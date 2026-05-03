@@ -1,6 +1,13 @@
+import { auth } from '@clerk/nextjs/server'
+import { redirect } from 'next/navigation'
 import Link from "next/link";
 
-export default function Home() {
+export default async function Home() {
+  const { userId } = await auth()
+  if (userId) {
+    redirect('/dashboard')
+  }
+
   return (
     <main style={{ background: 'var(--background)', minHeight: '100vh', overflowX: 'hidden' }}>
 
@@ -115,7 +122,7 @@ export default function Home() {
             borderRadius: '50%',
             background: 'var(--accent-blue)',
           }}></div>
-          7-DAY FREE TRIAL · CARD REQUIRED · CANCEL ANYTIME
+          7-DAY FREE TRIAL {'\u00B7'} CARD REQUIRED {'\u00B7'} CANCEL ANYTIME
         </div>
 
         <h1 style={{
@@ -145,7 +152,7 @@ export default function Home() {
           maxWidth: '600px',
           marginBottom: '48px',
         }}>
-          The professional outbound dialer built for anyone who lives on the phone. Upload your leads, launch your campaigns, and let DialerSeat do the heavy lifting — for a fraction of what everyone else charges.
+          The professional outbound dialer built for anyone who lives on the phone. Upload your leads, launch your campaigns, and let DialerSeat do the heavy lifting {'\u2014'} for a fraction of what everyone else charges.
         </p>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
@@ -177,7 +184,7 @@ export default function Home() {
         </div>
 
         <p style={{ fontSize: '11px', letterSpacing: '3px', color: 'var(--text-secondary)' }}>
-          7 DAYS FREE · THEN $35/WEEK · CANCEL ANYTIME
+          7 DAYS FREE {'\u00B7'} THEN $35/WEEK {'\u00B7'} CANCEL ANYTIME
         </p>
 
         {/* STATS BAR */}
@@ -195,7 +202,7 @@ export default function Home() {
             { number: '$35', label: 'PER WEEK' },
             { number: '7', label: 'DAY FREE TRIAL' },
             { number: '5X', label: 'CHEAPER THAN COMPETITORS' },
-            { number: '∞', label: 'LEADS UPLOADED' },
+            { number: '\u221E', label: 'LEADS UPLOADED' },
           ].map((stat, i) => (
             <div key={i} style={{ textAlign: 'center' }}>
               <div style={{
@@ -236,12 +243,12 @@ export default function Home() {
           gap: '24px',
         }}>
           {[
-            { icon: '⚡', title: 'INSTANT CAMPAIGNS', desc: 'Upload a CSV and launch a campaign in seconds. Run multiple campaigns simultaneously with zero setup time.' },
-            { icon: '📞', title: 'PREDICTIVE DIALING', desc: 'Our dialer calls ahead so you are always talking to someone. Maximum live connections per hour, every hour.' },
-            { icon: '🎯', title: 'LEAD MANAGEMENT', desc: 'Organize leads across unlimited campaigns. Track dispositions, callbacks, and conversion rates in real time.' },
-            { icon: '📊', title: 'LIVE ANALYTICS', desc: 'Real time dashboard showing calls made, contacts reached, campaign performance, and team activity.' },
-            { icon: '🏢', title: 'TEAM SEATS', desc: 'Buy seats for your whole team. Each member gets their own login, campaigns, and call data — all under one roof.' },
-            { icon: '🔒', title: 'YOUR DATA ALWAYS', desc: 'Your leads stay saved even if your subscription lapses. Pick up right where you left off, no questions asked.' },
+            { icon: '\u26A1', title: 'INSTANT CAMPAIGNS', desc: 'Upload a CSV and launch a campaign in seconds. Run multiple campaigns simultaneously with zero setup time.' },
+            { icon: '\uD83D\uDCDE', title: 'PREDICTIVE DIALING', desc: 'Our dialer calls ahead so you are always talking to someone. Maximum live connections per hour, every hour.' },
+            { icon: '\uD83C\uDFAF', title: 'LEAD MANAGEMENT', desc: 'Organize leads across unlimited campaigns. Track dispositions, callbacks, and conversion rates in real time.' },
+            { icon: '\uD83D\uDCCA', title: 'LIVE ANALYTICS', desc: 'Real time dashboard showing calls made, contacts reached, campaign performance, and team activity.' },
+            { icon: '\uD83C\uDFE2', title: 'TEAM SEATS', desc: 'Buy seats for your whole team. Each member gets their own login, campaigns, and call data \u2014 all under one roof.' },
+            { icon: '\uD83D\uDD12', title: 'YOUR DATA ALWAYS', desc: 'Your leads stay saved even if your subscription lapses. Pick up right where you left off, no questions asked.' },
           ].map((f, i) => (
             <div key={i} style={{
               padding: '40px',
@@ -357,13 +364,13 @@ export default function Home() {
 
           {[
             { feature: 'Weekly Cost', us: '$35', them1: '$199+/mo', them2: '$150+/mo' },
-            { feature: 'Free Trial', us: '7 Days', them1: '✗', them2: '✗' },
-            { feature: 'No Contract', us: '✓', them1: '✗', them2: '✗' },
-            { feature: 'Unlimited Leads', us: '✓', them1: '✓', them2: 'Limited' },
-            { feature: 'Multi Campaign', us: '✓', them1: '✓', them2: '✓' },
-            { feature: 'Data Saved Always', us: '✓', them1: '✗', them2: '✗' },
+            { feature: 'Free Trial', us: '7 Days', them1: '\u2717', them2: '\u2717' },
+            { feature: 'No Contract', us: '\u2713', them1: '\u2717', them2: '\u2717' },
+            { feature: 'Unlimited Leads', us: '\u2713', them1: '\u2713', them2: 'Limited' },
+            { feature: 'Multi Campaign', us: '\u2713', them1: '\u2713', them2: '\u2713' },
+            { feature: 'Data Saved Always', us: '\u2713', them1: '\u2717', them2: '\u2717' },
             { feature: 'Setup Fee', us: '$0', them1: '$0', them2: '$200+' },
-            { feature: 'Plug & Play', us: '✓', them1: '✗', them2: '✗' },
+            { feature: 'Plug & Play', us: '\u2713', them1: '\u2717', them2: '\u2717' },
           ].map((row, i) => (
             <div key={i} style={{
               display: 'grid',
@@ -423,7 +430,7 @@ export default function Home() {
             letterSpacing: '3px',
             color: 'var(--text-secondary)',
             marginBottom: '16px',
-          }}>PER SEAT · BILLED WEEKLY · CANCEL ANYTIME</p>
+          }}>PER SEAT {'\u00B7'} BILLED WEEKLY {'\u00B7'} CANCEL ANYTIME</p>
 
           <div style={{
             display: 'inline-block',
@@ -436,7 +443,7 @@ export default function Home() {
             color: 'var(--accent-blue)',
             marginBottom: '48px',
           }}>
-            7-DAY FREE TRIAL · CARD REQUIRED
+            7-DAY FREE TRIAL {'\u00B7'} CARD REQUIRED
           </div>
 
           <div style={{ marginBottom: '48px', textAlign: 'left' }}>
@@ -467,7 +474,7 @@ export default function Home() {
                   justifyContent: 'center',
                   flexShrink: 0,
                 }}>
-                  <span style={{ fontSize: '11px', color: 'var(--accent-blue)' }}>✓</span>
+                  <span style={{ fontSize: '11px', color: 'var(--accent-blue)' }}>{'\u2713'}</span>
                 </div>
                 <span style={{ fontSize: '14px', letterSpacing: '1px', color: 'var(--text-secondary)' }}>{feature}</span>
               </div>
@@ -490,7 +497,7 @@ export default function Home() {
             START FREE TRIAL
           </Link>
           <p style={{ fontSize: '11px', letterSpacing: '2px', color: 'var(--text-secondary)' }}>
-            CARD REQUIRED · NO CHARGE FOR 7 DAYS
+            CARD REQUIRED {'\u00B7'} NO CHARGE FOR 7 DAYS
           </p>
         </div>
       </section>
@@ -541,7 +548,7 @@ export default function Home() {
           GET STARTED FREE
         </Link>
         <p style={{ marginTop: '20px', fontSize: '11px', letterSpacing: '3px', color: 'var(--text-secondary)' }}>
-          7 DAYS FREE · THEN $35/WEEK · CANCEL ANYTIME
+          7 DAYS FREE {'\u00B7'} THEN $35/WEEK {'\u00B7'} CANCEL ANYTIME
         </p>
       </section>
 
@@ -566,7 +573,7 @@ export default function Home() {
           <span style={{ fontSize: '14px', fontWeight: 'bold', letterSpacing: '6px', color: 'var(--text-primary)' }}>DIALERSEAT</span>
         </div>
         <p style={{ fontSize: '11px', letterSpacing: '3px', color: 'var(--text-secondary)' }}>
-          © {new Date().getFullYear()} DIALERSEAT · ALL RIGHTS RESERVED
+          {'\u00A9'} {new Date().getFullYear()} DIALERSEAT {'\u00B7'} ALL RIGHTS RESERVED
         </p>
       </footer>
 
