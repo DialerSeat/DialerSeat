@@ -90,7 +90,7 @@ export default function DashboardPage() {
           alignItems: 'center',
           gap: '12px',
         }}>
-          <UserButton afterSignOutUrl="/" />
+          <UserButton />
           <div>
             <div style={{
               fontSize: '12px',
