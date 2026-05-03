@@ -1,8 +1,19 @@
 'use client'
 import { useUser, UserButton } from '@clerk/nextjs'
+import Link from 'next/link'
 
 export default function DashboardPage() {
   const { user } = useUser()
+
+  const navItems = [
+    { icon: '\uD83D\uDCCA', label: 'DASHBOARD', href: '/dashboard', active: true, ready: true },
+    { icon: '\uD83D\uDCDE', label: 'DIALER', href: '/dashboard/dialer', active: false, ready: true },
+    { icon: '\uD83D\uDCCB', label: 'CAMPAIGNS', href: '/dashboard/campaigns', active: false, ready: true },
+    { icon: '\uD83D\uDC65', label: 'LEADS', href: '/dashboard/leads', active: false, ready: true },
+    { icon: '\uD83D\uDCC8', label: 'ANALYTICS', href: '/dashboard/analytics', active: false, ready: true },
+    { icon: '\uD83C\uDFE2', label: 'TEAM', href: '/dashboard/team', active: false, ready: true },
+    { icon: '\u2699\uFE0F', label: 'SETTINGS', href: '/dashboard/settings', active: false, ready: true },
+  ]
 
   return (
     <main style={{
@@ -52,33 +63,42 @@ export default function DashboardPage() {
 
         {/* NAV ITEMS */}
         <nav style={{ flex: 1, padding: '0 12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          {[
-            { icon: '📊', label: 'DASHBOARD', active: true },
-            { icon: '📞', label: 'DIALER', active: false },
-            { icon: '📋', label: 'CAMPAIGNS', active: false },
-            { icon: '👥', label: 'LEADS', active: false },
-            { icon: '📈', label: 'ANALYTICS', active: false },
-            { icon: '🏢', label: 'TEAM', active: false },
-            { icon: '⚙️', label: 'SETTINGS', active: false },
-          ].map((item) => (
-            <div key={item.label} style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              padding: '12px 16px',
-              borderRadius: '10px',
-              cursor: 'pointer',
-              background: item.active ? 'rgba(74,158,255,0.1)' : 'transparent',
-              border: item.active ? '1px solid rgba(74,158,255,0.2)' : '1px solid transparent',
-            }}>
+          {navItems.map((item) => (
+            <Link
+              key={item.label}
+              href={item.href}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '12px 16px',
+                borderRadius: '10px',
+                cursor: 'pointer',
+                background: item.active ? 'rgba(74,158,255,0.1)' : 'transparent',
+                border: item.active ? '1px solid rgba(74,158,255,0.2)' : '1px solid transparent',
+                textDecoration: 'none',
+              }}
+            >
               <span style={{ fontSize: '16px' }}>{item.icon}</span>
               <span style={{
                 fontSize: '11px',
                 letterSpacing: '2px',
                 fontWeight: 'bold',
                 color: item.active ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                flex: 1,
               }}>{item.label}</span>
-            </div>
+              {!item.ready && (
+                <span style={{
+                  fontSize: '8px',
+                  letterSpacing: '1px',
+                  color: 'var(--text-secondary)',
+                  background: 'rgba(255,170,62,0.1)',
+                  border: '1px solid rgba(255,170,62,0.3)',
+                  padding: '2px 6px',
+                  borderRadius: '3px',
+                }}>SOON</span>
+              )}
+            </Link>
           ))}
         </nav>
 
@@ -175,11 +195,11 @@ export default function DashboardPage() {
           marginBottom: '32px',
         }}>
           {[
-            { icon: '📞', title: 'START DIALING', desc: 'Launch the dialer and start making calls', href: '/dashboard/dialer' },
-            { icon: '📋', title: 'NEW CAMPAIGN', desc: 'Create a campaign and upload your leads', href: '/dashboard/campaigns' },
-            { icon: '🏢', title: 'TEAM', desc: 'Add seats to your campaigns', href: '/dashboard/team' },
+            { icon: '\uD83D\uDCDE', title: 'START DIALING', desc: 'Launch the dialer and start making calls', href: '/dashboard/dialer' },
+            { icon: '\uD83D\uDCCB', title: 'NEW CAMPAIGN', desc: 'Create a campaign and upload your leads', href: '/dashboard/campaigns' },
+            { icon: '\uD83C\uDFE2', title: 'TEAM', desc: 'Add seats to your campaigns', href: '/dashboard/team' },
           ].map((action, i) => (
-            <a key={i} href={action.href} style={{ textDecoration: 'none' }}>
+            <Link key={i} href={action.href} style={{ textDecoration: 'none' }}>
               <div style={{
                 padding: '28px',
                 borderRadius: '16px',
@@ -209,7 +229,7 @@ export default function DashboardPage() {
                 }}>{action.title}</h3>
                 <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.6' }}>{action.desc}</p>
               </div>
-            </a>
+            </Link>
           ))}
         </div>
 
@@ -232,7 +252,7 @@ export default function DashboardPage() {
               letterSpacing: '3px',
               color: 'var(--text-primary)',
             }}>RECENT CAMPAIGNS</h2>
-            <button style={{
+            <Link href="/dashboard/campaigns" style={{
               padding: '8px 20px',
               borderRadius: '8px',
               background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
@@ -243,7 +263,8 @@ export default function DashboardPage() {
               border: 'none',
               cursor: 'pointer',
               fontFamily: 'Futura PT, Futura, sans-serif',
-            }}>+ NEW CAMPAIGN</button>
+              textDecoration: 'none',
+            }}>+ NEW CAMPAIGN</Link>
           </div>
 
           {/* EMPTY STATE */}
@@ -251,7 +272,7 @@ export default function DashboardPage() {
             textAlign: 'center',
             padding: '60px 20px',
           }}>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>📋</div>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>{'\uD83D\uDCCB'}</div>
             <h3 style={{
               fontSize: '13px',
               fontWeight: 'bold',
@@ -264,7 +285,8 @@ export default function DashboardPage() {
               color: 'var(--text-secondary)',
               marginBottom: '24px',
             }}>Create your first campaign and upload your leads to get started.</p>
-            <button style={{
+            <Link href="/dashboard/campaigns" style={{
+              display: 'inline-block',
               padding: '12px 32px',
               borderRadius: '10px',
               background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
@@ -275,7 +297,8 @@ export default function DashboardPage() {
               border: 'none',
               cursor: 'pointer',
               fontFamily: 'Futura PT, Futura, sans-serif',
-            }}>CREATE FIRST CAMPAIGN</button>
+              textDecoration: 'none',
+            }}>CREATE FIRST CAMPAIGN</Link>
           </div>
         </div>
       </div>
