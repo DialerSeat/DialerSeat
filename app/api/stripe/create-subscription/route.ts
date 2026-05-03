@@ -8,7 +8,6 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-// Statuses that mean "user has an active billing relationship — don't create another"
 const BLOCKING_STATUSES = ['trialing', 'active', 'past_due', 'incomplete']
 
 export async function POST() {
@@ -28,7 +27,29 @@ export async function POST() {
       return NextResponse.json({ error: 'No email on user' }, { status: 400 })
     }
 
-    // 1) Look up or create the Stripe customer
+    // 1) Ensure the user row exists in Supabase BEFORE we do anything else
+    // (Stripe webhook will reference users.clerk_id via foreign key)
+    const { error: upsertErr } = await supabase
+      .from('users')
+      .upsert(
+        {
+          clerk_id: userId,
+          email,
+          first_name: user.firstName ?? null,
+          last_name: user.lastName ?? null,
+        },
+        { onConflict: 'clerk_id' }
+      )
+
+    if (upsertErr) {
+      console.error('User upsert error:', upsertErr)
+      return NextResponse.json(
+        { error: 'Failed to sync user record' },
+        { status: 500 }
+      )
+    }
+
+    // 2) Look up or create the Stripe customer
     const { data: existingUser } = await supabase
       .from('users')
       .select('stripe_customer_id')
@@ -51,8 +72,7 @@ export async function POST() {
         .eq('clerk_id', userId)
     }
 
-    // 2) Check Stripe directly for any live subscriptions on this customer
-    // (more authoritative than checking our DB — handles re-subscribe case)
+    // 3) Check Stripe directly for any live subscriptions on this customer
     const stripeSubs = await stripe.subscriptions.list({
       customer: customerId,
       status: 'all',
@@ -70,14 +90,14 @@ export async function POST() {
       )
     }
 
-    // 3) Clean up any stale local rows (canceled / expired) so the upsert is clean
+    // 4) Clean up stale local rows
     await supabase
       .from('subscriptions')
       .delete()
       .eq('user_id', userId)
       .in('status', ['canceled', 'incomplete_expired', 'unpaid'])
 
-    // 4) Create the fresh subscription with 7-day trial
+    // 5) Create the fresh subscription with 7-day trial
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
       items: [{ price: process.env.STRIPE_PRICE_ID! }],
