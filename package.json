@@ -12,6 +12,7 @@
     "@clerk/nextjs": "^7.2.9",
     "@signalwire/js": "^3.30.0",
     "@signalwire/realtime-api": "^4.2.1",
+    "@stripe/react-stripe-js": "^6.3.0",
     "@stripe/stripe-js": "^9.4.0",
     "@supabase/supabase-js": "^2.105.1",
     "autoprefixer": "^10.5.0",
