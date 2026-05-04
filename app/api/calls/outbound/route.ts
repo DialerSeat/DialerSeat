@@ -1,9 +1,18 @@
 import { NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+import { auth } from '@clerk/nextjs/server'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 export async function POST(req: Request) {
   try {
     const body = await req.json()
     const { to } = body
+
+    const { userId } = await auth()
 
     const spaceUrl = process.env.SIGNALWIRE_SPACE_URL
     const projectId = process.env.SIGNALWIRE_PROJECT_ID
@@ -23,7 +32,8 @@ export async function POST(req: Request) {
     const authHeader = 'Basic ' + Buffer.from(`${projectId}:${apiToken}`).toString('base64')
     const callsUrl = `https://${spaceUrl}/api/laml/2010-04-01/Accounts/${projectId}/Calls.json`
 
-    // 1) Dial the lead — they go into the conference room
+    // 1) Dial the lead — they go into the conference room (with recording)
+    // The room param + record=true in TwiML triggers recording of the full conference
     const leadCallResponse = await fetch(callsUrl, {
       method: 'POST',
       headers: {
@@ -33,7 +43,7 @@ export async function POST(req: Request) {
       body: new URLSearchParams({
         To: toFormatted,
         From: phoneNumber,
-        Url: `${appUrl}/api/calls/twiml?room=${roomName}`,
+        Url: `${appUrl}/api/calls/twiml?room=${roomName}&record=true`,
         StatusCallback: `${appUrl}/api/calls/status`,
         StatusCallbackMethod: 'POST',
       }).toString(),
@@ -47,7 +57,6 @@ export async function POST(req: Request) {
     }
 
     // 2) Dial the agent (browser SIP) — joins same conference room
-    // SignalWire INVITEs the browser; sip.js auto-accepts and WebRTC negotiates correctly
     const agentSipUri = `sip:${sipUsername}@${sipDomain}`
     const agentCallResponse = await fetch(callsUrl, {
       method: 'POST',
@@ -67,7 +76,23 @@ export async function POST(req: Request) {
 
     if (!agentCallResponse.ok) {
       console.warn('Agent call failed but lead call succeeded:', agentData)
-      // Don't fail the whole request — the lead call is already dialing
+    }
+
+    // Track the room->user mapping so when the recording webhook fires we know who owns it
+    if (userId) {
+      try {
+        await supabase.from('call_rooms').upsert({
+          room_name: roomName,
+          user_id: userId,
+          phone_number: toFormatted,
+          lead_call_sid: leadData.sid,
+          agent_call_sid: agentData?.sid || null,
+          created_at: new Date().toISOString(),
+        })
+      } catch (e) {
+        // Table may not exist yet — fine, we'll fall back to other lookups
+        console.warn('call_rooms tracking skipped:', e)
+      }
     }
 
     return NextResponse.json({

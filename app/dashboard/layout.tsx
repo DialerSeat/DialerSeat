@@ -5,13 +5,14 @@ import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 
 const navItems = [
-  { icon: '\uD83D\uDCCA', label: 'DASHBOARD', href: '/dashboard' },
-  { icon: '\uD83D\uDCDE', label: 'DIALER', href: '/dashboard/dialer' },
-  { icon: '\uD83D\uDCCB', label: 'CAMPAIGNS', href: '/dashboard/campaigns' },
-  { icon: '\uD83D\uDC65', label: 'LEADS', href: '/dashboard/leads' },
-  { icon: '\uD83D\uDCC8', label: 'ANALYTICS', href: '/dashboard/analytics' },
-  { icon: '\uD83C\uDFE2', label: 'TEAM', href: '/dashboard/team' },
-  { icon: '\u2699\uFE0F', label: 'SETTINGS', href: '/dashboard/settings' },
+  { icon: '📊', label: 'DASHBOARD', href: '/dashboard' },
+  { icon: '📞', label: 'DIALER', href: '/dashboard/dialer' },
+  { icon: '📋', label: 'CAMPAIGNS', href: '/dashboard/campaigns' },
+  { icon: '👥', label: 'LEADS', href: '/dashboard/leads' },
+  { icon: '🎙️', label: 'RECORDINGS', href: '/dashboard/recordings' },
+  { icon: '📈', label: 'ANALYTICS', href: '/dashboard/analytics' },
+  { icon: '🏢', label: 'TEAM', href: '/dashboard/team' },
+  { icon: '⚙️', label: 'SETTINGS', href: '/dashboard/settings' },
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -39,7 +40,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const Sidebar = () => (
     <>
-      {/* LOGO */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -67,7 +67,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         }}>DIALERSEAT</span>
       </div>
 
-      {/* NAV ITEMS */}
       <nav style={{ flex: 1, padding: '0 12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
         {navItems.map((item) => {
           const active = isActive(item.href)
@@ -100,7 +99,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         })}
       </nav>
 
-      {/* USER SECTION */}
       <div style={{
         padding: '16px 24px',
         borderTop: '1px solid var(--border)',
@@ -202,26 +200,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         }
       `}</style>
 
-      {/* DESKTOP SIDEBAR — unchanged from before */}
       <div className="ds-sidebar-desktop">
         <Sidebar />
       </div>
 
-      {/* MOBILE OVERLAY */}
       <div
         className={`ds-mobile-overlay ${drawerOpen ? 'open' : ''}`}
         onClick={() => setDrawerOpen(false)}
         aria-hidden="true"
       />
 
-      {/* MOBILE DRAWER */}
       <aside className={`ds-sidebar-mobile ${drawerOpen ? 'open' : ''}`}>
         <Sidebar />
       </aside>
 
-      {/* MAIN COLUMN */}
       <div className="ds-mobile-content" style={{ flex: 1, minWidth: 0 }}>
-        {/* MOBILE TOP BAR (hamburger + logo) — only shows on mobile */}
         <div className="ds-mobile-topbar">
           <button
             onClick={() => setDrawerOpen(true)}
