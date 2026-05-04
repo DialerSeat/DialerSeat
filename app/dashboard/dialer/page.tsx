@@ -41,6 +41,8 @@ export default function DialerPage() {
   const [mounted, setMounted] = useState(false)
   const [swReady, setSwReady] = useState(false)
   const [micGranted, setMicGranted] = useState(false)
+  const [rightSidebarOpen, setRightSidebarOpen] = useState(false)
+  const [dialZoomed, setDialZoomed] = useState(false)
   const [sessionStats, setSessionStats] = useState({
     calls: 0, appointments: 0, closed: 0, dnc: 0, notInterested: 0
   })
@@ -115,7 +117,6 @@ export default function DialerPage() {
             try {
               const { SessionState: SS } = await import('sip.js')
 
-              // Listen for state changes BEFORE accepting
               invitation.stateChange.addListener((state: any) => {
                 console.log('> Incoming call state:', state)
                 if (state === SS.Established) {
@@ -351,6 +352,16 @@ export default function DialerPage() {
     return () => { if (timerRef.current) clearInterval(timerRef.current) }
   }, [status])
 
+  // Lock body scroll when zoom is open
+  useEffect(() => {
+    if (dialZoomed) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [dialZoomed])
+
   const startCallPolling = (callSid: string) => {
     const pollInterval = setInterval(async () => {
       try {
@@ -463,8 +474,6 @@ export default function DialerPage() {
       if (data.success) {
         setActiveCallSid(data.callSid)
         startCallPolling(data.callSid)
-        // No more dialIntoConference — SignalWire will INVITE us via the SIP credential
-        // and our onInvite handler will auto-accept it.
       } else {
         console.error('Call failed:', data.error)
         await fetch('/api/leads/dispose', {
@@ -545,6 +554,7 @@ export default function DialerPage() {
 
   const handleManualDial = async () => {
     if (!manualNumber) return
+    setDialZoomed(false)
     setStatus('calling')
     setSessionStats(s => ({ ...s, calls: s.calls + 1 }))
     playInitiateBlip()
@@ -558,7 +568,6 @@ export default function DialerPage() {
       if (data.success) {
         setActiveCallSid(data.callSid)
         startCallPolling(data.callSid)
-        // No more dialIntoConference — SignalWire INVITEs us, onInvite handles it
       } else {
         setStatus('idle')
       }
@@ -584,10 +593,11 @@ export default function DialerPage() {
       if (e.key === '*' || e.key === '#') handleKeypad(e.key)
       if (e.key === 'Backspace') handleBackspace()
       if (e.key === 'Enter' && manualNumber) handleManualDial()
+      if (e.key === 'Escape' && dialZoomed) setDialZoomed(false)
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [manualNumber, status])
+  }, [manualNumber, status, dialZoomed])
 
   const nameKeys = ['name', 'first_name', 'last_name', 'full_name', 'fname', 'lname', 'firstname', 'lastname']
   const filteredExtraData = (data: Record<string, any>) => {
@@ -606,7 +616,6 @@ export default function DialerPage() {
 
   const currentCampaign = campaigns.find(c => c.id === selectedCampaign)
   const activeScript = currentCampaign?.script || (selectedCampaign === 'all' ? campaigns.find(c => c.script)?.script : null)
-  const attemptNumber = (currentLead?.dial_attempts || 0) + 1
 
   const terminalBg = '#f0f1f4'
   const terminalSurface = '#e2e4ea'
@@ -618,458 +627,607 @@ export default function DialerPage() {
   const terminalGreen = '#1a6a1a'
   const terminalRed = '#8a1a1a'
 
-  return (
-    <main style={{ height: '100vh', background: 'var(--background)', display: 'flex', overflow: 'hidden' }}>
+  // Reusable manual dial component (used inline AND in zoom overlay)
+  const ManualDialer = ({ inOverlay = false }: { inOverlay?: boolean }) => (
+    <>
       <div style={{
-        width: '260px', height: '100vh', background: 'var(--surface)',
-        borderRight: '1px solid var(--border)', display: 'flex',
-        flexDirection: 'column', padding: '32px 0', flexShrink: 0,
+        background: terminalDark,
+        padding: inOverlay ? '14px 20px' : '8px 16px',
+        borderBottom: `1px solid ${terminalBorder}`,
+        flexShrink: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '0 24px', marginBottom: '48px' }}>
-          <div style={{
-            width: '32px', height: '32px', borderRadius: '8px',
-            background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-          }}>
-            <span style={{ color: 'white', fontWeight: 'bold', fontSize: '14px' }}>D</span>
-          </div>
-          <span style={{ fontSize: '14px', fontWeight: 'bold', letterSpacing: '4px', color: 'var(--text-primary)' }}>DIALERSEAT</span>
+        <span style={{
+          fontSize: inOverlay ? '11px' : '9px',
+          letterSpacing: '3px',
+          color: '#8888aa',
+          fontWeight: 'bold',
+        }}>MANUAL DIAL</span>
+        <button
+          onClick={() => setDialZoomed(!inOverlay)}
+          aria-label={inOverlay ? 'Close fullscreen dialer' : 'Open fullscreen dialer'}
+          style={{
+            background: 'transparent',
+            border: '1px solid #4a4a5e',
+            borderRadius: 4,
+            color: '#8888aa',
+            width: 28,
+            height: 28,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            fontSize: 14,
+            fontWeight: 'bold',
+            padding: 0,
+          }}
+        >
+          {inOverlay ? '×' : '⛶'}
+        </button>
+      </div>
+
+      <div style={{
+        padding: inOverlay ? '24px' : '12px',
+        background: terminalBg,
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        maxWidth: inOverlay ? 480 : 'none',
+        margin: inOverlay ? '0 auto' : 0,
+        width: inOverlay ? '100%' : 'auto',
+        boxSizing: 'border-box',
+      }}>
+        <div style={{
+          background: terminalSurface,
+          border: `1px solid ${terminalBorder}`,
+          borderRadius: '4px',
+          padding: inOverlay ? '20px 16px' : '10px 12px',
+          fontFamily: 'monospace',
+          fontSize: inOverlay ? '32px' : '18px',
+          fontWeight: 'bold',
+          color: manualNumber ? terminalText : terminalMuted,
+          letterSpacing: '3px',
+          textAlign: 'center',
+          marginBottom: inOverlay ? '20px' : '10px',
+          minHeight: inOverlay ? '64px' : '44px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          {manualNumber || '_ _ _ _ _ _ _ _'}
         </div>
 
-        <nav style={{ flex: 1, padding: '0 12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          {[
-            { icon: '📊', label: 'DASHBOARD', href: '/dashboard' },
-            { icon: '📞', label: 'DIALER', href: '/dashboard/dialer', active: true },
-            { icon: '📋', label: 'CAMPAIGNS', href: '/dashboard/campaigns' },
-            { icon: '👥', label: 'LEADS', href: '/dashboard/leads' },
-            { icon: '📈', label: 'ANALYTICS', href: '/dashboard/analytics' },
-            { icon: '🏢', label: 'TEAM', href: '/dashboard/team' },
-            { icon: '⚙️', label: 'SETTINGS', href: '/dashboard/settings' },
-          ].map((item) => (
-            <a key={item.label} href={item.href} style={{
-              display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px',
-              borderRadius: '10px', cursor: 'pointer', textDecoration: 'none',
-              background: item.active ? 'rgba(74,158,255,0.1)' : 'transparent',
-              border: item.active ? '1px solid rgba(74,158,255,0.2)' : '1px solid transparent',
-            }}>
-              <span style={{ fontSize: '16px' }}>{item.icon}</span>
-              <span style={{
-                fontSize: '11px', letterSpacing: '2px', fontWeight: 'bold',
-                color: item.active ? 'var(--accent-blue)' : 'var(--text-secondary)',
-              }}>{item.label}</span>
-            </a>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: inOverlay ? '12px' : '6px',
+          marginBottom: inOverlay ? '12px' : '6px',
+          flex: 1,
+        }}>
+          {['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'].map((key) => (
+            <button key={key} onClick={() => handleKeypad(key)} style={{
+              borderRadius: '3px',
+              background: terminalSurface,
+              border: `1px solid ${terminalBorder}`,
+              borderBottom: `3px solid ${terminalBorder}`,
+              color: terminalText,
+              fontSize: inOverlay ? '28px' : '16px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              fontFamily: 'monospace',
+              transition: 'all 0.05s',
+              padding: inOverlay ? '20px 0' : '12px 0',
+              minHeight: inOverlay ? 64 : 'auto',
+            }}>{key}</button>
           ))}
-        </nav>
+        </div>
 
-        <div style={{ padding: '20px 24px', borderTop: '1px solid var(--border)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <span style={{
-              fontSize: '10px', letterSpacing: '3px', fontWeight: 'bold',
-              color: available ? 'var(--accent-blue)' : 'var(--text-secondary)',
-            }}>{available ? '● AVAILABLE' : '○ OFFLINE'}</span>
-            <div onClick={handleSetAvailable} style={{
-              width: '44px', height: '24px', borderRadius: '12px',
-              background: available ? 'var(--accent-blue)' : 'var(--border)',
-              position: 'relative', cursor: 'pointer', transition: 'background 0.2s',
-            }}>
-              <div style={{
-                width: '18px', height: '18px', borderRadius: '50%', background: 'white',
-                position: 'absolute', top: '3px', left: available ? '23px' : '3px', transition: 'left 0.2s',
-              }} />
-            </div>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 2fr',
+          gap: inOverlay ? '12px' : '6px',
+        }}>
+          <button onClick={handleBackspace} style={{
+            padding: inOverlay ? '20px' : '12px',
+            borderRadius: '3px',
+            background: terminalSurface,
+            border: `1px solid ${terminalBorder}`,
+            borderBottom: `3px solid ${terminalBorder}`,
+            color: terminalMuted,
+            fontSize: inOverlay ? '24px' : '16px',
+            cursor: 'pointer',
+          }}>⌫</button>
+          <button onClick={handleManualDial} disabled={!manualNumber} style={{
+            padding: inOverlay ? '20px' : '12px',
+            borderRadius: '3px',
+            border: 'none',
+            background: manualNumber ? terminalDark : terminalSurface,
+            borderBottom: `3px solid ${manualNumber ? '#4a9eff' : terminalBorder}`,
+            color: manualNumber ? '#4a9eff' : terminalMuted,
+            fontSize: inOverlay ? '14px' : '11px',
+            fontWeight: 'bold',
+            letterSpacing: '2px',
+            cursor: manualNumber ? 'pointer' : 'not-allowed',
+            fontFamily: 'Futura PT, Futura, sans-serif',
+          }}>▶ DIAL</button>
+        </div>
+      </div>
+    </>
+  )
+
+  return (
+    <div className="dialer-root" style={{
+      flex: 1,
+      background: terminalBg,
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
+      minHeight: 0,
+      position: 'relative',
+    }}>
+      <style>{`
+        .dialer-root {
+          height: calc(100vh - 0px);
+        }
+        .dialer-status-bar { display: flex; align-items: center; justify-content: space-between; }
+        .dialer-status-bar-left { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+        .dialer-status-bar-right { display: flex; align-items: center; gap: 24px; }
+        .dialer-stat-grid { grid-template-columns: repeat(3, 1fr) !important; }
+        .dialer-right-sidebar {
+          width: 280px;
+          border-left: 1px solid ${terminalBorder};
+          display: flex;
+          flex-direction: column;
+          flex-shrink: 0;
+          overflow: hidden;
+        }
+        .dialer-right-toggle { display: none; }
+        .dialer-right-overlay { display: none; }
+
+        @media (max-width: 768px) {
+          .dialer-root { height: calc(100vh - 64px); }
+          .dialer-status-bar { padding: 6px 12px !important; }
+          .dialer-status-bar-left { gap: 10px; }
+          .dialer-status-bar-right { display: none !important; }
+          .dialer-stat-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+          }
+          .dialer-right-sidebar {
+            position: fixed;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            z-index: 60;
+            width: 280px;
+            max-width: 85vw;
+            transform: translateX(100%);
+            transition: transform 0.25s ease;
+            background: ${terminalBg};
+            border-left: 1px solid ${terminalBorder};
+          }
+          .dialer-right-sidebar.open { transform: translateX(0); }
+          .dialer-right-toggle {
+            display: flex;
+            position: fixed;
+            right: 12px;
+            bottom: 12px;
+            z-index: 50;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: ${terminalDark};
+            border: 1px solid #4a4a5e;
+            color: #4a9eff;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 18px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+          }
+          .dialer-right-overlay {
+            display: block;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 55;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+          }
+          .dialer-right-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+          }
+        }
+      `}</style>
+
+      {/* TOP STATUS BAR */}
+      <div className="dialer-status-bar" style={{
+        background: terminalDark,
+        padding: '8px 20px',
+        borderBottom: `2px solid ${terminalAccent}`,
+        flexShrink: 0,
+      }}>
+        <div className="dialer-status-bar-left">
+          <span style={{ fontSize: '11px', fontWeight: 'bold', letterSpacing: '4px', color: '#4a9eff' }}>
+            DIALERSEAT TERMINAL
+          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{
+              width: '8px', height: '8px', borderRadius: '50%',
+              background: available ? '#32ff7e' : '#ff6464',
+              boxShadow: available ? '0 0 6px #32ff7e' : '0 0 6px #ff6464',
+            }} />
+            <span style={{ fontSize: '10px', letterSpacing: '2px', color: available ? '#32ff7e' : '#ff6464' }}>
+              {available ? 'LIVE' : 'OFFLINE'}
+            </span>
           </div>
-          <p style={{ fontSize: '10px', color: 'var(--text-secondary)', letterSpacing: '1px' }}>
-            {micGranted ? '🎤 Mic ready' : 'Toggle to go available'}
-          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: swReady ? '#4a9eff' : '#666688' }} />
+            <span style={{ fontSize: '9px', letterSpacing: '2px', color: swReady ? '#4a9eff' : '#666688' }}>
+              {swReady ? 'AUDIO' : '...'}
+            </span>
+          </div>
+          <div onClick={handleSetAvailable} style={{
+            width: '36px', height: '20px', borderRadius: '10px',
+            background: available ? '#4a9eff' : '#444460',
+            position: 'relative', cursor: 'pointer', transition: 'background 0.2s',
+            flexShrink: 0,
+          }}>
+            <div style={{
+              width: '14px', height: '14px', borderRadius: '50%', background: 'white',
+              position: 'absolute', top: '3px', left: available ? '19px' : '3px', transition: 'left 0.2s',
+            }} />
+          </div>
+        </div>
+        <div className="dialer-status-bar-right">
+          <span style={{ fontSize: '11px', fontFamily: 'monospace', color: '#8888aa', letterSpacing: '2px' }}>{dateStr}</span>
+          <span style={{ fontSize: '14px', fontFamily: 'monospace', fontWeight: 'bold', color: '#4a9eff', letterSpacing: '3px' }}>{timeStr}</span>
         </div>
       </div>
 
-      <div style={{ flex: 1, background: terminalBg, display: 'flex', flexDirection: 'column', overflow: 'hidden', height: '100vh' }}>
-        <div style={{
-          background: terminalDark, padding: '8px 20px',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          borderBottom: `2px solid ${terminalAccent}`, flexShrink: 0,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-            <span style={{ fontSize: '11px', fontWeight: 'bold', letterSpacing: '4px', color: '#4a9eff' }}>
-              DIALERSEAT TERMINAL v1.0
-            </span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{
-                width: '8px', height: '8px', borderRadius: '50%',
-                background: available ? '#32ff7e' : '#ff6464',
-                boxShadow: available ? '0 0 6px #32ff7e' : '0 0 6px #ff6464',
-              }} />
-              <span style={{ fontSize: '10px', letterSpacing: '2px', color: available ? '#32ff7e' : '#ff6464' }}>
-                {available ? 'AGENT LIVE' : 'AGENT OFFLINE'}
-              </span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: swReady ? '#4a9eff' : '#666688' }} />
-              <span style={{ fontSize: '9px', letterSpacing: '2px', color: swReady ? '#4a9eff' : '#666688' }}>
-                {swReady ? 'AUDIO READY' : 'AUDIO INIT...'}
-              </span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: micGranted ? '#32ff7e' : '#666688' }} />
-              <span style={{ fontSize: '9px', letterSpacing: '2px', color: micGranted ? '#32ff7e' : '#666688' }}>
-                {micGranted ? 'MIC OK' : 'MIC PENDING'}
-              </span>
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-            <span style={{ fontSize: '11px', fontFamily: 'monospace', color: '#8888aa', letterSpacing: '2px' }}>{dateStr}</span>
-            <span style={{ fontSize: '14px', fontFamily: 'monospace', fontWeight: 'bold', color: '#4a9eff', letterSpacing: '3px' }}>{timeStr}</span>
-          </div>
-        </div>
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
+        {/* MAIN BODY */}
+        <div style={{ flex: 1, padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px', overflow: 'auto', minHeight: 0 }}>
 
-        <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-          <div style={{ flex: 1, padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px', overflow: 'hidden' }}>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', flexShrink: 0 }}>
-              {[
-                { label: 'STATUS', value: status.toUpperCase(), color: status === 'connected' ? terminalGreen : status === 'calling' ? '#8a6a1a' : terminalMuted },
-                { label: 'DURATION', value: status === 'connected' ? formatTime(seconds) : '--:--', color: terminalAccent },
-                { label: 'CAMPAIGN', value: currentCampaign?.name?.substring(0, 12) || 'ALL', color: terminalText },
-                { label: 'ATTEMPT', value: status !== 'idle' && currentLead ? `${attemptNumber} OF 3` : '---', color: attemptNumber >= 3 ? terminalRed : attemptNumber === 2 ? '#8a6a1a' : terminalText },
-              ].map((item) => (
-                <div key={item.label} style={{
-                  padding: '8px 12px', background: terminalSurface,
-                  border: `1px solid ${terminalBorder}`, borderRadius: '4px',
-                }}>
-                  <div style={{ fontSize: '9px', letterSpacing: '2px', color: terminalMuted, marginBottom: '3px' }}>{item.label}</div>
-                  <div style={{ fontSize: '12px', fontWeight: 'bold', fontFamily: 'monospace', color: item.color, letterSpacing: '1px' }}>{item.value}</div>
-                </div>
-              ))}
-            </div>
-
-            <div style={{ padding: '10px 14px', background: terminalSurface, border: `1px solid ${terminalBorder}`, borderRadius: '4px', flexShrink: 0 }}>
-              <div style={{ fontSize: '9px', letterSpacing: '3px', color: terminalMuted, marginBottom: '6px' }}>▸ SELECT CAMPAIGN</div>
-              <select value={selectedCampaign} onChange={(e) => setSelectedCampaign(e.target.value)} style={{
-                width: '100%', padding: '6px 10px', borderRadius: '4px',
-                background: terminalBg, border: `1px solid ${terminalBorder}`,
-                color: terminalText, fontSize: '12px', outline: 'none', fontFamily: 'monospace', cursor: 'pointer',
+          {/* STATUS / DURATION / CAMPAIGN — Attempt removed */}
+          <div className="dialer-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', flexShrink: 0 }}>
+            {[
+              { label: 'STATUS', value: status.toUpperCase(), color: status === 'connected' ? terminalGreen : status === 'calling' ? '#8a6a1a' : terminalMuted },
+              { label: 'DURATION', value: status === 'connected' ? formatTime(seconds) : '--:--', color: terminalAccent },
+              { label: 'CAMPAIGN', value: currentCampaign?.name?.substring(0, 12) || 'ALL', color: terminalText },
+            ].map((item) => (
+              <div key={item.label} style={{
+                padding: '8px 12px', background: terminalSurface,
+                border: `1px solid ${terminalBorder}`, borderRadius: '4px',
               }}>
-                <option value="all">[ ALL ACTIVE CAMPAIGNS ]</option>
-                {campaigns.map(c => (
-                  <option key={c.id} value={c.id}>{c.name} — {c.total_leads} leads</option>
-                ))}
-              </select>
-              {campaigns.length === 0 && (
-                <div style={{
-                  marginTop: '6px', padding: '5px 8px', background: '#f8e8e8',
-                  border: '1px solid #d0a0a0', borderRadius: '4px',
-                  fontSize: '10px', letterSpacing: '2px', color: terminalRed,
-                }}>⚠ NO ACTIVE CAMPAIGNS FOUND</div>
+                <div style={{ fontSize: '9px', letterSpacing: '2px', color: terminalMuted, marginBottom: '3px' }}>{item.label}</div>
+                <div style={{ fontSize: '12px', fontWeight: 'bold', fontFamily: 'monospace', color: item.color, letterSpacing: '1px' }}>{item.value}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ padding: '10px 14px', background: terminalSurface, border: `1px solid ${terminalBorder}`, borderRadius: '4px', flexShrink: 0 }}>
+            <div style={{ fontSize: '9px', letterSpacing: '3px', color: terminalMuted, marginBottom: '6px' }}>▸ SELECT CAMPAIGN</div>
+            <select value={selectedCampaign} onChange={(e) => setSelectedCampaign(e.target.value)} style={{
+              width: '100%', padding: '6px 10px', borderRadius: '4px',
+              background: terminalBg, border: `1px solid ${terminalBorder}`,
+              color: terminalText, fontSize: '12px', outline: 'none', fontFamily: 'monospace', cursor: 'pointer',
+            }}>
+              <option value="all">[ ALL ACTIVE CAMPAIGNS ]</option>
+              {campaigns.map(c => (
+                <option key={c.id} value={c.id}>{c.name} — {c.total_leads} leads</option>
+              ))}
+            </select>
+            {campaigns.length === 0 && (
+              <div style={{
+                marginTop: '6px', padding: '5px 8px', background: '#f8e8e8',
+                border: '1px solid #d0a0a0', borderRadius: '4px',
+                fontSize: '10px', letterSpacing: '2px', color: terminalRed,
+              }}>⚠ NO ACTIVE CAMPAIGNS FOUND</div>
+            )}
+          </div>
+
+          <div style={{
+            flex: 1, background: terminalSurface, border: `1px solid ${terminalBorder}`,
+            borderRadius: '4px', overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 200,
+          }}>
+            <div style={{
+              padding: '7px 14px', background: terminalDark, borderBottom: `1px solid ${terminalBorder}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
+            }}>
+              <span style={{ fontSize: '10px', letterSpacing: '3px', color: '#8888aa', fontWeight: 'bold' }}>LEAD PROFILE</span>
+              {currentLead && status === 'connected' && (
+                <span style={{ fontSize: '10px', fontFamily: 'monospace', color: '#4a9eff' }}>ID: {currentLead.id.substring(0, 8)}</span>
               )}
             </div>
 
-            <div style={{
-              flex: 1, background: terminalSurface, border: `1px solid ${terminalBorder}`,
-              borderRadius: '4px', overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0,
-            }}>
-              <div style={{
-                padding: '7px 14px', background: terminalDark, borderBottom: `1px solid ${terminalBorder}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
-              }}>
-                <span style={{ fontSize: '10px', letterSpacing: '3px', color: '#8888aa', fontWeight: 'bold' }}>LEAD PROFILE</span>
-                {currentLead && status === 'connected' && (
-                  <span style={{ fontSize: '10px', fontFamily: 'monospace', color: '#4a9eff' }}>ID: {currentLead.id.substring(0, 8)}</span>
-                )}
-              </div>
-
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                {(!currentLead || status === 'calling') ? (
-                  <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                    <div style={{ fontSize: '36px', marginBottom: '12px', filter: 'grayscale(1)', opacity: 0.4 }}>📋</div>
-                    <p style={{ fontSize: '11px', letterSpacing: '3px', color: terminalMuted }}>
-                      {noLeads ? 'NO MORE LEADS AVAILABLE' : status === 'calling' ? 'DIALING IN QUEUE...' : 'AWAITING DIAL COMMAND'}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
+              {(!currentLead || status === 'calling') ? (
+                <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                  <div style={{ fontSize: '36px', marginBottom: '12px', filter: 'grayscale(1)', opacity: 0.4 }}>📋</div>
+                  <p style={{ fontSize: '11px', letterSpacing: '3px', color: terminalMuted }}>
+                    {noLeads ? 'NO MORE LEADS AVAILABLE' : status === 'calling' ? 'DIALING IN QUEUE...' : 'AWAITING DIAL COMMAND'}
+                  </p>
+                  {noLeads && (
+                    <p style={{ fontSize: '10px', color: terminalRed, marginTop: '8px', letterSpacing: '2px' }}>
+                      UPLOAD MORE LEADS TO CONTINUE
                     </p>
-                    {noLeads && (
-                      <p style={{ fontSize: '10px', color: terminalRed, marginTop: '8px', letterSpacing: '2px' }}>
-                        UPLOAD MORE LEADS TO CONTINUE
-                      </p>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <div style={{ padding: '12px', flexShrink: 0 }}>
+                    <div style={{
+                      padding: '10px 14px', background: terminalBg,
+                      border: `2px solid ${status === 'connected' ? terminalGreen : terminalBorder}`,
+                      borderRadius: '4px', marginBottom: '10px',
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                        <div>
+                          <div style={{ fontSize: '19px', fontWeight: 'bold', fontFamily: 'monospace', color: terminalText, letterSpacing: '1px', marginBottom: '3px' }}>
+                            {currentLead.first_name} {currentLead.last_name}
+                          </div>
+                          <div style={{ fontSize: '15px', fontFamily: 'monospace', color: terminalAccent, fontWeight: 'bold', letterSpacing: '2px' }}>
+                            {currentLead.phone}
+                          </div>
+                        </div>
+                        <div style={{
+                          padding: '4px 10px', borderRadius: '2px',
+                          background: status === 'connected' ? '#e8f5e8' : '#f0f0f0',
+                          border: `1px solid ${status === 'connected' ? terminalGreen : terminalBorder}`,
+                          fontSize: '9px', letterSpacing: '2px', fontWeight: 'bold',
+                          color: status === 'connected' ? terminalGreen : terminalMuted,
+                        }}>
+                          {status === 'connected' ? '● LIVE' : '○ IDLE'}
+                        </div>
+                      </div>
+                    </div>
+                    {currentLead.extra_data && Object.keys(currentLead.extra_data).length > 0 && (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '5px' }}>
+                        {filteredExtraData(currentLead.extra_data).map(([key, value]) => (
+                          <div key={key} style={{ padding: '7px 10px', background: terminalBg, border: `1px solid ${terminalBorder}`, borderRadius: '3px' }}>
+                            <div style={{ fontSize: '8px', letterSpacing: '2px', color: terminalMuted, marginBottom: '2px', textTransform: 'uppercase' }}>{key}</div>
+                            <div style={{ fontSize: '11px', fontWeight: 'bold', fontFamily: 'monospace', color: terminalText }}>{String(value)}</div>
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </div>
-                ) : (
-                  <>
-                    <div style={{ padding: '12px', flexShrink: 0 }}>
+                  {activeScript && (
+                    <div style={{
+                      flex: 1, margin: '0 12px 12px', padding: '10px 12px',
+                      background: terminalBg, border: `1px solid ${terminalBorder}`,
+                      borderLeft: `3px solid ${terminalAccent}`, borderRadius: '3px',
+                      display: 'flex', flexDirection: 'column', minHeight: 80,
+                    }}>
+                      <div style={{ fontSize: '8px', letterSpacing: '2px', color: terminalMuted, marginBottom: '6px', flexShrink: 0 }}>CALL SCRIPT</div>
                       <div style={{
-                        padding: '10px 14px', background: terminalBg,
-                        border: `2px solid ${status === 'connected' ? terminalGreen : terminalBorder}`,
-                        borderRadius: '4px', marginBottom: '10px',
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                          <div>
-                            <div style={{ fontSize: '19px', fontWeight: 'bold', fontFamily: 'monospace', color: terminalText, letterSpacing: '1px', marginBottom: '3px' }}>
-                              {currentLead.first_name} {currentLead.last_name}
-                            </div>
-                            <div style={{ fontSize: '15px', fontFamily: 'monospace', color: terminalAccent, fontWeight: 'bold', letterSpacing: '2px' }}>
-                              {currentLead.phone}
-                            </div>
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-                            <div style={{
-                              padding: '4px 10px', borderRadius: '2px',
-                              background: status === 'connected' ? '#e8f5e8' : '#f0f0f0',
-                              border: `1px solid ${status === 'connected' ? terminalGreen : terminalBorder}`,
-                              fontSize: '9px', letterSpacing: '2px', fontWeight: 'bold',
-                              color: status === 'connected' ? terminalGreen : terminalMuted,
-                            }}>
-                              {status === 'connected' ? '● LIVE' : '○ IDLE'}
-                            </div>
-                            {(currentLead.dial_attempts || 0) > 0 && (
-                              <div style={{
-                                padding: '3px 8px', borderRadius: '2px',
-                                background: '#f8f4e8', border: '1px solid #8a6a1a',
-                                fontSize: '8px', letterSpacing: '2px', fontWeight: 'bold', color: '#8a6a1a',
-                              }}>RETRY {attemptNumber}/3</div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      {currentLead.extra_data && Object.keys(currentLead.extra_data).length > 0 && (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '5px' }}>
-                          {filteredExtraData(currentLead.extra_data).map(([key, value]) => (
-                            <div key={key} style={{ padding: '7px 10px', background: terminalBg, border: `1px solid ${terminalBorder}`, borderRadius: '3px' }}>
-                              <div style={{ fontSize: '8px', letterSpacing: '2px', color: terminalMuted, marginBottom: '2px', textTransform: 'uppercase' }}>{key}</div>
-                              <div style={{ fontSize: '11px', fontWeight: 'bold', fontFamily: 'monospace', color: terminalText }}>{String(value)}</div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                        fontSize: '11px', lineHeight: '1.7', color: terminalText,
+                        fontFamily: 'monospace', whiteSpace: 'pre-wrap', overflowY: 'auto', flex: 1,
+                      }}>{activeScript}</div>
                     </div>
-                    {activeScript && (
-                      <div style={{
-                        flex: 1, margin: '0 12px 12px', padding: '10px 12px',
-                        background: terminalBg, border: `1px solid ${terminalBorder}`,
-                        borderLeft: `3px solid ${terminalAccent}`, borderRadius: '3px',
-                        display: 'flex', flexDirection: 'column', minHeight: 0,
-                      }}>
-                        <div style={{ fontSize: '8px', letterSpacing: '2px', color: terminalMuted, marginBottom: '6px', flexShrink: 0 }}>CALL SCRIPT</div>
-                        <div style={{
-                          fontSize: '11px', lineHeight: '1.7', color: terminalText,
-                          fontFamily: 'monospace', whiteSpace: 'pre-wrap', overflowY: 'auto', flex: 1,
-                        }}>{activeScript}</div>
-                      </div>
-                    )}
-                  </>
-                )}
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+
+          {showDisposition && (
+            <div style={{
+              padding: '10px 14px', background: terminalSurface,
+              border: `2px solid ${terminalAccent}`, borderRadius: '4px', flexShrink: 0,
+            }}>
+              <div style={{ fontSize: '9px', letterSpacing: '3px', color: terminalMuted, marginBottom: '8px' }}>▸ SELECT DISPOSITION</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: '6px' }}>
+                {dispositions.map((d) => (
+                  <button key={d.label} onClick={() => handleDisposition(d.label)} style={{
+                    padding: '10px 4px', borderRadius: '3px',
+                    background: disposition === d.label ? d.color : d.bg,
+                    border: `1px solid ${d.color}`,
+                    color: disposition === d.label ? 'white' : d.color,
+                    fontSize: '8px', fontWeight: 'bold', letterSpacing: '1px',
+                    cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                  }}>{d.label}</button>
+                ))}
               </div>
             </div>
+          )}
 
-            {showDisposition && (
-              <div style={{
-                padding: '10px 14px', background: terminalSurface,
-                border: `2px solid ${terminalAccent}`, borderRadius: '4px', flexShrink: 0,
-              }}>
-                <div style={{ fontSize: '9px', letterSpacing: '3px', color: terminalMuted, marginBottom: '8px' }}>▸ SELECT DISPOSITION</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '6px' }}>
-                  {dispositions.map((d) => (
-                    <button key={d.label} onClick={() => handleDisposition(d.label)} style={{
-                      padding: '10px 4px', borderRadius: '3px',
-                      background: disposition === d.label ? d.color : d.bg,
-                      border: `1px solid ${d.color}`,
-                      color: disposition === d.label ? 'white' : d.color,
-                      fontSize: '8px', fontWeight: 'bold', letterSpacing: '1px',
-                      cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
-                    }}>{d.label}</button>
-                  ))}
-                </div>
-              </div>
+          <div style={{ display: 'grid', gridTemplateColumns: status === 'connected' ? '1fr 1fr' : '1fr', gap: '8px', flexShrink: 0 }}>
+            {status === 'idle' && !available && (
+              <button onClick={handleSetAvailable} style={{
+                padding: '14px', borderRadius: '4px', border: 'none',
+                background: terminalSurface, color: terminalMuted,
+                fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
+                cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                borderTop: `3px solid ${terminalBorder}`, transition: 'all 0.15s',
+              }}>[ SET AVAILABLE TO DIAL ]</button>
             )}
-
-            <div style={{ display: 'grid', gridTemplateColumns: status === 'connected' ? '1fr 1fr' : '1fr', gap: '8px', flexShrink: 0 }}>
-              {status === 'idle' && !available && (
-                <button onClick={handleSetAvailable} style={{
-                  padding: '14px', borderRadius: '4px', border: 'none',
-                  background: terminalSurface, color: terminalMuted,
-                  fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
+            {status === 'idle' && available && campaigns.length === 0 && (
+              <div style={{
+                padding: '14px', borderRadius: '4px', background: terminalSurface, color: terminalMuted,
+                fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
+                textAlign: 'center', borderTop: `3px solid ${terminalBorder}`,
+              }}>[ NO ACTIVE CAMPAIGNS ]</div>
+            )}
+            {status === 'idle' && available && campaigns.length > 0 && (
+              <button onClick={handleDial} style={{
+                padding: '14px', borderRadius: '4px', border: 'none',
+                background: terminalDark, color: '#4a9eff',
+                fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
+                cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                borderTop: `3px solid #4a9eff`, transition: 'all 0.15s',
+              }}>▶ INITIATE DIAL SEQUENCE</button>
+            )}
+            {status === 'calling' && (
+              <button onClick={async () => {
+                await hangupCall(activeCallSid)
+                setStatus('idle')
+                setCurrentLead(null)
+              }} style={{
+                padding: '14px', borderRadius: '4px', border: 'none',
+                background: '#f8e8e8', color: terminalRed,
+                fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
+                cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                borderTop: `3px solid ${terminalRed}`,
+              }}>■ ABORT CALL</button>
+            )}
+            {status === 'connected' && (
+              <>
+                <button onClick={handleSkip} style={{
+                  padding: '14px', borderRadius: '4px',
+                  background: '#f8f4e8', border: `1px solid #8a6a1a`,
+                  borderTop: `3px solid #8a6a1a`, color: '#8a6a1a',
+                  fontSize: '11px', fontWeight: 'bold', letterSpacing: '3px',
                   cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
-                  borderTop: `3px solid ${terminalBorder}`, transition: 'all 0.15s',
-                }}>[ SET AVAILABLE TO DIAL ]</button>
-              )}
-              {status === 'idle' && available && campaigns.length === 0 && (
-                <div style={{
-                  padding: '14px', borderRadius: '4px', background: terminalSurface, color: terminalMuted,
-                  fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
-                  textAlign: 'center', borderTop: `3px solid ${terminalBorder}`,
-                }}>[ NO ACTIVE CAMPAIGNS ]</div>
-              )}
-              {status === 'idle' && available && campaigns.length > 0 && (
-                <button onClick={handleDial} style={{
-                  padding: '14px', borderRadius: '4px', border: 'none',
-                  background: terminalDark, color: '#4a9eff',
-                  fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
-                  cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
-                  borderTop: `3px solid #4a9eff`, transition: 'all 0.15s',
-                }}>▶ INITIATE DIAL SEQUENCE</button>
-              )}
-              {status === 'calling' && (
+                }}>⏭ SKIP / NEXT LEAD</button>
                 <button onClick={async () => {
                   await hangupCall(activeCallSid)
                   setStatus('idle')
                   setCurrentLead(null)
+                  setShowDisposition(false)
+                  setDisposition('')
+                  setSeconds(0)
                 }} style={{
                   padding: '14px', borderRadius: '4px', border: 'none',
-                  background: '#f8e8e8', color: terminalRed,
-                  fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
-                  cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
-                  borderTop: `3px solid ${terminalRed}`,
-                }}>■ ABORT CALL</button>
-              )}
-              {status === 'connected' && (
-                <>
-                  <button onClick={handleSkip} style={{
-                    padding: '14px', borderRadius: '4px',
-                    background: '#f8f4e8', border: `1px solid #8a6a1a`,
-                    borderTop: `3px solid #8a6a1a`, color: '#8a6a1a',
-                    fontSize: '11px', fontWeight: 'bold', letterSpacing: '3px',
-                    cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
-                  }}>⏭ SKIP / NEXT LEAD</button>
-                  <button onClick={async () => {
-                    await hangupCall(activeCallSid)
-                    setStatus('idle')
-                    setCurrentLead(null)
-                    setShowDisposition(false)
-                    setDisposition('')
-                    setSeconds(0)
-                  }} style={{
-                    padding: '14px', borderRadius: '4px', border: 'none',
-                    background: '#f8e8e8', borderTop: `3px solid ${terminalRed}`,
-                    color: terminalRed, fontSize: '11px', fontWeight: 'bold',
-                    letterSpacing: '3px', cursor: 'pointer',
-                    fontFamily: 'Futura PT, Futura, sans-serif',
-                  }}>■ TERMINATE CALL</button>
-                </>
-              )}
-              {status === 'ended' && !showDisposition && (
-                <button onClick={handleDial} style={{
-                  padding: '14px', borderRadius: '4px', border: 'none',
-                  background: terminalDark, color: '#4a9eff',
-                  fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
-                  cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
-                  borderTop: `3px solid #4a9eff`,
-                }}>▶ NEXT LEAD</button>
-              )}
-            </div>
-          </div>
-
-          <div style={{
-            width: '280px', borderLeft: `1px solid ${terminalBorder}`,
-            display: 'flex', flexDirection: 'column', flexShrink: 0, overflow: 'hidden',
-          }}>
-            <div style={{ background: terminalDark, padding: '8px 16px', borderBottom: `1px solid ${terminalBorder}`, flexShrink: 0 }}>
-              <span style={{ fontSize: '9px', letterSpacing: '3px', color: '#8888aa', fontWeight: 'bold' }}>SESSION METRICS</span>
-            </div>
-
-            <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '5px', flexShrink: 0 }}>
-              {[
-                { label: 'TOTAL CALLS', value: sessionStats.calls, color: terminalText },
-                { label: 'CLOSED', value: sessionStats.closed, color: terminalGreen },
-                { label: 'APPOINTMENTS', value: sessionStats.appointments, color: '#1a4a8a' },
-                { label: 'NOT INTERESTED', value: sessionStats.notInterested, color: '#8a6a1a' },
-                { label: 'DO NOT CALL', value: sessionStats.dnc, color: terminalRed },
-              ].map((stat) => (
-                <div key={stat.label} style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '8px 12px', background: terminalSurface,
-                  border: `1px solid ${terminalBorder}`, borderRadius: '3px',
-                  borderLeft: `3px solid ${stat.color}`,
-                }}>
-                  <span style={{ fontSize: '9px', letterSpacing: '2px', color: terminalMuted }}>{stat.label}</span>
-                  <span style={{ fontSize: '18px', fontWeight: 'bold', fontFamily: 'monospace', color: stat.color }}>{stat.value}</span>
-                </div>
-              ))}
-            </div>
-
-            <div style={{ padding: '0 12px 10px', flexShrink: 0 }}>
-              <div style={{
-                padding: '10px 12px', background: terminalSurface,
-                border: `1px solid ${terminalBorder}`, borderRadius: '3px',
-                borderTop: `3px solid ${terminalAccent}`,
-              }}>
-                <div style={{ fontSize: '8px', letterSpacing: '1px', color: terminalMuted, marginBottom: '3px' }}>
-                  YOUR SESSION'S CONVERSION RATE
-                </div>
-                <div style={{ fontSize: '20px', fontWeight: 'bold', fontFamily: 'monospace', color: terminalAccent }}>
-                  {sessionStats.calls > 0
-                    ? `${(((sessionStats.appointments + sessionStats.closed) / sessionStats.calls) * 100).toFixed(1)}%`
-                    : '0.0%'}
-                </div>
-              </div>
-            </div>
-
-            <div style={{ background: terminalDark, padding: '8px 16px', borderBottom: `1px solid ${terminalBorder}`, flexShrink: 0 }}>
-              <span style={{ fontSize: '9px', letterSpacing: '3px', color: '#8888aa', fontWeight: 'bold' }}>MANUAL DIAL</span>
-            </div>
-
-            <div style={{ padding: '12px', background: terminalBg, flex: 1, display: 'flex', flexDirection: 'column' }}>
-              <div style={{
-                background: terminalSurface, border: `1px solid ${terminalBorder}`,
-                borderRadius: '4px', padding: '10px 12px',
-                fontFamily: 'monospace', fontSize: '18px', fontWeight: 'bold',
-                color: manualNumber ? terminalText : terminalMuted,
-                letterSpacing: '3px', textAlign: 'center',
-                marginBottom: '10px', minHeight: '44px',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                {manualNumber || '_ _ _ _ _ _ _ _'}
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', marginBottom: '6px', flex: 1 }}>
-                {['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'].map((key) => (
-                  <button key={key} onClick={() => handleKeypad(key)} style={{
-                    borderRadius: '3px', background: terminalSurface,
-                    border: `1px solid ${terminalBorder}`, borderBottom: `3px solid ${terminalBorder}`,
-                    color: terminalText, fontSize: '16px', fontWeight: 'bold',
-                    cursor: 'pointer', fontFamily: 'monospace', transition: 'all 0.05s',
-                  }}>{key}</button>
-                ))}
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '6px' }}>
-                <button onClick={handleBackspace} style={{
-                  padding: '12px', borderRadius: '3px',
-                  background: terminalSurface, border: `1px solid ${terminalBorder}`,
-                  borderBottom: `3px solid ${terminalBorder}`,
-                  color: terminalMuted, fontSize: '16px', cursor: 'pointer',
-                }}>⌫</button>
-                <button onClick={handleManualDial} disabled={!manualNumber} style={{
-                  padding: '12px', borderRadius: '3px', border: 'none',
-                  background: manualNumber ? terminalDark : terminalSurface,
-                  borderBottom: `3px solid ${manualNumber ? '#4a9eff' : terminalBorder}`,
-                  color: manualNumber ? '#4a9eff' : terminalMuted,
-                  fontSize: '11px', fontWeight: 'bold', letterSpacing: '2px',
-                  cursor: manualNumber ? 'pointer' : 'not-allowed',
+                  background: '#f8e8e8', borderTop: `3px solid ${terminalRed}`,
+                  color: terminalRed, fontSize: '11px', fontWeight: 'bold',
+                  letterSpacing: '3px', cursor: 'pointer',
                   fontFamily: 'Futura PT, Futura, sans-serif',
-                }}>▶ DIAL</button>
-              </div>
-            </div>
-
-            <div style={{ background: terminalDark, padding: '6px 16px', borderBottom: `1px solid ${terminalBorder}`, flexShrink: 0 }}>
-              <span style={{ fontSize: '9px', letterSpacing: '3px', color: '#8888aa', fontWeight: 'bold' }}>SYSTEM LOG</span>
-            </div>
-            <div style={{ padding: '5px 12px', background: '#1a1c24', height: '36px', overflowY: 'auto', flexShrink: 0 }}>
-              {[
-                status === 'connected' && `> CONNECTED — ${currentLead?.first_name} ${currentLead?.last_name}`,
-                status === 'calling' && '> DIALING IN QUEUE...',
-                swReady && '> AUDIO READY',
-                micGranted && '> MIC READY',
-                available && '> AGENT STATUS: ONLINE',
-                `> SESSION STARTED ${dateStr}`,
-                '> DIALERSEAT TERMINAL READY',
-              ].filter(Boolean).map((log, i) => (
-                <div key={i} style={{
-                  fontSize: '9px', fontFamily: 'monospace',
-                  color: i === 0 ? '#4a9eff' : '#4a5a4a',
-                  letterSpacing: '1px', marginBottom: '2px',
-                }}>{log as string}</div>
-              ))}
-            </div>
+                }}>■ TERMINATE CALL</button>
+              </>
+            )}
+            {status === 'ended' && !showDisposition && (
+              <button onClick={handleDial} style={{
+                padding: '14px', borderRadius: '4px', border: 'none',
+                background: terminalDark, color: '#4a9eff',
+                fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
+                cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                borderTop: `3px solid #4a9eff`,
+              }}>▶ NEXT LEAD</button>
+            )}
           </div>
         </div>
+
+        {/* MOBILE OVERLAY for right sidebar */}
+        <div
+          className={`dialer-right-overlay ${rightSidebarOpen ? 'open' : ''}`}
+          onClick={() => setRightSidebarOpen(false)}
+        />
+
+        {/* RIGHT SIDEBAR — desktop static, mobile drawer */}
+        <aside className={`dialer-right-sidebar ${rightSidebarOpen ? 'open' : ''}`}>
+          <div style={{ background: terminalDark, padding: '8px 16px', borderBottom: `1px solid ${terminalBorder}`, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '9px', letterSpacing: '3px', color: '#8888aa', fontWeight: 'bold' }}>SESSION METRICS</span>
+            <button
+              onClick={() => setRightSidebarOpen(false)}
+              aria-label="Close panel"
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#8888aa',
+                cursor: 'pointer',
+                fontSize: 18,
+                padding: 0,
+                width: 24,
+                height: 24,
+                display: 'none',
+              }}
+              className="dialer-close-mobile"
+            >×</button>
+          </div>
+
+          <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '5px', flexShrink: 0 }}>
+            {[
+              { label: 'TOTAL CALLS', value: sessionStats.calls, color: terminalText },
+              { label: 'CLOSED', value: sessionStats.closed, color: terminalGreen },
+              { label: 'APPOINTMENTS', value: sessionStats.appointments, color: '#1a4a8a' },
+              { label: 'NOT INTERESTED', value: sessionStats.notInterested, color: '#8a6a1a' },
+              { label: 'DO NOT CALL', value: sessionStats.dnc, color: terminalRed },
+            ].map((stat) => (
+              <div key={stat.label} style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '8px 12px', background: terminalSurface,
+                border: `1px solid ${terminalBorder}`, borderRadius: '3px',
+                borderLeft: `3px solid ${stat.color}`,
+              }}>
+                <span style={{ fontSize: '9px', letterSpacing: '2px', color: terminalMuted }}>{stat.label}</span>
+                <span style={{ fontSize: '18px', fontWeight: 'bold', fontFamily: 'monospace', color: stat.color }}>{stat.value}</span>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ padding: '0 12px 10px', flexShrink: 0 }}>
+            <div style={{
+              padding: '10px 12px', background: terminalSurface,
+              border: `1px solid ${terminalBorder}`, borderRadius: '3px',
+              borderTop: `3px solid ${terminalAccent}`,
+            }}>
+              <div style={{ fontSize: '8px', letterSpacing: '1px', color: terminalMuted, marginBottom: '3px' }}>
+                YOUR SESSION'S CONVERSION RATE
+              </div>
+              <div style={{ fontSize: '20px', fontWeight: 'bold', fontFamily: 'monospace', color: terminalAccent }}>
+                {sessionStats.calls > 0
+                  ? `${(((sessionStats.appointments + sessionStats.closed) / sessionStats.calls) * 100).toFixed(1)}%`
+                  : '0.0%'}
+              </div>
+            </div>
+          </div>
+
+          <ManualDialer />
+
+          <div style={{ background: terminalDark, padding: '6px 16px', borderBottom: `1px solid ${terminalBorder}`, flexShrink: 0 }}>
+            <span style={{ fontSize: '9px', letterSpacing: '3px', color: '#8888aa', fontWeight: 'bold' }}>SYSTEM LOG</span>
+          </div>
+          <div style={{ padding: '5px 12px', background: '#1a1c24', height: '36px', overflowY: 'auto', flexShrink: 0 }}>
+            {[
+              status === 'connected' && `> CONNECTED — ${currentLead?.first_name} ${currentLead?.last_name}`,
+              status === 'calling' && '> DIALING IN QUEUE...',
+              swReady && '> AUDIO READY',
+              micGranted && '> MIC READY',
+              available && '> AGENT STATUS: ONLINE',
+              `> SESSION STARTED ${dateStr}`,
+              '> DIALERSEAT TERMINAL READY',
+            ].filter(Boolean).map((log, i) => (
+              <div key={i} style={{
+                fontSize: '9px', fontFamily: 'monospace',
+                color: i === 0 ? '#4a9eff' : '#4a5a4a',
+                letterSpacing: '1px', marginBottom: '2px',
+              }}>{log as string}</div>
+            ))}
+          </div>
+        </aside>
       </div>
-    </main>
+
+      {/* MOBILE TOGGLE BUTTON — only visible on mobile */}
+      <button
+        className="dialer-right-toggle"
+        onClick={() => setRightSidebarOpen(true)}
+        aria-label="Open metrics & dial pad"
+      >☰</button>
+
+      {/* MANUAL DIAL FULLSCREEN OVERLAY */}
+      {dialZoomed && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 100,
+            background: terminalBg,
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+          onClick={(e) => {
+            // Click outside the dialer body to close
+            if (e.target === e.currentTarget) setDialZoomed(false)
+          }}
+        >
+          <ManualDialer inOverlay />
+        </div>
+      )}
+    </div>
   )
 }
