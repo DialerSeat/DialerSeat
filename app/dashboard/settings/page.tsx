@@ -66,24 +66,38 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <main style={pageStyle}>
+      <div className="settings-root" style={pageStyle}>
         <div style={cardStyle}>
           <div style={titleStyle}>LOADING...</div>
         </div>
-      </main>
+      </div>
     )
   }
 
   return (
-    <main style={pageStyle}>
-      <div style={cardStyle}>
+    <div className="settings-root" style={pageStyle}>
+      <style>{`
+        @media (max-width: 768px) {
+          .settings-root {
+            padding: 20px !important;
+          }
+          .settings-card {
+            padding: 20px !important;
+          }
+          .settings-confirm-buttons {
+            flex-direction: column !important;
+          }
+        }
+      `}</style>
+
+      <div className="settings-card" style={cardStyle}>
         <div style={titleStyle}>SETTINGS</div>
         <div style={subtitleStyle}>
           {user?.primaryEmailAddress?.emailAddress}
         </div>
 
         <div style={sectionStyle}>
-          <div style={sectionHeaderStyle}>{'\u25B8'} SUBSCRIPTION</div>
+          <div style={sectionHeaderStyle}>▸ SUBSCRIPTION</div>
 
           {!sub?.hasSubscription && (
             <div style={mutedStyle}>No active subscription on file.</div>
@@ -135,13 +149,13 @@ export default function SettingsPage() {
             ) : (
               <div style={confirmBoxStyle}>
                 <div style={confirmTextStyle}>
-                  Cancel your subscription? You{"\u2019"}ll keep access until{' '}
+                  Cancel your subscription? You'll keep access until{' '}
                   <strong style={{ color: '#4a9eff' }}>
                     {sub.currentPeriodEnd ? formatDate(sub.currentPeriodEnd) : 'period end'}
                   </strong>
                   . No further charges will be made.
                 </div>
-                <div style={confirmButtonsStyle}>
+                <div className="settings-confirm-buttons" style={confirmButtonsStyle}>
                   <button
                     onClick={() => setConfirming(false)}
                     disabled={canceling}
@@ -152,7 +166,7 @@ export default function SettingsPage() {
                   <button
                     onClick={handleCancel}
                     disabled={canceling}
-                    style={{ ...dangerButtonStyle, marginTop: 0 }}
+                    style={{ ...dangerButtonStyle, marginTop: 0, flex: 1 }}
                   >
                     {canceling ? 'CANCELING...' : 'CONFIRM CANCEL'}
                   </button>
@@ -168,7 +182,7 @@ export default function SettingsPage() {
           </div>
         )}
       </div>
-    </main>
+    </div>
   )
 }
 
@@ -187,8 +201,8 @@ function statusColor(status: string | null) {
 }
 
 const pageStyle: React.CSSProperties = {
-  minHeight: '100vh',
-  background: '#0d0e14',
+  flex: 1,
+  minHeight: 'calc(100vh - 64px)',
   display: 'flex',
   alignItems: 'flex-start',
   justifyContent: 'center',
@@ -206,6 +220,7 @@ const cardStyle: React.CSSProperties = {
   padding: 32,
   color: '#e0e2ea',
   fontFamily: FUTURA,
+  boxSizing: 'border-box',
 }
 
 const titleStyle: React.CSSProperties = {
@@ -221,6 +236,7 @@ const subtitleStyle: React.CSSProperties = {
   letterSpacing: 1,
   color: '#888a92',
   marginBottom: 28,
+  wordBreak: 'break-word',
 }
 
 const sectionStyle: React.CSSProperties = {
@@ -246,6 +262,8 @@ const rowStyle: React.CSSProperties = {
   alignItems: 'center',
   padding: '8px 0',
   borderBottom: '1px solid #2a2c34',
+  gap: 12,
+  flexWrap: 'wrap',
 }
 
 const labelStyle: React.CSSProperties = {

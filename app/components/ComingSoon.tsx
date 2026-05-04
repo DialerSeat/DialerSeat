@@ -1,4 +1,3 @@
-'use client'
 import Link from 'next/link'
 
 interface ComingSoonProps {
@@ -7,68 +6,71 @@ interface ComingSoonProps {
   icon?: string
 }
 
-export default function ComingSoon({ title, description, icon = '\uD83D\uDEE0\uFE0F' }: ComingSoonProps) {
+export default function ComingSoon({ title, description, icon = '🚧' }: ComingSoonProps) {
   return (
-    <main style={{
-      minHeight: '100vh',
-      background: 'var(--background)',
+    <div style={{
+      flex: 1,
+      minHeight: 'calc(100vh - 64px)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: 40,
+      padding: '40px 20px',
     }}>
       <div style={{
-        maxWidth: 480,
-        width: '100%',
-        padding: 48,
-        borderRadius: 16,
-        background: 'var(--surface)',
-        border: '1px solid var(--border)',
         textAlign: 'center',
+        maxWidth: '480px',
+        width: '100%',
       }}>
-        <div style={{ fontSize: 56, marginBottom: 24 }}>{icon}</div>
+        <div style={{ fontSize: '64px', marginBottom: '24px' }}>{icon}</div>
+
         <div style={{
           display: 'inline-block',
-          padding: '6px 14px',
-          borderRadius: 100,
-          background: 'rgba(255,170,62,0.1)',
-          border: '1px solid rgba(255,170,62,0.3)',
-          fontSize: 9,
-          letterSpacing: 3,
-          fontWeight: 700,
-          color: '#ffaa3e',
-          marginBottom: 20,
-          fontFamily: 'Futura PT, Futura, sans-serif',
-        }}>COMING SOON</div>
+          padding: '6px 16px',
+          borderRadius: '100px',
+          background: 'rgba(74,158,255,0.1)',
+          border: '1px solid var(--accent-blue)',
+          fontSize: '10px',
+          letterSpacing: '3px',
+          color: 'var(--accent-blue)',
+          marginBottom: '20px',
+          fontWeight: 'bold',
+        }}>
+          COMING SOON
+        </div>
+
         <h1 style={{
-          fontSize: 24,
-          fontWeight: 700,
-          letterSpacing: 4,
+          fontSize: '28px',
+          fontWeight: 'bold',
+          letterSpacing: '6px',
           color: 'var(--text-primary)',
-          marginBottom: 12,
+          marginBottom: '16px',
           fontFamily: 'Futura PT, Futura, sans-serif',
         }}>{title}</h1>
-        <p style={{
-          fontSize: 13,
-          lineHeight: 1.7,
-          color: 'var(--text-secondary)',
-          marginBottom: 32,
-        }}>
-          {description || `${title} is currently in development. We're shipping fast — check back soon.`}
-        </p>
+
+        {description && (
+          <p style={{
+            fontSize: '14px',
+            lineHeight: '1.7',
+            color: 'var(--text-secondary)',
+            marginBottom: '32px',
+            letterSpacing: '0.5px',
+          }}>{description}</p>
+        )}
+
         <Link href="/dashboard" style={{
           display: 'inline-block',
-          padding: '12px 32px',
-          borderRadius: 10,
-          background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
-          color: 'white',
-          fontSize: 11,
-          fontWeight: 700,
-          letterSpacing: 3,
+          padding: '12px 28px',
+          borderRadius: '10px',
+          background: 'transparent',
+          border: '1px solid var(--border)',
+          color: 'var(--text-secondary)',
+          fontSize: '11px',
+          fontWeight: 'bold',
+          letterSpacing: '2px',
           textDecoration: 'none',
           fontFamily: 'Futura PT, Futura, sans-serif',
-        }}>{'\u25C0'} BACK TO DASHBOARD</Link>
+        }}>← BACK TO DASHBOARD</Link>
       </div>
-    </main>
+    </div>
   )
 }
