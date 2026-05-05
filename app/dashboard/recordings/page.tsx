@@ -342,7 +342,7 @@ export default function RecordingsPage() {
             cursor: syncing ? 'wait' : 'pointer',
             fontFamily: 'Futura PT, Futura, sans-serif',
           }}
-        >{syncing ? '⟳ SYNCING...' : '⟳ SYNC FROM SIGNALWIRE'}</button>
+        >{syncing ? '⟳ SYNCING...' : '⟳ SYNC'}</button>
       </div>
 
       {syncMessage && (
