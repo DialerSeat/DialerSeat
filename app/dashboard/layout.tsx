@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
 
-const navItems = [
+const userNavItems = [
   { icon: '📊', label: 'DASHBOARD', href: '/dashboard' },
   { icon: '📞', label: 'DIALER', href: '/dashboard/dialer' },
   { icon: '📋', label: 'CAMPAIGNS', href: '/dashboard/campaigns' },
@@ -15,10 +15,18 @@ const navItems = [
   { icon: '⚙️', label: 'SETTINGS', href: '/dashboard/settings' },
 ]
 
+const adminNavItems = [
+  { icon: '👁️', label: 'OVERVIEW', href: '/dashboard/admin/overview' },
+  { icon: '🏢', label: 'TEAMS', href: '/dashboard/admin/teams' },
+  { icon: '📈', label: 'ANALYTICS', href: '/dashboard/admin/analytics' },
+  { icon: '⚙️', label: 'SETTINGS', href: '/dashboard/settings' },
+]
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user } = useUser()
   const pathname = usePathname()
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
   const profileRowRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -34,16 +42,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return () => { document.body.style.overflow = '' }
   }, [drawerOpen])
 
+  // Fetch admin status once on mount
+  useEffect(() => {
+    if (!user) return
+    let cancelled = false
+    fetch('/api/admin/check')
+      .then(r => r.json())
+      .then(d => { if (!cancelled) setIsAdmin(!!d.isAdmin) })
+      .catch(() => { if (!cancelled) setIsAdmin(false) })
+    return () => { cancelled = true }
+  }, [user])
+
+  const navItems = isAdmin ? adminNavItems : userNavItems
+
   const isActive = (href: string) => {
     if (href === '/dashboard') return pathname === '/dashboard'
     return pathname.startsWith(href)
   }
 
-  // When the user clicks anywhere in the profile row (name area, plan label, etc.),
-  // forward the click to the actual Clerk avatar trigger inside the row.
+  // Forward clicks anywhere in the profile row to the Clerk avatar trigger.
   const handleProfileRowClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement
-    // If they clicked directly on the Clerk button or its descendants, do nothing — Clerk handles it.
     if (target.closest('.cl-userButtonTrigger, .cl-userButtonAvatarBox')) return
 
     const row = e.currentTarget
@@ -74,12 +93,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         }}>
           <span style={{ color: 'white', fontWeight: 'bold', fontSize: '14px' }}>D</span>
         </div>
-        <span style={{
-          fontSize: '14px',
-          fontWeight: 'bold',
-          letterSpacing: '4px',
-          color: 'var(--text-primary)',
-        }}>DIALERSEAT</span>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <span style={{
+            fontSize: '14px',
+            fontWeight: 'bold',
+            letterSpacing: '4px',
+            color: 'var(--text-primary)',
+          }}>DIALERSEAT</span>
+          {isAdmin && (
+            <span style={{
+              fontSize: '8px',
+              fontWeight: 'bold',
+              letterSpacing: '3px',
+              color: '#4a9eff',
+              marginTop: 2,
+            }}>ADMIN CONSOLE</span>
+          )}
+        </div>
       </div>
 
       <nav style={{ flex: 1, padding: '0 12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -141,9 +171,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           }}>{user?.firstName} {user?.lastName}</div>
           <div style={{
             fontSize: '10px',
-            color: 'var(--text-secondary)',
+            color: isAdmin ? '#4a9eff' : 'var(--text-secondary)',
             letterSpacing: '1px',
-          }}>PRO PLAN</div>
+            fontWeight: isAdmin ? 'bold' : 'normal',
+          }}>{isAdmin ? 'ADMIN' : 'PRO PLAN'}</div>
         </div>
       </div>
     </>
