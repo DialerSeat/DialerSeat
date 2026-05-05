@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server'
 
 function buildTwiML(room: string, record: boolean, appUrl: string) {
+  // Use space-separated event list — some LaML implementations only fire callback
+  // when multiple events are subscribed
   const recordAttrs = record
-    ? ` record="record-from-start" recordingStatusCallback="${appUrl}/api/calls/recording-status" recordingStatusCallbackMethod="POST" recordingStatusCallbackEvent="completed"`
+    ? ` record="record-from-start" recordingStatusCallback="${appUrl}/api/calls/recording-status" recordingStatusCallbackMethod="POST" recordingStatusCallbackEvent="in-progress completed absent"`
     : ''
 
   return `<?xml version="1.0" encoding="UTF-8"?>

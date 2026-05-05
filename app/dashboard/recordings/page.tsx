@@ -71,6 +71,8 @@ export default function RecordingsPage() {
   const [cursor, setCursor] = useState<number | null>(0)
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+  const [syncMessage, setSyncMessage] = useState<string | null>(null)
   const [playingId, setPlayingId] = useState<string | null>(null)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const sentinelRef = useRef<HTMLDivElement | null>(null)
@@ -130,6 +132,27 @@ export default function RecordingsPage() {
     observer.observe(sentinelRef.current)
     return () => observer.disconnect()
   }, [fetchMore, loading, cursor, recordings.length])
+
+  const handleSync = async () => {
+    setSyncing(true)
+    setSyncMessage(null)
+    try {
+      const res = await fetch('/api/recordings/sync', { method: 'POST' })
+      const data = await res.json()
+      if (data.success) {
+        setSyncMessage(`Synced ${data.synced} new recording${data.synced === 1 ? '' : 's'} from SignalWire.`)
+        setRecordings([])
+        setCursor(0)
+      } else {
+        setSyncMessage(`Sync failed: ${data.error}`)
+      }
+    } catch (err: any) {
+      setSyncMessage(`Sync error: ${err.message}`)
+    } finally {
+      setSyncing(false)
+      setTimeout(() => setSyncMessage(null), 8000)
+    }
+  }
 
   return (
     <div className="rec-root" style={{
@@ -242,6 +265,14 @@ export default function RecordingsPage() {
           border-top: 1px solid ${T.border};
         }
         .rec-player audio { width: 100%; }
+        .rec-sync-msg {
+          padding: 8px 16px;
+          background: #e8f5e8;
+          border-bottom: 1px solid #6abf6a;
+          color: ${T.green};
+          font-size: 11px;
+          letter-spacing: 1px;
+        }
 
         @media (max-width: 768px) {
           .rec-header { padding: 10px 12px; }
@@ -296,7 +327,27 @@ export default function RecordingsPage() {
             {total.toLocaleString()} TOTAL · {recordings.length} LOADED
           </span>
         </div>
+        <button
+          onClick={handleSync}
+          disabled={syncing}
+          style={{
+            padding: '6px 14px',
+            background: 'transparent',
+            border: `1px solid ${T.blue}`,
+            borderRadius: 3,
+            color: T.blue,
+            fontSize: 10,
+            letterSpacing: 2,
+            fontWeight: 'bold',
+            cursor: syncing ? 'wait' : 'pointer',
+            fontFamily: 'Futura PT, Futura, sans-serif',
+          }}
+        >{syncing ? '⟳ SYNCING...' : '⟳ SYNC FROM SIGNALWIRE'}</button>
       </div>
+
+      {syncMessage && (
+        <div className="rec-sync-msg">{syncMessage}</div>
+      )}
 
       <div className="rec-banner">
         ⚠ <strong>RECORDING DISCLOSURE:</strong> You must verbally inform the other party they are on a recorded line in CA, CT, FL, IL, MD, MA, MI, MT, NV, NH, PA, WA. ·
@@ -340,7 +391,7 @@ export default function RecordingsPage() {
             <div style={{ fontSize: 36, marginBottom: 12, opacity: 0.4 }}>🎙️</div>
             NO RECORDINGS YET<br />
             <span style={{ fontSize: 10, marginTop: 8, display: 'inline-block' }}>
-              MAKE A CALL — IT WILL APPEAR HERE WHEN PROCESSING IS COMPLETE.
+              MAKE A CALL — THEN HIT SYNC IF IT DOESN'T APPEAR.
             </span>
           </div>
         )}
