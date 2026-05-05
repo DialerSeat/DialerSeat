@@ -4,7 +4,22 @@ export const alt = 'DialerSeat — Dial smarter. Close faster.'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
-export default function OpengraphImage() {
+async function loadJost(weight: '500' | '700' | '800') {
+  const urls: Record<string, string> = {
+    '500': 'https://fonts.gstatic.com/s/jost/v15/92zPtBhPNqw79Ij1E865zBUv7myjFwVGPokMmuHL.woff2',
+    '700': 'https://fonts.gstatic.com/s/jost/v15/92zPtBhPNqw79Ij1E865zBUv7myjLgVGPokMmuHL.woff2',
+    '800': 'https://fonts.gstatic.com/s/jost/v15/92zPtBhPNqw79Ij1E865zBUv7myjJQVGPokMmuHL.woff2',
+  }
+  const res = await fetch(urls[weight])
+  return res.arrayBuffer()
+}
+
+export default async function OpengraphImage() {
+  const [bold, extraBold] = await Promise.all([
+    loadJost('700'),
+    loadJost('800'),
+  ])
+
   return new ImageResponse(
     (
       <div
@@ -17,7 +32,7 @@ export default function OpengraphImage() {
           justifyContent: 'center',
           background: '#0a0a0f',
           color: 'white',
-          fontFamily: 'sans-serif',
+          fontFamily: 'Jost',
         }}
       >
         <div
@@ -38,7 +53,7 @@ export default function OpengraphImage() {
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: 80,
-              fontWeight: 900,
+              fontWeight: 800,
               color: 'white',
               letterSpacing: -3,
               boxShadow: '0 0 80px rgba(74,158,255,0.4)',
@@ -49,7 +64,7 @@ export default function OpengraphImage() {
           <div
             style={{
               fontSize: 72,
-              fontWeight: 900,
+              fontWeight: 800,
               letterSpacing: 12,
               color: 'white',
             }}
@@ -83,6 +98,12 @@ export default function OpengraphImage() {
         </div>
       </div>
     ),
-    { ...size }
+    {
+      ...size,
+      fonts: [
+        { name: 'Jost', data: bold, style: 'normal', weight: 700 },
+        { name: 'Jost', data: extraBold, style: 'normal', weight: 800 },
+      ],
+    }
   )
 }
