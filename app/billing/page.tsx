@@ -91,19 +91,21 @@ export default function BillingPage() {
   return (
     <main style={pageStyle}>
       <div style={cardStyle}>
-        <div style={titleStyle}>START YOUR 7-DAY FREE TRIAL</div>
+        <div style={titleStyle}>START YOUR SUBSCRIPTION</div>
         <div style={subtitleStyle}>
-          Full access to DialerSeat for 7 days. No charge today.
+          Pay $35 today and start dialing immediately.
         </div>
 
         <div style={termsBoxStyle}>
-          <div style={termsHeaderStyle}>{'\u25B8'} TRIAL TERMS</div>
+          <div style={termsHeaderStyle}>{'\u25B8'} BILLING TERMS</div>
           <ul style={termsListStyle}>
-            <li>$0 today {'\u2014'} payment method required to start trial</li>
             <li>
-              After 7 days, you will be billed{' '}
+              <strong style={{ color: '#4a9eff' }}>$35.00 USD</strong> charged today to start your subscription
+            </li>
+            <li>
+              You will be billed{' '}
               <strong style={{ color: '#4a9eff' }}>$35.00 USD weekly</strong>{' '}
-              automatically
+              automatically thereafter
             </li>
             <li>Cancel anytime in Settings {'\u2014'} service continues until period end</li>
             <li>Subscription is non-refundable once a billing cycle has been charged</li>
@@ -153,7 +155,7 @@ function CheckoutForm() {
     setSubmitting(true)
     setErrorMsg(null)
 
-    const { error } = await stripe.confirmSetup({
+    const { error } = await stripe.confirmPayment({
       elements,
       confirmParams: {
         return_url: `${window.location.origin}/billing/success`,
@@ -165,17 +167,6 @@ function CheckoutForm() {
       setSubmitting(false)
     }
   }
-
-  const termsLink = (
-    <a
-      href="/terms"
-      target="_blank"
-      rel="noopener noreferrer"
-      style={{ color: '#4a9eff', textDecoration: 'underline' }}
-    >
-      Terms of Service
-    </a>
-  )
 
   return (
     <form onSubmit={handleSubmit}>
@@ -189,9 +180,8 @@ function CheckoutForm() {
           style={{ marginRight: 10, accentColor: '#4a9eff' }}
         />
         <span>
-          I agree my card will be charged <strong>$35.00 USD weekly</strong>{' '}
-          starting after my 7-day free trial unless I cancel. I have read and
-          accept the {termsLink}.
+          I agree my card will be charged <strong>$35.00 USD today</strong> and{' '}
+          <strong>$35.00 USD weekly</strong> thereafter until I cancel.
         </span>
       </label>
 
@@ -206,7 +196,7 @@ function CheckoutForm() {
           cursor: !stripe || submitting || !agreed ? 'not-allowed' : 'pointer',
         }}
       >
-        {submitting ? 'PROCESSING...' : `${'\u25B6'} START FREE TRIAL`}
+        {submitting ? 'PROCESSING...' : `${'\u25B6'} PAY $35 & START DIALING`}
       </button>
 
       <button

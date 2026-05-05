@@ -158,7 +158,7 @@ export default async function Home() {
             width: '6px', height: '6px', borderRadius: '50%',
             background: 'var(--accent-blue)', flexShrink: 0,
           }}></div>
-          7-DAY FREE TRIAL · CARD REQUIRED · CANCEL ANYTIME
+          $35/WEEK · NO CONTRACTS · CANCEL ANYTIME
         </div>
 
         <h1 className="ds-hero-h1" style={{
@@ -210,7 +210,7 @@ export default async function Home() {
             background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
             boxShadow: '0 0 40px rgba(74,158,255,0.3)',
           }}>
-            START FREE TRIAL
+            GET STARTED
           </Link>
           <Link href="#compare" style={{
             padding: '16px 40px',
@@ -227,7 +227,7 @@ export default async function Home() {
         </div>
 
         <p style={{ fontSize: '11px', letterSpacing: '3px', color: 'var(--text-secondary)' }}>
-          7 DAYS FREE · THEN $35/WEEK · CANCEL ANYTIME
+          $35/WEEK · NO CONTRACTS · CANCEL ANYTIME
         </p>
 
         {/* STATS BAR */}
@@ -243,7 +243,7 @@ export default async function Home() {
         }}>
           {[
             { number: '$35', label: 'PER WEEK' },
-            { number: '7', label: 'DAY FREE TRIAL' },
+            { number: '$0', label: 'SETUP FEES' },
             { number: '5X', label: 'CHEAPER THAN OTHERS' },
             { number: '∞', label: 'LEADS UPLOADED' },
           ].map((stat, i) => (
@@ -333,7 +333,7 @@ export default async function Home() {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {[
-            { step: '01', title: 'CREATE YOUR ACCOUNT', desc: 'Sign up with Google or email. Enter your card to unlock your 7 day free trial. No charge until day 8.' },
+            { step: '01', title: 'CREATE YOUR ACCOUNT', desc: 'Sign up with Google or email. Enter your card and you are dialing in seconds. $35 weekly, cancel anytime.' },
             { step: '02', title: 'UPLOAD YOUR LEADS', desc: 'Drop your CSV into a campaign. Name it, organize it, and have multiple campaigns ready to go simultaneously.' },
             { step: '03', title: 'HIT DIAL AND GO', desc: 'Launch your campaign and DialerSeat starts working immediately. Live connections come through the second someone picks up.' },
             { step: '04', title: 'TRACK AND CLOSE', desc: 'Disposition every call in one click. Track your performance in real time. Rinse and repeat until your list is done.' },
@@ -406,7 +406,6 @@ export default async function Home() {
 
           {[
             { feature: 'Weekly Cost', us: '$35', them1: '$199+/mo', them2: '$150+/mo' },
-            { feature: 'Free Trial', us: '7 Days', them1: '✗', them2: '✗' },
             { feature: 'No Contract', us: '✓', them1: '✗', them2: '✗' },
             { feature: 'Setup Fee', us: '$0', them1: '$0', them2: '$200+' },
             { feature: 'Plug & Play', us: '✓', them1: '✗', them2: '✗' },
@@ -492,7 +491,7 @@ export default async function Home() {
             color: 'var(--accent-blue)',
             marginBottom: '40px',
           }}>
-            7-DAY FREE TRIAL · CARD REQUIRED
+            FIRST CHARGE TODAY · CANCEL ANYTIME
           </div>
 
           <div style={{ marginBottom: '40px', textAlign: 'left' }}>
@@ -545,10 +544,10 @@ export default async function Home() {
             boxShadow: '0 0 30px rgba(74,158,255,0.3)',
             marginBottom: '16px',
           }}>
-            START FREE TRIAL
+            GET STARTED
           </Link>
           <p style={{ fontSize: '11px', letterSpacing: '2px', color: 'var(--text-secondary)' }}>
-            CARD REQUIRED · NO CHARGE FOR 7 DAYS
+            $35 CHARGED TODAY · CANCEL ANYTIME
           </p>
         </div>
       </section>
@@ -595,10 +594,10 @@ export default async function Home() {
           background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
           boxShadow: '0 0 60px rgba(74,158,255,0.4)',
         }}>
-          GET STARTED FREE
+          GET STARTED
         </Link>
         <p style={{ marginTop: '20px', fontSize: '11px', letterSpacing: '3px', color: 'var(--text-secondary)' }}>
-          7 DAYS FREE · THEN $35/WEEK · CANCEL ANYTIME
+          $35/WEEK · NO CONTRACTS · CANCEL ANYTIME
         </p>
       </section>
 

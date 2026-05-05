@@ -97,30 +97,33 @@ export async function POST() {
       .eq('user_id', userId)
       .in('status', ['canceled', 'incomplete_expired', 'unpaid'])
 
-    // 5) Create the fresh subscription with 7-day trial
+    // 5) Create the subscription. No trial — first invoice charges $35 immediately.
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
       items: [{ price: process.env.STRIPE_PRICE_ID! }],
-      trial_period_days: 7,
       payment_behavior: 'default_incomplete',
       payment_settings: {
         payment_method_types: ['card'],
         save_default_payment_method: 'on_subscription',
       },
-      trial_settings: {
-        end_behavior: {
-          missing_payment_method: 'cancel',
-        },
-      },
-      expand: ['pending_setup_intent'],
+      expand: ['latest_invoice.payment_intent'],
       metadata: { clerk_id: userId },
     })
 
-    const setupIntent = subscription.pending_setup_intent as any
+    const invoice = subscription.latest_invoice as any
+    const paymentIntent = invoice?.payment_intent
+
+    if (!paymentIntent?.client_secret) {
+      console.error('No payment_intent on first invoice', { subId: subscription.id })
+      return NextResponse.json(
+        { error: 'Failed to initialize payment. Please try again.' },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json({
       subscriptionId: subscription.id,
-      clientSecret: setupIntent?.client_secret,
+      clientSecret: paymentIntent.client_secret,
     })
   } catch (err: any) {
     console.error('create-subscription error:', err)

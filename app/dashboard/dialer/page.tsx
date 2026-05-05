@@ -44,7 +44,7 @@ export default function DialerPage() {
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false)
   const [dialZoomed, setDialZoomed] = useState(false)
   const [sessionStats, setSessionStats] = useState({
-    calls: 0, appointments: 0, closed: 0, dnc: 0, notInterested: 0
+    calls: 0, connected: 0, appointments: 0, closed: 0, dnc: 0, notInterested: 0
   })
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const audioCtxRef = useRef<AudioContext | null>(null)
@@ -93,7 +93,7 @@ export default function DialerPage() {
         const sipDomain = process.env.NEXT_PUBLIC_SIGNALWIRE_SIP_DOMAIN
 
         if (!sipUsername || !sipPassword || !sipDomain) {
-          console.warn('SignalWire SIP credentials not configured')
+          console.warn('SIP credentials not configured')
           return
         }
 
@@ -113,7 +113,7 @@ export default function DialerPage() {
 
         userAgent.delegate = {
           onInvite: async (invitation: any) => {
-            console.log('> Incoming SIP INVITE received from SignalWire!')
+            console.log('> Incoming SIP INVITE received!')
             try {
               const { SessionState: SS } = await import('sip.js')
 
@@ -150,9 +150,9 @@ export default function DialerPage() {
 
         swClientRef.current = userAgent
         setSwReady(true)
-        console.log('> SignalWire browser audio ready — waiting for incoming calls')
+        console.log('> Browser audio ready — waiting for incoming calls')
       } catch (err: any) {
-        console.error('SignalWire init error:', err?.message || err)
+        console.error('SIP init error:', err?.message || err)
       }
     }
     initSW()
@@ -374,6 +374,7 @@ export default function DialerPage() {
           activePollRef.current = null
           playPickup()
           setStatus('connected')
+          setSessionStats(s => ({ ...s, connected: s.connected + 1 }))
 
           const hangupPoll = setInterval(async () => {
             try {
@@ -669,7 +670,7 @@ export default function DialerPage() {
       </div>
 
       <div style={{
-        padding: inOverlay ? '24px' : '12px',
+        padding: inOverlay ? '20px 24px' : '12px',
         background: terminalBg,
         flex: 1,
         display: 'flex',
@@ -678,6 +679,11 @@ export default function DialerPage() {
         margin: inOverlay ? '0 auto' : 0,
         width: inOverlay ? '100%' : 'auto',
         boxSizing: 'border-box',
+        overflowY: inOverlay ? 'auto' : 'visible',
+        // Add safe area padding at bottom for iOS home indicator + browser toolbar
+        paddingBottom: inOverlay
+          ? 'calc(20px + env(safe-area-inset-bottom, 0px))'
+          : 12,
       }}>
         <div style={{
           background: terminalSurface,
@@ -695,6 +701,7 @@ export default function DialerPage() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          flexShrink: 0,
         }}>
           {manualNumber || '_ _ _ _ _ _ _ _'}
         </div>
@@ -704,7 +711,7 @@ export default function DialerPage() {
           gridTemplateColumns: 'repeat(3, 1fr)',
           gap: inOverlay ? '12px' : '6px',
           marginBottom: inOverlay ? '12px' : '6px',
-          flex: 1,
+          flex: inOverlay ? '0 0 auto' : 1,
         }}>
           {['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'].map((key) => (
             <button key={key} onClick={() => handleKeypad(key)} style={{
@@ -728,6 +735,7 @@ export default function DialerPage() {
           display: 'grid',
           gridTemplateColumns: '1fr 2fr',
           gap: inOverlay ? '12px' : '6px',
+          flexShrink: 0,
         }}>
           <button onClick={handleBackspace} style={{
             padding: inOverlay ? '20px' : '12px',
@@ -769,11 +777,12 @@ export default function DialerPage() {
     }}>
       <style>{`
         .dialer-root {
-          height: calc(100vh - 0px);
+          height: 100vh;
+          height: 100dvh;
         }
         .dialer-status-bar { display: flex; align-items: center; justify-content: space-between; }
         .dialer-status-bar-left { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
-        .dialer-status-bar-right { display: flex; align-items: center; gap: 24px; }
+        .dialer-status-bar-right { display: flex; align-items: center; gap: 18px; }
         .dialer-stat-grid { grid-template-columns: repeat(3, 1fr) !important; }
         .dialer-right-sidebar {
           width: 280px;
@@ -785,12 +794,30 @@ export default function DialerPage() {
         }
         .dialer-right-toggle { display: none; }
         .dialer-right-overlay { display: none; }
+        .dialer-connected-pill {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 3px 10px;
+          background: rgba(74,158,255,0.12);
+          border: 1px solid rgba(74,158,255,0.3);
+          border-radius: 3px;
+          font-family: monospace;
+          font-size: 10px;
+          letter-spacing: 1px;
+          color: #4a9eff;
+          font-weight: bold;
+        }
 
         @media (max-width: 768px) {
-          .dialer-root { height: calc(100vh - 64px); }
+          .dialer-root {
+            height: calc(100vh - 64px);
+            height: calc(100dvh - 64px);
+          }
           .dialer-status-bar { padding: 6px 12px !important; }
           .dialer-status-bar-left { gap: 10px; }
-          .dialer-status-bar-right { display: none !important; }
+          .dialer-status-bar-right { gap: 10px; }
+          .dialer-status-bar-right .dialer-time-block { display: none !important; }
           .dialer-stat-grid {
             grid-template-columns: repeat(2, 1fr) !important;
           }
@@ -812,7 +839,7 @@ export default function DialerPage() {
             display: flex;
             position: fixed;
             right: 12px;
-            bottom: 12px;
+            bottom: calc(12px + env(safe-area-inset-bottom, 0px));
             z-index: 50;
             width: 48px;
             height: 48px;
@@ -883,8 +910,14 @@ export default function DialerPage() {
           </div>
         </div>
         <div className="dialer-status-bar-right">
-          <span style={{ fontSize: '11px', fontFamily: 'monospace', color: '#8888aa', letterSpacing: '2px' }}>{dateStr}</span>
-          <span style={{ fontSize: '14px', fontFamily: 'monospace', fontWeight: 'bold', color: '#4a9eff', letterSpacing: '3px' }}>{timeStr}</span>
+          <div className="dialer-connected-pill" title="Connected calls this session">
+            <span style={{ fontSize: 8, letterSpacing: 2, opacity: 0.75 }}>CONNECTED</span>
+            <span>{sessionStats.connected}</span>
+          </div>
+          <div className="dialer-time-block" style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+            <span style={{ fontSize: '11px', fontFamily: 'monospace', color: '#8888aa', letterSpacing: '2px' }}>{dateStr}</span>
+            <span style={{ fontSize: '14px', fontFamily: 'monospace', fontWeight: 'bold', color: '#4a9eff', letterSpacing: '3px' }}>{timeStr}</span>
+          </div>
         </div>
       </div>
 
@@ -892,7 +925,7 @@ export default function DialerPage() {
         {/* MAIN BODY */}
         <div style={{ flex: 1, padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px', overflow: 'auto', minHeight: 0 }}>
 
-          {/* STATUS / DURATION / CAMPAIGN — Attempt removed */}
+          {/* STATUS / DURATION / CAMPAIGN */}
           <div className="dialer-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', flexShrink: 0 }}>
             {[
               { label: 'STATUS', value: status.toUpperCase(), color: status === 'connected' ? terminalGreen : status === 'calling' ? '#8a6a1a' : terminalMuted },
@@ -1143,6 +1176,7 @@ export default function DialerPage() {
           <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '5px', flexShrink: 0 }}>
             {[
               { label: 'TOTAL CALLS', value: sessionStats.calls, color: terminalText },
+              { label: 'CONNECTED', value: sessionStats.connected, color: '#4a9eff' },
               { label: 'CLOSED', value: sessionStats.closed, color: terminalGreen },
               { label: 'APPOINTMENTS', value: sessionStats.appointments, color: '#1a4a8a' },
               { label: 'NOT INTERESTED', value: sessionStats.notInterested, color: '#8a6a1a' },
@@ -1219,9 +1253,11 @@ export default function DialerPage() {
             background: terminalBg,
             display: 'flex',
             flexDirection: 'column',
+            height: '100vh',
+            // @ts-ignore — dvh fallback for older TS lib
+            ['height' as any]: '100dvh',
           }}
           onClick={(e) => {
-            // Click outside the dialer body to close
             if (e.target === e.currentTarget) setDialZoomed(false)
           }}
         >

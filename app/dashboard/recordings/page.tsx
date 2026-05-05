@@ -140,7 +140,7 @@ export default function RecordingsPage() {
       const res = await fetch('/api/recordings/sync', { method: 'POST' })
       const data = await res.json()
       if (data.success) {
-        setSyncMessage(`Synced ${data.synced} new recording${data.synced === 1 ? '' : 's'} from SignalWire.`)
+        setSyncMessage(`Synced ${data.synced} new recording${data.synced === 1 ? '' : 's'}.`)
         setRecordings([])
         setCursor(0)
       } else {
@@ -462,11 +462,7 @@ export default function RecordingsPage() {
                     className={`rec-btn ${isPlaying ? 'rec-btn-active' : ''}`}
                     onClick={() => setPlayingId(isPlaying ? null : r.id)}
                   >{isPlaying ? '✕ CLOSE' : '▶ PLAY'}</button>
-                  <a
-                    className="rec-btn"
-                    href={`/api/recordings/play?call_id=${r.id}&download=1`}
-                    style={{ textDecoration: 'none' }}
-                  >↓ DOWNLOAD</a>
+                  <a className="rec-btn" href={`/api/recordings/play?call_id=${r.id}&download=1`} style={{ textDecoration: 'none' }}>↓ DOWNLOAD</a>
                 </div>
               </div>
 

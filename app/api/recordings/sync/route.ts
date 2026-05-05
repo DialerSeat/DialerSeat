@@ -7,7 +7,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-// Manually polls SignalWire for the user's recordings and back-fills the calls table.
+// Manually polls the telephony provider for the user's recordings and back-fills the calls table.
 // Triggered when the user opens the recordings page or hits a "sync" button.
 export async function POST(req: NextRequest) {
   try {
@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     const apiToken = process.env.SIGNALWIRE_API_TOKEN
 
     if (!spaceUrl || !projectId || !apiToken) {
-      return NextResponse.json({ success: false, error: 'SignalWire credentials missing' }, { status: 500 })
+      return NextResponse.json({ success: false, error: 'Telephony credentials missing' }, { status: 500 })
     }
 
     const authHeader = 'Basic ' + Buffer.from(`${projectId}:${apiToken}`).toString('base64')
@@ -38,13 +38,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, synced: 0, message: 'No call rooms found' })
     }
 
-    // Fetch ALL recent recordings from SignalWire
+    // Fetch ALL recent recordings from the telephony provider
     const recsUrl = `https://${spaceUrl}/api/laml/2010-04-01/Accounts/${projectId}/Recordings.json?PageSize=200`
     const recsRes = await fetch(recsUrl, { headers: { Authorization: authHeader } })
 
     if (!recsRes.ok) {
       const text = await recsRes.text()
-      return NextResponse.json({ success: false, error: `SignalWire ${recsRes.status}: ${text}` }, { status: 500 })
+      return NextResponse.json({ success: false, error: `Provider error ${recsRes.status}: ${text}` }, { status: 500 })
     }
 
     const recsJson = await recsRes.json()

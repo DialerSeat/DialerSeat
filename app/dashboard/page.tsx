@@ -1,9 +1,117 @@
 'use client'
 import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
+
+interface DashboardStats {
+  callsToday: number
+  contactsReached: number
+  activeCampaigns: number
+  leadsLoaded: number
+}
+
+interface RecentCampaign {
+  id: string
+  name: string
+  status: string
+  total_leads: number
+  called_leads: number
+}
 
 export default function DashboardPage() {
   const { user } = useUser()
+  const [stats, setStats] = useState<DashboardStats>({
+    callsToday: 0,
+    contactsReached: 0,
+    activeCampaigns: 0,
+    leadsLoaded: 0,
+  })
+  const [recentCampaigns, setRecentCampaigns] = useState<RecentCampaign[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!user) return
+    let cancelled = false
+
+    const load = async () => {
+      try {
+        const campRes = await fetch(`/api/campaigns/list?user_id=${user.id}`)
+        const campData = await campRes.json()
+        const campaigns: RecentCampaign[] = campData.success ? campData.campaigns : []
+
+        const startOfDay = new Date()
+        startOfDay.setHours(0, 0, 0, 0)
+        const endOfDay = new Date()
+        endOfDay.setHours(23, 59, 59, 999)
+
+        let callsToday = 0
+        let contactsReached = 0
+        try {
+          const params = new URLSearchParams({
+            user_id: user.id,
+            start: startOfDay.toISOString(),
+            end: endOfDay.toISOString(),
+          })
+          const sumRes = await fetch(`/api/analytics/summary?${params}`)
+          const sumData = await sumRes.json()
+          if (sumData.success && sumData.summary) {
+            callsToday = sumData.summary.totalCalls ?? 0
+            contactsReached = sumData.summary.contactsReached ?? 0
+          }
+        } catch {
+          // analytics endpoint optional — fall back to zeros
+        }
+
+        const activeCampaigns = campaigns.filter(c => c.status === 'active').length
+        const leadsLoaded = campaigns.reduce((sum, c) => sum + (c.total_leads || 0), 0)
+
+        const recent = [...campaigns]
+          .sort((a: any, b: any) => {
+            const ta = new Date(a.created_at || 0).getTime()
+            const tb = new Date(b.created_at || 0).getTime()
+            return tb - ta
+          })
+          .slice(0, 5)
+
+        if (!cancelled) {
+          setStats({ callsToday, contactsReached, activeCampaigns, leadsLoaded })
+          setRecentCampaigns(recent)
+          setLoading(false)
+        }
+      } catch (err) {
+        console.error('Dashboard load error:', err)
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    load()
+    return () => { cancelled = true }
+  }, [user])
+
+  const statCards = [
+    {
+      label: 'CALLS TODAY',
+      value: stats.callsToday.toLocaleString(),
+      change: stats.callsToday > 0 ? 'KEEP DIALING' : 'START DIALING',
+    },
+    {
+      label: 'CONTACTS REACHED',
+      value: stats.contactsReached.toLocaleString(),
+      change: stats.callsToday > 0
+        ? `${Math.round((stats.contactsReached / stats.callsToday) * 100)}% CONNECT RATE`
+        : 'START DIALING',
+    },
+    {
+      label: 'ACTIVE CAMPAIGNS',
+      value: stats.activeCampaigns.toLocaleString(),
+      change: stats.activeCampaigns > 0 ? 'RUNNING' : 'CREATE ONE',
+    },
+    {
+      label: 'LEADS LOADED',
+      value: stats.leadsLoaded.toLocaleString(),
+      change: stats.leadsLoaded > 0 ? 'IN ROTATION' : 'UPLOAD CSV',
+    },
+  ]
 
   return (
     <div style={{ flex: 1, padding: '40px', overflowY: 'auto' }}>
@@ -31,12 +139,7 @@ export default function DashboardPage() {
         gap: '16px',
         marginBottom: '32px',
       }} className="ds-stats-grid">
-        {[
-          { label: 'CALLS TODAY', value: '0', change: 'START DIALING' },
-          { label: 'CONTACTS REACHED', value: '0', change: 'START DIALING' },
-          { label: 'ACTIVE CAMPAIGNS', value: '0', change: 'CREATE ONE' },
-          { label: 'LEADS LOADED', value: '0', change: 'UPLOAD CSV' },
-        ].map((stat, i) => (
+        {statCards.map((stat, i) => (
           <div key={i} style={{
             padding: '24px',
             borderRadius: '16px',
@@ -55,7 +158,7 @@ export default function DashboardPage() {
               color: 'var(--text-primary)',
               marginBottom: '8px',
               letterSpacing: '-1px',
-            }}>{stat.value}</div>
+            }}>{loading ? '—' : stat.value}</div>
             <div style={{
               fontSize: '10px',
               letterSpacing: '2px',
@@ -145,39 +248,141 @@ export default function DashboardPage() {
           }}>+ NEW CAMPAIGN</Link>
         </div>
 
-        {/* EMPTY STATE */}
-        <div style={{
-          textAlign: 'center',
-          padding: '60px 20px',
-        }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>{'\uD83D\uDCCB'}</div>
-          <h3 style={{
-            fontSize: '13px',
-            fontWeight: 'bold',
-            letterSpacing: '3px',
-            color: 'var(--text-primary)',
-            marginBottom: '8px',
-          }}>NO CAMPAIGNS YET</h3>
-          <p style={{
-            fontSize: '13px',
-            color: 'var(--text-secondary)',
-            marginBottom: '24px',
-          }}>Create your first campaign and upload your leads to get started.</p>
-          <Link href="/dashboard/campaigns" style={{
-            display: 'inline-block',
-            padding: '12px 32px',
-            borderRadius: '10px',
-            background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
-            color: 'white',
+        {loading ? (
+          <div style={{
+            textAlign: 'center',
+            padding: '40px 20px',
             fontSize: '11px',
-            fontWeight: 'bold',
-            letterSpacing: '2px',
-            border: 'none',
-            cursor: 'pointer',
-            fontFamily: 'Futura PT, Futura, sans-serif',
-            textDecoration: 'none',
-          }}>CREATE FIRST CAMPAIGN</Link>
-        </div>
+            letterSpacing: '3px',
+            color: 'var(--text-secondary)',
+          }}>LOADING...</div>
+        ) : recentCampaigns.length === 0 ? (
+          /* EMPTY STATE */
+          <div style={{
+            textAlign: 'center',
+            padding: '60px 20px',
+          }}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>{'\uD83D\uDCCB'}</div>
+            <h3 style={{
+              fontSize: '13px',
+              fontWeight: 'bold',
+              letterSpacing: '3px',
+              color: 'var(--text-primary)',
+              marginBottom: '8px',
+            }}>NO CAMPAIGNS YET</h3>
+            <p style={{
+              fontSize: '13px',
+              color: 'var(--text-secondary)',
+              marginBottom: '24px',
+            }}>Create your first campaign and upload your leads to get started.</p>
+            <Link href="/dashboard/campaigns" style={{
+              display: 'inline-block',
+              padding: '12px 32px',
+              borderRadius: '10px',
+              background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+              color: 'white',
+              fontSize: '11px',
+              fontWeight: 'bold',
+              letterSpacing: '2px',
+              border: 'none',
+              cursor: 'pointer',
+              fontFamily: 'Futura PT, Futura, sans-serif',
+              textDecoration: 'none',
+            }}>CREATE FIRST CAMPAIGN</Link>
+          </div>
+        ) : (
+          /* CAMPAIGN LIST */
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {recentCampaigns.map(c => {
+              const total = c.total_leads || 0
+              const called = c.called_leads || 0
+              const pct = total > 0 ? Math.round((called / total) * 100) : 0
+              const isActive = c.status === 'active'
+              return (
+                <Link
+                  key={c.id}
+                  href="/dashboard/campaigns"
+                  style={{ textDecoration: 'none' }}
+                >
+                  <div style={{
+                    padding: '16px 20px',
+                    borderRadius: '10px',
+                    background: 'var(--background)',
+                    border: '1px solid var(--border)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '16px',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s',
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.borderColor = 'var(--accent-blue)'
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.borderColor = 'var(--border)'
+                  }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
+                        marginBottom: 6,
+                      }}>
+                        <span style={{
+                          fontSize: '13px',
+                          fontWeight: 'bold',
+                          color: 'var(--text-primary)',
+                          letterSpacing: '1px',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}>{c.name}</span>
+                        <span style={{
+                          fontSize: '8px',
+                          fontWeight: 'bold',
+                          letterSpacing: '2px',
+                          padding: '3px 8px',
+                          borderRadius: 3,
+                          background: isActive ? 'rgba(74,158,255,0.12)' : 'rgba(140,140,160,0.12)',
+                          color: isActive ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                          border: `1px solid ${isActive ? 'rgba(74,158,255,0.3)' : 'var(--border)'}`,
+                        }}>{c.status?.toUpperCase() || 'DRAFT'}</span>
+                      </div>
+                      <div style={{
+                        fontSize: '11px',
+                        color: 'var(--text-secondary)',
+                        fontFamily: 'monospace',
+                        letterSpacing: '1px',
+                      }}>
+                        {called.toLocaleString()} / {total.toLocaleString()} CALLED · {pct}%
+                      </div>
+                      <div style={{
+                        marginTop: 8,
+                        height: 4,
+                        background: 'var(--border)',
+                        borderRadius: 2,
+                        overflow: 'hidden',
+                      }}>
+                        <div style={{
+                          width: `${pct}%`,
+                          height: '100%',
+                          background: 'linear-gradient(90deg, #4a9eff, #2a6eff)',
+                          transition: 'width 0.3s',
+                        }} />
+                      </div>
+                    </div>
+                    <div style={{
+                      fontSize: 18,
+                      color: 'var(--text-secondary)',
+                      flexShrink: 0,
+                    }}>›</div>
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
+        )}
       </div>
 
       {/* MOBILE-ONLY LAYOUT TWEAKS — desktop is unchanged */}

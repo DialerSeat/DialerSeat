@@ -2,7 +2,7 @@
 import { useUser, UserButton } from '@clerk/nextjs'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 const navItems = [
   { icon: '📊', label: 'DASHBOARD', href: '/dashboard' },
@@ -19,6 +19,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { user } = useUser()
   const pathname = usePathname()
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const profileRowRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     setDrawerOpen(false)
@@ -36,6 +37,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const isActive = (href: string) => {
     if (href === '/dashboard') return pathname === '/dashboard'
     return pathname.startsWith(href)
+  }
+
+  // When the user clicks anywhere in the profile row (name area, plan label, etc.),
+  // forward the click to the actual Clerk avatar trigger inside the row.
+  const handleProfileRowClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement
+    // If they clicked directly on the Clerk button or its descendants, do nothing — Clerk handles it.
+    if (target.closest('.cl-userButtonTrigger, .cl-userButtonAvatarBox')) return
+
+    const row = e.currentTarget
+    const trigger = row.querySelector(
+      '.cl-userButtonTrigger, button.cl-userButtonAvatarBox, [data-clerk-component="UserButton"] button'
+    ) as HTMLButtonElement | null
+    if (trigger) trigger.click()
   }
 
   const Sidebar = () => (
@@ -99,20 +114,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         })}
       </nav>
 
-      <div style={{
-        padding: '16px 24px',
-        borderTop: '1px solid var(--border)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-      }}>
+      <div
+        ref={profileRowRef}
+        onClick={handleProfileRowClick}
+        className="ds-profile-row"
+        style={{
+          padding: '16px 24px',
+          borderTop: '1px solid var(--border)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          cursor: 'pointer',
+          transition: 'background 0.15s',
+        }}
+      >
         <UserButton />
-        <div>
+        <div style={{ flex: 1, minWidth: 0, pointerEvents: 'none' }}>
           <div style={{
             fontSize: '12px',
             fontWeight: 'bold',
             color: 'var(--text-primary)',
             letterSpacing: '1px',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
           }}>{user?.firstName} {user?.lastName}</div>
           <div style={{
             fontSize: '10px',
@@ -144,6 +169,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         .ds-mobile-topbar { display: none; }
         .ds-sidebar-mobile { display: none; }
         .ds-mobile-overlay { display: none; }
+
+        .ds-profile-row:hover {
+          background: rgba(74,158,255,0.06);
+        }
 
         @media (max-width: 768px) {
           .ds-sidebar-desktop { display: none; }
