@@ -65,8 +65,8 @@ function fmtMoney(n: number) {
   return '$' + n.toLocaleString()
 }
 
-function fmtDateTick(iso: string) {
-  const d = new Date(iso + 'T00:00:00')
+function fmtDateTick(iso: any) {
+  const d = new Date(String(iso) + 'T00:00:00')
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
