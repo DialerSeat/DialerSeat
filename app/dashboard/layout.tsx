@@ -22,11 +22,14 @@ const adminNavItems = [
   { icon: '⚙️', label: 'SETTINGS', href: '/dashboard/settings' },
 ]
 
+type AccessTier = 'active' | 'lapsed' | 'new' | null
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user } = useUser()
   const pathname = usePathname()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
+  const [tier, setTier] = useState<AccessTier>(null)
   const profileRowRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -51,6 +54,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       .catch(() => { if (!cancelled) setIsAdmin(false) })
     return () => { cancelled = true }
   }, [user])
+
+  // Fetch access tier so the sidebar can show ACTIVE / LAPSED / ADMIN
+  useEffect(() => {
+    if (!user) return
+    let cancelled = false
+    const loadTier = () => {
+      fetch('/api/stripe/status')
+        .then(r => r.json())
+        .then(d => { if (!cancelled) setTier(d.tier || null) })
+        .catch(() => { if (!cancelled) setTier(null) })
+    }
+    loadTier()
+    // Refresh tier when tab regains focus, in case sub state changed
+    // (e.g. user just resubscribed in another tab)
+    const onFocus = () => loadTier()
+    window.addEventListener('focus', onFocus)
+    return () => {
+      cancelled = true
+      window.removeEventListener('focus', onFocus)
+    }
+  }, [user, pathname])
 
   // Heartbeat — ping every 60s while tab is open + on focus to avoid stale "online" state
   useEffect(() => {
@@ -93,6 +117,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   const logoHref = isAdmin ? '/dashboard/admin/analytics' : '/dashboard'
+
+  // Tier label: ADMIN > LAPSED > ACTIVE > (loading)
+  // Color: admin/active = blue, lapsed = orange/red
+  const tierLabel = isAdmin
+    ? 'ADMIN'
+    : tier === 'lapsed'
+      ? 'UNSUBSCRIBED'
+      : tier === 'active'
+        ? 'ACTIVE'
+        : tier === 'new'
+          ? 'NO PLAN'
+          : '...'
+
+  const tierColor = isAdmin
+    ? '#4a9eff'
+    : tier === 'lapsed' || tier === 'new'
+      ? '#ffaa3e'
+      : tier === 'active'
+        ? 'var(--text-secondary)'
+        : 'var(--text-secondary)'
+
+  const tierWeight: 'bold' | 'normal' = isAdmin || tier === 'lapsed' || tier === 'new'
+    ? 'bold'
+    : 'normal'
 
   const Sidebar = () => (
     <>
@@ -177,6 +225,36 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         })}
       </nav>
 
+      {/* Resubscribe nudge for lapsed users — sits above profile row */}
+      {!isAdmin && tier === 'lapsed' && (
+        <Link
+          href="/billing"
+          style={{
+            margin: '0 12px 8px',
+            padding: '10px 14px',
+            borderRadius: '10px',
+            background: 'rgba(255,170,62,0.08)',
+            border: '1px solid rgba(255,170,62,0.4)',
+            textDecoration: 'none',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 2,
+            flexShrink: 0,
+          }}>
+          <span style={{
+            fontSize: 9,
+            letterSpacing: 2,
+            fontWeight: 'bold',
+            color: '#ffaa3e',
+          }}>▸ RESUBSCRIBE</span>
+          <span style={{
+            fontSize: 9,
+            color: 'var(--text-secondary)',
+            letterSpacing: 1,
+          }}>Restore dialing access</span>
+        </Link>
+      )}
+
       <div
         ref={profileRowRef}
         onClick={handleProfileRowClick}
@@ -205,10 +283,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           }}>{user?.firstName} {user?.lastName}</div>
           <div style={{
             fontSize: '10px',
-            color: isAdmin ? '#4a9eff' : 'var(--text-secondary)',
+            color: tierColor,
             letterSpacing: '1px',
-            fontWeight: isAdmin ? 'bold' : 'normal',
-          }}>{isAdmin ? 'ADMIN' : 'PRO PLAN'}</div>
+            fontWeight: tierWeight,
+          }}>{tierLabel}</div>
         </div>
       </div>
     </>

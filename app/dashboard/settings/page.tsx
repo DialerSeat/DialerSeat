@@ -11,6 +11,7 @@ interface SubStatus {
   currentPeriodEnd: string | null
   trialEnd: string | null
   cancelAtPeriodEnd: boolean
+  tier?: 'active' | 'lapsed' | 'new'
 }
 
 export default function SettingsPage() {
@@ -86,6 +87,10 @@ export default function SettingsPage() {
     setTypedConfirm('')
   }
 
+  const handleResubscribe = () => {
+    window.location.href = '/billing'
+  }
+
   if (loading) {
     return (
       <div className="settings-root" style={pageStyle}>
@@ -95,6 +100,11 @@ export default function SettingsPage() {
       </div>
     )
   }
+
+  // Show resubscribe panel for: lapsed users, OR canceling users (after period ends they'll be lapsed)
+  const showResubscribe =
+    !isAdmin &&
+    (sub?.tier === 'lapsed' || (sub?.cancelAtPeriodEnd && sub?.isActive))
 
   return (
     <div className="settings-root" style={pageStyle}>
@@ -125,6 +135,15 @@ export default function SettingsPage() {
               fontWeight: 'bold',
             }}>· ADMIN</span>
           )}
+          {!isAdmin && sub?.tier === 'lapsed' && (
+            <span style={{
+              marginLeft: 8,
+              fontSize: 9,
+              letterSpacing: 3,
+              color: '#ffaa3e',
+              fontWeight: 'bold',
+            }}>· UNSUBSCRIBED</span>
+          )}
         </div>
 
         <div style={sectionStyle}>
@@ -138,9 +157,8 @@ export default function SettingsPage() {
             <>
               <div style={rowStyle}>
                 <span style={labelStyle}>STATUS</span>
-                <span style={{ ...valueStyle, color: statusColor(sub.status) }}>
-                  {sub.status?.toUpperCase()}
-                  {sub.cancelAtPeriodEnd && ' (CANCELING)'}
+                <span style={{ ...valueStyle, color: tierStatusColor(sub) }}>
+                  {tierStatusLabel(sub)}
                 </span>
               </div>
 
@@ -151,7 +169,7 @@ export default function SettingsPage() {
                 </div>
               )}
 
-              {sub.currentPeriodEnd && (
+              {sub.currentPeriodEnd && sub.tier !== 'lapsed' && (
                 <div style={rowStyle}>
                   <span style={labelStyle}>
                     {sub.cancelAtPeriodEnd ? 'ACCESS UNTIL' : 'NEXT BILLING'}
@@ -170,6 +188,26 @@ export default function SettingsPage() {
 
         {message && <div style={successStyle}>{message}</div>}
         {error && <div style={errorStyle}>{error}</div>}
+
+        {/* RESUBSCRIBE — for lapsed users or those who canceled (still in paid period) */}
+        {showResubscribe && (
+          <div style={resubscribeBoxStyle}>
+            <div style={resubscribeHeaderStyle}>
+              {sub?.tier === 'lapsed'
+                ? 'YOUR SUBSCRIPTION HAS LAPSED'
+                : 'YOUR SUBSCRIPTION IS SCHEDULED TO CANCEL'}
+            </div>
+            <div style={resubscribeTextStyle}>
+              {sub?.tier === 'lapsed'
+                ? 'Resubscribe to restore dialing, campaign creation, and lead imports. Your existing leads, recordings, and analytics are still here.'
+                : `You'll lose dialing access on ${sub?.currentPeriodEnd ? formatDate(sub.currentPeriodEnd) : 'period end'}. Resume billing now to keep going without interruption.`
+              }
+            </div>
+            <button onClick={handleResubscribe} style={resubscribeButtonStyle}>
+              {sub?.tier === 'lapsed' ? 'RESUBSCRIBE — $35/WEEK' : 'RESUME SUBSCRIPTION'}
+            </button>
+          </div>
+        )}
 
         {/* ADMIN: cancel UI fully hidden, replaced with a notice */}
         {isAdmin && sub?.isActive && !sub.cancelAtPeriodEnd && (
@@ -234,7 +272,7 @@ export default function SettingsPage() {
           </>
         )}
 
-        {sub?.cancelAtPeriodEnd && (
+        {sub?.cancelAtPeriodEnd && !showResubscribe && (
           <div style={warnStyle}>
             Your subscription is scheduled to cancel at the end of the current billing period.
           </div>
@@ -252,9 +290,16 @@ function formatDate(iso: string) {
   })
 }
 
-function statusColor(status: string | null) {
-  if (status === 'active' || status === 'trialing') return '#32ff7e'
-  if (status === 'past_due') return '#ffaa3e'
+function tierStatusLabel(sub: SubStatus): string {
+  if (sub.tier === 'lapsed') return 'UNSUBSCRIBED'
+  if (sub.cancelAtPeriodEnd) return `${sub.status?.toUpperCase()} (CANCELING)`
+  return sub.status?.toUpperCase() || '—'
+}
+
+function tierStatusColor(sub: SubStatus): string {
+  if (sub.tier === 'lapsed') return '#ffaa3e'
+  if (sub.status === 'active' || sub.status === 'trialing') return '#32ff7e'
+  if (sub.status === 'past_due') return '#ffaa3e'
   return '#ff6464'
 }
 
@@ -460,4 +505,43 @@ const adminNoticeStyle: React.CSSProperties = {
   letterSpacing: 3,
   fontWeight: 700,
   marginTop: 16,
+}
+
+const resubscribeBoxStyle: React.CSSProperties = {
+  background: 'rgba(255,170,62,0.06)',
+  border: '1px solid #8a6a1a',
+  borderLeft: '3px solid #ffaa3e',
+  borderRadius: 3,
+  padding: 16,
+  marginBottom: 16,
+}
+
+const resubscribeHeaderStyle: React.CSSProperties = {
+  fontSize: 11,
+  letterSpacing: 3,
+  color: '#ffaa3e',
+  fontWeight: 700,
+  marginBottom: 8,
+}
+
+const resubscribeTextStyle: React.CSSProperties = {
+  fontSize: 12,
+  lineHeight: 1.6,
+  color: '#e0e2ea',
+  marginBottom: 14,
+}
+
+const resubscribeButtonStyle: React.CSSProperties = {
+  width: '100%',
+  padding: 14,
+  background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+  border: 'none',
+  borderRadius: 4,
+  color: 'white',
+  fontSize: 12,
+  fontWeight: 700,
+  letterSpacing: 4,
+  cursor: 'pointer',
+  fontFamily: FUTURA,
+  boxShadow: '0 0 15px rgba(74,158,255,0.25)',
 }
