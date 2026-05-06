@@ -12,6 +12,8 @@ const isPublicRoute = createRouteMatcher([
   '/api/calls/twiml-agent(.*)',
   '/api/calls/status(.*)',
   '/api/calls/recording(.*)',
+  '/api/calls/inbound(.*)',
+  '/api/cron/(.*)',
 ])
 
 // Auth required, no tier check needed.
