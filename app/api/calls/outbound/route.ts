@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json()
-    const { to } = body
+    const { to, leadId, campaignId } = body
 
     if (!to) {
       return NextResponse.json({ success: false, error: 'Missing destination' }, { status: 400 })
@@ -59,6 +59,9 @@ export async function POST(req: Request) {
         Url: `${appUrl}/api/calls/twiml?room=${roomName}&record=true`,
         StatusCallback: `${appUrl}/api/calls/status`,
         StatusCallbackMethod: 'POST',
+        StatusCallbackEvent: 'completed',
+        RecordingStatusCallback: `${appUrl}/api/calls/recording-status`,
+        RecordingStatusCallbackMethod: 'POST',
       }).toString(),
     })
 
@@ -89,6 +92,22 @@ export async function POST(req: Request) {
 
     if (!agentCallResponse.ok) {
       console.warn('Agent call failed but lead call succeeded:', agentData)
+    }
+
+    // Insert call row immediately so status + recording webhooks have something to update.
+    // Without this, both webhooks no-op silently and we never log the call.
+    try {
+      await supabase.from('calls').insert({
+        user_id: userId,
+        campaign_id: campaignId || null,
+        lead_id: leadId || null,
+        phone_number: toFormatted,
+        signalwire_call_id: leadData.sid,
+        duration: 0,
+        recording_status: 'pending',
+      })
+    } catch (e) {
+      console.error('Failed to insert call row:', e)
     }
 
     // Track the room->user mapping so when the recording webhook fires we know who owns it
