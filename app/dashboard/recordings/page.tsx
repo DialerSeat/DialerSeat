@@ -279,7 +279,17 @@ export default function RecordingsPage() {
           font-family: 'Futura PT', Futura, sans-serif;
           white-space: nowrap;
         }
-        .rec-actions { display: flex; gap: 6px; align-items: center; }
+        .rec-actions {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          align-items: stretch;
+          min-width: 100px;
+        }
+        .rec-actions-row {
+          display: flex;
+          gap: 4px;
+        }
         .rec-btn {
           padding: 6px 12px;
           background: transparent;
@@ -291,6 +301,8 @@ export default function RecordingsPage() {
           font-weight: bold;
           cursor: pointer;
           font-family: 'Futura PT', Futura, sans-serif;
+          flex: 1;
+          white-space: nowrap;
         }
         .rec-btn-danger {
           border-color: ${T.red};
@@ -367,7 +379,8 @@ export default function RecordingsPage() {
           .rec-card-header .col-meta-camp,
           .rec-card-header .col-meta-time,
           .rec-card-header .col-meta-dur { display: none; }
-          .rec-card-header .col-actions { grid-area: actions; justify-content: flex-end; }
+          .rec-card-header .col-actions { grid-area: actions; align-items: stretch; }
+          .rec-actions-row { width: 100%; }
           .rec-list { padding: 8px 12px; }
         }
       `}</style>
@@ -458,7 +471,6 @@ export default function RecordingsPage() {
           const isConfirming = confirmDeleteId === r.id
           const isDeleting = deletingId === r.id
 
-          // Better fallback: manual dials don't have leads, show "Manual Dial" not "Unknown"
           const hasLead = !!r.leads
           const leadName = hasLead
             ? `${r.leads!.first_name || ''} ${r.leads!.last_name || ''}`.trim() || 'Unnamed Lead'
@@ -524,31 +536,32 @@ export default function RecordingsPage() {
                   )}
                 </div>
                 <div className="col-actions rec-actions">
-                  <button
-                    className={`rec-btn ${isPlaying ? 'rec-btn-active' : ''}`}
-                    onClick={() => setPlayingId(isPlaying ? null : r.id)}
-                  >{isPlaying ? '✕ CLOSE' : '▶ PLAY'}</button>
-                  <a className="rec-btn" href={`/api/recordings/play?call_id=${r.id}&download=1`} style={{ textDecoration: 'none' }}>↓ DOWNLOAD</a>
-                  {isConfirming ? (
-                    <>
+                  <div className="rec-actions-row">
+                    <button className={`rec-btn ${isPlaying ? 'rec-btn-active' : ''}`} onClick={() => setPlayingId(isPlaying ? null : r.id)}>{isPlaying ? '✕ CLOSE' : '▶ PLAY'}</button>
+                    <a className="rec-btn" href={`/api/recordings/play?call_id=${r.id}&download=1`} style={{ textDecoration: 'none', textAlign: 'center' }}>↓ DOWNLOAD</a>
+                  </div>
+                  <div className="rec-actions-row">
+                    {isConfirming ? (
+                      <>
+                        <button
+                          className="rec-btn rec-btn-danger"
+                          disabled={isDeleting}
+                          onClick={() => handleDelete(r.id)}
+                          style={{ background: isDeleting ? 'transparent' : T.red, color: isDeleting ? T.red : '#fff' }}
+                        >{isDeleting ? '...' : '✓ CONFIRM'}</button>
+                        <button
+                          className="rec-btn"
+                          disabled={isDeleting}
+                          onClick={() => setConfirmDeleteId(null)}
+                        >CANCEL</button>
+                      </>
+                    ) : (
                       <button
                         className="rec-btn rec-btn-danger"
-                        disabled={isDeleting}
-                        onClick={() => handleDelete(r.id)}
-                        style={{ background: isDeleting ? 'transparent' : T.red, color: isDeleting ? T.red : '#fff' }}
-                      >{isDeleting ? '...' : '✓ CONFIRM'}</button>
-                      <button
-                        className="rec-btn"
-                        disabled={isDeleting}
-                        onClick={() => setConfirmDeleteId(null)}
-                      >CANCEL</button>
-                    </>
-                  ) : (
-                    <button
-                      className="rec-btn rec-btn-danger"
-                      onClick={() => setConfirmDeleteId(r.id)}
-                    >🗑 DELETE</button>
-                  )}
+                        onClick={() => setConfirmDeleteId(r.id)}
+                      >🗑 DELETE</button>
+                    )}
+                  </div>
                 </div>
               </div>
 

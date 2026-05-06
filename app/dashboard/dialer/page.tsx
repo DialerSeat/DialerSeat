@@ -493,7 +493,11 @@ export default function DialerPage() {
       const res = await fetch('/api/calls/outbound', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: lead.phone }),
+        body: JSON.stringify({
+          to: lead.phone,
+          leadId: lead.id,
+          campaignId: lead.campaign_id,
+        }),
       })
       const data = await res.json()
       console.log('Call initiated:', data)
