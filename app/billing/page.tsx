@@ -22,42 +22,80 @@ export default function BillingPage() {
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [checkingStatus, setCheckingStatus] = useState(true)
+  const [promoCode, setPromoCode] = useState('')
+  const [showPromo, setShowPromo] = useState(false)
+  const [submittingPromo, setSubmittingPromo] = useState(false)
+  const [promoApplied, setPromoApplied] = useState<string | null>(null)
+  const [freeWithCoupon, setFreeWithCoupon] = useState(false)
+
+  // The actual subscription init request, broken out so it can be re-run
+  // when a promo code is submitted.
+  const initSubscription = async (codeToApply?: string) => {
+    setError(null)
+    try {
+      const statusRes = await fetch('/api/stripe/status')
+      const statusData = await statusRes.json()
+
+      if (statusData.isActive) {
+        router.push('/dashboard')
+        return
+      }
+
+      const createRes = await fetch('/api/stripe/create-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(codeToApply ? { code: codeToApply } : {}),
+      })
+      const createData = await createRes.json()
+
+      if (!createRes.ok) {
+        setError(createData.error || 'Failed to start subscription')
+        setCheckingStatus(false)
+        setSubmittingPromo(false)
+        return
+      }
+
+      // Free coupon path — sub already active, skip Stripe Elements entirely
+      if (createData.freeWithCoupon) {
+        setFreeWithCoupon(true)
+        setCheckingStatus(false)
+        setSubmittingPromo(false)
+        // Brief delay so they see the success state, then redirect
+        setTimeout(() => router.push('/dashboard'), 1500)
+        return
+      }
+
+      setClientSecret(createData.clientSecret)
+      if (codeToApply) setPromoApplied(codeToApply)
+      setCheckingStatus(false)
+      setSubmittingPromo(false)
+    } catch (err: any) {
+      setError(err.message || 'Something went wrong')
+      setCheckingStatus(false)
+      setSubmittingPromo(false)
+    }
+  }
 
   useEffect(() => {
     if (!isLoaded || !user) return
+    initSubscription()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded, user])
 
-    const checkAndCreate = async () => {
-      try {
-        const statusRes = await fetch('/api/stripe/status')
-        const statusData = await statusRes.json()
+  const handleApplyPromo = async () => {
+    if (!promoCode.trim()) return
+    setSubmittingPromo(true)
+    setClientSecret(null)
+    await initSubscription(promoCode.trim())
+  }
 
-        if (statusData.isActive) {
-          router.push('/dashboard')
-          return
-        }
-
-        const createRes = await fetch('/api/stripe/create-subscription', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-        })
-        const createData = await createRes.json()
-
-        if (!createRes.ok) {
-          setError(createData.error || 'Failed to start subscription')
-          setCheckingStatus(false)
-          return
-        }
-
-        setClientSecret(createData.clientSecret)
-        setCheckingStatus(false)
-      } catch (err: any) {
-        setError(err.message || 'Something went wrong')
-        setCheckingStatus(false)
-      }
-    }
-
-    checkAndCreate()
-  }, [isLoaded, user, router])
+  const handleRemovePromo = async () => {
+    setPromoCode('')
+    setPromoApplied(null)
+    setSubmittingPromo(true)
+    setClientSecret(null)
+    await initSubscription()
+  }
 
   if (!isLoaded || checkingStatus) {
     return (
@@ -70,14 +108,41 @@ export default function BillingPage() {
     )
   }
 
+  if (freeWithCoupon) {
+    return (
+      <main style={pageStyle}>
+        <div style={cardStyle}>
+          <div style={{ ...titleStyle, color: '#32ff7e' }}>SUBSCRIPTION ACTIVE</div>
+          <div style={subtitleStyle}>
+            Promo code applied. Redirecting to your dashboard...
+          </div>
+        </div>
+      </main>
+    )
+  }
+
   if (error) {
     return (
       <main style={pageStyle}>
         <div style={cardStyle}>
           <div style={{ ...titleStyle, color: '#ff6464' }}>ERROR</div>
           <div style={{ ...subtitleStyle, marginBottom: 24 }}>{error}</div>
-          <button style={buttonStyle} onClick={() => location.reload()}>
+          <button
+            style={buttonStyle}
+            onClick={() => {
+              setError(null)
+              setCheckingStatus(true)
+              initSubscription(promoApplied || undefined)
+            }}
+          >
             {'\u25B6'} TRY AGAIN
+          </button>
+          <button
+            type="button"
+            onClick={() => router.push('/')}
+            style={cancelStyle}
+          >
+            Back to home
           </button>
         </div>
       </main>
@@ -112,6 +177,56 @@ export default function BillingPage() {
           </ul>
         </div>
 
+        {/* PROMO CODE BLOCK */}
+        <div style={promoBoxStyle}>
+          {promoApplied ? (
+            <div style={promoAppliedStyle}>
+              <span>
+                ▸ CODE <strong style={{ color: '#32ff7e' }}>{promoApplied.toUpperCase()}</strong> APPLIED
+              </span>
+              <button
+                onClick={handleRemovePromo}
+                disabled={submittingPromo}
+                style={promoRemoveStyle}
+              >
+                REMOVE
+              </button>
+            </div>
+          ) : !showPromo ? (
+            <button
+              onClick={() => setShowPromo(true)}
+              style={promoToggleStyle}
+            >
+              + HAVE A CODE?
+            </button>
+          ) : (
+            <div style={promoFormStyle}>
+              <input
+                type="text"
+                placeholder="Enter code"
+                value={promoCode}
+                onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleApplyPromo()
+                }}
+                style={promoInputStyle}
+                autoFocus
+              />
+              <button
+                onClick={handleApplyPromo}
+                disabled={!promoCode.trim() || submittingPromo}
+                style={{
+                  ...promoApplyStyle,
+                  opacity: !promoCode.trim() || submittingPromo ? 0.4 : 1,
+                  cursor: !promoCode.trim() || submittingPromo ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {submittingPromo ? '...' : 'APPLY'}
+              </button>
+            </div>
+          )}
+        </div>
+
         <Elements
           stripe={stripePromise}
           options={{
@@ -128,6 +243,8 @@ export default function BillingPage() {
               },
             },
           }}
+          // Force re-mount when clientSecret changes (e.g. after promo code applied)
+          key={clientSecret}
         >
           <CheckoutForm />
         </Elements>
@@ -255,7 +372,7 @@ const termsBoxStyle: React.CSSProperties = {
   borderLeft: '3px solid #4a9eff',
   borderRadius: 3,
   padding: '12px 16px',
-  marginBottom: 24,
+  marginBottom: 16,
   fontFamily: FUTURA,
 }
 
@@ -275,6 +392,85 @@ const termsListStyle: React.CSSProperties = {
   paddingLeft: 18,
   margin: 0,
   fontFamily: FUTURA,
+}
+
+const promoBoxStyle: React.CSSProperties = {
+  marginBottom: 20,
+}
+
+const promoToggleStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '10px 14px',
+  background: 'transparent',
+  border: '1px dashed #4a4a5e',
+  borderRadius: 3,
+  color: '#888a92',
+  fontSize: 11,
+  letterSpacing: 3,
+  fontWeight: 700,
+  cursor: 'pointer',
+  fontFamily: FUTURA,
+}
+
+const promoFormStyle: React.CSSProperties = {
+  display: 'flex',
+  gap: 8,
+}
+
+const promoInputStyle: React.CSSProperties = {
+  flex: 1,
+  padding: '10px 12px',
+  background: '#0d0e14',
+  border: '1px solid #2a4a8a',
+  borderRadius: 3,
+  fontFamily: 'monospace',
+  fontSize: 13,
+  color: '#4a9eff',
+  outline: 'none',
+  letterSpacing: 2,
+  textTransform: 'uppercase',
+  boxSizing: 'border-box',
+}
+
+const promoApplyStyle: React.CSSProperties = {
+  padding: '10px 18px',
+  background: '#0d0e14',
+  border: 'none',
+  borderTop: '3px solid #4a9eff',
+  borderRadius: 3,
+  color: '#4a9eff',
+  fontSize: 11,
+  fontWeight: 700,
+  letterSpacing: 3,
+  fontFamily: FUTURA,
+}
+
+const promoAppliedStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  padding: '10px 14px',
+  background: 'rgba(50,255,126,0.08)',
+  border: '1px solid #1a6a1a',
+  borderLeft: '3px solid #32ff7e',
+  borderRadius: 3,
+  fontSize: 11,
+  letterSpacing: 2,
+  color: '#c0c2ca',
+  fontFamily: FUTURA,
+}
+
+const promoRemoveStyle: React.CSSProperties = {
+  background: 'transparent',
+  border: '1px solid #4a4a5e',
+  borderRadius: 3,
+  color: '#888a92',
+  fontSize: 9,
+  letterSpacing: 2,
+  padding: '4px 10px',
+  cursor: 'pointer',
+  fontFamily: FUTURA,
+  fontWeight: 700,
 }
 
 const agreementStyle: React.CSSProperties = {

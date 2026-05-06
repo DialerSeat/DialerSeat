@@ -24,7 +24,7 @@ interface AdminUser {
 
 type FilterMode = 'all' | 'active' | 'inactive'
 
-const ONLINE_WINDOW_MS = 90_000 // 90 seconds
+const ONLINE_WINDOW_MS = 90_000
 
 const T = {
   bg: '#f0f1f4',
@@ -82,15 +82,13 @@ export default function AdminOverviewPage() {
   const [filter, setFilter] = useState<FilterMode>('all')
   const [search, setSearch] = useState('')
   const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [tick, setTick] = useState(0) // forces re-render so timeAgo / isOnline stay fresh
+  const [tick, setTick] = useState(0)
 
-  // Re-evaluate online status every 15 seconds without re-fetching
   useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 15_000)
     return () => clearInterval(id)
   }, [])
 
-  // Fetch user list every 30 seconds so heartbeats from new users show up
   useEffect(() => {
     let cancelled = false
 
@@ -250,6 +248,14 @@ export default function AdminOverviewPage() {
           font-family: monospace;
           margin-top: 2px;
         }
+        /* CHANGED: status pills now stack vertically so ONLINE sits BELOW ACTIVE */
+        .ovr-status-stack {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          align-items: flex-end;
+          min-width: 90px;
+        }
         .ovr-pill-status {
           display: inline-flex;
           align-items: center;
@@ -260,6 +266,7 @@ export default function AdminOverviewPage() {
           letter-spacing: 2px;
           font-weight: bold;
           white-space: nowrap;
+          width: fit-content;
         }
         .ovr-pill-status.active {
           background: rgba(26,106,26,0.1);
@@ -463,7 +470,8 @@ export default function AdminOverviewPage() {
                 }}>
                   {timeAgo(u.created_at)}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                {/* ONLINE pill now stacks UNDER the active/inactive pill */}
+                <div className="ovr-status-stack">
                   <span className={`ovr-pill-status ${u.is_active_subscription ? 'active' : 'inactive'}`}>
                     <span className={`ovr-status-dot ${u.is_active_subscription ? 'green' : 'gray'}`} />
                     {u.is_active_subscription ? 'ACTIVE' : 'INACTIVE'}

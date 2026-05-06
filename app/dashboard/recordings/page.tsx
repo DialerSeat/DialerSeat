@@ -350,9 +350,9 @@ export default function RecordingsPage() {
       )}
 
       <div className="rec-banner">
-        ⚠ <strong>RECORDING DISCLOSURE:</strong> You must verbally inform the other party they are on a recorded line in CA, CT, FL, IL, MD, MA, MI, MT, NV, NH, PA, WA. ·
-        <strong> 30-DAY RETENTION:</strong> Recordings auto-delete after 30 days. Click DOWNLOAD to save permanently.
-      </div>
+  ⚠ <strong>RECORDING DISCLOSURE:</strong> You must verbally inform the other party they are on a recorded line by law in CA, CT, FL, IL, MD, MA, MI, MT, NV, NH, PA, WA. ·
+  <strong> 30-DAY RETENTION:</strong> Recordings auto-delete after 30 days. Click DOWNLOAD to save permanently.
+</div>
 
       <div className="rec-mobile-toggle" onClick={() => setFiltersOpen(v => !v)}>
         <span>{filtersOpen ? '▲ HIDE' : '▼ SHOW'} FILTERS</span>

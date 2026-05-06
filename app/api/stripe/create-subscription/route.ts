@@ -2,15 +2,30 @@ import { NextResponse } from 'next/server'
 import { auth, currentUser } from '@clerk/nextjs/server'
 import { createClient } from '@supabase/supabase-js'
 import { stripe } from '@/lib/stripe'
+import type Stripe from 'stripe'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-const BLOCKING_STATUSES = ['trialing', 'active', 'past_due', 'incomplete']
+// Statuses that should block creation of a NEW sub.
+// Note: 'incomplete' is NOT here — that's the state our own code creates
+// while waiting for payment confirmation. Including it would create an
+// infinite loop where retrying the billing page errors out.
+// 'trialing' is also NOT here — we don't have trials anymore. If somehow a
+// trialing row appears, it's stale data and shouldn't block new signups.
+const BLOCKING_STATUSES = ['active', 'past_due']
 
-export async function POST() {
+// Statuses that mean "this is junk, delete it before retry"
+const STALE_STATUSES = [
+  'canceled',
+  'incomplete_expired',
+  'unpaid',
+  'trialing', // legacy trial-era data
+]
+
+export async function POST(req: Request) {
   try {
     const { userId } = await auth()
     if (!userId) {
@@ -27,8 +42,16 @@ export async function POST() {
       return NextResponse.json({ error: 'No email on user' }, { status: 400 })
     }
 
-    // 1) Ensure the user row exists in Supabase BEFORE we do anything else
-    // (Stripe webhook will reference users.clerk_id via foreign key)
+    // Optional: read promo code from body
+    let promoCode: string | null = null
+    try {
+      const body = await req.json().catch(() => ({}))
+      promoCode = (body?.code as string)?.trim() || null
+    } catch {
+      // body is optional
+    }
+
+    // 1) Ensure the user row exists in Supabase
     const { error: upsertErr } = await supabase
       .from('users')
       .upsert(
@@ -72,33 +95,60 @@ export async function POST() {
         .eq('clerk_id', userId)
     }
 
-    // 3) Check Stripe directly for any live subscriptions on this customer
+    // 3) Check Stripe directly for any LIVE subs that should block creation
+    // (active, past_due — these are paying customers who shouldn't double-subscribe)
     const stripeSubs = await stripe.subscriptions.list({
       customer: customerId,
       status: 'all',
       limit: 10,
     })
 
-    const liveSub = stripeSubs.data.find((s) =>
+    const blockingSub = stripeSubs.data.find((s) =>
       BLOCKING_STATUSES.includes(s.status)
     )
 
-    if (liveSub) {
+    if (blockingSub) {
       return NextResponse.json(
-        { error: 'You already have an active subscription' },
+        {
+          error: 'You already have an active subscription. Manage it from Settings.',
+          existingSubscriptionId: blockingSub.id,
+        },
         { status: 400 }
       )
     }
 
-    // 4) Clean up stale local rows
+    // 4) Cancel ANY existing 'incomplete' subs for this customer in Stripe.
+    // These are abandoned billing attempts. Without cleaning them up, the user
+    // accumulates orphan subs in Stripe forever.
+    const incompleteSubs = stripeSubs.data.filter((s) => s.status === 'incomplete')
+    for (const sub of incompleteSubs) {
+      try {
+        await stripe.subscriptions.cancel(sub.id)
+      } catch (err) {
+        console.warn('Failed to cancel incomplete sub:', sub.id, err)
+        // Non-fatal — Stripe sometimes already cleaned them up
+      }
+    }
+
+    // 5) Clean up stale local rows (trialing, canceled, expired, etc.)
+    // After this delete, the only sub rows that survive are 'active' / 'past_due'
+    // ones, which the BLOCKING check above already handled.
     await supabase
       .from('subscriptions')
       .delete()
       .eq('user_id', userId)
-      .in('status', ['canceled', 'incomplete_expired', 'unpaid'])
+      .in('status', STALE_STATUSES)
 
-    // 5) Create the subscription. No trial — first invoice charges $35 immediately.
-    const subscription = await stripe.subscriptions.create({
+    // Also delete any 'incomplete' rows in Supabase. The webhook will
+    // recreate the right one when we make the new sub below.
+    await supabase
+      .from('subscriptions')
+      .delete()
+      .eq('user_id', userId)
+      .eq('status', 'incomplete')
+
+   // 6) Build subscription create params
+    const subParams: Stripe.SubscriptionCreateParams = {
       customer: customerId,
       items: [{ price: process.env.STRIPE_PRICE_ID! }],
       payment_behavior: 'default_incomplete',
@@ -108,13 +158,83 @@ export async function POST() {
       },
       expand: ['latest_invoice.payment_intent'],
       metadata: { clerk_id: userId },
-    })
+    }
+
+    // 7) Apply promo code if provided
+    // Stripe accepts coupon IDs (created in dashboard) OR promotion codes (user-facing).
+    // We use the `discounts` array which is the current Stripe API surface
+    // and works across SDK versions.
+    if (promoCode) {
+      try {
+        // Look up as a promotion code first (what users actually have)
+        const promos = await stripe.promotionCodes.list({
+          code: promoCode,
+          active: true,
+          limit: 1,
+        })
+
+        if (promos.data.length > 0) {
+          subParams.discounts = [{ promotion_code: promos.data[0].id }]
+          subParams.metadata = {
+            ...subParams.metadata,
+            promo_code: promoCode,
+          }
+        } else {
+          // Try as a coupon ID directly (admin path)
+          try {
+            const coupon = await stripe.coupons.retrieve(promoCode)
+            if (coupon.valid) {
+              subParams.discounts = [{ coupon: coupon.id }]
+              subParams.metadata = {
+                ...subParams.metadata,
+                promo_code: promoCode,
+              }
+            } else {
+              return NextResponse.json(
+                { error: `Promo code "${promoCode}" is not valid.` },
+                { status: 400 }
+              )
+            }
+          } catch {
+            // Not a coupon either — let the user know
+            return NextResponse.json(
+              { error: `Promo code "${promoCode}" not found or expired.` },
+              { status: 400 }
+            )
+          }
+        }
+      } catch (err: any) {
+        console.warn('Promo code lookup failed:', err)
+        return NextResponse.json(
+          { error: `Could not apply promo code: ${err.message}` },
+          { status: 400 }
+        )
+      }
+    }
+
+    // 8) Create the subscription
+    const subscription = await stripe.subscriptions.create(subParams)
 
     const invoice = subscription.latest_invoice as any
     const paymentIntent = invoice?.payment_intent
 
+    // EDGE CASE: 100% off coupon means no payment needed.
+    // The invoice is auto-paid, no PaymentIntent is created, sub goes straight to 'active'.
     if (!paymentIntent?.client_secret) {
-      console.error('No payment_intent on first invoice', { subId: subscription.id })
+      // If the sub is already active (free coupon path), redirect-ready response
+      if (subscription.status === 'active') {
+        return NextResponse.json({
+          subscriptionId: subscription.id,
+          clientSecret: null,
+          freeWithCoupon: true,
+        })
+      }
+
+      console.error('No payment_intent on first invoice', {
+        subId: subscription.id,
+        status: subscription.status,
+        invoice: invoice?.id,
+      })
       return NextResponse.json(
         { error: 'Failed to initialize payment. Please try again.' },
         { status: 500 }

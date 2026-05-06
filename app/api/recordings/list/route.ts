@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { auth } from '@clerk/nextjs/server'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -9,18 +10,18 @@ const supabase = createClient(
 const PAGE_SIZE = 50
 
 export async function GET(req: NextRequest) {
+  const { userId } = await auth()
+  if (!userId) {
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+  }
+
   const { searchParams } = new URL(req.url)
-  const userId = searchParams.get('user_id')
   const campaignId = searchParams.get('campaign_id') || 'all'
   const disposition = searchParams.get('disposition') || 'all'
   const search = searchParams.get('search')?.trim() || ''
   const cursor = parseInt(searchParams.get('cursor') || '0', 10)
 
-  if (!userId) {
-    return NextResponse.json({ success: false, error: 'user_id required' }, { status: 400 })
-  }
-
-  // Get calls that have recordings
+  // Always scope to authenticated user — never trust user_id from query string
   let query = supabase
     .from('calls')
     .select('*, leads(first_name, last_name, phone), campaigns(name)', { count: 'exact' })
@@ -44,7 +45,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 })
   }
 
-  // Optional: filter by search term in lead name (post-fetch since it's joined)
   let recordings = data || []
   if (search) {
     const s = search.toLowerCase()

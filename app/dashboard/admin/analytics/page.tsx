@@ -317,7 +317,6 @@ export default function AdminAnalyticsPage() {
 
         {!loading && !error && data && (
           <>
-            {/* HERO — the 4 numbers that matter at 8am */}
             <div className="an-grid-4">
               <div className="an-stat-card hero" style={{
                 borderTopColor: data.summary.wowDelta >= 0 ? T.green : T.red,
@@ -333,12 +332,13 @@ export default function AdminAnalyticsPage() {
                 </div>
               </div>
 
+              {/* SWAPPED: Weekly is now the big number, Monthly the subtitle */}
               <div className="an-stat-card hero" style={{ borderTopColor: T.accent }}>
-                <div className="an-stat-label">EST. MRR</div>
+                <div className="an-stat-label">WEEKLY</div>
                 <div className="an-stat-value" style={{ color: T.accent }}>
-                  {fmtMoney(data.summary.mrr)}
+                  {fmtMoney(data.summary.wrr)}
                 </div>
-                <div className="an-stat-sub">{fmtMoney(data.summary.wrr)} / WEEK</div>
+                <div className="an-stat-sub">{fmtMoney(data.summary.mrr)} / MONTH</div>
               </div>
 
               <div className="an-stat-card hero" style={{
@@ -371,7 +371,6 @@ export default function AdminAnalyticsPage() {
               </div>
             </div>
 
-            {/* SIGNUPS + REVENUE */}
             <div className="an-section">
               <div className="an-section-title">SIGNUPS & REVENUE OVER TIME</div>
               <div className="an-section-sub">
@@ -446,7 +445,6 @@ export default function AdminAnalyticsPage() {
               </div>
             </div>
 
-            {/* BOTTOM ROW — 3 cards: SIGNUPS, TOTAL USERS, ESTABLISHED */}
             <div className="an-grid-3">
               <div className="an-stat-card">
                 <div className="an-stat-label">SIGNUPS · {RANGE_LABELS[range]}</div>

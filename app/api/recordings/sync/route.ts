@@ -7,7 +7,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-// Manually polls the telephony provider for the user's recordings and back-fills the calls table.
+// Manually polls SignalWire for the user's recordings and back-fills the calls table.
 // Triggered when the user opens the recordings page or hits a "sync" button.
 export async function POST(req: NextRequest) {
   try {
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, synced: 0, message: 'No call rooms found' })
     }
 
-    // Fetch ALL recent recordings from the telephony provider
+    // Fetch ALL recent recordings from SignalWire
     const recsUrl = `https://${spaceUrl}/api/laml/2010-04-01/Accounts/${projectId}/Recordings.json?PageSize=200`
     const recsRes = await fetch(recsUrl, { headers: { Authorization: authHeader } })
 
@@ -51,41 +51,45 @@ export async function POST(req: NextRequest) {
     const recordings = recsJson.recordings || []
 
     let synced = 0
+    let skipped = 0
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
 
     for (const rec of recordings) {
-      // Each recording has a CallSid (parent call) and ConferenceSid (if conference recording)
-      const recCallSid: string = rec.call_sid
-      const recConfSid: string = rec.conference_sid
+      const recCallSid: string | null = rec.call_sid || null
       const recDuration = parseInt(rec.duration || '0', 10)
       const recUrl = `https://${spaceUrl}/api/laml/2010-04-01/Accounts/${projectId}/Recordings/${rec.sid}`
 
-      // Try to find a matching call.
-      // Strategy: match by call_sid first
+      // Strategy 1: match by call_sid directly on the calls table
       let matched: any = null
+
       if (recCallSid) {
+        // CRITICAL FIX: was .single() — that throws when no row found.
+        // Now using .maybeSingle() which returns null cleanly.
         const { data } = await supabase
           .from('calls')
           .select('*')
           .eq('signalwire_call_id', recCallSid)
           .eq('user_id', userId)
-          .single()
+          .maybeSingle()
         if (data) matched = data
       }
 
-      // Fall back: match by lead_call_sid in call_rooms -> user calls
+      // Strategy 2: match through call_rooms.lead_call_sid -> nearby calls
       if (!matched && recCallSid) {
         const { data: room } = await supabase
           .from('call_rooms')
           .select('*')
           .eq('lead_call_sid', recCallSid)
           .eq('user_id', userId)
-          .single()
+          .maybeSingle()
+
         if (room) {
           const roomTime = new Date(room.created_at).getTime()
           const windowStart = new Date(roomTime - 60_000).toISOString()
           const windowEnd = new Date(roomTime + 5 * 60_000).toISOString()
-          const { data: callByRoom } = await supabase
+          // CRITICAL FIX: removed .single() — replaced with .limit(1)
+          // and reading first element. .single() throws on 0 results.
+          const { data: callsByRoom } = await supabase
             .from('calls')
             .select('*')
             .eq('user_id', userId)
@@ -93,17 +97,17 @@ export async function POST(req: NextRequest) {
             .lte('created_at', windowEnd)
             .order('created_at', { ascending: false })
             .limit(1)
-            .single()
-          if (callByRoom) matched = callByRoom
+          if (callsByRoom && callsByRoom.length > 0) matched = callsByRoom[0]
         }
       }
 
-      // Fall back: match by recording date (within 5 min) to user's most recent call near that time
+      // Strategy 3: match by recording timestamp ± window
       if (!matched) {
         const recDate = new Date(rec.date_created).getTime()
         const windowStart = new Date(recDate - 5 * 60_000).toISOString()
         const windowEnd = new Date(recDate + 60_000).toISOString()
-        const { data: callByTime } = await supabase
+        // CRITICAL FIX: same — was .single(), now .limit(1) + array read
+        const { data: callsByTime } = await supabase
           .from('calls')
           .select('*')
           .eq('user_id', userId)
@@ -112,25 +116,37 @@ export async function POST(req: NextRequest) {
           .is('recording_url', null)
           .order('created_at', { ascending: false })
           .limit(1)
-          .single()
-        if (callByTime) matched = callByTime
+        if (callsByTime && callsByTime.length > 0) matched = callsByTime[0]
       }
 
       if (matched && !matched.recording_url) {
-        await supabase
+        const { error: updateErr } = await supabase
           .from('calls')
           .update({
             recording_url: recUrl,
             recording_duration: recDuration,
             recording_status: 'completed',
             recording_expires_at: expiresAt,
+            signalwire_call_id: matched.signalwire_call_id || recCallSid,
           })
           .eq('id', matched.id)
-        synced++
+
+        if (updateErr) {
+          console.warn(`Failed to update call ${matched.id}:`, updateErr)
+        } else {
+          synced++
+        }
+      } else if (matched?.recording_url) {
+        skipped++
       }
     }
 
-    return NextResponse.json({ success: true, synced, total: recordings.length })
+    return NextResponse.json({
+      success: true,
+      synced,
+      skipped,
+      total: recordings.length,
+    })
   } catch (err: any) {
     console.error('Sync error:', err)
     return NextResponse.json({ success: false, error: err.message }, { status: 500 })

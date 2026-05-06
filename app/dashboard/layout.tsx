@@ -125,7 +125,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     : tier === 'lapsed'
       ? 'UNSUBSCRIBED'
       : tier === 'active'
-        ? 'ACTIVE'
+        ? 'PRO PLAN'
         : tier === 'new'
           ? 'NO PLAN'
           : '...'

@@ -32,7 +32,6 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [adminChecked, setAdminChecked] = useState(false)
 
-  // Bounce admins to /dashboard/admin/analytics on first load
   useEffect(() => {
     if (!user) return
     fetch('/api/admin/check')
@@ -106,11 +105,9 @@ export default function DashboardPage() {
     return () => { cancelled = true }
   }, [user, adminChecked])
 
-  // Toggle campaign active/inactive — same endpoint as the Campaigns page
   const toggleCampaign = async (id: string, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'inactive' : 'active'
 
-    // Optimistic update
     setRecentCampaigns(prev =>
       prev.map(c => (c.id === id ? { ...c, status: newStatus } : c))
     )
@@ -129,7 +126,6 @@ export default function DashboardPage() {
       if (!data.success) throw new Error(data.error || 'Update failed')
     } catch (err) {
       console.error('Toggle failed:', err)
-      // Revert on failure
       setRecentCampaigns(prev =>
         prev.map(c => (c.id === id ? { ...c, status: currentStatus } : c))
       )
@@ -140,7 +136,6 @@ export default function DashboardPage() {
     }
   }
 
-  // While checking admin status, show a quiet loading shell so we don't flash the user dashboard
   if (!adminChecked) {
     return (
       <div style={{
@@ -357,9 +352,6 @@ export default function DashboardPage() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {recentCampaigns.map(c => {
-              const total = c.total_leads || 0
-              const called = c.called_leads || 0
-              const pct = total > 0 ? Math.round((called / total) * 100) : 0
               const isActive = c.status === 'active'
               return (
                 <div key={c.id} style={{
@@ -416,7 +408,7 @@ export default function DashboardPage() {
                       cursor: 'pointer',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <span style={{
                         fontSize: '13px',
                         fontWeight: 'bold',
@@ -436,28 +428,6 @@ export default function DashboardPage() {
                         color: isActive ? 'var(--accent-blue)' : 'var(--text-secondary)',
                         border: `1px solid ${isActive ? 'rgba(74,158,255,0.3)' : 'var(--border)'}`,
                       }}>{c.status?.toUpperCase() || 'DRAFT'}</span>
-                    </div>
-                    <div style={{
-                      fontSize: '11px',
-                      color: 'var(--text-secondary)',
-                      fontFamily: 'monospace',
-                      letterSpacing: '1px',
-                    }}>
-                      {called.toLocaleString()} / {total.toLocaleString()} CALLED · {pct}%
-                    </div>
-                    <div style={{
-                      marginTop: 8,
-                      height: 4,
-                      background: 'var(--border)',
-                      borderRadius: 2,
-                      overflow: 'hidden',
-                    }}>
-                      <div style={{
-                        width: `${pct}%`,
-                        height: '100%',
-                        background: 'linear-gradient(90deg, #4a9eff, #2a6eff)',
-                        transition: 'width 0.3s',
-                      }} />
                     </div>
                   </Link>
 
