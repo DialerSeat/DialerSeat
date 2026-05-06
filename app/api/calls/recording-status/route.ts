@@ -4,46 +4,83 @@ import { NextResponse } from 'next/server'
 export async function POST(req: Request) {
   try {
     const formData = await req.formData()
-    const callSid = formData.get('CallSid') as string
-    const recordingSid = formData.get('RecordingSid') as string
-    const recordingUrl = formData.get('RecordingUrl') as string
-    const recordingStatus = formData.get('RecordingStatus') as string
-    const recordingDuration = formData.get('RecordingDuration') as string
+    const callSid = formData.get('CallSid') as string | null
+    const conferenceSid = formData.get('ConferenceSid') as string | null
+    const recordingSid = formData.get('RecordingSid') as string | null
+    const recordingUrl = formData.get('RecordingUrl') as string | null
+    const recordingStatus = formData.get('RecordingStatus') as string | null
+    const recordingDuration = formData.get('RecordingDuration') as string | null
+    const accountSid = formData.get('AccountSid') as string | null
 
-    console.log('Recording status update:', {
-      callSid,
-      recordingSid,
-      recordingUrl,
-      recordingStatus,
-      recordingDuration,
-    })
+    // Log the entire payload so we can see what SignalWire actually sends
+    console.log('Recording webhook payload:', Object.fromEntries(formData.entries()))
 
-    if (!callSid) {
-      return NextResponse.json({ success: true })
+    // Only act on completed recordings; ignore in-progress / absent
+    if (recordingStatus && recordingStatus !== 'completed') {
+      console.log(`Ignoring recording status: ${recordingStatus}`)
+      return NextResponse.json({ success: true, skipped: true })
     }
 
-    // SignalWire fires this webhook with status 'completed' when the recording
-    // is ready. URL points at their CDN; the existing /api/recordings/play
-    // proxy reads it with project-level auth headers.
     const updates: Record<string, any> = {
       recording_status: recordingStatus || 'completed',
     }
+    if (recordingUrl) updates.recording_url = recordingUrl
+    if (recordingDuration) updates.recording_duration = parseInt(recordingDuration)
 
-    if (recordingUrl) {
-      // SignalWire's RecordingUrl is the base; .mp3 gets appended for playback
-      updates.recording_url = recordingUrl
+    let matched = false
+
+    // Path 1: direct CallSid match (works for non-conference recordings)
+    if (callSid) {
+      const { data, error } = await supabaseAdmin
+        .from('calls')
+        .update(updates)
+        .eq('signalwire_call_id', callSid)
+        .select('id')
+
+      if (!error && data && data.length > 0) {
+        matched = true
+        console.log(`Recording matched via CallSid: ${callSid}`)
+      }
     }
 
-    if (recordingDuration) {
-      updates.recording_duration = parseInt(recordingDuration)
+    // Path 2: conference recording — match through call_rooms table
+    // ConferenceSid alone doesn't tell us which call, but the conference name
+    // we set was the room name. SignalWire echoes FriendlyName for the conference.
+    if (!matched) {
+      const friendlyName = formData.get('FriendlyName') as string | null
+      const conferenceName = friendlyName || conferenceSid
+
+      if (conferenceName) {
+        const { data: room } = await supabaseAdmin
+          .from('call_rooms')
+          .select('lead_call_sid')
+          .eq('room_name', conferenceName)
+          .maybeSingle()
+
+        if (room?.lead_call_sid) {
+          const { data, error } = await supabaseAdmin
+            .from('calls')
+            .update(updates)
+            .eq('signalwire_call_id', room.lead_call_sid)
+            .select('id')
+
+          if (!error && data && data.length > 0) {
+            matched = true
+            console.log(`Recording matched via room: ${conferenceName} -> ${room.lead_call_sid}`)
+          }
+        }
+      }
     }
 
-    await supabaseAdmin
-      .from('calls')
-      .update(updates)
-      .eq('signalwire_call_id', callSid)
+    if (!matched) {
+      console.warn('Recording webhook did not match any call row', {
+        callSid,
+        conferenceSid,
+        recordingSid,
+      })
+    }
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true, matched })
   } catch (error: any) {
     console.error('Recording webhook error:', error)
     return NextResponse.json({ success: false, error: error.message }, { status: 500 })

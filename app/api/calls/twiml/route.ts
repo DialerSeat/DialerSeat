@@ -1,16 +1,17 @@
 import { NextResponse } from 'next/server'
 
 function buildTwiML(room: string, record: boolean, appUrl: string) {
-  // Use space-separated event list — some LaML implementations only fire callback
-  // when multiple events are subscribed
-  const recordAttrs = record
-    ? ` record="record-from-start" recordingStatusCallback="${appUrl}/api/calls/recording-status" recordingStatusCallbackMethod="POST" recordingStatusCallbackEvent="in-progress completed absent"`
+  // Record at the <Dial> level — this records the parent call leg and fires
+  // recordingStatusCallback with CallSid matching our `signalwire_call_id`.
+  // Recording on <Conference> is unreliable across LaML implementations.
+  const dialAttrs = record
+    ? ` record="record-from-answer" recordingStatusCallback="${appUrl}/api/calls/recording-status" recordingStatusCallbackMethod="POST" recordingStatusCallbackEvent="completed"`
     : ''
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Dial>
-    <Conference waitUrl="" startConferenceOnEnter="true" endConferenceOnExit="true" beep="false"${recordAttrs}>
+  <Dial${dialAttrs}>
+    <Conference waitUrl="" startConferenceOnEnter="true" endConferenceOnExit="true" beep="false">
       ${room}
     </Conference>
   </Dial>
