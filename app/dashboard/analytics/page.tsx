@@ -68,6 +68,28 @@ function formatDuration(seconds: number) {
   return `${s}s`
 }
 
+// Build empty placeholder series so charts render axes/grid even with no data
+function buildEmptySeries(range: Range): any[] {
+  const points = range === 'today' ? 12 : 14
+  const out: any[] = []
+  for (let i = 0; i < points; i++) {
+    out.push({
+      label: range === 'today' ? `${i * 2}:00` : `D${i + 1}`,
+      calls: 0,
+      conversionRate: 0,
+    })
+  }
+  return out
+}
+
+const EMPTY_DISPOSITIONS = [
+  { disposition: 'NO DATA', count: 1 },
+]
+
+const EMPTY_CAMPAIGNS = [
+  { name: '—', total: 0, contacted: 0, converted: 0 },
+]
+
 export default function AnalyticsPage() {
   const { user } = useUser()
   const [range, setRange] = useState<Range>('month')
@@ -114,6 +136,26 @@ export default function AnalyticsPage() {
     { key: 'all', label: 'ALL TIME' },
     { key: 'custom', label: 'CUSTOM' },
   ]
+
+  // Safe view of summary — always have valid numbers, even before any calls exist
+  const s = summary || {
+    totalCalls: 0,
+    contactsReached: 0,
+    contactRate: 0,
+    conversions: 0,
+    conversionRate: 0,
+    closed: 0,
+    appointments: 0,
+    totalDuration: 0,
+    avgCallLength: 0,
+    bestCampaign: null,
+    bestCampaignRate: 0,
+  }
+
+  const hasData = !!summary && summary.totalCalls > 0
+  const seriesToRender = series.length > 0 ? series : buildEmptySeries(range)
+  const dispositionsToRender = dispositions.length > 0 ? dispositions : EMPTY_DISPOSITIONS
+  const campaignsToRender = campaigns.length > 0 ? campaigns : EMPTY_CAMPAIGNS
 
   return (
     <div className="analytics-root" style={{
@@ -177,6 +219,10 @@ export default function AnalyticsPage() {
           border: 1px solid ${T.border};
           border-radius: 4px;
           border-top: 3px solid ${T.blue};
+          position: relative;
+        }
+        .stat-card.empty {
+          opacity: 0.55;
         }
         .stat-label {
           font-size: 9px;
@@ -209,6 +255,7 @@ export default function AnalyticsPage() {
           border: 1px solid ${T.border};
           border-radius: 4px;
           padding: 14px;
+          position: relative;
         }
         .chart-card-full {
           grid-column: span 2;
@@ -220,6 +267,26 @@ export default function AnalyticsPage() {
           margin-bottom: 12px;
           font-weight: bold;
         }
+        .chart-empty-overlay {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          pointer-events: none;
+          z-index: 2;
+        }
+        .chart-empty-pill {
+          background: rgba(26, 26, 46, 0.85);
+          color: white;
+          font-size: 10px;
+          letter-spacing: 3px;
+          font-weight: bold;
+          padding: 8px 18px;
+          border-radius: 4px;
+          font-family: 'Futura PT', Futura, sans-serif;
+        }
+        .chart-faded { opacity: 0.35; }
         .empty-state {
           padding: 60px 20px;
           text-align: center;
@@ -278,86 +345,78 @@ export default function AnalyticsPage() {
         )}
       </div>
 
-      {loading && (
+      {loading ? (
         <div className="empty-state">LOADING ANALYTICS...</div>
-      )}
-
-      {!loading && summary && summary.totalCalls === 0 && (
-        <div className="empty-state">
-          <div style={{ fontSize: 36, opacity: 0.4, marginBottom: 12 }}>📊</div>
-          NO CALLS IN THIS RANGE
-        </div>
-      )}
-
-      {!loading && summary && summary.totalCalls > 0 && (
+      ) : (
         <>
-          {/* STAT CARDS */}
+          {/* STAT CARDS — always render, dim if no data */}
           <div className="stat-grid">
-            <div className="stat-card">
+            <div className={`stat-card ${!hasData ? 'empty' : ''}`}>
               <div className="stat-label">TOTAL CALLS</div>
-              <div className="stat-value">{summary.totalCalls.toLocaleString()}</div>
+              <div className="stat-value">{(s.totalCalls || 0).toLocaleString()}</div>
             </div>
-            <div className="stat-card" style={{ borderTopColor: T.accent }}>
+            <div className={`stat-card ${!hasData ? 'empty' : ''}`} style={{ borderTopColor: T.accent }}>
               <div className="stat-label">CONTACTS REACHED</div>
-              <div className="stat-value" style={{ color: T.accent }}>{summary.contactsReached.toLocaleString()}</div>
-              <div className="stat-sub">{summary.contactRate}% rate</div>
+              <div className="stat-value" style={{ color: T.accent }}>{(s.contactsReached || 0).toLocaleString()}</div>
+              <div className="stat-sub">{s.contactRate || 0}% rate</div>
             </div>
-            <div className="stat-card" style={{ borderTopColor: T.green }}>
+            <div className={`stat-card ${!hasData ? 'empty' : ''}`} style={{ borderTopColor: T.green }}>
               <div className="stat-label">CONVERSIONS</div>
-              <div className="stat-value" style={{ color: T.green }}>{summary.conversions.toLocaleString()}</div>
-              <div className="stat-sub">{summary.conversionRate}% rate</div>
+              <div className="stat-value" style={{ color: T.green }}>{(s.conversions || 0).toLocaleString()}</div>
+              <div className="stat-sub">{s.conversionRate || 0}% rate</div>
             </div>
-            <div className="stat-card" style={{ borderTopColor: T.green }}>
+            <div className={`stat-card ${!hasData ? 'empty' : ''}`} style={{ borderTopColor: T.green }}>
               <div className="stat-label">CLOSED</div>
-              <div className="stat-value" style={{ color: T.green }}>{summary.closed.toLocaleString()}</div>
-              <div className="stat-sub">{summary.appointments} appts</div>
+              <div className="stat-value" style={{ color: T.green }}>{(s.closed || 0).toLocaleString()}</div>
+              <div className="stat-sub">{s.appointments || 0} appts</div>
             </div>
-            <div className="stat-card">
+            <div className={`stat-card ${!hasData ? 'empty' : ''}`}>
               <div className="stat-label">TALK TIME</div>
-              <div className="stat-value">{formatDuration(summary.totalDuration)}</div>
-              <div className="stat-sub">avg {formatDuration(summary.avgCallLength)}/call</div>
+              <div className="stat-value">{formatDuration(s.totalDuration || 0)}</div>
+              <div className="stat-sub">avg {formatDuration(s.avgCallLength || 0)}/call</div>
             </div>
-            <div className="stat-card" style={{ borderTopColor: T.amber }}>
+            <div className={`stat-card ${!hasData ? 'empty' : ''}`} style={{ borderTopColor: T.amber }}>
               <div className="stat-label">BEST CAMPAIGN</div>
-              <div className="stat-value" style={{ fontSize: summary.bestCampaign ? 13 : 22, color: T.amber }}>
-                {summary.bestCampaign || '—'}
+              <div className="stat-value" style={{ fontSize: s.bestCampaign ? 13 : 22, color: T.amber }}>
+                {s.bestCampaign || '—'}
               </div>
-              <div className="stat-sub">{summary.bestCampaign ? `${summary.bestCampaignRate}% conv` : 'need 5+ calls'}</div>
+              <div className="stat-sub">{s.bestCampaign ? `${s.bestCampaignRate}% conv` : 'need 5+ calls'}</div>
             </div>
           </div>
 
-          {/* CHARTS */}
+          {/* CHARTS — always render scaffold; overlay AWAITING DATA pill if empty */}
           <div className="charts-grid">
 
             {/* CALL VOLUME LINE */}
             <div className="chart-card">
               <div className="chart-title">▸ CALL VOLUME OVER TIME</div>
-              {series.length === 0 ? (
-                <div style={{ padding: 40, textAlign: 'center', color: T.muted, fontSize: 11 }}>NO DATA</div>
-              ) : (
+              <div className={series.length === 0 ? 'chart-faded' : ''}>
                 <ResponsiveContainer width="100%" height={240}>
-                  <LineChart data={series}>
+                  <LineChart data={seriesToRender}>
                     <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
                     <XAxis dataKey="label" stroke={T.muted} fontSize={10} />
-                    <YAxis stroke={T.muted} fontSize={10} />
+                    <YAxis stroke={T.muted} fontSize={10} allowDecimals={false} domain={[0, 'auto']} />
                     <Tooltip contentStyle={{ background: T.dark, border: `1px solid ${T.border}`, color: 'white', fontSize: 11 }} />
                     <Line type="monotone" dataKey="calls" stroke={T.blue} strokeWidth={2} dot={{ fill: T.blue, r: 3 }} />
                   </LineChart>
                 </ResponsiveContainer>
+              </div>
+              {series.length === 0 && (
+                <div className="chart-empty-overlay">
+                  <div className="chart-empty-pill">AWAITING DATA</div>
+                </div>
               )}
             </div>
 
             {/* CONVERSION RATE LINE */}
             <div className="chart-card">
               <div className="chart-title">▸ CONVERSION RATE OVER TIME</div>
-              {series.length === 0 ? (
-                <div style={{ padding: 40, textAlign: 'center', color: T.muted, fontSize: 11 }}>NO DATA</div>
-              ) : (
+              <div className={series.length === 0 ? 'chart-faded' : ''}>
                 <ResponsiveContainer width="100%" height={240}>
-                  <LineChart data={series}>
+                  <LineChart data={seriesToRender}>
                     <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
                     <XAxis dataKey="label" stroke={T.muted} fontSize={10} />
-                    <YAxis stroke={T.muted} fontSize={10} unit="%" />
+                    <YAxis stroke={T.muted} fontSize={10} unit="%" domain={[0, 100]} />
                     <Tooltip
                       contentStyle={{ background: T.dark, border: `1px solid ${T.border}`, color: 'white', fontSize: 11 }}
                       formatter={(v: any) => `${v}%`}
@@ -365,19 +424,22 @@ export default function AnalyticsPage() {
                     <Line type="monotone" dataKey="conversionRate" stroke={T.green} strokeWidth={2} dot={{ fill: T.green, r: 3 }} />
                   </LineChart>
                 </ResponsiveContainer>
+              </div>
+              {series.length === 0 && (
+                <div className="chart-empty-overlay">
+                  <div className="chart-empty-pill">AWAITING DATA</div>
+                </div>
               )}
             </div>
 
             {/* DISPOSITION PIE */}
             <div className="chart-card">
               <div className="chart-title">▸ DISPOSITION BREAKDOWN</div>
-              {dispositions.length === 0 ? (
-                <div style={{ padding: 40, textAlign: 'center', color: T.muted, fontSize: 11 }}>NO DATA</div>
-              ) : (
+              <div className={dispositions.length === 0 ? 'chart-faded' : ''}>
                 <ResponsiveContainer width="100%" height={240}>
                   <PieChart>
                     <Pie
-                      data={dispositions}
+                      data={dispositionsToRender}
                       dataKey="count"
                       nameKey="disposition"
                       cx="50%"
@@ -386,8 +448,8 @@ export default function AnalyticsPage() {
                       label={(entry: any) => `${entry.disposition}`}
                       labelLine={false}
                     >
-                      {dispositions.map((d, i) => (
-                        <Cell key={i} fill={DISPOSITION_COLORS[d.disposition] || '#888'} />
+                      {dispositionsToRender.map((d, i) => (
+                        <Cell key={i} fill={DISPOSITION_COLORS[d.disposition] || '#bbb'} />
                       ))}
                     </Pie>
                     <Tooltip
@@ -395,20 +457,23 @@ export default function AnalyticsPage() {
                     />
                   </PieChart>
                 </ResponsiveContainer>
+              </div>
+              {dispositions.length === 0 && (
+                <div className="chart-empty-overlay">
+                  <div className="chart-empty-pill">AWAITING DATA</div>
+                </div>
               )}
             </div>
 
             {/* CAMPAIGN COMPARISON BAR */}
             <div className="chart-card">
               <div className="chart-title">▸ CAMPAIGN PERFORMANCE</div>
-              {campaigns.length === 0 ? (
-                <div style={{ padding: 40, textAlign: 'center', color: T.muted, fontSize: 11 }}>NO DATA</div>
-              ) : (
+              <div className={campaigns.length === 0 ? 'chart-faded' : ''}>
                 <ResponsiveContainer width="100%" height={240}>
-                  <BarChart data={campaigns} layout="horizontal">
+                  <BarChart data={campaignsToRender} layout="horizontal">
                     <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
                     <XAxis dataKey="name" stroke={T.muted} fontSize={9} />
-                    <YAxis stroke={T.muted} fontSize={10} />
+                    <YAxis stroke={T.muted} fontSize={10} allowDecimals={false} domain={[0, 'auto']} />
                     <Tooltip contentStyle={{ background: T.dark, border: `1px solid ${T.border}`, color: 'white', fontSize: 11 }} />
                     <Legend wrapperStyle={{ fontSize: 10 }} />
                     <Bar dataKey="total" fill={T.blue} name="Total" />
@@ -416,6 +481,11 @@ export default function AnalyticsPage() {
                     <Bar dataKey="converted" fill={T.green} name="Converted" />
                   </BarChart>
                 </ResponsiveContainer>
+              </div>
+              {campaigns.length === 0 && (
+                <div className="chart-empty-overlay">
+                  <div className="chart-empty-pill">AWAITING DATA</div>
+                </div>
               )}
             </div>
           </div>

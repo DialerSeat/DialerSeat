@@ -106,6 +106,40 @@ export default function DashboardPage() {
     return () => { cancelled = true }
   }, [user, adminChecked])
 
+  // Toggle campaign active/inactive — same endpoint as the Campaigns page
+  const toggleCampaign = async (id: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'active' ? 'inactive' : 'active'
+
+    // Optimistic update
+    setRecentCampaigns(prev =>
+      prev.map(c => (c.id === id ? { ...c, status: newStatus } : c))
+    )
+    setStats(prev => ({
+      ...prev,
+      activeCampaigns: prev.activeCampaigns + (newStatus === 'active' ? 1 : -1),
+    }))
+
+    try {
+      const res = await fetch('/api/campaigns/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status: newStatus }),
+      })
+      const data = await res.json()
+      if (!data.success) throw new Error(data.error || 'Update failed')
+    } catch (err) {
+      console.error('Toggle failed:', err)
+      // Revert on failure
+      setRecentCampaigns(prev =>
+        prev.map(c => (c.id === id ? { ...c, status: currentStatus } : c))
+      )
+      setStats(prev => ({
+        ...prev,
+        activeCampaigns: prev.activeCampaigns + (currentStatus === 'active' ? 1 : -1),
+      }))
+    }
+  }
+
   // While checking admin status, show a quiet loading shell so we don't flash the user dashboard
   if (!adminChecked) {
     return (
@@ -328,69 +362,107 @@ export default function DashboardPage() {
               const pct = total > 0 ? Math.round((called / total) * 100) : 0
               const isActive = c.status === 'active'
               return (
-                <Link key={c.id} href="/dashboard/campaigns" style={{ textDecoration: 'none' }}>
-                  <div style={{
-                    padding: '16px 20px',
-                    borderRadius: '10px',
-                    background: 'var(--background)',
-                    border: '1px solid var(--border)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '16px',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s',
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent-blue)' }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)' }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                        <span style={{
-                          fontSize: '13px',
-                          fontWeight: 'bold',
-                          color: 'var(--text-primary)',
-                          letterSpacing: '1px',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                        }}>{c.name}</span>
-                        <span style={{
-                          fontSize: '8px',
-                          fontWeight: 'bold',
-                          letterSpacing: '2px',
-                          padding: '3px 8px',
-                          borderRadius: 3,
-                          background: isActive ? 'rgba(74,158,255,0.12)' : 'rgba(140,140,160,0.12)',
-                          color: isActive ? 'var(--accent-blue)' : 'var(--text-secondary)',
-                          border: `1px solid ${isActive ? 'rgba(74,158,255,0.3)' : 'var(--border)'}`,
-                        }}>{c.status?.toUpperCase() || 'DRAFT'}</span>
-                      </div>
-                      <div style={{
-                        fontSize: '11px',
-                        color: 'var(--text-secondary)',
-                        fontFamily: 'monospace',
-                        letterSpacing: '1px',
-                      }}>
-                        {called.toLocaleString()} / {total.toLocaleString()} CALLED · {pct}%
-                      </div>
-                      <div style={{
-                        marginTop: 8,
-                        height: 4,
-                        background: 'var(--border)',
-                        borderRadius: 2,
-                        overflow: 'hidden',
-                      }}>
-                        <div style={{
-                          width: `${pct}%`,
-                          height: '100%',
-                          background: 'linear-gradient(90deg, #4a9eff, #2a6eff)',
-                          transition: 'width 0.3s',
-                        }} />
-                      </div>
-                    </div>
-                    <div style={{ fontSize: 18, color: 'var(--text-secondary)', flexShrink: 0 }}>›</div>
+                <div key={c.id} style={{
+                  padding: '16px 20px',
+                  borderRadius: '10px',
+                  background: 'var(--background)',
+                  border: '1px solid var(--border)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '16px',
+                  transition: 'border-color 0.15s',
+                }}>
+                  {/* TOGGLE — own click target, doesn't navigate */}
+                  <div
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      toggleCampaign(c.id, c.status)
+                    }}
+                    role="switch"
+                    aria-checked={isActive}
+                    aria-label={`${isActive ? 'Deactivate' : 'Activate'} ${c.name}`}
+                    style={{
+                      width: '44px',
+                      height: '24px',
+                      borderRadius: '12px',
+                      background: isActive ? 'var(--accent-blue)' : 'var(--border)',
+                      position: 'relative',
+                      cursor: 'pointer',
+                      transition: 'background 0.2s',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <div style={{
+                      width: '18px',
+                      height: '18px',
+                      borderRadius: '50%',
+                      background: 'white',
+                      position: 'absolute',
+                      top: '3px',
+                      left: isActive ? '23px' : '3px',
+                      transition: 'left 0.2s',
+                    }} />
                   </div>
-                </Link>
+
+                  {/* CAMPAIGN INFO — own click target, navigates */}
+                  <Link
+                    href="/dashboard/campaigns"
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      textDecoration: 'none',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                      <span style={{
+                        fontSize: '13px',
+                        fontWeight: 'bold',
+                        color: 'var(--text-primary)',
+                        letterSpacing: '1px',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}>{c.name}</span>
+                      <span style={{
+                        fontSize: '8px',
+                        fontWeight: 'bold',
+                        letterSpacing: '2px',
+                        padding: '3px 8px',
+                        borderRadius: 3,
+                        background: isActive ? 'rgba(74,158,255,0.12)' : 'rgba(140,140,160,0.12)',
+                        color: isActive ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                        border: `1px solid ${isActive ? 'rgba(74,158,255,0.3)' : 'var(--border)'}`,
+                      }}>{c.status?.toUpperCase() || 'DRAFT'}</span>
+                    </div>
+                    <div style={{
+                      fontSize: '11px',
+                      color: 'var(--text-secondary)',
+                      fontFamily: 'monospace',
+                      letterSpacing: '1px',
+                    }}>
+                      {called.toLocaleString()} / {total.toLocaleString()} CALLED · {pct}%
+                    </div>
+                    <div style={{
+                      marginTop: 8,
+                      height: 4,
+                      background: 'var(--border)',
+                      borderRadius: 2,
+                      overflow: 'hidden',
+                    }}>
+                      <div style={{
+                        width: `${pct}%`,
+                        height: '100%',
+                        background: 'linear-gradient(90deg, #4a9eff, #2a6eff)',
+                        transition: 'width 0.3s',
+                      }} />
+                    </div>
+                  </Link>
+
+                  <div style={{ fontSize: 18, color: 'var(--text-secondary)', flexShrink: 0 }}>›</div>
+                </div>
               )
             })}
           </div>

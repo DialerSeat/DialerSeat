@@ -106,28 +106,11 @@ export default async function Home() {
         </div>
 
         <div className="ds-nav-links">
-          <Link href="#features" className="ds-nav-link" style={{
-            fontSize: '12px', letterSpacing: '3px', color: 'var(--text-secondary)',
-            textDecoration: 'none', whiteSpace: 'nowrap',
-          }}>FEATURES</Link>
-          <Link href="#pricing" className="ds-nav-link" style={{
-            fontSize: '12px', letterSpacing: '3px', color: 'var(--text-secondary)',
-            textDecoration: 'none', whiteSpace: 'nowrap',
-          }}>PRICING</Link>
-          <Link href="#compare" className="ds-nav-link" style={{
-            fontSize: '12px', letterSpacing: '3px', color: 'var(--text-secondary)',
-            textDecoration: 'none', whiteSpace: 'nowrap',
-          }}>COMPARE</Link>
-          <Link href="/sign-in" className="ds-nav-link ds-show-mobile" style={{
-            fontSize: '11px', letterSpacing: '2px', color: 'var(--text-primary)',
-            textDecoration: 'none', padding: '8px 14px',
-            border: '1px solid var(--border)', borderRadius: '8px', whiteSpace: 'nowrap',
-          }}>SIGN IN</Link>
-          <Link href="/sign-up" className="ds-nav-link" style={{
-            fontSize: '12px', letterSpacing: '3px', color: 'white',
-            textDecoration: 'none', padding: '10px 20px', borderRadius: '8px',
-            background: 'linear-gradient(135deg, #4a9eff, #2a6eff)', whiteSpace: 'nowrap',
-          }}>GET STARTED</Link>
+          <Link href="#features" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>FEATURES</Link>
+          <Link href="#pricing" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>PRICING</Link>
+          <Link href="#compare" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>COMPARE</Link>
+          <Link href="/sign-in" className="ds-nav-link ds-show-mobile" style={{ fontSize: '11px', letterSpacing: '2px', color: 'var(--text-primary)', textDecoration: 'none', padding: '8px 14px', border: '1px solid var(--border)', borderRadius: '8px', whiteSpace: 'nowrap' }}>SIGN IN</Link>
+          <Link href="/sign-up" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'white', textDecoration: 'none', padding: '10px 20px', borderRadius: '8px', background: 'linear-gradient(135deg, #4a9eff, #2a6eff)', whiteSpace: 'nowrap' }}>GET STARTED</Link>
         </div>
       </nav>
 
@@ -189,7 +172,7 @@ export default async function Home() {
           marginBottom: '40px',
           padding: '0 8px',
         }}>
-          The professional outbound dialer built for <u>anyone</u> who lives on the phone. Upload your leads, launch your campaigns, and let DialerSeat do the heavy lifting — for a fraction of what everyone else charges.
+          The professional outbound dialer built for <u>ANYONE</u> who lives on the phone. Upload your leads, launch your campaigns, and let DialerSeat do the heavy lifting — for a fraction of what everyone else charges.
         </p>
 
         <div className="ds-cta-buttons" style={{
