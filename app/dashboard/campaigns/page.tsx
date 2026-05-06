@@ -1,6 +1,9 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { useUser } from '@clerk/nextjs'
+import Link from 'next/link'
+
+type AccessTier = 'active' | 'lapsed' | 'new' | null
 
 interface Campaign {
   id: string
@@ -14,6 +17,7 @@ interface Campaign {
 
 export default function CampaignsPage() {
   const { user } = useUser()
+  const [tier, setTier] = useState<AccessTier>(null)
   const [showModal, setShowModal] = useState(false)
   const [campaignName, setCampaignName] = useState('')
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
@@ -25,10 +29,19 @@ export default function CampaignsPage() {
   const [scriptModal, setScriptModal] = useState<Campaign | null>(null)
   const [scriptText, setScriptText] = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [deleteTyped, setDeleteTyped] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
 
+  const isLapsed = tier === 'lapsed' || tier === 'new'
+
   useEffect(() => {
-    if (user) fetchCampaigns()
+    if (user) {
+      fetchCampaigns()
+      fetch('/api/stripe/status')
+        .then(r => r.json())
+        .then(d => setTier(d.tier || null))
+        .catch(() => setTier(null))
+    }
   }, [user])
 
   const fetchCampaigns = async () => {
@@ -96,15 +109,18 @@ export default function CampaignsPage() {
       const res = await fetch('/api/campaigns/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: user.id, name: campaignName }),
+        body: JSON.stringify({ name: campaignName }),
       })
       const data = await res.json()
-      if (!data.success) throw new Error(data.error)
+      if (!data.success) {
+        if (res.status === 403) setTier('lapsed')
+        throw new Error(data.error)
+      }
       if (csvData.length > 0) {
         await fetch('/api/leads/upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ campaign_id: data.campaign.id, user_id: user.id, leads: csvData }),
+          body: JSON.stringify({ campaign_id: data.campaign.id, leads: csvData }),
         })
       }
       setCampaignName('')
@@ -120,6 +136,8 @@ export default function CampaignsPage() {
   }
 
   const toggleStatus = async (id: string, currentStatus: string) => {
+    // Toggle is allowed for everyone, including lapsed users — pausing your own
+    // campaign isn't a mutation that costs money.
     const newStatus = currentStatus === 'active' ? 'inactive' : 'active'
     setCampaigns(campaigns.map(c => c.id === id ? { ...c, status: newStatus } : c))
     await fetch('/api/campaigns/update', {
@@ -129,7 +147,12 @@ export default function CampaignsPage() {
     })
   }
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string, leadCount: number) => {
+    // For 100+ lead campaigns, require typed confirmation
+    if (leadCount >= 100 && deleteTyped.toLowerCase().trim() !== 'delete') {
+      return
+    }
+
     await fetch('/api/campaigns/delete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -137,6 +160,7 @@ export default function CampaignsPage() {
     })
     setCampaigns(campaigns.filter(c => c.id !== id))
     setDeleteConfirm(null)
+    setDeleteTyped('')
   }
 
   const handleSaveScript = async () => {
@@ -156,14 +180,20 @@ export default function CampaignsPage() {
     reader.onload = async (e) => {
       const text = e.target?.result as string
       const parsed = parseCSV(text)
-      await fetch('/api/leads/upload', {
+      const res = await fetch('/api/leads/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ campaign_id: campaignId, user_id: user?.id, leads: parsed }),
+        body: JSON.stringify({ campaign_id: campaignId, leads: parsed }),
       })
+      if (res.status === 403) setTier('lapsed')
       fetchCampaigns()
     }
     reader.readAsText(file)
+  }
+
+  const startDelete = (id: string) => {
+    setDeleteConfirm(id)
+    setDeleteTyped('')
   }
 
   return (
@@ -238,16 +268,53 @@ export default function CampaignsPage() {
       <div className="campaigns-header">
         <div>
           <h1 style={{ fontSize: '24px', fontWeight: 'bold', letterSpacing: '4px', color: 'var(--text-primary)', marginBottom: '8px' }}>CAMPAIGNS</h1>
-          <p style={{ fontSize: '12px', letterSpacing: '2px', color: 'var(--text-secondary)' }}>MANAGE YOUR LEAD LISTS AND DIALING CAMPAIGNS.</p>
+          <p style={{ fontSize: '12px', letterSpacing: '2px', color: 'var(--text-secondary)' }}>
+            {isLapsed ? 'READ-ONLY · RESUBSCRIBE TO CREATE OR DIAL' : 'MANAGE YOUR LEAD LISTS AND DIALING CAMPAIGNS.'}
+          </p>
         </div>
-        <button onClick={() => setShowModal(true)} className="new-campaign-btn" style={{
-          padding: '14px 28px', borderRadius: '10px',
-          background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
-          color: 'white', fontSize: '11px', fontWeight: 'bold', letterSpacing: '2px',
-          border: 'none', cursor: 'pointer', boxShadow: '0 0 20px rgba(74,158,255,0.3)',
-          fontFamily: 'Futura PT, Futura, sans-serif',
-        }}>+ NEW CAMPAIGN</button>
+        {!isLapsed ? (
+          <button onClick={() => setShowModal(true)} className="new-campaign-btn" style={{
+            padding: '14px 28px', borderRadius: '10px',
+            background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+            color: 'white', fontSize: '11px', fontWeight: 'bold', letterSpacing: '2px',
+            border: 'none', cursor: 'pointer', boxShadow: '0 0 20px rgba(74,158,255,0.3)',
+            fontFamily: 'Futura PT, Futura, sans-serif',
+          }}>+ NEW CAMPAIGN</button>
+        ) : (
+          <Link href="/billing" className="new-campaign-btn" style={{
+            padding: '14px 28px', borderRadius: '10px',
+            background: 'linear-gradient(135deg, #ffaa3e, #ff8a1a)',
+            color: 'white', fontSize: '11px', fontWeight: 'bold', letterSpacing: '2px',
+            border: 'none', cursor: 'pointer',
+            fontFamily: 'Futura PT, Futura, sans-serif',
+            textDecoration: 'none',
+            display: 'inline-block',
+          }}>↻ RESUBSCRIBE</Link>
+        )}
       </div>
+
+      {/* LAPSED BANNER */}
+      {isLapsed && (
+        <div style={{
+          padding: '16px 20px',
+          marginBottom: 24,
+          background: 'rgba(255,170,62,0.06)',
+          border: '1px solid #8a6a1a',
+          borderLeft: '3px solid #ffaa3e',
+          borderRadius: 6,
+          fontSize: 12,
+          color: 'var(--text-primary)',
+          letterSpacing: 1,
+          lineHeight: 1.6,
+        }}>
+          <strong style={{ color: '#ffaa3e', fontSize: 11, letterSpacing: 3, fontWeight: 700 }}>
+            ▸ READ-ONLY MODE
+          </strong>
+          <div style={{ marginTop: 6 }}>
+            Your campaigns are still here. You can pause or unpause them, but creating, deleting, importing, and dialing require an active subscription.
+          </div>
+        </div>
+      )}
 
       {/* CAMPAIGNS LIST */}
       {fetching ? (
@@ -262,15 +329,29 @@ export default function CampaignsPage() {
           <div style={{ fontSize: '56px', marginBottom: '20px' }}>📋</div>
           <h2 style={{ fontSize: '14px', fontWeight: 'bold', letterSpacing: '4px', color: 'var(--text-primary)', marginBottom: '12px' }}>NO CAMPAIGNS YET</h2>
           <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '32px', lineHeight: '1.7' }}>
-            Create your first campaign, upload your leads CSV,<br />and start dialing in minutes.
+            {isLapsed
+              ? <>Resubscribe to create your first campaign,<br />upload leads, and start dialing.</>
+              : <>Create your first campaign, upload your leads CSV,<br />and start dialing in minutes.</>}
           </p>
-          <button onClick={() => setShowModal(true)} style={{
-            padding: '14px 36px', borderRadius: '10px',
-            background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
-            color: 'white', fontSize: '11px', fontWeight: 'bold',
-            letterSpacing: '2px', border: 'none', cursor: 'pointer',
-            fontFamily: 'Futura PT, Futura, sans-serif',
-          }}>CREATE FIRST CAMPAIGN</button>
+          {!isLapsed ? (
+            <button onClick={() => setShowModal(true)} style={{
+              padding: '14px 36px', borderRadius: '10px',
+              background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+              color: 'white', fontSize: '11px', fontWeight: 'bold',
+              letterSpacing: '2px', border: 'none', cursor: 'pointer',
+              fontFamily: 'Futura PT, Futura, sans-serif',
+            }}>CREATE FIRST CAMPAIGN</button>
+          ) : (
+            <Link href="/billing" style={{
+              display: 'inline-block',
+              padding: '14px 36px', borderRadius: '10px',
+              background: 'linear-gradient(135deg, #ffaa3e, #ff8a1a)',
+              color: 'white', fontSize: '11px', fontWeight: 'bold',
+              letterSpacing: '2px', border: 'none', cursor: 'pointer',
+              fontFamily: 'Futura PT, Futura, sans-serif',
+              textDecoration: 'none',
+            }}>RESUBSCRIBE — $35/WEEK</Link>
+          )}
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -280,7 +361,6 @@ export default function CampaignsPage() {
             }}>
               <div className="campaign-row-inner">
                 <div className="campaign-left">
-                  {/* TOGGLE */}
                   <div onClick={() => toggleStatus(campaign.id, campaign.status)} style={{
                     width: '48px', height: '26px', borderRadius: '13px',
                     background: campaign.status === 'active' ? 'var(--accent-blue)' : 'var(--border)',
@@ -308,7 +388,6 @@ export default function CampaignsPage() {
                   </div>
                 </div>
 
-                {/* STATS — wrap below on mobile */}
                 <div className="campaign-stats-row" style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
                   <div className="campaign-stat">
                     <div style={{ fontSize: '22px', fontWeight: 'bold', color: 'var(--text-primary)', marginBottom: '2px' }}>
@@ -336,71 +415,120 @@ export default function CampaignsPage() {
                   </div>
                 </div>
 
-                {/* ACTIONS */}
                 <div className="campaign-actions">
-                  <button
-                    onClick={() => { setScriptModal(campaign); setScriptText(campaign.script || '') }}
-                    style={{
+                  {/* Script — active only */}
+                  {!isLapsed && (
+                    <button
+                      onClick={() => { setScriptModal(campaign); setScriptText(campaign.script || '') }}
+                      style={{
+                        padding: '8px 16px', borderRadius: '8px',
+                        background: campaign.script ? 'rgba(74,158,255,0.1)' : 'transparent',
+                        border: `1px solid ${campaign.script ? 'var(--accent-blue)' : 'var(--border)'}`,
+                        color: campaign.script ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                        fontSize: '10px', letterSpacing: '2px', cursor: 'pointer',
+                        fontFamily: 'Futura PT, Futura, sans-serif',
+                        whiteSpace: 'nowrap',
+                      }}>
+                      📝 {campaign.script ? 'EDIT SCRIPT' : 'ADD SCRIPT'}
+                    </button>
+                  )}
+
+                  {/* CSV upload — active only */}
+                  {!isLapsed && (
+                    <label style={{
                       padding: '8px 16px', borderRadius: '8px',
-                      background: campaign.script ? 'rgba(74,158,255,0.1)' : 'transparent',
-                      border: `1px solid ${campaign.script ? 'var(--accent-blue)' : 'var(--border)'}`,
-                      color: campaign.script ? 'var(--accent-blue)' : 'var(--text-secondary)',
-                      fontSize: '10px', letterSpacing: '2px', cursor: 'pointer',
+                      background: 'transparent', border: '1px solid var(--border)',
+                      color: 'var(--text-secondary)', fontSize: '10px',
+                      letterSpacing: '2px', cursor: 'pointer',
                       fontFamily: 'Futura PT, Futura, sans-serif',
                       whiteSpace: 'nowrap',
                     }}>
-                    📝 {campaign.script ? 'EDIT SCRIPT' : 'ADD SCRIPT'}
-                  </button>
+                      + CSV
+                      <input type="file" accept=".csv" style={{ display: 'none' }}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) handleUploadMore(campaign.id, file)
+                        }} />
+                    </label>
+                  )}
 
-                  <label style={{
-                    padding: '8px 16px', borderRadius: '8px',
-                    background: 'transparent', border: '1px solid var(--border)',
-                    color: 'var(--text-secondary)', fontSize: '10px',
-                    letterSpacing: '2px', cursor: 'pointer',
-                    fontFamily: 'Futura PT, Futura, sans-serif',
-                    whiteSpace: 'nowrap',
-                  }}>
-                    + CSV
-                    <input type="file" accept=".csv" style={{ display: 'none' }}
-                      onChange={(e) => {
-                        const file = e.target.files?.[0]
-                        if (file) handleUploadMore(campaign.id, file)
-                      }} />
-                  </label>
-
-                  <a href="/dashboard/dialer" style={{
-                    padding: '8px 20px', borderRadius: '8px',
-                    background: campaign.status === 'active' ? 'linear-gradient(135deg, #4a9eff, #2a6eff)' : 'var(--surface-2)',
-                    border: 'none', color: campaign.status === 'active' ? 'white' : 'var(--text-secondary)',
-                    fontSize: '10px', letterSpacing: '2px', cursor: 'pointer',
-                    fontFamily: 'Futura PT, Futura, sans-serif', textDecoration: 'none',
-                    boxShadow: campaign.status === 'active' ? '0 0 15px rgba(74,158,255,0.3)' : 'none',
-                    whiteSpace: 'nowrap',
-                  }}>DIAL NOW</a>
-
-                  {deleteConfirm === campaign.id ? (
-                    <div style={{ display: 'flex', gap: '6px' }}>
-                      <button onClick={() => handleDelete(campaign.id)} style={{
-                        padding: '8px 14px', borderRadius: '8px', border: 'none',
-                        background: '#ff4444', color: 'white', fontSize: '10px',
-                        letterSpacing: '2px', cursor: 'pointer',
-                        fontFamily: 'Futura PT, Futura, sans-serif',
-                      }}>CONFIRM</button>
-                      <button onClick={() => setDeleteConfirm(null)} style={{
-                        padding: '8px 14px', borderRadius: '8px',
-                        background: 'transparent', border: '1px solid var(--border)',
-                        color: 'var(--text-secondary)', fontSize: '10px',
-                        letterSpacing: '2px', cursor: 'pointer',
-                        fontFamily: 'Futura PT, Futura, sans-serif',
-                      }}>CANCEL</button>
-                    </div>
+                  {/* Dial Now — active only */}
+                  {!isLapsed ? (
+                    <a href="/dashboard/dialer" style={{
+                      padding: '8px 20px', borderRadius: '8px',
+                      background: campaign.status === 'active' ? 'linear-gradient(135deg, #4a9eff, #2a6eff)' : 'var(--surface-2)',
+                      border: 'none', color: campaign.status === 'active' ? 'white' : 'var(--text-secondary)',
+                      fontSize: '10px', letterSpacing: '2px', cursor: 'pointer',
+                      fontFamily: 'Futura PT, Futura, sans-serif', textDecoration: 'none',
+                      boxShadow: campaign.status === 'active' ? '0 0 15px rgba(74,158,255,0.3)' : 'none',
+                      whiteSpace: 'nowrap',
+                    }}>DIAL NOW</a>
                   ) : (
-                    <button onClick={() => setDeleteConfirm(campaign.id)} style={{
-                      padding: '8px 14px', borderRadius: '8px',
-                      background: 'transparent', border: '1px solid rgba(255,68,68,0.3)',
-                      color: '#ff4444', fontSize: '10px', letterSpacing: '2px',
-                      cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
-                    }}>🗑</button>
+                    <span style={{
+                      padding: '8px 20px', borderRadius: '8px',
+                      background: 'var(--surface-2)',
+                      border: '1px solid var(--border)',
+                      color: 'var(--text-secondary)',
+                      fontSize: '10px', letterSpacing: '2px',
+                      fontFamily: 'Futura PT, Futura, sans-serif',
+                      whiteSpace: 'nowrap',
+                      opacity: 0.6,
+                    }}>🔒 DIAL LOCKED</span>
+                  )}
+
+                  {/* Delete — active only */}
+                  {!isLapsed && (
+                    deleteConfirm === campaign.id ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: campaign.total_leads >= 100 ? 200 : 'auto' }}>
+                        {campaign.total_leads >= 100 && (
+                          <input
+                            type="text"
+                            placeholder='type "delete" to confirm'
+                            value={deleteTyped}
+                            onChange={e => setDeleteTyped(e.target.value)}
+                            autoFocus
+                            style={{
+                              padding: '6px 8px', borderRadius: '4px',
+                              background: 'var(--surface-2)',
+                              border: '1px solid #ff4444',
+                              color: 'var(--text-primary)',
+                              fontSize: '10px',
+                              fontFamily: 'monospace',
+                              outline: 'none',
+                              letterSpacing: 1,
+                            }}
+                          />
+                        )}
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button
+                            onClick={() => handleDelete(campaign.id, campaign.total_leads)}
+                            disabled={campaign.total_leads >= 100 && deleteTyped.toLowerCase().trim() !== 'delete'}
+                            style={{
+                              padding: '8px 14px', borderRadius: '8px', border: 'none',
+                              background: '#ff4444', color: 'white', fontSize: '10px',
+                              letterSpacing: '2px',
+                              cursor: campaign.total_leads >= 100 && deleteTyped.toLowerCase().trim() !== 'delete' ? 'not-allowed' : 'pointer',
+                              opacity: campaign.total_leads >= 100 && deleteTyped.toLowerCase().trim() !== 'delete' ? 0.4 : 1,
+                              fontFamily: 'Futura PT, Futura, sans-serif',
+                              flex: 1,
+                            }}>CONFIRM</button>
+                          <button onClick={() => { setDeleteConfirm(null); setDeleteTyped('') }} style={{
+                            padding: '8px 14px', borderRadius: '8px',
+                            background: 'transparent', border: '1px solid var(--border)',
+                            color: 'var(--text-secondary)', fontSize: '10px',
+                            letterSpacing: '2px', cursor: 'pointer',
+                            fontFamily: 'Futura PT, Futura, sans-serif',
+                          }}>CANCEL</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button onClick={() => startDelete(campaign.id)} style={{
+                        padding: '8px 14px', borderRadius: '8px',
+                        background: 'transparent', border: '1px solid rgba(255,68,68,0.3)',
+                        color: '#ff4444', fontSize: '10px', letterSpacing: '2px',
+                        cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                      }}>🗑</button>
+                    )
                   )}
                 </div>
               </div>
@@ -409,8 +537,8 @@ export default function CampaignsPage() {
         </div>
       )}
 
-      {/* CREATE CAMPAIGN MODAL */}
-      {showModal && (
+      {/* CREATE CAMPAIGN MODAL — active only */}
+      {!isLapsed && showModal && (
         <div className="modal-overlay" style={{
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -481,8 +609,8 @@ export default function CampaignsPage() {
         </div>
       )}
 
-      {/* SCRIPT MODAL */}
-      {scriptModal && (
+      {/* SCRIPT MODAL — active only */}
+      {!isLapsed && scriptModal && (
         <div className="modal-overlay" style={{
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',

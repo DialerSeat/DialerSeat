@@ -1,8 +1,10 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { useUser } from '@clerk/nextjs'
+import Link from 'next/link'
 
 type CallStatus = 'idle' | 'calling' | 'connected' | 'ended'
+type AccessTier = 'active' | 'lapsed' | 'new' | null
 
 interface Lead {
   id: string
@@ -26,6 +28,9 @@ interface Campaign {
 
 export default function DialerPage() {
   const { user } = useUser()
+  const [tier, setTier] = useState<AccessTier>(null)
+  const [tierLoaded, setTierLoaded] = useState(false)
+
   const [status, setStatus] = useState<CallStatus>('idle')
   const [manualNumber, setManualNumber] = useState('')
   const [seconds, setSeconds] = useState(0)
@@ -55,16 +60,37 @@ export default function DialerPage() {
 
   useEffect(() => setMounted(true), [])
 
+  // Fetch access tier — controls whether dialer or paywall shows
   useEffect(() => {
-    if (user) fetchCampaigns()
+    if (!user) return
+    fetch('/api/stripe/status')
+      .then(r => r.json())
+      .then(d => {
+        setTier(d.tier || null)
+        setTierLoaded(true)
+      })
+      .catch(() => {
+        setTier(null)
+        setTierLoaded(true)
+      })
   }, [user])
 
-  useEffect(() => {
-    const interval = setInterval(() => setTick(t => t + 1), 1000)
-    return () => clearInterval(interval)
-  }, [])
+  // Only initialize SIP / fetch campaigns / etc. for active users.
+  // Lapsed users get the paywall and never load any of this.
+  const isActive = tier === 'active'
 
   useEffect(() => {
+    if (user && isActive) fetchCampaigns()
+  }, [user, isActive])
+
+  useEffect(() => {
+    if (!isActive) return
+    const interval = setInterval(() => setTick(t => t + 1), 1000)
+    return () => clearInterval(interval)
+  }, [isActive])
+
+  useEffect(() => {
+    if (!isActive) return
     const warmUp = () => {
       if (!audioCtxRef.current) {
         audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
@@ -83,9 +109,10 @@ export default function DialerPage() {
       window.removeEventListener('click', warmUp)
       window.removeEventListener('keydown', warmUp)
     }
-  }, [])
+  }, [isActive])
 
   useEffect(() => {
+    if (!isActive) return
     const initSW = async () => {
       try {
         const sipUsername = process.env.NEXT_PUBLIC_SIGNALWIRE_SIP_USERNAME
@@ -156,7 +183,7 @@ export default function DialerPage() {
       }
     }
     initSW()
-  }, [])
+  }, [isActive])
 
   const attachSIPAudio = (session: any) => {
     const tryAttach = () => {
@@ -352,7 +379,6 @@ export default function DialerPage() {
     return () => { if (timerRef.current) clearInterval(timerRef.current) }
   }, [status])
 
-  // Lock body scroll when zoom is open
   useEffect(() => {
     if (dialZoomed) {
       document.body.style.overflow = 'hidden'
@@ -476,6 +502,11 @@ export default function DialerPage() {
         setActiveCallSid(data.callSid)
         startCallPolling(data.callSid)
       } else {
+        // 403 means subscription lapsed mid-session — re-fetch tier and bail to paywall
+        if (res.status === 403) {
+          setTier('lapsed')
+          return
+        }
         console.error('Call failed:', data.error)
         await fetch('/api/leads/dispose', {
           method: 'POST',
@@ -570,6 +601,10 @@ export default function DialerPage() {
         setActiveCallSid(data.callSid)
         startCallPolling(data.callSid)
       } else {
+        if (res.status === 403) {
+          setTier('lapsed')
+          return
+        }
         setStatus('idle')
       }
     } catch {
@@ -587,6 +622,7 @@ export default function DialerPage() {
   const handleBackspace = () => setManualNumber(prev => prev.slice(0, -1))
 
   useEffect(() => {
+    if (!isActive) return
     const handleKeyDown = (e: KeyboardEvent) => {
       const activeEl = document.activeElement?.tagName
       if (activeEl === 'INPUT' || activeEl === 'TEXTAREA' || activeEl === 'SELECT') return
@@ -598,7 +634,7 @@ export default function DialerPage() {
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [manualNumber, status, dialZoomed])
+  }, [manualNumber, status, dialZoomed, isActive])
 
   const nameKeys = ['name', 'first_name', 'last_name', 'full_name', 'fname', 'lname', 'firstname', 'lastname']
   const filteredExtraData = (data: Record<string, any>) => {
@@ -627,6 +663,128 @@ export default function DialerPage() {
   const terminalAccent = '#2a4a8a'
   const terminalGreen = '#1a6a1a'
   const terminalRed = '#8a1a1a'
+
+  // ========================================================================
+  // LAPSED PAYWALL — replaces the entire dialer for non-active users
+  // ========================================================================
+  if (tierLoaded && !isActive) {
+    return (
+      <div style={{
+        flex: 1,
+        background: terminalBg,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 24,
+        minHeight: 'calc(100vh - 64px)',
+        fontFamily: 'Futura PT, Futura, sans-serif',
+      }}>
+        <div style={{
+          width: '100%',
+          maxWidth: 520,
+          background: terminalDark,
+          border: `1px solid ${terminalBorder}`,
+          borderTop: `3px solid #ffaa3e`,
+          borderRadius: 4,
+          padding: 36,
+          color: '#e0e2ea',
+          textAlign: 'center',
+          boxSizing: 'border-box',
+        }}>
+          <div style={{
+            fontSize: 56, marginBottom: 16, opacity: 0.85,
+          }}>📞</div>
+
+          <div style={{
+            fontSize: 16,
+            fontWeight: 700,
+            letterSpacing: 5,
+            color: '#ffaa3e',
+            marginBottom: 12,
+          }}>SUBSCRIBE TO DIAL</div>
+
+          <div style={{
+            fontSize: 12,
+            lineHeight: 1.7,
+            color: '#c0c2ca',
+            letterSpacing: 1,
+            marginBottom: 28,
+          }}>
+            {tier === 'lapsed'
+              ? 'Your subscription has lapsed. Resubscribe to restore dialing access. Your leads, recordings, and campaigns are still here waiting for you.'
+              : 'An active subscription is required to make outbound calls.'}
+          </div>
+
+          <Link href="/billing" style={{
+            display: 'block',
+            padding: '16px 28px',
+            background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+            border: 'none',
+            borderRadius: 4,
+            color: 'white',
+            fontSize: 13,
+            fontWeight: 700,
+            letterSpacing: 4,
+            textDecoration: 'none',
+            boxShadow: '0 0 20px rgba(74,158,255,0.3)',
+            marginBottom: 16,
+            fontFamily: 'Futura PT, Futura, sans-serif',
+          }}>RESUBSCRIBE — $35/WEEK</Link>
+
+          <div style={{
+            fontSize: 9,
+            letterSpacing: 3,
+            color: '#888a92',
+            marginBottom: 24,
+          }}>NO CONTRACTS · CANCEL ANYTIME</div>
+
+          <div style={{
+            paddingTop: 20,
+            borderTop: '1px solid #2a2c34',
+            display: 'flex',
+            gap: 12,
+            justifyContent: 'center',
+            flexWrap: 'wrap',
+          }}>
+            <Link href="/dashboard/leads" style={navLinkStyle}>
+              VIEW LEADS
+            </Link>
+            <Link href="/dashboard/recordings" style={navLinkStyle}>
+              RECORDINGS
+            </Link>
+            <Link href="/dashboard/analytics" style={navLinkStyle}>
+              ANALYTICS
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // While tier is loading — show a minimal placeholder, don't flash the full UI
+  if (!tierLoaded) {
+    return (
+      <div style={{
+        flex: 1,
+        background: terminalBg,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: 'calc(100vh - 64px)',
+        fontFamily: 'Futura PT, Futura, sans-serif',
+      }}>
+        <div style={{
+          fontSize: 11,
+          letterSpacing: 4,
+          color: terminalMuted,
+        }}>LOADING TERMINAL...</div>
+      </div>
+    )
+  }
+
+  // ========================================================================
+  // ACTIVE USER — full dialer UI (unchanged from before)
+  // ========================================================================
 
   // Reusable manual dial component (used inline AND in zoom overlay)
   const ManualDialer = ({ inOverlay = false }: { inOverlay?: boolean }) => (
@@ -680,7 +838,6 @@ export default function DialerPage() {
         width: inOverlay ? '100%' : 'auto',
         boxSizing: 'border-box',
         overflowY: inOverlay ? 'auto' : 'visible',
-        // Add safe area padding at bottom for iOS home indicator + browser toolbar
         paddingBottom: inOverlay
           ? 'calc(20px + env(safe-area-inset-bottom, 0px))'
           : 12,
@@ -870,7 +1027,6 @@ export default function DialerPage() {
         }
       `}</style>
 
-      {/* TOP STATUS BAR */}
       <div className="dialer-status-bar" style={{
         background: terminalDark,
         padding: '8px 20px',
@@ -922,10 +1078,8 @@ export default function DialerPage() {
       </div>
 
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
-        {/* MAIN BODY */}
         <div style={{ flex: 1, padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px', overflow: 'auto', minHeight: 0 }}>
 
-          {/* STATUS / DURATION / CAMPAIGN */}
           <div className="dialer-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', flexShrink: 0 }}>
             {[
               { label: 'STATUS', value: status.toUpperCase(), color: status === 'connected' ? terminalGreen : status === 'calling' ? '#8a6a1a' : terminalMuted },
@@ -1145,13 +1299,11 @@ export default function DialerPage() {
           </div>
         </div>
 
-        {/* MOBILE OVERLAY for right sidebar */}
         <div
           className={`dialer-right-overlay ${rightSidebarOpen ? 'open' : ''}`}
           onClick={() => setRightSidebarOpen(false)}
         />
 
-        {/* RIGHT SIDEBAR — desktop static, mobile drawer */}
         <aside className={`dialer-right-sidebar ${rightSidebarOpen ? 'open' : ''}`}>
           <div style={{ background: terminalDark, padding: '8px 16px', borderBottom: `1px solid ${terminalBorder}`, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '9px', letterSpacing: '3px', color: '#8888aa', fontWeight: 'bold' }}>SESSION METRICS</span>
@@ -1236,14 +1388,12 @@ export default function DialerPage() {
         </aside>
       </div>
 
-      {/* MOBILE TOGGLE BUTTON — only visible on mobile */}
       <button
         className="dialer-right-toggle"
         onClick={() => setRightSidebarOpen(true)}
         aria-label="Open metrics & dial pad"
       >☰</button>
 
-      {/* MANUAL DIAL FULLSCREEN OVERLAY */}
       {dialZoomed && (
         <div
           style={{
@@ -1254,7 +1404,6 @@ export default function DialerPage() {
             display: 'flex',
             flexDirection: 'column',
             height: '100vh',
-            // @ts-ignore — dvh fallback for older TS lib
             ['height' as any]: '100dvh',
           }}
           onClick={(e) => {
@@ -1266,4 +1415,17 @@ export default function DialerPage() {
       )}
     </div>
   )
+}
+
+const navLinkStyle: React.CSSProperties = {
+  padding: '10px 16px',
+  background: 'transparent',
+  border: '1px solid #2a4a8a',
+  borderRadius: 3,
+  color: '#4a9eff',
+  fontSize: 10,
+  fontWeight: 700,
+  letterSpacing: 2,
+  textDecoration: 'none',
+  fontFamily: 'Futura PT, Futura, sans-serif',
 }

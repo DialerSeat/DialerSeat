@@ -1,6 +1,9 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useUser } from '@clerk/nextjs'
+import Link from 'next/link'
+
+type AccessTier = 'active' | 'lapsed' | 'new' | null
 
 interface Lead {
   id: string
@@ -34,7 +37,6 @@ const DISPOSITIONS = [
   { label: 'NO_ANSWER', color: '#5a5e6a', bg: '#f0f0f4' },
 ]
 
-// Terminal palette — match dialer
 const T = {
   bg: '#f0f1f4',
   surface: '#e2e4ea',
@@ -46,10 +48,12 @@ const T = {
   blue: '#4a9eff',
   green: '#1a6a1a',
   red: '#8a1a1a',
+  warn: '#ffaa3e',
 }
 
 export default function LeadsPage() {
   const { user } = useUser()
+  const [tier, setTier] = useState<AccessTier>(null)
   const [leads, setLeads] = useState<Lead[]>([])
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [campaignFilter, setCampaignFilter] = useState('all')
@@ -66,6 +70,17 @@ export default function LeadsPage() {
   const [saving, setSaving] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const sentinelRef = useRef<HTMLDivElement | null>(null)
+
+  const isLapsed = tier === 'lapsed' || tier === 'new'
+
+  // Fetch tier
+  useEffect(() => {
+    if (!user) return
+    fetch('/api/stripe/status')
+      .then(r => r.json())
+      .then(d => setTier(d.tier || null))
+      .catch(() => setTier(null))
+  }, [user])
 
   // Debounce search
   useEffect(() => {
@@ -144,7 +159,7 @@ export default function LeadsPage() {
   }
 
   const handleSave = async (leadId: string) => {
-    if (!user) return
+    if (!user || isLapsed) return
     setSaving(true)
     try {
       const res = await fetch('/api/leads/update', {
@@ -163,6 +178,8 @@ export default function LeadsPage() {
           l.id === leadId ? { ...l, disposition: editDisposition || null, notes: editNotes } : l
         ))
         setExpandedId(null)
+      } else if (res.status === 403) {
+        setTier('lapsed')
       }
     } finally {
       setSaving(false)
@@ -216,6 +233,19 @@ export default function LeadsPage() {
           align-items: center;
           justify-content: space-between;
           gap: 16px;
+          flex-wrap: wrap;
+        }
+        .leads-lapsed-banner {
+          padding: 10px 20px;
+          background: rgba(255,170,62,0.08);
+          border-bottom: 1px solid #8a6a1a;
+          font-size: 11px;
+          letter-spacing: 2px;
+          color: ${T.warn};
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
           flex-wrap: wrap;
         }
         .leads-controls {
@@ -320,11 +350,12 @@ export default function LeadsPage() {
           border: 1px solid ${T.border};
           background: white;
         }
+        .disp-btn:disabled { cursor: not-allowed; opacity: 0.5; }
 
         @media (max-width: 768px) {
           .leads-header { padding: 10px 12px; }
           .leads-header-stats { display: none; }
-          .leads-controls { display: ${'${'}filtersOpen ? 'grid' : 'none'${'}'} ; grid-template-columns: 1fr 1fr; padding: 12px; }
+          .leads-controls { display: grid; grid-template-columns: 1fr 1fr; padding: 12px; }
           .leads-controls.open-mobile { display: grid !important; grid-template-columns: 1fr 1fr !important; padding: 12px !important; }
           .leads-controls.closed-mobile { display: none !important; }
           .leads-controls .search-field { grid-column: span 2; }
@@ -400,6 +431,27 @@ export default function LeadsPage() {
           }}>↓ EXPORT CSV</button>
         </div>
       </div>
+
+      {/* LAPSED BANNER */}
+      {isLapsed && (
+        <div className="leads-lapsed-banner">
+          <span>
+            <strong style={{ marginRight: 6 }}>▸ READ-ONLY</strong>
+            Your leads are still here. Export anytime. Editing disabled until you resubscribe.
+          </span>
+          <Link href="/billing" style={{
+            padding: '5px 12px',
+            background: 'linear-gradient(135deg, #ffaa3e, #ff8a1a)',
+            color: 'white',
+            fontSize: 10,
+            letterSpacing: 2,
+            fontWeight: 'bold',
+            borderRadius: 3,
+            textDecoration: 'none',
+            fontFamily: 'Futura PT, Futura, sans-serif',
+          }}>↻ RESUBSCRIBE</Link>
+        </div>
+      )}
 
       {/* MOBILE FILTER TOGGLE */}
       <div className="leads-mobile-toggle" onClick={() => setFiltersOpen(v => !v)}>
@@ -547,91 +599,128 @@ export default function LeadsPage() {
                   </div>
 
                   <div className="lead-edit">
-                    <div>
+                    {/* Lapsed gets a notice instead of edit controls */}
+                    {isLapsed ? (
                       <div style={{
-                        fontSize: 9, letterSpacing: 2, color: T.muted, marginBottom: 6, fontWeight: 'bold',
-                      }}>SET DISPOSITION</div>
-                      <div className="disp-grid">
-                        {DISPOSITIONS.filter(d => d.label !== 'NO_ANSWER').map(d => (
-                          <button
-                            key={d.label}
-                            className="disp-btn"
-                            onClick={() => setEditDisposition(d.label)}
-                            style={{
-                              background: editDisposition === d.label ? d.color : d.bg,
-                              color: editDisposition === d.label ? 'white' : d.color,
-                              borderColor: d.color,
-                            }}
-                          >{d.label}</button>
-                        ))}
-                        <button
-                          className="disp-btn"
-                          onClick={() => setEditDisposition('')}
-                          style={{
-                            background: editDisposition === '' ? T.muted : 'white',
-                            color: editDisposition === '' ? 'white' : T.muted,
-                            borderColor: T.border,
-                          }}
-                        >CLEAR</button>
+                        padding: 14,
+                        background: 'rgba(255,170,62,0.06)',
+                        border: '1px solid #8a6a1a',
+                        borderLeft: '3px solid #ffaa3e',
+                        borderRadius: 3,
+                      }}>
+                        <div style={{
+                          fontSize: 10, letterSpacing: 3, fontWeight: 'bold',
+                          color: T.warn, marginBottom: 6,
+                        }}>▸ EDITING LOCKED</div>
+                        <div style={{
+                          fontSize: 11, lineHeight: 1.6, color: T.text,
+                          marginBottom: 12,
+                        }}>
+                          Resubscribe to update dispositions and notes. Your current data is preserved exactly as it was.
+                        </div>
+                        <Link href="/billing" style={{
+                          display: 'block',
+                          padding: '10px 14px',
+                          background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+                          color: 'white',
+                          fontSize: 10,
+                          fontWeight: 'bold',
+                          letterSpacing: 3,
+                          borderRadius: 3,
+                          textAlign: 'center',
+                          textDecoration: 'none',
+                          fontFamily: 'Futura PT, Futura, sans-serif',
+                        }}>RESUBSCRIBE — $35/WEEK</Link>
                       </div>
-                    </div>
+                    ) : (
+                      <>
+                        <div>
+                          <div style={{
+                            fontSize: 9, letterSpacing: 2, color: T.muted, marginBottom: 6, fontWeight: 'bold',
+                          }}>SET DISPOSITION</div>
+                          <div className="disp-grid">
+                            {DISPOSITIONS.filter(d => d.label !== 'NO_ANSWER').map(d => (
+                              <button
+                                key={d.label}
+                                className="disp-btn"
+                                onClick={() => setEditDisposition(d.label)}
+                                style={{
+                                  background: editDisposition === d.label ? d.color : d.bg,
+                                  color: editDisposition === d.label ? 'white' : d.color,
+                                  borderColor: d.color,
+                                }}
+                              >{d.label}</button>
+                            ))}
+                            <button
+                              className="disp-btn"
+                              onClick={() => setEditDisposition('')}
+                              style={{
+                                background: editDisposition === '' ? T.muted : 'white',
+                                color: editDisposition === '' ? 'white' : T.muted,
+                                borderColor: T.border,
+                              }}
+                            >CLEAR</button>
+                          </div>
+                        </div>
 
-                    <div>
-                      <div style={{
-                        fontSize: 9, letterSpacing: 2, color: T.muted, marginBottom: 6, fontWeight: 'bold',
-                      }}>NOTES</div>
-                      <textarea
-                        value={editNotes}
-                        onChange={e => setEditNotes(e.target.value)}
-                        placeholder="Add notes about this lead..."
-                        rows={4}
-                        style={{
-                          width: '100%',
-                          padding: 10,
-                          border: `1px solid ${T.border}`,
-                          borderRadius: 3,
-                          fontSize: 12,
-                          fontFamily: 'monospace',
-                          background: T.surface,
-                          color: T.text,
-                          outline: 'none',
-                          resize: 'vertical',
-                          boxSizing: 'border-box',
-                        }}
-                      />
-                    </div>
+                        <div>
+                          <div style={{
+                            fontSize: 9, letterSpacing: 2, color: T.muted, marginBottom: 6, fontWeight: 'bold',
+                          }}>NOTES</div>
+                          <textarea
+                            value={editNotes}
+                            onChange={e => setEditNotes(e.target.value)}
+                            placeholder="Add notes about this lead..."
+                            rows={4}
+                            style={{
+                              width: '100%',
+                              padding: 10,
+                              border: `1px solid ${T.border}`,
+                              borderRadius: 3,
+                              fontSize: 12,
+                              fontFamily: 'monospace',
+                              background: T.surface,
+                              color: T.text,
+                              outline: 'none',
+                              resize: 'vertical',
+                              boxSizing: 'border-box',
+                            }}
+                          />
+                        </div>
 
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button
-                        onClick={() => setExpandedId(null)}
-                        style={{
-                          flex: 1, padding: 10,
-                          background: 'transparent',
-                          border: `1px solid ${T.border}`,
-                          borderRadius: 3,
-                          color: T.muted,
-                          fontSize: 10,
-                          letterSpacing: 2,
-                          fontWeight: 'bold',
-                          cursor: 'pointer',
-                          fontFamily: 'Futura PT, Futura, sans-serif',
-                        }}>CANCEL</button>
-                      <button
-                        onClick={() => handleSave(lead.id)}
-                        disabled={saving}
-                        style={{
-                          flex: 2, padding: 10, border: 'none',
-                          background: T.dark,
-                          borderTop: `3px solid ${T.blue}`,
-                          borderRadius: 3,
-                          color: T.blue,
-                          fontSize: 10,
-                          letterSpacing: 2,
-                          fontWeight: 'bold',
-                          cursor: saving ? 'wait' : 'pointer',
-                          fontFamily: 'Futura PT, Futura, sans-serif',
-                        }}>{saving ? 'SAVING...' : '▶ SAVE'}</button>
-                    </div>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button
+                            onClick={() => setExpandedId(null)}
+                            style={{
+                              flex: 1, padding: 10,
+                              background: 'transparent',
+                              border: `1px solid ${T.border}`,
+                              borderRadius: 3,
+                              color: T.muted,
+                              fontSize: 10,
+                              letterSpacing: 2,
+                              fontWeight: 'bold',
+                              cursor: 'pointer',
+                              fontFamily: 'Futura PT, Futura, sans-serif',
+                            }}>CANCEL</button>
+                          <button
+                            onClick={() => handleSave(lead.id)}
+                            disabled={saving}
+                            style={{
+                              flex: 2, padding: 10, border: 'none',
+                              background: T.dark,
+                              borderTop: `3px solid ${T.blue}`,
+                              borderRadius: 3,
+                              color: T.blue,
+                              fontSize: 10,
+                              letterSpacing: 2,
+                              fontWeight: 'bold',
+                              cursor: saving ? 'wait' : 'pointer',
+                              fontFamily: 'Futura PT, Futura, sans-serif',
+                            }}>{saving ? 'SAVING...' : '▶ SAVE'}</button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               )}
@@ -639,7 +728,6 @@ export default function LeadsPage() {
           )
         })}
 
-        {/* SENTINEL — triggers infinite scroll */}
         {cursor !== null && (
           <div ref={sentinelRef} style={{
             padding: 20, textAlign: 'center',
