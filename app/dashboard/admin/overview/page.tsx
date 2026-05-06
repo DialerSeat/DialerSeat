@@ -8,6 +8,7 @@ interface AdminUser {
   first_name: string | null
   last_name: string | null
   created_at: string
+  last_seen_at: string | null
   is_admin: boolean
   lead_count: number
   last_active_at: string | null
@@ -22,6 +23,8 @@ interface AdminUser {
 }
 
 type FilterMode = 'all' | 'active' | 'inactive'
+
+const ONLINE_WINDOW_MS = 90_000 // 90 seconds
 
 const T = {
   bg: '#f0f1f4',
@@ -49,7 +52,11 @@ function timeAgo(iso: string | null) {
   const days = Math.floor(ms / 86400000)
   if (days === 0) {
     const hours = Math.floor(ms / 3600000)
-    if (hours === 0) return 'just now'
+    if (hours === 0) {
+      const mins = Math.floor(ms / 60000)
+      if (mins === 0) return 'just now'
+      return `${mins}m ago`
+    }
     return `${hours}h ago`
   }
   if (days === 1) return 'yesterday'
@@ -63,6 +70,11 @@ function daysSince(iso: string | null): number {
   return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000)
 }
 
+function isOnline(lastSeenAt: string | null): boolean {
+  if (!lastSeenAt) return false
+  return Date.now() - new Date(lastSeenAt).getTime() < ONLINE_WINDOW_MS
+}
+
 export default function AdminOverviewPage() {
   const [users, setUsers] = useState<AdminUser[]>([])
   const [loading, setLoading] = useState(true)
@@ -70,23 +82,42 @@ export default function AdminOverviewPage() {
   const [filter, setFilter] = useState<FilterMode>('all')
   const [search, setSearch] = useState('')
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [tick, setTick] = useState(0) // forces re-render so timeAgo / isOnline stay fresh
 
+  // Re-evaluate online status every 15 seconds without re-fetching
   useEffect(() => {
-    fetch('/api/admin/users')
-      .then(async r => {
-        if (r.status === 403) throw new Error('Forbidden — admin only')
-        if (r.status === 401) throw new Error('Not signed in')
-        return r.json()
-      })
-      .then(d => {
-        if (d.success) setUsers(d.users)
-        else setError(d.error || 'Failed to load')
-        setLoading(false)
-      })
-      .catch(err => {
-        setError(err.message)
-        setLoading(false)
-      })
+    const id = setInterval(() => setTick(t => t + 1), 15_000)
+    return () => clearInterval(id)
+  }, [])
+
+  // Fetch user list every 30 seconds so heartbeats from new users show up
+  useEffect(() => {
+    let cancelled = false
+
+    const load = (showLoader: boolean) => {
+      if (showLoader) setLoading(true)
+      fetch('/api/admin/users')
+        .then(async r => {
+          if (r.status === 403) throw new Error('Forbidden — admin only')
+          if (r.status === 401) throw new Error('Not signed in')
+          return r.json()
+        })
+        .then(d => {
+          if (cancelled) return
+          if (d.success) setUsers(d.users)
+          else setError(d.error || 'Failed to load')
+          setLoading(false)
+        })
+        .catch(err => {
+          if (cancelled) return
+          setError(err.message)
+          setLoading(false)
+        })
+    }
+
+    load(true)
+    const id = setInterval(() => load(false), 30_000)
+    return () => { cancelled = true; clearInterval(id) }
   }, [])
 
   const filtered = useMemo(() => {
@@ -107,7 +138,9 @@ export default function AdminOverviewPage() {
     all: users.length,
     active: users.filter(u => u.is_active_subscription).length,
     inactive: users.filter(u => !u.is_active_subscription).length,
-  }), [users])
+    online: users.filter(u => isOnline(u.last_seen_at)).length,
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [users, tick])
 
   return (
     <div style={{
@@ -217,17 +250,52 @@ export default function AdminOverviewPage() {
           font-family: monospace;
           margin-top: 2px;
         }
+        .ovr-pill-status {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 3px 8px;
+          border-radius: 3px;
+          font-size: 9px;
+          letter-spacing: 2px;
+          font-weight: bold;
+          white-space: nowrap;
+        }
+        .ovr-pill-status.active {
+          background: rgba(26,106,26,0.1);
+          border: 1px solid ${T.green};
+          color: ${T.green};
+        }
+        .ovr-pill-status.inactive {
+          background: rgba(90,94,106,0.1);
+          border: 1px solid ${T.muted};
+          color: ${T.muted};
+        }
+        .ovr-pill-status.online {
+          background: rgba(74,158,255,0.1);
+          border: 1px solid ${T.blue};
+          color: ${T.blue};
+        }
         .ovr-status-dot {
           width: 8px;
           height: 8px;
           border-radius: 50%;
         }
-        .ovr-status-dot.active {
+        .ovr-status-dot.green {
           background: #32ff7e;
           box-shadow: 0 0 6px #32ff7e;
         }
-        .ovr-status-dot.inactive {
+        .ovr-status-dot.gray {
           background: ${T.muted};
+        }
+        .ovr-status-dot.blue {
+          background: ${T.blue};
+          box-shadow: 0 0 6px ${T.blue};
+          animation: pulse-blue 2s ease-in-out infinite;
+        }
+        @keyframes pulse-blue {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.55; }
         }
         .ovr-detail {
           background: ${T.bg};
@@ -263,7 +331,7 @@ export default function AdminOverviewPage() {
         .ovr-detail-value.link:hover {
           text-decoration: underline;
         }
-        @media (max-width: 600px) {
+        @media (max-width: 700px) {
           .ovr-row-main {
             grid-template-columns: 1fr auto;
             gap: 8px;
@@ -274,7 +342,7 @@ export default function AdminOverviewPage() {
       `}</style>
 
       <div className="ovr-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 11, fontWeight: 'bold', letterSpacing: 4, color: T.blue }}>
             USER OVERVIEW
           </span>
@@ -283,6 +351,23 @@ export default function AdminOverviewPage() {
               ? `${users.length.toLocaleString()} TOTAL`
               : `${filtered.length} OF ${users.length} TOTAL`}
           </span>
+          {counts.online > 0 && (
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              fontSize: 10,
+              letterSpacing: 2,
+              color: T.blue,
+              fontWeight: 'bold',
+            }}>
+              <span style={{
+                width: 6, height: 6, borderRadius: '50%',
+                background: T.blue, boxShadow: `0 0 4px ${T.blue}`,
+              }} />
+              {counts.online} ONLINE
+            </span>
+          )}
         </div>
       </div>
 
@@ -307,7 +392,7 @@ export default function AdminOverviewPage() {
       </div>
 
       <div className="ovr-list">
-        {loading && (
+        {loading && users.length === 0 && (
           <div style={{ padding: 40, textAlign: 'center', fontSize: 11, letterSpacing: 3, color: T.muted }}>
             LOADING...
           </div>
@@ -333,6 +418,7 @@ export default function AdminOverviewPage() {
           const fullName = `${u.first_name || ''} ${u.last_name || ''}`.trim() || '(no name)'
           const inactiveDays = daysSince(u.last_active_at)
           const isStale = u.is_active_subscription && inactiveDays > 14
+          const userOnline = isOnline(u.last_seen_at)
 
           return (
             <div key={u.clerk_id} className={`ovr-row ${expanded ? 'expanded' : ''}`}>
@@ -377,14 +463,17 @@ export default function AdminOverviewPage() {
                 }}>
                   {timeAgo(u.created_at)}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div className={`ovr-status-dot ${u.is_active_subscription ? 'active' : 'inactive'}`} />
-                  <span style={{
-                    fontSize: 9, letterSpacing: 2, fontWeight: 'bold',
-                    color: u.is_active_subscription ? T.green : T.muted,
-                  }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span className={`ovr-pill-status ${u.is_active_subscription ? 'active' : 'inactive'}`}>
+                    <span className={`ovr-status-dot ${u.is_active_subscription ? 'green' : 'gray'}`} />
                     {u.is_active_subscription ? 'ACTIVE' : 'INACTIVE'}
                   </span>
+                  {userOnline && (
+                    <span className="ovr-pill-status online">
+                      <span className="ovr-status-dot blue" />
+                      ONLINE
+                    </span>
+                  )}
                 </div>
               </div>
 

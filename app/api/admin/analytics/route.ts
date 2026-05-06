@@ -10,8 +10,9 @@ const supabase = createClient(
 const WEEKLY_PRICE = 35
 const WEEKS_PER_MONTH = 4.33
 const ACTIVE_STATUSES = ['active', 'trialing', 'past_due']
+const AT_RISK_DAYS = 14
 
-type Range = '30d' | '90d' | '1y' | 'all' | 'custom'
+type Range = '7d' | '30d' | '90d' | '1y' | 'all' | 'custom'
 
 function rangeToBounds(range: Range, customStart: string | null, customEnd: string | null) {
   const now = Date.now()
@@ -19,10 +20,11 @@ function rangeToBounds(range: Range, customStart: string | null, customEnd: stri
   if (range === 'custom' && customStart && customEnd) {
     return { start: new Date(customStart).getTime(), end: new Date(customEnd).getTime() }
   }
-  if (range === '90d') return { start: now - 90 * day, end: now }
-  if (range === '1y')  return { start: now - 365 * day, end: now }
-  if (range === 'all') return { start: 0, end: now }
-  return { start: now - 30 * day, end: now } // default 30d
+  if (range === '7d')   return { start: now - 7 * day, end: now }
+  if (range === '90d')  return { start: now - 90 * day, end: now }
+  if (range === '1y')   return { start: now - 365 * day, end: now }
+  if (range === 'all')  return { start: 0, end: now }
+  return { start: now - 30 * day, end: now }
 }
 
 function dayKey(ms: number) {
@@ -44,15 +46,13 @@ export async function GET(req: NextRequest) {
   const customEnd = url.searchParams.get('end')
   const { start, end } = rangeToBounds(range, customStart, customEnd)
 
-  const startIso = new Date(start).toISOString()
-  const endIso = new Date(end).toISOString()
   const now = Date.now()
   const day = 86400000
 
   // 1) All users
   const { data: users } = await supabase
     .from('users')
-    .select('clerk_id, created_at')
+    .select('clerk_id, email, first_name, last_name, created_at, last_seen_at')
 
   const totalUsers = users?.length || 0
   const usersInRange = (users || []).filter(u => {
@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
     return t >= start && t <= end
   })
 
-  // 2) All subscriptions
+  // 2) Subscriptions
   const { data: subs } = await supabase
     .from('subscriptions')
     .select(`
@@ -68,7 +68,6 @@ export async function GET(req: NextRequest) {
       created_at, canceled_at, discount_coupon
     `)
 
-  // Latest sub per user
   const subByUser = new Map<string, any>()
   for (const s of subs || []) {
     const existing = subByUser.get(s.user_id)
@@ -77,26 +76,23 @@ export async function GET(req: NextRequest) {
   }
 
   const latestSubs = Array.from(subByUser.values())
-
-  // 3) Active subs — split by paying vs coupon-discounted
   const activeSubs = latestSubs.filter(s => ACTIVE_STATUSES.includes(s.status))
   const payingActiveSubs = activeSubs.filter(s => !s.discount_coupon)
   const couponSubs = activeSubs.filter(s => !!s.discount_coupon)
+  const payingUserIds = new Set(payingActiveSubs.map(s => s.user_id))
 
   const wrr = payingActiveSubs.length * WEEKLY_PRICE
   const mrr = Math.round(wrr * WEEKS_PER_MONTH)
 
-  // 4) Time-bound signup metrics
+  // 3) Range-bound metrics
   const signupsInRange = usersInRange.length
 
-  // Subs created in range that are still alive (paying)
   const paidConversionsInRange = (subs || []).filter(s => {
     if (s.discount_coupon) return false
     const t = new Date(s.created_at).getTime()
     return t >= start && t <= end
   }).length
 
-  // Cancellations in range (only paying ones)
   const cancellationsInRange = (subs || []).filter(s => {
     if (s.discount_coupon) return false
     if (s.status !== 'canceled') return false
@@ -105,29 +101,33 @@ export async function GET(req: NextRequest) {
     return t >= start && t <= end
   }).length
 
-  // Churn rate calculation
   const activeAtStart = payingActiveSubs.length + cancellationsInRange
   const churnRate = activeAtStart > 0
     ? Number(((cancellationsInRange / activeAtStart) * 100).toFixed(1))
     : 0
 
-  // Net new paying users in range
   const netNewPaying = paidConversionsInRange - cancellationsInRange
 
-  // 5) Funnel: signed up → started subscription → still active (paying only)
-  const everSubscribed = (subs || [])
-    .filter(s => !s.discount_coupon)
-    .map(s => s.user_id)
-  const everSubscribedSet = new Set(everSubscribed)
-  const stillActiveUserIds = new Set(payingActiveSubs.map(s => s.user_id))
+  // 4) Week-over-week paying users delta — growth velocity
+  const oneWeekAgo = now - 7 * day
+  const twoWeeksAgo = now - 14 * day
+  const payingUsersOneWeekAgo = (subs || []).filter(s => {
+    if (s.discount_coupon) return false
+    const created = new Date(s.created_at).getTime()
+    if (created > oneWeekAgo) return false
+    if (s.status === 'canceled' && s.canceled_at) {
+      const cancelled = new Date(s.canceled_at).getTime()
+      if (cancelled <= oneWeekAgo) return false
+    }
+    return true
+  }).length
 
-  const funnel = {
-    signedUp: totalUsers,
-    everSubscribed: everSubscribedSet.size,
-    stillActive: stillActiveUserIds.size,
-  }
+  const wowDelta = payingActiveSubs.length - payingUsersOneWeekAgo
+  const wowPct = payingUsersOneWeekAgo > 0
+    ? Number(((wowDelta / payingUsersOneWeekAgo) * 100).toFixed(1))
+    : (payingActiveSubs.length > 0 ? 100 : 0)
 
-  // 6) Avg customer lifetime in weeks (paying churned users)
+  // 5) Avg lifetime
   const churned = (subs || []).filter(s =>
     !s.discount_coupon && s.status === 'canceled' && s.canceled_at && s.created_at
   )
@@ -140,38 +140,108 @@ export async function GET(req: NextRequest) {
     avgLifetimeWeeks = Number((sum / churned.length).toFixed(1))
   }
 
-  // 7) Conversion rate — % of signups that ever became paying
-  const conversionRate = totalUsers > 0
-    ? Number(((everSubscribedSet.size / totalUsers) * 100).toFixed(1))
-    : 0
+  // 6) At-risk paying users — paying but no calls in 14+ days.
+  // We need last call time per paying user.
+  const atRiskUsers: any[] = []
+  if (payingUserIds.size > 0) {
+    const lastCallByUser = new Map<string, string>()
+    await Promise.all(
+      Array.from(payingUserIds).map(async (uid) => {
+        const { data } = await supabase
+          .from('calls')
+          .select('created_at')
+          .eq('user_id', uid)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+        if (data?.created_at) lastCallByUser.set(uid, data.created_at)
+      })
+    )
 
-  // 8) Active ratio — % of signups currently paying
-  const activeRatio = totalUsers > 0
-    ? Number(((stillActiveUserIds.size / totalUsers) * 100).toFixed(1))
-    : 0
+    const cutoff = now - AT_RISK_DAYS * day
+    const userByClerkId = new Map((users || []).map(u => [u.clerk_id, u]))
 
-  // 9) Daily series — signups + cumulative paying revenue
+    for (const uid of payingUserIds) {
+      const u = userByClerkId.get(uid)
+      if (!u) continue
+      const lastCall = lastCallByUser.get(uid)
+      const lastCallMs = lastCall ? new Date(lastCall).getTime() : 0
+      if (lastCallMs < cutoff) {
+        atRiskUsers.push({
+          clerk_id: u.clerk_id,
+          email: u.email,
+          first_name: u.first_name,
+          last_name: u.last_name,
+          last_call_at: lastCall || null,
+          days_silent: lastCall
+            ? Math.floor((now - lastCallMs) / day)
+            : null,
+        })
+      }
+    }
+    atRiskUsers.sort((a, b) => (b.days_silent ?? Infinity) - (a.days_silent ?? Infinity))
+  }
+
+  // 7) Hot prospects — non-paying users with calls in last 7 days
+  const hotProspects: any[] = []
+  const sevenDaysAgo = now - 7 * day
+  const sevenDaysAgoIso = new Date(sevenDaysAgo).toISOString()
+  const nonPayingUsers = (users || []).filter(u => !payingUserIds.has(u.clerk_id))
+
+  if (nonPayingUsers.length > 0) {
+    // Get call counts in last 7d for non-paying users in one query
+    const nonPayingIds = nonPayingUsers.map(u => u.clerk_id)
+    const { data: recentCalls } = await supabase
+      .from('calls')
+      .select('user_id, created_at')
+      .in('user_id', nonPayingIds)
+      .gte('created_at', sevenDaysAgoIso)
+
+    const callsByUser = new Map<string, { count: number; lastCall: string }>()
+    for (const c of recentCalls || []) {
+      const existing = callsByUser.get(c.user_id)
+      if (!existing) {
+        callsByUser.set(c.user_id, { count: 1, lastCall: c.created_at })
+      } else {
+        existing.count++
+        if (c.created_at > existing.lastCall) existing.lastCall = c.created_at
+      }
+    }
+
+    for (const u of nonPayingUsers) {
+      const stats = callsByUser.get(u.clerk_id)
+      if (stats && stats.count > 0) {
+        hotProspects.push({
+          clerk_id: u.clerk_id,
+          email: u.email,
+          first_name: u.first_name,
+          last_name: u.last_name,
+          calls_7d: stats.count,
+          last_call_at: stats.lastCall,
+        })
+      }
+    }
+    hotProspects.sort((a, b) => b.calls_7d - a.calls_7d)
+  }
+
+  // 8) Daily series — signups + cumulative paying revenue
   const totalDays = Math.max(1, Math.ceil((end - start) / day))
-  // Cap daily granularity at ~120 buckets — switch to weekly for longer ranges
   const useWeekly = totalDays > 120
   const bucketSize = useWeekly ? 7 * day : day
 
-  const buckets: { date: string; signups: number; revenue: number }[] = []
+  const buckets: { date: string; signups: number; revenue: number; calls: number }[] = []
   let cursor = start
   while (cursor <= end) {
-    buckets.push({ date: dayKey(cursor), signups: 0, revenue: 0 })
+    buckets.push({ date: dayKey(cursor), signups: 0, revenue: 0, calls: 0 })
     cursor += bucketSize
   }
 
-  // Bucket signups
   for (const u of usersInRange) {
     const t = new Date(u.created_at).getTime()
     const idx = Math.floor((t - start) / bucketSize)
     if (idx >= 0 && idx < buckets.length) buckets[idx].signups++
   }
 
-  // Compute cumulative paying-active subs at each bucket boundary, multiply by $35
-  // For each bucket, count paying subs that were created before bucket-end AND not canceled before bucket-end
   for (let i = 0; i < buckets.length; i++) {
     const bucketEnd = start + (i + 1) * bucketSize
     let activeAtBucket = 0
@@ -188,30 +258,35 @@ export async function GET(req: NextRequest) {
     buckets[i].revenue = activeAtBucket * WEEKLY_PRICE
   }
 
-  // 10) Status breakdown for pie (all-time, paying users only)
-  const statusBreakdown: Record<string, number> = {
-    active: 0,
-    trialing: 0,
-    past_due: 0,
-    canceled: 0,
-    incomplete: 0,
-    incomplete_expired: 0,
-    unpaid: 0,
-    none: 0,
-    coupon: 0,
+  // 9) Activity heatmap — last 30 days, total calls per day platform-wide
+  const heatmapStart = now - 30 * day
+  const heatmapStartIso = new Date(heatmapStart).toISOString()
+  const { data: heatCalls } = await supabase
+    .from('calls')
+    .select('created_at')
+    .gte('created_at', heatmapStartIso)
+    .limit(50000)
+
+  const heatmap: { date: string; calls: number }[] = []
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(now - i * day)
+    d.setHours(0, 0, 0, 0)
+    heatmap.push({ date: d.toISOString().slice(0, 10), calls: 0 })
+  }
+  for (const c of heatCalls || []) {
+    const key = c.created_at.slice(0, 10)
+    const bucket = heatmap.find(h => h.date === key)
+    if (bucket) bucket.calls++
   }
 
-  for (const u of users || []) {
-    const sub = subByUser.get(u.clerk_id)
-    if (!sub) {
-      statusBreakdown.none++
-    } else if (sub.discount_coupon) {
-      statusBreakdown.coupon++
-    } else {
-      const k = sub.status as string
-      if (k in statusBreakdown) statusBreakdown[k]++
-      else statusBreakdown[k] = 1
-    }
+  // 10) Tenure cohort — split paying users into "new" (≤30d sub age) vs "established" (>30d)
+  const thirtyDayCutoff = now - 30 * day
+  let newPayingUsers = 0
+  let establishedPayingUsers = 0
+  for (const s of payingActiveSubs) {
+    const created = new Date(s.created_at).getTime()
+    if (created >= thirtyDayCutoff) newPayingUsers++
+    else establishedPayingUsers++
   }
 
   return NextResponse.json({
@@ -230,11 +305,14 @@ export async function GET(req: NextRequest) {
       netNewPaying,
       churnRate,
       avgLifetimeWeeks,
-      conversionRate,
-      activeRatio,
+      wowDelta,
+      wowPct,
+      newPayingUsers,
+      establishedPayingUsers,
     },
-    funnel,
-    statusBreakdown,
+    atRiskUsers,
+    hotProspects,
     series: buckets,
+    heatmap,
   })
 }

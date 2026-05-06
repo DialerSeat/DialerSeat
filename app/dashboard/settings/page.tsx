@@ -18,9 +18,11 @@ export default function SettingsPage() {
   const [sub, setSub] = useState<SubStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [confirming, setConfirming] = useState(false)
+  const [typedConfirm, setTypedConfirm] = useState('')
   const [canceling, setCanceling] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
 
   const loadStatus = async () => {
     try {
@@ -36,9 +38,16 @@ export default function SettingsPage() {
 
   useEffect(() => {
     loadStatus()
+    fetch('/api/admin/check')
+      .then(r => r.json())
+      .then(d => setIsAdmin(!!d.isAdmin))
+      .catch(() => setIsAdmin(false))
   }, [])
 
+  const confirmReady = typedConfirm.toLowerCase().trim() === 'cancel'
+
   const handleCancel = async () => {
+    if (!confirmReady) return
     setCanceling(true)
     setError(null)
     setMessage(null)
@@ -56,12 +65,25 @@ export default function SettingsPage() {
           : 'Canceled.'
       )
       setConfirming(false)
+      setTypedConfirm('')
       await loadStatus()
     } catch (err: any) {
       setError(err.message || 'Something went wrong')
     } finally {
       setCanceling(false)
     }
+  }
+
+  const handleStartCancel = () => {
+    setConfirming(true)
+    setTypedConfirm('')
+    setError(null)
+    setMessage(null)
+  }
+
+  const handleAbortCancel = () => {
+    setConfirming(false)
+    setTypedConfirm('')
   }
 
   if (loading) {
@@ -94,6 +116,15 @@ export default function SettingsPage() {
         <div style={titleStyle}>SETTINGS</div>
         <div style={subtitleStyle}>
           {user?.primaryEmailAddress?.emailAddress}
+          {isAdmin && (
+            <span style={{
+              marginLeft: 8,
+              fontSize: 9,
+              letterSpacing: 3,
+              color: '#4a9eff',
+              fontWeight: 'bold',
+            }}>· ADMIN</span>
+          )}
         </div>
 
         <div style={sectionStyle}>
@@ -140,10 +171,18 @@ export default function SettingsPage() {
         {message && <div style={successStyle}>{message}</div>}
         {error && <div style={errorStyle}>{error}</div>}
 
-        {sub?.isActive && !sub.cancelAtPeriodEnd && (
+        {/* ADMIN: cancel UI fully hidden, replaced with a notice */}
+        {isAdmin && sub?.isActive && !sub.cancelAtPeriodEnd && (
+          <div style={adminNoticeStyle}>
+            ▸ ADMIN ACCOUNTS CANNOT CANCEL FROM THIS PANEL
+          </div>
+        )}
+
+        {/* NON-ADMIN: type-to-confirm cancel flow */}
+        {!isAdmin && sub?.isActive && !sub.cancelAtPeriodEnd && (
           <>
             {!confirming ? (
-              <button onClick={() => setConfirming(true)} style={dangerButtonStyle}>
+              <button onClick={handleStartCancel} style={dangerButtonStyle}>
                 CANCEL SUBSCRIPTION
               </button>
             ) : (
@@ -155,9 +194,22 @@ export default function SettingsPage() {
                   </strong>
                   . No further charges will be made.
                 </div>
+
+                <div style={typePromptStyle}>
+                  Type <strong style={{ color: '#ff6464' }}>cancel</strong> to confirm:
+                </div>
+                <input
+                  type="text"
+                  value={typedConfirm}
+                  onChange={e => setTypedConfirm(e.target.value)}
+                  placeholder="cancel"
+                  autoFocus
+                  style={typeInputStyle}
+                />
+
                 <div className="settings-confirm-buttons" style={confirmButtonsStyle}>
                   <button
-                    onClick={() => setConfirming(false)}
+                    onClick={handleAbortCancel}
                     disabled={canceling}
                     style={secondaryButtonStyle}
                   >
@@ -165,8 +217,14 @@ export default function SettingsPage() {
                   </button>
                   <button
                     onClick={handleCancel}
-                    disabled={canceling}
-                    style={{ ...dangerButtonStyle, marginTop: 0, flex: 1 }}
+                    disabled={canceling || !confirmReady}
+                    style={{
+                      ...dangerButtonStyle,
+                      marginTop: 0,
+                      flex: 1,
+                      opacity: canceling || !confirmReady ? 0.4 : 1,
+                      cursor: canceling || !confirmReady ? 'not-allowed' : 'pointer',
+                    }}
                   >
                     {canceling ? 'CANCELING...' : 'CONFIRM CANCEL'}
                   </button>
@@ -331,6 +389,28 @@ const confirmTextStyle: React.CSSProperties = {
   marginBottom: 16,
 }
 
+const typePromptStyle: React.CSSProperties = {
+  fontSize: 11,
+  letterSpacing: 1,
+  color: '#e0c2c2',
+  marginBottom: 8,
+}
+
+const typeInputStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '10px 12px',
+  background: '#0d0e14',
+  border: '1px solid #4a2a2a',
+  borderRadius: 3,
+  fontFamily: 'monospace',
+  fontSize: 13,
+  color: '#ff8888',
+  outline: 'none',
+  marginBottom: 16,
+  letterSpacing: 1,
+  boxSizing: 'border-box',
+}
+
 const confirmButtonsStyle: React.CSSProperties = {
   display: 'flex',
   gap: 8,
@@ -366,5 +446,18 @@ const warnStyle: React.CSSProperties = {
   borderRadius: 3,
   fontSize: 11,
   letterSpacing: 1,
+  marginTop: 16,
+}
+
+const adminNoticeStyle: React.CSSProperties = {
+  background: 'rgba(74,158,255,0.06)',
+  border: '1px solid #2a4a8a',
+  borderLeft: '3px solid #4a9eff',
+  color: '#4a9eff',
+  padding: 12,
+  borderRadius: 3,
+  fontSize: 10,
+  letterSpacing: 3,
+  fontWeight: 700,
   marginTop: 16,
 }

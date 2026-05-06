@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import {
   ResponsiveContainer,
   LineChart,
@@ -8,13 +9,28 @@ import {
   YAxis,
   Tooltip,
   CartesianGrid,
-  PieChart,
-  Pie,
-  Cell,
   Legend,
 } from 'recharts'
 
-type Range = '30d' | '90d' | '1y' | 'all' | 'custom'
+type Range = '7d' | '30d' | '90d' | '1y' | 'all' | 'custom'
+
+interface AtRiskUser {
+  clerk_id: string
+  email: string
+  first_name: string | null
+  last_name: string | null
+  last_call_at: string | null
+  days_silent: number | null
+}
+
+interface HotProspect {
+  clerk_id: string
+  email: string
+  first_name: string | null
+  last_name: string | null
+  calls_7d: number
+  last_call_at: string
+}
 
 interface AnalyticsData {
   range: Range
@@ -31,16 +47,15 @@ interface AnalyticsData {
     netNewPaying: number
     churnRate: number
     avgLifetimeWeeks: number
-    conversionRate: number
-    activeRatio: number
+    wowDelta: number
+    wowPct: number
+    newPayingUsers: number
+    establishedPayingUsers: number
   }
-  funnel: {
-    signedUp: number
-    everSubscribed: number
-    stillActive: number
-  }
-  statusBreakdown: Record<string, number>
-  series: { date: string; signups: number; revenue: number }[]
+  atRiskUsers: AtRiskUser[]
+  hotProspects: HotProspect[]
+  series: { date: string; signups: number; revenue: number; calls: number }[]
+  heatmap: { date: string; calls: number }[]
 }
 
 const T = {
@@ -57,31 +72,8 @@ const T = {
   amber: '#8a6a1a',
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  active: T.green,
-  trialing: T.blue,
-  past_due: T.amber,
-  canceled: '#999999',
-  incomplete: T.amber,
-  incomplete_expired: T.red,
-  unpaid: T.red,
-  coupon: '#a06ad4',
-  none: '#cfd0d6',
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  active: 'ACTIVE',
-  trialing: 'TRIALING',
-  past_due: 'PAST DUE',
-  canceled: 'CANCELED',
-  incomplete: 'INCOMPLETE',
-  incomplete_expired: 'EXPIRED',
-  unpaid: 'UNPAID',
-  coupon: 'COUPON (FREE)',
-  none: 'NO SUBSCRIPTION',
-}
-
 const RANGE_LABELS: Record<Range, string> = {
+  '7d': '7 DAYS',
   '30d': '30 DAYS',
   '90d': '90 DAYS',
   '1y': '1 YEAR',
@@ -96,6 +88,32 @@ function fmtMoney(n: number) {
 function fmtDateTick(iso: any) {
   const d = new Date(String(iso) + 'T00:00:00')
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+function timeAgo(iso: string | null) {
+  if (!iso) return 'never'
+  const ms = Date.now() - new Date(iso).getTime()
+  const days = Math.floor(ms / 86400000)
+  if (days === 0) return 'today'
+  if (days === 1) return 'yesterday'
+  if (days < 30) return `${days}d ago`
+  return `${Math.floor(days / 30)}mo ago`
+}
+
+function fullName(u: { first_name: string | null; last_name: string | null; email: string }) {
+  const n = `${u.first_name || ''} ${u.last_name || ''}`.trim()
+  return n || u.email
+}
+
+// Color scale for heatmap — empty → green
+function heatColor(calls: number, max: number) {
+  if (calls === 0) return T.surface
+  const intensity = Math.min(1, calls / Math.max(max, 1))
+  // Pale green at low, deep green at high
+  const r = Math.round(232 - 200 * intensity)
+  const g = Math.round(245 - 80 * intensity)
+  const b = Math.round(232 - 200 * intensity)
+  return `rgb(${r}, ${g}, ${b})`
 }
 
 export default function AdminAnalyticsPage() {
@@ -131,15 +149,7 @@ export default function AdminAnalyticsPage() {
       })
   }, [range, customStart, customEnd])
 
-  const pieData = data
-    ? Object.entries(data.statusBreakdown)
-        .filter(([_, n]) => n > 0)
-        .map(([status, count]) => ({
-          name: STATUS_LABELS[status] || status.toUpperCase(),
-          value: count,
-          status,
-        }))
-    : []
+  const heatmapMax = data ? Math.max(...data.heatmap.map(h => h.calls), 1) : 1
 
   return (
     <div style={{
@@ -168,6 +178,7 @@ export default function AdminAnalyticsPage() {
           border: 1px solid #2a2c34;
           border-radius: 4px;
           padding: 3px;
+          flex-wrap: wrap;
         }
         .an-range-pill {
           padding: 5px 10px;
@@ -196,16 +207,16 @@ export default function AdminAnalyticsPage() {
           grid-template-columns: repeat(4, 1fr);
           gap: 12px;
         }
+        .an-grid-2 {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+          align-items: stretch;
+        }
         .an-grid-3 {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
           gap: 12px;
-        }
-        .an-grid-2 {
-          display: grid;
-          grid-template-columns: 2fr 1fr;
-          gap: 16px;
-          align-items: stretch;
         }
         @media (max-width: 1100px) {
           .an-grid-2 { grid-template-columns: 1fr; }
@@ -275,45 +286,61 @@ export default function AdminAnalyticsPage() {
           font-family: monospace;
           margin-bottom: 14px;
         }
-        .an-funnel-row {
-          display: grid;
-          grid-template-columns: 110px 1fr 60px;
-          gap: 12px;
+        .an-user-row {
+          display: flex;
           align-items: center;
-          margin-bottom: 8px;
-        }
-        .an-funnel-name {
-          font-size: 10px;
-          letter-spacing: 2px;
-          color: ${T.text};
-          font-weight: bold;
-        }
-        .an-funnel-track {
-          height: 22px;
+          justify-content: space-between;
+          gap: 8px;
+          padding: 10px 12px;
           background: ${T.bg};
           border: 1px solid ${T.border};
           border-radius: 3px;
-          overflow: hidden;
-          position: relative;
+          margin-bottom: 6px;
+          text-decoration: none;
+          transition: border-color 0.15s;
         }
-        .an-funnel-fill {
-          height: 100%;
-          transition: width 0.4s;
-          display: flex;
-          align-items: center;
-          padding-left: 10px;
-          font-size: 10px;
-          font-weight: bold;
-          font-family: monospace;
-          color: white;
-          letter-spacing: 1px;
+        .an-user-row:hover {
+          border-color: ${T.blue};
         }
-        .an-funnel-count {
-          text-align: right;
-          font-family: monospace;
-          font-size: 13px;
+        .an-user-row-name {
+          font-size: 12px;
           font-weight: bold;
           color: ${T.text};
+          font-family: monospace;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .an-user-row-email {
+          font-size: 10px;
+          color: ${T.muted};
+          font-family: monospace;
+          margin-top: 2px;
+        }
+        .an-user-row-stat {
+          font-size: 11px;
+          font-weight: bold;
+          font-family: monospace;
+          white-space: nowrap;
+        }
+        .an-empty {
+          padding: 24px;
+          text-align: center;
+          color: ${T.muted};
+          font-size: 11px;
+          letter-spacing: 2px;
+          font-family: monospace;
+        }
+        .an-heatmap-grid {
+          display: grid;
+          grid-template-columns: repeat(30, 1fr);
+          gap: 3px;
+        }
+        .an-heat-cell {
+          aspect-ratio: 1;
+          border-radius: 2px;
+          border: 1px solid ${T.border};
+          cursor: default;
         }
         .an-custom-inputs {
           display: flex;
@@ -344,7 +371,7 @@ export default function AdminAnalyticsPage() {
         </div>
 
         <div className="an-range-pills">
-          {(['30d', '90d', '1y', 'all', 'custom'] as Range[]).map(r => (
+          {(['7d', '30d', '90d', '1y', 'all', 'custom'] as Range[]).map(r => (
             <button
               key={r}
               className={`an-range-pill ${range === r ? 'active' : ''}`}
@@ -405,19 +432,22 @@ export default function AdminAnalyticsPage() {
 
         {!loading && !error && data && (
           <>
-            {/* HERO STATS — the 4 numbers I'd glance at first thing every morning */}
+            {/* HERO — the 4 numbers that matter at 8am */}
             <div className="an-grid-4">
-              <div className="an-stat-card hero" style={{ borderTopColor: T.green }}>
+              <div className="an-stat-card hero" style={{
+                borderTopColor: data.summary.wowDelta >= 0 ? T.green : T.red,
+              }}>
                 <div className="an-stat-label">PAYING USERS</div>
                 <div className="an-stat-value" style={{ color: T.green }}>
                   {data.summary.payingActiveSubs.toLocaleString()}
                 </div>
-                <div className="an-stat-sub">
-                  {data.summary.couponSubsCount > 0
-                    ? `+ ${data.summary.couponSubsCount} ON COUPON`
-                    : 'NONE ON COUPON'}
+                <div className="an-stat-sub" style={{
+                  color: data.summary.wowDelta >= 0 ? T.green : T.red,
+                }}>
+                  {data.summary.wowDelta >= 0 ? '↑' : '↓'} {Math.abs(data.summary.wowDelta)} ({data.summary.wowPct >= 0 ? '+' : ''}{data.summary.wowPct}%) WoW
                 </div>
               </div>
+
               <div className="an-stat-card hero" style={{ borderTopColor: T.accent }}>
                 <div className="an-stat-label">EST. MRR</div>
                 <div className="an-stat-value" style={{ color: T.accent }}>
@@ -425,6 +455,7 @@ export default function AdminAnalyticsPage() {
                 </div>
                 <div className="an-stat-sub">{fmtMoney(data.summary.wrr)} / WEEK</div>
               </div>
+
               <div className="an-stat-card hero" style={{
                 borderTopColor: data.summary.netNewPaying >= 0 ? T.green : T.red,
               }}>
@@ -439,6 +470,7 @@ export default function AdminAnalyticsPage() {
                   {data.summary.paidConversionsInRange} NEW · {data.summary.cancellationsInRange} CHURNED
                 </div>
               </div>
+
               <div className="an-stat-card hero" style={{
                 borderTopColor: data.summary.churnRate > 5 ? T.red : T.amber,
               }}>
@@ -449,196 +481,213 @@ export default function AdminAnalyticsPage() {
                   {data.summary.churnRate}%
                 </div>
                 <div className="an-stat-sub">
-                  {data.summary.cancellationsInRange} CANCELED IN RANGE
+                  IN {RANGE_LABELS[range]}
                 </div>
               </div>
             </div>
 
-            {/* CONVERSION FUNNEL */}
-            <div className="an-section">
-              <div className="an-section-title">CONVERSION FUNNEL · ALL TIME</div>
-              <div className="an-section-sub">
-                Where your users are in the journey from sign-up to paying customer.
-              </div>
-              {(() => {
-                const max = Math.max(data.funnel.signedUp, 1)
-                const stages = [
-                  { name: 'SIGNED UP', value: data.funnel.signedUp, color: T.muted },
-                  { name: 'SUBSCRIBED', value: data.funnel.everSubscribed, color: T.blue },
-                  { name: 'STILL PAYING', value: data.funnel.stillActive, color: T.green },
-                ]
-                return stages.map((s, i) => {
-                  const prev = i > 0 ? stages[i - 1].value : null
-                  const dropPct = prev !== null && prev > 0
-                    ? Math.round(((prev - s.value) / prev) * 100)
-                    : null
-                  const widthPct = (s.value / max) * 100
-                  return (
-                    <div key={s.name} className="an-funnel-row">
-                      <span className="an-funnel-name">{s.name}</span>
-                      <div className="an-funnel-track">
-                        <div
-                          className="an-funnel-fill"
-                          style={{
-                            width: `${Math.max(widthPct, 4)}%`,
-                            background: s.color,
-                          }}
-                        >
-                          {widthPct >= 25 && `${Math.round(widthPct)}%`}
-                        </div>
-                      </div>
-                      <span className="an-funnel-count">
-                        {s.value.toLocaleString()}
-                        {dropPct !== null && dropPct > 0 && (
-                          <span style={{ fontSize: 9, color: T.red, marginLeft: 4 }}>
-                            -{dropPct}%
-                          </span>
-                        )}
-                      </span>
-                    </div>
-                  )
-                })
-              })()}
-            </div>
-
-            {/* SIGNUPS + REVENUE CHART (left) + STATUS PIE (right) */}
+            {/* AT-RISK + HOT PROSPECTS — the two most actionable widgets */}
             <div className="an-grid-2">
               <div className="an-section">
-                <div className="an-section-title">SIGNUPS & REVENUE OVER TIME</div>
+                <div className="an-section-title" style={{ color: T.red }}>
+                  ⚠ AT-RISK USERS · {data.atRiskUsers.length}
+                </div>
                 <div className="an-section-sub">
-                  {data.bucketSize === 'week' ? 'Weekly buckets' : 'Daily buckets'} · Revenue is paying subs only (excludes coupons).
+                  Paying users with no calls in 14+ days. Reach out before they cancel.
                 </div>
-                <div style={{ width: '100%', height: 280 }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={data.series} margin={{ top: 10, right: 16, left: -8, bottom: 0 }}>
-                      <CartesianGrid stroke={T.border} strokeDasharray="3 3" vertical={false} />
-                      <XAxis
-                        dataKey="date"
-                        tick={{ fontSize: 10, fill: T.muted }}
-                        tickFormatter={fmtDateTick}
-                        tickLine={false}
-                        axisLine={{ stroke: T.border }}
-                        interval="preserveStartEnd"
-                      />
-                      <YAxis
-                        yAxisId="left"
-                        tick={{ fontSize: 10, fill: T.muted }}
-                        tickLine={false}
-                        axisLine={false}
-                        allowDecimals={false}
-                      />
-                      <YAxis
-                        yAxisId="right"
-                        orientation="right"
-                        tick={{ fontSize: 10, fill: T.accent }}
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={(v) => '$' + v}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          background: T.dark,
-                          border: `1px solid ${T.accent}`,
-                          borderRadius: 4,
-                          fontSize: 11,
-                        }}
-                        labelStyle={{ color: '#8888aa', fontFamily: 'monospace' }}
-                        labelFormatter={fmtDateTick}
-                        formatter={(value: any, name: any) => {
-                          if (name === 'revenue') return [`$${value}`, 'WEEKLY REVENUE']
-                          return [value, 'SIGNUPS']
-                        }}
-                      />
-                      <Legend
-                        wrapperStyle={{ fontSize: 10, letterSpacing: 2 }}
-                        formatter={(v) => v === 'signups' ? 'SIGNUPS' : 'REVENUE'}
-                      />
-                      <Line
-                        yAxisId="left"
-                        type="monotone"
-                        dataKey="signups"
-                        stroke={T.blue}
-                        strokeWidth={2}
-                        dot={{ r: 2, fill: T.blue }}
-                        activeDot={{ r: 5 }}
-                      />
-                      <Line
-                        yAxisId="right"
-                        type="monotone"
-                        dataKey="revenue"
-                        stroke={T.accent}
-                        strokeWidth={2}
-                        strokeDasharray="4 4"
-                        dot={{ r: 2, fill: T.accent }}
-                        activeDot={{ r: 5 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
+                {data.atRiskUsers.length === 0 ? (
+                  <div className="an-empty">NO AT-RISK USERS · ALL CLEAR</div>
+                ) : (
+                  <div style={{ maxHeight: 260, overflowY: 'auto' }}>
+                    {data.atRiskUsers.slice(0, 20).map(u => (
+                      <Link
+                        key={u.clerk_id}
+                        href="/dashboard/admin/overview"
+                        className="an-user-row"
+                      >
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div className="an-user-row-name">{fullName(u)}</div>
+                          <div className="an-user-row-email">{u.email}</div>
+                        </div>
+                        <div className="an-user-row-stat" style={{
+                          color: (u.days_silent ?? 999) > 30 ? T.red : T.amber,
+                        }}>
+                          {u.days_silent !== null
+                            ? `${u.days_silent}D SILENT`
+                            : 'NO CALLS YET'}
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="an-section">
-                <div className="an-section-title">USER STATUS BREAKDOWN</div>
+                <div className="an-section-title" style={{ color: T.green }}>
+                  🔥 HOT PROSPECTS · {data.hotProspects.length}
+                </div>
                 <div className="an-section-sub">
-                  All-time. {data.summary.totalUsers.toLocaleString()} users total.
+                  Non-paying users dialing in last 7 days. Most likely to convert.
                 </div>
-                <div style={{ width: '100%', height: 280 }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={pieData}
-                        dataKey="value"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={50}
-                        outerRadius={90}
-                        paddingAngle={2}
-                        stroke="none"
+                {data.hotProspects.length === 0 ? (
+                  <div className="an-empty">NO ACTIVE PROSPECTS</div>
+                ) : (
+                  <div style={{ maxHeight: 260, overflowY: 'auto' }}>
+                    {data.hotProspects.slice(0, 20).map(u => (
+                      <Link
+                        key={u.clerk_id}
+                        href="/dashboard/admin/overview"
+                        className="an-user-row"
                       >
-                        {pieData.map(entry => (
-                          <Cell
-                            key={entry.status}
-                            fill={STATUS_COLORS[entry.status] || T.muted}
-                          />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{
-                          background: T.dark,
-                          border: `1px solid ${T.accent}`,
-                          borderRadius: 4,
-                          fontSize: 11,
-                        }}
-                        labelStyle={{ color: '#8888aa' }}
-                      />
-                      <Legend
-                        wrapperStyle={{ fontSize: 9, letterSpacing: 2 }}
-                        layout="vertical"
-                        verticalAlign="middle"
-                        align="right"
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div className="an-user-row-name">{fullName(u)}</div>
+                          <div className="an-user-row-email">{u.email}</div>
+                        </div>
+                        <div className="an-user-row-stat" style={{ color: T.green }}>
+                          {u.calls_7d.toLocaleString()} CALLS · 7D
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* RETENTION & CONVERSION ROW */}
+            {/* SIGNUPS + REVENUE */}
+            <div className="an-section">
+              <div className="an-section-title">SIGNUPS & REVENUE OVER TIME</div>
+              <div className="an-section-sub">
+                {data.bucketSize === 'week' ? 'Weekly buckets' : 'Daily buckets'} · Revenue is paying subs only (excludes coupons).
+              </div>
+              <div style={{ width: '100%', height: 280 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={data.series} margin={{ top: 10, right: 16, left: -8, bottom: 0 }}>
+                    <CartesianGrid stroke={T.border} strokeDasharray="3 3" vertical={false} />
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fontSize: 10, fill: T.muted }}
+                      tickFormatter={fmtDateTick}
+                      tickLine={false}
+                      axisLine={{ stroke: T.border }}
+                      interval="preserveStartEnd"
+                    />
+                    <YAxis
+                      yAxisId="left"
+                      tick={{ fontSize: 10, fill: T.muted }}
+                      tickLine={false}
+                      axisLine={false}
+                      allowDecimals={false}
+                    />
+                    <YAxis
+                      yAxisId="right"
+                      orientation="right"
+                      tick={{ fontSize: 10, fill: T.accent }}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(v) => '$' + v}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        background: T.dark,
+                        border: `1px solid ${T.accent}`,
+                        borderRadius: 4,
+                        fontSize: 11,
+                      }}
+                      labelStyle={{ color: '#8888aa', fontFamily: 'monospace' }}
+                      labelFormatter={fmtDateTick}
+                      formatter={(value: any, name: any) => {
+                        if (name === 'revenue') return [`$${value}`, 'WEEKLY REVENUE']
+                        return [value, 'SIGNUPS']
+                      }}
+                    />
+                    <Legend
+                      wrapperStyle={{ fontSize: 10, letterSpacing: 2 }}
+                      formatter={(v) => v === 'signups' ? 'SIGNUPS' : 'REVENUE'}
+                    />
+                    <Line
+                      yAxisId="left"
+                      type="monotone"
+                      dataKey="signups"
+                      stroke={T.blue}
+                      strokeWidth={2}
+                      dot={{ r: 2, fill: T.blue }}
+                      activeDot={{ r: 5 }}
+                    />
+                    <Line
+                      yAxisId="right"
+                      type="monotone"
+                      dataKey="revenue"
+                      stroke={T.accent}
+                      strokeWidth={2}
+                      strokeDasharray="4 4"
+                      dot={{ r: 2, fill: T.accent }}
+                      activeDot={{ r: 5 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* PLATFORM ACTIVITY HEATMAP */}
+            <div className="an-section">
+              <div className="an-section-title">PLATFORM ACTIVITY · LAST 30 DAYS</div>
+              <div className="an-section-sub">
+                Total calls placed across all users per day. Hover for details.
+              </div>
+              <div className="an-heatmap-grid">
+                {data.heatmap.map(h => (
+                  <div
+                    key={h.date}
+                    className="an-heat-cell"
+                    style={{
+                      background: heatColor(h.calls, heatmapMax),
+                    }}
+                    title={`${fmtDateTick(h.date)} · ${h.calls} calls`}
+                  />
+                ))}
+              </div>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                marginTop: 10,
+                fontSize: 9,
+                letterSpacing: 1,
+                color: T.muted,
+                fontFamily: 'monospace',
+              }}>
+                <span>30 DAYS AGO</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  LESS
+                  <div style={{ display: 'flex', gap: 2 }}>
+                    {[0, 0.25, 0.5, 0.75, 1].map(intensity => (
+                      <div key={intensity} style={{
+                        width: 10, height: 10, borderRadius: 2,
+                        background: heatColor(intensity * heatmapMax, heatmapMax),
+                        border: `1px solid ${T.border}`,
+                      }} />
+                    ))}
+                  </div>
+                  MORE
+                </span>
+                <span>TODAY</span>
+              </div>
+            </div>
+
+            {/* TENURE COHORT + LIFETIME + TOTALS */}
             <div className="an-grid-3">
               <div className="an-stat-card" style={{ borderTopColor: T.blue }}>
-                <div className="an-stat-label">CONVERSION RATE</div>
+                <div className="an-stat-label">NEW PAYING (≤30D)</div>
                 <div className="an-stat-value" style={{ color: T.blue }}>
-                  {data.summary.conversionRate}%
+                  {data.summary.newPayingUsers.toLocaleString()}
                 </div>
-                <div className="an-stat-sub">SIGNUPS WHO EVER PAID</div>
+                <div className="an-stat-sub">FRESH SUBSCRIPTIONS</div>
               </div>
               <div className="an-stat-card" style={{ borderTopColor: T.green }}>
-                <div className="an-stat-label">ACTIVE RATIO</div>
+                <div className="an-stat-label">ESTABLISHED (&gt;30D)</div>
                 <div className="an-stat-value" style={{ color: T.green }}>
-                  {data.summary.activeRatio}%
+                  {data.summary.establishedPayingUsers.toLocaleString()}
                 </div>
-                <div className="an-stat-sub">SIGNUPS PAYING NOW</div>
+                <div className="an-stat-sub">LOYAL CUSTOMERS</div>
               </div>
               <div className="an-stat-card" style={{ borderTopColor: T.accent }}>
                 <div className="an-stat-label">AVG LIFETIME</div>
@@ -655,7 +704,7 @@ export default function AdminAnalyticsPage() {
               </div>
             </div>
 
-            {/* SIGNUPS-IN-RANGE STAT */}
+            {/* TOTALS FOOTER */}
             <div className="an-grid-3">
               <div className="an-stat-card">
                 <div className="an-stat-label">TOTAL USERS</div>

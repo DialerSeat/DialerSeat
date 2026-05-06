@@ -52,6 +52,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return () => { cancelled = true }
   }, [user])
 
+  // Heartbeat — ping every 60s while tab is open + on focus to avoid stale "online" state
+  useEffect(() => {
+    if (!user) return
+
+    const ping = () => {
+      fetch('/api/heartbeat', { method: 'POST' }).catch(() => {})
+    }
+
+    ping() // initial ping
+    const interval = setInterval(ping, 60_000)
+    const onFocus = () => ping()
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) ping()
+    })
+
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('focus', onFocus)
+    }
+  }, [user])
+
   const navItems = isAdmin ? adminNavItems : userNavItems
 
   const isActive = (href: string) => {
@@ -70,7 +92,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (trigger) trigger.click()
   }
 
-  // Logo links to admin analytics for admins, regular dashboard for users
   const logoHref = isAdmin ? '/dashboard/admin/analytics' : '/dashboard'
 
   const Sidebar = () => (
@@ -80,8 +101,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         alignItems: 'center',
         gap: '12px',
         padding: '0 24px',
-        marginBottom: '48px',
+        marginBottom: '24px',
         textDecoration: 'none',
+        flexShrink: 0,
       }}>
         <div style={{
           width: '32px',
@@ -114,7 +136,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </Link>
 
-      <nav style={{ flex: 1, padding: '0 12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      <nav style={{
+        flex: 1,
+        minHeight: 0,
+        padding: '0 12px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '2px',
+        overflowY: 'auto',
+      }}>
         {navItems.map((item) => {
           const active = isActive(item.href)
           return (
@@ -125,12 +155,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 display: 'flex',
                 alignItems: 'center',
                 gap: '12px',
-                padding: '12px 16px',
+                padding: '10px 16px',
                 borderRadius: '10px',
                 cursor: 'pointer',
                 background: active ? 'rgba(74,158,255,0.1)' : 'transparent',
                 border: active ? '1px solid rgba(74,158,255,0.2)' : '1px solid transparent',
                 textDecoration: 'none',
+                flexShrink: 0,
               }}
             >
               <span style={{ fontSize: '16px' }}>{item.icon}</span>
@@ -151,13 +182,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         onClick={handleProfileRowClick}
         className="ds-profile-row"
         style={{
-          padding: '16px 24px',
+          padding: '14px 24px',
           borderTop: '1px solid var(--border)',
           display: 'flex',
           alignItems: 'center',
           gap: '12px',
           cursor: 'pointer',
           transition: 'background 0.15s',
+          flexShrink: 0,
         }}
       >
         <UserButton />
@@ -191,13 +223,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <style>{`
         .ds-sidebar-desktop {
           width: 260px;
-          min-height: 100vh;
+          height: 100vh;
+          position: sticky;
+          top: 0;
           background: var(--surface);
           border-right: 1px solid var(--border);
           display: flex;
           flex-direction: column;
-          padding: 32px 0;
+          padding: 20px 0;
           flex-shrink: 0;
+          overflow: hidden;
         }
         .ds-mobile-topbar { display: none; }
         .ds-sidebar-mobile { display: none; }
