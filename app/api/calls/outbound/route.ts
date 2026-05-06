@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { requireActive } from '@/lib/subscription'
 import { auth } from '@clerk/nextjs/server'
 
 const supabase = createClient(
@@ -9,10 +10,23 @@ const supabase = createClient(
 
 export async function POST(req: Request) {
   try {
+    // Hard gate: only active subscribers can initiate outbound calls.
+    // This is the most important gate in the entire app — no dialing without payment.
+    const gate = await requireActive()
+    if (gate) return gate
+
+    const { userId } = await auth()
+    // requireActive already validated userId, but TS doesn't know that.
+    if (!userId) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    }
+
     const body = await req.json()
     const { to } = body
 
-    const { userId } = await auth()
+    if (!to) {
+      return NextResponse.json({ success: false, error: 'Missing destination' }, { status: 400 })
+    }
 
     const spaceUrl = process.env.SIGNALWIRE_SPACE_URL
     const projectId = process.env.SIGNALWIRE_PROJECT_ID
@@ -33,7 +47,6 @@ export async function POST(req: Request) {
     const callsUrl = `https://${spaceUrl}/api/laml/2010-04-01/Accounts/${projectId}/Calls.json`
 
     // 1) Dial the lead — they go into the conference room (with recording)
-    // The room param + record=true in TwiML triggers recording of the full conference
     const leadCallResponse = await fetch(callsUrl, {
       method: 'POST',
       headers: {
@@ -79,20 +92,17 @@ export async function POST(req: Request) {
     }
 
     // Track the room->user mapping so when the recording webhook fires we know who owns it
-    if (userId) {
-      try {
-        await supabase.from('call_rooms').upsert({
-          room_name: roomName,
-          user_id: userId,
-          phone_number: toFormatted,
-          lead_call_sid: leadData.sid,
-          agent_call_sid: agentData?.sid || null,
-          created_at: new Date().toISOString(),
-        })
-      } catch (e) {
-        // Table may not exist yet — fine, we'll fall back to other lookups
-        console.warn('call_rooms tracking skipped:', e)
-      }
+    try {
+      await supabase.from('call_rooms').upsert({
+        room_name: roomName,
+        user_id: userId,
+        phone_number: toFormatted,
+        lead_call_sid: leadData.sid,
+        agent_call_sid: agentData?.sid || null,
+        created_at: new Date().toISOString(),
+      })
+    } catch (e) {
+      console.warn('call_rooms tracking skipped:', e)
     }
 
     return NextResponse.json({

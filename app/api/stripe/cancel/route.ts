@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { createClient } from '@supabase/supabase-js'
 import { stripe } from '@/lib/stripe'
+import { requireNotAdmin } from '@/lib/subscription'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,6 +15,11 @@ export async function POST() {
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    // Hard-block admins server-side. The settings page hides the cancel UI for
+    // admins, but a determined admin could POST here directly. This closes that.
+    const adminBlock = await requireNotAdmin(userId)
+    if (adminBlock) return adminBlock
 
     // Find the user's most recent active subscription.
     // Use limit(1) instead of maybeSingle() in case duplicate rows exist
