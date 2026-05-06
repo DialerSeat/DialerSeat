@@ -147,7 +147,9 @@ export async function POST(req: Request) {
       .eq('user_id', userId)
       .eq('status', 'incomplete')
 
-   // 6) Build subscription create params
+    // 6) Build subscription create params
+    // Note: expand is set at the create() call below, not here — the Dahlia
+    // API (2026-04-22+) renamed the field we expand to 'confirmation_secret'.
     const subParams: Stripe.SubscriptionCreateParams = {
       customer: customerId,
       items: [{ price: process.env.STRIPE_PRICE_ID! }],
@@ -156,7 +158,6 @@ export async function POST(req: Request) {
         payment_method_types: ['card'],
         save_default_payment_method: 'on_subscription',
       },
-      expand: ['latest_invoice.payment_intent'],
       metadata: { clerk_id: userId },
     }
 
@@ -213,15 +214,21 @@ export async function POST(req: Request) {
     }
 
     // 8) Create the subscription
-    const subscription = await stripe.subscriptions.create(subParams)
+    // Dahlia API (2026-04-22+) replaced `latest_invoice.payment_intent` with
+    // `latest_invoice.confirmation_secret`. The Element-side code (PaymentElement
+    // + confirmPayment) doesn't change — only the field name on our end.
+    const subscription = await stripe.subscriptions.create({
+      ...subParams,
+      expand: ['latest_invoice.confirmation_secret'],
+    })
 
     const invoice = subscription.latest_invoice as any
-    const paymentIntent = invoice?.payment_intent
+    const confirmationSecret = invoice?.confirmation_secret?.client_secret
 
     // EDGE CASE: 100% off coupon means no payment needed.
-    // The invoice is auto-paid, no PaymentIntent is created, sub goes straight to 'active'.
-    if (!paymentIntent?.client_secret) {
-      // If the sub is already active (free coupon path), redirect-ready response
+    // The invoice is auto-paid, no confirmation_secret is created, sub goes straight to 'active'.
+    if (!confirmationSecret) {
+      // Free coupon path
       if (subscription.status === 'active') {
         return NextResponse.json({
           subscriptionId: subscription.id,
@@ -230,10 +237,12 @@ export async function POST(req: Request) {
         })
       }
 
-      console.error('No payment_intent on first invoice', {
+      console.error('No confirmation_secret on first invoice', {
         subId: subscription.id,
         status: subscription.status,
         invoice: invoice?.id,
+        invoiceStatus: invoice?.status,
+        hasConfirmationSecret: !!invoice?.confirmation_secret,
       })
       return NextResponse.json(
         { error: 'Failed to initialize payment. Please try again.' },
@@ -243,7 +252,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       subscriptionId: subscription.id,
-      clientSecret: paymentIntent.client_secret,
+      clientSecret: confirmationSecret,
     })
   } catch (err: any) {
     console.error('create-subscription error:', err)
