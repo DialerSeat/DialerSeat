@@ -16,9 +16,9 @@ const userNavItems = [
 ]
 
 const adminNavItems = [
+  { icon: '📈', label: 'ANALYTICS', href: '/dashboard/admin/analytics' },
   { icon: '👁️', label: 'OVERVIEW', href: '/dashboard/admin/overview' },
   { icon: '🏢', label: 'TEAMS', href: '/dashboard/admin/teams' },
-  { icon: '📈', label: 'ANALYTICS', href: '/dashboard/admin/analytics' },
   { icon: '⚙️', label: 'SETTINGS', href: '/dashboard/settings' },
 ]
 
@@ -42,7 +42,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return () => { document.body.style.overflow = '' }
   }, [drawerOpen])
 
-  // Fetch admin status once on mount
   useEffect(() => {
     if (!user) return
     let cancelled = false
@@ -60,7 +59,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return pathname.startsWith(href)
   }
 
-  // Forward clicks anywhere in the profile row to the Clerk avatar trigger.
   const handleProfileRowClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement
     if (target.closest('.cl-userButtonTrigger, .cl-userButtonAvatarBox')) return
@@ -72,14 +70,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (trigger) trigger.click()
   }
 
+  // Logo links to admin analytics for admins, regular dashboard for users
+  const logoHref = isAdmin ? '/dashboard/admin/analytics' : '/dashboard'
+
   const Sidebar = () => (
     <>
-      <div style={{
+      <Link href={logoHref} style={{
         display: 'flex',
         alignItems: 'center',
         gap: '12px',
         padding: '0 24px',
         marginBottom: '48px',
+        textDecoration: 'none',
       }}>
         <div style={{
           width: '32px',
@@ -110,7 +112,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             }}>ADMIN CONSOLE</span>
           )}
         </div>
-      </div>
+      </Link>
 
       <nav style={{ flex: 1, padding: '0 12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
         {navItems.map((item) => {
@@ -299,7 +301,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <span style={{ width: 18, height: 2, background: 'var(--text-primary)', borderRadius: 1 }} />
           </button>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Link href={logoHref} style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
             <div style={{
               width: 26,
               height: 26,
@@ -317,7 +319,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               letterSpacing: 4,
               color: 'var(--text-primary)',
             }}>DIALERSEAT</span>
-          </div>
+          </Link>
 
           <UserButton />
         </div>

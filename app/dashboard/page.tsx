@@ -1,5 +1,6 @@
 'use client'
 import { useUser } from '@clerk/nextjs'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
@@ -20,6 +21,7 @@ interface RecentCampaign {
 
 export default function DashboardPage() {
   const { user } = useUser()
+  const router = useRouter()
   const [stats, setStats] = useState<DashboardStats>({
     callsToday: 0,
     contactsReached: 0,
@@ -28,9 +30,25 @@ export default function DashboardPage() {
   })
   const [recentCampaigns, setRecentCampaigns] = useState<RecentCampaign[]>([])
   const [loading, setLoading] = useState(true)
+  const [adminChecked, setAdminChecked] = useState(false)
 
+  // Bounce admins to /dashboard/admin/analytics on first load
   useEffect(() => {
     if (!user) return
+    fetch('/api/admin/check')
+      .then(r => r.json())
+      .then(d => {
+        if (d.isAdmin) {
+          router.replace('/dashboard/admin/analytics')
+        } else {
+          setAdminChecked(true)
+        }
+      })
+      .catch(() => setAdminChecked(true))
+  }, [user, router])
+
+  useEffect(() => {
+    if (!user || !adminChecked) return
     let cancelled = false
 
     const load = async () => {
@@ -59,7 +77,7 @@ export default function DashboardPage() {
             contactsReached = sumData.summary.contactsReached ?? 0
           }
         } catch {
-          // analytics endpoint optional — fall back to zeros
+          // ignore
         }
 
         const activeCampaigns = campaigns.filter(c => c.status === 'active').length
@@ -86,7 +104,25 @@ export default function DashboardPage() {
 
     load()
     return () => { cancelled = true }
-  }, [user])
+  }, [user, adminChecked])
+
+  // While checking admin status, show a quiet loading shell so we don't flash the user dashboard
+  if (!adminChecked) {
+    return (
+      <div style={{
+        flex: 1,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: 'calc(100vh - 64px)',
+        color: 'var(--text-secondary)',
+        fontSize: 11,
+        letterSpacing: 3,
+      }}>
+        LOADING...
+      </div>
+    )
+  }
 
   const statCards = [
     {
@@ -115,8 +151,6 @@ export default function DashboardPage() {
 
   return (
     <div style={{ flex: 1, padding: '40px', overflowY: 'auto' }}>
-
-      {/* HEADER */}
       <div style={{ marginBottom: '40px' }}>
         <h1 style={{
           fontSize: '24px',
@@ -132,7 +166,6 @@ export default function DashboardPage() {
         }}>HERE IS WHAT IS HAPPENING WITH YOUR CAMPAIGNS TODAY.</p>
       </div>
 
-      {/* STATS CARDS */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(4, 1fr)',
@@ -168,7 +201,6 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* QUICK ACTIONS */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(3, 1fr)',
@@ -214,7 +246,6 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* RECENT CAMPAIGNS */}
       <div style={{
         padding: '32px',
         borderRadius: '16px',
@@ -257,7 +288,6 @@ export default function DashboardPage() {
             color: 'var(--text-secondary)',
           }}>LOADING...</div>
         ) : recentCampaigns.length === 0 ? (
-          /* EMPTY STATE */
           <div style={{
             textAlign: 'center',
             padding: '60px 20px',
@@ -291,7 +321,6 @@ export default function DashboardPage() {
             }}>CREATE FIRST CAMPAIGN</Link>
           </div>
         ) : (
-          /* CAMPAIGN LIST */
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {recentCampaigns.map(c => {
               const total = c.total_leads || 0
@@ -299,11 +328,7 @@ export default function DashboardPage() {
               const pct = total > 0 ? Math.round((called / total) * 100) : 0
               const isActive = c.status === 'active'
               return (
-                <Link
-                  key={c.id}
-                  href="/dashboard/campaigns"
-                  style={{ textDecoration: 'none' }}
-                >
+                <Link key={c.id} href="/dashboard/campaigns" style={{ textDecoration: 'none' }}>
                   <div style={{
                     padding: '16px 20px',
                     borderRadius: '10px',
@@ -316,19 +341,10 @@ export default function DashboardPage() {
                     cursor: 'pointer',
                     transition: 'all 0.15s',
                   }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.borderColor = 'var(--accent-blue)'
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.borderColor = 'var(--border)'
-                  }}>
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent-blue)' }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)' }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 10,
-                        marginBottom: 6,
-                      }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
                         <span style={{
                           fontSize: '13px',
                           fontWeight: 'bold',
@@ -372,11 +388,7 @@ export default function DashboardPage() {
                         }} />
                       </div>
                     </div>
-                    <div style={{
-                      fontSize: 18,
-                      color: 'var(--text-secondary)',
-                      flexShrink: 0,
-                    }}>›</div>
+                    <div style={{ fontSize: 18, color: 'var(--text-secondary)', flexShrink: 0 }}>›</div>
                   </div>
                 </Link>
               )
@@ -385,7 +397,6 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* MOBILE-ONLY LAYOUT TWEAKS — desktop is unchanged */}
       <style jsx>{`
         @media (max-width: 768px) {
           :global(.ds-stats-grid) {

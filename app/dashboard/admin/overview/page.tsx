@@ -10,12 +10,13 @@ interface AdminUser {
   created_at: string
   is_admin: boolean
   lead_count: number
-  campaign_count: number
+  last_active_at: string | null
   team_member_count: number
   subscription: {
     status: string
     current_period_end: string | null
     cancel_at_period_end: boolean
+    discount_coupon: string | null
   } | null
   is_active_subscription: boolean
 }
@@ -38,20 +39,28 @@ const T = {
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
+    year: 'numeric', month: 'short', day: 'numeric',
   })
 }
 
-function timeAgo(iso: string) {
+function timeAgo(iso: string | null) {
+  if (!iso) return 'never'
   const ms = Date.now() - new Date(iso).getTime()
   const days = Math.floor(ms / 86400000)
-  if (days === 0) return 'today'
+  if (days === 0) {
+    const hours = Math.floor(ms / 3600000)
+    if (hours === 0) return 'just now'
+    return `${hours}h ago`
+  }
   if (days === 1) return 'yesterday'
   if (days < 30) return `${days}d ago`
   if (days < 365) return `${Math.floor(days / 30)}mo ago`
   return `${Math.floor(days / 365)}y ago`
+}
+
+function daysSince(iso: string | null): number {
+  if (!iso) return Infinity
+  return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000)
 }
 
 export default function AdminOverviewPage() {
@@ -270,25 +279,24 @@ export default function AdminOverviewPage() {
             USER OVERVIEW
           </span>
           <span style={{ fontSize: 10, fontFamily: 'monospace', color: '#8888aa', letterSpacing: 1 }}>
-            {users.length.toLocaleString()} TOTAL
+            {filtered.length === users.length
+              ? `${users.length.toLocaleString()} TOTAL`
+              : `${filtered.length} OF ${users.length} TOTAL`}
           </span>
         </div>
       </div>
 
       <div className="ovr-controls">
         <div className="ovr-pills">
-          <button
-            className={`ovr-pill ${filter === 'all' ? 'active' : ''}`}
-            onClick={() => setFilter('all')}
-          >ALL · {counts.all}</button>
-          <button
-            className={`ovr-pill ${filter === 'active' ? 'active' : ''}`}
-            onClick={() => setFilter('active')}
-          >ACTIVE · {counts.active}</button>
-          <button
-            className={`ovr-pill ${filter === 'inactive' ? 'active' : ''}`}
-            onClick={() => setFilter('inactive')}
-          >INACTIVE · {counts.inactive}</button>
+          <button className={`ovr-pill ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')}>
+            ALL · {counts.all}
+          </button>
+          <button className={`ovr-pill ${filter === 'active' ? 'active' : ''}`} onClick={() => setFilter('active')}>
+            ACTIVE · {counts.active}
+          </button>
+          <button className={`ovr-pill ${filter === 'inactive' ? 'active' : ''}`} onClick={() => setFilter('inactive')}>
+            INACTIVE · {counts.inactive}
+          </button>
         </div>
         <input
           className="ovr-search"
@@ -307,14 +315,8 @@ export default function AdminOverviewPage() {
 
         {error && (
           <div style={{
-            padding: 20,
-            textAlign: 'center',
-            fontSize: 12,
-            letterSpacing: 2,
-            color: T.red,
-            background: '#f8e8e8',
-            border: `1px solid ${T.red}`,
-            borderRadius: 4,
+            padding: 20, textAlign: 'center', fontSize: 12, letterSpacing: 2, color: T.red,
+            background: '#f8e8e8', border: `1px solid ${T.red}`, borderRadius: 4,
           }}>
             {error}
           </div>
@@ -329,6 +331,8 @@ export default function AdminOverviewPage() {
         {filtered.map(u => {
           const expanded = expandedId === u.clerk_id
           const fullName = `${u.first_name || ''} ${u.last_name || ''}`.trim() || '(no name)'
+          const inactiveDays = daysSince(u.last_active_at)
+          const isStale = u.is_active_subscription && inactiveDays > 14
 
           return (
             <div key={u.clerk_id} className={`ovr-row ${expanded ? 'expanded' : ''}`}>
@@ -341,41 +345,42 @@ export default function AdminOverviewPage() {
                     {fullName}
                     {u.is_admin && (
                       <span style={{
-                        marginLeft: 8,
-                        fontSize: 8,
-                        letterSpacing: 2,
-                        padding: '2px 6px',
-                        background: 'rgba(74,158,255,0.12)',
-                        color: T.blue,
-                        border: `1px solid ${T.blue}`,
-                        borderRadius: 2,
+                        marginLeft: 8, fontSize: 8, letterSpacing: 2, padding: '2px 6px',
+                        background: 'rgba(74,158,255,0.12)', color: T.blue,
+                        border: `1px solid ${T.blue}`, borderRadius: 2,
                       }}>ADMIN</span>
+                    )}
+                    {u.subscription?.discount_coupon && (
+                      <span style={{
+                        marginLeft: 6, fontSize: 8, letterSpacing: 2, padding: '2px 6px',
+                        background: 'rgba(140,106,26,0.12)', color: T.amber,
+                        border: `1px solid ${T.amber}`, borderRadius: 2,
+                      }}>COUPON</span>
+                    )}
+                    {isStale && (
+                      <span style={{
+                        marginLeft: 6, fontSize: 8, letterSpacing: 2, padding: '2px 6px',
+                        background: '#f8e8e8', color: T.red,
+                        border: `1px solid ${T.red}`, borderRadius: 2,
+                      }}>INACTIVE {inactiveDays}D</span>
                     )}
                   </div>
                   <div className="ovr-email">{u.email}</div>
                 </div>
                 <div className="ovr-leadcount" style={{
-                  fontFamily: 'monospace',
-                  fontSize: 11,
-                  color: T.muted,
-                  whiteSpace: 'nowrap',
+                  fontFamily: 'monospace', fontSize: 11, color: T.muted, whiteSpace: 'nowrap',
                 }}>
                   {u.lead_count.toLocaleString()} LEADS
                 </div>
                 <div className="ovr-joindate" style={{
-                  fontFamily: 'monospace',
-                  fontSize: 11,
-                  color: T.muted,
-                  whiteSpace: 'nowrap',
+                  fontFamily: 'monospace', fontSize: 11, color: T.muted, whiteSpace: 'nowrap',
                 }}>
                   {timeAgo(u.created_at)}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <div className={`ovr-status-dot ${u.is_active_subscription ? 'active' : 'inactive'}`} />
                   <span style={{
-                    fontSize: 9,
-                    letterSpacing: 2,
-                    fontWeight: 'bold',
+                    fontSize: 9, letterSpacing: 2, fontWeight: 'bold',
                     color: u.is_active_subscription ? T.green : T.muted,
                   }}>
                     {u.is_active_subscription ? 'ACTIVE' : 'INACTIVE'}
@@ -398,14 +403,20 @@ export default function AdminOverviewPage() {
                     <div className="ovr-detail-value">{u.lead_count.toLocaleString()}</div>
                   </div>
                   <div className="ovr-detail-cell">
-                    <div className="ovr-detail-label">CAMPAIGNS</div>
-                    <div className="ovr-detail-value">{u.campaign_count.toLocaleString()}</div>
+                    <div className="ovr-detail-label">LAST ACTIVE</div>
+                    <div className="ovr-detail-value" style={{
+                      color: !u.last_active_at ? T.muted
+                        : inactiveDays > 14 ? T.red
+                        : inactiveDays > 7 ? T.amber
+                        : T.green,
+                    }}>
+                      {timeAgo(u.last_active_at)}
+                    </div>
                   </div>
                   <div className="ovr-detail-cell">
                     <div className="ovr-detail-label">SUBSCRIPTION</div>
                     <div className="ovr-detail-value" style={{
-                      color: u.is_active_subscription ? T.green : T.muted,
-                      fontSize: 11,
+                      color: u.is_active_subscription ? T.green : T.muted, fontSize: 11,
                     }}>
                       {u.subscription
                         ? u.subscription.status.toUpperCase() + (u.subscription.cancel_at_period_end ? ' · CANCEL PENDING' : '')
