@@ -75,6 +75,8 @@ export default function RecordingsPage() {
   const [syncMessage, setSyncMessage] = useState<string | null>(null)
   const [playingId, setPlayingId] = useState<string | null>(null)
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const sentinelRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -151,6 +153,33 @@ export default function RecordingsPage() {
     } finally {
       setSyncing(false)
       setTimeout(() => setSyncMessage(null), 8000)
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    setDeletingId(id)
+    try {
+      const res = await fetch('/api/recordings/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ call_id: id }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setRecordings(prev => prev.filter(r => r.id !== id))
+        setTotal(t => Math.max(0, t - 1))
+        setSyncMessage('Recording deleted.')
+        setTimeout(() => setSyncMessage(null), 4000)
+      } else {
+        setSyncMessage(`Delete failed: ${data.error}`)
+        setTimeout(() => setSyncMessage(null), 6000)
+      }
+    } catch (err: any) {
+      setSyncMessage(`Delete error: ${err.message}`)
+      setTimeout(() => setSyncMessage(null), 6000)
+    } finally {
+      setDeletingId(null)
+      setConfirmDeleteId(null)
     }
   }
 
@@ -232,6 +261,14 @@ export default function RecordingsPage() {
           overflow: hidden;
           text-overflow: ellipsis;
         }
+        .rec-name-sub {
+          font-size: 10px;
+          color: ${T.muted};
+          font-family: monospace;
+          font-weight: normal;
+          letter-spacing: 1px;
+          margin-top: 2px;
+        }
         .rec-disp-badge {
           display: inline-block;
           padding: 3px 10px;
@@ -255,6 +292,10 @@ export default function RecordingsPage() {
           cursor: pointer;
           font-family: 'Futura PT', Futura, sans-serif;
         }
+        .rec-btn-danger {
+          border-color: ${T.red};
+          color: ${T.red};
+        }
         .rec-btn-active {
           background: ${T.dark};
           color: ${T.blue};
@@ -272,6 +313,14 @@ export default function RecordingsPage() {
           color: ${T.green};
           font-size: 11px;
           letter-spacing: 1px;
+        }
+        .rec-meta-text {
+          font-family: monospace;
+          font-size: 11px;
+          color: ${T.muted};
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
         @media (max-width: 768px) {
@@ -307,7 +356,14 @@ export default function RecordingsPage() {
           .rec-card-header .col-name { grid-area: name; }
           .rec-card-header .col-phone { grid-area: phone; }
           .rec-card-header .col-disp { grid-area: disp; }
-          .rec-card-header .col-meta { grid-area: meta; display: flex; gap: 12px; font-size: 10px; color: ${T.muted}; font-family: monospace; }
+          .rec-card-header .col-meta {
+            grid-area: meta;
+            display: flex;
+            gap: 12px;
+            font-size: 10px;
+            color: ${T.muted};
+            font-family: monospace;
+          }
           .rec-card-header .col-meta-camp,
           .rec-card-header .col-meta-time,
           .rec-card-header .col-meta-dur { display: none; }
@@ -350,9 +406,9 @@ export default function RecordingsPage() {
       )}
 
       <div className="rec-banner">
-  ⚠ <strong>RECORDING DISCLOSURE:</strong> You must verbally inform the other party they are on a recorded line by law in CA, CT, FL, IL, MD, MA, MI, MT, NV, NH, PA, WA. ·
-  <strong> 30-DAY RETENTION:</strong> Recordings auto-delete after 30 days. Click DOWNLOAD to save permanently.
-</div>
+        ⚠ <strong>RECORDING DISCLOSURE:</strong> You must verbally inform the other party they are on a recorded line by law in CA, CT, FL, IL, MD, MA, MI, MT, NV, NH, PA, WA. ·
+        <strong> 30-DAY RETENTION:</strong> Recordings auto-delete after 30 days. Click DOWNLOAD to save permanently.
+      </div>
 
       <div className="rec-mobile-toggle" onClick={() => setFiltersOpen(v => !v)}>
         <span>{filtersOpen ? '▲ HIDE' : '▼ SHOW'} FILTERS</span>
@@ -399,15 +455,25 @@ export default function RecordingsPage() {
         {recordings.map(r => {
           const expDays = daysUntilExpire(r.recording_expires_at)
           const isPlaying = playingId === r.id
-          const leadName = r.leads ? `${r.leads.first_name} ${r.leads.last_name}` : 'Unknown'
+          const isConfirming = confirmDeleteId === r.id
+          const isDeleting = deletingId === r.id
+
+          // Better fallback: manual dials don't have leads, show "Manual Dial" not "Unknown"
+          const hasLead = !!r.leads
+          const leadName = hasLead
+            ? `${r.leads!.first_name || ''} ${r.leads!.last_name || ''}`.trim() || 'Unnamed Lead'
+            : 'Manual Dial'
           const phone = r.leads?.phone || r.phone_number || '—'
-          const campName = r.campaigns?.name || '—'
+          const campName = r.campaigns?.name || (hasLead ? '—' : 'Direct')
 
           return (
             <div key={r.id} className="rec-card">
               <div className="rec-card-header">
                 <div className="col-name">
                   <div className="rec-name">{leadName}</div>
+                  {!hasLead && (
+                    <div className="rec-name-sub">no campaign attached</div>
+                  )}
                 </div>
                 <div className="col-phone" style={{
                   fontFamily: 'monospace',
@@ -418,19 +484,19 @@ export default function RecordingsPage() {
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                 }}>{phone}</div>
-                <div className="col-meta-dur" style={{ fontFamily: 'monospace', fontSize: 11, color: T.muted }}>
+                <div className="col-meta-dur rec-meta-text">
                   {formatDuration(r.recording_duration || r.duration)}
                 </div>
-                <div className="col-meta-time" style={{ fontFamily: 'monospace', fontSize: 11, color: T.muted }}>
+                <div className="col-meta-time rec-meta-text">
                   {formatDate(r.created_at)}
                 </div>
-                <div className="col-meta-camp" style={{ fontFamily: 'monospace', fontSize: 10, color: T.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <div className="col-meta-camp rec-meta-text">
                   {campName}
                 </div>
                 <div className="col-meta">
-                  <span>{formatDate(r.created_at)}</span>
-                  <span>{formatDuration(r.recording_duration || r.duration)}</span>
-                  <span>{campName}</span>
+                  <span style={{ color: T.muted }}>{formatDate(r.created_at)}</span>
+                  <span style={{ color: T.muted }}>{formatDuration(r.recording_duration || r.duration)}</span>
+                  <span style={{ color: T.muted }}>{campName}</span>
                 </div>
                 <div className="col-disp">
                   {r.disposition && (
@@ -463,6 +529,26 @@ export default function RecordingsPage() {
                     onClick={() => setPlayingId(isPlaying ? null : r.id)}
                   >{isPlaying ? '✕ CLOSE' : '▶ PLAY'}</button>
                   <a className="rec-btn" href={`/api/recordings/play?call_id=${r.id}&download=1`} style={{ textDecoration: 'none' }}>↓ DOWNLOAD</a>
+                  {isConfirming ? (
+                    <>
+                      <button
+                        className="rec-btn rec-btn-danger"
+                        disabled={isDeleting}
+                        onClick={() => handleDelete(r.id)}
+                        style={{ background: isDeleting ? 'transparent' : T.red, color: isDeleting ? T.red : '#fff' }}
+                      >{isDeleting ? '...' : '✓ CONFIRM'}</button>
+                      <button
+                        className="rec-btn"
+                        disabled={isDeleting}
+                        onClick={() => setConfirmDeleteId(null)}
+                      >CANCEL</button>
+                    </>
+                  ) : (
+                    <button
+                      className="rec-btn rec-btn-danger"
+                      onClick={() => setConfirmDeleteId(r.id)}
+                    >🗑 DELETE</button>
+                  )}
                 </div>
               </div>
 
