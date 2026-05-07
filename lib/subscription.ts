@@ -12,16 +12,22 @@ export type AccessTier = 'active' | 'lapsed' | 'new'
 const ACTIVE_STATUSES = ['trialing', 'active', 'past_due']
 
 /**
- * Determines a user's access tier.
- *
- *   active  - currently paying OR canceled-but-still-within-paid-period
- *   lapsed  - has at least one subscription row, but no current access (paid for a period before)
- *   new     - never had a subscription row (forced to /billing)
- *
- * Single source of truth: the `subscriptions` table (has period_end + cancel_at_period_end).
- * `users.subscription_status` is treated as a denormalized cache only.
+ * Detailed access info — used by UI to show what's keeping the user active.
+ * Existing gates (proxy.ts, requireActive) use the simpler getAccessTier()
+ * which collapses this to 'active' | 'lapsed' | 'new'.
  */
-export async function getAccessTier(clerkId: string): Promise<AccessTier> {
+export interface DetailedAccess {
+  tier: AccessTier
+  via: 'self' | 'seat' | null      // why active (or null if not active)
+  hasSelfSub: boolean              // user has own $35/week
+  activeSeatTeamIds: string[]      // team IDs where user has an owner-paid seat
+}
+
+/**
+ * Returns true if the user has an own subscription that grants active access.
+ * Pulled out so seat-checking and self-checking can share the same logic.
+ */
+async function checkSelfSubActive(clerkId: string): Promise<{ active: boolean; hasHistory: boolean }> {
   const { data: subs, error } = await supabase
     .from('subscriptions')
     .select('status, current_period_end, cancel_at_period_end')
@@ -29,47 +35,152 @@ export async function getAccessTier(clerkId: string): Promise<AccessTier> {
     .order('created_at', { ascending: false })
 
   if (error) {
-    console.error('[subscription] tier lookup failed:', error)
-    // Fail open on DB errors so a Supabase outage doesn't lock everyone out.
-    // Webhook is still source of truth, chargeback defense unaffected.
-    return 'active'
+    console.error('[subscription] self-sub lookup failed:', error)
+    // Fail open: treat as active so a Supabase outage doesn't lock everyone out.
+    return { active: true, hasHistory: true }
   }
 
   if (!subs || subs.length === 0) {
-    return 'new'
+    return { active: false, hasHistory: false }
   }
 
   const now = Date.now()
 
   for (const sub of subs) {
-    // Currently in an active billing state
     if (ACTIVE_STATUSES.includes(sub.status)) {
-      return 'active'
+      return { active: true, hasHistory: true }
     }
-
-    // Canceled but still within their paid-for period
     if (
       sub.status === 'canceled' &&
       sub.current_period_end &&
       new Date(sub.current_period_end).getTime() > now
     ) {
-      return 'active'
+      return { active: true, hasHistory: true }
     }
   }
 
-  // Has subscription history, but nothing currently active and no remaining paid period.
-  return 'lapsed'
+  return { active: false, hasHistory: true }
+}
+
+/**
+ * Returns team IDs where this user has an active member row AND the seat is
+ * currently being paid for by the owner (recent paid charge for current period).
+ *
+ * For 'recruit' codes there's no owner payment — those don't grant access via
+ * this path; recruit-code users still need their own $35 sub.
+ *
+ * For 'public' team campaigns, no charge exists at all — those bypass tier
+ * checks entirely at the campaign level (handled later, not here).
+ */
+async function getActiveTeamSeats(clerkId: string): Promise<string[]> {
+  const now = new Date().toISOString()
+
+  // Find active memberships joined via seat (not recruit) codes that have a
+  // current paid charge covering today.
+  const { data, error } = await supabase
+    .from('team_members')
+    .select(`
+      team_id,
+      status,
+      team_seat_charges!inner (
+        status,
+        period_start,
+        period_end
+      )
+    `)
+    .eq('user_id', clerkId)
+    .eq('status', 'active')
+    .eq('team_seat_charges.status', 'paid')
+    .lte('team_seat_charges.period_start', now)
+    .gte('team_seat_charges.period_end', now)
+
+  if (error) {
+    console.error('[subscription] team seat lookup failed:', error)
+    return []
+  }
+
+  if (!data || data.length === 0) return []
+
+  // Dedupe team_ids in case multiple charges overlap
+  return Array.from(new Set(data.map((r: any) => r.team_id)))
+}
+
+/**
+ * Determines a user's access tier (collapsed to 3 states for backward compat).
+ *
+ *   active  - own sub active OR has at least one paid team seat
+ *   lapsed  - has subscription history OR was previously on a paid seat,
+ *             but nothing currently grants access
+ *   new     - never had a sub AND never been on a paid seat
+ *
+ * Used by proxy.ts and requireActive(). Existing call sites keep working.
+ */
+export async function getAccessTier(clerkId: string): Promise<AccessTier> {
+  const self = await checkSelfSubActive(clerkId)
+  if (self.active) return 'active'
+
+  const activeSeats = await getActiveTeamSeats(clerkId)
+  if (activeSeats.length > 0) return 'active'
+
+  // Not currently active — figure out 'lapsed' vs 'new'.
+  if (self.hasHistory) return 'lapsed'
+
+  // Check if they were ever on a paid seat (for lapsed-via-seat detection).
+  const { data: seatHistory } = await supabase
+    .from('team_seat_charges')
+    .select('id')
+    .eq('agent_id', clerkId)
+    .eq('status', 'paid')
+    .limit(1)
+
+  if (seatHistory && seatHistory.length > 0) return 'lapsed'
+
+  return 'new'
+}
+
+/**
+ * Detailed access — for UI use only. Tells the dashboard whether to show
+ * "PRO PLAN" (own sub), "SEAT (Team X)" badge, or "UNSUBSCRIBED".
+ */
+export async function getDetailedAccess(clerkId: string): Promise<DetailedAccess> {
+  const self = await checkSelfSubActive(clerkId)
+  const activeSeats = await getActiveTeamSeats(clerkId)
+
+  let tier: AccessTier = 'new'
+  let via: 'self' | 'seat' | null = null
+
+  if (self.active) {
+    tier = 'active'
+    via = 'self'
+  } else if (activeSeats.length > 0) {
+    tier = 'active'
+    via = 'seat'
+  } else if (self.hasHistory) {
+    tier = 'lapsed'
+  } else {
+    // Check seat history for lapsed-via-seat
+    const { data: seatHistory } = await supabase
+      .from('team_seat_charges')
+      .select('id')
+      .eq('agent_id', clerkId)
+      .eq('status', 'paid')
+      .limit(1)
+
+    if (seatHistory && seatHistory.length > 0) tier = 'lapsed'
+  }
+
+  return {
+    tier,
+    via,
+    hasSelfSub: self.active,
+    activeSeatTeamIds: activeSeats,
+  }
 }
 
 /**
  * Server-side guard for API routes that mutate state and require active subscription.
  * Returns NextResponse 401/403 if user is unauthenticated or not active.
  * Returns null if check passes — call site continues normally.
- *
- * Usage:
- *   const gate = await requireActive()
- *   if (gate) return gate
- *   // ... proceed with mutation
  */
 export async function requireActive(): Promise<NextResponse | null> {
   const { userId } = await auth()
@@ -93,9 +204,32 @@ export async function requireActive(): Promise<NextResponse | null> {
 }
 
 /**
- * Result of getAuthAndTier — either an error response, or a userId + tier.
- * Check `result.error` first; if null, `result.userId` and `result.tier` are populated.
+ * Stricter guard: requires the user's OWN $35 sub, not a team seat.
+ * Used for actions only available to self-paying users:
+ *   - Creating a team
+ *   - Uploading own leads / running own campaigns
  */
+export async function requireSelfSub(): Promise<NextResponse | null> {
+  const { userId } = await auth()
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const self = await checkSelfSubActive(userId)
+  if (!self.active) {
+    return NextResponse.json(
+      {
+        error: 'Personal subscription required',
+        reason: 'self_sub_required',
+        redirectTo: '/billing',
+      },
+      { status: 403 }
+    )
+  }
+
+  return null
+}
+
 export interface AuthTierResult {
   error: NextResponse | null
   userId: string | null
@@ -104,13 +238,7 @@ export interface AuthTierResult {
 
 /**
  * Server-side guard that returns the authenticated userId and tier together.
- * Use when the route needs the userId regardless of tier (e.g. read-only routes
- * that allow lapsed users but still need ownership checks).
- *
- * Usage:
- *   const { error, userId, tier } = await getAuthAndTier()
- *   if (error) return error
- *   // userId and tier are now non-null
+ * Use when the route needs the userId regardless of tier.
  */
 export async function getAuthAndTier(): Promise<AuthTierResult> {
   const { userId } = await auth()
@@ -127,7 +255,6 @@ export async function getAuthAndTier(): Promise<AuthTierResult> {
 
 /**
  * Server-side guard that blocks admin users from performing the action.
- * Used on cancel-sub to prevent admin-account self-cancellation.
  */
 export async function requireNotAdmin(clerkId: string): Promise<NextResponse | null> {
   const { data, error } = await supabase
@@ -138,8 +265,6 @@ export async function requireNotAdmin(clerkId: string): Promise<NextResponse | n
 
   if (error) {
     console.error('[subscription] admin check failed:', error)
-    // Fail closed on this one — better to incorrectly block than incorrectly allow
-    // an admin to cancel their own sub.
     return NextResponse.json({ error: 'Permission check failed' }, { status: 500 })
   }
 
