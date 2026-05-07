@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { auth } from '@clerk/nextjs/server'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,35 +11,61 @@ const CONVERSION_DISPS = ['CLOSED', 'APPOINTMENT']
 const CONTACT_DISPS = ['CLOSED', 'APPOINTMENT', 'NOT INTERESTED', 'DO NOT CALL']
 
 export async function GET(req: NextRequest) {
+  // Auth — scope to authenticated user
+  const { userId: authUserId } = await auth()
+  if (!authUserId) {
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+  }
+
   const { searchParams } = new URL(req.url)
-  const userId = searchParams.get('user_id')
+  // We accept user_id in query for backwards compat, but always enforce auth match
+  const requestedUserId = searchParams.get('user_id')
+  const userId = (requestedUserId && requestedUserId === authUserId) ? authUserId : authUserId
+
   const start = searchParams.get('start')
   const end = searchParams.get('end')
 
-  if (!userId) {
-    return NextResponse.json({ success: false, error: 'user_id required' }, { status: 400 })
+  // -------- CALLS-BASED METRICS --------
+  // Total dial activity (every call attempt, including no-answers and skips)
+  let callsQuery = supabase.from('calls').select('*').eq('user_id', userId)
+  if (start) callsQuery = callsQuery.gte('created_at', start)
+  if (end) callsQuery = callsQuery.lte('created_at', end)
+  const { data: callsData, error: callsErr } = await callsQuery
+  if (callsErr) {
+    return NextResponse.json({ success: false, error: callsErr.message }, { status: 500 })
   }
+  const calls = callsData || []
 
-  let query = supabase.from('calls').select('*').eq('user_id', userId)
-  if (start) query = query.gte('created_at', start)
-  if (end) query = query.lte('created_at', end)
-
-  const { data, error } = await query
-  if (error) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
-  }
-
-  const calls = data || []
   const totalCalls = calls.length
   const totalDuration = calls.reduce((sum, c) => sum + (c.duration || 0), 0)
-  const conversions = calls.filter(c => CONVERSION_DISPS.includes(c.disposition)).length
-  const contactsReached = calls.filter(c => CONTACT_DISPS.includes(c.disposition)).length
-  const closed = calls.filter(c => c.disposition === 'CLOSED').length
-  const appointments = calls.filter(c => c.disposition === 'APPOINTMENT').length
-  const dnc = calls.filter(c => c.disposition === 'DO NOT CALL').length
-  const notInterested = calls.filter(c => c.disposition === 'NOT INTERESTED').length
 
-  // Best campaign by conversion rate
+  // -------- LEADS-BASED METRICS (the bug fix) --------
+  // Contacts reached + conversions count UNIQUE LEADS dispositioned in range,
+  // not call rows. This way:
+  //   - Lead called 3x then CLOSED → counts as 1 contact, 1 conversion
+  //   - Lead called 1x as NO_ANSWER → counts as 0 contacts
+  //   - Lead dispositioned via leads-tab edit (no call row) → still counts
+  //
+  // We use last_called_at as the "when this disposition was set" proxy.
+  let leadsQuery = supabase
+    .from('leads')
+    .select('disposition, last_called_at')
+    .eq('user_id', userId)
+    .not('disposition', 'is', null)
+  if (start) leadsQuery = leadsQuery.gte('last_called_at', start)
+  if (end) leadsQuery = leadsQuery.lte('last_called_at', end)
+  const { data: leadsData } = await leadsQuery
+  const leads = leadsData || []
+
+  const contactsReached = leads.filter(l => CONTACT_DISPS.includes(l.disposition)).length
+  const conversions = leads.filter(l => CONVERSION_DISPS.includes(l.disposition)).length
+  const closed = leads.filter(l => l.disposition === 'CLOSED').length
+  const appointments = leads.filter(l => l.disposition === 'APPOINTMENT').length
+  const dnc = leads.filter(l => l.disposition === 'DO NOT CALL').length
+  const notInterested = leads.filter(l => l.disposition === 'NOT INTERESTED').length
+
+  // Best campaign by conversion rate (still calls-based since we want
+  // to know which campaign's calls converted best)
   const campaignTotals: Record<string, { total: number; converted: number }> = {}
   for (const c of calls) {
     const cid = c.campaign_id || 'unknown'
@@ -59,7 +86,7 @@ export async function GET(req: NextRequest) {
   }
 
   let bestCampaignName: string | null = null
-  if (bestCampaignId) {
+  if (bestCampaignId && bestCampaignId !== 'unknown') {
     const { data: cdata } = await supabase
       .from('campaigns').select('name').eq('id', bestCampaignId).single()
     bestCampaignName = cdata?.name || null
@@ -67,9 +94,11 @@ export async function GET(req: NextRequest) {
 
   const conversionRate = totalCalls > 0 ? (conversions / totalCalls) * 100 : 0
   const contactRate = totalCalls > 0 ? (contactsReached / totalCalls) * 100 : 0
-  const avgCallLength = contactsReached > 0
-    ? Math.round(calls.filter(c => CONTACT_DISPS.includes(c.disposition))
-        .reduce((s, c) => s + (c.duration || 0), 0) / contactsReached)
+
+  // Average call length: avg duration of CONNECTED calls (those that hit a contact disposition)
+  const connectedCalls = calls.filter(c => CONTACT_DISPS.includes(c.disposition))
+  const avgCallLength = connectedCalls.length > 0
+    ? Math.round(connectedCalls.reduce((s, c) => s + (c.duration || 0), 0) / connectedCalls.length)
     : 0
 
   return NextResponse.json({

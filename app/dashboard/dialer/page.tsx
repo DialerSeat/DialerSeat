@@ -28,6 +28,7 @@ interface Campaign {
 
 export default function DialerPage() {
   const { user } = useUser()
+  const [notes, setNotes] = useState('')
   const [tier, setTier] = useState<AccessTier>(null)
   const [tierLoaded, setTierLoaded] = useState(false)
 
@@ -544,18 +545,20 @@ export default function DialerPage() {
         body: JSON.stringify({
           lead_id: currentLead.id,
           campaign_id: currentLead.campaign_id,
-          user_id: user?.id,
           disposition: 'SKIPPED',
           duration: Math.floor((Date.now() - callStart) / 1000),
+          notes: notes.trim() || undefined,
+          source: 'skip',
         }),
       })
     }
+    setNotes('')
     setCurrentLead(null)
     setStatus('idle')
     setTimeout(() => handleDial(), 300)
   }
 
-  const handleDisposition = async (disp: string) => {
+ const handleDisposition = async (disp: string) => {
     if (disp === 'SKIP') { handleSkip(); return }
     setDisposition(disp)
     setSessionStats(s => ({
@@ -572,9 +575,10 @@ export default function DialerPage() {
         body: JSON.stringify({
           lead_id: currentLead.id,
           campaign_id: currentLead.campaign_id,
-          user_id: user?.id,
           disposition: disp,
           duration: Math.floor((Date.now() - callStart) / 1000),
+          notes: notes.trim() || undefined,
+          source: 'dialer',
         }),
       })
     }
@@ -582,6 +586,7 @@ export default function DialerPage() {
       setStatus('idle')
       setShowDisposition(false)
       setDisposition('')
+      setNotes('')
       setSeconds(0)
       setCurrentLead(null)
       await handleDial()
@@ -1207,25 +1212,46 @@ export default function DialerPage() {
           </div>
 
           {showDisposition && (
-            <div style={{
-              padding: '10px 14px', background: terminalSurface,
-              border: `2px solid ${terminalAccent}`, borderRadius: '4px', flexShrink: 0,
-            }}>
-              <div style={{ fontSize: '9px', letterSpacing: '3px', color: terminalMuted, marginBottom: '8px' }}>▸ SELECT DISPOSITION</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: '6px' }}>
-                {dispositions.map((d) => (
-                  <button key={d.label} onClick={() => handleDisposition(d.label)} style={{
-                    padding: '10px 4px', borderRadius: '3px',
-                    background: disposition === d.label ? d.color : d.bg,
-                    border: `1px solid ${d.color}`,
-                    color: disposition === d.label ? 'white' : d.color,
-                    fontSize: '8px', fontWeight: 'bold', letterSpacing: '1px',
-                    cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
-                  }}>{d.label}</button>
-                ))}
-              </div>
-            </div>
-          )}
+  <div style={{
+    padding: '10px 14px', background: terminalSurface,
+    border: `2px solid ${terminalAccent}`, borderRadius: '4px', flexShrink: 0,
+  }}>
+    <div style={{ fontSize: '9px', letterSpacing: '3px', color: terminalMuted, marginBottom: '6px' }}>▸ NOTES <span style={{ opacity: 0.6 }}>(OPTIONAL)</span></div>
+    <textarea
+      value={notes}
+      onChange={(e) => setNotes(e.target.value)}
+      placeholder="Anything to remember about this call..."
+      rows={2}
+      style={{
+        width: '100%',
+        padding: '8px 10px',
+        background: terminalBg,
+        border: `1px solid ${terminalBorder}`,
+        borderRadius: 3,
+        fontFamily: 'monospace',
+        fontSize: 12,
+        color: terminalText,
+        outline: 'none',
+        resize: 'vertical',
+        marginBottom: 10,
+        boxSizing: 'border-box',
+      }}
+    />
+    <div style={{ fontSize: '9px', letterSpacing: '3px', color: terminalMuted, marginBottom: '8px' }}>▸ SELECT DISPOSITION</div>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: '6px' }}>
+      {dispositions.map((d) => (
+        <button key={d.label} onClick={() => handleDisposition(d.label)} style={{
+          padding: '10px 4px', borderRadius: '3px',
+          background: disposition === d.label ? d.color : d.bg,
+          border: `1px solid ${d.color}`,
+          color: disposition === d.label ? 'white' : d.color,
+          fontSize: '8px', fontWeight: 'bold', letterSpacing: '1px',
+          cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+        }}>{d.label}</button>
+      ))}
+    </div>
+  </div>
+)}
 
           <div style={{ display: 'grid', gridTemplateColumns: status === 'connected' ? '1fr 1fr' : '1fr', gap: '8px', flexShrink: 0 }}>
             {status === 'idle' && !available && (

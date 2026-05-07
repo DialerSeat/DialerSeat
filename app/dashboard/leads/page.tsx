@@ -51,6 +51,20 @@ const T = {
   warn: '#ffaa3e',
 }
 
+// Full-row tint based on disposition. Soft enough to scan a long list without
+// fatigue, distinct enough to spot CLOSED leads at a glance.
+const dispositionTint = (disp: string | null): string => {
+  switch (disp) {
+    case 'CLOSED': return 'rgba(26, 106, 26, 0.10)'         // soft green
+    case 'APPOINTMENT': return 'rgba(26, 74, 138, 0.10)'      // soft blue
+    case 'NOT INTERESTED': return 'rgba(138, 106, 26, 0.10)'  // soft amber
+    case 'DO NOT CALL': return 'rgba(138, 26, 26, 0.10)'      // soft red
+    case 'NO_ANSWER': return 'rgba(90, 94, 106, 0.06)'        // very faint gray
+    case 'SKIPPED': return 'rgba(90, 94, 106, 0.04)'          // even fainter
+    default: return T.surface                                  // unset = original surface color
+  }
+}
+
 export default function LeadsPage() {
   const { user } = useUser()
   const [tier, setTier] = useState<AccessTier>(null)
@@ -167,7 +181,6 @@ export default function LeadsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           lead_id: leadId,
-          user_id: user.id,
           disposition: editDisposition,
           notes: editNotes,
         }),
@@ -276,7 +289,7 @@ export default function LeadsPage() {
         .leads-mobile-toggle { display: none; }
         .leads-list { flex: 1; overflow-y: auto; padding: 12px 16px; }
         .lead-card {
-          background: ${T.surface};
+          /* background is set inline via dispositionTint(lead.disposition) */
           border: 1px solid ${T.border};
           border-radius: 4px;
           padding: 12px 14px;
@@ -286,7 +299,7 @@ export default function LeadsPage() {
           gap: 10px;
           align-items: center;
           cursor: pointer;
-          transition: border-color 0.1s;
+          transition: border-color 0.1s, background 0.15s;
           font-size: 12px;
         }
         .lead-card:hover { border-color: ${T.blue}; }
@@ -522,6 +535,7 @@ export default function LeadsPage() {
               <div
                 className={`lead-card ${isExpanded ? 'expanded' : ''}`}
                 onClick={() => handleExpand(lead)}
+                style={{ background: dispositionTint(lead.disposition) }}
               >
                 <div className="lead-cell lead-cell-name">
                   <div className="lead-name">{lead.first_name} {lead.last_name}</div>

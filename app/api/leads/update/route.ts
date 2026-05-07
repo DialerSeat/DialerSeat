@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { auth } from '@clerk/nextjs/server'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -8,11 +9,31 @@ const supabase = createClient(
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json()
-    const { lead_id, user_id, disposition, notes } = body
+    // Always use authenticated user — never trust body.user_id
+    const { userId } = await auth()
+    if (!userId) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    }
 
-    if (!lead_id || !user_id) {
-      return NextResponse.json({ success: false, error: 'lead_id and user_id required' }, { status: 400 })
+    const body = await req.json()
+    const { lead_id, disposition, notes } = body
+
+    if (!lead_id) {
+      return NextResponse.json({ success: false, error: 'lead_id required' }, { status: 400 })
+    }
+
+    // Verify ownership
+    const { data: existing, error: fetchErr } = await supabase
+      .from('leads')
+      .select('id, user_id, disposition')
+      .eq('id', lead_id)
+      .single()
+
+    if (fetchErr || !existing) {
+      return NextResponse.json({ success: false, error: 'Lead not found' }, { status: 404 })
+    }
+    if (existing.user_id !== userId) {
+      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
     }
 
     const updates: Record<string, any> = {}
@@ -27,13 +48,25 @@ export async function POST(req: NextRequest) {
       .from('leads')
       .update(updates)
       .eq('id', lead_id)
-      .eq('user_id', user_id)
+      .eq('user_id', userId)
       .select()
       .single()
 
     if (error) {
       console.error('lead update error', error)
       return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    }
+
+    // Append to notes history if notes were provided AND non-empty
+    const trimmedNotes = String(notes ?? '').trim()
+    if (trimmedNotes) {
+      await supabase.from('lead_notes').insert({
+        lead_id,
+        user_id: userId,
+        note: trimmedNotes,
+        disposition: disposition ?? null,
+        source: 'leads_tab',
+      })
     }
 
     return NextResponse.json({ success: true, lead: data })

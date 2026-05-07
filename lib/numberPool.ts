@@ -277,3 +277,118 @@ export async function getPoolStats(): Promise<{
     totalDailyCalls,
   }
 }
+
+// ============================================================
+// Wave 3 additions: pool config + auto-buy recommendations
+// ============================================================
+
+export interface PoolConfig {
+  max_pool_size: number
+  daily_buy_cap: number
+  utilization_trigger_pct: number
+  sustained_hours_required: number
+  buys_today: number
+  buys_today_date: string
+}
+
+/**
+ * Read the current pool config (caps + thresholds).
+ * Used by both the maintenance cron and the admin dashboard.
+ */
+export async function getPoolConfig(): Promise<PoolConfig> {
+  const { data, error } = await supabase
+    .from('pool_config')
+    .select('*')
+    .eq('id', 1)
+    .single()
+
+  if (error || !data) {
+    console.error('[numberPool] getPoolConfig failed, using fallback defaults:', error)
+    return {
+      max_pool_size: 200,
+      daily_buy_cap: 50,
+      utilization_trigger_pct: 70,
+      sustained_hours_required: 2,
+      buys_today: 0,
+      buys_today_date: new Date().toISOString().split('T')[0],
+    }
+  }
+
+  return data as PoolConfig
+}
+
+/**
+ * Atomically increment the buys_today counter, resetting it if the date rolled over.
+ * Returns the new count (post-increment). Used by the maintenance cron right after
+ * a successful purchase to track against daily_buy_cap.
+ */
+export async function recordBuy(): Promise<number> {
+  const today = new Date().toISOString().split('T')[0]
+  const { data: current } = await supabase
+    .from('pool_config')
+    .select('buys_today, buys_today_date')
+    .eq('id', 1)
+    .single()
+
+  if (!current) return 0
+
+  const isNewDay = current.buys_today_date !== today
+  const newCount = isNewDay ? 1 : current.buys_today + 1
+
+  await supabase
+    .from('pool_config')
+    .update({
+      buys_today: newCount,
+      buys_today_date: today,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', 1)
+
+  return newCount
+}
+
+/**
+ * Look at recent call traffic and suggest area codes that should be in the pool
+ * but aren't (or that are over-pressured).
+ *
+ * Strategy: count calls in the last 24h grouped by destination area code.
+ * For the top 5 most-called area codes, check if the pool has at least 1 active
+ * number in that area code. If not, recommend buying it.
+ *
+ * Returns a list of area codes ranked by how badly we need them.
+ */
+export async function recommendAreaCodesToBuy(limit = 5): Promise<string[]> {
+  // Recent calls
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+  const { data: recent } = await supabase
+    .from('calls')
+    .select('phone_number')
+    .gte('created_at', oneDayAgo)
+    .not('phone_number', 'is', null)
+
+  if (!recent || recent.length === 0) return []
+
+  // Tally area codes from recent calls
+  const tally = new Map<string, number>()
+  for (const c of recent) {
+    const ac = (c.phone_number || '').replace(/\D/g, '').slice(-10, -7)
+    if (ac && ac.length === 3) {
+      tally.set(ac, (tally.get(ac) ?? 0) + 1)
+    }
+  }
+
+  const ranked = Array.from(tally.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([ac]) => ac)
+
+  // Filter to those NOT already in pool with active status
+  const { data: existing } = await supabase
+    .from('phone_numbers')
+    .select('area_code')
+    .eq('status', 'active')
+
+  const haveAreaCodes = new Set((existing ?? []).map((n) => n.area_code))
+  const missing = ranked.filter((ac) => !haveAreaCodes.has(ac))
+
+  return missing.slice(0, limit)
+}

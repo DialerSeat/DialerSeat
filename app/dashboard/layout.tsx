@@ -16,10 +16,11 @@ const userNavItems = [
 ]
 
 const adminNavItems = [
-  { icon: '📈', label: 'ANALYTICS', href: '/dashboard/admin/analytics' },
-  { icon: '👁️', label: 'OVERVIEW', href: '/dashboard/admin/overview' },
-  { icon: '🏢', label: 'TEAMS', href: '/dashboard/admin/teams' },
-  { icon: '⚙️', label: 'SETTINGS', href: '/dashboard/settings' },
+  { label: 'OVERVIEW', href: '/dashboard/admin/overview', icon: '...' },
+  { label: 'ANALYTICS', href: '/dashboard/admin/analytics', icon: '...' },
+  { label: 'TEAMS', href: '/dashboard/admin/teams', icon: '...' },
+  // ADD THIS:
+  { label: 'NUMBERS', href: '/dashboard/admin/numbers', icon: '📞' },
 ]
 
 type AccessTier = 'active' | 'lapsed' | 'new' | null
