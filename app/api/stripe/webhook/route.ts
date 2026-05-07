@@ -141,15 +141,10 @@ async function upsertSubscription(subscription: Stripe.Subscription, clerkId: st
 }
 
 async function updateUserStatus(clerkId: string, subscription: Stripe.Subscription) {
-  const trialEnd = subscription.trial_end
-    ? new Date(subscription.trial_end * 1000).toISOString()
-    : null
-
   const { error } = await supabase
     .from('users')
     .update({
       subscription_status: subscription.status,
-      trial_ends_at: trialEnd,
     })
     .eq('clerk_id', clerkId)
 
