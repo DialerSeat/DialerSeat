@@ -17,8 +17,8 @@ const userNavItems = [
 const adminNavItems = [
   { icon: '📈', label: 'ANALYTICS', href: '/dashboard/admin/analytics' },
   { icon: '📋', label: 'OVERVIEW', href: '/dashboard/admin/overview' },
-  { icon: '📞', label: 'NUMBERS', href: '/dashboard/admin/numbers' },
   { icon: '🏢', label: 'TEAMS', href: '/dashboard/admin/teams' },
+  { icon: '📞', label: 'NUMBERS', href: '/dashboard/admin/numbers' },
   { icon: '⚙️', label: 'SETTINGS', href: '/dashboard/admin/settings' },
 ]
 
