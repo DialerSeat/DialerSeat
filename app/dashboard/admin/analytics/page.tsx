@@ -318,10 +318,11 @@ export default function AdminAnalyticsPage() {
         {!loading && !error && data && (
           <>
             <div className="an-grid-4">
+              {/* PAYING USERS — always reflects CURRENT state, not range-bound */}
               <div className="an-stat-card hero" style={{
                 borderTopColor: data.summary.wowDelta >= 0 ? T.green : T.red,
               }}>
-                <div className="an-stat-label">PAYING USERS</div>
+                <div className="an-stat-label">PAYING USERS · NOW</div>
                 <div className="an-stat-value" style={{ color: T.green }}>
                   {data.summary.payingActiveSubs.toLocaleString()}
                 </div>
@@ -332,9 +333,9 @@ export default function AdminAnalyticsPage() {
                 </div>
               </div>
 
-              {/* SWAPPED: Weekly is now the big number, Monthly the subtitle */}
+              {/* WEEKLY REVENUE — always reflects CURRENT state, not range-bound */}
               <div className="an-stat-card hero" style={{ borderTopColor: T.accent }}>
-                <div className="an-stat-label">WEEKLY</div>
+                <div className="an-stat-label">WEEKLY REVENUE · NOW</div>
                 <div className="an-stat-value" style={{ color: T.accent }}>
                   {fmtMoney(data.summary.wrr)}
                 </div>

@@ -247,7 +247,7 @@ export default function TeamsPage() {
             fontSize: 10, letterSpacing: 3, color: T.muted, fontWeight: 'bold', marginBottom: 8,
           }}>▸ HAVE A CODE?</div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <input
+           <input
               type="text"
               placeholder="Enter team code (e.g. JOIN-ALPHA)"
               value={redeemCode}
@@ -289,6 +289,48 @@ export default function TeamsPage() {
               }}
             >
               {redeeming ? '...' : '▶ REDEEM'}
+            </button><input
+              type="text"
+              placeholder="Enter team code"
+              value={redeemCode}
+              onChange={e => setRedeemCode(e.target.value.toUpperCase())}
+              onKeyDown={e => { if (e.key === 'Enter') handleRedeem() }}
+              disabled={redeeming}
+              style={{
+                flex: '1 1 200px',
+                minWidth: 0,
+                padding: '14px 16px',
+                background: T.bg,
+                border: `1px solid ${T.border}`,
+                borderRadius: 3,
+                fontFamily: 'monospace',
+                fontSize: 18,
+                color: T.text,
+                outline: 'none',
+                letterSpacing: 2,
+                textTransform: 'uppercase',
+                boxSizing: 'border-box',
+              }}
+            />
+            <button
+              onClick={handleRedeem}
+              disabled={!redeemCode.trim() || redeeming}
+              style={{
+                padding: '14px 24px',
+                background: T.dark,
+                border: 'none',
+                borderRadius: 3,
+                borderTop: `3px solid ${T.blue}`,
+                color: T.blue,
+                fontSize: 13,
+                fontWeight: 'bold',
+                letterSpacing: 3,
+                cursor: !redeemCode.trim() || redeeming ? 'not-allowed' : 'pointer',
+                opacity: !redeemCode.trim() || redeeming ? 0.5 : 1,
+                fontFamily: 'Futura PT, Futura, sans-serif',
+              }}
+            >
+              {redeeming ? '...' : 'REDEEM'}
             </button>
           </div>
           {redeemMessage && (

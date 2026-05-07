@@ -1,9 +1,33 @@
 import { redirect } from 'next/navigation'
+import { auth } from '@clerk/nextjs/server'
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 /**
- * /dashboard is no longer a real page — agents land on /dashboard/analytics
- * and admins are redirected by the admin/check flow on the analytics page.
+ * /dashboard is an admin-aware redirect.
+ *   - Admins → /dashboard/admin/analytics
+ *   - Everyone else → /dashboard/analytics
+ *
+ * Server-side check avoids the flash of agent UI before client redirect kicks in.
  */
-export default function DashboardIndex() {
+export default async function DashboardIndex() {
+  const { userId } = await auth()
+
+  if (userId) {
+    const { data } = await supabase
+      .from('users')
+      .select('is_admin')
+      .eq('clerk_id', userId)
+      .maybeSingle()
+
+    if (data?.is_admin) {
+      redirect('/dashboard/admin/analytics')
+    }
+  }
+
   redirect('/dashboard/analytics')
 }

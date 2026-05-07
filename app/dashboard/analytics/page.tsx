@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useMemo } from 'react'
 import { useUser } from '@clerk/nextjs'
+import { useRouter } from 'next/navigation'
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -31,6 +32,14 @@ const DISPOSITION_COLORS: Record<string, string> = {
 }
 
 type Range = 'today' | 'week' | 'month' | 'all' | 'custom'
+
+const RANGE_SUBLABEL: Record<Range, string> = {
+  today: 'TODAY',
+  week: 'THIS WEEK',
+  month: 'THIS MONTH',
+  all: 'ALL TIME',
+  custom: 'CUSTOM RANGE',
+}
 
 function getRangeBounds(range: Range, customStart?: string, customEnd?: string): { start: string | null; end: string | null } {
   if (range === 'all') return { start: null, end: null }
@@ -68,6 +77,17 @@ function formatDuration(seconds: number) {
   return `${s}s`
 }
 
+function formatHours(seconds: number) {
+  const hours = seconds / 3600
+  if (hours >= 10) return `${Math.round(hours)}h`
+  if (hours >= 1) return `${hours.toFixed(1)}h`
+  if (hours > 0) {
+    const m = Math.round(seconds / 60)
+    return `${m}m`
+  }
+  return '0h'
+}
+
 function buildEmptySeries(range: Range): any[] {
   const points = range === 'today' ? 12 : 14
   const out: any[] = []
@@ -91,7 +111,9 @@ const EMPTY_CAMPAIGNS = [
 
 export default function AnalyticsPage() {
   const { user } = useUser()
-  const [range, setRange] = useState<Range>('month')
+  const router = useRouter()
+  const [adminChecked, setAdminChecked] = useState(false)
+  const [range, setRange] = useState<Range>('week')
   const [customStart, setCustomStart] = useState('')
   const [customEnd, setCustomEnd] = useState('')
   const [summary, setSummary] = useState<any>(null)
@@ -100,10 +122,25 @@ export default function AnalyticsPage() {
   const [campaigns, setCampaigns] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
+  // Admin redirect — admins on /dashboard/analytics get sent to admin analytics
+  useEffect(() => {
+    if (!user) return
+    fetch('/api/admin/check')
+      .then(r => r.json())
+      .then(d => {
+        if (d.isAdmin) {
+          router.replace('/dashboard/admin/analytics')
+        } else {
+          setAdminChecked(true)
+        }
+      })
+      .catch(() => setAdminChecked(true))
+  }, [user, router])
+
   const bounds = useMemo(() => getRangeBounds(range, customStart, customEnd), [range, customStart, customEnd])
 
   useEffect(() => {
-    if (!user) return
+    if (!user || !adminChecked) return
     if (range === 'custom' && (!customStart || !customEnd)) return
 
     const params = new URLSearchParams({ user_id: user.id })
@@ -126,7 +163,7 @@ export default function AnalyticsPage() {
       if (c.success) setCampaigns(c.breakdown)
       setLoading(false)
     }).catch(() => setLoading(false))
-  }, [user, range, customStart, customEnd, bounds.start, bounds.end])
+  }, [user, adminChecked, range, customStart, customEnd, bounds.start, bounds.end])
 
   const ranges: { key: Range; label: string }[] = [
     { key: 'today', label: 'TODAY' },
@@ -154,6 +191,18 @@ export default function AnalyticsPage() {
   const seriesToRender = series.length > 0 ? series : buildEmptySeries(range)
   const dispositionsToRender = dispositions.length > 0 ? dispositions : EMPTY_DISPOSITIONS
   const campaignsToRender = campaigns.length > 0 ? campaigns : EMPTY_CAMPAIGNS
+
+  // Block render until admin check completes — prevents flash of agent UI for admins
+  if (!adminChecked) {
+    return (
+      <div style={{
+        flex: 1, background: T.bg,
+        minHeight: 'calc(100vh - 64px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 11, letterSpacing: 3, color: T.muted,
+      }}>LOADING...</div>
+    )
+  }
 
   return (
     <div className="analytics-root" style={{
@@ -369,11 +418,12 @@ export default function AnalyticsPage() {
             <div className={`stat-card ${!hasData ? 'empty' : ''}`}>
               <div className="stat-label">TOTAL CALLS</div>
               <div className="stat-value">{(s.totalCalls || 0).toLocaleString()}</div>
+              <div className="stat-sub">{RANGE_SUBLABEL[range]}</div>
             </div>
             <div className={`stat-card ${!hasData ? 'empty' : ''}`} style={{ borderTopColor: T.accent }}>
-              <div className="stat-label">CONTACTS REACHED</div>
-              <div className="stat-value" style={{ color: T.accent }}>{(s.contactsReached || 0).toLocaleString()}</div>
-              <div className="stat-sub">{s.contactRate || 0}% rate</div>
+              <div className="stat-label">HOURS DIALED</div>
+              <div className="stat-value" style={{ color: T.accent }}>{formatHours(s.totalDuration || 0)}</div>
+              <div className="stat-sub">{RANGE_SUBLABEL[range]}</div>
             </div>
             <div className={`stat-card ${!hasData ? 'empty' : ''}`} style={{ borderTopColor: T.green }}>
               <div className="stat-label">CONVERSIONS</div>
