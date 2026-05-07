@@ -11,7 +11,6 @@ const supabase = createClient(
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
 
-// Disable Next.js body parsing for this route — Stripe needs the raw body for signature verification
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
@@ -39,11 +38,11 @@ export async function POST(req: Request) {
       case 'customer.subscription.created':
       case 'customer.subscription.updated':
       case 'customer.subscription.trial_will_end':
-        await syncSubscription(event.data.object as Stripe.Subscription)
+        await routeSubscription(event.data.object as Stripe.Subscription)
         break
 
       case 'customer.subscription.deleted':
-        await markSubscriptionCanceled(event.data.object as Stripe.Subscription)
+        await routeSubscriptionDeleted(event.data.object as Stripe.Subscription)
         break
 
       case 'invoice.payment_succeeded':
@@ -52,7 +51,7 @@ export async function POST(req: Request) {
         const subscriptionId = (invoice as any).subscription as string | null
         if (subscriptionId) {
           const subscription = await stripe.subscriptions.retrieve(subscriptionId)
-          await syncSubscription(subscription)
+          await routeSubscription(subscription)
         }
         break
       }
@@ -68,11 +67,115 @@ export async function POST(req: Request) {
   }
 }
 
-async function syncSubscription(subscription: Stripe.Subscription) {
+/**
+ * Routes a subscription event to either personal-sub or team-seat handler
+ * based on metadata.
+ *
+ *   metadata.sub_kind === 'team_seat' → seat handler
+ *   metadata.clerk_id present (legacy/personal subs) → personal handler
+ *   neither → fallback to customer-id lookup (legacy personal subs)
+ */
+async function routeSubscription(subscription: Stripe.Subscription) {
+  const subKind = subscription.metadata?.sub_kind
+
+  if (subKind === 'team_seat') {
+    await syncSeatCharge(subscription)
+    return
+  }
+
+  // Personal sub flow (existing behavior)
+  await syncPersonalSubscription(subscription)
+}
+
+async function routeSubscriptionDeleted(subscription: Stripe.Subscription) {
+  const subKind = subscription.metadata?.sub_kind
+
+  if (subKind === 'team_seat') {
+    // Mark the seat charge voided
+    await supabase
+      .from('team_seat_charges')
+      .update({ status: 'voided' })
+      .eq('stripe_subscription_id', subscription.id)
+    return
+  }
+
+  // Personal sub deletion (existing behavior)
+  await markPersonalSubCanceled(subscription)
+}
+
+// ----------------------------------------------------------------------------
+// SEAT CHARGE HANDLING
+// ----------------------------------------------------------------------------
+
+async function syncSeatCharge(subscription: Stripe.Subscription) {
+  const seatChargeId = subscription.metadata?.seat_charge_id
+
+  if (!seatChargeId) {
+    console.error('Seat sub missing seat_charge_id metadata:', subscription.id)
+    return
+  }
+
+  // Map Stripe sub status to our seat_charges status
+  let chargeStatus: 'paid' | 'failed' | 'voided' | 'pending'
+  switch (subscription.status) {
+    case 'active':
+    case 'trialing':
+      chargeStatus = 'paid'
+      break
+    case 'past_due':
+      chargeStatus = 'failed'
+      break
+    case 'canceled':
+    case 'incomplete_expired':
+    case 'unpaid':
+      chargeStatus = 'voided'
+      break
+    case 'incomplete':
+      chargeStatus = 'pending'
+      break
+    default:
+      chargeStatus = 'pending'
+  }
+
+  const periodStart =
+    (subscription as any).current_period_start ??
+    subscription.items.data[0]?.current_period_start
+  const periodEnd =
+    (subscription as any).current_period_end ??
+    subscription.items.data[0]?.current_period_end
+
+  const updates: Record<string, any> = { status: chargeStatus }
+  if (periodStart) updates.period_start = new Date(periodStart * 1000).toISOString()
+  if (periodEnd) updates.period_end = new Date(periodEnd * 1000).toISOString()
+
+  await supabase
+    .from('team_seat_charges')
+    .update(updates)
+    .eq('id', seatChargeId)
+
+  // If sub went past_due/canceled → revoke the member's owner-paid access on this team
+  // This is what enforces "owner stops paying → agents go read-only" mid-cycle.
+  if (chargeStatus === 'failed' || chargeStatus === 'voided') {
+    const teamMemberId = subscription.metadata?.team_member_id
+    if (teamMemberId) {
+      await supabase
+        .from('team_campaign_access')
+        .update({ is_active: false, revoked_at: new Date().toISOString() })
+        .eq('team_member_id', teamMemberId)
+        .eq('payer', 'owner')
+        .eq('is_active', true)
+    }
+  }
+}
+
+// ----------------------------------------------------------------------------
+// PERSONAL SUBSCRIPTION HANDLING (unchanged from previous version)
+// ----------------------------------------------------------------------------
+
+async function syncPersonalSubscription(subscription: Stripe.Subscription) {
   const clerkId = subscription.metadata?.clerk_id
 
   if (!clerkId) {
-    // Fall back to looking up by Stripe customer ID
     const customerId =
       typeof subscription.customer === 'string'
         ? subscription.customer
@@ -89,16 +192,19 @@ async function syncSubscription(subscription: Stripe.Subscription) {
       return
     }
 
-    await upsertSubscription(subscription, userByCustomer.clerk_id)
-    await updateUserStatus(userByCustomer.clerk_id, subscription)
+    await upsertPersonalSubscription(subscription, userByCustomer.clerk_id)
+    await updatePersonalUserStatus(userByCustomer.clerk_id, subscription)
     return
   }
 
-  await upsertSubscription(subscription, clerkId)
-  await updateUserStatus(clerkId, subscription)
+  await upsertPersonalSubscription(subscription, clerkId)
+  await updatePersonalUserStatus(clerkId, subscription)
 }
 
-async function upsertSubscription(subscription: Stripe.Subscription, clerkId: string) {
+async function upsertPersonalSubscription(
+  subscription: Stripe.Subscription,
+  clerkId: string
+) {
   const customerId =
     typeof subscription.customer === 'string'
       ? subscription.customer
@@ -135,12 +241,15 @@ async function upsertSubscription(subscription: Stripe.Subscription, clerkId: st
     .upsert(payload, { onConflict: 'stripe_subscription_id' })
 
   if (error) {
-    console.error('Failed to upsert subscription:', error)
+    console.error('Failed to upsert personal subscription:', error)
     throw error
   }
 }
 
-async function updateUserStatus(clerkId: string, subscription: Stripe.Subscription) {
+async function updatePersonalUserStatus(
+  clerkId: string,
+  subscription: Stripe.Subscription
+) {
   const { error } = await supabase
     .from('users')
     .update({
@@ -153,7 +262,7 @@ async function updateUserStatus(clerkId: string, subscription: Stripe.Subscripti
   }
 }
 
-async function markSubscriptionCanceled(subscription: Stripe.Subscription) {
+async function markPersonalSubCanceled(subscription: Stripe.Subscription) {
   const { error } = await supabase
     .from('subscriptions')
     .update({
@@ -163,10 +272,9 @@ async function markSubscriptionCanceled(subscription: Stripe.Subscription) {
     .eq('stripe_subscription_id', subscription.id)
 
   if (error) {
-    console.error('Failed to mark subscription canceled:', error)
+    console.error('Failed to mark personal subscription canceled:', error)
   }
 
-  // Also update users.subscription_status
   const customerId =
     typeof subscription.customer === 'string'
       ? subscription.customer

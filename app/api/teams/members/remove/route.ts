@@ -1,17 +1,18 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { cancelSeatSubscription } from '@/lib/teamBilling'
 
 /**
  * Owner removes an active member from a team.
- * Requires typed "remove" confirmation per destructive-action pattern.
+ * Requires typed "remove" confirmation.
  *
- * - Sets team_members.status to 'removed'
- * - Sets all team_campaign_access rows for this member to is_active: false
- *   (audit trail preserved with revoked_at timestamp)
- * - Stripe seat charge cleanup (cancel sub, decide on refund) deferred to Batch 4
+ * Now Stripe-wired:
+ *   - Cancels any active seat subscriptions for this member's seats on this team
+ *   - Per Q2=B: no proration, no refund — owner pays out the period
  *
- * Per spec: removal is instant, owner eats the rest of the week's $35 (Q2=B).
+ * Member is hard-flagged 'removed' regardless of Stripe outcome to prevent
+ * the case where a Stripe error leaves the member dangling.
  *
  * Body:
  *   memberId: uuid (required)
@@ -64,6 +65,36 @@ export async function POST(req: Request) {
 
     const now = new Date().toISOString()
 
+    // Get all active paid seat charges for this member to cancel in Stripe
+    const { data: activeCharges } = await supabaseAdmin
+      .from('team_seat_charges')
+      .select('id, stripe_subscription_id')
+      .eq('team_member_id', memberId)
+      .eq('status', 'paid')
+
+    const stripeCancelResults: Array<{ chargeId: string; canceled: boolean; reason?: string }> = []
+
+    for (const charge of activeCharges || []) {
+      try {
+        const result = await cancelSeatSubscription(charge.stripe_subscription_id)
+        stripeCancelResults.push({ chargeId: charge.id, ...result })
+
+        // Mark the charge as canceled in our DB regardless of Stripe outcome
+        // (Stripe errors will be in stripeCancelResults for owner visibility)
+        await supabaseAdmin
+          .from('team_seat_charges')
+          .update({ status: 'voided' })
+          .eq('id', charge.id)
+      } catch (err: any) {
+        console.error('Stripe cancel failed for charge', charge.id, err)
+        stripeCancelResults.push({
+          chargeId: charge.id,
+          canceled: false,
+          reason: err.message,
+        })
+      }
+    }
+
     // Set member to removed
     await supabaseAdmin
       .from('team_members')
@@ -77,9 +108,10 @@ export async function POST(req: Request) {
       .eq('team_member_id', memberId)
       .eq('is_active', true)
 
-    // Stripe sub cancellation handled in Batch 4
-
-    return NextResponse.json({ success: true })
+    return NextResponse.json({
+      success: true,
+      stripeCancellations: stripeCancelResults,
+    })
   } catch (error: any) {
     console.error('Remove member error:', error)
     return NextResponse.json({ success: false, error: error.message }, { status: 500 })
