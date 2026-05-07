@@ -3,6 +3,20 @@ import { useState, useEffect, useRef } from 'react'
 import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
 
+const T = {
+  bg: '#f0f1f4',
+  surface: '#e2e4ea',
+  border: '#c4c8d0',
+  dark: '#1a1a2e',
+  text: '#1a1c24',
+  muted: '#5a5e6a',
+  accent: '#2a4a8a',
+  blue: '#4a9eff',
+  green: '#1a6a1a',
+  red: '#8a1a1a',
+  amber: '#8a6a1a',
+}
+
 type AccessTier = 'active' | 'lapsed' | 'new' | null
 
 interface Campaign {
@@ -136,8 +150,6 @@ export default function CampaignsPage() {
   }
 
   const toggleStatus = async (id: string, currentStatus: string) => {
-    // Toggle is allowed for everyone, including lapsed users — pausing your own
-    // campaign isn't a mutation that costs money.
     const newStatus = currentStatus === 'active' ? 'inactive' : 'active'
     setCampaigns(campaigns.map(c => c.id === id ? { ...c, status: newStatus } : c))
     await fetch('/api/campaigns/update', {
@@ -148,11 +160,9 @@ export default function CampaignsPage() {
   }
 
   const handleDelete = async (id: string, leadCount: number) => {
-    // For 100+ lead campaigns, require typed confirmation
     if (leadCount >= 100 && deleteTyped.toLowerCase().trim() !== 'delete') {
       return
     }
-
     await fetch('/api/campaigns/delete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -197,14 +207,45 @@ export default function CampaignsPage() {
   }
 
   return (
-    <div className="campaigns-root" style={{ flex: 1, padding: '40px', overflowY: 'auto' }}>
+    <div className="campaigns-root" style={{
+      flex: 1,
+      background: T.bg,
+      minHeight: 'calc(100vh - 64px)',
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'auto',
+      fontFamily: 'Futura PT, Futura, sans-serif',
+    }}>
       <style>{`
-        .campaigns-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 40px; gap: 16px; flex-wrap: wrap; }
+        .campaigns-root * { box-sizing: border-box; }
+        .campaigns-header {
+          background: ${T.dark};
+          padding: 12px 20px;
+          border-bottom: 2px solid ${T.accent};
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          flex-wrap: wrap;
+        }
+        .campaigns-content {
+          flex: 1;
+          padding: 16px 20px;
+          max-width: 1200px;
+          width: 100%;
+          margin: 0 auto;
+          box-sizing: border-box;
+        }
         .campaign-row {
-          padding: 24px 28px;
-          border-radius: 16px;
-          background: var(--surface);
+          padding: 16px 20px;
+          border-radius: 4px;
+          background: ${T.surface};
+          border: 1px solid ${T.border};
+          margin-bottom: 8px;
           transition: border-color 0.2s;
+        }
+        .campaign-row.active {
+          border-left: 3px solid ${T.blue};
         }
         .campaign-row-inner {
           display: flex;
@@ -212,29 +253,30 @@ export default function CampaignsPage() {
           justify-content: space-between;
           gap: 20px;
         }
-        .campaign-left { display: flex; align-items: center; gap: 20px; min-width: 0; flex: 1; }
-        .campaign-actions { display: flex; align-items: center; gap: 20px; flex-wrap: nowrap; }
+        .campaign-left { display: flex; align-items: center; gap: 16px; min-width: 0; flex: 1; }
+        .campaign-actions { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
         .campaign-stat { text-align: center; }
         .campaign-modal {
           width: 100%;
           max-width: 500px;
-          padding: 48px;
-          border-radius: 24px;
-          background: var(--surface);
-          border: 1px solid var(--border);
+          padding: 32px;
+          border-radius: 4px;
+          background: ${T.bg};
+          border: 1px solid ${T.border};
+          border-top: 3px solid ${T.blue};
           max-height: 90vh;
           overflow-y: auto;
         }
 
         @media (max-width: 768px) {
-          .campaigns-root { padding: 20px !important; }
-          .campaigns-header h1 { font-size: 20px !important; letter-spacing: 3px !important; }
+          .campaigns-header { padding: 10px 12px; }
+          .campaigns-content { padding: 12px; }
           .new-campaign-btn { width: 100%; }
-          .campaign-row { padding: 16px !important; border-radius: 12px !important; }
+          .campaign-row { padding: 14px; }
           .campaign-row-inner {
             flex-direction: column;
             align-items: stretch;
-            gap: 14px;
+            gap: 12px;
           }
           .campaign-left { width: 100%; }
           .campaign-actions {
@@ -250,12 +292,11 @@ export default function CampaignsPage() {
             width: 100%;
             justify-content: space-around;
             padding: 12px 0;
-            border-top: 1px solid var(--border);
-            border-bottom: 1px solid var(--border);
+            border-top: 1px solid ${T.border};
+            border-bottom: 1px solid ${T.border};
           }
           .campaign-modal {
-            padding: 24px !important;
-            border-radius: 16px !important;
+            padding: 20px !important;
             max-height: 100vh;
             border-radius: 0 !important;
             min-height: 100vh;
@@ -264,27 +305,31 @@ export default function CampaignsPage() {
         }
       `}</style>
 
-      {/* HEADER */}
       <div className="campaigns-header">
-        <div>
-          <h1 style={{ fontSize: '24px', fontWeight: 'bold', letterSpacing: '4px', color: 'var(--text-primary)', marginBottom: '8px' }}>CAMPAIGNS</h1>
-          <p style={{ fontSize: '12px', letterSpacing: '2px', color: 'var(--text-secondary)' }}>
-            {isLapsed ? 'READ-ONLY · RESUBSCRIBE TO CREATE OR DIAL' : 'MANAGE YOUR LEAD LISTS AND DIALING CAMPAIGNS.'}
-          </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 11, fontWeight: 'bold', letterSpacing: 4, color: T.blue }}>
+            CAMPAIGNS
+          </span>
+          <span style={{
+            fontSize: 10, fontFamily: 'monospace', color: '#8888aa', letterSpacing: 1,
+          }}>
+            {isLapsed ? 'READ-ONLY MODE' : `${campaigns.length} TOTAL · ${campaigns.filter(c => c.status === 'active').length} ACTIVE`}
+          </span>
         </div>
         {!isLapsed ? (
           <button onClick={() => setShowModal(true)} className="new-campaign-btn" style={{
-            padding: '14px 28px', borderRadius: '10px',
+            padding: '8px 18px', borderRadius: 6,
             background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
-            color: 'white', fontSize: '11px', fontWeight: 'bold', letterSpacing: '2px',
-            border: 'none', cursor: 'pointer', boxShadow: '0 0 20px rgba(74,158,255,0.3)',
+            color: 'white', fontSize: 11, fontWeight: 'bold', letterSpacing: 2,
+            border: 'none', cursor: 'pointer',
             fontFamily: 'Futura PT, Futura, sans-serif',
+            boxShadow: '0 0 15px rgba(74,158,255,0.25)',
           }}>+ NEW CAMPAIGN</button>
         ) : (
           <Link href="/billing" className="new-campaign-btn" style={{
-            padding: '14px 28px', borderRadius: '10px',
+            padding: '8px 18px', borderRadius: 6,
             background: 'linear-gradient(135deg, #ffaa3e, #ff8a1a)',
-            color: 'white', fontSize: '11px', fontWeight: 'bold', letterSpacing: '2px',
+            color: 'white', fontSize: 11, fontWeight: 'bold', letterSpacing: 2,
             border: 'none', cursor: 'pointer',
             fontFamily: 'Futura PT, Futura, sans-serif',
             textDecoration: 'none',
@@ -293,272 +338,270 @@ export default function CampaignsPage() {
         )}
       </div>
 
-      {/* LAPSED BANNER */}
-      {isLapsed && (
-        <div style={{
-          padding: '16px 20px',
-          marginBottom: 24,
-          background: 'rgba(255,170,62,0.06)',
-          border: '1px solid #8a6a1a',
-          borderLeft: '3px solid #ffaa3e',
-          borderRadius: 6,
-          fontSize: 12,
-          color: 'var(--text-primary)',
-          letterSpacing: 1,
-          lineHeight: 1.6,
-        }}>
-          <strong style={{ color: '#ffaa3e', fontSize: 11, letterSpacing: 3, fontWeight: 700 }}>
-            ▸ READ-ONLY MODE
-          </strong>
-          <div style={{ marginTop: 6 }}>
-            Your campaigns are still here. You can pause or unpause them, but creating, deleting, importing, and dialing require an active subscription.
+      <div className="campaigns-content">
+
+        {isLapsed && (
+          <div style={{
+            padding: '12px 16px',
+            marginBottom: 16,
+            background: '#fff8e8',
+            border: `1px solid ${T.amber}`,
+            borderLeft: `3px solid #ffaa3e`,
+            borderRadius: 4,
+            fontSize: 12,
+            color: T.text,
+            letterSpacing: 0.5,
+            lineHeight: 1.6,
+          }}>
+            <strong style={{ color: T.amber, fontSize: 10, letterSpacing: 3, fontWeight: 700 }}>
+              ▸ READ-ONLY MODE
+            </strong>
+            <div style={{ marginTop: 4, fontFamily: 'monospace', fontSize: 11 }}>
+              Your campaigns are still here. Pause/unpause is allowed; create, delete, import, and dial require an active subscription.
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* CAMPAIGNS LIST */}
-      {fetching ? (
-        <div style={{ textAlign: 'center', padding: '100px 20px' }}>
-          <p style={{ fontSize: '12px', letterSpacing: '3px', color: 'var(--text-secondary)' }}>LOADING CAMPAIGNS...</p>
-        </div>
-      ) : campaigns.length === 0 ? (
-        <div style={{
-          textAlign: 'center', padding: '100px 20px', borderRadius: '20px',
-          background: 'var(--surface)', border: '1px solid var(--border)',
-        }}>
-          <div style={{ fontSize: '56px', marginBottom: '20px' }}>📋</div>
-          <h2 style={{ fontSize: '14px', fontWeight: 'bold', letterSpacing: '4px', color: 'var(--text-primary)', marginBottom: '12px' }}>NO CAMPAIGNS YET</h2>
-          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '32px', lineHeight: '1.7' }}>
-            {isLapsed
-              ? <>Resubscribe to create your first campaign,<br />upload leads, and start dialing.</>
-              : <>Create your first campaign, upload your leads CSV,<br />and start dialing in minutes.</>}
-          </p>
-          {!isLapsed ? (
-            <button onClick={() => setShowModal(true)} style={{
-              padding: '14px 36px', borderRadius: '10px',
-              background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
-              color: 'white', fontSize: '11px', fontWeight: 'bold',
-              letterSpacing: '2px', border: 'none', cursor: 'pointer',
-              fontFamily: 'Futura PT, Futura, sans-serif',
-            }}>CREATE FIRST CAMPAIGN</button>
-          ) : (
-            <Link href="/billing" style={{
-              display: 'inline-block',
-              padding: '14px 36px', borderRadius: '10px',
-              background: 'linear-gradient(135deg, #ffaa3e, #ff8a1a)',
-              color: 'white', fontSize: '11px', fontWeight: 'bold',
-              letterSpacing: '2px', border: 'none', cursor: 'pointer',
-              fontFamily: 'Futura PT, Futura, sans-serif',
-              textDecoration: 'none',
-            }}>RESUBSCRIBE — $35/WEEK</Link>
-          )}
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {campaigns.map((campaign) => (
-            <div key={campaign.id} className="campaign-row" style={{
-              border: `1px solid ${campaign.status === 'active' ? 'rgba(74,158,255,0.3)' : 'var(--border)'}`,
-            }}>
-              <div className="campaign-row-inner">
-                <div className="campaign-left">
-                  <div onClick={() => toggleStatus(campaign.id, campaign.status)} style={{
-                    width: '48px', height: '26px', borderRadius: '13px',
-                    background: campaign.status === 'active' ? 'var(--accent-blue)' : 'var(--border)',
-                    position: 'relative', cursor: 'pointer', transition: 'background 0.2s', flexShrink: 0,
-                  }}>
-                    <div style={{
-                      width: '20px', height: '20px', borderRadius: '50%', background: 'white',
-                      position: 'absolute', top: '3px',
-                      left: campaign.status === 'active' ? '25px' : '3px', transition: 'left 0.2s',
-                    }} />
-                  </div>
-
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <h3 style={{
-                      fontSize: '14px', fontWeight: 'bold', letterSpacing: '2px',
-                      color: 'var(--text-primary)', marginBottom: '4px',
-                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        {fetching ? (
+          <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+            <p style={{ fontSize: 11, letterSpacing: 3, color: T.muted }}>LOADING CAMPAIGNS...</p>
+          </div>
+        ) : campaigns.length === 0 ? (
+          <div style={{
+            textAlign: 'center', padding: '60px 20px', borderRadius: 4,
+            background: T.surface, border: `1px solid ${T.border}`,
+          }}>
+            <div style={{ fontSize: 48, marginBottom: 16, opacity: 0.4 }}>📋</div>
+            <h2 style={{ fontSize: 13, fontWeight: 'bold', letterSpacing: 4, color: T.text, marginBottom: 12 }}>NO CAMPAIGNS YET</h2>
+            <p style={{ fontSize: 12, color: T.muted, marginBottom: 24, lineHeight: 1.7, fontFamily: 'monospace' }}>
+              {isLapsed
+                ? <>Resubscribe to create your first campaign,<br />upload leads, and start dialing.</>
+                : <>Create your first campaign, upload your leads CSV,<br />and start dialing in minutes.</>}
+            </p>
+            {!isLapsed ? (
+              <button onClick={() => setShowModal(true)} style={{
+                padding: '12px 28px', borderRadius: 6,
+                background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+                color: 'white', fontSize: 11, fontWeight: 'bold',
+                letterSpacing: 2, border: 'none', cursor: 'pointer',
+                fontFamily: 'Futura PT, Futura, sans-serif',
+              }}>CREATE FIRST CAMPAIGN</button>
+            ) : (
+              <Link href="/billing" style={{
+                display: 'inline-block',
+                padding: '12px 28px', borderRadius: 6,
+                background: 'linear-gradient(135deg, #ffaa3e, #ff8a1a)',
+                color: 'white', fontSize: 11, fontWeight: 'bold',
+                letterSpacing: 2, border: 'none', cursor: 'pointer',
+                fontFamily: 'Futura PT, Futura, sans-serif',
+                textDecoration: 'none',
+              }}>RESUBSCRIBE — $35/WEEK</Link>
+            )}
+          </div>
+        ) : (
+          <div>
+            {campaigns.map((campaign) => (
+              <div key={campaign.id} className={`campaign-row ${campaign.status === 'active' ? 'active' : ''}`}>
+                <div className="campaign-row-inner">
+                  <div className="campaign-left">
+                    {/* Toggle — kept blue gradient as requested */}
+                    <div onClick={() => toggleStatus(campaign.id, campaign.status)} style={{
+                      width: 44, height: 24, borderRadius: 12,
+                      background: campaign.status === 'active' ? 'var(--accent-blue, #4a9eff)' : T.border,
+                      position: 'relative', cursor: 'pointer', transition: 'background 0.2s', flexShrink: 0,
                     }}>
-                      {campaign.name}
-                    </h3>
-                    <p style={{ fontSize: '11px', letterSpacing: '1px', color: 'var(--text-secondary)' }}>
-                      CREATED {new Date(campaign.created_at).toLocaleDateString()}
-                      {campaign.script ? ' · SCRIPT ADDED' : ''}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="campaign-stats-row" style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-                  <div className="campaign-stat">
-                    <div style={{ fontSize: '22px', fontWeight: 'bold', color: 'var(--text-primary)', marginBottom: '2px' }}>
-                      {campaign.total_leads.toLocaleString()}
+                      <div style={{
+                        width: 18, height: 18, borderRadius: '50%', background: 'white',
+                        position: 'absolute', top: 3,
+                        left: campaign.status === 'active' ? 23 : 3, transition: 'left 0.2s',
+                      }} />
                     </div>
-                    <div style={{ fontSize: '9px', letterSpacing: '2px', color: 'var(--text-secondary)' }}>LEADS</div>
-                  </div>
 
-                  <div className="campaign-stat">
-                    <div style={{ fontSize: '22px', fontWeight: 'bold', color: 'var(--accent-blue)', marginBottom: '2px' }}>
-                      {campaign.called_leads.toLocaleString()}
-                    </div>
-                    <div style={{ fontSize: '9px', letterSpacing: '2px', color: 'var(--text-secondary)' }}>CALLED</div>
-                  </div>
-
-                  <div style={{
-                    padding: '6px 14px', borderRadius: '20px',
-                    background: campaign.status === 'active' ? 'rgba(74,158,255,0.1)' : 'var(--surface-2)',
-                    border: `1px solid ${campaign.status === 'active' ? 'var(--accent-blue)' : 'var(--border)'}`,
-                    fontSize: '10px', letterSpacing: '2px', fontWeight: 'bold',
-                    color: campaign.status === 'active' ? 'var(--accent-blue)' : 'var(--text-secondary)',
-                    whiteSpace: 'nowrap',
-                  }}>
-                    {campaign.status === 'active' ? '● ACTIVE' : '○ INACTIVE'}
-                  </div>
-                </div>
-
-                <div className="campaign-actions">
-                  {/* Script — active only */}
-                  {!isLapsed && (
-                    <button
-                      onClick={() => { setScriptModal(campaign); setScriptText(campaign.script || '') }}
-                      style={{
-                        padding: '8px 16px', borderRadius: '8px',
-                        background: campaign.script ? 'rgba(74,158,255,0.1)' : 'transparent',
-                        border: `1px solid ${campaign.script ? 'var(--accent-blue)' : 'var(--border)'}`,
-                        color: campaign.script ? 'var(--accent-blue)' : 'var(--text-secondary)',
-                        fontSize: '10px', letterSpacing: '2px', cursor: 'pointer',
-                        fontFamily: 'Futura PT, Futura, sans-serif',
-                        whiteSpace: 'nowrap',
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <h3 style={{
+                        fontSize: 13, fontWeight: 'bold', letterSpacing: 1,
+                        color: T.text, marginBottom: 3,
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                       }}>
-                      📝 {campaign.script ? 'EDIT SCRIPT' : 'ADD SCRIPT'}
-                    </button>
-                  )}
+                        {campaign.name}
+                      </h3>
+                      <p style={{ fontSize: 10, letterSpacing: 1, color: T.muted, fontFamily: 'monospace' }}>
+                        CREATED {new Date(campaign.created_at).toLocaleDateString()}
+                        {campaign.script ? ' · SCRIPT ADDED' : ''}
+                      </p>
+                    </div>
+                  </div>
 
-                  {/* CSV upload — active only */}
-                  {!isLapsed && (
-                    <label style={{
-                      padding: '8px 16px', borderRadius: '8px',
-                      background: 'transparent', border: '1px solid var(--border)',
-                      color: 'var(--text-secondary)', fontSize: '10px',
-                      letterSpacing: '2px', cursor: 'pointer',
-                      fontFamily: 'Futura PT, Futura, sans-serif',
+                  <div className="campaign-stats-row" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                    <div className="campaign-stat">
+                      <div style={{ fontSize: 18, fontWeight: 'bold', color: T.text, fontFamily: 'monospace' }}>
+                        {campaign.total_leads.toLocaleString()}
+                      </div>
+                      <div style={{ fontSize: 8, letterSpacing: 2, color: T.muted, fontWeight: 'bold' }}>LEADS</div>
+                    </div>
+
+                    <div className="campaign-stat">
+                      <div style={{ fontSize: 18, fontWeight: 'bold', color: T.blue, fontFamily: 'monospace' }}>
+                        {campaign.called_leads.toLocaleString()}
+                      </div>
+                      <div style={{ fontSize: 8, letterSpacing: 2, color: T.muted, fontWeight: 'bold' }}>CALLED</div>
+                    </div>
+
+                    <div style={{
+                      padding: '4px 10px', borderRadius: 3,
+                      background: campaign.status === 'active' ? 'rgba(74,158,255,0.12)' : 'transparent',
+                      border: `1px solid ${campaign.status === 'active' ? T.blue : T.border}`,
+                      fontSize: 9, letterSpacing: 2, fontWeight: 'bold',
+                      color: campaign.status === 'active' ? T.blue : T.muted,
                       whiteSpace: 'nowrap',
                     }}>
-                      + CSV
-                      <input type="file" accept=".csv" style={{ display: 'none' }}
-                        onChange={(e) => {
-                          const file = e.target.files?.[0]
-                          if (file) handleUploadMore(campaign.id, file)
-                        }} />
-                    </label>
-                  )}
+                      {campaign.status === 'active' ? '● ACTIVE' : '○ INACTIVE'}
+                    </div>
+                  </div>
 
-                  {/* Dial Now — active only */}
-                  {!isLapsed ? (
-                    <a href="/dashboard/dialer" style={{
-                      padding: '8px 20px', borderRadius: '8px',
-                      background: campaign.status === 'active' ? 'linear-gradient(135deg, #4a9eff, #2a6eff)' : 'var(--surface-2)',
-                      border: 'none', color: campaign.status === 'active' ? 'white' : 'var(--text-secondary)',
-                      fontSize: '10px', letterSpacing: '2px', cursor: 'pointer',
-                      fontFamily: 'Futura PT, Futura, sans-serif', textDecoration: 'none',
-                      boxShadow: campaign.status === 'active' ? '0 0 15px rgba(74,158,255,0.3)' : 'none',
-                      whiteSpace: 'nowrap',
-                    }}>DIAL NOW</a>
-                  ) : (
-                    <span style={{
-                      padding: '8px 20px', borderRadius: '8px',
-                      background: 'var(--surface-2)',
-                      border: '1px solid var(--border)',
-                      color: 'var(--text-secondary)',
-                      fontSize: '10px', letterSpacing: '2px',
-                      fontFamily: 'Futura PT, Futura, sans-serif',
-                      whiteSpace: 'nowrap',
-                      opacity: 0.6,
-                    }}>🔒 DIAL LOCKED</span>
-                  )}
+                  <div className="campaign-actions">
+                    {!isLapsed && (
+                      <button
+                        onClick={() => { setScriptModal(campaign); setScriptText(campaign.script || '') }}
+                        style={{
+                          padding: '6px 12px', borderRadius: 3,
+                          background: campaign.script ? 'rgba(74,158,255,0.1)' : 'transparent',
+                          border: `1px solid ${campaign.script ? T.blue : T.border}`,
+                          color: campaign.script ? T.blue : T.muted,
+                          fontSize: 10, letterSpacing: 1, cursor: 'pointer',
+                          fontFamily: 'Futura PT, Futura, sans-serif',
+                          whiteSpace: 'nowrap', fontWeight: 'bold',
+                        }}>
+                        📝 {campaign.script ? 'EDIT SCRIPT' : 'ADD SCRIPT'}
+                      </button>
+                    )}
 
-                  {/* Delete — active only */}
-                  {!isLapsed && (
-                    deleteConfirm === campaign.id ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: campaign.total_leads >= 100 ? 200 : 'auto' }}>
-                        {campaign.total_leads >= 100 && (
-                          <input
-                            type="text"
-                            placeholder='type "delete" to confirm'
-                            value={deleteTyped}
-                            onChange={e => setDeleteTyped(e.target.value)}
-                            autoFocus
-                            style={{
-                              padding: '6px 8px', borderRadius: '4px',
-                              background: 'var(--surface-2)',
-                              border: '1px solid #ff4444',
-                              color: 'var(--text-primary)',
-                              fontSize: '10px',
-                              fontFamily: 'monospace',
-                              outline: 'none',
-                              letterSpacing: 1,
-                            }}
-                          />
-                        )}
-                        <div style={{ display: 'flex', gap: '6px' }}>
-                          <button
-                            onClick={() => handleDelete(campaign.id, campaign.total_leads)}
-                            disabled={campaign.total_leads >= 100 && deleteTyped.toLowerCase().trim() !== 'delete'}
-                            style={{
-                              padding: '8px 14px', borderRadius: '8px', border: 'none',
-                              background: '#ff4444', color: 'white', fontSize: '10px',
-                              letterSpacing: '2px',
-                              cursor: campaign.total_leads >= 100 && deleteTyped.toLowerCase().trim() !== 'delete' ? 'not-allowed' : 'pointer',
-                              opacity: campaign.total_leads >= 100 && deleteTyped.toLowerCase().trim() !== 'delete' ? 0.4 : 1,
-                              fontFamily: 'Futura PT, Futura, sans-serif',
-                              flex: 1,
-                            }}>CONFIRM</button>
-                          <button onClick={() => { setDeleteConfirm(null); setDeleteTyped('') }} style={{
-                            padding: '8px 14px', borderRadius: '8px',
-                            background: 'transparent', border: '1px solid var(--border)',
-                            color: 'var(--text-secondary)', fontSize: '10px',
-                            letterSpacing: '2px', cursor: 'pointer',
-                            fontFamily: 'Futura PT, Futura, sans-serif',
-                          }}>CANCEL</button>
-                        </div>
-                      </div>
+                    {!isLapsed && (
+                      <label style={{
+                        padding: '6px 12px', borderRadius: 3,
+                        background: 'transparent', border: `1px solid ${T.border}`,
+                        color: T.muted, fontSize: 10,
+                        letterSpacing: 1, cursor: 'pointer',
+                        fontFamily: 'Futura PT, Futura, sans-serif',
+                        whiteSpace: 'nowrap', fontWeight: 'bold',
+                      }}>
+                        + CSV
+                        <input type="file" accept=".csv" style={{ display: 'none' }}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0]
+                            if (file) handleUploadMore(campaign.id, file)
+                          }} />
+                      </label>
+                    )}
+
+                    {/* DIAL NOW — kept blue gradient as requested */}
+                    {!isLapsed ? (
+                      <a href="/dashboard/dialer" style={{
+                        padding: '6px 16px', borderRadius: 3,
+                        background: campaign.status === 'active' ? 'linear-gradient(135deg, #4a9eff, #2a6eff)' : T.surface,
+                        border: campaign.status === 'active' ? 'none' : `1px solid ${T.border}`,
+                        color: campaign.status === 'active' ? 'white' : T.muted,
+                        fontSize: 10, letterSpacing: 1, cursor: 'pointer',
+                        fontFamily: 'Futura PT, Futura, sans-serif', textDecoration: 'none',
+                        boxShadow: campaign.status === 'active' ? '0 0 10px rgba(74,158,255,0.3)' : 'none',
+                        whiteSpace: 'nowrap', fontWeight: 'bold',
+                      }}>DIAL NOW</a>
                     ) : (
-                      <button onClick={() => startDelete(campaign.id)} style={{
-                        padding: '8px 14px', borderRadius: '8px',
-                        background: 'transparent', border: '1px solid rgba(255,68,68,0.3)',
-                        color: '#ff4444', fontSize: '10px', letterSpacing: '2px',
-                        cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
-                      }}>🗑</button>
-                    )
-                  )}
+                      <span style={{
+                        padding: '6px 16px', borderRadius: 3,
+                        background: T.surface,
+                        border: `1px solid ${T.border}`,
+                        color: T.muted,
+                        fontSize: 10, letterSpacing: 1,
+                        fontFamily: 'Futura PT, Futura, sans-serif',
+                        whiteSpace: 'nowrap', fontWeight: 'bold',
+                        opacity: 0.6,
+                      }}>🔒 DIAL LOCKED</span>
+                    )}
+
+                    {!isLapsed && (
+                      deleteConfirm === campaign.id ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: campaign.total_leads >= 100 ? 200 : 'auto' }}>
+                          {campaign.total_leads >= 100 && (
+                            <input
+                              type="text"
+                              placeholder='type "delete" to confirm'
+                              value={deleteTyped}
+                              onChange={e => setDeleteTyped(e.target.value)}
+                              autoFocus
+                              style={{
+                                padding: '6px 8px', borderRadius: 3,
+                                background: T.bg,
+                                border: `1px solid ${T.red}`,
+                                color: T.text,
+                                fontSize: 10,
+                                fontFamily: 'monospace',
+                                outline: 'none',
+                                letterSpacing: 1,
+                              }}
+                            />
+                          )}
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <button
+                              onClick={() => handleDelete(campaign.id, campaign.total_leads)}
+                              disabled={campaign.total_leads >= 100 && deleteTyped.toLowerCase().trim() !== 'delete'}
+                              style={{
+                                padding: '6px 12px', borderRadius: 3, border: 'none',
+                                background: T.red, color: 'white', fontSize: 10,
+                                letterSpacing: 1, fontWeight: 'bold',
+                                cursor: campaign.total_leads >= 100 && deleteTyped.toLowerCase().trim() !== 'delete' ? 'not-allowed' : 'pointer',
+                                opacity: campaign.total_leads >= 100 && deleteTyped.toLowerCase().trim() !== 'delete' ? 0.4 : 1,
+                                fontFamily: 'Futura PT, Futura, sans-serif',
+                                flex: 1,
+                              }}>CONFIRM</button>
+                            <button onClick={() => { setDeleteConfirm(null); setDeleteTyped('') }} style={{
+                              padding: '6px 12px', borderRadius: 3,
+                              background: 'transparent', border: `1px solid ${T.border}`,
+                              color: T.muted, fontSize: 10,
+                              letterSpacing: 1, cursor: 'pointer', fontWeight: 'bold',
+                              fontFamily: 'Futura PT, Futura, sans-serif',
+                            }}>CANCEL</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button onClick={() => startDelete(campaign.id)} style={{
+                          padding: '6px 12px', borderRadius: 3,
+                          background: 'transparent', border: `1px solid ${T.red}`,
+                          color: T.red, fontSize: 10, letterSpacing: 1,
+                          cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                          fontWeight: 'bold',
+                        }}>🗑</button>
+                      )
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
 
-      {/* CREATE CAMPAIGN MODAL — active only */}
       {!isLapsed && showModal && (
         <div className="modal-overlay" style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 100, backdropFilter: 'blur(10px)', padding: 16,
+          zIndex: 100, padding: 16,
         }}>
           <div className="campaign-modal">
-            <h2 style={{ fontSize: '18px', fontWeight: 'bold', letterSpacing: '4px', color: 'var(--text-primary)', marginBottom: '8px' }}>NEW CAMPAIGN</h2>
-            <p style={{ fontSize: '12px', letterSpacing: '1px', color: 'var(--text-secondary)', marginBottom: '32px' }}>
+            <h2 style={{ fontSize: 14, fontWeight: 'bold', letterSpacing: 4, color: T.blue, marginBottom: 8 }}>+ NEW CAMPAIGN</h2>
+            <p style={{ fontSize: 11, letterSpacing: 1, color: T.muted, marginBottom: 24, fontFamily: 'monospace' }}>
               Name your campaign and upload your leads CSV to get started.
             </p>
 
-            <label style={{ display: 'block', fontSize: '10px', letterSpacing: '3px', color: 'var(--text-secondary)', marginBottom: '8px' }}>CAMPAIGN NAME</label>
+            <label style={{ display: 'block', fontSize: 9, letterSpacing: 2, color: T.muted, marginBottom: 6, fontWeight: 'bold' }}>CAMPAIGN NAME</label>
             <input
-              type="text" placeholder="e.g. Medicare Leads May"
+              type="text" placeholder="Medicare Leads May"
               value={campaignName} onChange={(e) => setCampaignName(e.target.value)}
               style={{
-                width: '100%', padding: '14px 16px', borderRadius: '10px',
-                background: 'var(--surface-2)', border: '1px solid var(--border)',
-                color: 'var(--text-primary)', fontSize: '14px', outline: 'none',
-                marginBottom: '24px', fontFamily: 'Futura PT, Futura, sans-serif', boxSizing: 'border-box',
+                width: '100%', padding: '12px 14px', borderRadius: 4,
+                background: T.surface, border: `1px solid ${T.border}`,
+                color: T.text, fontSize: 13, outline: 'none',
+                marginBottom: 20, fontFamily: 'monospace', boxSizing: 'border-box',
               }} />
 
             <div
@@ -567,40 +610,40 @@ export default function CampaignsPage() {
               onDrop={handleDrop}
               onClick={() => fileRef.current?.click()}
               style={{
-                padding: '40px', borderRadius: '12px', cursor: 'pointer', marginBottom: '32px',
-                border: `2px dashed ${dragging ? 'var(--accent-blue)' : csvData.length > 0 ? 'var(--accent-blue)' : 'var(--border)'}`,
-                background: dragging ? 'rgba(74,158,255,0.05)' : csvData.length > 0 ? 'rgba(74,158,255,0.03)' : 'var(--surface-2)',
+                padding: 32, borderRadius: 4, cursor: 'pointer', marginBottom: 24,
+                border: `2px dashed ${dragging || csvData.length > 0 ? T.blue : T.border}`,
+                background: dragging ? 'rgba(74,158,255,0.05)' : csvData.length > 0 ? 'rgba(74,158,255,0.03)' : T.surface,
                 textAlign: 'center', transition: 'all 0.2s',
               }}>
               <input ref={fileRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={handleFileInput} />
               {csvData.length > 0 ? (
                 <>
-                  <div style={{ fontSize: '32px', marginBottom: '12px' }}>✅</div>
-                  <p style={{ fontSize: '13px', fontWeight: 'bold', letterSpacing: '2px', color: 'var(--accent-blue)', marginBottom: '4px' }}>
+                  <div style={{ fontSize: 28, marginBottom: 10 }}>✅</div>
+                  <p style={{ fontSize: 13, fontWeight: 'bold', letterSpacing: 2, color: T.blue, marginBottom: 4 }}>
                     {csvData.length.toLocaleString()} LEADS LOADED
                   </p>
-                  <p style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{csvName}</p>
+                  <p style={{ fontSize: 11, color: T.muted, fontFamily: 'monospace' }}>{csvName}</p>
                 </>
               ) : (
                 <>
-                  <div style={{ fontSize: '32px', marginBottom: '12px' }}>📂</div>
-                  <p style={{ fontSize: '12px', letterSpacing: '2px', color: 'var(--text-secondary)', marginBottom: '4px' }}>DROP YOUR CSV HERE</p>
-                  <p style={{ fontSize: '11px', color: 'var(--text-secondary)', opacity: 0.6 }}>or click to browse files</p>
+                  <div style={{ fontSize: 28, marginBottom: 10 }}>📂</div>
+                  <p style={{ fontSize: 12, letterSpacing: 2, color: T.muted, marginBottom: 4, fontWeight: 'bold' }}>DROP YOUR CSV HERE</p>
+                  <p style={{ fontSize: 10, color: T.muted, opacity: 0.7, fontFamily: 'monospace' }}>or click to browse files</p>
                 </>
               )}
             </div>
 
-            <div style={{ display: 'flex', gap: '12px' }}>
+            <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => { setShowModal(false); setCampaignName(''); setCsvData([]); setCsvName('') }} style={{
-                flex: 1, padding: '14px', borderRadius: '10px',
-                background: 'transparent', border: '1px solid var(--border)',
-                color: 'var(--text-secondary)', fontSize: '11px', letterSpacing: '2px',
+                flex: 1, padding: 12, borderRadius: 4,
+                background: 'transparent', border: `1px solid ${T.border}`,
+                color: T.muted, fontSize: 11, letterSpacing: 2, fontWeight: 'bold',
                 cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
               }}>CANCEL</button>
               <button onClick={handleCreate} disabled={!campaignName || loading} style={{
-                flex: 2, padding: '14px', borderRadius: '10px', border: 'none',
-                background: campaignName ? 'linear-gradient(135deg, #4a9eff, #2a6eff)' : 'var(--border)',
-                color: 'white', fontSize: '11px', fontWeight: 'bold', letterSpacing: '2px',
+                flex: 2, padding: 12, borderRadius: 4, border: 'none',
+                background: campaignName ? 'linear-gradient(135deg, #4a9eff, #2a6eff)' : T.border,
+                color: 'white', fontSize: 11, fontWeight: 'bold', letterSpacing: 2,
                 cursor: campaignName ? 'pointer' : 'not-allowed',
                 fontFamily: 'Futura PT, Futura, sans-serif',
               }}>{loading ? 'CREATING...' : 'CREATE CAMPAIGN →'}</button>
@@ -609,18 +652,17 @@ export default function CampaignsPage() {
         </div>
       )}
 
-      {/* SCRIPT MODAL — active only */}
       {!isLapsed && scriptModal && (
         <div className="modal-overlay" style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 100, backdropFilter: 'blur(10px)', padding: 16,
+          zIndex: 100, padding: 16,
         }}>
           <div className="campaign-modal" style={{ maxWidth: 600 }}>
-            <h2 style={{ fontSize: '18px', fontWeight: 'bold', letterSpacing: '4px', color: 'var(--text-primary)', marginBottom: '8px' }}>
+            <h2 style={{ fontSize: 14, fontWeight: 'bold', letterSpacing: 4, color: T.blue, marginBottom: 8 }}>
               CALL SCRIPT
             </h2>
-            <p style={{ fontSize: '12px', letterSpacing: '1px', color: 'var(--text-secondary)', marginBottom: '24px' }}>
+            <p style={{ fontSize: 11, letterSpacing: 1, color: T.muted, marginBottom: 20, fontFamily: 'monospace' }}>
               {scriptModal.name} — This script will appear in the dialer during calls.
             </p>
 
@@ -630,24 +672,24 @@ export default function CampaignsPage() {
               placeholder="Hi [Name], my name is [Agent] and I'm calling from..."
               rows={10}
               style={{
-                width: '100%', padding: '16px', borderRadius: '12px', boxSizing: 'border-box',
-                background: 'var(--surface-2)', border: '1px solid var(--border)',
-                color: 'var(--text-primary)', fontSize: '14px', lineHeight: '1.7',
-                outline: 'none', resize: 'vertical', fontFamily: 'Futura PT, Futura, sans-serif',
-                marginBottom: '24px',
+                width: '100%', padding: 14, borderRadius: 4, boxSizing: 'border-box',
+                background: T.surface, border: `1px solid ${T.border}`,
+                color: T.text, fontSize: 13, lineHeight: 1.7,
+                outline: 'none', resize: 'vertical', fontFamily: 'monospace',
+                marginBottom: 20,
               }} />
 
-            <div style={{ display: 'flex', gap: '12px' }}>
+            <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => { setScriptModal(null); setScriptText('') }} style={{
-                flex: 1, padding: '14px', borderRadius: '10px',
-                background: 'transparent', border: '1px solid var(--border)',
-                color: 'var(--text-secondary)', fontSize: '11px', letterSpacing: '2px',
+                flex: 1, padding: 12, borderRadius: 4,
+                background: 'transparent', border: `1px solid ${T.border}`,
+                color: T.muted, fontSize: 11, letterSpacing: 2, fontWeight: 'bold',
                 cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
               }}>CANCEL</button>
               <button onClick={handleSaveScript} style={{
-                flex: 2, padding: '14px', borderRadius: '10px', border: 'none',
+                flex: 2, padding: 12, borderRadius: 4, border: 'none',
                 background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
-                color: 'white', fontSize: '11px', fontWeight: 'bold', letterSpacing: '2px',
+                color: 'white', fontSize: 11, fontWeight: 'bold', letterSpacing: 2,
                 cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
               }}>SAVE SCRIPT →</button>
             </div>

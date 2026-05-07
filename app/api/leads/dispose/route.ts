@@ -4,7 +4,6 @@ import { auth } from '@clerk/nextjs/server'
 
 export async function POST(req: Request) {
   try {
-    // Auth check — only the lead's owner can dispose it
     const { userId: authUserId } = await auth()
     if (!authUserId) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
@@ -17,10 +16,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'No lead_id' }, { status: 400 })
     }
 
-    // Always trust the authenticated user, never the body's user_id
     const user_id = authUserId
 
-    // Verify ownership before mutating
     const { data: lead, error: leadErr } = await supabaseAdmin
       .from('leads')
       .select('id, user_id, dial_attempts')
@@ -37,7 +34,6 @@ export async function POST(req: Request) {
     const currentAttempts = lead.dial_attempts || 0
     const newAttempts = currentAttempts + 1
 
-    // Map disposition to status
     let newStatus = 'called'
     if (disposition === 'DO NOT CALL') newStatus = 'dnc'
     else if (disposition === 'CLOSED') newStatus = 'closed'
@@ -55,7 +51,6 @@ export async function POST(req: Request) {
       last_called_at: new Date().toISOString(),
     }
 
-    // Denormalized "latest note preview" on the lead row for fast display
     if (notes && String(notes).trim()) {
       updates.notes = String(notes).trim()
     }
@@ -70,7 +65,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: updateErr.message }, { status: 500 })
     }
 
-    // Append-only note history — only insert if there's actual text
     const trimmedNotes = String(notes ?? '').trim()
     if (trimmedNotes) {
       await supabaseAdmin.from('lead_notes').insert({
@@ -82,19 +76,46 @@ export async function POST(req: Request) {
       })
     }
 
-    // Update campaign called count (skip when disposition is SKIPPED)
     if (campaign_id && disposition !== 'SKIPPED') {
       await supabaseAdmin.rpc('increment_called_leads', { campaign_id_input: campaign_id })
     }
 
-    // Save call record
-    await supabaseAdmin.from('calls').insert({
-      user_id,
-      lead_id,
-      campaign_id,
-      disposition,
-      duration: duration || 0,
-    })
+    // ─────────────────────────────────────────────────────────────────────
+    // Update the existing calls row (created by /api/calls/outbound at dial
+    // start) instead of inserting a new one. Match the most recent open call
+    // for this lead. If we somehow can't find one (manual dial, edge case),
+    // insert a fallback row so we don't lose the disposition data.
+    // ─────────────────────────────────────────────────────────────────────
+    const { data: openCall } = await supabaseAdmin
+      .from('calls')
+      .select('id')
+      .eq('user_id', user_id)
+      .eq('lead_id', lead_id)
+      .is('disposition', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (openCall?.id) {
+      await supabaseAdmin
+        .from('calls')
+        .update({
+          disposition,
+          duration: duration || 0,
+          campaign_id, // backfill in case it was missing
+        })
+        .eq('id', openCall.id)
+    } else {
+      // Fallback insert — lead has no open call row (rare, e.g., disposition
+      // came through without a prior outbound dial attempt)
+      await supabaseAdmin.from('calls').insert({
+        user_id,
+        lead_id,
+        campaign_id,
+        disposition,
+        duration: duration || 0,
+      })
+    }
 
     return NextResponse.json({ success: true })
   } catch (error: any) {

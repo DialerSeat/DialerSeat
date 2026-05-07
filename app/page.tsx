@@ -226,8 +226,8 @@ export default async function Home() {
         }}>
           {[
             { number: '$35', label: 'PER WEEK' },
-            { number: '$0', label: 'SETUP FEES' },
             { number: '5X', label: 'CHEAPER THAN OTHERS' },
+            { number: '$0', label: 'SETUP FEES' },
             { number: '∞', label: 'LEADS UPLOADED' },
           ].map((stat, i) => (
             <div key={i} style={{ textAlign: 'center', flex: 1 }}>

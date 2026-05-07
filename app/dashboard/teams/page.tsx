@@ -90,7 +90,6 @@ export default function TeamsPage() {
         return
       }
 
-      // Branch by nextStep
       if (data.nextStep === 'redirect_to_billing') {
         setRedeemMessage({
           type: 'info',
@@ -123,13 +122,9 @@ export default function TeamsPage() {
   }
 
   const handleCreateTeamClick = async () => {
-    // Check tier — if not self-subscribed, show paywall gate instead of modal
     try {
       const res = await fetch('/api/stripe/status')
       const data = await res.json()
-      // hasSelfSub is the deciding factor — seat-only access doesn't qualify
-      // The status endpoint should return at minimum tier; we infer self-sub
-      // by tier === 'active' AND check via test create attempt for safety
       if (data.tier !== 'active') {
         setShowSubGate(true)
         return
@@ -157,7 +152,6 @@ export default function TeamsPage() {
       })
       const data = await res.json()
       if (!data.success) {
-        // 403 with self_sub_required means they tried to create without a personal sub
         if (data.reason === 'self_sub_required') {
           setShowCreateModal(false)
           setShowSubGate(true)
@@ -167,7 +161,6 @@ export default function TeamsPage() {
         setCreating(false)
         return
       }
-      // Success — close modal, reload list, navigate to new team
       setShowCreateModal(false)
       setCreateName('')
       setCreateDesc('')
@@ -191,7 +184,6 @@ export default function TeamsPage() {
       overflow: 'auto',
       fontFamily: 'Futura PT, Futura, sans-serif',
     }}>
-      {/* HEADER */}
       <div style={{
         background: T.dark,
         padding: '12px 20px',
@@ -231,10 +223,9 @@ export default function TeamsPage() {
         </button>
       </div>
 
-      {/* CONTENT */}
       <div style={{ flex: 1, padding: '16px 20px', maxWidth: 900, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
 
-        {/* REDEEM CODE PANEL — always visible */}
+        {/* SINGLE REDEEM PANEL */}
         <div style={{
           background: T.surface,
           border: `1px solid ${T.border}`,
@@ -247,49 +238,7 @@ export default function TeamsPage() {
             fontSize: 10, letterSpacing: 3, color: T.muted, fontWeight: 'bold', marginBottom: 8,
           }}>▸ HAVE A CODE?</div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-           <input
-              type="text"
-              placeholder="Enter team code (e.g. JOIN-ALPHA)"
-              value={redeemCode}
-              onChange={e => setRedeemCode(e.target.value.toUpperCase())}
-              onKeyDown={e => { if (e.key === 'Enter') handleRedeem() }}
-              disabled={redeeming}
-              style={{
-                flex: '1 1 200px',
-                minWidth: 0,
-                padding: '10px 12px',
-                background: T.bg,
-                border: `1px solid ${T.border}`,
-                borderRadius: 3,
-                fontFamily: 'monospace',
-                fontSize: 13,
-                color: T.text,
-                outline: 'none',
-                letterSpacing: 2,
-                textTransform: 'uppercase',
-                boxSizing: 'border-box',
-              }}
-            />
-            <button
-              onClick={handleRedeem}
-              disabled={!redeemCode.trim() || redeeming}
-              style={{
-                padding: '10px 18px',
-                background: T.dark,
-                border: 'none',
-                borderRadius: 3,
-                borderTop: `3px solid ${T.blue}`,
-                color: T.blue,
-                fontSize: 11,
-                fontWeight: 'bold',
-                letterSpacing: 3,
-                cursor: !redeemCode.trim() || redeeming ? 'not-allowed' : 'pointer',
-                opacity: !redeemCode.trim() || redeeming ? 0.5 : 1,
-                fontFamily: 'Futura PT, Futura, sans-serif',
-              }}
-            >
-              {redeeming ? '...' : '▶ REDEEM'}
-            </button><input
+            <input
               type="text"
               placeholder="Enter team code"
               value={redeemCode}
@@ -357,7 +306,6 @@ export default function TeamsPage() {
           )}
         </div>
 
-        {/* TEAMS LIST — shown when user has at least one team */}
         {hasAnyTeam && (
           <div style={{ marginBottom: 24 }}>
             <div style={{
@@ -424,42 +372,42 @@ export default function TeamsPage() {
           </div>
         )}
 
-        {/* WHAT IS A TEAM? — always visible */}
+        {/* WHAT IS A TEAM — bigger fonts, new copy */}
         <div style={{
           background: T.surface,
           border: `1px solid ${T.border}`,
           borderLeft: `3px solid ${T.accent}`,
           borderRadius: 4,
-          padding: '20px 24px',
+          padding: '24px 28px',
           marginBottom: 16,
         }}>
           <div style={{
-            fontSize: 10, letterSpacing: 3, color: T.muted, fontWeight: 'bold', marginBottom: 14,
+            fontSize: 11, letterSpacing: 3, color: T.muted, fontWeight: 'bold', marginBottom: 18,
           }}>▸ WHAT IS A TEAM?</div>
 
           <p style={{
-            fontSize: 12, lineHeight: 1.7, color: T.text, marginBottom: 16, marginTop: 0,
+            fontSize: 15, lineHeight: 1.7, color: T.text, marginBottom: 20, marginTop: 0,
           }}>
-            DialerSeat Teams lets lead vendors and agency owners distribute campaign access to other agents on the platform. There are two ways teams work:
+            DialerSeat Teams lets lead vendors and agency owners distribute their premium lead campaign access to other agents on the platform. There are two ways teams work:
           </p>
 
-          <div style={{ marginBottom: 14 }}>
+          <div style={{ marginBottom: 18 }}>
             <div style={{
-              fontSize: 11, fontWeight: 'bold', color: T.accent, letterSpacing: 2, marginBottom: 6,
+              fontSize: 13, fontWeight: 'bold', color: T.accent, letterSpacing: 2, marginBottom: 8,
             }}>▸ AS AN AGENT</div>
             <p style={{
-              fontSize: 12, lineHeight: 1.7, color: T.text, margin: 0,
+              fontSize: 14, lineHeight: 1.7, color: T.text, margin: 0,
             }}>
               A team owner can give you access to their lead campaigns by sending you a code. Some team owners pay your $35 weekly seat for you (you dial their leads for free). Others require you to subscribe yourself for $35 to access their leads. Either way, you join with a code from the team owner.
             </p>
           </div>
 
-          <div style={{ marginBottom: 14 }}>
+          <div style={{ marginBottom: 18 }}>
             <div style={{
-              fontSize: 11, fontWeight: 'bold', color: T.accent, letterSpacing: 2, marginBottom: 6,
+              fontSize: 13, fontWeight: 'bold', color: T.accent, letterSpacing: 2, marginBottom: 8,
             }}>▸ AS AN OWNER</div>
             <p style={{
-              fontSize: 12, lineHeight: 1.7, color: T.text, margin: 0,
+              fontSize: 14, lineHeight: 1.7, color: T.text, margin: 0,
             }}>
               You generate your own leads and want to give other agents access to them — usually because you charge them above-cost as a lead vendor or agency. Build teams, attach your campaigns, generate codes for your agents. You decide per code: do you pay the $35 weekly seat for them, or do they pay it themselves?
             </p>
@@ -469,14 +417,14 @@ export default function TeamsPage() {
             background: T.bg,
             border: `1px solid ${T.border}`,
             borderRadius: 3,
-            padding: '10px 14px',
-            marginTop: 14,
+            padding: '12px 16px',
+            marginTop: 18,
           }}>
             <div style={{
-              fontSize: 10, fontWeight: 'bold', color: T.muted, letterSpacing: 2, marginBottom: 4,
+              fontSize: 11, fontWeight: 'bold', color: T.muted, letterSpacing: 2, marginBottom: 6,
             }}>COST</div>
             <p style={{
-              fontSize: 11, lineHeight: 1.6, color: T.text, margin: 0,
+              fontSize: 13, lineHeight: 1.6, color: T.text, margin: 0,
             }}>
               <strong>$35 per active seat per week</strong>, paid to DialerSeat. Whether you (the owner) pay or your agent pays is up to you per agent and per campaign. Codes you create can be set to either payer.
             </p>
@@ -484,7 +432,6 @@ export default function TeamsPage() {
         </div>
       </div>
 
-      {/* SUB GATE MODAL — shown when non-self-paying user clicks Create Team */}
       {showSubGate && (
         <div
           onClick={() => setShowSubGate(false)}
@@ -551,7 +498,6 @@ export default function TeamsPage() {
         </div>
       )}
 
-      {/* CREATE TEAM MODAL */}
       {showCreateModal && (
         <div
           onClick={() => !creating && setShowCreateModal(false)}
@@ -587,7 +533,7 @@ export default function TeamsPage() {
                 type="text"
                 value={createName}
                 onChange={e => setCreateName(e.target.value)}
-                placeholder="e.g. Premium Leads"
+                placeholder="Premium Leads"
                 disabled={creating}
                 autoFocus
                 style={{

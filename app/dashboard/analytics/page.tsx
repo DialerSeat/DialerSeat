@@ -33,14 +33,6 @@ const DISPOSITION_COLORS: Record<string, string> = {
 
 type Range = 'today' | 'week' | 'month' | 'all' | 'custom'
 
-const RANGE_SUBLABEL: Record<Range, string> = {
-  today: 'TODAY',
-  week: 'THIS WEEK',
-  month: 'THIS MONTH',
-  all: 'ALL TIME',
-  custom: 'CUSTOM RANGE',
-}
-
 function getRangeBounds(range: Range, customStart?: string, customEnd?: string): { start: string | null; end: string | null } {
   if (range === 'all') return { start: null, end: null }
   const now = new Date()
@@ -65,6 +57,19 @@ function getRangeBounds(range: Range, customStart?: string, customEnd?: string):
     return { start: start.toISOString(), end: end.toISOString() }
   }
   return { start: null, end: null }
+}
+
+function todayBounds() {
+  const now = new Date()
+  const start = new Date(now); start.setHours(0, 0, 0, 0)
+  const end = new Date(now); end.setHours(23, 59, 59, 999)
+  return { start: start.toISOString(), end: end.toISOString() }
+}
+
+function weekBounds() {
+  const now = new Date()
+  const start = new Date(now); start.setDate(start.getDate() - 7); start.setHours(0, 0, 0, 0)
+  return { start: start.toISOString(), end: now.toISOString() }
 }
 
 function formatDuration(seconds: number) {
@@ -117,12 +122,13 @@ export default function AnalyticsPage() {
   const [customStart, setCustomStart] = useState('')
   const [customEnd, setCustomEnd] = useState('')
   const [summary, setSummary] = useState<any>(null)
+  const [secondarySummary, setSecondarySummary] = useState<any>(null)
   const [series, setSeries] = useState<any[]>([])
   const [dispositions, setDispositions] = useState<any[]>([])
   const [campaigns, setCampaigns] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Admin redirect — admins on /dashboard/analytics get sent to admin analytics
+  // Admin redirect
   useEffect(() => {
     if (!user) return
     fetch('/api/admin/check')
@@ -139,6 +145,13 @@ export default function AnalyticsPage() {
 
   const bounds = useMemo(() => getRangeBounds(range, customStart, customEnd), [range, customStart, customEnd])
 
+  // Secondary fetch: when range is 'today', secondary = WEEK; otherwise, secondary = TODAY
+  const secondaryBounds = useMemo(() => {
+    return range === 'today' ? weekBounds() : todayBounds()
+  }, [range])
+
+  const secondaryLabel = range === 'today' ? 'This week' : 'Today'
+
   useEffect(() => {
     if (!user || !adminChecked) return
     if (range === 'custom' && (!customStart || !customEnd)) return
@@ -150,20 +163,28 @@ export default function AnalyticsPage() {
     const tsParams = new URLSearchParams(params)
     tsParams.append('bucket', range === 'today' ? 'hour' : 'day')
 
+    const secondaryParams = new URLSearchParams({
+      user_id: user.id,
+      start: secondaryBounds.start,
+      end: secondaryBounds.end,
+    })
+
     setLoading(true)
     Promise.all([
       fetch(`/api/analytics/summary?${params}`).then(r => r.json()),
       fetch(`/api/analytics/timeseries?${tsParams}`).then(r => r.json()),
       fetch(`/api/analytics/dispositions?${params}`).then(r => r.json()),
       fetch(`/api/analytics/campaigns?${params}`).then(r => r.json()),
-    ]).then(([s, ts, d, c]) => {
+      fetch(`/api/analytics/summary?${secondaryParams}`).then(r => r.json()),
+    ]).then(([s, ts, d, c, sec]) => {
       if (s.success) setSummary(s.summary)
       if (ts.success) setSeries(ts.series)
       if (d.success) setDispositions(d.breakdown)
       if (c.success) setCampaigns(c.breakdown)
+      if (sec.success) setSecondarySummary(sec.summary)
       setLoading(false)
     }).catch(() => setLoading(false))
-  }, [user, adminChecked, range, customStart, customEnd, bounds.start, bounds.end])
+  }, [user, adminChecked, range, customStart, customEnd, bounds.start, bounds.end, secondaryBounds.start, secondaryBounds.end])
 
   const ranges: { key: Range; label: string }[] = [
     { key: 'today', label: 'TODAY' },
@@ -187,12 +208,22 @@ export default function AnalyticsPage() {
     bestCampaignRate: 0,
   }
 
+  const sec = secondarySummary || {
+    totalCalls: 0,
+    totalDuration: 0,
+    conversions: 0,
+    closed: 0,
+  }
+
   const hasData = !!summary && summary.totalCalls > 0
   const seriesToRender = series.length > 0 ? series : buildEmptySeries(range)
   const dispositionsToRender = dispositions.length > 0 ? dispositions : EMPTY_DISPOSITIONS
   const campaignsToRender = campaigns.length > 0 ? campaigns : EMPTY_CAMPAIGNS
 
-  // Block render until admin check completes — prevents flash of agent UI for admins
+  const fullName = user
+    ? [user.firstName, user.lastName].filter(Boolean).join(' ').toUpperCase()
+    : ''
+
   if (!adminChecked) {
     return (
       <div style={{
@@ -253,9 +284,7 @@ export default function AnalyticsPage() {
           border-color: ${T.blue};
           color: white;
         }
-        .custom-range {
-          display: flex; gap: 6px; align-items: center;
-        }
+        .custom-range { display: flex; gap: 6px; align-items: center; }
         .custom-range input {
           padding: 4px 8px;
           background: #2a2a3e;
@@ -279,9 +308,7 @@ export default function AnalyticsPage() {
           border-top: 3px solid ${T.blue};
           position: relative;
         }
-        .stat-card.empty {
-          opacity: 0.55;
-        }
+        .stat-card.empty { opacity: 0.55; }
         .stat-label {
           font-size: 9px;
           letter-spacing: 2px;
@@ -314,9 +341,6 @@ export default function AnalyticsPage() {
           border-radius: 4px;
           padding: 14px;
           position: relative;
-        }
-        .chart-card-full {
-          grid-column: span 2;
         }
         .chart-title {
           font-size: 10px;
@@ -369,14 +393,13 @@ export default function AnalyticsPage() {
             grid-template-columns: 1fr !important;
             padding: 0 12px 12px;
           }
-          .chart-card-full { grid-column: span 1; }
           .custom-range { flex-wrap: wrap; }
         }
       `}</style>
 
       <div className="analytics-header">
         <span style={{ fontSize: 11, fontWeight: 'bold', letterSpacing: 4, color: T.blue }}>
-          ANALYTICS
+          ANALYTICS OVERVIEW
         </span>
         <div className="range-tabs">
           {ranges.map(r => (
@@ -406,7 +429,7 @@ export default function AnalyticsPage() {
 
       <div className="welcome-row">
         <div className="welcome-line">
-          WELCOME BACK{user?.firstName ? `, ${user.firstName.toUpperCase()}` : ''}.
+          WELCOME BACK{fullName ? `, ${fullName}` : ''}.
         </div>
       </div>
 
@@ -418,22 +441,22 @@ export default function AnalyticsPage() {
             <div className={`stat-card ${!hasData ? 'empty' : ''}`}>
               <div className="stat-label">TOTAL CALLS</div>
               <div className="stat-value">{(s.totalCalls || 0).toLocaleString()}</div>
-              <div className="stat-sub">{RANGE_SUBLABEL[range]}</div>
+              <div className="stat-sub">{secondaryLabel} {(sec.totalCalls || 0).toLocaleString()}</div>
             </div>
             <div className={`stat-card ${!hasData ? 'empty' : ''}`} style={{ borderTopColor: T.accent }}>
               <div className="stat-label">HOURS DIALED</div>
               <div className="stat-value" style={{ color: T.accent }}>{formatHours(s.totalDuration || 0)}</div>
-              <div className="stat-sub">{RANGE_SUBLABEL[range]}</div>
+              <div className="stat-sub">{secondaryLabel} {formatHours(sec.totalDuration || 0)}</div>
             </div>
             <div className={`stat-card ${!hasData ? 'empty' : ''}`} style={{ borderTopColor: T.green }}>
               <div className="stat-label">CONVERSIONS</div>
               <div className="stat-value" style={{ color: T.green }}>{(s.conversions || 0).toLocaleString()}</div>
-              <div className="stat-sub">{s.conversionRate || 0}% rate</div>
+              <div className="stat-sub">{secondaryLabel} {(sec.conversions || 0).toLocaleString()}</div>
             </div>
             <div className={`stat-card ${!hasData ? 'empty' : ''}`} style={{ borderTopColor: T.green }}>
               <div className="stat-label">CLOSED</div>
               <div className="stat-value" style={{ color: T.green }}>{(s.closed || 0).toLocaleString()}</div>
-              <div className="stat-sub">{s.appointments || 0} appts</div>
+              <div className="stat-sub">{secondaryLabel} {(sec.closed || 0).toLocaleString()}</div>
             </div>
             <div className={`stat-card ${!hasData ? 'empty' : ''}`}>
               <div className="stat-label">TALK TIME</div>

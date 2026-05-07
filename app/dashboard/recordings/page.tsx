@@ -47,11 +47,15 @@ function formatDuration(s: number) {
   return `${m}:${String(sec).padStart(2, '0')}`
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleString('en-US', {
-    month: 'short', day: 'numeric',
-    hour: 'numeric', minute: '2-digit',
+function formatDateClean(iso: string) {
+  const d = new Date(iso)
+  const date = d.toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric',
   })
+  const time = d.toLocaleTimeString('en-US', {
+    hour: 'numeric', minute: '2-digit', hour12: true,
+  })
+  return { date, time }
 }
 
 function daysUntilExpire(iso: string | null) {
@@ -244,19 +248,24 @@ export default function RecordingsPage() {
           background: ${T.surface};
           border: 1px solid ${T.border};
           border-radius: 4px;
-          padding: 12px 14px;
+          padding: 14px 16px;
           margin-bottom: 8px;
         }
-        .rec-card-header {
+
+        /* DESKTOP LAYOUT — action column far right, DELETE under date/time */
+        .rec-desktop-row {
           display: grid;
-          grid-template-columns: 2fr 1.2fr 0.8fr 1fr 1fr auto;
-          gap: 12px;
+          grid-template-columns: 1.6fr 1.2fr 1fr 1.2fr auto;
+          gap: 16px;
           align-items: center;
         }
+        .rec-mobile-row { display: none; }
+
         .rec-name {
           font-weight: bold;
           font-family: monospace;
           color: ${T.text};
+          font-size: 13px;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -269,9 +278,36 @@ export default function RecordingsPage() {
           letter-spacing: 1px;
           margin-top: 2px;
         }
+        .rec-phone {
+          font-family: monospace;
+          color: ${T.accent};
+          font-weight: bold;
+          font-size: 12px;
+          white-space: nowrap;
+        }
+        .rec-datetime {
+          font-family: monospace;
+          font-size: 11px;
+          color: ${T.text};
+          line-height: 1.5;
+        }
+        .rec-datetime .date {
+          font-weight: bold;
+          letter-spacing: 0.5px;
+        }
+        .rec-datetime .time {
+          color: ${T.muted};
+          font-size: 10px;
+          margin-top: 2px;
+        }
+        .rec-datetime .duration {
+          color: ${T.muted};
+          font-size: 10px;
+          margin-top: 2px;
+        }
         .rec-disp-badge {
           display: inline-block;
-          padding: 3px 10px;
+          padding: 4px 10px;
           border-radius: 3px;
           font-size: 9px;
           letter-spacing: 1px;
@@ -279,19 +315,28 @@ export default function RecordingsPage() {
           font-family: 'Futura PT', Futura, sans-serif;
           white-space: nowrap;
         }
+        .rec-camp {
+          font-family: monospace;
+          font-size: 11px;
+          color: ${T.muted};
+          letter-spacing: 0.5px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
         .rec-actions {
           display: flex;
           flex-direction: column;
-          gap: 4px;
+          gap: 6px;
           align-items: stretch;
-          min-width: 100px;
+          min-width: 130px;
         }
         .rec-actions-row {
           display: flex;
           gap: 4px;
         }
         .rec-btn {
-          padding: 6px 12px;
+          padding: 7px 12px;
           background: transparent;
           border: 1px solid ${T.blue};
           border-radius: 3px;
@@ -313,8 +358,8 @@ export default function RecordingsPage() {
           color: ${T.blue};
         }
         .rec-player {
-          margin-top: 10px;
-          padding-top: 10px;
+          margin-top: 12px;
+          padding-top: 12px;
           border-top: 1px solid ${T.border};
         }
         .rec-player audio { width: 100%; }
@@ -325,14 +370,6 @@ export default function RecordingsPage() {
           color: ${T.green};
           font-size: 11px;
           letter-spacing: 1px;
-        }
-        .rec-meta-text {
-          font-family: monospace;
-          font-size: 11px;
-          color: ${T.muted};
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
         }
 
         @media (max-width: 768px) {
@@ -356,7 +393,9 @@ export default function RecordingsPage() {
             grid-template-columns: 1fr;
             padding: 12px;
           }
-          .rec-card-header {
+          .rec-desktop-row { display: none; }
+          .rec-mobile-row {
+            display: grid;
             grid-template-columns: 1fr auto;
             gap: 8px;
             grid-template-areas:
@@ -365,10 +404,10 @@ export default function RecordingsPage() {
               "meta meta"
               "actions actions";
           }
-          .rec-card-header .col-name { grid-area: name; }
-          .rec-card-header .col-phone { grid-area: phone; }
-          .rec-card-header .col-disp { grid-area: disp; }
-          .rec-card-header .col-meta {
+          .rec-mobile-row .col-name { grid-area: name; }
+          .rec-mobile-row .col-phone { grid-area: phone; }
+          .rec-mobile-row .col-disp { grid-area: disp; }
+          .rec-mobile-row .col-meta {
             grid-area: meta;
             display: flex;
             gap: 12px;
@@ -376,11 +415,8 @@ export default function RecordingsPage() {
             color: ${T.muted};
             font-family: monospace;
           }
-          .rec-card-header .col-meta-camp,
-          .rec-card-header .col-meta-time,
-          .rec-card-header .col-meta-dur { display: none; }
-          .rec-card-header .col-actions { grid-area: actions; align-items: stretch; }
-          .rec-actions-row { width: 100%; }
+          .rec-mobile-row .col-actions { grid-area: actions; align-items: stretch; min-width: auto; }
+          .rec-mobile-row .rec-actions-row { width: 100%; }
           .rec-list { padding: 8px 12px; }
         }
       `}</style>
@@ -433,7 +469,7 @@ export default function RecordingsPage() {
       <div className={`rec-controls ${filtersOpen ? 'open-mobile' : 'closed-mobile'}`}>
         <div className="field">
           <label>SEARCH NAME OR PHONE</label>
-          <input type="text" placeholder="e.g. Brown..." value={search} onChange={e => setSearch(e.target.value)} />
+          <input type="text" placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         <div className="field">
           <label>CAMPAIGN</label>
@@ -477,68 +513,125 @@ export default function RecordingsPage() {
             : 'Manual Dial'
           const phone = r.leads?.phone || r.phone_number || '—'
           const campName = r.campaigns?.name || (hasLead ? '—' : 'Direct')
+          const { date, time } = formatDateClean(r.created_at)
+          const dur = formatDuration(r.recording_duration || r.duration)
+
+          const dispBadgeStyle = r.disposition ? {
+            background:
+              r.disposition === 'CLOSED' ? '#e8f5e8' :
+              r.disposition === 'APPOINTMENT' ? '#e8eef8' :
+              r.disposition === 'DO NOT CALL' ? '#f8e8e8' :
+              r.disposition === 'NOT INTERESTED' ? '#f8f4e8' :
+              '#f0f0f4',
+            color:
+              r.disposition === 'CLOSED' ? T.green :
+              r.disposition === 'APPOINTMENT' ? T.accent :
+              r.disposition === 'DO NOT CALL' ? T.red :
+              r.disposition === 'NOT INTERESTED' ? T.amber :
+              T.muted,
+            border: `1px solid ${
+              r.disposition === 'CLOSED' ? T.green :
+              r.disposition === 'APPOINTMENT' ? T.accent :
+              r.disposition === 'DO NOT CALL' ? T.red :
+              r.disposition === 'NOT INTERESTED' ? T.amber :
+              T.border
+            }`,
+          } : {}
 
           return (
             <div key={r.id} className="rec-card">
-              <div className="rec-card-header">
+              {/* DESKTOP — name | phone | datetime+duration | campaign+disp | actions far right */}
+              <div className="rec-desktop-row">
+                <div>
+                  <div className="rec-name">{leadName}</div>
+                  {!hasLead && (
+                    <div className="rec-name-sub">no campaign attached</div>
+                  )}
+                </div>
+
+                <div className="rec-phone">{phone}</div>
+
+                <div className="rec-datetime">
+                  <div className="date">{date}</div>
+                  <div className="time">{time}</div>
+                  <div className="duration">▸ {dur}</div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+                  <div className="rec-camp">{campName}</div>
+                  {r.disposition && (
+                    <span className="rec-disp-badge" style={dispBadgeStyle}>{r.disposition}</span>
+                  )}
+                </div>
+
+                <div className="rec-actions">
+                  <div className="rec-actions-row">
+                    <button
+                      className={`rec-btn ${isPlaying ? 'rec-btn-active' : ''}`}
+                      onClick={() => setPlayingId(isPlaying ? null : r.id)}
+                    >{isPlaying ? '✕ CLOSE' : '▶ PLAY'}</button>
+                    <a
+                      className="rec-btn"
+                      href={`/api/recordings/play?call_id=${r.id}&download=1`}
+                      style={{ textDecoration: 'none', textAlign: 'center' }}
+                    >↓ SAVE</a>
+                  </div>
+                  <div className="rec-actions-row">
+                    {isConfirming ? (
+                      <>
+                        <button
+                          className="rec-btn rec-btn-danger"
+                          disabled={isDeleting}
+                          onClick={() => handleDelete(r.id)}
+                          style={{ background: isDeleting ? 'transparent' : T.red, color: isDeleting ? T.red : '#fff' }}
+                        >{isDeleting ? '...' : '✓ CONFIRM'}</button>
+                        <button
+                          className="rec-btn"
+                          disabled={isDeleting}
+                          onClick={() => setConfirmDeleteId(null)}
+                        >CANCEL</button>
+                      </>
+                    ) : (
+                      <button
+                        className="rec-btn rec-btn-danger"
+                        onClick={() => setConfirmDeleteId(r.id)}
+                        style={{ width: '100%' }}
+                      >🗑 DELETE</button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* MOBILE — stacked layout */}
+              <div className="rec-mobile-row">
                 <div className="col-name">
                   <div className="rec-name">{leadName}</div>
                   {!hasLead && (
                     <div className="rec-name-sub">no campaign attached</div>
                   )}
                 </div>
-                <div className="col-phone" style={{
-                  fontFamily: 'monospace',
-                  color: T.accent,
-                  fontWeight: 'bold',
-                  fontSize: 12,
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}>{phone}</div>
-                <div className="col-meta-dur rec-meta-text">
-                  {formatDuration(r.recording_duration || r.duration)}
-                </div>
-                <div className="col-meta-time rec-meta-text">
-                  {formatDate(r.created_at)}
-                </div>
-                <div className="col-meta-camp rec-meta-text">
-                  {campName}
-                </div>
-                <div className="col-meta">
-                  <span style={{ color: T.muted }}>{formatDate(r.created_at)}</span>
-                  <span style={{ color: T.muted }}>{formatDuration(r.recording_duration || r.duration)}</span>
-                  <span style={{ color: T.muted }}>{campName}</span>
-                </div>
                 <div className="col-disp">
                   {r.disposition && (
-                    <span className="rec-disp-badge" style={{
-                      background:
-                        r.disposition === 'CLOSED' ? '#e8f5e8' :
-                        r.disposition === 'APPOINTMENT' ? '#e8eef8' :
-                        r.disposition === 'DO NOT CALL' ? '#f8e8e8' :
-                        r.disposition === 'NOT INTERESTED' ? '#f8f4e8' :
-                        '#f0f0f4',
-                      color:
-                        r.disposition === 'CLOSED' ? T.green :
-                        r.disposition === 'APPOINTMENT' ? T.accent :
-                        r.disposition === 'DO NOT CALL' ? T.red :
-                        r.disposition === 'NOT INTERESTED' ? T.amber :
-                        T.muted,
-                      border: `1px solid ${
-                        r.disposition === 'CLOSED' ? T.green :
-                        r.disposition === 'APPOINTMENT' ? T.accent :
-                        r.disposition === 'DO NOT CALL' ? T.red :
-                        r.disposition === 'NOT INTERESTED' ? T.amber :
-                        T.border
-                      }`,
-                    }}>{r.disposition}</span>
+                    <span className="rec-disp-badge" style={dispBadgeStyle}>{r.disposition}</span>
                   )}
+                </div>
+                <div className="col-phone rec-phone">{phone}</div>
+                <div className="col-meta">
+                  <span>{date} · {time}</span>
+                  <span>{dur}</span>
+                  <span>{campName}</span>
                 </div>
                 <div className="col-actions rec-actions">
                   <div className="rec-actions-row">
-                    <button className={`rec-btn ${isPlaying ? 'rec-btn-active' : ''}`} onClick={() => setPlayingId(isPlaying ? null : r.id)}>{isPlaying ? '✕ CLOSE' : '▶ PLAY'}</button>
-                    <a className="rec-btn" href={`/api/recordings/play?call_id=${r.id}&download=1`} style={{ textDecoration: 'none', textAlign: 'center' }}>↓ DOWNLOAD</a>
+                    <button
+                      className={`rec-btn ${isPlaying ? 'rec-btn-active' : ''}`}
+                      onClick={() => setPlayingId(isPlaying ? null : r.id)}
+                    >{isPlaying ? '✕ CLOSE' : '▶ PLAY'}</button>
+                    <a
+                      className="rec-btn"
+                      href={`/api/recordings/play?call_id=${r.id}&download=1`}
+                      style={{ textDecoration: 'none', textAlign: 'center' }}
+                    >↓ SAVE</a>
                   </div>
                   <div className="rec-actions-row">
                     {isConfirming ? (
