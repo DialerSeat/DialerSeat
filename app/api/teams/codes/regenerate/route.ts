@@ -3,15 +3,15 @@ import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
 
 /**
- * Owner regenerates a code: replaces the existing code with a new one.
+ * Owner regenerates a code: replaces the existing code value with a new one.
  * Old code is HARD DELETED — anyone who hasn't redeemed it loses the chance.
  *
- * Body:
- *   codeId: uuid (required) — the existing code row to replace
- *   newCode: string (optional) — owner-chosen replacement; if omitted, random
+ * Preserved fields: code_type, campaign_id, payer, team_id.
+ * Only the `code` string changes.
  *
- * Note: codeType stays the same. To switch a code from 'seat' to 'recruit',
- * delete this code and create a new one with the desired type.
+ * Body:
+ *   codeId:  uuid (required)
+ *   newCode: string (optional vanity; if omitted, random)
  */
 
 const CODE_PATTERN = /^[A-Z0-9_-]{4,32}$/
@@ -39,10 +39,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'codeId required' }, { status: 400 })
     }
 
-    // Fetch existing code + verify ownership through the team
     const { data: existing } = await supabaseAdmin
       .from('team_codes')
-      .select('id, team_id, code_type, teams!inner(owner_id)')
+      .select('id, team_id, code_type, campaign_id, payer, teams!inner(owner_id)')
       .eq('id', codeId)
       .maybeSingle()
 
@@ -58,7 +57,6 @@ export async function POST(req: Request) {
       )
     }
 
-    // Determine new code value
     let code: string
     if (rawCode && typeof rawCode === 'string' && rawCode.trim()) {
       code = rawCode.trim().toUpperCase().replace(/\s+/g, '')
@@ -92,10 +90,6 @@ export async function POST(req: Request) {
       }
     }
 
-    // Two-step replace: delete old, insert new with same code_type and team_id.
-    // Done in two queries because Supabase doesn't support transactions over PostgREST.
-    // If the insert fails on collision, we re-create the old one to avoid data loss —
-    // but realistically the only fail case is collision, which we'd catch first.
     const { error: delErr } = await supabaseAdmin
       .from('team_codes')
       .delete()
@@ -109,13 +103,14 @@ export async function POST(req: Request) {
         team_id: existing.team_id,
         code,
         code_type: existing.code_type,
+        campaign_id: existing.campaign_id,
+        payer: existing.payer,
         is_active: true,
       })
       .select()
       .single()
 
     if (insErr) {
-      // Rare but possible: collision between delete and insert
       if (insErr.code === '23505') {
         return NextResponse.json(
           { success: false, error: `Code "${code}" is already taken — pick another` },
