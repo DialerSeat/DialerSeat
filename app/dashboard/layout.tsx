@@ -5,22 +5,21 @@ import { usePathname } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
 
 const userNavItems = [
-  { icon: '📊', label: 'DASHBOARD', href: '/dashboard' },
+  { icon: '📈', label: 'ANALYTICS', href: '/dashboard/analytics' },
   { icon: '📞', label: 'DIALER', href: '/dashboard/dialer' },
   { icon: '📋', label: 'CAMPAIGNS', href: '/dashboard/campaigns' },
   { icon: '🎙️', label: 'RECORDINGS', href: '/dashboard/recordings' },
   { icon: '👥', label: 'LEADS', href: '/dashboard/leads' },
-  { icon: '📈', label: 'ANALYTICS', href: '/dashboard/analytics' },
-  { icon: '🏢', label: 'TEAM', href: '/dashboard/team' },
+  { icon: '🏢', label: 'TEAMS', href: '/dashboard/teams' },
   { icon: '⚙️', label: 'SETTINGS', href: '/dashboard/settings' },
 ]
 
 const adminNavItems = [
-  { label: 'OVERVIEW', href: '/dashboard/admin/overview', icon: '...' },
-  { label: 'ANALYTICS', href: '/dashboard/admin/analytics', icon: '...' },
-  { label: 'TEAMS', href: '/dashboard/admin/teams', icon: '...' },
-  // ADD THIS:
-  { label: 'NUMBERS', href: '/dashboard/admin/numbers', icon: '📞' },
+  { icon: '📈', label: 'ANALYTICS', href: '/dashboard/admin/analytics' },
+  { icon: '📋', label: 'OVERVIEW', href: '/dashboard/admin/overview' },
+  { icon: '📞', label: 'NUMBERS', href: '/dashboard/admin/numbers' },
+  { icon: '🏢', label: 'TEAMS', href: '/dashboard/admin/teams' },
+  { icon: '⚙️', label: 'SETTINGS', href: '/dashboard/admin/settings' },
 ]
 
 type AccessTier = 'active' | 'lapsed' | 'new' | null
@@ -56,7 +55,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return () => { cancelled = true }
   }, [user])
 
-  // Fetch access tier so the sidebar can show ACTIVE / LAPSED / ADMIN
   useEffect(() => {
     if (!user) return
     let cancelled = false
@@ -67,8 +65,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         .catch(() => { if (!cancelled) setTier(null) })
     }
     loadTier()
-    // Refresh tier when tab regains focus, in case sub state changed
-    // (e.g. user just resubscribed in another tab)
     const onFocus = () => loadTier()
     window.addEventListener('focus', onFocus)
     return () => {
@@ -77,7 +73,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [user, pathname])
 
-  // Heartbeat — ping every 60s while tab is open + on focus to avoid stale "online" state
   useEffect(() => {
     if (!user) return
 
@@ -85,7 +80,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       fetch('/api/heartbeat', { method: 'POST' }).catch(() => {})
     }
 
-    ping() // initial ping
+    ping()
     const interval = setInterval(ping, 60_000)
     const onFocus = () => ping()
     window.addEventListener('focus', onFocus)
@@ -102,8 +97,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const navItems = isAdmin ? adminNavItems : userNavItems
 
   const isActive = (href: string) => {
-    if (href === '/dashboard') return pathname === '/dashboard'
-    return pathname.startsWith(href)
+    return pathname === href || pathname.startsWith(href + '/')
   }
 
   const handleProfileRowClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -117,10 +111,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (trigger) trigger.click()
   }
 
-  const logoHref = isAdmin ? '/dashboard/admin/analytics' : '/dashboard'
+  const logoHref = isAdmin ? '/dashboard/admin/analytics' : '/dashboard/analytics'
 
-  // Tier label: ADMIN > LAPSED > ACTIVE > (loading)
-  // Color: admin/active = blue, lapsed = orange/red
   const tierLabel = isAdmin
     ? 'ADMIN'
     : tier === 'lapsed'
@@ -226,7 +218,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         })}
       </nav>
 
-      {/* Resubscribe nudge for lapsed users — sits above profile row */}
       {!isAdmin && tier === 'lapsed' && (
         <Link
           href="/billing"

@@ -68,7 +68,6 @@ function formatDuration(seconds: number) {
   return `${s}s`
 }
 
-// Build empty placeholder series so charts render axes/grid even with no data
 function buildEmptySeries(range: Range): any[] {
   const points = range === 'today' ? 12 : 14
   const out: any[] = []
@@ -137,7 +136,6 @@ export default function AnalyticsPage() {
     { key: 'custom', label: 'CUSTOM' },
   ]
 
-  // Safe view of summary — always have valid numbers, even before any calls exist
   const s = summary || {
     totalCalls: 0,
     contactsReached: 0,
@@ -176,6 +174,17 @@ export default function AnalyticsPage() {
           align-items: center;
           gap: 16px;
           flex-wrap: wrap;
+        }
+        .welcome-row {
+          background: ${T.bg};
+          padding: 18px 20px 4px;
+        }
+        .welcome-line {
+          font-size: 18px;
+          font-weight: bold;
+          color: ${T.text};
+          letter-spacing: 2px;
+          font-family: 'Futura PT', Futura, sans-serif;
         }
         .range-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
         .range-tab {
@@ -297,6 +306,8 @@ export default function AnalyticsPage() {
 
         @media (max-width: 768px) {
           .analytics-header { padding: 10px 12px; }
+          .welcome-row { padding: 14px 12px 4px; }
+          .welcome-line { font-size: 15px; letter-spacing: 1px; }
           .range-tab { padding: 6px 10px; font-size: 9px; letter-spacing: 1px; }
           .stat-grid {
             grid-template-columns: repeat(2, 1fr) !important;
@@ -314,7 +325,6 @@ export default function AnalyticsPage() {
         }
       `}</style>
 
-      {/* HEADER WITH RANGE TABS */}
       <div className="analytics-header">
         <span style={{ fontSize: 11, fontWeight: 'bold', letterSpacing: 4, color: T.blue }}>
           ANALYTICS
@@ -345,11 +355,16 @@ export default function AnalyticsPage() {
         )}
       </div>
 
+      <div className="welcome-row">
+        <div className="welcome-line">
+          WELCOME BACK{user?.firstName ? `, ${user.firstName.toUpperCase()}` : ''}.
+        </div>
+      </div>
+
       {loading ? (
         <div className="empty-state">LOADING ANALYTICS...</div>
       ) : (
         <>
-          {/* STAT CARDS — always render, dim if no data */}
           <div className="stat-grid">
             <div className={`stat-card ${!hasData ? 'empty' : ''}`}>
               <div className="stat-label">TOTAL CALLS</div>
@@ -384,10 +399,8 @@ export default function AnalyticsPage() {
             </div>
           </div>
 
-          {/* CHARTS — always render scaffold; overlay AWAITING DATA pill if empty */}
           <div className="charts-grid">
 
-            {/* CALL VOLUME LINE */}
             <div className="chart-card">
               <div className="chart-title">▸ CALL VOLUME OVER TIME</div>
               <div className={series.length === 0 ? 'chart-faded' : ''}>
@@ -408,7 +421,6 @@ export default function AnalyticsPage() {
               )}
             </div>
 
-            {/* CONVERSION RATE LINE */}
             <div className="chart-card">
               <div className="chart-title">▸ CONVERSION RATE OVER TIME</div>
               <div className={series.length === 0 ? 'chart-faded' : ''}>
@@ -432,7 +444,6 @@ export default function AnalyticsPage() {
               )}
             </div>
 
-            {/* DISPOSITION PIE */}
             <div className="chart-card">
               <div className="chart-title">▸ DISPOSITION BREAKDOWN</div>
               <div className={dispositions.length === 0 ? 'chart-faded' : ''}>
@@ -465,7 +476,6 @@ export default function AnalyticsPage() {
               )}
             </div>
 
-            {/* CAMPAIGN COMPARISON BAR */}
             <div className="chart-card">
               <div className="chart-title">▸ CAMPAIGN PERFORMANCE</div>
               <div className={campaigns.length === 0 ? 'chart-faded' : ''}>
