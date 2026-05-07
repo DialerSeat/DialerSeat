@@ -61,13 +61,8 @@ export async function POST(req: Request) {
       )
     }
 
-    // Seat codes must have a campaign; recruit codes must NOT
-    if (codeType === 'seat' && !campaignId) {
-      return NextResponse.json(
-        { success: false, error: 'Seat codes require a campaignId' },
-        { status: 400 }
-      )
-    }
+    // Recruit codes must NOT have a campaign; seat codes MAY have one (specific
+    // campaign access) or omit it (grants access to ALL team campaigns)
     if (codeType === 'recruit' && campaignId) {
       return NextResponse.json(
         { success: false, error: 'Recruit codes cannot have a campaignId' },
