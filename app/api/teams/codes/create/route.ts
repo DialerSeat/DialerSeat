@@ -88,8 +88,10 @@ export async function POST(req: Request) {
       )
     }
 
-    // For seat codes: verify the campaign belongs to this owner AND is attached to the team
-    if (codeType === 'seat') {
+    // For seat codes WITH a specific campaign: verify the campaign belongs to
+    // this owner AND is attached to the team. Seat codes without campaignId
+    // grant access to all team campaigns and skip this check.
+    if (codeType === 'seat' && campaignId) {
       const { data: campaign } = await supabaseAdmin
         .from('campaigns')
         .select('id, user_id')
