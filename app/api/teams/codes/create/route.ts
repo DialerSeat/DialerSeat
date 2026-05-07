@@ -3,25 +3,20 @@ import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
 
 /**
- * Owner creates a new code for one of their teams.
+ * Owner regenerates a code: replaces the existing code value with a new one.
+ * Old code is HARD DELETED — anyone who hasn't redeemed it loses the chance.
+ *
+ * Preserved fields: code_type, campaign_id, payer, team_id.
+ * Only the `code` string changes.
  *
  * Body:
- *   teamId: uuid (required)
- *   code: string (optional — owner-chosen vanity; if omitted, server generates random)
- *   codeType: 'seat' | 'recruit' (required)
- *
- * Code rules:
- *   - 4-32 chars, alphanumeric + dash + underscore
- *   - Stored as uppercase for display, but matched case-insensitively at redeem time
- *   - Unique platform-wide (across all teams, all owners)
- *
- * No tier gate — owner verification is implicit in team_id ownership check.
+ *   codeId:  uuid (required)
+ *   newCode: string (optional vanity; if omitted, random)
  */
 
 const CODE_PATTERN = /^[A-Z0-9_-]{4,32}$/
 
 function generateRandomCode(length = 8): string {
-  // Excluded chars that look alike: 0/O, 1/I/L
   const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
   let code = ''
   for (let i = 0; i < length; i++) {
@@ -38,38 +33,30 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json()
-    const { teamId, code: rawCode, codeType } = body
+    const { codeId, newCode: rawCode } = body
 
-    if (!teamId) {
-      return NextResponse.json({ success: false, error: 'teamId required' }, { status: 400 })
+    if (!codeId) {
+      return NextResponse.json({ success: false, error: 'codeId required' }, { status: 400 })
     }
 
-    if (!codeType || !['seat', 'recruit'].includes(codeType)) {
-      return NextResponse.json(
-        { success: false, error: 'codeType must be "seat" or "recruit"' },
-        { status: 400 }
-      )
-    }
-
-    // Verify the user owns this team
-    const { data: team } = await supabaseAdmin
-      .from('teams')
-      .select('id, owner_id')
-      .eq('id', teamId)
+    const { data: existing } = await supabaseAdmin
+      .from('team_codes')
+      .select('id, team_id, code_type, campaign_id, payer, teams!inner(owner_id)')
+      .eq('id', codeId)
       .maybeSingle()
 
-    if (!team) {
-      return NextResponse.json({ success: false, error: 'Team not found' }, { status: 404 })
+    if (!existing) {
+      return NextResponse.json({ success: false, error: 'Code not found' }, { status: 404 })
     }
 
-    if (team.owner_id !== userId) {
+    const ownerCheck = (existing as any).teams?.owner_id
+    if (ownerCheck !== userId) {
       return NextResponse.json(
-        { success: false, error: 'Only the team owner can create codes' },
+        { success: false, error: 'Only the team owner can regenerate codes' },
         { status: 403 }
       )
     }
 
-    // Determine final code
     let code: string
     if (rawCode && typeof rawCode === 'string' && rawCode.trim()) {
       code = rawCode.trim().toUpperCase().replace(/\s+/g, '')
@@ -83,16 +70,15 @@ export async function POST(req: Request) {
         )
       }
     } else {
-      // Generate random code, retry on collision (very rare)
       let attempts = 0
       do {
         code = generateRandomCode(8)
-        const { data: existing } = await supabaseAdmin
+        const { data: collision } = await supabaseAdmin
           .from('team_codes')
           .select('id')
           .eq('code', code)
           .maybeSingle()
-        if (!existing) break
+        if (!collision) break
         attempts++
       } while (attempts < 10)
 
@@ -104,31 +90,39 @@ export async function POST(req: Request) {
       }
     }
 
-    // Insert (will 23505 if vanity code already exists)
-    const { data, error } = await supabaseAdmin
+    const { error: delErr } = await supabaseAdmin
+      .from('team_codes')
+      .delete()
+      .eq('id', codeId)
+
+    if (delErr) throw delErr
+
+    const { data: newRow, error: insErr } = await supabaseAdmin
       .from('team_codes')
       .insert({
-        team_id: teamId,
+        team_id: existing.team_id,
         code,
-        code_type: codeType,
+        code_type: existing.code_type,
+        campaign_id: existing.campaign_id,
+        payer: existing.payer,
         is_active: true,
       })
       .select()
       .single()
 
-    if (error) {
-      if (error.code === '23505') {
+    if (insErr) {
+      if (insErr.code === '23505') {
         return NextResponse.json(
           { success: false, error: `Code "${code}" is already taken — pick another` },
           { status: 409 }
         )
       }
-      throw error
+      throw insErr
     }
 
-    return NextResponse.json({ success: true, code: data })
+    return NextResponse.json({ success: true, code: newRow })
   } catch (error: any) {
-    console.error('Code create error:', error)
+    console.error('Code regenerate error:', error)
     return NextResponse.json({ success: false, error: error.message }, { status: 500 })
   }
 }
