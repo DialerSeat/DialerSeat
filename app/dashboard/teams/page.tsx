@@ -225,7 +225,6 @@ export default function TeamsPage() {
 
       <div style={{ flex: 1, padding: '16px 20px', maxWidth: 900, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
 
-        {/* SINGLE REDEEM PANEL */}
         <div style={{
           background: T.surface,
           border: `1px solid ${T.border}`,
@@ -372,42 +371,42 @@ export default function TeamsPage() {
           </div>
         )}
 
-        {/* WHAT IS A TEAM — bigger fonts, new copy */}
+        {/* WHAT IS A DIALERSEAT TEAM — bigger fonts */}
         <div style={{
           background: T.surface,
           border: `1px solid ${T.border}`,
           borderLeft: `3px solid ${T.accent}`,
           borderRadius: 4,
-          padding: '24px 28px',
+          padding: '28px 32px',
           marginBottom: 16,
         }}>
           <div style={{
-            fontSize: 11, letterSpacing: 3, color: T.muted, fontWeight: 'bold', marginBottom: 18,
-          }}>▸ WHAT IS A TEAM?</div>
+            fontSize: 13, letterSpacing: 4, color: T.muted, fontWeight: 'bold', marginBottom: 22,
+          }}>▸ WHAT IS A DIALERSEAT TEAM?</div>
 
           <p style={{
-            fontSize: 15, lineHeight: 1.7, color: T.text, marginBottom: 20, marginTop: 0,
+            fontSize: 18, lineHeight: 1.7, color: T.text, marginBottom: 24, marginTop: 0,
           }}>
             DialerSeat Teams lets lead vendors and agency owners distribute their premium lead campaign access to other agents on the platform. There are two ways teams work:
           </p>
 
-          <div style={{ marginBottom: 18 }}>
+          <div style={{ marginBottom: 22 }}>
             <div style={{
-              fontSize: 13, fontWeight: 'bold', color: T.accent, letterSpacing: 2, marginBottom: 8,
+              fontSize: 15, fontWeight: 'bold', color: T.accent, letterSpacing: 2, marginBottom: 10,
             }}>▸ AS AN AGENT</div>
             <p style={{
-              fontSize: 14, lineHeight: 1.7, color: T.text, margin: 0,
+              fontSize: 16, lineHeight: 1.7, color: T.text, margin: 0,
             }}>
               A team owner can give you access to their lead campaigns by sending you a code. Some team owners pay your $35 weekly seat for you (you dial their leads for free). Others require you to subscribe yourself for $35 to access their leads. Either way, you join with a code from the team owner.
             </p>
           </div>
 
-          <div style={{ marginBottom: 18 }}>
+          <div style={{ marginBottom: 22 }}>
             <div style={{
-              fontSize: 13, fontWeight: 'bold', color: T.accent, letterSpacing: 2, marginBottom: 8,
+              fontSize: 15, fontWeight: 'bold', color: T.accent, letterSpacing: 2, marginBottom: 10,
             }}>▸ AS AN OWNER</div>
             <p style={{
-              fontSize: 14, lineHeight: 1.7, color: T.text, margin: 0,
+              fontSize: 16, lineHeight: 1.7, color: T.text, margin: 0,
             }}>
               You generate your own leads and want to give other agents access to them — usually because you charge them above-cost as a lead vendor or agency. Build teams, attach your campaigns, generate codes for your agents. You decide per code: do you pay the $35 weekly seat for them, or do they pay it themselves?
             </p>
@@ -417,14 +416,14 @@ export default function TeamsPage() {
             background: T.bg,
             border: `1px solid ${T.border}`,
             borderRadius: 3,
-            padding: '12px 16px',
-            marginTop: 18,
+            padding: '14px 18px',
+            marginTop: 22,
           }}>
             <div style={{
-              fontSize: 11, fontWeight: 'bold', color: T.muted, letterSpacing: 2, marginBottom: 6,
+              fontSize: 13, fontWeight: 'bold', color: T.muted, letterSpacing: 2, marginBottom: 8,
             }}>COST</div>
             <p style={{
-              fontSize: 13, lineHeight: 1.6, color: T.text, margin: 0,
+              fontSize: 15, lineHeight: 1.6, color: T.text, margin: 0,
             }}>
               <strong>$35 per active seat per week</strong>, paid to DialerSeat. Whether you (the owner) pay or your agent pays is up to you per agent and per campaign. Codes you create can be set to either payer.
             </p>

@@ -20,6 +20,42 @@ const DISPOSITIONS = [
   'CLOSED', 'APPOINTMENT', 'NOT INTERESTED', 'DO NOT CALL', 'SKIPPED', 'NO_ANSWER',
 ]
 
+const dispColor = (disp: string | null): string => {
+  switch (disp) {
+    case 'CLOSED': return T.green
+    case 'APPOINTMENT': return '#1a4a8a'
+    case 'NOT INTERESTED': return T.amber
+    case 'DO NOT CALL': return T.red
+    case 'SKIPPED':
+    case 'NO_ANSWER':
+    default: return T.muted
+  }
+}
+
+const dispBg = (disp: string | null): string => {
+  switch (disp) {
+    case 'CLOSED': return '#e8f5e8'
+    case 'APPOINTMENT': return '#e8eef8'
+    case 'NOT INTERESTED': return '#f8f4e8'
+    case 'DO NOT CALL': return '#f8e8e8'
+    case 'SKIPPED':
+    case 'NO_ANSWER':
+    default: return '#f0f0f4'
+  }
+}
+
+const dispositionTint = (disp: string | null): string => {
+  switch (disp) {
+    case 'CLOSED': return 'rgba(26, 106, 26, 0.10)'
+    case 'APPOINTMENT': return 'rgba(26, 74, 138, 0.10)'
+    case 'NOT INTERESTED': return 'rgba(138, 106, 26, 0.10)'
+    case 'DO NOT CALL': return 'rgba(138, 26, 26, 0.10)'
+    case 'NO_ANSWER': return 'rgba(90, 94, 106, 0.06)'
+    case 'SKIPPED': return 'rgba(90, 94, 106, 0.04)'
+    default: return T.surface
+  }
+}
+
 interface Recording {
   id: string
   campaign_id: string
@@ -31,7 +67,8 @@ interface Recording {
   recording_duration: number
   recording_expires_at: string | null
   created_at: string
-  leads: { first_name: string; last_name: string; phone: string } | null
+  notes?: string | null
+  leads: { first_name: string; last_name: string; phone: string; notes?: string | null } | null
   campaigns: { name: string } | null
 }
 
@@ -78,6 +115,7 @@ export default function RecordingsPage() {
   const [syncing, setSyncing] = useState(false)
   const [syncMessage, setSyncMessage] = useState<string | null>(null)
   const [playingId, setPlayingId] = useState<string | null>(null)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -100,6 +138,7 @@ export default function RecordingsPage() {
     setRecordings([])
     setCursor(0)
     setPlayingId(null)
+    setExpandedId(null)
   }, [campaignFilter, dispositionFilter, debouncedSearch, user])
 
   const fetchMore = useCallback(async () => {
@@ -187,6 +226,10 @@ export default function RecordingsPage() {
     }
   }
 
+  const handleDownload = (id: string) => {
+    window.location.href = `/api/recordings/play?call_id=${id}&download=1`
+  }
+
   return (
     <div className="rec-root" style={{
       flex: 1,
@@ -245,14 +288,15 @@ export default function RecordingsPage() {
         .rec-mobile-toggle { display: none; }
         .rec-list { flex: 1; overflow-y: auto; padding: 12px 16px; }
         .rec-card {
-          background: ${T.surface};
           border: 1px solid ${T.border};
           border-radius: 4px;
           padding: 14px 16px;
-          margin-bottom: 8px;
+          margin-bottom: 6px;
+          cursor: pointer;
+          transition: border-color 0.1s, background 0.15s;
         }
-
-        /* DESKTOP LAYOUT — action column far right, DELETE under date/time */
+        .rec-card:hover { border-color: ${T.blue}; }
+        .rec-card.expanded { border-color: ${T.blue}; }
         .rec-desktop-row {
           display: grid;
           grid-template-columns: 1.6fr 1.2fr 1fr 1.2fr auto;
@@ -260,7 +304,6 @@ export default function RecordingsPage() {
           align-items: center;
         }
         .rec-mobile-row { display: none; }
-
         .rec-name {
           font-weight: bold;
           font-family: monospace;
@@ -307,9 +350,9 @@ export default function RecordingsPage() {
         }
         .rec-disp-badge {
           display: inline-block;
-          padding: 4px 10px;
+          padding: 5px 12px;
           border-radius: 3px;
-          font-size: 9px;
+          font-size: 10px;
           letter-spacing: 1px;
           font-weight: bold;
           font-family: 'Futura PT', Futura, sans-serif;
@@ -357,6 +400,49 @@ export default function RecordingsPage() {
           background: ${T.dark};
           color: ${T.blue};
         }
+        .rec-expand {
+          margin-top: 12px;
+          padding: 14px;
+          background: ${T.bg};
+          border: 1px solid ${T.blue};
+          border-radius: 3px;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+        }
+        .rec-expand-section-label {
+          font-size: 9px;
+          letter-spacing: 2px;
+          color: ${T.muted};
+          font-weight: bold;
+          margin-bottom: 6px;
+        }
+        .rec-expand-row {
+          display: flex;
+          justify-content: space-between;
+          padding: 6px 10px;
+          background: ${T.surface};
+          border: 1px solid ${T.border};
+          border-radius: 3px;
+          font-size: 11px;
+          margin-bottom: 4px;
+        }
+        .rec-notes-block {
+          padding: 12px;
+          background: ${T.surface};
+          border: 1px solid ${T.border};
+          border-radius: 3px;
+          font-family: monospace;
+          font-size: 12px;
+          line-height: 1.6;
+          color: ${T.text};
+          white-space: pre-wrap;
+          min-height: 60px;
+        }
+        .rec-notes-empty {
+          color: ${T.muted};
+          font-style: italic;
+        }
         .rec-player {
           margin-top: 12px;
           padding-top: 12px;
@@ -371,7 +457,6 @@ export default function RecordingsPage() {
           font-size: 11px;
           letter-spacing: 1px;
         }
-
         @media (max-width: 768px) {
           .rec-header { padding: 10px 12px; }
           .rec-banner { padding: 8px 12px; font-size: 10px; }
@@ -418,6 +503,7 @@ export default function RecordingsPage() {
           .rec-mobile-row .col-actions { grid-area: actions; align-items: stretch; min-width: auto; }
           .rec-mobile-row .rec-actions-row { width: 100%; }
           .rec-list { padding: 8px 12px; }
+          .rec-expand { grid-template-columns: 1fr; }
         }
       `}</style>
 
@@ -504,6 +590,7 @@ export default function RecordingsPage() {
         {recordings.map(r => {
           const expDays = daysUntilExpire(r.recording_expires_at)
           const isPlaying = playingId === r.id
+          const isExpanded = expandedId === r.id
           const isConfirming = confirmDeleteId === r.id
           const isDeleting = deletingId === r.id
 
@@ -515,32 +602,26 @@ export default function RecordingsPage() {
           const campName = r.campaigns?.name || (hasLead ? '—' : 'Direct')
           const { date, time } = formatDateClean(r.created_at)
           const dur = formatDuration(r.recording_duration || r.duration)
+          const notes = r.leads?.notes || (r as any).notes || ''
 
           const dispBadgeStyle = r.disposition ? {
-            background:
-              r.disposition === 'CLOSED' ? '#e8f5e8' :
-              r.disposition === 'APPOINTMENT' ? '#e8eef8' :
-              r.disposition === 'DO NOT CALL' ? '#f8e8e8' :
-              r.disposition === 'NOT INTERESTED' ? '#f8f4e8' :
-              '#f0f0f4',
-            color:
-              r.disposition === 'CLOSED' ? T.green :
-              r.disposition === 'APPOINTMENT' ? T.accent :
-              r.disposition === 'DO NOT CALL' ? T.red :
-              r.disposition === 'NOT INTERESTED' ? T.amber :
-              T.muted,
-            border: `1px solid ${
-              r.disposition === 'CLOSED' ? T.green :
-              r.disposition === 'APPOINTMENT' ? T.accent :
-              r.disposition === 'DO NOT CALL' ? T.red :
-              r.disposition === 'NOT INTERESTED' ? T.amber :
-              T.border
-            }`,
+            background: dispBg(r.disposition),
+            color: dispColor(r.disposition),
+            border: `1px solid ${dispColor(r.disposition)}`,
           } : {}
 
           return (
-            <div key={r.id} className="rec-card">
-              {/* DESKTOP — name | phone | datetime+duration | campaign+disp | actions far right */}
+            <div
+              key={r.id}
+              className={`rec-card ${isExpanded ? 'expanded' : ''}`}
+              style={{ background: dispositionTint(r.disposition) }}
+              onClick={(e) => {
+                const target = e.target as HTMLElement
+                if (target.closest('button, audio, .rec-actions')) return
+                setExpandedId(isExpanded ? null : r.id)
+              }}
+            >
+              {/* DESKTOP */}
               <div className="rec-desktop-row">
                 <div>
                   <div className="rec-name">{leadName}</div>
@@ -557,10 +638,15 @@ export default function RecordingsPage() {
                   <div className="duration">▸ {dur}</div>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
                   <div className="rec-camp">{campName}</div>
-                  {r.disposition && (
+                  {r.disposition ? (
                     <span className="rec-disp-badge" style={dispBadgeStyle}>{r.disposition}</span>
+                  ) : (
+                    <span className="rec-disp-badge" style={{
+                      background: '#e8e8ec', color: T.muted,
+                      border: `1px solid ${T.border}`,
+                    }}>NO DISPOSITION</span>
                   )}
                 </div>
 
@@ -570,11 +656,10 @@ export default function RecordingsPage() {
                       className={`rec-btn ${isPlaying ? 'rec-btn-active' : ''}`}
                       onClick={() => setPlayingId(isPlaying ? null : r.id)}
                     >{isPlaying ? '✕ CLOSE' : '▶ PLAY'}</button>
-                    <a
+                    <button
                       className="rec-btn"
-                      href={`/api/recordings/play?call_id=${r.id}&download=1`}
-                      style={{ textDecoration: 'none', textAlign: 'center' }}
-                    >↓ SAVE</a>
+                      onClick={() => handleDownload(r.id)}
+                    >↓ SAVE</button>
                   </div>
                   <div className="rec-actions-row">
                     {isConfirming ? (
@@ -602,7 +687,7 @@ export default function RecordingsPage() {
                 </div>
               </div>
 
-              {/* MOBILE — stacked layout */}
+              {/* MOBILE */}
               <div className="rec-mobile-row">
                 <div className="col-name">
                   <div className="rec-name">{leadName}</div>
@@ -611,8 +696,13 @@ export default function RecordingsPage() {
                   )}
                 </div>
                 <div className="col-disp">
-                  {r.disposition && (
+                  {r.disposition ? (
                     <span className="rec-disp-badge" style={dispBadgeStyle}>{r.disposition}</span>
+                  ) : (
+                    <span className="rec-disp-badge" style={{
+                      background: '#e8e8ec', color: T.muted,
+                      border: `1px solid ${T.border}`,
+                    }}>NO DISP</span>
                   )}
                 </div>
                 <div className="col-phone rec-phone">{phone}</div>
@@ -627,11 +717,10 @@ export default function RecordingsPage() {
                       className={`rec-btn ${isPlaying ? 'rec-btn-active' : ''}`}
                       onClick={() => setPlayingId(isPlaying ? null : r.id)}
                     >{isPlaying ? '✕ CLOSE' : '▶ PLAY'}</button>
-                    <a
+                    <button
                       className="rec-btn"
-                      href={`/api/recordings/play?call_id=${r.id}&download=1`}
-                      style={{ textDecoration: 'none', textAlign: 'center' }}
-                    >↓ SAVE</a>
+                      onClick={() => handleDownload(r.id)}
+                    >↓ SAVE</button>
                   </div>
                   <div className="rec-actions-row">
                     {isConfirming ? (
@@ -657,6 +746,50 @@ export default function RecordingsPage() {
                   </div>
                 </div>
               </div>
+
+              {/* EXPANDED */}
+              {isExpanded && (
+                <div className="rec-expand">
+                  <div>
+                    <div className="rec-expand-section-label">CALL DETAILS</div>
+                    <div className="rec-expand-row">
+                      <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>DISPOSITION</span>
+                      <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: dispColor(r.disposition) }}>
+                        {r.disposition || '—'}
+                      </span>
+                    </div>
+                    <div className="rec-expand-row">
+                      <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>CAMPAIGN</span>
+                      <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: T.text }}>{campName}</span>
+                    </div>
+                    <div className="rec-expand-row">
+                      <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>DURATION</span>
+                      <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: T.text }}>{dur}</span>
+                    </div>
+                    <div className="rec-expand-row">
+                      <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>RECORDED</span>
+                      <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: T.text }}>{date} · {time}</span>
+                    </div>
+                    {expDays !== null && (
+                      <div className="rec-expand-row">
+                        <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>EXPIRES</span>
+                        <span style={{
+                          fontFamily: 'monospace', fontWeight: 'bold',
+                          color: expDays < 7 ? T.red : T.text,
+                        }}>
+                          {expDays} day{expDays === 1 ? '' : 's'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <div className="rec-expand-section-label">CALL NOTES</div>
+                    <div className={`rec-notes-block ${!notes ? 'rec-notes-empty' : ''}`}>
+                      {notes || 'No notes recorded for this call.'}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {isPlaying && (
                 <div className="rec-player">
