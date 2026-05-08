@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
   // Always scope to authenticated user — never trust user_id from query string
   let query = supabase
     .from('calls')
-    .select('*, leads(first_name, last_name, phone), campaigns(name)', { count: 'exact' })
+    .select('*, leads(first_name, last_name, phone, notes), campaigns(name)', { count: 'exact' })
     .eq('user_id', userId)
     .not('recording_url', 'is', null)
 
