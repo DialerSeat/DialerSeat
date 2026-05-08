@@ -1357,7 +1357,6 @@ export default function DialerPage() {
 
           <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '5px', flexShrink: 0 }}>
             {[
-              { label: 'TOTAL CALLS', value: sessionStats.calls, color: terminalText },
               { label: 'CONNECTED', value: sessionStats.connected, color: '#4a9eff' },
               { label: 'CLOSED', value: sessionStats.closed, color: terminalGreen },
               { label: 'APPOINTMENTS', value: sessionStats.appointments, color: '#1a4a8a' },
