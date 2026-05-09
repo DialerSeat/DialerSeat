@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json()
-    const { to, leadId, campaignId } = body
+    const { to, leadId, campaignId, teamId } = body
 
     if (!to) {
       return NextResponse.json({ success: false, error: 'Missing destination' }, { status: 400 })
@@ -50,12 +50,12 @@ export async function POST(req: Request) {
         )
       }
       console.warn('[calls/outbound] Pool empty, using SIGNALWIRE_PHONE_NUMBER fallback')
-      return await placeCall(toFormatted, fallback, null, userId, leadId, campaignId, {
+      return await placeCall(toFormatted, fallback, null, userId, leadId, campaignId, teamId, {
         spaceUrl, projectId, apiToken, sipUsername, sipDomain, appUrl,
       })
     }
 
-    return await placeCall(toFormatted, poolNumber.phone_number, poolNumber.id, userId, leadId, campaignId, {
+    return await placeCall(toFormatted, poolNumber.phone_number, poolNumber.id, userId, leadId, campaignId, teamId, {
       spaceUrl, projectId, apiToken, sipUsername, sipDomain, appUrl,
     })
   } catch (error: any) {
@@ -80,6 +80,7 @@ async function placeCall(
   userId: string,
   leadId: string | null | undefined,
   campaignId: string | null | undefined,
+  teamId: string | null | undefined,
   env: PlaceCallEnv
 ) {
   const roomName = `room-${Date.now()}`
@@ -111,15 +112,13 @@ async function placeCall(
     )
   }
 
-  // ────────────────────────────────────────────────────────────────────────
-  // INSERT THE CALLS ROW NOW — one row per call, all attribution captured
-  // upfront. Status + recording webhooks will UPDATE this row, not create new.
-  // ────────────────────────────────────────────────────────────────────────
+  // INSERT CALLS ROW with team_id attribution
   try {
     await supabase.from('calls').insert({
       user_id: userId,
       lead_id: leadId || null,
       campaign_id: campaignId || null,
+      team_id: teamId || null,
       phone_number: toFormatted,
       signalwire_call_id: leadData.sid,
       duration: 0,
@@ -127,7 +126,6 @@ async function placeCall(
     })
   } catch (insertErr) {
     console.error('[calls/outbound] Failed to insert calls row:', insertErr)
-    // Don't fail the whole call — the call is already going. Webhook will warn.
   }
 
   if (poolNumberId) {
