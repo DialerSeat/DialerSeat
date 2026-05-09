@@ -1,11 +1,12 @@
 'use client'
-import { useState, useEffect, useRef, Suspense } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
-type CallStatus = 'idle' | 'calling' | 'connected' | 'ended'
+type CallStatus = 'idle' | 'calling' | 'connected' | 'ended' | 'preview_ready'
 type AccessTier = 'active' | 'lapsed' | 'new' | null
+type DialerMode = 'preview' | 'power' | 'progressive' | 'predictive'
 
 interface Lead {
   id: string
@@ -25,6 +26,9 @@ interface Campaign {
   status: string
   total_leads: number
   script?: string
+  dialer_mode?: DialerMode
+  amd_enabled?: boolean
+  predictive_lines_per_agent?: number
 }
 
 interface TeamScopeCampaign {
@@ -40,9 +44,17 @@ interface TeamScope {
   teamCampaigns: TeamScopeCampaign[]
 }
 
+interface PacingInfo {
+  activeAgents: number
+  abandonRate: number
+  isDegraded: boolean
+  configuredLines: number
+  effectiveLines: number
+}
+
 const PERSONAL_SCOPE = '__personal__'
 
-function DialerPageInner() {
+export default function DialerPage() {
   const { user } = useUser()
   const searchParams = useSearchParams()
   const [notes, setNotes] = useState('')
@@ -56,6 +68,7 @@ function DialerPageInner() {
   const [disposition, setDisposition] = useState('')
   const [showDisposition, setShowDisposition] = useState(false)
   const [currentLead, setCurrentLead] = useState<Lead | null>(null)
+  const [previewLead, setPreviewLead] = useState<Lead | null>(null)
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [selectedCampaign, setSelectedCampaign] = useState<string>('all')
   const [callStart, setCallStart] = useState(0)
@@ -75,12 +88,19 @@ function DialerPageInner() {
   const [selectedScope, setSelectedScope] = useState<string>(PERSONAL_SCOPE)
   const [scopesLoaded, setScopesLoaded] = useState(false)
 
+  // Mode-aware state
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
+  const [pacingInfo, setPacingInfo] = useState<PacingInfo | null>(null)
+  const [amdActivity, setAmdActivity] = useState<string[]>([])
+
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const audioCtxRef = useRef<AudioContext | null>(null)
   const activePollRef = useRef<NodeJS.Timeout | null>(null)
   const swClientRef = useRef<any>(null)
   const swCallRef = useRef<any>(null)
-  const [tick, setTick] = useState(0)
+  const heartbeatRef = useRef<NodeJS.Timeout | null>(null)
+  const pacingPollRef = useRef<NodeJS.Timeout | null>(null)
+  const sessionIdRef = useRef<string | null>(null)
   const urlParamsConsumedRef = useRef(false)
 
   useEffect(() => setMounted(true), [])
@@ -101,7 +121,19 @@ function DialerPageInner() {
 
   const isActive = tier === 'active'
 
-  // Load team scopes (member of any team OR owner of any team)
+  // Resolve current campaign object — used for mode awareness
+  const currentCampaign: Campaign | undefined =
+    selectedCampaign !== 'all'
+      ? campaigns.find(c => c.id === selectedCampaign)
+      : undefined
+  const dialerMode: DialerMode = (currentCampaign?.dialer_mode as DialerMode) || 'power'
+  const amdEnabled = !!currentCampaign?.amd_enabled
+  const isPredictive = dialerMode === 'predictive'
+  const isProgressive = dialerMode === 'progressive'
+  const isPreview = dialerMode === 'preview'
+  const autoDials = isProgressive || isPredictive
+
+  // Load team scopes
   useEffect(() => {
     if (!user || !isActive) return
     let cancelled = false
@@ -113,7 +145,6 @@ function DialerPageInner() {
           return
         }
         const scopes: TeamScope[] = []
-        // Owner teams already have teamCampaigns
         for (const t of data.teams.owned || []) {
           if ((t.teamCampaigns || []).length > 0) {
             scopes.push({
@@ -124,7 +155,6 @@ function DialerPageInner() {
             })
           }
         }
-        // Member teams need a per-team detail call to get teamCampaigns
         const memberTeams = data.teams.member || []
         if (memberTeams.length > 0) {
           await Promise.all(memberTeams.map(async (t: any) => {
@@ -153,16 +183,16 @@ function DialerPageInner() {
     return () => { cancelled = true }
   }, [user, isActive])
 
-  // Read URL params (?teamId=X&campaignId=Y) once after scopes load
+  // URL params (?teamId=X&campaignId=Y) consumed once after scopes load
   useEffect(() => {
     if (!scopesLoaded || urlParamsConsumedRef.current) return
     const teamIdParam = searchParams.get('teamId')
     const campaignIdParam = searchParams.get('campaignId')
     if (teamIdParam && teamScopes.find(s => s.id === teamIdParam)) {
       setSelectedScope(teamIdParam)
-      if (campaignIdParam) {
-        setSelectedCampaign(campaignIdParam)
-      }
+    }
+    if (campaignIdParam) {
+      setSelectedCampaign(campaignIdParam)
     }
     urlParamsConsumedRef.current = true
   }, [scopesLoaded, teamScopes, searchParams])
@@ -171,7 +201,6 @@ function DialerPageInner() {
     if (user && isActive) fetchCampaigns()
   }, [user, isActive])
 
-  // When scope changes, reset campaign selection (unless it was URL-driven)
   useEffect(() => {
     if (!urlParamsConsumedRef.current) return
     setSelectedCampaign('all')
@@ -179,7 +208,7 @@ function DialerPageInner() {
 
   useEffect(() => {
     if (!isActive) return
-    const interval = setInterval(() => setTick(t => t + 1), 1000)
+    const interval = setInterval(() => {}, 1000)
     return () => clearInterval(interval)
   }, [isActive])
 
@@ -213,14 +242,11 @@ function DialerPageInner() {
         const sipPassword = process.env.NEXT_PUBLIC_SIGNALWIRE_SIP_PASSWORD
         const sipDomain = process.env.NEXT_PUBLIC_SIGNALWIRE_SIP_DOMAIN
 
-        if (!sipUsername || !sipPassword || !sipDomain) {
-          console.warn('SIP credentials not configured')
-          return
-        }
+        if (!sipUsername || !sipPassword || !sipDomain) return
 
         const { UserAgent, Registerer } = await import('sip.js')
         const uri = UserAgent.makeURI(`sip:${sipUsername}@${sipDomain}`)
-        if (!uri) { console.error('Failed to create SIP URI'); return }
+        if (!uri) return
 
         const userAgent = new UserAgent({
           uri,
@@ -234,24 +260,19 @@ function DialerPageInner() {
 
         userAgent.delegate = {
           onInvite: async (invitation: any) => {
-            console.log('> Incoming SIP INVITE received!')
             try {
               const { SessionState: SS } = await import('sip.js')
               invitation.stateChange.addListener((state: any) => {
-                console.log('> Incoming call state:', state)
                 if (state === SS.Established) {
-                  console.log('> Call ESTABLISHED — attaching audio')
                   swCallRef.current = invitation
                   attachSIPAudio(invitation)
                 } else if (state === SS.Terminated) {
-                  console.log('> SIP call terminated')
                   if (swCallRef.current === invitation) swCallRef.current = null
                 }
               })
               await invitation.accept({
                 sessionDescriptionHandlerOptions: { constraints: { audio: true, video: false } },
               })
-              console.log('> Accepted incoming SIP invite')
             } catch (err) {
               console.error('Error accepting SIP invite:', err)
             }
@@ -308,7 +329,6 @@ function DialerPageInner() {
         })
         return true
       } catch (err) {
-        console.error('attachSIPAudio error:', err)
         return false
       }
     }
@@ -321,6 +341,135 @@ function DialerPageInner() {
       setTimeout(() => tryAttach(), 1000)
     }
   }
+
+  // ── SESSION HEARTBEAT ──────────────────────────────────────────────────
+  // Start a session whenever user is available + has a specific campaign selected.
+  // End the session when going offline, switching campaigns, or unmounting.
+  const startSession = useCallback(async (campaignId: string) => {
+    try {
+      const teamId = selectedScope !== PERSONAL_SCOPE ? selectedScope : undefined
+      const res = await fetch('/api/dialer/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ campaignId, teamId }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setCurrentSessionId(data.sessionId)
+        sessionIdRef.current = data.sessionId
+      }
+    } catch (err) {
+      console.error('startSession error:', err)
+    }
+  }, [selectedScope])
+
+  const endSession = useCallback(async () => {
+    const sid = sessionIdRef.current
+    if (!sid) return
+    try {
+      await fetch('/api/dialer/session', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: sid }),
+      })
+    } catch {}
+    setCurrentSessionId(null)
+    sessionIdRef.current = null
+  }, [])
+
+  // Manage session lifecycle — only when available + specific campaign selected
+  useEffect(() => {
+    if (!isActive) return
+    const shouldHaveSession = available && selectedCampaign !== 'all' && currentCampaign
+
+    if (shouldHaveSession) {
+      // Start session if we don't have one for this campaign
+      if (!sessionIdRef.current) {
+        startSession(selectedCampaign)
+      }
+      // Set up heartbeat every 30s
+      if (!heartbeatRef.current) {
+        heartbeatRef.current = setInterval(() => {
+          if (selectedCampaign !== 'all') startSession(selectedCampaign)
+        }, 30000)
+      }
+    } else {
+      // End any existing session
+      if (sessionIdRef.current) endSession()
+      if (heartbeatRef.current) {
+        clearInterval(heartbeatRef.current)
+        heartbeatRef.current = null
+      }
+    }
+
+    return () => {
+      if (heartbeatRef.current) {
+        clearInterval(heartbeatRef.current)
+        heartbeatRef.current = null
+      }
+    }
+  }, [available, selectedCampaign, currentCampaign, isActive, startSession, endSession])
+
+  // End session on page unload
+  useEffect(() => {
+    const handleUnload = () => {
+      const sid = sessionIdRef.current
+      if (sid && navigator.sendBeacon) {
+        const blob = new Blob(
+          [JSON.stringify({ sessionId: sid })],
+          { type: 'application/json' }
+        )
+        // sendBeacon doesn't support DELETE, use a side-channel
+        // Best-effort cleanup; server has 5min stale-cleanup as backup
+        navigator.sendBeacon('/api/dialer/session-end', blob)
+      }
+    }
+    window.addEventListener('beforeunload', handleUnload)
+    window.addEventListener('pagehide', handleUnload)
+    return () => {
+      window.removeEventListener('beforeunload', handleUnload)
+      window.removeEventListener('pagehide', handleUnload)
+      endSession()
+    }
+  }, [endSession])
+
+  // ── PREDICTIVE PACING POLL ─────────────────────────────────────────────
+  // Only when in predictive mode + available — poll active agents + abandon rate
+  useEffect(() => {
+    if (!isActive || !isPredictive || !available || selectedCampaign === 'all') {
+      setPacingInfo(null)
+      if (pacingPollRef.current) {
+        clearInterval(pacingPollRef.current)
+        pacingPollRef.current = null
+      }
+      return
+    }
+
+    const fetchPacing = async () => {
+      try {
+        const res = await fetch(`/api/dialer/active-agents?campaignId=${selectedCampaign}`)
+        const data = await res.json()
+        if (data.success) {
+          setPacingInfo(prev => ({
+            activeAgents: data.activeAgents,
+            abandonRate: prev?.abandonRate || 0,
+            isDegraded: prev?.isDegraded || false,
+            configuredLines: currentCampaign?.predictive_lines_per_agent || 1.5,
+            effectiveLines: prev?.isDegraded ? 1.0 : (currentCampaign?.predictive_lines_per_agent || 1.5),
+          }))
+        }
+      } catch {}
+    }
+
+    fetchPacing()
+    pacingPollRef.current = setInterval(fetchPacing, 15000)
+    return () => {
+      if (pacingPollRef.current) {
+        clearInterval(pacingPollRef.current)
+        pacingPollRef.current = null
+      }
+    }
+  }, [isActive, isPredictive, available, selectedCampaign, currentCampaign])
 
   const handleSetAvailable = async () => {
     if (!micGranted) {
@@ -422,12 +571,9 @@ function DialerPageInner() {
     if (data.success) setCampaigns(data.campaigns.filter((c: Campaign) => c.status === 'active'))
   }
 
-  // ── Scope helpers ──────────────────────────────────────────────────────
-
   const isPersonalScope = selectedScope === PERSONAL_SCOPE
   const currentScope = teamScopes.find(s => s.id === selectedScope) || null
 
-  // Campaigns visible in the current scope picker
   const scopeCampaigns: { id: string; name: string; total_leads: number }[] = isPersonalScope
     ? campaigns.map(c => ({ id: c.id, name: c.name, total_leads: c.total_leads }))
     : (currentScope?.teamCampaigns
@@ -438,14 +584,13 @@ function DialerPageInner() {
           total_leads: tc.campaign!.total_leads,
         })) || [])
 
-  const fetchNextLead = async () => {
+  const fetchNextLead = async (): Promise<Lead | null> => {
     const params = new URLSearchParams({ user_id: user?.id || '' })
     if (selectedCampaign !== 'all') params.append('campaign_id', selectedCampaign)
     if (!isPersonalScope) params.append('team_id', selectedScope)
     const res = await fetch(`/api/leads/next?${params}`)
     const data = await res.json()
     if (data.success) {
-      setCurrentLead(data.lead)
       setNoLeads(false)
       return data.lead
     } else {
@@ -480,6 +625,118 @@ function DialerPageInner() {
     else document.body.style.overflow = ''
     return () => { document.body.style.overflow = '' }
   }, [dialZoomed])
+
+  // ── PREVIEW MODE FLOW ──────────────────────────────────────────────────
+  // Fetch lead, show profile, wait for user to click DIAL or SKIP
+  const fetchPreviewLead = async () => {
+    setShowDisposition(false)
+    setDisposition('')
+    setNoLeads(false)
+    const lead = await fetchNextLead()
+    if (!lead) return
+    setPreviewLead(lead)
+    setStatus('preview_ready')
+  }
+
+  const dialPreviewLead = async () => {
+    if (!previewLead) return
+    const lead = previewLead
+    setPreviewLead(null)
+    setCurrentLead(lead)
+    await dialLeadCall(lead)
+  }
+
+  const skipPreviewLead = async () => {
+    if (!previewLead) return
+    await fetch('/api/leads/dispose', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        lead_id: previewLead.id,
+        campaign_id: previewLead.campaign_id,
+        user_id: user?.id,
+        disposition: 'SKIPPED',
+        duration: 0,
+        source: 'preview_skip',
+      }),
+    })
+    setPreviewLead(null)
+    setStatus('idle')
+    fetchPreviewLead()
+  }
+
+  // ── COMMON CALL FIRE — used by all modes ───────────────────────────────
+  const dialLeadCall = async (lead: Lead) => {
+    const rawPhone = lead.phone?.replace(/\D/g, '')
+    if (!rawPhone || rawPhone.length < 10) {
+      await fetch('/api/leads/dispose', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lead_id: lead.id,
+          campaign_id: lead.campaign_id,
+          user_id: user?.id,
+          disposition: 'SKIPPED',
+          duration: 0,
+        }),
+      })
+      setCurrentLead(null)
+      // For auto-dialing modes, immediately try the next lead
+      if (autoDials) setTimeout(() => handleDial(), 300)
+      else setStatus('idle')
+      return
+    }
+
+    setStatus('calling')
+    setSessionStats(s => ({ ...s, calls: s.calls + 1 }))
+    playInitiateBlip()
+
+    if (amdEnabled) {
+      setAmdActivity(prev => [`AMD ENABLED — analyzing pickup`, ...prev].slice(0, 5))
+    }
+
+    try {
+      const res = await fetch('/api/calls/outbound', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: lead.phone,
+          leadId: lead.id,
+          campaignId: lead.campaign_id,
+          teamId: isPersonalScope ? undefined : selectedScope,
+        }),
+      })
+      const data = await res.json()
+
+      if (data.success) {
+        setActiveCallSid(data.callSid)
+        startCallPolling(data.callSid)
+      } else {
+        if (res.status === 403) {
+          setTier('lapsed')
+          return
+        }
+        await fetch('/api/leads/dispose', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            lead_id: lead.id,
+            campaign_id: lead.campaign_id,
+            user_id: user?.id,
+            disposition: 'SKIPPED',
+            duration: 0,
+          }),
+        })
+        setStatus('idle')
+        setCurrentLead(null)
+        if (autoDials) setTimeout(() => handleDial(), 500)
+      }
+    } catch (error) {
+      console.error('Call error:', error)
+      setStatus('idle')
+      setCurrentLead(null)
+    }
+  }
 
   const startCallPolling = (callSid: string) => {
     const pollInterval = setInterval(async () => {
@@ -523,25 +780,47 @@ function DialerPageInner() {
           statusData.status === 'no-answer' ||
           statusData.status === 'canceled'
         ) {
+          // Call ended without connecting (voicemail auto-hung-up via AMD,
+          // or simply unanswered/busy/failed). For auto-dialing modes,
+          // disposition is auto-set and we move to next lead silently.
           clearInterval(pollInterval)
           activePollRef.current = null
           setActiveCallSid(null)
+
+          // Check if AMD result was a machine — log it for the agent
+          if (amdEnabled && statusData.amd_result?.startsWith('machine_')) {
+            setAmdActivity(prev =>
+              [`> VOICEMAIL FILTERED — ${statusData.amd_result}`, ...prev].slice(0, 5)
+            )
+          }
+
           if (currentLead) {
-            await fetch('/api/leads/dispose', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                lead_id: currentLead.id,
-                campaign_id: currentLead.campaign_id,
-                user_id: user?.id,
-                disposition: 'NO_ANSWER',
-                duration: 0,
-              }),
-            })
+            // Auto-dispose if AMD already set it; otherwise mark NO_ANSWER
+            const isAmdHangup = amdEnabled && statusData.amd_result?.startsWith('machine_')
+            if (!isAmdHangup) {
+              await fetch('/api/leads/dispose', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  lead_id: currentLead.id,
+                  campaign_id: currentLead.campaign_id,
+                  user_id: user?.id,
+                  disposition: 'NO_ANSWER',
+                  duration: 0,
+                }),
+              })
+            }
           }
           setStatus('idle')
           setCurrentLead(null)
-          setTimeout(() => handleDial(), 800)
+
+          // Auto-fire next lead in progressive/predictive mode
+          if (autoDials) {
+            setTimeout(() => handleDial(), 1200)
+          } else {
+            // Power mode: auto-retry next lead (existing behavior)
+            setTimeout(() => handleDial(), 800)
+          }
         }
       } catch (err) {
         clearInterval(pollInterval)
@@ -551,76 +830,23 @@ function DialerPageInner() {
     activePollRef.current = pollInterval
   }
 
+  // ── HANDLE DIAL — entry point varies by mode ──────────────────────────
   const handleDial = async () => {
     setShowDisposition(false)
     setDisposition('')
     setNoLeads(false)
-    const lead = await fetchNextLead()
-    if (!lead) return
 
-    const rawPhone = lead.phone?.replace(/\D/g, '')
-    if (!rawPhone || rawPhone.length < 10) {
-      await fetch('/api/leads/dispose', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          lead_id: lead.id,
-          campaign_id: lead.campaign_id,
-          user_id: user?.id,
-          disposition: 'SKIPPED',
-          duration: 0,
-        }),
-      })
-      setCurrentLead(null)
-      setTimeout(() => handleDial(), 300)
+    if (isPreview) {
+      // Preview mode: load lead, show profile, wait for explicit DIAL click
+      await fetchPreviewLead()
       return
     }
 
-    setStatus('calling')
-    setSessionStats(s => ({ ...s, calls: s.calls + 1 }))
-    playInitiateBlip()
-
-    try {
-      const res = await fetch('/api/calls/outbound', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: lead.phone,
-          leadId: lead.id,
-          campaignId: lead.campaign_id,
-          teamId: isPersonalScope ? undefined : selectedScope,
-        }),
-      })
-      const data = await res.json()
-
-      if (data.success) {
-        setActiveCallSid(data.callSid)
-        startCallPolling(data.callSid)
-      } else {
-        if (res.status === 403) {
-          setTier('lapsed')
-          return
-        }
-        await fetch('/api/leads/dispose', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            lead_id: lead.id,
-            campaign_id: lead.campaign_id,
-            user_id: user?.id,
-            disposition: 'SKIPPED',
-            duration: 0,
-          }),
-        })
-        setStatus('idle')
-        setCurrentLead(null)
-        setTimeout(() => handleDial(), 500)
-      }
-    } catch (error) {
-      console.error('Call error:', error)
-      setStatus('idle')
-      setCurrentLead(null)
-    }
+    // Power, progressive, predictive: fetch + dial immediately
+    const lead = await fetchNextLead()
+    if (!lead) return
+    setCurrentLead(lead)
+    await dialLeadCall(lead)
   }
 
   const handleSkip = async () => {
@@ -670,6 +896,8 @@ function DialerPageInner() {
         }),
       })
     }
+
+    // Auto-fire next lead for progressive/predictive AND power modes (existing behavior)
     setTimeout(async () => {
       setStatus('idle')
       setShowDisposition(false)
@@ -678,7 +906,7 @@ function DialerPageInner() {
       setSeconds(0)
       setCurrentLead(null)
       await handleDial()
-    }, 600)
+    }, autoDials ? 800 : 600)
   }
 
   const handleManualDial = async () => {
@@ -748,19 +976,9 @@ function DialerPageInner() {
     { label: 'SKIP', color: '#5a5e6a', bg: '#f0f0f4' },
   ]
 
-  // Resolve current campaign for script display, accounting for scope
-  let currentCampaign: Campaign | undefined = undefined
   let activeScript: string | null = null
   if (selectedCampaign !== 'all') {
-    if (isPersonalScope) {
-      currentCampaign = campaigns.find(c => c.id === selectedCampaign)
-      activeScript = currentCampaign?.script || null
-    } else {
-      // For team scopes, the campaign data may not include script (depends on API)
-      // Fall back to personal-list lookup; harmless if not found
-      currentCampaign = campaigns.find(c => c.id === selectedCampaign)
-      activeScript = currentCampaign?.script || null
-    }
+    activeScript = currentCampaign?.script || null
   } else if (isPersonalScope) {
     activeScript = campaigns.find(c => c.script)?.script || null
   }
@@ -774,6 +992,12 @@ function DialerPageInner() {
   const terminalAccent = '#2a4a8a'
   const terminalGreen = '#1a6a1a'
   const terminalRed = '#8a1a1a'
+
+  // Mode badge color
+  const modeColor = isPredictive ? terminalRed
+    : isProgressive ? terminalGreen
+    : isPreview ? terminalMuted
+    : terminalAccent
 
   // ========================================================================
   // LAPSED PAYWALL
@@ -837,6 +1061,9 @@ function DialerPageInner() {
       </div>
     )
   }
+
+  // The lead currently displayed (preview or active call lead)
+  const displayLead = previewLead || currentLead
 
   // ========================================================================
   // ACTIVE USER — full dialer UI
@@ -939,7 +1166,7 @@ function DialerPageInner() {
       <style>{`
         .dialer-root { height: 100vh; height: 100dvh; }
         .dialer-status-bar { display: flex; align-items: center; justify-content: space-between; }
-        .dialer-status-bar-left { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+        .dialer-status-bar-left { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
         .dialer-status-bar-right { display: flex; align-items: center; gap: 18px; }
         .dialer-stat-grid { grid-template-columns: repeat(3, 1fr) !important; }
         .dialer-right-sidebar {
@@ -1011,6 +1238,18 @@ function DialerPageInner() {
               {swReady ? 'AUDIO' : '...'}
             </span>
           </div>
+          {currentCampaign && (
+            <div style={{
+              padding: '2px 8px', borderRadius: 3,
+              border: `1px solid ${modeColor}`,
+              fontSize: 9, fontWeight: 'bold', letterSpacing: 1.5,
+              color: modeColor,
+              fontFamily: 'monospace',
+            }}>
+              {dialerMode.toUpperCase()}
+              {amdEnabled && <span style={{ marginLeft: 4, opacity: 0.7 }}>· AMD</span>}
+            </div>
+          )}
           <div onClick={handleSetAvailable} style={{
             width: '36px', height: '20px', borderRadius: '10px',
             background: available ? '#4a9eff' : '#444460',
@@ -1035,14 +1274,30 @@ function DialerPageInner() {
         </div>
       </div>
 
+      {/* AUTO-DEGRADED BANNER for predictive when throttled */}
+      {isPredictive && pacingInfo?.isDegraded && (
+        <div style={{
+          padding: '8px 20px',
+          background: '#f8e8e8',
+          borderBottom: `2px solid ${terminalRed}`,
+          color: terminalRed,
+          fontSize: 11,
+          letterSpacing: 1,
+          textAlign: 'center',
+          fontWeight: 'bold',
+        }}>
+          ⚠ AUTO-DEGRADED TO PROGRESSIVE — abandon rate {(pacingInfo.abandonRate * 100).toFixed(2)}% (legal cap 3%)
+        </div>
+      )}
+
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
         <div style={{ flex: 1, padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px', overflow: 'auto', minHeight: 0 }}>
 
           <div className="dialer-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', flexShrink: 0 }}>
             {[
-              { label: 'STATUS', value: status.toUpperCase(), color: status === 'connected' ? terminalGreen : status === 'calling' ? '#8a6a1a' : terminalMuted },
+              { label: 'STATUS', value: status === 'preview_ready' ? 'PREVIEW' : status.toUpperCase(), color: status === 'connected' ? terminalGreen : status === 'calling' ? '#8a6a1a' : status === 'preview_ready' ? terminalAccent : terminalMuted },
               { label: 'DURATION', value: status === 'connected' ? formatTime(seconds) : '--:--', color: terminalAccent },
-              { label: 'SCOPE', value: isPersonalScope ? 'PERSONAL' : (currentScope?.name?.substring(0, 12) || '—'), color: isPersonalScope ? terminalText : '#4a9eff' },
+              { label: 'MODE', value: dialerMode.toUpperCase(), color: modeColor },
             ].map((item) => (
               <div key={item.label} style={{
                 padding: '8px 12px', background: terminalSurface,
@@ -1054,7 +1309,50 @@ function DialerPageInner() {
             ))}
           </div>
 
-          {/* SCOPE PICKER — only show when there's at least one team scope */}
+          {/* Predictive pacing display */}
+          {isPredictive && pacingInfo && (
+            <div style={{
+              padding: '10px 14px', background: terminalSurface,
+              border: `1px solid ${terminalBorder}`, borderLeft: `3px solid ${pacingInfo.isDegraded ? terminalRed : terminalAccent}`,
+              borderRadius: '4px', flexShrink: 0,
+              display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10,
+            }}>
+              <div>
+                <div style={{ fontSize: 9, letterSpacing: 2, color: terminalMuted, marginBottom: 3 }}>ACTIVE AGENTS</div>
+                <div style={{ fontSize: 14, fontWeight: 'bold', fontFamily: 'monospace', color: terminalText }}>
+                  {pacingInfo.activeAgents}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 9, letterSpacing: 2, color: terminalMuted, marginBottom: 3 }}>EFFECTIVE LINES</div>
+                <div style={{ fontSize: 14, fontWeight: 'bold', fontFamily: 'monospace', color: pacingInfo.isDegraded ? terminalRed : terminalAccent }}>
+                  {pacingInfo.effectiveLines.toFixed(1)}×{pacingInfo.isDegraded && ' (degraded)'}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 9, letterSpacing: 2, color: terminalMuted, marginBottom: 3 }}>30D ABANDON RATE</div>
+                <div style={{
+                  fontSize: 14, fontWeight: 'bold', fontFamily: 'monospace',
+                  color: pacingInfo.abandonRate >= 0.025 ? terminalRed : pacingInfo.abandonRate >= 0.020 ? '#8a6a1a' : terminalGreen,
+                }}>
+                  {(pacingInfo.abandonRate * 100).toFixed(2)}%
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Predictive low-agent warning */}
+          {isPredictive && pacingInfo && pacingInfo.activeAgents > 0 && pacingInfo.activeAgents < 8 && !pacingInfo.isDegraded && (
+            <div style={{
+              padding: '8px 12px', background: 'rgba(255,170,62,0.08)',
+              border: '1px solid #8a6a1a', borderLeft: '3px solid #ffaa3e',
+              borderRadius: 4, fontSize: 11, color: '#8a6a1a', letterSpacing: 0.5,
+            }}>
+              ⚠ Predictive works best with 8+ concurrent agents. With {pacingInfo.activeAgents}, abandon-rate risk is elevated.{' '}
+              <Link href="/dialing-modes" target="_blank" style={{ color: terminalAccent, fontWeight: 'bold' }}>Why? →</Link>
+            </div>
+          )}
+
           {teamScopes.length > 0 && (
             <div style={{
               padding: '10px 14px', background: terminalSurface,
@@ -1103,6 +1401,16 @@ function DialerPageInner() {
                 ⚠ {isPersonalScope ? 'NO ACTIVE CAMPAIGNS FOUND' : 'NO CAMPAIGNS ACCESSIBLE FROM THIS TEAM'}
               </div>
             )}
+            {selectedCampaign === 'all' && (isPredictive || isProgressive || isPreview) && (
+              <div style={{
+                marginTop: 6, padding: '5px 8px',
+                background: 'rgba(255,170,62,0.08)',
+                border: '1px solid #8a6a1a', borderRadius: 4,
+                fontSize: 10, color: '#8a6a1a', letterSpacing: 0.5,
+              }}>
+                ⚠ {dialerMode} mode requires a specific campaign selection
+              </div>
+            )}
           </div>
 
           <div style={{
@@ -1113,14 +1421,16 @@ function DialerPageInner() {
               padding: '7px 14px', background: terminalDark, borderBottom: `1px solid ${terminalBorder}`,
               display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
             }}>
-              <span style={{ fontSize: '10px', letterSpacing: '3px', color: '#8888aa', fontWeight: 'bold' }}>LEAD PROFILE</span>
-              {currentLead && status === 'connected' && (
-                <span style={{ fontSize: '10px', fontFamily: 'monospace', color: '#4a9eff' }}>ID: {currentLead.id.substring(0, 8)}</span>
+              <span style={{ fontSize: '10px', letterSpacing: '3px', color: '#8888aa', fontWeight: 'bold' }}>
+                {previewLead ? 'LEAD PREVIEW — REVIEW BEFORE DIALING' : 'LEAD PROFILE'}
+              </span>
+              {displayLead && (status === 'connected' || status === 'preview_ready') && (
+                <span style={{ fontSize: '10px', fontFamily: 'monospace', color: '#4a9eff' }}>ID: {displayLead.id.substring(0, 8)}</span>
               )}
             </div>
 
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
-              {(!currentLead || status === 'calling') ? (
+              {(!displayLead || status === 'calling') ? (
                 <div style={{ textAlign: 'center', padding: '40px 0' }}>
                   <div style={{ fontSize: '36px', marginBottom: '12px', filter: 'grayscale(1)', opacity: 0.4 }}>📋</div>
                   <p style={{ fontSize: '11px', letterSpacing: '3px', color: terminalMuted }}>
@@ -1137,32 +1447,32 @@ function DialerPageInner() {
                   <div style={{ padding: '12px', flexShrink: 0 }}>
                     <div style={{
                       padding: '10px 14px', background: terminalBg,
-                      border: `2px solid ${status === 'connected' ? terminalGreen : terminalBorder}`,
+                      border: `2px solid ${status === 'connected' ? terminalGreen : status === 'preview_ready' ? terminalAccent : terminalBorder}`,
                       borderRadius: '4px', marginBottom: '10px',
                     }}>
                       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                         <div>
                           <div style={{ fontSize: '19px', fontWeight: 'bold', fontFamily: 'monospace', color: terminalText, letterSpacing: '1px', marginBottom: '3px' }}>
-                            {currentLead.first_name} {currentLead.last_name}
+                            {displayLead.first_name} {displayLead.last_name}
                           </div>
                           <div style={{ fontSize: '15px', fontFamily: 'monospace', color: terminalAccent, fontWeight: 'bold', letterSpacing: '2px' }}>
-                            {currentLead.phone}
+                            {displayLead.phone}
                           </div>
                         </div>
                         <div style={{
                           padding: '4px 10px', borderRadius: '2px',
-                          background: status === 'connected' ? '#e8f5e8' : '#f0f0f0',
-                          border: `1px solid ${status === 'connected' ? terminalGreen : terminalBorder}`,
+                          background: status === 'connected' ? '#e8f5e8' : status === 'preview_ready' ? '#e8eef8' : '#f0f0f0',
+                          border: `1px solid ${status === 'connected' ? terminalGreen : status === 'preview_ready' ? terminalAccent : terminalBorder}`,
                           fontSize: '9px', letterSpacing: '2px', fontWeight: 'bold',
-                          color: status === 'connected' ? terminalGreen : terminalMuted,
+                          color: status === 'connected' ? terminalGreen : status === 'preview_ready' ? terminalAccent : terminalMuted,
                         }}>
-                          {status === 'connected' ? '● LIVE' : '○ IDLE'}
+                          {status === 'connected' ? '● LIVE' : status === 'preview_ready' ? '◉ PREVIEW' : '○ IDLE'}
                         </div>
                       </div>
                     </div>
-                    {currentLead.extra_data && Object.keys(currentLead.extra_data).length > 0 && (
+                    {displayLead.extra_data && Object.keys(displayLead.extra_data).length > 0 && (
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '5px' }}>
-                        {filteredExtraData(currentLead.extra_data).map(([key, value]) => (
+                        {filteredExtraData(displayLead.extra_data).map(([key, value]) => (
                           <div key={key} style={{ padding: '7px 10px', background: terminalBg, border: `1px solid ${terminalBorder}`, borderRadius: '3px' }}>
                             <div style={{ fontSize: '8px', letterSpacing: '2px', color: terminalMuted, marginBottom: '2px', textTransform: 'uppercase' }}>{key}</div>
                             <div style={{ fontSize: '11px', fontWeight: 'bold', fontFamily: 'monospace', color: terminalText }}>{String(value)}</div>
@@ -1225,7 +1535,8 @@ function DialerPageInner() {
             </div>
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: status === 'connected' ? '1fr 1fr' : '1fr', gap: '8px', flexShrink: 0 }}>
+          {/* PRIMARY ACTION BUTTONS — VARY BY MODE + STATE */}
+          <div style={{ display: 'grid', gridTemplateColumns: status === 'connected' ? '1fr 1fr' : status === 'preview_ready' ? '1fr 1fr' : '1fr', gap: '8px', flexShrink: 0 }}>
             {status === 'idle' && !available && (
               <button onClick={handleSetAvailable} style={{
                 padding: '14px', borderRadius: '4px', border: 'none',
@@ -1249,7 +1560,27 @@ function DialerPageInner() {
                 fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
                 cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
                 borderTop: `3px solid #4a9eff`, transition: 'all 0.15s',
-              }}>▶ INITIATE DIAL SEQUENCE</button>
+              }}>
+                {isPreview ? '▶ LOAD NEXT LEAD' : '▶ INITIATE DIAL SEQUENCE'}
+              </button>
+            )}
+            {status === 'preview_ready' && previewLead && (
+              <>
+                <button onClick={skipPreviewLead} style={{
+                  padding: '14px', borderRadius: '4px',
+                  background: '#f8f4e8', border: `1px solid #8a6a1a`,
+                  borderTop: `3px solid #8a6a1a`, color: '#8a6a1a',
+                  fontSize: '11px', fontWeight: 'bold', letterSpacing: '3px',
+                  cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                }}>⏭ SKIP THIS LEAD</button>
+                <button onClick={dialPreviewLead} style={{
+                  padding: '14px', borderRadius: '4px', border: 'none',
+                  background: terminalDark, color: '#4a9eff',
+                  fontSize: '12px', fontWeight: 'bold', letterSpacing: '3px',
+                  cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                  borderTop: `3px solid #4a9eff`,
+                }}>▶ DIAL THIS LEAD</button>
+              </>
             )}
             {status === 'calling' && (
               <button onClick={async () => {
@@ -1309,16 +1640,6 @@ function DialerPageInner() {
         <aside className={`dialer-right-sidebar ${rightSidebarOpen ? 'open' : ''}`}>
           <div style={{ background: terminalDark, padding: '8px 16px', borderBottom: `1px solid ${terminalBorder}`, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '9px', letterSpacing: '3px', color: '#8888aa', fontWeight: 'bold' }}>SESSION METRICS</span>
-            <button
-              onClick={() => setRightSidebarOpen(false)}
-              aria-label="Close panel"
-              style={{
-                background: 'transparent', border: 'none', color: '#8888aa',
-                cursor: 'pointer', fontSize: 18, padding: 0, width: 24, height: 24,
-                display: 'none',
-              }}
-              className="dialer-close-mobile"
-            >×</button>
           </div>
 
           <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '5px', flexShrink: 0 }}>
@@ -1348,7 +1669,7 @@ function DialerPageInner() {
               borderTop: `3px solid ${terminalAccent}`,
             }}>
               <div style={{ fontSize: '8px', letterSpacing: '1px', color: terminalMuted, marginBottom: '3px' }}>
-                YOUR SESSION'S CONVERSION RATE
+                YOUR SESSION&apos;S CONVERSION RATE
               </div>
               <div style={{ fontSize: '20px', fontWeight: 'bold', fontFamily: 'monospace', color: terminalAccent }}>
                 {sessionStats.calls > 0
@@ -1363,17 +1684,19 @@ function DialerPageInner() {
           <div style={{ background: terminalDark, padding: '6px 16px', borderBottom: `1px solid ${terminalBorder}`, flexShrink: 0 }}>
             <span style={{ fontSize: '9px', letterSpacing: '3px', color: '#8888aa', fontWeight: 'bold' }}>SYSTEM LOG</span>
           </div>
-          <div style={{ padding: '5px 12px', background: '#1a1c24', height: '36px', overflowY: 'auto', flexShrink: 0 }}>
+          <div style={{ padding: '5px 12px', background: '#1a1c24', height: '88px', overflowY: 'auto', flexShrink: 0 }}>
             {[
+              ...amdActivity.map(a => `> ${a}`),
               status === 'connected' && `> CONNECTED — ${currentLead?.first_name} ${currentLead?.last_name}`,
               status === 'calling' && '> DIALING IN QUEUE...',
+              status === 'preview_ready' && `> PREVIEW LOADED — ${previewLead?.first_name} ${previewLead?.last_name}`,
+              currentCampaign && `> MODE: ${dialerMode.toUpperCase()}${amdEnabled ? ' + AMD' : ''}`,
+              isPredictive && pacingInfo && `> AGENTS: ${pacingInfo.activeAgents} · ABANDON: ${(pacingInfo.abandonRate * 100).toFixed(2)}%`,
+              currentSessionId && '> SESSION ACTIVE',
               !isPersonalScope && currentScope && `> SCOPE: ${currentScope.name.toUpperCase()}`,
               swReady && '> AUDIO READY',
-              micGranted && '> MIC READY',
               available && '> AGENT STATUS: ONLINE',
-              `> SESSION STARTED ${dateStr}`,
-              '> DIALERSEAT TERMINAL READY',
-            ].filter(Boolean).map((log, i) => (
+            ].filter(Boolean).slice(0, 12).map((log, i) => (
               <div key={i} style={{
                 fontSize: '9px', fontFamily: 'monospace',
                 color: i === 0 ? '#4a9eff' : '#4a5a4a',
@@ -1413,23 +1736,4 @@ const navLinkStyle: React.CSSProperties = {
   border: '1px solid #2a4a8a', borderRadius: 3,
   color: '#4a9eff', fontSize: 10, fontWeight: 700, letterSpacing: 2,
   textDecoration: 'none', fontFamily: 'Futura PT, Futura, sans-serif',
-}
-
-export default function DialerPage() {
-  return (
-    <Suspense
-      fallback={
-        <div style={{
-          flex: 1, background: '#f0f1f4',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          minHeight: 'calc(100vh - 64px)',
-          fontFamily: 'Futura PT, Futura, sans-serif',
-        }}>
-          <div style={{ fontSize: 11, letterSpacing: 4, color: '#5a5e6a' }}>LOADING TERMINAL...</div>
-        </div>
-      }
-    >
-      <DialerPageInner />
-    </Suspense>
-  )
 }
