@@ -3,9 +3,11 @@ import { NextResponse } from 'next/server'
 import { requireActive } from '@/lib/subscription'
 import { auth } from '@clerk/nextjs/server'
 
+const VALID_MODES = ['preview', 'power', 'progressive', 'predictive'] as const
+type DialerMode = typeof VALID_MODES[number]
+
 export async function POST(req: Request) {
   try {
-    // Active subscription required to create campaigns
     const gate = await requireActive()
     if (gate) return gate
 
@@ -15,21 +17,39 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json()
-    const { name } = body
+    const { name, dialer_mode, amd_enabled, predictive_lines_per_agent, voicemail_drop_url } = body
 
     if (!name || typeof name !== 'string' || !name.trim()) {
-      return NextResponse.json(
-        { success: false, error: 'Campaign name required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ success: false, error: 'Campaign name required' }, { status: 400 })
     }
 
-    // Always use the authenticated userId — never trust user_id from request body.
-    // Previous version accepted user_id from the body, which let anyone create
-    // campaigns under any user.
+    // Validate dialer mode (default to 'power' for backward compat)
+    const mode: DialerMode = dialer_mode && VALID_MODES.includes(dialer_mode)
+      ? dialer_mode
+      : 'power'
+
+    // AMD: defaults to true for progressive/predictive, false for power/preview.
+    // Power and preview agents listen for voicemail themselves. Progressive and
+    // predictive cannot tolerate voicemails reaching the agent.
+    const amdDefault = mode === 'progressive' || mode === 'predictive'
+    const amdEnabled = typeof amd_enabled === 'boolean' ? amd_enabled : amdDefault
+
+    // Predictive lines per agent: clamp 1.0 - 3.0, default 1.5
+    let lines = 1.5
+    if (typeof predictive_lines_per_agent === 'number') {
+      lines = Math.max(1.0, Math.min(3.0, predictive_lines_per_agent))
+    }
+
     const { data, error } = await supabaseAdmin
       .from('campaigns')
-      .insert({ user_id: userId, name: name.trim() })
+      .insert({
+        user_id: userId,
+        name: name.trim(),
+        dialer_mode: mode,
+        amd_enabled: amdEnabled,
+        predictive_lines_per_agent: lines,
+        voicemail_drop_url: voicemail_drop_url || null,
+      })
       .select()
       .single()
 
