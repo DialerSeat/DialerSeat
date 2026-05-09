@@ -132,6 +132,21 @@ export default function TeamsPage() {
   const [actionError, setActionError] = useState<string | null>(null)
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
 
+  // Edit team modal
+  const [editTeam, setEditTeam] = useState<OwnedTeam | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editDesc, setEditDesc] = useState('')
+  const [editSubmitting, setEditSubmitting] = useState(false)
+  const [editError, setEditError] = useState<string | null>(null)
+
+  // Two-stage delete team modal
+  const [deleteTeamStage, setDeleteTeamStage] = useState<{
+    team: OwnedTeam
+    stage: 'confirm' | 'type'
+  } | null>(null)
+  const [deleteTypedConfirm, setDeleteTypedConfirm] = useState('')
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false)
+
   // New code modal
   const [codeModalTeam, setCodeModalTeam] = useState<OwnedTeam | null>(null)
   const [codeType, setCodeType] = useState<'seat' | 'recruit'>('seat')
@@ -149,7 +164,7 @@ export default function TeamsPage() {
   const [attachSubmitting, setAttachSubmitting] = useState(false)
   const [attachError, setAttachError] = useState<string | null>(null)
 
-  // Typed-confirm modal (generic)
+  // Generic typed-confirm modal (for non-delete-team destructive actions)
   const [confirmState, setConfirmState] = useState<{
     title: string
     body: string
@@ -169,7 +184,6 @@ export default function TeamsPage() {
         const owned = data.teams.owned || []
         setOwnedTeams(owned)
         setMemberTeams(data.teams.member || [])
-        // Auto-expand first team if owner has exactly one team
         if (owned.length === 1) {
           setExpandedTeams({ [owned[0].id]: true })
         }
@@ -287,7 +301,6 @@ export default function TeamsPage() {
     }
   }
 
-  // Owner actions
   const toggleExpanded = (teamId: string) => {
     setExpandedTeams(prev => ({ ...prev, [teamId]: !prev[teamId] }))
   }
@@ -300,7 +313,7 @@ export default function TeamsPage() {
     } catch {}
   }
 
-  const acceptMember = async (m: TeamMember, isOwnerPays: boolean) => {
+  const acceptMember = async (m: TeamMember) => {
     setActioningId(m.id)
     setActionError(null)
     try {
@@ -350,8 +363,8 @@ export default function TeamsPage() {
 
   const removeMember = (m: TeamMember) => {
     setConfirmState({
-      title: 'REMOVE MEMBER',
-      body: `Remove ${displayName(m.user, 'this member')} from the team? Their seat subscription (if owner-paid) will be canceled at end of period — no refunds. Type "remove" to confirm.`,
+      title: 'KICK MEMBER',
+      body: `Remove ${displayName(m.user, 'this member')} from the team? They lose all campaign access and any owner-paid subs end at period close. No refunds. Type "remove" to confirm.`,
       confirmWord: 'remove',
       danger: true,
       onConfirm: async () => {
@@ -453,7 +466,6 @@ export default function TeamsPage() {
     setAttachAccessMode('owner_pays')
     setAttachError(null)
     const list = await loadCampaigns()
-    // Filter out already-attached campaigns
     const attachedIds = new Set(team.teamCampaigns.map(tc => tc.campaignId))
     setAttachCampaigns(list.filter(c => !attachedIds.has(c.id)))
   }
@@ -518,7 +530,7 @@ export default function TeamsPage() {
   const detachCampaign = (teamId: string, campaignId: string, campaignName: string) => {
     setConfirmState({
       title: 'DETACH CAMPAIGN',
-      body: `Detach "${campaignName}" from this team? Member access to this campaign will be revoked. Owner-paid seat subs tied solely to this campaign will be canceled at end of period (no refunds). Type "remove" to confirm.`,
+      body: `Detach "${campaignName}" from this team? Member access to this campaign will be revoked. Owner-paid seat subs tied to this campaign end at period close (no refunds). Type "remove" to confirm.`,
       confirmWord: 'remove',
       danger: true,
       onConfirm: async () => {
@@ -547,6 +559,72 @@ export default function TeamsPage() {
       setActionError(err.message || 'Action failed')
     } finally {
       setConfirmSubmitting(false)
+    }
+  }
+
+  // Edit team
+  const openEditModal = (team: OwnedTeam) => {
+    setEditTeam(team)
+    setEditName(team.name)
+    setEditDesc(team.description || '')
+    setEditError(null)
+  }
+
+  const submitEdit = async () => {
+    if (!editTeam) return
+    setEditSubmitting(true)
+    setEditError(null)
+    try {
+      const res = await fetch(`/api/teams/${editTeam.id}/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: editName.trim(), description: editDesc.trim() || null }),
+      })
+      const data = await res.json()
+      if (!data.success) {
+        setEditError(data.error || 'Failed to update')
+        return
+      }
+      setEditTeam(null)
+      await loadTeams()
+    } catch (err: any) {
+      setEditError(err.message || 'Failed to update')
+    } finally {
+      setEditSubmitting(false)
+    }
+  }
+
+  // Two-stage delete
+  const startDeleteTeam = (team: OwnedTeam) => {
+    setDeleteTeamStage({ team, stage: 'confirm' })
+    setDeleteTypedConfirm('')
+  }
+
+  const proceedToDeleteType = () => {
+    if (!deleteTeamStage) return
+    setDeleteTeamStage({ ...deleteTeamStage, stage: 'type' })
+  }
+
+  const submitDeleteTeam = async () => {
+    if (!deleteTeamStage) return
+    if (deleteTypedConfirm.trim().toLowerCase() !== 'delete') return
+    setDeleteSubmitting(true)
+    setActionError(null)
+    try {
+      const res = await fetch(`/api/teams/${deleteTeamStage.team.id}/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: 'remove' }),
+      })
+      const data = await res.json()
+      if (!data.success) throw new Error(data.error || 'Failed to delete')
+      setDeleteTeamStage(null)
+      setDeleteTypedConfirm('')
+      await loadTeams()
+    } catch (err: any) {
+      setActionError(err.message || 'Failed to delete')
+    } finally {
+      setDeleteSubmitting(false)
     }
   }
 
@@ -687,7 +765,6 @@ export default function TeamsPage() {
           )}
         </div>
 
-        {/* GLOBAL ACTION ERROR */}
         {actionError && (
           <div style={{
             background: '#f8e8e8',
@@ -714,7 +791,7 @@ export default function TeamsPage() {
           </div>
         )}
 
-        {/* MEMBER TEAMS — simple list */}
+        {/* MEMBER TEAMS */}
         {memberTeams.length > 0 && (
           <div style={{ marginBottom: 24 }}>
             <div style={{
@@ -772,7 +849,7 @@ export default function TeamsPage() {
           </div>
         )}
 
-        {/* OWNED TEAMS — full management */}
+        {/* OWNED TEAMS */}
         {ownedTeams.length > 0 && (
           <div style={{ marginBottom: 24 }}>
             <div style={{
@@ -804,7 +881,6 @@ export default function TeamsPage() {
                         overflow: 'hidden',
                       }}
                     >
-                      {/* Team header strip */}
                       <div
                         onClick={() => toggleExpanded(team.id)}
                         style={{
@@ -865,11 +941,10 @@ export default function TeamsPage() {
                         }}>OWNER</div>
                       </div>
 
-                      {/* Expanded management content */}
                       {isExpanded && (
                         <div style={{ padding: '16px 18px', background: T.surface }}>
 
-                          {/* PENDING MEMBERS */}
+                          {/* PENDING MEMBERS — always first when present */}
                           {pendingCount > 0 && (
                             <Section title="PENDING REQUESTS" accent={T.amber}>
                               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -906,7 +981,7 @@ export default function TeamsPage() {
                                       </div>
                                       <div style={{ display: 'flex', gap: 6 }}>
                                         <button
-                                          onClick={() => acceptMember(m, isOwnerPays)}
+                                          onClick={() => acceptMember(m)}
                                           disabled={actioningId === m.id}
                                           style={btnPrimary(actioningId === m.id)}
                                         >
@@ -925,42 +1000,78 @@ export default function TeamsPage() {
                             </Section>
                           )}
 
-                          {/* ACTIVE MEMBERS */}
-                          <Section title={`ACTIVE MEMBERS (${memberCount})`} accent={T.accent}>
-                            {memberCount === 0 ? (
-                              <EmptyHint text="No active members yet. Generate a code and share it with an agent to get started." />
+                          {/* CAMPAIGNS — moved before codes per request */}
+                          <Section
+                            title={`ATTACHED CAMPAIGNS (${campaignCount})`}
+                            accent={T.accent}
+                            action={(
+                              <button
+                                onClick={() => openAttachModal(team)}
+                                style={btnPrimary(false)}
+                              >+ ATTACH</button>
+                            )}
+                          >
+                            {campaignCount === 0 ? (
+                              <EmptyHint text="No campaigns attached. Attach a campaign to grant team members access to its leads." />
                             ) : (
                               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                {team.members.map(m => (
-                                  <div
-                                    key={m.id}
-                                    style={{
-                                      background: T.bg,
-                                      border: `1px solid ${T.border}`,
-                                      borderRadius: 3,
-                                      padding: '8px 12px',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: 10,
-                                      flexWrap: 'wrap',
-                                    }}
-                                  >
-                                    <div style={{ flex: '1 1 200px', minWidth: 0 }}>
-                                      <div style={{ fontSize: 12, fontWeight: 'bold', color: T.text, letterSpacing: 0.5 }}>
-                                        {displayName(m.user, m.user_id.slice(0, 12))}
+                                {team.teamCampaigns.map(tc => {
+                                  const busy = actioningId === `${team.id}:${tc.campaignId}`
+                                  return (
+                                    <div
+                                      key={tc.campaignId}
+                                      style={{
+                                        background: T.bg,
+                                        border: `1px solid ${T.border}`,
+                                        borderRadius: 3,
+                                        padding: '8px 12px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 10,
+                                        flexWrap: 'wrap',
+                                      }}
+                                    >
+                                      <div style={{ flex: '1 1 180px', minWidth: 0 }}>
+                                        <div style={{
+                                          fontSize: 12, fontWeight: 'bold', color: T.text, letterSpacing: 0.5,
+                                          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                        }}>
+                                          {tc.campaign?.name || '(deleted campaign)'}
+                                        </div>
+                                        {tc.campaign && (
+                                          <div style={{ fontSize: 10, color: T.muted, fontFamily: 'monospace', marginTop: 2 }}>
+                                            {tc.campaign.called_leads} / {tc.campaign.total_leads} called
+                                          </div>
+                                        )}
                                       </div>
-                                      <div style={{ fontSize: 10, color: T.muted, fontFamily: 'monospace', marginTop: 2 }}>
-                                        joined {m.accepted_at ? fmtDate(m.accepted_at) : fmtDate(m.created_at)}
-                                        {m.joined_via_code && ` · via ${m.joined_via_code}`}
-                                      </div>
+                                      <select
+                                        value={tc.accessMode}
+                                        onChange={e => updateCampaignAccess(team.id, tc.campaignId, e.target.value as any)}
+                                        disabled={busy}
+                                        style={{
+                                          padding: '5px 8px',
+                                          background: T.surface,
+                                          border: `1px solid ${T.border}`,
+                                          borderRadius: 3,
+                                          fontSize: 10,
+                                          fontFamily: 'monospace',
+                                          letterSpacing: 1,
+                                          color: T.text,
+                                          cursor: busy ? 'not-allowed' : 'pointer',
+                                        }}
+                                      >
+                                        <option value="owner_pays">OWNER PAYS</option>
+                                        <option value="agent_pays">AGENT PAYS</option>
+                                        <option value="public">PUBLIC</option>
+                                      </select>
+                                      <button
+                                        onClick={() => detachCampaign(team.id, tc.campaignId, tc.campaign?.name || 'this campaign')}
+                                        disabled={busy}
+                                        style={btnSubtle(busy, T.red)}
+                                      >DETACH</button>
                                     </div>
-                                    <button
-                                      onClick={() => removeMember(m)}
-                                      disabled={actioningId === m.id}
-                                      style={btnSubtle(actioningId === m.id, T.red)}
-                                    >REMOVE</button>
-                                  </div>
-                                ))}
+                                  )
+                                })}
                               </div>
                             )}
                           </Section>
@@ -1043,81 +1154,58 @@ export default function TeamsPage() {
                             )}
                           </Section>
 
-                          {/* CAMPAIGNS */}
-                          <Section
-                            title={`ATTACHED CAMPAIGNS (${campaignCount})`}
-                            accent={T.accent}
-                            action={(
-                              <button
-                                onClick={() => openAttachModal(team)}
-                                style={btnPrimary(false)}
-                              >+ ATTACH</button>
-                            )}
-                          >
-                            {campaignCount === 0 ? (
-                              <EmptyHint text="No campaigns attached. Attach a campaign to grant team members access to its leads." />
+                          {/* ACTIVE MEMBERS — moved to bottom per request */}
+                          <Section title={`ACTIVE MEMBERS (${memberCount})`} accent={T.accent}>
+                            {memberCount === 0 ? (
+                              <EmptyHint text="No active members yet. Generate a code and share it with an agent to get started." />
                             ) : (
                               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                {team.teamCampaigns.map(tc => {
-                                  const busy = actioningId === `${team.id}:${tc.campaignId}`
-                                  return (
-                                    <div
-                                      key={tc.campaignId}
-                                      style={{
-                                        background: T.bg,
-                                        border: `1px solid ${T.border}`,
-                                        borderRadius: 3,
-                                        padding: '8px 12px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 10,
-                                        flexWrap: 'wrap',
-                                      }}
-                                    >
-                                      <div style={{ flex: '1 1 180px', minWidth: 0 }}>
-                                        <div style={{
-                                          fontSize: 12, fontWeight: 'bold', color: T.text, letterSpacing: 0.5,
-                                          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                                        }}>
-                                          {tc.campaign?.name || '(deleted campaign)'}
-                                        </div>
-                                        {tc.campaign && (
-                                          <div style={{ fontSize: 10, color: T.muted, fontFamily: 'monospace', marginTop: 2 }}>
-                                            {tc.campaign.called_leads} / {tc.campaign.total_leads} called
-                                          </div>
-                                        )}
+                                {team.members.map(m => (
+                                  <div
+                                    key={m.id}
+                                    style={{
+                                      background: T.bg,
+                                      border: `1px solid ${T.border}`,
+                                      borderRadius: 3,
+                                      padding: '8px 12px',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: 10,
+                                      flexWrap: 'wrap',
+                                    }}
+                                  >
+                                    <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+                                      <div style={{ fontSize: 12, fontWeight: 'bold', color: T.text, letterSpacing: 0.5 }}>
+                                        {displayName(m.user, m.user_id.slice(0, 12))}
                                       </div>
-                                      <select
-                                        value={tc.accessMode}
-                                        onChange={e => updateCampaignAccess(team.id, tc.campaignId, e.target.value as any)}
-                                        disabled={busy}
-                                        style={{
-                                          padding: '5px 8px',
-                                          background: T.surface,
-                                          border: `1px solid ${T.border}`,
-                                          borderRadius: 3,
-                                          fontSize: 10,
-                                          fontFamily: 'monospace',
-                                          letterSpacing: 1,
-                                          color: T.text,
-                                          cursor: busy ? 'not-allowed' : 'pointer',
-                                        }}
-                                      >
-                                        <option value="owner_pays">OWNER PAYS</option>
-                                        <option value="agent_pays">AGENT PAYS</option>
-                                        <option value="public">PUBLIC</option>
-                                      </select>
-                                      <button
-                                        onClick={() => detachCampaign(team.id, tc.campaignId, tc.campaign?.name || 'this campaign')}
-                                        disabled={busy}
-                                        style={btnSubtle(busy, T.red)}
-                                      >DETACH</button>
+                                      <div style={{ fontSize: 10, color: T.muted, fontFamily: 'monospace', marginTop: 2 }}>
+                                        joined {m.accepted_at ? fmtDate(m.accepted_at) : fmtDate(m.created_at)}
+                                        {m.joined_via_code && ` · via ${m.joined_via_code}`}
+                                      </div>
                                     </div>
-                                  )
-                                })}
+                                    <button
+                                      onClick={() => removeMember(m)}
+                                      disabled={actioningId === m.id}
+                                      style={btnSubtle(actioningId === m.id, T.red)}
+                                    >KICK</button>
+                                  </div>
+                                ))}
                               </div>
                             )}
                           </Section>
+
+                          {/* OWNER MANAGEMENT FOOTER — edit + delete team */}
+                          <div style={{
+                            marginTop: 18, paddingTop: 14, borderTop: `1px solid ${T.border}`,
+                            display: 'flex', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap',
+                          }}>
+                            <button onClick={() => openEditModal(team)} style={btnSubtle(false, T.muted)}>
+                              EDIT TEAM
+                            </button>
+                            <button onClick={() => startDeleteTeam(team)} style={btnSubtle(false, T.red)}>
+                              DELETE TEAM
+                            </button>
+                          </div>
 
                         </div>
                       )}
@@ -1129,7 +1217,6 @@ export default function TeamsPage() {
           </div>
         )}
 
-        {/* Empty state for users with no teams at all */}
         {!loading && !hasAnyTeam && (
           <div style={{
             background: T.surface,
@@ -1149,7 +1236,7 @@ export default function TeamsPage() {
           </div>
         )}
 
-        {/* WHAT IS A DIALERSEAT TEAM */}
+        {/* WHAT IS A DIALERSEAT TEAM — copy fix: "for free" removed */}
         <div style={{
           background: T.surface,
           border: `1px solid ${T.border}`,
@@ -1175,7 +1262,7 @@ export default function TeamsPage() {
             <p style={{
               fontSize: 16, lineHeight: 1.7, color: T.text, margin: 0,
             }}>
-              A team owner can give you access to their lead campaigns by sending you a code. Some team owners pay your $35 weekly seat for you (you dial their leads for free). Others require you to subscribe yourself for $35 to access their leads. Either way, you join with a code from the team owner.
+              A team owner can give you access to their lead campaigns by sending you a code. Some team owners pay your $35 weekly seat for you. Others require you to subscribe yourself for $35 to access their leads. Either way, you join with a code from the team owner.
             </p>
           </div>
 
@@ -1211,233 +1298,159 @@ export default function TeamsPage() {
 
       {/* SUB GATE MODAL */}
       {showSubGate && (
-        <div
-          onClick={() => setShowSubGate(false)}
-          style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 100, padding: 20,
-          }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              background: T.dark,
-              border: `1px solid ${T.border}`,
-              borderTop: `3px solid #ffaa3e`,
-              borderRadius: 4,
-              padding: 32,
-              maxWidth: 440,
-              width: '100%',
-              color: '#e0e2ea',
-              textAlign: 'center',
-            }}
-          >
+        <div onClick={() => setShowSubGate(false)} style={overlayStyle}>
+          <div onClick={e => e.stopPropagation()} style={{
+            ...modalShellStyle, background: T.dark, borderTop: `3px solid #ffaa3e`,
+            color: '#e0e2ea', textAlign: 'center', maxWidth: 440,
+          }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>🔒</div>
             <div style={{
               fontSize: 14, fontWeight: 'bold', letterSpacing: 4, color: '#ffaa3e', marginBottom: 12,
             }}>SUBSCRIPTION REQUIRED</div>
-            <p style={{
-              fontSize: 12, lineHeight: 1.7, color: '#c0c2ca', letterSpacing: 1, marginBottom: 24,
-            }}>
+            <p style={{ fontSize: 12, lineHeight: 1.7, color: '#c0c2ca', letterSpacing: 1, marginBottom: 24 }}>
               Creating teams requires an active personal subscription. Subscribe for $35/week to upload your own leads, build teams, and start selling seats to other agents.
             </p>
-            <Link
-              href="/billing"
-              style={{
-                display: 'block',
-                padding: '14px 24px',
-                background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
-                border: 'none',
-                borderRadius: 4,
-                color: 'white',
-                fontSize: 12,
-                fontWeight: 'bold',
-                letterSpacing: 4,
-                textDecoration: 'none',
-                marginBottom: 10,
-                fontFamily: 'Futura PT, Futura, sans-serif',
-              }}
-            >SUBSCRIBE — $35/WEEK</Link>
-            <button
-              onClick={() => setShowSubGate(false)}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: '#888a92',
-                fontSize: 11,
-                letterSpacing: 2,
-                cursor: 'pointer',
-                fontFamily: 'Futura PT, Futura, sans-serif',
-                padding: 8,
-              }}
-            >CLOSE</button>
+            <Link href="/billing" style={{
+              display: 'block', padding: '14px 24px',
+              background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+              border: 'none', borderRadius: 4, color: 'white',
+              fontSize: 12, fontWeight: 'bold', letterSpacing: 4, textDecoration: 'none', marginBottom: 10,
+              fontFamily: 'Futura PT, Futura, sans-serif',
+            }}>SUBSCRIBE — $35/WEEK</Link>
+            <button onClick={() => setShowSubGate(false)} style={{
+              background: 'transparent', border: 'none', color: '#888a92',
+              fontSize: 11, letterSpacing: 2, cursor: 'pointer',
+              fontFamily: 'Futura PT, Futura, sans-serif', padding: 8,
+            }}>CLOSE</button>
           </div>
         </div>
       )}
 
       {/* CREATE TEAM MODAL */}
       {showCreateModal && (
-        <div
-          onClick={() => !creating && setShowCreateModal(false)}
-          style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 100, padding: 20,
-          }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              background: T.bg,
-              border: `1px solid ${T.border}`,
-              borderTop: `3px solid ${T.blue}`,
-              borderRadius: 4,
-              padding: 28,
-              maxWidth: 480,
-              width: '100%',
-              fontFamily: 'Futura PT, Futura, sans-serif',
-            }}
-          >
-            <div style={{
-              fontSize: 12, fontWeight: 'bold', letterSpacing: 4, color: T.blue, marginBottom: 16,
-            }}>+ CREATE A TEAM</div>
-
-            <div style={{ marginBottom: 14 }}>
-              <label style={{
-                display: 'block', fontSize: 9, letterSpacing: 2, color: T.muted,
-                fontWeight: 'bold', marginBottom: 6,
-              }}>TEAM NAME</label>
-              <input
-                type="text"
-                value={createName}
-                onChange={e => setCreateName(e.target.value)}
-                placeholder="Premium Leads"
-                disabled={creating}
-                autoFocus
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  background: T.surface,
-                  border: `1px solid ${T.border}`,
-                  borderRadius: 3,
-                  fontFamily: 'monospace',
-                  fontSize: 13,
-                  color: T.text,
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                }}
-              />
+        <div onClick={() => !creating && setShowCreateModal(false)} style={overlayStyle}>
+          <div onClick={e => e.stopPropagation()} style={{ ...modalShellStyle, borderTop: `3px solid ${T.blue}` }}>
+            <div style={{ fontSize: 12, fontWeight: 'bold', letterSpacing: 4, color: T.blue, marginBottom: 16 }}>+ CREATE A TEAM</div>
+            <FieldLabel>TEAM NAME</FieldLabel>
+            <input
+              type="text" value={createName} onChange={e => setCreateName(e.target.value)}
+              placeholder="Premium Leads" disabled={creating} autoFocus
+              style={modalInput}
+            />
+            <div style={{ height: 12 }} />
+            <FieldLabel>DESCRIPTION</FieldLabel>
+            <textarea
+              value={createDesc} onChange={e => setCreateDesc(e.target.value)}
+              placeholder="What's this team for?" disabled={creating} rows={3}
+              style={{ ...modalInput, fontSize: 12, resize: 'vertical' }}
+            />
+            {createError && <ErrorInline text={createError} />}
+            <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+              <button onClick={() => setShowCreateModal(false)} disabled={creating} style={modalCancelBtn(creating)}>CANCEL</button>
+              <button onClick={handleCreateSubmit} disabled={!createName.trim() || creating} style={modalConfirmBtn(!createName.trim() || creating, T.blue)}>
+                {creating ? '...' : '▶ CREATE TEAM'}
+              </button>
             </div>
+          </div>
+        </div>
+      )}
 
-            <div style={{ marginBottom: 18 }}>
-              <label style={{
-                display: 'block', fontSize: 9, letterSpacing: 2, color: T.muted,
-                fontWeight: 'bold', marginBottom: 6,
-              }}>DESCRIPTION (OPTIONAL)</label>
-              <textarea
-                value={createDesc}
-                onChange={e => setCreateDesc(e.target.value)}
-                placeholder="What's this team for?"
-                disabled={creating}
-                rows={3}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  background: T.surface,
-                  border: `1px solid ${T.border}`,
-                  borderRadius: 3,
-                  fontFamily: 'monospace',
-                  fontSize: 12,
-                  color: T.text,
-                  outline: 'none',
-                  resize: 'vertical',
-                  boxSizing: 'border-box',
-                }}
-              />
+      {/* EDIT TEAM MODAL */}
+      {editTeam && (
+        <div onClick={() => !editSubmitting && setEditTeam(null)} style={overlayStyle}>
+          <div onClick={e => e.stopPropagation()} style={{ ...modalShellStyle, borderTop: `3px solid ${T.blue}` }}>
+            <div style={{ fontSize: 12, fontWeight: 'bold', letterSpacing: 4, color: T.blue, marginBottom: 16 }}>EDIT TEAM</div>
+            <FieldLabel>TEAM NAME</FieldLabel>
+            <input
+              type="text" value={editName} onChange={e => setEditName(e.target.value)}
+              disabled={editSubmitting} autoFocus style={modalInput}
+            />
+            <div style={{ height: 12 }} />
+            <FieldLabel>DESCRIPTION</FieldLabel>
+            <textarea
+              value={editDesc} onChange={e => setEditDesc(e.target.value)}
+              disabled={editSubmitting} rows={3}
+              style={{ ...modalInput, fontSize: 12, resize: 'vertical' }}
+            />
+            {editError && <ErrorInline text={editError} />}
+            <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+              <button onClick={() => setEditTeam(null)} disabled={editSubmitting} style={modalCancelBtn(editSubmitting)}>CANCEL</button>
+              <button onClick={submitEdit} disabled={!editName.trim() || editSubmitting} style={modalConfirmBtn(!editName.trim() || editSubmitting, T.blue)}>
+                {editSubmitting ? '...' : '▶ SAVE'}
+              </button>
             </div>
+          </div>
+        </div>
+      )}
 
-            {createError && (
-              <div style={{
-                background: '#f8e8e8',
-                border: `1px solid ${T.red}`,
-                color: T.red,
-                padding: '8px 12px',
-                borderRadius: 3,
-                fontSize: 11,
-                letterSpacing: 1,
-                marginBottom: 14,
-              }}>{createError}</div>
+      {/* TWO-STAGE DELETE TEAM MODAL */}
+      {deleteTeamStage && (
+        <div onClick={() => !deleteSubmitting && (setDeleteTeamStage(null), setDeleteTypedConfirm(''))} style={overlayStyle}>
+          <div onClick={e => e.stopPropagation()} style={{ ...modalShellStyle, borderTop: `3px solid ${T.red}` }}>
+            {deleteTeamStage.stage === 'confirm' ? (
+              <>
+                <div style={{ fontSize: 12, fontWeight: 'bold', letterSpacing: 4, color: T.red, marginBottom: 14 }}>
+                  DELETE TEAM
+                </div>
+                <p style={{ fontSize: 14, lineHeight: 1.6, color: T.text, margin: '0 0 8px 0' }}>
+                  Are you sure you want to delete <strong>{deleteTeamStage.team.name}</strong>?
+                </p>
+                <p style={{ fontSize: 12, lineHeight: 1.6, color: T.muted, margin: '0 0 16px 0' }}>
+                  All members lose access. Owner-paid seat subscriptions end at period close. Refunds for partial periods are only available via dispute through the cardholder&apos;s bank. This cannot be undone.
+                </p>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => setDeleteTeamStage(null)} style={modalCancelBtn(false)}>NO, KEEP TEAM</button>
+                  <button onClick={proceedToDeleteType} style={modalConfirmBtn(false, T.red)}>YES, DELETE →</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: 12, fontWeight: 'bold', letterSpacing: 4, color: T.red, marginBottom: 14 }}>
+                  CONFIRM DELETE
+                </div>
+                <p style={{ fontSize: 13, lineHeight: 1.6, color: T.text, margin: '0 0 14px 0' }}>
+                  Type <strong style={{ color: T.red, fontFamily: 'monospace' }}>delete</strong> to permanently remove <strong>{deleteTeamStage.team.name}</strong>.
+                </p>
+                <input
+                  type="text"
+                  value={deleteTypedConfirm}
+                  onChange={e => setDeleteTypedConfirm(e.target.value)}
+                  placeholder='type "delete"'
+                  autoFocus
+                  disabled={deleteSubmitting}
+                  style={modalInput}
+                />
+                {actionError && <ErrorInline text={actionError} />}
+                <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+                  <button
+                    onClick={() => { setDeleteTeamStage(null); setDeleteTypedConfirm('') }}
+                    disabled={deleteSubmitting}
+                    style={modalCancelBtn(deleteSubmitting)}
+                  >CANCEL</button>
+                  <button
+                    onClick={submitDeleteTeam}
+                    disabled={
+                      deleteSubmitting ||
+                      deleteTypedConfirm.trim().toLowerCase() !== 'delete'
+                    }
+                    style={modalConfirmBtn(
+                      deleteSubmitting ||
+                      deleteTypedConfirm.trim().toLowerCase() !== 'delete',
+                      T.red
+                    )}
+                  >{deleteSubmitting ? '...' : '▶ DELETE FOREVER'}</button>
+                </div>
+              </>
             )}
-
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                onClick={() => setShowCreateModal(false)}
-                disabled={creating}
-                style={{
-                  flex: 1,
-                  padding: '10px',
-                  background: 'transparent',
-                  border: `1px solid ${T.border}`,
-                  borderRadius: 3,
-                  color: T.muted,
-                  fontSize: 11,
-                  fontWeight: 'bold',
-                  letterSpacing: 2,
-                  cursor: creating ? 'not-allowed' : 'pointer',
-                  fontFamily: 'Futura PT, Futura, sans-serif',
-                }}
-              >CANCEL</button>
-              <button
-                onClick={handleCreateSubmit}
-                disabled={!createName.trim() || creating}
-                style={{
-                  flex: 2,
-                  padding: '10px',
-                  background: T.dark,
-                  border: 'none',
-                  borderRadius: 3,
-                  borderTop: `3px solid ${T.blue}`,
-                  color: T.blue,
-                  fontSize: 11,
-                  fontWeight: 'bold',
-                  letterSpacing: 2,
-                  cursor: !createName.trim() || creating ? 'not-allowed' : 'pointer',
-                  opacity: !createName.trim() || creating ? 0.5 : 1,
-                  fontFamily: 'Futura PT, Futura, sans-serif',
-                }}
-              >{creating ? '...' : '▶ CREATE TEAM'}</button>
-            </div>
           </div>
         </div>
       )}
 
       {/* NEW CODE MODAL */}
       {codeModalTeam && (
-        <div
-          onClick={() => !codeCreating && setCodeModalTeam(null)}
-          style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 100, padding: 20,
-          }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              background: T.bg,
-              border: `1px solid ${T.border}`,
-              borderTop: `3px solid ${T.blue}`,
-              borderRadius: 4,
-              padding: 28,
-              maxWidth: 480,
-              width: '100%',
-              fontFamily: 'Futura PT, Futura, sans-serif',
-            }}
-          >
-            <div style={{
-              fontSize: 12, fontWeight: 'bold', letterSpacing: 4, color: T.blue, marginBottom: 4,
-            }}>+ NEW CODE</div>
+        <div onClick={() => !codeCreating && setCodeModalTeam(null)} style={overlayStyle}>
+          <div onClick={e => e.stopPropagation()} style={{ ...modalShellStyle, borderTop: `3px solid ${T.blue}` }}>
+            <div style={{ fontSize: 12, fontWeight: 'bold', letterSpacing: 4, color: T.blue, marginBottom: 4 }}>+ NEW CODE</div>
             <div style={{ fontSize: 11, color: T.muted, marginBottom: 18, letterSpacing: 1 }}>
               for {codeModalTeam.name}
             </div>
@@ -1454,7 +1467,7 @@ export default function TeamsPage() {
 
             <FieldLabel>WHO PAYS THE $35/WEEK?</FieldLabel>
             <SegmentedTwo
-              left={{ label: 'OWNER PAYS', value: 'owner', desc: 'You pay the seat. Agent dials your leads for free.' }}
+              left={{ label: 'OWNER PAYS', value: 'owner', desc: 'You pay the seat. Agent dials your leads.' }}
               right={{ label: 'AGENT PAYS', value: 'agent', desc: 'Agent subscribes themselves to access.' }}
               value={codePayer}
               onChange={v => setCodePayer(v as 'owner' | 'agent')}
@@ -1462,58 +1475,29 @@ export default function TeamsPage() {
 
             <div style={{ height: 14 }} />
 
-            <FieldLabel>CAMPAIGN (OPTIONAL)</FieldLabel>
+            <FieldLabel>CAMPAIGN</FieldLabel>
             <select
               value={codeCampaignId}
               onChange={e => setCodeCampaignId(e.target.value)}
               disabled={codeCreating}
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                background: T.surface,
-                border: `1px solid ${T.border}`,
-                borderRadius: 3,
-                fontFamily: 'monospace',
-                fontSize: 12,
-                color: T.text,
-                outline: 'none',
-                boxSizing: 'border-box',
-                marginBottom: 6,
-              }}
+              style={{ ...modalInput, fontSize: 12, padding: '10px 12px' }}
             >
               <option value="">All attached campaigns</option>
               {codeCampaigns.map(c => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
-            <div style={{ fontSize: 10, color: T.muted, letterSpacing: 0.5, marginBottom: 16 }}>
+            <div style={{ fontSize: 10, color: T.muted, letterSpacing: 0.5, marginTop: 6, marginBottom: 16 }}>
               Limit this code to one campaign, or leave blank for all attached.
             </div>
 
-            {codeError && (
-              <div style={{
-                background: '#f8e8e8',
-                border: `1px solid ${T.red}`,
-                color: T.red,
-                padding: '8px 12px',
-                borderRadius: 3,
-                fontSize: 11,
-                letterSpacing: 1,
-                marginBottom: 14,
-              }}>{codeError}</div>
-            )}
+            {codeError && <ErrorInline text={codeError} />}
 
             <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                onClick={() => setCodeModalTeam(null)}
-                disabled={codeCreating}
-                style={modalCancelBtn(codeCreating)}
-              >CANCEL</button>
-              <button
-                onClick={submitCreateCode}
-                disabled={codeCreating}
-                style={modalConfirmBtn(codeCreating, T.blue)}
-              >{codeCreating ? '...' : '▶ CREATE CODE'}</button>
+              <button onClick={() => setCodeModalTeam(null)} disabled={codeCreating} style={modalCancelBtn(codeCreating)}>CANCEL</button>
+              <button onClick={submitCreateCode} disabled={codeCreating} style={modalConfirmBtn(codeCreating, T.blue)}>
+                {codeCreating ? '...' : '▶ CREATE CODE'}
+              </button>
             </div>
           </div>
         </div>
@@ -1521,38 +1505,15 @@ export default function TeamsPage() {
 
       {/* ATTACH CAMPAIGN MODAL */}
       {attachModalTeam && (
-        <div
-          onClick={() => !attachSubmitting && setAttachModalTeam(null)}
-          style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 100, padding: 20,
-          }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              background: T.bg,
-              border: `1px solid ${T.border}`,
-              borderTop: `3px solid ${T.blue}`,
-              borderRadius: 4,
-              padding: 28,
-              maxWidth: 480,
-              width: '100%',
-              fontFamily: 'Futura PT, Futura, sans-serif',
-            }}
-          >
-            <div style={{
-              fontSize: 12, fontWeight: 'bold', letterSpacing: 4, color: T.blue, marginBottom: 4,
-            }}>+ ATTACH CAMPAIGN</div>
+        <div onClick={() => !attachSubmitting && setAttachModalTeam(null)} style={overlayStyle}>
+          <div onClick={e => e.stopPropagation()} style={{ ...modalShellStyle, borderTop: `3px solid ${T.blue}` }}>
+            <div style={{ fontSize: 12, fontWeight: 'bold', letterSpacing: 4, color: T.blue, marginBottom: 4 }}>+ ATTACH CAMPAIGN</div>
             <div style={{ fontSize: 11, color: T.muted, marginBottom: 18, letterSpacing: 1 }}>
               to {attachModalTeam.name}
             </div>
 
             {attachCampaigns.length === 0 ? (
-              <div style={{
-                fontSize: 12, color: T.muted, lineHeight: 1.6, padding: '16px 0',
-              }}>
+              <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.6, padding: '16px 0' }}>
                 You have no remaining campaigns to attach. Either all your campaigns are already attached, or you haven&apos;t created any yet.{' '}
                 <Link href="/dashboard/campaigns" style={{ color: T.blue }}>Go to campaigns →</Link>
               </div>
@@ -1563,19 +1524,7 @@ export default function TeamsPage() {
                   value={attachCampaignId}
                   onChange={e => setAttachCampaignId(e.target.value)}
                   disabled={attachSubmitting}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    background: T.surface,
-                    border: `1px solid ${T.border}`,
-                    borderRadius: 3,
-                    fontFamily: 'monospace',
-                    fontSize: 12,
-                    color: T.text,
-                    outline: 'none',
-                    boxSizing: 'border-box',
-                    marginBottom: 14,
-                  }}
+                  style={{ ...modalInput, fontSize: 12, padding: '10px 12px', marginBottom: 14 }}
                 >
                   <option value="">Select a campaign…</option>
                   {attachCampaigns.map(c => (
@@ -1586,26 +1535,18 @@ export default function TeamsPage() {
                 <FieldLabel>ACCESS MODE</FieldLabel>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
                   {([
-                    { v: 'owner_pays', t: 'OWNER PAYS', d: 'You pay $35/wk per agent who joins. Agents dial free.' },
+                    { v: 'owner_pays', t: 'OWNER PAYS', d: 'You pay $35/wk per agent who joins. Agents dial without paying.' },
                     { v: 'agent_pays', t: 'AGENT PAYS', d: 'Agents must have their own $35/wk sub to access.' },
                     { v: 'public', t: 'PUBLIC', d: 'Any active subscriber can access without a code.' },
                   ] as const).map(opt => (
-                    <label
-                      key={opt.v}
-                      style={{
-                        display: 'flex',
-                        gap: 10,
-                        padding: '10px 12px',
-                        background: attachAccessMode === opt.v ? '#dde0e8' : T.surface,
-                        border: `1px solid ${attachAccessMode === opt.v ? T.blue : T.border}`,
-                        borderRadius: 3,
-                        cursor: 'pointer',
-                      }}
-                    >
+                    <label key={opt.v} style={{
+                      display: 'flex', gap: 10, padding: '10px 12px',
+                      background: attachAccessMode === opt.v ? '#dde0e8' : T.surface,
+                      border: `1px solid ${attachAccessMode === opt.v ? T.blue : T.border}`,
+                      borderRadius: 3, cursor: 'pointer',
+                    }}>
                       <input
-                        type="radio"
-                        name="access_mode"
-                        value={opt.v}
+                        type="radio" name="access_mode" value={opt.v}
                         checked={attachAccessMode === opt.v}
                         onChange={() => setAttachAccessMode(opt.v)}
                         style={{ marginTop: 2 }}
@@ -1620,25 +1561,10 @@ export default function TeamsPage() {
               </>
             )}
 
-            {attachError && (
-              <div style={{
-                background: '#f8e8e8',
-                border: `1px solid ${T.red}`,
-                color: T.red,
-                padding: '8px 12px',
-                borderRadius: 3,
-                fontSize: 11,
-                letterSpacing: 1,
-                marginBottom: 14,
-              }}>{attachError}</div>
-            )}
+            {attachError && <ErrorInline text={attachError} />}
 
             <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                onClick={() => setAttachModalTeam(null)}
-                disabled={attachSubmitting}
-                style={modalCancelBtn(attachSubmitting)}
-              >CANCEL</button>
+              <button onClick={() => setAttachModalTeam(null)} disabled={attachSubmitting} style={modalCancelBtn(attachSubmitting)}>CANCEL</button>
               {attachCampaigns.length > 0 && (
                 <button
                   onClick={submitAttach}
@@ -1651,38 +1577,18 @@ export default function TeamsPage() {
         </div>
       )}
 
-      {/* TYPED CONFIRM MODAL */}
+      {/* GENERIC TYPED CONFIRM MODAL (for non-delete-team destructive actions) */}
       {confirmState && (
-        <div
-          onClick={() => !confirmSubmitting && (setConfirmState(null), setConfirmInput(''))}
-          style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 100, padding: 20,
-          }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              background: T.bg,
-              border: `1px solid ${T.border}`,
-              borderTop: `3px solid ${confirmState.danger ? T.red : T.blue}`,
-              borderRadius: 4,
-              padding: 28,
-              maxWidth: 460,
-              width: '100%',
-              fontFamily: 'Futura PT, Futura, sans-serif',
-            }}
-          >
+        <div onClick={() => !confirmSubmitting && (setConfirmState(null), setConfirmInput(''))} style={overlayStyle}>
+          <div onClick={e => e.stopPropagation()} style={{
+            ...modalShellStyle,
+            borderTop: `3px solid ${confirmState.danger ? T.red : T.blue}`,
+          }}>
             <div style={{
               fontSize: 12, fontWeight: 'bold', letterSpacing: 4,
               color: confirmState.danger ? T.red : T.blue, marginBottom: 14,
             }}>{confirmState.title}</div>
-
-            <p style={{
-              fontSize: 13, lineHeight: 1.6, color: T.text, margin: '0 0 16px 0',
-            }}>{confirmState.body}</p>
-
+            <p style={{ fontSize: 13, lineHeight: 1.6, color: T.text, margin: '0 0 16px 0' }}>{confirmState.body}</p>
             <input
               type="text"
               value={confirmInput}
@@ -1690,35 +1596,10 @@ export default function TeamsPage() {
               placeholder={`type "${confirmState.confirmWord}"`}
               autoFocus
               disabled={confirmSubmitting}
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                background: T.surface,
-                border: `1px solid ${T.border}`,
-                borderRadius: 3,
-                fontFamily: 'monospace',
-                fontSize: 13,
-                color: T.text,
-                outline: 'none',
-                boxSizing: 'border-box',
-                marginBottom: 14,
-              }}
+              style={modalInput}
             />
-
-            {actionError && (
-              <div style={{
-                background: '#f8e8e8',
-                border: `1px solid ${T.red}`,
-                color: T.red,
-                padding: '8px 12px',
-                borderRadius: 3,
-                fontSize: 11,
-                letterSpacing: 1,
-                marginBottom: 14,
-              }}>{actionError}</div>
-            )}
-
-            <div style={{ display: 'flex', gap: 8 }}>
+            {actionError && <ErrorInline text={actionError} />}
+            <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
               <button
                 onClick={() => { setConfirmState(null); setConfirmInput('') }}
                 disabled={confirmSubmitting}
@@ -1744,25 +1625,17 @@ export default function TeamsPage() {
   )
 }
 
-// ── Small UI helpers ────────────────────────────────────────────────────────
+// ── Helpers ─────────────────────────────────────────────────────────────────
 
 function Section({
   title, accent, action, children,
 }: {
-  title: string
-  accent: string
-  action?: React.ReactNode
-  children: React.ReactNode
+  title: string; accent: string; action?: React.ReactNode; children: React.ReactNode
 }) {
   return (
     <div style={{ marginBottom: 18 }}>
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        marginBottom: 8, gap: 10,
-      }}>
-        <div style={{
-          fontSize: 10, letterSpacing: 3, color: accent, fontWeight: 'bold',
-        }}>▸ {title}</div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, gap: 10 }}>
+        <div style={{ fontSize: 10, letterSpacing: 3, color: accent, fontWeight: 'bold' }}>▸ {title}</div>
         {action}
       </div>
       {children}
@@ -1788,16 +1661,8 @@ function EmptyHint({ text }: { text: string }) {
 function Badge({ color, children }: { color: string; children: React.ReactNode }) {
   return (
     <span style={{
-      padding: '2px 8px',
-      borderRadius: 3,
-      fontSize: 9,
-      fontWeight: 'bold',
-      letterSpacing: 1.5,
-      color,
-      border: `1px solid ${color}`,
-      background: 'transparent',
-      whiteSpace: 'nowrap',
-      fontFamily: 'monospace',
+      padding: '2px 8px', borderRadius: 3, fontSize: 9, fontWeight: 'bold', letterSpacing: 1.5,
+      color, border: `1px solid ${color}`, background: 'transparent', whiteSpace: 'nowrap', fontFamily: 'monospace',
     }}>{children}</span>
   )
 }
@@ -1805,8 +1670,7 @@ function Badge({ color, children }: { color: string; children: React.ReactNode }
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
     <label style={{
-      display: 'block', fontSize: 9, letterSpacing: 2, color: '#5a5e6a',
-      fontWeight: 'bold', marginBottom: 6,
+      display: 'block', fontSize: 9, letterSpacing: 2, color: '#5a5e6a', fontWeight: 'bold', marginBottom: 6,
     }}>{children}</label>
   )
 }
@@ -1824,20 +1688,13 @@ function SegmentedTwo({
       {[left, right].map(opt => {
         const selected = value === opt.value
         return (
-          <button
-            key={opt.value}
-            onClick={() => onChange(opt.value)}
-            style={{
-              flex: 1,
-              padding: '10px 12px',
-              textAlign: 'left',
-              background: selected ? '#dde0e8' : '#e2e4ea',
-              border: `1px solid ${selected ? '#4a9eff' : '#c4c8d0'}`,
-              borderRadius: 3,
-              cursor: 'pointer',
-              fontFamily: 'Futura PT, Futura, sans-serif',
-            }}
-          >
+          <button key={opt.value} onClick={() => onChange(opt.value)} style={{
+            flex: 1, padding: '10px 12px', textAlign: 'left',
+            background: selected ? '#dde0e8' : '#e2e4ea',
+            border: `1px solid ${selected ? '#4a9eff' : '#c4c8d0'}`,
+            borderRadius: 3, cursor: 'pointer',
+            fontFamily: 'Futura PT, Futura, sans-serif',
+          }}>
             <div style={{
               fontSize: 11, fontWeight: 'bold', letterSpacing: 2,
               color: selected ? '#4a9eff' : '#1a1c24', marginBottom: 4,
@@ -1850,88 +1707,90 @@ function SegmentedTwo({
   )
 }
 
+function ErrorInline({ text }: { text: string }) {
+  return (
+    <div style={{
+      background: '#f8e8e8', border: `1px solid ${T.red}`, color: T.red,
+      padding: '8px 12px', borderRadius: 3, fontSize: 11, letterSpacing: 1, marginTop: 8,
+    }}>{text}</div>
+  )
+}
+
+const overlayStyle: React.CSSProperties = {
+  position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  zIndex: 100, padding: 20,
+}
+
+const modalShellStyle: React.CSSProperties = {
+  background: '#f0f1f4',
+  border: '1px solid #c4c8d0',
+  borderRadius: 4,
+  padding: 28,
+  maxWidth: 480,
+  width: '100%',
+  fontFamily: 'Futura PT, Futura, sans-serif',
+}
+
+const modalInput: React.CSSProperties = {
+  width: '100%',
+  padding: '10px 12px',
+  background: '#e2e4ea',
+  border: '1px solid #c4c8d0',
+  borderRadius: 3,
+  fontFamily: 'monospace',
+  fontSize: 13,
+  color: '#1a1c24',
+  outline: 'none',
+  boxSizing: 'border-box',
+}
+
 function btnPrimary(disabled: boolean): React.CSSProperties {
   return {
-    padding: '6px 12px',
-    background: '#1a1a2e',
-    border: 'none',
-    borderRadius: 3,
-    borderTop: '2px solid #4a9eff',
-    color: '#4a9eff',
-    fontSize: 10,
-    fontWeight: 'bold',
-    letterSpacing: 2,
-    cursor: disabled ? 'not-allowed' : 'pointer',
-    opacity: disabled ? 0.5 : 1,
-    fontFamily: 'Futura PT, Futura, sans-serif',
-    whiteSpace: 'nowrap',
+    padding: '6px 12px', background: '#1a1a2e', border: 'none', borderRadius: 3,
+    borderTop: '2px solid #4a9eff', color: '#4a9eff',
+    fontSize: 10, fontWeight: 'bold', letterSpacing: 2,
+    cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1,
+    fontFamily: 'Futura PT, Futura, sans-serif', whiteSpace: 'nowrap',
   }
 }
 
 function btnDanger(disabled: boolean): React.CSSProperties {
   return {
-    padding: '6px 12px',
-    background: 'transparent',
-    border: '1px solid #8a1a1a',
-    borderRadius: 3,
-    color: '#8a1a1a',
-    fontSize: 10,
-    fontWeight: 'bold',
-    letterSpacing: 2,
-    cursor: disabled ? 'not-allowed' : 'pointer',
-    opacity: disabled ? 0.5 : 1,
-    fontFamily: 'Futura PT, Futura, sans-serif',
-    whiteSpace: 'nowrap',
+    padding: '6px 12px', background: 'transparent', border: '1px solid #8a1a1a',
+    borderRadius: 3, color: '#8a1a1a',
+    fontSize: 10, fontWeight: 'bold', letterSpacing: 2,
+    cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1,
+    fontFamily: 'Futura PT, Futura, sans-serif', whiteSpace: 'nowrap',
   }
 }
 
 function btnSubtle(disabled: boolean, color: string): React.CSSProperties {
   return {
-    padding: '5px 10px',
-    background: 'transparent',
-    border: `1px solid ${color}`,
-    borderRadius: 3,
-    color,
-    fontSize: 9,
-    fontWeight: 'bold',
-    letterSpacing: 2,
-    cursor: disabled ? 'not-allowed' : 'pointer',
-    opacity: disabled ? 0.5 : 1,
-    fontFamily: 'Futura PT, Futura, sans-serif',
-    whiteSpace: 'nowrap',
+    padding: '5px 10px', background: 'transparent', border: `1px solid ${color}`,
+    borderRadius: 3, color,
+    fontSize: 9, fontWeight: 'bold', letterSpacing: 2,
+    cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1,
+    fontFamily: 'Futura PT, Futura, sans-serif', whiteSpace: 'nowrap',
   }
 }
 
 function modalCancelBtn(disabled: boolean): React.CSSProperties {
   return {
-    flex: 1,
-    padding: '10px',
-    background: 'transparent',
-    border: '1px solid #c4c8d0',
-    borderRadius: 3,
-    color: '#5a5e6a',
-    fontSize: 11,
-    fontWeight: 'bold',
-    letterSpacing: 2,
+    flex: 1, padding: '10px', background: 'transparent', border: '1px solid #c4c8d0',
+    borderRadius: 3, color: '#5a5e6a',
+    fontSize: 11, fontWeight: 'bold', letterSpacing: 2,
     cursor: disabled ? 'not-allowed' : 'pointer',
     fontFamily: 'Futura PT, Futura, sans-serif',
   }
 }
 
-function modalConfirmBtn(disabled: boolean, accentColor: string): React.CSSProperties {
+function modalConfirmBtn(disabled: boolean, accent: string): React.CSSProperties {
   return {
-    flex: 2,
-    padding: '10px',
-    background: '#1a1a2e',
-    border: 'none',
-    borderRadius: 3,
-    borderTop: `3px solid ${accentColor}`,
-    color: accentColor,
-    fontSize: 11,
-    fontWeight: 'bold',
-    letterSpacing: 2,
-    cursor: disabled ? 'not-allowed' : 'pointer',
-    opacity: disabled ? 0.5 : 1,
+    flex: 2, padding: '10px', background: '#1a1a2e', border: 'none', borderRadius: 3,
+    borderTop: `3px solid ${accent}`, color: accent,
+    fontSize: 11, fontWeight: 'bold', letterSpacing: 2,
+    cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1,
     fontFamily: 'Futura PT, Futura, sans-serif',
   }
 }

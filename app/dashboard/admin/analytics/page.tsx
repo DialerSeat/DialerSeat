@@ -319,10 +319,10 @@ export default function AdminAnalyticsPage() {
           <>
             <div className="an-grid-4">
               {/* PAYING USERS — always reflects CURRENT state, not range-bound */}
-              <div className="an-stat-card hero" style={{
+             <div className="an-stat-card hero" style={{
                 borderTopColor: data.summary.wowDelta >= 0 ? T.green : T.red,
               }}>
-                <div className="an-stat-label">PAYING USERS · NOW</div>
+                <div className="an-stat-label">FILLED SEATS · NOW</div>
                 <div className="an-stat-value" style={{ color: T.green }}>
                   {data.summary.payingActiveSubs.toLocaleString()}
                 </div>

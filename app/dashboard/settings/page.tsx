@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useUser } from '@clerk/nextjs'
+import Link from 'next/link'
 
 const FUTURA = 'Futura PT, Futura, "Trebuchet MS", sans-serif'
 
@@ -14,9 +15,40 @@ interface SubStatus {
   tier?: 'active' | 'lapsed' | 'new'
 }
 
+interface OwnerPaidSeat {
+  id: string
+  teamId: string
+  teamName: string
+  ownerName: string
+  ownerEmail: string | null
+  amountCents: number
+  status: string
+  periodStart: string
+  periodEnd: string
+  payer: 'owner'
+}
+
+interface AgentPaidSeat {
+  id: string
+  teamId: string
+  teamName: string
+  ownerName: string
+  campaignId: string
+  campaignName: string | null
+  status: string
+  payer: 'agent'
+}
+
+interface SubsSummary {
+  ownerPaidSeats: OwnerPaidSeat[]
+  agentPaidSeats: AgentPaidSeat[]
+  counts: { ownerPaid: number; agentPaid: number; totalSeats: number }
+}
+
 export default function SettingsPage() {
   const { user } = useUser()
   const [sub, setSub] = useState<SubStatus | null>(null)
+  const [seats, setSeats] = useState<SubsSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [confirming, setConfirming] = useState(false)
   const [typedConfirm, setTypedConfirm] = useState('')
@@ -25,11 +57,27 @@ export default function SettingsPage() {
   const [error, setError] = useState<string | null>(null)
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
 
+  // Per-seat cancel state
+  const [seatCancelling, setSeatCancelling] = useState<string | null>(null)
+  const [seatConfirmTarget, setSeatConfirmTarget] = useState<AgentPaidSeat | null>(null)
+  const [seatTypedConfirm, setSeatTypedConfirm] = useState('')
+
   const loadStatus = async () => {
     try {
-      const res = await fetch('/api/stripe/status')
-      const data = await res.json()
-      setSub(data)
+      const [statusRes, summaryRes] = await Promise.all([
+        fetch('/api/stripe/status'),
+        fetch('/api/subscriptions/summary'),
+      ])
+      const statusData = await statusRes.json()
+      setSub(statusData)
+      const summaryData = await summaryRes.json()
+      if (summaryData.success) {
+        setSeats({
+          ownerPaidSeats: summaryData.ownerPaidSeats || [],
+          agentPaidSeats: summaryData.agentPaidSeats || [],
+          counts: summaryData.counts || { ownerPaid: 0, agentPaid: 0, totalSeats: 0 },
+        })
+      }
     } catch {
       setError('Failed to load subscription status')
     } finally {
@@ -91,6 +139,44 @@ export default function SettingsPage() {
     window.location.href = '/billing'
   }
 
+  // Cancel an agent-paid team seat (loses campaign access, stays on team)
+  const startCancelSeat = (seat: AgentPaidSeat) => {
+    setSeatConfirmTarget(seat)
+    setSeatTypedConfirm('')
+  }
+
+  const submitCancelSeat = async () => {
+    if (!seatConfirmTarget) return
+    if (seatTypedConfirm.toLowerCase().trim() !== 'cancel') return
+    setSeatCancelling(seatConfirmTarget.id)
+    setError(null)
+    setMessage(null)
+    try {
+      const res = await fetch('/api/teams/access/revoke', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          teamId: seatConfirmTarget.teamId,
+          campaignId: seatConfirmTarget.campaignId,
+          confirm: 'remove',
+        }),
+      })
+      const data = await res.json()
+      if (!data.success) {
+        setError(data.error || 'Failed to cancel seat')
+        return
+      }
+      setMessage(`Canceled access to ${seatConfirmTarget.campaignName || 'the campaign'}. You're still a member of ${seatConfirmTarget.teamName}.`)
+      setSeatConfirmTarget(null)
+      setSeatTypedConfirm('')
+      await loadStatus()
+    } catch (err: any) {
+      setError(err.message || 'Failed to cancel seat')
+    } finally {
+      setSeatCancelling(null)
+    }
+  }
+
   if (loading) {
     return (
       <div className="settings-root" style={pageStyle}>
@@ -101,24 +187,19 @@ export default function SettingsPage() {
     )
   }
 
-  // Show resubscribe panel for: lapsed users, OR canceling users (after period ends they'll be lapsed)
   const showResubscribe =
     !isAdmin &&
     (sub?.tier === 'lapsed' || (sub?.cancelAtPeriodEnd && sub?.isActive))
+
+  const hasAnySeats = (seats?.counts.totalSeats || 0) > 0
 
   return (
     <div className="settings-root" style={pageStyle}>
       <style>{`
         @media (max-width: 768px) {
-          .settings-root {
-            padding: 20px !important;
-          }
-          .settings-card {
-            padding: 20px !important;
-          }
-          .settings-confirm-buttons {
-            flex-direction: column !important;
-          }
+          .settings-root { padding: 20px !important; }
+          .settings-card { padding: 20px !important; }
+          .settings-confirm-buttons { flex-direction: column !important; }
         }
       `}</style>
 
@@ -127,27 +208,16 @@ export default function SettingsPage() {
         <div style={subtitleStyle}>
           {user?.primaryEmailAddress?.emailAddress}
           {isAdmin && (
-            <span style={{
-              marginLeft: 8,
-              fontSize: 9,
-              letterSpacing: 3,
-              color: '#4a9eff',
-              fontWeight: 'bold',
-            }}>· ADMIN</span>
+            <span style={{ marginLeft: 8, fontSize: 9, letterSpacing: 3, color: '#4a9eff', fontWeight: 'bold' }}>· ADMIN</span>
           )}
           {!isAdmin && sub?.tier === 'lapsed' && (
-            <span style={{
-              marginLeft: 8,
-              fontSize: 9,
-              letterSpacing: 3,
-              color: '#ffaa3e',
-              fontWeight: 'bold',
-            }}>· UNSUBSCRIBED</span>
+            <span style={{ marginLeft: 8, fontSize: 9, letterSpacing: 3, color: '#ffaa3e', fontWeight: 'bold' }}>· UNSUBSCRIBED</span>
           )}
         </div>
 
+        {/* PERSONAL SUBSCRIPTION */}
         <div style={sectionStyle}>
-          <div style={sectionHeaderStyle}>▸ SUBSCRIPTION</div>
+          <div style={sectionHeaderStyle}>▸ YOUR SUBSCRIPTION</div>
 
           {!sub?.hasSubscription && (
             <div style={mutedStyle}>No active subscription on file.</div>
@@ -186,10 +256,76 @@ export default function SettingsPage() {
           )}
         </div>
 
+        {/* TEAM SEATS — new section */}
+        {hasAnySeats && (
+          <div style={sectionStyle}>
+            <div style={sectionHeaderStyle}>
+              ▸ TEAM SEATS ({seats!.counts.totalSeats})
+            </div>
+
+            {/* Owner-paid: read-only */}
+            {seats!.ownerPaidSeats.map(seat => (
+              <div key={seat.id} style={seatRowStyle('#1a4a8a')}>
+                <div style={seatHeaderStyle}>
+                  <span style={seatTeamStyle}>{seat.teamName}</span>
+                  <span style={seatBadgeStyle('#4a9eff')}>OWNER PAID</span>
+                </div>
+                <div style={seatDetailStyle}>
+                  Paid by <strong style={{ color: '#e0e2ea' }}>{seat.ownerName}</strong> · ${(seat.amountCents / 100).toFixed(2)} / WEEK
+                </div>
+                <div style={seatDetailStyle}>
+                  Period: {formatDate(seat.periodStart)} → {formatDate(seat.periodEnd)}
+                </div>
+                <div style={{ ...seatDetailStyle, color: '#666870', fontSize: 10, marginTop: 6 }}>
+                  Only the team owner can cancel this seat.
+                </div>
+              </div>
+            ))}
+
+            {/* Agent-paid: cancellable */}
+            {seats!.agentPaidSeats.map(seat => (
+              <div key={seat.id} style={seatRowStyle('#8a6a1a')}>
+                <div style={seatHeaderStyle}>
+                  <span style={seatTeamStyle}>{seat.teamName}</span>
+                  <span style={seatBadgeStyle('#ffaa3e')}>AGENT PAID</span>
+                </div>
+                <div style={seatDetailStyle}>
+                  Campaign: <strong style={{ color: '#e0e2ea' }}>{seat.campaignName || '—'}</strong>
+                </div>
+                <div style={seatDetailStyle}>
+                  Owner: {seat.ownerName} · $35.00 / WEEK
+                </div>
+                <button
+                  onClick={() => startCancelSeat(seat)}
+                  disabled={seatCancelling === seat.id}
+                  style={{
+                    ...miniDangerButtonStyle,
+                    opacity: seatCancelling === seat.id ? 0.4 : 1,
+                    cursor: seatCancelling === seat.id ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {seatCancelling === seat.id ? 'CANCELING...' : 'CANCEL ACCESS'}
+                </button>
+              </div>
+            ))}
+
+            <div style={{
+              fontSize: 10,
+              color: '#666870',
+              letterSpacing: 1,
+              lineHeight: 1.5,
+              marginTop: 12,
+              paddingTop: 12,
+              borderTop: '1px solid #2a2c34',
+            }}>
+              Canceling a seat ends campaign access only. You remain on the team and can rejoin a campaign anytime. Refunds for partial periods are only available via dispute through your bank.
+            </div>
+          </div>
+        )}
+
         {message && <div style={successStyle}>{message}</div>}
         {error && <div style={errorStyle}>{error}</div>}
 
-        {/* RESUBSCRIBE — for lapsed users or those who canceled (still in paid period) */}
         {showResubscribe && (
           <div style={resubscribeBoxStyle}>
             <div style={resubscribeHeaderStyle}>
@@ -209,14 +345,12 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {/* ADMIN: cancel UI fully hidden, replaced with a notice */}
         {isAdmin && sub?.isActive && !sub.cancelAtPeriodEnd && (
           <div style={adminNoticeStyle}>
             ▸ ADMIN ACCOUNTS CANNOT CANCEL FROM THIS PANEL
           </div>
         )}
 
-        {/* NON-ADMIN: type-to-confirm cancel flow */}
         {!isAdmin && sub?.isActive && !sub.cancelAtPeriodEnd && (
           <>
             {!confirming ? (
@@ -226,11 +360,11 @@ export default function SettingsPage() {
             ) : (
               <div style={confirmBoxStyle}>
                 <div style={confirmTextStyle}>
-                  Cancel your subscription? You'll keep access until{' '}
+                  Cancel your subscription? You&apos;ll keep access until{' '}
                   <strong style={{ color: '#4a9eff' }}>
                     {sub.currentPeriodEnd ? formatDate(sub.currentPeriodEnd) : 'period end'}
                   </strong>
-                  . No further charges will be made.
+                  . No further charges. Refunds for partial periods are only available via dispute through your bank.
                 </div>
 
                 <div style={typePromptStyle}>
@@ -246,20 +380,14 @@ export default function SettingsPage() {
                 />
 
                 <div className="settings-confirm-buttons" style={confirmButtonsStyle}>
-                  <button
-                    onClick={handleAbortCancel}
-                    disabled={canceling}
-                    style={secondaryButtonStyle}
-                  >
+                  <button onClick={handleAbortCancel} disabled={canceling} style={secondaryButtonStyle}>
                     KEEP SUBSCRIPTION
                   </button>
                   <button
                     onClick={handleCancel}
                     disabled={canceling || !confirmReady}
                     style={{
-                      ...dangerButtonStyle,
-                      marginTop: 0,
-                      flex: 1,
+                      ...dangerButtonStyle, marginTop: 0, flex: 1,
                       opacity: canceling || !confirmReady ? 0.4 : 1,
                       cursor: canceling || !confirmReady ? 'not-allowed' : 'pointer',
                     }}
@@ -278,15 +406,80 @@ export default function SettingsPage() {
           </div>
         )}
       </div>
+
+      {/* SEAT CANCEL CONFIRM MODAL */}
+      {seatConfirmTarget && (
+        <div
+          onClick={() => seatCancelling === null && (setSeatConfirmTarget(null), setSeatTypedConfirm(''))}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 100, padding: 20,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: '#1a1c24',
+              border: '1px solid #2a2c34',
+              borderTop: '3px solid #8a1a1a',
+              borderRadius: 4,
+              padding: 28,
+              maxWidth: 460,
+              width: '100%',
+              fontFamily: FUTURA,
+              color: '#e0e2ea',
+            }}
+          >
+            <div style={{
+              fontSize: 12, fontWeight: 700, letterSpacing: 4, color: '#ff6464', marginBottom: 14,
+            }}>CANCEL SEAT ACCESS</div>
+            <p style={{ fontSize: 13, lineHeight: 1.6, color: '#e0e2ea', margin: '0 0 14px 0' }}>
+              Cancel your access to <strong>{seatConfirmTarget.campaignName || 'this campaign'}</strong> on team <strong>{seatConfirmTarget.teamName}</strong>?
+            </p>
+            <p style={{ fontSize: 12, lineHeight: 1.6, color: '#888a92', margin: '0 0 16px 0' }}>
+              You stay on the team but lose dialing access to this campaign. Your $35/wk for this seat stops at period close. Refunds for partial periods are only available via dispute through your bank.
+            </p>
+            <div style={typePromptStyle}>
+              Type <strong style={{ color: '#ff6464' }}>cancel</strong> to confirm:
+            </div>
+            <input
+              type="text"
+              value={seatTypedConfirm}
+              onChange={e => setSeatTypedConfirm(e.target.value)}
+              placeholder="cancel"
+              autoFocus
+              disabled={seatCancelling !== null}
+              style={typeInputStyle}
+            />
+            <div className="settings-confirm-buttons" style={confirmButtonsStyle}>
+              <button
+                onClick={() => { setSeatConfirmTarget(null); setSeatTypedConfirm('') }}
+                disabled={seatCancelling !== null}
+                style={secondaryButtonStyle}
+              >KEEP ACCESS</button>
+              <button
+                onClick={submitCancelSeat}
+                disabled={seatCancelling !== null || seatTypedConfirm.toLowerCase().trim() !== 'cancel'}
+                style={{
+                  ...dangerButtonStyle, marginTop: 0, flex: 1,
+                  opacity: (seatCancelling !== null || seatTypedConfirm.toLowerCase().trim() !== 'cancel') ? 0.4 : 1,
+                  cursor: (seatCancelling !== null || seatTypedConfirm.toLowerCase().trim() !== 'cancel') ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {seatCancelling !== null ? 'CANCELING...' : 'CONFIRM CANCEL'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
+    month: 'long', day: 'numeric', year: 'numeric',
   })
 }
 
@@ -327,19 +520,11 @@ const cardStyle: React.CSSProperties = {
 }
 
 const titleStyle: React.CSSProperties = {
-  fontSize: 18,
-  fontWeight: 700,
-  letterSpacing: 5,
-  color: '#4a9eff',
-  marginBottom: 4,
+  fontSize: 18, fontWeight: 700, letterSpacing: 5, color: '#4a9eff', marginBottom: 4,
 }
 
 const subtitleStyle: React.CSSProperties = {
-  fontSize: 12,
-  letterSpacing: 1,
-  color: '#888a92',
-  marginBottom: 28,
-  wordBreak: 'break-word',
+  fontSize: 12, letterSpacing: 1, color: '#888a92', marginBottom: 28, wordBreak: 'break-word',
 }
 
 const sectionStyle: React.CSSProperties = {
@@ -352,196 +537,128 @@ const sectionStyle: React.CSSProperties = {
 }
 
 const sectionHeaderStyle: React.CSSProperties = {
-  fontSize: 9,
-  letterSpacing: 3,
-  color: '#888a92',
-  marginBottom: 14,
-  fontWeight: 700,
+  fontSize: 9, letterSpacing: 3, color: '#888a92', marginBottom: 14, fontWeight: 700,
 }
 
 const rowStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  padding: '8px 0',
-  borderBottom: '1px solid #2a2c34',
-  gap: 12,
-  flexWrap: 'wrap',
+  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+  padding: '8px 0', borderBottom: '1px solid #2a2c34', gap: 12, flexWrap: 'wrap',
 }
 
-const labelStyle: React.CSSProperties = {
-  fontSize: 10,
-  letterSpacing: 2,
-  color: '#888a92',
-}
-
-const valueStyle: React.CSSProperties = {
-  fontSize: 12,
-  letterSpacing: 1,
-  color: '#e0e2ea',
-  fontWeight: 700,
-}
-
-const mutedStyle: React.CSSProperties = {
-  fontSize: 12,
-  color: '#888a92',
-  letterSpacing: 1,
-}
+const labelStyle: React.CSSProperties = { fontSize: 10, letterSpacing: 2, color: '#888a92' }
+const valueStyle: React.CSSProperties = { fontSize: 12, letterSpacing: 1, color: '#e0e2ea', fontWeight: 700 }
+const mutedStyle: React.CSSProperties = { fontSize: 12, color: '#888a92', letterSpacing: 1 }
 
 const dangerButtonStyle: React.CSSProperties = {
-  width: '100%',
-  padding: 14,
-  background: '#0d0e14',
-  border: 'none',
-  borderTop: '3px solid #8a1a1a',
-  borderRadius: 4,
-  color: '#ff6464',
-  fontSize: 12,
-  fontWeight: 700,
-  letterSpacing: 4,
-  cursor: 'pointer',
+  width: '100%', padding: 14, background: '#0d0e14', border: 'none',
+  borderTop: '3px solid #8a1a1a', borderRadius: 4, color: '#ff6464',
+  fontSize: 12, fontWeight: 700, letterSpacing: 4, cursor: 'pointer',
+  fontFamily: FUTURA, marginTop: 8,
+}
+
+const miniDangerButtonStyle: React.CSSProperties = {
+  marginTop: 10, padding: '8px 14px', background: 'transparent',
+  border: '1px solid #8a1a1a', borderRadius: 3, color: '#ff6464',
+  fontSize: 10, fontWeight: 700, letterSpacing: 2, cursor: 'pointer',
   fontFamily: FUTURA,
-  marginTop: 8,
 }
 
 const secondaryButtonStyle: React.CSSProperties = {
-  flex: 1,
-  padding: 14,
-  background: '#0d0e14',
-  border: 'none',
-  borderTop: '3px solid #4a9eff',
-  borderRadius: 4,
-  color: '#4a9eff',
-  fontSize: 11,
-  fontWeight: 700,
-  letterSpacing: 3,
-  cursor: 'pointer',
-  fontFamily: FUTURA,
+  flex: 1, padding: 14, background: '#0d0e14', border: 'none',
+  borderTop: '3px solid #4a9eff', borderRadius: 4, color: '#4a9eff',
+  fontSize: 11, fontWeight: 700, letterSpacing: 3, cursor: 'pointer', fontFamily: FUTURA,
 }
 
 const confirmBoxStyle: React.CSSProperties = {
-  background: '#2a1a1a',
-  border: '1px solid #8a1a1a',
-  borderRadius: 4,
-  padding: 16,
-  marginTop: 8,
+  background: '#2a1a1a', border: '1px solid #8a1a1a', borderRadius: 4, padding: 16, marginTop: 8,
 }
 
 const confirmTextStyle: React.CSSProperties = {
-  fontSize: 12,
-  lineHeight: 1.6,
-  color: '#e0c2c2',
-  marginBottom: 16,
+  fontSize: 12, lineHeight: 1.6, color: '#e0c2c2', marginBottom: 16,
 }
 
 const typePromptStyle: React.CSSProperties = {
-  fontSize: 11,
-  letterSpacing: 1,
-  color: '#e0c2c2',
-  marginBottom: 8,
+  fontSize: 11, letterSpacing: 1, color: '#e0c2c2', marginBottom: 8,
 }
 
 const typeInputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '10px 12px',
-  background: '#0d0e14',
-  border: '1px solid #4a2a2a',
-  borderRadius: 3,
-  fontFamily: 'monospace',
-  fontSize: 13,
-  color: '#ff8888',
-  outline: 'none',
-  marginBottom: 16,
-  letterSpacing: 1,
-  boxSizing: 'border-box',
+  width: '100%', padding: '10px 12px', background: '#0d0e14',
+  border: '1px solid #4a2a2a', borderRadius: 3,
+  fontFamily: 'monospace', fontSize: 13, color: '#ff8888',
+  outline: 'none', marginBottom: 16, letterSpacing: 1, boxSizing: 'border-box',
 }
 
-const confirmButtonsStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: 8,
-}
+const confirmButtonsStyle: React.CSSProperties = { display: 'flex', gap: 8 }
 
 const successStyle: React.CSSProperties = {
-  background: '#1a2a1a',
-  border: '1px solid #1a6a1a',
-  color: '#32ff7e',
-  padding: 12,
-  borderRadius: 3,
-  fontSize: 11,
-  letterSpacing: 1,
-  marginBottom: 16,
+  background: '#1a2a1a', border: '1px solid #1a6a1a', color: '#32ff7e',
+  padding: 12, borderRadius: 3, fontSize: 11, letterSpacing: 1, marginBottom: 16,
 }
 
 const errorStyle: React.CSSProperties = {
-  background: '#2a1a1a',
-  border: '1px solid #8a1a1a',
-  color: '#ff6464',
-  padding: 12,
-  borderRadius: 3,
-  fontSize: 11,
-  letterSpacing: 1,
-  marginBottom: 16,
+  background: '#2a1a1a', border: '1px solid #8a1a1a', color: '#ff6464',
+  padding: 12, borderRadius: 3, fontSize: 11, letterSpacing: 1, marginBottom: 16,
 }
 
 const warnStyle: React.CSSProperties = {
-  background: '#2a221a',
-  border: '1px solid #8a6a1a',
-  color: '#ffaa3e',
-  padding: 12,
-  borderRadius: 3,
-  fontSize: 11,
-  letterSpacing: 1,
-  marginTop: 16,
+  background: '#2a221a', border: '1px solid #8a6a1a', color: '#ffaa3e',
+  padding: 12, borderRadius: 3, fontSize: 11, letterSpacing: 1, marginTop: 16,
 }
 
 const adminNoticeStyle: React.CSSProperties = {
-  background: 'rgba(74,158,255,0.06)',
-  border: '1px solid #2a4a8a',
-  borderLeft: '3px solid #4a9eff',
-  color: '#4a9eff',
-  padding: 12,
-  borderRadius: 3,
-  fontSize: 10,
-  letterSpacing: 3,
-  fontWeight: 700,
-  marginTop: 16,
+  background: 'rgba(74,158,255,0.06)', border: '1px solid #2a4a8a',
+  borderLeft: '3px solid #4a9eff', color: '#4a9eff',
+  padding: 12, borderRadius: 3, fontSize: 10, letterSpacing: 3, fontWeight: 700, marginTop: 16,
 }
 
 const resubscribeBoxStyle: React.CSSProperties = {
-  background: 'rgba(255,170,62,0.06)',
-  border: '1px solid #8a6a1a',
-  borderLeft: '3px solid #ffaa3e',
-  borderRadius: 3,
-  padding: 16,
-  marginBottom: 16,
+  background: 'rgba(255,170,62,0.06)', border: '1px solid #8a6a1a',
+  borderLeft: '3px solid #ffaa3e', borderRadius: 3, padding: 16, marginBottom: 16,
 }
 
 const resubscribeHeaderStyle: React.CSSProperties = {
-  fontSize: 11,
-  letterSpacing: 3,
-  color: '#ffaa3e',
-  fontWeight: 700,
-  marginBottom: 8,
+  fontSize: 11, letterSpacing: 3, color: '#ffaa3e', fontWeight: 700, marginBottom: 8,
 }
 
 const resubscribeTextStyle: React.CSSProperties = {
-  fontSize: 12,
-  lineHeight: 1.6,
-  color: '#e0e2ea',
-  marginBottom: 14,
+  fontSize: 12, lineHeight: 1.6, color: '#e0e2ea', marginBottom: 14,
 }
 
 const resubscribeButtonStyle: React.CSSProperties = {
-  width: '100%',
-  padding: 14,
-  background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
-  border: 'none',
-  borderRadius: 4,
-  color: 'white',
-  fontSize: 12,
-  fontWeight: 700,
-  letterSpacing: 4,
-  cursor: 'pointer',
-  fontFamily: FUTURA,
-  boxShadow: '0 0 15px rgba(74,158,255,0.25)',
+  width: '100%', padding: 14, background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+  border: 'none', borderRadius: 4, color: 'white',
+  fontSize: 12, fontWeight: 700, letterSpacing: 4, cursor: 'pointer',
+  fontFamily: FUTURA, boxShadow: '0 0 15px rgba(74,158,255,0.25)',
+}
+
+function seatRowStyle(borderColor: string): React.CSSProperties {
+  return {
+    background: '#0d0e14',
+    border: `1px solid ${borderColor}`,
+    borderLeft: `3px solid ${borderColor}`,
+    borderRadius: 3,
+    padding: 14,
+    marginBottom: 10,
+  }
+}
+
+const seatHeaderStyle: React.CSSProperties = {
+  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+  marginBottom: 8, gap: 10, flexWrap: 'wrap',
+}
+
+const seatTeamStyle: React.CSSProperties = {
+  fontSize: 13, fontWeight: 700, letterSpacing: 1, color: '#e0e2ea',
+}
+
+function seatBadgeStyle(color: string): React.CSSProperties {
+  return {
+    padding: '3px 10px', borderRadius: 3, fontSize: 9, fontWeight: 700,
+    letterSpacing: 2, color, border: `1px solid ${color}`, background: 'transparent',
+    fontFamily: 'monospace',
+  }
+}
+
+const seatDetailStyle: React.CSSProperties = {
+  fontSize: 11, color: '#888a92', letterSpacing: 0.5, lineHeight: 1.5, marginTop: 4,
 }
