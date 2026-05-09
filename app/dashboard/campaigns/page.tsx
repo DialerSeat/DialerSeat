@@ -572,7 +572,23 @@ export default function CampaignsPage() {
                         ⚙ MODE
                       </button>
                     )}
-
+{!isLapsed && (
+  <Link
+    href={`/dashboard/compliance?focus=${campaign.id}`}
+    style={{
+      padding: '8px 14px', borderRadius: '8px',
+      background: 'transparent',
+      border: `1px solid ${T.muted}`,
+      color: T.muted,
+      fontSize: '10px', letterSpacing: '2px',
+      fontFamily: 'Futura PT, Futura, sans-serif',
+      whiteSpace: 'nowrap',
+      textDecoration: 'none',
+      fontWeight: 'bold',
+    }}>
+    🛡 COMPLIANCE
+  </Link>
+)}
                     {!isLapsed && (
                       <button
                         onClick={() => { setScriptModal(campaign); setScriptText(campaign.script || '') }}
