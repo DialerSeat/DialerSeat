@@ -37,6 +37,21 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Missing credentials' }, { status: 500 })
     }
 
+    // Look up campaign config — we need amd_enabled and dialer_mode
+    let amdEnabled = false
+    let dialerMode = 'power'
+    if (campaignId) {
+      const { data: campaign } = await supabase
+        .from('campaigns')
+        .select('amd_enabled, dialer_mode')
+        .eq('id', campaignId)
+        .maybeSingle()
+      if (campaign) {
+        amdEnabled = !!campaign.amd_enabled
+        dialerMode = campaign.dialer_mode || 'power'
+      }
+    }
+
     const toFormatted = to.startsWith('+') ? to : `+1${to.replace(/\D/g, '')}`
 
     const poolNumber = await pickNumberForLead(toFormatted)
@@ -50,12 +65,12 @@ export async function POST(req: Request) {
         )
       }
       console.warn('[calls/outbound] Pool empty, using SIGNALWIRE_PHONE_NUMBER fallback')
-      return await placeCall(toFormatted, fallback, null, userId, leadId, campaignId, teamId, {
+      return await placeCall(toFormatted, fallback, null, userId, leadId, campaignId, teamId, amdEnabled, dialerMode, {
         spaceUrl, projectId, apiToken, sipUsername, sipDomain, appUrl,
       })
     }
 
-    return await placeCall(toFormatted, poolNumber.phone_number, poolNumber.id, userId, leadId, campaignId, teamId, {
+    return await placeCall(toFormatted, poolNumber.phone_number, poolNumber.id, userId, leadId, campaignId, teamId, amdEnabled, dialerMode, {
       spaceUrl, projectId, apiToken, sipUsername, sipDomain, appUrl,
     })
   } catch (error: any) {
@@ -81,11 +96,39 @@ async function placeCall(
   leadId: string | null | undefined,
   campaignId: string | null | undefined,
   teamId: string | null | undefined,
+  amdEnabled: boolean,
+  dialerMode: string,
   env: PlaceCallEnv
 ) {
   const roomName = `room-${Date.now()}`
   const authHeader = 'Basic ' + Buffer.from(`${env.projectId}:${env.apiToken}`).toString('base64')
   const callsUrl = `https://${env.spaceUrl}/api/laml/2010-04-01/Accounts/${env.projectId}/Calls.json`
+
+  // Build outbound params
+  const outboundParams: Record<string, string> = {
+    To: toFormatted,
+    From: fromNumber,
+    Url: `${env.appUrl}/api/calls/twiml?room=${roomName}&record=true`,
+    StatusCallback: `${env.appUrl}/api/calls/status`,
+    StatusCallbackMethod: 'POST',
+  }
+
+  // ── AMD config ─────────────────────────────────────────────────────────
+  // When enabled, SignalWire analyzes the first few seconds of audio and
+  // posts AnsweredBy to AsyncAmdStatusCallback. We use DetectMessageEnd
+  // (default) which waits for the voicemail beep — most accurate but slowest.
+  // For predictive mode where speed matters, we could swap to "Enable" later.
+  if (amdEnabled) {
+    outboundParams.MachineDetection = 'DetectMessageEnd'
+    outboundParams.AsyncAmd = 'true'
+    outboundParams.AsyncAmdStatusCallback = `${env.appUrl}/api/calls/amd-result`
+    outboundParams.AsyncAmdStatusCallbackMethod = 'POST'
+    // Tighter timeouts than SignalWire defaults — we want a verdict fast
+    outboundParams.MachineDetectionTimeout = '20'
+    outboundParams.MachineDetectionSpeechThreshold = '2400'
+    outboundParams.MachineDetectionSpeechEndThreshold = '1200'
+    outboundParams.MachineDetectionSilenceTimeout = '5000'
+  }
 
   const leadCallResponse = await fetch(callsUrl, {
     method: 'POST',
@@ -93,13 +136,7 @@ async function placeCall(
       'Authorization': authHeader,
       'Content-Type': 'application/x-www-form-urlencoded',
     },
-    body: new URLSearchParams({
-      To: toFormatted,
-      From: fromNumber,
-      Url: `${env.appUrl}/api/calls/twiml?room=${roomName}&record=true`,
-      StatusCallback: `${env.appUrl}/api/calls/status`,
-      StatusCallbackMethod: 'POST',
-    }).toString(),
+    body: new URLSearchParams(outboundParams).toString(),
   })
 
   const leadData = await leadCallResponse.json()
@@ -178,5 +215,7 @@ async function placeCall(
     roomName,
     fromNumber,
     status: leadData.status,
+    amdEnabled,
+    dialerMode,
   })
 }
