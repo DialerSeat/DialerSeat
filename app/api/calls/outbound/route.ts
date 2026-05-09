@@ -37,7 +37,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Missing credentials' }, { status: 500 })
     }
 
-    // Look up campaign config — we need amd_enabled and dialer_mode
     let amdEnabled = false
     let dialerMode = 'power'
     if (campaignId) {
@@ -104,26 +103,29 @@ async function placeCall(
   const authHeader = 'Basic ' + Buffer.from(`${env.projectId}:${env.apiToken}`).toString('base64')
   const callsUrl = `https://${env.spaceUrl}/api/laml/2010-04-01/Accounts/${env.projectId}/Calls.json`
 
-  // Build outbound params
+  // ── Compliance: TSR § 310.4(b)(4)(ii) requires ring duration of at least
+  // 15 seconds or 4 rings before treating an unanswered call as no-answer.
+  // SignalWire/Twilio Timeout default is 60s, but we set it explicitly when
+  // AMD is enabled (i.e., when in a TSR-regulated mode) for audit clarity.
+  // We use 20 seconds — well above the 15-second floor, generous enough
+  // to give carriers time to handle the call routing.
+  const isTsrRegulated = dialerMode === 'progressive' || dialerMode === 'predictive'
+  const ringTimeout = isTsrRegulated ? '20' : '60'
+
   const outboundParams: Record<string, string> = {
     To: toFormatted,
     From: fromNumber,
-    Url: `${env.appUrl}/api/calls/twiml?room=${roomName}&record=true`,
+    Url: `${env.appUrl}/api/calls/twiml?room=${roomName}&record=true&campaignId=${campaignId || ''}`,
     StatusCallback: `${env.appUrl}/api/calls/status`,
     StatusCallbackMethod: 'POST',
+    Timeout: ringTimeout,
   }
 
-  // ── AMD config ─────────────────────────────────────────────────────────
-  // When enabled, SignalWire analyzes the first few seconds of audio and
-  // posts AnsweredBy to AsyncAmdStatusCallback. We use DetectMessageEnd
-  // (default) which waits for the voicemail beep — most accurate but slowest.
-  // For predictive mode where speed matters, we could swap to "Enable" later.
   if (amdEnabled) {
     outboundParams.MachineDetection = 'DetectMessageEnd'
     outboundParams.AsyncAmd = 'true'
     outboundParams.AsyncAmdStatusCallback = `${env.appUrl}/api/calls/amd-result`
     outboundParams.AsyncAmdStatusCallbackMethod = 'POST'
-    // Tighter timeouts than SignalWire defaults — we want a verdict fast
     outboundParams.MachineDetectionTimeout = '20'
     outboundParams.MachineDetectionSpeechThreshold = '2400'
     outboundParams.MachineDetectionSpeechEndThreshold = '1200'
@@ -149,7 +151,6 @@ async function placeCall(
     )
   }
 
-  // INSERT CALLS ROW with team_id attribution
   try {
     await supabase.from('calls').insert({
       user_id: userId,
@@ -217,5 +218,6 @@ async function placeCall(
     status: leadData.status,
     amdEnabled,
     dialerMode,
+    ringTimeout,
   })
 }
