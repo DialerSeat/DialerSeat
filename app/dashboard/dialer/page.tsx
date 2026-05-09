@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -54,7 +54,7 @@ interface PacingInfo {
 
 const PERSONAL_SCOPE = '__personal__'
 
-export default function DialerPage() {
+function DialerPageInner() {
   const { user } = useUser()
   const searchParams = useSearchParams()
   const [notes, setNotes] = useState('')
@@ -1736,4 +1736,25 @@ const navLinkStyle: React.CSSProperties = {
   border: '1px solid #2a4a8a', borderRadius: 3,
   color: '#4a9eff', fontSize: 10, fontWeight: 700, letterSpacing: 2,
   textDecoration: 'none', fontFamily: 'Futura PT, Futura, sans-serif',
+}
+export default function DialerPage() {
+  return (
+    <Suspense fallback={
+      <div style={{
+        flex: 1,
+        background: '#f0f1f4',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: 'calc(100vh - 64px)',
+        fontFamily: 'Futura PT, Futura, sans-serif',
+      }}>
+        <div style={{ fontSize: 11, letterSpacing: 4, color: '#5a5e6a' }}>
+          LOADING TERMINAL...
+        </div>
+      </div>
+    }>
+      <DialerPageInner />
+    </Suspense>
+  )
 }
