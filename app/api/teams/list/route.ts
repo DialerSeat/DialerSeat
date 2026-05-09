@@ -9,11 +9,10 @@ import { supabaseAdmin } from '@/lib/supabase'
  *   - An active member (limited fields, omits owner-only data)
  *
  * Each team is tagged with `viewerRole: 'owner' | 'member'` so UI can branch.
- * No tier gate — lapsed users can still see their teams (read-only).
  *
  * Optional ?detail=owned — embeds members/pendingMembers/codes/teamCampaigns
- * on each owned team, with member identity resolved against users table.
- * Member teams remain limited regardless of this flag.
+ * on each owned team. Each member also gets a campaignAccess[] array showing
+ * which campaigns they have active access to and the underlying payer.
  */
 export async function GET(req: NextRequest) {
   try {
@@ -25,7 +24,6 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const detail = searchParams.get('detail') === 'owned'
 
-    // Teams owned by this user
     const { data: ownedTeams, error: ownedErr } = await supabaseAdmin
       .from('teams')
       .select('*')
@@ -34,7 +32,6 @@ export async function GET(req: NextRequest) {
 
     if (ownedErr) throw ownedErr
 
-    // Teams where this user is an active member
     const { data: memberRows, error: memberErr } = await supabaseAdmin
       .from('team_members')
       .select('team_id, status, accepted_at, joined_via_code')
@@ -59,15 +56,14 @@ export async function GET(req: NextRequest) {
     let owned = (ownedTeams || []).map((t: any) => ({ ...t, viewerRole: 'owner' as const }))
     const member = memberTeams.map((t: any) => ({ ...t, viewerRole: 'member' as const }))
 
-    // Embed detail for owned teams when requested
     if (detail && owned.length > 0) {
       const ownedIds = owned.map((t: any) => t.id)
 
-      // Fetch all related rows in parallel for all owned teams
       const [
         { data: allMembers },
         { data: allCodes },
         { data: allCampaigns },
+        { data: allAccess },
       ] = await Promise.all([
         supabaseAdmin
           .from('team_members')
@@ -85,9 +81,14 @@ export async function GET(req: NextRequest) {
           .from('team_campaigns')
           .select('team_id, campaign_id, access_mode, created_at, campaigns(id, name, total_leads, called_leads, status)')
           .in('team_id', ownedIds),
+        supabaseAdmin
+          .from('team_campaign_access')
+          .select('id, team_id, team_member_id, campaign_id, payer, is_active, access_source, created_at')
+          .in('team_id', ownedIds)
+          .eq('is_active', true),
       ])
 
-      // Resolve member identities against users table
+      // Resolve member identities
       const memberClerkIds = Array.from(new Set((allMembers || []).map((m: any) => m.user_id)))
       let userById: Record<string, { email: string; first_name: string | null; last_name: string | null }> = {}
       if (memberClerkIds.length > 0) {
@@ -104,13 +105,27 @@ export async function GET(req: NextRequest) {
         }
       }
 
-      // Group by team_id
+      // Group access by team_member_id
+      const accessByMember: Record<string, any[]> = {}
+      for (const a of allAccess || []) {
+        if (!accessByMember[a.team_member_id]) accessByMember[a.team_member_id] = []
+        accessByMember[a.team_member_id].push(a)
+      }
+
+      // Group members by team_id, attaching access + identity
       const membersByTeam: Record<string, any[]> = {}
       const pendingByTeam: Record<string, any[]> = {}
       for (const m of allMembers || []) {
         const enriched = {
           ...m,
           user: userById[m.user_id] || { email: null, first_name: null, last_name: null },
+          campaignAccess: (accessByMember[m.id] || []).map((a: any) => ({
+            id: a.id,
+            campaignId: a.campaign_id,
+            payer: a.payer,
+            accessSource: a.access_source,
+            createdAt: a.created_at,
+          })),
         }
         const bucket = m.status === 'active' ? membersByTeam : pendingByTeam
         if (!bucket[m.team_id]) bucket[m.team_id] = []

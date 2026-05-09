@@ -4,10 +4,10 @@ import { supabaseAdmin } from '@/lib/supabase'
 
 /**
  * Returns full detail for one team.
- * Owners see everything (members list, codes, campaigns, pending requests).
- * Members see limited info (team meta, accessible campaigns, their own membership row only).
- *
- * Anyone else (not owner, not member) gets 403.
+ * Owners see everything (members list + per-member campaign access + codes
+ * + campaigns + pending requests).
+ * Members see limited info (team meta, accessible campaigns, their own
+ * membership row only).
  */
 export async function GET(
   req: Request,
@@ -21,7 +21,6 @@ export async function GET(
 
     const { id: teamId } = await params
 
-    // Fetch team
     const { data: team, error: teamErr } = await supabaseAdmin
       .from('teams')
       .select('*')
@@ -35,7 +34,6 @@ export async function GET(
 
     const isOwner = team.owner_id === userId
 
-    // If not owner, verify active membership before exposing anything
     let viewerMembership: any = null
     if (!isOwner) {
       const { data: m } = await supabaseAdmin
@@ -52,13 +50,16 @@ export async function GET(
       viewerMembership = m
     }
 
-    // Owner-only data
     let members: any[] = []
     let codes: any[] = []
     let pendingMembers: any[] = []
 
     if (isOwner) {
-      const [{ data: mAll }, { data: cAll }] = await Promise.all([
+      const [
+        { data: mAll },
+        { data: cAll },
+        { data: accessAll },
+      ] = await Promise.all([
         supabaseAdmin
           .from('team_members')
           .select('id, user_id, status, accepted_at, removed_at, joined_via_code, created_at')
@@ -70,14 +71,53 @@ export async function GET(
           .eq('team_id', teamId)
           .eq('is_active', true)
           .order('created_at', { ascending: false }),
+        supabaseAdmin
+          .from('team_campaign_access')
+          .select('id, team_member_id, campaign_id, payer, is_active, access_source, created_at')
+          .eq('team_id', teamId)
+          .eq('is_active', true),
       ])
 
-      members = (mAll || []).filter((m: any) => m.status === 'active')
-      pendingMembers = (mAll || []).filter((m: any) => m.status === 'pending')
+      // Resolve identities
+      const memberClerkIds = Array.from(new Set((mAll || []).map((m: any) => m.user_id)))
+      let userById: Record<string, any> = {}
+      if (memberClerkIds.length > 0) {
+        const { data: userRows } = await supabaseAdmin
+          .from('users')
+          .select('clerk_id, email, first_name, last_name')
+          .in('clerk_id', memberClerkIds)
+        for (const u of userRows || []) userById[u.clerk_id] = u
+      }
+
+      const accessByMember: Record<string, any[]> = {}
+      for (const a of accessAll || []) {
+        if (!accessByMember[a.team_member_id]) accessByMember[a.team_member_id] = []
+        accessByMember[a.team_member_id].push(a)
+      }
+
+      const enrich = (m: any) => ({
+        ...m,
+        user: userById[m.user_id]
+          ? {
+              email: userById[m.user_id].email,
+              first_name: userById[m.user_id].first_name,
+              last_name: userById[m.user_id].last_name,
+            }
+          : { email: null, first_name: null, last_name: null },
+        campaignAccess: (accessByMember[m.id] || []).map((a: any) => ({
+          id: a.id,
+          campaignId: a.campaign_id,
+          payer: a.payer,
+          accessSource: a.access_source,
+          createdAt: a.created_at,
+        })),
+      })
+
+      members = (mAll || []).filter((m: any) => m.status === 'active').map(enrich)
+      pendingMembers = (mAll || []).filter((m: any) => m.status === 'pending').map(enrich)
       codes = cAll || []
     }
 
-    // Campaigns attached to team — both owner and member see, with access_mode
     const { data: tcRows } = await supabaseAdmin
       .from('team_campaigns')
       .select('campaign_id, access_mode, created_at, campaigns(id, name, total_leads, called_leads, status)')

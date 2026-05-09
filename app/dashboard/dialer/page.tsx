@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { useUser } from '@clerk/nextjs'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
 type CallStatus = 'idle' | 'calling' | 'connected' | 'ended'
@@ -26,8 +27,24 @@ interface Campaign {
   script?: string
 }
 
+interface TeamScopeCampaign {
+  campaignId: string
+  accessMode: 'owner_pays' | 'agent_pays' | 'public'
+  campaign: { id: string; name: string; total_leads: number; called_leads: number; status: string } | null
+}
+
+interface TeamScope {
+  id: string
+  name: string
+  viewerRole: 'owner' | 'member'
+  teamCampaigns: TeamScopeCampaign[]
+}
+
+const PERSONAL_SCOPE = '__personal__'
+
 export default function DialerPage() {
   const { user } = useUser()
+  const searchParams = useSearchParams()
   const [notes, setNotes] = useState('')
   const [tier, setTier] = useState<AccessTier>(null)
   const [tierLoaded, setTierLoaded] = useState(false)
@@ -52,16 +69,22 @@ export default function DialerPage() {
   const [sessionStats, setSessionStats] = useState({
     calls: 0, connected: 0, appointments: 0, closed: 0, dnc: 0, notInterested: 0
   })
+
+  // Team scope state
+  const [teamScopes, setTeamScopes] = useState<TeamScope[]>([])
+  const [selectedScope, setSelectedScope] = useState<string>(PERSONAL_SCOPE)
+  const [scopesLoaded, setScopesLoaded] = useState(false)
+
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const audioCtxRef = useRef<AudioContext | null>(null)
   const activePollRef = useRef<NodeJS.Timeout | null>(null)
   const swClientRef = useRef<any>(null)
   const swCallRef = useRef<any>(null)
   const [tick, setTick] = useState(0)
+  const urlParamsConsumedRef = useRef(false)
 
   useEffect(() => setMounted(true), [])
 
-  // Fetch access tier — controls whether dialer or paywall shows
   useEffect(() => {
     if (!user) return
     fetch('/api/stripe/status')
@@ -76,13 +99,83 @@ export default function DialerPage() {
       })
   }, [user])
 
-  // Only initialize SIP / fetch campaigns / etc. for active users.
-  // Lapsed users get the paywall and never load any of this.
   const isActive = tier === 'active'
+
+  // Load team scopes (member of any team OR owner of any team)
+  useEffect(() => {
+    if (!user || !isActive) return
+    let cancelled = false
+    fetch('/api/teams/list?detail=owned')
+      .then(r => r.json())
+      .then(async data => {
+        if (cancelled || !data.success) {
+          setScopesLoaded(true)
+          return
+        }
+        const scopes: TeamScope[] = []
+        // Owner teams already have teamCampaigns
+        for (const t of data.teams.owned || []) {
+          if ((t.teamCampaigns || []).length > 0) {
+            scopes.push({
+              id: t.id,
+              name: t.name,
+              viewerRole: 'owner',
+              teamCampaigns: t.teamCampaigns,
+            })
+          }
+        }
+        // Member teams need a per-team detail call to get teamCampaigns
+        const memberTeams = data.teams.member || []
+        if (memberTeams.length > 0) {
+          await Promise.all(memberTeams.map(async (t: any) => {
+            try {
+              const r = await fetch(`/api/teams/${t.id}/get`)
+              const d = await r.json()
+              if (d.success && d.team.teamCampaigns?.length > 0) {
+                scopes.push({
+                  id: t.id,
+                  name: t.name,
+                  viewerRole: 'member',
+                  teamCampaigns: d.team.teamCampaigns,
+                })
+              }
+            } catch {}
+          }))
+        }
+        if (!cancelled) {
+          setTeamScopes(scopes)
+          setScopesLoaded(true)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setScopesLoaded(true)
+      })
+    return () => { cancelled = true }
+  }, [user, isActive])
+
+  // Read URL params (?teamId=X&campaignId=Y) once after scopes load
+  useEffect(() => {
+    if (!scopesLoaded || urlParamsConsumedRef.current) return
+    const teamIdParam = searchParams.get('teamId')
+    const campaignIdParam = searchParams.get('campaignId')
+    if (teamIdParam && teamScopes.find(s => s.id === teamIdParam)) {
+      setSelectedScope(teamIdParam)
+      if (campaignIdParam) {
+        setSelectedCampaign(campaignIdParam)
+      }
+    }
+    urlParamsConsumedRef.current = true
+  }, [scopesLoaded, teamScopes, searchParams])
 
   useEffect(() => {
     if (user && isActive) fetchCampaigns()
   }, [user, isActive])
+
+  // When scope changes, reset campaign selection (unless it was URL-driven)
+  useEffect(() => {
+    if (!urlParamsConsumedRef.current) return
+    setSelectedCampaign('all')
+  }, [selectedScope])
 
   useEffect(() => {
     if (!isActive) return
@@ -144,7 +237,6 @@ export default function DialerPage() {
             console.log('> Incoming SIP INVITE received!')
             try {
               const { SessionState: SS } = await import('sip.js')
-
               invitation.stateChange.addListener((state: any) => {
                 console.log('> Incoming call state:', state)
                 if (state === SS.Established) {
@@ -156,11 +248,8 @@ export default function DialerPage() {
                   if (swCallRef.current === invitation) swCallRef.current = null
                 }
               })
-
               await invitation.accept({
-                sessionDescriptionHandlerOptions: {
-                  constraints: { audio: true, video: false },
-                },
+                sessionDescriptionHandlerOptions: { constraints: { audio: true, video: false } },
               })
               console.log('> Accepted incoming SIP invite')
             } catch (err) {
@@ -170,15 +259,10 @@ export default function DialerPage() {
         }
 
         await userAgent.start()
-        console.log('> SIP UserAgent started')
-
         const registerer = new Registerer(userAgent)
         await registerer.register()
-        console.log('> SIP registered successfully!')
-
         swClientRef.current = userAgent
         setSwReady(true)
-        console.log('> Browser audio ready — waiting for incoming calls')
       } catch (err: any) {
         console.error('SIP init error:', err?.message || err)
       }
@@ -195,7 +279,6 @@ export default function DialerPage() {
         if (!pc) return false
 
         pc.ontrack = (event: RTCTrackEvent) => {
-          console.log('> Got remote audio track!')
           if (event.streams && event.streams[0]) {
             let audioEl = document.getElementById('sip-audio') as HTMLAudioElement
             if (!audioEl) {
@@ -205,13 +288,12 @@ export default function DialerPage() {
               document.body.appendChild(audioEl)
             }
             audioEl.srcObject = event.streams[0]
-            audioEl.play().then(() => console.log('> Audio playing!')).catch(console.error)
+            audioEl.play().catch(console.error)
           }
         }
 
         pc.getReceivers().forEach((receiver: RTCRtpReceiver) => {
           if (receiver.track && receiver.track.kind === 'audio') {
-            console.log('> Found existing audio track!')
             const stream = new MediaStream([receiver.track])
             let audioEl = document.getElementById('sip-audio') as HTMLAudioElement
             if (!audioEl) {
@@ -221,11 +303,9 @@ export default function DialerPage() {
               document.body.appendChild(audioEl)
             }
             audioEl.srcObject = stream
-            audioEl.play().then(() => console.log('> Existing audio playing!')).catch(console.error)
+            audioEl.play().catch(console.error)
           }
         })
-
-        console.log('> Audio listener attached to peer connection')
         return true
       } catch (err) {
         console.error('attachSIPAudio error:', err)
@@ -248,7 +328,6 @@ export default function DialerPage() {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
         stream.getTracks().forEach(track => track.stop())
         setMicGranted(true)
-        console.log('> Microphone permission granted')
       } catch (err) {
         console.warn('Microphone permission denied:', err)
       }
@@ -343,12 +422,28 @@ export default function DialerPage() {
     if (data.success) setCampaigns(data.campaigns.filter((c: Campaign) => c.status === 'active'))
   }
 
+  // ── Scope helpers ──────────────────────────────────────────────────────
+
+  const isPersonalScope = selectedScope === PERSONAL_SCOPE
+  const currentScope = teamScopes.find(s => s.id === selectedScope) || null
+
+  // Campaigns visible in the current scope picker
+  const scopeCampaigns: { id: string; name: string; total_leads: number }[] = isPersonalScope
+    ? campaigns.map(c => ({ id: c.id, name: c.name, total_leads: c.total_leads }))
+    : (currentScope?.teamCampaigns
+        .filter(tc => tc.campaign)
+        .map(tc => ({
+          id: tc.campaign!.id,
+          name: tc.campaign!.name,
+          total_leads: tc.campaign!.total_leads,
+        })) || [])
+
   const fetchNextLead = async () => {
     const params = new URLSearchParams({ user_id: user?.id || '' })
     if (selectedCampaign !== 'all') params.append('campaign_id', selectedCampaign)
+    if (!isPersonalScope) params.append('team_id', selectedScope)
     const res = await fetch(`/api/leads/next?${params}`)
     const data = await res.json()
-    console.log('fetchNextLead result:', data)
     if (data.success) {
       setCurrentLead(data.lead)
       setNoLeads(false)
@@ -381,11 +476,8 @@ export default function DialerPage() {
   }, [status])
 
   useEffect(() => {
-    if (dialZoomed) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
-    }
+    if (dialZoomed) document.body.style.overflow = 'hidden'
+    else document.body.style.overflow = ''
     return () => { document.body.style.overflow = '' }
   }, [dialZoomed])
 
@@ -394,7 +486,6 @@ export default function DialerPage() {
       try {
         const statusRes = await fetch(`/api/calls/check?sid=${callSid}`)
         const statusData = await statusRes.json()
-        console.log('Call status:', statusData.status)
 
         if (statusData.status === 'in-progress') {
           clearInterval(pollInterval)
@@ -407,7 +498,6 @@ export default function DialerPage() {
             try {
               const res = await fetch(`/api/calls/check?sid=${callSid}`)
               const d = await res.json()
-              console.log('Connected status check:', d.status)
               if (d.status === 'completed' || d.status === 'canceled' || d.status === 'failed') {
                 clearInterval(hangupPoll)
                 activePollRef.current = null
@@ -498,21 +588,19 @@ export default function DialerPage() {
           to: lead.phone,
           leadId: lead.id,
           campaignId: lead.campaign_id,
+          teamId: isPersonalScope ? undefined : selectedScope,
         }),
       })
       const data = await res.json()
-      console.log('Call initiated:', data)
 
       if (data.success) {
         setActiveCallSid(data.callSid)
         startCallPolling(data.callSid)
       } else {
-        // 403 means subscription lapsed mid-session — re-fetch tier and bail to paywall
         if (res.status === 403) {
           setTier('lapsed')
           return
         }
-        console.error('Call failed:', data.error)
         await fetch('/api/leads/dispose', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -558,7 +646,7 @@ export default function DialerPage() {
     setTimeout(() => handleDial(), 300)
   }
 
- const handleDisposition = async (disp: string) => {
+  const handleDisposition = async (disp: string) => {
     if (disp === 'SKIP') { handleSkip(); return }
     setDisposition(disp)
     setSessionStats(s => ({
@@ -660,8 +748,22 @@ export default function DialerPage() {
     { label: 'SKIP', color: '#5a5e6a', bg: '#f0f0f4' },
   ]
 
-  const currentCampaign = campaigns.find(c => c.id === selectedCampaign)
-  const activeScript = currentCampaign?.script || (selectedCampaign === 'all' ? campaigns.find(c => c.script)?.script : null)
+  // Resolve current campaign for script display, accounting for scope
+  let currentCampaign: Campaign | undefined = undefined
+  let activeScript: string | null = null
+  if (selectedCampaign !== 'all') {
+    if (isPersonalScope) {
+      currentCampaign = campaigns.find(c => c.id === selectedCampaign)
+      activeScript = currentCampaign?.script || null
+    } else {
+      // For team scopes, the campaign data may not include script (depends on API)
+      // Fall back to personal-list lookup; harmless if not found
+      currentCampaign = campaigns.find(c => c.id === selectedCampaign)
+      activeScript = currentCampaign?.script || null
+    }
+  } else if (isPersonalScope) {
+    activeScript = campaigns.find(c => c.script)?.script || null
+  }
 
   const terminalBg = '#f0f1f4'
   const terminalSurface = '#e2e4ea'
@@ -674,255 +776,152 @@ export default function DialerPage() {
   const terminalRed = '#8a1a1a'
 
   // ========================================================================
-  // LAPSED PAYWALL — replaces the entire dialer for non-active users
+  // LAPSED PAYWALL
   // ========================================================================
   if (tierLoaded && !isActive) {
     return (
       <div style={{
-        flex: 1,
-        background: terminalBg,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 24,
-        minHeight: 'calc(100vh - 64px)',
+        flex: 1, background: terminalBg,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 24, minHeight: 'calc(100vh - 64px)',
         fontFamily: 'Futura PT, Futura, sans-serif',
       }}>
         <div style={{
-          width: '100%',
-          maxWidth: 520,
-          background: terminalDark,
-          border: `1px solid ${terminalBorder}`,
-          borderTop: `3px solid #ffaa3e`,
-          borderRadius: 4,
-          padding: 36,
-          color: '#e0e2ea',
-          textAlign: 'center',
-          boxSizing: 'border-box',
+          width: '100%', maxWidth: 520,
+          background: terminalDark, border: `1px solid ${terminalBorder}`,
+          borderTop: `3px solid #ffaa3e`, borderRadius: 4, padding: 36,
+          color: '#e0e2ea', textAlign: 'center', boxSizing: 'border-box',
         }}>
-          <div style={{
-            fontSize: 56, marginBottom: 16, opacity: 0.85,
-          }}>📞</div>
-
-          <div style={{
-            fontSize: 16,
-            fontWeight: 700,
-            letterSpacing: 5,
-            color: '#ffaa3e',
-            marginBottom: 12,
-          }}>SUBSCRIBE TO DIAL</div>
-
-          <div style={{
-            fontSize: 12,
-            lineHeight: 1.7,
-            color: '#c0c2ca',
-            letterSpacing: 1,
-            marginBottom: 28,
-          }}>
+          <div style={{ fontSize: 56, marginBottom: 16, opacity: 0.85 }}>📞</div>
+          <div style={{ fontSize: 16, fontWeight: 700, letterSpacing: 5, color: '#ffaa3e', marginBottom: 12 }}>
+            SUBSCRIBE TO DIAL
+          </div>
+          <div style={{ fontSize: 12, lineHeight: 1.7, color: '#c0c2ca', letterSpacing: 1, marginBottom: 28 }}>
             {tier === 'lapsed'
               ? 'Your subscription has lapsed. Resubscribe to restore dialing access. Your leads, recordings, and campaigns are still here waiting for you.'
               : 'An active subscription is required to make outbound calls.'}
           </div>
-
           <Link href="/billing" style={{
-            display: 'block',
-            padding: '16px 28px',
+            display: 'block', padding: '16px 28px',
             background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
-            border: 'none',
-            borderRadius: 4,
-            color: 'white',
-            fontSize: 13,
-            fontWeight: 700,
-            letterSpacing: 4,
-            textDecoration: 'none',
-            boxShadow: '0 0 20px rgba(74,158,255,0.3)',
-            marginBottom: 16,
-            fontFamily: 'Futura PT, Futura, sans-serif',
+            border: 'none', borderRadius: 4, color: 'white',
+            fontSize: 13, fontWeight: 700, letterSpacing: 4,
+            textDecoration: 'none', boxShadow: '0 0 20px rgba(74,158,255,0.3)',
+            marginBottom: 16, fontFamily: 'Futura PT, Futura, sans-serif',
           }}>RESUBSCRIBE — $35/WEEK</Link>
-
+          <div style={{ fontSize: 9, letterSpacing: 3, color: '#888a92', marginBottom: 24 }}>
+            NO CONTRACTS · CANCEL ANYTIME
+          </div>
           <div style={{
-            fontSize: 9,
-            letterSpacing: 3,
-            color: '#888a92',
-            marginBottom: 24,
-          }}>NO CONTRACTS · CANCEL ANYTIME</div>
-
-          <div style={{
-            paddingTop: 20,
-            borderTop: '1px solid #2a2c34',
-            display: 'flex',
-            gap: 12,
-            justifyContent: 'center',
-            flexWrap: 'wrap',
+            paddingTop: 20, borderTop: '1px solid #2a2c34',
+            display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap',
           }}>
-            <Link href="/dashboard/leads" style={navLinkStyle}>
-              VIEW LEADS
-            </Link>
-            <Link href="/dashboard/recordings" style={navLinkStyle}>
-              RECORDINGS
-            </Link>
-            <Link href="/dashboard/analytics" style={navLinkStyle}>
-              ANALYTICS
-            </Link>
+            <Link href="/dashboard/leads" style={navLinkStyle}>VIEW LEADS</Link>
+            <Link href="/dashboard/recordings" style={navLinkStyle}>RECORDINGS</Link>
+            <Link href="/dashboard/analytics" style={navLinkStyle}>ANALYTICS</Link>
           </div>
         </div>
       </div>
     )
   }
 
-  // While tier is loading — show a minimal placeholder, don't flash the full UI
   if (!tierLoaded) {
     return (
       <div style={{
-        flex: 1,
-        background: terminalBg,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+        flex: 1, background: terminalBg,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
         minHeight: 'calc(100vh - 64px)',
         fontFamily: 'Futura PT, Futura, sans-serif',
       }}>
-        <div style={{
-          fontSize: 11,
-          letterSpacing: 4,
-          color: terminalMuted,
-        }}>LOADING TERMINAL...</div>
+        <div style={{ fontSize: 11, letterSpacing: 4, color: terminalMuted }}>LOADING TERMINAL...</div>
       </div>
     )
   }
 
   // ========================================================================
-  // ACTIVE USER — full dialer UI (unchanged from before)
+  // ACTIVE USER — full dialer UI
   // ========================================================================
 
-  // Reusable manual dial component (used inline AND in zoom overlay)
   const ManualDialer = ({ inOverlay = false }: { inOverlay?: boolean }) => (
     <>
       <div style={{
-        background: terminalDark,
-        padding: inOverlay ? '14px 20px' : '8px 16px',
-        borderBottom: `1px solid ${terminalBorder}`,
-        flexShrink: 0,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
+        background: terminalDark, padding: inOverlay ? '14px 20px' : '8px 16px',
+        borderBottom: `1px solid ${terminalBorder}`, flexShrink: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <span style={{
-          fontSize: inOverlay ? '11px' : '9px',
-          letterSpacing: '3px',
-          color: '#8888aa',
-          fontWeight: 'bold',
+          fontSize: inOverlay ? '11px' : '9px', letterSpacing: '3px',
+          color: '#8888aa', fontWeight: 'bold',
         }}>MANUAL DIAL</span>
         <button
           onClick={() => setDialZoomed(!inOverlay)}
           aria-label={inOverlay ? 'Close fullscreen dialer' : 'Open fullscreen dialer'}
           style={{
-            background: 'transparent',
-            border: '1px solid #4a4a5e',
-            borderRadius: 4,
-            color: '#8888aa',
-            width: 28,
-            height: 28,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            fontSize: 14,
-            fontWeight: 'bold',
-            padding: 0,
+            background: 'transparent', border: '1px solid #4a4a5e', borderRadius: 4,
+            color: '#8888aa', width: 28, height: 28,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', fontSize: 14, fontWeight: 'bold', padding: 0,
           }}
-        >
-          {inOverlay ? '×' : '⛶'}
-        </button>
+        >{inOverlay ? '×' : '⛶'}</button>
       </div>
 
       <div style={{
         padding: inOverlay ? '20px 24px' : '12px',
-        background: terminalBg,
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
+        background: terminalBg, flex: 1,
+        display: 'flex', flexDirection: 'column',
         maxWidth: inOverlay ? 480 : 'none',
         margin: inOverlay ? '0 auto' : 0,
         width: inOverlay ? '100%' : 'auto',
         boxSizing: 'border-box',
         overflowY: inOverlay ? 'auto' : 'visible',
-        paddingBottom: inOverlay
-          ? 'calc(20px + env(safe-area-inset-bottom, 0px))'
-          : 12,
+        paddingBottom: inOverlay ? 'calc(20px + env(safe-area-inset-bottom, 0px))' : 12,
       }}>
         <div style={{
-          background: terminalSurface,
-          border: `1px solid ${terminalBorder}`,
-          borderRadius: '4px',
+          background: terminalSurface, border: `1px solid ${terminalBorder}`, borderRadius: '4px',
           padding: inOverlay ? '20px 16px' : '10px 12px',
-          fontFamily: 'monospace',
-          fontSize: inOverlay ? '32px' : '18px',
-          fontWeight: 'bold',
-          color: manualNumber ? terminalText : terminalMuted,
-          letterSpacing: '3px',
-          textAlign: 'center',
+          fontFamily: 'monospace', fontSize: inOverlay ? '32px' : '18px',
+          fontWeight: 'bold', color: manualNumber ? terminalText : terminalMuted,
+          letterSpacing: '3px', textAlign: 'center',
           marginBottom: inOverlay ? '20px' : '10px',
           minHeight: inOverlay ? '64px' : '44px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
         }}>
           {manualNumber || '_ _ _ _ _ _ _ _'}
         </div>
 
         <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: inOverlay ? '12px' : '6px',
-          marginBottom: inOverlay ? '12px' : '6px',
+          display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: inOverlay ? '12px' : '6px', marginBottom: inOverlay ? '12px' : '6px',
           flex: inOverlay ? '0 0 auto' : 1,
         }}>
           {['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'].map((key) => (
             <button key={key} onClick={() => handleKeypad(key)} style={{
-              borderRadius: '3px',
-              background: terminalSurface,
-              border: `1px solid ${terminalBorder}`,
-              borderBottom: `3px solid ${terminalBorder}`,
-              color: terminalText,
-              fontSize: inOverlay ? '28px' : '16px',
-              fontWeight: 'bold',
-              cursor: 'pointer',
-              fontFamily: 'monospace',
-              transition: 'all 0.05s',
-              padding: inOverlay ? '20px 0' : '12px 0',
+              borderRadius: '3px', background: terminalSurface,
+              border: `1px solid ${terminalBorder}`, borderBottom: `3px solid ${terminalBorder}`,
+              color: terminalText, fontSize: inOverlay ? '28px' : '16px',
+              fontWeight: 'bold', cursor: 'pointer', fontFamily: 'monospace',
+              transition: 'all 0.05s', padding: inOverlay ? '20px 0' : '12px 0',
               minHeight: inOverlay ? 64 : 'auto',
             }}>{key}</button>
           ))}
         </div>
 
         <div style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 2fr',
-          gap: inOverlay ? '12px' : '6px',
-          flexShrink: 0,
+          display: 'grid', gridTemplateColumns: '1fr 2fr',
+          gap: inOverlay ? '12px' : '6px', flexShrink: 0,
         }}>
           <button onClick={handleBackspace} style={{
-            padding: inOverlay ? '20px' : '12px',
-            borderRadius: '3px',
-            background: terminalSurface,
-            border: `1px solid ${terminalBorder}`,
-            borderBottom: `3px solid ${terminalBorder}`,
-            color: terminalMuted,
-            fontSize: inOverlay ? '24px' : '16px',
-            cursor: 'pointer',
+            padding: inOverlay ? '20px' : '12px', borderRadius: '3px',
+            background: terminalSurface, border: `1px solid ${terminalBorder}`,
+            borderBottom: `3px solid ${terminalBorder}`, color: terminalMuted,
+            fontSize: inOverlay ? '24px' : '16px', cursor: 'pointer',
           }}>⌫</button>
           <button onClick={handleManualDial} disabled={!manualNumber} style={{
-            padding: inOverlay ? '20px' : '12px',
-            borderRadius: '3px',
-            border: 'none',
+            padding: inOverlay ? '20px' : '12px', borderRadius: '3px', border: 'none',
             background: manualNumber ? terminalDark : terminalSurface,
             borderBottom: `3px solid ${manualNumber ? '#4a9eff' : terminalBorder}`,
             color: manualNumber ? '#4a9eff' : terminalMuted,
-            fontSize: inOverlay ? '14px' : '11px',
-            fontWeight: 'bold',
-            letterSpacing: '2px',
+            fontSize: inOverlay ? '14px' : '11px', fontWeight: 'bold', letterSpacing: '2px',
             cursor: manualNumber ? 'pointer' : 'not-allowed',
             fontFamily: 'Futura PT, Futura, sans-serif',
           }}>▶ DIAL</button>
@@ -933,114 +932,64 @@ export default function DialerPage() {
 
   return (
     <div className="dialer-root" style={{
-      flex: 1,
-      background: terminalBg,
-      display: 'flex',
-      flexDirection: 'column',
-      overflow: 'hidden',
-      minHeight: 0,
-      position: 'relative',
+      flex: 1, background: terminalBg,
+      display: 'flex', flexDirection: 'column',
+      overflow: 'hidden', minHeight: 0, position: 'relative',
     }}>
       <style>{`
-        .dialer-root {
-          height: 100vh;
-          height: 100dvh;
-        }
+        .dialer-root { height: 100vh; height: 100dvh; }
         .dialer-status-bar { display: flex; align-items: center; justify-content: space-between; }
         .dialer-status-bar-left { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
         .dialer-status-bar-right { display: flex; align-items: center; gap: 18px; }
         .dialer-stat-grid { grid-template-columns: repeat(3, 1fr) !important; }
         .dialer-right-sidebar {
-          width: 280px;
-          border-left: 1px solid ${terminalBorder};
-          display: flex;
-          flex-direction: column;
-          flex-shrink: 0;
-          overflow: hidden;
+          width: 280px; border-left: 1px solid ${terminalBorder};
+          display: flex; flex-direction: column; flex-shrink: 0; overflow: hidden;
         }
         .dialer-right-toggle { display: none; }
         .dialer-right-overlay { display: none; }
         .dialer-connected-pill {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          padding: 3px 10px;
-          background: rgba(74,158,255,0.12);
-          border: 1px solid rgba(74,158,255,0.3);
-          border-radius: 3px;
-          font-family: monospace;
-          font-size: 10px;
-          letter-spacing: 1px;
-          color: #4a9eff;
-          font-weight: bold;
+          display: flex; align-items: center; gap: 6px;
+          padding: 3px 10px; background: rgba(74,158,255,0.12);
+          border: 1px solid rgba(74,158,255,0.3); border-radius: 3px;
+          font-family: monospace; font-size: 10px; letter-spacing: 1px;
+          color: #4a9eff; font-weight: bold;
         }
 
         @media (max-width: 768px) {
-          .dialer-root {
-            height: calc(100vh - 64px);
-            height: calc(100dvh - 64px);
-          }
+          .dialer-root { height: calc(100vh - 64px); height: calc(100dvh - 64px); }
           .dialer-status-bar { padding: 6px 12px !important; }
           .dialer-status-bar-left { gap: 10px; }
           .dialer-status-bar-right { gap: 10px; }
           .dialer-status-bar-right .dialer-time-block { display: none !important; }
-          .dialer-stat-grid {
-            grid-template-columns: repeat(2, 1fr) !important;
-          }
+          .dialer-stat-grid { grid-template-columns: repeat(2, 1fr) !important; }
           .dialer-right-sidebar {
-            position: fixed;
-            right: 0;
-            top: 0;
-            bottom: 0;
-            z-index: 60;
-            width: 280px;
-            max-width: 85vw;
-            transform: translateX(100%);
-            transition: transform 0.25s ease;
-            background: ${terminalBg};
-            border-left: 1px solid ${terminalBorder};
+            position: fixed; right: 0; top: 0; bottom: 0; z-index: 60;
+            width: 280px; max-width: 85vw;
+            transform: translateX(100%); transition: transform 0.25s ease;
+            background: ${terminalBg}; border-left: 1px solid ${terminalBorder};
           }
           .dialer-right-sidebar.open { transform: translateX(0); }
           .dialer-right-toggle {
-            display: flex;
-            position: fixed;
-            right: 12px;
-            bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-            z-index: 50;
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            background: ${terminalDark};
-            border: 1px solid #4a4a5e;
-            color: #4a9eff;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-size: 18px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+            display: flex; position: fixed; right: 12px;
+            bottom: calc(12px + env(safe-area-inset-bottom, 0px)); z-index: 50;
+            width: 48px; height: 48px; border-radius: 50%;
+            background: ${terminalDark}; border: 1px solid #4a4a5e; color: #4a9eff;
+            align-items: center; justify-content: center; cursor: pointer;
+            font-size: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.25);
           }
           .dialer-right-overlay {
-            display: block;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.5);
-            z-index: 55;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s ease;
+            display: block; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.5); z-index: 55;
+            opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
           }
-          .dialer-right-overlay.open {
-            opacity: 1;
-            pointer-events: auto;
-          }
+          .dialer-right-overlay.open { opacity: 1; pointer-events: auto; }
         }
       `}</style>
 
       <div className="dialer-status-bar" style={{
-        background: terminalDark,
-        padding: '8px 20px',
-        borderBottom: `2px solid ${terminalAccent}`,
-        flexShrink: 0,
+        background: terminalDark, padding: '8px 20px',
+        borderBottom: `2px solid ${terminalAccent}`, flexShrink: 0,
       }}>
         <div className="dialer-status-bar-left">
           <span style={{ fontSize: '11px', fontWeight: 'bold', letterSpacing: '4px', color: '#4a9eff' }}>
@@ -1093,7 +1042,7 @@ export default function DialerPage() {
             {[
               { label: 'STATUS', value: status.toUpperCase(), color: status === 'connected' ? terminalGreen : status === 'calling' ? '#8a6a1a' : terminalMuted },
               { label: 'DURATION', value: status === 'connected' ? formatTime(seconds) : '--:--', color: terminalAccent },
-              { label: 'CAMPAIGN', value: currentCampaign?.name?.substring(0, 12) || 'ALL', color: terminalText },
+              { label: 'SCOPE', value: isPersonalScope ? 'PERSONAL' : (currentScope?.name?.substring(0, 12) || '—'), color: isPersonalScope ? terminalText : '#4a9eff' },
             ].map((item) => (
               <div key={item.label} style={{
                 padding: '8px 12px', background: terminalSurface,
@@ -1105,24 +1054,54 @@ export default function DialerPage() {
             ))}
           </div>
 
+          {/* SCOPE PICKER — only show when there's at least one team scope */}
+          {teamScopes.length > 0 && (
+            <div style={{
+              padding: '10px 14px', background: terminalSurface,
+              border: `1px solid ${terminalBorder}`, borderRadius: '4px', flexShrink: 0,
+            }}>
+              <div style={{ fontSize: '9px', letterSpacing: '3px', color: terminalMuted, marginBottom: '6px' }}>▸ SOURCE</div>
+              <select
+                value={selectedScope}
+                onChange={(e) => setSelectedScope(e.target.value)}
+                style={{
+                  width: '100%', padding: '6px 10px', borderRadius: '4px',
+                  background: terminalBg, border: `1px solid ${terminalBorder}`,
+                  color: terminalText, fontSize: '12px', outline: 'none',
+                  fontFamily: 'monospace', cursor: 'pointer',
+                }}
+              >
+                <option value={PERSONAL_SCOPE}>★ MY LEADS (PERSONAL)</option>
+                {teamScopes.map(s => (
+                  <option key={s.id} value={s.id}>
+                    {s.viewerRole === 'owner' ? '⚙ ' : '◇ '}TEAM: {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div style={{ padding: '10px 14px', background: terminalSurface, border: `1px solid ${terminalBorder}`, borderRadius: '4px', flexShrink: 0 }}>
             <div style={{ fontSize: '9px', letterSpacing: '3px', color: terminalMuted, marginBottom: '6px' }}>▸ SELECT CAMPAIGN</div>
             <select value={selectedCampaign} onChange={(e) => setSelectedCampaign(e.target.value)} style={{
               width: '100%', padding: '6px 10px', borderRadius: '4px',
               background: terminalBg, border: `1px solid ${terminalBorder}`,
-              color: terminalText, fontSize: '12px', outline: 'none', fontFamily: 'monospace', cursor: 'pointer',
+              color: terminalText, fontSize: '12px', outline: 'none',
+              fontFamily: 'monospace', cursor: 'pointer',
             }}>
-              <option value="all">[ ALL ACTIVE CAMPAIGNS ]</option>
-              {campaigns.map(c => (
+              <option value="all">[ ALL {isPersonalScope ? 'ACTIVE' : 'TEAM'} CAMPAIGNS ]</option>
+              {scopeCampaigns.map(c => (
                 <option key={c.id} value={c.id}>{c.name} — {c.total_leads} leads</option>
               ))}
             </select>
-            {campaigns.length === 0 && (
+            {scopeCampaigns.length === 0 && (
               <div style={{
                 marginTop: '6px', padding: '5px 8px', background: '#f8e8e8',
                 border: '1px solid #d0a0a0', borderRadius: '4px',
                 fontSize: '10px', letterSpacing: '2px', color: terminalRed,
-              }}>⚠ NO ACTIVE CAMPAIGNS FOUND</div>
+              }}>
+                ⚠ {isPersonalScope ? 'NO ACTIVE CAMPAIGNS FOUND' : 'NO CAMPAIGNS ACCESSIBLE FROM THIS TEAM'}
+              </div>
             )}
           </div>
 
@@ -1149,7 +1128,7 @@ export default function DialerPage() {
                   </p>
                   {noLeads && (
                     <p style={{ fontSize: '10px', color: terminalRed, marginTop: '8px', letterSpacing: '2px' }}>
-                      UPLOAD MORE LEADS TO CONTINUE
+                      {isPersonalScope ? 'UPLOAD MORE LEADS TO CONTINUE' : 'NO MORE TEAM LEADS — TRY ANOTHER CAMPAIGN OR SCOPE'}
                     </p>
                   )}
                 </div>
@@ -1212,46 +1191,39 @@ export default function DialerPage() {
           </div>
 
           {showDisposition && (
-  <div style={{
-    padding: '10px 14px', background: terminalSurface,
-    border: `2px solid ${terminalAccent}`, borderRadius: '4px', flexShrink: 0,
-  }}>
-    <div style={{ fontSize: '9px', letterSpacing: '3px', color: terminalMuted, marginBottom: '6px' }}>▸ NOTES <span style={{ opacity: 0.6 }}>(OPTIONAL)</span></div>
-    <textarea
-      value={notes}
-      onChange={(e) => setNotes(e.target.value)}
-      placeholder="Anything to remember about this call..."
-      rows={2}
-      style={{
-        width: '100%',
-        padding: '8px 10px',
-        background: terminalBg,
-        border: `1px solid ${terminalBorder}`,
-        borderRadius: 3,
-        fontFamily: 'monospace',
-        fontSize: 12,
-        color: terminalText,
-        outline: 'none',
-        resize: 'vertical',
-        marginBottom: 10,
-        boxSizing: 'border-box',
-      }}
-    />
-    <div style={{ fontSize: '9px', letterSpacing: '3px', color: terminalMuted, marginBottom: '8px' }}>▸ SELECT DISPOSITION</div>
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: '6px' }}>
-      {dispositions.map((d) => (
-        <button key={d.label} onClick={() => handleDisposition(d.label)} style={{
-          padding: '10px 4px', borderRadius: '3px',
-          background: disposition === d.label ? d.color : d.bg,
-          border: `1px solid ${d.color}`,
-          color: disposition === d.label ? 'white' : d.color,
-          fontSize: '8px', fontWeight: 'bold', letterSpacing: '1px',
-          cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
-        }}>{d.label}</button>
-      ))}
-    </div>
-  </div>
-)}
+            <div style={{
+              padding: '10px 14px', background: terminalSurface,
+              border: `2px solid ${terminalAccent}`, borderRadius: '4px', flexShrink: 0,
+            }}>
+              <div style={{ fontSize: '9px', letterSpacing: '3px', color: terminalMuted, marginBottom: '6px' }}>▸ NOTES <span style={{ opacity: 0.6 }}>(OPTIONAL)</span></div>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Anything to remember about this call..."
+                rows={2}
+                style={{
+                  width: '100%', padding: '8px 10px',
+                  background: terminalBg, border: `1px solid ${terminalBorder}`,
+                  borderRadius: 3, fontFamily: 'monospace', fontSize: 12,
+                  color: terminalText, outline: 'none', resize: 'vertical',
+                  marginBottom: 10, boxSizing: 'border-box',
+                }}
+              />
+              <div style={{ fontSize: '9px', letterSpacing: '3px', color: terminalMuted, marginBottom: '8px' }}>▸ SELECT DISPOSITION</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: '6px' }}>
+                {dispositions.map((d) => (
+                  <button key={d.label} onClick={() => handleDisposition(d.label)} style={{
+                    padding: '10px 4px', borderRadius: '3px',
+                    background: disposition === d.label ? d.color : d.bg,
+                    border: `1px solid ${d.color}`,
+                    color: disposition === d.label ? 'white' : d.color,
+                    fontSize: '8px', fontWeight: 'bold', letterSpacing: '1px',
+                    cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                  }}>{d.label}</button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div style={{ display: 'grid', gridTemplateColumns: status === 'connected' ? '1fr 1fr' : '1fr', gap: '8px', flexShrink: 0 }}>
             {status === 'idle' && !available && (
@@ -1263,14 +1235,14 @@ export default function DialerPage() {
                 borderTop: `3px solid ${terminalBorder}`, transition: 'all 0.15s',
               }}>[ SET AVAILABLE TO DIAL ]</button>
             )}
-            {status === 'idle' && available && campaigns.length === 0 && (
+            {status === 'idle' && available && scopeCampaigns.length === 0 && (
               <div style={{
                 padding: '14px', borderRadius: '4px', background: terminalSurface, color: terminalMuted,
                 fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
                 textAlign: 'center', borderTop: `3px solid ${terminalBorder}`,
-              }}>[ NO ACTIVE CAMPAIGNS ]</div>
+              }}>[ NO CAMPAIGNS IN SCOPE ]</div>
             )}
-            {status === 'idle' && available && campaigns.length > 0 && (
+            {status === 'idle' && available && scopeCampaigns.length > 0 && (
               <button onClick={handleDial} style={{
                 padding: '14px', borderRadius: '4px', border: 'none',
                 background: terminalDark, color: '#4a9eff',
@@ -1341,14 +1313,8 @@ export default function DialerPage() {
               onClick={() => setRightSidebarOpen(false)}
               aria-label="Close panel"
               style={{
-                background: 'transparent',
-                border: 'none',
-                color: '#8888aa',
-                cursor: 'pointer',
-                fontSize: 18,
-                padding: 0,
-                width: 24,
-                height: 24,
+                background: 'transparent', border: 'none', color: '#8888aa',
+                cursor: 'pointer', fontSize: 18, padding: 0, width: 24, height: 24,
                 display: 'none',
               }}
               className="dialer-close-mobile"
@@ -1401,6 +1367,7 @@ export default function DialerPage() {
             {[
               status === 'connected' && `> CONNECTED — ${currentLead?.first_name} ${currentLead?.last_name}`,
               status === 'calling' && '> DIALING IN QUEUE...',
+              !isPersonalScope && currentScope && `> SCOPE: ${currentScope.name.toUpperCase()}`,
               swReady && '> AUDIO READY',
               micGranted && '> MIC READY',
               available && '> AGENT STATUS: ONLINE',
@@ -1426,14 +1393,9 @@ export default function DialerPage() {
       {dialZoomed && (
         <div
           style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 100,
-            background: terminalBg,
-            display: 'flex',
-            flexDirection: 'column',
-            height: '100vh',
-            ['height' as any]: '100dvh',
+            position: 'fixed', inset: 0, zIndex: 100,
+            background: terminalBg, display: 'flex', flexDirection: 'column',
+            height: '100vh', ['height' as any]: '100dvh',
           }}
           onClick={(e) => {
             if (e.target === e.currentTarget) setDialZoomed(false)
@@ -1447,14 +1409,8 @@ export default function DialerPage() {
 }
 
 const navLinkStyle: React.CSSProperties = {
-  padding: '10px 16px',
-  background: 'transparent',
-  border: '1px solid #2a4a8a',
-  borderRadius: 3,
-  color: '#4a9eff',
-  fontSize: 10,
-  fontWeight: 700,
-  letterSpacing: 2,
-  textDecoration: 'none',
-  fontFamily: 'Futura PT, Futura, sans-serif',
+  padding: '10px 16px', background: 'transparent',
+  border: '1px solid #2a4a8a', borderRadius: 3,
+  color: '#4a9eff', fontSize: 10, fontWeight: 700, letterSpacing: 2,
+  textDecoration: 'none', fontFamily: 'Futura PT, Futura, sans-serif',
 }

@@ -24,12 +24,19 @@ const adminNavItems = [
 
 type AccessTier = 'active' | 'lapsed' | 'new' | null
 
+interface SubsSummary {
+  ownerPaidSeats: { teamId: string; teamName: string }[]
+  agentPaidSeats: { teamId: string; teamName: string }[]
+  counts: { ownerPaid: number; agentPaid: number; totalSeats: number }
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user } = useUser()
   const pathname = usePathname()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
   const [tier, setTier] = useState<AccessTier>(null)
+  const [seats, setSeats] = useState<SubsSummary | null>(null)
   const profileRowRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -37,11 +44,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [pathname])
 
   useEffect(() => {
-    if (drawerOpen) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
-    }
+    if (drawerOpen) document.body.style.overflow = 'hidden'
+    else document.body.style.overflow = ''
     return () => { document.body.style.overflow = '' }
   }, [drawerOpen])
 
@@ -64,8 +68,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         .then(d => { if (!cancelled) setTier(d.tier || null) })
         .catch(() => { if (!cancelled) setTier(null) })
     }
+    const loadSeats = () => {
+      fetch('/api/subscriptions/summary')
+        .then(r => r.json())
+        .then(d => {
+          if (cancelled) return
+          if (d.success) {
+            setSeats({
+              ownerPaidSeats: d.ownerPaidSeats || [],
+              agentPaidSeats: d.agentPaidSeats || [],
+              counts: d.counts || { ownerPaid: 0, agentPaid: 0, totalSeats: 0 },
+            })
+          }
+        })
+        .catch(() => {})
+    }
     loadTier()
-    const onFocus = () => loadTier()
+    loadSeats()
+    const onFocus = () => { loadTier(); loadSeats() }
     window.addEventListener('focus', onFocus)
     return () => {
       cancelled = true
@@ -75,11 +95,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     if (!user) return
-
-    const ping = () => {
-      fetch('/api/heartbeat', { method: 'POST' }).catch(() => {})
-    }
-
+    const ping = () => { fetch('/api/heartbeat', { method: 'POST' }).catch(() => {}) }
     ping()
     const interval = setInterval(ping, 60_000)
     const onFocus = () => ping()
@@ -87,7 +103,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) ping()
     })
-
     return () => {
       clearInterval(interval)
       window.removeEventListener('focus', onFocus)
@@ -103,7 +118,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const handleProfileRowClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement
     if (target.closest('.cl-userButtonTrigger, .cl-userButtonAvatarBox')) return
-
     const row = e.currentTarget
     const trigger = row.querySelector(
       '.cl-userButtonTrigger, button.cl-userButtonAvatarBox, [data-clerk-component="UserButton"] button'
@@ -113,27 +127,52 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const logoHref = isAdmin ? '/dashboard/admin/analytics' : '/dashboard/analytics'
 
-  const tierLabel = isAdmin
-    ? 'ADMIN'
-    : tier === 'lapsed'
-      ? 'UNSUBSCRIBED'
-      : tier === 'active'
-        ? 'PRO PLAN'
-        : tier === 'new'
-          ? 'NO PLAN'
-          : '...'
+  // Tier label resolution — context-aware with seat awareness
+  const totalSeats = seats?.counts.totalSeats || 0
+  const hasActivePersonal = tier === 'active'
+  const hasAnySeat = totalSeats > 0
 
-  const tierColor = isAdmin
-    ? '#4a9eff'
-    : tier === 'lapsed' || tier === 'new'
-      ? '#ffaa3e'
-      : tier === 'active'
-        ? 'var(--text-secondary)'
-        : 'var(--text-secondary)'
+  let primaryLabel: string
+  let primaryColor: string
+  let primaryWeight: 'bold' | 'normal'
+  let secondaryText: string | null = null
 
-  const tierWeight: 'bold' | 'normal' = isAdmin || tier === 'lapsed' || tier === 'new'
-    ? 'bold'
-    : 'normal'
+  if (isAdmin) {
+    primaryLabel = 'ADMIN'
+    primaryColor = '#4a9eff'
+    primaryWeight = 'bold'
+  } else if (hasActivePersonal && hasAnySeat) {
+    primaryLabel = 'PRO PLAN'
+    primaryColor = 'var(--text-secondary)'
+    primaryWeight = 'normal'
+    secondaryText = `+ ${totalSeats} TEAM SEAT${totalSeats === 1 ? '' : 'S'}`
+  } else if (hasActivePersonal) {
+    primaryLabel = 'PRO PLAN'
+    primaryColor = 'var(--text-secondary)'
+    primaryWeight = 'normal'
+  } else if (hasAnySeat) {
+    primaryLabel = 'TEAM SEAT'
+    primaryColor = '#4a9eff'
+    primaryWeight = 'bold'
+    const firstTeam = (seats?.ownerPaidSeats[0] || seats?.agentPaidSeats[0])
+    if (firstTeam) {
+      secondaryText = totalSeats === 1
+        ? `via ${firstTeam.teamName}`
+        : `${totalSeats} teams`
+    }
+  } else if (tier === 'lapsed') {
+    primaryLabel = 'UNSUBSCRIBED'
+    primaryColor = '#ffaa3e'
+    primaryWeight = 'bold'
+  } else if (tier === 'new') {
+    primaryLabel = 'NO PLAN'
+    primaryColor = '#ffaa3e'
+    primaryWeight = 'bold'
+  } else {
+    primaryLabel = '...'
+    primaryColor = 'var(--text-secondary)'
+    primaryWeight = 'normal'
+  }
 
   const Sidebar = () => (
     <>
@@ -178,12 +217,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </Link>
 
       <nav style={{
-        flex: 1,
-        minHeight: 0,
-        padding: '0 12px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '2px',
+        flex: 1, minHeight: 0, padding: '0 12px',
+        display: 'flex', flexDirection: 'column', gap: '2px',
         overflowY: 'auto',
       }}>
         {navItems.map((item) => {
@@ -218,7 +253,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         })}
       </nav>
 
-      {!isAdmin && tier === 'lapsed' && (
+      {!isAdmin && tier === 'lapsed' && !hasAnySeat && (
         <Link
           href="/billing"
           style={{
@@ -234,15 +269,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             flexShrink: 0,
           }}>
           <span style={{
-            fontSize: 9,
-            letterSpacing: 2,
-            fontWeight: 'bold',
-            color: '#ffaa3e',
+            fontSize: 9, letterSpacing: 2, fontWeight: 'bold', color: '#ffaa3e',
           }}>▸ RESUBSCRIBE</span>
           <span style={{
-            fontSize: 9,
-            color: 'var(--text-secondary)',
-            letterSpacing: 1,
+            fontSize: 9, color: 'var(--text-secondary)', letterSpacing: 1,
           }}>Restore dialing access</span>
         </Link>
       )}
@@ -265,104 +295,62 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <UserButton />
         <div style={{ flex: 1, minWidth: 0, pointerEvents: 'none' }}>
           <div style={{
-            fontSize: '12px',
-            fontWeight: 'bold',
-            color: 'var(--text-primary)',
-            letterSpacing: '1px',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
+            fontSize: '12px', fontWeight: 'bold', color: 'var(--text-primary)',
+            letterSpacing: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           }}>{user?.firstName} {user?.lastName}</div>
           <div style={{
-            fontSize: '10px',
-            color: tierColor,
-            letterSpacing: '1px',
-            fontWeight: tierWeight,
-          }}>{tierLabel}</div>
+            fontSize: '10px', color: primaryColor,
+            letterSpacing: '1px', fontWeight: primaryWeight,
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          }}>{primaryLabel}</div>
+          {secondaryText && (
+            <div style={{
+              fontSize: '9px', color: 'var(--text-secondary)',
+              letterSpacing: '0.5px', marginTop: 1,
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+            }}>{secondaryText}</div>
+          )}
         </div>
       </div>
     </>
   )
 
   return (
-    <main style={{
-      minHeight: '100vh',
-      background: 'var(--background)',
-      display: 'flex',
-    }}>
+    <main style={{ minHeight: '100vh', background: 'var(--background)', display: 'flex' }}>
       <style>{`
         .ds-sidebar-desktop {
-          width: 260px;
-          height: 100vh;
-          position: sticky;
-          top: 0;
-          background: var(--surface);
-          border-right: 1px solid var(--border);
-          display: flex;
-          flex-direction: column;
-          padding: 20px 0;
-          flex-shrink: 0;
-          overflow: hidden;
+          width: 260px; height: 100vh; position: sticky; top: 0;
+          background: var(--surface); border-right: 1px solid var(--border);
+          display: flex; flex-direction: column; padding: 20px 0;
+          flex-shrink: 0; overflow: hidden;
         }
         .ds-mobile-topbar { display: none; }
         .ds-sidebar-mobile { display: none; }
         .ds-mobile-overlay { display: none; }
-
-        .ds-profile-row:hover {
-          background: rgba(74,158,255,0.06);
-        }
+        .ds-profile-row:hover { background: rgba(74,158,255,0.06); }
 
         @media (max-width: 768px) {
           .ds-sidebar-desktop { display: none; }
           .ds-mobile-topbar {
-            display: flex;
-            position: sticky;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 40;
-            align-items: center;
-            justify-content: space-between;
-            padding: 12px 16px;
-            background: var(--surface);
-            border-bottom: 1px solid var(--border);
+            display: flex; position: sticky; top: 0; left: 0; right: 0; z-index: 40;
+            align-items: center; justify-content: space-between;
+            padding: 12px 16px; background: var(--surface); border-bottom: 1px solid var(--border);
           }
           .ds-sidebar-mobile {
-            display: flex;
-            position: fixed;
-            top: 0;
-            left: 0;
-            bottom: 0;
-            width: 280px;
-            max-width: 85vw;
-            background: var(--surface);
-            border-right: 1px solid var(--border);
-            flex-direction: column;
-            padding: 24px 0;
-            z-index: 60;
-            transform: translateX(-100%);
-            transition: transform 0.25s ease;
+            display: flex; position: fixed; top: 0; left: 0; bottom: 0;
+            width: 280px; max-width: 85vw;
+            background: var(--surface); border-right: 1px solid var(--border);
+            flex-direction: column; padding: 24px 0; z-index: 60;
+            transform: translateX(-100%); transition: transform 0.25s ease;
           }
           .ds-sidebar-mobile.open { transform: translateX(0); }
           .ds-mobile-overlay {
-            display: block;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.55);
-            z-index: 50;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s ease;
+            display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+            z-index: 50; opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
           }
-          .ds-mobile-overlay.open {
-            opacity: 1;
-            pointer-events: auto;
-          }
+          .ds-mobile-overlay.open { opacity: 1; pointer-events: auto; }
           .ds-mobile-content {
-            flex: 1;
-            min-width: 0;
-            display: flex;
-            flex-direction: column;
+            flex: 1; min-width: 0; display: flex; flex-direction: column;
           }
         }
       `}</style>
@@ -387,18 +375,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             onClick={() => setDrawerOpen(true)}
             aria-label="Open menu"
             style={{
-              width: 40,
-              height: 40,
-              border: '1px solid var(--border)',
-              background: 'var(--surface)',
-              borderRadius: 8,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 4,
-              cursor: 'pointer',
-              padding: 0,
+              width: 40, height: 40, border: '1px solid var(--border)',
+              background: 'var(--surface)', borderRadius: 8,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              gap: 4, cursor: 'pointer', padding: 0,
             }}
           >
             <span style={{ width: 18, height: 2, background: 'var(--text-primary)', borderRadius: 1 }} />
@@ -408,22 +388,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           <Link href={logoHref} style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
             <div style={{
-              width: 26,
-              height: 26,
-              borderRadius: 6,
+              width: 26, height: 26, borderRadius: 6,
               background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
               <span style={{ color: 'white', fontWeight: 'bold', fontSize: 12 }}>D</span>
             </div>
-            <span style={{
-              fontSize: 12,
-              fontWeight: 'bold',
-              letterSpacing: 4,
-              color: 'var(--text-primary)',
-            }}>DIALERSEAT</span>
+            <span style={{ fontSize: 12, fontWeight: 'bold', letterSpacing: 4, color: 'var(--text-primary)' }}>
+              DIALERSEAT
+            </span>
           </Link>
 
           <UserButton />
