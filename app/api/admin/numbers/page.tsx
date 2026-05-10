@@ -91,6 +91,13 @@ const STATUS_COLORS = {
   released: T.muted,
 }
 
+const CONFIG_FIELDS: Array<{ key: keyof PoolConfig, label: string, help: string }> = [
+  { key: 'max_pool_size', label: 'MAX POOL SIZE', help: 'Hard ceiling on total numbers (10-5000)' },
+  { key: 'daily_buy_cap', label: 'DAILY BUY CAP', help: 'Max auto-buys per day (1-500)' },
+  { key: 'utilization_trigger_pct', label: 'TRIGGER %', help: 'Buy when util reaches this % (30-99)' },
+  { key: 'sustained_hours_required', label: 'SUSTAINED HOURS', help: 'Hours util must stay above trigger (1-24)' },
+]
+
 export default function AdminNumbersPage() {
   const [data, setData] = useState<PoolData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -112,6 +119,14 @@ export default function AdminNumbersPage() {
   const [configEdits, setConfigEdits] = useState<Partial<PoolConfig>>({})
   const [savingConfig, setSavingConfig] = useState(false)
   const [configMessage, setConfigMessage] = useState<string | null>(null)
+
+  // Seed (one-time-ish)
+  const [seedOpen, setSeedOpen] = useState(false)
+  const [seeding, setSeeding] = useState(false)
+  const [seedMessage, setSeedMessage] = useState<string | null>(null)
+
+  // Sync from SignalWire
+  const [syncing, setSyncing] = useState(false)
 
   const load = async (showLoader = true) => {
     if (showLoader) setLoading(true)
@@ -167,6 +182,49 @@ export default function AdminNumbersPage() {
       setBuyMessage(`Error: ${err.message}`)
     } finally {
       setBuying(false)
+    }
+  }
+
+  const handleSeed = async () => {
+    setSeeding(true)
+    setSeedMessage(null)
+    try {
+      const res = await fetch('/api/admin/pool/seed', { method: 'POST' })
+      const d = await res.json()
+      if (d.success) {
+        const { purchased, skipped, failed, total } = d.summary
+        setSeedMessage(`Seed complete: ${purchased} purchased, ${skipped} already in pool, ${failed} failed (of ${total})`)
+        await load(false)
+      } else {
+        setSeedMessage(`Seed failed: ${d.error}`)
+      }
+    } catch (err: any) {
+      setSeedMessage(`Error: ${err.message}`)
+    } finally {
+      setSeeding(false)
+    }
+  }
+
+  const handleSync = async () => {
+    if (syncing) return
+    setSyncing(true)
+    try {
+      const res = await fetch('/api/admin/pool/sync', { method: 'POST' })
+      const d = await res.json()
+      if (d.success) {
+        const { imported, already_in_pool, orphans } = d.summary
+        const orphanNote = orphans > 0
+          ? `, ${orphans} orphaned (in pool but not in SignalWire)`
+          : ''
+        alert(`Sync complete: ${imported} imported, ${already_in_pool} already tracked${orphanNote}`)
+        await load(false)
+      } else {
+        alert(`Sync failed: ${d.error}`)
+      }
+    } catch (e: any) {
+      alert(`Sync error: ${e.message}`)
+    } finally {
+      setSyncing(false)
     }
   }
 
@@ -245,6 +303,7 @@ export default function AdminNumbersPage() {
   const utilizationDelta = liveUtilization.triggerPct - liveUtilization.pct
   const willTriggerSoon = utilizationDelta <= 10 && utilizationDelta > 0
   const triggerHit = liveUtilization.pct >= liveUtilization.triggerPct
+  const poolEmpty = poolCount === 0
 
   return (
     <div style={{
@@ -383,6 +442,13 @@ export default function AdminNumbersPage() {
           outline: none;
           width: 100%;
         }
+        .pool-empty-cta {
+          padding: 32px;
+          background: ${T.surface};
+          border: 1px solid ${T.border};
+          border-radius: 4px;
+          text-align: center;
+        }
       `}</style>
 
       <div className="pool-header">
@@ -394,13 +460,39 @@ export default function AdminNumbersPage() {
             {poolCount} OF {config.max_pool_size} MAX · LIVE UTIL {liveUtilization.pct}%
           </span>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button className="pool-btn" onClick={() => setConfigOpen(true)}>⚙ CONFIG</button>
+          <button className="pool-btn" onClick={handleSync} disabled={syncing}>
+            {syncing ? '⟳ SYNCING...' : '⟳ SYNC SIGNALWIRE'}
+          </button>
+          {poolEmpty && (
+            <button className="pool-btn pool-btn-primary" onClick={() => setSeedOpen(true)}>
+              ⚡ SEED 10 NUMBERS
+            </button>
+          )}
           <button className="pool-btn pool-btn-primary" onClick={() => setBuyOpen(true)}>+ BUY NOW</button>
         </div>
       </div>
 
       <div className="pool-content">
+        {poolEmpty && (
+          <div className="pool-empty-cta">
+            <div style={{ fontSize: 36, marginBottom: 12, opacity: 0.4 }}>📞</div>
+            <div style={{
+              fontSize: 13, letterSpacing: 3, fontWeight: 'bold',
+              color: T.text, marginBottom: 8,
+            }}>POOL IS EMPTY</div>
+            <div style={{ fontSize: 11, color: T.muted, marginBottom: 16, lineHeight: 1.6 }}>
+              Click <strong>SYNC SIGNALWIRE</strong> to import any numbers you already own,
+              <br />or <strong>SEED 10 NUMBERS</strong> to populate with 10 across major US metros,
+              <br />or <strong>BUY NOW</strong> to add specific area codes one at a time.
+            </div>
+            <div style={{ fontSize: 10, color: T.muted, fontFamily: 'monospace', letterSpacing: 1 }}>
+              Each number costs ~$1/mo from SignalWire.
+            </div>
+          </div>
+        )}
+
         {/* Stats row */}
         <div className="pool-stat-grid">
           <div className="pool-stat-card">
@@ -448,7 +540,9 @@ export default function AdminNumbersPage() {
             </div>
             <div style={{ flex: 1, minWidth: 200 }}>
               <div style={{ fontSize: 10, color: T.muted, letterSpacing: 1, marginBottom: 4 }}>
-                {triggerHit
+                {poolEmpty
+                  ? 'Pool is empty — no utilization data yet'
+                  : triggerHit
                   ? `▲ AT TRIGGER — auto-buy will fire next cron run (top of hour)`
                   : willTriggerSoon
                   ? `▲ ${utilizationDelta}% under trigger — auto-buy approaching`
@@ -494,27 +588,29 @@ export default function AdminNumbersPage() {
         </div>
 
         {/* Filter pills */}
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          {(['all', 'active', 'resting', 'flagged'] as const).map(f => (
-            <button
-              key={f}
-              className="pool-btn"
-              onClick={() => setFilter(f)}
-              style={{
-                background: filter === f ? T.dark : 'transparent',
-                color: filter === f ? T.blue : T.muted,
-                borderColor: filter === f ? T.blue : T.border,
-              }}
-            >
-              {f.toUpperCase()} · {
-                f === 'all' ? poolCount
-                : f === 'active' ? stats.active
-                : f === 'resting' ? stats.resting
-                : stats.flagged
-              }
-            </button>
-          ))}
-        </div>
+        {!poolEmpty && (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            {(['all', 'active', 'resting', 'flagged'] as const).map(f => (
+              <button
+                key={f}
+                className="pool-btn"
+                onClick={() => setFilter(f)}
+                style={{
+                  background: filter === f ? T.dark : 'transparent',
+                  color: filter === f ? T.blue : T.muted,
+                  borderColor: filter === f ? T.blue : T.border,
+                }}
+              >
+                {f.toUpperCase()} · {
+                  f === 'all' ? poolCount
+                  : f === 'active' ? stats.active
+                  : f === 'resting' ? stats.resting
+                  : stats.flagged
+                }
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Numbers grid */}
         <div className="pool-grid">
@@ -608,12 +704,12 @@ export default function AdminNumbersPage() {
           })}
         </div>
 
-        {filteredNumbers.length === 0 && (
+        {!poolEmpty && filteredNumbers.length === 0 && (
           <div style={{
             padding: 60, textAlign: 'center', color: T.muted,
             fontSize: 11, letterSpacing: 3,
           }}>
-            {poolCount === 0 ? 'POOL EMPTY — RUN /api/admin/pool/seed TO POPULATE' : 'NO MATCHES'}
+            NO MATCHES IN THIS FILTER
           </div>
         )}
       </div>
@@ -655,6 +751,42 @@ export default function AdminNumbersPage() {
         </div>
       )}
 
+      {/* Seed Modal */}
+      {seedOpen && (
+        <div className="pool-modal-bg" onClick={() => !seeding && setSeedOpen(false)}>
+          <div className="pool-modal" onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 11, letterSpacing: 3, fontWeight: 'bold', marginBottom: 12 }}>
+              SEED INITIAL POOL
+            </div>
+            <div style={{ fontSize: 10, color: T.muted, letterSpacing: 1, marginBottom: 12, lineHeight: 1.6 }}>
+              Auto-buys 10 numbers across these US metros:
+              <br /><br />
+              212 NYC · 213 LA · 312 Chicago · 281 Houston · 602 Phoenix
+              <br />
+              215 Philadelphia · 210 San Antonio · 619 San Diego · 214 Dallas · 408 San Jose
+              <br /><br />
+              Cost: ~<strong>$10 one-time SignalWire charge</strong> + ~$10/mo recurring.
+              <br /><br />
+              Idempotent — running twice won't double-buy.
+            </div>
+            {seedMessage && (
+              <div style={{
+                fontSize: 10, color: seedMessage.startsWith('Seed complete') ? T.green : T.red,
+                letterSpacing: 1, marginBottom: 8,
+              }}>{seedMessage}</div>
+            )}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="pool-btn pool-btn-primary" disabled={seeding} onClick={handleSeed}>
+                {seeding ? 'SEEDING (1-2 MIN)...' : 'CONFIRM SEED'}
+              </button>
+              <button className="pool-btn" disabled={seeding} onClick={() => { setSeedOpen(false); setSeedMessage(null) }}>
+                CLOSE
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Config Modal */}
       {configOpen && (
         <div className="pool-modal-bg" onClick={() => !savingConfig && setConfigOpen(false)}>
@@ -666,13 +798,11 @@ export default function AdminNumbersPage() {
               Edit caps and triggers without redeploying. Changes apply on next cron run.
             </div>
 
-            {([
-              { key: 'max_pool_size', label: 'MAX POOL SIZE', help: 'Hard ceiling on total numbers (10-5000)' },
-              { key: 'daily_buy_cap', label: 'DAILY BUY CAP', help: 'Max auto-buys per day (1-500)' },
-              { key: 'utilization_trigger_pct', label: 'TRIGGER %', help: 'Buy when util reaches this % (30-99)' },
-              { key: 'sustained_hours_required', label: 'SUSTAINED HOURS', help: 'Hours util must stay above trigger (1-24)' },
-            ] as Array<{ key: keyof PoolConfig, label: string, help: string }>).map(({ key, label, help }) => {
-              const current = configEdits[key] ?? config[key]
+            {CONFIG_FIELDS.map(({ key, label, help }) => {
+              const editValue = configEdits[key]
+              const currentValue: number = editValue !== undefined
+                ? Number(editValue)
+                : Number(config[key])
               return (
                 <div key={key} style={{ marginBottom: 12 }}>
                   <div style={{
@@ -685,7 +815,7 @@ export default function AdminNumbersPage() {
                   <input
                     className="pool-input"
                     type="number"
-                    value={current as number}
+                    value={currentValue}
                     onChange={e => setConfigEdits(prev => ({
                       ...prev,
                       [key]: parseInt(e.target.value, 10) || 0,
