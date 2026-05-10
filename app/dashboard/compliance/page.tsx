@@ -46,6 +46,12 @@ interface ComplianceData {
   windowDays: number
 }
 
+interface ConsentSummary {
+  totalLeads: number
+  withConsent: number
+  consentPct: number
+}
+
 export default function CompliancePage() {
   const { user } = useUser()
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
@@ -54,6 +60,7 @@ export default function CompliancePage() {
   const [statsLoading, setStatsLoading] = useState<Record<string, boolean>>({})
   const [exportingId, setExportingId] = useState<string | null>(null)
   const [exportRange, setExportRange] = useState<{ campaignId: string; days: number } | null>(null)
+  const [consentSummary, setConsentSummary] = useState<ConsentSummary | null>(null)
 
   const loadCampaigns = useCallback(async () => {
     if (!user) return
@@ -86,11 +93,33 @@ export default function CompliancePage() {
     }
   }, [])
 
-  useEffect(() => {
-    if (user) loadCampaigns()
-  }, [user, loadCampaigns])
+  // Load platform-wide consent percentage. Falls back gracefully if endpoint
+  // doesn't exist yet — UI just hides the stat.
+  const loadConsentSummary = useCallback(async () => {
+    if (!user) return
+    try {
+      const res = await fetch('/api/leads/consent-summary')
+      if (!res.ok) return
+      const data = await res.json()
+      if (data.success) {
+        setConsentSummary({
+          totalLeads: data.totalLeads,
+          withConsent: data.withConsent,
+          consentPct: data.totalLeads > 0
+            ? (data.withConsent / data.totalLeads) * 100
+            : 0,
+        })
+      }
+    } catch {}
+  }, [user])
 
-  // Auto-load stats for all campaigns once they're loaded
+  useEffect(() => {
+    if (user) {
+      loadCampaigns()
+      loadConsentSummary()
+    }
+  }, [user, loadCampaigns, loadConsentSummary])
+
   useEffect(() => {
     if (campaigns.length === 0) return
     campaigns.forEach(c => loadStats(c.id))
@@ -102,7 +131,6 @@ export default function CompliancePage() {
       const endDate = new Date().toISOString()
       const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
       const url = `/api/campaigns/compliance-export?campaignId=${campaignId}&startDate=${startDate}&endDate=${endDate}`
-      // Trigger browser download via anchor click
       const a = document.createElement('a')
       a.href = url
       a.download = ''
@@ -115,7 +143,6 @@ export default function CompliancePage() {
     }
   }
 
-  // Platform-wide aggregates
   const totalAnswered = Object.values(statsByCampaign).reduce((sum, d) => sum + d.compliance.answeredCalls, 0)
   const totalAbandoned = Object.values(statsByCampaign).reduce((sum, d) => sum + d.compliance.abandonedCalls, 0)
   const platformAbandonRate = totalAnswered > 0 ? totalAbandoned / totalAnswered : 0
@@ -131,7 +158,6 @@ export default function CompliancePage() {
       flexDirection: 'column',
       fontFamily: 'Futura PT, Futura, sans-serif',
     }}>
-      {/* HEADER */}
       <div style={{
         background: T.dark,
         padding: '12px 20px',
@@ -169,7 +195,6 @@ export default function CompliancePage() {
         maxWidth: 1100, width: '100%', margin: '0 auto', boxSizing: 'border-box',
       }}>
 
-        {/* CONTEXT BAR — what is this page */}
         <div style={{
           background: T.surface,
           border: `1px solid ${T.border}`,
@@ -179,14 +204,14 @@ export default function CompliancePage() {
           marginBottom: 16,
         }}>
           <div style={{ fontSize: 11, lineHeight: 1.6, color: T.text }}>
-            <strong style={{ color: T.accent, letterSpacing: 1 }}>About this page:</strong> Live monitoring of FTC TSR § 310.4(b)(4) safe-harbor compliance for every campaign you own. Abandon rates calculated over a rolling 30-day window per campaign, per FTC requirements.{' '}
+            <strong style={{ color: T.accent, letterSpacing: 1 }}>About this page:</strong> Live monitoring of FTC TSR § 310.4(b)(4) safe-harbor compliance + TCPA one-to-one consent (FCC Jan 2025) for every campaign you own. Abandon rates calculated over a rolling 30-day window per campaign.{' '}
             <Link href="/dialing-modes" target="_blank" style={{ color: T.blue, fontWeight: 'bold' }}>
               Read full methodology →
             </Link>
           </div>
         </div>
 
-        {/* PLATFORM TOTALS */}
+        {/* PLATFORM TOTALS — now 5 cards including consent */}
         {!loading && Object.keys(statsByCampaign).length > 0 && (
           <div style={{
             display: 'grid',
@@ -211,6 +236,17 @@ export default function CompliancePage() {
                 platformAbandonRate >= 0.020 ? T.amber : T.green
               }
             />
+            {consentSummary && (
+              <PlatformStat
+                label="CONSENT ON FILE"
+                value={`${consentSummary.consentPct.toFixed(1)}%`}
+                sub={`${consentSummary.withConsent.toLocaleString()} / ${consentSummary.totalLeads.toLocaleString()}`}
+                accent={
+                  consentSummary.consentPct >= 80 ? T.green :
+                  consentSummary.consentPct >= 50 ? T.amber : T.red
+                }
+              />
+            )}
             <PlatformStat
               label="STATUS"
               value={degradedCount > 0 ? `${degradedCount} DEGRADED` : cautionCount > 0 ? `${cautionCount} CAUTION` : 'ALL SAFE'}
@@ -219,7 +255,25 @@ export default function CompliancePage() {
           </div>
         )}
 
-        {/* LEGAL THRESHOLDS REFERENCE */}
+        {/* TCPA CONSENT EXPLAINER */}
+        <div style={{
+          background: T.dark,
+          color: '#c0c2ca',
+          borderRadius: 4,
+          padding: '12px 16px',
+          marginBottom: 18,
+          fontSize: 11,
+          letterSpacing: 0.3,
+          lineHeight: 1.6,
+        }}>
+          <div style={{ fontSize: 9, letterSpacing: 3, color: '#8888aa', fontWeight: 'bold', marginBottom: 6 }}>
+            ▸ TCPA ONE-TO-ONE CONSENT · FCC RULE EFFECTIVE JAN 2025
+          </div>
+          <div>
+            Each lead must have prior express written consent specific to <strong style={{ color: T.blue }}>your business</strong>, not bundled across multiple sellers. Upload leads with optional CSV columns: <code style={{ background: '#2a2c34', padding: '1px 6px', borderRadius: 2 }}>consent_date</code>, <code style={{ background: '#2a2c34', padding: '1px 6px', borderRadius: 2 }}>consent_source</code>, <code style={{ background: '#2a2c34', padding: '1px 6px', borderRadius: 2 }}>consent_description</code>, <code style={{ background: '#2a2c34', padding: '1px 6px', borderRadius: 2 }}>consent_proof_url</code>. Each lead&apos;s consent is visible on the Leads tab.
+          </div>
+        </div>
+
         <div style={{
           background: T.dark,
           color: '#c0c2ca',
@@ -289,8 +343,6 @@ export default function CompliancePage() {
   )
 }
 
-// ── Campaign Card ──────────────────────────────────────────────────────────
-
 interface CardProps {
   campaign: Campaign
   mode: DialerMode
@@ -329,7 +381,6 @@ function CampaignComplianceCard({
       borderRadius: 4,
       overflow: 'hidden',
     }}>
-      {/* HEADER ROW */}
       <div style={{
         padding: '14px 18px',
         display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap',
@@ -398,7 +449,6 @@ function CampaignComplianceCard({
         </div>
       </div>
 
-      {/* BODY */}
       {isLoadingStats && !stats ? (
         <div style={{ padding: 24, textAlign: 'center', fontSize: 11, letterSpacing: 3, color: T.muted }}>
           LOADING STATS...
@@ -409,7 +459,6 @@ function CampaignComplianceCard({
         </div>
       ) : (
         <>
-          {/* STATUS MESSAGE BANNER (if not safe) */}
           {status !== 'safe' && (
             <div style={{
               padding: '10px 18px',
@@ -424,7 +473,6 @@ function CampaignComplianceCard({
             </div>
           )}
 
-          {/* METRICS GRID */}
           <div style={{
             padding: '14px 18px',
             display: 'grid',
@@ -454,7 +502,6 @@ function CampaignComplianceCard({
             />
           </div>
 
-          {/* AMD BREAKDOWN */}
           {Object.keys(stats.amdBreakdown).length > 0 && (
             <div style={{
               padding: '0 18px 14px',
@@ -476,7 +523,6 @@ function CampaignComplianceCard({
         </>
       )}
 
-      {/* EXPORT RANGE PICKER */}
       {exportRangeOpen && (
         <div style={{
           padding: '14px 18px',
@@ -520,9 +566,14 @@ function CampaignComplianceCard({
   )
 }
 
-// ── Helpers ────────────────────────────────────────────────────────────────
-
-function PlatformStat({ label, value, accent }: { label: string; value: string; accent: string }) {
+function PlatformStat({
+  label, value, accent, sub,
+}: {
+  label: string
+  value: string
+  accent: string
+  sub?: string
+}) {
   return (
     <div style={{
       padding: '12px 14px',
@@ -535,6 +586,12 @@ function PlatformStat({ label, value, accent }: { label: string; value: string; 
       <div style={{
         fontSize: 22, fontWeight: 'bold', color: accent, lineHeight: 1, fontFamily: 'monospace',
       }}>{value}</div>
+      {sub && (
+        <div style={{
+          fontSize: 9, color: T.muted, fontFamily: 'monospace',
+          letterSpacing: 0.5, marginTop: 4,
+        }}>{sub}</div>
+      )}
     </div>
   )
 }

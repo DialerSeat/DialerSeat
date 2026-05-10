@@ -20,6 +20,11 @@ interface Lead {
   last_called_at: string | null
   created_at: string
   extra_data: Record<string, any>
+  // TCPA one-to-one consent fields (FCC Jan 2025)
+  consent_date?: string | null
+  consent_source?: string | null
+  consent_description?: string | null
+  consent_proof_url?: string | null
 }
 
 interface Campaign {
@@ -49,19 +54,18 @@ const T = {
   green: '#1a6a1a',
   red: '#8a1a1a',
   warn: '#ffaa3e',
+  amber: '#8a6a1a',
 }
 
-// Full-row tint based on disposition. Soft enough to scan a long list without
-// fatigue, distinct enough to spot CLOSED leads at a glance.
 const dispositionTint = (disp: string | null): string => {
   switch (disp) {
-    case 'CLOSED': return 'rgba(26, 106, 26, 0.10)'         // soft green
-    case 'APPOINTMENT': return 'rgba(26, 74, 138, 0.10)'      // soft blue
-    case 'NOT INTERESTED': return 'rgba(138, 106, 26, 0.10)'  // soft amber
-    case 'DO NOT CALL': return 'rgba(138, 26, 26, 0.10)'      // soft red
-    case 'NO_ANSWER': return 'rgba(90, 94, 106, 0.06)'        // very faint gray
-    case 'SKIPPED': return 'rgba(90, 94, 106, 0.04)'          // even fainter
-    default: return T.surface                                  // unset = original surface color
+    case 'CLOSED': return 'rgba(26, 106, 26, 0.10)'
+    case 'APPOINTMENT': return 'rgba(26, 74, 138, 0.10)'
+    case 'NOT INTERESTED': return 'rgba(138, 106, 26, 0.10)'
+    case 'DO NOT CALL': return 'rgba(138, 26, 26, 0.10)'
+    case 'NO_ANSWER': return 'rgba(90, 94, 106, 0.06)'
+    case 'SKIPPED': return 'rgba(90, 94, 106, 0.04)'
+    default: return T.surface
   }
 }
 
@@ -87,7 +91,6 @@ export default function LeadsPage() {
 
   const isLapsed = tier === 'lapsed' || tier === 'new'
 
-  // Fetch tier
   useEffect(() => {
     if (!user) return
     fetch('/api/stripe/status')
@@ -96,13 +99,11 @@ export default function LeadsPage() {
       .catch(() => setTier(null))
   }, [user])
 
-  // Debounce search
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 350)
     return () => clearTimeout(t)
   }, [search])
 
-  // Load campaigns once
   useEffect(() => {
     if (!user) return
     fetch(`/api/campaigns/list?user_id=${user.id}`)
@@ -110,7 +111,6 @@ export default function LeadsPage() {
       .then(d => { if (d.success) setCampaigns(d.campaigns) })
   }, [user])
 
-  // Reset & reload when filters change
   useEffect(() => {
     if (!user) return
     setLeads([])
@@ -144,12 +144,10 @@ export default function LeadsPage() {
     }
   }, [user, cursor, loading, campaignFilter, dispositionFilter, debouncedSearch, sort])
 
-  // First load + filter changes
   useEffect(() => {
     if (cursor === 0) fetchMore()
   }, [cursor, fetchMore])
 
-  // Infinite scroll observer
   useEffect(() => {
     if (!sentinelRef.current || cursor === null) return
     const observer = new IntersectionObserver(
@@ -222,9 +220,17 @@ export default function LeadsPage() {
   const campaignName = (id: string) =>
     campaigns.find(c => c.id === id)?.name || '—'
 
-  const formatDate = (iso: string | null) => {
+  const formatDate = (iso: string | null | undefined) => {
     if (!iso) return '—'
     return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  }
+
+  const formatDateTime = (iso: string | null | undefined) => {
+    if (!iso) return '—'
+    return new Date(iso).toLocaleString('en-US', {
+      year: 'numeric', month: 'short', day: 'numeric',
+      hour: 'numeric', minute: '2-digit',
+    })
   }
 
   return (
@@ -289,13 +295,12 @@ export default function LeadsPage() {
         .leads-mobile-toggle { display: none; }
         .leads-list { flex: 1; overflow-y: auto; padding: 12px 16px; }
         .lead-card {
-          /* background is set inline via dispositionTint(lead.disposition) */
           border: 1px solid ${T.border};
           border-radius: 4px;
           padding: 12px 14px;
           margin-bottom: 6px;
           display: grid;
-          grid-template-columns: 2fr 1.5fr 0.8fr 1.2fr 1fr 0.6fr 0.8fr;
+          grid-template-columns: 1.7fr 1.3fr 0.6fr 1fr 0.7fr 0.7fr 0.5fr 0.7fr;
           gap: 10px;
           align-items: center;
           cursor: pointer;
@@ -312,7 +317,6 @@ export default function LeadsPage() {
         .lead-phone {
           font-family: monospace; color: ${T.accent}; font-weight: bold;
         }
-        .lead-mobile-row1, .lead-mobile-row2 { display: contents; }
         .lead-meta-mobile { display: none; }
         .lead-expand {
           padding: 16px;
@@ -347,6 +351,17 @@ export default function LeadsPage() {
           font-family: 'Futura PT', Futura, sans-serif;
           white-space: nowrap;
         }
+        .consent-badge {
+          display: inline-block;
+          padding: 2px 6px;
+          border-radius: 2px;
+          font-size: 8px;
+          letter-spacing: 1px;
+          font-weight: bold;
+          font-family: 'Futura PT', Futura, sans-serif;
+          white-space: nowrap;
+          cursor: help;
+        }
         .disp-grid {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
@@ -364,6 +379,25 @@ export default function LeadsPage() {
           background: white;
         }
         .disp-btn:disabled { cursor: not-allowed; opacity: 0.5; }
+        .consent-block {
+          padding: 10px 12px;
+          background: rgba(26,106,26,0.06);
+          border: 1px solid ${T.green};
+          border-left: 3px solid ${T.green};
+          border-radius: 3px;
+          font-size: 11px;
+          line-height: 1.5;
+        }
+        .consent-block-empty {
+          padding: 10px 12px;
+          background: rgba(138,106,26,0.06);
+          border: 1px solid ${T.amber};
+          border-left: 3px solid ${T.amber};
+          border-radius: 3px;
+          font-size: 11px;
+          line-height: 1.5;
+          color: ${T.amber};
+        }
 
         @media (max-width: 768px) {
           .leads-header { padding: 10px 12px; }
@@ -390,6 +424,7 @@ export default function LeadsPage() {
             grid-template-areas:
               "name attempts"
               "phone phone"
+              "meta consent"
               "meta disp";
             gap: 6px;
             padding: 12px;
@@ -400,6 +435,7 @@ export default function LeadsPage() {
             display: none;
           }
           .lead-cell-attempts { grid-area: attempts; text-align: right; }
+          .lead-cell-consent { grid-area: consent; text-align: right; }
           .lead-cell-disp { grid-area: disp; text-align: right; }
           .lead-meta-mobile {
             grid-area: meta;
@@ -445,7 +481,6 @@ export default function LeadsPage() {
         </div>
       </div>
 
-      {/* LAPSED BANNER */}
       {isLapsed && (
         <div className="leads-lapsed-banner">
           <span>
@@ -466,7 +501,6 @@ export default function LeadsPage() {
         </div>
       )}
 
-      {/* MOBILE FILTER TOGGLE */}
       <div className="leads-mobile-toggle" onClick={() => setFiltersOpen(v => !v)}>
         <span>{filtersOpen ? '▲ HIDE' : '▼ SHOW'} FILTERS</span>
         <span style={{ fontSize: 10, color: T.muted, fontFamily: 'monospace' }}>
@@ -474,7 +508,6 @@ export default function LeadsPage() {
         </span>
       </div>
 
-      {/* CONTROLS */}
       <div className={`leads-controls ${filtersOpen ? 'open-mobile' : 'closed-mobile'}`}>
         <div className="field search-field">
           <label>SEARCH NAME OR PHONE</label>
@@ -516,7 +549,6 @@ export default function LeadsPage() {
         <div className="field export-btn-cell"></div>
       </div>
 
-      {/* LIST */}
       <div className="leads-list">
         {leads.length === 0 && !loading && (
           <div style={{
@@ -530,6 +562,11 @@ export default function LeadsPage() {
 
         {leads.map(lead => {
           const isExpanded = expandedId === lead.id
+          const hasConsent = !!lead.consent_date
+          const consentTooltip = hasConsent
+            ? `Source: ${lead.consent_source || 'unknown'}\nDate: ${formatDateTime(lead.consent_date)}\n${lead.consent_description ? `Description: ${lead.consent_description}` : ''}`
+            : 'No consent on file'
+
           return (
             <div key={lead.id}>
               <div
@@ -562,6 +599,21 @@ export default function LeadsPage() {
                   fontSize: 10, color: T.muted, fontFamily: 'monospace',
                 }}>
                   {formatDate(lead.last_called_at)}
+                </div>
+                <div className="lead-cell lead-cell-consent" title={consentTooltip}>
+                  {hasConsent ? (
+                    <span className="consent-badge" style={{
+                      background: '#e8f5e8',
+                      color: T.green,
+                      border: `1px solid ${T.green}`,
+                    }}>✓ CONSENT</span>
+                  ) : (
+                    <span className="consent-badge" style={{
+                      background: '#f8f4e8',
+                      color: T.amber,
+                      border: `1px solid ${T.amber}`,
+                    }}>—</span>
+                  )}
                 </div>
                 <div className="lead-cell lead-cell-attempts" style={{
                   fontSize: 11, color: lead.dial_attempts > 0 ? T.accent : T.muted,
@@ -610,10 +662,52 @@ export default function LeadsPage() {
                         {lead.last_called_at ? new Date(lead.last_called_at).toLocaleString() : '—'}
                       </span>
                     </div>
+
+                    {/* TCPA CONSENT BLOCK */}
+                    <div style={{
+                      fontSize: 9, letterSpacing: 2, color: T.muted,
+                      marginTop: 10, marginBottom: 4, fontWeight: 'bold',
+                    }}>TCPA CONSENT (one-to-one rule)</div>
+                    {hasConsent ? (
+                      <div className="consent-block">
+                        <div style={{
+                          fontSize: 9, letterSpacing: 2, color: T.green,
+                          fontWeight: 'bold', marginBottom: 6,
+                        }}>✓ CONSENT ON FILE</div>
+                        <div style={{ display: 'grid', gap: 4 }}>
+                          <div><strong style={{ color: T.muted }}>Date:</strong>{' '}
+                            <span style={{ fontFamily: 'monospace' }}>{formatDateTime(lead.consent_date)}</span>
+                          </div>
+                          {lead.consent_source && (
+                            <div><strong style={{ color: T.muted }}>Source:</strong>{' '}
+                              <span style={{ fontFamily: 'monospace' }}>{lead.consent_source}</span>
+                            </div>
+                          )}
+                          {lead.consent_description && (
+                            <div><strong style={{ color: T.muted }}>Description:</strong>{' '}
+                              <span>{lead.consent_description}</span>
+                            </div>
+                          )}
+                          {lead.consent_proof_url && (
+                            <div>
+                              <strong style={{ color: T.muted }}>Proof:</strong>{' '}
+                              <a href={lead.consent_proof_url} target="_blank" rel="noopener noreferrer" style={{
+                                color: T.blue, textDecoration: 'underline', fontFamily: 'monospace',
+                              }}>
+                                View ↗
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="consent-block-empty">
+                        ⚠ No consent on file. For TCPA compliance, ensure you have proof of express written consent before dialing leads under FCC&apos;s one-to-one rule (Jan 2025).
+                      </div>
+                    )}
                   </div>
 
                   <div className="lead-edit">
-                    {/* Lapsed gets a notice instead of edit controls */}
                     {isLapsed ? (
                       <div style={{
                         padding: 14,

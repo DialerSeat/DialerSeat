@@ -3,9 +3,47 @@ import { NextResponse } from 'next/server'
 import { requireActive } from '@/lib/subscription'
 import { auth } from '@clerk/nextjs/server'
 
+/**
+ * Parses optional consent fields from a lead row. Returns the four columns
+ * if they're present and parseable, all null otherwise.
+ *
+ * Accepted CSV header names (case-insensitive, punctuation-stripped):
+ *   consent_date, consent date, consentdate
+ *   consent_source, consent source
+ *   consent_description, consent text, consent_text
+ *   consent_proof_url, consent_proof, proof_url
+ *
+ * This is per the FCC's January 2025 one-to-one consent rule under TCPA.
+ */
+function parseConsent(row: Record<string, any>) {
+  const lower: Record<string, string> = {}
+  for (const [k, v] of Object.entries(row)) {
+    if (v !== null && v !== undefined && String(v).trim()) {
+      lower[k.toLowerCase().replace(/[^a-z]/g, '')] = String(v).trim()
+    }
+  }
+
+  const dateRaw = lower['consentdate']
+  const source = lower['consentsource']
+  const description = lower['consentdescription'] || lower['consenttext']
+  const proofUrl = lower['consentproofurl'] || lower['consentproof'] || lower['proofurl']
+
+  let consentDate: string | null = null
+  if (dateRaw) {
+    const parsed = new Date(dateRaw)
+    if (!isNaN(parsed.getTime())) consentDate = parsed.toISOString()
+  }
+
+  return {
+    consent_date: consentDate,
+    consent_source: source || null,
+    consent_description: description || null,
+    consent_proof_url: proofUrl || null,
+  }
+}
+
 export async function POST(req: Request) {
   try {
-    // Active subscription required to upload leads
     const gate = await requireActive()
     if (gate) return gate
 
@@ -31,7 +69,6 @@ export async function POST(req: Request) {
       )
     }
 
-    // Ownership check: confirm the campaign belongs to the caller.
     const { data: campaign } = await supabaseAdmin
       .from('campaigns')
       .select('id, user_id, total_leads')
@@ -72,7 +109,7 @@ export async function POST(req: Request) {
 
         return {
           campaign_id,
-          user_id: userId, // Always use authenticated userId
+          user_id: userId,
           first_name,
           last_name,
           phone: String(phone).replace(/\D/g, ''),
@@ -80,6 +117,7 @@ export async function POST(req: Request) {
           state: lead['state'] || lead['State'] || lead['STATE'] || '',
           status: 'uncalled',
           extra_data: lead,
+          ...parseConsent(lead),
         }
       }
 
@@ -96,6 +134,12 @@ export async function POST(req: Request) {
           phone: String(phone).replace(/\D/g, ''),
           status: 'uncalled',
           extra_data: { raw: lead },
+          // Array-format leads can't carry consent metadata cleanly,
+          // so consent fields default to null
+          consent_date: null,
+          consent_source: null,
+          consent_description: null,
+          consent_proof_url: null,
         }
       }
 
@@ -115,13 +159,6 @@ export async function POST(req: Request) {
 
     if (insertError) throw insertError
 
-    // FIX: increment total_leads instead of overwriting it.
-    // Previous version called .update({ total_leads: leadsToInsert.length }), which
-    // wiped out the running count on every upload (uploading 100 then 50 left
-    // total_leads=50 instead of 150).
-    //
-    // Recalculating from a count() query is more reliable than incrementing,
-    // because it self-corrects if a lead was deleted or insertion partially failed.
     const { count: actualCount } = await supabaseAdmin
       .from('leads')
       .select('*', { count: 'exact', head: true })
@@ -132,10 +169,15 @@ export async function POST(req: Request) {
       .update({ total_leads: actualCount ?? 0 })
       .eq('id', campaign_id)
 
+    // Count how many leads in this batch actually carried consent metadata.
+    // Useful for showing "uploaded 1,000 leads (823 with consent)" in the UI.
+    const consentCount = leadsToInsert.filter((l: any) => l && l.consent_date).length
+
     return NextResponse.json({
       success: true,
       count: leadsToInsert.length,
       total: actualCount,
+      withConsent: consentCount,
     })
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 })
