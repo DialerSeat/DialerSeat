@@ -61,8 +61,6 @@ function DialerPageInner() {
   const [tier, setTier] = useState<AccessTier>(null)
   const [tierLoaded, setTierLoaded] = useState(false)
 
-  // clockTick exists purely to force re-render every second so the displayed
-  // clock updates. Value is never read directly.
   const [clockTick, setClockTick] = useState(0)
 
   const [status, setStatus] = useState<CallStatus>('idle')
@@ -106,8 +104,10 @@ function DialerPageInner() {
   const pacingPollRef = useRef<NodeJS.Timeout | null>(null)
   const sessionIdRef = useRef<string | null>(null)
   const urlParamsConsumedRef = useRef(false)
+  const currentLeadRef = useRef<Lead | null>(null)
 
   useEffect(() => setMounted(true), [])
+  useEffect(() => { currentLeadRef.current = currentLead }, [currentLead])
 
   useEffect(() => {
     if (!user) return
@@ -130,8 +130,6 @@ function DialerPageInner() {
       ? campaigns.find(c => c.id === selectedCampaign)
       : undefined
   const dialerMode: DialerMode = (currentCampaign?.dialer_mode as DialerMode) || 'power'
-  // AMD is always on platform-wide as of May 10, 2026 — voicemail filtering is a
-  // core promise of the product. The amd_enabled field is no longer the gate.
   const amdEnabled = true
   const isPredictive = dialerMode === 'predictive'
   const isProgressive = dialerMode === 'progressive'
@@ -209,7 +207,6 @@ function DialerPageInner() {
     setSelectedCampaign('all')
   }, [selectedScope])
 
-  // CLOCK TICK — forces re-render every second so timeStr/dateStr update
   useEffect(() => {
     if (!isActive) return
     const interval = setInterval(() => setClockTick(t => t + 1), 1000)
@@ -599,11 +596,9 @@ function DialerPageInner() {
     return `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`
   }
 
-  // Reads clockTick (in deps via state) so this recomputes every second
   const now = new Date()
   const timeStr = mounted ? now.toLocaleTimeString('en-US', { hour12: false }) : '--:--:--'
   const dateStr = mounted ? now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : ''
-  // Silence unused-var warning — clockTick exists solely to trigger re-render
   void clockTick
 
   useEffect(() => {
@@ -753,6 +748,12 @@ function DialerPageInner() {
     }
   }
 
+  // Helper: detect any AMD result that is NOT a human picking up.
+  const isNotHuman = (amd?: string): boolean => {
+    if (!amd) return false
+    return amd.startsWith('machine_') || amd === 'fax' || amd === 'unknown'
+  }
+
   const startCallPolling = (callSid: string) => {
     const pollInterval = setInterval(async () => {
       try {
@@ -762,6 +763,20 @@ function DialerPageInner() {
         if (statusData.status === 'in-progress') {
           clearInterval(pollInterval)
           activePollRef.current = null
+
+          // If AMD already flagged this as not-a-human, skip the connection.
+          // Don't play pickup sound, don't pop disposition tab, just dial next.
+          if (isNotHuman(statusData.amd_result)) {
+            setAmdActivity(prev =>
+              [`> VOICEMAIL FILTERED — ${statusData.amd_result}`, ...prev].slice(0, 5)
+            )
+            setActiveCallSid(null)
+            setStatus('idle')
+            setCurrentLead(null)
+            setTimeout(() => handleDial(), 600)
+            return
+          }
+
           playPickup()
           setStatus('connected')
           setSessionStats(s => ({ ...s, connected: s.connected + 1 }))
@@ -778,8 +793,20 @@ function DialerPageInner() {
                   try { await swCallRef.current.bye() } catch {}
                   swCallRef.current = null
                 }
-                setStatus('ended')
-                setShowDisposition(true)
+
+                // If AMD came back machine/fax during the call (late detection),
+                // skip disposition tab and dial next instead.
+                if (isNotHuman(d.amd_result)) {
+                  setAmdActivity(prev =>
+                    [`> VOICEMAIL FILTERED LATE — ${d.amd_result}`, ...prev].slice(0, 5)
+                  )
+                  setStatus('idle')
+                  setCurrentLead(null)
+                  setTimeout(() => handleDial(), 600)
+                } else {
+                  setStatus('ended')
+                  setShowDisposition(true)
+                }
               }
             } catch {
               clearInterval(hangupPoll)
@@ -795,25 +822,29 @@ function DialerPageInner() {
           statusData.status === 'no-answer' ||
           statusData.status === 'canceled'
         ) {
+          // Call ended before we ever saw "in-progress" — voicemail hung up
+          // very fast, or never answered. Either way: no disposition tab,
+          // just auto-dial the next lead.
           clearInterval(pollInterval)
           activePollRef.current = null
           setActiveCallSid(null)
 
-          if (statusData.amd_result?.startsWith('machine_')) {
+          if (isNotHuman(statusData.amd_result)) {
             setAmdActivity(prev =>
               [`> VOICEMAIL FILTERED — ${statusData.amd_result}`, ...prev].slice(0, 5)
             )
           }
 
-          if (currentLead) {
-            const isAmdHangup = statusData.amd_result?.startsWith('machine_')
+          const ld = currentLeadRef.current
+          if (ld) {
+            const isAmdHangup = isNotHuman(statusData.amd_result)
             if (!isAmdHangup) {
               await fetch('/api/leads/dispose', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                  lead_id: currentLead.id,
-                  campaign_id: currentLead.campaign_id,
+                  lead_id: ld.id,
+                  campaign_id: ld.campaign_id,
                   user_id: user?.id,
                   disposition: 'NO_ANSWER',
                   duration: 0,
@@ -824,11 +855,7 @@ function DialerPageInner() {
           setStatus('idle')
           setCurrentLead(null)
 
-          if (autoDials) {
-            setTimeout(() => handleDial(), 1200)
-          } else {
-            setTimeout(() => handleDial(), 800)
-          }
+          setTimeout(() => handleDial(), 800)
         }
       } catch (err) {
         clearInterval(pollInterval)
