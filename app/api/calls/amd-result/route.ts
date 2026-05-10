@@ -37,10 +37,15 @@ export async function POST(req: Request) {
     // Record the AMD result
     await recordAmdResult(callSid, answeredBy)
 
-    // For machine_* results: hang up the call
-    if (answeredBy.startsWith('machine_')) {
+    // Hang up if it's a machine, fax, or AMD couldn't tell what it was
+    // (in which case it's almost certainly NOT a human worth your time).
+    const isNotHuman =
+      answeredBy.startsWith('machine_') ||
+      answeredBy === 'fax' ||
+      answeredBy === 'unknown'
+
+    if (isNotHuman) {
       await hangupCall(callSid)
-      // Also auto-dispose the lead so progressive/predictive can move on
       await autoDisposeAsNoAnswer(callSid)
     }
 

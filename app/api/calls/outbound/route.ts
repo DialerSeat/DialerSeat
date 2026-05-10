@@ -72,16 +72,17 @@ export async function POST(req: Request) {
       }, { status: 451 })  // 451 Unavailable For Legal Reasons (RFC 7725)
     }
 
-    let amdEnabled = false
+    // AMD is ALWAYS on — voicemail filtering is core to the product and must run
+    // regardless of campaign settings. Manual dials (no campaignId) also get AMD.
+    const amdEnabled = true
     let dialerMode = 'power'
     if (campaignId) {
       const { data: campaign } = await supabase
         .from('campaigns')
-        .select('amd_enabled, dialer_mode')
+        .select('dialer_mode')
         .eq('id', campaignId)
         .maybeSingle()
       if (campaign) {
-        amdEnabled = !!campaign.amd_enabled
         dialerMode = campaign.dialer_mode || 'power'
       }
     }
@@ -149,14 +150,22 @@ async function placeCall(
   }
 
   if (amdEnabled) {
-    outboundParams.MachineDetection = 'DetectMessageEnd'
+    // 'Enable' (vs DetectMessageEnd) drops the call the SECOND a machine is
+    // detected rather than waiting for the greeting to finish. This is what we
+    // want for outbound dialing — no waiting through "leave a message after the beep".
+    outboundParams.MachineDetection = 'Enable'
     outboundParams.AsyncAmd = 'true'
     outboundParams.AsyncAmdStatusCallback = `${env.appUrl}/api/calls/amd-result`
     outboundParams.AsyncAmdStatusCallbackMethod = 'POST'
-    outboundParams.MachineDetectionTimeout = '20'
-    outboundParams.MachineDetectionSpeechThreshold = '2400'
-    outboundParams.MachineDetectionSpeechEndThreshold = '1200'
-    outboundParams.MachineDetectionSilenceTimeout = '5000'
+    // Total time AMD has to decide (in ms). 10s is plenty for a greeting.
+    outboundParams.MachineDetectionTimeout = '10'
+    // How long speech must continue before considered a machine. Lower = faster
+    // voicemail drop. Default is 2400ms; 1800ms catches most voicemails fast.
+    outboundParams.MachineDetectionSpeechThreshold = '1800'
+    // How long silence at end of speech before considered done. Lower = snappier.
+    outboundParams.MachineDetectionSpeechEndThreshold = '800'
+    // Silence at start (initial ring before greeting). Default fine.
+    outboundParams.MachineDetectionSilenceTimeout = '3000'
   }
 
   const leadCallResponse = await fetch(callsUrl, {
