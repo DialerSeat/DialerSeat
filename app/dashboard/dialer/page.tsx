@@ -61,6 +61,10 @@ function DialerPageInner() {
   const [tier, setTier] = useState<AccessTier>(null)
   const [tierLoaded, setTierLoaded] = useState(false)
 
+  // clockTick exists purely to force re-render every second so the displayed
+  // clock updates. Value is never read directly.
+  const [clockTick, setClockTick] = useState(0)
+
   const [status, setStatus] = useState<CallStatus>('idle')
   const [manualNumber, setManualNumber] = useState('')
   const [seconds, setSeconds] = useState(0)
@@ -83,18 +87,14 @@ function DialerPageInner() {
     calls: 0, connected: 0, appointments: 0, closed: 0, dnc: 0, notInterested: 0
   })
 
-  // Team scope state
   const [teamScopes, setTeamScopes] = useState<TeamScope[]>([])
   const [selectedScope, setSelectedScope] = useState<string>(PERSONAL_SCOPE)
   const [scopesLoaded, setScopesLoaded] = useState(false)
 
-  // Mode-aware state
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
   const [pacingInfo, setPacingInfo] = useState<PacingInfo | null>(null)
   const [amdActivity, setAmdActivity] = useState<string[]>([])
 
-  // TCPA-aware state — distinguishes "no leads at all" from "all leads
-  // currently outside 8am-9pm local time window"
   const [tcpaBlockedAll, setTcpaBlockedAll] = useState(false)
 
   const timerRef = useRef<NodeJS.Timeout | null>(null)
@@ -125,19 +125,19 @@ function DialerPageInner() {
 
   const isActive = tier === 'active'
 
-  // Resolve current campaign object — used for mode awareness
   const currentCampaign: Campaign | undefined =
     selectedCampaign !== 'all'
       ? campaigns.find(c => c.id === selectedCampaign)
       : undefined
   const dialerMode: DialerMode = (currentCampaign?.dialer_mode as DialerMode) || 'power'
-  const amdEnabled = !!currentCampaign?.amd_enabled
+  // AMD is always on platform-wide as of May 10, 2026 — voicemail filtering is a
+  // core promise of the product. The amd_enabled field is no longer the gate.
+  const amdEnabled = true
   const isPredictive = dialerMode === 'predictive'
   const isProgressive = dialerMode === 'progressive'
   const isPreview = dialerMode === 'preview'
   const autoDials = isProgressive || isPredictive
 
-  // Load team scopes
   useEffect(() => {
     if (!user || !isActive) return
     let cancelled = false
@@ -187,7 +187,6 @@ function DialerPageInner() {
     return () => { cancelled = true }
   }, [user, isActive])
 
-  // URL params (?teamId=X&campaignId=Y) consumed once after scopes load
   useEffect(() => {
     if (!scopesLoaded || urlParamsConsumedRef.current) return
     const teamIdParam = searchParams.get('teamId')
@@ -210,9 +209,10 @@ function DialerPageInner() {
     setSelectedCampaign('all')
   }, [selectedScope])
 
+  // CLOCK TICK — forces re-render every second so timeStr/dateStr update
   useEffect(() => {
     if (!isActive) return
-    const interval = setInterval(() => {}, 1000)
+    const interval = setInterval(() => setClockTick(t => t + 1), 1000)
     return () => clearInterval(interval)
   }, [isActive])
 
@@ -346,9 +346,6 @@ function DialerPageInner() {
     }
   }
 
-  // ── SESSION HEARTBEAT ──────────────────────────────────────────────────
-  // Start a session whenever user is available + has a specific campaign selected.
-  // End the session when going offline, switching campaigns, or unmounting.
   const startSession = useCallback(async (campaignId: string) => {
     try {
       const teamId = selectedScope !== PERSONAL_SCOPE ? selectedScope : undefined
@@ -381,24 +378,20 @@ function DialerPageInner() {
     sessionIdRef.current = null
   }, [])
 
-  // Manage session lifecycle — only when available + specific campaign selected
   useEffect(() => {
     if (!isActive) return
     const shouldHaveSession = available && selectedCampaign !== 'all' && currentCampaign
 
     if (shouldHaveSession) {
-      // Start session if we don't have one for this campaign
       if (!sessionIdRef.current) {
         startSession(selectedCampaign)
       }
-      // Set up heartbeat every 30s
       if (!heartbeatRef.current) {
         heartbeatRef.current = setInterval(() => {
           if (selectedCampaign !== 'all') startSession(selectedCampaign)
         }, 30000)
       }
     } else {
-      // End any existing session
       if (sessionIdRef.current) endSession()
       if (heartbeatRef.current) {
         clearInterval(heartbeatRef.current)
@@ -414,7 +407,6 @@ function DialerPageInner() {
     }
   }, [available, selectedCampaign, currentCampaign, isActive, startSession, endSession])
 
-  // End session on page unload
   useEffect(() => {
     const handleUnload = () => {
       const sid = sessionIdRef.current
@@ -423,8 +415,6 @@ function DialerPageInner() {
           [JSON.stringify({ sessionId: sid })],
           { type: 'application/json' }
         )
-        // sendBeacon doesn't support DELETE, use a side-channel
-        // Best-effort cleanup; server has 5min stale-cleanup as backup
         navigator.sendBeacon('/api/dialer/session-end', blob)
       }
     }
@@ -437,8 +427,6 @@ function DialerPageInner() {
     }
   }, [endSession])
 
-  // ── PREDICTIVE PACING POLL ─────────────────────────────────────────────
-  // Only when in predictive mode + available — poll active agents + abandon rate
   useEffect(() => {
     if (!isActive || !isPredictive || !available || selectedCampaign === 'all') {
       setPacingInfo(null)
@@ -600,9 +588,6 @@ function DialerPageInner() {
       return data.lead
     } else {
       setNoLeads(true)
-      // /api/leads/next returns tcpaBlocked: true when there ARE leads but
-      // they're all outside their local 8am-9pm window. This drives the
-      // empty-state messaging to say "try later" instead of "upload more".
       setTcpaBlockedAll(!!data.tcpaBlocked)
       return null
     }
@@ -614,9 +599,12 @@ function DialerPageInner() {
     return `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`
   }
 
+  // Reads clockTick (in deps via state) so this recomputes every second
   const now = new Date()
   const timeStr = mounted ? now.toLocaleTimeString('en-US', { hour12: false }) : '--:--:--'
   const dateStr = mounted ? now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : ''
+  // Silence unused-var warning — clockTick exists solely to trigger re-render
+  void clockTick
 
   useEffect(() => {
     if (status === 'connected') {
@@ -635,8 +623,6 @@ function DialerPageInner() {
     return () => { document.body.style.overflow = '' }
   }, [dialZoomed])
 
-  // ── PREVIEW MODE FLOW ──────────────────────────────────────────────────
-  // Fetch lead, show profile, wait for user to click DIAL or SKIP
   const fetchPreviewLead = async () => {
     setShowDisposition(false)
     setDisposition('')
@@ -674,7 +660,6 @@ function DialerPageInner() {
     fetchPreviewLead()
   }
 
-  // ── COMMON CALL FIRE — used by all modes ───────────────────────────────
   const dialLeadCall = async (lead: Lead) => {
     const rawPhone = lead.phone?.replace(/\D/g, '')
     if (!rawPhone || rawPhone.length < 10) {
@@ -690,7 +675,6 @@ function DialerPageInner() {
         }),
       })
       setCurrentLead(null)
-      // For auto-dialing modes, immediately try the next lead
       if (autoDials) setTimeout(() => handleDial(), 300)
       else setStatus('idle')
       return
@@ -700,9 +684,7 @@ function DialerPageInner() {
     setSessionStats(s => ({ ...s, calls: s.calls + 1 }))
     playInitiateBlip()
 
-    if (amdEnabled) {
-      setAmdActivity(prev => [`AMD ENABLED — analyzing pickup`, ...prev].slice(0, 5))
-    }
+    setAmdActivity(prev => [`AMD ENABLED — analyzing pickup`, ...prev].slice(0, 5))
 
     try {
       const res = await fetch('/api/calls/outbound', {
@@ -725,12 +707,6 @@ function DialerPageInner() {
           setTier('lapsed')
           return
         }
-        // 451 = TCPA window block (RFC 7725 — Unavailable For Legal Reasons)
-        // The lead is outside their local 8am-9pm calling window, OR a state-
-        // specific stricter window (e.g. FL ends at 8pm), OR it's a federal
-        // holiday, OR LA on a Sunday, etc. We disposition this distinctly as
-        // TCPA_BLOCKED so it shows up in compliance reporting separately from
-        // ordinary skips.
         if (res.status === 451) {
           console.warn('TCPA window block:', data.detail)
           await fetch('/api/leads/dispose', {
@@ -745,8 +721,6 @@ function DialerPageInner() {
               source: 'tcpa_block',
             }),
           })
-          // Surface to agent in the activity log so they see WHY this lead got
-          // skipped without a disruptive popup
           setAmdActivity(prev => [
             `TCPA SKIP — ${data.leadState || '?'}: ${data.detail}`,
             ...prev,
@@ -821,23 +795,18 @@ function DialerPageInner() {
           statusData.status === 'no-answer' ||
           statusData.status === 'canceled'
         ) {
-          // Call ended without connecting (voicemail auto-hung-up via AMD,
-          // or simply unanswered/busy/failed). For auto-dialing modes,
-          // disposition is auto-set and we move to next lead silently.
           clearInterval(pollInterval)
           activePollRef.current = null
           setActiveCallSid(null)
 
-          // Check if AMD result was a machine — log it for the agent
-          if (amdEnabled && statusData.amd_result?.startsWith('machine_')) {
+          if (statusData.amd_result?.startsWith('machine_')) {
             setAmdActivity(prev =>
               [`> VOICEMAIL FILTERED — ${statusData.amd_result}`, ...prev].slice(0, 5)
             )
           }
 
           if (currentLead) {
-            // Auto-dispose if AMD already set it; otherwise mark NO_ANSWER
-            const isAmdHangup = amdEnabled && statusData.amd_result?.startsWith('machine_')
+            const isAmdHangup = statusData.amd_result?.startsWith('machine_')
             if (!isAmdHangup) {
               await fetch('/api/leads/dispose', {
                 method: 'POST',
@@ -855,11 +824,9 @@ function DialerPageInner() {
           setStatus('idle')
           setCurrentLead(null)
 
-          // Auto-fire next lead in progressive/predictive mode
           if (autoDials) {
             setTimeout(() => handleDial(), 1200)
           } else {
-            // Power mode: auto-retry next lead (existing behavior)
             setTimeout(() => handleDial(), 800)
           }
         }
@@ -871,19 +838,16 @@ function DialerPageInner() {
     activePollRef.current = pollInterval
   }
 
-  // ── HANDLE DIAL — entry point varies by mode ──────────────────────────
   const handleDial = async () => {
     setShowDisposition(false)
     setDisposition('')
     setNoLeads(false)
 
     if (isPreview) {
-      // Preview mode: load lead, show profile, wait for explicit DIAL click
       await fetchPreviewLead()
       return
     }
 
-    // Power, progressive, predictive: fetch + dial immediately
     const lead = await fetchNextLead()
     if (!lead) return
     setCurrentLead(lead)
@@ -938,7 +902,6 @@ function DialerPageInner() {
       })
     }
 
-    // Auto-fire next lead for progressive/predictive AND power modes (existing behavior)
     setTimeout(async () => {
       setStatus('idle')
       setShowDisposition(false)
@@ -971,9 +934,6 @@ function DialerPageInner() {
           setTier('lapsed')
           return
         }
-        // 451 = TCPA window block. For manual dials we don't have a lead row
-        // to disposition, so we just alert the user with the destination's
-        // local time so they understand why and know when to retry.
         if (res.status === 451) {
           alert(`Cannot dial: ${data.detail}\n\nLocal time at destination: ${data.leadLocalTime || 'unknown'}`)
           setStatus('idle')
@@ -1043,15 +1003,11 @@ function DialerPageInner() {
   const terminalRed = '#8a1a1a'
   const terminalAmber = '#8a6a1a'
 
-  // Mode badge color
   const modeColor = isPredictive ? terminalRed
     : isProgressive ? terminalGreen
     : isPreview ? terminalMuted
     : terminalAccent
 
-  // ========================================================================
-  // LAPSED PAYWALL
-  // ========================================================================
   if (tierLoaded && !isActive) {
     return (
       <div style={{
@@ -1112,12 +1068,7 @@ function DialerPageInner() {
     )
   }
 
-  // The lead currently displayed (preview or active call lead)
   const displayLead = previewLead || currentLead
-
-  // ========================================================================
-  // ACTIVE USER — full dialer UI
-  // ========================================================================
 
   const ManualDialer = ({ inOverlay = false }: { inOverlay?: boolean }) => (
     <>
@@ -1272,7 +1223,7 @@ function DialerPageInner() {
           <span style={{ fontSize: '11px', fontWeight: 'bold', letterSpacing: '4px', color: '#4a9eff' }}>
             DIALERSEAT TERMINAL
           </span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div style={{
               width: '8px', height: '8px', borderRadius: '50%',
               background: available ? '#32ff7e' : '#ff6464',
@@ -1281,6 +1232,17 @@ function DialerPageInner() {
             <span style={{ fontSize: '10px', letterSpacing: '2px', color: available ? '#32ff7e' : '#ff6464' }}>
               {available ? 'LIVE' : 'OFFLINE'}
             </span>
+            <div onClick={handleSetAvailable} style={{
+              width: '36px', height: '20px', borderRadius: '10px',
+              background: available ? '#4a9eff' : '#444460',
+              position: 'relative', cursor: 'pointer', transition: 'background 0.2s',
+              flexShrink: 0,
+            }}>
+              <div style={{
+                width: '14px', height: '14px', borderRadius: '50%', background: 'white',
+                position: 'absolute', top: '3px', left: available ? '19px' : '3px', transition: 'left 0.2s',
+              }} />
+            </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: swReady ? '#4a9eff' : '#666688' }} />
@@ -1297,20 +1259,9 @@ function DialerPageInner() {
               fontFamily: 'monospace',
             }}>
               {dialerMode.toUpperCase()}
-              {amdEnabled && <span style={{ marginLeft: 4, opacity: 0.7 }}>· AMD</span>}
+              <span style={{ marginLeft: 4, opacity: 0.7 }}>· AMD</span>
             </div>
           )}
-          <div onClick={handleSetAvailable} style={{
-            width: '36px', height: '20px', borderRadius: '10px',
-            background: available ? '#4a9eff' : '#444460',
-            position: 'relative', cursor: 'pointer', transition: 'background 0.2s',
-            flexShrink: 0,
-          }}>
-            <div style={{
-              width: '14px', height: '14px', borderRadius: '50%', background: 'white',
-              position: 'absolute', top: '3px', left: available ? '19px' : '3px', transition: 'left 0.2s',
-            }} />
-          </div>
         </div>
         <div className="dialer-status-bar-right">
           <div className="dialer-connected-pill" title="Connected calls this session">
@@ -1324,7 +1275,6 @@ function DialerPageInner() {
         </div>
       </div>
 
-      {/* AUTO-DEGRADED BANNER for predictive when throttled */}
       {isPredictive && pacingInfo?.isDegraded && (
         <div style={{
           padding: '8px 20px',
@@ -1359,7 +1309,6 @@ function DialerPageInner() {
             ))}
           </div>
 
-          {/* Predictive pacing display */}
           {isPredictive && pacingInfo && (
             <div style={{
               padding: '10px 14px', background: terminalSurface,
@@ -1391,7 +1340,6 @@ function DialerPageInner() {
             </div>
           )}
 
-          {/* Predictive low-agent warning */}
           {isPredictive && pacingInfo && pacingInfo.activeAgents > 0 && pacingInfo.activeAgents < 8 && !pacingInfo.isDegraded && (
             <div style={{
               padding: '8px 12px', background: 'rgba(255,170,62,0.08)',
@@ -1594,7 +1542,6 @@ function DialerPageInner() {
             </div>
           )}
 
-          {/* PRIMARY ACTION BUTTONS — VARY BY MODE + STATE */}
           <div style={{ display: 'grid', gridTemplateColumns: status === 'connected' ? '1fr 1fr' : status === 'preview_ready' ? '1fr 1fr' : '1fr', gap: '8px', flexShrink: 0 }}>
             {status === 'idle' && !available && (
               <button onClick={handleSetAvailable} style={{
@@ -1749,7 +1696,7 @@ function DialerPageInner() {
               status === 'connected' && `> CONNECTED — ${currentLead?.first_name} ${currentLead?.last_name}`,
               status === 'calling' && '> DIALING IN QUEUE...',
               status === 'preview_ready' && `> PREVIEW LOADED — ${previewLead?.first_name} ${previewLead?.last_name}`,
-              currentCampaign && `> MODE: ${dialerMode.toUpperCase()}${amdEnabled ? ' + AMD' : ''}`,
+              currentCampaign && `> MODE: ${dialerMode.toUpperCase()} + AMD`,
               isPredictive && pacingInfo && `> AGENTS: ${pacingInfo.activeAgents} · ABANDON: ${(pacingInfo.abandonRate * 100).toFixed(2)}%`,
               currentSessionId && '> SESSION ACTIVE',
               !isPersonalScope && currentScope && `> SCOPE: ${currentScope.name.toUpperCase()}`,

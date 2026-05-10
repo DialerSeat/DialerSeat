@@ -7,12 +7,15 @@ const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/terms',
+  '/dialing-modes',
   '/api/stripe/webhook',
   '/api/calls/twiml(.*)',
   '/api/calls/twiml-agent(.*)',
   '/api/calls/status(.*)',
   '/api/calls/recording(.*)',
   '/api/calls/inbound(.*)',
+  '/api/calls/amd-result(.*)',
+  '/api/calls/amd-result',
   '/api/cron/(.*)',
 ])
 
