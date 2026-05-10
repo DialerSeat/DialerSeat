@@ -1,5 +1,11 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import { NextResponse } from 'next/server'
+import { isCallableNow } from '@/lib/callingWindow'
+
+// How many candidate leads to evaluate before giving up.
+// We over-fetch then filter in JS because Supabase can't run our time-zone
+// logic. Most pools at 50-200 leads, this is plenty.
+const CANDIDATE_LIMIT = 50
 
 export async function GET(req: Request) {
   try {
@@ -12,9 +18,8 @@ export async function GET(req: Request) {
       return NextResponse.json({ success: false, error: 'No user_id' }, { status: 400 })
     }
 
-    // ── TEAM SCOPE: leads come from team's attached campaigns, not user_id ──
+    // ── TEAM SCOPE ──
     if (team_id) {
-      // Verify the user is actually a member or owner of this team
       const { data: team } = await supabaseAdmin
         .from('teams')
         .select('id, owner_id')
@@ -39,7 +44,6 @@ export async function GET(req: Request) {
         }
       }
 
-      // Get attached active campaigns for this team
       const { data: tcRows } = await supabaseAdmin
         .from('team_campaigns')
         .select('campaign_id, campaigns(status)')
@@ -53,7 +57,6 @@ export async function GET(req: Request) {
         return NextResponse.json({ success: false, error: 'No active campaigns in team' }, { status: 404 })
       }
 
-      // Constrain selected campaign to ones in the team
       let scopedCampaignIds: string[]
       if (campaign_id && campaign_id !== 'all') {
         if (!teamCampaignIds.includes(campaign_id)) {
@@ -64,7 +67,8 @@ export async function GET(req: Request) {
         scopedCampaignIds = teamCampaignIds
       }
 
-      const { data, error } = await supabaseAdmin
+      // Fetch a batch of candidates, then filter by calling window in JS
+      const { data: candidates, error } = await supabaseAdmin
         .from('leads')
         .select('*, extra_data')
         .in('campaign_id', scopedCampaignIds)
@@ -77,17 +81,33 @@ export async function GET(req: Request) {
         .neq('phone', '')
         .order('dial_attempts', { ascending: true })
         .order('created_at', { ascending: true })
-        .limit(1)
-        .single()
+        .limit(CANDIDATE_LIMIT)
 
-      if (error || !data) {
-        return NextResponse.json({ success: false, error: 'No more team leads' }, { status: 404 })
+      if (error) {
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 })
       }
 
-      return NextResponse.json({ success: true, lead: data })
+      const callable = (candidates || []).find(c => isCallableNow({
+        phone: c.phone,
+        state: c.state,
+      }).allowed)
+
+      if (!callable) {
+        // Distinguish between "no leads" and "all leads outside callable window"
+        const hasAnyCandidates = (candidates?.length || 0) > 0
+        return NextResponse.json({
+          success: false,
+          error: hasAnyCandidates
+            ? 'All available leads are outside their local 8am-9pm calling window. Try again in a few hours.'
+            : 'No more team leads',
+          tcpaBlocked: hasAnyCandidates,
+        }, { status: 404 })
+      }
+
+      return NextResponse.json({ success: true, lead: callable })
     }
 
-    // ── PERSONAL SCOPE (existing behavior, unchanged) ──
+    // ── PERSONAL SCOPE ──
     const { data: activeCampaigns } = await supabaseAdmin
       .from('campaigns')
       .select('id')
@@ -113,7 +133,7 @@ export async function GET(req: Request) {
       .neq('phone', '')
       .order('dial_attempts', { ascending: true })
       .order('created_at', { ascending: true })
-      .limit(1)
+      .limit(CANDIDATE_LIMIT)
 
     if (campaign_id && campaign_id !== 'all') {
       query = query.eq('campaign_id', campaign_id)
@@ -121,13 +141,30 @@ export async function GET(req: Request) {
       query = query.in('campaign_id', activeCampaignIds)
     }
 
-    const { data, error } = await query.single()
+    const { data: candidates, error } = await query
 
-    if (error || !data) {
-      return NextResponse.json({ success: false, error: 'No more leads' }, { status: 404 })
+    if (error) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true, lead: data })
+    // Filter to only leads currently inside their local TCPA window
+    const callable = (candidates || []).find(c => isCallableNow({
+      phone: c.phone,
+      state: c.state,
+    }).allowed)
+
+    if (!callable) {
+      const hasAnyCandidates = (candidates?.length || 0) > 0
+      return NextResponse.json({
+        success: false,
+        error: hasAnyCandidates
+          ? 'All available leads are outside their local 8am-9pm calling window. Try again in a few hours.'
+          : 'No more leads',
+        tcpaBlocked: hasAnyCandidates,
+      }, { status: 404 })
+    }
+
+    return NextResponse.json({ success: true, lead: callable })
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 })
   }

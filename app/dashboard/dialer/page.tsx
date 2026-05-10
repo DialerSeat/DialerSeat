@@ -93,6 +93,10 @@ function DialerPageInner() {
   const [pacingInfo, setPacingInfo] = useState<PacingInfo | null>(null)
   const [amdActivity, setAmdActivity] = useState<string[]>([])
 
+  // TCPA-aware state — distinguishes "no leads at all" from "all leads
+  // currently outside 8am-9pm local time window"
+  const [tcpaBlockedAll, setTcpaBlockedAll] = useState(false)
+
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const audioCtxRef = useRef<AudioContext | null>(null)
   const activePollRef = useRef<NodeJS.Timeout | null>(null)
@@ -592,9 +596,14 @@ function DialerPageInner() {
     const data = await res.json()
     if (data.success) {
       setNoLeads(false)
+      setTcpaBlockedAll(false)
       return data.lead
     } else {
       setNoLeads(true)
+      // /api/leads/next returns tcpaBlocked: true when there ARE leads but
+      // they're all outside their local 8am-9pm window. This drives the
+      // empty-state messaging to say "try later" instead of "upload more".
+      setTcpaBlockedAll(!!data.tcpaBlocked)
       return null
     }
   }
@@ -714,6 +723,38 @@ function DialerPageInner() {
       } else {
         if (res.status === 403) {
           setTier('lapsed')
+          return
+        }
+        // 451 = TCPA window block (RFC 7725 — Unavailable For Legal Reasons)
+        // The lead is outside their local 8am-9pm calling window, OR a state-
+        // specific stricter window (e.g. FL ends at 8pm), OR it's a federal
+        // holiday, OR LA on a Sunday, etc. We disposition this distinctly as
+        // TCPA_BLOCKED so it shows up in compliance reporting separately from
+        // ordinary skips.
+        if (res.status === 451) {
+          console.warn('TCPA window block:', data.detail)
+          await fetch('/api/leads/dispose', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              lead_id: lead.id,
+              campaign_id: lead.campaign_id,
+              disposition: 'TCPA_BLOCKED',
+              duration: 0,
+              notes: data.detail,
+              source: 'tcpa_block',
+            }),
+          })
+          // Surface to agent in the activity log so they see WHY this lead got
+          // skipped without a disruptive popup
+          setAmdActivity(prev => [
+            `TCPA SKIP — ${data.leadState || '?'}: ${data.detail}`,
+            ...prev,
+          ].slice(0, 5))
+          setStatus('idle')
+          setCurrentLead(null)
+          if (autoDials) setTimeout(() => handleDial(), 500)
+          else setTimeout(() => handleDial(), 300)
           return
         }
         await fetch('/api/leads/dispose', {
@@ -930,6 +971,14 @@ function DialerPageInner() {
           setTier('lapsed')
           return
         }
+        // 451 = TCPA window block. For manual dials we don't have a lead row
+        // to disposition, so we just alert the user with the destination's
+        // local time so they understand why and know when to retry.
+        if (res.status === 451) {
+          alert(`Cannot dial: ${data.detail}\n\nLocal time at destination: ${data.leadLocalTime || 'unknown'}`)
+          setStatus('idle')
+          return
+        }
         setStatus('idle')
       }
     } catch {
@@ -992,6 +1041,7 @@ function DialerPageInner() {
   const terminalAccent = '#2a4a8a'
   const terminalGreen = '#1a6a1a'
   const terminalRed = '#8a1a1a'
+  const terminalAmber = '#8a6a1a'
 
   // Mode badge color
   const modeColor = isPredictive ? terminalRed
@@ -1437,8 +1487,17 @@ function DialerPageInner() {
                     {noLeads ? 'NO MORE LEADS AVAILABLE' : status === 'calling' ? 'DIALING IN QUEUE...' : 'AWAITING DIAL COMMAND'}
                   </p>
                   {noLeads && (
-                    <p style={{ fontSize: '10px', color: terminalRed, marginTop: '8px', letterSpacing: '2px' }}>
-                      {isPersonalScope ? 'UPLOAD MORE LEADS TO CONTINUE' : 'NO MORE TEAM LEADS — TRY ANOTHER CAMPAIGN OR SCOPE'}
+                    <p style={{
+                      fontSize: '10px',
+                      color: tcpaBlockedAll ? terminalAmber : terminalRed,
+                      marginTop: '8px',
+                      letterSpacing: '2px',
+                    }}>
+                      {tcpaBlockedAll
+                        ? '⏰ ALL LEADS OUTSIDE 8AM-9PM WINDOW — TRY LATER'
+                        : isPersonalScope
+                          ? 'UPLOAD MORE LEADS TO CONTINUE'
+                          : 'NO MORE TEAM LEADS — TRY ANOTHER CAMPAIGN OR SCOPE'}
                     </p>
                   )}
                 </div>

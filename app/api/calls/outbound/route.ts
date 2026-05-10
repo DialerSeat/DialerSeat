@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { requireActive } from '@/lib/subscription'
 import { auth } from '@clerk/nextjs/server'
 import { pickNumberForLead, recordUsage } from '@/lib/numberPool'
+import { isCallableNow } from '@/lib/callingWindow'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -37,6 +38,40 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Missing credentials' }, { status: 500 })
     }
 
+    const toFormatted = to.startsWith('+') ? to : `+1${to.replace(/\D/g, '')}`
+
+    // ── TCPA WINDOW PRE-FLIGHT (defense in depth) ─────────────────────────
+    // /api/leads/next already filters callable leads, but a stale lead-id
+    // or a manual dial could bypass that. This endpoint is the last gate
+    // before we hit SignalWire. Returns HTTP 451 if outside window.
+    let leadStateForTcpa: string | null = null
+    if (leadId) {
+      const { data: lead } = await supabase
+        .from('leads')
+        .select('phone, state, user_id')
+        .eq('id', leadId)
+        .maybeSingle()
+      if (lead && lead.user_id === userId) {
+        leadStateForTcpa = lead.state
+      }
+    }
+
+    const tcpaCheck = isCallableNow({
+      phone: toFormatted,
+      state: leadStateForTcpa,
+    })
+
+    if (!tcpaCheck.allowed) {
+      return NextResponse.json({
+        success: false,
+        error: 'Cannot dial outside calling window',
+        detail: tcpaCheck.reason,
+        leadState: tcpaCheck.leadState,
+        leadLocalTime: tcpaCheck.leadLocalTime,
+        retryAfter: tcpaCheck.retryAfter?.toISOString(),
+      }, { status: 451 })  // 451 Unavailable For Legal Reasons (RFC 7725)
+    }
+
     let amdEnabled = false
     let dialerMode = 'power'
     if (campaignId) {
@@ -50,8 +85,6 @@ export async function POST(req: Request) {
         dialerMode = campaign.dialer_mode || 'power'
       }
     }
-
-    const toFormatted = to.startsWith('+') ? to : `+1${to.replace(/\D/g, '')}`
 
     const poolNumber = await pickNumberForLead(toFormatted)
 
@@ -103,12 +136,6 @@ async function placeCall(
   const authHeader = 'Basic ' + Buffer.from(`${env.projectId}:${env.apiToken}`).toString('base64')
   const callsUrl = `https://${env.spaceUrl}/api/laml/2010-04-01/Accounts/${env.projectId}/Calls.json`
 
-  // ── Compliance: TSR § 310.4(b)(4)(ii) requires ring duration of at least
-  // 15 seconds or 4 rings before treating an unanswered call as no-answer.
-  // SignalWire/Twilio Timeout default is 60s, but we set it explicitly when
-  // AMD is enabled (i.e., when in a TSR-regulated mode) for audit clarity.
-  // We use 20 seconds — well above the 15-second floor, generous enough
-  // to give carriers time to handle the call routing.
   const isTsrRegulated = dialerMode === 'progressive' || dialerMode === 'predictive'
   const ringTimeout = isTsrRegulated ? '20' : '60'
 
