@@ -8,7 +8,6 @@ const userNavItems = [
   { icon: '📈', label: 'ANALYTICS', href: '/dashboard/analytics' },
   { icon: '📞', label: 'DIALER', href: '/dashboard/dialer' },
   { icon: '📋', label: 'CAMPAIGNS', href: '/dashboard/campaigns' },
-  { icon: '🛡', label: 'COMPLIANCE', href: '/dashboard/compliance' },
   { icon: '🎙️', label: 'RECORDINGS', href: '/dashboard/recordings' },
   { icon: '👥', label: 'LEADS', href: '/dashboard/leads' },
   { icon: '🏢', label: 'TEAMS', href: '/dashboard/teams' },
@@ -128,7 +127,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const logoHref = isAdmin ? '/dashboard/admin/analytics' : '/dashboard/analytics'
 
-  // Tier label resolution — context-aware with seat awareness
   const totalSeats = seats?.counts.totalSeats || 0
   const hasActivePersonal = tier === 'active'
   const hasAnySeat = totalSeats > 0

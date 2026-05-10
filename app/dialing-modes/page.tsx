@@ -1,18 +1,6 @@
-import type { Metadata } from 'next'
+'use client'
+import { useUser, UserButton } from '@clerk/nextjs'
 import Link from 'next/link'
-
-export const metadata: Metadata = {
-  title: 'Dialing Modes & Compliance Methodology | DialerSeat',
-  description:
-    'A technical breakdown of preview, power, progressive, and predictive dialing — and exactly how DialerSeat enforces TCPA and FTC TSR compliance for each. No fluff, no marketing spin.',
-  openGraph: {
-    title: 'Dialing Modes & Compliance Methodology | DialerSeat',
-    description:
-      'How DialerSeat handles preview, power, progressive, and predictive dialing under TCPA and FTC TSR rules.',
-    type: 'article',
-  },
-  alternates: { canonical: 'https://dialerseat.com/dialing-modes' },
-}
 
 const T = {
   bg: '#f0f1f4',
@@ -29,6 +17,8 @@ const T = {
 }
 
 export default function DialingModesPage() {
+  const { isSignedIn, isLoaded } = useUser()
+
   return (
     <div style={{
       background: T.bg,
@@ -54,33 +44,65 @@ export default function DialingModesPage() {
           gap: 16,
         }}>
           <Link href="/" style={{
-            fontSize: 13,
-            fontWeight: 'bold',
-            letterSpacing: 4,
-            color: T.blue,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
             textDecoration: 'none',
           }}>
-            DIALERSEAT
-          </Link>
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-            <Link href="/sign-in" style={{
-              fontSize: 10,
-              letterSpacing: 2,
-              color: '#8888aa',
-              textDecoration: 'none',
-              fontWeight: 'bold',
-            }}>SIGN IN</Link>
-            <Link href="/sign-up" style={{
-              padding: '8px 16px',
-              borderRadius: 4,
+            <div style={{
+              width: 28,
+              height: 28,
+              borderRadius: 6,
               background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
-              color: 'white',
-              fontSize: 10,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              <span style={{ color: 'white', fontWeight: 'bold', fontSize: 13 }}>D</span>
+            </div>
+            <span style={{
+              fontSize: 13,
               fontWeight: 'bold',
-              letterSpacing: 2,
-              textDecoration: 'none',
-            }}>START FREE</Link>
-          </div>
+              letterSpacing: 4,
+              color: T.blue,
+            }}>
+              DIALERSEAT
+            </span>
+          </Link>
+
+          {isLoaded && isSignedIn ? (
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+              <Link href="/dashboard/dialer" style={{
+                fontSize: 10,
+                letterSpacing: 2,
+                color: '#8888aa',
+                textDecoration: 'none',
+                fontWeight: 'bold',
+              }}>← BACK TO DASHBOARD</Link>
+              <UserButton />
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+              <Link href="/sign-in" style={{
+                fontSize: 10,
+                letterSpacing: 2,
+                color: '#8888aa',
+                textDecoration: 'none',
+                fontWeight: 'bold',
+              }}>SIGN IN</Link>
+              <Link href="/sign-up" style={{
+                padding: '8px 16px',
+                borderRadius: 4,
+                background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+                color: 'white',
+                fontSize: 10,
+                fontWeight: 'bold',
+                letterSpacing: 2,
+                textDecoration: 'none',
+              }}>GET STARTED</Link>
+            </div>
+          )}
         </div>
       </header>
 
@@ -340,13 +362,13 @@ export default function DialingModesPage() {
             margin: '20px 0',
           }}>
             <li style={{ marginBottom: 12 }}>
-              <strong>Consent records.</strong> TCPA requires prior express written consent for autodialed marketing calls to wireless numbers. Under the 2024 one-to-one consent rule, that consent must name the specific seller calling. Verifying that your leads have valid consent is your responsibility as the seller. We are working on lead-level consent record storage and one-click verification, but it isn&apos;t live yet.
+              <strong>Consent records.</strong> TCPA requires prior express written consent for autodialed marketing calls to wireless numbers. Under the 2024 one-to-one consent rule, that consent must name the specific seller calling. Verifying that your leads have valid consent is your responsibility as the seller. DialerSeat now stores consent metadata per-lead and surfaces it in the leads tab — but you supply it.
             </li>
             <li style={{ marginBottom: 12 }}>
               <strong>National Do Not Call (DNC) Registry scrubbing.</strong> The TSR requires sellers to scrub against the National DNC Registry before calling. We do not currently provide automatic DNC scrubbing — campaign owners are responsible for scrubbing their lists before upload. We&apos;re evaluating integration with commercial DNC scrub services.
             </li>
             <li style={{ marginBottom: 12 }}>
-              <strong>State-specific calling windows.</strong> The TCPA limits calling to between 8:00 AM and 9:00 PM in the called party&apos;s local time zone. Several states impose stricter windows. We will surface area-code-based time zone hints, but campaign owners are responsible for ensuring their dialing windows comply with each state where their leads are located.
+              <strong>State-specific calling windows.</strong> The TCPA limits calling to between 8:00 AM and 9:00 PM in the called party&apos;s local time zone. Several states impose stricter windows. DialerSeat enforces this hard — leads outside their local window are skipped automatically with a TCPA_BLOCKED disposition.
             </li>
             <li style={{ marginBottom: 12 }}>
               <strong>Litigator scrubbing.</strong> Commercial databases of known TCPA plaintiffs exist. Scrubbing against them is best practice for high-volume dialers. We don&apos;t currently integrate with these services.
@@ -376,52 +398,89 @@ export default function DialingModesPage() {
           </p>
         </section>
 
-        {/* CTA */}
-        <section style={{
-          background: T.dark,
-          borderRadius: 12,
-          padding: '40px 32px',
-          textAlign: 'center',
-          marginTop: 64,
-        }}>
-          <div style={{
-            fontSize: 11,
-            letterSpacing: 4,
-            color: '#8888aa',
-            fontWeight: 'bold',
-            marginBottom: 12,
-          }}>▸ DIALERSEAT</div>
-          <h2 style={{
-            fontSize: 22,
-            fontWeight: 'bold',
-            letterSpacing: 1,
-            color: 'white',
-            margin: '0 0 12px 0',
+        {/* CTA — auth-aware */}
+        {isLoaded && isSignedIn ? (
+          <section style={{
+            background: T.dark,
+            borderRadius: 12,
+            padding: '32px',
+            textAlign: 'center',
+            marginTop: 64,
           }}>
-            $35/week. All four dialing modes. No call-volume limits.
-          </h2>
-          <p style={{
-            fontSize: 14,
-            lineHeight: 1.7,
-            color: '#c0c2ca',
-            maxWidth: 540,
-            margin: '0 auto 24px',
+            <div style={{
+              fontSize: 11,
+              letterSpacing: 4,
+              color: '#8888aa',
+              fontWeight: 'bold',
+              marginBottom: 8,
+            }}>▸ READY TO DIAL</div>
+            <p style={{
+              fontSize: 14,
+              lineHeight: 1.7,
+              color: '#c0c2ca',
+              margin: '0 auto 16px',
+            }}>
+              Pick the mode that fits your campaign. You can change it anytime in Campaign Settings.
+            </p>
+            <Link href="/dashboard/campaigns" style={{
+              display: 'inline-block',
+              padding: '12px 24px',
+              background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+              borderRadius: 6,
+              color: 'white',
+              fontSize: 11,
+              fontWeight: 'bold',
+              letterSpacing: 3,
+              textDecoration: 'none',
+            }}>GO TO CAMPAIGNS →</Link>
+          </section>
+        ) : (
+          <section style={{
+            background: T.dark,
+            borderRadius: 12,
+            padding: '40px 32px',
+            textAlign: 'center',
+            marginTop: 64,
           }}>
-            Cancel anytime. Your leads, recordings, and campaigns stay yours.
-          </p>
-          <Link href="/sign-up" style={{
-            display: 'inline-block',
-            padding: '14px 28px',
-            background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
-            borderRadius: 6,
-            color: 'white',
-            fontSize: 12,
-            fontWeight: 'bold',
-            letterSpacing: 3,
-            textDecoration: 'none',
-            boxShadow: '0 0 20px rgba(74,158,255,0.3)',
-          }}>START FREE →</Link>
-        </section>
+            <div style={{
+              fontSize: 11,
+              letterSpacing: 4,
+              color: '#8888aa',
+              fontWeight: 'bold',
+              marginBottom: 12,
+            }}>▸ DIALERSEAT</div>
+            <h2 style={{
+              fontSize: 22,
+              fontWeight: 'bold',
+              letterSpacing: 1,
+              color: 'white',
+              margin: '0 0 12px 0',
+            }}>
+              $35/week. All four dialing modes. No call-volume limits.
+            </h2>
+            <p style={{
+              fontSize: 14,
+              lineHeight: 1.7,
+              color: '#c0c2ca',
+              maxWidth: 540,
+              margin: '0 auto 24px',
+            }}>
+              Cancel anytime. Your leads, recordings, and campaigns stay yours.
+            </p>
+            <Link href="/sign-up" style={{
+              display: 'inline-block',
+              padding: '14px 28px',
+              background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+              borderRadius: 6,
+              color: 'white',
+              fontSize: 12,
+              fontWeight: 'bold',
+              letterSpacing: 3,
+              textDecoration: 'none',
+              boxShadow: '0 0 20px rgba(74,158,255,0.3)',
+            }}>GET STARTED →</Link>
+          </section>
+        )}
 
         {/* FOOTER LEGAL DISCLAIMER */}
         <p style={{
@@ -439,8 +498,6 @@ export default function DialingModesPage() {
     </div>
   )
 }
-
-// ── Helper components ──────────────────────────────────────────────────────
 
 const SectionLabel = ({ children }: { children: React.ReactNode }) => (
   <div style={{
@@ -570,8 +627,6 @@ const ModeBlock = ({ label, color, tagline, mechanics, compliance, bestFor, extr
     )}
   </div>
 )
-
-// ── Styles ─────────────────────────────────────────────────────────────────
 
 const h2 = {
   fontSize: 24,

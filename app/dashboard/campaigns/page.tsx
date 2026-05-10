@@ -82,7 +82,6 @@ export default function CampaignsPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [deleteTyped, setDeleteTyped] = useState('')
 
-  // New: dialer mode modal
   const [modeModal, setModeModal] = useState<Campaign | null>(null)
   const [modeChoice, setModeChoice] = useState<DialerMode>('power')
   const [amdEnabled, setAmdEnabled] = useState(false)
@@ -90,7 +89,6 @@ export default function CampaignsPage() {
   const [modeSaving, setModeSaving] = useState(false)
   const [modeError, setModeError] = useState<string | null>(null)
 
-  // New: dialer mode for create modal
   const [createMode, setCreateMode] = useState<DialerMode>('power')
 
   const fileRef = useRef<HTMLInputElement>(null)
@@ -169,7 +167,6 @@ export default function CampaignsPage() {
     if (!campaignName || !user) return
     setLoading(true)
     try {
-      // AMD defaults: on for progressive/predictive, off for preview/power
       const amd = createMode === 'progressive' || createMode === 'predictive'
       const res = await fetch('/api/campaigns/create', {
         method: 'POST',
@@ -260,7 +257,6 @@ export default function CampaignsPage() {
     setDeleteTyped('')
   }
 
-  // ── Dialer mode editor ─────────────────────────────────────────────────
   const openModeModal = (campaign: Campaign) => {
     setModeModal(campaign)
     setModeChoice(campaign.dialer_mode || 'power')
@@ -271,7 +267,6 @@ export default function CampaignsPage() {
 
   const handleModeSelect = (newMode: DialerMode) => {
     setModeChoice(newMode)
-    // Auto-adjust AMD default when mode changes
     if (newMode === 'progressive' || newMode === 'predictive') {
       setAmdEnabled(true)
     } else if (newMode === 'preview' || newMode === 'power') {
@@ -572,23 +567,7 @@ export default function CampaignsPage() {
                         ⚙ MODE
                       </button>
                     )}
-{!isLapsed && (
-  <Link
-    href={`/dashboard/compliance?focus=${campaign.id}`}
-    style={{
-      padding: '8px 14px', borderRadius: '8px',
-      background: 'transparent',
-      border: `1px solid ${T.muted}`,
-      color: T.muted,
-      fontSize: '10px', letterSpacing: '2px',
-      fontFamily: 'Futura PT, Futura, sans-serif',
-      whiteSpace: 'nowrap',
-      textDecoration: 'none',
-      fontWeight: 'bold',
-    }}>
-    🛡 COMPLIANCE
-  </Link>
-)}
+
                     {!isLapsed && (
                       <button
                         onClick={() => { setScriptModal(campaign); setScriptText(campaign.script || '') }}
@@ -707,7 +686,7 @@ export default function CampaignsPage() {
         </div>
       )}
 
-      {/* CREATE CAMPAIGN MODAL — now with mode selector */}
+      {/* CREATE CAMPAIGN MODAL */}
       {!isLapsed && showModal && (
         <div className="modal-overlay" style={{
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
@@ -771,7 +750,10 @@ export default function CampaignsPage() {
             <p style={{
               fontSize: 10, letterSpacing: 0.5, color: T.muted, lineHeight: 1.5, marginBottom: 24,
             }}>
-              Not sure? Start with <strong>POWER</strong>. You can change anytime. <Link href="/dialing-modes" style={{ color: T.blue }}>Compare modes →</Link>
+              Not sure? Start with <strong>POWER</strong>. You can change anytime.{' '}
+              <Link href="/dialing-modes" target="_blank" rel="noopener" style={{ color: T.blue }}>
+                Compare modes →
+              </Link>
             </p>
 
             <div
@@ -889,7 +871,6 @@ export default function CampaignsPage() {
               })}
             </div>
 
-            {/* AMD toggle (relevant for all modes; default on for progressive/predictive) */}
             <div style={{
               display: 'flex',
               alignItems: 'center',
@@ -936,7 +917,6 @@ export default function CampaignsPage() {
               </div>
             </div>
 
-            {/* Predictive lines slider */}
             {modeChoice === 'predictive' && (
               <div style={{
                 padding: '14px 16px',
@@ -987,7 +967,6 @@ export default function CampaignsPage() {
               </div>
             )}
 
-            {/* Compliance banner — only for progressive/predictive */}
             {(modeChoice === 'progressive' || modeChoice === 'predictive') && (
               <div style={{
                 padding: '12px 14px',
@@ -1005,14 +984,14 @@ export default function CampaignsPage() {
                   {modeChoice === 'predictive' ? (
                     <>
                       Predictive dialing is governed by the FTC Telemarketing Sales Rule and TCPA. Abandon rate must stay under 3% per campaign per 30-day window. Most reliable with 8+ concurrent agents — DialerSeat&apos;s pacing algorithm enforces this automatically.{' '}
-                      <Link href="/dialing-modes" target="_blank" style={{ color: T.blue, fontWeight: 'bold' }}>
+                      <Link href="/dialing-modes" target="_blank" rel="noopener" style={{ color: T.blue, fontWeight: 'bold' }}>
                         Read methodology →
                       </Link>
                     </>
                   ) : (
                     <>
                       Progressive dialing produces zero abandoned calls (every dial is 1:1 with an agent). AMD filters voicemails so agents only hear humans.{' '}
-                      <Link href="/dialing-modes" target="_blank" style={{ color: T.blue, fontWeight: 'bold' }}>
+                      <Link href="/dialing-modes" target="_blank" rel="noopener" style={{ color: T.blue, fontWeight: 'bold' }}>
                         Read methodology →
                       </Link>
                     </>
