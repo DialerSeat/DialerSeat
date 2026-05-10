@@ -91,6 +91,13 @@ const STATUS_COLORS = {
   released: T.muted,
 }
 
+const CONFIG_FIELDS: Array<{ key: keyof PoolConfig, label: string, help: string }> = [
+  { key: 'max_pool_size', label: 'MAX POOL SIZE', help: 'Hard ceiling on total numbers (10-5000)' },
+  { key: 'daily_buy_cap', label: 'DAILY BUY CAP', help: 'Max auto-buys per day (1-500)' },
+  { key: 'utilization_trigger_pct', label: 'TRIGGER %', help: 'Buy when util reaches this % (30-99)' },
+  { key: 'sustained_hours_required', label: 'SUSTAINED HOURS', help: 'Hours util must stay above trigger (1-24)' },
+]
+
 export default function AdminNumbersPage() {
   const [data, setData] = useState<PoolData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -117,6 +124,9 @@ export default function AdminNumbersPage() {
   const [seedOpen, setSeedOpen] = useState(false)
   const [seeding, setSeeding] = useState(false)
   const [seedMessage, setSeedMessage] = useState<string | null>(null)
+
+  // Sync from SignalWire
+  const [syncing, setSyncing] = useState(false)
 
   const load = async (showLoader = true) => {
     if (showLoader) setLoading(true)
@@ -192,6 +202,29 @@ export default function AdminNumbersPage() {
       setSeedMessage(`Error: ${err.message}`)
     } finally {
       setSeeding(false)
+    }
+  }
+
+  const handleSync = async () => {
+    if (syncing) return
+    setSyncing(true)
+    try {
+      const res = await fetch('/api/admin/pool/sync', { method: 'POST' })
+      const d = await res.json()
+      if (d.success) {
+        const { imported, already_in_pool, orphans } = d.summary
+        const orphanNote = orphans > 0
+          ? `, ${orphans} orphaned (in pool but not in SignalWire)`
+          : ''
+        alert(`Sync complete: ${imported} imported, ${already_in_pool} already tracked${orphanNote}`)
+        await load(false)
+      } else {
+        alert(`Sync failed: ${d.error}`)
+      }
+    } catch (e: any) {
+      alert(`Sync error: ${e.message}`)
+    } finally {
+      setSyncing(false)
     }
   }
 
@@ -427,8 +460,11 @@ export default function AdminNumbersPage() {
             {poolCount} OF {config.max_pool_size} MAX · LIVE UTIL {liveUtilization.pct}%
           </span>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button className="pool-btn" onClick={() => setConfigOpen(true)}>⚙ CONFIG</button>
+          <button className="pool-btn" onClick={handleSync} disabled={syncing}>
+            {syncing ? '⟳ SYNCING...' : '⟳ SYNC SIGNALWIRE'}
+          </button>
           {poolEmpty && (
             <button className="pool-btn pool-btn-primary" onClick={() => setSeedOpen(true)}>
               ⚡ SEED 10 NUMBERS
@@ -447,11 +483,12 @@ export default function AdminNumbersPage() {
               color: T.text, marginBottom: 8,
             }}>POOL IS EMPTY</div>
             <div style={{ fontSize: 11, color: T.muted, marginBottom: 16, lineHeight: 1.6 }}>
-              Click <strong>SEED 10 NUMBERS</strong> above to populate the pool with 10 numbers across major US metros.
-              <br />Or use <strong>BUY NOW</strong> to add specific area codes one at a time.
+              Click <strong>SYNC SIGNALWIRE</strong> to import any numbers you already own,
+              <br />or <strong>SEED 10 NUMBERS</strong> to populate with 10 across major US metros,
+              <br />or <strong>BUY NOW</strong> to add specific area codes one at a time.
             </div>
             <div style={{ fontSize: 10, color: T.muted, fontFamily: 'monospace', letterSpacing: 1 }}>
-              Each number costs ~$1/mo from SignalWire. 10 numbers = ~$10/mo.
+              Each number costs ~$1/mo from SignalWire.
             </div>
           </div>
         )}
@@ -761,13 +798,11 @@ export default function AdminNumbersPage() {
               Edit caps and triggers without redeploying. Changes apply on next cron run.
             </div>
 
-            {([
-              { key: 'max_pool_size', label: 'MAX POOL SIZE', help: 'Hard ceiling on total numbers (10-5000)' },
-              { key: 'daily_buy_cap', label: 'DAILY BUY CAP', help: 'Max auto-buys per day (1-500)' },
-              { key: 'utilization_trigger_pct', label: 'TRIGGER %', help: 'Buy when util reaches this % (30-99)' },
-              { key: 'sustained_hours_required', label: 'SUSTAINED HOURS', help: 'Hours util must stay above trigger (1-24)' },
-            ] as Array<{ key: keyof PoolConfig, label: string, help: string }>).map(({ key, label, help }) => {
-              const current = configEdits[key] ?? config[key]
+            {CONFIG_FIELDS.map(({ key, label, help }) => {
+              const editValue = configEdits[key]
+              const currentValue: number = editValue !== undefined
+                ? Number(editValue)
+                : Number(config[key])
               return (
                 <div key={key} style={{ marginBottom: 12 }}>
                   <div style={{
@@ -780,7 +815,7 @@ export default function AdminNumbersPage() {
                   <input
                     className="pool-input"
                     type="number"
-                    value={current as number}
+                    value={currentValue}
                     onChange={e => setConfigEdits(prev => ({
                       ...prev,
                       [key]: parseInt(e.target.value, 10) || 0,
