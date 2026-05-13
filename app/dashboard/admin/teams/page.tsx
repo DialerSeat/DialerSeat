@@ -73,6 +73,14 @@ type SortKey = 'wrr' | 'members' | 'seats' | 'created' | 'name'
 const fmtMoney = (cents: number) => `$${(cents / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 
+interface DeleteState {
+  team: AdminTeam
+  step: 1 | 2
+  confirmText: string
+  busy: boolean
+  error: string | null
+}
+
 export default function AdminTeamsPage() {
   const [data, setData] = useState<Response | null>(null)
   const [loading, setLoading] = useState(true)
@@ -80,6 +88,23 @@ export default function AdminTeamsPage() {
   const [search, setSearch] = useState('')
   const [sortKey, setSortKey] = useState<SortKey>('wrr')
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+  const [deleting, setDeleting] = useState<DeleteState | null>(null)
+  const [toast, setToast] = useState<string | null>(null)
+
+  const loadTeams = async () => {
+    setLoading(true)
+    try {
+      const r = await fetch('/api/admin/teams')
+      if (r.status === 403) throw new Error('Forbidden — admin only')
+      const d = await r.json()
+      if (d.success) setData(d)
+      else setError(d.error || 'Failed to load')
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -125,13 +150,189 @@ export default function AdminTeamsPage() {
 
   const toggle = (id: string) => setExpanded(p => ({ ...p, [id]: !p[id] }))
 
+  const startDelete = (team: AdminTeam, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setDeleting({ team, step: 1, confirmText: '', busy: false, error: null })
+  }
+
+  const cancelDelete = () => setDeleting(null)
+
+  const confirmDeleteStep1 = () => {
+    if (!deleting) return
+    setDeleting({ ...deleting, step: 2 })
+  }
+
+  const executeDelete = async () => {
+    if (!deleting) return
+    if (deleting.confirmText.trim().toLowerCase() !== 'remove') {
+      setDeleting({ ...deleting, error: 'Type "remove" exactly to confirm' })
+      return
+    }
+    setDeleting({ ...deleting, busy: true, error: null })
+    try {
+      const res = await fetch('/api/admin/teams/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teamId: deleting.team.id, confirm: 'remove' }),
+      })
+      const d = await res.json()
+      if (!d.success) {
+        setDeleting({ ...deleting, busy: false, error: d.error || 'Delete failed' })
+        return
+      }
+      const teamName = deleting.team.name
+      setDeleting(null)
+      setToast(`Deleted "${teamName}" — ${d.deleted.membersRemoved} members removed, ${d.deleted.campaignsDetached} campaigns detached`)
+      setTimeout(() => setToast(null), 6000)
+      await loadTeams()
+    } catch (err: any) {
+      setDeleting({ ...deleting, busy: false, error: err.message })
+    }
+  }
+
   return (
     <div style={{
       flex: 1, background: T.bg, minHeight: 'calc(100vh - 64px)',
       display: 'flex', flexDirection: 'column',
       fontFamily: 'Futura PT, Futura, sans-serif',
+      position: 'relative',
     }}>
-      {/* HEADER */}
+      {toast && (
+        <div style={{
+          position: 'fixed', top: 80, right: 20, zIndex: 200,
+          padding: '12px 18px', background: T.dark, color: '#32ff7e',
+          border: `1px solid ${T.green}`, borderRadius: 4,
+          fontSize: 11, fontWeight: 'bold', letterSpacing: 1,
+          fontFamily: 'monospace', boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+          maxWidth: 480,
+        }}>
+          ✓ {toast}
+        </div>
+      )}
+
+      {deleting && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 300,
+            background: 'rgba(0,0,0,0.6)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 20,
+          }}
+          onClick={(e) => { if (e.target === e.currentTarget && !deleting.busy) cancelDelete() }}
+        >
+          <div style={{
+            width: '100%', maxWidth: 480,
+            background: T.dark, border: `1px solid ${T.red}`,
+            borderTop: `3px solid ${T.red}`, borderRadius: 4,
+            padding: 24, color: '#e0e2ea', boxSizing: 'border-box',
+          }}>
+            <div style={{
+              fontSize: 11, letterSpacing: 4, color: T.red,
+              fontWeight: 'bold', marginBottom: 14,
+            }}>
+              {deleting.step === 1 ? '⚠ CONFIRM DELETE' : '⚠ FINAL CONFIRMATION'}
+            </div>
+
+            {deleting.step === 1 ? (
+              <>
+                <div style={{ fontSize: 13, lineHeight: 1.6, color: '#c0c2ca', marginBottom: 18 }}>
+                  Permanently delete team <strong style={{ color: 'white' }}>&quot;{deleting.team.name}&quot;</strong>?
+                </div>
+                <div style={{
+                  background: '#1a1c24', border: `1px solid #2a2c34`,
+                  borderRadius: 3, padding: '10px 14px', marginBottom: 18,
+                  fontSize: 11, lineHeight: 1.7, color: '#a0a2aa',
+                  fontFamily: 'monospace',
+                }}>
+                  <div>OWNER: <span style={{ color: 'white' }}>{deleting.team.owner.name}</span></div>
+                  <div>MEMBERS: <span style={{ color: 'white' }}>{deleting.team.memberCount}</span></div>
+                  <div>CAMPAIGNS ATTACHED: <span style={{ color: 'white' }}>{deleting.team.campaignCount}</span></div>
+                  <div>ACTIVE PAID SEATS: <span style={{
+                    color: deleting.team.activeSeats > 0 ? '#ff6464' : 'white',
+                    fontWeight: deleting.team.activeSeats > 0 ? 'bold' : 'normal',
+                  }}>{deleting.team.activeSeats}</span></div>
+                  <div>WEEKLY REVENUE: <span style={{
+                    color: deleting.team.wrr_cents > 0 ? '#ffaa3e' : 'white',
+                    fontWeight: deleting.team.wrr_cents > 0 ? 'bold' : 'normal',
+                  }}>{fmtMoney(deleting.team.wrr_cents)}</span></div>
+                </div>
+
+                {deleting.team.activeSeats > 0 && (
+                  <div style={{
+                    background: 'rgba(138,26,26,0.2)',
+                    border: `1px solid ${T.red}`,
+                    borderLeft: `3px solid ${T.red}`,
+                    borderRadius: 3, padding: '10px 12px', marginBottom: 18,
+                    fontSize: 11, lineHeight: 1.6, color: '#ffaaaa',
+                  }}>
+                    <strong>⚠ This team has {deleting.team.activeSeats} active paid seat(s).</strong>
+                    {' '}Stripe charges will NOT be auto-cancelled. The owner will keep getting billed unless you cancel their subscriptions in Stripe manually.
+                  </div>
+                )}
+
+                <div style={{
+                  fontSize: 10, color: '#888a92', letterSpacing: 1, lineHeight: 1.5,
+                  marginBottom: 20,
+                }}>
+                  This will permanently remove the team, all member associations, and detach all campaigns. Seat charge history will be preserved for audit. This cannot be undone.
+                </div>
+
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                  <button onClick={cancelDelete} style={modalBtnSecondary}>CANCEL</button>
+                  <button onClick={confirmDeleteStep1} style={modalBtnDanger}>YES, CONTINUE</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: 13, lineHeight: 1.6, color: '#c0c2ca', marginBottom: 18 }}>
+                  Type <strong style={{ color: T.red, fontFamily: 'monospace' }}>remove</strong> below to permanently destroy <strong style={{ color: 'white' }}>&quot;{deleting.team.name}&quot;</strong>.
+                </div>
+
+                <input
+                  autoFocus
+                  type="text"
+                  placeholder="type: remove"
+                  value={deleting.confirmText}
+                  onChange={e => setDeleting({ ...deleting, confirmText: e.target.value, error: null })}
+                  onKeyDown={e => { if (e.key === 'Enter' && !deleting.busy) executeDelete() }}
+                  disabled={deleting.busy}
+                  style={{
+                    width: '100%', padding: '12px 14px',
+                    background: '#1a1c24', border: `1px solid ${T.red}`,
+                    borderRadius: 3, fontFamily: 'monospace', fontSize: 14,
+                    color: 'white', outline: 'none', letterSpacing: 2,
+                    marginBottom: 12, boxSizing: 'border-box',
+                  }}
+                />
+
+                {deleting.error && (
+                  <div style={{
+                    padding: '8px 12px', background: 'rgba(138,26,26,0.2)',
+                    border: `1px solid ${T.red}`, borderRadius: 3,
+                    fontSize: 11, color: '#ffaaaa', marginBottom: 14,
+                  }}>{deleting.error}</div>
+                )}
+
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                  <button onClick={cancelDelete} disabled={deleting.busy} style={modalBtnSecondary}>CANCEL</button>
+                  <button
+                    onClick={executeDelete}
+                    disabled={deleting.busy || deleting.confirmText.trim().toLowerCase() !== 'remove'}
+                    style={{
+                      ...modalBtnDanger,
+                      opacity: (deleting.busy || deleting.confirmText.trim().toLowerCase() !== 'remove') ? 0.5 : 1,
+                      cursor: (deleting.busy || deleting.confirmText.trim().toLowerCase() !== 'remove') ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    {deleting.busy ? 'DELETING...' : '■ DESTROY TEAM'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       <div style={{
         background: T.dark, padding: '12px 20px',
         borderBottom: `2px solid ${T.accent}`,
@@ -165,7 +366,6 @@ export default function AdminTeamsPage() {
 
         {!loading && !error && data && (
           <>
-            {/* PLATFORM TOTALS */}
             <div style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
@@ -178,7 +378,6 @@ export default function AdminTeamsPage() {
               <PlatformStat label="EST. MONTHLY" value={fmtMoney(data.platformTotals.mrr_cents)} accent={T.accent} />
             </div>
 
-            {/* CONTROLS */}
             <div style={{
               display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap',
             }}>
@@ -212,7 +411,6 @@ export default function AdminTeamsPage() {
               </select>
             </div>
 
-            {/* TEAM LIST */}
             {teams.length === 0 ? (
               <div style={{
                 background: T.surface, border: `1px dashed ${T.border}`, borderRadius: 4,
@@ -260,11 +458,22 @@ export default function AdminTeamsPage() {
                         <Stat label="MEMBERS" value={team.memberCount.toString()} muted={team.memberCount === 0} />
                         <Stat label="SEATS" value={team.activeSeats.toString()} accent={team.activeSeats > 0 ? T.green : undefined} />
                         <Stat label="WRR" value={fmtMoney(team.wrr_cents)} accent={team.wrr_cents > 0 ? T.accent : undefined} />
+                        <button
+                          onClick={(e) => startDelete(team, e)}
+                          style={{
+                            padding: '6px 12px',
+                            background: 'transparent', color: T.red,
+                            border: `1px solid ${T.red}`, borderRadius: 3,
+                            fontSize: 9, letterSpacing: 2, fontWeight: 'bold',
+                            cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                            whiteSpace: 'nowrap',
+                          }}
+                          title="Delete this team permanently"
+                        >■ DELETE</button>
                       </div>
 
                       {isExpanded && (
                         <div style={{ padding: '14px 18px' }}>
-                          {/* Inline metadata row */}
                           <div style={{
                             display: 'grid',
                             gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
@@ -284,7 +493,6 @@ export default function AdminTeamsPage() {
                             }}>{team.description}</div>
                           )}
 
-                          {/* MEMBERS */}
                           <div style={{ marginBottom: 14 }}>
                             <SectionTitle text={`MEMBERS (${team.members.length})`} />
                             {team.members.length === 0 ? (
@@ -325,7 +533,6 @@ export default function AdminTeamsPage() {
                             )}
                           </div>
 
-                          {/* SEAT CHARGES */}
                           <div>
                             <SectionTitle text={`SEAT CHARGES (${team.seats.length})`} />
                             {team.seats.length === 0 ? (
@@ -390,8 +597,6 @@ export default function AdminTeamsPage() {
     </div>
   )
 }
-
-// ── Helpers ─────────────────────────────────────────────────────────────────
 
 function PlatformStat({ label, value, accent }: { label: string; value: string; accent: string }) {
   return (
@@ -487,4 +692,20 @@ const thStyle: React.CSSProperties = {
 const tdStyle: React.CSSProperties = {
   padding: '8px 10px',
   fontSize: 12, color: T.text, textAlign: 'left',
+}
+
+const modalBtnSecondary: React.CSSProperties = {
+  padding: '10px 18px',
+  background: 'transparent', color: '#a0a2aa',
+  border: '1px solid #4a4a5e', borderRadius: 3,
+  fontSize: 10, letterSpacing: 3, fontWeight: 'bold',
+  cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+}
+
+const modalBtnDanger: React.CSSProperties = {
+  padding: '10px 18px',
+  background: '#8a1a1a', color: 'white',
+  border: 'none', borderRadius: 3,
+  fontSize: 10, letterSpacing: 3, fontWeight: 'bold',
+  cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
 }
