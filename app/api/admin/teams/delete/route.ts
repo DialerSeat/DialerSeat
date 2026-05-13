@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { requireAdmin } from '@/lib/admin'
 
 /**
  * Admin force-delete a team.
@@ -13,21 +13,7 @@ import { supabaseAdmin } from '@/lib/supabase'
  */
 export async function POST(req: Request) {
   try {
-    const { userId } = await auth()
-    if (!userId) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Inline admin check — mirrors what /api/admin/check does
-    const { data: userRow } = await supabaseAdmin
-      .from('users')
-      .select('is_admin')
-      .eq('clerk_id', userId)
-      .maybeSingle()
-
-    if (!userRow?.is_admin) {
-      return NextResponse.json({ success: false, error: 'Admin only' }, { status: 403 })
-    }
+    await requireAdmin()
 
     const body = await req.json().catch(() => ({}))
     const { teamId, confirm } = body
@@ -88,6 +74,8 @@ export async function POST(req: Request) {
       },
     })
   } catch (error: any) {
+    // requireAdmin() throws Response objects — re-return them
+    if (error instanceof Response) return error
     console.error('Admin team delete error:', error)
     return NextResponse.json({ success: false, error: error.message }, { status: 500 })
   }
