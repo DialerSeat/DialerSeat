@@ -2,25 +2,12 @@ import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { recordAmdResult } from '@/lib/dialerPacing'
 
-/**
- * SignalWire AMD result webhook.
- * Configured via the `AsyncAmdStatusCallback` parameter on the outbound call
- * (see /api/calls/outbound).
- *
- * SignalWire posts form-encoded data like:
- *   CallSid=CAxxx
- *   AnsweredBy=human|machine_start|machine_end_beep|machine_end_silence|machine_end_other|fax|unknown
- *
- * Behavior:
- *   - Always records the AMD result on the calls row
- *   - If machine_*: hangs up the call via SignalWire REST API
- *   - If human: leaves the call alone (the existing twiml flow connects the agent)
- *   - If fax/unknown: records but does nothing (lets the call play out)
- *
- * NOTE: voicemail_drop_url support is wired through but not yet active.
- * To enable, you'd POST a new TwiML URL to the call after machine detection
- * that plays the recording. Future enhancement.
- */
+// SignalWire AMD result webhook.
+// Records the AMD result on the calls row.
+// If machine/fax/unknown: hangs up the call AND deletes the recording
+// so voicemail-filtered calls don't pollute the user's recording list.
+// If human: leaves the call alone so the agent gets routed in normally.
+
 export async function POST(req: Request) {
   try {
     const formData = await req.formData()
@@ -34,11 +21,8 @@ export async function POST(req: Request) {
 
     console.log(`[amd-result] ${callSid} answered by ${answeredBy}`)
 
-    // Record the AMD result
     await recordAmdResult(callSid, answeredBy)
 
-    // Hang up if it's a machine, fax, or AMD couldn't tell what it was
-    // (in which case it's almost certainly NOT a human worth your time).
     const isNotHuman =
       answeredBy.startsWith('machine_') ||
       answeredBy === 'fax' ||
@@ -47,12 +31,14 @@ export async function POST(req: Request) {
     if (isNotHuman) {
       await hangupCall(callSid)
       await autoDisposeAsNoAnswer(callSid)
+      cleanupRecordingsForCall(callSid).catch(err => {
+        console.error('[amd-result] recording cleanup failed:', err)
+      })
     }
 
     return new NextResponse('', { status: 200 })
   } catch (error: any) {
     console.error('[amd-result] error:', error)
-    // Always return 200 so SignalWire doesn't retry
     return new NextResponse('', { status: 200 })
   }
 }
@@ -91,7 +77,6 @@ async function hangupCall(callSid: string): Promise<void> {
 }
 
 async function autoDisposeAsNoAnswer(callSid: string): Promise<void> {
-  // Find the calls row + its lead
   const { data: callRow } = await supabaseAdmin
     .from('calls')
     .select('id, lead_id, campaign_id, user_id')
@@ -100,7 +85,6 @@ async function autoDisposeAsNoAnswer(callSid: string): Promise<void> {
 
   if (!callRow || !callRow.lead_id) return
 
-  // Update the lead status + dial_attempts
   const { data: lead } = await supabaseAdmin
     .from('leads')
     .select('dial_attempts')
@@ -116,9 +100,65 @@ async function autoDisposeAsNoAnswer(callSid: string): Promise<void> {
     })
     .eq('id', callRow.lead_id)
 
-  // Record the disposition on the call row
   await supabaseAdmin
     .from('calls')
     .update({ disposition: 'NO_ANSWER_AMD' })
     .eq('id', callRow.id)
+}
+
+// When AMD detects a machine, find any recording for this call SID and
+// delete it from both SignalWire AND our recordings table.
+// Retries with progressive delays because recording may not exist yet
+// when AMD fires.
+async function cleanupRecordingsForCall(callSid: string): Promise<void> {
+  const spaceUrl = process.env.SIGNALWIRE_SPACE_URL
+  const projectId = process.env.SIGNALWIRE_PROJECT_ID
+  const apiToken = process.env.SIGNALWIRE_API_TOKEN
+
+  if (!spaceUrl || !projectId || !apiToken) return
+
+  const authHeader = 'Basic ' + Buffer.from(`${projectId}:${apiToken}`).toString('base64')
+
+  const delays = [2000, 5000, 15000]
+  for (const delay of delays) {
+    await new Promise(r => setTimeout(r, delay))
+
+    try {
+      const listUrl = `https://${spaceUrl}/api/laml/2010-04-01/Accounts/${projectId}/Calls/${callSid}/Recordings.json`
+      const res = await fetch(listUrl, { headers: { 'Authorization': authHeader } })
+      if (!res.ok) continue
+
+      const data = await res.json()
+      const recordings = data?.recordings || []
+
+      if (recordings.length === 0) {
+        continue
+      }
+
+      for (const rec of recordings) {
+        const recSid = rec.sid
+        const delUrl = `https://${spaceUrl}/api/laml/2010-04-01/Accounts/${projectId}/Recordings/${recSid}.json`
+        try {
+          await fetch(delUrl, {
+            method: 'DELETE',
+            headers: { 'Authorization': authHeader },
+          })
+          console.log(`[amd-result] deleted recording ${recSid} (voicemail filtered)`)
+        } catch (err) {
+          console.error(`[amd-result] failed to delete recording ${recSid}:`, err)
+        }
+
+        await supabaseAdmin
+          .from('recordings')
+          .delete()
+          .eq('signalwire_recording_sid', recSid)
+      }
+
+      return
+    } catch (err) {
+      console.error('[amd-result] recording lookup error:', err)
+    }
+  }
+
+  console.log(`[amd-result] no recording found for ${callSid} after retries`)
 }

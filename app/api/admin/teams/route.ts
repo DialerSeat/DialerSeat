@@ -4,7 +4,10 @@ import { supabaseAdmin } from '@/lib/supabase'
 
 /**
  * Admin-only: aggregated overview of every team on DialerSeat.
- * Returns one row per team with owner, member count, active seats, MRR, churn.
+ * Returns one row per team with owner, member count, active seats, MRR, churn, join code.
+ *
+ * Platform totals exclude coupon-discounted subscriptions so admin/comp accounts
+ * don't inflate displayed revenue.
  */
 export async function GET() {
   try {
@@ -13,7 +16,6 @@ export async function GET() {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
 
-    // requireAdmin guard
     const { data: u } = await supabaseAdmin
       .from('users')
       .select('is_admin')
@@ -24,20 +26,29 @@ export async function GET() {
       return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
     }
 
-    // Pull everything in parallel
     const [
       { data: teams },
       { data: allMembers },
       { data: allSeatCharges },
       { data: allCampaigns },
+      { data: allCodes },
+      { data: allSubs },
     ] = await Promise.all([
       supabaseAdmin.from('teams').select('id, name, description, owner_id, created_at').order('created_at', { ascending: false }),
       supabaseAdmin.from('team_members').select('id, team_id, user_id, status, accepted_at, removed_at').in('status', ['active', 'pending', 'removed']),
       supabaseAdmin.from('team_seat_charges').select('id, team_id, owner_id, agent_id, amount_cents, status, period_start, period_end, stripe_subscription_id'),
       supabaseAdmin.from('team_campaigns').select('team_id, campaign_id, access_mode'),
+      supabaseAdmin.from('team_codes').select('team_id, code'),
+      supabaseAdmin.from('subscriptions').select('user_id, discount_coupon'),
     ])
 
-    // Resolve owner identities
+    // Build a set of user IDs who have any coupon applied (exclude from $ totals)
+    const couponedUsers = new Set<string>(
+      (allSubs || [])
+        .filter((s: any) => s.discount_coupon)
+        .map((s: any) => s.user_id)
+    )
+
     const ownerIds = Array.from(new Set((teams || []).map((t: any) => t.owner_id)))
     const memberClerkIds = Array.from(new Set((allMembers || []).map((m: any) => m.user_id)))
     const allClerkIds = Array.from(new Set([...ownerIds, ...memberClerkIds]))
@@ -57,7 +68,6 @@ export async function GET() {
       }
     }
 
-    // Group by team
     const teamMap: Record<string, any[]> = {}
     for (const m of allMembers || []) {
       if (!teamMap[m.team_id]) teamMap[m.team_id] = []
@@ -76,11 +86,17 @@ export async function GET() {
       campMap[tc.team_id].push(tc)
     }
 
+    // Build team_id → join code map (use most recent if multiple)
+    const codeMap: Record<string, string> = {}
+    for (const c of allCodes || []) {
+      if (!codeMap[c.team_id]) codeMap[c.team_id] = c.code
+    }
+
     const platformTotals = {
       teams: teams?.length || 0,
       activeSeats: 0,
       pendingSeats: 0,
-      mrr_cents: 0, // weekly × 4.33
+      mrr_cents: 0,
       wrr_cents: 0,
     }
 
@@ -88,6 +104,7 @@ export async function GET() {
       const members = teamMap[t.id] || []
       const seats = seatMap[t.id] || []
       const campaigns = campMap[t.id] || []
+      const code = codeMap[t.id] || null
 
       const activeMemberCount = members.filter((m: any) => m.status === 'active').length
       const pendingMemberCount = members.filter((m: any) => m.status === 'pending').length
@@ -100,10 +117,18 @@ export async function GET() {
       const wrr_cents = activeSeats * 3500
       const mrr_cents = Math.round(wrr_cents * 4.33)
 
+      // Per-team revenue still shown for visibility — coupon flag indicates
+      // which teams have free-riding owners. But platform-wide totals exclude them.
+      const ownerHasCoupon = couponedUsers.has(t.owner_id)
+
+      // Platform totals: count seats regardless of coupon, but exclude $$
+      // from coupon'd owners since they're not actually paying.
       platformTotals.activeSeats += activeSeats
       platformTotals.pendingSeats += pendingSeatsCount
-      platformTotals.wrr_cents += wrr_cents
-      platformTotals.mrr_cents += mrr_cents
+      if (!ownerHasCoupon) {
+        platformTotals.wrr_cents += wrr_cents
+        platformTotals.mrr_cents += mrr_cents
+      }
 
       const ownerInfo = userById[t.owner_id]
       const ownerName = ownerInfo
@@ -115,6 +140,8 @@ export async function GET() {
         name: t.name,
         description: t.description,
         createdAt: t.created_at,
+        joinCode: code,
+        ownerHasCoupon,
         owner: {
           id: t.owner_id,
           name: ownerName,
@@ -164,7 +191,6 @@ export async function GET() {
       }
     })
 
-    // Default sort: by WRR descending, then by member count descending
     enriched.sort((a, b) => b.wrr_cents - a.wrr_cents || b.memberCount - a.memberCount)
 
     return NextResponse.json({
