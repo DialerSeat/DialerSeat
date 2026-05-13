@@ -53,6 +53,15 @@ interface PacingInfo {
 }
 
 const PERSONAL_SCOPE = '__personal__'
+const LS_LAST_CAMPAIGN = 'dialer:lastCampaign'
+const LS_LAST_SCOPE = 'dialer:lastScope'
+
+const MODE_OPTIONS: { value: DialerMode; label: string; color: string }[] = [
+  { value: 'preview', label: 'PREVIEW', color: '#5a5e6a' },
+  { value: 'power', label: 'POWER', color: '#2a4a8a' },
+  { value: 'progressive', label: 'PROGRESSIVE', color: '#1a6a1a' },
+  { value: 'predictive', label: 'PREDICTIVE', color: '#8a1a1a' },
+]
 
 function DialerPageInner() {
   const { user } = useUser()
@@ -72,7 +81,10 @@ function DialerPageInner() {
   const [currentLead, setCurrentLead] = useState<Lead | null>(null)
   const [previewLead, setPreviewLead] = useState<Lead | null>(null)
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
-  const [selectedCampaign, setSelectedCampaign] = useState<string>('all')
+  // Default = empty string — user must explicitly pick a campaign
+  const [selectedCampaign, setSelectedCampaign] = useState<string>('')
+  const [campaignsLoaded, setCampaignsLoaded] = useState(false)
+  const [showSelectCampaignMsg, setShowSelectCampaignMsg] = useState(false)
   const [callStart, setCallStart] = useState(0)
   const [noLeads, setNoLeads] = useState(false)
   const [activeCallSid, setActiveCallSid] = useState<string | null>(null)
@@ -95,6 +107,10 @@ function DialerPageInner() {
 
   const [tcpaBlockedAll, setTcpaBlockedAll] = useState(false)
 
+  // Mode dropdown state
+  const [modeDropdownOpen, setModeDropdownOpen] = useState(false)
+  const [modeSaving, setModeSaving] = useState(false)
+
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const audioCtxRef = useRef<AudioContext | null>(null)
   const activePollRef = useRef<NodeJS.Timeout | null>(null)
@@ -105,6 +121,7 @@ function DialerPageInner() {
   const sessionIdRef = useRef<string | null>(null)
   const urlParamsConsumedRef = useRef(false)
   const currentLeadRef = useRef<Lead | null>(null)
+  const lsRestoredRef = useRef(false)
 
   useEffect(() => setMounted(true), [])
   useEffect(() => { currentLeadRef.current = currentLead }, [currentLead])
@@ -126,7 +143,7 @@ function DialerPageInner() {
   const isActive = tier === 'active'
 
   const currentCampaign: Campaign | undefined =
-    selectedCampaign !== 'all'
+    selectedCampaign
       ? campaigns.find(c => c.id === selectedCampaign)
       : undefined
   const dialerMode: DialerMode = (currentCampaign?.dialer_mode as DialerMode) || 'power'
@@ -135,6 +152,21 @@ function DialerPageInner() {
   const isProgressive = dialerMode === 'progressive'
   const isPreview = dialerMode === 'preview'
   const autoDials = isProgressive || isPredictive
+
+  // Persist last chosen campaign + scope per user
+  useEffect(() => {
+    if (!user || !lsRestoredRef.current) return
+    if (selectedCampaign) {
+      try { localStorage.setItem(`${LS_LAST_CAMPAIGN}:${user.id}`, selectedCampaign) } catch {}
+    } else {
+      try { localStorage.removeItem(`${LS_LAST_CAMPAIGN}:${user.id}`) } catch {}
+    }
+  }, [selectedCampaign, user])
+
+  useEffect(() => {
+    if (!user || !lsRestoredRef.current) return
+    try { localStorage.setItem(`${LS_LAST_SCOPE}:${user.id}`, selectedScope) } catch {}
+  }, [selectedScope, user])
 
   useEffect(() => {
     if (!user || !isActive) return
@@ -185,26 +217,48 @@ function DialerPageInner() {
     return () => { cancelled = true }
   }, [user, isActive])
 
+  // Restore last-used campaign + scope from localStorage AFTER campaigns load
+  // and BEFORE URL params get consumed. URL params still override.
   useEffect(() => {
-    if (!scopesLoaded || urlParamsConsumedRef.current) return
+    if (!user || !campaignsLoaded || !scopesLoaded || lsRestoredRef.current) return
+
     const teamIdParam = searchParams.get('teamId')
     const campaignIdParam = searchParams.get('campaignId')
+
     if (teamIdParam && teamScopes.find(s => s.id === teamIdParam)) {
       setSelectedScope(teamIdParam)
+    } else {
+      try {
+        const lastScope = localStorage.getItem(`${LS_LAST_SCOPE}:${user.id}`)
+        if (lastScope && (lastScope === PERSONAL_SCOPE || teamScopes.find(s => s.id === lastScope))) {
+          setSelectedScope(lastScope)
+        }
+      } catch {}
     }
-    if (campaignIdParam) {
+
+    if (campaignIdParam && campaigns.find(c => c.id === campaignIdParam)) {
       setSelectedCampaign(campaignIdParam)
+    } else {
+      try {
+        const lastCampaign = localStorage.getItem(`${LS_LAST_CAMPAIGN}:${user.id}`)
+        if (lastCampaign && campaigns.find(c => c.id === lastCampaign)) {
+          setSelectedCampaign(lastCampaign)
+        }
+      } catch {}
     }
+
+    lsRestoredRef.current = true
     urlParamsConsumedRef.current = true
-  }, [scopesLoaded, teamScopes, searchParams])
+  }, [user, campaignsLoaded, scopesLoaded, teamScopes, campaigns, searchParams])
 
   useEffect(() => {
     if (user && isActive) fetchCampaigns()
   }, [user, isActive])
 
+  // When user switches scopes manually after first load, clear campaign
   useEffect(() => {
-    if (!urlParamsConsumedRef.current) return
-    setSelectedCampaign('all')
+    if (!lsRestoredRef.current) return
+    setSelectedCampaign('')
   }, [selectedScope])
 
   useEffect(() => {
@@ -377,7 +431,7 @@ function DialerPageInner() {
 
   useEffect(() => {
     if (!isActive) return
-    const shouldHaveSession = available && selectedCampaign !== 'all' && currentCampaign
+    const shouldHaveSession = available && selectedCampaign && currentCampaign
 
     if (shouldHaveSession) {
       if (!sessionIdRef.current) {
@@ -385,7 +439,7 @@ function DialerPageInner() {
       }
       if (!heartbeatRef.current) {
         heartbeatRef.current = setInterval(() => {
-          if (selectedCampaign !== 'all') startSession(selectedCampaign)
+          if (selectedCampaign) startSession(selectedCampaign)
         }, 30000)
       }
     } else {
@@ -425,7 +479,7 @@ function DialerPageInner() {
   }, [endSession])
 
   useEffect(() => {
-    if (!isActive || !isPredictive || !available || selectedCampaign === 'all') {
+    if (!isActive || !isPredictive || !available || !selectedCampaign) {
       setPacingInfo(null)
       if (pacingPollRef.current) {
         clearInterval(pacingPollRef.current)
@@ -557,7 +611,10 @@ function DialerPageInner() {
   const fetchCampaigns = async () => {
     const res = await fetch(`/api/campaigns/list?user_id=${user?.id}`)
     const data = await res.json()
-    if (data.success) setCampaigns(data.campaigns.filter((c: Campaign) => c.status === 'active'))
+    if (data.success) {
+      setCampaigns(data.campaigns.filter((c: Campaign) => c.status === 'active'))
+    }
+    setCampaignsLoaded(true)
   }
 
   const isPersonalScope = selectedScope === PERSONAL_SCOPE
@@ -575,7 +632,7 @@ function DialerPageInner() {
 
   const fetchNextLead = async (): Promise<Lead | null> => {
     const params = new URLSearchParams({ user_id: user?.id || '' })
-    if (selectedCampaign !== 'all') params.append('campaign_id', selectedCampaign)
+    if (selectedCampaign) params.append('campaign_id', selectedCampaign)
     if (!isPersonalScope) params.append('team_id', selectedScope)
     const res = await fetch(`/api/leads/next?${params}`)
     const data = await res.json()
@@ -748,7 +805,6 @@ function DialerPageInner() {
     }
   }
 
-  // Helper: detect any AMD result that is NOT a human picking up.
   const isNotHuman = (amd?: string): boolean => {
     if (!amd) return false
     return amd.startsWith('machine_') || amd === 'fax' || amd === 'unknown'
@@ -764,8 +820,6 @@ function DialerPageInner() {
           clearInterval(pollInterval)
           activePollRef.current = null
 
-          // If AMD already flagged this as not-a-human, skip the connection.
-          // Don't play pickup sound, don't pop disposition tab, just dial next.
           if (isNotHuman(statusData.amd_result)) {
             setAmdActivity(prev =>
               [`> VOICEMAIL FILTERED — ${statusData.amd_result}`, ...prev].slice(0, 5)
@@ -794,8 +848,6 @@ function DialerPageInner() {
                   swCallRef.current = null
                 }
 
-                // If AMD came back machine/fax during the call (late detection),
-                // skip disposition tab and dial next instead.
                 if (isNotHuman(d.amd_result)) {
                   setAmdActivity(prev =>
                     [`> VOICEMAIL FILTERED LATE — ${d.amd_result}`, ...prev].slice(0, 5)
@@ -822,9 +874,6 @@ function DialerPageInner() {
           statusData.status === 'no-answer' ||
           statusData.status === 'canceled'
         ) {
-          // Call ended before we ever saw "in-progress" — voicemail hung up
-          // very fast, or never answered. Either way: no disposition tab,
-          // just auto-dial the next lead.
           clearInterval(pollInterval)
           activePollRef.current = null
           setActiveCallSid(null)
@@ -869,6 +918,13 @@ function DialerPageInner() {
     setShowDisposition(false)
     setDisposition('')
     setNoLeads(false)
+
+    // Gate: must have a campaign selected
+    if (!selectedCampaign) {
+      setShowSelectCampaignMsg(true)
+      setTimeout(() => setShowSelectCampaignMsg(false), 4000)
+      return
+    }
 
     if (isPreview) {
       await fetchPreviewLead()
@@ -997,6 +1053,51 @@ function DialerPageInner() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [manualNumber, status, dialZoomed, isActive])
 
+  // Mode dropdown — change current campaign's mode in place
+  const handleModeChange = async (newMode: DialerMode) => {
+    if (!currentCampaign || newMode === dialerMode) {
+      setModeDropdownOpen(false)
+      return
+    }
+    setModeSaving(true)
+    try {
+      const amd = newMode === 'progressive' || newMode === 'predictive'
+      const res = await fetch('/api/campaigns/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: currentCampaign.id,
+          dialer_mode: newMode,
+          amd_enabled: amd,
+        }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setCampaigns(prev => prev.map(c =>
+          c.id === currentCampaign.id ? { ...c, dialer_mode: newMode, amd_enabled: amd } : c
+        ))
+      }
+    } catch (err) {
+      console.error('Mode change failed:', err)
+    } finally {
+      setModeSaving(false)
+      setModeDropdownOpen(false)
+    }
+  }
+
+  // Close mode dropdown on outside click
+  useEffect(() => {
+    if (!modeDropdownOpen) return
+    const onDoc = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (!target.closest('.mode-dropdown-wrap')) {
+        setModeDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [modeDropdownOpen])
+
   const nameKeys = ['name', 'first_name', 'last_name', 'full_name', 'fname', 'lname', 'firstname', 'lastname']
   const filteredExtraData = (data: Record<string, any>) => {
     return Object.entries(data).filter(([k, v]) =>
@@ -1013,10 +1114,8 @@ function DialerPageInner() {
   ]
 
   let activeScript: string | null = null
-  if (selectedCampaign !== 'all') {
+  if (selectedCampaign) {
     activeScript = currentCampaign?.script || null
-  } else if (isPersonalScope) {
-    activeScript = campaigns.find(c => c.script)?.script || null
   }
 
   const terminalBg = '#f0f1f4'
@@ -1210,6 +1309,22 @@ function DialerPageInner() {
           font-family: monospace; font-size: 10px; letter-spacing: 1px;
           color: #4a9eff; font-weight: bold;
         }
+        .mode-dropdown-wrap { position: relative; }
+        .mode-dropdown {
+          position: absolute; top: calc(100% + 4px); left: 0;
+          background: ${terminalDark}; border: 1px solid #4a4a5e;
+          border-radius: 4px; padding: 4px; z-index: 200;
+          min-width: 160px; box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+        }
+        .mode-dropdown-item {
+          display: flex; align-items: center; gap: 8px;
+          padding: 8px 10px; cursor: pointer;
+          font-size: 10px; font-weight: bold; letter-spacing: 2px;
+          font-family: monospace; border-radius: 3px;
+          transition: background 0.1s;
+        }
+        .mode-dropdown-item:hover { background: rgba(255,255,255,0.05); }
+        .mode-dropdown-item.current { background: rgba(74,158,255,0.1); }
 
         @media (max-width: 768px) {
           .dialer-root { height: calc(100vh - 64px); height: calc(100dvh - 64px); }
@@ -1250,15 +1365,8 @@ function DialerPageInner() {
           <span style={{ fontSize: '11px', fontWeight: 'bold', letterSpacing: '4px', color: '#4a9eff' }}>
             DIALERSEAT TERMINAL
           </span>
+          {/* TOGGLE first, then LIVE indicator */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{
-              width: '8px', height: '8px', borderRadius: '50%',
-              background: available ? '#32ff7e' : '#ff6464',
-              boxShadow: available ? '0 0 6px #32ff7e' : '0 0 6px #ff6464',
-            }} />
-            <span style={{ fontSize: '10px', letterSpacing: '2px', color: available ? '#32ff7e' : '#ff6464' }}>
-              {available ? 'LIVE' : 'OFFLINE'}
-            </span>
             <div onClick={handleSetAvailable} style={{
               width: '36px', height: '20px', borderRadius: '10px',
               background: available ? '#4a9eff' : '#444460',
@@ -1270,6 +1378,14 @@ function DialerPageInner() {
                 position: 'absolute', top: '3px', left: available ? '19px' : '3px', transition: 'left 0.2s',
               }} />
             </div>
+            <div style={{
+              width: '8px', height: '8px', borderRadius: '50%',
+              background: available ? '#32ff7e' : '#ff6464',
+              boxShadow: available ? '0 0 6px #32ff7e' : '0 0 6px #ff6464',
+            }} />
+            <span style={{ fontSize: '10px', letterSpacing: '2px', color: available ? '#32ff7e' : '#ff6464' }}>
+              {available ? 'LIVE' : 'OFFLINE'}
+            </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: swReady ? '#4a9eff' : '#666688' }} />
@@ -1277,16 +1393,49 @@ function DialerPageInner() {
               {swReady ? 'AUDIO' : '...'}
             </span>
           </div>
+          {/* MODE DROPDOWN — clickable */}
           {currentCampaign && (
-            <div style={{
-              padding: '2px 8px', borderRadius: 3,
-              border: `1px solid ${modeColor}`,
-              fontSize: 9, fontWeight: 'bold', letterSpacing: 1.5,
-              color: modeColor,
-              fontFamily: 'monospace',
-            }}>
-              {dialerMode.toUpperCase()}
-              <span style={{ marginLeft: 4, opacity: 0.7 }}>· AMD</span>
+            <div className="mode-dropdown-wrap">
+              <div
+                onClick={() => !modeSaving && setModeDropdownOpen(o => !o)}
+                style={{
+                  padding: '2px 10px', borderRadius: 3,
+                  border: `1px solid ${modeColor}`,
+                  fontSize: 9, fontWeight: 'bold', letterSpacing: 1.5,
+                  color: modeColor,
+                  fontFamily: 'monospace',
+                  cursor: modeSaving ? 'wait' : 'pointer',
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  opacity: modeSaving ? 0.5 : 1,
+                  userSelect: 'none',
+                }}
+                title="Click to change dialing mode for this campaign"
+              >
+                {dialerMode.toUpperCase()}
+                <span style={{ marginLeft: 2, opacity: 0.7 }}>· AMD</span>
+                <span style={{ fontSize: 8, marginLeft: 2 }}>{modeDropdownOpen ? '▲' : '▼'}</span>
+              </div>
+              {modeDropdownOpen && (
+                <div className="mode-dropdown">
+                  {MODE_OPTIONS.map(opt => (
+                    <div
+                      key={opt.value}
+                      className={`mode-dropdown-item ${opt.value === dialerMode ? 'current' : ''}`}
+                      onClick={() => handleModeChange(opt.value)}
+                      style={{ color: opt.color }}
+                    >
+                      <span style={{
+                        width: 8, height: 8, borderRadius: '50%',
+                        background: opt.color, flexShrink: 0,
+                      }} />
+                      {opt.label}
+                      {opt.value === dialerMode && (
+                        <span style={{ marginLeft: 'auto', color: '#4a9eff' }}>✓</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -1408,11 +1557,12 @@ function DialerPageInner() {
             <div style={{ fontSize: '9px', letterSpacing: '3px', color: terminalMuted, marginBottom: '6px' }}>▸ SELECT CAMPAIGN</div>
             <select value={selectedCampaign} onChange={(e) => setSelectedCampaign(e.target.value)} style={{
               width: '100%', padding: '6px 10px', borderRadius: '4px',
-              background: terminalBg, border: `1px solid ${terminalBorder}`,
-              color: terminalText, fontSize: '12px', outline: 'none',
+              background: terminalBg, border: `1px solid ${selectedCampaign ? terminalBorder : '#ffaa3e'}`,
+              color: selectedCampaign ? terminalText : terminalMuted,
+              fontSize: '12px', outline: 'none',
               fontFamily: 'monospace', cursor: 'pointer',
             }}>
-              <option value="all">[ ALL {isPersonalScope ? 'ACTIVE' : 'TEAM'} CAMPAIGNS ]</option>
+              <option value="">— SELECT A CAMPAIGN —</option>
               {scopeCampaigns.map(c => (
                 <option key={c.id} value={c.id}>{c.name} — {c.total_leads} leads</option>
               ))}
@@ -1426,14 +1576,16 @@ function DialerPageInner() {
                 ⚠ {isPersonalScope ? 'NO ACTIVE CAMPAIGNS FOUND' : 'NO CAMPAIGNS ACCESSIBLE FROM THIS TEAM'}
               </div>
             )}
-            {selectedCampaign === 'all' && (isPredictive || isProgressive || isPreview) && (
+            {showSelectCampaignMsg && (
               <div style={{
-                marginTop: 6, padding: '5px 8px',
-                background: 'rgba(255,170,62,0.08)',
-                border: '1px solid #8a6a1a', borderRadius: 4,
-                fontSize: 10, color: '#8a6a1a', letterSpacing: 0.5,
+                marginTop: 6, padding: '6px 10px',
+                background: '#fdf4e8',
+                border: `1px solid ${terminalAmber}`,
+                borderLeft: `3px solid ${terminalAmber}`,
+                borderRadius: 4,
+                fontSize: 11, color: terminalAmber, letterSpacing: 0.5, fontWeight: 'bold',
               }}>
-                ⚠ {dialerMode} mode requires a specific campaign selection
+                ⚠ YOU MUST SELECT A CAMPAIGN BEFORE DIALING
               </div>
             )}
           </div>
