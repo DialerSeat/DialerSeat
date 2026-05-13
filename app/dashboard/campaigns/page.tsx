@@ -35,6 +35,16 @@ interface Campaign {
   voicemail_drop_url?: string | null
 }
 
+interface CampaignScript {
+  id: string
+  name: string
+  body: string
+  is_default: boolean
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
 const MODE_INFO: Record<DialerMode, { label: string; tagline: string; speed: string; abandons: string; color: string }> = {
   preview: {
     label: 'PREVIEW',
@@ -77,10 +87,18 @@ export default function CampaignsPage() {
   const [csvName, setCsvName] = useState('')
   const [loading, setLoading] = useState(false)
   const [fetching, setFetching] = useState(true)
-  const [scriptModal, setScriptModal] = useState<Campaign | null>(null)
-  const [scriptText, setScriptText] = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [deleteTyped, setDeleteTyped] = useState('')
+
+  // SCRIPTS MODAL (multi-script manager)
+  const [scriptsModal, setScriptsModal] = useState<Campaign | null>(null)
+  const [scripts, setScripts] = useState<CampaignScript[]>([])
+  const [activeScriptId, setActiveScriptId] = useState<string | null>(null)
+  const [scriptsLoading, setScriptsLoading] = useState(false)
+  const [editingName, setEditingName] = useState('')
+  const [editingBody, setEditingBody] = useState('')
+  const [savingScript, setSavingScript] = useState(false)
+  const [dirtyScript, setDirtyScript] = useState(false)
 
   const [modeModal, setModeModal] = useState<Campaign | null>(null)
   const [modeChoice, setModeChoice] = useState<DialerMode>('power')
@@ -224,18 +242,6 @@ export default function CampaignsPage() {
     setDeleteTyped('')
   }
 
-  const handleSaveScript = async () => {
-    if (!scriptModal) return
-    await fetch('/api/campaigns/script', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: scriptModal.id, script: scriptText }),
-    })
-    setCampaigns(campaigns.map(c => c.id === scriptModal.id ? { ...c, script: scriptText } : c))
-    setScriptModal(null)
-    setScriptText('')
-  }
-
   const handleUploadMore = async (campaignId: string, file: File) => {
     const reader = new FileReader()
     reader.onload = async (e) => {
@@ -256,6 +262,178 @@ export default function CampaignsPage() {
     setDeleteConfirm(id)
     setDeleteTyped('')
   }
+
+  // ── SCRIPTS MODAL ──────────────────────────────────────────────────────
+
+  const openScriptsModal = async (campaign: Campaign) => {
+    setScriptsModal(campaign)
+    setScripts([])
+    setActiveScriptId(null)
+    setScriptsLoading(true)
+    setDirtyScript(false)
+    try {
+      const res = await fetch(`/api/campaigns/scripts/list?campaign_id=${campaign.id}`)
+      const data = await res.json()
+      if (data.success) {
+        setScripts(data.scripts || [])
+        if (data.scripts && data.scripts.length > 0) {
+          const def = data.scripts.find((s: CampaignScript) => s.is_default) || data.scripts[0]
+          setActiveScriptId(def.id)
+          setEditingName(def.name)
+          setEditingBody(def.body)
+        }
+      }
+    } catch (err) {
+      console.error('Load scripts failed:', err)
+    } finally {
+      setScriptsLoading(false)
+    }
+  }
+
+  const closeScriptsModal = () => {
+    if (dirtyScript && !confirm('You have unsaved changes. Discard?')) return
+    setScriptsModal(null)
+    setScripts([])
+    setActiveScriptId(null)
+    setEditingName('')
+    setEditingBody('')
+    setDirtyScript(false)
+  }
+
+  const switchActiveScript = (id: string) => {
+    if (dirtyScript && !confirm('You have unsaved changes on this script. Switch anyway?')) return
+    const s = scripts.find(x => x.id === id)
+    if (!s) return
+    setActiveScriptId(id)
+    setEditingName(s.name)
+    setEditingBody(s.body)
+    setDirtyScript(false)
+  }
+
+  const handleAddScript = async () => {
+    if (!scriptsModal) return
+    const name = prompt('Name this script (e.g. "Cold open", "Voicemail leave-behind", "Objection: too expensive")')
+    if (!name || !name.trim()) return
+    setSavingScript(true)
+    try {
+      const res = await fetch('/api/campaigns/scripts/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          campaign_id: scriptsModal.id,
+          name: name.trim(),
+          body: '',
+        }),
+      })
+      const data = await res.json()
+      if (data.success && data.script) {
+        const updated = [...scripts, data.script].sort((a, b) => a.sort_order - b.sort_order)
+        setScripts(updated)
+        setActiveScriptId(data.script.id)
+        setEditingName(data.script.name)
+        setEditingBody(data.script.body)
+        setDirtyScript(false)
+      }
+    } catch (err) {
+      console.error('Create script failed:', err)
+    } finally {
+      setSavingScript(false)
+    }
+  }
+
+  const handleSaveActive = async () => {
+    if (!activeScriptId) return
+    setSavingScript(true)
+    try {
+      const res = await fetch('/api/campaigns/scripts/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: activeScriptId,
+          name: editingName.trim() || 'Untitled',
+          body: editingBody,
+        }),
+      })
+      const data = await res.json()
+      if (data.success && data.script) {
+        setScripts(prev => prev.map(s => s.id === data.script.id ? data.script : s))
+        setDirtyScript(false)
+        // If this script is the default, update local campaign for badge consistency
+        if (data.script.is_default && scriptsModal) {
+          setCampaigns(prev => prev.map(c =>
+            c.id === scriptsModal.id ? { ...c, script: data.script.body } : c
+          ))
+        }
+      }
+    } catch (err) {
+      console.error('Save script failed:', err)
+    } finally {
+      setSavingScript(false)
+    }
+  }
+
+  const handleMakeDefault = async () => {
+    if (!activeScriptId) return
+    setSavingScript(true)
+    try {
+      const res = await fetch('/api/campaigns/scripts/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: activeScriptId, is_default: true }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setScripts(prev => prev.map(s => ({
+          ...s,
+          is_default: s.id === activeScriptId,
+        })))
+        if (scriptsModal && data.script) {
+          setCampaigns(prev => prev.map(c =>
+            c.id === scriptsModal.id ? { ...c, script: data.script.body } : c
+          ))
+        }
+      }
+    } catch (err) {
+      console.error('Make default failed:', err)
+    } finally {
+      setSavingScript(false)
+    }
+  }
+
+  const handleDeleteScript = async () => {
+    if (!activeScriptId) return
+    if (!confirm('Delete this script? This cannot be undone.')) return
+    setSavingScript(true)
+    try {
+      const res = await fetch('/api/campaigns/scripts/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: activeScriptId }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        const remaining = scripts.filter(s => s.id !== activeScriptId)
+        setScripts(remaining)
+        if (remaining.length > 0) {
+          const next = remaining[0]
+          setActiveScriptId(next.id)
+          setEditingName(next.name)
+          setEditingBody(next.body)
+        } else {
+          setActiveScriptId(null)
+          setEditingName('')
+          setEditingBody('')
+        }
+        setDirtyScript(false)
+      }
+    } catch (err) {
+      console.error('Delete script failed:', err)
+    } finally {
+      setSavingScript(false)
+    }
+  }
+
+  // ── MODE MODAL ─────────────────────────────────────────────────────────
 
   const openModeModal = (campaign: Campaign) => {
     setModeModal(campaign)
@@ -345,6 +523,76 @@ export default function CampaignsPage() {
           overflow-y: auto;
         }
 
+        .scripts-modal {
+          width: 100%;
+          max-width: 880px;
+          max-height: 90vh;
+          background: ${T.surface};
+          border: 1px solid ${T.border};
+          border-radius: 16px;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+        .scripts-tabs {
+          display: flex;
+          gap: 4px;
+          padding: 12px 16px 0;
+          border-bottom: 1px solid ${T.border};
+          overflow-x: auto;
+          background: ${T.surface2};
+          flex-shrink: 0;
+        }
+        .scripts-tab {
+          padding: 8px 14px;
+          background: ${T.surface};
+          border: 1px solid ${T.border};
+          border-bottom: none;
+          border-radius: 6px 6px 0 0;
+          color: ${T.muted};
+          font-size: 11px;
+          letter-spacing: 1.5px;
+          font-weight: bold;
+          font-family: 'Futura PT', Futura, sans-serif;
+          cursor: pointer;
+          white-space: nowrap;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          transition: all 0.15s;
+        }
+        .scripts-tab:hover { background: ${T.surface}; color: ${T.text}; }
+        .scripts-tab.active {
+          background: ${T.bg};
+          color: ${T.blue};
+          border-color: ${T.blue};
+          border-bottom-color: ${T.bg};
+          margin-bottom: -1px;
+        }
+        .scripts-tab-default-badge {
+          font-size: 8px;
+          padding: 1px 5px;
+          background: ${T.green};
+          color: white;
+          border-radius: 2px;
+          letter-spacing: 1px;
+        }
+        .scripts-add-btn {
+          padding: 8px 14px;
+          background: transparent;
+          border: 1px dashed ${T.border};
+          border-bottom: none;
+          border-radius: 6px 6px 0 0;
+          color: ${T.muted};
+          font-size: 11px;
+          letter-spacing: 1.5px;
+          font-weight: bold;
+          font-family: 'Futura PT', Futura, sans-serif;
+          cursor: pointer;
+          white-space: nowrap;
+        }
+        .scripts-add-btn:hover { color: ${T.blue}; border-color: ${T.blue}; }
+
         @media (max-width: 768px) {
           .campaigns-root { padding: 20px !important; }
           .campaigns-header h1 { font-size: 20px !important; letter-spacing: 3px !important; }
@@ -377,6 +625,11 @@ export default function CampaignsPage() {
             border-radius: 16px !important;
             max-height: 100vh;
             border-radius: 0 !important;
+            min-height: 100vh;
+          }
+          .scripts-modal {
+            border-radius: 0 !important;
+            max-height: 100vh;
             min-height: 100vh;
           }
           .modal-overlay { padding: 0 !important; }
@@ -570,7 +823,7 @@ export default function CampaignsPage() {
 
                     {!isLapsed && (
                       <button
-                        onClick={() => { setScriptModal(campaign); setScriptText(campaign.script || '') }}
+                        onClick={() => openScriptsModal(campaign)}
                         style={{
                           padding: '8px 14px', borderRadius: '8px',
                           background: campaign.script ? 'rgba(74,158,255,0.1)' : 'transparent',
@@ -580,7 +833,7 @@ export default function CampaignsPage() {
                           fontFamily: 'Futura PT, Futura, sans-serif',
                           whiteSpace: 'nowrap',
                         }}>
-                        📝 {campaign.script ? 'SCRIPT' : 'SCRIPT'}
+                        📝 SCRIPTS
                       </button>
                     )}
 
@@ -804,7 +1057,7 @@ export default function CampaignsPage() {
         </div>
       )}
 
-      {/* DIALER MODE MODAL */}
+      {/* MODE MODAL */}
       {!isLapsed && modeModal && (
         <div className="modal-overlay" style={{
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
@@ -967,39 +1220,6 @@ export default function CampaignsPage() {
               </div>
             )}
 
-            {(modeChoice === 'progressive' || modeChoice === 'predictive') && (
-              <div style={{
-                padding: '12px 14px',
-                background: 'rgba(255,170,62,0.08)',
-                border: '1px solid #8a6a1a',
-                borderLeft: '3px solid #ffaa3e',
-                borderRadius: 8,
-                marginBottom: 16,
-              }}>
-                <div style={{
-                  fontSize: 10, fontWeight: 'bold', letterSpacing: 2,
-                  color: '#8a6a1a', marginBottom: 6,
-                }}>▸ COMPLIANCE NOTE</div>
-                <div style={{ fontSize: 11, color: T.text, lineHeight: 1.6 }}>
-                  {modeChoice === 'predictive' ? (
-                    <>
-                      Predictive dialing is governed by the FTC Telemarketing Sales Rule and TCPA. Abandon rate must stay under 3% per campaign per 30-day window. Most reliable with 8+ concurrent agents — DialerSeat&apos;s pacing algorithm enforces this automatically.{' '}
-                      <Link href="/dialing-modes" target="_blank" rel="noopener" style={{ color: T.blue, fontWeight: 'bold' }}>
-                        Read methodology →
-                      </Link>
-                    </>
-                  ) : (
-                    <>
-                      Progressive dialing produces zero abandoned calls (every dial is 1:1 with an agent). AMD filters voicemails so agents only hear humans.{' '}
-                      <Link href="/dialing-modes" target="_blank" rel="noopener" style={{ color: T.blue, fontWeight: 'bold' }}>
-                        Read methodology →
-                      </Link>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
-
             {modeError && (
               <div style={{
                 padding: '10px 12px',
@@ -1034,47 +1254,182 @@ export default function CampaignsPage() {
         </div>
       )}
 
-      {!isLapsed && scriptModal && (
+      {/* SCRIPTS MODAL */}
+      {!isLapsed && scriptsModal && (
         <div className="modal-overlay" style={{
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           zIndex: 100, backdropFilter: 'blur(10px)', padding: 16,
         }}>
-          <div className="campaign-modal" style={{ maxWidth: 600 }}>
-            <h2 style={{ fontSize: '18px', fontWeight: 'bold', letterSpacing: '4px', color: T.text, marginBottom: '8px' }}>
-              CALL SCRIPT
-            </h2>
-            <p style={{ fontSize: '12px', letterSpacing: '1px', color: T.muted, marginBottom: '24px' }}>
-              {scriptModal.name} — This script will appear in the dialer during calls.
-            </p>
-
-            <textarea
-              value={scriptText}
-              onChange={(e) => setScriptText(e.target.value)}
-              placeholder="Hi [Name], my name is [Agent] and I'm calling from..."
-              rows={10}
-              style={{
-                width: '100%', padding: '16px', borderRadius: '12px', boxSizing: 'border-box',
-                background: T.surface2, border: `1px solid ${T.border}`,
-                color: T.text, fontSize: '14px', lineHeight: '1.7',
-                outline: 'none', resize: 'vertical', fontFamily: 'Futura PT, Futura, sans-serif',
-                marginBottom: '24px',
-              }} />
-
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button onClick={() => { setScriptModal(null); setScriptText('') }} style={{
-                flex: 1, padding: '14px', borderRadius: '10px',
-                background: 'transparent', border: `1px solid ${T.border}`,
-                color: T.muted, fontSize: '11px', letterSpacing: '2px',
-                cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
-              }}>CANCEL</button>
-              <button onClick={handleSaveScript} style={{
-                flex: 2, padding: '14px', borderRadius: '10px', border: 'none',
-                background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
-                color: 'white', fontSize: '11px', fontWeight: 'bold', letterSpacing: '2px',
-                cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
-              }}>SAVE SCRIPT →</button>
+          <div className="scripts-modal">
+            <div style={{
+              padding: '20px 24px',
+              borderBottom: `1px solid ${T.border}`,
+              flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+            }}>
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 'bold', letterSpacing: 4, color: T.text }}>
+                  CALL SCRIPTS
+                </div>
+                <div style={{ fontSize: 11, letterSpacing: 1, color: T.muted, marginTop: 4 }}>
+                  {scriptsModal.name} — switch between scripts mid-call from the dialer.
+                </div>
+              </div>
+              <button
+                onClick={closeScriptsModal}
+                style={{
+                  background: 'transparent', border: `1px solid ${T.border}`,
+                  color: T.muted, width: 32, height: 32, borderRadius: 6,
+                  cursor: 'pointer', fontSize: 16,
+                }}
+              >×</button>
             </div>
+
+            {/* TABS */}
+            <div className="scripts-tabs">
+              {scripts.map(s => (
+                <div
+                  key={s.id}
+                  className={`scripts-tab ${activeScriptId === s.id ? 'active' : ''}`}
+                  onClick={() => switchActiveScript(s.id)}
+                >
+                  {s.name || 'Untitled'}
+                  {s.is_default && <span className="scripts-tab-default-badge">DEFAULT</span>}
+                </div>
+              ))}
+              <button className="scripts-add-btn" onClick={handleAddScript} disabled={savingScript}>
+                + ADD SCRIPT
+              </button>
+            </div>
+
+            <div style={{ flex: 1, overflow: 'auto', padding: 24 }}>
+              {scriptsLoading ? (
+                <div style={{ textAlign: 'center', padding: 60, fontSize: 12, color: T.muted, letterSpacing: 3 }}>
+                  LOADING SCRIPTS...
+                </div>
+              ) : scripts.length === 0 ? (
+                <div style={{
+                  textAlign: 'center', padding: '60px 20px',
+                  background: T.surface2, border: `1px dashed ${T.border}`, borderRadius: 8,
+                }}>
+                  <div style={{ fontSize: 40, marginBottom: 16 }}>📝</div>
+                  <div style={{ fontSize: 13, fontWeight: 'bold', letterSpacing: 3, color: T.text, marginBottom: 8 }}>
+                    NO SCRIPTS YET
+                  </div>
+                  <div style={{ fontSize: 11, color: T.muted, marginBottom: 20, lineHeight: 1.6 }}>
+                    Create scripts for different scenarios:<br />
+                    cold open, voicemail leave-behind, common objections, closing pitches.
+                  </div>
+                  <button
+                    onClick={handleAddScript}
+                    disabled={savingScript}
+                    style={{
+                      padding: '12px 24px', borderRadius: 8, border: 'none',
+                      background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+                      color: 'white', fontSize: 11, fontWeight: 'bold', letterSpacing: 2,
+                      cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                    }}
+                  >+ CREATE FIRST SCRIPT</button>
+                </div>
+              ) : activeScriptId ? (
+                <>
+                  <label style={{ display: 'block', fontSize: 10, letterSpacing: 3, color: T.muted, marginBottom: 6 }}>
+                    SCRIPT NAME
+                  </label>
+                  <input
+                    type="text"
+                    value={editingName}
+                    onChange={e => { setEditingName(e.target.value); setDirtyScript(true) }}
+                    placeholder="e.g. Cold open, Voicemail leave-behind, Objection: too expensive"
+                    style={{
+                      width: '100%', padding: '10px 14px', borderRadius: 8,
+                      background: T.surface2, border: `1px solid ${T.border}`,
+                      color: T.text, fontSize: 13, outline: 'none',
+                      marginBottom: 16, fontFamily: 'Futura PT, Futura, sans-serif',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+
+                  <label style={{ display: 'block', fontSize: 10, letterSpacing: 3, color: T.muted, marginBottom: 6 }}>
+                    SCRIPT BODY
+                  </label>
+                  <textarea
+                    value={editingBody}
+                    onChange={e => { setEditingBody(e.target.value); setDirtyScript(true) }}
+                    placeholder="Hi [Name], my name is [Agent] and I'm calling from..."
+                    rows={14}
+                    style={{
+                      width: '100%', padding: 16, borderRadius: 8, boxSizing: 'border-box',
+                      background: T.surface2, border: `1px solid ${T.border}`,
+                      color: T.text, fontSize: 14, lineHeight: 1.7,
+                      outline: 'none', resize: 'vertical',
+                      fontFamily: 'Futura PT, Futura, sans-serif',
+                    }}
+                  />
+                </>
+              ) : null}
+            </div>
+
+            {activeScriptId && (
+              <div style={{
+                padding: '14px 20px',
+                borderTop: `1px solid ${T.border}`,
+                flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                gap: 12, flexWrap: 'wrap',
+                background: T.surface2,
+              }}>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {!scripts.find(s => s.id === activeScriptId)?.is_default && (
+                    <button
+                      onClick={handleMakeDefault}
+                      disabled={savingScript}
+                      style={{
+                        padding: '10px 14px', borderRadius: 6,
+                        background: 'transparent', border: `1px solid ${T.green}`,
+                        color: T.green, fontSize: 10, letterSpacing: 2, fontWeight: 'bold',
+                        cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                      }}
+                    >★ MAKE DEFAULT</button>
+                  )}
+                  <button
+                    onClick={handleDeleteScript}
+                    disabled={savingScript}
+                    style={{
+                      padding: '10px 14px', borderRadius: 6,
+                      background: 'transparent', border: '1px solid rgba(255,68,68,0.4)',
+                      color: '#ff4444', fontSize: 10, letterSpacing: 2, fontWeight: 'bold',
+                      cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                    }}
+                  >🗑 DELETE SCRIPT</button>
+                </div>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button
+                    onClick={closeScriptsModal}
+                    disabled={savingScript}
+                    style={{
+                      padding: '10px 20px', borderRadius: 6,
+                      background: 'transparent', border: `1px solid ${T.border}`,
+                      color: T.muted, fontSize: 10, letterSpacing: 2, fontWeight: 'bold',
+                      cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                    }}
+                  >CLOSE</button>
+                  <button
+                    onClick={handleSaveActive}
+                    disabled={savingScript || !dirtyScript}
+                    style={{
+                      padding: '10px 24px', borderRadius: 6, border: 'none',
+                      background: dirtyScript ? 'linear-gradient(135deg, #4a9eff, #2a6eff)' : T.border,
+                      color: 'white', fontSize: 10, letterSpacing: 2, fontWeight: 'bold',
+                      cursor: dirtyScript ? 'pointer' : 'not-allowed',
+                      opacity: dirtyScript ? 1 : 0.6,
+                      fontFamily: 'Futura PT, Futura, sans-serif',
+                    }}
+                  >{savingScript ? 'SAVING...' : dirtyScript ? '💾 SAVE CHANGES' : 'SAVED'}</button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
