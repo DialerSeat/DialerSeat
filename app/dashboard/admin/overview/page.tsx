@@ -248,7 +248,6 @@ export default function AdminOverviewPage() {
           font-family: monospace;
           margin-top: 2px;
         }
-        /* CHANGED: status pills now stack vertically so ONLINE sits BELOW ACTIVE */
         .ovr-status-stack {
           display: flex;
           flex-direction: column;
@@ -424,7 +423,6 @@ export default function AdminOverviewPage() {
           const expanded = expandedId === u.clerk_id
           const fullName = `${u.first_name || ''} ${u.last_name || ''}`.trim() || '(no name)'
           const inactiveDays = daysSince(u.last_active_at)
-          const isStale = u.is_active_subscription && inactiveDays > 14
           const userOnline = isOnline(u.last_seen_at)
 
           return (
@@ -443,20 +441,6 @@ export default function AdminOverviewPage() {
                         border: `1px solid ${T.blue}`, borderRadius: 2,
                       }}>ADMIN</span>
                     )}
-                    {u.subscription?.discount_coupon && (
-                      <span style={{
-                        marginLeft: 6, fontSize: 8, letterSpacing: 2, padding: '2px 6px',
-                        background: 'rgba(140,106,26,0.12)', color: T.amber,
-                        border: `1px solid ${T.amber}`, borderRadius: 2,
-                      }}>COUPON</span>
-                    )}
-                    {isStale && (
-                      <span style={{
-                        marginLeft: 6, fontSize: 8, letterSpacing: 2, padding: '2px 6px',
-                        background: '#f8e8e8', color: T.red,
-                        border: `1px solid ${T.red}`, borderRadius: 2,
-                      }}>INACTIVE {inactiveDays}D</span>
-                    )}
                   </div>
                   <div className="ovr-email">{u.email}</div>
                 </div>
@@ -470,7 +454,6 @@ export default function AdminOverviewPage() {
                 }}>
                   {timeAgo(u.created_at)}
                 </div>
-                {/* ONLINE pill now stacks UNDER the active/inactive pill */}
                 <div className="ovr-status-stack">
                   <span className={`ovr-pill-status ${u.is_active_subscription ? 'active' : 'inactive'}`}>
                     <span className={`ovr-status-dot ${u.is_active_subscription ? 'green' : 'gray'}`} />

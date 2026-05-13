@@ -22,7 +22,6 @@ export async function GET(req: Request) {
     }
 
     // Verify the caller owns this call SID before reporting on it.
-    // call_rooms tracks both lead_call_sid and agent_call_sid; either one matches.
     const { data: room } = await supabase
       .from('call_rooms')
       .select('user_id')
@@ -30,7 +29,6 @@ export async function GET(req: Request) {
       .maybeSingle()
 
     if (!room || room.user_id !== userId) {
-      // Don't leak whether the SID exists — return same shape as not-found
       return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 })
     }
 
@@ -48,7 +46,35 @@ export async function GET(req: Request) {
     )
 
     const data = await response.json()
-    return NextResponse.json({ success: true, status: data.status, data })
+
+    // Look up AMD result from our calls table. The amd-result webhook stores
+    // it as disposition='NO_ANSWER_AMD' and also writes any machine_* result
+    // there. The dialer needs to see this field to skip the disposition tab
+    // when AMD hung up a voicemail.
+    const { data: callRow } = await supabase
+      .from('calls')
+      .select('disposition, amd_result')
+      .eq('signalwire_call_id', sid)
+      .maybeSingle()
+
+    // Build a normalized amd_result: prefer the explicit column if it exists,
+    // otherwise infer from disposition. NO_ANSWER_AMD disposition means a
+    // machine was detected, so report 'machine_end_other' as a sensible default.
+    let amd_result: string | null = null
+    if (callRow) {
+      if ((callRow as any).amd_result) {
+        amd_result = (callRow as any).amd_result
+      } else if (callRow.disposition === 'NO_ANSWER_AMD') {
+        amd_result = 'machine_end_other'
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      status: data.status,
+      amd_result,
+      data,
+    })
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 })
   }

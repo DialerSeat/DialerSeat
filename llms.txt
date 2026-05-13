@@ -1,0 +1,70 @@
+# DialerSeat — Dial Smarter. Close Faster.
+
+> This site offers comprehensive information about DialerSeat, an affordable, easy-to-use outbound dialer solution. It provides structured details on features, pricing, how it works, and comparative advantages, enabling LLMs to understand its core functionalities, target users, and value propositions.
+
+## Core Content
+[Main Landing Page](https://dialerseat.com)
+
+- Overview of DialerSeat as a professional outbound dialer built for volume calling.
+- Pricing details: $35/week, no contracts, cancel anytime.
+- Key features:
+  - Predictive Dialing: multi-lead calling with live connection focus.
+  - Voicemail Detection: skips voicemails efficiently.
+  - Multiple Campaigns: run multiple campaigns simultaneously.
+  - Memory of Marked Leads: retain dispositions, notes, callbacks.
+  - Manual Dialer: manual control when needed.
+  - Team Workflow: multiple agents with individual logins.
+  - Global Support: international dialing capability.
+  - User-Friendly UI: easy setup on desktop and mobile.
+  - Data Ownership: leads are preserved even after cancellation.
+- How-to workflow:
+  - Sign up, upload leads, launch campaigns, track performance.
+- Comparison with competitors:
+  - Cost advantages.
+  - Feature-set superiority.
+  - No setup fees.
+
+## Pricing & Plans
+- Detailed plan: DialerSeat Pro - $35/week per seat.
+- Inclusions:
+  - Predictive Dialing
+  - Voicemail detection
+  - Unlimited campaigns and leads
+  - Data persistence
+  - Global operation
+  - No setup fee
+- Call to action: [Get Started](https://dialerseat.com/sign-up)
+
+## Feature Details
+- Predictive Dialing
+- Voicemail Detection
+- Multi Campaign Management
+- Lead and Disposition Memory
+- Manual Dialer
+- Team Workflow Management
+- Global Dialing Support
+- Mobile Compatibility
+- Secure Data Ownership
+
+## How It Works
+- Sign up with email or Google, payment is weekly.
+- Upload leads via CSV, name campaigns.
+- Launch campaigns and monitor in real-time.
+- Disposition calls and analyze performance.
+
+## Comparison & Advantages
+- Cost efficiency: significantly cheaper than competitors.
+- Feature richness: offers predictive dialing, voicemail detection, and team features.
+- Unlimited leads and campaigns included.
+- No contracts or setup fees.
+- Data is retained after cancellation, ensuring continuity.
+
+## Resources
+- [Sign Up](https://dialerseat.com/sign-up)
+- [See How We Compare](#compare)
+
+## Optional
+- Testimonials (if available)
+- Case studies or user success stories
+- Additional integrations or add-ons
+- Blog or help center links
