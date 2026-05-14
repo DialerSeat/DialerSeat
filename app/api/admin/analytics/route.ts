@@ -9,7 +9,6 @@ const supabase = createClient(
 )
 
 const WEEKLY_PRICE = 35
-const WEEKS_PER_MONTH = 4.33
 const ACTIVE_STATUSES = ['active', 'trialing', 'past_due']
 const AT_RISK_DAYS = 14
 
@@ -150,7 +149,7 @@ export async function GET(req: NextRequest) {
   const payingUserIds = new Set(payingActiveSubs.map(s => s.user_id))
 
   const wrr = payingActiveSubs.length * WEEKLY_PRICE
-  const mrr = Math.round(wrr * WEEKS_PER_MONTH)
+  const mrr = wrr * 4
 
   // 3) Range-bound metrics
   const signupsInRange = usersInRange.length

@@ -146,6 +146,28 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 };
 
+// Clerk localization override — lowercases every "Delete account" surface
+// inside the UserProfile so the button, the modal title, the confirm
+// description, and the typed-in confirmation string all match. If we
+// lowercased only the button, the confirmation flow ("Type 'Delete account'
+// below") would still display the uppercase string and the user input
+// requirement would mismatch what they were shown.
+const dialerseatLocalization = {
+  userProfile: {
+    start: {
+      dangerSection: {
+        deleteAccountButton: 'delete account',
+        deleteAccountTitle: 'delete account',
+      },
+    },
+    deletePage: {
+      title: 'delete account',
+      actionDescription: "Type 'delete account' below to continue.",
+      confirm: 'delete account',
+    },
+  },
+} as const;
+
 // iOS splash screens — every documented device size + orientation.
 // Next.js doesn't have first-class metadata support for these, so we
 // emit them via the head as raw <link> tags below.
@@ -186,7 +208,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ClerkProvider>
+    <ClerkProvider localization={dialerseatLocalization}>
       <html lang="en">
         <head>
           {/* iOS splash screens — emitted as raw <link> tags with the

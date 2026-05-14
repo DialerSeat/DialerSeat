@@ -84,6 +84,13 @@ export default function AdminOverviewPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [tick, setTick] = useState(0)
 
+  // Delete modal state
+  const [deletingUser, setDeletingUser] = useState<AdminUser | null>(null)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [deleteInFlight, setDeleteInFlight] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [deleteResult, setDeleteResult] = useState<any>(null)
+
   useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 15_000)
     return () => clearInterval(id)
@@ -139,6 +146,54 @@ export default function AdminOverviewPage() {
     online: users.filter(u => isOnline(u.last_seen_at)).length,
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [users, tick])
+
+  function openDeleteModal(u: AdminUser) {
+    setDeletingUser(u)
+    setDeleteConfirmText('')
+    setDeleteError(null)
+    setDeleteResult(null)
+  }
+
+  function closeDeleteModal() {
+    if (deleteInFlight) return
+    setDeletingUser(null)
+    setDeleteConfirmText('')
+    setDeleteError(null)
+    setDeleteResult(null)
+  }
+
+  async function executeDelete() {
+    if (!deletingUser) return
+    if (deleteConfirmText.trim().toLowerCase() !== 'delete') return
+    setDeleteInFlight(true)
+    setDeleteError(null)
+    try {
+      const r = await fetch('/api/admin/users/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clerkId: deletingUser.clerk_id }),
+      })
+      const d = await r.json()
+      if (!r.ok || !d.success) {
+        setDeleteError(d.error || `Request failed (${r.status})`)
+        setDeleteInFlight(false)
+        return
+      }
+      setDeleteResult(d.summary)
+      setUsers(prev => prev.filter(u => u.clerk_id !== deletingUser.clerk_id))
+      if (expandedId === deletingUser.clerk_id) setExpandedId(null)
+    } catch (err: any) {
+      setDeleteError(err?.message || 'Network error')
+    } finally {
+      setDeleteInFlight(false)
+    }
+  }
+
+  const canExecuteDelete =
+    !!deletingUser &&
+    !deleteInFlight &&
+    !deleteResult &&
+    deleteConfirmText.trim().toLowerCase() === 'delete'
 
   return (
     <div style={{
@@ -337,6 +392,166 @@ export default function AdminOverviewPage() {
         .ovr-detail-value.link:hover {
           text-decoration: underline;
         }
+        .ovr-danger-zone {
+          background: ${T.bg};
+          border-top: 1px dashed ${T.red};
+          padding: 12px 16px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
+        .ovr-danger-label {
+          font-size: 9px;
+          letter-spacing: 2px;
+          color: ${T.red};
+          font-weight: bold;
+        }
+        .ovr-danger-btn {
+          padding: 7px 14px;
+          background: transparent;
+          border: 1px solid ${T.red};
+          color: ${T.red};
+          font-size: 10px;
+          letter-spacing: 2px;
+          font-weight: bold;
+          cursor: pointer;
+          border-radius: 3px;
+          font-family: 'Futura PT', Futura, sans-serif;
+        }
+        .ovr-danger-btn:hover:not(:disabled) {
+          background: ${T.red};
+          color: #fff;
+        }
+        .ovr-danger-btn:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+        }
+        .ovr-modal-backdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.7);
+          z-index: 1000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 16px;
+        }
+        .ovr-modal {
+          background: ${T.bg};
+          border: 2px solid ${T.red};
+          border-radius: 4px;
+          max-width: 520px;
+          width: 100%;
+          max-height: 90vh;
+          overflow-y: auto;
+          font-family: 'Futura PT', Futura, sans-serif;
+        }
+        .ovr-modal-header {
+          background: ${T.red};
+          color: #fff;
+          padding: 12px 16px;
+          font-size: 11px;
+          letter-spacing: 3px;
+          font-weight: bold;
+        }
+        .ovr-modal-body {
+          padding: 16px;
+        }
+        .ovr-modal-warning {
+          background: #f8e8e8;
+          border: 1px solid ${T.red};
+          padding: 12px;
+          border-radius: 3px;
+          font-size: 12px;
+          color: ${T.text};
+          line-height: 1.5;
+          margin-bottom: 14px;
+          font-family: system-ui, sans-serif;
+        }
+        .ovr-modal-list {
+          font-family: monospace;
+          font-size: 11px;
+          color: ${T.text};
+          margin: 8px 0 0 0;
+          padding-left: 18px;
+        }
+        .ovr-modal-list li {
+          margin: 2px 0;
+        }
+        .ovr-modal-input {
+          width: 100%;
+          padding: 10px 12px;
+          background: ${T.surface};
+          border: 1px solid ${T.border};
+          border-radius: 3px;
+          font-family: monospace;
+          font-size: 13px;
+          color: ${T.text};
+          outline: none;
+          margin-top: 6px;
+        }
+        .ovr-modal-input:focus {
+          border-color: ${T.red};
+        }
+        .ovr-modal-input-label {
+          font-size: 10px;
+          letter-spacing: 2px;
+          color: ${T.muted};
+          font-weight: bold;
+        }
+        .ovr-modal-footer {
+          padding: 12px 16px;
+          background: ${T.surface};
+          border-top: 1px solid ${T.border};
+          display: flex;
+          gap: 10px;
+          justify-content: flex-end;
+        }
+        .ovr-modal-btn {
+          padding: 8px 16px;
+          border-radius: 3px;
+          font-size: 10px;
+          letter-spacing: 2px;
+          font-weight: bold;
+          cursor: pointer;
+          font-family: 'Futura PT', Futura, sans-serif;
+          border: 1px solid ${T.border};
+          background: ${T.bg};
+          color: ${T.text};
+        }
+        .ovr-modal-btn.danger {
+          background: ${T.red};
+          border-color: ${T.red};
+          color: #fff;
+        }
+        .ovr-modal-btn:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+        }
+        .ovr-modal-error {
+          background: #f8e8e8;
+          border: 1px solid ${T.red};
+          color: ${T.red};
+          padding: 10px;
+          border-radius: 3px;
+          font-size: 11px;
+          font-family: monospace;
+          margin-top: 10px;
+        }
+        .ovr-modal-result {
+          background: #e8f4e8;
+          border: 1px solid ${T.green};
+          color: ${T.text};
+          padding: 10px;
+          border-radius: 3px;
+          font-size: 11px;
+          font-family: monospace;
+          margin-top: 10px;
+          white-space: pre-wrap;
+          word-break: break-word;
+        }
         @media (max-width: 700px) {
           .ovr-row-main {
             grid-template-columns: 1fr auto;
@@ -469,59 +684,176 @@ export default function AdminOverviewPage() {
               </div>
 
               {expanded && (
-                <div className="ovr-detail">
-                  <div className="ovr-detail-cell">
-                    <div className="ovr-detail-label">EMAIL</div>
-                    <div className="ovr-detail-value" style={{ fontSize: 11 }}>{u.email}</div>
-                  </div>
-                  <div className="ovr-detail-cell">
-                    <div className="ovr-detail-label">JOINED</div>
-                    <div className="ovr-detail-value">{formatDate(u.created_at)}</div>
-                  </div>
-                  <div className="ovr-detail-cell">
-                    <div className="ovr-detail-label">LEADS</div>
-                    <div className="ovr-detail-value">{u.lead_count.toLocaleString()}</div>
-                  </div>
-                  <div className="ovr-detail-cell">
-                    <div className="ovr-detail-label">LAST ACTIVE</div>
-                    <div className="ovr-detail-value" style={{
-                      color: !u.last_active_at ? T.muted
-                        : inactiveDays > 14 ? T.red
-                        : inactiveDays > 7 ? T.amber
-                        : T.green,
-                    }}>
-                      {timeAgo(u.last_active_at)}
+                <>
+                  <div className="ovr-detail">
+                    <div className="ovr-detail-cell">
+                      <div className="ovr-detail-label">EMAIL</div>
+                      <div className="ovr-detail-value" style={{ fontSize: 11 }}>{u.email}</div>
+                    </div>
+                    <div className="ovr-detail-cell">
+                      <div className="ovr-detail-label">JOINED</div>
+                      <div className="ovr-detail-value">{formatDate(u.created_at)}</div>
+                    </div>
+                    <div className="ovr-detail-cell">
+                      <div className="ovr-detail-label">LEADS</div>
+                      <div className="ovr-detail-value">{u.lead_count.toLocaleString()}</div>
+                    </div>
+                    <div className="ovr-detail-cell">
+                      <div className="ovr-detail-label">LAST ACTIVE</div>
+                      <div className="ovr-detail-value" style={{
+                        color: !u.last_active_at ? T.muted
+                          : inactiveDays > 14 ? T.red
+                          : inactiveDays > 7 ? T.amber
+                          : T.green,
+                      }}>
+                        {timeAgo(u.last_active_at)}
+                      </div>
+                    </div>
+                    <div className="ovr-detail-cell">
+                      <div className="ovr-detail-label">SUBSCRIPTION</div>
+                      <div className="ovr-detail-value" style={{
+                        color: u.is_active_subscription ? T.green : T.muted, fontSize: 11,
+                      }}>
+                        {u.subscription
+                          ? u.subscription.status.toUpperCase() + (u.subscription.cancel_at_period_end ? ' · CANCEL PENDING' : '')
+                          : 'NONE'}
+                      </div>
+                    </div>
+                    <div className="ovr-detail-cell">
+                      <div className="ovr-detail-label">TEAM MEMBERS</div>
+                      {u.team_member_count > 0 ? (
+                        <Link
+                          href={`/dashboard/admin/teams?owner=${u.clerk_id}`}
+                          className="ovr-detail-value link"
+                        >
+                          {u.team_member_count} →
+                        </Link>
+                      ) : (
+                        <div className="ovr-detail-value" style={{ color: T.muted }}>0</div>
+                      )}
                     </div>
                   </div>
-                  <div className="ovr-detail-cell">
-                    <div className="ovr-detail-label">SUBSCRIPTION</div>
-                    <div className="ovr-detail-value" style={{
-                      color: u.is_active_subscription ? T.green : T.muted, fontSize: 11,
-                    }}>
-                      {u.subscription
-                        ? u.subscription.status.toUpperCase() + (u.subscription.cancel_at_period_end ? ' · CANCEL PENDING' : '')
-                        : 'NONE'}
-                    </div>
+
+                  <div className="ovr-danger-zone">
+                    <span className="ovr-danger-label">
+                      DANGER ZONE{u.is_admin ? ' · ADMIN PROTECTED' : ''}
+                    </span>
+                    <button
+                      className="ovr-danger-btn"
+                      disabled={u.is_admin}
+                      title={u.is_admin ? 'Admin accounts cannot be deleted from this UI' : 'Delete this user permanently'}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (u.is_admin) return
+                        openDeleteModal(u)
+                      }}
+                    >
+                      DELETE
+                    </button>
                   </div>
-                  <div className="ovr-detail-cell">
-                    <div className="ovr-detail-label">TEAM MEMBERS</div>
-                    {u.team_member_count > 0 ? (
-                      <Link
-                        href={`/dashboard/admin/teams?owner=${u.clerk_id}`}
-                        className="ovr-detail-value link"
-                      >
-                        {u.team_member_count} →
-                      </Link>
-                    ) : (
-                      <div className="ovr-detail-value" style={{ color: T.muted }}>0</div>
-                    )}
-                  </div>
-                </div>
+                </>
               )}
             </div>
           )
         })}
       </div>
+
+      {deletingUser && (
+        <div className="ovr-modal-backdrop" onClick={closeDeleteModal}>
+          <div className="ovr-modal" onClick={e => e.stopPropagation()}>
+            <div className="ovr-modal-header">
+              {deleteResult ? 'DELETION COMPLETE' : 'PERMANENTLY DELETE USER'}
+            </div>
+            <div className="ovr-modal-body">
+              {!deleteResult && (
+                <>
+                  <div className="ovr-modal-warning">
+                    You are about to permanently delete{' '}
+                    <strong style={{ fontFamily: 'monospace' }}>{deletingUser.email}</strong>.
+                    This will remove:
+                    <ul className="ovr-modal-list">
+                      <li>Clerk account (sign-in identity)</li>
+                      <li>Stripe customer + all subscriptions (canceled first)</li>
+                      <li>All campaigns, scripts, leads, and calls</li>
+                      <li>Team memberships and owned teams</li>
+                      <li>Subscription history and data-preserved flag</li>
+                    </ul>
+                    <div style={{ marginTop: 10, fontWeight: 'bold' }}>
+                      This action cannot be undone.
+                    </div>
+                  </div>
+
+                  <label className="ovr-modal-input-label">
+                    TYPE &quot;DELETE&quot; TO CONFIRM
+                  </label>
+                  <input
+                    className="ovr-modal-input"
+                    autoFocus
+                    value={deleteConfirmText}
+                    onChange={e => setDeleteConfirmText(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && canExecuteDelete) executeDelete()
+                    }}
+                    placeholder="delete"
+                    disabled={deleteInFlight}
+                  />
+
+                  {deleteError && (
+                    <div className="ovr-modal-error">{deleteError}</div>
+                  )}
+                </>
+              )}
+
+              {deleteResult && (
+                <div className="ovr-modal-result">
+                  {`Stripe subscriptions canceled: ${deleteResult.stripe.subscriptionsCanceled}
+Stripe customer deleted: ${deleteResult.stripe.customerDeleted}
+${deleteResult.stripe.error ? `Stripe error: ${deleteResult.stripe.error}\n` : ''}Clerk deleted: ${deleteResult.clerk.deleted}
+${deleteResult.clerk.error ? `Clerk error: ${deleteResult.clerk.error}\n` : ''}
+Supabase rows removed:
+  users: ${deleteResult.supabase.users}
+  subscriptions: ${deleteResult.supabase.subscriptions}
+  campaigns: ${deleteResult.supabase.campaigns}
+  campaign_scripts: ${deleteResult.supabase.campaign_scripts}
+  leads: ${deleteResult.supabase.leads}
+  calls: ${deleteResult.supabase.calls}
+  team_members: ${deleteResult.supabase.team_members}
+  teams: ${deleteResult.supabase.teams}
+  data_preserved_users: ${deleteResult.supabase.data_preserved_users}
+${deleteResult.supabase.errors.length > 0 ? `\nSupabase errors:\n  ${deleteResult.supabase.errors.join('\n  ')}` : ''}`}
+                </div>
+              )}
+            </div>
+            <div className="ovr-modal-footer">
+              {!deleteResult ? (
+                <>
+                  <button
+                    className="ovr-modal-btn"
+                    onClick={closeDeleteModal}
+                    disabled={deleteInFlight}
+                  >
+                    CANCEL
+                  </button>
+                  <button
+                    className="ovr-modal-btn danger"
+                    onClick={executeDelete}
+                    disabled={!canExecuteDelete}
+                  >
+                    {deleteInFlight ? 'DELETING...' : 'DELETE PERMANENTLY'}
+                  </button>
+                </>
+              ) : (
+                <button
+                  className="ovr-modal-btn"
+                  onClick={closeDeleteModal}
+                >
+                  CLOSE
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

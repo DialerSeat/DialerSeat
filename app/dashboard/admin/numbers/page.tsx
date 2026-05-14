@@ -31,6 +31,7 @@ interface PoolNumber {
   flag_reason: string | null
   monthly_cost_cents: number
   acquired_at: string
+  is_registered: boolean
 }
 
 interface PoolConfig {
@@ -183,6 +184,12 @@ export default function AdminNumbersPage() {
 
   const [syncing, setSyncing] = useState(false)
 
+  // Registration toggle state
+  const [registeringIds, setRegisteringIds] = useState<Set<string>>(new Set())
+  const [registerAllOpen, setRegisterAllOpen] = useState(false)
+  const [registerAllInFlight, setRegisterAllInFlight] = useState(false)
+  const [registerAllMessage, setRegisterAllMessage] = useState<string | null>(null)
+
   const load = async (showLoader = true) => {
     if (showLoader) setLoading(true)
     setError(null)
@@ -211,6 +218,11 @@ export default function AdminNumbersPage() {
     if (filter === 'all') return data.numbers
     return data.numbers.filter(n => n.status === filter)
   }, [data, filter])
+
+  const unregisteredCount = useMemo(() => {
+    if (!data) return 0
+    return data.numbers.filter(n => !n.is_registered).length
+  }, [data])
 
   const resetBuyModal = () => {
     setBuyOpen(false)
@@ -421,6 +433,93 @@ export default function AdminNumbersPage() {
     }
   }
 
+  // Toggle one number's is_registered. Optimistically updates UI,
+  // reverts if the API call fails.
+  const handleToggleRegister = async (n: PoolNumber) => {
+    if (registeringIds.has(n.id)) return
+    const next = !n.is_registered
+
+    setRegisteringIds(prev => {
+      const s = new Set(prev)
+      s.add(n.id)
+      return s
+    })
+
+    // Optimistic update
+    setData(prev => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        numbers: prev.numbers.map(x =>
+          x.id === n.id ? { ...x, is_registered: next } : x
+        ),
+      }
+    })
+
+    try {
+      const res = await fetch('/api/admin/pool/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ numberId: n.id, registered: next }),
+      })
+      const d = await res.json()
+      if (!d.success) {
+        // Revert
+        setData(prev => {
+          if (!prev) return prev
+          return {
+            ...prev,
+            numbers: prev.numbers.map(x =>
+              x.id === n.id ? { ...x, is_registered: !next } : x
+            ),
+          }
+        })
+        alert(`Failed to update registration: ${d.error}`)
+      }
+    } catch (err: any) {
+      // Revert on network error
+      setData(prev => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          numbers: prev.numbers.map(x =>
+            x.id === n.id ? { ...x, is_registered: !next } : x
+          ),
+        }
+      })
+      alert(`Registration error: ${err.message}`)
+    } finally {
+      setRegisteringIds(prev => {
+        const s = new Set(prev)
+        s.delete(n.id)
+        return s
+      })
+    }
+  }
+
+  const handleRegisterAll = async () => {
+    setRegisterAllInFlight(true)
+    setRegisterAllMessage(null)
+    try {
+      const res = await fetch('/api/admin/pool/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ registerAll: true, registered: true }),
+      })
+      const d = await res.json()
+      if (d.success) {
+        setRegisterAllMessage(`Marked ${d.updated} number${d.updated === 1 ? '' : 's'} as registered.`)
+        await load(false)
+      } else {
+        setRegisterAllMessage(`Failed: ${d.error}`)
+      }
+    } catch (err: any) {
+      setRegisterAllMessage(`Error: ${err.message}`)
+    } finally {
+      setRegisterAllInFlight(false)
+    }
+  }
+
   const toggleState = (state: string) => {
     setBuySelectedStates(prev => {
       const next = new Set(prev)
@@ -464,6 +563,7 @@ export default function AdminNumbersPage() {
   const willTriggerSoon = utilizationDelta <= 10 && utilizationDelta > 0
   const triggerHit = liveUtilization.pct >= liveUtilization.triggerPct
   const poolEmpty = poolCount === 0
+  const registeredCount = poolCount - unregisteredCount
 
   return (
     <div style={{
@@ -554,6 +654,34 @@ export default function AdminNumbersPage() {
           font-weight: bold;
           font-family: 'Futura PT', sans-serif;
         }
+        .pool-reg-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 3px;
+          padding: 3px 8px;
+          border-radius: 2px;
+          font-size: 9px;
+          letter-spacing: 1.5px;
+          font-weight: bold;
+          font-family: 'Futura PT', sans-serif;
+          cursor: pointer;
+          transition: opacity 0.15s, transform 0.05s;
+          user-select: none;
+          border: 1px solid;
+        }
+        .pool-reg-badge:hover:not(:disabled) { opacity: 0.75; }
+        .pool-reg-badge:active:not(:disabled) { transform: scale(0.97); }
+        .pool-reg-badge:disabled { opacity: 0.4; cursor: wait; }
+        .pool-reg-badge.registered {
+          background: rgba(26,106,26,0.1);
+          border-color: ${T.green};
+          color: ${T.green};
+        }
+        .pool-reg-badge.unregistered {
+          background: rgba(138,26,26,0.1);
+          border-color: ${T.red};
+          color: ${T.red};
+        }
         .pool-btn {
           padding: 6px 12px;
           background: transparent;
@@ -572,6 +700,15 @@ export default function AdminNumbersPage() {
           background: ${T.dark};
           color: ${T.blue};
           border-color: ${T.blue};
+        }
+        .pool-btn-success {
+          background: transparent;
+          border-color: ${T.green};
+          color: ${T.green};
+        }
+        .pool-btn-success:hover:not(:disabled) {
+          background: ${T.green};
+          color: #fff;
         }
         .pool-modal-bg {
           position: fixed;
@@ -679,6 +816,20 @@ export default function AdminNumbersPage() {
           <span style={{ fontSize: 10, fontFamily: 'monospace', color: '#8888aa', letterSpacing: 1 }}>
             {poolCount} OF {config.max_pool_size} MAX · LIVE UTIL {liveUtilization.pct}%
           </span>
+          {poolCount > 0 && (
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              fontSize: 10, fontFamily: 'monospace',
+              color: unregisteredCount === 0 ? '#32ff7e' : '#ffb84a',
+              letterSpacing: 1,
+            }}>
+              <span style={{
+                width: 6, height: 6, borderRadius: '50%',
+                background: unregisteredCount === 0 ? '#32ff7e' : '#ffb84a',
+              }} />
+              {registeredCount}/{poolCount} REGISTERED
+            </span>
+          )}
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button className="pool-btn pool-btn-primary" onClick={() => setBuyOpen(true)}>+ BUY NOW</button>
@@ -686,6 +837,14 @@ export default function AdminNumbersPage() {
           <button className="pool-btn" onClick={handleSync} disabled={syncing}>
             {syncing ? '⟳ SYNCING...' : '⟳ SYNC'}
           </button>
+          {unregisteredCount > 0 && (
+            <button
+              className="pool-btn pool-btn-success"
+              onClick={() => { setRegisterAllOpen(true); setRegisterAllMessage(null) }}
+            >
+              ✓ REGISTER ALL · {unregisteredCount}
+            </button>
+          )}
           {poolEmpty && (
             <button className="pool-btn pool-btn-primary" onClick={() => setSeedOpen(true)}>
               ⚡ SEED 10 NUMBERS
@@ -836,6 +995,7 @@ export default function AdminNumbersPage() {
               : 0
             const isConfirming = releaseConfirmId === n.id
             const isReleasing = releasing === n.id
+            const isRegistering = registeringIds.has(n.id)
 
             return (
               <div key={n.id} className={`pool-card status-${n.status}`}>
@@ -852,11 +1012,23 @@ export default function AdminNumbersPage() {
                       {n.area_code} · {n.state || '?'} · {n.region?.toUpperCase() || 'UNKNOWN'}
                     </div>
                   </div>
-                  <span className="pool-pill" style={{
-                    background: `${STATUS_COLORS[n.status]}22`,
-                    color: STATUS_COLORS[n.status],
-                    border: `1px solid ${STATUS_COLORS[n.status]}`,
-                  }}>{n.status.toUpperCase()}</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
+                    <span className="pool-pill" style={{
+                      background: `${STATUS_COLORS[n.status]}22`,
+                      color: STATUS_COLORS[n.status],
+                      border: `1px solid ${STATUS_COLORS[n.status]}`,
+                    }}>{n.status.toUpperCase()}</span>
+                    <button
+                      className={`pool-reg-badge ${n.is_registered ? 'registered' : 'unregistered'}`}
+                      disabled={isRegistering}
+                      onClick={() => handleToggleRegister(n)}
+                      title={n.is_registered
+                        ? 'Marked as registered with carriers. Click to unmark.'
+                        : 'Not yet registered with carriers (FCR, etc). Click to mark as registered.'}
+                    >
+                      {isRegistering ? '...' : (n.is_registered ? '✓ REG' : '✗ UNREG')}
+                    </button>
+                  </div>
                 </div>
 
                 <div style={{ fontSize: 10, color: T.muted, letterSpacing: 1, marginBottom: 4 }}>
@@ -1099,6 +1271,52 @@ export default function AdminNumbersPage() {
               )}
               <button className="pool-btn" disabled={buying} onClick={resetBuyModal}>
                 CLOSE
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Register All Modal */}
+      {registerAllOpen && (
+        <div className="pool-modal-bg" onClick={() => !registerAllInFlight && setRegisterAllOpen(false)}>
+          <div className="pool-modal" onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 11, letterSpacing: 3, fontWeight: 'bold', marginBottom: 12 }}>
+              MARK ALL AS REGISTERED
+            </div>
+            <div style={{ fontSize: 11, color: T.text, letterSpacing: 0.5, marginBottom: 14, lineHeight: 1.6 }}>
+              Flip all <strong>{unregisteredCount}</strong> currently-unregistered number
+              {unregisteredCount === 1 ? '' : 's'} to registered.
+              <br /><br />
+              This is a UI flag only — it does NOT submit to Free Caller Registry, A2P 10DLC, or any
+              external carrier system. Use this once you&apos;ve completed the actual registration
+              externally to track which numbers are compliant.
+            </div>
+            {registerAllMessage && (
+              <div style={{
+                fontSize: 10,
+                color: registerAllMessage.startsWith('Marked') ? T.green : T.red,
+                letterSpacing: 1, marginBottom: 12,
+                padding: '8px 10px',
+                background: registerAllMessage.startsWith('Marked') ? 'rgba(26,106,26,0.08)' : '#f8e8e8',
+                border: `1px solid ${registerAllMessage.startsWith('Marked') ? T.green : T.red}`,
+                borderRadius: 3,
+              }}>{registerAllMessage}</div>
+            )}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                className="pool-btn pool-btn-success"
+                disabled={registerAllInFlight}
+                onClick={handleRegisterAll}
+              >
+                {registerAllInFlight ? 'UPDATING...' : `✓ MARK ${unregisteredCount} REGISTERED`}
+              </button>
+              <button
+                className="pool-btn"
+                disabled={registerAllInFlight}
+                onClick={() => { setRegisterAllOpen(false); setRegisterAllMessage(null) }}
+              >
+                {registerAllMessage?.startsWith('Marked') ? 'CLOSE' : 'CANCEL'}
               </button>
             </div>
           </div>
