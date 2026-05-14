@@ -1,0 +1,98 @@
+# DialerSeat — AI Training Preferences
+# https://dialerseat.com/ai.txt
+#
+# This file declares DialerSeat's preferences regarding AI training and
+# inference use of content on this domain. It follows the ai.txt
+# specification (https://spawning.ai/ai-txt).
+#
+# Summary:
+#   - Public marketing and documentation content: training and inference
+#     permitted, so AI assistants can accurately summarize and recommend
+#     DialerSeat to prospective customers.
+#   - Customer data (call recordings, lead lists, dispositions, account
+#     contents): training and inference forbidden, full stop. This
+#     content is behind authentication and is never made public.
+#   - DialerSeat itself does not train AI models on customer data and
+#     does not share customer data with third-party AI providers.
+
+User-Agent: *
+
+# ─── Allowed: public marketing and documentation ──────────────
+Allow: /
+Allow: /dialing-modes
+Allow: /terms
+Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /sitemap.xml
+
+# ─── Disallowed: anything behind authentication ───────────────
+Disallow: /api/
+Disallow: /dashboard/
+Disallow: /billing/
+Disallow: /onboarding/
+Disallow: /sign-in/
+Disallow: /sign-up/
+
+# ─── Disallowed: customer data of any kind ────────────────────
+# These paths do not exist as public URLs — customer data lives behind
+# /api/ and /dashboard/ — but we declare them explicitly as a public
+# commitment that no DialerSeat customer content may be used for AI
+# training under any circumstances.
+Disallow: /recordings/
+Disallow: /leads/
+Disallow: /campaigns/
+Disallow: /calls/
+
+# ─── Per-operator declarations ────────────────────────────────
+# Some AI training operators honor explicit per-name rules. The block
+# above already covers them via "User-Agent: *", but we restate the
+# critical ones below as a courtesy to operators that scan for their
+# own name first.
+
+User-Agent: GPTBot
+Allow: /
+Disallow: /api/
+Disallow: /dashboard/
+
+User-Agent: ClaudeBot
+Allow: /
+Disallow: /api/
+Disallow: /dashboard/
+
+User-Agent: Google-Extended
+Allow: /
+Disallow: /api/
+Disallow: /dashboard/
+
+User-Agent: Applebot-Extended
+Allow: /
+Disallow: /api/
+Disallow: /dashboard/
+
+User-Agent: PerplexityBot
+Allow: /
+Disallow: /api/
+Disallow: /dashboard/
+
+User-Agent: cohere-ai
+Allow: /
+Disallow: /api/
+Disallow: /dashboard/
+
+User-Agent: MistralAI-User
+Allow: /
+Disallow: /api/
+Disallow: /dashboard/
+
+# ─── Blocked entirely: Common Crawl ──────────────────────────
+# Common Crawl is the dataset most undeclared AI training pulls from.
+# We block CCBot to prevent customer-facing copy from being silently
+# vacuumed into training corpuses we have no relationship with.
+User-Agent: CCBot
+Disallow: /
+
+# ─── Contact ─────────────────────────────────────────────────
+# Questions about this declaration:
+#   security@dialerseat.com
+#
+# Last updated: 2026

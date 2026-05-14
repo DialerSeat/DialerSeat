@@ -298,7 +298,7 @@ function CheckoutForm() {
         />
         <span>
           I agree my card will be charged <strong>$35.00 USD today</strong> and{' '}
-          <strong>$35.00 USD weekly</strong> thereafter until I cancel.
+          <strong>$35.00 USD weekly</strong> thereafter unless I cancel.
         </span>
       </label>
 
@@ -313,7 +313,7 @@ function CheckoutForm() {
           cursor: !stripe || submitting || !agreed ? 'not-allowed' : 'pointer',
         }}
       >
-        {submitting ? 'PROCESSING...' : `${'\u25B6'} PAY $35 & START DIALING`}
+        {submitting ? 'PROCESSING...' : 'CONTINUE'}
       </button>
 
       <button

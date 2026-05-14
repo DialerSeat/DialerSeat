@@ -49,6 +49,10 @@ export default function OnboardingPage() {
   const isLast = index === SLIDES.length - 1
   const onCodeSlide = !!(slide as any).isCodeSlide
 
+  // If user denies billing and returns later, route them to dashboard
+  // (dashboard handles lapsed/new state read-only). The "denied billing"
+  // signal is the absence of an active sub — but we shouldn't re-walk
+  // them through onboarding either. Send them to dashboard on skip.
   const handleSkip = () => {
     router.push('/billing')
   }
@@ -103,7 +107,7 @@ export default function OnboardingPage() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (onCodeSlide) return // disable arrow nav on code slide so Enter typing works
+      if (onCodeSlide) return
       if (e.key === 'ArrowRight' || e.key === 'Enter') {
         e.preventDefault()
         if (index < SLIDES.length - 1) setIndex(index + 1)

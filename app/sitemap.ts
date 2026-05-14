@@ -15,14 +15,34 @@ export default function sitemap(): MetadataRoute.Sitemap {
       url: `${BASE}/dialing-modes`,
       lastModified: now,
       changeFrequency: 'monthly',
+      priority: 0.9,
+    },
+    {
+      url: `${BASE}/terms`,
+      lastModified: now,
+      changeFrequency: 'yearly',
+      priority: 0.3,
+    },
+    // Hash-anchored landing sections — Google surfaces these as
+    // direct-jump SERP sub-links ("Jump to Pricing →")
+    {
+      url: `${BASE}/#features`,
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.7,
+    },
+    {
+      url: `${BASE}/#pricing`,
+      lastModified: now,
+      changeFrequency: 'monthly',
       priority: 0.8,
     },
-    // Future: /terms, /privacy, /vs/readymode, /pricing
-    // {
-    //   url: `${BASE}/terms`,
-    //   lastModified: now,
-    //   changeFrequency: 'yearly',
-    //   priority: 0.4,
-    // },
+    {
+      url: `${BASE}/#compare`,
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    // Future: /privacy, /vs/readymode, /vs/mojo, /vs/phoneburner
   ]
 }

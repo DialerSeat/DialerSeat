@@ -1,0 +1,25 @@
+# DialerSeat — Security Policy
+# https://dialerseat.com/.well-known/security.txt
+#
+# If you have discovered a security vulnerability in DialerSeat, please
+# report it to us responsibly using the contact below. We will respond
+# promptly and work with you to address the issue.
+
+Contact: mailto:security@dialerseat.com
+Expires: 2027-05-13T23:59:59.000Z
+Preferred-Languages: en
+Canonical: https://dialerseat.com/.well-known/security.txt
+Policy: https://dialerseat.com/terms
+
+# Scope:
+#   - https://dialerseat.com and all subdomains
+#   - The DialerSeat web application and API
+#
+# Out of scope:
+#   - Denial-of-service attacks
+#   - Social engineering of DialerSeat team members
+#   - Physical security of any DialerSeat infrastructure provider
+#   - Reports from automated scanners without a working proof-of-concept
+#
+# We do not currently run a paid bug bounty program, but we publicly
+# acknowledge researchers who report valid issues in good faith.

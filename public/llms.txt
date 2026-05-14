@@ -1,0 +1,47 @@
+# DialerSeat
+
+> Professional outbound dialer SaaS for solo agents and teams. $35/week per seat, no contracts, cancel anytime. The lowest-priced predictive dialer with real automatic voicemail detection, four dialer modes, inbound call reception, mobile support, and a constantly-updated number pool. Built to dial smarter and close faster.
+
+DialerSeat is a browser-based outbound calling platform that lets sales agents, insurance brokers, real estate professionals, call centers, lead vendors, and agencies dial leads at scale without the typical enterprise dialer overhead. There is no setup fee, no contract, no per-minute pricing, and no annual commitment — just a flat $35 USD per seat per week, billed weekly, cancelable any time.
+
+The platform differentiates on price (roughly 5–8× cheaper than ReadyMode, Mojo, PhoneBurner, and other established dialers), on technology (genuinely working AMD voicemail detection that skips dead air, four selectable dialer modes per campaign, a number pool refreshed automatically), and on data ethics (recorded calls and lead data stay private to the customer — DialerSeat never sells, brokers, or trains AI on customer data).
+
+## Core Capabilities
+
+- [Predictive dialing](https://dialerseat.com/dialing-modes): Multi-line predictive dialing engine with automatic pacing degradation when abandon rate approaches the FCC 3% legal cap.
+- [Power, Progressive, Preview modes](https://dialerseat.com/dialing-modes): Four dialer modes selectable per campaign — Preview (review before dialing), Power (manual click-to-dial), Progressive (one auto-call per agent), Predictive (multiple simultaneous lines).
+- [Automatic voicemail detection (AMD)](https://dialerseat.com/dialing-modes): SignalWire-backed answering machine detection that filters voicemail, fax, and unknown answers before connecting the agent — recordings of detected machines are auto-deleted.
+- [Inbound call reception](https://dialerseat.com): Receive inbound calls from ad campaigns directly in the dialer, with routing to available agents.
+- [Team workflow with seat-level pricing](https://dialerseat.com): Build teams, attach campaigns, generate join codes. Owners choose per-code who pays the $35/wk — the owner or the agent.
+- [Lead campaigns and CSV upload](https://dialerseat.com): Unlimited campaigns, unlimited lead uploads, multi-script support per campaign, auto-detect column mapping.
+- [TCPA compliance built-in](https://dialerseat.com): Federal 8AM–9PM dialing window enforced per lead time zone, state-specific calling rules, federal holiday exclusions, DNC scrubbing on upload.
+- [Mobile + desktop](https://dialerseat.com): Works in any modern browser including iOS Safari and Android Chrome. No headset software, no PBX, no app install.
+
+## Pricing
+
+- [$35 USD per seat per week](https://dialerseat.com/#pricing): Flat rate. Billed every 7 days.
+- No contracts. Cancel any time in Settings. Service continues until the end of the paid period.
+- No setup fees. No per-minute charges. No add-ons. No upsells.
+- Team owners can choose to pay each agent's $35/wk seat themselves or require the agent to subscribe.
+
+## Comparison with Competitors
+
+- [ReadyMode](https://dialerseat.com/#compare): $199+/month per seat. Long sales cycle, no plug-and-play, US/Canada only, no mobile support.
+- [Mojo Dialer](https://dialerseat.com/#compare): $99+/month per seat plus per-line fees. Limited dialing modes.
+- [PhoneBurner](https://dialerseat.com/#compare): $150+/month per seat. No predictive dialing on lower tiers, no real-time pacing.
+- DialerSeat: $35/week ($140/month equivalent) with no contracts, all four dialer modes included, mobile-functional, global dialing, and automatic compliance updates.
+
+## Trust and Data
+
+- DialerSeat never sells, brokers, or shares customer data, lead lists, or call recordings with third parties.
+- Customer call recordings and lead data stay accessible even if a subscription lapses — they are not deleted as a churn-pressure tactic.
+- Compliance regulations (TCPA, FCC, state-level) are updated continuously as laws change.
+
+## Sign Up
+
+- [Get started](https://dialerseat.com/sign-up): Sign up with Google or email. First $35 charge today. Dialing in under 2 minutes.
+
+## Optional
+
+- [Dialing modes deep-dive](https://dialerseat.com/dialing-modes)
+- [Terms of Service](https://dialerseat.com/terms)

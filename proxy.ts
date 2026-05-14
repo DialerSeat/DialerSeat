@@ -79,22 +79,18 @@ export default clerkMiddleware(async (auth, request) => {
 
   const tier = await getAccessTier(userId)
 
-  // 'new' users (never subscribed) → force to /billing.
-  // The Clerk SIGN_UP_FORCE_REDIRECT_URL points to /onboarding, which is in
-  // isBillingOrOnboardingRoute above, so they reach onboarding fine. After
-  // clicking GET STARTED, they hit /billing (also allowed). It's only when
-  // they try to bypass straight to /dashboard that this redirect kicks in.
-  if (tier === 'new') {
-    const billingUrl = new URL('/billing', request.url)
-    return NextResponse.redirect(billingUrl)
-  }
-
-  if (tier === 'lapsed') {
+  // 'new' and 'lapsed' both treated as read-only access.
+  // - Dashboard layout, dialer page, etc. already handle both tiers
+  //   gracefully (badge + RESUBSCRIBE nudge + dialer-gate screen).
+  // - Active-only API routes (outbound, leads/next, etc.) still 403.
+  // - This lets users who deny billing land on /dashboard in read-only
+  //   instead of being trapped in a /billing loop.
+  if (tier === 'new' || tier === 'lapsed') {
     if (isActiveOnlyRoute(request)) {
       return NextResponse.json(
         {
           error: 'Active subscription required',
-          tier: 'lapsed',
+          tier,
           redirectTo: '/billing',
         },
         { status: 403 }
@@ -102,7 +98,7 @@ export default clerkMiddleware(async (auth, request) => {
     }
 
     const res = NextResponse.next()
-    res.headers.set('x-access-tier', 'lapsed')
+    res.headers.set('x-access-tier', tier)
     return res
   }
 
