@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { requireAdmin } from '@/lib/admin'
+import { stripe } from '@/lib/stripe'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -31,6 +32,65 @@ function dayKey(ms: number) {
   const d = new Date(ms)
   d.setHours(0, 0, 0, 0)
   return d.toISOString().slice(0, 10)
+}
+
+// ── 100%-off coupon classifier ─────────────────────────────────
+// Looks up a coupon code in Stripe and returns true if it nullifies
+// the entire $35 price. Results are cached per request lifecycle in
+// the passed-in Map so we hit Stripe at most once per distinct code.
+//
+// Fail-conservative: if Stripe is unreachable, we treat the coupon as
+// 100%-off (i.e., exclude the user from monetary metrics). Better to
+// under-count revenue than over-count during a Stripe outage.
+async function isFullDiscountCoupon(
+  code: string,
+  cache: Map<string, boolean>
+): Promise<boolean> {
+  const cached = cache.get(code)
+  if (cached !== undefined) return cached
+
+  try {
+    // Try as a coupon ID first (admin-created codes like 'owner_free')
+    try {
+      const coupon = await stripe.coupons.retrieve(code)
+      const isFull =
+        coupon.percent_off === 100 ||
+        (coupon.amount_off !== null && coupon.amount_off >= WEEKLY_PRICE * 100)
+      cache.set(code, isFull)
+      return isFull
+    } catch {
+      // Not a coupon ID — try as a promotion code (user-facing)
+    }
+
+    const promos = await stripe.promotionCodes.list({
+      code,
+      limit: 1,
+      expand: ['data.coupon'],
+    })
+    if (promos.data.length > 0) {
+      // The Dahlia SDK no longer types `coupon` directly on PromotionCode,
+      // but it's present on the response when expanded. Cast through unknown
+      // to get a typed view of the coupon fields we need.
+      const promo = promos.data[0] as unknown as {
+        coupon: { percent_off: number | null; amount_off: number | null }
+      }
+      const c = promo.coupon
+      const isFull =
+        c.percent_off === 100 ||
+        (c.amount_off !== null && c.amount_off >= WEEKLY_PRICE * 100)
+      cache.set(code, isFull)
+      return isFull
+    }
+
+    // Unknown code — treat as not full discount (partial / legitimate revenue).
+    cache.set(code, false)
+    return false
+  } catch (err) {
+    console.warn(`[admin/analytics] coupon lookup failed for "${code}":`, err)
+    // Fail-conservative: assume full discount on lookup failure.
+    cache.set(code, true)
+    return true
+  }
 }
 
 export async function GET(req: NextRequest) {
@@ -75,10 +135,28 @@ export async function GET(req: NextRequest) {
     if (!existing || isLive) subByUser.set(s.user_id, s)
   }
 
+  // ── Coupon classification ──────────────────────────────────────
+  // For every sub with a discount_coupon, classify it as either:
+  //   - 100%-off (exclude from monetary metrics: seats, WRR, MRR, cohorts)
+  //   - partial discount (legitimate revenue — keep in monetary metrics)
+  // Activity metrics (calls, signups, etc.) still count both types.
+  const couponCache = new Map<string, boolean>()
+  const uniqueCoupons = new Set<string>()
+  for (const s of subs || []) {
+    if (s.discount_coupon) uniqueCoupons.add(s.discount_coupon)
+  }
+  await Promise.all(
+    Array.from(uniqueCoupons).map(code => isFullDiscountCoupon(code, couponCache))
+  )
+  const isFullDiscount = (code: string | null | undefined) =>
+    !!code && couponCache.get(code) === true
+
   const latestSubs = Array.from(subByUser.values())
   const activeSubs = latestSubs.filter(s => ACTIVE_STATUSES.includes(s.status))
-  const payingActiveSubs = activeSubs.filter(s => !s.discount_coupon)
-  const couponSubs = activeSubs.filter(s => !!s.discount_coupon)
+  // "Paying" = active sub + NOT on a 100%-off coupon.
+  // Partial-discount coupons (e.g., 20% off) count as paying.
+  const payingActiveSubs = activeSubs.filter(s => !isFullDiscount(s.discount_coupon))
+  const fullDiscountSubs = activeSubs.filter(s => isFullDiscount(s.discount_coupon))
   const payingUserIds = new Set(payingActiveSubs.map(s => s.user_id))
 
   const wrr = payingActiveSubs.length * WEEKLY_PRICE
@@ -87,14 +165,18 @@ export async function GET(req: NextRequest) {
   // 3) Range-bound metrics
   const signupsInRange = usersInRange.length
 
+  // Paid conversions = new subs in range that AREN'T 100%-off coupon'd.
+  // A partial-discount promo signup is still a real conversion.
   const paidConversionsInRange = (subs || []).filter(s => {
-    if (s.discount_coupon) return false
+    if (isFullDiscount(s.discount_coupon)) return false
     const t = new Date(s.created_at).getTime()
     return t >= start && t <= end
   }).length
 
+  // Cancellations only count for users who were ever actually paying.
+  // A coupon'd test account "cancelling" isn't a real churn event.
   const cancellationsInRange = (subs || []).filter(s => {
-    if (s.discount_coupon) return false
+    if (isFullDiscount(s.discount_coupon)) return false
     if (s.status !== 'canceled') return false
     if (!s.canceled_at) return false
     const t = new Date(s.canceled_at).getTime()
@@ -110,9 +192,8 @@ export async function GET(req: NextRequest) {
 
   // 4) Week-over-week paying users delta — growth velocity
   const oneWeekAgo = now - 7 * day
-  const twoWeeksAgo = now - 14 * day
   const payingUsersOneWeekAgo = (subs || []).filter(s => {
-    if (s.discount_coupon) return false
+    if (isFullDiscount(s.discount_coupon)) return false
     const created = new Date(s.created_at).getTime()
     if (created > oneWeekAgo) return false
     if (s.status === 'canceled' && s.canceled_at) {
@@ -127,9 +208,9 @@ export async function GET(req: NextRequest) {
     ? Number(((wowDelta / payingUsersOneWeekAgo) * 100).toFixed(1))
     : (payingActiveSubs.length > 0 ? 100 : 0)
 
-  // 5) Avg lifetime
+  // 5) Avg lifetime — only counts users who were ever actually paying.
   const churned = (subs || []).filter(s =>
-    !s.discount_coupon && s.status === 'canceled' && s.canceled_at && s.created_at
+    !isFullDiscount(s.discount_coupon) && s.status === 'canceled' && s.canceled_at && s.created_at
   )
   let avgLifetimeWeeks = 0
   if (churned.length > 0) {
@@ -141,7 +222,6 @@ export async function GET(req: NextRequest) {
   }
 
   // 6) At-risk paying users — paying but no calls in 14+ days.
-  // We need last call time per paying user.
   const atRiskUsers: any[] = []
   if (payingUserIds.size > 0) {
     const lastCallByUser = new Map<string, string>()
@@ -182,14 +262,19 @@ export async function GET(req: NextRequest) {
     atRiskUsers.sort((a, b) => (b.days_silent ?? Infinity) - (a.days_silent ?? Infinity))
   }
 
-  // 7) Hot prospects — non-paying users with calls in last 7 days
+  // 7) Hot prospects — non-paying users with calls in last 7 days.
+  // Note: users on 100%-off coupons are technically non-paying, but
+  // we exclude them from hot prospects too — they're test accounts
+  // or comped users, not conversion opportunities.
   const hotProspects: any[] = []
   const sevenDaysAgo = now - 7 * day
   const sevenDaysAgoIso = new Date(sevenDaysAgo).toISOString()
-  const nonPayingUsers = (users || []).filter(u => !payingUserIds.has(u.clerk_id))
+  const fullDiscountUserIds = new Set(fullDiscountSubs.map(s => s.user_id))
+  const nonPayingUsers = (users || []).filter(u =>
+    !payingUserIds.has(u.clerk_id) && !fullDiscountUserIds.has(u.clerk_id)
+  )
 
   if (nonPayingUsers.length > 0) {
-    // Get call counts in last 7d for non-paying users in one query
     const nonPayingIds = nonPayingUsers.map(u => u.clerk_id)
     const { data: recentCalls } = await supabase
       .from('calls')
@@ -246,7 +331,7 @@ export async function GET(req: NextRequest) {
     const bucketEnd = start + (i + 1) * bucketSize
     let activeAtBucket = 0
     for (const s of subs || []) {
-      if (s.discount_coupon) continue
+      if (isFullDiscount(s.discount_coupon)) continue
       const created = new Date(s.created_at).getTime()
       if (created > bucketEnd) continue
       if (s.status === 'canceled' && s.canceled_at) {
@@ -258,7 +343,9 @@ export async function GET(req: NextRequest) {
     buckets[i].revenue = activeAtBucket * WEEKLY_PRICE
   }
 
-  // 9) Activity heatmap — last 30 days, total calls per day platform-wide
+  // 9) Activity heatmap — last 30 days, total calls per day platform-wide.
+  // NOTE: Activity metrics (calls, signups) deliberately include
+  // coupon'd accounts — only monetary metrics exclude them.
   const heatmapStart = now - 30 * day
   const heatmapStartIso = new Date(heatmapStart).toISOString()
   const { data: heatCalls } = await supabase
@@ -279,7 +366,8 @@ export async function GET(req: NextRequest) {
     if (bucket) bucket.calls++
   }
 
-  // 10) Tenure cohort — split paying users into "new" (≤30d sub age) vs "established" (>30d)
+  // 10) Tenure cohort — split paying users into "new" (≤30d sub age) vs "established" (>30d).
+  // 100%-off coupon users are excluded entirely (already filtered out of payingActiveSubs above).
   const thirtyDayCutoff = now - 30 * day
   let newPayingUsers = 0
   let establishedPayingUsers = 0
@@ -296,7 +384,7 @@ export async function GET(req: NextRequest) {
     summary: {
       totalUsers,
       payingActiveSubs: payingActiveSubs.length,
-      couponSubsCount: couponSubs.length,
+      couponSubsCount: fullDiscountSubs.length,
       wrr,
       mrr,
       signupsInRange,
