@@ -42,6 +42,8 @@ interface AdminTeam {
   name: string
   description: string | null
   createdAt: string
+  joinCode: string | null
+  ownerHasCoupon: boolean
   owner: { id: string; name: string; email: string | null }
   memberCount: number
   pendingMemberCount: number
@@ -90,6 +92,7 @@ export default function AdminTeamsPage() {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [deleting, setDeleting] = useState<DeleteState | null>(null)
   const [toast, setToast] = useState<string | null>(null)
+  const [copiedCode, setCopiedCode] = useState<string | null>(null)
 
   const loadTeams = async () => {
     setLoading(true)
@@ -135,7 +138,8 @@ export default function AdminTeamsPage() {
       list = list.filter(t =>
         t.name.toLowerCase().includes(s) ||
         t.owner.name.toLowerCase().includes(s) ||
-        (t.owner.email || '').toLowerCase().includes(s)
+        (t.owner.email || '').toLowerCase().includes(s) ||
+        (t.joinCode || '').toLowerCase().includes(s)
       )
     }
     switch (sortKey) {
@@ -187,6 +191,17 @@ export default function AdminTeamsPage() {
       await loadTeams()
     } catch (err: any) {
       setDeleting({ ...deleting, busy: false, error: err.message })
+    }
+  }
+
+  const copyCode = async (code: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    try {
+      await navigator.clipboard.writeText(code)
+      setCopiedCode(code)
+      setTimeout(() => setCopiedCode(null), 1800)
+    } catch {
+      // ignore
     }
   }
 
@@ -374,8 +389,8 @@ export default function AdminTeamsPage() {
               <PlatformStat label="TOTAL TEAMS" value={data.platformTotals.teams.toString()} accent={T.blue} />
               <PlatformStat label="ACTIVE SEATS" value={data.platformTotals.activeSeats.toString()} accent={T.green} />
               <PlatformStat label="PENDING SEATS" value={data.platformTotals.pendingSeats.toString()} accent={T.amber} />
-              <PlatformStat label="WEEKLY RECURRING" value={fmtMoney(data.platformTotals.wrr_cents)} accent={T.accent} />
-              <PlatformStat label="EST. MONTHLY" value={fmtMoney(data.platformTotals.mrr_cents)} accent={T.accent} />
+              <PlatformStat label="WEEKLY RECURRING" value={fmtMoney(data.platformTotals.wrr_cents)} accent={T.accent} subtitle="EXCL. COUPON'D" />
+              <PlatformStat label="EST. MONTHLY" value={fmtMoney(data.platformTotals.mrr_cents)} accent={T.accent} subtitle="EXCL. COUPON'D" />
             </div>
 
             <div style={{
@@ -383,7 +398,7 @@ export default function AdminTeamsPage() {
             }}>
               <input
                 type="text"
-                placeholder="Search team or owner..."
+                placeholder="Search team, owner, or code..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 style={{
@@ -449,8 +464,20 @@ export default function AdminTeamsPage() {
                         <div style={{ flex: '1 1 200px', minWidth: 0 }}>
                           <div style={{
                             fontSize: 13, fontWeight: 'bold', color: T.text, letterSpacing: 0.5,
-                            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                          }}>{team.name}</div>
+                            display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+                          }}>
+                            <span style={{
+                              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 280,
+                            }}>{team.name}</span>
+                            {team.ownerHasCoupon && (
+                              <span style={{
+                                fontSize: 8, padding: '2px 6px', borderRadius: 2,
+                                background: 'rgba(140,106,26,0.12)',
+                                color: T.amber, border: `1px solid ${T.amber}`,
+                                letterSpacing: 1.5, fontWeight: 'bold', fontFamily: 'monospace',
+                              }}>COUPON</span>
+                            )}
+                          </div>
                           <div style={{ fontSize: 10, color: T.muted, fontFamily: 'monospace', marginTop: 2 }}>
                             {team.owner.name}{team.owner.email ? ` · ${team.owner.email}` : ''}
                           </div>
@@ -484,6 +511,45 @@ export default function AdminTeamsPage() {
                             <DetailCell label="PENDING SEATS" value={team.pendingSeats.toString()} accent={team.pendingSeats > 0 ? T.amber : undefined} />
                             <DetailCell label="FAILED" value={team.failedSeats.toString()} accent={team.failedSeats > 0 ? T.red : undefined} />
                             <DetailCell label="EST. MRR" value={fmtMoney(team.mrr_cents)} />
+                          </div>
+
+                          {/* JOIN CODE block */}
+                          <div style={{
+                            display: 'flex', alignItems: 'center', gap: 12,
+                            padding: '10px 14px',
+                            background: team.joinCode ? T.bg : '#f8f4e8',
+                            border: `1px solid ${team.joinCode ? T.border : T.amber}`,
+                            borderLeft: `3px solid ${team.joinCode ? T.blue : T.amber}`,
+                            borderRadius: 3, marginBottom: 14, flexWrap: 'wrap',
+                          }}>
+                            <div style={{ fontSize: 9, letterSpacing: 2, color: T.muted, fontWeight: 'bold' }}>
+                              JOIN CODE
+                            </div>
+                            {team.joinCode ? (
+                              <>
+                                <div style={{
+                                  fontFamily: 'monospace', fontSize: 16, fontWeight: 'bold',
+                                  color: T.text, letterSpacing: 3, userSelect: 'all',
+                                  padding: '4px 12px', background: T.surface, borderRadius: 3,
+                                  border: `1px solid ${T.border}`,
+                                }}>{team.joinCode}</div>
+                                <button
+                                  onClick={(e) => copyCode(team.joinCode!, e)}
+                                  style={{
+                                    padding: '5px 10px', border: `1px solid ${T.blue}`,
+                                    background: copiedCode === team.joinCode ? T.blue : 'transparent',
+                                    color: copiedCode === team.joinCode ? 'white' : T.blue,
+                                    fontSize: 9, letterSpacing: 2, fontWeight: 'bold',
+                                    borderRadius: 3, cursor: 'pointer',
+                                    fontFamily: 'Futura PT, Futura, sans-serif',
+                                  }}
+                                >{copiedCode === team.joinCode ? '✓ COPIED' : '⧉ COPY'}</button>
+                              </>
+                            ) : (
+                              <span style={{ fontSize: 11, color: T.amber, fontStyle: 'italic' }}>
+                                No active code (team owner must regenerate)
+                              </span>
+                            )}
                           </div>
 
                           {team.description && (
@@ -598,7 +664,7 @@ export default function AdminTeamsPage() {
   )
 }
 
-function PlatformStat({ label, value, accent }: { label: string; value: string; accent: string }) {
+function PlatformStat({ label, value, accent, subtitle }: { label: string; value: string; accent: string; subtitle?: string }) {
   return (
     <div style={{
       padding: '12px 14px',
@@ -611,6 +677,11 @@ function PlatformStat({ label, value, accent }: { label: string; value: string; 
       <div style={{
         fontSize: 22, fontWeight: 'bold', color: accent, lineHeight: 1, fontFamily: 'monospace',
       }}>{value}</div>
+      {subtitle && (
+        <div style={{ fontSize: 8, color: T.muted, letterSpacing: 1.5, marginTop: 4, fontFamily: 'monospace' }}>
+          {subtitle}
+        </div>
+      )}
     </div>
   )
 }

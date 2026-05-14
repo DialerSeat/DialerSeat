@@ -62,6 +62,61 @@ interface PoolData {
   }
 }
 
+// Common US area codes by state — used for the "specific states" batch buy.
+// Pick a representative metro code per state so the buy actually targets the right area.
+const STATE_AREA_CODES: Array<{ state: string; name: string; areaCodes: string[] }> = [
+  { state: 'AL', name: 'Alabama', areaCodes: ['205', '251', '256', '334', '938'] },
+  { state: 'AK', name: 'Alaska', areaCodes: ['907'] },
+  { state: 'AZ', name: 'Arizona', areaCodes: ['480', '520', '602', '623', '928'] },
+  { state: 'AR', name: 'Arkansas', areaCodes: ['479', '501', '870'] },
+  { state: 'CA', name: 'California', areaCodes: ['213', '310', '408', '415', '510', '619', '714', '818', '925', '949'] },
+  { state: 'CO', name: 'Colorado', areaCodes: ['303', '719', '720', '970'] },
+  { state: 'CT', name: 'Connecticut', areaCodes: ['203', '475', '860', '959'] },
+  { state: 'DE', name: 'Delaware', areaCodes: ['302'] },
+  { state: 'FL', name: 'Florida', areaCodes: ['305', '321', '352', '386', '407', '561', '727', '813', '850', '904', '954'] },
+  { state: 'GA', name: 'Georgia', areaCodes: ['229', '404', '470', '478', '678', '706', '770', '912'] },
+  { state: 'HI', name: 'Hawaii', areaCodes: ['808'] },
+  { state: 'ID', name: 'Idaho', areaCodes: ['208', '986'] },
+  { state: 'IL', name: 'Illinois', areaCodes: ['217', '224', '309', '312', '331', '618', '630', '708', '773', '815', '847', '872'] },
+  { state: 'IN', name: 'Indiana', areaCodes: ['219', '260', '317', '463', '574', '765', '812'] },
+  { state: 'IA', name: 'Iowa', areaCodes: ['319', '515', '563', '641', '712'] },
+  { state: 'KS', name: 'Kansas', areaCodes: ['316', '620', '785', '913'] },
+  { state: 'KY', name: 'Kentucky', areaCodes: ['270', '364', '502', '606', '859'] },
+  { state: 'LA', name: 'Louisiana', areaCodes: ['225', '318', '337', '504', '985'] },
+  { state: 'ME', name: 'Maine', areaCodes: ['207'] },
+  { state: 'MD', name: 'Maryland', areaCodes: ['240', '301', '410', '443', '667'] },
+  { state: 'MA', name: 'Massachusetts', areaCodes: ['339', '351', '413', '508', '617', '774', '781', '857', '978'] },
+  { state: 'MI', name: 'Michigan', areaCodes: ['231', '248', '269', '313', '517', '586', '616', '734', '810', '906', '947', '989'] },
+  { state: 'MN', name: 'Minnesota', areaCodes: ['218', '320', '507', '612', '651', '763', '952'] },
+  { state: 'MS', name: 'Mississippi', areaCodes: ['228', '601', '662', '769'] },
+  { state: 'MO', name: 'Missouri', areaCodes: ['314', '417', '573', '636', '660', '816'] },
+  { state: 'MT', name: 'Montana', areaCodes: ['406'] },
+  { state: 'NE', name: 'Nebraska', areaCodes: ['308', '402', '531'] },
+  { state: 'NV', name: 'Nevada', areaCodes: ['702', '725', '775'] },
+  { state: 'NH', name: 'New Hampshire', areaCodes: ['603'] },
+  { state: 'NJ', name: 'New Jersey', areaCodes: ['201', '551', '609', '732', '848', '856', '862', '908', '973'] },
+  { state: 'NM', name: 'New Mexico', areaCodes: ['505', '575'] },
+  { state: 'NY', name: 'New York', areaCodes: ['212', '315', '347', '516', '518', '585', '607', '631', '646', '716', '718', '845', '914', '917', '929', '934'] },
+  { state: 'NC', name: 'North Carolina', areaCodes: ['252', '336', '704', '743', '828', '910', '919', '980', '984'] },
+  { state: 'ND', name: 'North Dakota', areaCodes: ['701'] },
+  { state: 'OH', name: 'Ohio', areaCodes: ['216', '234', '330', '380', '419', '440', '513', '567', '614', '740', '937'] },
+  { state: 'OK', name: 'Oklahoma', areaCodes: ['405', '539', '580', '918'] },
+  { state: 'OR', name: 'Oregon', areaCodes: ['458', '503', '541', '971'] },
+  { state: 'PA', name: 'Pennsylvania', areaCodes: ['215', '223', '267', '272', '412', '484', '570', '610', '717', '724', '814', '878'] },
+  { state: 'RI', name: 'Rhode Island', areaCodes: ['401'] },
+  { state: 'SC', name: 'South Carolina', areaCodes: ['803', '843', '854', '864'] },
+  { state: 'SD', name: 'South Dakota', areaCodes: ['605'] },
+  { state: 'TN', name: 'Tennessee', areaCodes: ['423', '615', '629', '731', '865', '901', '931'] },
+  { state: 'TX', name: 'Texas', areaCodes: ['210', '214', '254', '281', '325', '346', '361', '409', '430', '432', '469', '512', '682', '713', '726', '737', '806', '817', '830', '832', '903', '915', '936', '940', '956', '972', '979'] },
+  { state: 'UT', name: 'Utah', areaCodes: ['385', '435', '801'] },
+  { state: 'VT', name: 'Vermont', areaCodes: ['802'] },
+  { state: 'VA', name: 'Virginia', areaCodes: ['276', '434', '540', '571', '703', '757', '804'] },
+  { state: 'WA', name: 'Washington', areaCodes: ['206', '253', '360', '425', '509', '564'] },
+  { state: 'WV', name: 'West Virginia', areaCodes: ['304', '681'] },
+  { state: 'WI', name: 'Wisconsin', areaCodes: ['262', '414', '534', '608', '715', '920'] },
+  { state: 'WY', name: 'Wyoming', areaCodes: ['307'] },
+]
+
 function formatPhone(p: string) {
   const d = p.replace(/\D/g, '')
   if (d.length === 11) return `+1 (${d.slice(1, 4)}) ${d.slice(4, 7)}-${d.slice(7)}`
@@ -92,7 +147,7 @@ const STATUS_COLORS = {
 }
 
 const CONFIG_FIELDS: Array<{ key: keyof PoolConfig, label: string, help: string }> = [
-  { key: 'max_pool_size', label: 'MAX POOL SIZE', help: 'Hard ceiling on total numbers (10-5000)' },
+  { key: 'max_pool_size', label: 'MAX POOL SIZE', help: 'Hard ceiling on total numbers (10-50000)' },
   { key: 'daily_buy_cap', label: 'DAILY BUY CAP', help: 'Max auto-buys per day (1-500)' },
   { key: 'utilization_trigger_pct', label: 'TRIGGER %', help: 'Buy when util reaches this % (30-99)' },
   { key: 'sustained_hours_required', label: 'SUSTAINED HOURS', help: 'Hours util must stay above trigger (1-24)' },
@@ -106,26 +161,26 @@ export default function AdminNumbersPage() {
 
   // Buy modal
   const [buyOpen, setBuyOpen] = useState(false)
+  const [buyMode, setBuyMode] = useState<'single' | 'random' | 'states'>('single')
   const [buyAreaCode, setBuyAreaCode] = useState('')
+  const [buyQty, setBuyQty] = useState(5)
+  const [buySelectedStates, setBuySelectedStates] = useState<Set<string>>(new Set())
   const [buying, setBuying] = useState(false)
   const [buyMessage, setBuyMessage] = useState<string | null>(null)
+  const [buyProgress, setBuyProgress] = useState<{ done: number; total: number } | null>(null)
 
-  // Release confirm
   const [releaseConfirmId, setReleaseConfirmId] = useState<string | null>(null)
   const [releasing, setReleasing] = useState<string | null>(null)
 
-  // Config edit
   const [configOpen, setConfigOpen] = useState(false)
   const [configEdits, setConfigEdits] = useState<Partial<PoolConfig>>({})
   const [savingConfig, setSavingConfig] = useState(false)
   const [configMessage, setConfigMessage] = useState<string | null>(null)
 
-  // Seed (one-time-ish)
   const [seedOpen, setSeedOpen] = useState(false)
   const [seeding, setSeeding] = useState(false)
   const [seedMessage, setSeedMessage] = useState<string | null>(null)
 
-  // Sync from SignalWire
   const [syncing, setSyncing] = useState(false)
 
   const load = async (showLoader = true) => {
@@ -157,7 +212,18 @@ export default function AdminNumbersPage() {
     return data.numbers.filter(n => n.status === filter)
   }, [data, filter])
 
-  const handleBuy = async () => {
+  const resetBuyModal = () => {
+    setBuyOpen(false)
+    setBuyMessage(null)
+    setBuyAreaCode('')
+    setBuyQty(5)
+    setBuySelectedStates(new Set())
+    setBuyMode('single')
+    setBuyProgress(null)
+  }
+
+  // Single-area-code buy
+  const handleBuySingle = async () => {
     if (!/^\d{3}$/.test(buyAreaCode)) {
       setBuyMessage('Area code must be exactly 3 digits')
       return
@@ -183,6 +249,83 @@ export default function AdminNumbersPage() {
     } finally {
       setBuying(false)
     }
+  }
+
+  // Pick `qty` area codes from a flat list, no duplicates, weighted by metro size
+  // (which is approximated by the order they appear in the array — first one
+  // per state is the largest metro).
+  const sampleAreaCodes = (sourceCodes: string[], qty: number): string[] => {
+    const picks: string[] = []
+    const pool = [...sourceCodes]
+    for (let i = 0; i < qty && pool.length > 0; i++) {
+      const idx = Math.floor(Math.random() * pool.length)
+      picks.push(pool[idx])
+      pool.splice(idx, 1)
+    }
+    return picks
+  }
+
+  // Random states or specific states batch buy
+  const handleBuyBatch = async () => {
+    const qty = Math.max(1, Math.min(buyQty, 100))
+    let pickFrom: string[] = []
+
+    if (buyMode === 'random') {
+      // All US area codes — flatten everything
+      pickFrom = STATE_AREA_CODES.flatMap(s => s.areaCodes)
+    } else {
+      // Specific states
+      if (buySelectedStates.size === 0) {
+        setBuyMessage('Pick at least one state')
+        return
+      }
+      pickFrom = STATE_AREA_CODES
+        .filter(s => buySelectedStates.has(s.state))
+        .flatMap(s => s.areaCodes)
+    }
+
+    if (pickFrom.length === 0) {
+      setBuyMessage('No area codes match selection')
+      return
+    }
+
+    setBuying(true)
+    setBuyMessage(null)
+    setBuyProgress({ done: 0, total: qty })
+
+    const codes = sampleAreaCodes(pickFrom, qty)
+    let success = 0
+    let failed = 0
+    const failures: string[] = []
+
+    // Fire purchases sequentially so we don't blow past daily_buy_cap or
+    // race against config limits
+    for (let i = 0; i < codes.length; i++) {
+      const code = codes[i]
+      try {
+        const res = await fetch('/api/admin/pool/buy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ areaCode: code }),
+        })
+        const d = await res.json()
+        if (d.success) {
+          success++
+        } else {
+          failed++
+          failures.push(`${code}: ${d.error}`)
+        }
+      } catch (err: any) {
+        failed++
+        failures.push(`${code}: ${err.message}`)
+      }
+      setBuyProgress({ done: i + 1, total: qty })
+    }
+
+    setBuyMessage(`Batch complete: ${success} bought, ${failed} failed${failures.length > 0 ? ` (${failures.slice(0, 3).join('; ')}${failures.length > 3 ? '...' : ''})` : ''}`)
+    setBuying(false)
+    setBuyProgress(null)
+    await load(false)
   }
 
   const handleSeed = async () => {
@@ -276,6 +419,23 @@ export default function AdminNumbersPage() {
     } finally {
       setSavingConfig(false)
     }
+  }
+
+  const toggleState = (state: string) => {
+    setBuySelectedStates(prev => {
+      const next = new Set(prev)
+      if (next.has(state)) next.delete(state)
+      else next.add(state)
+      return next
+    })
+  }
+
+  const selectAllStates = () => {
+    setBuySelectedStates(new Set(STATE_AREA_CODES.map(s => s.state)))
+  }
+
+  const clearAllStates = () => {
+    setBuySelectedStates(new Set())
   }
 
   if (loading && !data) {
@@ -428,8 +588,10 @@ export default function AdminNumbersPage() {
           border: 1px solid ${T.border};
           border-radius: 4px;
           padding: 24px;
-          max-width: 460px;
+          max-width: 560px;
           width: 100%;
+          max-height: 90vh;
+          overflow-y: auto;
         }
         .pool-input {
           padding: 8px 10px;
@@ -441,6 +603,7 @@ export default function AdminNumbersPage() {
           color: ${T.text};
           outline: none;
           width: 100%;
+          box-sizing: border-box;
         }
         .pool-empty-cta {
           padding: 32px;
@@ -448,6 +611,63 @@ export default function AdminNumbersPage() {
           border: 1px solid ${T.border};
           border-radius: 4px;
           text-align: center;
+        }
+        .buy-mode-tabs {
+          display: flex;
+          gap: 4px;
+          margin-bottom: 16px;
+          border-bottom: 1px solid ${T.border};
+        }
+        .buy-mode-tab {
+          padding: 8px 14px;
+          background: transparent;
+          border: none;
+          border-bottom: 2px solid transparent;
+          color: ${T.muted};
+          font-size: 10px;
+          letter-spacing: 1.5px;
+          font-weight: bold;
+          font-family: 'Futura PT', sans-serif;
+          cursor: pointer;
+          margin-bottom: -1px;
+        }
+        .buy-mode-tab.active {
+          color: ${T.blue};
+          border-bottom-color: ${T.blue};
+        }
+        .state-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+          gap: 4px;
+          max-height: 280px;
+          overflow-y: auto;
+          padding: 8px;
+          background: ${T.surface};
+          border: 1px solid ${T.border};
+          border-radius: 4px;
+          margin-bottom: 12px;
+        }
+        .state-checkbox {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 5px 8px;
+          font-size: 10px;
+          color: ${T.text};
+          cursor: pointer;
+          border-radius: 3px;
+          font-family: monospace;
+          letter-spacing: 1px;
+        }
+        .state-checkbox:hover { background: ${T.bg}; }
+        .state-checkbox input {
+          margin: 0;
+          accent-color: ${T.blue};
+        }
+        .state-checkbox.checked {
+          background: rgba(74,158,255,0.12);
+          color: ${T.blue};
+          font-weight: bold;
         }
       `}</style>
 
@@ -461,16 +681,16 @@ export default function AdminNumbersPage() {
           </span>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button className="pool-btn pool-btn-primary" onClick={() => setBuyOpen(true)}>+ BUY NOW</button>
           <button className="pool-btn" onClick={() => setConfigOpen(true)}>⚙ CONFIG</button>
           <button className="pool-btn" onClick={handleSync} disabled={syncing}>
-            {syncing ? '⟳ SYNCING...' : '⟳ SYNC SIGNALWIRE'}
+            {syncing ? '⟳ SYNCING...' : '⟳ SYNC'}
           </button>
           {poolEmpty && (
             <button className="pool-btn pool-btn-primary" onClick={() => setSeedOpen(true)}>
               ⚡ SEED 10 NUMBERS
             </button>
           )}
-          <button className="pool-btn pool-btn-primary" onClick={() => setBuyOpen(true)}>+ BUY NOW</button>
         </div>
       </div>
 
@@ -483,9 +703,9 @@ export default function AdminNumbersPage() {
               color: T.text, marginBottom: 8,
             }}>POOL IS EMPTY</div>
             <div style={{ fontSize: 11, color: T.muted, marginBottom: 16, lineHeight: 1.6 }}>
-              Click <strong>SYNC SIGNALWIRE</strong> to import any numbers you already own,
+              Click <strong>SYNC</strong> to import any numbers you already own,
               <br />or <strong>SEED 10 NUMBERS</strong> to populate with 10 across major US metros,
-              <br />or <strong>BUY NOW</strong> to add specific area codes one at a time.
+              <br />or <strong>BUY NOW</strong> to add specific area codes or batches.
             </div>
             <div style={{ fontSize: 10, color: T.muted, fontFamily: 'monospace', letterSpacing: 1 }}>
               Each number costs ~$1/mo from SignalWire.
@@ -493,7 +713,6 @@ export default function AdminNumbersPage() {
           </div>
         )}
 
-        {/* Stats row */}
         <div className="pool-stat-grid">
           <div className="pool-stat-card">
             <div className="pool-stat-label">POOL SIZE</div>
@@ -524,7 +743,6 @@ export default function AdminNumbersPage() {
           </div>
         </div>
 
-        {/* Growth meter */}
         <div className="pool-section">
           <div className="pool-section-title">▸ GROWTH METER</div>
           <div style={{
@@ -587,7 +805,6 @@ export default function AdminNumbersPage() {
           </div>
         </div>
 
-        {/* Filter pills */}
         {!poolEmpty && (
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             {(['all', 'active', 'resting', 'flagged'] as const).map(f => (
@@ -612,7 +829,6 @@ export default function AdminNumbersPage() {
           </div>
         )}
 
-        {/* Numbers grid */}
         <div className="pool-grid">
           {filteredNumbers.map(n => {
             const usagePct = n.daily_cap > 0
@@ -716,34 +932,172 @@ export default function AdminNumbersPage() {
 
       {/* Buy Modal */}
       {buyOpen && (
-        <div className="pool-modal-bg" onClick={() => !buying && setBuyOpen(false)}>
+        <div className="pool-modal-bg" onClick={() => !buying && resetBuyModal()}>
           <div className="pool-modal" onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: 11, letterSpacing: 3, fontWeight: 'bold', marginBottom: 12 }}>
-              MANUAL BUY
+              BUY NUMBERS
             </div>
-            <div style={{ fontSize: 10, color: T.muted, letterSpacing: 1, marginBottom: 12 }}>
-              Buys ONE number in the specified area code (3 digits, e.g. 212).
-              Counts against daily buy cap ({config.buys_today}/{config.daily_buy_cap} used today).
+
+            <div className="buy-mode-tabs">
+              <button
+                className={`buy-mode-tab ${buyMode === 'single' ? 'active' : ''}`}
+                onClick={() => { setBuyMode('single'); setBuyMessage(null) }}
+              >SINGLE</button>
+              <button
+                className={`buy-mode-tab ${buyMode === 'random' ? 'active' : ''}`}
+                onClick={() => { setBuyMode('random'); setBuyMessage(null) }}
+              >RANDOM STATES</button>
+              <button
+                className={`buy-mode-tab ${buyMode === 'states' ? 'active' : ''}`}
+                onClick={() => { setBuyMode('states'); setBuyMessage(null) }}
+              >SPECIFIC STATES</button>
             </div>
-            <input
-              className="pool-input"
-              placeholder="Area code (e.g. 212)"
-              value={buyAreaCode}
-              onChange={e => setBuyAreaCode(e.target.value.replace(/\D/g, '').slice(0, 3))}
-              maxLength={3}
-              disabled={buying}
-            />
+
+            {buyMode === 'single' && (
+              <>
+                <div style={{ fontSize: 10, color: T.muted, letterSpacing: 1, marginBottom: 12 }}>
+                  Buys ONE number in the specified area code. Counts against daily buy cap
+                  ({config.buys_today}/{config.daily_buy_cap} used today).
+                </div>
+                <input
+                  className="pool-input"
+                  placeholder="Area code (e.g. 212)"
+                  value={buyAreaCode}
+                  onChange={e => setBuyAreaCode(e.target.value.replace(/\D/g, '').slice(0, 3))}
+                  maxLength={3}
+                  disabled={buying}
+                />
+              </>
+            )}
+
+            {buyMode === 'random' && (
+              <>
+                <div style={{ fontSize: 10, color: T.muted, letterSpacing: 1, marginBottom: 12, lineHeight: 1.6 }}>
+                  Buys <strong>{buyQty}</strong> numbers picked randomly from across all US area codes.
+                  Each purchase counts against daily buy cap
+                  ({config.buys_today}/{config.daily_buy_cap} used today).
+                </div>
+                <label style={{ fontSize: 9, letterSpacing: 2, color: T.muted, fontWeight: 'bold', display: 'block', marginBottom: 6 }}>
+                  QUANTITY (1-100)
+                </label>
+                <input
+                  className="pool-input"
+                  type="number"
+                  value={buyQty}
+                  onChange={e => setBuyQty(Math.max(1, Math.min(100, parseInt(e.target.value, 10) || 1)))}
+                  min={1}
+                  max={100}
+                  disabled={buying}
+                />
+                <div style={{
+                  fontSize: 10, color: T.amber, letterSpacing: 1, marginTop: 10,
+                  padding: '8px 10px', background: 'rgba(138,106,26,0.08)',
+                  border: `1px solid ${T.amber}`, borderRadius: 3,
+                }}>
+                  ⚠ Estimated cost: ~${buyQty}.00/mo recurring + ${buyQty}.00 one-time.
+                </div>
+              </>
+            )}
+
+            {buyMode === 'states' && (
+              <>
+                <div style={{ fontSize: 10, color: T.muted, letterSpacing: 1, marginBottom: 8, lineHeight: 1.6 }}>
+                  Pick states, then specify how many total numbers to buy.
+                  System distributes randomly across area codes in selected states.
+                </div>
+                <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+                  <button className="pool-btn" onClick={selectAllStates} style={{ fontSize: 9 }}>SELECT ALL</button>
+                  <button className="pool-btn" onClick={clearAllStates} style={{ fontSize: 9 }}>CLEAR</button>
+                  <span style={{
+                    marginLeft: 'auto', fontSize: 10, color: T.muted,
+                    fontFamily: 'monospace', letterSpacing: 1, alignSelf: 'center',
+                  }}>
+                    {buySelectedStates.size} STATES SELECTED
+                  </span>
+                </div>
+                <div className="state-grid">
+                  {STATE_AREA_CODES.map(s => {
+                    const checked = buySelectedStates.has(s.state)
+                    return (
+                      <label
+                        key={s.state}
+                        className={`state-checkbox ${checked ? 'checked' : ''}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleState(s.state)}
+                          disabled={buying}
+                        />
+                        {s.state}
+                      </label>
+                    )
+                  })}
+                </div>
+                <label style={{ fontSize: 9, letterSpacing: 2, color: T.muted, fontWeight: 'bold', display: 'block', marginBottom: 6 }}>
+                  TOTAL QUANTITY (1-100)
+                </label>
+                <input
+                  className="pool-input"
+                  type="number"
+                  value={buyQty}
+                  onChange={e => setBuyQty(Math.max(1, Math.min(100, parseInt(e.target.value, 10) || 1)))}
+                  min={1}
+                  max={100}
+                  disabled={buying}
+                />
+                <div style={{
+                  fontSize: 10, color: T.amber, letterSpacing: 1, marginTop: 10,
+                  padding: '8px 10px', background: 'rgba(138,106,26,0.08)',
+                  border: `1px solid ${T.amber}`, borderRadius: 3,
+                }}>
+                  ⚠ Estimated cost: ~${buyQty}.00/mo recurring + ${buyQty}.00 one-time.
+                </div>
+              </>
+            )}
+
+            {buyProgress && (
+              <div style={{
+                marginTop: 12, padding: '8px 10px',
+                background: T.surface, border: `1px solid ${T.border}`, borderRadius: 3,
+                fontSize: 11, color: T.text, letterSpacing: 1,
+              }}>
+                BUYING... {buyProgress.done}/{buyProgress.total}
+                <div className="pool-meter-bg" style={{ marginTop: 4 }}>
+                  <div className="pool-meter-fill" style={{
+                    width: `${(buyProgress.done / buyProgress.total) * 100}%`,
+                    background: T.blue,
+                  }} />
+                </div>
+              </div>
+            )}
+
             {buyMessage && (
               <div style={{
-                fontSize: 10, color: buyMessage.startsWith('Bought') ? T.green : T.red,
-                letterSpacing: 1, marginTop: 8,
+                fontSize: 10, color: buyMessage.includes('failed') || buyMessage.includes('Failed') || buyMessage.includes('Error') ? T.red : T.green,
+                letterSpacing: 1, marginTop: 12, lineHeight: 1.5,
               }}>{buyMessage}</div>
             )}
+
             <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-              <button className="pool-btn pool-btn-primary" disabled={buying || buyAreaCode.length !== 3} onClick={handleBuy}>
-                {buying ? 'BUYING...' : 'BUY'}
-              </button>
-              <button className="pool-btn" disabled={buying} onClick={() => { setBuyOpen(false); setBuyMessage(null); setBuyAreaCode('') }}>
+              {buyMode === 'single' ? (
+                <button
+                  className="pool-btn pool-btn-primary"
+                  disabled={buying || buyAreaCode.length !== 3}
+                  onClick={handleBuySingle}
+                >
+                  {buying ? 'BUYING...' : 'BUY'}
+                </button>
+              ) : (
+                <button
+                  className="pool-btn pool-btn-primary"
+                  disabled={buying || (buyMode === 'states' && buySelectedStates.size === 0)}
+                  onClick={handleBuyBatch}
+                >
+                  {buying ? `BUYING ${buyProgress?.done || 0}/${buyProgress?.total || buyQty}...` : `BUY ${buyQty}`}
+                </button>
+              )}
+              <button className="pool-btn" disabled={buying} onClick={resetBuyModal}>
                 CLOSE
               </button>
             </div>
@@ -767,7 +1121,7 @@ export default function AdminNumbersPage() {
               <br /><br />
               Cost: ~<strong>$10 one-time SignalWire charge</strong> + ~$10/mo recurring.
               <br /><br />
-              Idempotent — running twice won't double-buy.
+              Idempotent — running twice won&apos;t double-buy.
             </div>
             {seedMessage && (
               <div style={{

@@ -20,11 +20,6 @@ interface Lead {
   last_called_at: string | null
   created_at: string
   extra_data: Record<string, any>
-  // TCPA one-to-one consent fields (FCC Jan 2025)
-  consent_date?: string | null
-  consent_source?: string | null
-  consent_description?: string | null
-  consent_proof_url?: string | null
 }
 
 interface Campaign {
@@ -225,14 +220,6 @@ export default function LeadsPage() {
     return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   }
 
-  const formatDateTime = (iso: string | null | undefined) => {
-    if (!iso) return '—'
-    return new Date(iso).toLocaleString('en-US', {
-      year: 'numeric', month: 'short', day: 'numeric',
-      hour: 'numeric', minute: '2-digit',
-    })
-  }
-
   return (
     <div className="leads-root" style={{
       flex: 1,
@@ -300,7 +287,7 @@ export default function LeadsPage() {
           padding: 12px 14px;
           margin-bottom: 6px;
           display: grid;
-          grid-template-columns: 1.7fr 1.3fr 0.6fr 1fr 0.7fr 0.7fr 0.5fr 0.7fr;
+          grid-template-columns: 1.7fr 1.3fr 0.6fr 1fr 0.7fr 0.5fr 0.7fr;
           gap: 10px;
           align-items: center;
           cursor: pointer;
@@ -351,17 +338,6 @@ export default function LeadsPage() {
           font-family: 'Futura PT', Futura, sans-serif;
           white-space: nowrap;
         }
-        .consent-badge {
-          display: inline-block;
-          padding: 2px 6px;
-          border-radius: 2px;
-          font-size: 8px;
-          letter-spacing: 1px;
-          font-weight: bold;
-          font-family: 'Futura PT', Futura, sans-serif;
-          white-space: nowrap;
-          cursor: help;
-        }
         .disp-grid {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
@@ -379,25 +355,6 @@ export default function LeadsPage() {
           background: white;
         }
         .disp-btn:disabled { cursor: not-allowed; opacity: 0.5; }
-        .consent-block {
-          padding: 10px 12px;
-          background: rgba(26,106,26,0.06);
-          border: 1px solid ${T.green};
-          border-left: 3px solid ${T.green};
-          border-radius: 3px;
-          font-size: 11px;
-          line-height: 1.5;
-        }
-        .consent-block-empty {
-          padding: 10px 12px;
-          background: rgba(138,106,26,0.06);
-          border: 1px solid ${T.amber};
-          border-left: 3px solid ${T.amber};
-          border-radius: 3px;
-          font-size: 11px;
-          line-height: 1.5;
-          color: ${T.amber};
-        }
 
         @media (max-width: 768px) {
           .leads-header { padding: 10px 12px; }
@@ -424,7 +381,6 @@ export default function LeadsPage() {
             grid-template-areas:
               "name attempts"
               "phone phone"
-              "meta consent"
               "meta disp";
             gap: 6px;
             padding: 12px;
@@ -435,7 +391,6 @@ export default function LeadsPage() {
             display: none;
           }
           .lead-cell-attempts { grid-area: attempts; text-align: right; }
-          .lead-cell-consent { grid-area: consent; text-align: right; }
           .lead-cell-disp { grid-area: disp; text-align: right; }
           .lead-meta-mobile {
             grid-area: meta;
@@ -453,7 +408,6 @@ export default function LeadsPage() {
         }
       `}</style>
 
-      {/* HEADER */}
       <div className="leads-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <span style={{ fontSize: 11, fontWeight: 'bold', letterSpacing: 4, color: T.blue }}>
@@ -562,10 +516,6 @@ export default function LeadsPage() {
 
         {leads.map(lead => {
           const isExpanded = expandedId === lead.id
-          const hasConsent = !!lead.consent_date
-          const consentTooltip = hasConsent
-            ? `Source: ${lead.consent_source || 'unknown'}\nDate: ${formatDateTime(lead.consent_date)}\n${lead.consent_description ? `Description: ${lead.consent_description}` : ''}`
-            : 'No consent on file'
 
           return (
             <div key={lead.id}>
@@ -599,21 +549,6 @@ export default function LeadsPage() {
                   fontSize: 10, color: T.muted, fontFamily: 'monospace',
                 }}>
                   {formatDate(lead.last_called_at)}
-                </div>
-                <div className="lead-cell lead-cell-consent" title={consentTooltip}>
-                  {hasConsent ? (
-                    <span className="consent-badge" style={{
-                      background: '#e8f5e8',
-                      color: T.green,
-                      border: `1px solid ${T.green}`,
-                    }}>✓ CONSENT</span>
-                  ) : (
-                    <span className="consent-badge" style={{
-                      background: '#f8f4e8',
-                      color: T.amber,
-                      border: `1px solid ${T.amber}`,
-                    }}>—</span>
-                  )}
                 </div>
                 <div className="lead-cell lead-cell-attempts" style={{
                   fontSize: 11, color: lead.dial_attempts > 0 ? T.accent : T.muted,
@@ -662,49 +597,6 @@ export default function LeadsPage() {
                         {lead.last_called_at ? new Date(lead.last_called_at).toLocaleString() : '—'}
                       </span>
                     </div>
-
-                    {/* TCPA CONSENT BLOCK */}
-                    <div style={{
-                      fontSize: 9, letterSpacing: 2, color: T.muted,
-                      marginTop: 10, marginBottom: 4, fontWeight: 'bold',
-                    }}>TCPA CONSENT (one-to-one rule)</div>
-                    {hasConsent ? (
-                      <div className="consent-block">
-                        <div style={{
-                          fontSize: 9, letterSpacing: 2, color: T.green,
-                          fontWeight: 'bold', marginBottom: 6,
-                        }}>✓ CONSENT ON FILE</div>
-                        <div style={{ display: 'grid', gap: 4 }}>
-                          <div><strong style={{ color: T.muted }}>Date:</strong>{' '}
-                            <span style={{ fontFamily: 'monospace' }}>{formatDateTime(lead.consent_date)}</span>
-                          </div>
-                          {lead.consent_source && (
-                            <div><strong style={{ color: T.muted }}>Source:</strong>{' '}
-                              <span style={{ fontFamily: 'monospace' }}>{lead.consent_source}</span>
-                            </div>
-                          )}
-                          {lead.consent_description && (
-                            <div><strong style={{ color: T.muted }}>Description:</strong>{' '}
-                              <span>{lead.consent_description}</span>
-                            </div>
-                          )}
-                          {lead.consent_proof_url && (
-                            <div>
-                              <strong style={{ color: T.muted }}>Proof:</strong>{' '}
-                              <a href={lead.consent_proof_url} target="_blank" rel="noopener noreferrer" style={{
-                                color: T.blue, textDecoration: 'underline', fontFamily: 'monospace',
-                              }}>
-                                View ↗
-                              </a>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="consent-block-empty">
-                        ⚠ No consent on file. For TCPA compliance, ensure you have proof of express written consent before dialing leads under FCC&apos;s one-to-one rule (Jan 2025).
-                      </div>
-                    )}
                   </div>
 
                   <div className="lead-edit">
