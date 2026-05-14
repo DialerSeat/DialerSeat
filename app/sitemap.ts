@@ -45,4 +45,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     // Future: /privacy, /vs/readymode, /vs/mojo, /vs/phoneburner
   ]
+  
 }

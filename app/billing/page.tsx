@@ -16,6 +16,19 @@ const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
 )
 
+// Best-effort cleanup of any incomplete Stripe sub the user just
+// created. Fire-and-forget — we always redirect to landing regardless
+// of whether this succeeds. Called from any "cancel" / "back to home"
+// path on the billing page.
+async function abandonAndRedirect(router: ReturnType<typeof useRouter>) {
+  try {
+    await fetch('/api/stripe/abandon-billing', { method: 'POST' })
+  } catch {
+    // intentional — never block the redirect on cleanup failure
+  }
+  router.push('/')
+}
+
 export default function BillingPage() {
   const { user, isLoaded } = useUser()
   const router = useRouter()
@@ -27,9 +40,8 @@ export default function BillingPage() {
   const [submittingPromo, setSubmittingPromo] = useState(false)
   const [promoApplied, setPromoApplied] = useState<string | null>(null)
   const [freeWithCoupon, setFreeWithCoupon] = useState(false)
+  const [abandoning, setAbandoning] = useState(false)
 
-  // The actual subscription init request, broken out so it can be re-run
-  // when a promo code is submitted.
   const initSubscription = async (codeToApply?: string) => {
     setError(null)
     try {
@@ -55,12 +67,10 @@ export default function BillingPage() {
         return
       }
 
-      // Free coupon path — sub already active, skip Stripe Elements entirely
       if (createData.freeWithCoupon) {
         setFreeWithCoupon(true)
         setCheckingStatus(false)
         setSubmittingPromo(false)
-        // Brief delay so they see the success state, then redirect
         setTimeout(() => router.push('/dashboard'), 1500)
         return
       }
@@ -95,6 +105,13 @@ export default function BillingPage() {
     setSubmittingPromo(true)
     setClientSecret(null)
     await initSubscription()
+  }
+
+  const handleAbandon = async () => {
+    if (abandoning) return
+    setAbandoning(true)
+    await abandonAndRedirect(router)
+    // No setAbandoning(false) — we're navigating away
   }
 
   if (!isLoaded || checkingStatus) {
@@ -134,15 +151,21 @@ export default function BillingPage() {
               setCheckingStatus(true)
               initSubscription(promoApplied || undefined)
             }}
+            disabled={abandoning}
           >
             {'\u25B6'} TRY AGAIN
           </button>
           <button
             type="button"
-            onClick={() => router.push('/')}
-            style={cancelStyle}
+            onClick={handleAbandon}
+            disabled={abandoning}
+            style={{
+              ...cancelStyle,
+              opacity: abandoning ? 0.5 : 1,
+              cursor: abandoning ? 'not-allowed' : 'pointer',
+            }}
           >
-            Back to home
+            {abandoning ? 'Going back...' : 'Back to home'}
           </button>
         </div>
       </main>
@@ -246,7 +269,7 @@ export default function BillingPage() {
           // Force re-mount when clientSecret changes (e.g. after promo code applied)
           key={clientSecret}
         >
-          <CheckoutForm />
+          <CheckoutForm onAbandon={handleAbandon} abandoning={abandoning} />
         </Elements>
 
         <div style={footerNoteStyle}>
@@ -257,10 +280,15 @@ export default function BillingPage() {
   )
 }
 
-function CheckoutForm() {
+function CheckoutForm({
+  onAbandon,
+  abandoning,
+}: {
+  onAbandon: () => void
+  abandoning: boolean
+}) {
   const stripe = useStripe()
   const elements = useElements()
-  const router = useRouter()
   const [submitting, setSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [agreed, setAgreed] = useState(false)
@@ -287,7 +315,20 @@ function CheckoutForm() {
 
   return (
     <form onSubmit={handleSubmit}>
-      <PaymentElement />
+      <PaymentElement
+        options={{
+          // Accordion layout, card collapsed by default so Apple Pay /
+          // Google Pay are visible below as their own selectable rows.
+          // Card stays on top per paymentMethodOrder.
+          layout: {
+            type: 'accordion',
+            defaultCollapsed: true,
+            radios: 'auto',
+            spacedAccordionItems: false,
+          },
+          paymentMethodOrder: ['card', 'apple_pay', 'google_pay', 'link'],
+        }}
+      />
 
       <label style={agreementStyle}>
         <input
@@ -306,11 +347,11 @@ function CheckoutForm() {
 
       <button
         type="submit"
-        disabled={!stripe || submitting || !agreed}
+        disabled={!stripe || submitting || !agreed || abandoning}
         style={{
           ...buttonStyle,
-          opacity: !stripe || submitting || !agreed ? 0.5 : 1,
-          cursor: !stripe || submitting || !agreed ? 'not-allowed' : 'pointer',
+          opacity: !stripe || submitting || !agreed || abandoning ? 0.5 : 1,
+          cursor: !stripe || submitting || !agreed || abandoning ? 'not-allowed' : 'pointer',
         }}
       >
         {submitting ? 'PROCESSING...' : 'CONTINUE'}
@@ -318,10 +359,15 @@ function CheckoutForm() {
 
       <button
         type="button"
-        onClick={() => router.push('/')}
-        style={cancelStyle}
+        onClick={onAbandon}
+        disabled={submitting || abandoning}
+        style={{
+          ...cancelStyle,
+          opacity: submitting || abandoning ? 0.5 : 1,
+          cursor: submitting || abandoning ? 'not-allowed' : 'pointer',
+        }}
       >
-        Cancel
+        {abandoning ? 'CANCELING...' : 'Cancel'}
       </button>
     </form>
   )
