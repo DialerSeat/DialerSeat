@@ -20,28 +20,10 @@ const isPublicRoute = createRouteMatcher([
 ])
 
 // Auth required, no tier check needed.
-// IMPORTANT: /onboarding is here so brand-new users see the walkthrough
-// before being redirected to /billing.
 const isBillingOrOnboardingRoute = createRouteMatcher([
   '/billing(.*)',
   '/onboarding(.*)',
   '/api/stripe/(.*)',
-])
-
-const isReadOnlyAllowedRoute = createRouteMatcher([
-  '/dashboard',
-  '/dashboard/leads(.*)',
-  '/dashboard/recordings(.*)',
-  '/dashboard/analytics(.*)',
-  '/dashboard/team(.*)',
-  '/dashboard/settings(.*)',
-  '/dashboard/admin(.*)',
-  '/api/leads/list',
-  '/api/leads/export',
-  '/api/campaigns/list',
-  '/api/recordings/(.*)',
-  '/api/admin/(.*)',
-  '/api/heartbeat',
 ])
 
 const isActiveOnlyRoute = createRouteMatcher([
@@ -62,7 +44,8 @@ type AccessTier = 'active' | 'lapsed' | 'new'
 
 interface AccessState {
   tier: AccessTier
-  hasData: boolean
+  isAdmin: boolean
+  isPreserved: boolean
 }
 
 export default clerkMiddleware(async (auth, request) => {
@@ -76,36 +59,36 @@ export default clerkMiddleware(async (auth, request) => {
     return NextResponse.next()
   }
 
-  // Billing & onboarding bypass tier check — both new and lapsed users
+  // Billing & onboarding bypass everything else — both new and lapsed users
   // need to reach these to (re)subscribe.
   if (isBillingOrOnboardingRoute(request)) {
     return NextResponse.next()
   }
 
-  const { tier, hasData } = await getAccessState(userId)
+  const { tier, isAdmin, isPreserved } = await getAccessState(userId)
 
-  // ── BRAND-NEW USER WITH NO DATA → FORCE TO /billing ──────────────
-  // The case: someone signed up but never finished paying, has no leads,
-  // no campaigns, no teams. Land them at /billing every time until they
-  // either complete payment or upload data. This protects against the
-  // confused-empty-dashboard experience for first-time users.
-  //
-  // Once they have ANY data (lead, campaign, team membership), they
-  // qualify for the lapsed-read-only flow below and can return to the
-  // dashboard freely.
-  if (tier === 'new' && !hasData) {
-    const billingUrl = new URL('/billing', request.url)
-    return NextResponse.redirect(billingUrl)
+  // ── ADMIN BYPASS ─────────────────────────────────────────────────
+  // Admins get full access regardless of Stripe state. Admin status is
+  // never tied to billing — they manage the platform, they don't pay for it.
+  if (isAdmin) {
+    const res = NextResponse.next()
+    res.headers.set('x-access-tier', 'active')
+    res.headers.set('x-is-admin', '1')
+    return res
   }
 
-  // ── EVERYONE ELSE WITHOUT AN ACTIVE SUB → READ-ONLY DASHBOARD ────
-  // - 'new' + hasData: rare path (e.g. team member who joined a team
-  //   but never subscribed personally — they have team membership data,
-  //   should see the dashboard).
-  // - 'lapsed': normal returning user whose sub expired. Always allow.
-  // - Active-only API routes (outbound, leads/next, etc.) still 403 for
-  //   both groups — they can browse, not dial.
-  if (tier === 'new' || tier === 'lapsed') {
+  // ── ACTIVE SUB → FULL ACCESS ─────────────────────────────────────
+  if (tier === 'active') {
+    const res = NextResponse.next()
+    res.headers.set('x-access-tier', 'active')
+    return res
+  }
+
+  // ── PRESERVED USER → READ-ONLY DASHBOARD ─────────────────────────
+  // User has uploaded leads, created a campaign, joined a team, or otherwise
+  // has data in the system. They can view their dashboard in read-only mode
+  // but active-only routes still 403 them.
+  if (isPreserved) {
     if (isActiveOnlyRoute(request)) {
       return NextResponse.json(
         {
@@ -119,14 +102,15 @@ export default clerkMiddleware(async (auth, request) => {
 
     const res = NextResponse.next()
     res.headers.set('x-access-tier', tier)
-    res.headers.set('x-has-data', hasData ? '1' : '0')
+    res.headers.set('x-data-preserved', '1')
     return res
   }
 
-  // Active sub: full access.
-  const res = NextResponse.next()
-  res.headers.set('x-access-tier', 'active')
-  return res
+  // ── EVERYONE ELSE → /billing ─────────────────────────────────────
+  // No active sub, not an admin, no preserved data. They must subscribe
+  // or abandon (which signs them out and returns them to the landing page).
+  const billingUrl = new URL('/billing', request.url)
+  return NextResponse.redirect(billingUrl)
 })
 
 async function getAccessState(clerkId: string): Promise<AccessState> {
@@ -136,10 +120,11 @@ async function getAccessState(clerkId: string): Promise<AccessState> {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // Single query: tier from subscriptions + hasData from users.
-    // Could be Promise.all'd but Supabase JS client doesn't share a
-    // socket per request anyway, so the two awaits are fine.
-    const [{ data: subs }, { data: userRow }] = await Promise.all([
+    const [
+      { data: subs },
+      { data: userRow },
+      { data: preservedRow },
+    ] = await Promise.all([
       supabase
         .from('subscriptions')
         .select('status, current_period_end')
@@ -147,38 +132,42 @@ async function getAccessState(clerkId: string): Promise<AccessState> {
         .order('created_at', { ascending: false }),
       supabase
         .from('users')
-        .select('has_data')
+        .select('is_admin')
+        .eq('clerk_id', clerkId)
+        .maybeSingle(),
+      supabase
+        .from('data_preserved_users')
+        .select('clerk_id')
         .eq('clerk_id', clerkId)
         .maybeSingle(),
     ])
 
-    const hasData = !!userRow?.has_data
+    const isAdmin = !!userRow?.is_admin
+    const isPreserved = !!preservedRow
 
     if (!subs || subs.length === 0) {
-      return { tier: 'new', hasData }
+      return { tier: 'new', isAdmin, isPreserved }
     }
 
     const now = Date.now()
     for (const sub of subs) {
       if (ACTIVE_STATUSES.includes(sub.status)) {
-        return { tier: 'active', hasData }
+        return { tier: 'active', isAdmin, isPreserved }
       }
       if (
         sub.status === 'canceled' &&
         sub.current_period_end &&
         new Date(sub.current_period_end).getTime() > now
       ) {
-        return { tier: 'active', hasData }
+        return { tier: 'active', isAdmin, isPreserved }
       }
     }
-    return { tier: 'lapsed', hasData }
+    return { tier: 'lapsed', isAdmin, isPreserved }
   } catch (err) {
     console.error('[proxy] access state lookup failed:', err)
-    // Fail-open: if Supabase is unreachable, let the user through as if
-    // they have an active sub. Better than locking everyone out during
-    // a Supabase incident. Active-only API routes will independently
-    // fail at their own auth layer if the user genuinely doesn't qualify.
-    return { tier: 'active', hasData: true }
+    // Fail-open: if Supabase is unreachable, let the user through.
+    // Better than locking everyone out during a Supabase outage.
+    return { tier: 'active', isAdmin: false, isPreserved: true }
   }
 }
 

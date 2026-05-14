@@ -1,346 +1,614 @@
-'use client'
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useUser } from '@clerk/nextjs'
+import { auth } from '@clerk/nextjs/server'
+import { redirect } from 'next/navigation'
+import Link from "next/link"
 
-const SLIDES = [
-  {
-    eyebrow: 'IMPORT YOUR LIST IN SECONDS',
-    icon: '📥',
-    body: `Got a list of leads in a spreadsheet? Drop the CSV in and you are done. We auto-detect the names, phones, and any extra info you want to see during the call. No setup wizard. No "import templates." No tutorials to watch.`,
-    sub: 'Works with any CSV. Unlimited leads. Add as many lists as you want.',
-  },
-  {
-    eyebrow: 'CLICK ONE BUTTON. START DIALING.',
-    icon: '📞',
-    body: `Calls come through your browser. No headset software, no phone app, no PBX, no setup fees. Just plug in a microphone and you are live. We dial. They pick up. You talk. That is the whole thing.`,
-    sub: 'Skips voicemails. Marks bad numbers. Keeps you talking, not waiting.',
-  },
-  {
-    eyebrow: 'KNOW EXACTLY WHAT IS WORKING',
-    icon: '📊',
-    body: `Tag every call in one tap — Closed, Appointment, Not Interested, Do Not Call. Your dashboard tells you which campaigns convert, what your connect rate is, and where your time is best spent. No spreadsheet wrangling. Built in.`,
-    sub: 'Every call recorded. Every disposition saved. Yours forever.',
-  },
-  {
-    eyebrow: 'JOINING A TEAM?',
-    icon: '🎟️',
-    body: `If a team owner gave you a code to dial their leads, drop it here. We'll route you straight in. If you don't have one — no worries, just skip ahead.`,
-    sub: 'Team codes only. No promo codes here.',
-    isCodeSlide: true,
-  },
-] as const
-
-export default function OnboardingPage() {
-  const router = useRouter()
-  const { isLoaded, isSignedIn } = useUser()
-  const [index, setIndex] = useState(0)
-
-  // Code slide state
-  const [code, setCode] = useState('')
-  const [redeeming, setRedeeming] = useState(false)
-  const [redeemMessage, setRedeemMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null)
-
-  useEffect(() => {
-    if (isLoaded && !isSignedIn) router.push('/sign-in')
-  }, [isLoaded, isSignedIn, router])
-
-  const slide = SLIDES[index]
-  const isLast = index === SLIDES.length - 1
-  const onCodeSlide = !!(slide as any).isCodeSlide
-
-  // If user denies billing and returns later, route them to dashboard
-  // (dashboard handles lapsed/new state read-only). The "denied billing"
-  // signal is the absence of an active sub — but we shouldn't re-walk
-  // them through onboarding either. Send them to dashboard on skip.
-  const handleSkip = () => {
-    router.push('/billing')
+export default async function Home() {
+  const { userId } = await auth()
+  if (userId) {
+    redirect('/dashboard')
   }
-
-  const handleRedeem = async () => {
-    const trimmed = code.trim()
-    if (!trimmed) {
-      handleSkip()
-      return
-    }
-    setRedeeming(true)
-    setRedeemMessage(null)
-    try {
-      const res = await fetch('/api/teams/redeem', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: trimmed }),
-      })
-      const data = await res.json()
-      if (!data.success) {
-        setRedeemMessage({ type: 'error', text: data.error || 'Code not recognized' })
-        setRedeeming(false)
-        return
-      }
-      if (data.nextStep === 'redirect_to_billing') {
-        setRedeemMessage({
-          type: 'info',
-          text: `Joined ${data.team?.name || 'team'}. Heading to billing...`,
-        })
-        setTimeout(() => router.push('/billing'), 1000)
-      } else if (data.nextStep === 'awaiting_owner_approval') {
-        setRedeemMessage({
-          type: 'success',
-          text: `Request sent to ${data.team?.name || 'team'} owner. Heading to billing — you'll get access once approved.`,
-        })
-        setTimeout(() => router.push('/billing'), 1500)
-      } else if (data.nextStep === 'redirect_to_team') {
-        setRedeemMessage({
-          type: 'success',
-          text: `Joined ${data.team?.name || 'team'}. Welcome aboard!`,
-        })
-        setTimeout(() => router.push(`/dashboard/teams/${data.team.id}`), 1200)
-      } else {
-        setRedeemMessage({ type: 'success', text: 'Code redeemed.' })
-        setTimeout(() => router.push('/billing'), 1000)
-      }
-    } catch (err: any) {
-      setRedeemMessage({ type: 'error', text: err.message || 'Could not redeem code' })
-      setRedeeming(false)
-    }
-  }
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (onCodeSlide) return
-      if (e.key === 'ArrowRight' || e.key === 'Enter') {
-        e.preventDefault()
-        if (index < SLIDES.length - 1) setIndex(index + 1)
-        else handleSkip()
-      }
-      if (e.key === 'ArrowLeft' && index > 0) {
-        e.preventDefault()
-        setIndex(index - 1)
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [index, onCodeSlide])
-
-  const eyebrowText = `0${index + 1} / 0${SLIDES.length}`
 
   return (
-    <main style={{
-      minHeight: '100vh',
-      background: 'var(--background, #0a0a0f)',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '40px 20px',
-      position: 'relative',
-      overflow: 'hidden',
-    }}>
+    <main style={{ background: 'var(--background)', minHeight: '100vh', overflowX: 'hidden' }}>
       <style>{`
-        @keyframes ds-fade-up {
-          from { opacity: 0; transform: translateY(12px); }
-          to { opacity: 1; transform: translateY(0); }
+        :root {
+          --hero-fs: 80px;
+          --section-fs: 36px;
+          --cta-fs: 52px;
         }
-        .ds-onboarding-bg {
-          position: absolute;
-          inset: 0;
-          background:
-            radial-gradient(ellipse 60% 40% at 50% 0%, rgba(74,158,255,0.18) 0%, transparent 60%),
-            radial-gradient(ellipse 80% 50% at 50% 100%, rgba(42,110,255,0.12) 0%, transparent 60%);
-          pointer-events: none;
-        }
-        .ds-slide-card { animation: ds-fade-up 0.45s cubic-bezier(0.2, 0.8, 0.2, 1); }
-        .ds-onboarding-grid {
-          display: grid; grid-template-columns: 1fr; gap: 64px; align-items: center;
-        }
-        @media (min-width: 900px) {
-          .ds-onboarding-grid { grid-template-columns: 1fr 1fr; gap: 80px; }
-        }
-        .ds-icon-stage {
-          aspect-ratio: 1 / 1; max-width: 360px; width: 100%; margin: 0 auto;
-          border-radius: 32px;
-          background: linear-gradient(135deg, rgba(74,158,255,0.08), rgba(42,110,255,0.04));
-          border: 1px solid rgba(74,158,255,0.18);
-          display: flex; align-items: center; justify-content: center;
-          font-size: 140px;
-          box-shadow: 0 20px 80px rgba(74,158,255,0.15), inset 0 1px 0 rgba(255,255,255,0.04);
-        }
-        @media (min-width: 900px) {
-          .ds-icon-stage { max-width: 440px; font-size: 180px; }
-        }
-        .ds-eyebrow { font-size: 11px; letter-spacing: 6px; color: var(--accent-blue, #4a9eff); font-weight: 700; margin-bottom: 28px; }
-        .ds-headline { font-size: 36px; font-weight: 800; letter-spacing: -1px; line-height: 1.1; color: var(--text-primary, #fff); margin-bottom: 24px; }
-        @media (min-width: 900px) { .ds-headline { font-size: 48px; letter-spacing: -1.5px; } }
-        .ds-body { font-size: 16px; line-height: 1.7; color: var(--text-secondary, #a8aab2); margin-bottom: 24px; }
-        @media (min-width: 900px) { .ds-body { font-size: 17px; } }
-        .ds-sub {
-          font-size: 12px; letter-spacing: 2px; color: var(--accent-blue, #4a9eff);
-          font-weight: 700; padding: 10px 16px;
-          background: rgba(74,158,255,0.08); border: 1px solid rgba(74,158,255,0.25);
-          border-radius: 8px; display: inline-block;
-        }
-        .ds-dots { display: flex; gap: 10px; justify-content: center; }
-        .ds-dot {
-          width: 32px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.12);
-          transition: all 0.3s; cursor: pointer; border: none; padding: 0;
-        }
-        .ds-dot.active { background: var(--accent-blue, #4a9eff); box-shadow: 0 0 16px rgba(74,158,255,0.5); }
-        .ds-cta {
-          padding: 18px 48px; border-radius: 14px;
-          background: linear-gradient(135deg, #4a9eff, #2a6eff); color: white;
-          font-size: 13px; font-weight: 800; letter-spacing: 4px;
-          border: none; cursor: pointer;
-          box-shadow: 0 10px 40px rgba(74,158,255,0.35);
-          transition: transform 0.15s, box-shadow 0.15s; font-family: inherit;
-        }
-        .ds-cta:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 14px 50px rgba(74,158,255,0.5); }
-        .ds-cta:active { transform: translateY(0); }
-        .ds-cta:disabled { opacity: 0.6; cursor: not-allowed; }
-        .ds-back-btn {
-          background: transparent; border: 1px solid rgba(255,255,255,0.1); color: var(--text-secondary, #888a92);
-          padding: 18px 24px; border-radius: 14px;
-          font-size: 12px; letter-spacing: 3px; font-weight: 700; cursor: pointer;
-          transition: all 0.15s; font-family: inherit;
-        }
-        .ds-back-btn:hover { color: var(--text-primary, #fff); border-color: rgba(255,255,255,0.25); }
-        .ds-skip-btn {
-          background: transparent; border: 1px solid rgba(255,255,255,0.12);
-          color: var(--text-secondary, #888a92);
-          padding: 18px 32px; border-radius: 14px;
-          font-size: 12px; letter-spacing: 3px; font-weight: 700; cursor: pointer;
-          transition: all 0.15s; font-family: inherit;
-        }
-        .ds-skip-btn:hover { color: var(--text-primary, #fff); border-color: rgba(255,255,255,0.25); }
-        .ds-reassurance {
-          margin-top: 20px; font-size: 11px; letter-spacing: 3px;
-          color: var(--text-secondary, #666870); text-align: center;
-        }
-        .ds-reassurance strong { color: var(--text-primary, #c0c2ca); font-weight: 700; }
-        .ds-code-input {
-          width: 100%; padding: 18px 20px;
-          background: rgba(255,255,255,0.04); border: 1px solid rgba(74,158,255,0.25);
-          border-radius: 12px;
-          color: var(--text-primary, #fff);
-          font-family: 'Courier New', monospace;
-          font-size: 22px; letter-spacing: 4px; text-transform: uppercase;
-          outline: none; box-sizing: border-box;
-          transition: border-color 0.15s;
-        }
-        .ds-code-input:focus { border-color: rgba(74,158,255,0.6); }
-        .ds-redeem-msg {
-          margin-top: 14px; padding: 10px 14px; border-radius: 8px;
-          font-size: 12px; letter-spacing: 1px; line-height: 1.5;
+
+        .ds-nav { padding: 20px 60px; }
+        .ds-nav-links { display: flex; align-items: center; gap: 40px; }
+        .ds-nav-link { display: inline-block; }
+
+        .ds-hero { padding: 120px 40px 80px; }
+        .ds-stats { flex-direction: row; padding: 32px 60px; gap: 48px; }
+        .ds-section { padding: 120px 60px; }
+        .ds-grid-3 { grid-template-columns: repeat(3, 1fr); }
+        .ds-pricing-card { padding: 60px; }
+        .ds-cta-buttons { flex-direction: row; }
+
+        @media (max-width: 768px) {
+          :root {
+            --hero-fs: 44px;
+            --section-fs: 26px;
+            --cta-fs: 32px;
+          }
+          .ds-nav { padding: 14px 20px; }
+          .ds-nav-links { gap: 0; }
+          .ds-nav-link { display: none; }
+          .ds-nav-link.ds-show-mobile { display: inline-block; }
+          .ds-hero { padding: 100px 20px 60px; }
+          .ds-hero-h1 { letter-spacing: -1px !important; line-height: 1.1 !important; }
+          .ds-hero-p { font-size: 15px !important; }
+          .ds-stats {
+            flex-direction: column;
+            padding: 24px 20px;
+            gap: 24px;
+            margin-top: 60px !important;
+            width: 100%;
+            box-sizing: border-box;
+          }
+          .ds-stats-num { font-size: 28px !important; }
+          .ds-section { padding: 60px 20px; }
+          .ds-grid-3 { grid-template-columns: 1fr; }
+          .ds-pricing-card { padding: 32px 24px !important; }
+          .ds-cta-buttons { flex-direction: column; width: 100%; }
+          .ds-cta-buttons > a { width: 100%; box-sizing: border-box; text-align: center; }
+          .ds-feature-card { padding: 28px !important; }
+          .ds-step-card { flex-direction: column !important; gap: 12px !important; padding: 28px !important; }
+          .ds-step-num { font-size: 36px !important; }
+          .ds-compare-row,
+          .ds-compare-header {
+            grid-template-columns: 1.4fr 0.9fr 0.9fr 0.9fr !important;
+            padding: 14px 16px !important;
+            gap: 8px;
+          }
+          .ds-compare-cell { font-size: 11px !important; letter-spacing: 0 !important; }
+          .ds-final-cta-h2 { letter-spacing: 0 !important; }
         }
       `}</style>
 
-      <div className="ds-onboarding-bg" />
-
-      <div style={{
-        position: 'relative', width: '100%', maxWidth: 1100, flex: 1,
-        display: 'flex', flexDirection: 'column', justifyContent: 'center',
+      {/* NAV */}
+      <nav className="ds-nav" style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 50,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        background: 'rgba(10,10,15,0.9)',
+        backdropFilter: 'blur(20px)',
+        borderBottom: '1px solid var(--border)',
       }}>
-        <div key={index} className="ds-slide-card">
-          <div className="ds-onboarding-grid">
-            <div className="ds-icon-stage">
-              <span style={{ filter: 'drop-shadow(0 8px 24px rgba(74,158,255,0.4))' }}>
-                {slide.icon}
-              </span>
-            </div>
-
-            <div>
-              <div className="ds-eyebrow">{eyebrowText}</div>
-              <h1 className="ds-headline">{slide.eyebrow}</h1>
-              <p className="ds-body">{slide.body}</p>
-
-              {onCodeSlide ? (
-                <div>
-                  <input
-                    type="text"
-                    value={code}
-                    onChange={e => setCode(e.target.value.toUpperCase())}
-                    onKeyDown={e => { if (e.key === 'Enter') handleRedeem() }}
-                    placeholder="ENTER TEAM CODE"
-                    disabled={redeeming}
-                    autoFocus
-                    className="ds-code-input"
-                  />
-                  <div className="ds-sub" style={{ marginTop: 14 }}>{slide.sub}</div>
-                  {redeemMessage && (
-                    <div className="ds-redeem-msg" style={{
-                      background:
-                        redeemMessage.type === 'success' ? 'rgba(50,255,126,0.08)' :
-                        redeemMessage.type === 'error' ? 'rgba(255,100,100,0.1)' :
-                        'rgba(74,158,255,0.08)',
-                      border: `1px solid ${
-                        redeemMessage.type === 'success' ? 'rgba(50,255,126,0.4)' :
-                        redeemMessage.type === 'error' ? 'rgba(255,100,100,0.4)' :
-                        'rgba(74,158,255,0.4)'
-                      }`,
-                      color:
-                        redeemMessage.type === 'success' ? '#32ff7e' :
-                        redeemMessage.type === 'error' ? '#ff8888' :
-                        '#7ab8ff',
-                    }}>{redeemMessage.text}</div>
-                  )}
-                </div>
-              ) : (
-                <div className="ds-sub">{slide.sub}</div>
-              )}
-            </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{
+            width: '36px',
+            height: '36px',
+            borderRadius: '8px',
+            background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}>
+            <span style={{ color: 'white', fontWeight: 'bold', fontSize: '16px' }}>D</span>
           </div>
+          <span style={{
+            fontSize: '16px',
+            fontWeight: 'bold',
+            letterSpacing: '4px',
+            color: 'var(--text-primary)',
+            whiteSpace: 'nowrap',
+          }}>DIALERSEAT</span>
         </div>
 
-        <div style={{ marginTop: 64 }}>
-          <div style={{ marginBottom: 32 }}>
-            <div className="ds-dots">
-              {SLIDES.map((_, i) => (
-                <button
-                  key={i}
-                  className={`ds-dot ${i === index ? 'active' : ''}`}
-                  onClick={() => setIndex(i)}
-                  aria-label={`Go to slide ${i + 1}`}
-                />
-              ))}
+        <div className="ds-nav-links">
+          <Link href="#features" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>FEATURES</Link>
+          <Link href="#pricing" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>PRICING</Link>
+          <Link href="#compare" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>COMPARE</Link>
+          <Link href="/sign-in" className="ds-nav-link ds-show-mobile" style={{ fontSize: '11px', letterSpacing: '2px', color: 'var(--text-primary)', textDecoration: 'none', padding: '8px 14px', border: '1px solid var(--border)', borderRadius: '8px', whiteSpace: 'nowrap' }}>SIGN IN</Link>
+          <Link href="/sign-up" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'white', textDecoration: 'none', padding: '10px 20px', borderRadius: '8px', background: 'linear-gradient(135deg, #4a9eff, #2a6eff)', whiteSpace: 'nowrap' }}>GET STARTED</Link>
+        </div>
+      </nav>
+
+      {/* HERO */}
+      <section className="ds-hero" style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100vh',
+        textAlign: 'center',
+      }}>
+        <div style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '8px 20px',
+          borderRadius: '100px',
+          border: '1px solid var(--border)',
+          color: 'var(--accent-blue)',
+          background: 'rgba(74,158,255,0.05)',
+          fontSize: '11px',
+          letterSpacing: '3px',
+          marginBottom: '40px',
+          textAlign: 'center',
+        }}>
+          <div style={{
+            width: '6px', height: '6px', borderRadius: '50%',
+            background: 'var(--accent-blue)', flexShrink: 0,
+          }}></div>
+          $35/WEEK · NO CONTRACTS · CANCEL ANYTIME
+        </div>
+
+        <h1 className="ds-hero-h1" style={{
+          fontSize: 'var(--hero-fs)',
+          fontWeight: 'bold',
+          letterSpacing: '-2px',
+          lineHeight: '1.05',
+          marginBottom: '32px',
+          maxWidth: '900px',
+        }}>
+          <span style={{ color: 'var(--text-primary)' }}>DIAL </span>
+          <span style={{
+            background: 'linear-gradient(135deg, #4a9eff, #a0c4ff)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+          }}>SMARTER.</span>
+          <br />
+          <span style={{ color: 'var(--text-primary)' }}>CLOSE </span>
+          <span style={{ color: 'var(--accent-silver)' }}>FASTER.</span>
+        </h1>
+
+        <p className="ds-hero-p" style={{
+          fontSize: '18px',
+          lineHeight: '1.7',
+          letterSpacing: '0.5px',
+          color: 'var(--text-secondary)',
+          maxWidth: '600px',
+          marginBottom: '40px',
+          padding: '0 8px',
+        }}>
+          The professional outbound dialer built for <u>ANYONE</u> who lives on the phone. Upload your leads, launch your campaigns, and let DialerSeat do the heavy lifting — for a fraction of what everyone else charges.
+        </p>
+
+        <div className="ds-cta-buttons" style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '16px',
+          marginBottom: '24px',
+          maxWidth: 480,
+        }}>
+          <Link href="/sign-up" style={{
+            padding: '16px 40px',
+            borderRadius: '12px',
+            fontSize: '13px',
+            fontWeight: 'bold',
+            letterSpacing: '3px',
+            color: 'white',
+            textDecoration: 'none',
+            background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+            boxShadow: '0 0 40px rgba(74,158,255,0.3)',
+          }}>
+            GET STARTED
+          </Link>
+          <Link href="#compare" style={{
+            padding: '16px 40px',
+            borderRadius: '12px',
+            fontSize: '13px',
+            fontWeight: 'bold',
+            letterSpacing: '3px',
+            color: 'var(--text-primary)',
+            textDecoration: 'none',
+            border: '1px solid var(--border)',
+          }}>
+            SEE HOW WE COMPARE
+          </Link>
+        </div>
+
+        <p style={{ fontSize: '11px', letterSpacing: '3px', color: 'var(--text-secondary)' }}>
+          $35/WEEK · NO CONTRACTS · CANCEL ANYTIME
+        </p>
+
+        {/* STATS BAR */}
+        <div className="ds-stats" style={{
+          display: 'flex',
+          alignItems: 'center',
+          marginTop: '80px',
+          borderRadius: '16px',
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          maxWidth: '100%',
+          boxSizing: 'border-box',
+        }}>
+          {[
+            { number: '$35', label: 'PER WEEK' },
+            { number: '5X', label: 'CHEAPER THAN OTHERS' },
+            { number: '$0', label: 'SETUP FEES' },
+            { number: '∞', label: 'LEADS UPLOADED' },
+          ].map((stat, i) => (
+            <div key={i} style={{ textAlign: 'center', flex: 1 }}>
+              <div className="ds-stats-num" style={{
+                fontSize: '36px',
+                fontWeight: 'bold',
+                color: 'var(--accent-blue)',
+                letterSpacing: '-1px',
+                marginBottom: '6px',
+              }}>{stat.number}</div>
+              <div style={{
+                fontSize: '10px',
+                letterSpacing: '3px',
+                color: 'var(--text-secondary)',
+              }}>{stat.label}</div>
             </div>
+          ))}
+        </div>
+      </section>
+
+      {/* FEATURES */}
+      <section id="features" className="ds-section" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: '64px' }}>
+          <h2 style={{
+            fontSize: 'var(--section-fs)',
+            fontWeight: 'bold',
+            letterSpacing: '6px',
+            color: 'var(--text-primary)',
+            marginBottom: '16px',
+          }}>BUILT FOR VOLUME</h2>
+          <p style={{ fontSize: '12px', letterSpacing: '4px', color: 'var(--text-secondary)' }}>
+            FOR SALES TEAMS, CALL CENTERS, AGENCIES, AND <u>ANYONE</u> WHO WORKS LEADS.
+          </p>
+        </div>
+
+        <div className="ds-grid-3" style={{ display: 'grid', gap: '20px' }}>
+          {[
+            { icon: '⚡', title: 'PREDICTIVE DIALING', desc: 'Multiple leads dialed at once. The first to pick up is yours. Maximum live conversations per hour, every hour.' },
+            { icon: '🎙️', title: 'IDENTIFIES VOICEMAIL', desc: 'Stop wasting your day on dead air. DialerSeat knows when a machine answers and skips ahead to the next live human.' },
+            { icon: '📋', title: 'MULTIPLE CAMPAIGNS', desc: 'Run unlimited campaigns simultaneously. Upload a CSV, name it, and you are dialing in seconds.' },
+            { icon: '🎯', title: 'MEMORY OF MARKED LEADS', desc: 'Every disposition, callback, and note remembers itself. Your work is never lost between sessions or seats.' },
+            { icon: '📞', title: 'MANUAL DIALER', desc: 'When you want to control every call yourself, we have you. Click-to-dial individual numbers any time.' },
+            { icon: '🏢', title: 'TEAM WORKFLOW', desc: 'Buy seats for your whole crew. Each agent gets their own login, campaigns, and call data — all under one roof.' },
+            { icon: '🌎', title: 'WORKS GLOBALLY', desc: 'Dial anywhere on the map. International leads supported with the same simple weekly rate.' },
+            { icon: '✨', title: 'CLEAN, PLUG-AND-PLAY UI', desc: 'No bloat, no setup wizard, no learning curve. Sign in, upload, dial. Works on desktop and mobile.' },
+            { icon: '🔒', title: 'YOUR DATA, ALWAYS YOURS', desc: 'Your leads stay saved even if your subscription lapses. Pick up right where you left off — no questions asked.' },
+          ].map((f, i) => (
+            <div key={i} className="ds-feature-card" style={{
+              padding: '36px',
+              borderRadius: '16px',
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+            }}>
+              <div style={{ fontSize: '28px', marginBottom: '16px' }}>{f.icon}</div>
+              <h3 style={{
+                fontSize: '12px',
+                fontWeight: 'bold',
+                letterSpacing: '3px',
+                color: 'var(--text-primary)',
+                marginBottom: '12px',
+              }}>{f.title}</h3>
+              <p style={{
+                fontSize: '13px',
+                lineHeight: '1.7',
+                color: 'var(--text-secondary)',
+              }}>{f.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* HOW IT WORKS */}
+      <section className="ds-section" style={{ maxWidth: '900px', margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: '64px' }}>
+          <h2 style={{
+            fontSize: 'var(--section-fs)',
+            fontWeight: 'bold',
+            letterSpacing: '6px',
+            color: 'var(--text-primary)',
+            marginBottom: '16px',
+          }}>HOW IT WORKS</h2>
+          <p style={{ fontSize: '12px', letterSpacing: '4px', color: 'var(--text-secondary)' }}>
+            FROM ZERO TO DIALING IN UNDER 2 MINUTES.
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {[
+            { step: '01', title: 'CREATE YOUR ACCOUNT', desc: 'Sign up with Google or email. Enter your card and you are dialing in seconds. $35 weekly, cancel anytime.' },
+            { step: '02', title: 'UPLOAD YOUR LEADS', desc: 'Drop your CSV into a campaign. Name it, organize it, and have multiple campaigns ready to go simultaneously.' },
+            { step: '03', title: 'HIT DIAL AND GO', desc: 'Launch your campaign and DialerSeat starts working immediately. Live connections come through the second someone picks up.' },
+            { step: '04', title: 'TRACK AND CLOSE', desc: 'Disposition every call in one click. Track your performance in real time. Rinse and repeat until your list is done.' },
+          ].map((step, i) => (
+            <div key={i} className="ds-step-card" style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '32px',
+              padding: '36px',
+              borderRadius: '16px',
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+            }}>
+              <div className="ds-step-num" style={{
+                fontSize: '48px',
+                fontWeight: 'bold',
+                color: 'var(--accent-blue)',
+                opacity: 0.3,
+                lineHeight: 1,
+                flexShrink: 0,
+                letterSpacing: '-2px',
+              }}>{step.step}</div>
+              <div>
+                <h3 style={{
+                  fontSize: '13px',
+                  fontWeight: 'bold',
+                  letterSpacing: '3px',
+                  color: 'var(--text-primary)',
+                  marginBottom: '12px',
+                }}>{step.title}</h3>
+                <p style={{
+                  fontSize: '14px',
+                  lineHeight: '1.7',
+                  color: 'var(--text-secondary)',
+                }}>{step.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* COMPARE */}
+      <section id="compare" className="ds-section" style={{ maxWidth: '900px', margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: '64px' }}>
+          <h2 style={{
+            fontSize: 'var(--section-fs)',
+            fontWeight: 'bold',
+            letterSpacing: '6px',
+            color: 'var(--text-primary)',
+            marginBottom: '16px',
+          }}>WHY DIALERSEAT</h2>
+          <p style={{ fontSize: '12px', letterSpacing: '4px', color: 'var(--text-secondary)' }}>
+            THE NUMBERS SPEAK FOR THEMSELVES.
+          </p>
+        </div>
+
+        <div style={{ borderRadius: '20px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+          <div className="ds-compare-header" style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr 1fr 1fr',
+            padding: '20px 32px',
+            background: 'var(--surface-2)',
+            borderBottom: '1px solid var(--border)',
+          }}>
+            <div className="ds-compare-cell" style={{ fontSize: '11px', letterSpacing: '3px', color: 'var(--text-secondary)' }}>FEATURE</div>
+            <div className="ds-compare-cell" style={{ fontSize: '11px', letterSpacing: '3px', color: 'var(--accent-blue)', textAlign: 'center' }}>DIALERSEAT</div>
+            <div className="ds-compare-cell" style={{ fontSize: '11px', letterSpacing: '3px', color: 'var(--text-secondary)', textAlign: 'center' }}>READYMODE</div>
+            <div className="ds-compare-cell" style={{ fontSize: '11px', letterSpacing: '3px', color: 'var(--text-secondary)', textAlign: 'center' }}>OTHERS</div>
           </div>
+
+          {[
+            { feature: 'Weekly Cost', us: '$35', them1: '$199+/mo', them2: '$150+/mo' },
+            { feature: 'No Contract', us: '✓', them1: '✗', them2: '✗' },
+            { feature: 'Setup Fee', us: '$0', them1: '$0', them2: '$200+' },
+            { feature: 'Plug & Play', us: '✓', them1: '✗', them2: '✗' },
+            { feature: 'Predictive Dialing', us: '✓', them1: '✓', them2: 'Limited' },
+            { feature: 'Identifies Voicemail', us: '✓', them1: '✓', them2: '✗' },
+            { feature: 'Manual Dialer', us: '✓', them1: '✗', them2: '✓' },
+            { feature: 'Multi Campaign', us: '✓', them1: '✓', them2: '✓' },
+            { feature: 'Unlimited Leads', us: '✓', them1: '✓', them2: 'Limited' },
+            { feature: 'Memory of Marked Leads', us: '✓', them1: 'Limited', them2: '✗' },
+            { feature: 'Data Saved Always', us: '✓', them1: '✗', them2: '✗' },
+            { feature: 'Team Workflow', us: '✓', them1: '✓', them2: 'Add-on' },
+            { feature: 'Works on Mobile', us: '✓', them1: '✗', them2: '✗' },
+            { feature: 'Works Globally', us: '✓', them1: 'US/CA', them2: 'Limited' },
+            { feature: 'Satisfaction Priority', us: '✓', them1: '✗', them2: '✗' },
+          ].map((row, i, arr) => (
+            <div key={i} className="ds-compare-row" style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr 1fr 1fr',
+              padding: '16px 32px',
+              borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none',
+              background: i % 2 === 0 ? 'var(--surface)' : 'transparent',
+            }}>
+              <div className="ds-compare-cell" style={{ fontSize: '13px', letterSpacing: '1px', color: 'var(--text-secondary)' }}>{row.feature}</div>
+              <div className="ds-compare-cell" style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--accent-blue)', textAlign: 'center' }}>{row.us}</div>
+              <div className="ds-compare-cell" style={{ fontSize: '13px', color: 'var(--text-secondary)', textAlign: 'center', opacity: 0.6 }}>{row.them1}</div>
+              <div className="ds-compare-cell" style={{ fontSize: '13px', color: 'var(--text-secondary)', textAlign: 'center', opacity: 0.6 }}>{row.them2}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* PRICING */}
+      <section id="pricing" className="ds-section">
+        <div style={{ textAlign: 'center', marginBottom: '64px' }}>
+          <h2 style={{
+            fontSize: 'var(--section-fs)',
+            fontWeight: 'bold',
+            letterSpacing: '6px',
+            color: 'var(--text-primary)',
+            marginBottom: '16px',
+          }}>SIMPLE PRICING</h2>
+          <p style={{ fontSize: '12px', letterSpacing: '4px', color: 'var(--text-secondary)' }}>
+            ONE PLAN. EVERYTHING INCLUDED. NO SURPRISES.
+          </p>
+        </div>
+
+        <div className="ds-pricing-card" style={{
+          maxWidth: '440px',
+          margin: '0 auto',
+          borderRadius: '24px',
+          background: 'var(--surface)',
+          border: '1px solid var(--accent-blue)',
+          boxShadow: '0 0 80px rgba(74,158,255,0.08)',
+          textAlign: 'center',
+        }}>
+          <div style={{
+            fontSize: '11px',
+            letterSpacing: '4px',
+            color: 'var(--accent-blue)',
+            marginBottom: '24px',
+          }}>DIALERSEAT PRO</div>
+
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
+            <span style={{ fontSize: '64px', fontWeight: 'bold', lineHeight: 1, color: 'var(--text-primary)' }}>$35</span>
+            <span style={{ fontSize: '16px', color: 'var(--text-secondary)', marginBottom: '10px' }}>/week</span>
+          </div>
+
+          <p style={{
+            fontSize: '11px',
+            letterSpacing: '3px',
+            color: 'var(--text-secondary)',
+            marginBottom: '16px',
+          }}>PER SEAT · BILLED WEEKLY · CANCEL ANYTIME</p>
 
           <div style={{
-            display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+            display: 'inline-block',
+            padding: '8px 20px',
+            borderRadius: '100px',
+            background: 'rgba(74,158,255,0.1)',
+            border: '1px solid var(--accent-blue)',
+            fontSize: '11px',
+            letterSpacing: '3px',
+            color: 'var(--accent-blue)',
+            marginBottom: '40px',
           }}>
-            {index > 0 && !redeeming && (
-              <button className="ds-back-btn" onClick={() => setIndex(index - 1)} aria-label="Previous slide">
-                ← BACK
-              </button>
-            )}
-
-            {!isLast ? (
-              <button className="ds-cta" onClick={() => setIndex(index + 1)}>
-                NEXT →
-              </button>
-            ) : onCodeSlide ? (
-              <>
-                <button className="ds-skip-btn" onClick={handleSkip} disabled={redeeming}>
-                  SKIP
-                </button>
-                <button className="ds-cta" onClick={handleRedeem} disabled={redeeming}>
-                  {redeeming ? 'REDEEMING...' : code.trim() ? 'REDEEM & CONTINUE →' : 'CONTINUE →'}
-                </button>
-              </>
-            ) : (
-              <button className="ds-cta" onClick={handleSkip}>
-                GET STARTED →
-              </button>
-            )}
+            FIRST CHARGE TODAY · CANCEL ANYTIME
           </div>
 
-          {isLast && !onCodeSlide && (
-            <div className="ds-reassurance">
-              <strong>$35/WEEK</strong> · CANCEL ANYTIME · NO CONTRACTS
-            </div>
-          )}
+          <div style={{ marginBottom: '40px', textAlign: 'left' }}>
+            {[
+              'Predictive dialing engine',
+              'Voicemail detection',
+              'Unlimited outbound calling',
+              'Unlimited lead uploads',
+              'Multiple simultaneous campaigns',
+              'Disposition memory across sessions',
+              'Team seat management',
+              'Works globally',
+              'Your data saved forever',
+              'No setup fees ever',
+            ].map((feature, i) => (
+              <div key={i} style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '14px',
+                marginBottom: '16px',
+              }}>
+                <div style={{
+                  width: '20px',
+                  height: '20px',
+                  borderRadius: '50%',
+                  background: 'rgba(74,158,255,0.1)',
+                  border: '1px solid var(--accent-blue)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}>
+                  <span style={{ fontSize: '10px', color: 'var(--accent-blue)' }}>✓</span>
+                </div>
+                <span style={{ fontSize: '13px', letterSpacing: '0.5px', color: 'var(--text-secondary)' }}>{feature}</span>
+              </div>
+            ))}
+          </div>
+
+          <Link href="/sign-up" style={{
+            display: 'block',
+            padding: '16px',
+            borderRadius: '12px',
+            fontSize: '13px',
+            fontWeight: 'bold',
+            letterSpacing: '3px',
+            color: 'white',
+            textDecoration: 'none',
+            background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+            boxShadow: '0 0 30px rgba(74,158,255,0.3)',
+            marginBottom: '16px',
+          }}>
+            GET STARTED
+          </Link>
+          <p style={{ fontSize: '11px', letterSpacing: '2px', color: 'var(--text-secondary)' }}>
+            $35 CHARGED TODAY · CANCEL ANYTIME
+          </p>
         </div>
-      </div>
+      </section>
+
+      {/* FINAL CTA */}
+      <section className="ds-section" style={{
+        textAlign: 'center',
+        maxWidth: '800px',
+        margin: '0 auto',
+      }}>
+        <h2 className="ds-final-cta-h2" style={{
+          fontSize: 'var(--cta-fs)',
+          fontWeight: 'bold',
+          letterSpacing: '-1px',
+          color: 'var(--text-primary)',
+          marginBottom: '24px',
+          lineHeight: '1.1',
+        }}>
+          STOP PAYING TOO MUCH.<br />
+          <span style={{
+            background: 'linear-gradient(135deg, #4a9eff, #a0c4ff)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+          }}>START CLOSING MORE.</span>
+        </h2>
+        <p style={{
+          fontSize: '15px',
+          letterSpacing: '0.5px',
+          color: 'var(--text-secondary)',
+          marginBottom: '40px',
+          lineHeight: '1.7',
+        }}>
+          Join the dialer built for the people actually making the calls. No fluff, no bloat, no contracts. Just pure dialing power at a price that makes sense.
+        </p>
+        <Link href="/sign-up" style={{
+          display: 'inline-block',
+          padding: '20px 60px',
+          borderRadius: '14px',
+          fontSize: '14px',
+          fontWeight: 'bold',
+          letterSpacing: '4px',
+          color: 'white',
+          textDecoration: 'none',
+          background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+          boxShadow: '0 0 60px rgba(74,158,255,0.4)',
+        }}>
+          GET STARTED
+        </Link>
+        <p style={{ marginTop: '20px', fontSize: '11px', letterSpacing: '3px', color: 'var(--text-secondary)' }}>
+          $35/WEEK · NO CONTRACTS · CANCEL ANYTIME
+        </p>
+      </section>
+
+      {/* FOOTER */}
+      <footer style={{
+        padding: '40px 20px',
+        textAlign: 'center',
+        borderTop: '1px solid var(--border)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '16px' }}>
+          <div style={{
+            width: '28px',
+            height: '28px',
+            borderRadius: '6px',
+            background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            <span style={{ color: 'white', fontWeight: 'bold', fontSize: '12px' }}>D</span>
+          </div>
+          <span style={{ fontSize: '14px', fontWeight: 'bold', letterSpacing: '6px', color: 'var(--text-primary)' }}>DIALERSEAT</span>
+        </div>
+        <p style={{ fontSize: '11px', letterSpacing: '3px', color: 'var(--text-secondary)' }}>
+          © {new Date().getFullYear()} DIALERSEAT · ALL RIGHTS RESERVED
+        </p>
+      </footer>
+
     </main>
   )
 }

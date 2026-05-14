@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useUser } from '@clerk/nextjs'
+import { useUser, useClerk } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { loadStripe } from '@stripe/stripe-js'
 import {
@@ -16,21 +16,9 @@ const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
 )
 
-// Best-effort cleanup of any incomplete Stripe sub the user just
-// created. Fire-and-forget — we always redirect to landing regardless
-// of whether this succeeds. Called from any "cancel" / "back to home"
-// path on the billing page.
-async function abandonAndRedirect(router: ReturnType<typeof useRouter>) {
-  try {
-    await fetch('/api/stripe/abandon-billing', { method: 'POST' })
-  } catch {
-    // intentional — never block the redirect on cleanup failure
-  }
-  router.push('/')
-}
-
 export default function BillingPage() {
   const { user, isLoaded } = useUser()
+  const { signOut } = useClerk()
   const router = useRouter()
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -41,6 +29,26 @@ export default function BillingPage() {
   const [promoApplied, setPromoApplied] = useState<string | null>(null)
   const [freeWithCoupon, setFreeWithCoupon] = useState(false)
   const [abandoning, setAbandoning] = useState(false)
+
+  // Abandon billing → clean up incomplete Stripe sub → sign out → landing.
+  // This is the ONLY exit path from the billing page that isn't "successful payment".
+  // No more landing them in a stale dashboard state. Sign out is the source of truth:
+  // they leave with no session, hit the landing page, can decide whether to come back.
+  async function abandonAndSignOut() {
+    if (abandoning) return
+    setAbandoning(true)
+    try {
+      await fetch('/api/stripe/abandon-billing', { method: 'POST' })
+    } catch {
+      // Best-effort. Sign out happens regardless.
+    }
+    try {
+      await signOut({ redirectUrl: '/' })
+    } catch {
+      // If signOut fails for some reason, force navigation anyway
+      router.push('/')
+    }
+  }
 
   const initSubscription = async (codeToApply?: string) => {
     setError(null)
@@ -107,13 +115,6 @@ export default function BillingPage() {
     await initSubscription()
   }
 
-  const handleAbandon = async () => {
-    if (abandoning) return
-    setAbandoning(true)
-    await abandonAndRedirect(router)
-    // No setAbandoning(false) — we're navigating away
-  }
-
   if (!isLoaded || checkingStatus) {
     return (
       <main style={pageStyle}>
@@ -157,7 +158,7 @@ export default function BillingPage() {
           </button>
           <button
             type="button"
-            onClick={handleAbandon}
+            onClick={abandonAndSignOut}
             disabled={abandoning}
             style={{
               ...cancelStyle,
@@ -200,7 +201,6 @@ export default function BillingPage() {
           </ul>
         </div>
 
-        {/* PROMO CODE BLOCK */}
         <div style={promoBoxStyle}>
           {promoApplied ? (
             <div style={promoAppliedStyle}>
@@ -266,10 +266,9 @@ export default function BillingPage() {
               },
             },
           }}
-          // Force re-mount when clientSecret changes (e.g. after promo code applied)
           key={clientSecret}
         >
-          <CheckoutForm onAbandon={handleAbandon} abandoning={abandoning} />
+          <CheckoutForm onAbandon={abandonAndSignOut} abandoning={abandoning} />
         </Elements>
 
         <div style={footerNoteStyle}>
@@ -317,9 +316,6 @@ function CheckoutForm({
     <form onSubmit={handleSubmit}>
       <PaymentElement
         options={{
-          // Accordion layout, card collapsed by default so Apple Pay /
-          // Google Pay are visible below as their own selectable rows.
-          // Card stays on top per paymentMethodOrder.
           layout: {
             type: 'accordion',
             defaultCollapsed: true,
@@ -470,7 +466,7 @@ const promoInputStyle: React.CSSProperties = {
   border: '1px solid #2a4a8a',
   borderRadius: 3,
   fontFamily: 'monospace',
-  fontSize: 13,
+  fontSize: 16,
   color: '#4a9eff',
   outline: 'none',
   letterSpacing: 2,
