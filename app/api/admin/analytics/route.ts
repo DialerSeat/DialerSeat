@@ -34,14 +34,6 @@ function dayKey(ms: number) {
   return d.toISOString().slice(0, 10)
 }
 
-// ── 100%-off coupon classifier ─────────────────────────────────
-// Looks up a coupon code in Stripe and returns true if it nullifies
-// the entire $35 price. Results are cached per request lifecycle in
-// the passed-in Map so we hit Stripe at most once per distinct code.
-//
-// Fail-conservative: if Stripe is unreachable, we treat the coupon as
-// 100%-off (i.e., exclude the user from monetary metrics). Better to
-// under-count revenue than over-count during a Stripe outage.
 async function isFullDiscountCoupon(
   code: string,
   cache: Map<string, boolean>
@@ -50,7 +42,6 @@ async function isFullDiscountCoupon(
   if (cached !== undefined) return cached
 
   try {
-    // Try as a coupon ID first (admin-created codes like 'owner_free')
     try {
       const coupon = await stripe.coupons.retrieve(code)
       const isFull =
@@ -59,7 +50,7 @@ async function isFullDiscountCoupon(
       cache.set(code, isFull)
       return isFull
     } catch {
-      // Not a coupon ID — try as a promotion code (user-facing)
+      // Not a coupon ID — try as a promotion code
     }
 
     const promos = await stripe.promotionCodes.list({
@@ -68,9 +59,6 @@ async function isFullDiscountCoupon(
       expand: ['data.coupon'],
     })
     if (promos.data.length > 0) {
-      // The Dahlia SDK no longer types `coupon` directly on PromotionCode,
-      // but it's present on the response when expanded. Cast through unknown
-      // to get a typed view of the coupon fields we need.
       const promo = promos.data[0] as unknown as {
         coupon: { percent_off: number | null; amount_off: number | null }
       }
@@ -82,12 +70,10 @@ async function isFullDiscountCoupon(
       return isFull
     }
 
-    // Unknown code — treat as not full discount (partial / legitimate revenue).
     cache.set(code, false)
     return false
   } catch (err) {
     console.warn(`[admin/analytics] coupon lookup failed for "${code}":`, err)
-    // Fail-conservative: assume full discount on lookup failure.
     cache.set(code, true)
     return true
   }
@@ -109,40 +95,46 @@ export async function GET(req: NextRequest) {
   const now = Date.now()
   const day = 86400000
 
-  // 1) All users
+  // 1) All users — and a Set of excluded clerk_ids (admins + dev accounts).
+  // Excluded users contribute to nothing: not signups, not seats, not WRR,
+  // not series, not heatmap, not hot prospects, not at-risk, not cohort.
+  // is_admin and exclude_from_analytics are both honored, either flips you off.
   const { data: users } = await supabase
     .from('users')
-    .select('clerk_id, email, first_name, last_name, created_at, last_seen_at')
+    .select('clerk_id, email, first_name, last_name, created_at, last_seen_at, is_admin, exclude_from_analytics')
 
-  const totalUsers = users?.length || 0
-  const usersInRange = (users || []).filter(u => {
+  const excluded = new Set<string>()
+  for (const u of users || []) {
+    if (u.is_admin || u.exclude_from_analytics) excluded.add(u.clerk_id)
+  }
+
+  const realUsers = (users || []).filter(u => !excluded.has(u.clerk_id))
+  const totalUsers = realUsers.length
+  const usersInRange = realUsers.filter(u => {
     const t = new Date(u.created_at).getTime()
     return t >= start && t <= end
   })
 
-  // 2) Subscriptions
-  const { data: subs } = await supabase
+  // 2) Subscriptions — drop anything belonging to an excluded user
+  const { data: rawSubs } = await supabase
     .from('subscriptions')
     .select(`
       user_id, status, current_period_end, cancel_at_period_end,
       created_at, canceled_at, discount_coupon
     `)
 
+  const subs = (rawSubs || []).filter(s => !excluded.has(s.user_id))
+
   const subByUser = new Map<string, any>()
-  for (const s of subs || []) {
+  for (const s of subs) {
     const existing = subByUser.get(s.user_id)
     const isLive = ACTIVE_STATUSES.includes(s.status)
     if (!existing || isLive) subByUser.set(s.user_id, s)
   }
 
-  // ── Coupon classification ──────────────────────────────────────
-  // For every sub with a discount_coupon, classify it as either:
-  //   - 100%-off (exclude from monetary metrics: seats, WRR, MRR, cohorts)
-  //   - partial discount (legitimate revenue — keep in monetary metrics)
-  // Activity metrics (calls, signups, etc.) still count both types.
   const couponCache = new Map<string, boolean>()
   const uniqueCoupons = new Set<string>()
-  for (const s of subs || []) {
+  for (const s of subs) {
     if (s.discount_coupon) uniqueCoupons.add(s.discount_coupon)
   }
   await Promise.all(
@@ -153,8 +145,6 @@ export async function GET(req: NextRequest) {
 
   const latestSubs = Array.from(subByUser.values())
   const activeSubs = latestSubs.filter(s => ACTIVE_STATUSES.includes(s.status))
-  // "Paying" = active sub + NOT on a 100%-off coupon.
-  // Partial-discount coupons (e.g., 20% off) count as paying.
   const payingActiveSubs = activeSubs.filter(s => !isFullDiscount(s.discount_coupon))
   const fullDiscountSubs = activeSubs.filter(s => isFullDiscount(s.discount_coupon))
   const payingUserIds = new Set(payingActiveSubs.map(s => s.user_id))
@@ -165,17 +155,13 @@ export async function GET(req: NextRequest) {
   // 3) Range-bound metrics
   const signupsInRange = usersInRange.length
 
-  // Paid conversions = new subs in range that AREN'T 100%-off coupon'd.
-  // A partial-discount promo signup is still a real conversion.
-  const paidConversionsInRange = (subs || []).filter(s => {
+  const paidConversionsInRange = subs.filter(s => {
     if (isFullDiscount(s.discount_coupon)) return false
     const t = new Date(s.created_at).getTime()
     return t >= start && t <= end
   }).length
 
-  // Cancellations only count for users who were ever actually paying.
-  // A coupon'd test account "cancelling" isn't a real churn event.
-  const cancellationsInRange = (subs || []).filter(s => {
+  const cancellationsInRange = subs.filter(s => {
     if (isFullDiscount(s.discount_coupon)) return false
     if (s.status !== 'canceled') return false
     if (!s.canceled_at) return false
@@ -190,9 +176,9 @@ export async function GET(req: NextRequest) {
 
   const netNewPaying = paidConversionsInRange - cancellationsInRange
 
-  // 4) Week-over-week paying users delta — growth velocity
+  // 4) Week-over-week paying users delta
   const oneWeekAgo = now - 7 * day
-  const payingUsersOneWeekAgo = (subs || []).filter(s => {
+  const payingUsersOneWeekAgo = subs.filter(s => {
     if (isFullDiscount(s.discount_coupon)) return false
     const created = new Date(s.created_at).getTime()
     if (created > oneWeekAgo) return false
@@ -208,8 +194,8 @@ export async function GET(req: NextRequest) {
     ? Number(((wowDelta / payingUsersOneWeekAgo) * 100).toFixed(1))
     : (payingActiveSubs.length > 0 ? 100 : 0)
 
-  // 5) Avg lifetime — only counts users who were ever actually paying.
-  const churned = (subs || []).filter(s =>
+  // 5) Avg lifetime
+  const churned = subs.filter(s =>
     !isFullDiscount(s.discount_coupon) && s.status === 'canceled' && s.canceled_at && s.created_at
   )
   let avgLifetimeWeeks = 0
@@ -221,7 +207,7 @@ export async function GET(req: NextRequest) {
     avgLifetimeWeeks = Number((sum / churned.length).toFixed(1))
   }
 
-  // 6) At-risk paying users — paying but no calls in 14+ days.
+  // 6) At-risk paying users
   const atRiskUsers: any[] = []
   if (payingUserIds.size > 0) {
     const lastCallByUser = new Map<string, string>()
@@ -239,7 +225,7 @@ export async function GET(req: NextRequest) {
     )
 
     const cutoff = now - AT_RISK_DAYS * day
-    const userByClerkId = new Map((users || []).map(u => [u.clerk_id, u]))
+    const userByClerkId = new Map(realUsers.map(u => [u.clerk_id, u]))
 
     for (const uid of payingUserIds) {
       const u = userByClerkId.get(uid)
@@ -262,15 +248,12 @@ export async function GET(req: NextRequest) {
     atRiskUsers.sort((a, b) => (b.days_silent ?? Infinity) - (a.days_silent ?? Infinity))
   }
 
-  // 7) Hot prospects — non-paying users with calls in last 7 days.
-  // Note: users on 100%-off coupons are technically non-paying, but
-  // we exclude them from hot prospects too — they're test accounts
-  // or comped users, not conversion opportunities.
+  // 7) Hot prospects
   const hotProspects: any[] = []
   const sevenDaysAgo = now - 7 * day
   const sevenDaysAgoIso = new Date(sevenDaysAgo).toISOString()
   const fullDiscountUserIds = new Set(fullDiscountSubs.map(s => s.user_id))
-  const nonPayingUsers = (users || []).filter(u =>
+  const nonPayingUsers = realUsers.filter(u =>
     !payingUserIds.has(u.clerk_id) && !fullDiscountUserIds.has(u.clerk_id)
   )
 
@@ -309,7 +292,7 @@ export async function GET(req: NextRequest) {
     hotProspects.sort((a, b) => b.calls_7d - a.calls_7d)
   }
 
-  // 8) Daily series — signups + cumulative paying revenue
+  // 8) Daily series
   const totalDays = Math.max(1, Math.ceil((end - start) / day))
   const useWeekly = totalDays > 120
   const bucketSize = useWeekly ? 7 * day : day
@@ -330,7 +313,7 @@ export async function GET(req: NextRequest) {
   for (let i = 0; i < buckets.length; i++) {
     const bucketEnd = start + (i + 1) * bucketSize
     let activeAtBucket = 0
-    for (const s of subs || []) {
+    for (const s of subs) {
       if (isFullDiscount(s.discount_coupon)) continue
       const created = new Date(s.created_at).getTime()
       if (created > bucketEnd) continue
@@ -343,16 +326,16 @@ export async function GET(req: NextRequest) {
     buckets[i].revenue = activeAtBucket * WEEKLY_PRICE
   }
 
-  // 9) Activity heatmap — last 30 days, total calls per day platform-wide.
-  // NOTE: Activity metrics (calls, signups) deliberately include
-  // coupon'd accounts — only monetary metrics exclude them.
+  // 9) Activity heatmap — exclude calls from excluded users
   const heatmapStart = now - 30 * day
   const heatmapStartIso = new Date(heatmapStart).toISOString()
-  const { data: heatCalls } = await supabase
+  const { data: heatCallsRaw } = await supabase
     .from('calls')
-    .select('created_at')
+    .select('user_id, created_at')
     .gte('created_at', heatmapStartIso)
     .limit(50000)
+
+  const heatCalls = (heatCallsRaw || []).filter(c => !excluded.has(c.user_id))
 
   const heatmap: { date: string; calls: number }[] = []
   for (let i = 29; i >= 0; i--) {
@@ -360,14 +343,13 @@ export async function GET(req: NextRequest) {
     d.setHours(0, 0, 0, 0)
     heatmap.push({ date: d.toISOString().slice(0, 10), calls: 0 })
   }
-  for (const c of heatCalls || []) {
+  for (const c of heatCalls) {
     const key = c.created_at.slice(0, 10)
     const bucket = heatmap.find(h => h.date === key)
     if (bucket) bucket.calls++
   }
 
-  // 10) Tenure cohort — split paying users into "new" (≤30d sub age) vs "established" (>30d).
-  // 100%-off coupon users are excluded entirely (already filtered out of payingActiveSubs above).
+  // 10) Tenure cohort
   const thirtyDayCutoff = now - 30 * day
   let newPayingUsers = 0
   let establishedPayingUsers = 0
@@ -381,6 +363,7 @@ export async function GET(req: NextRequest) {
     success: true,
     range,
     bucketSize: useWeekly ? 'week' : 'day',
+    excludedUserCount: excluded.size,
     summary: {
       totalUsers,
       payingActiveSubs: payingActiveSubs.length,
