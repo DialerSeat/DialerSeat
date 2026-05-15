@@ -40,36 +40,47 @@ export async function POST(req: Request) {
 
     const toFormatted = to.startsWith('+') ? to : `+1${to.replace(/\D/g, '')}`
 
-    // ── TCPA WINDOW PRE-FLIGHT (defense in depth) ─────────────────────────
-    // /api/leads/next already filters callable leads, but a stale lead-id
-    // or a manual dial could bypass that. This endpoint is the last gate
-    // before we hit SignalWire. Returns HTTP 451 if outside window.
-    let leadStateForTcpa: string | null = null
-    if (leadId) {
-      const { data: lead } = await supabase
-        .from('leads')
-        .select('phone, state, user_id')
-        .eq('id', leadId)
-        .maybeSingle()
-      if (lead && lead.user_id === userId) {
-        leadStateForTcpa = lead.state
+    // ── MANUAL DIAL BYPASS ──────────────────────────────────────────────
+    // Dials with no leadId AND no campaignId originate from the manual
+    // keypad (dialer page "Manual Dial" widget). The user is dialing a
+    // number they typed in directly — they take direct responsibility for
+    // who they're calling, so TCPA window enforcement is skipped.
+    // Campaign-driven dials (any leadId OR campaignId present) still go
+    // through the TCPA check below.
+    const isManualDial = !leadId && !campaignId
+
+    if (!isManualDial) {
+      // ── TCPA WINDOW PRE-FLIGHT (defense in depth) ─────────────────────
+      // /api/leads/next already filters callable leads, but a stale lead-id
+      // could bypass that. This endpoint is the last gate before SignalWire.
+      // Returns HTTP 451 if outside window.
+      let leadStateForTcpa: string | null = null
+      if (leadId) {
+        const { data: lead } = await supabase
+          .from('leads')
+          .select('phone, state, user_id')
+          .eq('id', leadId)
+          .maybeSingle()
+        if (lead && lead.user_id === userId) {
+          leadStateForTcpa = lead.state
+        }
       }
-    }
 
-    const tcpaCheck = isCallableNow({
-      phone: toFormatted,
-      state: leadStateForTcpa,
-    })
+      const tcpaCheck = isCallableNow({
+        phone: toFormatted,
+        state: leadStateForTcpa,
+      })
 
-    if (!tcpaCheck.allowed) {
-      return NextResponse.json({
-        success: false,
-        error: 'Cannot dial outside calling window',
-        detail: tcpaCheck.reason,
-        leadState: tcpaCheck.leadState,
-        leadLocalTime: tcpaCheck.leadLocalTime,
-        retryAfter: tcpaCheck.retryAfter?.toISOString(),
-      }, { status: 451 })  // 451 Unavailable For Legal Reasons (RFC 7725)
+      if (!tcpaCheck.allowed) {
+        return NextResponse.json({
+          success: false,
+          error: 'Cannot dial outside calling window',
+          detail: tcpaCheck.reason,
+          leadState: tcpaCheck.leadState,
+          leadLocalTime: tcpaCheck.leadLocalTime,
+          retryAfter: tcpaCheck.retryAfter?.toISOString(),
+        }, { status: 451 })  // 451 Unavailable For Legal Reasons (RFC 7725)
+      }
     }
 
     // AMD is ALWAYS on — voicemail filtering is core to the product and must run

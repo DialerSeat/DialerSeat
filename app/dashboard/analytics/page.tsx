@@ -43,11 +43,18 @@ function getRangeBounds(range: Range, customStart?: string, customEnd?: string):
     return { start: start.toISOString(), end: end.toISOString() }
   }
   if (range === 'week') {
-    const start = new Date(now); start.setDate(start.getDate() - 7); start.setHours(0, 0, 0, 0)
+    // Current CALENDAR week — Sunday 00:00 of this week → now.
+    // Resets every Sunday at midnight local time.
+    // getDay(): 0=Sun, 1=Mon, ..., 6=Sat.
+    const start = new Date(now)
+    start.setDate(start.getDate() - start.getDay())
+    start.setHours(0, 0, 0, 0)
     return { start: start.toISOString(), end: now.toISOString() }
   }
   if (range === 'month') {
-    const start = new Date(now); start.setDate(start.getDate() - 30); start.setHours(0, 0, 0, 0)
+    // Current CALENDAR month — 1st 00:00 of this month → now.
+    // Resets on the 1st of every month at midnight local time.
+    const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0)
     return { start: start.toISOString(), end: now.toISOString() }
   }
   if (range === 'custom') {
@@ -66,9 +73,14 @@ function todayBounds() {
   return { start: start.toISOString(), end: end.toISOString() }
 }
 
+// Used as the secondary fetch when range='today'. Returns the same calendar
+// week as getRangeBounds('week') so the "This week" sub-stats stay aligned
+// with whatever the WEEK tab would show.
 function weekBounds() {
   const now = new Date()
-  const start = new Date(now); start.setDate(start.getDate() - 7); start.setHours(0, 0, 0, 0)
+  const start = new Date(now)
+  start.setDate(start.getDate() - start.getDay())
+  start.setHours(0, 0, 0, 0)
   return { start: start.toISOString(), end: now.toISOString() }
 }
 
@@ -145,7 +157,8 @@ export default function AnalyticsPage() {
 
   const bounds = useMemo(() => getRangeBounds(range, customStart, customEnd), [range, customStart, customEnd])
 
-  // Secondary fetch: when range is 'today', secondary = WEEK; otherwise, secondary = TODAY
+  // Secondary fetch: when range is 'today', secondary = current calendar WEEK;
+  // otherwise, secondary = TODAY.
   const secondaryBounds = useMemo(() => {
     return range === 'today' ? weekBounds() : todayBounds()
   }, [range])

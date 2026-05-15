@@ -579,7 +579,7 @@ export default function RecordingsPage() {
           role="button"
           aria-expanded={disclosureOpen}
         >
-          <span>⚠ RECORDING DISCLOSURE & 30-DAY RETENTION POLICY</span>
+          <span>⚠️ DISCLOSURE & 30-DAY RECORDINGS BACKUP</span>
           <span className="chev">▾</span>
         </div>
         {disclosureOpen && (
@@ -590,8 +590,8 @@ export default function RecordingsPage() {
               MA, MI, MT, NV, NH, PA, WA.
             </p>
             <p>
-              <strong>30-DAY RETENTION:</strong> Recordings auto-delete after 30 days.
-              Click DOWNLOAD to save permanently.
+              <strong>30-DAY BACKUP:</strong> Recordings are kept for 30 days, then
+              auto-removed. Click DOWNLOAD to save permanently.
             </p>
           </div>
         )}
