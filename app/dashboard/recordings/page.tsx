@@ -117,6 +117,7 @@ export default function RecordingsPage() {
   const [playingId, setPlayingId] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const [disclosureOpen, setDisclosureOpen] = useState(false)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const sentinelRef = useRef<HTMLDivElement | null>(null)
@@ -251,15 +252,45 @@ export default function RecordingsPage() {
           gap: 16px;
           flex-wrap: wrap;
         }
-        .rec-banner {
+        .rec-disclosure {
           background: #fff8e8;
           border-bottom: 1px solid #d4b86a;
-          padding: 10px 20px;
+        }
+        .rec-disclosure-summary {
+          padding: 8px 20px;
           font-size: 11px;
           color: ${T.amber};
           letter-spacing: 1px;
-          line-height: 1.5;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          cursor: pointer;
+          user-select: none;
+          font-weight: bold;
+          font-family: 'Futura PT', Futura, sans-serif;
         }
+        .rec-disclosure-summary:hover { background: #fdf2d6; }
+        .rec-disclosure-summary .chev {
+          font-family: monospace;
+          font-size: 10px;
+          color: ${T.amber};
+          transition: transform 0.15s;
+        }
+        .rec-disclosure-summary.open .chev { transform: rotate(180deg); }
+        .rec-disclosure-body {
+          padding: 4px 20px 12px 20px;
+          font-size: 11px;
+          color: ${T.amber};
+          letter-spacing: 0.5px;
+          line-height: 1.6;
+          border-top: 1px dashed #d4b86a;
+          font-family: system-ui, -apple-system, sans-serif;
+        }
+        .rec-disclosure-body p {
+          margin: 8px 0 0 0;
+        }
+        .rec-disclosure-body p:first-child { margin-top: 6px; }
         .rec-controls {
           padding: 12px 16px;
           background: ${T.surface};
@@ -459,7 +490,8 @@ export default function RecordingsPage() {
         }
         @media (max-width: 768px) {
           .rec-header { padding: 10px 12px; }
-          .rec-banner { padding: 8px 12px; font-size: 10px; }
+          .rec-disclosure-summary { padding: 8px 12px; font-size: 10px; }
+          .rec-disclosure-body { padding: 4px 12px 10px 12px; font-size: 10px; }
           .rec-mobile-toggle {
             display: flex;
             align-items: center;
@@ -540,9 +572,29 @@ export default function RecordingsPage() {
         <div className="rec-sync-msg">{syncMessage}</div>
       )}
 
-      <div className="rec-banner">
-        ⚠ <strong>RECORDING DISCLOSURE:</strong> You must verbally inform the other party they are on a recorded line by law in CA, CT, FL, IL, MD, MA, MI, MT, NV, NH, PA, WA. ·
-        <strong> 30-DAY RETENTION:</strong> Recordings auto-delete after 30 days. Click DOWNLOAD to save permanently.
+      <div className="rec-disclosure">
+        <div
+          className={`rec-disclosure-summary ${disclosureOpen ? 'open' : ''}`}
+          onClick={() => setDisclosureOpen(v => !v)}
+          role="button"
+          aria-expanded={disclosureOpen}
+        >
+          <span>⚠ RECORDING DISCLOSURE & 30-DAY RETENTION POLICY</span>
+          <span className="chev">▾</span>
+        </div>
+        {disclosureOpen && (
+          <div className="rec-disclosure-body">
+            <p>
+              <strong>RECORDING DISCLOSURE:</strong> You must verbally inform the
+              other party they are on a recorded line by law in CA, CT, FL, IL, MD,
+              MA, MI, MT, NV, NH, PA, WA.
+            </p>
+            <p>
+              <strong>30-DAY RETENTION:</strong> Recordings auto-delete after 30 days.
+              Click DOWNLOAD to save permanently.
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="rec-mobile-toggle" onClick={() => setFiltersOpen(v => !v)}>

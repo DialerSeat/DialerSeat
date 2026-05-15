@@ -7,6 +7,21 @@ import { isCallableNow } from '@/lib/callingWindow'
 // logic. Most pools at 50-200 leads, this is plenty.
 const CANDIDATE_LIMIT = 50
 
+// Fetch the campaign's dialer mode + AMD setting so the client can drive
+// per-call behavior (especially for ALL_ACTIVE which dials across many
+// campaigns each with its own mode). Falls back to power+AMD-on if not set.
+async function fetchCampaignMode(campaignId: string) {
+  const { data } = await supabaseAdmin
+    .from('campaigns')
+    .select('dialer_mode, amd_enabled')
+    .eq('id', campaignId)
+    .maybeSingle()
+  return {
+    dialer_mode: (data?.dialer_mode as string) || 'power',
+    amd_enabled: data?.amd_enabled !== false,
+  }
+}
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url)
@@ -104,7 +119,8 @@ export async function GET(req: Request) {
         }, { status: 404 })
       }
 
-      return NextResponse.json({ success: true, lead: callable })
+      const campaign = await fetchCampaignMode(callable.campaign_id)
+      return NextResponse.json({ success: true, lead: callable, campaign })
     }
 
     // ── PERSONAL SCOPE ──
@@ -164,7 +180,8 @@ export async function GET(req: Request) {
       }, { status: 404 })
     }
 
-    return NextResponse.json({ success: true, lead: callable })
+    const campaign = await fetchCampaignMode(callable.campaign_id)
+    return NextResponse.json({ success: true, lead: callable, campaign })
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 })
   }

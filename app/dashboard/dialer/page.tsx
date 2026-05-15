@@ -70,6 +70,9 @@ const ALL_ACTIVE = '__all_active__'
 const LS_LAST_CAMPAIGN = 'dialer:lastCampaign'
 const LS_LAST_SCOPE = 'dialer:lastScope'
 const LS_SESSION_STATS = 'dialer:sessionStats'
+const LS_ALL_ACTIVE_MODE = 'dialer:allActiveMode'
+
+const VALID_MODES: DialerMode[] = ['preview', 'power', 'progressive', 'predictive']
 
 const MODE_OPTIONS: { value: DialerMode; label: string; color: string }[] = [
   { value: 'preview', label: 'PREVIEW', color: '#5a5e6a' },
@@ -129,6 +132,12 @@ function DialerPageInner() {
   const [modeDropdownOpen, setModeDropdownOpen] = useState(false)
   const [modeSaving, setModeSaving] = useState(false)
 
+  // Session-level dialer mode for ALL ACTIVE. Persisted in localStorage.
+  // For ALL ACTIVE selection, this is the source of truth — overriding
+  // each individual campaign's dialer_mode for the duration of the session.
+  // Does NOT write back to any campaign's DB row.
+  const [allActiveOverrideMode, setAllActiveOverrideMode] = useState<DialerMode>('power')
+
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const audioCtxRef = useRef<AudioContext | null>(null)
   const activePollRef = useRef<NodeJS.Timeout | null>(null)
@@ -168,13 +177,27 @@ function DialerPageInner() {
       ? campaigns.find(c => c.id === selectedCampaign)
       : undefined
 
-  const dialerMode: DialerMode = (currentCampaign?.dialer_mode as DialerMode) || 'power'
+  // Effective dialer mode used to drive call behavior:
+  //  • Specific campaign  → that campaign's saved dialer_mode (from DB)
+  //  • ALL ACTIVE         → user's session-level override (allActiveOverrideMode)
+  //  • Nothing selected   → power (no calls happen until selection anyway)
+  const dialerMode: DialerMode =
+    isSpecificCampaign
+      ? ((currentCampaign?.dialer_mode as DialerMode) || 'power')
+      : isAllActive
+        ? allActiveOverrideMode
+        : 'power'
+
   const amdEnabled = true
   const isPredictive = dialerMode === 'predictive'
   const isProgressive = dialerMode === 'progressive'
   const isPreview = dialerMode === 'preview'
   const autoDials = isProgressive || isPredictive
-  const modeRequiresSpecific = isPredictive || isProgressive || isPreview
+  const modeRequiresSpecific = false  // ALL ACTIVE now supports every mode via override
+
+  // Mode tile is interactive when a specific campaign is selected (writes to DB)
+  // OR when ALL ACTIVE is selected (writes to local override state).
+  const modeTileInteractive = isSpecificCampaign || isAllActive
 
   // ── SESSION METRICS PERSISTENCE ─────────────────────────────────────────
   useEffect(() => {
@@ -217,7 +240,7 @@ function DialerPageInner() {
     return () => clearInterval(id)
   }, [sessionDate, user])
 
-  // ── CAMPAIGN/SCOPE PERSISTENCE ──────────────────────────────────────────
+  // ── CAMPAIGN/SCOPE/ALL-ACTIVE-MODE PERSISTENCE ──────────────────────────
   useEffect(() => {
     if (!user || !lsRestoredRef.current) return
     if (selectedCampaign) {
@@ -231,6 +254,11 @@ function DialerPageInner() {
     if (!user || !lsRestoredRef.current) return
     try { localStorage.setItem(`${LS_LAST_SCOPE}:${user.id}`, selectedScope) } catch {}
   }, [selectedScope, user])
+
+  useEffect(() => {
+    if (!user || !lsRestoredRef.current) return
+    try { localStorage.setItem(`${LS_ALL_ACTIVE_MODE}:${user.id}`, allActiveOverrideMode) } catch {}
+  }, [allActiveOverrideMode, user])
 
   useEffect(() => {
     if (!user || !isActive) return
@@ -298,16 +326,30 @@ function DialerPageInner() {
       } catch {}
     }
 
-    if (campaignIdParam && campaigns.find(c => c.id === campaignIdParam)) {
+    // Only restore campaign selection if the campaign still exists AND is active.
+    // Paused campaigns aren't shown in the dropdown, so restoring one would
+    // leave the select element in a blank-but-saved state.
+    if (campaignIdParam && campaigns.find(c => c.id === campaignIdParam && c.status === 'active')) {
       setSelectedCampaign(campaignIdParam)
     } else {
       try {
         const lastCampaign = localStorage.getItem(`${LS_LAST_CAMPAIGN}:${user.id}`)
-        if (lastCampaign === ALL_ACTIVE || (lastCampaign && campaigns.find(c => c.id === lastCampaign))) {
+        if (
+          lastCampaign === ALL_ACTIVE ||
+          (lastCampaign && campaigns.find(c => c.id === lastCampaign && c.status === 'active'))
+        ) {
           setSelectedCampaign(lastCampaign)
         }
       } catch {}
     }
+
+    // Restore ALL_ACTIVE override mode
+    try {
+      const lastAllActiveMode = localStorage.getItem(`${LS_ALL_ACTIVE_MODE}:${user.id}`)
+      if (lastAllActiveMode && VALID_MODES.includes(lastAllActiveMode as DialerMode)) {
+        setAllActiveOverrideMode(lastAllActiveMode as DialerMode)
+      }
+    } catch {}
 
     lsRestoredRef.current = true
     urlParamsConsumedRef.current = true
@@ -576,13 +618,16 @@ function DialerPageInner() {
   }, [isActive, isPredictive, available, isSpecificCampaign, selectedCampaign, currentCampaign])
 
   const handleSetAvailable = async () => {
-    if (!micGranted) {
+    let granted = micGranted
+    if (!granted) {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
         stream.getTracks().forEach(track => track.stop())
         setMicGranted(true)
+        granted = true
       } catch (err) {
         console.warn('Microphone permission denied:', err)
+        return  // Don't go online without mic
       }
     }
     setAvailable(v => !v)
@@ -681,6 +726,7 @@ function DialerPageInner() {
   const isPersonalScope = selectedScope === PERSONAL_SCOPE
   const currentScope = teamScopes.find(s => s.id === selectedScope) || null
 
+  // Full list of scope campaigns (all statuses). Used for counting + existence checks.
   const scopeCampaigns: { id: string; name: string; total_leads: number; status: string }[] = isPersonalScope
     ? campaigns.map(c => ({ id: c.id, name: c.name, total_leads: c.total_leads, status: c.status }))
     : (currentScope?.teamCampaigns
@@ -692,7 +738,9 @@ function DialerPageInner() {
           status: tc.campaign!.status,
         })) || [])
 
-  const activeCampaignsCount = scopeCampaigns.filter(c => c.status === 'active').length
+  // Active-only list — what the dropdown shows. Paused/archived hidden completely.
+  const activeScopeCampaigns = scopeCampaigns.filter(c => c.status === 'active')
+  const activeCampaignsCount = activeScopeCampaigns.length
 
   const fetchNextLead = async (): Promise<Lead | null> => {
     const params = new URLSearchParams({ user_id: user?.id || '' })
@@ -988,7 +1036,9 @@ function DialerPageInner() {
       return
     }
 
-    if (isSpecificCampaign && isPreview) {
+    // Preview mode applies to both specific-campaign AND ALL ACTIVE
+    // (the latter uses allActiveOverrideMode === 'preview')
+    if (isPreview) {
       await fetchPreviewLead()
       return
     }
@@ -1115,11 +1165,26 @@ function DialerPageInner() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [manualNumber, status, dialZoomed, isActive])
 
+  // Mode picker — branches based on whether the user has a specific campaign
+  // (writes to DB) or ALL ACTIVE selected (writes to local session override).
   const handleModeChange = async (newMode: DialerMode) => {
-    if (!currentCampaign || newMode === dialerMode) {
+    if (newMode === dialerMode) {
       setModeDropdownOpen(false)
       return
     }
+
+    if (isAllActive) {
+      // Session-level override only — does NOT write to any campaign's DB row.
+      setAllActiveOverrideMode(newMode)
+      setModeDropdownOpen(false)
+      return
+    }
+
+    if (!currentCampaign) {
+      setModeDropdownOpen(false)
+      return
+    }
+
     setModeSaving(true)
     try {
       const amd = newMode === 'progressive' || newMode === 'predictive'
@@ -1522,25 +1587,31 @@ function DialerPageInner() {
             <div
               className="mode-tile-wrap"
               onClick={() => {
-                if (!currentCampaign || modeSaving) return
+                if (!modeTileInteractive || modeSaving) return
                 setModeDropdownOpen(o => !o)
               }}
               style={{
                 padding: '8px 12px', background: terminalSurface,
-                border: `1px solid ${currentCampaign ? modeColor : terminalBorder}`,
+                border: `1px solid ${modeTileInteractive ? modeColor : terminalBorder}`,
                 borderRadius: '4px',
-                cursor: currentCampaign ? 'pointer' : 'default',
+                cursor: modeTileInteractive ? 'pointer' : 'default',
                 opacity: modeSaving ? 0.5 : 1,
                 userSelect: 'none',
               }}
-              title={currentCampaign ? 'Click to change mode for this campaign' : 'Select a specific campaign to change mode'}
+              title={
+                isAllActive
+                  ? 'Click to change mode for ALL ACTIVE session (does not modify individual campaign settings)'
+                  : isSpecificCampaign
+                    ? 'Click to change mode for this campaign'
+                    : 'Select a campaign to change mode'
+              }
             >
               <div style={{
                 fontSize: '9px', letterSpacing: '2px', color: terminalMuted, marginBottom: '3px',
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               }}>
-                <span>MODE</span>
-                {currentCampaign && (
+                <span>MODE{isAllActive ? ' (SESSION)' : ''}</span>
+                {modeTileInteractive && (
                   <span style={{ fontSize: 8, opacity: 0.7 }}>{modeDropdownOpen ? '▲' : '▼'}</span>
                 )}
               </div>
@@ -1550,7 +1621,7 @@ function DialerPageInner() {
               }}>
                 {dialerMode.toUpperCase()}
               </div>
-              {modeDropdownOpen && currentCampaign && (
+              {modeDropdownOpen && modeTileInteractive && (
                 <div className="mode-tile-dropdown" onClick={e => e.stopPropagation()}>
                   {MODE_OPTIONS.map(opt => (
                     <div
@@ -1621,10 +1692,10 @@ function DialerPageInner() {
                   fontFamily: 'monospace', cursor: 'pointer',
                 }}
               >
-                <option value={PERSONAL_SCOPE}>★ MY LEADS (PERSONAL)</option>
+                <option value={PERSONAL_SCOPE}>MY LEADS (PERSONAL)</option>
                 {teamScopes.map(s => (
                   <option key={s.id} value={s.id}>
-                    {s.viewerRole === 'owner' ? '⚙ ' : '◇ '}TEAM: {s.name}
+                    {s.viewerRole === 'owner' ? 'TEAM (OWNER): ' : 'TEAM: '}{s.name}
                   </option>
                 ))}
               </select>
@@ -1642,31 +1713,23 @@ function DialerPageInner() {
             }}>
               <option value="">— SELECT A CAMPAIGN —</option>
               {activeCampaignsCount > 0 && (
-                <option value={ALL_ACTIVE}>★ ALL ACTIVE CAMPAIGNS ({activeCampaignsCount})</option>
+                <option value={ALL_ACTIVE}>ALL ACTIVE CAMPAIGNS ({activeCampaignsCount})</option>
               )}
-              {scopeCampaigns.map(c => (
+              {activeScopeCampaigns.map(c => (
                 <option key={c.id} value={c.id}>
-                  {c.status === 'active' ? '● ' : '○ '}{c.name} — {c.total_leads} leads{c.status !== 'active' ? ' (paused)' : ''}
+                  {c.name} — {c.total_leads} leads
                 </option>
               ))}
             </select>
-            {scopeCampaigns.length === 0 && (
+            {activeScopeCampaigns.length === 0 && (
               <div style={{
                 marginTop: '6px', padding: '5px 8px', background: '#f8e8e8',
                 border: '1px solid #d0a0a0', borderRadius: '4px',
                 fontSize: '10px', letterSpacing: '2px', color: terminalRed,
               }}>
-                ⚠ {isPersonalScope ? 'NO CAMPAIGNS FOUND' : 'NO CAMPAIGNS ACCESSIBLE FROM THIS TEAM'}
-              </div>
-            )}
-            {isAllActive && (
-              <div style={{
-                marginTop: 6, padding: '5px 8px',
-                background: 'rgba(255,170,62,0.08)',
-                border: '1px solid #8a6a1a', borderRadius: 4,
-                fontSize: 10, color: '#8a6a1a', letterSpacing: 0.5,
-              }}>
-                ⚠ Preview/Progressive/Predictive modes are per-campaign. ALL ACTIVE dials in power mode.
+                ⚠ {scopeCampaigns.length === 0
+                    ? (isPersonalScope ? 'NO CAMPAIGNS FOUND' : 'NO CAMPAIGNS ACCESSIBLE FROM THIS TEAM')
+                    : 'NO ACTIVE CAMPAIGNS — ACTIVATE A CAMPAIGN TO START DIALING'}
               </div>
             )}
             {showSelectCampaignMsg && (
@@ -1824,14 +1887,14 @@ function DialerPageInner() {
                 borderTop: `3px solid ${terminalBorder}`, transition: 'all 0.15s',
               }}>[ SET AVAILABLE TO DIAL ]</button>
             )}
-            {status === 'idle' && available && scopeCampaigns.length === 0 && (
+            {status === 'idle' && available && activeScopeCampaigns.length === 0 && (
               <div style={{
                 padding: '14px', borderRadius: '4px', background: terminalSurface, color: terminalMuted,
                 fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
                 textAlign: 'center', borderTop: `3px solid ${terminalBorder}`,
-              }}>[ NO CAMPAIGNS IN SCOPE ]</div>
+              }}>[ NO ACTIVE CAMPAIGNS IN SCOPE ]</div>
             )}
-            {status === 'idle' && available && scopeCampaigns.length > 0 && (
+            {status === 'idle' && available && activeScopeCampaigns.length > 0 && (
               <button onClick={handleDial} style={{
                 padding: '14px', borderRadius: '4px', border: 'none',
                 background: terminalDark, color: '#4a9eff',
@@ -1839,7 +1902,7 @@ function DialerPageInner() {
                 cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
                 borderTop: `3px solid #4a9eff`, transition: 'all 0.15s',
               }}>
-                {isSpecificCampaign && isPreview ? '▶ LOAD NEXT LEAD' : '▶ INITIATE DIAL SEQUENCE'}
+                {isPreview ? '▶ LOAD NEXT LEAD' : '▶ INITIATE DIAL SEQUENCE'}
               </button>
             )}
             {status === 'preview_ready' && previewLead && (
@@ -1968,8 +2031,8 @@ function DialerPageInner() {
               status === 'connected' && `> CONNECTED — ${currentLead?.first_name} ${currentLead?.last_name}`,
               status === 'calling' && '> DIALING IN QUEUE...',
               status === 'preview_ready' && `> PREVIEW LOADED — ${previewLead?.first_name} ${previewLead?.last_name}`,
-              currentCampaign && `> MODE: ${dialerMode.toUpperCase()} + AMD`,
-              isAllActive && `> SCOPE: ALL ACTIVE CAMPAIGNS`,
+              isSpecificCampaign && currentCampaign && `> CAMPAIGN MODE: ${dialerMode.toUpperCase()} + AMD`,
+              isAllActive && `> ALL ACTIVE · SESSION MODE: ${dialerMode.toUpperCase()}`,
               isPredictive && pacingInfo && `> AGENTS: ${pacingInfo.activeAgents} · ABANDON: ${(pacingInfo.abandonRate * 100).toFixed(2)}%`,
               currentSessionId && '> SESSION ACTIVE',
               !isPersonalScope && currentScope && `> SCOPE: ${currentScope.name.toUpperCase()}`,
