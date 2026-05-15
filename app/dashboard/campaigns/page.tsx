@@ -100,6 +100,14 @@ export default function CampaignsPage() {
   const [savingScript, setSavingScript] = useState(false)
   const [dirtyScript, setDirtyScript] = useState(false)
 
+  // Tab drag-reorder state. Uses pointer events so it works on touch and mouse.
+  const [tabDrag, setTabDrag] = useState<{
+    draggedId: string
+    pointerId: number
+    targetId: string | null
+  } | null>(null)
+  const tabsRowRef = useRef<HTMLDivElement | null>(null)
+
   const [modeModal, setModeModal] = useState<Campaign | null>(null)
   const [modeChoice, setModeChoice] = useState<DialerMode>('power')
   const [amdEnabled, setAmdEnabled] = useState(false)
@@ -298,6 +306,7 @@ export default function CampaignsPage() {
     setEditingName('')
     setEditingBody('')
     setDirtyScript(false)
+    setTabDrag(null)
   }
 
   const switchActiveScript = (id: string) => {
@@ -358,7 +367,6 @@ export default function CampaignsPage() {
       if (data.success && data.script) {
         setScripts(prev => prev.map(s => s.id === data.script.id ? data.script : s))
         setDirtyScript(false)
-        // If this script is the default, update local campaign for badge consistency
         if (data.script.is_default && scriptsModal) {
           setCampaigns(prev => prev.map(c =>
             c.id === scriptsModal.id ? { ...c, script: data.script.body } : c
@@ -431,6 +439,73 @@ export default function CampaignsPage() {
     } finally {
       setSavingScript(false)
     }
+  }
+
+  // ── TAB REORDER (pointer events — works on touch + mouse) ──────────────
+
+  const persistScriptOrder = async (orderedIds: string[]) => {
+    if (!scriptsModal) return
+    try {
+      await fetch('/api/campaigns/scripts/reorder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          campaign_id: scriptsModal.id,
+          order: orderedIds,
+        }),
+      })
+    } catch (err) {
+      console.error('Reorder failed:', err)
+    }
+  }
+
+  const onTabHandlePointerDown = (e: React.PointerEvent<HTMLSpanElement>, id: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+    setTabDrag({ draggedId: id, pointerId: e.pointerId, targetId: null })
+  }
+
+  const onTabHandlePointerMove = (e: React.PointerEvent<HTMLSpanElement>) => {
+    if (!tabDrag || e.pointerId !== tabDrag.pointerId) return
+    const row = tabsRowRef.current
+    if (!row) return
+    // Find which tab the pointer is over
+    const tabs = row.querySelectorAll<HTMLElement>('[data-tab-id]')
+    let targetId: string | null = null
+    for (const tab of Array.from(tabs)) {
+      const rect = tab.getBoundingClientRect()
+      if (
+        e.clientX >= rect.left && e.clientX <= rect.right &&
+        e.clientY >= rect.top && e.clientY <= rect.bottom
+      ) {
+        targetId = tab.getAttribute('data-tab-id')
+        break
+      }
+    }
+    if (targetId !== tabDrag.targetId) {
+      setTabDrag({ ...tabDrag, targetId })
+    }
+  }
+
+  const onTabHandlePointerUp = (e: React.PointerEvent<HTMLSpanElement>) => {
+    if (!tabDrag || e.pointerId !== tabDrag.pointerId) return
+    const { draggedId, targetId } = tabDrag
+    setTabDrag(null)
+    if (!targetId || draggedId === targetId) return
+    const draggedIdx = scripts.findIndex(s => s.id === draggedId)
+    const targetIdx = scripts.findIndex(s => s.id === targetId)
+    if (draggedIdx === -1 || targetIdx === -1) return
+    const reordered = [...scripts]
+    const [moved] = reordered.splice(draggedIdx, 1)
+    reordered.splice(targetIdx, 0, moved)
+    const withOrder = reordered.map((s, i) => ({ ...s, sort_order: i }))
+    setScripts(withOrder)
+    persistScriptOrder(withOrder.map(s => s.id))
+  }
+
+  const onTabHandlePointerCancel = () => {
+    setTabDrag(null)
   }
 
   // ── MODE MODAL ─────────────────────────────────────────────────────────
@@ -520,13 +595,29 @@ export default function CampaignsPage() {
           background: ${T.surface};
           border: 1px solid ${T.border};
           max-height: 90vh;
+          max-height: 90dvh;
           overflow-y: auto;
+        }
+
+        .modal-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.6);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 100;
+          backdrop-filter: blur(10px);
+          padding: 16px;
+          height: 100vh;
+          height: 100dvh;
         }
 
         .scripts-modal {
           width: 100%;
           max-width: 880px;
           max-height: 90vh;
+          max-height: 90dvh;
           background: ${T.surface};
           border: 1px solid ${T.border};
           border-radius: 16px;
@@ -534,6 +625,47 @@ export default function CampaignsPage() {
           flex-direction: column;
           overflow: hidden;
         }
+        .scripts-modal-header {
+          padding: 18px 22px;
+          padding-top: max(18px, env(safe-area-inset-top));
+          border-bottom: 1px solid ${T.border};
+          flex-shrink: 0;
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 12px;
+          background: ${T.surface};
+        }
+        .scripts-modal-header-text { min-width: 0; flex: 1; }
+        .scripts-modal-title {
+          font-size: 17px;
+          font-weight: bold;
+          letterSpacing: 3px;
+          letter-spacing: 3px;
+          color: ${T.text};
+          font-family: 'Futura PT', Futura, sans-serif;
+        }
+        .scripts-modal-subtitle {
+          font-size: 11px;
+          letter-spacing: 1px;
+          color: ${T.muted};
+          margin-top: 4px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .scripts-modal-close {
+          background: transparent;
+          border: 1px solid ${T.border};
+          color: ${T.muted};
+          width: 36px;
+          height: 36px;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 18px;
+          flex-shrink: 0;
+        }
+
         .scripts-tabs {
           display: flex;
           gap: 4px;
@@ -542,9 +674,10 @@ export default function CampaignsPage() {
           overflow-x: auto;
           background: ${T.surface2};
           flex-shrink: 0;
+          touch-action: pan-x;
         }
         .scripts-tab {
-          padding: 8px 14px;
+          padding: 8px 14px 8px 8px;
           background: ${T.surface};
           border: 1px solid ${T.border};
           border-bottom: none;
@@ -559,7 +692,7 @@ export default function CampaignsPage() {
           display: flex;
           align-items: center;
           gap: 6px;
-          transition: all 0.15s;
+          transition: background 0.15s, color 0.15s, border-color 0.15s;
         }
         .scripts-tab:hover { background: ${T.surface}; color: ${T.text}; }
         .scripts-tab.active {
@@ -569,6 +702,29 @@ export default function CampaignsPage() {
           border-bottom-color: ${T.bg};
           margin-bottom: -1px;
         }
+        .scripts-tab.dragging {
+          opacity: 0.4;
+        }
+        .scripts-tab.drag-over {
+          border-color: ${T.blue};
+          background: rgba(74,158,255,0.15);
+        }
+        .scripts-tab-handle {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 18px;
+          height: 22px;
+          font-size: 12px;
+          color: ${T.muted};
+          cursor: grab;
+          touch-action: none;
+          user-select: none;
+          line-height: 1;
+          letter-spacing: -2px;
+          font-weight: bold;
+        }
+        .scripts-tab-handle:active { cursor: grabbing; }
         .scripts-tab-default-badge {
           font-size: 8px;
           padding: 1px 5px;
@@ -592,6 +748,46 @@ export default function CampaignsPage() {
           white-space: nowrap;
         }
         .scripts-add-btn:hover { color: ${T.blue}; border-color: ${T.blue}; }
+
+        .scripts-modal-body {
+          flex: 1;
+          overflow: auto;
+          padding: 22px;
+          -webkit-overflow-scrolling: touch;
+        }
+        .scripts-modal-footer {
+          padding: 14px 20px;
+          padding-bottom: max(14px, env(safe-area-inset-bottom));
+          border-top: 1px solid ${T.border};
+          flex-shrink: 0;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          flex-wrap: wrap;
+          background: ${T.surface2};
+        }
+        .scripts-modal-footer-left {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+        .scripts-modal-footer-right {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+        }
+        .scripts-modal-tip {
+          padding: 8px 12px;
+          margin-bottom: 14px;
+          background: rgba(74,158,255,0.08);
+          border: 1px dashed rgba(74,158,255,0.3);
+          border-radius: 6px;
+          font-size: 10px;
+          color: ${T.muted};
+          letter-spacing: 1px;
+          line-height: 1.5;
+        }
 
         @media (max-width: 768px) {
           .campaigns-root { padding: 20px !important; }
@@ -622,17 +818,64 @@ export default function CampaignsPage() {
           }
           .campaign-modal {
             padding: 24px !important;
-            border-radius: 16px !important;
-            max-height: 100vh;
             border-radius: 0 !important;
+            max-height: 100vh !important;
+            max-height: 100dvh !important;
             min-height: 100vh;
+            min-height: 100dvh;
+            padding-top: max(24px, env(safe-area-inset-top)) !important;
+            padding-bottom: max(24px, env(safe-area-inset-bottom)) !important;
           }
           .scripts-modal {
             border-radius: 0 !important;
-            max-height: 100vh;
+            max-height: 100vh !important;
+            max-height: 100dvh !important;
             min-height: 100vh;
+            min-height: 100dvh;
           }
-          .modal-overlay { padding: 0 !important; }
+          .modal-overlay {
+            padding: 0 !important;
+          }
+          .scripts-modal-header {
+            padding: 14px 16px;
+            padding-top: max(14px, env(safe-area-inset-top));
+          }
+          .scripts-modal-title { font-size: 14px; letter-spacing: 2px; }
+          .scripts-modal-subtitle { font-size: 10px; }
+          .scripts-modal-close {
+            width: 44px;
+            height: 44px;
+            font-size: 20px;
+          }
+          .scripts-tabs {
+            padding: 10px 12px 0;
+          }
+          .scripts-tab {
+            padding: 10px 12px 10px 6px;
+            font-size: 10px;
+          }
+          .scripts-tab-handle {
+            width: 22px;
+            height: 28px;
+            font-size: 14px;
+          }
+          .scripts-modal-body {
+            padding: 16px;
+          }
+          .scripts-modal-footer {
+            padding: 12px 14px;
+            padding-bottom: max(12px, env(safe-area-inset-bottom));
+            gap: 8px;
+          }
+          .scripts-modal-footer-left,
+          .scripts-modal-footer-right {
+            width: 100%;
+            justify-content: stretch;
+          }
+          .scripts-modal-footer-left button,
+          .scripts-modal-footer-right button {
+            flex: 1;
+          }
         }
       `}</style>
 
@@ -941,11 +1184,7 @@ export default function CampaignsPage() {
 
       {/* CREATE CAMPAIGN MODAL */}
       {!isLapsed && showModal && (
-        <div className="modal-overlay" style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 100, backdropFilter: 'blur(10px)', padding: 16,
-        }}>
+        <div className="modal-overlay">
           <div className="campaign-modal" style={{ maxWidth: 580 }}>
             <h2 style={{ fontSize: '18px', fontWeight: 'bold', letterSpacing: '4px', color: T.text, marginBottom: '8px' }}>NEW CAMPAIGN</h2>
             <p style={{ fontSize: '12px', letterSpacing: '1px', color: T.muted, marginBottom: '32px' }}>
@@ -1059,11 +1298,7 @@ export default function CampaignsPage() {
 
       {/* MODE MODAL */}
       {!isLapsed && modeModal && (
-        <div className="modal-overlay" style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 100, backdropFilter: 'blur(10px)', padding: 16,
-        }}>
+        <div className="modal-overlay">
           <div className="campaign-modal" style={{ maxWidth: 640 }}>
             <h2 style={{ fontSize: '18px', fontWeight: 'bold', letterSpacing: '4px', color: T.text, marginBottom: '8px' }}>
               DIALER MODE
@@ -1256,54 +1491,58 @@ export default function CampaignsPage() {
 
       {/* SCRIPTS MODAL */}
       {!isLapsed && scriptsModal && (
-        <div className="modal-overlay" style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 100, backdropFilter: 'blur(10px)', padding: 16,
-        }}>
+        <div className="modal-overlay">
           <div className="scripts-modal">
-            <div style={{
-              padding: '20px 24px',
-              borderBottom: `1px solid ${T.border}`,
-              flexShrink: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-            }}>
-              <div>
-                <div style={{ fontSize: 18, fontWeight: 'bold', letterSpacing: 4, color: T.text }}>
-                  CALL SCRIPTS
-                </div>
-                <div style={{ fontSize: 11, letterSpacing: 1, color: T.muted, marginTop: 4 }}>
+            <div className="scripts-modal-header">
+              <div className="scripts-modal-header-text">
+                <div className="scripts-modal-title">CALL SCRIPTS</div>
+                <div className="scripts-modal-subtitle">
                   {scriptsModal.name} — switch between scripts mid-call from the dialer.
                 </div>
               </div>
               <button
+                className="scripts-modal-close"
                 onClick={closeScriptsModal}
-                style={{
-                  background: 'transparent', border: `1px solid ${T.border}`,
-                  color: T.muted, width: 32, height: 32, borderRadius: 6,
-                  cursor: 'pointer', fontSize: 16,
-                }}
+                aria-label="Close"
               >×</button>
             </div>
 
             {/* TABS */}
-            <div className="scripts-tabs">
-              {scripts.map(s => (
-                <div
-                  key={s.id}
-                  className={`scripts-tab ${activeScriptId === s.id ? 'active' : ''}`}
-                  onClick={() => switchActiveScript(s.id)}
-                >
-                  {s.name || 'Untitled'}
-                  {s.is_default && <span className="scripts-tab-default-badge">DEFAULT</span>}
-                </div>
-              ))}
+            <div className="scripts-tabs" ref={tabsRowRef}>
+              {scripts.map(s => {
+                const isActive = activeScriptId === s.id
+                const isDragging = tabDrag?.draggedId === s.id
+                const isDragOver = tabDrag?.targetId === s.id && tabDrag?.draggedId !== s.id
+                return (
+                  <div
+                    key={s.id}
+                    data-tab-id={s.id}
+                    className={`scripts-tab ${isActive ? 'active' : ''} ${isDragging ? 'dragging' : ''} ${isDragOver ? 'drag-over' : ''}`}
+                    onClick={() => switchActiveScript(s.id)}
+                  >
+                    {scripts.length > 1 && (
+                      <span
+                        className="scripts-tab-handle"
+                        onPointerDown={(e) => onTabHandlePointerDown(e, s.id)}
+                        onPointerMove={onTabHandlePointerMove}
+                        onPointerUp={onTabHandlePointerUp}
+                        onPointerCancel={onTabHandlePointerCancel}
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label="Drag to reorder"
+                        title="Drag to reorder"
+                      >⋮⋮</span>
+                    )}
+                    {s.name || 'Untitled'}
+                    {s.is_default && <span className="scripts-tab-default-badge">DEFAULT</span>}
+                  </div>
+                )
+              })}
               <button className="scripts-add-btn" onClick={handleAddScript} disabled={savingScript}>
                 + ADD SCRIPT
               </button>
             </div>
 
-            <div style={{ flex: 1, overflow: 'auto', padding: 24 }}>
+            <div className="scripts-modal-body">
               {scriptsLoading ? (
                 <div style={{ textAlign: 'center', padding: 60, fontSize: 12, color: T.muted, letterSpacing: 3 }}>
                   LOADING SCRIPTS...
@@ -1334,6 +1573,11 @@ export default function CampaignsPage() {
                 </div>
               ) : activeScriptId ? (
                 <>
+                  {scripts.length > 1 && (
+                    <div className="scripts-modal-tip">
+                      ⋮⋮ <strong>TIP:</strong> Drag the handle on any tab to reorder. Order shows up the same way on the dialer.
+                    </div>
+                  )}
                   <label style={{ display: 'block', fontSize: 10, letterSpacing: 3, color: T.muted, marginBottom: 6 }}>
                     SCRIPT NAME
                   </label>
@@ -1372,15 +1616,8 @@ export default function CampaignsPage() {
             </div>
 
             {activeScriptId && (
-              <div style={{
-                padding: '14px 20px',
-                borderTop: `1px solid ${T.border}`,
-                flexShrink: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                gap: 12, flexWrap: 'wrap',
-                background: T.surface2,
-              }}>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <div className="scripts-modal-footer">
+                <div className="scripts-modal-footer-left">
                   {!scripts.find(s => s.id === activeScriptId)?.is_default && (
                     <button
                       onClick={handleMakeDefault}
@@ -1404,7 +1641,7 @@ export default function CampaignsPage() {
                     }}
                   >🗑 DELETE SCRIPT</button>
                 </div>
-                <div style={{ display: 'flex', gap: 10 }}>
+                <div className="scripts-modal-footer-right">
                   <button
                     onClick={closeScriptsModal}
                     disabled={savingScript}

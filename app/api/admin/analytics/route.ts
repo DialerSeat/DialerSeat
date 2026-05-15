@@ -12,7 +12,11 @@ const WEEKLY_PRICE = 35
 const ACTIVE_STATUSES = ['active', 'trialing', 'past_due']
 const AT_RISK_DAYS = 14
 
-type Range = '7d' | '30d' | '90d' | '1y' | 'all' | 'custom'
+// '7d'/'30d' accepted for backward compat with existing admin page tabs, but
+// they now resolve to calendar week / calendar month (same as agent analytics).
+// 'week' and 'month' are the new canonical names — rename the admin page tab
+// labels at your convenience.
+type Range = '7d' | '30d' | '90d' | '1y' | 'all' | 'custom' | 'week' | 'month'
 
 function rangeToBounds(range: Range, customStart: string | null, customEnd: string | null) {
   const now = Date.now()
@@ -20,11 +24,25 @@ function rangeToBounds(range: Range, customStart: string | null, customEnd: stri
   if (range === 'custom' && customStart && customEnd) {
     return { start: new Date(customStart).getTime(), end: new Date(customEnd).getTime() }
   }
-  if (range === '7d')   return { start: now - 7 * day, end: now }
+  if (range === '7d' || range === 'week') {
+    // Current CALENDAR week — Sunday 00:00 of this week → now.
+    // Resets every Sunday at midnight. getDay() returns 0=Sun, 6=Sat.
+    const d = new Date(now)
+    d.setDate(d.getDate() - d.getDay())
+    d.setHours(0, 0, 0, 0)
+    return { start: d.getTime(), end: now }
+  }
+  if (range === '30d' || range === 'month') {
+    // Current CALENDAR month — 1st 00:00 of this month → now.
+    // Resets on the 1st of every month.
+    const d = new Date(now)
+    const start = new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0, 0)
+    return { start: start.getTime(), end: now }
+  }
   if (range === '90d')  return { start: now - 90 * day, end: now }
   if (range === '1y')   return { start: now - 365 * day, end: now }
   if (range === 'all')  return { start: 0, end: now }
-  return { start: now - 30 * day, end: now }
+  return { start: now - 30 * day, end: now }  // safety default
 }
 
 function dayKey(ms: number) {
@@ -175,7 +193,9 @@ export async function GET(req: NextRequest) {
 
   const netNewPaying = paidConversionsInRange - cancellationsInRange
 
-  // 4) Week-over-week paying users delta
+  // 4) Week-over-week paying users delta — kept as rolling 7-day for the
+  // comparison math regardless of range tab. This is "this week vs last week"
+  // and not a calendar-aligned concept.
   const oneWeekAgo = now - 7 * day
   const payingUsersOneWeekAgo = subs.filter(s => {
     if (isFullDiscount(s.discount_coupon)) return false
