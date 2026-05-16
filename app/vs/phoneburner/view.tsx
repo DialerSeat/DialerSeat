@@ -18,9 +18,10 @@ const T = {
 }
 
 const features = [
-  { feature: 'Public pricing', dialerseat: '$140 flat all-in', competitor: '$140–$215 + add-ons' },
+  { feature: 'Public pricing', dialerseat: '$35/week ($140/mo) flat', competitor: '$140–$215 + add-ons' },
+  { feature: 'Weekly billing option', dialerseat: true, competitor: false },
   { feature: 'Annual contract for best price', dialerseat: false, competitor: true },
-  { feature: 'Monthly billing option', dialerseat: 'Default', competitor: 'Premium upcharge' },
+  { feature: 'Monthly billing option', dialerseat: 'Available', competitor: 'Premium upcharge' },
   { feature: 'Setup fee', dialerseat: '$0', competitor: '$0' },
   { feature: 'Free trial', dialerseat: '7 days, full access', competitor: '60 calling minutes' },
   { feature: 'Single-line power dialer', dialerseat: true, competitor: true },
@@ -157,6 +158,7 @@ export default function VsPhoneBurnerView() {
         .price-card-name { font-size: 24px; font-weight: 800; color: ${T.text}; margin-bottom: 16px; }
         .price-card-big { font-size: 44px; font-weight: 800; letter-spacing: -1px; color: ${T.text}; line-height: 1; }
         .price-card-suffix { font-size: 14px; color: ${T.muted}; margin-left: 4px; letter-spacing: 1px; }
+        .price-card-monthly { margin-top: 8px; font-size: 13px; color: ${T.muted}; letter-spacing: 0.5px; }
         .price-card-list { margin-top: 20px; padding-top: 20px; border-top: 1px solid ${T.border}; list-style: none; padding-left: 0; }
         .price-card-list li {
           padding: 6px 0;
@@ -287,13 +289,14 @@ export default function VsPhoneBurnerView() {
           <div className="vs-eyebrow">DIALERSEAT VS PHONEBURNER</div>
           <h1 className="vs-h1">
             PhoneBurner stops at single-line.<br />
-            <span className="versus">We don't.</span>
+            <span className="versus">We don't. $35 a week.</span>
           </h1>
           <p className="vs-subhead">
-            Same Tier-1 carrier audio. Same spam protection and reputation monitoring. Same CRM
-            integrations. Without being capped at single-line dialing. Without ARMOR as a $35/seat
-            add-on. Without Connect Scores as a $20/seat add-on. Without an annual contract for
-            the best price. Multi-line predictive included, monthly billing default.
+            Same Tier-1 carrier audio. Same spam protection. Same CRM integrations.
+            At <strong>just $35/week</strong> ($140/mo) — without being capped at single-line.
+            Without ARMOR as a $35/seat add-on. Without Connect Scores as a $20/seat add-on.
+            Without an annual contract for the best price. Multi-line predictive included,
+            weekly billing default.
           </p>
           <div className="vs-cta-row">
             <Link href="/" className="vs-btn-primary">START FREE TRIAL →</Link>
@@ -310,13 +313,14 @@ export default function VsPhoneBurnerView() {
           connections, and the best-in-class ARMOR spam protection. Their reputation is real. The
           problem: they stop at single-line, they hide their best features behind annual
           contracts, and the headline $140/seat number lands at $200–$250 once add-ons stack up.
+          We charge $35/week. Everything is included.
         </p>
 
         <div className="verdict-card">
           <div className="verdict-title">▸ BOTTOM LINE</div>
           <p className="verdict-text">
             <strong>Pick DialerSeat</strong> if you need multi-line predictive speed, want spam
-            protection and AI features included (not stacked as add-ons), and prefer monthly
+            protection and AI features included (not stacked as add-ons), and prefer weekly
             billing over annual lock-in.{' '}
             <strong>Pick PhoneBurner</strong> if you're committed to single-line dialing for
             quality reasons and your team is happy on an annual contract with their ecosystem.
@@ -345,11 +349,12 @@ export default function VsPhoneBurnerView() {
         <div className="price-grid" style={{ marginTop: 32 }}>
           <div className="price-card winner">
             <div className="price-card-label">DIALERSEAT</div>
-            <div className="price-card-name">Everything included, flat</div>
+            <div className="price-card-name">Everything included, weekly</div>
             <div>
-              <span className="price-card-big">$140</span>
-              <span className="price-card-suffix">/seat/month</span>
+              <span className="price-card-big">$35</span>
+              <span className="price-card-suffix">/seat/week</span>
             </div>
+            <div className="price-card-monthly">≈ $140/month — pick weekly or monthly billing</div>
             <ul className="price-card-list">
               <li><span className="check">✓</span> Multi-line predictive dialer included</li>
               <li><span className="check">✓</span> Spam protection + reputation monitoring included</li>
@@ -358,7 +363,7 @@ export default function VsPhoneBurnerView() {
               <li><span className="check">✓</span> SMS + inbound numbers included</li>
               <li><span className="check">✓</span> Live monitoring + coaching included</li>
               <li><span className="check">✓</span> Native CRM integrations included</li>
-              <li><span className="check">✓</span> Monthly billing default — no annual lock-in</li>
+              <li><span className="check">✓</span> Weekly billing default — no annual lock-in</li>
               <li><span className="check">✓</span> Unlimited outbound minutes</li>
             </ul>
           </div>
@@ -370,6 +375,7 @@ export default function VsPhoneBurnerView() {
               <span className="price-card-big">$200–$250</span>
               <span className="price-card-suffix">/seat/month (real)</span>
             </div>
+            <div className="price-card-monthly">Annual contract for best price. No weekly option.</div>
             <ul className="price-card-list">
               <li className="bad"><span className="cross">✕</span> Single-line dialing only</li>
               <li className="bad"><span className="cross">✕</span> ARMOR as ~$35/seat add-on</li>
@@ -386,8 +392,8 @@ export default function VsPhoneBurnerView() {
 
         <div className="vs-incentive-strip">
           <strong>FOR TEAMS:</strong> 10-rep team on PhoneBurner real-bill = ~$2,380/mo. 10-rep
-          team on DialerSeat = $1,400/mo. <strong>Save $11,760/year</strong> — plus get
-          multi-line dialing PhoneBurner doesn't offer.
+          team on DialerSeat = $1,400/mo ($350/week). <strong>Save $11,760/year</strong> — plus
+          get multi-line dialing PhoneBurner doesn't offer.
         </div>
       </div>
 
@@ -396,8 +402,8 @@ export default function VsPhoneBurnerView() {
         <h2 className="vs-section-h2">Where the tier-gating shows up.</h2>
         <p className="vs-section-lede">
           PhoneBurner's three tiers (Standard, Professional, Premium) gate critical features
-          behind upgrades. We include everything. Side-by-side scoring below — partial means
-          "available but gated or add-on."
+          behind upgrades. We include everything for $35/week. Side-by-side scoring below —
+          partial means "available but gated or add-on."
         </p>
 
         <div style={{ overflowX: 'auto' }}>
@@ -436,7 +442,15 @@ export default function VsPhoneBurnerView() {
 
         <div className="win-grid">
           <div className="win-card">
-            <div className="win-card-title">1. Multi-line dialing — predictive, triple-line, all of it</div>
+            <div className="win-card-title">1. Weekly billing at $35/week — nobody else does this</div>
+            <p className="win-card-body">
+              $35 this week. Cancel before next Monday and you owe nothing more. PhoneBurner wants
+              annual commitments to give you their best price. Different category of customer
+              experience.
+            </p>
+          </div>
+          <div className="win-card">
+            <div className="win-card-title">2. Multi-line dialing — predictive, triple-line, all of it</div>
             <p className="win-card-body">
               PhoneBurner is single-line only. For high-volume outbound, that's a 3x speed
               difference. Reviewers on Reddit and G2 cite "no multi-line" as their #1 complaint.
@@ -444,25 +458,18 @@ export default function VsPhoneBurnerView() {
             </p>
           </div>
           <div className="win-card">
-            <div className="win-card-title">2. Everything included, no add-on stacking</div>
+            <div className="win-card-title">3. Everything included, no add-on stacking</div>
             <p className="win-card-body">
               ARMOR, Connect Scores, SMS, inbound, live monitoring, coaching — all included in our
-              base price. PhoneBurner stacks them into separate add-ons and tiers that push real
-              bills from $140 to $250 per seat.
+              $35/week base. PhoneBurner stacks them into separate add-ons and tiers that push
+              real bills from $140 to $250 per seat.
             </p>
           </div>
           <div className="win-card">
-            <div className="win-card-title">3. Multiple scripts per campaign + live switching</div>
+            <div className="win-card-title">4. Multiple scripts per campaign + live switching</div>
             <p className="win-card-body">
               Cold open, voicemail leave-behind, objection handlers, closer — tabs in your dialer,
               one tap away on every call. PhoneBurner expects one script per session.
-            </p>
-          </div>
-          <div className="win-card">
-            <div className="win-card-title">4. Monthly billing — no annual contract for best price</div>
-            <p className="win-card-body">
-              PhoneBurner's published prices assume annual billing. Monthly costs more. Our $140
-              is monthly by default — cancel anytime, no recovery call from Customer Success.
             </p>
           </div>
           <div className="win-card">
@@ -527,7 +534,7 @@ export default function VsPhoneBurnerView() {
             <ul className="decision-list">
               <li>✓ Your team needs multi-line predictive dialing</li>
               <li>✓ You don't want to stack add-ons to get core features</li>
-              <li>✓ Monthly billing fits your finance team better than annual</li>
+              <li>✓ Weekly or monthly billing fits your finance team better than annual</li>
               <li>✓ You want AI transcription + summaries included</li>
               <li>✓ Live monitoring matters from day one (not tier upgrade later)</li>
               <li>✓ SMS as a 2-touch channel is part of your strategy</li>
@@ -554,11 +561,11 @@ export default function VsPhoneBurnerView() {
 
       <div className="vs-final-cta">
         <div className="vs-final-cta-inner">
-          <h2 className="vs-final-cta-h2">Multi-line speed. Flat pricing. No annual lock-in.</h2>
+          <h2 className="vs-final-cta-h2">Multi-line speed. $35 a week. No annual lock-in.</h2>
           <p className="vs-final-cta-p">
-            7-day free trial with full features unlocked. No 60-minute calling cap. Bring your
-            team. If we can't replace PhoneBurner for you, walk away — no contract, no recovery
-            call from Customer Success.
+            7-day free trial with full features unlocked. No 60-minute calling cap. After trial:
+            just $35/week ($140/mo) per seat. Cancel any time — even mid-week. No recovery call
+            from Customer Success.
           </p>
           <div className="vs-cta-row">
             <Link href="/" className="vs-btn-primary">START FREE TRIAL →</Link>

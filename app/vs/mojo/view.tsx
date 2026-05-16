@@ -18,7 +18,8 @@ const T = {
 }
 
 const features = [
-  { feature: 'Public pricing', dialerseat: '$140 flat all-in', competitor: '$99 + add-ons stack to $250+' },
+  { feature: 'Public pricing', dialerseat: '$35/week ($140/mo) flat', competitor: '$99 + add-ons stack to $250+' },
+  { feature: 'Weekly billing option', dialerseat: true, competitor: false },
   { feature: 'Required Agent Access fee', dialerseat: '$0 (included)', competitor: '+$10/user/mo' },
   { feature: 'Setup fee', dialerseat: '$0', competitor: '$0' },
   { feature: 'Free trial', dialerseat: '7 days, full access', competitor: '14 days' },
@@ -183,6 +184,7 @@ export default function VsMojoView() {
         .price-card-name { font-size: 24px; font-weight: 800; color: ${T.text}; margin-bottom: 16px; }
         .price-card-big { font-size: 44px; font-weight: 800; letter-spacing: -1px; color: ${T.text}; line-height: 1; }
         .price-card-suffix { font-size: 14px; color: ${T.muted}; margin-left: 4px; letter-spacing: 1px; }
+        .price-card-monthly { margin-top: 8px; font-size: 13px; color: ${T.muted}; letter-spacing: 0.5px; }
         .price-card-list {
           margin-top: 20px;
           padding-top: 20px;
@@ -334,13 +336,14 @@ export default function VsMojoView() {
           <div className="vs-eyebrow">DIALERSEAT VS MOJO DIALER</div>
           <h1 className="vs-h1">
             Mojo charges à la carte.<br />
-            <span className="versus">We charge once.</span>
+            <span className="versus">We charge once. Weekly.</span>
           </h1>
           <p className="vs-subhead">
-            Same triple-line speed. Same DNC scrubbing. Same voicemail drop. Without the
-            $10/mo Agent Access fee, the $49 skip tracer add-on, the $49 pre-foreclosure add-on,
-            the $25/county FSBO data add-on — and without being locked into real estate.
-            Every industry, every team size, one flat price.
+            Same triple-line speed. Same DNC scrubbing. Same voicemail drop. At
+            <strong> just $35/week</strong> ($140/mo) — without the $10/mo Agent Access fee, the
+            $49 skip tracer add-on, the $49 pre-foreclosure add-on, the $25/county FSBO data
+            add-on. And without being locked into real estate. Every industry, every team size,
+            one flat weekly price.
           </p>
           <div className="vs-cta-row">
             <Link href="/" className="vs-btn-primary">START FREE TRIAL →</Link>
@@ -356,14 +359,14 @@ export default function VsMojoView() {
           Mojo built the best triple-line dialer for real estate prospecting. They've earned that
           reputation. But the moment you need anything outside their core — CRM integrations,
           live coaching, AI summaries, modern UI, or anything for an industry other than real
-          estate — you start paying add-ons that double the bill.
+          estate — you start paying add-ons that double the bill. We just charge $35/week. Done.
         </p>
 
         <div className="verdict-card">
           <div className="verdict-title">▸ BOTTOM LINE</div>
           <p className="verdict-text">
-            <strong>Pick DialerSeat</strong> if you want all features in one flat price across any
-            industry, with modern software and full CRM integrations.{' '}
+            <strong>Pick DialerSeat</strong> if you want all features in one flat $35/week price
+            across any industry, with modern software and full CRM integrations.{' '}
             <strong>Pick Mojo</strong> if you're a real estate solo agent who lives in expired
             listings and FSBOs and only needs a fast triple-line dialer.
           </p>
@@ -394,9 +397,10 @@ export default function VsMojoView() {
             <div className="price-card-label">DIALERSEAT</div>
             <div className="price-card-name">All features included</div>
             <div>
-              <span className="price-card-big">$140</span>
-              <span className="price-card-suffix">/seat/month</span>
+              <span className="price-card-big">$35</span>
+              <span className="price-card-suffix">/seat/week</span>
             </div>
+            <div className="price-card-monthly">≈ $140/month — pick weekly or monthly billing</div>
             <ul className="price-card-list">
               <li><span className="check">✓</span> No Agent Access fee — included</li>
               <li><span className="check">✓</span> Triple-line + Predictive + Progressive + Preview</li>
@@ -417,6 +421,7 @@ export default function VsMojoView() {
               <span className="price-card-big">$346</span>
               <span className="price-card-suffix">/agent/month (real)</span>
             </div>
+            <div className="price-card-monthly">Monthly billing only. No weekly option.</div>
             <ul className="price-card-list">
               <li className="bad"><span className="cross">✕</span> $10/mo mandatory access fee</li>
               <li className="bad"><span className="cross">✕</span> No true predictive (triple-line only)</li>
@@ -433,7 +438,7 @@ export default function VsMojoView() {
 
         <div className="vs-incentive-strip">
           <strong>FOR TEAMS:</strong> 10-rep team on Mojo Triple Line + add-ons = ~$3,460/mo.
-          10-rep team on DialerSeat = $1,400/mo. <strong>Save $24,720/year.</strong>
+          10-rep team on DialerSeat = $1,400/mo ($350/week). <strong>Save $24,720/year.</strong>
         </div>
       </div>
 
@@ -481,7 +486,15 @@ export default function VsMojoView() {
 
         <div className="win-grid">
           <div className="win-card">
-            <div className="win-card-title">1. Every industry, not just real estate</div>
+            <div className="win-card-title">1. Weekly billing — nobody else does this</div>
+            <p className="win-card-body">
+              $35 this week. Cancel before next Monday and you owe nothing more. Mojo wants
+              monthly billing with multiple add-ons. We charge once, weekly, and you get
+              everything.
+            </p>
+          </div>
+          <div className="win-card">
+            <div className="win-card-title">2. Every industry, not just real estate</div>
             <p className="win-card-body">
               Mojo is built around FSBO, expired, and neighborhood data. If you sell insurance,
               financial services, B2B SaaS, debt resolution, fundraising, or anything else, you're
@@ -489,7 +502,7 @@ export default function VsMojoView() {
             </p>
           </div>
           <div className="win-card">
-            <div className="win-card-title">2. Multiple scripts per campaign + live switching</div>
+            <div className="win-card-title">3. Multiple scripts per campaign + live switching</div>
             <p className="win-card-body">
               Cold open, voicemail leave-behind, three objection handlers, closer — all on tabs,
               one tap away mid-call. Mojo gives you one script per campaign and expects you to
@@ -497,7 +510,7 @@ export default function VsMojoView() {
             </p>
           </div>
           <div className="win-card">
-            <div className="win-card-title">3. Real predictive dialer + 4 modes per campaign</div>
+            <div className="win-card-title">4. Real predictive dialer + 4 modes per campaign</div>
             <p className="win-card-body">
               Triple-line is fast for prospecting but it's not true predictive — there's no pacing
               algorithm with abandon-rate caps. We have Predictive, Progressive, Power, and
@@ -505,18 +518,10 @@ export default function VsMojoView() {
             </p>
           </div>
           <div className="win-card">
-            <div className="win-card-title">4. Live monitoring + whisper + barge</div>
+            <div className="win-card-title">5. Live monitoring + whisper + barge</div>
             <p className="win-card-body">
               Coach reps in real time, whisper advice mid-call, barge in when needed. Mojo doesn't
               have any of this. For team-based selling, this is non-negotiable.
-            </p>
-          </div>
-          <div className="win-card">
-            <div className="win-card-title">5. Full CRM stack, not Follow Up Boss only</div>
-            <p className="win-card-body">
-              Native two-way sync with Salesforce, HubSpot, Pipedrive, Zoho, plus a public API for
-              custom integrations. Mojo's only deep integration is Follow Up Boss, which is real
-              estate-specific.
             </p>
           </div>
           <div className="win-card">
@@ -573,7 +578,7 @@ export default function VsMojoView() {
             <h3 className="decision-card-h3">You're in any industry that needs serious team dialing.</h3>
             <ul className="decision-list">
               <li>✓ You're not strictly real estate</li>
-              <li>✓ You want flat pricing without add-on creep</li>
+              <li>✓ You want $35/week flat pricing without add-on creep</li>
               <li>✓ Your team uses Salesforce, HubSpot, Pipedrive, or Zoho</li>
               <li>✓ You need live coaching for newer reps</li>
               <li>✓ You want AI transcription and summaries</li>
@@ -601,11 +606,11 @@ export default function VsMojoView() {
 
       <div className="vs-final-cta">
         <div className="vs-final-cta-inner">
-          <h2 className="vs-final-cta-h2">Same speed. Half the price. Every industry.</h2>
+          <h2 className="vs-final-cta-h2">Same speed. Half the price. Every industry. $35 a week.</h2>
           <p className="vs-final-cta-p">
-            7-day free trial with full features unlocked. No credit card. Bring your team during
-            trial. If we can't replace Mojo for you, walk away — no contract, no recovery call,
-            no hard sell.
+            7-day free trial with full features unlocked. No credit card. After trial: just
+            $35/week ($140/mo) per seat. Cancel any time — even mid-week. No contract, no
+            recovery call, no hard sell.
           </p>
           <div className="vs-cta-row">
             <Link href="/" className="vs-btn-primary">START FREE TRIAL →</Link>

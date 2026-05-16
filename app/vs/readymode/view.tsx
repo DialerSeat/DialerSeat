@@ -20,6 +20,8 @@ const T = {
 const features = [
   { feature: 'Public pricing on website', dialerseat: true, competitor: false },
   { feature: 'Self-serve signup (no demo required)', dialerseat: true, competitor: false },
+  { feature: 'Weekly billing option', dialerseat: 'Default', competitor: false },
+  { feature: 'Monthly billing option', dialerseat: true, competitor: true },
   { feature: 'Setup fee', dialerseat: '$0', competitor: '$500–$2,000' },
   { feature: 'Annual contract required', dialerseat: false, competitor: 'Typical' },
   { feature: 'Free trial', dialerseat: '7 days, full access', competitor: 'None' },
@@ -227,6 +229,12 @@ export default function VsReadyModeView() {
           margin-left: 4px;
           letter-spacing: 1px;
         }
+        .price-card-monthly {
+          margin-top: 8px;
+          font-size: 13px;
+          color: ${T.muted};
+          letter-spacing: 0.5px;
+        }
         .price-card-list {
           margin-top: 20px;
           padding-top: 20px;
@@ -244,7 +252,6 @@ export default function VsReadyModeView() {
           gap: 8px;
         }
         .price-card-list li.bad { color: ${T.muted}; }
-        .price-card-list li::before { content: ''; flex-shrink: 0; width: 4px; }
         .check, .cross {
           display: inline-block;
           width: 18px;
@@ -413,9 +420,10 @@ export default function VsReadyModeView() {
             <span className="versus">DialerSeat is built for 2026.</span>
           </h1>
           <p className="vs-subhead">
-            Same multi-line predictive dialing, live coaching, and CRM integrations — without the
-            $500–$2,000 setup fee, the mandatory demo call, the annual contract, or the dated UI
-            agents complain about. Sign up, configure your team, and dial in under 10 minutes.
+            Same multi-line predictive dialing, live coaching, and CRM integrations — at
+            <strong> just $35/week</strong> ($140/mo). No $500–$2,000 setup fee, no mandatory
+            demo call, no annual contract, no dated UI agents complain about. Sign up, configure
+            your team, and dial in under 10 minutes.
           </p>
           <div className="vs-cta-row">
             <Link href="/" className="vs-btn-primary">START FREE TRIAL →</Link>
@@ -429,15 +437,16 @@ export default function VsReadyModeView() {
         <h2 className="vs-section-h2">If you have 5+ reps and budget for $200/seat, you have two options.</h2>
         <p className="vs-section-lede">
           ReadyMode is the legacy choice — comprehensive, customizable, and proven. DialerSeat is
-          the modern choice — same feature set, half the friction, none of the contract lock-in.
-          Here's how they actually stack up in 2026.
+          the modern choice — same feature set, half the friction, none of the contract lock-in,
+          and the only dialer in the category that bills weekly. Here's how they actually stack
+          up in 2026.
         </p>
 
         <div className="verdict-card">
           <div className="verdict-title">▸ BOTTOM LINE</div>
           <p className="verdict-text">
-            <strong>Pick DialerSeat</strong> if you want to onboard 50 reps in a day, pay a flat
-            $140/seat with no add-on creep, and skip the enterprise sales cycle.{' '}
+            <strong>Pick DialerSeat</strong> if you want to onboard 50 reps in a day, pay
+            $35/week per seat with no add-on creep, and skip the enterprise sales cycle.{' '}
             <strong>Pick ReadyMode</strong> if your buying committee requires a 60-day RFP, a
             white-glove implementation manager, and a CFO who insists on annual commitments.
           </p>
@@ -446,25 +455,27 @@ export default function VsReadyModeView() {
 
       <div className="vs-section" style={{ paddingTop: 0 }}>
         <div className="vs-section-eyebrow">PRICING IN 2026</div>
-        <h2 className="vs-section-h2">Flat $140/seat vs $200–$300/seat once the add-ons land.</h2>
+        <h2 className="vs-section-h2">$35/week flat vs $200–$300/seat once the add-ons land.</h2>
         <p className="vs-section-lede">
           ReadyMode publishes a $165 starting price. Every customer we've spoken to ends up at
           $200–$249 after implementation fees, custom reports, and the features ReadyMode hides
-          behind tier upgrades. We don't have tier upgrades.
+          behind tier upgrades. We don't have tier upgrades. We bill weekly. No one else in the
+          category does.
         </p>
 
         <div className="price-grid">
           <div className="price-card winner">
             <div className="price-card-label">DIALERSEAT</div>
-            <div className="price-card-name">All-in flat pricing</div>
+            <div className="price-card-name">Flat weekly billing</div>
             <div>
-              <span className="price-card-big">$140</span>
-              <span className="price-card-suffix">/seat/month</span>
+              <span className="price-card-big">$35</span>
+              <span className="price-card-suffix">/seat/week</span>
             </div>
+            <div className="price-card-monthly">≈ $140/month — pick weekly or monthly billing</div>
             <ul className="price-card-list">
               <li><span className="check">✓</span> $0 setup fee</li>
               <li><span className="check">✓</span> $0 implementation</li>
-              <li><span className="check">✓</span> Cancel any time, monthly billing</li>
+              <li><span className="check">✓</span> Cancel any time — even mid-week</li>
               <li><span className="check">✓</span> All dialer modes included</li>
               <li><span className="check">✓</span> Live monitoring + coaching included</li>
               <li><span className="check">✓</span> AI transcription + summaries included</li>
@@ -481,6 +492,7 @@ export default function VsReadyModeView() {
               <span className="price-card-big">$165–$249</span>
               <span className="price-card-suffix">/seat/month</span>
             </div>
+            <div className="price-card-monthly">Annual billing preferred. No weekly option.</div>
             <ul className="price-card-list">
               <li className="bad"><span className="cross">✕</span> $500–$2,000 setup fee</li>
               <li className="bad"><span className="cross">✕</span> Annual contract typical</li>
@@ -540,42 +552,43 @@ export default function VsReadyModeView() {
 
       <div className="vs-section" style={{ paddingTop: 0 }}>
         <div className="vs-section-eyebrow">WHERE DIALERSEAT WINS</div>
-        <h2 className="vs-section-h2">Five things ReadyMode literally cannot do.</h2>
+        <h2 className="vs-section-h2">Six things ReadyMode literally cannot do.</h2>
 
         <div className="win-grid">
           <div className="win-card">
-            <div className="win-card-title">1. Multiple scripts per campaign with live mid-call switching</div>
+            <div className="win-card-title">1. Weekly billing — nobody else in the category does this</div>
+            <p className="win-card-body">
+              $35 this week. Cancel before next Monday and you owe nothing more. Want to skip a
+              slow week? Pause. ReadyMode wants a 12-month commitment with a 60-day cancellation
+              clause. Different universe.
+            </p>
+          </div>
+          <div className="win-card">
+            <div className="win-card-title">2. Multiple scripts per campaign with live mid-call switching</div>
             <p className="win-card-body">
               Cold open, voicemail leave-behind, three objection handlers, closing script — all one
               tap away on every call. ReadyMode forces you into one script per campaign. We don't.
             </p>
           </div>
           <div className="win-card">
-            <div className="win-card-title">2. Per-campaign dialer mode (Preview, Power, Progressive, Predictive)</div>
+            <div className="win-card-title">3. Per-campaign dialer mode (Preview, Power, Progressive, Predictive)</div>
             <p className="win-card-body">
               Your cold list runs Predictive. Your hot follow-ups run Preview. Same agent, same
               session, different modes per campaign. ReadyMode locks you to one mode account-wide.
             </p>
           </div>
           <div className="win-card">
-            <div className="win-card-title">3. Calendar-aligned analytics (Sunday + 1st-of-month resets)</div>
+            <div className="win-card-title">4. Calendar-aligned analytics (Sunday + 1st-of-month resets)</div>
             <p className="win-card-body">
               "This week" means Sunday through now, not a rolling 7-day window. "This month" means
               the 1st through now. Matches how sales managers actually think about pipeline.
             </p>
           </div>
           <div className="win-card">
-            <div className="win-card-title">4. Lapsed-user data preservation</div>
+            <div className="win-card-title">5. Lapsed-user data preservation</div>
             <p className="win-card-body">
               Pause your subscription, keep your campaigns, leads, recordings, and call history.
               Resubscribe and pick up where you left off. ReadyMode deletes or charges storage fees.
-            </p>
-          </div>
-          <div className="win-card">
-            <div className="win-card-title">5. Self-serve everything — even for 50-seat teams</div>
-            <p className="win-card-body">
-              Spin up a 50-person sales floor in an afternoon. No demo, no implementation manager,
-              no rollout schedule. ReadyMode requires a 2–6 week implementation cycle.
             </p>
           </div>
           <div className="win-card">
@@ -633,8 +646,8 @@ export default function VsReadyModeView() {
             <ul className="decision-list">
               <li>✓ You'd rather configure software than sit through demos</li>
               <li>✓ Your team size is 5–500 reps</li>
-              <li>✓ Flat $140/seat is more predictable than $200–$249 + add-ons</li>
-              <li>✓ You want monthly billing, not annual lock-in</li>
+              <li>✓ $35/week is more predictable than $200–$249 + add-ons</li>
+              <li>✓ You want weekly or monthly billing, not annual lock-in</li>
               <li>✓ Modern UI matters for rep retention and morale</li>
               <li>✓ You need to onboard new reps in hours, not weeks</li>
               <li>✓ You use Salesforce / HubSpot / Pipedrive and want native sync</li>
@@ -662,9 +675,9 @@ export default function VsReadyModeView() {
         <div className="vs-final-cta-inner">
           <h2 className="vs-final-cta-h2">Skip the demo. Start dialing today.</h2>
           <p className="vs-final-cta-p">
-            7-day free trial with full team features unlocked. No credit card required. Bring up to
-            10 reps free during trial. If it's not better than ReadyMode in 7 days, walk away —
-            no contract, no obligation, no recovery call from a "Customer Success" rep.
+            7-day free trial with full team features unlocked. No credit card required. After
+            trial: just $35/week per seat ($140/mo). Cancel any time. No contract, no obligation,
+            no recovery call from a "Customer Success" rep.
           </p>
           <div className="vs-cta-row">
             <Link href="/" className="vs-btn-primary">START FREE TRIAL →</Link>
