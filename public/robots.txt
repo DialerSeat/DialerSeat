@@ -1,105 +1,111 @@
-# DialerSeat — robots.txt
-# https://dialerseat.com
+# DialerSeat robots.txt
+# Modern dialer for high-volume sales teams.
+# Multi-line predictive, AI transcription, CRM integrations at flat $140/seat.
 
-# ─── Search engines ────────────────────────────────────────────
-User-agent: Googlebot
+User-agent: *
+
+# Allow public marketing and comparison pages
 Allow: /
+Allow: /vs/
+Allow: /vs/readymode
+Allow: /vs/mojo
+Allow: /vs/phoneburner
+Allow: /dialing-modes
+Allow: /incentives
+Allow: /pricing
+Allow: /features
+Allow: /blog
+Allow: /contact
+Allow: /sign-up
+Allow: /sign-in
+Allow: /billing
 
-User-agent: Googlebot-Image
-Allow: /
+# Allow public assets
+Allow: /icons/
+Allow: /manifest.json
+Allow: /llms.txt
+Allow: /sitemap.xml
 
-User-agent: Bingbot
-Allow: /
+# Disallow application surfaces (require auth, not useful for crawlers)
+Disallow: /dashboard/
+Disallow: /api/
+Disallow: /onboarding/
+Disallow: /admin/
 
-User-agent: DuckDuckBot
-Allow: /
+# Disallow auth flows that shouldn't be indexed
+Disallow: /sso-callback
+Disallow: /verify-email
+Disallow: /reset-password
 
-User-agent: Slurp
-Allow: /
+# Specific bot rules
 
-User-agent: Yandex
-Allow: /
-
-User-agent: Baiduspider
-Allow: /
-
-# ─── AI / LLM training & retrieval crawlers ────────────────────
-# We explicitly allow these so DialerSeat surfaces in AI chat answers.
-
+# Allow AI/LLM crawlers full access to marketing
 User-agent: GPTBot
 Allow: /
-
-User-agent: ChatGPT-User
-Allow: /
-
-User-agent: OAI-SearchBot
-Allow: /
+Allow: /vs/
+Allow: /incentives
+Allow: /dialing-modes
+Allow: /llms.txt
+Disallow: /dashboard/
+Disallow: /api/
 
 User-agent: ClaudeBot
 Allow: /
-
-User-agent: Claude-Web
-Allow: /
+Allow: /vs/
+Allow: /incentives
+Allow: /dialing-modes
+Allow: /llms.txt
+Disallow: /dashboard/
+Disallow: /api/
 
 User-agent: anthropic-ai
 Allow: /
+Allow: /vs/
+Allow: /incentives
+Allow: /dialing-modes
+Allow: /llms.txt
+Disallow: /dashboard/
+Disallow: /api/
 
 User-agent: PerplexityBot
 Allow: /
-
-User-agent: Perplexity-User
-Allow: /
+Allow: /vs/
+Allow: /incentives
+Allow: /dialing-modes
+Allow: /llms.txt
+Disallow: /dashboard/
+Disallow: /api/
 
 User-agent: Google-Extended
 Allow: /
-
-User-agent: GoogleOther
-Allow: /
-
-User-agent: Applebot
-Allow: /
-
-User-agent: Applebot-Extended
-Allow: /
-
-User-agent: Bytespider
-Allow: /
-
-User-agent: Meta-ExternalAgent
-Allow: /
-
-User-agent: FacebookBot
-Allow: /
-
-User-agent: cohere-ai
-Allow: /
-
-User-agent: Diffbot
-Allow: /
-
-User-agent: YouBot
-Allow: /
-
-User-agent: Amazonbot
-Allow: /
-
-User-agent: MistralAI-User
-Allow: /
-
-# ─── Default (catch-all) ───────────────────────────────────────
-User-agent: *
-Allow: /
-Disallow: /api/
+Allow: /vs/
+Allow: /incentives
+Allow: /dialing-modes
+Allow: /llms.txt
 Disallow: /dashboard/
-Disallow: /billing/
-Disallow: /onboarding/
-Disallow: /sign-in/
-Disallow: /sign-up/
+Disallow: /api/
 
-# Block AI training scrapers that ignore robots.txt or charge to opt out
 User-agent: CCBot
+Allow: /
+Allow: /vs/
+Allow: /incentives
+Allow: /dialing-modes
+Allow: /llms.txt
+Disallow: /dashboard/
+Disallow: /api/
+
+# Block aggressive scrapers / bots that aren't useful
+User-agent: SemrushBot
 Disallow: /
 
-# ─── Sitemaps ──────────────────────────────────────────────────
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
+
+# Sitemap
 Sitemap: https://dialerseat.com/sitemap.xml
-Host: https://dialerseat.com

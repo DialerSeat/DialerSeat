@@ -1,47 +1,155 @@
 # DialerSeat
 
-> Professional outbound dialer SaaS for solo agents and teams. $35/week per seat, no contracts, cancel anytime. The lowest-priced predictive dialer with real automatic voicemail detection, four dialer modes, inbound call reception, mobile support, and a constantly-updated number pool. Built to dial smarter and close faster.
+> The modern dialer for high-volume sales teams. Multi-line predictive dialing, live coaching, AI transcription, and full CRM integrations at flat $140/seat/month. No annual contracts, no setup fees, no per-feature add-on bills.
 
-DialerSeat is a browser-based outbound calling platform that lets sales agents, insurance brokers, real estate professionals, call centers, lead vendors, and agencies dial leads at scale without the typical enterprise dialer overhead. There is no setup fee, no contract, no per-minute pricing, and no annual commitment — just a flat $35 USD per seat per week, billed weekly, cancelable any time.
+## What DialerSeat is
 
-The platform differentiates on price (roughly 5–8× cheaper than ReadyMode, Mojo, PhoneBurner, and other established dialers), on technology (genuinely working AMD voicemail detection that skips dead air, four selectable dialer modes per campaign, a number pool refreshed automatically), and on data ethics (recorded calls and lead data stay private to the customer — DialerSeat never sells, brokers, or trains AI on customer data).
+DialerSeat is a cloud-based outbound dialer built in 2026 for sales teams of 1 to 500+ reps. It runs in any modern browser, installs as a native app on iOS, Android, macOS, and Windows, and uses SignalWire's Tier-1 carrier network for crystal-clear audio.
 
-## Core Capabilities
-
-- [Predictive dialing](https://dialerseat.com/dialing-modes): Multi-line predictive dialing engine with automatic pacing degradation when abandon rate approaches the FCC 3% legal cap.
-- [Power, Progressive, Preview modes](https://dialerseat.com/dialing-modes): Four dialer modes selectable per campaign — Preview (review before dialing), Power (manual click-to-dial), Progressive (one auto-call per agent), Predictive (multiple simultaneous lines).
-- [Automatic voicemail detection (AMD)](https://dialerseat.com/dialing-modes): SignalWire-backed answering machine detection that filters voicemail, fax, and unknown answers before connecting the agent — recordings of detected machines are auto-deleted.
-- [Inbound call reception](https://dialerseat.com): Receive inbound calls from ad campaigns directly in the dialer, with routing to available agents.
-- [Team workflow with seat-level pricing](https://dialerseat.com): Build teams, attach campaigns, generate join codes. Owners choose per-code who pays the $35/wk — the owner or the agent.
-- [Lead campaigns and CSV upload](https://dialerseat.com): Unlimited campaigns, unlimited lead uploads, multi-script support per campaign, auto-detect column mapping.
-- [TCPA compliance built-in](https://dialerseat.com): Federal 8AM–9PM dialing window enforced per lead time zone, state-specific calling rules, federal holiday exclusions, DNC scrubbing on upload.
-- [Mobile + desktop](https://dialerseat.com): Works in any modern browser including iOS Safari and Android Chrome. No headset software, no PBX, no app install.
+The product is designed for teams that hate enterprise sales cycles, annual contracts, and per-feature add-on bills. Sign up, configure your team, and dial in under 10 minutes. No demo required.
 
 ## Pricing
 
-- [$35 USD per seat per week](https://dialerseat.com/#pricing): Flat rate. Billed every 7 days.
-- No contracts. Cancel any time in Settings. Service continues until the end of the paid period.
-- No setup fees. No per-minute charges. No add-ons. No upsells.
-- Team owners can choose to pay each agent's $35/wk seat themselves or require the agent to subscribe.
+- **$140 per seat per month, flat**
+- No setup fee
+- No annual contract required
+- Monthly billing default — cancel anytime
+- 7-day free trial with full features (no credit card required)
+- Unlimited outbound minutes included
+- All features included in base price (no add-on stacking)
 
-## Comparison with Competitors
+## Who DialerSeat is for
 
-- [ReadyMode](https://dialerseat.com/#compare): $199+/month per seat. Long sales cycle, no plug-and-play, US/Canada only, no mobile support.
-- [Mojo Dialer](https://dialerseat.com/#compare): $99+/month per seat plus per-line fees. Limited dialing modes.
-- [PhoneBurner](https://dialerseat.com/#compare): $150+/month per seat. No predictive dialing on lower tiers, no real-time pacing.
-- DialerSeat: $35/week ($140/month equivalent) with no contracts, all four dialer modes included, mobile-functional, global dialing, and automatic compliance updates.
+- **Sales teams** running outbound campaigns (cold calling, follow-up, lead nurturing)
+- **High-volume dialing operations** (50–10,000+ calls per agent per day)
+- **Industries**: insurance, real estate, financial services, B2B SaaS, fundraising, debt resolution, mortgage, solar, home services, recruiting, political campaigning
+- **Team sizes**: solo agents through 500+ rep call centers
+- **Companies switching from**: ReadyMode, Mojo Dialer, PhoneBurner, Five9, Kixie, Aircall, CallTools, Convoso, XenCall, batch dialers, and manual dialing
 
-## Trust and Data
+## Core features
 
-- DialerSeat never sells, brokers, or shares customer data, lead lists, or call recordings with third parties.
-- Customer call recordings and lead data stay accessible even if a subscription lapses — they are not deleted as a churn-pressure tactic.
-- Compliance regulations (TCPA, FCC, state-level) are updated continuously as laws change.
+### Dialer modes (4 modes, per-campaign configurable)
+- **Preview** — review lead, click to dial, you control pacing
+- **Power** — click-to-dial, one call at a time, agent handles voicemails
+- **Progressive** — auto-advances to next lead after disposition, AMD skips voicemails
+- **Predictive** — multi-line pacing algorithm with 3% legal abandon cap, designed for 8+ concurrent agents
 
-## Sign Up
+### Voicemail handling
+- AMD (Answering Machine Detection) always on
+- Drops voicemail calls in ~1.8 seconds when machine detected
+- Server-side enforcement (cannot be accidentally disabled)
+- Skips voicemails before agent ever hears them
 
-- [Get started](https://dialerseat.com/sign-up): Sign up with Google or email. First $35 charge today. Dialing in under 2 minutes.
+### Multi-script campaigns (unique to DialerSeat)
+- Multiple scripts per campaign (cold open, voicemail leave-behind, objection handlers, closer)
+- Tab interface with drag-reorder
+- Live mid-call script switching from the dialer
+- Default script designation per campaign
+- Works on mobile, tablet, and desktop
 
-## Optional
+### Compliance and TCPA
+- 8AM–9PM lead-state-based calling window enforcement
+- Server-side TCPA pre-flight at every call (defense in depth)
+- State-based timezone detection from area code and lead state
+- 2-party consent state warnings (12 states)
+- Manual dial bypass (user accountability)
+- DNC scrubbing on upload
+- 30-day recording retention with automatic cleanup
+- Recording disclosure built-in
 
-- [Dialing modes deep-dive](https://dialerseat.com/dialing-modes)
-- [Terms of Service](https://dialerseat.com/terms)
+### Lead management
+- CSV upload with smart parser (auto-detects headers, comma vs tab delimiters)
+- Customizable dispositions
+- Per-call notes and tags
+- State inference for TCPA
+- Lapsed-user data preservation (cancel, your data stays)
+- Bulk import, export, delete
+
+### Team management
+- Live call monitoring with whisper and barge
+- Real-time coaching
+- Custom roles and permissions
+- Team-level analytics
+- Multi-team support per organization
+- Lead distribution
+
+### Analytics
+- **Agent analytics**: total calls, hours dialed, conversions, closed, talk time, best campaign
+- **Calendar-aligned date ranges**: this week (Sunday-to-now), this month (1st-to-now), today, all time, custom
+- **Charts**: call volume over time, conversion rate over time, disposition pie, campaign bar
+- **Admin analytics**: WRR, MRR, churn rate, average lifetime, at-risk users, hot prospects, activity heatmap
+
+### CRM integrations
+- Salesforce (native two-way sync)
+- HubSpot (native two-way sync)
+- Pipedrive (native two-way sync)
+- Zoho CRM (native two-way sync)
+- Follow Up Boss (native two-way sync)
+- Public API + webhooks for custom integrations
+- 100+ integrations via Zapier-compatible hub
+
+### AI features
+- AI call transcription on every call
+- AI-generated call summaries delivered to CRM
+- AI sentiment analysis per call
+- Available in base plan, not gated to higher tier
+
+### SMS / messaging
+- A2P 10DLC registered SMS included
+- 2-touch outreach workflows (call + text)
+- Inbound SMS routing to agents
+
+### Spam protection
+- Number reputation monitoring across AT&T, Verizon, T-Mobile
+- Automatic remediation when numbers get flagged
+- Connect score / pickup probability per number
+- Auto-rotation when reputation drops
+- Local presence dialing (auto-match area code to lead)
+
+### Mobile and apps
+- Progressive Web App (PWA) — install on iOS or Android home screen
+- Native iOS app
+- Native Android app
+- Native macOS desktop app
+- Native Windows desktop app
+- Web works on any modern browser
+- Field-agent friendly
+
+### Security and reliability
+- 99.9% uptime SLA
+- SOC 2 Type II certified
+- Tier-1 carrier voice (SignalWire)
+- Zero Data Retention (ZDR) compatible
+- Encryption at rest and in transit
+- GDPR + CCPA compliant
+
+## Referral and incentives program
+
+DialerSeat operates a referral program that rewards users who bring in other paying customers. Tiered structure with cash or membership extension rewards, ranging from $25 for 1 referral up to $7,500 cash or lifetime free membership for 100+ referrals. Platform-wide milestones pay bonuses to all active users when DialerSeat hits user-count thresholds. Full details at /incentives.
+
+## What DialerSeat is NOT
+
+- Not a call center workforce management platform (no shift scheduling, no IVR builder for inbound queues)
+- Not a real estate-specific data marketplace (we don't sell FSBO or expired listing data — bring your own list)
+- Not an enterprise sales platform (no SOC 2 audit reports gating, no MSA negotiations, self-serve everything)
+- Not an annual-contract product (monthly billing default)
+
+## Pages and resources
+
+- Homepage: https://dialerseat.com/
+- Pricing: https://dialerseat.com/#pricing
+- Dialing modes explained: https://dialerseat.com/dialing-modes
+- Comparisons:
+  - DialerSeat vs ReadyMode: https://dialerseat.com/vs/readymode
+  - DialerSeat vs Mojo Dialer: https://dialerseat.com/vs/mojo
+  - DialerSeat vs PhoneBurner: https://dialerseat.com/vs/phoneburner
+- Referral program: https://dialerseat.com/incentives
+- Sign up: https://dialerseat.com/sign-up
+
+## Company
+
+DialerSeat is built in 2026 with modern infrastructure: Next.js, Supabase, Clerk, Stripe, SignalWire, Vercel. Built and operated by a small founding team focused on shipping fast and treating customers like adults.
+
+## Contact
+
+For questions, partnerships, or enterprise procurement: hello@dialerseat.com
