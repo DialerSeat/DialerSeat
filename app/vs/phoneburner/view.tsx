@@ -23,7 +23,6 @@ const features = [
   { feature: 'Annual contract for best price', dialerseat: false, competitor: true },
   { feature: 'Monthly billing option', dialerseat: 'Available', competitor: 'Premium upcharge' },
   { feature: 'Setup fee', dialerseat: '$0', competitor: '$0' },
-  { feature: 'Free trial', dialerseat: '7 days, full access', competitor: '60 calling minutes' },
   { feature: 'Single-line power dialer', dialerseat: true, competitor: true },
   { feature: 'Triple-line / multi-line dialer', dialerseat: true, competitor: false },
   { feature: 'True predictive dialer with pacing', dialerseat: true, competitor: false },
@@ -59,6 +58,8 @@ const features = [
 ]
 
 export default function VsPhoneBurnerView() {
+  const currentYear = new Date().getFullYear()
+
   return (
     <div className="vs-root" style={{
       background: T.bg,
@@ -122,18 +123,6 @@ export default function VsPhoneBurnerView() {
           text-decoration: none;
           display: inline-block;
           box-shadow: 0 0 24px rgba(74,158,255,0.4);
-        }
-        .vs-btn-secondary {
-          padding: 16px 32px;
-          background: transparent;
-          color: white;
-          font-size: 13px;
-          letter-spacing: 2.5px;
-          font-weight: bold;
-          border-radius: 8px;
-          border: 1px solid rgba(255,255,255,0.3);
-          text-decoration: none;
-          display: inline-block;
         }
         .vs-section { max-width: 1080px; margin: 0 auto; padding: 80px 32px; }
         .vs-section-eyebrow { font-size: 11px; letter-spacing: 4px; color: ${T.muted}; font-weight: bold; margin-bottom: 12px; }
@@ -209,22 +198,44 @@ export default function VsPhoneBurnerView() {
         }
         .win-card-title { font-size: 17px; font-weight: 800; color: ${T.text}; margin-bottom: 10px; }
         .win-card-body { font-size: 14px; line-height: 1.65; color: ${T.muted}; margin: 0; }
-        .honest-gap {
-          background: rgba(138,106,26,0.05);
-          border: 1px solid rgba(138,106,26,0.3);
+        .switching-card {
+          background: white;
+          border: 1px solid ${T.border};
           border-radius: 12px;
-          padding: 28px;
+          padding: 36px;
           margin-top: 24px;
+          border-top: 4px solid ${T.blue};
         }
-        .decision-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 24px; }
-        .decision-card { padding: 28px; background: white; border: 1px solid ${T.border}; border-radius: 12px; }
-        .decision-card.ours { border-top: 4px solid ${T.blue}; }
-        .decision-card.theirs { border-top: 4px solid ${T.muted}; }
-        .decision-card-title { font-size: 11px; letter-spacing: 3px; font-weight: bold; color: ${T.muted}; margin-bottom: 16px; }
-        .decision-card.ours .decision-card-title { color: ${T.blue}; }
-        .decision-card-h3 { font-size: 22px; font-weight: 800; color: ${T.text}; margin-bottom: 16px; }
-        .decision-list { list-style: none; padding: 0; margin: 0; }
-        .decision-list li { padding: 8px 0; font-size: 14px; color: ${T.text}; line-height: 1.5; display: flex; gap: 10px; }
+        .switching-card h3 {
+          font-size: 22px;
+          font-weight: 800;
+          color: ${T.text};
+          margin: 0 0 12px 0;
+        }
+        .switching-card p.intro {
+          font-size: 14px;
+          color: ${T.muted};
+          line-height: 1.65;
+          margin: 0 0 24px 0;
+        }
+        .switching-list {
+          list-style: none;
+          padding: 0;
+          margin: 0;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 14px 28px;
+        }
+        .switching-list li {
+          font-size: 14px;
+          color: ${T.text};
+          line-height: 1.55;
+          display: flex;
+          gap: 10px;
+          align-items: flex-start;
+        }
+        .switching-list .check-icon { color: ${T.green}; font-weight: bold; flex-shrink: 0; }
+        .switching-list strong { color: ${T.text}; font-weight: 800; }
         .vs-final-cta {
           background: linear-gradient(135deg, ${T.dark}, ${T.darker});
           color: white;
@@ -234,17 +245,6 @@ export default function VsPhoneBurnerView() {
         .vs-final-cta-inner { max-width: 720px; margin: 0 auto; }
         .vs-final-cta-h2 { font-size: 42px; font-weight: 800; letter-spacing: -0.5px; margin: 0 0 16px 0; line-height: 1.15; }
         .vs-final-cta-p { font-size: 17px; color: #c4c8d8; line-height: 1.6; margin: 0 0 32px 0; }
-        .vs-incentive-strip {
-          background: rgba(74,158,255,0.06);
-          border: 1px dashed rgba(74,158,255,0.4);
-          border-radius: 8px;
-          padding: 20px 24px;
-          margin: 40px 0;
-          font-size: 14px;
-          color: ${T.text};
-          line-height: 1.6;
-        }
-        .vs-incentive-strip strong { color: ${T.blue}; letter-spacing: 1px; }
         .cost-breakdown {
           background: white;
           border: 1px solid ${T.border};
@@ -276,11 +276,12 @@ export default function VsPhoneBurnerView() {
           .vs-subhead { font-size: 16px; }
           .vs-section { padding: 56px 20px; }
           .vs-section-h2 { font-size: 28px; }
-          .price-grid, .win-grid, .decision-grid { grid-template-columns: 1fr; }
+          .price-grid, .win-grid { grid-template-columns: 1fr; }
+          .switching-list { grid-template-columns: 1fr; }
           .feature-table th, .feature-table td { padding: 10px 12px; font-size: 12px; }
           .vs-final-cta { padding: 56px 20px; }
           .vs-final-cta-h2 { font-size: 30px; }
-          .vs-btn-primary, .vs-btn-secondary { width: 100%; }
+          .vs-btn-primary { width: 100%; }
         }
       `}</style>
 
@@ -292,38 +293,35 @@ export default function VsPhoneBurnerView() {
             <span className="versus">We don't. $35 a week.</span>
           </h1>
           <p className="vs-subhead">
-            Same Tier-1 carrier audio. Same spam protection. Same CRM integrations.
-            At <strong>just $35/week</strong> ($140/mo) — without being capped at single-line.
+            Same Tier-1 carrier audio. Same spam protection. Same CRM integrations. At
+            <strong> just $35/week</strong> ($140/mo) — without being capped at single-line.
             Without ARMOR as a $35/seat add-on. Without Connect Scores as a $20/seat add-on.
-            Without an annual contract for the best price. Multi-line predictive included,
-            weekly billing default.
+            Without an annual contract. Multi-line predictive included, weekly billing default.
           </p>
           <div className="vs-cta-row">
-            <Link href="/" className="vs-btn-primary">START FREE TRIAL →</Link>
-            <Link href="/contact" className="vs-btn-secondary">SEE PLANS</Link>
+            <Link href="/sign-up" className="vs-btn-primary">START DIALING →</Link>
           </div>
         </div>
       </div>
 
       <div className="vs-section">
         <div className="vs-section-eyebrow">THE QUICK VERDICT</div>
-        <h2 className="vs-section-h2">PhoneBurner is the gold standard for single-line. We're the standard for everything else.</h2>
+        <h2 className="vs-section-h2">Everything PhoneBurner does, plus multi-line, plus weekly billing.</h2>
         <p className="vs-section-lede">
           PhoneBurner earned its 4.7/5 G2 rating with rock-solid single-line dialing, instant
-          connections, and the best-in-class ARMOR spam protection. Their reputation is real. The
-          problem: they stop at single-line, they hide their best features behind annual
-          contracts, and the headline $140/seat number lands at $200–$250 once add-ons stack up.
-          We charge $35/week. Everything is included.
+          connections, and best-in-class ARMOR spam protection. Their reputation is real. The
+          problem: they stop at single-line, gate critical features behind annual contracts,
+          and the headline $140/seat number lands at $200–$250 once add-ons stack up. We
+          charge $35/week. Everything is included.
         </p>
 
         <div className="verdict-card">
           <div className="verdict-title">▸ BOTTOM LINE</div>
           <p className="verdict-text">
-            <strong>Pick DialerSeat</strong> if you need multi-line predictive speed, want spam
-            protection and AI features included (not stacked as add-ons), and prefer weekly
-            billing over annual lock-in.{' '}
-            <strong>Pick PhoneBurner</strong> if you're committed to single-line dialing for
-            quality reasons and your team is happy on an annual contract with their ecosystem.
+            <strong>Switch to DialerSeat</strong> for multi-line predictive speed, spam
+            protection and AI features included (not stacked as add-ons), and weekly billing
+            instead of annual lock-in. Everything PhoneBurner offers is here — plus the
+            things they don't have.
           </p>
         </div>
       </div>
@@ -332,10 +330,10 @@ export default function VsPhoneBurnerView() {
         <div className="vs-section-eyebrow">THE REAL COST OF PHONEBURNER</div>
         <h2 className="vs-section-h2">$140 advertised. $200–$250 when ARMOR + Connect Scores land.</h2>
         <p className="vs-section-lede">
-          PhoneBurner's two most-mentioned features in their own marketing — ARMOR spam protection
-          and Connect Scores pickup probability — aren't included in the base price. Independent
-          analysts estimate them at ~$35/seat and ~$20/seat respectively. Real customer bills land
-          here:
+          PhoneBurner's two most-mentioned features in their own marketing — ARMOR spam
+          protection and Connect Scores pickup probability — aren't included in the base
+          price. Independent analysts estimate them at ~$35/seat and ~$20/seat respectively.
+          Real customer bills land here:
         </p>
 
         <div className="cost-breakdown">
@@ -389,12 +387,6 @@ export default function VsPhoneBurnerView() {
             </ul>
           </div>
         </div>
-
-        <div className="vs-incentive-strip">
-          <strong>FOR TEAMS:</strong> 10-rep team on PhoneBurner real-bill = ~$2,380/mo. 10-rep
-          team on DialerSeat = $1,400/mo ($350/week). <strong>Save $11,760/year</strong> — plus
-          get multi-line dialing PhoneBurner doesn't offer.
-        </div>
       </div>
 
       <div className="vs-section" style={{ paddingTop: 0 }}>
@@ -444,118 +436,129 @@ export default function VsPhoneBurnerView() {
           <div className="win-card">
             <div className="win-card-title">1. Weekly billing at $35/week — nobody else does this</div>
             <p className="win-card-body">
-              $35 this week. Cancel before next Monday and you owe nothing more. PhoneBurner wants
-              annual commitments to give you their best price. Different category of customer
-              experience.
+              $35 this week. Cancel before next Monday and you owe nothing more. PhoneBurner
+              wants annual commitments to give you their best price. Different category of
+              customer experience.
             </p>
           </div>
           <div className="win-card">
             <div className="win-card-title">2. Multi-line dialing — predictive, triple-line, all of it</div>
             <p className="win-card-body">
               PhoneBurner is single-line only. For high-volume outbound, that's a 3x speed
-              difference. Reviewers on Reddit and G2 cite "no multi-line" as their #1 complaint.
-              We have Predictive, Progressive, Power, and Preview, configurable per campaign.
+              difference. Reviewers on Reddit and G2 cite "no multi-line" as their #1
+              complaint. We have Predictive, Progressive, Power, and Preview, configurable per
+              campaign.
             </p>
           </div>
           <div className="win-card">
             <div className="win-card-title">3. Everything included, no add-on stacking</div>
             <p className="win-card-body">
-              ARMOR, Connect Scores, SMS, inbound, live monitoring, coaching — all included in our
-              $35/week base. PhoneBurner stacks them into separate add-ons and tiers that push
-              real bills from $140 to $250 per seat.
+              ARMOR, Connect Scores, SMS, inbound, live monitoring, coaching — all included
+              in our $35/week base. PhoneBurner stacks them into separate add-ons and tiers
+              that push real bills from $140 to $250 per seat.
             </p>
           </div>
           <div className="win-card">
             <div className="win-card-title">4. Multiple scripts per campaign + live switching</div>
             <p className="win-card-body">
-              Cold open, voicemail leave-behind, objection handlers, closer — tabs in your dialer,
-              one tap away on every call. PhoneBurner expects one script per session.
+              Cold open, voicemail leave-behind, objection handlers, closer — tabs in your
+              dialer, one tap away on every call. PhoneBurner expects one script per session.
             </p>
           </div>
           <div className="win-card">
             <div className="win-card-title">5. Flexible dial-list size + single-contact calling</div>
             <p className="win-card-body">
               PhoneBurner forces dial lists into 10/25/50 increments and doesn't support
-              single-contact calling — two of the most-cited frustrations in Capterra reviews. We
-              support any list size and one-off contact calls.
+              single-contact calling — two of the most-cited frustrations in Capterra reviews.
+              We support any list size and one-off contact calls.
             </p>
           </div>
           <div className="win-card">
             <div className="win-card-title">6. See contact name during the call</div>
             <p className="win-card-body">
-              Multiple PhoneBurner reviewers flag that they "can't see the name of the person I'm
-              calling" — a basic CRM visibility issue at a $165+/seat tool. We always show full
-              contact context during the call.
+              Multiple PhoneBurner reviewers flag that they "can't see the name of the person
+              I'm calling" — a basic CRM visibility issue at a $165+/seat tool. We always show
+              full contact context during the call.
             </p>
           </div>
         </div>
       </div>
 
       <div className="vs-section" style={{ paddingTop: 0 }}>
-        <div className="vs-section-eyebrow">WHERE PHONEBURNER WINS</div>
-        <h2 className="vs-section-h2">Genuine credit where it's due.</h2>
+        <div className="vs-section-eyebrow">SWITCHING FROM PHONEBURNER</div>
+        <h2 className="vs-section-h2">Single-line loyalists, ARMOR believers — we've got you.</h2>
         <p className="vs-section-lede">
-          PhoneBurner has 15+ years of category leadership for a reason. Two real strengths.
+          Every reason teams stay on PhoneBurner has a clean answer on DialerSeat. Here's how:
         </p>
 
-        <div className="honest-gap">
-          <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 12, color: T.amber }}>
-            ▸ ARMOR SPAM PROTECTION IS GENUINELY BEST-IN-CLASS
-          </div>
-          <p style={{ fontSize: 14, lineHeight: 1.65, color: T.text, margin: 0 }}>
-            ARMOR monitors number reputation across AT&T, Verizon, and T-Mobile and automatically
-            handles remediation when numbers get flagged. Their 15 years of carrier relationships
-            give them an edge here. Our spam monitoring and auto-rotation match feature parity,
-            but PhoneBurner's carrier remediation depth is real. We're closing the gap.
+        <div className="switching-card">
+          <h3>Yes, even if you're sold on single-line and ARMOR.</h3>
+          <p className="intro">
+            We don't ask you to abandon what works. Use single-line if you prefer it. Get
+            spam protection without the $35/seat upcharge. Migrate at your pace.
           </p>
-        </div>
-
-        <div className="honest-gap" style={{ marginTop: 16 }}>
-          <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 12, color: T.amber }}>
-            ▸ INTEGRATION ECOSYSTEM BREADTH (150+)
-          </div>
-          <p style={{ fontSize: 14, lineHeight: 1.65, color: T.text, margin: 0 }}>
-            PhoneBurner has 150+ integrations — every major CRM, plus dozens of niche tools. We
-            have native two-way sync with Salesforce, HubSpot, Pipedrive, and Zoho, plus a public
-            API. For 95% of teams that's enough. If you need a niche obscure integration that
-            PhoneBurner has and we don't, you can build it via our API.
-          </p>
-        </div>
-      </div>
-
-      <div className="vs-section" style={{ paddingTop: 0 }}>
-        <div className="vs-section-eyebrow">WHICH ONE IS RIGHT FOR YOU</div>
-        <h2 className="vs-section-h2">Honest decision framework.</h2>
-
-        <div className="decision-grid">
-          <div className="decision-card ours">
-            <div className="decision-card-title">▸ PICK DIALERSEAT IF</div>
-            <h3 className="decision-card-h3">You want multi-line speed and everything included.</h3>
-            <ul className="decision-list">
-              <li>✓ Your team needs multi-line predictive dialing</li>
-              <li>✓ You don't want to stack add-ons to get core features</li>
-              <li>✓ Weekly or monthly billing fits your finance team better than annual</li>
-              <li>✓ You want AI transcription + summaries included</li>
-              <li>✓ Live monitoring matters from day one (not tier upgrade later)</li>
-              <li>✓ SMS as a 2-touch channel is part of your strategy</li>
-              <li>✓ Modern UI matters for rep retention</li>
-              <li>✓ Your stack is Salesforce, HubSpot, Pipedrive, or Zoho</li>
-            </ul>
-          </div>
-
-          <div className="decision-card theirs">
-            <div className="decision-card-title">▸ PICK PHONEBURNER IF</div>
-            <h3 className="decision-card-h3">Single-line + ARMOR's spam protection is your top priority.</h3>
-            <ul className="decision-list">
-              <li>○ You believe single-line beats multi-line for quality reasons</li>
-              <li>○ You're already on a PhoneBurner annual contract</li>
-              <li>○ ARMOR's carrier remediation depth is non-negotiable</li>
-              <li>○ Your team uses a niche integration only PhoneBurner has</li>
-              <li>○ You don't need AI transcription / summaries yet</li>
-              <li>○ Your team is happy on Standard tier without live monitoring</li>
-              <li>○ Annual contract terms suit your procurement</li>
-            </ul>
-          </div>
+          <ul className="switching-list">
+            <li>
+              <span className="check-icon">✓</span>
+              <span>
+                <strong>Believe single-line beats multi-line?</strong> Use Preview or Power
+                mode — same single-line approach. We don't force multi-line on you; we just
+                offer it when you want it.
+              </span>
+            </li>
+            <li>
+              <span className="check-icon">✓</span>
+              <span>
+                <strong>ARMOR is critical to your operation?</strong> We monitor number
+                reputation across the same carriers (AT&T, Verizon, T-Mobile) and auto-rotate
+                flagged numbers. Same outcome, no $35/seat surcharge.
+              </span>
+            </li>
+            <li>
+              <span className="check-icon">✓</span>
+              <span>
+                <strong>Annual contract suits your procurement?</strong> We support annual
+                billing too. The weekly model is the default but it's not the only option.
+              </span>
+            </li>
+            <li>
+              <span className="check-icon">✓</span>
+              <span>
+                <strong>On Standard tier today?</strong> Everything PhoneBurner Premium
+                offers is included in our $35/week — live monitoring, coaching, SMS, inbound.
+                No tier upgrade required.
+              </span>
+            </li>
+            <li>
+              <span className="check-icon">✓</span>
+              <span>
+                <strong>Use a niche integration only PhoneBurner has?</strong> Build it via
+                our public API + webhooks. Most niche tools take a few hours to wire up.
+              </span>
+            </li>
+            <li>
+              <span className="check-icon">✓</span>
+              <span>
+                <strong>Need data migration?</strong> Bulk import your PhoneBurner contacts,
+                campaigns, and history. We handle the conversion — you keep your work.
+              </span>
+            </li>
+            <li>
+              <span className="check-icon">✓</span>
+              <span>
+                <strong>Reps trained on PhoneBurner?</strong> Our UI is intuitive — most
+                reps are productive in under an hour. Familiar concepts, modern execution.
+              </span>
+            </li>
+            <li>
+              <span className="check-icon">✓</span>
+              <span>
+                <strong>Trust PhoneBurner's Tier-1 audio?</strong> We run on SignalWire's
+                Tier-1 carrier network. Same call quality, same A-level STIR/SHAKEN
+                attestation.
+              </span>
+            </li>
+          </ul>
         </div>
       </div>
 
@@ -563,13 +566,11 @@ export default function VsPhoneBurnerView() {
         <div className="vs-final-cta-inner">
           <h2 className="vs-final-cta-h2">Multi-line speed. $35 a week. No annual lock-in.</h2>
           <p className="vs-final-cta-p">
-            7-day free trial with full features unlocked. No 60-minute calling cap. After trial:
-            just $35/week ($140/mo) per seat. Cancel any time — even mid-week. No recovery call
-            from Customer Success.
+            $35/week ($140/mo) per seat. Cancel any time — even mid-week. No add-on stack,
+            no tier upgrades, no annual procurement cycle. Just a modern dialer that works.
           </p>
           <div className="vs-cta-row">
-            <Link href="/" className="vs-btn-primary">START FREE TRIAL →</Link>
-            <Link href="/contact" className="vs-btn-secondary">TALK TO US</Link>
+            <Link href="/sign-up" className="vs-btn-primary">START DIALING →</Link>
           </div>
         </div>
       </div>

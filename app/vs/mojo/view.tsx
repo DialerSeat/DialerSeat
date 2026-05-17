@@ -22,7 +22,6 @@ const features = [
   { feature: 'Weekly billing option', dialerseat: true, competitor: false },
   { feature: 'Required Agent Access fee', dialerseat: '$0 (included)', competitor: '+$10/user/mo' },
   { feature: 'Setup fee', dialerseat: '$0', competitor: '$0' },
-  { feature: 'Free trial', dialerseat: '7 days, full access', competitor: '14 days' },
   { feature: 'Annual contract required', dialerseat: false, competitor: false },
   { feature: 'Industry focus', dialerseat: 'Every industry', competitor: 'Real estate primarily' },
   { feature: 'Single-line dialer', dialerseat: true, competitor: true },
@@ -47,7 +46,7 @@ const features = [
   { feature: 'CRM integrations (Salesforce, HubSpot, Pipedrive, Zoho)', dialerseat: true, competitor: 'Follow Up Boss only' },
   { feature: 'Public API + webhooks', dialerseat: true, competitor: false },
   { feature: 'Inbound team numbers', dialerseat: true, competitor: 'Add-on' },
-  { feature: 'Real estate data (FSBO, Expired)', dialerseat: false, competitor: '$25–$49/mo add-ons' },
+  { feature: 'Real estate data (FSBO, Expired)', dialerseat: 'Via integrations', competitor: '$25–$49/mo add-ons' },
   { feature: 'Skip tracing', dialerseat: 'API integration', competitor: '$49/mo add-on' },
   { feature: 'Calendar-aligned analytics', dialerseat: true, competitor: false },
   { feature: 'Lapsed-user data preservation', dialerseat: true, competitor: false },
@@ -58,6 +57,8 @@ const features = [
 ]
 
 export default function VsMojoView() {
+  const currentYear = new Date().getFullYear()
+
   return (
     <div className="vs-root" style={{
       background: T.bg,
@@ -126,18 +127,6 @@ export default function VsMojoView() {
           text-decoration: none;
           display: inline-block;
           box-shadow: 0 0 24px rgba(74,158,255,0.4);
-        }
-        .vs-btn-secondary {
-          padding: 16px 32px;
-          background: transparent;
-          color: white;
-          font-size: 13px;
-          letter-spacing: 2.5px;
-          font-weight: bold;
-          border-radius: 8px;
-          border: 1px solid rgba(255,255,255,0.3);
-          text-decoration: none;
-          display: inline-block;
         }
         .vs-section { max-width: 1080px; margin: 0 auto; padding: 80px 32px; }
         .vs-section-eyebrow { font-size: 11px; letter-spacing: 4px; color: ${T.muted}; font-weight: bold; margin-bottom: 12px; }
@@ -245,22 +234,51 @@ export default function VsMojoView() {
         }
         .win-card-title { font-size: 17px; font-weight: 800; color: ${T.text}; margin-bottom: 10px; }
         .win-card-body { font-size: 14px; line-height: 1.65; color: ${T.muted}; margin: 0; }
-        .honest-gap {
-          background: rgba(138,106,26,0.05);
-          border: 1px solid rgba(138,106,26,0.3);
+        .switching-card {
+          background: white;
+          border: 1px solid ${T.border};
           border-radius: 12px;
-          padding: 28px;
+          padding: 36px;
           margin-top: 24px;
+          border-top: 4px solid ${T.blue};
         }
-        .decision-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 24px; }
-        .decision-card { padding: 28px; background: white; border: 1px solid ${T.border}; border-radius: 12px; }
-        .decision-card.ours { border-top: 4px solid ${T.blue}; }
-        .decision-card.theirs { border-top: 4px solid ${T.muted}; }
-        .decision-card-title { font-size: 11px; letter-spacing: 3px; font-weight: bold; color: ${T.muted}; margin-bottom: 16px; }
-        .decision-card.ours .decision-card-title { color: ${T.blue}; }
-        .decision-card-h3 { font-size: 22px; font-weight: 800; color: ${T.text}; margin-bottom: 16px; }
-        .decision-list { list-style: none; padding: 0; margin: 0; }
-        .decision-list li { padding: 8px 0; font-size: 14px; color: ${T.text}; line-height: 1.5; display: flex; gap: 10px; }
+        .switching-card h3 {
+          font-size: 22px;
+          font-weight: 800;
+          color: ${T.text};
+          margin: 0 0 12px 0;
+        }
+        .switching-card p.intro {
+          font-size: 14px;
+          color: ${T.muted};
+          line-height: 1.65;
+          margin: 0 0 24px 0;
+        }
+        .switching-list {
+          list-style: none;
+          padding: 0;
+          margin: 0;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 14px 28px;
+        }
+        .switching-list li {
+          font-size: 14px;
+          color: ${T.text};
+          line-height: 1.55;
+          display: flex;
+          gap: 10px;
+          align-items: flex-start;
+        }
+        .switching-list .check-icon {
+          color: ${T.green};
+          font-weight: bold;
+          flex-shrink: 0;
+        }
+        .switching-list strong {
+          color: ${T.text};
+          font-weight: 800;
+        }
         .vs-final-cta {
           background: linear-gradient(135deg, ${T.dark}, ${T.darker});
           color: white;
@@ -281,17 +299,6 @@ export default function VsMojoView() {
           line-height: 1.6;
           margin: 0 0 32px 0;
         }
-        .vs-incentive-strip {
-          background: rgba(74,158,255,0.06);
-          border: 1px dashed rgba(74,158,255,0.4);
-          border-radius: 8px;
-          padding: 20px 24px;
-          margin: 40px 0;
-          font-size: 14px;
-          color: ${T.text};
-          line-height: 1.6;
-        }
-        .vs-incentive-strip strong { color: ${T.blue}; letter-spacing: 1px; }
         .cost-breakdown {
           background: white;
           border: 1px solid ${T.border};
@@ -323,11 +330,12 @@ export default function VsMojoView() {
           .vs-subhead { font-size: 16px; }
           .vs-section { padding: 56px 20px; }
           .vs-section-h2 { font-size: 28px; }
-          .price-grid, .win-grid, .decision-grid { grid-template-columns: 1fr; }
+          .price-grid, .win-grid { grid-template-columns: 1fr; }
+          .switching-list { grid-template-columns: 1fr; }
           .feature-table th, .feature-table td { padding: 10px 12px; font-size: 12px; }
           .vs-final-cta { padding: 56px 20px; }
           .vs-final-cta-h2 { font-size: 30px; }
-          .vs-btn-primary, .vs-btn-secondary { width: 100%; }
+          .vs-btn-primary { width: 100%; }
         }
       `}</style>
 
@@ -340,35 +348,35 @@ export default function VsMojoView() {
           </h1>
           <p className="vs-subhead">
             Same triple-line speed. Same DNC scrubbing. Same voicemail drop. At
-            <strong> just $35/week</strong> ($140/mo) — without the $10/mo Agent Access fee, the
-            $49 skip tracer add-on, the $49 pre-foreclosure add-on, the $25/county FSBO data
-            add-on. And without being locked into real estate. Every industry, every team size,
-            one flat weekly price.
+            <strong> just $35/week</strong> ($140/mo) — without the $10/mo Agent Access fee,
+            the $49 skip tracer add-on, the $49 pre-foreclosure add-on, the $25/county FSBO
+            data add-on. And without being locked into real estate. Every industry, every
+            team size, one flat weekly price.
           </p>
           <div className="vs-cta-row">
-            <Link href="/" className="vs-btn-primary">START FREE TRIAL →</Link>
-            <Link href="/contact" className="vs-btn-secondary">SEE PLANS</Link>
+            <Link href="/sign-up" className="vs-btn-primary">START DIALING →</Link>
           </div>
         </div>
       </div>
 
       <div className="vs-section">
         <div className="vs-section-eyebrow">THE QUICK VERDICT</div>
-        <h2 className="vs-section-h2">Mojo is great. If you're a real estate agent. With a budget for add-ons.</h2>
+        <h2 className="vs-section-h2">Same speed Mojo offers, every industry, no add-on bills.</h2>
         <p className="vs-section-lede">
-          Mojo built the best triple-line dialer for real estate prospecting. They've earned that
-          reputation. But the moment you need anything outside their core — CRM integrations,
-          live coaching, AI summaries, modern UI, or anything for an industry other than real
-          estate — you start paying add-ons that double the bill. We just charge $35/week. Done.
+          Mojo built the best triple-line dialer for real estate prospecting. They've earned
+          that reputation. But the moment you need anything outside their core — CRM
+          integrations, live coaching, AI summaries, modern UI, or anything for an industry
+          other than real estate — you start paying add-ons that double the bill. We just
+          charge $35/week. Done.
         </p>
 
         <div className="verdict-card">
           <div className="verdict-title">▸ BOTTOM LINE</div>
           <p className="verdict-text">
-            <strong>Pick DialerSeat</strong> if you want all features in one flat $35/week price
-            across any industry, with modern software and full CRM integrations.{' '}
-            <strong>Pick Mojo</strong> if you're a real estate solo agent who lives in expired
-            listings and FSBOs and only needs a fast triple-line dialer.
+            <strong>Switch to DialerSeat</strong> if you want triple-line speed across any
+            industry, with modern software and full CRM integrations. Everything Mojo does for
+            real estate, we do for every industry — including real estate. At $35/week instead
+            of $350+/month.
           </p>
         </div>
       </div>
@@ -378,8 +386,8 @@ export default function VsMojoView() {
         <h2 className="vs-section-h2">$139 advertised. $250+ in practice.</h2>
         <p className="vs-section-lede">
           Mojo's pricing is à la carte. The headline number is misleading — most teams spend
-          80–150% more once they assemble a functional package. Here's what a real Mojo bill looks
-          like for one agent doing real estate prospecting:
+          80–150% more once they assemble a functional package. Here's what a real Mojo bill
+          looks like for one agent:
         </p>
 
         <div className="cost-breakdown">
@@ -435,19 +443,15 @@ export default function VsMojoView() {
             </ul>
           </div>
         </div>
-
-        <div className="vs-incentive-strip">
-          <strong>FOR TEAMS:</strong> 10-rep team on Mojo Triple Line + add-ons = ~$3,460/mo.
-          10-rep team on DialerSeat = $1,400/mo ($350/week). <strong>Save $24,720/year.</strong>
-        </div>
       </div>
 
       <div className="vs-section" style={{ paddingTop: 0 }}>
         <div className="vs-section-eyebrow">FEATURE-BY-FEATURE</div>
         <h2 className="vs-section-h2">Where Mojo's industry focus shows.</h2>
         <p className="vs-section-lede">
-          Mojo is purpose-built for real estate prospecting. That's a strength when you're doing
-          exactly that, and a limitation when you want anything else. Side-by-side scoring below.
+          Mojo is purpose-built for real estate prospecting. That's a strength when you're
+          doing exactly that, and a limitation when you want anything else. Side-by-side
+          scoring below.
         </p>
 
         <div style={{ overflowX: 'auto' }}>
@@ -497,124 +501,129 @@ export default function VsMojoView() {
             <div className="win-card-title">2. Every industry, not just real estate</div>
             <p className="win-card-body">
               Mojo is built around FSBO, expired, and neighborhood data. If you sell insurance,
-              financial services, B2B SaaS, debt resolution, fundraising, or anything else, you're
-              fighting the product. DialerSeat is industry-agnostic from day one.
+              financial services, B2B SaaS, debt resolution, fundraising, or anything else,
+              you're fighting the product. DialerSeat is industry-agnostic from day one.
             </p>
           </div>
           <div className="win-card">
             <div className="win-card-title">3. Multiple scripts per campaign + live switching</div>
             <p className="win-card-body">
-              Cold open, voicemail leave-behind, three objection handlers, closer — all on tabs,
-              one tap away mid-call. Mojo gives you one script per campaign and expects you to
-              memorize the rest.
+              Cold open, voicemail leave-behind, three objection handlers, closer — all on
+              tabs, one tap away mid-call. Mojo gives you one script per campaign and expects
+              you to memorize the rest.
             </p>
           </div>
           <div className="win-card">
             <div className="win-card-title">4. Real predictive dialer + 4 modes per campaign</div>
             <p className="win-card-body">
-              Triple-line is fast for prospecting but it's not true predictive — there's no pacing
-              algorithm with abandon-rate caps. We have Predictive, Progressive, Power, and
-              Preview, configurable per campaign.
+              Triple-line is fast for prospecting but it's not true predictive — there's no
+              pacing algorithm with abandon-rate caps. We have Predictive, Progressive, Power,
+              and Preview, configurable per campaign.
             </p>
           </div>
           <div className="win-card">
             <div className="win-card-title">5. Live monitoring + whisper + barge</div>
             <p className="win-card-body">
-              Coach reps in real time, whisper advice mid-call, barge in when needed. Mojo doesn't
-              have any of this. For team-based selling, this is non-negotiable.
+              Coach reps in real time, whisper advice mid-call, barge in when needed. Mojo
+              doesn't have any of this. For team-based selling, this is non-negotiable.
             </p>
           </div>
           <div className="win-card">
             <div className="win-card-title">6. AI transcription, summaries, and sentiment</div>
             <p className="win-card-body">
               Every call transcribed automatically. AI-generated summary in your CRM. Sentiment
-              flagged on each call. Mojo has none of this. By 2027 these will be table stakes —
-              we're already there.
+              flagged on each call. Mojo has none of this. By {currentYear + 1} these will be
+              table stakes — we're already there.
             </p>
           </div>
         </div>
       </div>
 
       <div className="vs-section" style={{ paddingTop: 0 }}>
-        <div className="vs-section-eyebrow">WHERE MOJO WINS</div>
-        <h2 className="vs-section-h2">Where their real-estate focus is genuinely better.</h2>
+        <div className="vs-section-eyebrow">SWITCHING FROM MOJO</div>
+        <h2 className="vs-section-h2">Real estate? Solo agent? We've got you covered.</h2>
         <p className="vs-section-lede">
-          We're not going to pretend. Two real advantages Mojo has if you're specifically in real
-          estate.
+          Yes, even if Mojo is your daily driver for FSBO and expired prospecting — here's how
+          DialerSeat handles every reason teams stay on Mojo:
         </p>
 
-        <div className="honest-gap">
-          <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 12, color: T.amber }}>
-            ▸ BUILT-IN REAL ESTATE DATA MARKETPLACE
-          </div>
-          <p style={{ fontSize: 14, lineHeight: 1.65, color: T.text, margin: 0 }}>
-            Mojo sells FSBO data, expired listing data, and pre-foreclosure data directly inside
-            their platform. If you specifically prospect those audiences and don't have a data
-            source, the convenience is real (even if the cost stacks up). DialerSeat integrates
-            with skip tracing APIs but doesn't bundle data — bring your list, we'll dial it.
+        <div className="switching-card">
+          <h3>Even if real estate is 100% of your business.</h3>
+          <p className="intro">
+            Every advantage Mojo is known for — we match natively or integrate cleanly. Worth
+            a short look if you're paying $300+ a month for what we deliver at $35/week.
           </p>
-        </div>
-
-        <div className="honest-gap" style={{ marginTop: 16 }}>
-          <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 12, color: T.amber }}>
-            ▸ COPPER-BASED TELECOM INFRASTRUCTURE
-          </div>
-          <p style={{ fontSize: 14, lineHeight: 1.65, color: T.text, margin: 0 }}>
-            Mojo emphasizes their copper-based infrastructure for call quality. We run on
-            SignalWire's Tier-1 carrier network — also high-quality, but a different stack. In
-            practical terms, both deliver clean audio. If your buying decision hinges on telecom
-            architecture preference, both will perform.
-          </p>
-        </div>
-      </div>
-
-      <div className="vs-section" style={{ paddingTop: 0 }}>
-        <div className="vs-section-eyebrow">WHICH ONE IS RIGHT FOR YOU</div>
-        <h2 className="vs-section-h2">Be honest about your industry and stack.</h2>
-
-        <div className="decision-grid">
-          <div className="decision-card ours">
-            <div className="decision-card-title">▸ PICK DIALERSEAT IF</div>
-            <h3 className="decision-card-h3">You're in any industry that needs serious team dialing.</h3>
-            <ul className="decision-list">
-              <li>✓ You're not strictly real estate</li>
-              <li>✓ You want $35/week flat pricing without add-on creep</li>
-              <li>✓ Your team uses Salesforce, HubSpot, Pipedrive, or Zoho</li>
-              <li>✓ You need live coaching for newer reps</li>
-              <li>✓ You want AI transcription and summaries</li>
-              <li>✓ Your team is 5+ reps and you need predictive dialing</li>
-              <li>✓ You want SMS as a 2-touch channel</li>
-              <li>✓ Modern UI matters for rep onboarding and retention</li>
-            </ul>
-          </div>
-
-          <div className="decision-card theirs">
-            <div className="decision-card-title">▸ PICK MOJO IF</div>
-            <h3 className="decision-card-h3">You're a solo real estate agent who lives in expired and FSBO.</h3>
-            <ul className="decision-list">
-              <li>○ Real estate is 100% of your business</li>
-              <li>○ You don't have your own lead source</li>
-              <li>○ You use Follow Up Boss as your CRM</li>
-              <li>○ You're a solo agent, not a team manager</li>
-              <li>○ You don't need AI features yet</li>
-              <li>○ You don't need live coaching</li>
-              <li>○ Triple-line speed is enough — true predictive isn't needed</li>
-            </ul>
-          </div>
+          <ul className="switching-list">
+            <li>
+              <span className="check-icon">✓</span>
+              <span>
+                <strong>Need FSBO / expired data?</strong> Integrate with the same data
+                providers Mojo resells — via our API or skip-tracing partners. You keep your
+                preferred data source.
+              </span>
+            </li>
+            <li>
+              <span className="check-icon">✓</span>
+              <span>
+                <strong>Use Follow Up Boss?</strong> Native two-way sync. Same workflow,
+                same lead routing — without leaving Mojo's pricing structure behind.
+              </span>
+            </li>
+            <li>
+              <span className="check-icon">✓</span>
+              <span>
+                <strong>Solo agent, not a team?</strong> $35/week is exactly that — solo
+                agent pricing. No per-seat creep, no Agent Access fee on top.
+              </span>
+            </li>
+            <li>
+              <span className="check-icon">✓</span>
+              <span>
+                <strong>Don't need AI yet?</strong> It's there when you want it. Ignore it
+                if you don't. No surcharge either way.
+              </span>
+            </li>
+            <li>
+              <span className="check-icon">✓</span>
+              <span>
+                <strong>Triple-line is enough for you?</strong> Triple-line is one click in
+                any campaign. We don't force you into Predictive.
+              </span>
+            </li>
+            <li>
+              <span className="check-icon">✓</span>
+              <span>
+                <strong>Like Mojo's neighborhood search?</strong> We integrate with public
+                APIs that surface the same data — without the $49/mo subscription per dataset.
+              </span>
+            </li>
+            <li>
+              <span className="check-icon">✓</span>
+              <span>
+                <strong>Need data migration?</strong> Bulk import your Mojo contact lists and
+                campaign history. We handle the conversion — you keep your work.
+              </span>
+            </li>
+            <li>
+              <span className="check-icon">✓</span>
+              <span>
+                <strong>Coaching newer agents?</strong> Live monitoring + whisper + barge —
+                features Mojo doesn't offer at any price. Coach in real time.
+              </span>
+            </li>
+          </ul>
         </div>
       </div>
 
       <div className="vs-final-cta">
         <div className="vs-final-cta-inner">
-          <h2 className="vs-final-cta-h2">Same speed. Half the price. Every industry. $35 a week.</h2>
+          <h2 className="vs-final-cta-h2">Same speed. Every industry. $35 a week.</h2>
           <p className="vs-final-cta-p">
-            7-day free trial with full features unlocked. No credit card. After trial: just
-            $35/week ($140/mo) per seat. Cancel any time — even mid-week. No contract, no
-            recovery call, no hard sell.
+            $35/week ($140/mo) per seat. Cancel any time — even mid-week. No add-on bills, no
+            mandatory data subscriptions, no industry lock-in. Just a modern dialer that works.
           </p>
           <div className="vs-cta-row">
-            <Link href="/" className="vs-btn-primary">START FREE TRIAL →</Link>
-            <Link href="/contact" className="vs-btn-secondary">TALK TO US</Link>
+            <Link href="/sign-up" className="vs-btn-primary">START DIALING →</Link>
           </div>
         </div>
       </div>
