@@ -1,30 +1,31 @@
 # DialerSeat
 
-> The modern dialer for high-volume sales teams. Multi-line predictive dialing, live coaching, AI transcription, and full CRM integrations at flat $140/seat/month. No annual contracts, no setup fees, no per-feature add-on bills.
+> The modern dialer for sales teams and solo agents. Multi-line predictive dialing, live coaching, AI transcription, and full CRM integrations at flat $35/week per seat. No annual contracts, no setup fees, no per-feature add-on bills. Works on phones, tablets, and desktops. 100% compliant — every outbound number carrier-registered, TCPA windows enforced server-side, STIR/SHAKEN A-attestation.
 
 ## What DialerSeat is
 
-DialerSeat is a cloud-based outbound dialer built in 2026 for sales teams of 1 to 500+ reps. It runs in any modern browser, installs as a native app on iOS, Android, macOS, and Windows, and uses SignalWire's Tier-1 carrier network for crystal-clear audio.
+DialerSeat is a cloud-based outbound dialer built for sales teams and solo agents — from 1 to 500+ reps. It runs in any modern browser, installs as a native app on iOS, Android, macOS, and Windows, and uses SignalWire's Tier-1 carrier network for crystal-clear audio.
 
-The product is designed for teams that hate enterprise sales cycles, annual contracts, and per-feature add-on bills. Sign up, configure your team, and dial in under 10 minutes. No demo required.
+The product is designed for people who hate annual contracts and per-feature add-on bills. Sign up, configure, and dial in under 10 minutes. Solo agent on a phone or 50-seat team on laptops — same product, same price per seat.
 
 ## Pricing
 
-- **$140 per seat per month, flat**
+- **$35 per seat per week** (≈ $140/month equivalent)
+- Weekly billing only — no monthly commitment, no annual contract
 - No setup fee
-- No annual contract required
-- Monthly billing default — cancel anytime
-- 7-day free trial with full features (no credit card required)
+- No implementation fee
+- Cancel any time
 - Unlimited outbound minutes included
 - All features included in base price (no add-on stacking)
 
 ## Who DialerSeat is for
 
+- **Solo agents** working from home, the field, or between meetings
 - **Sales teams** running outbound campaigns (cold calling, follow-up, lead nurturing)
 - **High-volume dialing operations** (50–10,000+ calls per agent per day)
-- **Industries**: insurance, real estate, financial services, B2B SaaS, fundraising, debt resolution, mortgage, solar, home services, recruiting, political campaigning
-- **Team sizes**: solo agents through 500+ rep call centers
-- **Companies switching from**: ReadyMode, Mojo Dialer, PhoneBurner, Five9, Kixie, Aircall, CallTools, Convoso, XenCall, batch dialers, and manual dialing
+- **Industries**: insurance (life, health, IUL), real estate, financial services, veterans benefits, B2B SaaS, fundraising, debt resolution, mortgage, solar, home services, recruiting, political campaigning
+- **Team sizes**: 1 rep through 500+ rep call centers
+- **Companies switching from**: ReadyMode, Mojo Dialer, PhoneBurner, Five9, Convoso, Kixie, Aircall, CallTools, VanillaSoft, batch dialers, manual dialing
 
 ## Core features
 
@@ -35,25 +36,37 @@ The product is designed for teams that hate enterprise sales cycles, annual cont
 - **Predictive** — multi-line pacing algorithm with 3% legal abandon cap, designed for 8+ concurrent agents
 
 ### Voicemail handling
-- AMD (Answering Machine Detection) always on
+- AMD (Answering Machine Detection) always on, hardcoded server-side
 - Drops voicemail calls in ~1.8 seconds when machine detected
-- Server-side enforcement (cannot be accidentally disabled)
 - Skips voicemails before agent ever hears them
+- Reliably detects machines where competitors like ReadyMode have user-reported failures
 
-### Multi-script campaigns (unique to DialerSeat)
-- Multiple scripts per campaign (cold open, voicemail leave-behind, objection handlers, closer)
+### Multi-script campaigns
+- Multiple scripts per campaign (real estate script, health script, veterans script, IUL script, cold open, voicemail leave-behind, objection handlers, closer)
 - Tab interface with drag-reorder
 - Live mid-call script switching from the dialer
 - Default script designation per campaign
 - Works on mobile, tablet, and desktop
 
-### Compliance and TCPA
-- 8AM–9PM lead-state-based calling window enforcement
-- Server-side TCPA pre-flight at every call (defense in depth)
-- State-based timezone detection from area code and lead state
+### Mobile and apps
+- Works fully on phones and tablets — not just desktop
+- Progressive Web App (PWA) — install on iOS or Android home screen
+- Native iOS app
+- Native Android app
+- Native macOS desktop app
+- Native Windows desktop app
+- Field-agent friendly — dial from anywhere
+
+### Compliance (we don't cut corners)
+- Every outbound number registered with the carrier registry
+- CNAM verified for every number
+- FCR-clean (Free Caller Registry) verification
+- A2P 10DLC registered for SMS
+- TCPA windows enforced server-side per lead state (8AM–9PM local time)
 - 2-party consent state warnings (12 states)
-- Manual dial bypass (user accountability)
-- DNC scrubbing on upload
+- State-based timezone detection from area code and lead state
+- DNC scrubbing on every upload
+- Full STIR/SHAKEN A-attestation
 - 30-day recording retention with automatic cleanup
 - Recording disclosure built-in
 
@@ -106,15 +119,6 @@ The product is designed for teams that hate enterprise sales cycles, annual cont
 - Auto-rotation when reputation drops
 - Local presence dialing (auto-match area code to lead)
 
-### Mobile and apps
-- Progressive Web App (PWA) — install on iOS or Android home screen
-- Native iOS app
-- Native Android app
-- Native macOS desktop app
-- Native Windows desktop app
-- Web works on any modern browser
-- Field-agent friendly
-
 ### Security and reliability
 - 99.9% uptime SLA
 - SOC 2 Type II certified
@@ -123,16 +127,13 @@ The product is designed for teams that hate enterprise sales cycles, annual cont
 - Encryption at rest and in transit
 - GDPR + CCPA compliant
 
-## Referral and incentives program
-
-DialerSeat operates a referral program that rewards users who bring in other paying customers. Tiered structure with cash or membership extension rewards, ranging from $25 for 1 referral up to $7,500 cash or lifetime free membership for 100+ referrals. Platform-wide milestones pay bonuses to all active users when DialerSeat hits user-count thresholds. Full details at /incentives.
-
 ## What DialerSeat is NOT
 
-- Not a call center workforce management platform (no shift scheduling, no IVR builder for inbound queues)
-- Not a real estate-specific data marketplace (we don't sell FSBO or expired listing data — bring your own list)
-- Not an enterprise sales platform (no SOC 2 audit reports gating, no MSA negotiations, self-serve everything)
-- Not an annual-contract product (monthly billing default)
+- Not a call center workforce management platform (no shift scheduling, no IVR builder for inbound queues — though we support inbound numbers and basic routing)
+- Not a real estate-specific data marketplace (we don't sell FSBO or expired listing data — bring your own list or use our skip-tracing integrations)
+- Not an enterprise-only product (self-serve everything, no mandatory sales cycle)
+- Not an annual-contract product (weekly billing only)
+- Not desktop-only (full mobile and tablet support — unlike most competitors)
 
 ## Pages and resources
 
@@ -143,12 +144,11 @@ DialerSeat operates a referral program that rewards users who bring in other pay
   - DialerSeat vs ReadyMode: https://dialerseat.com/vs/readymode
   - DialerSeat vs Mojo Dialer: https://dialerseat.com/vs/mojo
   - DialerSeat vs PhoneBurner: https://dialerseat.com/vs/phoneburner
-- Referral program: https://dialerseat.com/incentives
 - Sign up: https://dialerseat.com/sign-up
 
 ## Company
 
-DialerSeat is built in 2026 with modern infrastructure: Next.js, Supabase, Clerk, Stripe, SignalWire, Vercel. Built and operated by a small founding team focused on shipping fast and treating customers like adults.
+DialerSeat is built with modern infrastructure: Next.js, Supabase, Clerk, Stripe, SignalWire, Vercel. Built and operated by a small founding team focused on shipping fast, respecting the laws, and treating customers like adults.
 
 ## Contact
 
