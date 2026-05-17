@@ -1,0 +1,781 @@
+'use client'
+import Link from 'next/link'
+import SiteHeader from '@/components/site-header'
+
+const T = {
+  bg: '#f0f1f4',
+  surface: '#e2e4ea',
+  surface2: '#d4d7df',
+  border: '#c4c8d0',
+  dark: '#1a1a2e',
+  darker: '#0a0a14',
+  text: '#1a1c24',
+  muted: '#5a5e6a',
+  accent: '#2a4a8a',
+  blue: '#4a9eff',
+  green: '#1a6a1a',
+  red: '#8a1a1a',
+  amber: '#8a6a1a',
+}
+
+// Wide feature matrix: DialerSeat vs 5 named competitors + composite "others"
+type Cell = true | false | string
+
+interface FeatureRow {
+  feature: string
+  ds: Cell
+  rm: Cell // ReadyMode
+  mo: Cell // Mojo
+  pb: Cell // PhoneBurner
+  f9: Cell // Five9
+  cv: Cell // Convoso
+}
+
+const features: FeatureRow[] = [
+  { feature: 'Per-seat price (monthly equiv)', ds: '$140/mo ($35/wk)', rm: '$165–$249', mo: '$99+ add-ons', pb: '$140–$215', f9: '$175+', cv: '$189–$249' },
+  { feature: 'Weekly billing option', ds: true, rm: false, mo: false, pb: false, f9: false, cv: false },
+  { feature: 'Annual contract required', ds: false, rm: 'Typical', mo: false, pb: 'For best price', f9: 'Typical', cv: 'Typical' },
+  { feature: 'Public pricing on website', ds: true, rm: false, mo: true, pb: true, f9: false, cv: false },
+  { feature: 'Self-serve signup (no demo)', ds: true, rm: false, mo: true, pb: true, f9: false, cv: false },
+  { feature: 'Setup fee', ds: '$0', rm: '$500–$2K', mo: '$0', pb: '$0', f9: 'Variable', cv: 'Variable' },
+  { feature: 'Power dialer', ds: true, rm: true, mo: true, pb: true, f9: true, cv: true },
+  { feature: 'Preview dialer', ds: true, rm: true, mo: true, pb: false, f9: true, cv: true },
+  { feature: 'Progressive dialer', ds: true, rm: true, mo: 'Partial', pb: false, f9: true, cv: true },
+  { feature: 'Predictive dialer (multi-line)', ds: true, rm: true, mo: 'Triple-line only', pb: false, f9: true, cv: true },
+  { feature: 'Per-campaign dialer mode', ds: true, rm: false, mo: false, pb: false, f9: false, cv: false },
+  { feature: 'AMD voicemail filter (~1.8s)', ds: 'Always on', rm: 'Users report misses', mo: 'Optional', pb: true, f9: true, cv: true },
+  { feature: 'Multiple scripts per campaign', ds: true, rm: false, mo: false, pb: false, f9: 'Custom build', cv: false },
+  { feature: 'Live mid-call script switching', ds: true, rm: false, mo: false, pb: false, f9: false, cv: false },
+  { feature: 'Live call monitoring', ds: true, rm: true, mo: false, pb: 'Tier upgrade', f9: true, cv: true },
+  { feature: 'Whisper + barge coaching', ds: true, rm: true, mo: false, pb: 'Premium only', f9: true, cv: true },
+  { feature: 'AI call transcription', ds: true, rm: 'Partial', mo: false, pb: 'Add-on', f9: 'Add-on', cv: 'Add-on' },
+  { feature: 'AI call summaries', ds: true, rm: false, mo: false, pb: false, f9: 'Custom', cv: false },
+  { feature: 'AI sentiment analysis', ds: true, rm: false, mo: false, pb: false, f9: 'Custom', cv: false },
+  { feature: 'Works on phones + tablets', ds: true, rm: false, mo: 'Web only', pb: false, f9: false, cv: 'Web only' },
+  { feature: 'Native iOS / Android / desktop apps', ds: true, rm: false, mo: false, pb: false, f9: false, cv: false },
+  { feature: 'All outbound numbers carrier-registered', ds: true, rm: 'Inconsistent', mo: 'Inconsistent', pb: 'Variable', f9: 'Variable', cv: 'Variable' },
+  { feature: 'STIR/SHAKEN A-attestation', ds: true, rm: 'Variable', mo: 'Variable', pb: true, f9: true, cv: 'Variable' },
+  { feature: 'TCPA enforced server-side', ds: true, rm: 'Partial', mo: 'Partial', pb: 'Partial', f9: 'Partial', cv: 'Partial' },
+  { feature: 'DNC scrubbing on upload', ds: true, rm: true, mo: true, pb: true, f9: true, cv: true },
+  { feature: 'Local presence dialing', ds: true, rm: true, mo: true, pb: true, f9: true, cv: true },
+  { feature: 'Spam monitoring + auto-rotation', ds: true, rm: true, mo: 'Partial', pb: '~$35 add-on', f9: 'Add-on', cv: 'Add-on' },
+  { feature: 'SMS / A2P 10DLC', ds: true, rm: true, mo: false, pb: 'Premium tier', f9: 'Add-on', cv: 'Add-on' },
+  { feature: 'CRM: Salesforce + HubSpot + Pipedrive + Zoho', ds: true, rm: 'Salesforce only', mo: 'Follow Up Boss', pb: '150+ via Zapier', f9: true, cv: 'Limited' },
+  { feature: 'Public API + webhooks', ds: true, rm: false, mo: false, pb: true, f9: true, cv: 'Limited' },
+  { feature: 'Calendar-aligned analytics (Sun/1st)', ds: true, rm: false, mo: false, pb: false, f9: false, cv: false },
+  { feature: 'Lapsed-user data preservation', ds: true, rm: false, mo: false, pb: false, f9: false, cv: false },
+  { feature: '99.9% uptime SLA', ds: true, rm: true, mo: true, pb: true, f9: true, cv: true },
+  { feature: 'SOC 2 Type II', ds: true, rm: true, mo: false, pb: true, f9: true, cv: true },
+]
+
+const INDUSTRY_FAILURES = [
+  {
+    num: '01',
+    title: 'OPAQUE PRICING',
+    body: 'Five9, Convoso, ReadyMode, and most enterprise dialers hide their real pricing behind a sales call. You spend a week scheduling and sitting through demos before anyone gives you a number. We publish $35/week on the homepage.',
+  },
+  {
+    num: '02',
+    title: 'ANNUAL CONTRACT LOCK-IN',
+    body: 'The industry standard for "best pricing" is a 12-month commitment with auto-renewal and 60-day cancellation clauses. PhoneBurner, Five9, Convoso, ReadyMode all do this. We bill weekly with one-click cancellation.',
+  },
+  {
+    num: '03',
+    title: 'ADD-ON STACKING',
+    body: 'The headline $99–$140 advertised price becomes $200–$346 effective once you add spam protection (PhoneBurner $35), SMS (Premium tier upgrade), AI transcription (extra), or industry data (Mojo $25–$49 per dataset). Everything is included for us.',
+  },
+  {
+    num: '04',
+    title: 'DESKTOP-ONLY SOFTWARE',
+    body: 'Most legacy dialers were built before tablets existed and never modernized. ReadyMode, PhoneBurner, and Five9 have no real mobile or tablet experience. Field agents and solo reps need to be at their desk. We work on phone, tablet, and desktop with native apps on every OS.',
+  },
+  {
+    num: '05',
+    title: 'COMPLIANCE SHORTCUTS',
+    body: 'Number registration is inconsistent at most competitors. TCPA enforcement is often partial. DNC scrubbing happens on request rather than automatically. We register every outbound number, enforce TCPA server-side per lead state, and scrub DNC on every upload. We respect the laws so you do not get blocked or fined.',
+  },
+  {
+    num: '06',
+    title: 'DATED INTERFACES',
+    body: 'ReadyMode reviewers describe the UI as "Windows 8" or "dated." Mojo, PhoneBurner, and most enterprise tools accumulated UI debt over a decade. Rep retention suffers when the software feels old. We built DialerSeat from scratch this year with a modern design system.',
+  },
+]
+
+const SWITCHING_FROM = [
+  {
+    name: 'READYMODE',
+    href: '/vs/readymode',
+    summary: 'Same multi-line predictive at $35/week instead of $165–$249/month. No $500–$2,000 setup fee. Modern UI built this year. Works on phones and tablets where ReadyMode is desktop-only.',
+  },
+  {
+    name: 'MOJO DIALER',
+    href: '/vs/mojo',
+    summary: 'Same triple-line speed across every industry — not just real estate. No $10/mo Agent Access fee. No $25–$49 data add-ons stacking. Native CRM integrations beyond Follow Up Boss.',
+  },
+  {
+    name: 'PHONEBURNER',
+    href: '/vs/phoneburner',
+    summary: 'Multi-line predictive included (PhoneBurner is single-line only). ARMOR-equivalent spam protection and Connect Scores included — no $35 and $20 add-ons. Weekly billing, no annual contract.',
+  },
+  {
+    name: 'FIVE9',
+    href: null,
+    summary: 'Same enterprise feature depth without the enterprise sales cycle. Self-serve setup in minutes, not weeks. Flat $35/week per seat vs Five9\'s $175+ with custom quotes and annual commitments.',
+  },
+  {
+    name: 'CONVOSO',
+    href: null,
+    summary: 'Same high-volume outbound dialing for insurance, solar, and lead-heavy verticals. Without the $200+/seat pricing, annual contracts, and opaque quoting. Every feature included at $35/week.',
+  },
+  {
+    name: 'CALLTOOLS / KIXIE / JUSTCALL',
+    href: null,
+    summary: 'Cleaner UI, full multi-line predictive (most mid-market dialers cap at progressive), proper compliance infrastructure, and CRM integrations beyond the HubSpot ecosystem. Same price band, more capability.',
+  },
+]
+
+function Cell({ value }: { value: Cell }) {
+  if (value === true) return <span style={{ color: T.green, fontSize: 18, fontWeight: 'bold' }}>✓</span>
+  if (value === false) return <span style={{ color: T.red, fontSize: 18, fontWeight: 'bold' }}>✕</span>
+  // String values
+  const lower = value.toLowerCase()
+  let color: string = T.text
+  if (lower.includes('add-on') || lower.includes('partial') || lower.includes('variable') || lower.includes('inconsistent') || lower.includes('limited') || lower.includes('only') || lower.includes('tier') || lower.includes('premium') || lower.includes('misses') || lower.includes('custom')) {
+    color = T.amber
+  }
+  return <span style={{ color, fontSize: 11, fontStyle: lower.includes('add-on') || lower.includes('partial') ? 'italic' : 'normal', letterSpacing: 0.3 }}>{value}</span>
+}
+
+export default function VsEveryoneView() {
+  const currentYear = new Date().getFullYear()
+
+  return (
+    <>
+      <SiteHeader />
+      <div className="vs-root" style={{
+        background: T.bg,
+        minHeight: '100vh',
+        fontFamily: 'Futura PT, Futura, sans-serif',
+        color: T.text,
+      }}>
+        <style>{`
+          .vs-root * { box-sizing: border-box; }
+          .vs-hero {
+            background: linear-gradient(135deg, ${T.darker} 0%, ${T.dark} 100%);
+            color: white;
+            padding: 80px 32px 100px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+          }
+          .vs-hero::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+              radial-gradient(circle at 20% 30%, rgba(74,158,255,0.18) 0%, transparent 45%),
+              radial-gradient(circle at 80% 60%, rgba(74,158,255,0.12) 0%, transparent 45%);
+          }
+          .vs-hero-inner { position: relative; max-width: 920px; margin: 0 auto; }
+          .vs-eyebrow {
+            display: inline-block;
+            padding: 6px 14px;
+            background: rgba(74,158,255,0.15);
+            border: 1px solid ${T.blue};
+            border-radius: 4px;
+            color: ${T.blue};
+            font-size: 11px;
+            letter-spacing: 3px;
+            font-weight: bold;
+            margin-bottom: 24px;
+          }
+          .vs-h1 {
+            font-size: 60px;
+            letter-spacing: -1.5px;
+            line-height: 1.05;
+            font-weight: 800;
+            margin: 0 0 20px 0;
+          }
+          .vs-h1 .versus { color: ${T.blue}; }
+          .vs-subhead {
+            font-size: 19px;
+            line-height: 1.55;
+            color: #c4c8d8;
+            max-width: 760px;
+            margin: 0 auto 36px;
+          }
+          .vs-cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+          .vs-btn-primary {
+            padding: 16px 32px;
+            background: linear-gradient(135deg, ${T.blue}, #2a6eff);
+            color: white;
+            font-size: 13px;
+            letter-spacing: 2.5px;
+            font-weight: bold;
+            border-radius: 8px;
+            text-decoration: none;
+            display: inline-block;
+            box-shadow: 0 0 24px rgba(74,158,255,0.4);
+          }
+          .competitor-strip {
+            margin-top: 36px;
+            font-size: 11px;
+            letter-spacing: 2.5px;
+            color: rgba(255,255,255,0.5);
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 18px;
+          }
+          .competitor-strip span {
+            opacity: 0.7;
+          }
+          .vs-section { max-width: 1180px; margin: 0 auto; padding: 80px 32px; }
+          .vs-section-eyebrow { font-size: 11px; letter-spacing: 4px; color: ${T.muted}; font-weight: bold; margin-bottom: 12px; }
+          .vs-section-h2 {
+            font-size: 36px;
+            letter-spacing: -0.5px;
+            line-height: 1.15;
+            font-weight: 800;
+            margin: 0 0 16px 0;
+            color: ${T.text};
+          }
+          .vs-section-lede {
+            font-size: 16px;
+            color: ${T.muted};
+            line-height: 1.65;
+            max-width: 760px;
+            margin: 0 0 48px 0;
+          }
+          .verdict-card {
+            background: white;
+            border: 1px solid ${T.border};
+            border-radius: 12px;
+            padding: 32px;
+            margin-bottom: 48px;
+            border-left: 4px solid ${T.blue};
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+          }
+          .verdict-title { font-size: 14px; font-weight: bold; letter-spacing: 3px; color: ${T.blue}; margin-bottom: 12px; }
+          .verdict-text { font-size: 17px; line-height: 1.7; color: ${T.text}; margin: 0; }
+          .sins-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-top: 24px;
+          }
+          .sin-card {
+            background: white;
+            border: 1px solid ${T.border};
+            border-radius: 12px;
+            padding: 28px;
+            position: relative;
+            overflow: hidden;
+          }
+          .sin-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: ${T.red};
+          }
+          .sin-num {
+            font-size: 36px;
+            font-weight: 800;
+            color: ${T.surface2};
+            letter-spacing: -1px;
+            line-height: 1;
+            margin-bottom: 8px;
+          }
+          .sin-title {
+            font-size: 14px;
+            font-weight: 800;
+            letter-spacing: 2.5px;
+            color: ${T.text};
+            margin-bottom: 10px;
+          }
+          .sin-body {
+            font-size: 14px;
+            line-height: 1.65;
+            color: ${T.muted};
+            margin: 0;
+          }
+          .cost-breakdown {
+            background: white;
+            border: 1px solid ${T.border};
+            border-radius: 12px;
+            padding: 24px;
+            margin-top: 24px;
+            max-width: 600px;
+          }
+          .cost-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px dashed ${T.border};
+            font-size: 14px;
+          }
+          .cost-row:last-child {
+            border-bottom: none;
+            border-top: 2px solid ${T.text};
+            margin-top: 6px;
+            font-weight: 800;
+            font-size: 17px;
+            padding-top: 14px;
+          }
+          .cost-row .item { color: ${T.text}; }
+          .cost-row .price { color: ${T.muted}; font-family: monospace; }
+          .price-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 32px; }
+          .price-card { padding: 32px; border-radius: 12px; background: white; border: 1px solid ${T.border}; }
+          .price-card.winner { border: 2px solid ${T.blue}; box-shadow: 0 8px 32px rgba(74,158,255,0.12); }
+          .price-card-label { font-size: 11px; letter-spacing: 3px; font-weight: bold; color: ${T.muted}; margin-bottom: 8px; }
+          .price-card.winner .price-card-label { color: ${T.blue}; }
+          .price-card-name { font-size: 24px; font-weight: 800; color: ${T.text}; margin-bottom: 16px; }
+          .price-card-big { font-size: 44px; font-weight: 800; letter-spacing: -1px; color: ${T.text}; line-height: 1; }
+          .price-card-suffix { font-size: 14px; color: ${T.muted}; margin-left: 4px; letter-spacing: 1px; }
+          .price-card-monthly { margin-top: 8px; font-size: 13px; color: ${T.muted}; letter-spacing: 0.5px; }
+          .price-card-list { margin-top: 20px; padding-top: 20px; border-top: 1px solid ${T.border}; list-style: none; padding-left: 0; }
+          .price-card-list li {
+            padding: 6px 0;
+            font-size: 13px;
+            line-height: 1.5;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+          }
+          .price-card-list li.bad { color: ${T.muted}; }
+          .check, .cross { display: inline-block; width: 18px; flex-shrink: 0; }
+          .check { color: ${T.green}; }
+          .cross { color: ${T.red}; }
+          .matrix-wrap {
+            background: white;
+            border: 1px solid ${T.border};
+            border-radius: 12px;
+            overflow: hidden;
+            margin-top: 24px;
+          }
+          .matrix-scroll { overflow-x: auto; }
+          .matrix {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 880px;
+          }
+          .matrix th {
+            padding: 14px 12px;
+            background: ${T.dark};
+            color: white;
+            font-size: 10px;
+            letter-spacing: 1.5px;
+            text-align: center;
+            font-weight: bold;
+            border-right: 1px solid rgba(255,255,255,0.06);
+          }
+          .matrix th:first-child { text-align: left; padding-left: 20px; }
+          .matrix th.ds-col { background: ${T.accent}; color: white; }
+          .matrix td {
+            padding: 12px;
+            border-top: 1px solid ${T.border};
+            font-size: 13px;
+            text-align: center;
+            border-right: 1px solid ${T.border};
+          }
+          .matrix td:first-child {
+            text-align: left;
+            padding-left: 20px;
+            color: ${T.text};
+            font-weight: 500;
+            font-size: 13px;
+          }
+          .matrix td:last-child { border-right: none; }
+          .matrix tr:nth-child(even) td { background: ${T.bg}; }
+          .matrix .ds-cell { background: rgba(74,158,255,0.06) !important; font-weight: bold; }
+          .win-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-top: 24px; }
+          .win-card {
+            padding: 28px;
+            background: white;
+            border: 1px solid ${T.border};
+            border-radius: 12px;
+            border-left: 4px solid ${T.green};
+          }
+          .win-card-title { font-size: 17px; font-weight: 800; color: ${T.text}; margin-bottom: 10px; }
+          .win-card-body { font-size: 14px; line-height: 1.65; color: ${T.muted}; margin: 0; }
+          .switching-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-top: 24px;
+          }
+          .switching-mini-card {
+            background: white;
+            border: 1px solid ${T.border};
+            border-top: 3px solid ${T.blue};
+            border-radius: 8px;
+            padding: 24px;
+            text-decoration: none;
+            color: ${T.text};
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 14px;
+          }
+          .switching-mini-card.has-link:hover {
+            border-color: ${T.blue};
+            box-shadow: 0 4px 16px rgba(74,158,255,0.10);
+          }
+          .switching-mini-card h4 {
+            font-size: 14px;
+            font-weight: 800;
+            letter-spacing: 2.5px;
+            color: ${T.text};
+            margin: 0;
+          }
+          .switching-mini-card p {
+            font-size: 13px;
+            line-height: 1.6;
+            color: ${T.muted};
+            margin: 0;
+            flex: 1;
+          }
+          .switching-mini-card .read-more {
+            font-size: 10px;
+            letter-spacing: 2px;
+            font-weight: bold;
+            color: ${T.blue};
+            margin-top: 4px;
+          }
+          .vs-final-cta {
+            background: linear-gradient(135deg, ${T.dark}, ${T.darker});
+            color: white;
+            padding: 80px 32px;
+            text-align: center;
+          }
+          .vs-final-cta-inner { max-width: 720px; margin: 0 auto; }
+          .vs-final-cta-h2 { font-size: 42px; font-weight: 800; letter-spacing: -0.5px; margin: 0 0 16px 0; line-height: 1.15; }
+          .vs-final-cta-p { font-size: 17px; color: #c4c8d8; line-height: 1.6; margin: 0 0 32px 0; }
+
+          @media (max-width: 768px) {
+            .vs-hero { padding: 56px 20px 64px; }
+            .vs-h1 { font-size: 36px; }
+            .vs-subhead { font-size: 16px; }
+            .competitor-strip { font-size: 9px; gap: 10px; }
+            .vs-section { padding: 56px 20px; }
+            .vs-section-h2 { font-size: 28px; }
+            .sins-grid { grid-template-columns: 1fr; }
+            .price-grid { grid-template-columns: 1fr; }
+            .win-grid { grid-template-columns: 1fr; }
+            .switching-grid { grid-template-columns: 1fr; }
+            .vs-final-cta { padding: 56px 20px; }
+            .vs-final-cta-h2 { font-size: 30px; }
+            .vs-btn-primary { width: 100%; }
+          }
+        `}</style>
+
+        <div className="vs-hero">
+          <div className="vs-hero-inner">
+            <div className="vs-eyebrow">DIALERSEAT VS THE WHOLE INDUSTRY</div>
+            <h1 className="vs-h1">
+              Every legacy dialer fails the same way.<br />
+              <span className="versus">We fix all of it. $35 a week.</span>
+            </h1>
+            <p className="vs-subhead">
+              ReadyMode, Mojo, PhoneBurner, Five9, Convoso, CallTools, Kixie, JustCall —
+              whichever you're considering, they share the same flaws: opaque pricing, annual
+              contracts, dated UI, add-on stacking, desktop-only, compliance shortcuts.
+              DialerSeat fixes every one of them at <strong>$35/week per seat</strong>.
+              Solo agent or 500-seat team. Every industry. Every device.
+            </p>
+            <div className="vs-cta-row">
+              <Link href="/sign-up" className="vs-btn-primary">START DIALING →</Link>
+            </div>
+            <div className="competitor-strip">
+              <span>READYMODE</span>
+              <span>·</span>
+              <span>MOJO DIALER</span>
+              <span>·</span>
+              <span>PHONEBURNER</span>
+              <span>·</span>
+              <span>FIVE9</span>
+              <span>·</span>
+              <span>CONVOSO</span>
+              <span>·</span>
+              <span>CALLTOOLS</span>
+              <span>·</span>
+              <span>KIXIE</span>
+              <span>·</span>
+              <span>JUSTCALL</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="vs-section">
+          <div className="vs-section-eyebrow">THE QUICK VERDICT</div>
+          <h2 className="vs-section-h2">Pick any "industry-leading" dialer. They all share the same flaws.</h2>
+          <p className="vs-section-lede">
+            The outbound dialer category has been dominated by tools built between 2010–2018.
+            They were designed for traditional call centers — desktop-only, annual contracts,
+            add-on revenue models, opaque pricing. The industry never modernized. DialerSeat
+            was built in {currentYear} to fix every shared flaw at once.
+          </p>
+
+          <div className="verdict-card">
+            <div className="verdict-title">▸ BOTTOM LINE</div>
+            <p className="verdict-text">
+              <strong>Switch to DialerSeat</strong> for one product that beats every legacy
+              alternative on price, billing flexibility, mobile support, compliance depth, and
+              modern AI features. Whichever competitor you'd otherwise choose — ReadyMode,
+              Mojo, PhoneBurner, Five9, Convoso, or any other — there's a cleaner version of
+              it here at $35/week.
+            </p>
+          </div>
+        </div>
+
+        <div className="vs-section" style={{ paddingTop: 0 }}>
+          <div className="vs-section-eyebrow">THE INDUSTRY-WIDE PROBLEMS</div>
+          <h2 className="vs-section-h2">Six failures every legacy dialer shares.</h2>
+          <p className="vs-section-lede">
+            Across the major outbound dialing tools, six patterns repeat. Each one is a
+            choice — not a constraint. Modern infrastructure makes all of them avoidable.
+          </p>
+
+          <div className="sins-grid">
+            {INDUSTRY_FAILURES.map((sin, i) => (
+              <div key={i} className="sin-card">
+                <div className="sin-num">{sin.num}</div>
+                <div className="sin-title">{sin.title}</div>
+                <p className="sin-body">{sin.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="vs-section" style={{ paddingTop: 0 }}>
+          <div className="vs-section-eyebrow">THE REAL COST OF LEGACY DIALERS</div>
+          <h2 className="vs-section-h2">$99–$165 advertised. $200–$346 in practice.</h2>
+          <p className="vs-section-lede">
+            The headline pricing legacy dialers advertise rarely matches the bill teams
+            actually receive. Below is a representative "real bill" for a single seat once
+            common add-ons are stacked. DialerSeat's $35/week includes all of these.
+          </p>
+
+          <div className="cost-breakdown">
+            <div className="cost-row"><span className="item">Base plan (industry average)</span><span className="price">$165.00/mo</span></div>
+            <div className="cost-row"><span className="item">Spam protection / number reputation</span><span className="price">+$35.00/mo</span></div>
+            <div className="cost-row"><span className="item">Connect/pickup probability scoring</span><span className="price">+$20.00/mo</span></div>
+            <div className="cost-row"><span className="item">SMS / A2P 10DLC (tier upgrade)</span><span className="price">+$18.00/mo</span></div>
+            <div className="cost-row"><span className="item">AI transcription add-on</span><span className="price">+$25.00/mo</span></div>
+            <div className="cost-row"><span className="item">Industry data / skip tracing (Mojo-style)</span><span className="price">+$49.00/mo</span></div>
+            <div className="cost-row"><span className="item">Real effective per-seat bill</span><span className="price">$312.00/mo</span></div>
+          </div>
+
+          <div className="price-grid">
+            <div className="price-card winner">
+              <div className="price-card-label">DIALERSEAT</div>
+              <div className="price-card-name">Everything included, weekly</div>
+              <div>
+                <span className="price-card-big">$35</span>
+                <span className="price-card-suffix">/seat/week</span>
+              </div>
+              <div className="price-card-monthly">≈ $140/month equivalent</div>
+              <ul className="price-card-list">
+                <li><span className="check">✓</span> Multi-line predictive + 4 modes</li>
+                <li><span className="check">✓</span> Spam protection + Connect scoring</li>
+                <li><span className="check">✓</span> AI transcription + summaries + sentiment</li>
+                <li><span className="check">✓</span> SMS + inbound numbers</li>
+                <li><span className="check">✓</span> Live monitoring + coaching</li>
+                <li><span className="check">✓</span> Native CRM integrations</li>
+                <li><span className="check">✓</span> Works on every device</li>
+                <li><span className="check">✓</span> Weekly billing — no annual lock-in</li>
+                <li><span className="check">✓</span> Unlimited outbound minutes</li>
+              </ul>
+            </div>
+
+            <div className="price-card">
+              <div className="price-card-label">LEGACY DIALER (TYPICAL)</div>
+              <div className="price-card-name">Stacked add-ons + annual</div>
+              <div>
+                <span className="price-card-big">$200–$350</span>
+                <span className="price-card-suffix">/seat/month (effective)</span>
+              </div>
+              <div className="price-card-monthly">Annual contract for best rate. No weekly option.</div>
+              <ul className="price-card-list">
+                <li className="bad"><span className="cross">✕</span> Annual contract typical</li>
+                <li className="bad"><span className="cross">✕</span> Spam protection as add-on</li>
+                <li className="bad"><span className="cross">✕</span> AI features extra or absent</li>
+                <li className="bad"><span className="cross">✕</span> SMS gated to higher tier</li>
+                <li className="bad"><span className="cross">✕</span> Live monitoring tier-gated</li>
+                <li className="bad"><span className="cross">✕</span> CRM coverage varies</li>
+                <li className="bad"><span className="cross">✕</span> Desktop-only or minimal mobile</li>
+                <li className="bad"><span className="cross">✕</span> Pricing hidden behind sales call</li>
+                <li className="bad"><span className="cross">✕</span> Setup fees $200–$2,000</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div className="vs-section" style={{ paddingTop: 0 }}>
+          <div className="vs-section-eyebrow">FEATURE MATRIX</div>
+          <h2 className="vs-section-h2">DialerSeat vs five major competitors, side by side.</h2>
+          <p className="vs-section-lede">
+            One row per feature, six columns including DialerSeat. Green ✓ = full support,
+            red ✕ = not available, amber italic = partial, add-on, or tier-gated. Scroll
+            horizontally on mobile.
+          </p>
+
+          <div className="matrix-wrap">
+            <div className="matrix-scroll">
+              <table className="matrix">
+                <thead>
+                  <tr>
+                    <th>FEATURE</th>
+                    <th className="ds-col">DIALERSEAT</th>
+                    <th>READYMODE</th>
+                    <th>MOJO</th>
+                    <th>PHONEBURNER</th>
+                    <th>FIVE9</th>
+                    <th>CONVOSO</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {features.map((f, i) => (
+                    <tr key={i}>
+                      <td>{f.feature}</td>
+                      <td className="ds-cell"><Cell value={f.ds} /></td>
+                      <td><Cell value={f.rm} /></td>
+                      <td><Cell value={f.mo} /></td>
+                      <td><Cell value={f.pb} /></td>
+                      <td><Cell value={f.f9} /></td>
+                      <td><Cell value={f.cv} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div className="vs-section" style={{ paddingTop: 0 }}>
+          <div className="vs-section-eyebrow">WHERE DIALERSEAT WINS</div>
+          <h2 className="vs-section-h2">Eight advantages no legacy dialer matches.</h2>
+
+          <div className="win-grid">
+            <div className="win-card">
+              <div className="win-card-title">1. Weekly billing — unique in the entire category</div>
+              <p className="win-card-body">
+                $35 this week. Cancel before next Monday and you owe nothing more. Every other
+                dialer in the category bills monthly minimum, most prefer annual. We are the
+                only outbound dialer billing weekly at this price point.
+              </p>
+            </div>
+            <div className="win-card">
+              <div className="win-card-title">2. AMD that actually drops voicemails in ~1.8 seconds</div>
+              <p className="win-card-body">
+                Hardcoded server-side, always on. Reviewers across multiple competitors report
+                voicemail detection failures — calls reaching agents that turn out to be
+                machines. Our AMD drops every voicemail before any agent hears a beep.
+              </p>
+            </div>
+            <div className="win-card">
+              <div className="win-card-title">3. Multiple scripts per campaign with live switching</div>
+              <p className="win-card-body">
+                Real estate script, health script, veterans script, IUL script — every team's
+                go-to scripts on tabs, one tap away on every call. No legacy dialer in the
+                category supports this. They all force you into one script per campaign.
+              </p>
+            </div>
+            <div className="win-card">
+              <div className="win-card-title">4. Per-campaign dialer mode</div>
+              <p className="win-card-body">
+                Your cold list runs Predictive. Your hot follow-ups run Preview. Same agent,
+                same session, different modes per campaign. Every competitor locks you to one
+                mode account-wide.
+              </p>
+            </div>
+            <div className="win-card">
+              <div className="win-card-title">5. Works on phones and tablets — not just desktop</div>
+              <p className="win-card-body">
+                Native iOS, Android, macOS, and Windows apps plus install-to-home PWA. Field
+                agents on iPad, solo agents on their phone, manager dashboards on laptop. Most
+                legacy dialers are desktop-only or have minimal mobile experiences.
+              </p>
+            </div>
+            <div className="win-card">
+              <div className="win-card-title">6. 100% compliant — no shortcuts</div>
+              <p className="win-card-body">
+                Every outbound number is carrier-registered (CNAM, FCR, A2P 10DLC). TCPA
+                windows enforced server-side per lead state. DNC scrubbed on every upload.
+                Full STIR/SHAKEN A-attestation. Compliance is consistent at most competitors
+                — partial enforcement, variable number registration, manual DNC scrubbing.
+              </p>
+            </div>
+            <div className="win-card">
+              <div className="win-card-title">7. AI transcription + summaries + sentiment included</div>
+              <p className="win-card-body">
+                Every call transcribed, summarized, and sentiment-tagged automatically.
+                Delivered to your CRM. By next year these are table stakes. We're already
+                there. Most competitors charge AI as a paid add-on or do not offer it.
+              </p>
+            </div>
+            <div className="win-card">
+              <div className="win-card-title">8. Modern UI built in {currentYear}</div>
+              <p className="win-card-body">
+                Legacy dialers accumulated UI debt over a decade. Reviewers describe ReadyMode
+                as "Windows 8" and PhoneBurner's contact panel as missing basic information.
+                We built DialerSeat from scratch this year with a modern design system. Your
+                reps will notice.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="vs-section" style={{ paddingTop: 0 }}>
+          <div className="vs-section-eyebrow">SWITCHING FROM ANYWHERE</div>
+          <h2 className="vs-section-h2">Whichever competitor you're on now — we've got you.</h2>
+          <p className="vs-section-lede">
+            Every reason teams stay on their current dialer has a clean answer on DialerSeat.
+            Quick takes below. Click through for the detailed comparison.
+          </p>
+
+          <div className="switching-grid">
+            {SWITCHING_FROM.map((item, i) => {
+              const inner = (
+                <>
+                  <h4>VS {item.name}</h4>
+                  <p>{item.summary}</p>
+                  {item.href && <div className="read-more">FULL COMPARISON →</div>}
+                </>
+              )
+              if (item.href) {
+                return (
+                  <Link key={i} href={item.href} className="switching-mini-card has-link">
+                    {inner}
+                  </Link>
+                )
+              }
+              return (
+                <div key={i} className="switching-mini-card">
+                  {inner}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        <div className="vs-final-cta">
+          <div className="vs-final-cta-inner">
+            <h2 className="vs-final-cta-h2">Beat every legacy dialer. $35 a week.</h2>
+            <p className="vs-final-cta-p">
+              $35/seat/week. Solo or team. Every industry. Every device. Every feature
+              included. No add-ons, no annual contract, no setup fee, no compliance
+              shortcuts. Just a modern dialer that beats every legacy alternative.
+            </p>
+            <div className="vs-cta-row">
+              <Link href="/sign-up" className="vs-btn-primary">START DIALING →</Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
