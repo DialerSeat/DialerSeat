@@ -24,8 +24,7 @@ const features = [
   { feature: 'Required Agent Access fee', dialerseat: '$0 (included)', competitor: '+$10/user/mo' },
   { feature: 'Setup fee', dialerseat: '$0', competitor: '$0' },
   { feature: 'Annual contract required', dialerseat: false, competitor: false },
-  { feature: 'Works on phones + tablets', dialerseat: true, competitor: 'Mobile web only' },
-  { feature: 'Native iOS / Android / macOS / Windows apps', dialerseat: true, competitor: false },
+  { feature: 'Works on phones + tablets (PWA install)', dialerseat: true, competitor: 'Mobile web only' },
   { feature: 'Industry focus', dialerseat: 'Every industry', competitor: 'Real estate primarily' },
   { feature: 'Single-line dialer', dialerseat: true, competitor: true },
   { feature: 'Triple-line dialer', dialerseat: true, competitor: true },
@@ -37,26 +36,15 @@ const features = [
   { feature: 'Multiple scripts per campaign', dialerseat: true, competitor: false },
   { feature: 'Live mid-call script switching', dialerseat: true, competitor: false },
   { feature: 'Voicemail drop', dialerseat: true, competitor: true },
-  { feature: 'Live call monitoring', dialerseat: true, competitor: false },
-  { feature: 'Whisper + barge coaching', dialerseat: true, competitor: false },
-  { feature: 'AI call transcription', dialerseat: true, competitor: false },
-  { feature: 'AI call summaries', dialerseat: true, competitor: false },
-  { feature: 'AI sentiment analysis', dialerseat: true, competitor: false },
   { feature: 'TCPA windows enforced server-side', dialerseat: true, competitor: 'Partial' },
   { feature: 'All outbound numbers carrier-registered', dialerseat: true, competitor: 'Inconsistent' },
   { feature: 'STIR/SHAKEN A-attestation', dialerseat: true, competitor: 'Variable' },
-  { feature: 'DNC scrubbing on upload', dialerseat: true, competitor: true },
   { feature: 'Local presence dialing', dialerseat: true, competitor: true },
-  { feature: 'Spam monitoring + auto-rotation', dialerseat: true, competitor: 'Partial' },
-  { feature: 'SMS / A2P 10DLC', dialerseat: true, competitor: false },
-  { feature: 'CRM integrations (Salesforce, HubSpot, Pipedrive, Zoho)', dialerseat: true, competitor: 'Follow Up Boss only' },
-  { feature: 'Public API + webhooks', dialerseat: true, competitor: false },
+  { feature: 'Public API + webhooks (any CRM)', dialerseat: true, competitor: false },
   { feature: 'Inbound team numbers', dialerseat: true, competitor: 'Add-on' },
   { feature: 'Real estate data (FSBO, Expired)', dialerseat: 'Via integrations', competitor: '$25–$49/mo add-ons' },
   { feature: 'Calendar-aligned analytics', dialerseat: true, competitor: false },
   { feature: 'Lapsed-user data preservation', dialerseat: true, competitor: false },
-  { feature: '99.9% uptime SLA', dialerseat: true, competitor: true },
-  { feature: 'SOC 2 Type II', dialerseat: true, competitor: false },
 ]
 
 export default function VsMojoView() {
@@ -295,7 +283,7 @@ export default function VsMojoView() {
             </h1>
             <p className="vs-subhead">
               Solo agent or 50-rep team. Real estate, insurance, financial services — any
-              industry. Same triple-line speed, same DNC scrubbing, same voicemail drop, at
+              industry. Same triple-line speed, same voicemail drop, at
               <strong> just $35/week</strong> per seat. No $10/mo Agent Access fee, no $49
               skip tracer add-on, no $25/county FSBO data add-on. One flat weekly price.
             </p>
@@ -310,19 +298,19 @@ export default function VsMojoView() {
           <h2 className="vs-section-h2">Same triple-line speed. Every industry. Every device.</h2>
           <p className="vs-section-lede">
             Mojo built the best triple-line dialer for real estate prospecting. They've earned
-            that reputation. But the moment you need anything outside their core — CRM
-            integrations, live coaching, AI summaries, modern UI, or anything other than real
-            estate — you start paying add-ons that double the bill. We just charge $35/week.
-            Solo agent or team, real estate or anything else.
+            that reputation. But the moment you need anything outside their core — true
+            predictive dialing, modern UI, calendar-aligned analytics, or anything other than
+            real estate — you start paying add-ons that double the bill. We just charge
+            $35/week. Solo agent or team, real estate or anything else.
           </p>
 
           <div className="verdict-card">
             <div className="verdict-title">▸ BOTTOM LINE</div>
             <p className="verdict-text">
               <strong>Switch to DialerSeat</strong> for triple-line speed across any industry,
-              modern software, full CRM integrations, and a dialer that works on every device.
-              Everything Mojo does for real estate, we do for every industry — at $35/week
-              instead of $350+/month.
+              modern software, a public API that works with any CRM, and a dialer that works
+              on every device. Everything Mojo does for real estate, we do for every industry
+              — at $35/week instead of $350+/month.
             </p>
           </div>
         </div>
@@ -359,10 +347,10 @@ export default function VsMojoView() {
                 <li><span className="check">✓</span> No Agent Access fee — included</li>
                 <li><span className="check">✓</span> Triple-line + Predictive + Progressive + Preview</li>
                 <li><span className="check">✓</span> Multiple scripts per campaign</li>
-                <li><span className="check">✓</span> Live monitoring + coaching</li>
-                <li><span className="check">✓</span> AI transcription + summaries</li>
-                <li><span className="check">✓</span> Salesforce, HubSpot, Pipedrive, Zoho native</li>
-                <li><span className="check">✓</span> SMS + inbound numbers included</li>
+                <li><span className="check">✓</span> Public API + webhooks (any CRM)</li>
+                <li><span className="check">✓</span> Inbound numbers included</li>
+                <li><span className="check">✓</span> Calendar-aligned analytics</li>
+                <li><span className="check">✓</span> Lapsed-user data preservation</li>
                 <li><span className="check">✓</span> Works on phone, tablet, desktop</li>
                 <li><span className="check">✓</span> Skip tracing via API integration</li>
               </ul>
@@ -380,12 +368,12 @@ export default function VsMojoView() {
                 <li className="bad"><span className="cross">✕</span> $10/mo mandatory access fee</li>
                 <li className="bad"><span className="cross">✕</span> No true predictive (triple-line only)</li>
                 <li className="bad"><span className="cross">✕</span> One script per campaign</li>
-                <li className="bad"><span className="cross">✕</span> No live monitoring or coaching</li>
-                <li className="bad"><span className="cross">✕</span> No AI transcription</li>
-                <li className="bad"><span className="cross">✕</span> CRM: Follow Up Boss only</li>
-                <li className="bad"><span className="cross">✕</span> SMS not included</li>
-                <li className="bad"><span className="cross">✕</span> Mobile web only — no native app</li>
+                <li className="bad"><span className="cross">✕</span> Mobile web only — no install</li>
+                <li className="bad"><span className="cross">✕</span> CRM coverage: Follow Up Boss focus</li>
+                <li className="bad"><span className="cross">✕</span> Inbound numbers as add-on</li>
+                <li className="bad"><span className="cross">✕</span> Data feeds stack separately</li>
                 <li className="bad"><span className="cross">✕</span> Real estate framing throughout</li>
+                <li className="bad"><span className="cross">✕</span> Rolling analytics windows</li>
               </ul>
             </div>
           </div>
@@ -472,34 +460,33 @@ export default function VsMojoView() {
               <div className="win-card-title">5. Works on phones and tablets — not just mobile web</div>
               <p className="win-card-body">
                 Field agents dialing from an iPad. Solo agents closing from their phone in the
-                car between showings. Native iOS, Android, macOS, Windows apps plus
-                install-to-home-screen PWA. Mojo offers mobile web only — slow, clunky, not
-                built for serious mobile dialing.
+                car between showings. Install DialerSeat to your home screen on iPhone, iPad,
+                or Android and it behaves like a native app. Mojo offers mobile web only —
+                slow, clunky, not built for serious mobile dialing.
               </p>
             </div>
             <div className="win-card">
-              <div className="win-card-title">6. 100% compliant — we don't cut corners</div>
+              <div className="win-card-title">6. Compliance posture without shortcuts</div>
               <p className="win-card-body">
                 Every outbound number is registered with the carrier registry (CNAM verified,
-                FCR-clean, A2P 10DLC for SMS). TCPA windows enforced server-side per lead
-                state. DNC scrubbed on every upload. STIR/SHAKEN A-attestation. We respect
-                the laws so you don't get blocked, fined, or sued.
+                FCR-clean). TCPA windows enforced server-side per lead state. STIR/SHAKEN
+                A-attestation. We respect the laws so you don't get blocked, fined, or sued.
               </p>
             </div>
             <div className="win-card">
-              <div className="win-card-title">7. Live monitoring + whisper + barge</div>
+              <div className="win-card-title">7. Public API + webhooks — works with any CRM</div>
               <p className="win-card-body">
-                Coach reps in real time, whisper advice mid-call, barge in when needed. Mojo
-                doesn't have any of this. For team-based selling — or even solo agents working
-                with a mentor — this is non-negotiable.
+                Push call results, dispositions, and lead updates to any CRM via our public
+                API and webhooks. No vendor lock-in to Follow Up Boss or any other single
+                CRM. If your CRM has an API, it works with DialerSeat.
               </p>
             </div>
             <div className="win-card">
-              <div className="win-card-title">8. AI transcription, summaries, and sentiment</div>
+              <div className="win-card-title">8. Calendar-aligned analytics + data preservation</div>
               <p className="win-card-body">
-                Every call transcribed automatically. AI-generated summary in your CRM.
-                Sentiment flagged on each call. Mojo has none of this. By {currentYear + 1}
-                these will be table stakes — we're already there.
+                "This week" means Sunday through now. "This month" means the 1st through now.
+                Matches how sales people actually track quota. Plus — pause your subscription
+                and keep your campaigns, leads, and history. Mojo has neither.
               </p>
             </div>
           </div>
@@ -532,8 +519,8 @@ export default function VsMojoView() {
               <li>
                 <span className="check-icon">✓</span>
                 <span>
-                  <strong>Use Follow Up Boss?</strong> Native two-way sync. Same workflow,
-                  same lead routing — without leaving Mojo's pricing structure behind.
+                  <strong>Use Follow Up Boss?</strong> Push call results and dispositions via
+                  our public API + webhooks. Same workflow, same lead routing.
                 </span>
               </li>
               <li>
@@ -541,13 +528,6 @@ export default function VsMojoView() {
                 <span>
                   <strong>Solo agent, not a team?</strong> $35/week, one seat. No per-seat
                   creep, no Agent Access fee, no team-only features locked away.
-                </span>
-              </li>
-              <li>
-                <span className="check-icon">✓</span>
-                <span>
-                  <strong>Don't need AI yet?</strong> It's there when you want it. Ignore it
-                  if you don't. No surcharge either way.
                 </span>
               </li>
               <li>
@@ -575,8 +555,15 @@ export default function VsMojoView() {
               <li>
                 <span className="check-icon">✓</span>
                 <span>
-                  <strong>Coaching newer agents?</strong> Live monitoring + whisper + barge —
-                  features Mojo doesn't offer at any price. Coach in real time.
+                  <strong>Need real predictive dialing?</strong> Multi-line with proper
+                  pacing — not just triple-line. Configure per campaign.
+                </span>
+              </li>
+              <li>
+                <span className="check-icon">✓</span>
+                <span>
+                  <strong>Need calendar-aligned reporting?</strong> Sunday weeks, 1st-of-month
+                  resets. Matches how reps actually think about quota.
                 </span>
               </li>
             </ul>

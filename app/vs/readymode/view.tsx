@@ -24,8 +24,7 @@ const features = [
   { feature: 'Weekly billing ($35/seat/week)', dialerseat: true, competitor: false },
   { feature: 'Setup fee', dialerseat: '$0', competitor: '$500–$2,000' },
   { feature: 'Annual contract required', dialerseat: false, competitor: 'Typical' },
-  { feature: 'Works on phones + tablets', dialerseat: true, competitor: false },
-  { feature: 'Native iOS / Android / macOS / Windows apps', dialerseat: true, competitor: false },
+  { feature: 'Works on phones + tablets (PWA install)', dialerseat: true, competitor: false },
   { feature: 'Power dialer', dialerseat: true, competitor: true },
   { feature: 'Preview dialer', dialerseat: true, competitor: true },
   { feature: 'Progressive dialer', dialerseat: true, competitor: true },
@@ -34,25 +33,13 @@ const features = [
   { feature: 'AMD that reliably drops voicemails (~1.8s)', dialerseat: 'Always on', competitor: 'Users report misses' },
   { feature: 'Multiple scripts per campaign', dialerseat: true, competitor: false },
   { feature: 'Live mid-call script switching', dialerseat: true, competitor: false },
-  { feature: 'Live call monitoring', dialerseat: true, competitor: true },
-  { feature: 'Whisper + barge coaching', dialerseat: true, competitor: true },
-  { feature: 'AI call transcription', dialerseat: true, competitor: 'Partial' },
-  { feature: 'AI call summaries', dialerseat: true, competitor: false },
-  { feature: 'AI sentiment analysis', dialerseat: true, competitor: false },
   { feature: 'TCPA windows enforced server-side', dialerseat: true, competitor: 'Partial' },
   { feature: 'All outbound numbers carrier-registered', dialerseat: true, competitor: 'Inconsistent' },
   { feature: 'STIR/SHAKEN A-attestation', dialerseat: true, competitor: 'Variable' },
-  { feature: 'DNC scrubbing on upload', dialerseat: true, competitor: true },
   { feature: 'Local presence dialing', dialerseat: true, competitor: true },
-  { feature: 'Spam monitoring + auto-rotation', dialerseat: true, competitor: true },
-  { feature: 'SMS / A2P 10DLC', dialerseat: true, competitor: true },
-  { feature: 'CRM integrations (Salesforce, HubSpot, Pipedrive)', dialerseat: true, competitor: 'Salesforce only' },
-  { feature: 'Public API + webhooks', dialerseat: true, competitor: false },
-  { feature: 'Inbound team numbers', dialerseat: true, competitor: true },
+  { feature: 'Public API + webhooks (any CRM)', dialerseat: true, competitor: false },
   { feature: 'Calendar-aligned analytics (Sun reset, 1st reset)', dialerseat: true, competitor: false },
   { feature: 'Lapsed-user data preservation', dialerseat: true, competitor: false },
-  { feature: '99.9% uptime SLA', dialerseat: true, competitor: true },
-  { feature: 'SOC 2 Type II', dialerseat: true, competitor: true },
 ]
 
 export default function VsReadyModeView() {
@@ -278,10 +265,9 @@ export default function VsReadyModeView() {
             </h1>
             <p className="vs-subhead">
               Whether you're a solo agent grinding from your phone or a manager running 50
-              reps from HQ — same multi-line predictive dialing, live coaching, and CRM
-              integrations at <strong>just $35/week</strong> per seat. No $500–$2,000 setup
-              fee, no annual contract, no desktop-only UI agents complain about. Sign up,
-              configure, dial.
+              reps from HQ — same multi-line predictive dialing and modern campaign tools at
+              <strong> just $35/week</strong> per seat. No $500–$2,000 setup fee, no annual
+              contract, no desktop-only UI agents complain about. Sign up, configure, dial.
             </p>
             <div className="vs-cta-row">
               <Link href="/sign-up" className="vs-btn-primary">START DIALING →</Link>
@@ -294,7 +280,7 @@ export default function VsReadyModeView() {
           <h2 className="vs-section-h2">Solo agent or 500-seat operation — both work here.</h2>
           <p className="vs-section-lede">
             ReadyMode is the legacy choice — comprehensive, customizable, proven. DialerSeat is
-            the modern choice — same feature set, half the friction, none of the contract
+            the modern choice — same core feature set, half the friction, none of the contract
             lock-in, and the only dialer that bills weekly at $35. Whether you're one agent or
             a 500-seat sales floor, the math and feature set work the same.
           </p>
@@ -304,8 +290,8 @@ export default function VsReadyModeView() {
             <p className="verdict-text">
               <strong>Switch to DialerSeat</strong> if you want to dial today (whether solo or
               with a team), pay $35/week with no add-on creep, and skip the enterprise sales
-              cycle. Everything ReadyMode does, we do — modern, mobile-ready, fully compliant,
-              weekly billing, $0 setup.
+              cycle. Same core dialer capability ReadyMode offers, modern, mobile-ready,
+              compliant, weekly billing, $0 setup.
             </p>
           </div>
         </div>
@@ -334,10 +320,10 @@ export default function VsReadyModeView() {
                 <li><span className="check">✓</span> $0 implementation</li>
                 <li><span className="check">✓</span> Cancel any time</li>
                 <li><span className="check">✓</span> All dialer modes included</li>
-                <li><span className="check">✓</span> Live monitoring + coaching included</li>
-                <li><span className="check">✓</span> AI transcription + summaries included</li>
-                <li><span className="check">✓</span> CRM integrations included</li>
-                <li><span className="check">✓</span> SMS + inbound numbers included</li>
+                <li><span className="check">✓</span> Multiple scripts per campaign</li>
+                <li><span className="check">✓</span> Public API + webhooks (any CRM)</li>
+                <li><span className="check">✓</span> Calendar-aligned analytics</li>
+                <li><span className="check">✓</span> Lapsed-user data preservation</li>
                 <li><span className="check">✓</span> Works on phone, tablet, desktop</li>
               </ul>
             </div>
@@ -443,19 +429,19 @@ export default function VsReadyModeView() {
             <div className="win-card">
               <div className="win-card-title">5. Works on phones and tablets — not just desktop</div>
               <p className="win-card-body">
-                Field agents dialing from an iPad. Solo reps closing from their phone between
-                meetings. Manager dashboards on laptop. Native iOS, Android, macOS, Windows
-                apps plus install-to-home-screen PWA. ReadyMode is desktop-only — there's no
-                real mobile experience to speak of.
+                Install DialerSeat to your home screen on iPhone, iPad, or Android and it
+                behaves like a native app. Field agents dialing from an iPad. Solo reps
+                closing from their phone between meetings. Manager dashboards on laptop.
+                ReadyMode is desktop-only — there's no real mobile experience to speak of.
               </p>
             </div>
             <div className="win-card">
-              <div className="win-card-title">6. 100% compliant — we don't cut corners</div>
+              <div className="win-card-title">6. Compliance posture without shortcuts</div>
               <p className="win-card-body">
                 Every outbound number is registered with the carrier registry (CNAM verified,
-                FCR-clean, A2P 10DLC for SMS). TCPA windows enforced server-side per lead
-                state. DNC scrubbed on every upload. Full STIR/SHAKEN A-attestation. We
-                respect the laws so you don't get blocked, fined, or sued.
+                FCR-clean). TCPA windows enforced server-side per lead state. Full
+                STIR/SHAKEN A-attestation. We respect the laws so you don't get blocked,
+                fined, or sued.
               </p>
             </div>
             <div className="win-card">
@@ -511,8 +497,9 @@ export default function VsReadyModeView() {
               <li>
                 <span className="check-icon">✓</span>
                 <span>
-                  <strong>Need custom inbound IVR flow?</strong> Tell us your routing logic,
-                  we build it. Inbound numbers, IVR menus, queue handling — all supported.
+                  <strong>Use a specific CRM?</strong> Our public API + webhooks push call
+                  results, dispositions, and lead updates to any CRM. If it has an API, it
+                  works with DialerSeat.
                 </span>
               </li>
               <li>
@@ -547,8 +534,8 @@ export default function VsReadyModeView() {
               <li>
                 <span className="check-icon">✓</span>
                 <span>
-                  <strong>Need SOC 2 + uptime SLA?</strong> We're SOC 2 Type II with a 99.9%
-                  uptime SLA. Procurement-friendly out of the box.
+                  <strong>Need calendar-aligned reporting?</strong> Sunday weeks, 1st-of-month
+                  resets. Matches how your reps actually track quota.
                 </span>
               </li>
             </ul>

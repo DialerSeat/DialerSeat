@@ -1,9 +1,7 @@
 const SITE_URL = 'https://dialerseat.com'
 
-/**
- * Site-wide Organization schema. Tells Google + AIs who runs the site.
- * Include on every marketing page.
- */
+// Site-wide Organization schema. Tells Google + AIs who runs the site.
+// Include on every marketing page.
 export function organizationSchema() {
   return {
     '@context': 'https://schema.org',
@@ -13,7 +11,7 @@ export function organizationSchema() {
     url: SITE_URL,
     logo: `${SITE_URL}/logo.png`,
     description:
-      'The modern dialer for sales teams and solo agents. Multi-line predictive dialing, AI transcription, live coaching, and full CRM integrations at flat $35/week per seat. No annual contracts.',
+      'The modern dialer for sales teams and solo agents. Multi-line predictive dialing with per-campaign mode configuration, multiple scripts per campaign, server-side TCPA enforcement, and full STIR/SHAKEN compliance at flat $35/week per seat. No annual contracts.',
     foundingDate: '2025',
     contactPoint: {
       '@type': 'ContactPoint',
@@ -24,11 +22,9 @@ export function organizationSchema() {
   }
 }
 
-/**
- * SoftwareApplication schema for DialerSeat the product.
- * Powers Google product knowledge panels and AI recommendations.
- * Include on landing, pricing, and /vs comparison pages.
- */
+// SoftwareApplication schema for DialerSeat the product.
+// Powers Google product knowledge panels and AI recommendations.
+// Include on landing, pricing, and /vs comparison pages.
 export function softwareApplicationSchema() {
   return {
     '@context': 'https://schema.org',
@@ -36,10 +32,10 @@ export function softwareApplicationSchema() {
     '@id': `${SITE_URL}/#software`,
     name: 'DialerSeat',
     description:
-      'Multi-line predictive dialer for sales teams and solo agents. AI transcription, live coaching, full CRM integrations, mobile-ready, 100% TCPA compliant. $35/week per seat with no annual contract.',
+      'Multi-line predictive dialer for sales teams and solo agents. Per-campaign dialer mode, multiple scripts with live mid-call switching, server-side TCPA compliance, full STIR/SHAKEN A-attestation, and a public API that works with any CRM. Works on phone, tablet, and desktop. $35/week per seat with no annual contract.',
     applicationCategory: 'BusinessApplication',
     applicationSubCategory: 'Sales Dialer',
-    operatingSystem: 'Web, iOS, Android, macOS, Windows',
+    operatingSystem: 'Web (works on iOS, Android, macOS, Windows via browser or installable PWA)',
     url: SITE_URL,
     softwareVersion: '1.0',
     offers: {
@@ -60,29 +56,18 @@ export function softwareApplicationSchema() {
       'Multi-line predictive dialer',
       'Preview, Power, Progressive, and Predictive dialer modes',
       'Per-campaign dialer mode configuration',
-      'AI call transcription',
-      'AI call summaries delivered to CRM',
-      'AI sentiment analysis',
-      'Live call monitoring',
-      'Whisper and barge coaching',
       'AMD voicemail detection drops in 1.8 seconds',
       'Multiple scripts per campaign with live mid-call switching',
-      'CRM integrations: Salesforce, HubSpot, Pipedrive, Zoho',
-      'Public API and webhooks',
-      'SMS and A2P 10DLC registered messaging',
+      'Public API and webhooks (works with any CRM)',
       'Inbound team numbers',
       'TCPA windows enforced server-side per lead state',
       'STIR/SHAKEN A-attestation',
-      'All outbound numbers carrier-registered',
-      'DNC scrubbing on every upload',
-      'Spam monitoring with auto-rotation',
+      'All outbound numbers carrier-registered (CNAM, FCR)',
       'Local presence dialing',
       'Calendar-aligned analytics (Sunday + 1st-of-month resets)',
       'Lapsed-user data preservation',
-      'Native iOS, Android, macOS, and Windows apps',
-      'Progressive Web App (PWA) installable on phones and tablets',
-      'SOC 2 Type II certified',
-      '99.9% uptime SLA',
+      'Installable as Progressive Web App on phones, tablets, and desktops',
+      'Flat $35/week per seat — no annual contract, no setup fee',
     ],
     publisher: {
       '@id': `${SITE_URL}/#organization`,
@@ -90,10 +75,8 @@ export function softwareApplicationSchema() {
   }
 }
 
-/**
- * FAQPage schema — produces rich snippets in Google search results.
- * Pass an array of question/answer pairs.
- */
+// FAQPage schema — produces rich snippets in Google search results.
+// Pass an array of question/answer pairs.
 export function faqPageSchema(faqs: Array<{ question: string; answer: string }>) {
   return {
     '@context': 'https://schema.org',
@@ -109,10 +92,8 @@ export function faqPageSchema(faqs: Array<{ question: string; answer: string }>)
   }
 }
 
-/**
- * BreadcrumbList schema — tells Google the navigation hierarchy.
- * Renders as breadcrumb trail in search results.
- */
+// BreadcrumbList schema — tells Google the navigation hierarchy.
+// Renders as breadcrumb trail in search results.
 export function breadcrumbSchema(items: Array<{ name: string; url: string }>) {
   return {
     '@context': 'https://schema.org',
@@ -126,10 +107,8 @@ export function breadcrumbSchema(items: Array<{ name: string; url: string }>) {
   }
 }
 
-/**
- * Pre-built FAQ set for the /dialing-modes page.
- * Each Q targets a real Google search ("what is predictive dialing", etc.)
- */
+// Pre-built FAQ set for the /dialing-modes page.
+// Each Q targets a real Google search ("what is predictive dialing", etc.)
 export const DIALING_MODES_FAQS = [
   {
     question: 'What is preview dialing?',
@@ -159,7 +138,7 @@ export const DIALING_MODES_FAQS = [
   {
     question: 'Is predictive dialing legal?',
     answer:
-      'Yes — predictive dialing is legal under TCPA when the abandon rate stays under 3% over a 30-day period and proper disclosure is provided. DialerSeat enforces this cap automatically and includes server-side TCPA window enforcement, DNC scrubbing, and full STIR/SHAKEN A-attestation.',
+      'Yes — predictive dialing is legal under TCPA when the abandon rate stays under 3% over a 30-day period and proper disclosure is provided. DialerSeat enforces this cap automatically and includes server-side TCPA window enforcement and full STIR/SHAKEN A-attestation.',
   },
   {
     question: 'What is AMD (Answering Machine Detection)?',

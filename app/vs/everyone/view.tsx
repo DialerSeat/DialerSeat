@@ -46,26 +46,14 @@ const features: FeatureRow[] = [
   { feature: 'AMD voicemail filter (~1.8s)', ds: 'Always on', rm: 'Users report misses', mo: 'Optional', pb: true, f9: true, cv: true },
   { feature: 'Multiple scripts per campaign', ds: true, rm: false, mo: false, pb: false, f9: 'Custom build', cv: false },
   { feature: 'Live mid-call script switching', ds: true, rm: false, mo: false, pb: false, f9: false, cv: false },
-  { feature: 'Live call monitoring', ds: true, rm: true, mo: false, pb: 'Tier upgrade', f9: true, cv: true },
-  { feature: 'Whisper + barge coaching', ds: true, rm: true, mo: false, pb: 'Premium only', f9: true, cv: true },
-  { feature: 'AI call transcription', ds: true, rm: 'Partial', mo: false, pb: 'Add-on', f9: 'Add-on', cv: 'Add-on' },
-  { feature: 'AI call summaries', ds: true, rm: false, mo: false, pb: false, f9: 'Custom', cv: false },
-  { feature: 'AI sentiment analysis', ds: true, rm: false, mo: false, pb: false, f9: 'Custom', cv: false },
-  { feature: 'Works on phones + tablets', ds: true, rm: false, mo: 'Web only', pb: false, f9: false, cv: 'Web only' },
-  { feature: 'Native iOS / Android / desktop apps', ds: true, rm: false, mo: false, pb: false, f9: false, cv: false },
+  { feature: 'Works on phones + tablets (PWA install)', ds: true, rm: false, mo: 'Web only', pb: false, f9: false, cv: 'Web only' },
   { feature: 'All outbound numbers carrier-registered', ds: true, rm: 'Inconsistent', mo: 'Inconsistent', pb: 'Variable', f9: 'Variable', cv: 'Variable' },
   { feature: 'STIR/SHAKEN A-attestation', ds: true, rm: 'Variable', mo: 'Variable', pb: true, f9: true, cv: 'Variable' },
   { feature: 'TCPA enforced server-side', ds: true, rm: 'Partial', mo: 'Partial', pb: 'Partial', f9: 'Partial', cv: 'Partial' },
-  { feature: 'DNC scrubbing on upload', ds: true, rm: true, mo: true, pb: true, f9: true, cv: true },
   { feature: 'Local presence dialing', ds: true, rm: true, mo: true, pb: true, f9: true, cv: true },
-  { feature: 'Spam monitoring + auto-rotation', ds: true, rm: true, mo: 'Partial', pb: '~$35 add-on', f9: 'Add-on', cv: 'Add-on' },
-  { feature: 'SMS / A2P 10DLC', ds: true, rm: true, mo: false, pb: 'Premium tier', f9: 'Add-on', cv: 'Add-on' },
-  { feature: 'CRM: Salesforce + HubSpot + Pipedrive + Zoho', ds: true, rm: 'Salesforce only', mo: 'Follow Up Boss', pb: '150+ via Zapier', f9: true, cv: 'Limited' },
-  { feature: 'Public API + webhooks', ds: true, rm: false, mo: false, pb: true, f9: true, cv: 'Limited' },
+  { feature: 'Public API + webhooks (works with any CRM)', ds: true, rm: false, mo: false, pb: true, f9: true, cv: 'Limited' },
   { feature: 'Calendar-aligned analytics (Sun/1st)', ds: true, rm: false, mo: false, pb: false, f9: false, cv: false },
   { feature: 'Lapsed-user data preservation', ds: true, rm: false, mo: false, pb: false, f9: false, cv: false },
-  { feature: '99.9% uptime SLA', ds: true, rm: true, mo: true, pb: true, f9: true, cv: true },
-  { feature: 'SOC 2 Type II', ds: true, rm: true, mo: false, pb: true, f9: true, cv: true },
 ]
 
 const INDUSTRY_FAILURES = [
@@ -82,17 +70,17 @@ const INDUSTRY_FAILURES = [
   {
     num: '03',
     title: 'ADD-ON STACKING',
-    body: 'The headline $99–$140 advertised price becomes $200–$346 effective once you add spam protection (PhoneBurner $35), SMS (Premium tier upgrade), AI transcription (extra), or industry data (Mojo $25–$49 per dataset). Everything is included for us.',
+    body: 'The headline $99–$140 advertised price becomes $200–$300 effective once you add data feeds (Mojo $25–$49 per dataset), tier upgrades for basic features, or industry-specific add-ons. Our $35/week is the bill — nothing stacks on top.',
   },
   {
     num: '04',
     title: 'DESKTOP-ONLY SOFTWARE',
-    body: 'Most legacy dialers were built before tablets existed and never modernized. ReadyMode, PhoneBurner, and Five9 have no real mobile or tablet experience. Field agents and solo reps need to be at their desk. We work on phone, tablet, and desktop with native apps on every OS.',
+    body: 'Most legacy dialers were built before tablets existed and never modernized. ReadyMode, PhoneBurner, and Five9 have no real mobile or tablet experience. Field agents and solo reps need to be at their desk. We work on phone, tablet, and desktop — install to home screen and it behaves like a native app.',
   },
   {
     num: '05',
     title: 'COMPLIANCE SHORTCUTS',
-    body: 'Number registration is inconsistent at most competitors. TCPA enforcement is often partial. DNC scrubbing happens on request rather than automatically. We register every outbound number, enforce TCPA server-side per lead state, and scrub DNC on every upload. We respect the laws so you do not get blocked or fined.',
+    body: 'Number registration is inconsistent at most competitors. TCPA enforcement is often partial rather than server-side per lead state. We register every outbound number with the carrier registry and enforce TCPA windows server-side. We respect the laws so you do not get blocked or fined.',
   },
   {
     num: '06',
@@ -110,27 +98,27 @@ const SWITCHING_FROM = [
   {
     name: 'MOJO DIALER',
     href: '/vs/mojo',
-    summary: 'Same triple-line speed across every industry — not just real estate. No $10/mo Agent Access fee. No $25–$49 data add-ons stacking. Native CRM integrations beyond Follow Up Boss.',
+    summary: 'Same triple-line speed across every industry — not just real estate. No $10/mo Agent Access fee. No $25–$49 data add-ons stacking. Multiple scripts per campaign, calendar-aligned analytics.',
   },
   {
     name: 'PHONEBURNER',
     href: '/vs/phoneburner',
-    summary: 'Multi-line predictive included (PhoneBurner is single-line only). ARMOR-equivalent spam protection and Connect Scores included — no $35 and $20 add-ons. Weekly billing, no annual contract.',
+    summary: 'Multi-line predictive included (PhoneBurner is single-line only). Weekly billing, no annual contract. Per-campaign dialer mode. Flexible list sizes (no forced 10/25/50 increments).',
   },
   {
     name: 'FIVE9',
     href: null,
-    summary: 'Same enterprise feature depth without the enterprise sales cycle. Self-serve setup in minutes, not weeks. Flat $35/week per seat vs Five9\'s $175+ with custom quotes and annual commitments.',
+    summary: 'Same compliance posture without the enterprise sales cycle. Self-serve setup in minutes, not weeks. Flat $35/week per seat vs Five9\'s $175+ with custom quotes and annual commitments.',
   },
   {
     name: 'CONVOSO',
     href: null,
-    summary: 'Same high-volume outbound dialing for insurance, solar, and lead-heavy verticals. Without the $200+/seat pricing, annual contracts, and opaque quoting. Every feature included at $35/week.',
+    summary: 'Same high-volume outbound dialing for insurance, solar, and lead-heavy verticals. Without the $200+/seat pricing, annual contracts, and opaque quoting. One flat weekly price.',
   },
   {
     name: 'CALLTOOLS / KIXIE / JUSTCALL',
     href: null,
-    summary: 'Cleaner UI, full multi-line predictive (most mid-market dialers cap at progressive), proper compliance infrastructure, and CRM integrations beyond the HubSpot ecosystem. Same price band, more capability.',
+    summary: 'Cleaner UI, full multi-line predictive (most mid-market dialers cap at progressive), proper compliance infrastructure, and a public API that works with any CRM. Same price band, more capability.',
   },
 ]
 
@@ -524,9 +512,9 @@ export default function VsEveryoneView() {
             <p className="verdict-text">
               <strong>Switch to DialerSeat</strong> for one product that beats every legacy
               alternative on price, billing flexibility, mobile support, compliance depth, and
-              modern AI features. Whichever competitor you'd otherwise choose — ReadyMode,
-              Mojo, PhoneBurner, Five9, Convoso, or any other — there's a cleaner version of
-              it here at $35/week.
+              modern UI. Whichever competitor you'd otherwise choose — ReadyMode, Mojo,
+              PhoneBurner, Five9, Convoso, or any other — there's a cleaner version of it
+              here at $35/week.
             </p>
           </div>
         </div>
@@ -552,21 +540,21 @@ export default function VsEveryoneView() {
 
         <div className="vs-section" style={{ paddingTop: 0 }}>
           <div className="vs-section-eyebrow">THE REAL COST OF LEGACY DIALERS</div>
-          <h2 className="vs-section-h2">$99–$165 advertised. $200–$346 in practice.</h2>
+          <h2 className="vs-section-h2">$99–$165 advertised. $200–$300 in practice.</h2>
           <p className="vs-section-lede">
             The headline pricing legacy dialers advertise rarely matches the bill teams
             actually receive. Below is a representative "real bill" for a single seat once
-            common add-ons are stacked. DialerSeat's $35/week includes all of these.
+            common add-ons and tier upgrades stack. DialerSeat's $35/week is the bill —
+            nothing stacks on top.
           </p>
 
           <div className="cost-breakdown">
             <div className="cost-row"><span className="item">Base plan (industry average)</span><span className="price">$165.00/mo</span></div>
-            <div className="cost-row"><span className="item">Spam protection / number reputation</span><span className="price">+$35.00/mo</span></div>
-            <div className="cost-row"><span className="item">Connect/pickup probability scoring</span><span className="price">+$20.00/mo</span></div>
-            <div className="cost-row"><span className="item">SMS / A2P 10DLC (tier upgrade)</span><span className="price">+$18.00/mo</span></div>
-            <div className="cost-row"><span className="item">AI transcription add-on</span><span className="price">+$25.00/mo</span></div>
+            <div className="cost-row"><span className="item">Tier upgrade for inbound numbers</span><span className="price">+$30.00/mo</span></div>
+            <div className="cost-row"><span className="item">Tier upgrade for live monitoring</span><span className="price">+$25.00/mo</span></div>
             <div className="cost-row"><span className="item">Industry data / skip tracing (Mojo-style)</span><span className="price">+$49.00/mo</span></div>
-            <div className="cost-row"><span className="item">Real effective per-seat bill</span><span className="price">$312.00/mo</span></div>
+            <div className="cost-row"><span className="item">Implementation / setup amortized</span><span className="price">+$20.00/mo</span></div>
+            <div className="cost-row"><span className="item">Real effective per-seat bill</span><span className="price">$289.00/mo</span></div>
           </div>
 
           <div className="price-grid">
@@ -580,12 +568,12 @@ export default function VsEveryoneView() {
               <div className="price-card-monthly">≈ $140/month equivalent</div>
               <ul className="price-card-list">
                 <li><span className="check">✓</span> Multi-line predictive + 4 modes</li>
-                <li><span className="check">✓</span> Spam protection + Connect scoring</li>
-                <li><span className="check">✓</span> AI transcription + summaries + sentiment</li>
-                <li><span className="check">✓</span> SMS + inbound numbers</li>
-                <li><span className="check">✓</span> Live monitoring + coaching</li>
-                <li><span className="check">✓</span> Native CRM integrations</li>
-                <li><span className="check">✓</span> Works on every device</li>
+                <li><span className="check">✓</span> Multiple scripts per campaign</li>
+                <li><span className="check">✓</span> Public API + webhooks (any CRM)</li>
+                <li><span className="check">✓</span> All outbound numbers carrier-registered</li>
+                <li><span className="check">✓</span> TCPA enforced server-side</li>
+                <li><span className="check">✓</span> Calendar-aligned analytics</li>
+                <li><span className="check">✓</span> Works on every device (PWA install)</li>
                 <li><span className="check">✓</span> Weekly billing — no annual lock-in</li>
                 <li><span className="check">✓</span> Unlimited outbound minutes</li>
               </ul>
@@ -595,20 +583,20 @@ export default function VsEveryoneView() {
               <div className="price-card-label">LEGACY DIALER (TYPICAL)</div>
               <div className="price-card-name">Stacked add-ons + annual</div>
               <div>
-                <span className="price-card-big">$200–$350</span>
+                <span className="price-card-big">$200–$300</span>
                 <span className="price-card-suffix">/seat/month (effective)</span>
               </div>
               <div className="price-card-monthly">Annual contract for best rate. No weekly option.</div>
               <ul className="price-card-list">
                 <li className="bad"><span className="cross">✕</span> Annual contract typical</li>
-                <li className="bad"><span className="cross">✕</span> Spam protection as add-on</li>
-                <li className="bad"><span className="cross">✕</span> AI features extra or absent</li>
-                <li className="bad"><span className="cross">✕</span> SMS gated to higher tier</li>
+                <li className="bad"><span className="cross">✕</span> Inbound numbers gated to tier</li>
                 <li className="bad"><span className="cross">✕</span> Live monitoring tier-gated</li>
+                <li className="bad"><span className="cross">✕</span> Data feeds stacked separately</li>
                 <li className="bad"><span className="cross">✕</span> CRM coverage varies</li>
                 <li className="bad"><span className="cross">✕</span> Desktop-only or minimal mobile</li>
                 <li className="bad"><span className="cross">✕</span> Pricing hidden behind sales call</li>
                 <li className="bad"><span className="cross">✕</span> Setup fees $200–$2,000</li>
+                <li className="bad"><span className="cross">✕</span> Compliance partial / inconsistent</li>
               </ul>
             </div>
           </div>
@@ -695,26 +683,27 @@ export default function VsEveryoneView() {
             <div className="win-card">
               <div className="win-card-title">5. Works on phones and tablets — not just desktop</div>
               <p className="win-card-body">
-                Native iOS, Android, macOS, and Windows apps plus install-to-home PWA. Field
-                agents on iPad, solo agents on their phone, manager dashboards on laptop. Most
-                legacy dialers are desktop-only or have minimal mobile experiences.
+                Install DialerSeat to your home screen on iPhone, iPad, Android, or any
+                desktop and it behaves like a native app. Field agents on iPad, solo agents
+                on their phone, manager dashboards on laptop. Most legacy dialers are
+                desktop-only or have minimal mobile experiences.
               </p>
             </div>
             <div className="win-card">
-              <div className="win-card-title">6. 100% compliant — no shortcuts</div>
+              <div className="win-card-title">6. Compliance posture without shortcuts</div>
               <p className="win-card-body">
-                Every outbound number is carrier-registered (CNAM, FCR, A2P 10DLC). TCPA
-                windows enforced server-side per lead state. DNC scrubbed on every upload.
-                Full STIR/SHAKEN A-attestation. Compliance is consistent at most competitors
-                — partial enforcement, variable number registration, manual DNC scrubbing.
+                Every outbound number is carrier-registered (CNAM, FCR). TCPA windows enforced
+                server-side per lead state. Full STIR/SHAKEN A-attestation. Compliance at
+                most competitors is partial — variable number registration, partial TCPA
+                enforcement.
               </p>
             </div>
             <div className="win-card">
-              <div className="win-card-title">7. AI transcription + summaries + sentiment included</div>
+              <div className="win-card-title">7. Public API + webhooks — works with any CRM</div>
               <p className="win-card-body">
-                Every call transcribed, summarized, and sentiment-tagged automatically.
-                Delivered to your CRM. By next year these are table stakes. We're already
-                there. Most competitors charge AI as a paid add-on or do not offer it.
+                Push call results, lead updates, and dispositions to any CRM via our public
+                API and webhooks. No native integration lock-in, no waiting for us to build a
+                connector. If your CRM has an API, it works with DialerSeat today.
               </p>
             </div>
             <div className="win-card">
@@ -766,9 +755,9 @@ export default function VsEveryoneView() {
           <div className="vs-final-cta-inner">
             <h2 className="vs-final-cta-h2">Beat every legacy dialer. $35 a week.</h2>
             <p className="vs-final-cta-p">
-              $35/seat/week. Solo or team. Every industry. Every device. Every feature
-              included. No add-ons, no annual contract, no setup fee, no compliance
-              shortcuts. Just a modern dialer that beats every legacy alternative.
+              $35/seat/week. Solo or team. Every industry. Every device. No add-ons, no
+              annual contract, no setup fee, no compliance shortcuts. Just a modern dialer
+              that beats every legacy alternative.
             </p>
             <div className="vs-cta-row">
               <Link href="/sign-up" className="vs-btn-primary">START DIALING →</Link>
