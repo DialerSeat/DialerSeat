@@ -16,8 +16,12 @@ export default withSentryConfig(nextConfig, {
   // Only print upload logs in CI (Vercel sets CI=1), quiet in local builds
   silent: !process.env.CI,
 
-  // Source maps go to Sentry server-side only, not served to browsers
-  hideSourceMaps: true,
+  // Source map handling — uploaded to Sentry, deleted from public bundle
+  // after upload so they aren't served to browsers
+  sourcemaps: {
+    disable: false,
+    deleteSourcemapsAfterUpload: true,
+  },
 
   // Disable Sentry's bundler telemetry
   telemetry: false,
