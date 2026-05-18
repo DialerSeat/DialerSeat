@@ -1,198 +1,199 @@
 'use client'
-import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
+import { useUser, UserButton } from '@clerk/nextjs'
 import { useEffect, useState } from 'react'
+import { createClient } from '@supabase/supabase-js'
+
+const T = {
+  bg: '#f0f1f4',
+  surface: '#e2e4ea',
+  border: '#c4c8d0',
+  dark: '#1a1a2e',
+  darker: '#0a0a14',
+  text: '#1a1c24',
+  muted: '#5a5e6a',
+  accent: '#2a4a8a',
+  blue: '#4a9eff',
+}
 
 export default function SiteHeader() {
-  const { isSignedIn, user, isLoaded } = useUser()
+  const { isSignedIn, isLoaded, user } = useUser()
   const [isAdmin, setIsAdmin] = useState(false)
 
+  // Look up admin status to pick the right HOME destination
   useEffect(() => {
-    if (!isLoaded || !isSignedIn) return
-    fetch('/api/admin/check')
-      .then((r) => r.json())
-      .then((d) => setIsAdmin(!!d.isAdmin))
-      .catch(() => setIsAdmin(false))
-  }, [isLoaded, isSignedIn])
+    if (!isLoaded || !isSignedIn || !user?.id) return
+
+    let cancelled = false
+    const lookup = async () => {
+      try {
+        const supabase = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          // Anon key is fine here — RLS on users table should allow self-lookup.
+          // If you don't expose anon key client-side, drop this whole block
+          // and hard-code HOME to /dashboard/analytics.
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+        )
+        const { data } = await supabase
+          .from('users')
+          .select('is_admin')
+          .eq('clerk_id', user.id)
+          .maybeSingle()
+        if (!cancelled && data?.is_admin) setIsAdmin(true)
+      } catch {
+        // Silently default to non-admin on lookup failure
+      }
+    }
+    lookup()
+    return () => {
+      cancelled = true
+    }
+  }, [isLoaded, isSignedIn, user?.id])
 
   const homeHref = isAdmin ? '/dashboard/admin/analytics' : '/dashboard/analytics'
-  const imageUrl = user?.imageUrl
-  const initials = (
-    user?.firstName?.[0] ||
-    user?.username?.[0] ||
-    user?.emailAddresses?.[0]?.emailAddress?.[0] ||
-    '?'
-  ).toUpperCase()
-  const displayName = user?.firstName || user?.username || 'user'
 
   return (
-    <header className="site-header">
-      <style>{`
-        .site-header {
-          position: sticky;
-          top: 0;
-          z-index: 50;
-          background: rgba(255, 255, 255, 0.95);
-          backdrop-filter: blur(8px);
-          border-bottom: 1px solid #d4d7df;
-        }
-        .site-header-inner {
-          max-width: 1280px;
-          margin: 0 auto;
-          padding: 14px 24px;
-          display: grid;
-          grid-template-columns: 1fr auto 1fr;
-          align-items: center;
-          gap: 16px;
-        }
-        .site-header-left {
-          display: flex;
-          align-items: center;
-          justify-content: flex-start;
-        }
-        .site-header-center {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .site-header-right {
-          display: flex;
-          align-items: center;
-          justify-content: flex-end;
-          gap: 12px;
-        }
-        .site-header-brand-link {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          text-decoration: none;
-        }
-        .site-header-brand-logo {
-          width: 36px;
-          height: 36px;
-          border-radius: 8px;
-          background: linear-gradient(135deg, #4a9eff, #2a6eff);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
-        }
-        .site-header-brand-logo-text {
-          color: white;
-          font-weight: 800;
-          font-size: 16px;
-          font-family: 'Futura PT', Futura, sans-serif;
-        }
-        .site-header-brand-text {
-          font-family: 'Futura PT', Futura, sans-serif;
-          font-size: 16px;
-          font-weight: 800;
-          letter-spacing: 4px;
-          color: #1a1c24;
-          white-space: nowrap;
-        }
-        .site-header-home {
-          font-family: 'Futura PT', Futura, sans-serif;
-          font-size: 11px;
-          font-weight: 700;
-          letter-spacing: 2.5px;
-          color: #2a4a8a;
-          text-decoration: none;
-          padding: 8px 14px;
-          background: rgba(74, 158, 255, 0.08);
-          border: 1px solid rgba(74, 158, 255, 0.3);
-          border-radius: 6px;
-          transition: background 0.15s;
-        }
-        .site-header-home:hover {
-          background: rgba(74, 158, 255, 0.16);
-        }
-        .site-header-login {
-          font-family: 'Futura PT', Futura, sans-serif;
-          font-size: 12px;
-          font-weight: 700;
-          letter-spacing: 2px;
-          color: #5a5e6a;
-          text-decoration: none;
-          padding: 8px 14px;
-        }
-        .site-header-login:hover {
-          color: #1a1c24;
-        }
-        .site-header-signup {
-          font-family: 'Futura PT', Futura, sans-serif;
-          font-size: 12px;
-          font-weight: 700;
-          letter-spacing: 2px;
-          color: white;
-          background: linear-gradient(135deg, #4a9eff, #2a6eff);
-          text-decoration: none;
-          padding: 9px 18px;
-          border-radius: 6px;
-          box-shadow: 0 2px 8px rgba(74, 158, 255, 0.25);
-        }
-        .site-header-avatar {
-          width: 36px;
-          height: 36px;
-          border-radius: 50%;
-          background-size: cover;
-          background-position: center;
-          background-color: #4a9eff;
-          color: white;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-weight: 800;
-          font-size: 14px;
-          font-family: 'Futura PT', Futura, sans-serif;
-          flex-shrink: 0;
-          overflow: hidden;
-          user-select: none;
-        }
-        @media (max-width: 600px) {
-          .site-header-inner { padding: 12px 14px; gap: 8px; }
-          .site-header-brand-text { font-size: 13px; letter-spacing: 2.5px; }
-          .site-header-brand-logo { width: 30px; height: 30px; }
-          .site-header-brand-logo-text { font-size: 14px; }
-          .site-header-brand-link { gap: 8px; }
-          .site-header-home { padding: 6px 10px; font-size: 10px; letter-spacing: 1.5px; }
-          .site-header-login { padding: 6px 8px; font-size: 11px; }
-          .site-header-signup { padding: 7px 12px; font-size: 11px; }
-          .site-header-avatar { width: 32px; height: 32px; font-size: 13px; }
-        }
-      `}</style>
-      <div className="site-header-inner">
-        <div className="site-header-left">
+    <header
+      style={{
+        background: T.darker,
+        borderBottom: `1px solid ${T.border}`,
+        padding: '12px 24px',
+        position: 'sticky',
+        top: 0,
+        zIndex: 50,
+      }}
+    >
+      <div
+        style={{
+          maxWidth: 1280,
+          margin: '0 auto',
+          display: 'grid',
+          gridTemplateColumns: '1fr auto 1fr',
+          alignItems: 'center',
+          gap: 16,
+        }}
+      >
+        {/* LEFT: HOME button (signed in only) */}
+        <div style={{ display: 'flex', alignItems: 'center' }}>
           {isLoaded && isSignedIn && (
-            <Link href={homeHref} className="site-header-home">← HOME</Link>
-          )}
-        </div>
-
-        <div className="site-header-center">
-          <Link href="/" className="site-header-brand-link">
-            <div className="site-header-brand-logo">
-              <span className="site-header-brand-logo-text">D</span>
-            </div>
-            <span className="site-header-brand-text">DIALERSEAT</span>
-          </Link>
-        </div>
-
-        <div className="site-header-right">
-          {!isLoaded ? null : isSignedIn ? (
-            <div
-              className="site-header-avatar"
-              style={imageUrl ? { backgroundImage: `url(${imageUrl})` } : undefined}
-              title={`Signed in as ${displayName}`}
-              aria-label={`Signed in as ${displayName}`}
+            <Link
+              href={homeHref}
+              style={{
+                fontSize: 10,
+                letterSpacing: 2.5,
+                color: '#8888aa',
+                textDecoration: 'none',
+                fontWeight: 'bold',
+                padding: '6px 10px',
+                borderRadius: 4,
+                transition: 'color 0.15s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = T.blue
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = '#8888aa'
+              }}
             >
-              {!imageUrl && initials}
-            </div>
-          ) : (
-            <>
-              <Link href="/sign-in" className="site-header-login">LOG IN</Link>
-              <Link href="/sign-up" className="site-header-signup">SIGN UP</Link>
-            </>
+              ← HOME
+            </Link>
           )}
+        </div>
+
+        {/* CENTER: brand */}
+        <Link
+          href="/"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            textDecoration: 'none',
+          }}
+        >
+          <div
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: 6,
+              background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <span style={{ color: 'white', fontWeight: 'bold', fontSize: 13 }}>
+              D
+            </span>
+          </div>
+          <span
+            style={{
+              fontSize: 13,
+              fontWeight: 'bold',
+              letterSpacing: 4,
+              color: T.blue,
+            }}
+          >
+            DIALERSEAT
+          </span>
+        </Link>
+
+        {/* RIGHT: UserButton (Clerk dropdown) when signed in, auth links when not */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            alignItems: 'center',
+            gap: 12,
+          }}
+        >
+          {isLoaded && isSignedIn ? (
+            <UserButton
+              appearance={{
+                elements: {
+                  avatarBox: {
+                    width: 32,
+                    height: 32,
+                  },
+                  userButtonPopoverCard: {
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
+                    border: `1px solid ${T.border}`,
+                  },
+                },
+              }}
+            />
+          ) : isLoaded && !isSignedIn ? (
+            <>
+              <Link
+                href="/sign-in"
+                style={{
+                  fontSize: 10,
+                  letterSpacing: 2.5,
+                  color: '#8888aa',
+                  textDecoration: 'none',
+                  fontWeight: 'bold',
+                  padding: '6px 10px',
+                }}
+              >
+                LOG IN
+              </Link>
+              <Link
+                href="/sign-up"
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: 4,
+                  background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+                  color: 'white',
+                  fontSize: 10,
+                  fontWeight: 'bold',
+                  letterSpacing: 2.5,
+                  textDecoration: 'none',
+                }}
+              >
+                SIGN UP
+              </Link>
+            </>
+          ) : null}
         </div>
       </div>
     </header>

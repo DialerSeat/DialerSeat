@@ -22,12 +22,12 @@ const LANDING_FAQS = [
   {
     question: 'Does DialerSeat work on phones and tablets?',
     answer:
-      'Yes — DialerSeat works fully on phones, tablets, and desktops. Install as a Progressive Web App on iOS or Android, or use the native iOS, Android, macOS, and Windows apps. Field agents dial from an iPad. Solo agents dial from their phone. Manager dashboards run on laptops.',
+      'Yes — DialerSeat works fully on phones, tablets, and desktops. Install as a Progressive Web App on iPhone, iPad, Android, macOS, or Windows. Once installed it behaves like a native app — full-screen, dock icon, no browser chrome. Field agents dial from an iPad. Solo agents dial from their phone. Manager dashboards run on laptops.',
   },
   {
     question: 'Is DialerSeat TCPA compliant?',
     answer:
-      'Yes. DialerSeat enforces TCPA calling windows server-side per lead state (8AM–9PM local time). Every outbound number is carrier-registered (CNAM verified, FCR-clean, A2P 10DLC for SMS). DNC scrubbing on every upload. Full STIR/SHAKEN A-attestation. We respect the laws so you do not get blocked, fined, or sued.',
+      'DialerSeat enforces TCPA calling windows server-side per lead state (8AM–9PM local time). Every outbound number is carrier-registered (CNAM verified, FCR-clean). Full STIR/SHAKEN A-attestation. The predictive dialer enforces the FTC Telemarketing Sales Rule 3% abandon-rate cap automatically. We respect the laws so you do not get blocked, fined, or sued.',
   },
   {
     question: 'What is predictive dialing?',
@@ -316,9 +316,9 @@ export default async function Home() {
             { icon: '⚡', title: 'MULTI-LINE PREDICTIVE', desc: 'Multiple leads dialed at once. The first to pick up is yours. Maximum live conversations per hour. Preview, Power, Progressive, and Predictive modes — configurable per campaign.' },
             { icon: '🎙️', title: 'AMD VOICEMAIL FILTER', desc: 'Drops voicemails in 1.8 seconds before any agent hears a beep. Hardcoded server-side and always on. Reliable detection where competitors miss.' },
             { icon: '📋', title: 'MULTIPLE SCRIPTS PER CAMPAIGN', desc: 'Real estate script, health script, veterans script, IUL script — every team\'s go-to scripts on tabs, one tap away on every call. Add as many as you need per campaign.' },
-            { icon: '📱', title: 'WORKS ON EVERY DEVICE', desc: 'Phones, tablets, and desktops. Native iOS, Android, macOS, and Windows apps. Install as a PWA from any browser. Field agents on iPad, solo reps on their phone, manager dashboards on laptop.' },
-            { icon: '🔒', title: '100% COMPLIANT — NO SHORTCUTS', desc: 'Every outbound number registered (CNAM, FCR, A2P 10DLC). TCPA windows enforced server-side per lead state. DNC scrubbed on every upload. Full STIR/SHAKEN A-attestation.' },
-            { icon: '🏢', title: 'TEAM WORKFLOW', desc: 'Buy seats for your whole team. Each agent gets their own login, campaigns, and call data. Live monitoring, whisper, and barge for coaching new reps in real time.' },
+            { icon: '📱', title: 'WORKS ON EVERY DEVICE', desc: 'Phones, tablets, and desktops. Install as a Progressive Web App from any browser and it behaves like a native app — full-screen, home-screen icon, no browser chrome. Field agents on iPad, solo reps on their phone, manager dashboards on laptop.' },
+            { icon: '🔒', title: 'COMPLIANCE WITHOUT SHORTCUTS', desc: 'Every outbound number carrier-registered (CNAM, FCR). TCPA windows enforced server-side per lead state. Full STIR/SHAKEN A-attestation. Predictive dialer enforces the FTC 3% abandon-rate cap automatically.' },
+            { icon: '🏢', title: 'TEAM WORKFLOW', desc: 'Buy seats for your whole team. Each agent gets their own login, campaigns, and call data. Owner-paid or agent-paid seat structures supported.' },
             { icon: '🎯', title: 'LAPSED-USER DATA PRESERVATION', desc: 'Pause your subscription, your data stays. Campaigns, leads, recordings, call history — all preserved. Resubscribe and pick up where you left off. No questions, no charges.' },
             { icon: '🌎', title: 'EVERY INDUSTRY', desc: 'Insurance (life, health, IUL, veterans). Real estate. Financial services. B2B SaaS. Solar. Mortgage. Recruiting. DialerSeat is industry-agnostic — bring your list, we will dial it.' },
             { icon: '✨', title: 'MODERN UI, NO LEARNING CURVE', desc: 'Built fresh this year. No bloat, no setup wizard, no manual to read. Sign up, configure your team, and dial in under 10 minutes.' },
@@ -365,7 +365,7 @@ export default async function Home() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {[
             { step: '01', title: 'CREATE YOUR ACCOUNT', desc: 'Sign up with Google or email. Enter your card and you are dialing in seconds. $35 weekly, cancel anytime, no annual lock-in.' },
-            { step: '02', title: 'UPLOAD YOUR LEADS', desc: 'Drop your CSV into a campaign. Our parser auto-detects headers and delimiters. Multiple campaigns run simultaneously. DNC scrubbing happens automatically.' },
+            { step: '02', title: 'UPLOAD YOUR LEADS', desc: 'Drop your CSV into a campaign. Our parser auto-detects headers and delimiters. Multiple campaigns run simultaneously.' },
             { step: '03', title: 'CONFIGURE SCRIPTS + MODE', desc: 'Set your dialer mode per campaign (Preview, Power, Progressive, Predictive). Add your scripts as tabs — switch mid-call as needed.' },
             { step: '04', title: 'DIAL FROM ANY DEVICE', desc: 'Phone, tablet, laptop — same dialer everywhere. Live connections come through the moment someone picks up. AMD drops voicemails automatically.' },
             { step: '05', title: 'TRACK AND CLOSE', desc: 'Disposition every call in one click. Track performance in real time. Calendar-aligned analytics (Sunday/1st resets) match how teams actually think.' },
@@ -447,11 +447,9 @@ export default async function Home() {
             { feature: 'Multiple Scripts per Campaign', us: '✓', them1: '✗', them2: '✗' },
             { feature: 'Live Mid-Call Script Switching', us: '✓', them1: '✗', them2: '✗' },
             { feature: 'Works on Phones + Tablets', us: '✓', them1: '✗', them2: '✗' },
-            { feature: 'Native iOS/Android Apps', us: '✓', them1: '✗', them2: '✗' },
             { feature: 'All Numbers Carrier-Registered', us: '✓', them1: 'Inconsistent', them2: 'Variable' },
             { feature: 'TCPA Enforced Server-Side', us: '✓', them1: 'Partial', them2: 'Partial' },
             { feature: 'STIR/SHAKEN A-Attestation', us: '✓', them1: 'Variable', them2: 'Variable' },
-            { feature: 'DNC Scrubbing on Upload', us: '✓', them1: '✓', them2: '✓' },
             { feature: 'Solo Agent Friendly', us: '✓', them1: 'Limited', them2: 'Limited' },
             { feature: 'Every Industry', us: '✓', them1: 'Limited', them2: 'Limited' },
             { feature: 'Lapsed-User Data Preservation', us: '✓', them1: '✗', them2: '✗' },
@@ -575,18 +573,16 @@ export default async function Home() {
               'Multi-line predictive dialer (4 modes)',
               'AMD voicemail detection in 1.8s',
               'Multiple scripts per campaign',
-              'Live monitoring + whisper + barge',
-              'Works on phones, tablets, desktops',
+              'Per-campaign dialer mode',
+              'Works on phones, tablets, desktops (PWA)',
               'All numbers carrier-registered',
               'TCPA enforced server-side',
               'STIR/SHAKEN A-attestation',
-              'DNC scrubbing on every upload',
               'Unlimited outbound minutes',
               'Unlimited lead uploads',
               'Lapsed-user data preservation',
-              'Native iOS / Android / desktop apps',
-              'Public API + webhooks',
-              'SOC 2 Type II · 99.9% uptime SLA',
+              'Calendar-aligned analytics',
+              'Public API + webhooks (any CRM)',
             ].map((feature, i) => (
               <div key={i} style={{
                 display: 'flex',
