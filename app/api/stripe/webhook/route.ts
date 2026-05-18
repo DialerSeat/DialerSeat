@@ -3,6 +3,12 @@ import { headers } from 'next/headers'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
 import { stripe } from '@/lib/stripe'
+import {
+  claimStripeEvent,
+  markStripeEventProcessed,
+  markStripeEventFailed,
+  markStripeEventSkipped,
+} from '@/lib/stripe-idempotency'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -31,9 +37,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: `Webhook Error: ${err.message}` }, { status: 400 })
   }
 
-  console.log('> Stripe webhook received:', event.type)
+  // Idempotency claim. Stripe retries aggressively on 5xx (up to 3 days).
+  // Without this guard, retries of already-processed events would re-run
+  // every handler — double-provisioning, double seat-charge revocation, etc.
+  const claim = await claimStripeEvent(event)
+  if (!claim.shouldProcess) {
+    console.log(`> Stripe webhook ${event.id} skipped: ${claim.reason}`)
+    return NextResponse.json({ received: true, reason: claim.reason })
+  }
+
+  console.log(`> Stripe webhook received: ${event.type} (${event.id}, ${claim.reason})`)
 
   try {
+    let handled = true
+
     switch (event.type) {
       case 'customer.subscription.created':
       case 'customer.subscription.updated':
@@ -58,11 +75,21 @@ export async function POST(req: Request) {
 
       default:
         console.log(`Unhandled event type: ${event.type}`)
+        handled = false
+    }
+
+    if (handled) {
+      await markStripeEventProcessed(event.id)
+    } else {
+      await markStripeEventSkipped(event.id)
     }
 
     return NextResponse.json({ received: true })
   } catch (err: any) {
     console.error('Webhook handler error:', err)
+    await markStripeEventFailed(event.id, err)
+    // Return 500 so Stripe retries. The idempotency layer will let the retry
+    // through (status flips to 'received' with bumped attempts).
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }
