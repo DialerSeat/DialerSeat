@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@clerk/nextjs": "^7.2.9",
+    "@sentry/nextjs": "^10.53.1",
     "@signalwire/js": "^3.30.0",
     "@signalwire/realtime-api": "^4.2.1",
     "@stripe/react-stripe-js": "^6.3.0",
