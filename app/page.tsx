@@ -1,50 +1,6 @@
 import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import Link from "next/link"
-import JsonLd from '@/components/json-ld'
-import {
-  organizationSchema,
-  softwareApplicationSchema,
-  faqPageSchema,
-} from '@/lib/schema'
-
-const LANDING_FAQS = [
-  {
-    question: 'How much does DialerSeat cost?',
-    answer:
-      'DialerSeat is $35 per seat per week (about $140/month equivalent). Weekly billing only — no annual contract, no setup fee, no add-on charges. All features included in the base price. Cancel any time.',
-  },
-  {
-    question: 'Can solo agents use DialerSeat, or is it only for teams?',
-    answer:
-      'Both. DialerSeat is built for solo agents and teams of 1 to 500+ reps. Same product, same $35/week per seat. No minimum team size, no team-only features locked away. Solo agents get the same dialer that 500-seat call centers use.',
-  },
-  {
-    question: 'Does DialerSeat work on phones and tablets?',
-    answer:
-      'Yes — DialerSeat works fully on phones, tablets, and desktops. Install as a Progressive Web App on iPhone, iPad, Android, macOS, or Windows. Once installed it behaves like a native app — full-screen, dock icon, no browser chrome. Field agents dial from an iPad. Solo agents dial from their phone. Manager dashboards run on laptops.',
-  },
-  {
-    question: 'Is DialerSeat TCPA compliant?',
-    answer:
-      'DialerSeat enforces TCPA calling windows server-side per lead state (8AM–9PM local time). Every outbound number is carrier-registered (CNAM verified, FCR-clean). Full STIR/SHAKEN A-attestation. The predictive dialer enforces the FTC Telemarketing Sales Rule 3% abandon-rate cap automatically. We respect the laws so you do not get blocked, fined, or sued.',
-  },
-  {
-    question: 'What is predictive dialing?',
-    answer:
-      'Predictive dialing uses a pacing algorithm to call multiple numbers simultaneously across a team, predicting when agents will become available based on average call durations. Maximizes agent talk time. Designed for teams of 8+ concurrent agents. DialerSeat includes a legal 3% abandon rate cap to stay TCPA-compliant.',
-  },
-  {
-    question: 'Do I have to sign a contract?',
-    answer:
-      'No. DialerSeat bills weekly and cancellation is one click. No annual commitment, no minimum term, no recovery calls from a customer success rep. Pay $35 this week, cancel before next Monday, owe nothing more.',
-  },
-  {
-    question: 'What industries is DialerSeat for?',
-    answer:
-      'Any industry that makes outbound calls — insurance (life, health, IUL, veterans benefits), real estate, financial services, B2B SaaS, fundraising, debt resolution, mortgage, solar, home services, recruiting, political campaigning. DialerSeat is industry-agnostic and works the same across all of them.',
-  },
-]
 
 export default async function Home() {
   const { userId } = await auth()
@@ -54,9 +10,6 @@ export default async function Home() {
 
   return (
     <main style={{ background: 'var(--background)', minHeight: '100vh', overflowX: 'hidden' }}>
-      <JsonLd data={organizationSchema()} />
-      <JsonLd data={softwareApplicationSchema()} />
-      <JsonLd data={faqPageSchema(LANDING_FAQS)} />
       <style>{`
         :root {
           --hero-fs: 80px;
@@ -113,7 +66,6 @@ export default async function Home() {
           }
           .ds-compare-cell { font-size: 11px !important; letter-spacing: 0 !important; }
           .ds-final-cta-h2 { letter-spacing: 0 !important; }
-          .ds-faq-item { padding: 20px !important; }
         }
       `}</style>
 
@@ -189,7 +141,7 @@ export default async function Home() {
             width: '6px', height: '6px', borderRadius: '50%',
             background: 'var(--accent-blue)', flexShrink: 0,
           }}></div>
-          $35/WEEK · WORKS ON EVERY DEVICE · 100% COMPLIANT
+          $35/WEEK · NO CONTRACTS · CANCEL ANYTIME
         </div>
 
         <h1 className="ds-hero-h1" style={{
@@ -216,11 +168,11 @@ export default async function Home() {
           lineHeight: '1.7',
           letterSpacing: '0.5px',
           color: 'var(--text-secondary)',
-          maxWidth: '640px',
+          maxWidth: '600px',
           marginBottom: '40px',
           padding: '0 8px',
         }}>
-          The professional outbound dialer for solo agents and high-volume teams. Multi-line predictive dialing, mobile-ready, fully compliant. <strong>$35 a week</strong> — for a fraction of what everyone else charges. Insurance, real estate, financial services, every industry welcome.
+          The professional outbound dialer built for <u>ANYONE</u> who lives on the phone. Upload your leads, launch your campaigns, and let DialerSeat do the heavy lifting — for a fraction of what everyone else charges.
         </p>
 
         <div className="ds-cta-buttons" style={{
@@ -274,9 +226,9 @@ export default async function Home() {
         }}>
           {[
             { number: '$35', label: 'PER WEEK' },
-            { number: '1.8s', label: 'VOICEMAIL DROP' },
+            { number: '5X', label: 'CHEAPER THAN OTHERS' },
             { number: '$0', label: 'SETUP FEES' },
-            { number: '100%', label: 'COMPLIANT' },
+            { number: '∞', label: 'LEADS UPLOADED' },
           ].map((stat, i) => (
             <div key={i} style={{ textAlign: 'center', flex: 1 }}>
               <div className="ds-stats-num" style={{
@@ -307,21 +259,21 @@ export default async function Home() {
             marginBottom: '16px',
           }}>BUILT FOR VOLUME</h2>
           <p style={{ fontSize: '12px', letterSpacing: '4px', color: 'var(--text-secondary)' }}>
-            FOR SOLO AGENTS, SALES TEAMS, AND CALL CENTERS WHO WORK LEADS ALL DAY.
+            FOR SALES TEAMS, CALL CENTERS, AGENCIES, AND <u>ANYONE</u> WHO WORKS LEADS.
           </p>
         </div>
 
         <div className="ds-grid-3" style={{ display: 'grid', gap: '20px' }}>
           {[
-            { icon: '⚡', title: 'MULTI-LINE PREDICTIVE', desc: 'Multiple leads dialed at once. The first to pick up is yours. Maximum live conversations per hour. Preview, Power, Progressive, and Predictive modes — configurable per campaign.' },
-            { icon: '🎙️', title: 'AMD VOICEMAIL FILTER', desc: 'Drops voicemails in 1.8 seconds before any agent hears a beep. Hardcoded server-side and always on. Reliable detection where competitors miss.' },
-            { icon: '📋', title: 'MULTIPLE SCRIPTS PER CAMPAIGN', desc: 'Real estate script, health script, veterans script, IUL script — every team\'s go-to scripts on tabs, one tap away on every call. Add as many as you need per campaign.' },
-            { icon: '📱', title: 'WORKS ON EVERY DEVICE', desc: 'Phones, tablets, and desktops. Install as a Progressive Web App from any browser and it behaves like a native app — full-screen, home-screen icon, no browser chrome. Field agents on iPad, solo reps on their phone, manager dashboards on laptop.' },
-            { icon: '🔒', title: 'COMPLIANCE WITHOUT SHORTCUTS', desc: 'Every outbound number carrier-registered (CNAM, FCR). TCPA windows enforced server-side per lead state. Full STIR/SHAKEN A-attestation. Predictive dialer enforces the FTC 3% abandon-rate cap automatically.' },
-            { icon: '🏢', title: 'TEAM WORKFLOW', desc: 'Buy seats for your whole team. Each agent gets their own login, campaigns, and call data. Owner-paid or agent-paid seat structures supported.' },
-            { icon: '🎯', title: 'LAPSED-USER DATA PRESERVATION', desc: 'Pause your subscription, your data stays. Campaigns, leads, recordings, call history — all preserved. Resubscribe and pick up where you left off. No questions, no charges.' },
-            { icon: '🌎', title: 'EVERY INDUSTRY', desc: 'Insurance (life, health, IUL, veterans). Real estate. Financial services. B2B SaaS. Solar. Mortgage. Recruiting. DialerSeat is industry-agnostic — bring your list, we will dial it.' },
-            { icon: '✨', title: 'MODERN UI, NO LEARNING CURVE', desc: 'Built fresh this year. No bloat, no setup wizard, no manual to read. Sign up, configure your team, and dial in under 10 minutes.' },
+            { icon: '⚡', title: 'PREDICTIVE DIALING', desc: 'Multiple leads dialed at once. The first to pick up is yours. Maximum live conversations per hour, every hour.' },
+            { icon: '🎙️', title: 'IDENTIFIES VOICEMAIL', desc: 'Stop wasting your day on dead air. DialerSeat knows when a machine answers and skips ahead to the next live human.' },
+            { icon: '📋', title: 'MULTIPLE CAMPAIGNS', desc: 'Run unlimited campaigns simultaneously. Upload a CSV, name it, and you are dialing in seconds.' },
+            { icon: '🎯', title: 'MEMORY OF MARKED LEADS', desc: 'Every disposition, callback, and note remembers itself. Your work is never lost between sessions or seats.' },
+            { icon: '📞', title: 'MANUAL DIALER', desc: 'When you want to control every call yourself, we have you. Click-to-dial individual numbers any time.' },
+            { icon: '🏢', title: 'TEAM WORKFLOW', desc: 'Buy seats for your whole crew. Each agent gets their own login, campaigns, and call data — all under one roof.' },
+            { icon: '🌎', title: 'WORKS GLOBALLY', desc: 'Dial anywhere on the map. International leads supported with the same simple weekly rate.' },
+            { icon: '✨', title: 'CLEAN, PLUG-AND-PLAY UI', desc: 'No bloat, no setup wizard, no learning curve. Sign in, upload, dial. Works on desktop and mobile.' },
+            { icon: '🔒', title: 'YOUR DATA, ALWAYS YOURS', desc: 'Your leads stay saved even if your subscription lapses. Pick up right where you left off — no questions asked.' },
           ].map((f, i) => (
             <div key={i} className="ds-feature-card" style={{
               padding: '36px',
@@ -358,17 +310,16 @@ export default async function Home() {
             marginBottom: '16px',
           }}>HOW IT WORKS</h2>
           <p style={{ fontSize: '12px', letterSpacing: '4px', color: 'var(--text-secondary)' }}>
-            FROM SIGNUP TO DIALING IN UNDER 10 MINUTES.
+            FROM ZERO TO DIALING IN UNDER 2 MINUTES.
           </p>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {[
-            { step: '01', title: 'CREATE YOUR ACCOUNT', desc: 'Sign up with Google or email. Enter your card and you are dialing in seconds. $35 weekly, cancel anytime, no annual lock-in.' },
-            { step: '02', title: 'UPLOAD YOUR LEADS', desc: 'Drop your CSV into a campaign. Our parser auto-detects headers and delimiters. Multiple campaigns run simultaneously.' },
-            { step: '03', title: 'CONFIGURE SCRIPTS + MODE', desc: 'Set your dialer mode per campaign (Preview, Power, Progressive, Predictive). Add your scripts as tabs — switch mid-call as needed.' },
-            { step: '04', title: 'DIAL FROM ANY DEVICE', desc: 'Phone, tablet, laptop — same dialer everywhere. Live connections come through the moment someone picks up. AMD drops voicemails automatically.' },
-            { step: '05', title: 'TRACK AND CLOSE', desc: 'Disposition every call in one click. Track performance in real time. Calendar-aligned analytics (Sunday/1st resets) match how teams actually think.' },
+            { step: '01', title: 'CREATE YOUR ACCOUNT', desc: 'Sign up with Google or email. Enter your card and you are dialing in seconds. $35 weekly, cancel anytime.' },
+            { step: '02', title: 'UPLOAD YOUR LEADS', desc: 'Drop your CSV into a campaign. Name it, organize it, and have multiple campaigns ready to go simultaneously.' },
+            { step: '03', title: 'HIT DIAL AND GO', desc: 'Launch your campaign and DialerSeat starts working immediately. Live connections come through the second someone picks up.' },
+            { step: '04', title: 'TRACK AND CLOSE', desc: 'Disposition every call in one click. Track your performance in real time. Rinse and repeat until your list is done.' },
           ].map((step, i) => (
             <div key={i} className="ds-step-card" style={{
               display: 'flex',
@@ -408,7 +359,7 @@ export default async function Home() {
       </section>
 
       {/* COMPARE */}
-      <section id="compare" className="ds-section" style={{ maxWidth: '960px', margin: '0 auto' }}>
+      <section id="compare" className="ds-section" style={{ maxWidth: '900px', margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: '64px' }}>
           <h2 style={{
             fontSize: 'var(--section-fs)',
@@ -418,7 +369,7 @@ export default async function Home() {
             marginBottom: '16px',
           }}>WHY DIALERSEAT</h2>
           <p style={{ fontSize: '12px', letterSpacing: '4px', color: 'var(--text-secondary)' }}>
-            SIDE-BY-SIDE WITH THE LEGACY DIALERS.
+            THE NUMBERS SPEAK FOR THEMSELVES.
           </p>
         </div>
 
@@ -438,23 +389,20 @@ export default async function Home() {
 
           {[
             { feature: 'Weekly Cost', us: '$35', them1: '$199+/mo', them2: '$150+/mo' },
-            { feature: 'Weekly Billing Option', us: '✓', them1: '✗', them2: '✗' },
-            { feature: 'No Contract Required', us: '✓', them1: '✗', them2: '✗' },
-            { feature: 'Setup Fee', us: '$0', them1: '$0–$2,000', them2: '$200+' },
-            { feature: 'Multi-Line Predictive', us: '✓', them1: '✓', them2: 'Limited' },
-            { feature: 'Per-Campaign Dialer Mode', us: '✓', them1: '✗', them2: '✗' },
-            { feature: 'AMD Voicemail Detection', us: '1.8s', them1: 'Misses', them2: 'Variable' },
-            { feature: 'Multiple Scripts per Campaign', us: '✓', them1: '✗', them2: '✗' },
-            { feature: 'Live Mid-Call Script Switching', us: '✓', them1: '✗', them2: '✗' },
-            { feature: 'Works on Phones + Tablets', us: '✓', them1: '✗', them2: '✗' },
-            { feature: 'All Numbers Carrier-Registered', us: '✓', them1: 'Inconsistent', them2: 'Variable' },
-            { feature: 'TCPA Enforced Server-Side', us: '✓', them1: 'Partial', them2: 'Partial' },
-            { feature: 'STIR/SHAKEN A-Attestation', us: '✓', them1: 'Variable', them2: 'Variable' },
-            { feature: 'Solo Agent Friendly', us: '✓', them1: 'Limited', them2: 'Limited' },
-            { feature: 'Every Industry', us: '✓', them1: 'Limited', them2: 'Limited' },
-            { feature: 'Lapsed-User Data Preservation', us: '✓', them1: '✗', them2: '✗' },
-            { feature: 'Calendar-Aligned Analytics', us: '✓', them1: '✗', them2: '✗' },
-            { feature: 'Public API + Webhooks', us: '✓', them1: '✗', them2: 'Limited' },
+            { feature: 'No Contract', us: '✓', them1: '✗', them2: '✗' },
+            { feature: 'Setup Fee', us: '$0', them1: '$0', them2: '$200+' },
+            { feature: 'Plug & Play', us: '✓', them1: '✗', them2: '✗' },
+            { feature: 'Predictive Dialing', us: '✓', them1: '✓', them2: 'Limited' },
+            { feature: 'Identifies Voicemail', us: '✓', them1: '✓', them2: '✗' },
+            { feature: 'Manual Dialer', us: '✓', them1: '✗', them2: '✓' },
+            { feature: 'Multi Campaign', us: '✓', them1: '✓', them2: '✓' },
+            { feature: 'Unlimited Leads', us: '✓', them1: '✓', them2: 'Limited' },
+            { feature: 'Memory of Marked Leads', us: '✓', them1: 'Limited', them2: '✗' },
+            { feature: 'Data Saved Always', us: '✓', them1: '✗', them2: '✗' },
+            { feature: 'Team Workflow', us: '✓', them1: '✓', them2: 'Add-on' },
+            { feature: 'Works on Mobile', us: '✓', them1: '✗', them2: '✗' },
+            { feature: 'Works Globally', us: '✓', them1: 'US/CA', them2: 'Limited' },
+            { feature: 'Satisfaction Priority', us: '✓', them1: '✗', them2: '✗' },
           ].map((row, i, arr) => (
             <div key={i} className="ds-compare-row" style={{
               display: 'grid',
@@ -469,45 +417,6 @@ export default async function Home() {
               <div className="ds-compare-cell" style={{ fontSize: '13px', color: 'var(--text-secondary)', textAlign: 'center', opacity: 0.6 }}>{row.them2}</div>
             </div>
           ))}
-        </div>
-
-        <div style={{ textAlign: 'center', marginTop: '32px', display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
-          <Link href="/vs/readymode" style={{
-            padding: '12px 24px',
-            borderRadius: '8px',
-            fontSize: '11px',
-            fontWeight: 'bold',
-            letterSpacing: '2px',
-            color: 'var(--accent-blue)',
-            textDecoration: 'none',
-            border: '1px solid var(--accent-blue)',
-          }}>
-            VS READYMODE →
-          </Link>
-          <Link href="/vs/mojo" style={{
-            padding: '12px 24px',
-            borderRadius: '8px',
-            fontSize: '11px',
-            fontWeight: 'bold',
-            letterSpacing: '2px',
-            color: 'var(--accent-blue)',
-            textDecoration: 'none',
-            border: '1px solid var(--accent-blue)',
-          }}>
-            VS MOJO DIALER →
-          </Link>
-          <Link href="/vs/phoneburner" style={{
-            padding: '12px 24px',
-            borderRadius: '8px',
-            fontSize: '11px',
-            fontWeight: 'bold',
-            letterSpacing: '2px',
-            color: 'var(--accent-blue)',
-            textDecoration: 'none',
-            border: '1px solid var(--accent-blue)',
-          }}>
-            VS PHONEBURNER →
-          </Link>
         </div>
       </section>
 
@@ -540,11 +449,11 @@ export default async function Home() {
             letterSpacing: '4px',
             color: 'var(--accent-blue)',
             marginBottom: '24px',
-          }}>DIALERSEAT</div>
+          }}>DIALERSEAT PRO</div>
 
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
             <span style={{ fontSize: '64px', fontWeight: 'bold', lineHeight: 1, color: 'var(--text-primary)' }}>$35</span>
-            <span style={{ fontSize: '16px', color: 'var(--text-secondary)', marginBottom: '10px' }}>/seat/week</span>
+            <span style={{ fontSize: '16px', color: 'var(--text-secondary)', marginBottom: '10px' }}>/week</span>
           </div>
 
           <p style={{
@@ -552,7 +461,7 @@ export default async function Home() {
             letterSpacing: '3px',
             color: 'var(--text-secondary)',
             marginBottom: '16px',
-          }}>≈ $140/MONTH EQUIVALENT · BILLED WEEKLY</p>
+          }}>PER SEAT · BILLED WEEKLY · CANCEL ANYTIME</p>
 
           <div style={{
             display: 'inline-block',
@@ -565,30 +474,27 @@ export default async function Home() {
             color: 'var(--accent-blue)',
             marginBottom: '40px',
           }}>
-            CANCEL ANY TIME · NO ANNUAL LOCK-IN
+            FIRST CHARGE TODAY · CANCEL ANYTIME
           </div>
 
           <div style={{ marginBottom: '40px', textAlign: 'left' }}>
             {[
-              'Multi-line predictive dialer (4 modes)',
-              'AMD voicemail detection in 1.8s',
-              'Multiple scripts per campaign',
-              'Per-campaign dialer mode',
-              'Works on phones, tablets, desktops (PWA)',
-              'All numbers carrier-registered',
-              'TCPA enforced server-side',
-              'STIR/SHAKEN A-attestation',
-              'Unlimited outbound minutes',
+              'Predictive dialing engine',
+              'Voicemail detection',
+              'Unlimited outbound calling',
               'Unlimited lead uploads',
-              'Lapsed-user data preservation',
-              'Calendar-aligned analytics',
-              'Public API + webhooks (any CRM)',
+              'Multiple simultaneous campaigns',
+              'Disposition memory across sessions',
+              'Team seat management',
+              'Works globally',
+              'Your data saved forever',
+              'No setup fees ever',
             ].map((feature, i) => (
               <div key={i} style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '14px',
-                marginBottom: '14px',
+                marginBottom: '16px',
               }}>
                 <div style={{
                   width: '20px',
@@ -629,48 +535,6 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* FAQ */}
-      <section id="faq" className="ds-section" style={{ maxWidth: '780px', margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: '64px' }}>
-          <h2 style={{
-            fontSize: 'var(--section-fs)',
-            fontWeight: 'bold',
-            letterSpacing: '6px',
-            color: 'var(--text-primary)',
-            marginBottom: '16px',
-          }}>QUESTIONS</h2>
-          <p style={{ fontSize: '12px', letterSpacing: '4px', color: 'var(--text-secondary)' }}>
-            EVERYTHING WORTH ASKING BEFORE YOU SIGN UP.
-          </p>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {LANDING_FAQS.map((faq, i) => (
-            <div key={i} className="ds-faq-item" style={{
-              padding: '28px 32px',
-              borderRadius: '12px',
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
-            }}>
-              <h3 style={{
-                fontSize: '15px',
-                fontWeight: 'bold',
-                letterSpacing: '1px',
-                color: 'var(--text-primary)',
-                marginBottom: '12px',
-                lineHeight: 1.4,
-              }}>{faq.question}</h3>
-              <p style={{
-                fontSize: '14px',
-                lineHeight: '1.7',
-                color: 'var(--text-secondary)',
-                margin: 0,
-              }}>{faq.answer}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
       {/* FINAL CTA */}
       <section className="ds-section" style={{
         textAlign: 'center',
@@ -699,7 +563,7 @@ export default async function Home() {
           marginBottom: '40px',
           lineHeight: '1.7',
         }}>
-          The dialer built for solo agents and high-volume teams. No fluff, no bloat, no contracts. Just modern, compliant dialing on every device at a price that makes sense.
+          Join the dialer built for the people actually making the calls. No fluff, no bloat, no contracts. Just pure dialing power at a price that makes sense.
         </p>
         <Link href="/sign-up" style={{
           display: 'inline-block',
@@ -740,16 +604,11 @@ export default async function Home() {
           </div>
           <span style={{ fontSize: '14px', fontWeight: 'bold', letterSpacing: '6px', color: 'var(--text-primary)' }}>DIALERSEAT</span>
         </div>
-        <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', marginBottom: '16px', flexWrap: 'wrap' }}>
-          <Link href="/vs/readymode" style={{ fontSize: '11px', letterSpacing: '2px', color: 'var(--text-secondary)', textDecoration: 'none' }}>VS READYMODE</Link>
-          <Link href="/vs/mojo" style={{ fontSize: '11px', letterSpacing: '2px', color: 'var(--text-secondary)', textDecoration: 'none' }}>VS MOJO</Link>
-          <Link href="/vs/phoneburner" style={{ fontSize: '11px', letterSpacing: '2px', color: 'var(--text-secondary)', textDecoration: 'none' }}>VS PHONEBURNER</Link>
-          <Link href="/dialing-modes" style={{ fontSize: '11px', letterSpacing: '2px', color: 'var(--text-secondary)', textDecoration: 'none' }}>DIALING MODES</Link>
-        </div>
         <p style={{ fontSize: '11px', letterSpacing: '3px', color: 'var(--text-secondary)' }}>
           © {new Date().getFullYear()} DIALERSEAT · ALL RIGHTS RESERVED
         </p>
       </footer>
+
     </main>
   )
 }
