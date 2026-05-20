@@ -1,6 +1,7 @@
 'use client'
 import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
+import BackToVsButton from '@/components/back-to-vs-button'
 
 const T = {
   bg: '#f0f1f4',
@@ -85,7 +86,7 @@ const INDUSTRY_FAILURES = [
   {
     num: '06',
     title: 'DATED INTERFACES',
-    body: 'ReadyMode reviewers describe the UI as "Windows 8" or "dated." Mojo, PhoneBurner, and most enterprise tools accumulated UI debt over a decade. Rep retention suffers when the software feels old. We built DialerSeat from scratch this year with a modern design system.',
+    body: 'ReadyMode reviewers describe the UI as "Windows 8" or "dated." Mojo, PhoneBurner, and most enterprise tools accumulated UI debt over a decade. Rep retention suffers when the software feels old. DialerSeat ships with a modern design system — clean, fast, and built for the way teams actually work.',
   },
 ]
 
@@ -93,7 +94,7 @@ const SWITCHING_FROM = [
   {
     name: 'READYMODE',
     href: '/vs/readymode',
-    summary: 'Same multi-line predictive at $35/week instead of $165–$249/month. No $500–$2,000 setup fee. Modern UI built this year. Works on phones and tablets where ReadyMode is desktop-only.',
+    summary: 'Same multi-line predictive at $35/week instead of $165–$249/month. No $500–$2,000 setup fee. Modern UI. Works on phones and tablets where ReadyMode is desktop-only.',
   },
   {
     name: 'MOJO DIALER',
@@ -107,7 +108,7 @@ const SWITCHING_FROM = [
   },
   {
     name: 'FIVE9',
-    href: null,
+    href: '/vs/five9',
     summary: 'Same compliance posture without the enterprise sales cycle. Self-serve setup in minutes, not weeks. Flat $35/week per seat vs Five9\'s $175+ with custom quotes and annual commitments.',
   },
   {
@@ -135,11 +136,10 @@ function Cell({ value }: { value: Cell }) {
 }
 
 export default function VsEveryoneView() {
-  const currentYear = new Date().getFullYear()
-
   return (
     <>
       <SiteHeader />
+      <BackToVsButton />
       <div className="vs-root" style={{
         background: T.bg,
         minHeight: '100vh',
@@ -504,7 +504,7 @@ export default function VsEveryoneView() {
             The outbound dialer category has been dominated by tools built between 2010–2018.
             They were designed for traditional call centers — desktop-only, annual contracts,
             add-on revenue models, opaque pricing. The industry never modernized. DialerSeat
-            was built in {currentYear} to fix every shared flaw at once.
+            was built from scratch to fix every shared flaw at once.
           </p>
 
           <div className="verdict-card">
@@ -707,12 +707,12 @@ export default function VsEveryoneView() {
               </p>
             </div>
             <div className="win-card">
-              <div className="win-card-title">8. Modern UI built in {currentYear}</div>
+              <div className="win-card-title">8. Modern UI with no learning curve</div>
               <p className="win-card-body">
                 Legacy dialers accumulated UI debt over a decade. Reviewers describe ReadyMode
                 as "Windows 8" and PhoneBurner's contact panel as missing basic information.
-                We built DialerSeat from scratch this year with a modern design system. Your
-                reps will notice.
+                DialerSeat ships with a modern design system — clean, fast, and built for the
+                way teams actually work. Your reps will notice.
               </p>
             </div>
           </div>
