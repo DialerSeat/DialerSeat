@@ -7,6 +7,7 @@ import Link from 'next/link'
 type CallStatus = 'idle' | 'calling' | 'connected' | 'ended' | 'preview_ready'
 type AccessTier = 'active' | 'lapsed' | 'new' | null
 type DialerMode = 'preview' | 'power' | 'progressive' | 'predictive'
+type AgentState = 'ready' | 'dialing' | 'on_call' | 'wrapping' | 'paused'
 
 interface Lead {
   id: string
@@ -44,12 +45,19 @@ interface TeamScope {
   teamCampaigns: TeamScopeCampaign[]
 }
 
+// Updated to match the new /api/dialer/active-agents response shape.
+// The endpoint returns { agents, total_active, campaign_pacing, generated_at }
+// where campaign_pacing contains the predictive-relevant fields.
 interface PacingInfo {
-  activeAgents: number
-  abandonRate: number
-  isDegraded: boolean
-  configuredLines: number
-  effectiveLines: number
+  activeAgents: number          // total agents online on this campaign (any state)
+  readyAgents: number           // agents waiting to be routed a call
+  dialingAgents: number         // agents with fan-out calls in flight
+  onCallAgents: number          // agents talking to live humans
+  abandonRate: number           // 0..1, from 30-day rolling view (FTC TSR <3%)
+  isDegraded: boolean           // true when abandon rate >= 2.5%
+  isPredictiveTeam: boolean     // 2+ agents on same campaign → multi-agent reroute applies
+  configuredLines: number       // campaign's predictive_lines_per_agent
+  effectiveLines: number        // throttled value if degraded
 }
 
 interface SessionStats {
@@ -80,6 +88,13 @@ const MODE_OPTIONS: { value: DialerMode; label: string; color: string }[] = [
   { value: 'progressive', label: 'PROGRESSIVE', color: '#1a6a1a' },
   { value: 'predictive', label: 'PREDICTIVE', color: '#8a1a1a' },
 ]
+
+// Heartbeat tick rate. New endpoint expects 5s; sessions go offline after 15s.
+const HEARTBEAT_INTERVAL_MS = 5_000
+
+// Active agents poll rate (for the pacing panel). Doesn't need to be as
+// frequent as heartbeat — agents joining/leaving is a low-rate event.
+const PACING_POLL_INTERVAL_MS = 10_000
 
 function todayKey(): string {
   return new Date().toISOString().split('T')[0]
@@ -127,15 +142,14 @@ function DialerPageInner() {
   const [pacingInfo, setPacingInfo] = useState<PacingInfo | null>(null)
   const [amdActivity, setAmdActivity] = useState<string[]>([])
 
+  // Server has told us to yield (predictive abandon-rate approaching FTC cap)
+  const [shouldYield, setShouldYield] = useState(false)
+
   const [tcpaBlockedAll, setTcpaBlockedAll] = useState(false)
 
   const [modeDropdownOpen, setModeDropdownOpen] = useState(false)
   const [modeSaving, setModeSaving] = useState(false)
 
-  // Session-level dialer mode for ALL ACTIVE. Persisted in localStorage.
-  // For ALL ACTIVE selection, this is the source of truth — overriding
-  // each individual campaign's dialer_mode for the duration of the session.
-  // Does NOT write back to any campaign's DB row.
   const [allActiveOverrideMode, setAllActiveOverrideMode] = useState<DialerMode>('power')
 
   const timerRef = useRef<NodeJS.Timeout | null>(null)
@@ -143,9 +157,16 @@ function DialerPageInner() {
   const activePollRef = useRef<NodeJS.Timeout | null>(null)
   const swClientRef = useRef<any>(null)
   const swCallRef = useRef<any>(null)
-  const heartbeatRef = useRef<NodeJS.Timeout | null>(null)
-  const pacingPollRef = useRef<NodeJS.Timeout | null>(null)
+
+  // OLD session-tracking refs (for /api/dialer/session POST/DELETE)
+  // Kept for backward compat with whatever analytics consumed those rows.
+  const sessionHeartbeatRef = useRef<NodeJS.Timeout | null>(null)
   const sessionIdRef = useRef<string | null>(null)
+
+  // NEW heartbeat ref (for /api/dialer/heartbeat — agent presence + readiness)
+  const heartbeatRef = useRef<NodeJS.Timeout | null>(null)
+
+  const pacingPollRef = useRef<NodeJS.Timeout | null>(null)
   const urlParamsConsumedRef = useRef(false)
   const currentLeadRef = useRef<Lead | null>(null)
   const lsRestoredRef = useRef(false)
@@ -177,10 +198,6 @@ function DialerPageInner() {
       ? campaigns.find(c => c.id === selectedCampaign)
       : undefined
 
-  // Effective dialer mode used to drive call behavior:
-  //  • Specific campaign  → that campaign's saved dialer_mode (from DB)
-  //  • ALL ACTIVE         → user's session-level override (allActiveOverrideMode)
-  //  • Nothing selected   → power (no calls happen until selection anyway)
   const dialerMode: DialerMode =
     isSpecificCampaign
       ? ((currentCampaign?.dialer_mode as DialerMode) || 'power')
@@ -193,11 +210,22 @@ function DialerPageInner() {
   const isProgressive = dialerMode === 'progressive'
   const isPreview = dialerMode === 'preview'
   const autoDials = isProgressive || isPredictive
-  const modeRequiresSpecific = false  // ALL ACTIVE now supports every mode via override
+  const modeRequiresSpecific = false
 
-  // Mode tile is interactive when a specific campaign is selected (writes to DB)
-  // OR when ALL ACTIVE is selected (writes to local override state).
   const modeTileInteractive = isSpecificCampaign || isAllActive
+
+  // ────────────────────────────────────────────────────────────────────────
+  // NEW: Agent state for heartbeat
+  // ────────────────────────────────────────────────────────────────────────
+  // Maps the dialer's UI state to one of the heartbeat-accepted agent states.
+  // The server uses this to know who's available for predictive routing.
+  const agentState: AgentState = (() => {
+    if (!available) return 'paused'
+    if (status === 'connected') return 'on_call'
+    if (status === 'calling') return 'dialing'
+    if (showDisposition) return 'wrapping'
+    return 'ready'
+  })()
 
   // ── SESSION METRICS PERSISTENCE ─────────────────────────────────────────
   useEffect(() => {
@@ -326,9 +354,6 @@ function DialerPageInner() {
       } catch {}
     }
 
-    // Only restore campaign selection if the campaign still exists AND is active.
-    // Paused campaigns aren't shown in the dropdown, so restoring one would
-    // leave the select element in a blank-but-saved state.
     if (campaignIdParam && campaigns.find(c => c.id === campaignIdParam && c.status === 'active')) {
       setSelectedCampaign(campaignIdParam)
     } else {
@@ -343,7 +368,6 @@ function DialerPageInner() {
       } catch {}
     }
 
-    // Restore ALL_ACTIVE override mode
     try {
       const lastAllActiveMode = localStorage.getItem(`${LS_ALL_ACTIVE_MODE}:${user.id}`)
       if (lastAllActiveMode && VALID_MODES.includes(lastAllActiveMode as DialerMode)) {
@@ -500,6 +524,11 @@ function DialerPageInner() {
     }
   }
 
+  // ── OLD /api/dialer/session lifecycle (kept for analytics compatibility) ─
+  // This is the previous session-tracking system. Heartbeat replaces this for
+  // presence/state, but if other code reads from the `dialer_sessions` table
+  // for reporting purposes, we leave it intact. Safe to remove once we confirm
+  // nothing else depends on it.
   const startSession = useCallback(async (campaignId: string) => {
     try {
       const teamId = selectedScope !== PERSONAL_SCOPE ? selectedScope : undefined
@@ -540,18 +569,65 @@ function DialerPageInner() {
       if (!sessionIdRef.current) {
         startSession(selectedCampaign)
       }
-      if (!heartbeatRef.current) {
-        heartbeatRef.current = setInterval(() => {
+      if (!sessionHeartbeatRef.current) {
+        sessionHeartbeatRef.current = setInterval(() => {
           if (isSpecificCampaign) startSession(selectedCampaign)
         }, 30000)
       }
     } else {
       if (sessionIdRef.current) endSession()
-      if (heartbeatRef.current) {
-        clearInterval(heartbeatRef.current)
-        heartbeatRef.current = null
+      if (sessionHeartbeatRef.current) {
+        clearInterval(sessionHeartbeatRef.current)
+        sessionHeartbeatRef.current = null
       }
     }
+
+    return () => {
+      if (sessionHeartbeatRef.current) {
+        clearInterval(sessionHeartbeatRef.current)
+        sessionHeartbeatRef.current = null
+      }
+    }
+  }, [available, selectedCampaign, currentCampaign, isActive, isSpecificCampaign, startSession, endSession])
+
+  // ────────────────────────────────────────────────────────────────────────
+  // NEW: Predictive-foundation heartbeat
+  // ────────────────────────────────────────────────────────────────────────
+  // Posts agent state to /api/dialer/heartbeat every 5 seconds.
+  // This is what populates agent_sessions and drives predictive routing.
+  //
+  // Server may respond with should_yield=true if the campaign's 30-day
+  // abandon rate is approaching the FTC 3% cap. When that happens we flip
+  // the agent to 'paused' so the controller stops fanning out new calls.
+  // ────────────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!isActive) return
+
+    const sendHeartbeat = async () => {
+      try {
+        const res = await fetch('/api/dialer/heartbeat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            state: agentState,
+            campaign_id: isSpecificCampaign ? selectedCampaign : null,
+            dialer_mode: dialerMode,
+            current_call_id: activeCallSid || null,
+          }),
+        })
+        if (!res.ok) return
+        const data = await res.json()
+        if (typeof data.should_yield === 'boolean') {
+          setShouldYield(data.should_yield)
+        }
+      } catch {
+        // Network blip — next heartbeat will retry
+      }
+    }
+
+    // Fire immediately, then every interval
+    sendHeartbeat()
+    heartbeatRef.current = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL_MS)
 
     return () => {
       if (heartbeatRef.current) {
@@ -559,10 +635,18 @@ function DialerPageInner() {
         heartbeatRef.current = null
       }
     }
-  }, [available, selectedCampaign, currentCampaign, isActive, isSpecificCampaign, startSession, endSession])
+  }, [
+    isActive,
+    agentState,
+    isSpecificCampaign,
+    selectedCampaign,
+    dialerMode,
+    activeCallSid,
+  ])
 
   useEffect(() => {
     const handleUnload = () => {
+      // OLD session beacon
       const sid = sessionIdRef.current
       if (sid && navigator.sendBeacon) {
         const blob = new Blob(
@@ -570,6 +654,18 @@ function DialerPageInner() {
           { type: 'application/json' }
         )
         navigator.sendBeacon('/api/dialer/session-end', blob)
+      }
+      // NEW: tell server we're paused on unload so other agents on the
+      // same campaign can take over routing immediately, rather than
+      // waiting 15s for the stale-session sweep.
+      if (navigator.sendBeacon) {
+        try {
+          const blob = new Blob(
+            [JSON.stringify({ state: 'paused' })],
+            { type: 'application/json' }
+          )
+          navigator.sendBeacon('/api/dialer/heartbeat', blob)
+        } catch {}
       }
     }
     window.addEventListener('beforeunload', handleUnload)
@@ -581,6 +677,9 @@ function DialerPageInner() {
     }
   }, [endSession])
 
+  // ────────────────────────────────────────────────────────────────────────
+  // PACING PANEL — consumes new /api/dialer/active-agents response shape
+  // ────────────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!isActive || !isPredictive || !available || !isSpecificCampaign) {
       setPacingInfo(null)
@@ -593,22 +692,35 @@ function DialerPageInner() {
 
     const fetchPacing = async () => {
       try {
-        const res = await fetch(`/api/dialer/active-agents?campaignId=${selectedCampaign}`)
+        const res = await fetch(`/api/dialer/active-agents?campaign_id=${selectedCampaign}`)
+        if (!res.ok) return
         const data = await res.json()
-        if (data.success) {
-          setPacingInfo(prev => ({
-            activeAgents: data.activeAgents,
-            abandonRate: prev?.abandonRate || 0,
-            isDegraded: prev?.isDegraded || false,
-            configuredLines: currentCampaign?.predictive_lines_per_agent || 1.5,
-            effectiveLines: prev?.isDegraded ? 1.0 : (currentCampaign?.predictive_lines_per_agent || 1.5),
-          }))
+        const cp = data.campaign_pacing
+        if (!cp) {
+          setPacingInfo(null)
+          return
         }
+
+        const configuredLines = currentCampaign?.predictive_lines_per_agent || 3
+        const abandonRateDecimal = (cp.abandon_rate_pct ?? 0) / 100
+        const isDegraded = abandonRateDecimal >= 0.025
+
+        setPacingInfo({
+          activeAgents: cp.active_agents,
+          readyAgents: cp.ready_agents,
+          dialingAgents: cp.dialing_agents,
+          onCallAgents: cp.on_call_agents,
+          abandonRate: abandonRateDecimal,
+          isDegraded,
+          isPredictiveTeam: cp.is_predictive_team,
+          configuredLines,
+          effectiveLines: isDegraded ? 1.0 : configuredLines,
+        })
       } catch {}
     }
 
     fetchPacing()
-    pacingPollRef.current = setInterval(fetchPacing, 15000)
+    pacingPollRef.current = setInterval(fetchPacing, PACING_POLL_INTERVAL_MS)
     return () => {
       if (pacingPollRef.current) {
         clearInterval(pacingPollRef.current)
@@ -627,7 +739,7 @@ function DialerPageInner() {
         granted = true
       } catch (err) {
         console.warn('Microphone permission denied:', err)
-        return  // Don't go online without mic
+        return
       }
     }
     setAvailable(v => !v)
@@ -726,7 +838,6 @@ function DialerPageInner() {
   const isPersonalScope = selectedScope === PERSONAL_SCOPE
   const currentScope = teamScopes.find(s => s.id === selectedScope) || null
 
-  // Full list of scope campaigns (all statuses). Used for counting + existence checks.
   const scopeCampaigns: { id: string; name: string; total_leads: number; status: string }[] = isPersonalScope
     ? campaigns.map(c => ({ id: c.id, name: c.name, total_leads: c.total_leads, status: c.status }))
     : (currentScope?.teamCampaigns
@@ -738,7 +849,6 @@ function DialerPageInner() {
           status: tc.campaign!.status,
         })) || [])
 
-  // Active-only list — what the dropdown shows. Paused/archived hidden completely.
   const activeScopeCampaigns = scopeCampaigns.filter(c => c.status === 'active')
   const activeCampaignsCount = activeScopeCampaigns.length
 
@@ -1036,8 +1146,12 @@ function DialerPageInner() {
       return
     }
 
-    // Preview mode applies to both specific-campaign AND ALL ACTIVE
-    // (the latter uses allActiveOverrideMode === 'preview')
+    // Predictive guardrail — if server has asked us to yield, hold off auto-dial
+    if (isPredictive && shouldYield) {
+      setAmdActivity(prev => [`YIELDING — abandon rate approaching FTC cap`, ...prev].slice(0, 5))
+      return
+    }
+
     if (isPreview) {
       await fetchPreviewLead()
       return
@@ -1165,8 +1279,6 @@ function DialerPageInner() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [manualNumber, status, dialZoomed, isActive])
 
-  // Mode picker — branches based on whether the user has a specific campaign
-  // (writes to DB) or ALL ACTIVE selected (writes to local session override).
   const handleModeChange = async (newMode: DialerMode) => {
     if (newMode === dialerMode) {
       setModeDropdownOpen(false)
@@ -1174,7 +1286,6 @@ function DialerPageInner() {
     }
 
     if (isAllActive) {
-      // Session-level override only — does NOT write to any campaign's DB row.
       setAllActiveOverrideMode(newMode)
       setModeDropdownOpen(false)
       return
@@ -1551,6 +1662,21 @@ function DialerPageInner() {
         </div>
       )}
 
+      {isPredictive && shouldYield && !pacingInfo?.isDegraded && (
+        <div style={{
+          padding: '8px 20px',
+          background: '#fdf4e8',
+          borderBottom: `2px solid ${terminalAmber}`,
+          color: terminalAmber,
+          fontSize: 11,
+          letterSpacing: 1,
+          textAlign: 'center',
+          fontWeight: 'bold',
+        }}>
+          ⚠ YIELDING — abandon rate approaching FTC 3% cap. Dialing paused briefly.
+        </div>
+      )}
+
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
         <div style={{ flex: 1, padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px', overflow: 'auto', minHeight: 0 }}>
 
@@ -1655,7 +1781,9 @@ function DialerPageInner() {
               <div>
                 <div style={{ fontSize: 9, letterSpacing: 2, color: terminalMuted, marginBottom: 3 }}>ACTIVE AGENTS</div>
                 <div style={{ fontSize: 14, fontWeight: 'bold', fontFamily: 'monospace', color: terminalText }}>
-                  {pacingInfo.activeAgents}
+                  {pacingInfo.activeAgents}{pacingInfo.isPredictiveTeam && (
+                    <span style={{ fontSize: 9, color: terminalGreen, marginLeft: 6, letterSpacing: 1 }}>TEAM</span>
+                  )}
                 </div>
               </div>
               <div>
@@ -2033,12 +2161,15 @@ function DialerPageInner() {
               status === 'preview_ready' && `> PREVIEW LOADED — ${previewLead?.first_name} ${previewLead?.last_name}`,
               isSpecificCampaign && currentCampaign && `> CAMPAIGN MODE: ${dialerMode.toUpperCase()} + AMD`,
               isAllActive && `> ALL ACTIVE · SESSION MODE: ${dialerMode.toUpperCase()}`,
-              isPredictive && pacingInfo && `> AGENTS: ${pacingInfo.activeAgents} · ABANDON: ${(pacingInfo.abandonRate * 100).toFixed(2)}%`,
+              isPredictive && pacingInfo && `> AGENTS: ${pacingInfo.activeAgents} (READY:${pacingInfo.readyAgents}/DIALING:${pacingInfo.dialingAgents}/ONCALL:${pacingInfo.onCallAgents})`,
+              isPredictive && pacingInfo && `> ABANDON: ${(pacingInfo.abandonRate * 100).toFixed(2)}%`,
+              isPredictive && shouldYield && `> SERVER ASKED TO YIELD — abandon rate near cap`,
+              isPredictive && pacingInfo?.isPredictiveTeam && `> TEAM PREDICTIVE — reroute on disconnect enabled`,
               currentSessionId && '> SESSION ACTIVE',
               !isPersonalScope && currentScope && `> SCOPE: ${currentScope.name.toUpperCase()}`,
               swReady && '> AUDIO READY',
-              available && '> AGENT STATUS: ONLINE',
-            ].filter(Boolean).slice(0, 12).map((log, i) => (
+              available && `> AGENT STATE: ${agentState.toUpperCase()}`,
+            ].filter(Boolean).slice(0, 14).map((log, i) => (
               <div key={i} style={{
                 fontSize: '9px', fontFamily: 'monospace',
                 color: i === 0 ? '#4a9eff' : '#4a5a4a',

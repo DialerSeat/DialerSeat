@@ -14,6 +14,13 @@ export const metadata: Metadata = {
   },
 }
 
+// IMPORTANT: This is a static date reflecting when the policy was actually
+// last revised. Do NOT make this auto-update. Users need to know what version
+// of the policy they agreed to.
+//
+// When you make material changes to this policy, update this constant manually
+// and email registered users at least 30 days before changes take effect (as
+// stated in section 12 of the policy itself).
 const LAST_UPDATED = 'May 20, 2026'
 
 export default function PrivacyPolicyPage() {
@@ -121,6 +128,21 @@ export default function PrivacyPolicyPage() {
             color: #2a4a8a;
             text-decoration: underline;
           }
+          .privacy-footer {
+            padding: 32px 20px;
+            text-align: center;
+            border-top: 1px solid #c4c8d0;
+            background: #1a1a2e;
+            color: rgba(255,255,255,0.5);
+            font-size: 11px;
+            letter-spacing: 3px;
+          }
+          .privacy-footer a {
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            margin: 0 12px;
+          }
+          .privacy-footer a:hover { color: white; }
           @media (max-width: 768px) {
             .privacy-hero { padding: 56px 20px 40px; }
             .privacy-hero h1 { font-size: 32px; }
@@ -395,6 +417,13 @@ export default function PrivacyPolicyPage() {
             <p>
               See also: <Link href="/terms">Terms of Service</Link>.
             </p>
+          </div>
+
+          <div className="privacy-footer">
+            © {new Date().getFullYear()} DIALERSEAT · ALL RIGHTS RESERVED ·{' '}
+            <Link href="/">HOME</Link> ·{' '}
+            <Link href="/terms">TERMS</Link> ·{' '}
+            <Link href="/faq">FAQ</Link>
           </div>
         </div>
       </main>
