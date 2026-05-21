@@ -3,11 +3,47 @@ import { redirect } from 'next/navigation'
 import Link from "next/link"
 import SiteFooter from '@/components/site-footer'
 
-export default async function Home() {
+// =============================================================================
+// LANDING PAGE
+// =============================================================================
+// Default behavior:
+//   - Logged out → renders landing
+//   - Logged in → REDIRECTS to /dashboard (the original flow)
+//
+// Override:
+//   - Logged in + ?view=landing query param → renders landing instead of
+//     redirecting. The "LANDING PAGE" button on the analytics page header
+//     links here with that param so paying users can review the public
+//     marketing site without being kicked back to the app.
+//
+// When a logged-in user IS viewing the landing, every "GET STARTED" CTA in
+// the body becomes "GO TO DASHBOARD" linking to /dashboard. They've already
+// signed up — pushing them through sign-up flow again would be confusing.
+// =============================================================================
+
+interface PageProps {
+  // Next.js 16 App Router passes searchParams as a Promise
+  searchParams: Promise<{ view?: string }>
+}
+
+export default async function Home({ searchParams }: PageProps) {
   const { userId } = await auth()
-  if (userId) {
+  const params = await searchParams
+  const wantsLanding = params.view === 'landing'
+
+  // Default flow: logged-in users get sent to dashboard unless they explicitly
+  // opted into viewing the landing page.
+  if (userId && !wantsLanding) {
     redirect('/dashboard')
   }
+
+  const isLoggedIn = !!userId
+
+  // Where the body CTAs should point:
+  //   - Logged-in landing visitor → /dashboard (they already have an account)
+  //   - Logged-out visitor → /sign-up (standard signup flow)
+  const ctaHref = isLoggedIn ? '/dashboard' : '/sign-up'
+  const ctaLabel = isLoggedIn ? 'GO TO DASHBOARD' : 'GET STARTED'
 
   return (
     <main style={{ background: 'var(--background)', minHeight: '100vh', overflowX: 'hidden' }}>
@@ -110,8 +146,14 @@ export default async function Home() {
           <Link href="#features" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>FEATURES</Link>
           <Link href="#pricing" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>PRICING</Link>
           <Link href="#compare" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>COMPARE</Link>
-          <Link href="/sign-in" className="ds-nav-link ds-show-mobile" style={{ fontSize: '11px', letterSpacing: '2px', color: 'var(--text-primary)', textDecoration: 'none', padding: '8px 14px', border: '1px solid var(--border)', borderRadius: '8px', whiteSpace: 'nowrap' }}>SIGN IN</Link>
-          <Link href="/sign-up" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'white', textDecoration: 'none', padding: '10px 20px', borderRadius: '8px', background: 'linear-gradient(135deg, #4a9eff, #2a6eff)', whiteSpace: 'nowrap' }}>GET STARTED</Link>
+          {isLoggedIn ? (
+            <Link href="/dashboard" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'white', textDecoration: 'none', padding: '10px 20px', borderRadius: '8px', background: 'linear-gradient(135deg, #4a9eff, #2a6eff)', whiteSpace: 'nowrap' }}>GO TO DASHBOARD</Link>
+          ) : (
+            <>
+              <Link href="/sign-in" className="ds-nav-link ds-show-mobile" style={{ fontSize: '11px', letterSpacing: '2px', color: 'var(--text-primary)', textDecoration: 'none', padding: '8px 14px', border: '1px solid var(--border)', borderRadius: '8px', whiteSpace: 'nowrap' }}>SIGN IN</Link>
+              <Link href="/sign-up" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'white', textDecoration: 'none', padding: '10px 20px', borderRadius: '8px', background: 'linear-gradient(135deg, #4a9eff, #2a6eff)', whiteSpace: 'nowrap' }}>GET STARTED</Link>
+            </>
+          )}
         </div>
       </nav>
 
@@ -183,7 +225,7 @@ export default async function Home() {
           marginBottom: '24px',
           maxWidth: 480,
         }}>
-          <Link href="/sign-up" style={{
+          <Link href={ctaHref} style={{
             padding: '16px 40px',
             borderRadius: '12px',
             fontSize: '13px',
@@ -194,7 +236,7 @@ export default async function Home() {
             background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
             boxShadow: '0 0 40px rgba(74,158,255,0.3)',
           }}>
-            GET STARTED
+            {ctaLabel}
           </Link>
           <Link href="#compare" style={{
             padding: '16px 40px',
@@ -533,7 +575,7 @@ export default async function Home() {
             ))}
           </div>
 
-          <Link href="/sign-up" style={{
+          <Link href={ctaHref} style={{
             display: 'block',
             padding: '16px',
             borderRadius: '12px',
@@ -546,7 +588,7 @@ export default async function Home() {
             boxShadow: '0 0 30px rgba(74,158,255,0.3)',
             marginBottom: '16px',
           }}>
-            GET STARTED
+            {ctaLabel}
           </Link>
           <p style={{ fontSize: '11px', letterSpacing: '2px', color: 'var(--text-secondary)' }}>
             $35 CHARGED TODAY · CANCEL ANYTIME
@@ -584,7 +626,7 @@ export default async function Home() {
         }}>
           Join the dialer built for the people actually making the calls. No fluff, no bloat, no contracts. Just pure dialing power at a price that makes sense.
         </p>
-        <Link href="/sign-up" style={{
+        <Link href={ctaHref} style={{
           display: 'inline-block',
           padding: '20px 60px',
           borderRadius: '14px',
@@ -596,7 +638,7 @@ export default async function Home() {
           background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
           boxShadow: '0 0 60px rgba(74,158,255,0.4)',
         }}>
-          GET STARTED
+          {ctaLabel}
         </Link>
         <p style={{ marginTop: '20px', fontSize: '11px', letterSpacing: '3px', color: 'var(--text-secondary)' }}>
           $35/WEEK · NO CONTRACTS · CANCEL ANYTIME

@@ -2,6 +2,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -268,6 +269,26 @@ export default function AnalyticsPage() {
           gap: 16px;
           flex-wrap: wrap;
         }
+        /* Pushes the LANDING PAGE button to the far right of the header bar */
+        .analytics-header-spacer { flex: 1 1 auto; }
+        .landing-page-btn {
+          padding: 6px 14px;
+          background: rgba(74,158,255,0.08);
+          border: 1px solid ${T.blue};
+          border-radius: 4px;
+          font-size: 10px;
+          letter-spacing: 2px;
+          color: ${T.blue};
+          cursor: pointer;
+          font-family: 'Futura PT', Futura, sans-serif;
+          font-weight: bold;
+          text-decoration: none;
+          transition: background 0.15s;
+          white-space: nowrap;
+        }
+        .landing-page-btn:hover {
+          background: rgba(74,158,255,0.18);
+        }
         .welcome-row {
           background: ${T.bg};
           padding: 18px 20px 4px;
@@ -395,6 +416,7 @@ export default function AnalyticsPage() {
           .welcome-row { padding: 14px 12px 4px; }
           .welcome-line { font-size: 15px; letter-spacing: 1px; }
           .range-tab { padding: 6px 10px; font-size: 9px; letter-spacing: 1px; }
+          .landing-page-btn { padding: 5px 10px; font-size: 9px; letter-spacing: 1.5px; }
           .stat-grid {
             grid-template-columns: repeat(2, 1fr) !important;
             padding: 12px;
@@ -438,6 +460,19 @@ export default function AnalyticsPage() {
             />
           </div>
         )}
+
+        {/* Pushes the LANDING PAGE button to the right edge */}
+        <div className="analytics-header-spacer" />
+
+        {/*
+          LANDING PAGE button — links to landing with ?view=landing param.
+          Without that param, app/page.tsx would redirect us right back to
+          /dashboard because logged-in users normally get sent there.
+          The param tells page.tsx "render the landing for this visit".
+        */}
+        <Link href="/?view=landing" className="landing-page-btn">
+          LANDING PAGE →
+        </Link>
       </div>
 
       <div className="welcome-row">

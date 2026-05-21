@@ -20,7 +20,7 @@ export default function SiteHeader() {
   const { isSignedIn, isLoaded, user } = useUser()
   const [isAdmin, setIsAdmin] = useState(false)
 
-  // Look up admin status to pick the right HOME destination
+  // Look up admin status to pick the right DASHBOARD destination
   useEffect(() => {
     if (!isLoaded || !isSignedIn || !user?.id) return
 
@@ -30,8 +30,6 @@ export default function SiteHeader() {
         const supabase = createClient(
           process.env.NEXT_PUBLIC_SUPABASE_URL!,
           // Anon key is fine here — RLS on users table should allow self-lookup.
-          // If you don't expose anon key client-side, drop this whole block
-          // and hard-code HOME to /dashboard/analytics.
           process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
         )
         const { data } = await supabase
@@ -50,7 +48,17 @@ export default function SiteHeader() {
     }
   }, [isLoaded, isSignedIn, user?.id])
 
-  const homeHref = isAdmin ? '/dashboard/admin/analytics' : '/dashboard/analytics'
+  const dashboardHref = isAdmin ? '/dashboard/admin/analytics' : '/dashboard/analytics'
+
+  // Build display name for the signed-in user.
+  // Prefer first + last name; fall back to email username; fall back to empty.
+  const displayName = (() => {
+    if (!user) return ''
+    const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ').trim()
+    if (fullName) return fullName
+    const email = user.primaryEmailAddress?.emailAddress || ''
+    return email.split('@')[0] || ''
+  })()
 
   return (
     <header
@@ -73,29 +81,31 @@ export default function SiteHeader() {
           gap: 16,
         }}
       >
-        {/* LEFT: HOME button (signed in only) */}
+        {/* LEFT: DASHBOARD button (signed in only) */}
         <div style={{ display: 'flex', alignItems: 'center' }}>
           {isLoaded && isSignedIn && (
             <Link
-              href={homeHref}
+              href={dashboardHref}
               style={{
                 fontSize: 10,
                 letterSpacing: 2.5,
-                color: '#8888aa',
+                color: T.blue,
                 textDecoration: 'none',
                 fontWeight: 'bold',
-                padding: '6px 10px',
+                padding: '8px 14px',
                 borderRadius: 4,
-                transition: 'color 0.15s',
+                border: `1px solid ${T.blue}`,
+                background: 'rgba(74,158,255,0.06)',
+                transition: 'all 0.15s',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.color = T.blue
+                e.currentTarget.style.background = 'rgba(74,158,255,0.15)'
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.color = '#8888aa'
+                e.currentTarget.style.background = 'rgba(74,158,255,0.06)'
               }}
             >
-              ← HOME
+              → DASHBOARD
             </Link>
           )}
         </div>
@@ -138,30 +148,49 @@ export default function SiteHeader() {
           </span>
         </Link>
 
-        {/* RIGHT: UserButton (Clerk dropdown) when signed in, auth links when not */}
+        {/* RIGHT: avatar + name when signed in, auth links when not */}
         <div
           style={{
             display: 'flex',
             justifyContent: 'flex-end',
             alignItems: 'center',
-            gap: 12,
+            gap: 10,
           }}
         >
           {isLoaded && isSignedIn ? (
-            <UserButton
-              appearance={{
-                elements: {
-                  avatarBox: {
-                    width: 32,
-                    height: 32,
+            <>
+              <UserButton
+                appearance={{
+                  elements: {
+                    avatarBox: {
+                      width: 32,
+                      height: 32,
+                    },
+                    userButtonPopoverCard: {
+                      boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
+                      border: `1px solid ${T.border}`,
+                    },
                   },
-                  userButtonPopoverCard: {
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
-                    border: `1px solid ${T.border}`,
-                  },
-                },
-              }}
-            />
+                }}
+              />
+              {displayName && (
+                <span
+                  className="site-header-username"
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 'bold',
+                    color: '#c4c8d8',
+                    letterSpacing: 1.5,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    maxWidth: 180,
+                  }}
+                >
+                  {displayName}
+                </span>
+              )}
+            </>
           ) : isLoaded && !isSignedIn ? (
             <>
               <Link
@@ -196,6 +225,15 @@ export default function SiteHeader() {
           ) : null}
         </div>
       </div>
+
+      {/* On narrow viewports hide the username to keep the header readable */}
+      <style>{`
+        @media (max-width: 640px) {
+          .site-header-username {
+            display: none !important;
+          }
+        }
+      `}</style>
     </header>
   )
 }
