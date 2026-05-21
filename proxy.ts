@@ -7,7 +7,10 @@ const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/terms',
+  '/privacy',
+  '/faq',
   '/dialing-modes',
+  '/vs',
   '/vs/(.*)',
   '/api/stripe/webhook',
   '/api/calls/twiml(.*)',
@@ -68,7 +71,7 @@ export default clerkMiddleware(async (auth, request) => {
 
   const { tier, isAdmin, isPreserved } = await getAccessState(userId)
 
-  // ── ADMIN BYPASS ─────────────────────────────────────────────────
+  // ── ADMIN BYPASS ────────────────────────────────────────────────────────
   // Admins get full access regardless of Stripe state. Admin status is
   // never tied to billing — they manage the platform, they don't pay for it.
   if (isAdmin) {
@@ -78,14 +81,14 @@ export default clerkMiddleware(async (auth, request) => {
     return res
   }
 
-  // ── ACTIVE SUB → FULL ACCESS ─────────────────────────────────────
+  // ── ACTIVE SUB → FULL ACCESS ────────────────────────────────────────────
   if (tier === 'active') {
     const res = NextResponse.next()
     res.headers.set('x-access-tier', 'active')
     return res
   }
 
-  // ── PRESERVED USER → READ-ONLY DASHBOARD ─────────────────────────
+  // ── PRESERVED USER → READ-ONLY DASHBOARD ────────────────────────────────
   // User has uploaded leads, created a campaign, joined a team, or otherwise
   // has data in the system. They can view their dashboard in read-only mode
   // but active-only routes still 403 them.
@@ -107,7 +110,7 @@ export default clerkMiddleware(async (auth, request) => {
     return res
   }
 
-  // ── EVERYONE ELSE → /billing ─────────────────────────────────────
+  // ── EVERYONE ELSE → /billing ────────────────────────────────────────────
   // No active sub, not an admin, no preserved data. They must subscribe
   // or abandon (which signs them out and returns them to the landing page).
   const billingUrl = new URL('/billing', request.url)
@@ -172,9 +175,25 @@ async function getAccessState(clerkId: string): Promise<AccessState> {
   }
 }
 
+// =============================================================================
+// MIDDLEWARE MATCHER
+// =============================================================================
+// Excludes static assets from running through Clerk auth. The negative
+// lookahead in the regex says "match all paths EXCEPT those that look like
+// static files."
+//
+// Excluded extensions: html, css, js, jsx, json, images, fonts, icons,
+// archives, spreadsheets, webmanifest.
+//
+// HISTORY (May 2026): The original matcher had `js(?!on)` which means "js
+// but not json" — i.e. JSON files were NOT excluded and got routed through
+// Clerk auth. That caused /manifest.json (and any other public JSON files)
+// to 404 because unauthenticated requests got redirected to /billing.
+// Fix: `jsx?|json` so .js, .jsx, and .json are all excluded from auth.
+// =============================================================================
 export const config = {
   matcher: [
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docb?x?|xlsx?|zip|webmanifest)).*)',
+    '/((?!_next|[^?]*\\.(?:html?|css|jsx?|json|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docb?x?|xlsx?|zip|webmanifest)).*)',
     '/(api|trpc)(.*)',
   ],
 }
