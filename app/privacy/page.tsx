@@ -2,6 +2,20 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
 
+// =============================================================================
+// BUILD FIX — force-dynamic to bypass static-generation hang
+// =============================================================================
+// Next.js 16.2.4 + Turbopack was hanging at "Generating static pages" for this
+// route during build. Marking dynamic skips the static prerender step entirely;
+// the page is rendered per-request instead. Vercel's edge layer still caches
+// the response, so user-facing performance is unaffected.
+//
+// Side benefit: the `new Date().getFullYear()` in the footer is now always
+// fresh on each request instead of being baked-in at build time.
+// =============================================================================
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export const metadata: Metadata = {
   title: 'Privacy Policy — DialerSeat',
   description: 'How DialerSeat collects, uses, stores, and protects your data. Covers user accounts, lead data, call recordings, payment info, and your rights.',
