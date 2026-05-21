@@ -93,21 +93,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [user, pathname])
 
-  useEffect(() => {
-    if (!user) return
-    const ping = () => { fetch('/api/heartbeat', { method: 'POST' }).catch(() => {}) }
-    ping()
-    const interval = setInterval(ping, 60_000)
-    const onFocus = () => ping()
-    window.addEventListener('focus', onFocus)
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) ping()
-    })
-    return () => {
-      clearInterval(interval)
-      window.removeEventListener('focus', onFocus)
-    }
-  }, [user])
+  // NOTE: Dashboard-wide /api/heartbeat ping removed.
+  // Replaced by the per-dialer heartbeat in app/dashboard/dialer/page.tsx,
+  // which posts to /api/dialer/heartbeat every 5 seconds with full agent
+  // state (idle/dialing/on_call/wrapping/paused), feeds the predictive
+  // controller, and runs the stale-session sweep. The old dashboard ping
+  // was a coarser "user is online" heartbeat that's now redundant.
 
   const navItems = isAdmin ? adminNavItems : userNavItems
 
