@@ -1,6 +1,7 @@
 'use client'
 import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
+import SiteFooter from '@/components/site-footer'
 import BackToVsButton from '@/components/back-to-vs-button'
 
 const T = {
@@ -471,7 +472,7 @@ export default function VsEveryoneView() {
               ReadyMode, Mojo, PhoneBurner, Five9, Convoso, CallTools, Kixie, JustCall —
               whichever you're considering, they share the same flaws: opaque pricing, annual
               contracts, dated UI, add-on stacking, desktop-only, compliance shortcuts.
-              DialerSeat fixes every one of them at <strong>$35/week per seat</strong>.
+              DialerSeat™ fixes every one of them at <strong>$35/week per seat</strong>.
               Solo agent or 500-seat team. Every industry. Every device.
             </p>
             <div className="vs-cta-row">
@@ -493,6 +494,8 @@ export default function VsEveryoneView() {
               <span>KIXIE</span>
               <span>·</span>
               <span>JUSTCALL</span>
+              <span>·</span>
+              <span>ETC.</span>
             </div>
           </div>
         </div>
@@ -503,14 +506,14 @@ export default function VsEveryoneView() {
           <p className="vs-section-lede">
             The outbound dialer category has been dominated by tools built between 2010–2018.
             They were designed for traditional call centers — desktop-only, annual contracts,
-            add-on revenue models, opaque pricing. The industry never modernized. DialerSeat
+            add-on revenue models, opaque pricing. The industry never modernized. DialerSeat™
             was built from scratch to fix every shared flaw at once.
           </p>
 
           <div className="verdict-card">
             <div className="verdict-title">▸ BOTTOM LINE</div>
             <p className="verdict-text">
-              <strong>Switch to DialerSeat</strong> for one product that beats every legacy
+              <strong>Switch to DialerSeat™</strong> for one product that beats every legacy
               alternative on price, billing flexibility, mobile support, compliance depth, and
               modern UI. Whichever competitor you'd otherwise choose — ReadyMode, Mojo,
               PhoneBurner, Five9, Convoso, or any other — there's a cleaner version of it
@@ -544,7 +547,7 @@ export default function VsEveryoneView() {
           <p className="vs-section-lede">
             The headline pricing legacy dialers advertise rarely matches the bill teams
             actually receive. Below is a representative "real bill" for a single seat once
-            common add-ons and tier upgrades stack. DialerSeat's $35/week is the bill —
+            common add-ons and tier upgrades stack. DialerSeat™'s $35/week is the bill —
             nothing stacks on top.
           </p>
 
@@ -661,7 +664,7 @@ export default function VsEveryoneView() {
               <p className="win-card-body">
                 Hardcoded server-side, always on. Reviewers across multiple competitors report
                 voicemail detection failures — calls reaching agents that turn out to be
-                machines. Our AMD drops every voicemail before any agent hears a beep.
+                machines. Our AMD drops every voicemail and gets straight to the next lead.
               </p>
             </div>
             <div className="win-card">
@@ -683,7 +686,7 @@ export default function VsEveryoneView() {
             <div className="win-card">
               <div className="win-card-title">5. Works on phones and tablets — not just desktop</div>
               <p className="win-card-body">
-                Install DialerSeat to your home screen on iPhone, iPad, Android, or any
+                Install DialerSeat™ to your home screen on iPhone, iPad, Android, or any
                 desktop and it behaves like a native app. Field agents on iPad, solo agents
                 on their phone, manager dashboards on laptop. Most legacy dialers are
                 desktop-only or have minimal mobile experiences.
@@ -703,7 +706,7 @@ export default function VsEveryoneView() {
               <p className="win-card-body">
                 Push call results, lead updates, and dispositions to any CRM via our public
                 API and webhooks. No native integration lock-in, no waiting for us to build a
-                connector. If your CRM has an API, it works with DialerSeat today.
+                connector. If your CRM has an API, it works with DialerSeat™ today.
               </p>
             </div>
             <div className="win-card">
@@ -711,7 +714,7 @@ export default function VsEveryoneView() {
               <p className="win-card-body">
                 Legacy dialers accumulated UI debt over a decade. Reviewers describe ReadyMode
                 as "Windows 8" and PhoneBurner's contact panel as missing basic information.
-                DialerSeat ships with a modern design system — clean, fast, and built for the
+                DialerSeat™ ships with a modern design system — clean, fast, and built for the
                 way teams actually work. Your reps will notice.
               </p>
             </div>
@@ -722,7 +725,7 @@ export default function VsEveryoneView() {
           <div className="vs-section-eyebrow">SWITCHING FROM ANYWHERE</div>
           <h2 className="vs-section-h2">Whichever competitor you're on now — we've got you.</h2>
           <p className="vs-section-lede">
-            Every reason teams stay on their current dialer has a clean answer on DialerSeat.
+            Every reason teams stay on their current dialer has a clean answer on DialerSeat™.
             Quick takes below. Click through for the detailed comparison.
           </p>
 
@@ -765,6 +768,7 @@ export default function VsEveryoneView() {
           </div>
         </div>
       </div>
+      <SiteFooter />
     </>
   )
 }

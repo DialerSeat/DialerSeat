@@ -7,7 +7,10 @@ const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/terms',
+  '/privacy',
+  '/faq',
   '/dialing-modes',
+  '/vs',
   '/vs/(.*)',
   '/api/stripe/webhook',
   '/api/calls/twiml(.*)',
@@ -179,18 +182,14 @@ async function getAccessState(clerkId: string): Promise<AccessState> {
 // lookahead in the regex says "match all paths EXCEPT those that look like
 // static files."
 //
-// Excluded extensions: html, css, js (but NOT json — see history below),
-// images, fonts, icons, archives, spreadsheets, webmanifest.
+// Excluded extensions: html, css, js, jsx, json, images, fonts, icons,
+// archives, spreadsheets, webmanifest.
 //
-// HISTORY (May 2026): The original matcher had `js(?!on)` which means
-// "js but not json" — i.e. JSON files were NOT excluded and got routed
-// through Clerk auth. That caused /manifest.json (and any other public
-// JSON files) to 404 because unauthenticated requests got redirected to
-// /billing. Fix: change `js(?!on)` to `jsx?|json` so both .js, .jsx, and
-// .json are excluded from auth.
-//
-// If you ever need to add a new extension here (e.g. you serve .pdf
-// downloads from /public), add it to the exclusion list.
+// HISTORY (May 2026): The original matcher had `js(?!on)` which means "js
+// but not json" — i.e. JSON files were NOT excluded and got routed through
+// Clerk auth. That caused /manifest.json (and any other public JSON files)
+// to 404 because unauthenticated requests got redirected to /billing.
+// Fix: `jsx?|json` so .js, .jsx, and .json are all excluded from auth.
 // =============================================================================
 export const config = {
   matcher: [

@@ -1,6 +1,7 @@
 import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import Link from "next/link"
+import SiteFooter from '@/components/site-footer'
 
 export default async function Home() {
   const { userId } = await auth()
@@ -418,6 +419,24 @@ export default async function Home() {
             </div>
           ))}
         </div>
+
+        {/* SEE ALL COMPARISONS BUTTON */}
+        <div style={{ textAlign: 'center', marginTop: '40px' }}>
+          <Link href="/vs" style={{
+            display: 'inline-block',
+            padding: '14px 32px',
+            borderRadius: '10px',
+            fontSize: '12px',
+            fontWeight: 'bold',
+            letterSpacing: '3px',
+            color: 'var(--text-primary)',
+            textDecoration: 'none',
+            border: '1px solid var(--accent-blue)',
+            background: 'rgba(74,158,255,0.05)',
+          }}>
+            SEE ALL COMPARISONS →
+          </Link>
+        </div>
       </section>
 
       {/* PRICING */}
@@ -585,30 +604,7 @@ export default async function Home() {
       </section>
 
       {/* FOOTER */}
-      <footer style={{
-        padding: '40px 20px',
-        textAlign: 'center',
-        borderTop: '1px solid var(--border)',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '16px' }}>
-          <div style={{
-            width: '28px',
-            height: '28px',
-            borderRadius: '6px',
-            background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}>
-            <span style={{ color: 'white', fontWeight: 'bold', fontSize: '12px' }}>D</span>
-          </div>
-          <span style={{ fontSize: '14px', fontWeight: 'bold', letterSpacing: '6px', color: 'var(--text-primary)' }}>DIALERSEAT</span>
-        </div>
-        <p style={{ fontSize: '11px', letterSpacing: '3px', color: 'var(--text-secondary)' }}>
-          © {new Date().getFullYear()} DIALERSEAT · ALL RIGHTS RESERVED
-        </p>
-      </footer>
-
+      <SiteFooter />
     </main>
   )
 }

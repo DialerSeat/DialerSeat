@@ -1,14 +1,10 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
+import SiteFooter from '@/components/site-footer'
 
 // =============================================================================
 // BUILD FIX — force-dynamic to bypass static-generation hang
-// =============================================================================
-// Next.js 16.2.4 + Turbopack was hanging at "Generating static pages" for this
-// route during build. Marking dynamic skips the static prerender step entirely;
-// the page is rendered per-request instead. Vercel's edge layer still caches
-// the response, so user-facing performance is unaffected.
 // =============================================================================
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -154,7 +150,7 @@ export default function FaqPage() {
               <div className="faq-eyebrow">FREQUENTLY ASKED QUESTIONS</div>
               <h1>Got questions?</h1>
               <p>
-                Answers to the most common questions about DialerSeat — pricing,
+                Answers to the most common questions about DialerSeat™ — pricing,
                 dialing modes, compliance, billing, and team setup.
               </p>
             </div>
@@ -176,6 +172,7 @@ export default function FaqPage() {
           </div>
         </div>
       </main>
+      <SiteFooter />
     </>
   )
 }

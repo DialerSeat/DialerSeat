@@ -1,17 +1,10 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
+import SiteFooter from '@/components/site-footer'
 
 // =============================================================================
 // BUILD FIX — force-dynamic to bypass static-generation hang
-// =============================================================================
-// Next.js 16.2.4 + Turbopack was hanging at "Generating static pages" for this
-// route during build. Marking dynamic skips the static prerender step entirely;
-// the page is rendered per-request instead. Vercel's edge layer still caches
-// the response, so user-facing performance is unaffected.
-//
-// Side benefit: the `new Date().getFullYear()` in the footer is now always
-// fresh on each request instead of being baked-in at build time.
 // =============================================================================
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -142,21 +135,6 @@ export default function PrivacyPolicyPage() {
             color: #2a4a8a;
             text-decoration: underline;
           }
-          .privacy-footer {
-            padding: 32px 20px;
-            text-align: center;
-            border-top: 1px solid #c4c8d0;
-            background: #1a1a2e;
-            color: rgba(255,255,255,0.5);
-            font-size: 11px;
-            letter-spacing: 3px;
-          }
-          .privacy-footer a {
-            color: rgba(255,255,255,0.7);
-            text-decoration: none;
-            margin: 0 12px;
-          }
-          .privacy-footer a:hover { color: white; }
           @media (max-width: 768px) {
             .privacy-hero { padding: 56px 20px 40px; }
             .privacy-hero h1 { font-size: 32px; }
@@ -173,7 +151,7 @@ export default function PrivacyPolicyPage() {
 
           <div className="privacy-body">
             <div className="meta-row">
-              <strong>The short version:</strong> DialerSeat is software you use to make outbound calls. We store the information you give us — your account, your leads, your call records — to run the product for you. We don't sell your data, we don't train AI on your data, and we don't share it with advertisers. Full details below.
+              <strong>The short version:</strong> DialerSeat™ is software you use to make outbound calls. We store the information you give us — your account, your leads, your call records — to run the product for you. We don't sell your data, we don't train AI on your data, and we don't share it with advertisers. Full details below.
             </div>
 
             <div className="toc">
@@ -197,7 +175,7 @@ export default function PrivacyPolicyPage() {
 
             <h2 id="who-we-are">1. Who we are</h2>
             <p>
-              DialerSeat ("we", "us", "our") is an outbound calling platform for sales teams,
+              DialerSeat™ ("we", "us", "our") is an outbound calling platform for sales teams,
               call centers, and solo agents. We operate the website <strong>dialerseat.com</strong> and
               the DialerSeat application. This Privacy Policy explains how we handle information
               when you visit our website, sign up for an account, or use our platform.
@@ -432,15 +410,9 @@ export default function PrivacyPolicyPage() {
               See also: <Link href="/terms">Terms of Service</Link>.
             </p>
           </div>
-
-          <div className="privacy-footer">
-            © {new Date().getFullYear()} DIALERSEAT · ALL RIGHTS RESERVED ·{' '}
-            <Link href="/">HOME</Link> ·{' '}
-            <Link href="/terms">TERMS</Link> ·{' '}
-            <Link href="/faq">FAQ</Link>
-          </div>
         </div>
       </main>
+      <SiteFooter />
     </>
   )
 }
