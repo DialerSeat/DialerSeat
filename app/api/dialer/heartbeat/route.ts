@@ -18,6 +18,16 @@ const supabase = createClient(
 // session is marked offline, and any in-flight calls they own get handled
 // per the campaign's disconnect_behavior setting.
 //
+// SCHEMA NOTES (important — earlier version of this file got these wrong):
+//   - users table has no `team_id` column. Solo agents have no team at all.
+//   - Team membership is determined via TWO places:
+//       1. teams.owner_id (stores Clerk ID, not users.id UUID)
+//       2. team_members.user_id (stores Clerk ID, not users.id UUID)
+//         with team_members.status = 'active'
+//   - users.clerk_id is the Clerk external ID
+//   - users.id is an internal UUID, NOT used for team joins
+//   - agent_sessions.team_id is nullable — solo agents pass null
+//
 // Request body:
 // {
 //   state: 'ready' | 'dialing' | 'on_call' | 'wrapping' | 'paused',
@@ -30,7 +40,8 @@ const supabase = createClient(
 // {
 //   session_id: string,
 //   state: string,
-//   should_yield: boolean   // true if server wants agent to pause (e.g. abandon rate too high)
+//   should_yield: boolean,
+//   heartbeat_at: string
 // }
 // =============================================================================
 
@@ -47,24 +58,77 @@ interface HeartbeatBody {
   current_call_id?: string | null
 }
 
+// -----------------------------------------------------------------------------
+// resolveTeamId — given a Clerk ID, return the team_id the agent is acting
+// under, or null for solo agents.
+//
+// Resolution order:
+//   1. Are they the OWNER of a team? Use that team_id.
+//      (Most common case: someone created a team to invite others.)
+//   2. Are they an ACTIVE MEMBER of a team? Use that team_id.
+//      (Invited agent who accepted via team code.)
+//   3. Otherwise null — solo agent with no team affiliation.
+//
+// We deliberately don't error if no team is found. Solo dialing is a first-
+// class supported case.
+// -----------------------------------------------------------------------------
+async function resolveTeamId(clerkId: string): Promise<string | null> {
+  // Owner check
+  const { data: ownedTeam } = await supabase
+    .from('teams')
+    .select('id')
+    .eq('owner_id', clerkId)
+    .limit(1)
+    .maybeSingle()
+
+  if (ownedTeam?.id) return ownedTeam.id
+
+  // Member check
+  const { data: membership } = await supabase
+    .from('team_members')
+    .select('team_id')
+    .eq('user_id', clerkId)
+    .eq('status', 'active')
+    .limit(1)
+    .maybeSingle()
+
+  if (membership?.team_id) return membership.team_id
+
+  // Solo agent
+  return null
+}
+
 export async function POST(req: NextRequest) {
   try {
-    // Auth — Clerk userId is the external ID, we resolve to internal users.id
-    // via the users.clerk_id column (this codebase's naming convention).
     const { userId: clerkId } = await auth()
     if (!clerkId) {
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
     }
 
+    // Look up internal user row (id is what agent_sessions.user_id references).
+    // Note: we look up by clerk_id and NOT team_id — users table has no team_id.
     const { data: userRow, error: userErr } = await supabase
       .from('users')
-      .select('id, team_id')
+      .select('id')
       .eq('clerk_id', clerkId)
       .single()
 
     if (userErr || !userRow) {
-      return NextResponse.json({ error: 'user not found' }, { status: 404 })
+      console.error('[heartbeat] user lookup failed', {
+        clerkId,
+        userErr,
+      })
+      // Return 500 (not 404) so this doesn't masquerade as a routing problem.
+      // 404 from inside a handler is indistinguishable client-side from
+      // "route doesn't exist" — caused us hours of confusion earlier.
+      return NextResponse.json(
+        { error: 'user row not found in supabase' },
+        { status: 500 }
+      )
     }
+
+    // Resolve team (null is fine — solo agents are supported)
+    const team_id = await resolveTeamId(clerkId)
 
     // Parse body
     let body: HeartbeatBody = {}
@@ -91,7 +155,7 @@ export async function POST(req: NextRequest) {
       .upsert(
         {
           user_id: userRow.id,
-          team_id: userRow.team_id,
+          team_id,
           campaign_id: body.campaign_id ?? null,
           dialer_mode,
           state,
@@ -165,14 +229,16 @@ export async function GET() {
       .single()
 
     if (!userRow) {
-      return NextResponse.json({ error: 'user not found' }, { status: 404 })
+      // No user row yet — return empty session, not 404.
+      // (Edge case: Clerk user exists but Supabase row hasn't been provisioned.)
+      return NextResponse.json({ session: null })
     }
 
     const { data: session } = await supabase
       .from('agent_sessions')
       .select('id, state, campaign_id, dialer_mode, current_call_id, last_heartbeat')
       .eq('user_id', userRow.id)
-      .single()
+      .maybeSingle()
 
     return NextResponse.json({
       session: session ?? null,
