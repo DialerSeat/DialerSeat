@@ -579,7 +579,7 @@ export default function RecordingsPage() {
           role="button"
           aria-expanded={disclosureOpen}
         >
-          <span>⚠️ DISCLOSURE & 30-DAY RECORDINGS BACKUP</span>
+          <span>⚠️ DISCLOSURE & 30-DAY RECORDINGS BACKUP:</span>
           <span className="chev">▾</span>
         </div>
         {disclosureOpen && (
