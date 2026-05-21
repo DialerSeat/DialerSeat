@@ -81,7 +81,11 @@ export default function SiteHeader() {
           gap: 16,
         }}
       >
-        {/* LEFT: DASHBOARD button (signed in only) */}
+        {/*
+          LEFT: DASHBOARD button (signed in only).
+          Arrow points LEFT (←) because clicking this sends the user back to
+          the dashboard they came from — they're currently on a marketing page.
+        */}
         <div style={{ display: 'flex', alignItems: 'center' }}>
           {isLoaded && isSignedIn && (
             <Link
@@ -105,7 +109,7 @@ export default function SiteHeader() {
                 e.currentTarget.style.background = 'rgba(74,158,255,0.06)'
               }}
             >
-              → DASHBOARD
+              ← DASHBOARD
             </Link>
           )}
         </div>

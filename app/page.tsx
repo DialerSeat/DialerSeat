@@ -2,27 +2,28 @@ import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import Link from "next/link"
 import SiteFooter from '@/components/site-footer'
+import LandingNavProfile from '@/components/landing-nav-profile'
 
 // =============================================================================
 // LANDING PAGE
 // =============================================================================
 // Default behavior:
-//   - Logged out → renders landing
-//   - Logged in → REDIRECTS to /dashboard (the original flow)
+//   - Logged out → renders landing with ORIGINAL layout (logo left, links right)
+//   - Logged in → REDIRECTS to /dashboard
 //
 // Override:
-//   - Logged in + ?view=landing query param → renders landing instead of
-//     redirecting. The "LANDING PAGE" button on the analytics page header
-//     links here with that param so paying users can review the public
-//     marketing site without being kicked back to the app.
+//   - Logged in + ?view=landing query param → renders landing with the
+//     logged-in nav variant: DASHBOARD button left, logo center, profile+name
+//     right. The "LANDING PAGE" button on the analytics page header links
+//     here with that param so paying users can review the public marketing
+//     site without being kicked back to the app.
 //
-// When a logged-in user IS viewing the landing, every "GET STARTED" CTA in
-// the body becomes "GO TO DASHBOARD" linking to /dashboard. They've already
-// signed up — pushing them through sign-up flow again would be confusing.
+// Body CTAs:
+//   - Logged-in landing visitor → GO TO DASHBOARD (→ /dashboard)
+//   - Logged-out visitor → GET STARTED (→ /sign-up)
 // =============================================================================
 
 interface PageProps {
-  // Next.js 16 App Router passes searchParams as a Promise
   searchParams: Promise<{ view?: string }>
 }
 
@@ -31,17 +32,12 @@ export default async function Home({ searchParams }: PageProps) {
   const params = await searchParams
   const wantsLanding = params.view === 'landing'
 
-  // Default flow: logged-in users get sent to dashboard unless they explicitly
-  // opted into viewing the landing page.
   if (userId && !wantsLanding) {
     redirect('/dashboard')
   }
 
   const isLoggedIn = !!userId
 
-  // Where the body CTAs should point:
-  //   - Logged-in landing visitor → /dashboard (they already have an account)
-  //   - Logged-out visitor → /sign-up (standard signup flow)
   const ctaHref = isLoggedIn ? '/dashboard' : '/sign-up'
   const ctaLabel = isLoggedIn ? 'GO TO DASHBOARD' : 'GET STARTED'
 
@@ -57,6 +53,15 @@ export default async function Home({ searchParams }: PageProps) {
         .ds-nav { padding: 20px 60px; }
         .ds-nav-links { display: flex; align-items: center; gap: 40px; }
         .ds-nav-link { display: inline-block; }
+
+        /* Logged-in 3-column nav variant */
+        .ds-nav-3col {
+          padding: 16px 32px;
+          display: grid;
+          grid-template-columns: 1fr auto 1fr;
+          align-items: center;
+          gap: 16px;
+        }
 
         .ds-hero { padding: 120px 40px 80px; }
         .ds-stats { flex-direction: row; padding: 32px 60px; gap: 48px; }
@@ -75,6 +80,7 @@ export default async function Home({ searchParams }: PageProps) {
           .ds-nav-links { gap: 0; }
           .ds-nav-link { display: none; }
           .ds-nav-link.ds-show-mobile { display: inline-block; }
+          .ds-nav-3col { padding: 12px 16px; }
           .ds-hero { padding: 100px 20px 60px; }
           .ds-hero-h1 { letter-spacing: -1px !important; line-height: 1.1 !important; }
           .ds-hero-p { font-size: 15px !important; }
@@ -106,56 +112,113 @@ export default async function Home({ searchParams }: PageProps) {
         }
       `}</style>
 
-      {/* NAV */}
-      <nav className="ds-nav" style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        zIndex: 50,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        background: 'rgba(10,10,15,0.9)',
-        backdropFilter: 'blur(20px)',
-        borderBottom: '1px solid var(--border)',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{
-            width: '36px',
-            height: '36px',
-            borderRadius: '8px',
-            background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+      {/* NAV — two variants:
+            * Logged out: original layout (logo left, links right). DO NOT CHANGE.
+            * Logged in:  3-column (DASHBOARD left, logo center, profile+name right) */}
+      {isLoggedIn ? (
+        <nav className="ds-nav-3col" style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 50,
+          background: 'rgba(10,10,15,0.9)',
+          backdropFilter: 'blur(20px)',
+          borderBottom: '1px solid var(--border)',
+        }}>
+          {/* LEFT — Go to dashboard */}
+          <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+            <Link href="/dashboard" style={{
+              fontSize: '12px',
+              letterSpacing: '3px',
+              color: 'white',
+              textDecoration: 'none',
+              padding: '10px 20px',
+              borderRadius: '8px',
+              background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+              whiteSpace: 'nowrap',
+              fontWeight: 'bold',
+            }}>
+              GO TO DASHBOARD
+            </Link>
+          </div>
+
+          {/* CENTER — Brand */}
+          <Link href="/?view=landing" style={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
+            gap: '12px',
+            textDecoration: 'none',
           }}>
-            <span style={{ color: 'white', fontWeight: 'bold', fontSize: '16px' }}>D</span>
-          </div>
-          <span style={{
-            fontSize: '16px',
-            fontWeight: 'bold',
-            letterSpacing: '4px',
-            color: 'var(--text-primary)',
-            whiteSpace: 'nowrap',
-          }}>DIALERSEAT</span>
-        </div>
+            <div style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '8px',
+              background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              <span style={{ color: 'white', fontWeight: 'bold', fontSize: '16px' }}>D</span>
+            </div>
+            <span style={{
+              fontSize: '16px',
+              fontWeight: 'bold',
+              letterSpacing: '4px',
+              color: 'var(--text-primary)',
+              whiteSpace: 'nowrap',
+            }}>DIALERSEAT</span>
+          </Link>
 
-        <div className="ds-nav-links">
-          <Link href="#features" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>FEATURES</Link>
-          <Link href="#pricing" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>PRICING</Link>
-          <Link href="#compare" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>COMPARE</Link>
-          {isLoggedIn ? (
-            <Link href="/dashboard" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'white', textDecoration: 'none', padding: '10px 20px', borderRadius: '8px', background: 'linear-gradient(135deg, #4a9eff, #2a6eff)', whiteSpace: 'nowrap' }}>GO TO DASHBOARD</Link>
-          ) : (
-            <>
-              <Link href="/sign-in" className="ds-nav-link ds-show-mobile" style={{ fontSize: '11px', letterSpacing: '2px', color: 'var(--text-primary)', textDecoration: 'none', padding: '8px 14px', border: '1px solid var(--border)', borderRadius: '8px', whiteSpace: 'nowrap' }}>SIGN IN</Link>
-              <Link href="/sign-up" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'white', textDecoration: 'none', padding: '10px 20px', borderRadius: '8px', background: 'linear-gradient(135deg, #4a9eff, #2a6eff)', whiteSpace: 'nowrap' }}>GET STARTED</Link>
-            </>
-          )}
-        </div>
-      </nav>
+          {/* RIGHT — Profile + name */}
+          <LandingNavProfile />
+        </nav>
+      ) : (
+        <nav className="ds-nav" style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 50,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          background: 'rgba(10,10,15,0.9)',
+          backdropFilter: 'blur(20px)',
+          borderBottom: '1px solid var(--border)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '8px',
+              background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              <span style={{ color: 'white', fontWeight: 'bold', fontSize: '16px' }}>D</span>
+            </div>
+            <span style={{
+              fontSize: '16px',
+              fontWeight: 'bold',
+              letterSpacing: '4px',
+              color: 'var(--text-primary)',
+              whiteSpace: 'nowrap',
+            }}>DIALERSEAT</span>
+          </div>
+
+          <div className="ds-nav-links">
+            <Link href="#features" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>FEATURES</Link>
+            <Link href="#pricing" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>PRICING</Link>
+            <Link href="#compare" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>COMPARE</Link>
+            <Link href="/sign-in" className="ds-nav-link ds-show-mobile" style={{ fontSize: '11px', letterSpacing: '2px', color: 'var(--text-primary)', textDecoration: 'none', padding: '8px 14px', border: '1px solid var(--border)', borderRadius: '8px', whiteSpace: 'nowrap' }}>SIGN IN</Link>
+            <Link href="/sign-up" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'white', textDecoration: 'none', padding: '10px 20px', borderRadius: '8px', background: 'linear-gradient(135deg, #4a9eff, #2a6eff)', whiteSpace: 'nowrap' }}>GET STARTED</Link>
+          </div>
+        </nav>
+      )}
 
       {/* HERO */}
       <section className="ds-hero" style={{
