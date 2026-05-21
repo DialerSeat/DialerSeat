@@ -13,6 +13,9 @@ import Link from 'next/link'
  *   <BackToVsButton />
  *
  * Do NOT include this on /vs itself — that page IS the hub.
+ *
+ * HISTORY: Earlier version pointed to /vs/everyone (a comparison page,
+ * not the hub). Updated to /vs once the proper VsHubView component shipped.
  */
 export default function BackToVsButton() {
   return (

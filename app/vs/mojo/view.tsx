@@ -1,6 +1,7 @@
 'use client'
 import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
+import SiteFooter from '@/components/site-footer'
 import BackToVsButton from '@/components/back-to-vs-button'
 
 const T = {
@@ -217,7 +218,7 @@ export default function VsMojoView() {
             <p className="vs-subhead">
               Mojo carved out a niche in real estate prospecting and serves it well. If you're
               outside real estate — insurance, financial services, B2B, mortgage, solar — you're
-              paying for a tool tuned to someone else's workflow. DialerSeat is industry-agnostic
+              paying for a tool tuned to someone else's workflow. DialerSeat™ is industry-agnostic
               with the same multi-line predictive dialing, at a fraction of the price.
             </p>
             <div className="vs-cta-row">
@@ -233,13 +234,13 @@ export default function VsMojoView() {
             Mojo Dialer ($149/mo) gives you their 3-line dialer plus a real-estate-tuned interface
             and integrations. Mojo Express ($10/mo) is single-line only. The product is solid but
             its DNA is real estate prospecting — neighborhood searches, FSBO/expired tools, MLS
-            integrations. DialerSeat is built for any outbound team in any industry.
+            integrations. DialerSeat™ is built for any outbound team in any industry.
           </p>
 
           <div className="verdict-card">
             <div className="verdict-title">▸ BOTTOM LINE</div>
             <p className="verdict-text">
-              <strong>Switch to DialerSeat</strong> if you're not in real estate, want
+              <strong>Switch to DialerSeat™</strong> if you're not in real estate, want
               industry-agnostic dialing at a lower price, or need modern mobile/tablet support.
               <strong> Stay on Mojo</strong> if you're a real estate prospector deeply embedded
               in their FSBO/expired/neighborhood data tools — those are genuinely good and we
@@ -253,7 +254,7 @@ export default function VsMojoView() {
           <h2 className="vs-section-h2">$35 a week versus $149 a month.</h2>
           <p className="vs-section-lede">
             Mojo Dialer (their 3-line predictive) is $149/seat/month. Mojo Express (single-line) is
-            $10/month but you lose multi-line predictive entirely. DialerSeat is $35/week
+            $10/month but you lose multi-line predictive entirely. DialerSeat™ is $35/week
             (≈$140/month) with all four dialer modes included.
           </p>
 
@@ -305,7 +306,7 @@ export default function VsMojoView() {
             Mojo's real-estate-specific features are not in this table because they're not
             comparable — they're an entirely different value proposition. If you need FSBO/expired
             data, neighborhood prospecting, or MLS integration, Mojo wins. If you need a general-
-            purpose outbound dialer, DialerSeat wins on every axis.
+            purpose outbound dialer, DialerSeat™ wins on every axis.
           </p>
 
           <div style={{ overflowX: 'auto' }}>
@@ -353,7 +354,7 @@ export default function VsMojoView() {
             <div className="win-card">
               <div className="win-card-title">2. Industry-agnostic</div>
               <p className="win-card-body">
-                Insurance, financial services, B2B, mortgage, solar, recruiting — DialerSeat
+                Insurance, financial services, B2B, mortgage, solar, recruiting — DialerSeat™
                 serves all of them. Mojo's UI and workflows are built around real estate prospecting.
               </p>
             </div>
@@ -393,7 +394,7 @@ export default function VsMojoView() {
             <h2 className="vs-final-cta-h2">Dialing is dialing. Pay less for the same thing.</h2>
             <p className="vs-final-cta-p">
               If you're not running a real estate prospecting operation, you're paying Mojo for
-              tools you'll never use. DialerSeat is the industry-agnostic alternative — same
+              tools you'll never use. DialerSeat™ is the industry-agnostic alternative — same
               multi-line predictive engine, weekly billing, no contract, mobile support.
             </p>
             <div className="vs-cta-row">
@@ -402,6 +403,7 @@ export default function VsMojoView() {
           </div>
         </div>
       </div>
+      <SiteFooter />
     </>
   )
 }

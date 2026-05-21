@@ -1,6 +1,7 @@
 'use client'
 import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
+import SiteFooter from '@/components/site-footer'
 import BackToVsButton from '@/components/back-to-vs-button'
 
 const T = {
@@ -217,7 +218,7 @@ export default function VsPhoneBurnerView() {
               PhoneBurner built its reputation on power dialing — single-line, no abandon risk,
               voicemail drop. Solid for low-volume one-rep teams. If you need multi-line predictive,
               configurable per-campaign dialer modes, or weekly billing, you're outside their
-              philosophy. DialerSeat covers all four modes at <strong>$35 per seat per week</strong>.
+              philosophy. DialerSeat™ covers all four modes at <strong>$35 per seat per week</strong>.
             </p>
             <div className="vs-cta-row">
               <Link href="/sign-up" className="vs-btn-primary">START DIALING →</Link>
@@ -232,14 +233,14 @@ export default function VsPhoneBurnerView() {
             PhoneBurner is deliberately single-line: agents dial through a list one at a time with
             voicemail drop and click-to-dial. That's a feature for solo agents who want maximum
             control. It's a limitation for teams that want predictive multi-line dialing on
-            high-volume cold lists. DialerSeat gives you all four modes — Preview, Power,
+            high-volume cold lists. DialerSeat™ gives you all four modes — Preview, Power,
             Progressive, Predictive — configurable per campaign.
           </p>
 
           <div className="verdict-card">
             <div className="verdict-title">▸ BOTTOM LINE</div>
             <p className="verdict-text">
-              <strong>Switch to DialerSeat</strong> if you want multi-line predictive dialing,
+              <strong>Switch to DialerSeat™</strong> if you want multi-line predictive dialing,
               configurable per-campaign modes, weekly billing, or mobile support. <strong>Stay
               on PhoneBurner</strong> if you're a solo agent who deliberately wants single-line
               power dialing only and you're happy with their CRM-integrated workflow.
@@ -252,7 +253,7 @@ export default function VsPhoneBurnerView() {
           <h2 className="vs-section-h2">$35 a week versus $149+ a month.</h2>
           <p className="vs-section-lede">
             PhoneBurner starts at $149/seat/month for their standard plan. Higher tiers reach
-            $169–$199/seat/month for advanced features. DialerSeat is $35/week (≈$140/month)
+            $169–$199/seat/month for advanced features. DialerSeat™ is $35/week (≈$140/month)
             with all features included.
           </p>
 
@@ -302,7 +303,7 @@ export default function VsPhoneBurnerView() {
           <h2 className="vs-section-h2">Where each tool wins.</h2>
           <p className="vs-section-lede">
             PhoneBurner's strength is the polished single-line power-dialing experience plus
-            CRM-integrated workflow tools. DialerSeat's strength is multi-mode flexibility,
+            CRM-integrated workflow tools. DialerSeat™'s strength is multi-mode flexibility,
             pricing transparency, and modern mobile/tablet support.
           </p>
 
@@ -393,7 +394,7 @@ export default function VsPhoneBurnerView() {
             <p className="vs-final-cta-p">
               PhoneBurner is great if you exclusively want single-line power dialing. If you want
               all four dialer modes — Preview, Power, Progressive, Predictive — configurable per
-              campaign, at a lower price with weekly billing, that's DialerSeat.
+              campaign, at a lower price with weekly billing, that's DialerSeat™.
             </p>
             <div className="vs-cta-row">
               <Link href="/sign-up" className="vs-btn-primary">START DIALING →</Link>
@@ -401,6 +402,7 @@ export default function VsPhoneBurnerView() {
           </div>
         </div>
       </div>
+      <SiteFooter />
     </>
   )
 }

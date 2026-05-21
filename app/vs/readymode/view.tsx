@@ -1,6 +1,7 @@
 'use client'
 import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
+import SiteFooter from '@/components/site-footer'
 import BackToVsButton from '@/components/back-to-vs-button'
 
 const T = {
@@ -235,14 +236,14 @@ export default function VsReadymodeView() {
           <p className="vs-section-lede">
             ReadyMode has been a fixture of the outbound dialer category for years. Their core dialer
             works well. Where they fall down is delivery model — opaque pricing, multi-month
-            contracts, setup fees, legacy UI that takes hours to learn. DialerSeat keeps the dialer
+            contracts, setup fees, legacy UI that takes hours to learn. DialerSeat™ keeps the dialer
             quality and strips the friction.
           </p>
 
           <div className="verdict-card">
             <div className="verdict-title">▸ BOTTOM LINE</div>
             <p className="verdict-text">
-              <strong>Switch to DialerSeat</strong> if you want predictive dialing without monthly
+              <strong>Switch to DialerSeat™</strong> if you want predictive dialing without monthly
               contracts, opaque pricing, or weeks of onboarding. Stay on ReadyMode if you've already
               built deep custom integrations with their platform and switching costs would exceed
               the savings.
@@ -256,7 +257,7 @@ export default function VsReadymodeView() {
           <p className="vs-section-lede">
             ReadyMode's published starting price is $199 per user per month. Real quotes for full
             features and proper line counts typically land at $250–400 per seat per month. Setup
-            fees range from $0 to $2,000 depending on team size. DialerSeat publishes pricing on
+            fees range from $0 to $2,000 depending on team size. DialerSeat™ publishes pricing on
             the homepage and charges weekly.
           </p>
 
@@ -308,7 +309,7 @@ export default function VsReadymodeView() {
           <h2 className="vs-section-h2">Where each tool wins.</h2>
           <p className="vs-section-lede">
             Honest side-by-side. Green ✓ = full support, red ✕ = not available, amber = partial,
-            tier-gated, or inconsistent. The two share core predictive dialing; DialerSeat wins
+            tier-gated, or inconsistent. The two share core predictive dialing; DialerSeat™ wins
             on pricing transparency, mobile, and modern UX.
           </p>
 
@@ -406,6 +407,7 @@ export default function VsReadymodeView() {
           </div>
         </div>
       </div>
+      <SiteFooter />
     </>
   )
 }
