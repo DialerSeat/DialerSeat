@@ -45,19 +45,40 @@ interface TeamScope {
   teamCampaigns: TeamScopeCampaign[]
 }
 
-// Updated to match the new /api/dialer/active-agents response shape.
-// The endpoint returns { agents, total_active, campaign_pacing, generated_at }
-// where campaign_pacing contains the predictive-relevant fields.
 interface PacingInfo {
-  activeAgents: number          // total agents online on this campaign (any state)
-  readyAgents: number           // agents waiting to be routed a call
-  dialingAgents: number         // agents with fan-out calls in flight
-  onCallAgents: number          // agents talking to live humans
-  abandonRate: number           // 0..1, from 30-day rolling view (FTC TSR <3%)
-  isDegraded: boolean           // true when abandon rate >= 2.5%
-  isPredictiveTeam: boolean     // 2+ agents on same campaign → multi-agent reroute applies
-  configuredLines: number       // campaign's predictive_lines_per_agent
-  effectiveLines: number        // throttled value if degraded
+  activeAgents: number
+  readyAgents: number
+  dialingAgents: number
+  onCallAgents: number
+  abandonRate: number
+  isDegraded: boolean
+  isPredictiveTeam: boolean
+  configuredLines: number
+  effectiveLines: number
+}
+
+// Per-agent lines preference response from /api/predictive/prefs.
+// The server enforces the hard cap of 5; the dropdown UI also only shows 1-5.
+interface LinesPrefInfo {
+  effective_lines: number          // what the controller will actually use
+  preferred_lines: number | null   // null = inheriting campaign default
+  campaign_default: number
+  campaign_min: number
+  campaign_max: number
+  hard_cap: number
+}
+
+// Result of a single /api/calls/predictive-tick invocation. Used to drive
+// the "DIALING X LINES" indicator and system log entries.
+interface ControllerTickResult {
+  fired: number
+  desired: number
+  inFlight: number
+  effectiveLines: number
+  degraded: boolean
+  reason: string
+  callSids: string[]
+  skipped: number
 }
 
 interface SessionStats {
@@ -95,6 +116,15 @@ const HEARTBEAT_INTERVAL_MS = 5_000
 // Active agents poll rate (for the pacing panel). Doesn't need to be as
 // frequent as heartbeat — agents joining/leaving is a low-rate event.
 const PACING_POLL_INTERVAL_MS = 10_000
+
+// Minimum time between predictive-tick invocations from this client. The
+// heartbeat could fire many times while we're ready+predictive; we only
+// want to ask the controller to refill our lines every few seconds.
+const PREDICTIVE_TICK_MIN_INTERVAL_MS = 3_000
+
+// Available lines options in the dropdown. Hard cap of 5 enforced server-
+// side AND in this list (no UI option above 5).
+const LINES_OPTIONS = [1, 2, 3, 4, 5]
 
 function todayKey(): string {
   return new Date().toISOString().split('T')[0]
@@ -142,6 +172,14 @@ function DialerPageInner() {
   const [pacingInfo, setPacingInfo] = useState<PacingInfo | null>(null)
   const [amdActivity, setAmdActivity] = useState<string[]>([])
 
+  // ── NEW STATE FOR PR 2 PART B ──────────────────────────────────────────
+  // Lines preference for the currently-selected campaign (predictive mode only)
+  const [linesPref, setLinesPref] = useState<LinesPrefInfo | null>(null)
+  const [linesPrefSaving, setLinesPrefSaving] = useState(false)
+  // Most recent controller tick — drives "DIALING X LINES" indicator
+  const [lastTick, setLastTick] = useState<ControllerTickResult | null>(null)
+  const lastTickAtRef = useRef<number>(0)
+
   // Server has told us to yield (predictive abandon-rate approaching FTC cap)
   const [shouldYield, setShouldYield] = useState(false)
 
@@ -158,12 +196,9 @@ function DialerPageInner() {
   const swClientRef = useRef<any>(null)
   const swCallRef = useRef<any>(null)
 
-  // OLD session-tracking refs (for /api/dialer/session POST/DELETE)
-  // Kept for backward compat with whatever analytics consumed those rows.
   const sessionHeartbeatRef = useRef<NodeJS.Timeout | null>(null)
   const sessionIdRef = useRef<string | null>(null)
 
-  // NEW heartbeat ref (for /api/dialer/heartbeat — agent presence + readiness)
   const heartbeatRef = useRef<NodeJS.Timeout | null>(null)
 
   const pacingPollRef = useRef<NodeJS.Timeout | null>(null)
@@ -214,11 +249,6 @@ function DialerPageInner() {
 
   const modeTileInteractive = isSpecificCampaign || isAllActive
 
-  // ────────────────────────────────────────────────────────────────────────
-  // NEW: Agent state for heartbeat
-  // ────────────────────────────────────────────────────────────────────────
-  // Maps the dialer's UI state to one of the heartbeat-accepted agent states.
-  // The server uses this to know who's available for predictive routing.
   const agentState: AgentState = (() => {
     if (!available) return 'paused'
     if (status === 'connected') return 'on_call'
@@ -524,11 +554,6 @@ function DialerPageInner() {
     }
   }
 
-  // ── OLD /api/dialer/session lifecycle (kept for analytics compatibility) ─
-  // This is the previous session-tracking system. Heartbeat replaces this for
-  // presence/state, but if other code reads from the `dialer_sessions` table
-  // for reporting purposes, we leave it intact. Safe to remove once we confirm
-  // nothing else depends on it.
   const startSession = useCallback(async (campaignId: string) => {
     try {
       const teamId = selectedScope !== PERSONAL_SCOPE ? selectedScope : undefined
@@ -591,14 +616,7 @@ function DialerPageInner() {
   }, [available, selectedCampaign, currentCampaign, isActive, isSpecificCampaign, startSession, endSession])
 
   // ────────────────────────────────────────────────────────────────────────
-  // NEW: Predictive-foundation heartbeat
-  // ────────────────────────────────────────────────────────────────────────
-  // Posts agent state to /api/dialer/heartbeat every 5 seconds.
-  // This is what populates agent_sessions and drives predictive routing.
-  //
-  // Server may respond with should_yield=true if the campaign's 30-day
-  // abandon rate is approaching the FTC 3% cap. When that happens we flip
-  // the agent to 'paused' so the controller stops fanning out new calls.
+  // Predictive-foundation heartbeat
   // ────────────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!isActive) return
@@ -625,7 +643,6 @@ function DialerPageInner() {
       }
     }
 
-    // Fire immediately, then every interval
     sendHeartbeat()
     heartbeatRef.current = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL_MS)
 
@@ -644,9 +661,126 @@ function DialerPageInner() {
     activeCallSid,
   ])
 
+  // ────────────────────────────────────────────────────────────────────────
+  // PREDICTIVE TICK — invoke controller on ready+predictive transitions
+  // ────────────────────────────────────────────────────────────────────────
+  // Fires when:
+  //   - Agent transitions to state='ready'
+  //   - AND dialer_mode='predictive'
+  //   - AND a campaign is selected
+  //   - AND we're not yielding (abandon-rate guardrail)
+  //   - AND it's been at least PREDICTIVE_TICK_MIN_INTERVAL_MS since the
+  //     last tick (debounce — heartbeat-driven state changes can fire many
+  //     times in quick succession)
+  //
+  // The controller's job is to refill lines so the agent always has N
+  // calls in flight while ready. We don't need to call it from anywhere
+  // ELSE — heartbeat captures all ready transitions.
+  // ────────────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!isActive) return
+    if (agentState !== 'ready') return
+    if (!isPredictive) return
+    if (!isSpecificCampaign) return
+    if (shouldYield) return
+
+    const now = Date.now()
+    if (now - lastTickAtRef.current < PREDICTIVE_TICK_MIN_INTERVAL_MS) return
+
+    lastTickAtRef.current = now
+
+    const fire = async () => {
+      try {
+        const res = await fetch('/api/calls/predictive-tick', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        })
+        if (!res.ok) return
+        const data: ControllerTickResult & { error?: string } = await res.json()
+        if (data.error) return
+        setLastTick(data)
+
+        if (data.fired > 0) {
+          setAmdActivity(prev => [
+            `▶ DIALED ${data.fired} LINE${data.fired === 1 ? '' : 'S'} (${data.effectiveLines}x target)`,
+            ...prev,
+          ].slice(0, 5))
+        } else if (data.degraded) {
+          setAmdActivity(prev => [
+            `⚠ AUTO-DEGRADED — abandon rate trigger`,
+            ...prev,
+          ].slice(0, 5))
+        }
+      } catch (err) {
+        console.error('predictive-tick error:', err)
+      }
+    }
+    fire()
+  }, [
+    isActive,
+    agentState,
+    isPredictive,
+    isSpecificCampaign,
+    selectedCampaign,
+    shouldYield,
+  ])
+
+  // ────────────────────────────────────────────────────────────────────────
+  // LINES PREFERENCE — fetch when entering predictive mode
+  // ────────────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!isActive || !isPredictive || !isSpecificCampaign) {
+      setLinesPref(null)
+      return
+    }
+
+    let cancelled = false
+    fetch(`/api/predictive/prefs?campaign_id=${selectedCampaign}`)
+      .then(r => r.json())
+      .then(d => {
+        if (cancelled) return
+        if (d.error) {
+          setLinesPref(null)
+          return
+        }
+        setLinesPref(d as LinesPrefInfo)
+      })
+      .catch(() => {
+        if (!cancelled) setLinesPref(null)
+      })
+    return () => { cancelled = true }
+  }, [isActive, isPredictive, isSpecificCampaign, selectedCampaign])
+
+  const handleLinesChange = async (newLines: number) => {
+    if (!selectedCampaign || !isPredictive) return
+    setLinesPrefSaving(true)
+    try {
+      const res = await fetch('/api/predictive/prefs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          campaign_id: selectedCampaign,
+          preferred_lines: newLines,
+        }),
+      })
+      const data = await res.json()
+      if (!data.error) {
+        setLinesPref(data as LinesPrefInfo)
+        setAmdActivity(prev => [
+          `LINES PREFERENCE → ${data.effective_lines}`,
+          ...prev,
+        ].slice(0, 5))
+      }
+    } catch (err) {
+      console.error('lines pref save failed:', err)
+    } finally {
+      setLinesPrefSaving(false)
+    }
+  }
+
   useEffect(() => {
     const handleUnload = () => {
-      // OLD session beacon
       const sid = sessionIdRef.current
       if (sid && navigator.sendBeacon) {
         const blob = new Blob(
@@ -655,9 +789,6 @@ function DialerPageInner() {
         )
         navigator.sendBeacon('/api/dialer/session-end', blob)
       }
-      // NEW: tell server we're paused on unload so other agents on the
-      // same campaign can take over routing immediately, rather than
-      // waiting 15s for the stale-session sweep.
       if (navigator.sendBeacon) {
         try {
           const blob = new Blob(
@@ -678,7 +809,7 @@ function DialerPageInner() {
   }, [endSession])
 
   // ────────────────────────────────────────────────────────────────────────
-  // PACING PANEL — consumes new /api/dialer/active-agents response shape
+  // PACING PANEL — consumes /api/dialer/active-agents
   // ────────────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!isActive || !isPredictive || !available || !isSpecificCampaign) {
@@ -701,7 +832,7 @@ function DialerPageInner() {
           return
         }
 
-        const configuredLines = currentCampaign?.predictive_lines_per_agent || 3
+        const configuredLines = linesPref?.effective_lines || currentCampaign?.predictive_lines_per_agent || 3
         const abandonRateDecimal = (cp.abandon_rate_pct ?? 0) / 100
         const isDegraded = abandonRateDecimal >= 0.025
 
@@ -727,7 +858,7 @@ function DialerPageInner() {
         pacingPollRef.current = null
       }
     }
-  }, [isActive, isPredictive, available, isSpecificCampaign, selectedCampaign, currentCampaign])
+  }, [isActive, isPredictive, available, isSpecificCampaign, selectedCampaign, currentCampaign, linesPref])
 
   const handleSetAvailable = async () => {
     let granted = micGranted
@@ -1146,9 +1277,18 @@ function DialerPageInner() {
       return
     }
 
-    // Predictive guardrail — if server has asked us to yield, hold off auto-dial
     if (isPredictive && shouldYield) {
       setAmdActivity(prev => [`YIELDING — abandon rate approaching FTC cap`, ...prev].slice(0, 5))
+      return
+    }
+
+    // ── Predictive mode: don't do single-lead fetch here ──
+    // The controller is doing all the dialing via /api/calls/predictive-tick.
+    // The button just signals "I'm ready" which the heartbeat picks up.
+    // If user clicks INITIATE while predictive, we just wait — the controller
+    // will fire calls on the next tick (within a few seconds).
+    if (isPredictive) {
+      setAmdActivity(prev => [`▶ READY — controller will dial ${linesPref?.effective_lines || 3} lines`, ...prev].slice(0, 5))
       return
     }
 
@@ -1551,6 +1691,13 @@ function DialerPageInner() {
           font-family: monospace; font-size: 10px; letter-spacing: 1px;
           color: #4a9eff; font-weight: bold;
         }
+        .dialer-fanout-pill {
+          display: flex; align-items: center; gap: 6px;
+          padding: 3px 10px; background: rgba(138,26,26,0.12);
+          border: 1px solid rgba(138,26,26,0.4); border-radius: 3px;
+          font-family: monospace; font-size: 10px; letter-spacing: 1px;
+          color: ${terminalRed}; font-weight: bold;
+        }
         .mode-tile-wrap { position: relative; cursor: pointer; }
         .mode-tile-dropdown {
           position: absolute; top: calc(100% + 4px); left: 0; right: 0;
@@ -1567,6 +1714,16 @@ function DialerPageInner() {
         }
         .mode-dropdown-item:hover { background: rgba(255,255,255,0.05); }
         .mode-dropdown-item.current { background: rgba(74,158,255,0.1); }
+        .lines-selector {
+          display: flex; align-items: center; gap: 6px;
+          padding: 4px 10px; background: ${terminalBg};
+          border: 1px solid ${terminalBorder}; border-radius: 3px;
+        }
+        .lines-selector select {
+          background: transparent; border: none; outline: none;
+          font-family: monospace; font-size: 12px; font-weight: bold;
+          color: ${terminalText}; cursor: pointer; padding: 2px 4px;
+        }
 
         @media (max-width: 768px) {
           .dialer-root { height: calc(100vh - 64px); height: calc(100dvh - 64px); }
@@ -1636,6 +1793,13 @@ function DialerPageInner() {
           </div>
         </div>
         <div className="dialer-status-bar-right">
+          {/* DIALING X LINES indicator (predictive only) */}
+          {isPredictive && lastTick && lastTick.fired > 0 && (
+            <div className="dialer-fanout-pill" title="Active fanout lines">
+              <span style={{ fontSize: 8, letterSpacing: 2, opacity: 0.75 }}>DIALING</span>
+              <span>{lastTick.fired} LINE{lastTick.fired === 1 ? '' : 'S'}</span>
+            </div>
+          )}
           <div className="dialer-connected-pill" title="Connected calls today">
             <span style={{ fontSize: 8, letterSpacing: 2, opacity: 0.75 }}>CONNECTED TODAY</span>
             <span>{sessionStats.connected}</span>
@@ -1771,12 +1935,13 @@ function DialerPageInner() {
             </div>
           </div>
 
+          {/* PACING PANEL — extended with LINES selector for predictive mode */}
           {isPredictive && pacingInfo && (
             <div style={{
               padding: '10px 14px', background: terminalSurface,
               border: `1px solid ${terminalBorder}`, borderLeft: `3px solid ${pacingInfo.isDegraded ? terminalRed : terminalAccent}`,
               borderRadius: '4px', flexShrink: 0,
-              display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10,
+              display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10,
             }}>
               <div>
                 <div style={{ fontSize: 9, letterSpacing: 2, color: terminalMuted, marginBottom: 3 }}>ACTIVE AGENTS</div>
@@ -1785,6 +1950,29 @@ function DialerPageInner() {
                     <span style={{ fontSize: 9, color: terminalGreen, marginLeft: 6, letterSpacing: 1 }}>TEAM</span>
                   )}
                 </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 9, letterSpacing: 2, color: terminalMuted, marginBottom: 3 }}>MY LINES</div>
+                {linesPref ? (
+                  <div className="lines-selector" style={{ padding: '2px 8px', opacity: linesPrefSaving ? 0.5 : 1 }}>
+                    <select
+                      value={linesPref.preferred_lines ?? linesPref.campaign_default}
+                      disabled={linesPrefSaving}
+                      onChange={e => handleLinesChange(parseInt(e.target.value))}
+                    >
+                      {LINES_OPTIONS
+                        .filter(n => n <= linesPref.campaign_max && n >= linesPref.campaign_min)
+                        .map(n => (
+                          <option key={n} value={n}>{n}</option>
+                        ))}
+                    </select>
+                    <span style={{ fontSize: 9, color: terminalMuted, letterSpacing: 1 }}>
+                      {linesPref.preferred_lines === null ? '(default)' : ''}
+                    </span>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 14, fontFamily: 'monospace', color: terminalMuted }}>—</div>
+                )}
               </div>
               <div>
                 <div style={{ fontSize: 9, letterSpacing: 2, color: terminalMuted, marginBottom: 3 }}>EFFECTIVE LINES</div>
@@ -1895,7 +2083,9 @@ function DialerPageInner() {
                 <div style={{ textAlign: 'center', padding: '40px 0' }}>
                   <div style={{ fontSize: '36px', marginBottom: '12px', filter: 'grayscale(1)', opacity: 0.4 }}>📋</div>
                   <p style={{ fontSize: '11px', letterSpacing: '3px', color: terminalMuted }}>
-                    {noLeads ? 'NO MORE LEADS AVAILABLE' : status === 'calling' ? 'DIALING IN QUEUE...' : 'AWAITING DIAL COMMAND'}
+                    {isPredictive && available
+                      ? 'PREDICTIVE: WAITING FOR CONTROLLER TO ROUTE A HUMAN'
+                      : noLeads ? 'NO MORE LEADS AVAILABLE' : status === 'calling' ? 'DIALING IN QUEUE...' : 'AWAITING DIAL COMMAND'}
                   </p>
                   {noLeads && (
                     <p style={{
@@ -2030,7 +2220,7 @@ function DialerPageInner() {
                 cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
                 borderTop: `3px solid #4a9eff`, transition: 'all 0.15s',
               }}>
-                {isPreview ? '▶ LOAD NEXT LEAD' : '▶ INITIATE DIAL SEQUENCE'}
+                {isPreview ? '▶ LOAD NEXT LEAD' : isPredictive ? '▶ READY (CONTROLLER DIALS)' : '▶ INITIATE DIAL SEQUENCE'}
               </button>
             )}
             {status === 'preview_ready' && previewLead && (
@@ -2163,6 +2353,7 @@ function DialerPageInner() {
               isAllActive && `> ALL ACTIVE · SESSION MODE: ${dialerMode.toUpperCase()}`,
               isPredictive && pacingInfo && `> AGENTS: ${pacingInfo.activeAgents} (READY:${pacingInfo.readyAgents}/DIALING:${pacingInfo.dialingAgents}/ONCALL:${pacingInfo.onCallAgents})`,
               isPredictive && pacingInfo && `> ABANDON: ${(pacingInfo.abandonRate * 100).toFixed(2)}%`,
+              isPredictive && lastTick && lastTick.fired > 0 && `> CONTROLLER FIRED ${lastTick.fired} LINES`,
               isPredictive && shouldYield && `> SERVER ASKED TO YIELD — abandon rate near cap`,
               isPredictive && pacingInfo?.isPredictiveTeam && `> TEAM PREDICTIVE — reroute on disconnect enabled`,
               currentSessionId && '> SESSION ACTIVE',
