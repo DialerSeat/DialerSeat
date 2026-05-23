@@ -260,6 +260,10 @@ export default function AnalyticsPage() {
     }}>
       <style>{`
         .analytics-root * { box-sizing: border-box; }
+
+        /* ── DESKTOP HEADER (default) ──────────────────────────────────── */
+        /* Flex row — title, range tabs, spacer pushing the LANDING button  */
+        /* to the far right. Original behavior preserved.                   */
         .analytics-header {
           background: ${T.dark};
           padding: 12px 20px;
@@ -269,8 +273,9 @@ export default function AnalyticsPage() {
           gap: 16px;
           flex-wrap: wrap;
         }
-        /* Pushes the LANDING PAGE button to the far right of the header bar */
+        .analytics-header-title-row { display: contents; }
         .analytics-header-spacer { flex: 1 1 auto; }
+
         .landing-page-btn {
           padding: 6px 14px;
           background: rgba(74,158,255,0.08);
@@ -289,6 +294,7 @@ export default function AnalyticsPage() {
         .landing-page-btn:hover {
           background: rgba(74,158,255,0.18);
         }
+
         .welcome-row {
           background: ${T.bg};
           padding: 18px 20px 4px;
@@ -411,12 +417,40 @@ export default function AnalyticsPage() {
           color: ${T.muted};
         }
 
+        /* ── MOBILE HEADER (≤ 768px) ───────────────────────────────────── */
+        /* Two-row layout:                                                  */
+        /*   Row 1: ANALYTICS OVERVIEW [left] · LANDING PAGE → [right]      */
+        /*   Row 2: range tabs spanning full width                          */
+        /* This puts the LANDING button at the same vertical level as the   */
+        /* page title, which is what you asked for.                         */
         @media (max-width: 768px) {
-          .analytics-header { padding: 10px 12px; }
+          .analytics-header {
+            padding: 10px 12px;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            grid-template-areas:
+              "title  landing"
+              "tabs   tabs";
+            gap: 10px 12px;
+            align-items: center;
+          }
+          .analytics-header-title { grid-area: title; }
+          .landing-page-btn {
+            grid-area: landing;
+            padding: 5px 10px;
+            font-size: 9px;
+            letter-spacing: 1.5px;
+          }
+          .range-tabs {
+            grid-area: tabs;
+            width: 100%;
+            justify-content: flex-start;
+          }
+          .analytics-header-spacer { display: none; }
+
           .welcome-row { padding: 14px 12px 4px; }
           .welcome-line { font-size: 15px; letter-spacing: 1px; }
           .range-tab { padding: 6px 10px; font-size: 9px; letter-spacing: 1px; }
-          .landing-page-btn { padding: 5px 10px; font-size: 9px; letter-spacing: 1.5px; }
           .stat-grid {
             grid-template-columns: repeat(2, 1fr) !important;
             padding: 12px;
@@ -428,12 +462,12 @@ export default function AnalyticsPage() {
             grid-template-columns: 1fr !important;
             padding: 0 12px 12px;
           }
-          .custom-range { flex-wrap: wrap; }
+          .custom-range { flex-wrap: wrap; grid-column: 1 / -1; }
         }
       `}</style>
 
       <div className="analytics-header">
-        <span style={{ fontSize: 11, fontWeight: 'bold', letterSpacing: 4, color: T.blue }}>
+        <span className="analytics-header-title" style={{ fontSize: 11, fontWeight: 'bold', letterSpacing: 4, color: T.blue }}>
           ANALYTICS OVERVIEW
         </span>
         <div className="range-tabs">
@@ -461,7 +495,8 @@ export default function AnalyticsPage() {
           </div>
         )}
 
-        {/* Pushes the LANDING PAGE button to the right edge */}
+        {/* Spacer — pushes LANDING button right on desktop. Hidden on mobile
+            (replaced by grid placement). */}
         <div className="analytics-header-spacer" />
 
         {/*

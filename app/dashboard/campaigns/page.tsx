@@ -578,15 +578,39 @@ export default function CampaignsPage() {
           background: ${T.surface};
           transition: border-color 0.2s;
         }
+
+        /* ── DEFAULT (wide desktop ≥ 1200px) ─────────────────────────────── */
+        /* Top-row layout: name+toggle on the left, stats in the middle,    */
+        /* action buttons on the right. Has plenty of horizontal room.      */
         .campaign-row-inner {
           display: flex;
           align-items: center;
           justify-content: space-between;
           gap: 20px;
+          flex-wrap: nowrap;
         }
-        .campaign-left { display: flex; align-items: center; gap: 20px; min-width: 0; flex: 1; }
-        .campaign-actions { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
+        .campaign-left {
+          display: flex;
+          align-items: center;
+          gap: 20px;
+          min-width: 0;
+          flex: 1 1 320px;
+        }
+        .campaign-stats-row {
+          display: flex;
+          align-items: center;
+          gap: 20px;
+          flex-shrink: 0;
+        }
+        .campaign-actions {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: nowrap;
+          flex-shrink: 0;
+        }
         .campaign-stat { text-align: center; }
+
         .campaign-modal {
           width: 100%;
           max-width: 500px;
@@ -789,6 +813,33 @@ export default function CampaignsPage() {
           line-height: 1.5;
         }
 
+        /* ── TABLET / LAPTOP BREAKPOINT (769px - 1199px) ─────────────────── */
+        /* This is the Dell Latitude range. The three-section row crammed       */
+        /* together caused overlap. We stack vertically: name on top, then     */
+        /* a single bottom row with stats + status + actions that wraps        */
+        /* naturally when buttons can't fit on one line.                       */
+        @media (max-width: 1199px) and (min-width: 769px) {
+          .campaign-row-inner {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 14px;
+          }
+          .campaign-left {
+            width: 100%;
+            flex: 0 0 auto;
+          }
+          .campaign-stats-row {
+            justify-content: flex-start;
+            gap: 24px;
+          }
+          .campaign-actions {
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: flex-start;
+          }
+        }
+
+        /* ── MOBILE BREAKPOINT (≤ 768px) — original mobile behavior ──────── */
         @media (max-width: 768px) {
           .campaigns-root { padding: 20px !important; }
           .campaigns-header h1 { font-size: 20px !important; letter-spacing: 3px !important; }
@@ -799,7 +850,7 @@ export default function CampaignsPage() {
             align-items: stretch;
             gap: 14px;
           }
-          .campaign-left { width: 100%; }
+          .campaign-left { width: 100%; flex: 0 0 auto; }
           .campaign-actions {
             flex-wrap: wrap;
             gap: 8px;
@@ -1019,7 +1070,7 @@ export default function CampaignsPage() {
                     </div>
                   </div>
 
-                  <div className="campaign-stats-row" style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+                  <div className="campaign-stats-row">
                     <div className="campaign-stat">
                       <div style={{ fontSize: '22px', fontWeight: 'bold', color: T.text, marginBottom: '2px' }}>
                         {campaign.total_leads.toLocaleString()}
