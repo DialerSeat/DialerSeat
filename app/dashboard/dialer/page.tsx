@@ -57,28 +57,45 @@ interface PacingInfo {
   effectiveLines: number
 }
 
-// Per-agent lines preference response from /api/predictive/prefs.
-// The server enforces the hard cap of 5; the dropdown UI also only shows 1-5.
+// Per-agent lines preference (from /api/predictive/prefs)
 interface LinesPrefInfo {
-  effective_lines: number          // what the controller will actually use
-  preferred_lines: number | null   // null = inheriting campaign default
+  effective_lines: number
+  preferred_lines: number | null
   campaign_default: number
   campaign_min: number
   campaign_max: number
   hard_cap: number
 }
 
-// Result of a single /api/calls/predictive-tick invocation. Used to drive
-// the "DIALING X LINES" indicator and system log entries.
-interface ControllerTickResult {
+// Controller summary returned by heartbeat in predictive mode
+interface HeartbeatControllerSummary {
   fired: number
   desired: number
   inFlight: number
   effectiveLines: number
   degraded: boolean
   reason: string
-  callSids: string[]
-  skipped: number
+  callSids?: string[]
+  skipped?: number
+  released?: number
+  dedupedPhones?: number
+}
+
+// Incoming-route polling response shape
+interface IncomingRouteResponse {
+  incoming: boolean
+  reason?: string
+  call?: {
+    id: string
+    sid: string
+    lead_id: string | null
+    phone_number: string
+    started_at: string
+    room_name: string | null
+  }
+  lead?: Lead | null
+  session_state?: string
+  session_id?: string
 }
 
 interface SessionStats {
@@ -110,20 +127,12 @@ const MODE_OPTIONS: { value: DialerMode; label: string; color: string }[] = [
   { value: 'predictive', label: 'PREDICTIVE', color: '#8a1a1a' },
 ]
 
-// Heartbeat tick rate. New endpoint expects 5s; sessions go offline after 15s.
 const HEARTBEAT_INTERVAL_MS = 5_000
-
-// Active agents poll rate (for the pacing panel). Doesn't need to be as
-// frequent as heartbeat — agents joining/leaving is a low-rate event.
 const PACING_POLL_INTERVAL_MS = 10_000
 
-// Minimum time between predictive-tick invocations from this client. The
-// heartbeat could fire many times while we're ready+predictive; we only
-// want to ask the controller to refill our lines every few seconds.
-const PREDICTIVE_TICK_MIN_INTERVAL_MS = 3_000
+// NEW — incoming-route poll rate while predictive AVAILABLE
+const INCOMING_POLL_INTERVAL_MS = 2_000
 
-// Available lines options in the dropdown. Hard cap of 5 enforced server-
-// side AND in this list (no UI option above 5).
 const LINES_OPTIONS = [1, 2, 3, 4, 5]
 
 function todayKey(): string {
@@ -172,13 +181,13 @@ function DialerPageInner() {
   const [pacingInfo, setPacingInfo] = useState<PacingInfo | null>(null)
   const [amdActivity, setAmdActivity] = useState<string[]>([])
 
-  // ── NEW STATE FOR PR 2 PART B ──────────────────────────────────────────
   // Lines preference for the currently-selected campaign (predictive mode only)
   const [linesPref, setLinesPref] = useState<LinesPrefInfo | null>(null)
   const [linesPrefSaving, setLinesPrefSaving] = useState(false)
-  // Most recent controller tick — drives "DIALING X LINES" indicator
-  const [lastTick, setLastTick] = useState<ControllerTickResult | null>(null)
-  const lastTickAtRef = useRef<number>(0)
+
+  // Most recent controller summary (from heartbeat response, predictive mode)
+  const [lastControllerSummary, setLastControllerSummary] =
+    useState<HeartbeatControllerSummary | null>(null)
 
   // Server has told us to yield (predictive abandon-rate approaching FTC cap)
   const [shouldYield, setShouldYield] = useState(false)
@@ -200,8 +209,13 @@ function DialerPageInner() {
   const sessionIdRef = useRef<string | null>(null)
 
   const heartbeatRef = useRef<NodeJS.Timeout | null>(null)
-
   const pacingPollRef = useRef<NodeJS.Timeout | null>(null)
+
+  // NEW — incoming-route polling ref (predictive only)
+  const incomingPollRef = useRef<NodeJS.Timeout | null>(null)
+  // Tracks the last call sid we transitioned ON for, so we don't double-trigger
+  const lastIncomingCallSidRef = useRef<string | null>(null)
+
   const urlParamsConsumedRef = useRef(false)
   const currentLeadRef = useRef<Lead | null>(null)
   const lsRestoredRef = useRef(false)
@@ -244,17 +258,36 @@ function DialerPageInner() {
   const isPredictive = dialerMode === 'predictive'
   const isProgressive = dialerMode === 'progressive'
   const isPreview = dialerMode === 'preview'
-  const autoDials = isProgressive || isPredictive
+  const autoDials = isProgressive  // predictive no longer in autoDials — system handles it
   const modeRequiresSpecific = false
 
   const modeTileInteractive = isSpecificCampaign || isAllActive
 
+  // Maps the dialer's UI state to one of the heartbeat-accepted agent states.
   const agentState: AgentState = (() => {
     if (!available) return 'paused'
     if (status === 'connected') return 'on_call'
     if (status === 'calling') return 'dialing'
     if (showDisposition) return 'wrapping'
     return 'ready'
+  })()
+
+  // ────────────────────────────────────────────────────────────────────────
+  // PREDICTIVE UI STATE — derived
+  // ────────────────────────────────────────────────────────────────────────
+  // For predictive mode, we render a totally different center column based
+  // on whether the agent is:
+  //   - AVAILABLE (LIVE + ready + waiting for a routed call)
+  //   - ON CALL (talking to a routed human)
+  //   - WRAPPING (dispositioning, system still dialing)
+  //   - OFFLINE (LIVE toggle is off)
+  // ────────────────────────────────────────────────────────────────────────
+  type PredictiveView = 'offline' | 'available' | 'on_call' | 'wrapping'
+  const predictiveView: PredictiveView = (() => {
+    if (!available) return 'offline'
+    if (showDisposition) return 'wrapping'
+    if (status === 'connected' && currentLead) return 'on_call'
+    return 'available'
   })()
 
   // ── SESSION METRICS PERSISTENCE ─────────────────────────────────────────
@@ -554,6 +587,7 @@ function DialerPageInner() {
     }
   }
 
+  // ── /api/dialer/session lifecycle (analytics compatibility, unchanged) ──
   const startSession = useCallback(async (campaignId: string) => {
     try {
       const teamId = selectedScope !== PERSONAL_SCOPE ? selectedScope : undefined
@@ -616,7 +650,11 @@ function DialerPageInner() {
   }, [available, selectedCampaign, currentCampaign, isActive, isSpecificCampaign, startSession, endSession])
 
   // ────────────────────────────────────────────────────────────────────────
-  // Predictive-foundation heartbeat
+  // HEARTBEAT — now also returns controller summary for predictive
+  // ────────────────────────────────────────────────────────────────────────
+  // The server-side controller is invoked on the heartbeat itself. Response
+  // includes the controller summary so we can show diagnostics in the system
+  // log without needing a separate API call.
   // ────────────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!isActive) return
@@ -637,6 +675,23 @@ function DialerPageInner() {
         const data = await res.json()
         if (typeof data.should_yield === 'boolean') {
           setShouldYield(data.should_yield)
+        }
+        // NEW — capture controller summary so the system log can show it
+        if (data.controller_invoked && data.controller) {
+          setLastControllerSummary(data.controller as HeartbeatControllerSummary)
+          // Surface controller activity to the AMD log too, for visibility
+          const summary = data.controller as HeartbeatControllerSummary
+          if (summary.fired > 0) {
+            setAmdActivity(prev => [
+              `▶ CONTROLLER FIRED ${summary.fired} LINE${summary.fired === 1 ? '' : 'S'} (${summary.effectiveLines}x target)`,
+              ...prev,
+            ].slice(0, 5))
+          } else if (summary.degraded) {
+            setAmdActivity(prev => [
+              `⚠ AUTO-DEGRADED — abandon rate trigger`,
+              ...prev,
+            ].slice(0, 5))
+          }
         }
       } catch {
         // Network blip — next heartbeat will retry
@@ -662,69 +717,67 @@ function DialerPageInner() {
   ])
 
   // ────────────────────────────────────────────────────────────────────────
-  // PREDICTIVE TICK — invoke controller on ready+predictive transitions
+  // INCOMING-ROUTE POLLING — predictive AVAILABLE only
   // ────────────────────────────────────────────────────────────────────────
-  // Fires when:
-  //   - Agent transitions to state='ready'
-  //   - AND dialer_mode='predictive'
-  //   - AND a campaign is selected
-  //   - AND we're not yielding (abandon-rate guardrail)
-  //   - AND it's been at least PREDICTIVE_TICK_MIN_INTERVAL_MS since the
-  //     last tick (debounce — heartbeat-driven state changes can fire many
-  //     times in quick succession)
+  // Polls /api/calls/incoming-route every 2s while predictive AVAILABLE
+  // (LIVE + no current call). When the server reports a routed call, we
+  // transition the page into ON CALL: populate lead profile, set activeCallSid,
+  // start the existing call-status polling flow.
   //
-  // The controller's job is to refill lines so the agent always has N
-  // calls in flight while ready. We don't need to call it from anywhere
-  // ELSE — heartbeat captures all ready transitions.
+  // Stops polling once we're on a call (no point) and starts again when
+  // we go back to AVAILABLE after wrap.
   // ────────────────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!isActive) return
-    if (agentState !== 'ready') return
-    if (!isPredictive) return
-    if (!isSpecificCampaign) return
-    if (shouldYield) return
+    if (!isActive || !isPredictive || predictiveView !== 'available') {
+      if (incomingPollRef.current) {
+        clearInterval(incomingPollRef.current)
+        incomingPollRef.current = null
+      }
+      return
+    }
 
-    const now = Date.now()
-    if (now - lastTickAtRef.current < PREDICTIVE_TICK_MIN_INTERVAL_MS) return
-
-    lastTickAtRef.current = now
-
-    const fire = async () => {
+    const pollIncoming = async () => {
       try {
-        const res = await fetch('/api/calls/predictive-tick', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({}),
-        })
+        const res = await fetch('/api/calls/incoming-route')
         if (!res.ok) return
-        const data: ControllerTickResult & { error?: string } = await res.json()
-        if (data.error) return
-        setLastTick(data)
+        const data = (await res.json()) as IncomingRouteResponse
+        if (!data.incoming || !data.call) return
 
-        if (data.fired > 0) {
-          setAmdActivity(prev => [
-            `▶ DIALED ${data.fired} LINE${data.fired === 1 ? '' : 'S'} (${data.effectiveLines}x target)`,
-            ...prev,
-          ].slice(0, 5))
-        } else if (data.degraded) {
-          setAmdActivity(prev => [
-            `⚠ AUTO-DEGRADED — abandon rate trigger`,
-            ...prev,
-          ].slice(0, 5))
+        // De-dup: if we've already transitioned for this call sid, ignore
+        if (lastIncomingCallSidRef.current === data.call.sid) return
+        lastIncomingCallSidRef.current = data.call.sid
+
+        // Transition into ON CALL state
+        setAmdActivity(prev => [
+          `▶ HUMAN ROUTED — ${data.lead?.first_name || ''} ${data.lead?.last_name || ''}`.trim(),
+          ...prev,
+        ].slice(0, 5))
+
+        playPickup()
+        setActiveCallSid(data.call.sid)
+        if (data.lead) {
+          setCurrentLead(data.lead)
         }
-      } catch (err) {
-        console.error('predictive-tick error:', err)
+        setStatus('connected')
+        setSessionStats(s => ({ ...s, calls: s.calls + 1, connected: s.connected + 1 }))
+
+        // Hand off to the existing call-completion poll to detect hangup
+        startHangupPolling(data.call.sid)
+      } catch {
+        // Network blip — next poll will retry
       }
     }
-    fire()
-  }, [
-    isActive,
-    agentState,
-    isPredictive,
-    isSpecificCampaign,
-    selectedCampaign,
-    shouldYield,
-  ])
+
+    pollIncoming()
+    incomingPollRef.current = setInterval(pollIncoming, INCOMING_POLL_INTERVAL_MS)
+
+    return () => {
+      if (incomingPollRef.current) {
+        clearInterval(incomingPollRef.current)
+        incomingPollRef.current = null
+      }
+    }
+  }, [isActive, isPredictive, predictiveView])
 
   // ────────────────────────────────────────────────────────────────────────
   // LINES PREFERENCE — fetch when entering predictive mode
@@ -808,9 +861,7 @@ function DialerPageInner() {
     }
   }, [endSession])
 
-  // ────────────────────────────────────────────────────────────────────────
-  // PACING PANEL — consumes /api/dialer/active-agents
-  // ────────────────────────────────────────────────────────────────────────
+  // ── PACING PANEL (predictive only) ──────────────────────────────────────
   useEffect(() => {
     if (!isActive || !isPredictive || !available || !isSpecificCampaign) {
       setPacingInfo(null)
@@ -999,6 +1050,7 @@ function DialerPageInner() {
       return null
     }
   }
+
   const formatTime = (s: number) => {
     const m = Math.floor(s / 60)
     const sec = s % 60
@@ -1162,6 +1214,44 @@ function DialerPageInner() {
     return amd.startsWith('machine_') || amd === 'fax' || amd === 'unknown'
   }
 
+  // Extracted from startCallPolling — the hangup-detection loop. Used by
+  // both progressive-style polling AND predictive's transition-on-incoming
+  // flow (predictive enters the call already in 'connected' state, so it
+  // just needs the hangup detector).
+  const startHangupPolling = (callSid: string) => {
+    const hangupPoll = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/calls/check?sid=${callSid}`)
+        const d = await res.json()
+        if (d.status === 'completed' || d.status === 'canceled' || d.status === 'failed') {
+          clearInterval(hangupPoll)
+          activePollRef.current = null
+          setActiveCallSid(null)
+          if (swCallRef.current) {
+            try { await swCallRef.current.bye() } catch {}
+            swCallRef.current = null
+          }
+
+          if (isNotHuman(d.amd_result)) {
+            setAmdActivity(prev =>
+              [`> VOICEMAIL FILTERED LATE — ${d.amd_result}`, ...prev].slice(0, 5)
+            )
+            setStatus('idle')
+            setCurrentLead(null)
+            if (autoDials) setTimeout(() => handleDial(), 600)
+          } else {
+            setStatus('ended')
+            setShowDisposition(true)
+          }
+        }
+      } catch {
+        clearInterval(hangupPoll)
+        activePollRef.current = null
+      }
+    }, 2000)
+    activePollRef.current = hangupPoll
+  }
+
   const startCallPolling = (callSid: string) => {
     const pollInterval = setInterval(async () => {
       try {
@@ -1187,37 +1277,7 @@ function DialerPageInner() {
           setStatus('connected')
           setSessionStats(s => ({ ...s, connected: s.connected + 1 }))
 
-          const hangupPoll = setInterval(async () => {
-            try {
-              const res = await fetch(`/api/calls/check?sid=${callSid}`)
-              const d = await res.json()
-              if (d.status === 'completed' || d.status === 'canceled' || d.status === 'failed') {
-                clearInterval(hangupPoll)
-                activePollRef.current = null
-                setActiveCallSid(null)
-                if (swCallRef.current) {
-                  try { await swCallRef.current.bye() } catch {}
-                  swCallRef.current = null
-                }
-
-                if (isNotHuman(d.amd_result)) {
-                  setAmdActivity(prev =>
-                    [`> VOICEMAIL FILTERED LATE — ${d.amd_result}`, ...prev].slice(0, 5)
-                  )
-                  setStatus('idle')
-                  setCurrentLead(null)
-                  setTimeout(() => handleDial(), 600)
-                } else {
-                  setStatus('ended')
-                  setShowDisposition(true)
-                }
-              }
-            } catch {
-              clearInterval(hangupPoll)
-              activePollRef.current = null
-            }
-          }, 2000)
-          activePollRef.current = hangupPoll
+          startHangupPolling(callSid)
 
         } else if (
           statusData.status === 'completed' ||
@@ -1277,18 +1337,10 @@ function DialerPageInner() {
       return
     }
 
-    if (isPredictive && shouldYield) {
-      setAmdActivity(prev => [`YIELDING — abandon rate approaching FTC cap`, ...prev].slice(0, 5))
-      return
-    }
-
-    // ── Predictive mode: don't do single-lead fetch here ──
-    // The controller is doing all the dialing via /api/calls/predictive-tick.
-    // The button just signals "I'm ready" which the heartbeat picks up.
-    // If user clicks INITIATE while predictive, we just wait — the controller
-    // will fire calls on the next tick (within a few seconds).
+    // PREDICTIVE: there is no manual dial — the system is dialing.
+    // This shouldn't even be reachable from the UI in predictive mode
+    // (button is removed), but guard anyway.
     if (isPredictive) {
-      setAmdActivity(prev => [`▶ READY — controller will dial ${linesPref?.effective_lines || 3} lines`, ...prev].slice(0, 5))
       return
     }
 
@@ -1323,7 +1375,15 @@ function DialerPageInner() {
     setNotes('')
     setCurrentLead(null)
     setStatus('idle')
-    setTimeout(() => handleDial(), 300)
+
+    // In predictive mode, after skip we go back to AVAILABLE — system handles next dial.
+    // In other auto-dial modes, manually trigger next.
+    if (isPredictive) {
+      lastIncomingCallSidRef.current = null
+      // No setTimeout(handleDial) — incoming-route polling will detect next routed call
+    } else {
+      setTimeout(() => handleDial(), 300)
+    }
   }
 
   const handleDisposition = async (disp: string) => {
@@ -1358,6 +1418,13 @@ function DialerPageInner() {
       setNotes('')
       setSeconds(0)
       setCurrentLead(null)
+
+      // PREDICTIVE: don't call handleDial — incoming-route polling resumes
+      // automatically and the next human routes whenever the system finds one.
+      if (isPredictive) {
+        lastIncomingCallSidRef.current = null
+        return
+      }
       await handleDial()
     }, autoDials ? 800 : 600)
   }
@@ -1666,6 +1733,93 @@ function DialerPageInner() {
     </>
   )
 
+  // ────────────────────────────────────────────────────────────────────────
+  // PREDICTIVE — AVAILABLE state UI
+  // ────────────────────────────────────────────────────────────────────────
+  // Big calm status card. No lead. No dial button. Just: system is dialing,
+  // wait for a human. Pulse animation on the status dot signals activity.
+  // ────────────────────────────────────────────────────────────────────────
+  const PredictiveAvailableCard = () => {
+    const linesActive = lastControllerSummary?.inFlight ?? 0
+    const linesTarget = linesPref?.effective_lines || pacingInfo?.configuredLines || 3
+    return (
+      <div style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '20px 16px',
+        background: terminalSurface,
+        border: `1px solid ${terminalBorder}`,
+        borderLeft: `3px solid ${terminalAccent}`,
+        borderRadius: 4,
+        minHeight: 280,
+      }}>
+        <style>{`
+          @keyframes predictiveAvailablePulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 12px ${terminalAccent}; }
+            50% { opacity: 0.4; box-shadow: 0 0 4px ${terminalAccent}; }
+          }
+          .predictive-pulse-dot {
+            animation: predictiveAvailablePulse 1.4s ease-in-out infinite;
+          }
+        `}</style>
+        <div style={{
+          width: 24, height: 24, borderRadius: '50%',
+          background: terminalAccent, marginBottom: 18,
+        }} className="predictive-pulse-dot" />
+        <div style={{
+          fontSize: 20, fontWeight: 'bold', letterSpacing: 6,
+          color: terminalAccent, marginBottom: 10, textAlign: 'center',
+        }}>
+          AVAILABLE
+        </div>
+        <div style={{
+          fontSize: 11, letterSpacing: 2, color: terminalMuted,
+          textAlign: 'center', lineHeight: 1.7, maxWidth: 360, marginBottom: 22,
+        }}>
+          System is dialing in the background.<br/>
+          A live human will be routed to you automatically.
+        </div>
+        <div style={{
+          display: 'flex', gap: 14, flexWrap: 'wrap', justifyContent: 'center',
+          marginBottom: 22,
+        }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 8, letterSpacing: 2, color: terminalMuted }}>LINES IN FLIGHT</div>
+            <div style={{ fontSize: 18, fontFamily: 'monospace', fontWeight: 'bold', color: terminalText }}>
+              {linesActive} / {linesTarget}
+            </div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 8, letterSpacing: 2, color: terminalMuted }}>CONNECTED TODAY</div>
+            <div style={{ fontSize: 18, fontFamily: 'monospace', fontWeight: 'bold', color: terminalAccent }}>
+              {sessionStats.connected}
+            </div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 8, letterSpacing: 2, color: terminalMuted }}>30D ABANDON</div>
+            <div style={{
+              fontSize: 18, fontFamily: 'monospace', fontWeight: 'bold',
+              color: pacingInfo && pacingInfo.abandonRate >= 0.025 ? terminalRed
+                : pacingInfo && pacingInfo.abandonRate >= 0.020 ? terminalAmber : terminalGreen,
+            }}>
+              {pacingInfo ? `${(pacingInfo.abandonRate * 100).toFixed(2)}%` : '—'}
+            </div>
+          </div>
+        </div>
+        <button onClick={handleSetAvailable} style={{
+          padding: '12px 28px', borderRadius: 4, border: 'none',
+          background: '#f8e8e8', borderTop: `3px solid ${terminalRed}`,
+          color: terminalRed, fontSize: 11, fontWeight: 'bold',
+          letterSpacing: 3, cursor: 'pointer',
+          fontFamily: 'Futura PT, Futura, sans-serif',
+        }}>■ GO OFFLINE</button>
+      </div>
+    )
+  }
+
   return (
     <div className="dialer-root" style={{
       flex: 1, background: terminalBg,
@@ -1690,13 +1844,6 @@ function DialerPageInner() {
           border: 1px solid rgba(74,158,255,0.3); border-radius: 3px;
           font-family: monospace; font-size: 10px; letter-spacing: 1px;
           color: #4a9eff; font-weight: bold;
-        }
-        .dialer-fanout-pill {
-          display: flex; align-items: center; gap: 6px;
-          padding: 3px 10px; background: rgba(138,26,26,0.12);
-          border: 1px solid rgba(138,26,26,0.4); border-radius: 3px;
-          font-family: monospace; font-size: 10px; letter-spacing: 1px;
-          color: ${terminalRed}; font-weight: bold;
         }
         .mode-tile-wrap { position: relative; cursor: pointer; }
         .mode-tile-dropdown {
@@ -1793,13 +1940,6 @@ function DialerPageInner() {
           </div>
         </div>
         <div className="dialer-status-bar-right">
-          {/* DIALING X LINES indicator (predictive only) */}
-          {isPredictive && lastTick && lastTick.fired > 0 && (
-            <div className="dialer-fanout-pill" title="Active fanout lines">
-              <span style={{ fontSize: 8, letterSpacing: 2, opacity: 0.75 }}>DIALING</span>
-              <span>{lastTick.fired} LINE{lastTick.fired === 1 ? '' : 'S'}</span>
-            </div>
-          )}
           <div className="dialer-connected-pill" title="Connected calls today">
             <span style={{ fontSize: 8, letterSpacing: 2, opacity: 0.75 }}>CONNECTED TODAY</span>
             <span>{sessionStats.connected}</span>
@@ -1935,7 +2075,7 @@ function DialerPageInner() {
             </div>
           </div>
 
-          {/* PACING PANEL — extended with LINES selector for predictive mode */}
+          {/* PACING PANEL — predictive only, includes LINES selector */}
           {isPredictive && pacingInfo && (
             <div style={{
               padding: '10px 14px', background: terminalSurface,
@@ -2062,103 +2202,134 @@ function DialerPageInner() {
             )}
           </div>
 
-          <div style={{
-            flex: 1, background: terminalSurface, border: `1px solid ${terminalBorder}`,
-            borderRadius: '4px', overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 200,
-          }}>
+          {/* ──────────────────────────────────────────────────────────── */}
+          {/* CENTER PANEL — branches on mode + predictive view             */}
+          {/* ──────────────────────────────────────────────────────────── */}
+          {isPredictive && predictiveView === 'available' && isSpecificCampaign ? (
+            // PREDICTIVE AVAILABLE — ReadyMode-style status card
+            <PredictiveAvailableCard />
+          ) : isPredictive && predictiveView === 'offline' ? (
+            // PREDICTIVE OFFLINE — instruct to toggle LIVE
             <div style={{
-              padding: '7px 14px', background: terminalDark, borderBottom: `1px solid ${terminalBorder}`,
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
+              flex: 1, background: terminalSurface, border: `1px solid ${terminalBorder}`,
+              borderRadius: '4px', overflow: 'hidden', display: 'flex',
+              flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              minHeight: 280, padding: 20,
             }}>
-              <span style={{ fontSize: '10px', letterSpacing: '3px', color: '#8888aa', fontWeight: 'bold' }}>
-                {previewLead ? 'LEAD PREVIEW — REVIEW BEFORE DIALING' : 'LEAD PROFILE'}
-              </span>
-              {displayLead && (status === 'connected' || status === 'preview_ready') && (
-                <span style={{ fontSize: '10px', fontFamily: 'monospace', color: '#4a9eff' }}>ID: {displayLead.id.substring(0, 8)}</span>
+              <div style={{ fontSize: 36, marginBottom: 12, opacity: 0.4 }}>📞</div>
+              <p style={{ fontSize: 11, letterSpacing: 3, color: terminalMuted, textAlign: 'center', marginBottom: 16 }}>
+                {!isSpecificCampaign
+                  ? 'SELECT A CAMPAIGN, THEN TOGGLE LIVE TO BEGIN'
+                  : 'TOGGLE LIVE TO BEGIN — SYSTEM WILL AUTO-DIAL'}
+              </p>
+              {isSpecificCampaign && (
+                <button onClick={handleSetAvailable} style={{
+                  padding: '14px 32px', borderRadius: '4px', border: 'none',
+                  background: terminalDark, color: '#4a9eff',
+                  fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
+                  cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                  borderTop: `3px solid #4a9eff`,
+                }}>● GO LIVE</button>
               )}
             </div>
+          ) : (
+            // PROGRESSIVE / POWER / PREVIEW / PREDICTIVE_ON_CALL / PREDICTIVE_WRAPPING
+            <div style={{
+              flex: 1, background: terminalSurface, border: `1px solid ${terminalBorder}`,
+              borderRadius: '4px', overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 200,
+            }}>
+              <div style={{
+                padding: '7px 14px', background: terminalDark, borderBottom: `1px solid ${terminalBorder}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
+              }}>
+                <span style={{ fontSize: '10px', letterSpacing: '3px', color: '#8888aa', fontWeight: 'bold' }}>
+                  {previewLead ? 'LEAD PREVIEW — REVIEW BEFORE DIALING' : 'LEAD PROFILE'}
+                </span>
+                {displayLead && (status === 'connected' || status === 'preview_ready') && (
+                  <span style={{ fontSize: '10px', fontFamily: 'monospace', color: '#4a9eff' }}>ID: {displayLead.id.substring(0, 8)}</span>
+                )}
+              </div>
 
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
-              {(!displayLead || status === 'calling') ? (
-                <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                  <div style={{ fontSize: '36px', marginBottom: '12px', filter: 'grayscale(1)', opacity: 0.4 }}>📋</div>
-                  <p style={{ fontSize: '11px', letterSpacing: '3px', color: terminalMuted }}>
-                    {isPredictive && available
-                      ? 'PREDICTIVE: WAITING FOR CONTROLLER TO ROUTE A HUMAN'
-                      : noLeads ? 'NO MORE LEADS AVAILABLE' : status === 'calling' ? 'DIALING IN QUEUE...' : 'AWAITING DIAL COMMAND'}
-                  </p>
-                  {noLeads && (
-                    <p style={{
-                      fontSize: '10px',
-                      color: tcpaBlockedAll ? terminalAmber : terminalRed,
-                      marginTop: '8px',
-                      letterSpacing: '2px',
-                    }}>
-                      {tcpaBlockedAll
-                        ? '⏰ ALL LEADS OUTSIDE 8AM-9PM WINDOW — TRY LATER'
-                        : isPersonalScope
-                          ? 'UPLOAD MORE LEADS TO CONTINUE'
-                          : 'NO MORE TEAM LEADS — TRY ANOTHER CAMPAIGN OR SCOPE'}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
+                {(!displayLead || status === 'calling') ? (
+                  <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                    <div style={{ fontSize: '36px', marginBottom: '12px', filter: 'grayscale(1)', opacity: 0.4 }}>📋</div>
+                    <p style={{ fontSize: '11px', letterSpacing: '3px', color: terminalMuted }}>
+                      {noLeads ? 'NO MORE LEADS AVAILABLE' : status === 'calling' ? 'DIALING IN QUEUE...' : 'AWAITING DIAL COMMAND'}
                     </p>
-                  )}
-                </div>
-              ) : (
-                <>
-                  <div style={{ padding: '12px', flexShrink: 0 }}>
-                    <div style={{
-                      padding: '10px 14px', background: terminalBg,
-                      border: `2px solid ${status === 'connected' ? terminalGreen : status === 'preview_ready' ? terminalAccent : terminalBorder}`,
-                      borderRadius: '4px', marginBottom: '10px',
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-                        <div>
-                          <div style={{ fontSize: '19px', fontWeight: 'bold', fontFamily: 'monospace', color: terminalText, letterSpacing: '1px', marginBottom: '3px' }}>
-                            {displayLead.first_name} {displayLead.last_name}
-                          </div>
-                          <div style={{ fontSize: '15px', fontFamily: 'monospace', color: terminalAccent, fontWeight: 'bold', letterSpacing: '2px' }}>
-                            {displayLead.phone}
-                          </div>
-                        </div>
-                        <div style={{
-                          padding: '4px 10px', borderRadius: '2px',
-                          background: status === 'connected' ? '#e8f5e8' : status === 'preview_ready' ? '#e8eef8' : '#f0f0f0',
-                          border: `1px solid ${status === 'connected' ? terminalGreen : status === 'preview_ready' ? terminalAccent : terminalBorder}`,
-                          fontSize: '9px', letterSpacing: '2px', fontWeight: 'bold',
-                          color: status === 'connected' ? terminalGreen : status === 'preview_ready' ? terminalAccent : terminalMuted,
-                        }}>
-                          {status === 'connected' ? '● LIVE' : status === 'preview_ready' ? '◉ PREVIEW' : '○ IDLE'}
-                        </div>
-                      </div>
-                    </div>
-                    {displayLead.extra_data && Object.keys(displayLead.extra_data).length > 0 && (
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '5px' }}>
-                        {filteredExtraData(displayLead.extra_data).map(([key, value]) => (
-                          <div key={key} style={{ padding: '7px 10px', background: terminalBg, border: `1px solid ${terminalBorder}`, borderRadius: '3px' }}>
-                            <div style={{ fontSize: '8px', letterSpacing: '2px', color: terminalMuted, marginBottom: '2px', textTransform: 'uppercase' }}>{key}</div>
-                            <div style={{ fontSize: '11px', fontWeight: 'bold', fontFamily: 'monospace', color: terminalText }}>{String(value)}</div>
-                          </div>
-                        ))}
-                      </div>
+                    {noLeads && (
+                      <p style={{
+                        fontSize: '10px',
+                        color: tcpaBlockedAll ? terminalAmber : terminalRed,
+                        marginTop: '8px',
+                        letterSpacing: '2px',
+                      }}>
+                        {tcpaBlockedAll
+                          ? '⏰ ALL LEADS OUTSIDE 8AM-9PM WINDOW — TRY LATER'
+                          : isPersonalScope
+                            ? 'UPLOAD MORE LEADS TO CONTINUE'
+                            : 'NO MORE TEAM LEADS — TRY ANOTHER CAMPAIGN OR SCOPE'}
+                      </p>
                     )}
                   </div>
-                  {activeScript && (
-                    <div style={{
-                      flex: 1, margin: '0 12px 12px', padding: '10px 12px',
-                      background: terminalBg, border: `1px solid ${terminalBorder}`,
-                      borderLeft: `3px solid ${terminalAccent}`, borderRadius: '3px',
-                      display: 'flex', flexDirection: 'column', minHeight: 80,
-                    }}>
-                      <div style={{ fontSize: '8px', letterSpacing: '2px', color: terminalMuted, marginBottom: '6px', flexShrink: 0 }}>CALL SCRIPT</div>
+                ) : (
+                  <>
+                    <div style={{ padding: '12px', flexShrink: 0 }}>
                       <div style={{
-                        fontSize: '11px', lineHeight: '1.7', color: terminalText,
-                        fontFamily: 'monospace', whiteSpace: 'pre-wrap', overflowY: 'auto', flex: 1,
-                      }}>{activeScript}</div>
+                        padding: '10px 14px', background: terminalBg,
+                        border: `2px solid ${status === 'connected' ? terminalGreen : status === 'preview_ready' ? terminalAccent : terminalBorder}`,
+                        borderRadius: '4px', marginBottom: '10px',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                          <div>
+                            <div style={{ fontSize: '19px', fontWeight: 'bold', fontFamily: 'monospace', color: terminalText, letterSpacing: '1px', marginBottom: '3px' }}>
+                              {displayLead.first_name} {displayLead.last_name}
+                            </div>
+                            <div style={{ fontSize: '15px', fontFamily: 'monospace', color: terminalAccent, fontWeight: 'bold', letterSpacing: '2px' }}>
+                              {displayLead.phone}
+                            </div>
+                          </div>
+                          <div style={{
+                            padding: '4px 10px', borderRadius: '2px',
+                            background: status === 'connected' ? '#e8f5e8' : status === 'preview_ready' ? '#e8eef8' : '#f0f0f0',
+                            border: `1px solid ${status === 'connected' ? terminalGreen : status === 'preview_ready' ? terminalAccent : terminalBorder}`,
+                            fontSize: '9px', letterSpacing: '2px', fontWeight: 'bold',
+                            color: status === 'connected' ? terminalGreen : status === 'preview_ready' ? terminalAccent : terminalMuted,
+                          }}>
+                            {status === 'connected' ? '● LIVE' : status === 'preview_ready' ? '◉ PREVIEW' : '○ IDLE'}
+                          </div>
+                        </div>
+                      </div>
+                      {displayLead.extra_data && Object.keys(displayLead.extra_data).length > 0 && (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '5px' }}>
+                          {filteredExtraData(displayLead.extra_data).map(([key, value]) => (
+                            <div key={key} style={{ padding: '7px 10px', background: terminalBg, border: `1px solid ${terminalBorder}`, borderRadius: '3px' }}>
+                              <div style={{ fontSize: '8px', letterSpacing: '2px', color: terminalMuted, marginBottom: '2px', textTransform: 'uppercase' }}>{key}</div>
+                              <div style={{ fontSize: '11px', fontWeight: 'bold', fontFamily: 'monospace', color: terminalText }}>{String(value)}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </>
-              )}
+                    {activeScript && (
+                      <div style={{
+                        flex: 1, margin: '0 12px 12px', padding: '10px 12px',
+                        background: terminalBg, border: `1px solid ${terminalBorder}`,
+                        borderLeft: `3px solid ${terminalAccent}`, borderRadius: '3px',
+                        display: 'flex', flexDirection: 'column', minHeight: 80,
+                      }}>
+                        <div style={{ fontSize: '8px', letterSpacing: '2px', color: terminalMuted, marginBottom: '6px', flexShrink: 0 }}>CALL SCRIPT</div>
+                        <div style={{
+                          fontSize: '11px', lineHeight: '1.7', color: terminalText,
+                          fontFamily: 'monospace', whiteSpace: 'pre-wrap', overflowY: 'auto', flex: 1,
+                        }}>{activeScript}</div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {showDisposition && (
             <div style={{
@@ -2179,6 +2350,17 @@ function DialerPageInner() {
                   marginBottom: 10, boxSizing: 'border-box',
                 }}
               />
+              {/* PREDICTIVE — note that system keeps dialing during wrap */}
+              {isPredictive && (
+                <div style={{
+                  marginBottom: 10, padding: '6px 10px',
+                  background: 'rgba(42,74,138,0.08)',
+                  borderLeft: `3px solid ${terminalAccent}`,
+                  fontSize: 10, color: terminalAccent, letterSpacing: 0.5,
+                }}>
+                  ⓘ System is still dialing in background. Next human routes automatically.
+                </div>
+              )}
               <div style={{ fontSize: '9px', letterSpacing: '3px', color: terminalMuted, marginBottom: '8px' }}>▸ SELECT DISPOSITION</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: '6px' }}>
                 {dispositions.map((d) => (
@@ -2195,67 +2377,17 @@ function DialerPageInner() {
             </div>
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: status === 'connected' ? '1fr 1fr' : status === 'preview_ready' ? '1fr 1fr' : '1fr', gap: '8px', flexShrink: 0 }}>
-            {status === 'idle' && !available && (
-              <button onClick={handleSetAvailable} style={{
-                padding: '14px', borderRadius: '4px', border: 'none',
-                background: terminalSurface, color: terminalMuted,
-                fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
-                cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
-                borderTop: `3px solid ${terminalBorder}`, transition: 'all 0.15s',
-              }}>[ SET AVAILABLE TO DIAL ]</button>
-            )}
-            {status === 'idle' && available && activeScopeCampaigns.length === 0 && (
-              <div style={{
-                padding: '14px', borderRadius: '4px', background: terminalSurface, color: terminalMuted,
-                fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
-                textAlign: 'center', borderTop: `3px solid ${terminalBorder}`,
-              }}>[ NO ACTIVE CAMPAIGNS IN SCOPE ]</div>
-            )}
-            {status === 'idle' && available && activeScopeCampaigns.length > 0 && (
-              <button onClick={handleDial} style={{
-                padding: '14px', borderRadius: '4px', border: 'none',
-                background: terminalDark, color: '#4a9eff',
-                fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
-                cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
-                borderTop: `3px solid #4a9eff`, transition: 'all 0.15s',
-              }}>
-                {isPreview ? '▶ LOAD NEXT LEAD' : isPredictive ? '▶ READY (CONTROLLER DIALS)' : '▶ INITIATE DIAL SEQUENCE'}
-              </button>
-            )}
-            {status === 'preview_ready' && previewLead && (
-              <>
-                <button onClick={skipPreviewLead} style={{
-                  padding: '14px', borderRadius: '4px',
-                  background: '#f8f4e8', border: `1px solid #8a6a1a`,
-                  borderTop: `3px solid #8a6a1a`, color: '#8a6a1a',
-                  fontSize: '11px', fontWeight: 'bold', letterSpacing: '3px',
-                  cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
-                }}>⏭ SKIP THIS LEAD</button>
-                <button onClick={dialPreviewLead} style={{
-                  padding: '14px', borderRadius: '4px', border: 'none',
-                  background: terminalDark, color: '#4a9eff',
-                  fontSize: '12px', fontWeight: 'bold', letterSpacing: '3px',
-                  cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
-                  borderTop: `3px solid #4a9eff`,
-                }}>▶ DIAL THIS LEAD</button>
-              </>
-            )}
-            {status === 'calling' && (
-              <button onClick={async () => {
-                await hangupCall(activeCallSid)
-                setStatus('idle')
-                setCurrentLead(null)
-              }} style={{
-                padding: '14px', borderRadius: '4px', border: 'none',
-                background: '#f8e8e8', color: terminalRed,
-                fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
-                cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
-                borderTop: `3px solid ${terminalRed}`,
-              }}>■ ABORT CALL</button>
-            )}
-            {status === 'connected' && (
-              <>
+          {/* ──────────────────────────────────────────────────────────── */}
+          {/* BUTTONS — branches on mode + state                          */}
+          {/* ──────────────────────────────────────────────────────────── */}
+          {/* PREDICTIVE: only ON CALL state shows buttons (skip/terminate). */}
+          {/* AVAILABLE state's GO OFFLINE button is inside PredictiveAvailableCard. */}
+          {/* WRAPPING state's disposition buttons are above. */}
+          {/* For non-predictive modes, original button logic is preserved. */}
+          {isPredictive ? (
+            // PREDICTIVE — only render call-control buttons when ON CALL
+            status === 'connected' && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, flexShrink: 0 }}>
                 <button onClick={handleSkip} style={{
                   padding: '14px', borderRadius: '4px',
                   background: '#f8f4e8', border: `1px solid #8a6a1a`,
@@ -2270,6 +2402,7 @@ function DialerPageInner() {
                   setShowDisposition(false)
                   setDisposition('')
                   setSeconds(0)
+                  lastIncomingCallSidRef.current = null
                 }} style={{
                   padding: '14px', borderRadius: '4px', border: 'none',
                   background: '#f8e8e8', borderTop: `3px solid ${terminalRed}`,
@@ -2277,18 +2410,105 @@ function DialerPageInner() {
                   letterSpacing: '3px', cursor: 'pointer',
                   fontFamily: 'Futura PT, Futura, sans-serif',
                 }}>■ TERMINATE CALL</button>
-              </>
-            )}
-            {status === 'ended' && !showDisposition && (
-              <button onClick={handleDial} style={{
-                padding: '14px', borderRadius: '4px', border: 'none',
-                background: terminalDark, color: '#4a9eff',
-                fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
-                cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
-                borderTop: `3px solid #4a9eff`,
-              }}>▶ NEXT LEAD</button>
-            )}
-          </div>
+              </div>
+            )
+          ) : (
+            // NON-PREDICTIVE — original button logic
+            <div style={{ display: 'grid', gridTemplateColumns: status === 'connected' ? '1fr 1fr' : status === 'preview_ready' ? '1fr 1fr' : '1fr', gap: '8px', flexShrink: 0 }}>
+              {status === 'idle' && !available && (
+                <button onClick={handleSetAvailable} style={{
+                  padding: '14px', borderRadius: '4px', border: 'none',
+                  background: terminalSurface, color: terminalMuted,
+                  fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
+                  cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                  borderTop: `3px solid ${terminalBorder}`, transition: 'all 0.15s',
+                }}>[ SET AVAILABLE TO DIAL ]</button>
+              )}
+              {status === 'idle' && available && activeScopeCampaigns.length === 0 && (
+                <div style={{
+                  padding: '14px', borderRadius: '4px', background: terminalSurface, color: terminalMuted,
+                  fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
+                  textAlign: 'center', borderTop: `3px solid ${terminalBorder}`,
+                }}>[ NO ACTIVE CAMPAIGNS IN SCOPE ]</div>
+              )}
+              {status === 'idle' && available && activeScopeCampaigns.length > 0 && (
+                <button onClick={handleDial} style={{
+                  padding: '14px', borderRadius: '4px', border: 'none',
+                  background: terminalDark, color: '#4a9eff',
+                  fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
+                  cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                  borderTop: `3px solid #4a9eff`, transition: 'all 0.15s',
+                }}>
+                  {isPreview ? '▶ LOAD NEXT LEAD' : '▶ INITIATE DIAL SEQUENCE'}
+                </button>
+              )}
+              {status === 'preview_ready' && previewLead && (
+                <>
+                  <button onClick={skipPreviewLead} style={{
+                    padding: '14px', borderRadius: '4px',
+                    background: '#f8f4e8', border: `1px solid #8a6a1a`,
+                    borderTop: `3px solid #8a6a1a`, color: '#8a6a1a',
+                    fontSize: '11px', fontWeight: 'bold', letterSpacing: '3px',
+                    cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                  }}>⏭ SKIP THIS LEAD</button>
+                  <button onClick={dialPreviewLead} style={{
+                    padding: '14px', borderRadius: '4px', border: 'none',
+                    background: terminalDark, color: '#4a9eff',
+                    fontSize: '12px', fontWeight: 'bold', letterSpacing: '3px',
+                    cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                    borderTop: `3px solid #4a9eff`,
+                  }}>▶ DIAL THIS LEAD</button>
+                </>
+              )}
+              {status === 'calling' && (
+                <button onClick={async () => {
+                  await hangupCall(activeCallSid)
+                  setStatus('idle')
+                  setCurrentLead(null)
+                }} style={{
+                  padding: '14px', borderRadius: '4px', border: 'none',
+                  background: '#f8e8e8', color: terminalRed,
+                  fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
+                  cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                  borderTop: `3px solid ${terminalRed}`,
+                }}>■ ABORT CALL</button>
+              )}
+              {status === 'connected' && (
+                <>
+                  <button onClick={handleSkip} style={{
+                    padding: '14px', borderRadius: '4px',
+                    background: '#f8f4e8', border: `1px solid #8a6a1a`,
+                    borderTop: `3px solid #8a6a1a`, color: '#8a6a1a',
+                    fontSize: '11px', fontWeight: 'bold', letterSpacing: '3px',
+                    cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                  }}>⏭ SKIP / NEXT LEAD</button>
+                  <button onClick={async () => {
+                    await hangupCall(activeCallSid)
+                    setStatus('idle')
+                    setCurrentLead(null)
+                    setShowDisposition(false)
+                    setDisposition('')
+                    setSeconds(0)
+                  }} style={{
+                    padding: '14px', borderRadius: '4px', border: 'none',
+                    background: '#f8e8e8', borderTop: `3px solid ${terminalRed}`,
+                    color: terminalRed, fontSize: '11px', fontWeight: 'bold',
+                    letterSpacing: '3px', cursor: 'pointer',
+                    fontFamily: 'Futura PT, Futura, sans-serif',
+                  }}>■ TERMINATE CALL</button>
+                </>
+              )}
+              {status === 'ended' && !showDisposition && (
+                <button onClick={handleDial} style={{
+                  padding: '14px', borderRadius: '4px', border: 'none',
+                  background: terminalDark, color: '#4a9eff',
+                  fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
+                  cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                  borderTop: `3px solid #4a9eff`,
+                }}>▶ NEXT LEAD</button>
+              )}
+            </div>
+          )}
         </div>
 
         <div
@@ -2353,7 +2573,8 @@ function DialerPageInner() {
               isAllActive && `> ALL ACTIVE · SESSION MODE: ${dialerMode.toUpperCase()}`,
               isPredictive && pacingInfo && `> AGENTS: ${pacingInfo.activeAgents} (READY:${pacingInfo.readyAgents}/DIALING:${pacingInfo.dialingAgents}/ONCALL:${pacingInfo.onCallAgents})`,
               isPredictive && pacingInfo && `> ABANDON: ${(pacingInfo.abandonRate * 100).toFixed(2)}%`,
-              isPredictive && lastTick && lastTick.fired > 0 && `> CONTROLLER FIRED ${lastTick.fired} LINES`,
+              isPredictive && lastControllerSummary && `> CTRL: fired=${lastControllerSummary.fired} desired=${lastControllerSummary.desired} inflight=${lastControllerSummary.inFlight}`,
+              isPredictive && lastControllerSummary && lastControllerSummary.reason && `> CTRL: ${lastControllerSummary.reason}`,
               isPredictive && shouldYield && `> SERVER ASKED TO YIELD — abandon rate near cap`,
               isPredictive && pacingInfo?.isPredictiveTeam && `> TEAM PREDICTIVE — reroute on disconnect enabled`,
               currentSessionId && '> SESSION ACTIVE',
