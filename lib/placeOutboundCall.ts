@@ -164,7 +164,12 @@ export async function placeOutboundCall(
   }
 
   // ── NUMBER POOL ──────────────────────────────────────────────────────
-  const poolNumber = await pickNumberForLead(toFormatted)
+  // Pass dialerMode so the pool can decide how to pick:
+  //   - predictive: ignore area-code matching, round-robin the full pool
+  //     to spread load across many caller IDs (essential for multi-line)
+  //   - everything else: area-code → state → region → any (fallback always
+  //     succeeds if there's any active number at all)
+  const poolNumber = await pickNumberForLead(toFormatted, dialerMode)
   const fromNumber = poolNumber?.phone_number || process.env.SIGNALWIRE_PHONE_NUMBER
 
   if (!fromNumber) {

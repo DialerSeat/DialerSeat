@@ -1738,6 +1738,10 @@ function DialerPageInner() {
   // ────────────────────────────────────────────────────────────────────────
   // Big calm status card. No lead. No dial button. Just: system is dialing,
   // wait for a human. Pulse animation on the status dot signals activity.
+  //
+  // NOTE: GO OFFLINE button removed from this card — it now lives in the
+  // unified button row below, matching the "SET AVAILABLE TO DIAL" position
+  // and dimensions used by other modes.
   // ────────────────────────────────────────────────────────────────────────
   const PredictiveAvailableCard = () => {
     const linesActive = lastControllerSummary?.inFlight ?? 0
@@ -1784,7 +1788,6 @@ function DialerPageInner() {
         </div>
         <div style={{
           display: 'flex', gap: 14, flexWrap: 'wrap', justifyContent: 'center',
-          marginBottom: 22,
         }}>
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: 8, letterSpacing: 2, color: terminalMuted }}>LINES IN FLIGHT</div>
@@ -1809,13 +1812,6 @@ function DialerPageInner() {
             </div>
           </div>
         </div>
-        <button onClick={handleSetAvailable} style={{
-          padding: '12px 28px', borderRadius: 4, border: 'none',
-          background: '#f8e8e8', borderTop: `3px solid ${terminalRed}`,
-          color: terminalRed, fontSize: 11, fontWeight: 'bold',
-          letterSpacing: 3, cursor: 'pointer',
-          fontFamily: 'Futura PT, Futura, sans-serif',
-        }}>■ GO OFFLINE</button>
       </div>
     )
   }
@@ -2209,7 +2205,8 @@ function DialerPageInner() {
             // PREDICTIVE AVAILABLE — ReadyMode-style status card
             <PredictiveAvailableCard />
           ) : isPredictive && predictiveView === 'offline' ? (
-            // PREDICTIVE OFFLINE — instruct to toggle LIVE
+            // PREDICTIVE OFFLINE — empty state matching SET-AVAILABLE empty
+            // state for other modes. NO inline button — that lives below.
             <div style={{
               flex: 1, background: terminalSurface, border: `1px solid ${terminalBorder}`,
               borderRadius: '4px', overflow: 'hidden', display: 'flex',
@@ -2217,20 +2214,11 @@ function DialerPageInner() {
               minHeight: 280, padding: 20,
             }}>
               <div style={{ fontSize: 36, marginBottom: 12, opacity: 0.4 }}>📞</div>
-              <p style={{ fontSize: 11, letterSpacing: 3, color: terminalMuted, textAlign: 'center', marginBottom: 16 }}>
+              <p style={{ fontSize: 11, letterSpacing: 3, color: terminalMuted, textAlign: 'center' }}>
                 {!isSpecificCampaign
-                  ? 'SELECT A CAMPAIGN, THEN TOGGLE LIVE TO BEGIN'
-                  : 'TOGGLE LIVE TO BEGIN — SYSTEM WILL AUTO-DIAL'}
+                  ? 'SELECT A CAMPAIGN TO BEGIN'
+                  : 'SYSTEM WILL AUTO-DIAL WHEN LIVE'}
               </p>
-              {isSpecificCampaign && (
-                <button onClick={handleSetAvailable} style={{
-                  padding: '14px 32px', borderRadius: '4px', border: 'none',
-                  background: terminalDark, color: '#4a9eff',
-                  fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
-                  cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
-                  borderTop: `3px solid #4a9eff`,
-                }}>● GO LIVE</button>
-              )}
             </div>
           ) : (
             // PROGRESSIVE / POWER / PREVIEW / PREDICTIVE_ON_CALL / PREDICTIVE_WRAPPING
@@ -2380,40 +2368,83 @@ function DialerPageInner() {
           {/* ──────────────────────────────────────────────────────────── */}
           {/* BUTTONS — branches on mode + state                          */}
           {/* ──────────────────────────────────────────────────────────── */}
-          {/* PREDICTIVE: only ON CALL state shows buttons (skip/terminate). */}
-          {/* AVAILABLE state's GO OFFLINE button is inside PredictiveAvailableCard. */}
-          {/* WRAPPING state's disposition buttons are above. */}
-          {/* For non-predictive modes, original button logic is preserved. */}
+          {/* PREDICTIVE button layout, matching position + dimensions of   */}
+          {/* the non-predictive "SET AVAILABLE TO DIAL" / "INITIATE DIAL"  */}
+          {/* buttons — full-width grid row, padding 14px, same letter      */}
+          {/* spacing and font size:                                        */}
+          {/*   - OFFLINE  → "● GO LIVE"   (full width, blue accent)        */}
+          {/*   - AVAILABLE → "■ GO OFFLINE" (full width, red accent)        */}
+          {/*   - ON CALL  → SKIP + TERMINATE (2-col grid)                  */}
+          {/*   - WRAPPING → no buttons (dispositions handle next state)    */}
           {isPredictive ? (
-            // PREDICTIVE — only render call-control buttons when ON CALL
-            status === 'connected' && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, flexShrink: 0 }}>
-                <button onClick={handleSkip} style={{
-                  padding: '14px', borderRadius: '4px',
-                  background: '#f8f4e8', border: `1px solid #8a6a1a`,
-                  borderTop: `3px solid #8a6a1a`, color: '#8a6a1a',
-                  fontSize: '11px', fontWeight: 'bold', letterSpacing: '3px',
-                  cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
-                }}>⏭ SKIP / NEXT LEAD</button>
-                <button onClick={async () => {
-                  await hangupCall(activeCallSid)
-                  setStatus('idle')
-                  setCurrentLead(null)
-                  setShowDisposition(false)
-                  setDisposition('')
-                  setSeconds(0)
-                  lastIncomingCallSidRef.current = null
-                }} style={{
-                  padding: '14px', borderRadius: '4px', border: 'none',
-                  background: '#f8e8e8', borderTop: `3px solid ${terminalRed}`,
-                  color: terminalRed, fontSize: '11px', fontWeight: 'bold',
-                  letterSpacing: '3px', cursor: 'pointer',
-                  fontFamily: 'Futura PT, Futura, sans-serif',
-                }}>■ TERMINATE CALL</button>
-              </div>
-            )
+            <>
+              {/* OFFLINE — show GO LIVE button (matches SET AVAILABLE TO DIAL position/size) */}
+              {predictiveView === 'offline' && isSpecificCampaign && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', flexShrink: 0 }}>
+                  <button onClick={handleSetAvailable} style={{
+                    padding: '14px', borderRadius: '4px', border: 'none',
+                    background: terminalDark, color: '#4a9eff',
+                    fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
+                    cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                    borderTop: `3px solid #4a9eff`, transition: 'all 0.15s',
+                  }}>● GO LIVE</button>
+                </div>
+              )}
+
+              {/* OFFLINE + no campaign — placeholder matching no-active-campaigns style */}
+              {predictiveView === 'offline' && !isSpecificCampaign && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', flexShrink: 0 }}>
+                  <div style={{
+                    padding: '14px', borderRadius: '4px', background: terminalSurface, color: terminalMuted,
+                    fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
+                    textAlign: 'center', borderTop: `3px solid ${terminalBorder}`,
+                  }}>[ SELECT A CAMPAIGN TO BEGIN ]</div>
+                </div>
+              )}
+
+              {/* AVAILABLE — show GO OFFLINE button (same shape as GO LIVE) */}
+              {predictiveView === 'available' && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', flexShrink: 0 }}>
+                  <button onClick={handleSetAvailable} style={{
+                    padding: '14px', borderRadius: '4px', border: 'none',
+                    background: '#f8e8e8', borderTop: `3px solid ${terminalRed}`,
+                    color: terminalRed, fontSize: '12px', fontWeight: 'bold',
+                    letterSpacing: '4px', cursor: 'pointer',
+                    fontFamily: 'Futura PT, Futura, sans-serif',
+                  }}>■ GO OFFLINE</button>
+                </div>
+              )}
+
+              {/* ON CALL — skip + terminate */}
+              {status === 'connected' && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, flexShrink: 0 }}>
+                  <button onClick={handleSkip} style={{
+                    padding: '14px', borderRadius: '4px',
+                    background: '#f8f4e8', border: `1px solid #8a6a1a`,
+                    borderTop: `3px solid #8a6a1a`, color: '#8a6a1a',
+                    fontSize: '11px', fontWeight: 'bold', letterSpacing: '3px',
+                    cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                  }}>⏭ SKIP / NEXT LEAD</button>
+                  <button onClick={async () => {
+                    await hangupCall(activeCallSid)
+                    setStatus('idle')
+                    setCurrentLead(null)
+                    setShowDisposition(false)
+                    setDisposition('')
+                    setSeconds(0)
+                    lastIncomingCallSidRef.current = null
+                  }} style={{
+                    padding: '14px', borderRadius: '4px', border: 'none',
+                    background: '#f8e8e8', borderTop: `3px solid ${terminalRed}`,
+                    color: terminalRed, fontSize: '11px', fontWeight: 'bold',
+                    letterSpacing: '3px', cursor: 'pointer',
+                    fontFamily: 'Futura PT, Futura, sans-serif',
+                  }}>■ TERMINATE CALL</button>
+                </div>
+              )}
+            </>
           ) : (
-            // NON-PREDICTIVE — original button logic
+            // NON-PREDICTIVE — original button logic preserved
             <div style={{ display: 'grid', gridTemplateColumns: status === 'connected' ? '1fr 1fr' : status === 'preview_ready' ? '1fr 1fr' : '1fr', gap: '8px', flexShrink: 0 }}>
               {status === 'idle' && !available && (
                 <button onClick={handleSetAvailable} style={{
