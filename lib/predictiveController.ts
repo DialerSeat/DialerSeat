@@ -9,66 +9,59 @@ const supabase = createClient(
 // =============================================================================
 // PREDICTIVE CONTROLLER
 // =============================================================================
-// The fan-out logic that places multiple simultaneous outbound calls for one
-// agent in predictive mode.
+// Pure server-side function. Invoked by /api/dialer/heartbeat every 5s
+// (was: /api/calls/predictive-tick by the client — now deprecated).
 //
-// FIRES WHEN: /api/calls/predictive-tick is POSTed (by the dialer page when
-// an agent transitions to ready+predictive+has-campaign).
+// FIRES WHEN: agent's heartbeat reports state in (ready/on_call/wrapping)
+//             AND dialer_mode='predictive' AND has campaign AND not yielding
 //
 // CORE LOGIC:
-//   1. Look up agent's session and verify it's ready+predictive+campaign
-//   2. Determine N = how many lines to dial
-//        a. agent_predictive_prefs.preferred_lines (if set)
-//        b. else campaigns.predictive_lines_per_agent
-//        c. clamped to [1, predictive_lines_max] (max ceiling 5)
-//   3. Count in-flight calls for this campaign+session (calls inserted in
-//      last 60s with no completion signal)
-//   4. desired = N, shouldDial = max(0, N - inFlight)
+//   1. Look up agent's preferred_lines (or campaign default)
+//   2. Clamp to [1, 5] AND apply abandon-rate auto-degrade (if >=2.5%, force 1)
+//   3. Count in-flight calls scoped to this session
+//   4. desired = effectiveLines, shouldDial = max(0, desired - inFlight)
 //   5. Atomically claim shouldDial leads via claim_next_leads_for_campaign()
-//   6. For each claimed lead, place an outbound call via placeOutboundCall()
-//      with source='controller_fanout'
-//   7. Return summary so the API endpoint can report back
+//   6. DEDUPE by phone number (new — fixes the all-same-number test case)
+//   7. For each unique phone, place an outbound call with source='controller_fanout'
+//   8. Release any failed-to-dial OR deduped claims back to the pool
 //
-// ABANDON HANDLING (later in the call lifecycle, not here):
-//   When AMD says human on a fanout call, /api/calls/amd-result will either:
-//   - Route to the agent if they're still ready (their UI picks it up via
-//     polling or websocket)
-//   - Or play the abandon TwiML if the agent is already on another call
-//   That logic lives in amd-result, not here — controller's job ends once
-//   the leads are dialing.
-//
-// ABANDON-RATE THROTTLING:
-//   The heartbeat already returns should_yield=true when 30d rate > 2.8%.
-//   The dialer client honors that and doesn't fire predictive-tick. So if
-//   we got here, abandon rate is under the throttle. Controller does NOT
-//   re-check abandon rate — it trusts the heartbeat decision.
-//
-//   However, we do check campaign_abandon_rate_30d and if >= 2.5%, we
-//   FORCE shouldDial = 1 (auto-degrade to progressive). This is the
-//   hard safety net.
+// REFILLS DURING ON_CALL / WRAPPING:
+//   This is the key speed feature. When agent is talking, controller still
+//   refills lines so that by the time they disposition, the next human is
+//   already queued. ReadyMode's "set it and forget it" philosophy.
 // =============================================================================
 
-const HARD_LINE_CAP = 5                          // never fire more than 5
-const ABANDON_AUTO_DEGRADE_PCT = 2.5             // force 1 line at/above this
+const HARD_LINE_CAP = 5
+const ABANDON_AUTO_DEGRADE_PCT = 2.5
 
 export interface ControllerResult {
-  fired: number                                  // how many calls placed
-  desired: number                                // target N before any clamping
-  inFlight: number                               // existing in-flight count
-  effectiveLines: number                         // post-clamp lines value
-  degraded: boolean                              // abandon-rate forced 1x
-  reason: string                                 // human-readable
-  callSids: string[]                             // placed-call SIDs
-  skipped: number                                // leads claimed but skipped (TCPA, etc)
-  released: number                               // stale claims cleaned
+  fired: number
+  desired: number
+  inFlight: number
+  effectiveLines: number
+  degraded: boolean
+  reason: string
+  callSids: string[]
+  skipped: number
+  released: number
+  dedupedPhones: number      // NEW — how many leads in the batch were dupes
 }
 
 interface RunControllerInput {
-  sessionId: string                              // agent_sessions.id
+  sessionId: string
   campaignId: string
-  clerkId: string                                // for placeOutboundCall.userId
-  internalUserId: string                         // for matching agent_sessions.user_id
+  clerkId: string
+  internalUserId: string
   teamId: string | null
+}
+
+// Normalize a phone number for dedup comparison.
+// '+13365925053', '13365925053', '3365925053', '336-592-5053' all → '13365925053'
+function normalizePhone(raw: string): string {
+  const digits = (raw || '').replace(/\D/g, '')
+  if (digits.length === 11 && digits.startsWith('1')) return digits
+  if (digits.length === 10) return '1' + digits
+  return digits
 }
 
 export async function runPredictiveController(
@@ -76,9 +69,7 @@ export async function runPredictiveController(
 ): Promise<ControllerResult> {
   const { sessionId, campaignId, clerkId, internalUserId, teamId } = input
 
-  // ── Opportunistic stale-claim cleanup ──────────────────────────────────
-  // Every controller tick releases claims older than 30s. Cheap, idempotent.
-  // If nothing's stale, returns 0 instantly.
+  // ── Stale-claim sweep (cheap, idempotent) ──────────────────────────────
   let released = 0
   try {
     const { data } = await supabase.rpc('release_stale_lead_claims')
@@ -87,27 +78,18 @@ export async function runPredictiveController(
     console.error('[controller] stale claim sweep failed', sweepErr)
   }
 
-  // ── Look up campaign config ────────────────────────────────────────────
-  const { data: campaign, error: campaignErr } = await supabase
+  // ── Campaign config ────────────────────────────────────────────────────
+  const { data: campaign } = await supabase
     .from('campaigns')
-    .select('id, dialer_mode, predictive_lines_per_agent, predictive_lines_max, user_id')
+    .select('id, dialer_mode, predictive_lines_per_agent, predictive_lines_max')
     .eq('id', campaignId)
     .maybeSingle()
 
-  if (campaignErr || !campaign) {
-    return {
-      fired: 0, desired: 0, inFlight: 0, effectiveLines: 0, degraded: false,
-      reason: `campaign ${campaignId} not found`,
-      callSids: [], skipped: 0, released,
-    }
+  if (!campaign) {
+    return zeroResult(`campaign ${campaignId} not found`, released)
   }
-
   if (campaign.dialer_mode !== 'predictive') {
-    return {
-      fired: 0, desired: 0, inFlight: 0, effectiveLines: 0, degraded: false,
-      reason: `campaign mode is ${campaign.dialer_mode}, not predictive`,
-      callSids: [], skipped: 0, released,
-    }
+    return zeroResult(`campaign mode is ${campaign.dialer_mode}, not predictive`, released)
   }
 
   // ── Determine N (lines for this agent) ─────────────────────────────────
@@ -150,17 +132,20 @@ export async function runPredictiveController(
   }
 
   // ── Count in-flight calls for THIS session ─────────────────────────────
-  // We scope to this session_id (via dial_group_id) so two agents on the
-  // same campaign each get their own line count. Without this, agent A's
-  // calls would count against agent B's quota.
-  const sixtySecondsAgo = new Date(Date.now() - 60_000).toISOString()
+  // Scoped to dial_group_id=sessionId so two agents on the same campaign
+  // don't pollute each other's line counts.
+  //
+  // "In-flight" = no disposition yet AND placed within last 90s.
+  // Previously used duration=0 which incorrectly excluded calls that had
+  // just ended but hadn't been dispositioned yet.
+  const ninetySecondsAgo = new Date(Date.now() - 90_000).toISOString()
   const { count: inFlightCount } = await supabase
     .from('calls')
     .select('id', { count: 'exact', head: true })
     .eq('campaign_id', campaignId)
     .eq('dial_group_id', sessionId)
-    .gte('created_at', sixtySecondsAgo)
-    .eq('duration', 0)
+    .gte('created_at', ninetySecondsAgo)
+    .is('disposition', null)
 
   const inFlight = inFlightCount || 0
   const desired = effectiveLines
@@ -170,11 +155,11 @@ export async function runPredictiveController(
     return {
       fired: 0, desired, inFlight, effectiveLines, degraded,
       reason: `at target: ${inFlight}/${desired} in flight`,
-      callSids: [], skipped: 0, released,
+      callSids: [], skipped: 0, released, dedupedPhones: 0,
     }
   }
 
-  // ── Atomically claim N leads ───────────────────────────────────────────
+  // ── Atomically claim leads ─────────────────────────────────────────────
   const { data: claimedLeads, error: claimErr } = await supabase.rpc(
     'claim_next_leads_for_campaign',
     {
@@ -185,11 +170,11 @@ export async function runPredictiveController(
   )
 
   if (claimErr) {
-    console.error('[controller] claim_next_leads_for_campaign failed', claimErr)
+    console.error('[controller] claim failed', claimErr)
     return {
       fired: 0, desired, inFlight, effectiveLines, degraded,
       reason: `claim failed: ${claimErr.message}`,
-      callSids: [], skipped: 0, released,
+      callSids: [], skipped: 0, released, dedupedPhones: 0,
     }
   }
 
@@ -203,7 +188,50 @@ export async function runPredictiveController(
     return {
       fired: 0, desired, inFlight, effectiveLines, degraded,
       reason: 'no claimable leads',
-      callSids: [], skipped: 0, released,
+      callSids: [], skipped: 0, released, dedupedPhones: 0,
+    }
+  }
+
+  // ── PHONE DEDUPLICATION (new) ──────────────────────────────────────────
+  // If the batch contains multiple leads with the same phone number (your
+  // test case had 4 leads all pointing to 336-592-5053), only dial each
+  // unique phone once. Release the duplicates so they can be tried later
+  // (likely a data quality issue but we don't want to FAIL the batch).
+  const phoneSeen = new Set<string>()
+  const leadsToCall: typeof leads = []
+  const dupeLeadIds: string[] = []
+
+  for (const lead of leads) {
+    const phone = normalizePhone(lead.phone)
+    if (!phone) {
+      // Invalid phone — release claim, skip
+      dupeLeadIds.push(lead.id)
+      continue
+    }
+    if (phoneSeen.has(phone)) {
+      // Duplicate within this batch — release claim, skip
+      dupeLeadIds.push(lead.id)
+      continue
+    }
+    phoneSeen.add(phone)
+    leadsToCall.push(lead)
+  }
+
+  // Release dupes / invalid in parallel
+  if (dupeLeadIds.length > 0) {
+    await Promise.allSettled(
+      dupeLeadIds.map(leadId =>
+        supabase.rpc('release_lead_claim', { p_lead_id: leadId })
+      )
+    )
+    console.log(`[controller] released ${dupeLeadIds.length} dupes/invalid from batch`)
+  }
+
+  if (leadsToCall.length === 0) {
+    return {
+      fired: 0, desired, inFlight, effectiveLines, degraded,
+      reason: `claimed ${leads.length} leads but all were dupes/invalid`,
+      callSids: [], skipped: 0, released, dedupedPhones: dupeLeadIds.length,
     }
   }
 
@@ -212,7 +240,7 @@ export async function runPredictiveController(
   let skipped = 0
 
   const placements = await Promise.allSettled(
-    leads.map(lead =>
+    leadsToCall.map(lead =>
       placeOutboundCall({
         to: lead.phone,
         userId: clerkId,
@@ -227,12 +255,11 @@ export async function runPredictiveController(
 
   for (let i = 0; i < placements.length; i++) {
     const result = placements[i]
-    const lead = leads[i]
+    const lead = leadsToCall[i]
 
     if (result.status === 'fulfilled' && result.value.success && result.value.callSid) {
       callSids.push(result.value.callSid)
     } else {
-      // Release the claim so this lead can be retried later
       skipped++
       try {
         await supabase.rpc('release_lead_claim', { p_lead_id: lead.id })
@@ -243,8 +270,7 @@ export async function runPredictiveController(
       if (result.status === 'fulfilled') {
         console.warn(
           `[controller] placement failed for lead ${lead.id}:`,
-          result.value.error,
-          result.value.detail
+          result.value.error, result.value.detail
         )
       } else {
         console.error(`[controller] placement threw for lead ${lead.id}:`, result.reason)
@@ -260,9 +286,18 @@ export async function runPredictiveController(
     degraded,
     reason: degraded
       ? `auto-degraded to 1x (abandon rate >= ${ABANDON_AUTO_DEGRADE_PCT}%)`
-      : `dialed ${callSids.length}/${shouldDial}, ${skipped} skipped`,
+      : `dialed ${callSids.length}/${leadsToCall.length} unique${dupeLeadIds.length ? `, deduped ${dupeLeadIds.length}` : ''}`,
     callSids,
     skipped,
     released,
+    dedupedPhones: dupeLeadIds.length,
+  }
+}
+
+function zeroResult(reason: string, released: number): ControllerResult {
+  return {
+    fired: 0, desired: 0, inFlight: 0, effectiveLines: 0,
+    degraded: false, reason,
+    callSids: [], skipped: 0, released, dedupedPhones: 0,
   }
 }
