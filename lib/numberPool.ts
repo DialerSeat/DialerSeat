@@ -28,7 +28,44 @@ export interface PoolNumber {
   last_called_at: string | null
 }
 
-export async function pickNumberForLead(leadPhone: string): Promise<PoolNumber | null> {
+// =============================================================================
+// PICK NUMBER FOR LEAD
+// =============================================================================
+// The dialer mode determines how aggressively we localize the caller ID:
+//
+//   - predictive: PURE ROUND-ROBIN across all active numbers in the pool.
+//     Multi-line predictive dialing must spread load across many caller IDs
+//     to avoid carrier spam flagging. Area-code matching is intentionally
+//     skipped here — burning out 2 numbers at high rate is worse than
+//     spreading across 7 at low rate. If you have a 336 lead and only a
+//     201 number is least-recently-used, the 201 gets used. A dial is a
+//     dial; the lead still gets called.
+//
+//   - progressive / power / preview / unknown: TIERED MATCH with fallback.
+//     Try area-code match first (best for answer rates on single-line dials),
+//     then state, then region, then ANY available number. This preserves
+//     the original behavior for non-predictive modes.
+//
+// CRITICAL INVARIANT: This function never returns null because of a missing
+// area-code match. It only returns null if there are LITERALLY zero active
+// numbers in the pool. Every lead gets dialed.
+// =============================================================================
+export async function pickNumberForLead(
+  leadPhone: string,
+  dialerMode?: string
+): Promise<PoolNumber | null> {
+  // ── PREDICTIVE: pure round-robin, ignore area code matching ────────────
+  // The whole point of predictive is multi-line throughput. If we keep
+  // tiered area-code matching here, we'll burn the same 1-2 numbers over
+  // and over while the rest of the pool sits idle. Spread the load.
+  if (dialerMode === 'predictive') {
+    return findActive({})
+  }
+
+  // ── PROGRESSIVE / POWER / PREVIEW / UNDEFINED: tiered match ────────────
+  // Single-line dialing benefits from local-presence caller ID, so we try
+  // to match the lead's area code → state → region first. ALWAYS fall back
+  // to ANY available number — no lead is excluded because of pool geography.
   const areaCode = extractAreaCode(leadPhone)
   const info = areaCode ? getAreaCodeInfo(areaCode) : null
   const state = info?.state ?? null
@@ -49,6 +86,8 @@ export async function pickNumberForLead(leadPhone: string): Promise<PoolNumber |
     if (regionMatch) return regionMatch
   }
 
+  // Final fallback: ANY active number with capacity. The lead will be
+  // dialed — area code mismatch is fine. A dial is a dial.
   return findActive({})
 }
 
