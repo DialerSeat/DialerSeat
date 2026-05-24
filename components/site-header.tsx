@@ -1,8 +1,10 @@
 'use client'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useUser, UserButton } from '@clerk/nextjs'
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
+import { useBranding } from '@/components/ThemeProvider'
 
 const T = {
   bg: '#f0f1f4',
@@ -19,6 +21,18 @@ const T = {
 export default function SiteHeader() {
   const { isSignedIn, isLoaded, user } = useUser()
   const [isAdmin, setIsAdmin] = useState(false)
+
+  // ── WHITE-LABEL BRANDING ──────────────────────────────────────────────
+  // useBranding() returns null on the standard dialerseat.com domain, so
+  // every reference below has a default. White-label tenants override only
+  // what they've explicitly set:
+  //   - brand_name (always required for tenants)
+  //   - logo_url (optional — falls back to the gradient "D" placeholder)
+  //   - primary_color (used to tint the brand link color and accent border)
+  const branding = useBranding()
+  const brandName = branding?.brand_name?.toUpperCase() || 'DIALERSEAT'
+  const brandLogoUrl = branding?.logo_url || null
+  const brandPrimary = branding?.primary_color || T.blue
 
   // We render UserButton inside a wrapper. To make the username text "open
   // the dropdown" when clicked, we forward a click to the avatar element
@@ -117,12 +131,12 @@ export default function SiteHeader() {
               style={{
                 fontSize: 10,
                 letterSpacing: 2.5,
-                color: T.blue,
+                color: brandPrimary,
                 textDecoration: 'none',
                 fontWeight: 'bold',
                 padding: '8px 14px',
                 borderRadius: 4,
-                border: `1px solid ${T.blue}`,
+                border: `1px solid ${brandPrimary}`,
                 background: 'rgba(74,158,255,0.06)',
                 transition: 'all 0.15s',
                 whiteSpace: 'nowrap',
@@ -140,7 +154,9 @@ export default function SiteHeader() {
           )}
         </div>
 
-        {/* CENTER: brand */}
+        {/* CENTER: brand mark + brand name. Both come from useBranding()
+            on white-label subdomains, fall back to the gradient "D" logo
+            and "DIALERSEAT" text on the main domain. */}
         <Link
           href="/"
           className="site-header-brand"
@@ -151,33 +167,60 @@ export default function SiteHeader() {
             textDecoration: 'none',
           }}
         >
-          <div
-            className="site-header-brand-mark"
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: 6,
-              background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <span style={{ color: 'white', fontWeight: 'bold', fontSize: 13 }}>
-              D
+          {brandLogoUrl ? (
+            // Tenant uploaded a logo — render it as an image at the same
+            // dimensions as the default gradient mark
+            <span
+              className="site-header-brand-mark"
+              style={{
+                position: 'relative',
+                width: 28,
+                height: 28,
+                borderRadius: 6,
+                overflow: 'hidden',
+                flexShrink: 0,
+                background: T.darker,
+              }}
+            >
+              <Image
+                src={brandLogoUrl}
+                alt={brandName}
+                fill
+                sizes="28px"
+                style={{ objectFit: 'cover' }}
+                priority
+                unoptimized
+              />
             </span>
-          </div>
+          ) : (
+            <div
+              className="site-header-brand-mark"
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 6,
+                background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <span style={{ color: 'white', fontWeight: 'bold', fontSize: 13 }}>
+                D
+              </span>
+            </div>
+          )}
           <span
             className="site-header-brand-text"
             style={{
               fontSize: 13,
               fontWeight: 'bold',
               letterSpacing: 4,
-              color: T.blue,
+              color: brandPrimary,
             }}
           >
-            DIALERSEAT
+            {brandName}
           </span>
         </Link>
 

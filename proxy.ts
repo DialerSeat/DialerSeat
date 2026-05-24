@@ -52,21 +52,99 @@ interface AccessState {
   isPreserved: boolean
 }
 
+// =============================================================================
+// SUBDOMAIN / TENANT EXTRACTION
+// =============================================================================
+// White-label tenants live at <slug>.dialerseat.com. We extract the slug
+// from the request hostname and attach it as the x-tenant-slug header,
+// which downstream server components read via headers().
+//
+// We intentionally do NOT do a Supabase lookup here — that would add a
+// round-trip to every request including static assets. The header just
+// carries the slug; lib/tenant.ts does the actual branding lookup with
+// caching when the layout or a page actually needs it.
+//
+// Reserved subdomains (www, app, api, admin, dashboard) are treated as
+// the main DialerSeat experience, not white-label. This protects against
+// someone registering 'app.dialerseat.com' as a tenant slug and breaking
+// internal routing.
+//
+// Local development is handled too — slug.localhost:3000 works via
+// /etc/hosts edits or .localhost DNS.
+// =============================================================================
+
+const RESERVED_SUBDOMAINS = new Set([
+  'www', 'app', 'api', 'admin', 'dashboard', 'static', 'cdn', 'assets',
+  'mail', 'email', 'smtp', 'imap', 'pop',
+  'docs', 'blog', 'help', 'support', 'status',
+  'demo', // we use admin "view as team" impersonation instead of demo subdomain
+])
+
+const PRIMARY_DOMAINS = ['dialerseat.com', 'localhost']
+
+function extractTenantSlug(hostname: string): string | null {
+  // Strip port if present (localhost:3000)
+  const host = hostname.split(':')[0].toLowerCase()
+
+  // Find which primary domain this host ends with
+  let primary: string | null = null
+  for (const p of PRIMARY_DOMAINS) {
+    if (host === p) return null // bare domain, not a subdomain
+    if (host.endsWith('.' + p)) {
+      primary = p
+      break
+    }
+  }
+  if (!primary) return null // unknown host, treat as main app
+
+  // Strip the primary domain to get the subdomain portion
+  const subdomain = host.slice(0, -1 - primary.length)
+
+  // Multi-level subdomains (e.g. preview.acme.dialerseat.com) are not
+  // supported as tenants — treat them as main app.
+  if (subdomain.includes('.')) return null
+
+  // Reserved subdomains are never tenants
+  if (RESERVED_SUBDOMAINS.has(subdomain)) return null
+
+  // Sanity check the slug shape: lowercase alphanumeric + hyphens,
+  // 2-30 chars, doesn't start or end with hyphen. Same regex as the
+  // schema CHECK constraint.
+  if (!/^[a-z0-9][a-z0-9-]{0,28}[a-z0-9]$/.test(subdomain)) return null
+
+  return subdomain
+}
+
 export default clerkMiddleware(async (auth, request) => {
+  // ── TENANT EXTRACTION (runs for every request) ──────────────────────────
+  // We attach the tenant slug to BOTH the incoming request (so route
+  // handlers can read it) AND the outgoing response (so server components
+  // can read it via headers()).
+  const hostname = request.headers.get('host') || ''
+  const tenantSlug = extractTenantSlug(hostname)
+
+  // Helper to consistently attach the header to a response
+  const withTenantHeader = (res: NextResponse): NextResponse => {
+    if (tenantSlug) {
+      res.headers.set('x-tenant-slug', tenantSlug)
+    }
+    return res
+  }
+
   if (isPublicRoute(request)) {
-    return NextResponse.next()
+    return withTenantHeader(NextResponse.next())
   }
 
   const { userId } = await auth()
   if (!userId) {
     await auth.protect()
-    return NextResponse.next()
+    return withTenantHeader(NextResponse.next())
   }
 
   // Billing & onboarding bypass everything else — both new and lapsed users
   // need to reach these to (re)subscribe.
   if (isBillingOrOnboardingRoute(request)) {
-    return NextResponse.next()
+    return withTenantHeader(NextResponse.next())
   }
 
   const { tier, isAdmin, isPreserved } = await getAccessState(userId)
@@ -78,14 +156,14 @@ export default clerkMiddleware(async (auth, request) => {
     const res = NextResponse.next()
     res.headers.set('x-access-tier', 'active')
     res.headers.set('x-is-admin', '1')
-    return res
+    return withTenantHeader(res)
   }
 
   // ── ACTIVE SUB → FULL ACCESS ────────────────────────────────────────────
   if (tier === 'active') {
     const res = NextResponse.next()
     res.headers.set('x-access-tier', 'active')
-    return res
+    return withTenantHeader(res)
   }
 
   // ── PRESERVED USER → READ-ONLY DASHBOARD ────────────────────────────────
@@ -107,7 +185,7 @@ export default clerkMiddleware(async (auth, request) => {
     const res = NextResponse.next()
     res.headers.set('x-access-tier', tier)
     res.headers.set('x-data-preserved', '1')
-    return res
+    return withTenantHeader(res)
   }
 
   // ── EVERYONE ELSE → /billing ────────────────────────────────────────────

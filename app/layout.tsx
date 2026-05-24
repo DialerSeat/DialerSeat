@@ -1,7 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { ClerkProvider } from '@clerk/nextjs';
+import { headers } from 'next/headers';
 import "./globals.css";
 import StructuredData from './components/StructuredData';
+import { ThemeProvider } from '@/components/ThemeProvider';
+import { getTenantBranding } from '@/lib/tenant';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://dialerseat.com'),
@@ -49,6 +52,10 @@ export const metadata: Metadata = {
     'team dialer',
     'multi seat dialer',
     'lead vendor dialer',
+    // white-label tier
+    'white label dialer',
+    'agency dialer',
+    'reseller dialer',
   ],
   authors: [{ name: 'DialerSeat' }],
   creator: 'DialerSeat',
@@ -202,11 +209,26 @@ const IOS_SPLASH_SCREENS: Array<{ w: number; h: number; orient: 'portrait' | 'la
   { w: 2796, h: 1290, orient: 'landscape' },
 ];
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // ── WHITE-LABEL TENANT RESOLUTION ─────────────────────────────────────
+  // proxy.ts extracts the subdomain slug from the request hostname and
+  // attaches it as the x-tenant-slug header. We read it here and look up
+  // the tenant's branding via the cached helper. If no header is present
+  // (standard dialerseat.com traffic) or no matching tenant exists, we
+  // get null back and the ThemeProvider passes through unchanged — the
+  // app looks exactly like it does today.
+  //
+  // The tenant lookup uses unstable_cache with a 60s TTL + per-tenant tag.
+  // The admin "save branding" API revalidates the tag immediately so
+  // changes propagate without waiting for the TTL.
+  const h = await headers();
+  const tenantSlug = h.get('x-tenant-slug');
+  const branding = await getTenantBranding(tenantSlug);
+
   return (
     <ClerkProvider localization={dialerseatLocalization}>
       <html lang="en">
@@ -235,12 +257,29 @@ export default function RootLayout({
               />
             );
           })}
+
+          {/* If this is a white-label tenant, point favicon to the tenant's
+              uploaded favicon. Falls through to the default favicon set by
+              metadata.icons when branding is null. */}
+          {branding?.favicon_url && (
+            <link rel="icon" href={branding.favicon_url} />
+          )}
         </head>
         <body>
           {/* JSON-LD structured data — must be inside <body> in the
-              App Router. Google reads it from anywhere on the page. */}
-          <StructuredData />
-          {children}
+              App Router. Google reads it from anywhere on the page.
+              Only emitted for standard DialerSeat traffic — we don't want
+              to claim "DialerSeat" as the Organization on a white-label
+              subdomain, that would confuse search engines. */}
+          {!branding && <StructuredData />}
+
+          {/* ThemeProvider wraps everything. When branding is null it's
+              a pass-through and the app renders as standard DialerSeat.
+              When branding is set, --brand-* CSS variables are injected
+              at :root and useBranding() returns the brand object. */}
+          <ThemeProvider branding={branding}>
+            {children}
+          </ThemeProvider>
         </body>
       </html>
     </ClerkProvider>
