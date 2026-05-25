@@ -2,6 +2,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { useUser, UserButton } from '@clerk/nextjs'
+import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { useBranding } from '@/components/ThemeProvider'
@@ -18,7 +19,39 @@ const T = {
   blue: '#4a9eff',
 }
 
+// =============================================================================
+// SITE HEADER
+// =============================================================================
+// Global header rendered (probably) by the root layout. Shows brand + auth
+// state + DASHBOARD button on every page that doesn't suppress it.
+//
+// v21 FIX — admin desktop suppression:
+//   The Win7 admin shell at /dashboard/admin/desktop owns the entire viewport.
+//   On mobile especially, the site-header was bleeding through over the
+//   Win7 taskbar/desktop. A CSS-based hide via the route's layout.tsx
+//   wasn't sticking (suspect: Next 16 layout style ordering / hydration).
+//
+//   This early-return makes the header DOM-absent on that route at all
+//   viewport sizes. usePathname reads on the client during render, so
+//   the first paint after navigation already has no header — no FOUC.
+//
+//   Pattern matches both `/dashboard/admin/desktop` and any future
+//   sub-routes like `/dashboard/admin/desktop/x` if they appear.
+// =============================================================================
+
+const SUPPRESS_HEADER_PREFIXES = [
+  '/dashboard/admin/desktop',
+]
+
+function shouldSuppressHeader(pathname: string | null): boolean {
+  if (!pathname) return false
+  return SUPPRESS_HEADER_PREFIXES.some((p) => pathname.startsWith(p))
+}
+
 export default function SiteHeader() {
+  const pathname = usePathname()
+  const suppressed = shouldSuppressHeader(pathname)
+
   const { isSignedIn, isLoaded, user } = useUser()
   const [isAdmin, setIsAdmin] = useState(false)
 
@@ -41,16 +74,18 @@ export default function SiteHeader() {
   // Clerk v6+ because UserButton always renders a clickable .cl-userButtonTrigger.
   const userButtonRef = useRef<HTMLDivElement | null>(null)
 
-  // Look up admin status to pick the right DASHBOARD destination
+  // Look up admin status to pick the right DASHBOARD destination.
+  // Hooks above this line will still run when suppressed, which is fine —
+  // we just don't render anything.
   useEffect(() => {
     if (!isLoaded || !isSignedIn || !user?.id) return
+    if (suppressed) return  // skip the lookup on routes we don't render
 
     let cancelled = false
     const lookup = async () => {
       try {
         const supabase = createClient(
           process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          // Anon key is fine here — RLS on users table should allow self-lookup.
           process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
         )
         const { data } = await supabase
@@ -67,7 +102,12 @@ export default function SiteHeader() {
     return () => {
       cancelled = true
     }
-  }, [isLoaded, isSignedIn, user?.id])
+  }, [isLoaded, isSignedIn, user?.id, suppressed])
+
+  // ── EARLY RETURN: suppress header entirely on admin desktop route ────
+  // This is THE fix — the header simply doesn't render. CSS hide attempts
+  // were unreliable, so we go to the source.
+  if (suppressed) return null
 
   // v20: admins land on the Win7 desktop shell. The old /dashboard/admin/analytics
   // route is being removed (per the v20 cleanup list), so this needed to point
@@ -90,8 +130,6 @@ export default function SiteHeader() {
   const openUserMenu = () => {
     const root = userButtonRef.current
     if (!root) return
-    // Clerk's UserButton renders a button with class .cl-userButtonTrigger
-    // in modern versions. We also fall back to any button inside the wrapper.
     const trigger =
       (root.querySelector('.cl-userButtonTrigger') as HTMLButtonElement | null) ||
       (root.querySelector('button') as HTMLButtonElement | null)
@@ -171,8 +209,6 @@ export default function SiteHeader() {
           }}
         >
           {brandLogoUrl ? (
-            // Tenant uploaded a logo — render it as an image at the same
-            // dimensions as the default gradient mark
             <span
               className="site-header-brand-mark"
               style={{
@@ -339,11 +375,9 @@ export default function SiteHeader() {
           .site-header {
             padding: 10px 14px !important;
           }
-          /* Reduce side gutters so brand stays visually centered */
           .site-header-grid {
             gap: 8px !important;
           }
-          /* Brand mark shrinks slightly */
           .site-header-brand-mark {
             width: 24px !important;
             height: 24px !important;
@@ -353,7 +387,6 @@ export default function SiteHeader() {
             font-size: 11px !important;
             letter-spacing: 3px !important;
           }
-          /* DASHBOARD button shrinks; show short ← version */
           .site-header-dashboard-btn {
             font-size: 9px !important;
             padding: 6px 10px !important;
@@ -361,11 +394,9 @@ export default function SiteHeader() {
           }
           .site-header-dashboard-btn-full { display: none !important; }
           .site-header-dashboard-btn-short { display: inline !important; font-size: 14px; letter-spacing: 0; }
-          /* Username gets hidden on mobile to keep header clean — avatar still opens menu */
           .site-header-username {
             display: none !important;
           }
-          /* Auth links shrink */
           .site-header-auth-link {
             font-size: 9px !important;
             padding: 4px 6px !important;
@@ -381,7 +412,6 @@ export default function SiteHeader() {
         /* ──────────────────────────────────────────────────────────────── */
         /* SMALL PHONE (≤ 380px)                                            */
         /* ──────────────────────────────────────────────────────────────── */
-        /* iPhone SE and tiny Android phones — be aggressive about size.    */
         @media (max-width: 380px) {
           .site-header {
             padding: 8px 10px !important;
