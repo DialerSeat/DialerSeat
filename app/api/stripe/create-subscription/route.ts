@@ -17,8 +17,28 @@ const STALE_STATUSES = [
   'trialing',
 ]
 
-// Stripe's error code when an ID we have for a customer/sub/etc no longer
-// exists in Stripe (admin deleted it, test mode wipe, etc).
+// =============================================================================
+// /api/stripe/create-subscription
+// =============================================================================
+// Creates a new Stripe subscription for the calling user. Supports two plans:
+//
+//   plan: 'standard' (default) → $35/wk via STRIPE_PRICE_ID
+//   plan: 'wl'                 → $115/wk via STRIPE_PRICE_WL_BASE
+//
+// WL subscriptions get `metadata.sub_kind = 'whitelabel'` so the webhook
+// branches into the tenant provisioning flow on payment success.
+//
+// REQUEST BODY (all optional):
+//   { plan: 'standard' | 'wl', code?: string }
+//
+// If neither STRIPE_PRICE_ID nor STRIPE_PRICE_WL_BASE env var is set, we
+// return a clear error instead of letting Stripe yell about a missing price.
+//
+// CONSTRAINT: a user can only have ONE active subscription. If they're trying
+// to create a WL sub while having an active standard sub, they get blocked
+// and told to manage from Settings. Same the other way around.
+// =============================================================================
+
 function isResourceMissing(err: any): boolean {
   return err?.code === 'resource_missing' || err?.raw?.code === 'resource_missing'
 }
@@ -38,14 +58,11 @@ async function getOrCreateCustomer(
   let customerId = existingUser?.stripe_customer_id
 
   if (customerId) {
-    // Verify the customer still exists in Stripe. If admin deleted it
-    // out of band, we get a resource_missing error and need to start fresh.
     try {
       const verify = await stripe.customers.retrieve(customerId)
       if (verify && !('deleted' in verify && verify.deleted)) {
         return customerId
       }
-      // Deleted customer object — treat as missing
       console.warn(`[create-sub] stripe customer ${customerId} is marked deleted, recreating`)
       customerId = null
     } catch (err: any) {
@@ -59,7 +76,6 @@ async function getOrCreateCustomer(
   }
 
   if (!customerId) {
-    // Null out the stale value before creating a new one
     await supabase
       .from('users')
       .update({ stripe_customer_id: null })
@@ -98,15 +114,38 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No email on user' }, { status: 400 })
     }
 
+    // ── PARSE BODY: plan + promo code ─────────────────────────────────
+    let plan: 'standard' | 'wl' = 'standard'
     let promoCode: string | null = null
     try {
       const body = await req.json().catch(() => ({}))
+      if (body?.plan === 'wl') plan = 'wl'
       promoCode = (body?.code as string)?.trim() || null
     } catch {
-      // body is optional
+      // body optional
     }
 
-    // 1) Ensure user row exists
+    // ── PICK THE PRICE ID ────────────────────────────────────────────
+    const priceId =
+      plan === 'wl'
+        ? process.env.STRIPE_PRICE_WL_BASE
+        : process.env.STRIPE_PRICE_ID
+
+    if (!priceId) {
+      const envVarName = plan === 'wl' ? 'STRIPE_PRICE_WL_BASE' : 'STRIPE_PRICE_ID'
+      console.error(`[create-sub] missing env var: ${envVarName}`)
+      return NextResponse.json(
+        {
+          error:
+            plan === 'wl'
+              ? 'White-label pricing is not configured yet. Contact support.'
+              : 'Subscription pricing is not configured.',
+        },
+        { status: 500 }
+      )
+    }
+
+    // ── ENSURE USER ROW ──────────────────────────────────────────────
     const { error: upsertErr } = await supabase
       .from('users')
       .upsert(
@@ -127,7 +166,7 @@ export async function POST(req: Request) {
       )
     }
 
-    // 2) Get-or-create customer with stale-ID self-healing
+    // ── GET-OR-CREATE STRIPE CUSTOMER ────────────────────────────────
     const customerId = await getOrCreateCustomer(
       userId,
       email,
@@ -135,7 +174,7 @@ export async function POST(req: Request) {
       user.lastName
     )
 
-    // 3) Check Stripe for any LIVE subs that should block
+    // ── CHECK FOR BLOCKING ACTIVE SUBS ───────────────────────────────
     let stripeSubs: Stripe.ApiList<Stripe.Subscription>
     try {
       stripeSubs = await stripe.subscriptions.list({
@@ -145,7 +184,6 @@ export async function POST(req: Request) {
       })
     } catch (err: any) {
       if (isResourceMissing(err)) {
-        // Customer was just deleted between getOrCreate and now. Force fresh.
         await supabase
           .from('users')
           .update({ stripe_customer_id: null })
@@ -172,7 +210,9 @@ export async function POST(req: Request) {
       )
     }
 
-    // 4) Cancel any abandoned incomplete subs
+    // ── CANCEL INCOMPLETE SUBS ───────────────────────────────────────
+    // Includes incompletes from PLAN-SWITCHING: if the user just abandoned
+    // a $35 incomplete to switch to $115, cancel the old $35 here.
     const incompleteSubs = stripeSubs.data.filter((s) => s.status === 'incomplete')
     for (const sub of incompleteSubs) {
       try {
@@ -182,7 +222,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // 5) Clean stale local rows
+    // ── CLEAN STALE LOCAL ROWS ──────────────────────────────────────
     await supabase
       .from('subscriptions')
       .delete()
@@ -195,19 +235,25 @@ export async function POST(req: Request) {
       .eq('user_id', userId)
       .eq('status', 'incomplete')
 
-    // 6) Build sub params
+    // ── BUILD SUB PARAMS ────────────────────────────────────────────
+    // metadata.sub_kind drives webhook routing:
+    //   'whitelabel' → routeWhitelabel (creates tenant row + team)
+    //   absent / 'standard' → routePersonal (existing $35 flow)
     const subParams: Stripe.SubscriptionCreateParams = {
       customer: customerId,
-      items: [{ price: process.env.STRIPE_PRICE_ID! }],
+      items: [{ price: priceId }],
       payment_behavior: 'default_incomplete',
       payment_settings: {
         payment_method_types: ['card'],
         save_default_payment_method: 'on_subscription',
       },
-      metadata: { clerk_id: userId },
+      metadata: {
+        clerk_id: userId,
+        ...(plan === 'wl' ? { sub_kind: 'whitelabel' } : {}),
+      },
     }
 
-    // 7) Promo code
+    // ── PROMO CODE LOOKUP ────────────────────────────────────────────
     if (promoCode) {
       try {
         const promos = await stripe.promotionCodes.list({
@@ -253,7 +299,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // 8) Create sub
+    // ── CREATE SUB ───────────────────────────────────────────────────
     const subscription = await stripe.subscriptions.create({
       ...subParams,
       expand: ['latest_invoice.confirmation_secret'],
@@ -286,13 +332,11 @@ export async function POST(req: Request) {
     return NextResponse.json({
       subscriptionId: subscription.id,
       clientSecret: confirmationSecret,
+      plan,
     })
   } catch (err: any) {
     console.error('create-subscription error:', err)
 
-    // Catch-all: if anywhere deep in this flow we hit a stale-resource
-    // error that didn't get caught at the customer layer, null out the
-    // stripe_customer_id so the next retry starts fresh instead of looping.
     if (isResourceMissing(err)) {
       try {
         const { userId } = await auth()
@@ -302,9 +346,7 @@ export async function POST(req: Request) {
             .update({ stripe_customer_id: null })
             .eq('clerk_id', userId)
         }
-      } catch {
-        // ignore
-      }
+      } catch {}
       return NextResponse.json(
         { error: 'Account out of sync — please try again.' },
         { status: 500 }

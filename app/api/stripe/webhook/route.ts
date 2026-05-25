@@ -20,6 +20,36 @@ const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
+// =============================================================================
+// STRIPE WEBHOOK — v21
+// =============================================================================
+// v20 routed subscriptions by `metadata.sub_kind`:
+//   'team_seat'  → team_seat_charges table
+//   (none / personal) → subscriptions table
+//
+// v21 adds a third route:
+//   'whitelabel' → still hits `subscriptions` table (it's still a personal
+//                  sub from a billing perspective — one clerk_id, one card,
+//                  one weekly charge), but ALSO:
+//                  • Sets users.wl_onboarding_status = 'pending' on first
+//                    payment so the onboarding flow can show
+//                  • Stores the subscription id for future seat-quantity
+//                    updates as the tenant's team grows
+//                  • Does NOT create the tenant row here — that happens
+//                    when the user completes the onboarding form
+//                    (/api/whitelabel/onboarding). We don't want to
+//                    create a half-configured tenant before the user has
+//                    picked a subdomain.
+//
+// FAILURE / CANCEL HANDLING:
+//   If a WL sub goes past_due or canceled, we:
+//     • Mark the tenant row inactive (if it exists)
+//     • Their subdomain stops resolving via the tenant-lookup branding query
+//     • Their team members effectively see the default DialerSeat branding
+//   Same logic for any agent seats charged via team_seat_charges on that
+//   team — already handled by the existing seat-charge handler.
+// =============================================================================
+
 export async function POST(req: Request) {
   const body = await req.text()
   const headersList = await headers()
@@ -37,9 +67,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: `Webhook Error: ${err.message}` }, { status: 400 })
   }
 
-  // Idempotency claim. Stripe retries aggressively on 5xx (up to 3 days).
-  // Without this guard, retries of already-processed events would re-run
-  // every handler — double-provisioning, double seat-charge revocation, etc.
   const claim = await claimStripeEvent(event)
   if (!claim.shouldProcess) {
     console.log(`> Stripe webhook ${event.id} skipped: ${claim.reason}`)
@@ -88,20 +115,19 @@ export async function POST(req: Request) {
   } catch (err: any) {
     console.error('Webhook handler error:', err)
     await markStripeEventFailed(event.id, err)
-    // Return 500 so Stripe retries. The idempotency layer will let the retry
-    // through (status flips to 'received' with bumped attempts).
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }
 
-/**
- * Routes a subscription event to either personal-sub or team-seat handler
- * based on metadata.
- *
- *   metadata.sub_kind === 'team_seat' → seat handler
- *   metadata.clerk_id present (legacy/personal subs) → personal handler
- *   neither → fallback to customer-id lookup (legacy personal subs)
- */
+// =============================================================================
+// ROUTING
+// =============================================================================
+// metadata.sub_kind → which handler:
+//   'team_seat'  → syncSeatCharge
+//   'whitelabel' → routeWhitelabel  (v21)
+//   else         → syncPersonalSubscription
+// =============================================================================
+
 async function routeSubscription(subscription: Stripe.Subscription) {
   const subKind = subscription.metadata?.sub_kind
 
@@ -110,7 +136,11 @@ async function routeSubscription(subscription: Stripe.Subscription) {
     return
   }
 
-  // Personal sub flow (existing behavior)
+  if (subKind === 'whitelabel') {
+    await routeWhitelabel(subscription)
+    return
+  }
+
   await syncPersonalSubscription(subscription)
 }
 
@@ -118,7 +148,6 @@ async function routeSubscriptionDeleted(subscription: Stripe.Subscription) {
   const subKind = subscription.metadata?.sub_kind
 
   if (subKind === 'team_seat') {
-    // Mark the seat charge voided
     await supabase
       .from('team_seat_charges')
       .update({ status: 'voided' })
@@ -126,13 +155,114 @@ async function routeSubscriptionDeleted(subscription: Stripe.Subscription) {
     return
   }
 
-  // Personal sub deletion (existing behavior)
+  if (subKind === 'whitelabel') {
+    await markWhitelabelCanceled(subscription)
+    return
+  }
+
   await markPersonalSubCanceled(subscription)
 }
 
-// ----------------------------------------------------------------------------
-// SEAT CHARGE HANDLING
-// ----------------------------------------------------------------------------
+// =============================================================================
+// WHITE-LABEL HANDLING — v21
+// =============================================================================
+
+async function routeWhitelabel(subscription: Stripe.Subscription) {
+  // WL subs still get the standard subscriptions-table write — they ARE
+  // a personal sub from a billing standpoint. The tenant row is created
+  // separately by the onboarding form.
+  const clerkId =
+    subscription.metadata?.clerk_id ||
+    (await lookupClerkIdByCustomer(subscription))
+
+  if (!clerkId) {
+    console.error('[wl] no clerk_id for subscription', subscription.id)
+    return
+  }
+
+  // 1. Upsert into subscriptions table (same as personal)
+  await upsertPersonalSubscription(subscription, clerkId)
+  await updatePersonalUserStatus(clerkId, subscription)
+
+  // 2. WL-specific state on users table
+  //    - wl_onboarding_status: 'pending' when first paid, 'complete' once
+  //      tenant row is created. The onboarding page checks this flag to
+  //      decide whether to show the form or redirect to dashboard.
+  //    - wl_subscription_id: tracks which sub is the WL one so we can
+  //      later add seat quantity changes to it as the team grows.
+  if (subscription.status === 'active' || subscription.status === 'trialing') {
+    // Only set 'pending' if not already 'complete' — don't reset an
+    // already-onboarded tenant if the sub renews.
+    const { data: u } = await supabase
+      .from('users')
+      .select('wl_onboarding_status')
+      .eq('clerk_id', clerkId)
+      .maybeSingle()
+
+    const updates: Record<string, any> = {
+      wl_subscription_id: subscription.id,
+    }
+    if (!u?.wl_onboarding_status || u.wl_onboarding_status === 'not_started') {
+      updates.wl_onboarding_status = 'pending'
+    }
+
+    const { error } = await supabase
+      .from('users')
+      .update(updates)
+      .eq('clerk_id', clerkId)
+    if (error) {
+      console.error('[wl] failed to mark wl_onboarding_status pending:', error)
+    }
+  }
+
+  // 3. If the sub is past_due/unpaid, deactivate the tenant
+  if (subscription.status === 'past_due' || subscription.status === 'unpaid') {
+    await supabase
+      .from('white_label_tenants')
+      .update({ is_active: false })
+      .eq('owner_clerk_id', clerkId)
+  }
+
+  // 4. If the sub is back to active and a tenant exists, reactivate it
+  if (subscription.status === 'active') {
+    await supabase
+      .from('white_label_tenants')
+      .update({ is_active: true })
+      .eq('owner_clerk_id', clerkId)
+  }
+}
+
+async function markWhitelabelCanceled(subscription: Stripe.Subscription) {
+  const clerkId =
+    subscription.metadata?.clerk_id ||
+    (await lookupClerkIdByCustomer(subscription))
+
+  await supabase
+    .from('subscriptions')
+    .update({
+      status: 'canceled',
+      canceled_at: new Date().toISOString(),
+    })
+    .eq('stripe_subscription_id', subscription.id)
+
+  if (clerkId) {
+    // Deactivate the tenant. We don't DELETE it — keeps subdomain history
+    // and lets the owner re-activate by re-subscribing.
+    await supabase
+      .from('white_label_tenants')
+      .update({ is_active: false })
+      .eq('owner_clerk_id', clerkId)
+
+    await supabase
+      .from('users')
+      .update({ subscription_status: 'canceled' })
+      .eq('clerk_id', clerkId)
+  }
+}
+
+// =============================================================================
+// TEAM SEAT HANDLING — unchanged from v20
+// =============================================================================
 
 async function syncSeatCharge(subscription: Stripe.Subscription) {
   const seatChargeId = subscription.metadata?.seat_charge_id
@@ -142,7 +272,6 @@ async function syncSeatCharge(subscription: Stripe.Subscription) {
     return
   }
 
-  // Map Stripe sub status to our seat_charges status
   let chargeStatus: 'paid' | 'failed' | 'voided' | 'pending'
   switch (subscription.status) {
     case 'active':
@@ -180,8 +309,6 @@ async function syncSeatCharge(subscription: Stripe.Subscription) {
     .update(updates)
     .eq('id', seatChargeId)
 
-  // If sub went past_due/canceled → revoke the member's owner-paid access on this team
-  // This is what enforces "owner stops paying → agents go read-only" mid-cycle.
   if (chargeStatus === 'failed' || chargeStatus === 'voided') {
     const teamMemberId = subscription.metadata?.team_member_id
     if (teamMemberId) {
@@ -195,37 +322,39 @@ async function syncSeatCharge(subscription: Stripe.Subscription) {
   }
 }
 
-// ----------------------------------------------------------------------------
-// PERSONAL SUBSCRIPTION HANDLING (unchanged from previous version)
-// ----------------------------------------------------------------------------
+// =============================================================================
+// PERSONAL SUBSCRIPTION HANDLING — unchanged from v20
+// =============================================================================
 
 async function syncPersonalSubscription(subscription: Stripe.Subscription) {
-  const clerkId = subscription.metadata?.clerk_id
+  const clerkId =
+    subscription.metadata?.clerk_id ||
+    (await lookupClerkIdByCustomer(subscription))
 
   if (!clerkId) {
-    const customerId =
-      typeof subscription.customer === 'string'
-        ? subscription.customer
-        : subscription.customer.id
-
-    const { data: userByCustomer } = await supabase
-      .from('users')
-      .select('clerk_id')
-      .eq('stripe_customer_id', customerId)
-      .maybeSingle()
-
-    if (!userByCustomer) {
-      console.error('No user found for subscription', subscription.id)
-      return
-    }
-
-    await upsertPersonalSubscription(subscription, userByCustomer.clerk_id)
-    await updatePersonalUserStatus(userByCustomer.clerk_id, subscription)
+    console.error('No user found for subscription', subscription.id)
     return
   }
 
   await upsertPersonalSubscription(subscription, clerkId)
   await updatePersonalUserStatus(clerkId, subscription)
+}
+
+async function lookupClerkIdByCustomer(
+  subscription: Stripe.Subscription
+): Promise<string | null> {
+  const customerId =
+    typeof subscription.customer === 'string'
+      ? subscription.customer
+      : subscription.customer.id
+
+  const { data: userByCustomer } = await supabase
+    .from('users')
+    .select('clerk_id')
+    .eq('stripe_customer_id', customerId)
+    .maybeSingle()
+
+  return userByCustomer?.clerk_id ?? null
 }
 
 async function upsertPersonalSubscription(

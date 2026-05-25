@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useUser, useClerk } from '@clerk/nextjs'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { loadStripe } from '@stripe/stripe-js'
 import {
   Elements,
@@ -16,10 +16,63 @@ const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
 )
 
+// =============================================================================
+// BILLING PAGE — v21
+// =============================================================================
+// Now supports TWO plans:
+//
+//   Standard ($35/wk):
+//     - Default plan
+//     - Existing dialer flow, lands on /dashboard after payment
+//
+//   White Label ($115/wk):
+//     - User clicks "Switch to White Label" button OR lands here with
+//       ?plan=wl in the URL (e.g. from the landing-page WL CTA)
+//     - Same payment UI, different Stripe price ID + metadata
+//     - After payment, /billing/success routes WL users to
+//       /onboarding/whitelabel (subdomain + logo + colors) instead of
+//       /dashboard
+//
+// SWITCHING PLANS:
+//   When user toggles between standard/wl, we abandon the current
+//   incomplete subscription and create a fresh one with the new price.
+//   No card details are re-entered — Stripe re-uses the same client
+//   secret pattern, just bound to a new subscription.
+// =============================================================================
+
+type Plan = 'standard' | 'wl'
+
+const PLAN_INFO = {
+  standard: {
+    label: 'STANDARD',
+    price: 35,
+    title: 'START YOUR SUBSCRIPTION',
+    subtitle: 'Pay $35 today and start dialing immediately.',
+    weeklyBlurb: '$35.00 USD',
+    description: 'Standard DialerSeat — one agent seat, all features, billed weekly.',
+  },
+  wl: {
+    label: 'WHITE LABEL',
+    price: 115,
+    title: 'START YOUR WHITE LABEL TENANT',
+    subtitle: 'Pay $115 today to provision your branded dialer.',
+    weeklyBlurb: '$115.00 USD',
+    description:
+      'White-label DialerSeat — your subdomain, your branding. After payment, you’ll pick your subdomain + upload logo + set colors.',
+  },
+} as const
+
 export default function BillingPage() {
   const { user, isLoaded } = useUser()
   const { signOut } = useClerk()
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  // Initial plan: from URL ?plan=wl if present, else standard
+  const initialPlan: Plan = searchParams.get('plan') === 'wl' ? 'wl' : 'standard'
+  const [plan, setPlan] = useState<Plan>(initialPlan)
+  const planInfo = PLAN_INFO[plan]
+
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [checkingStatus, setCheckingStatus] = useState(true)
@@ -29,29 +82,28 @@ export default function BillingPage() {
   const [promoApplied, setPromoApplied] = useState<string | null>(null)
   const [freeWithCoupon, setFreeWithCoupon] = useState(false)
   const [abandoning, setAbandoning] = useState(false)
+  // True while we're re-creating a sub because the user switched plans
+  const [switchingPlan, setSwitchingPlan] = useState(false)
 
-  // Abandon billing → clean up incomplete Stripe sub → sign out → landing.
-  // This is the ONLY exit path from the billing page that isn't "successful payment".
-  // No more landing them in a stale dashboard state. Sign out is the source of truth:
-  // they leave with no session, hit the landing page, can decide whether to come back.
   async function abandonAndSignOut() {
     if (abandoning) return
     setAbandoning(true)
     try {
       await fetch('/api/stripe/abandon-billing', { method: 'POST' })
-    } catch {
-      // Best-effort. Sign out happens regardless.
-    }
+    } catch {}
     try {
       await signOut({ redirectUrl: '/' })
     } catch {
-      // If signOut fails for some reason, force navigation anyway
       router.push('/')
     }
   }
 
-  const initSubscription = async (codeToApply?: string) => {
+  const initSubscription = async (
+    codeToApply?: string,
+    planOverride?: Plan,
+  ) => {
     setError(null)
+    const usePlan = planOverride ?? plan
     try {
       const statusRes = await fetch('/api/stripe/status')
       const statusData = await statusRes.json()
@@ -64,7 +116,10 @@ export default function BillingPage() {
       const createRes = await fetch('/api/stripe/create-subscription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(codeToApply ? { code: codeToApply } : {}),
+        body: JSON.stringify({
+          plan: usePlan,
+          ...(codeToApply ? { code: codeToApply } : {}),
+        }),
       })
       const createData = await createRes.json()
 
@@ -72,6 +127,7 @@ export default function BillingPage() {
         setError(createData.error || 'Failed to start subscription')
         setCheckingStatus(false)
         setSubmittingPromo(false)
+        setSwitchingPlan(false)
         return
       }
 
@@ -79,7 +135,9 @@ export default function BillingPage() {
         setFreeWithCoupon(true)
         setCheckingStatus(false)
         setSubmittingPromo(false)
-        setTimeout(() => router.push('/dashboard'), 1500)
+        setSwitchingPlan(false)
+        const successPath = usePlan === 'wl' ? '/onboarding/whitelabel' : '/dashboard'
+        setTimeout(() => router.push(successPath), 1500)
         return
       }
 
@@ -87,10 +145,12 @@ export default function BillingPage() {
       if (codeToApply) setPromoApplied(codeToApply)
       setCheckingStatus(false)
       setSubmittingPromo(false)
+      setSwitchingPlan(false)
     } catch (err: any) {
       setError(err.message || 'Something went wrong')
       setCheckingStatus(false)
       setSubmittingPromo(false)
+      setSwitchingPlan(false)
     }
   }
 
@@ -99,6 +159,19 @@ export default function BillingPage() {
     initSubscription()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded, user])
+
+  // ── PLAN SWITCH ────────────────────────────────────────────────────
+  const switchTo = async (newPlan: Plan) => {
+    if (newPlan === plan) return
+    setPlan(newPlan)
+    setClientSecret(null)
+    setSwitchingPlan(true)
+    // Reset promo on plan switch — different prices may have different rules
+    setPromoCode('')
+    setPromoApplied(null)
+    setShowPromo(false)
+    await initSubscription(undefined, newPlan)
+  }
 
   const handleApplyPromo = async () => {
     if (!promoCode.trim()) return
@@ -132,7 +205,7 @@ export default function BillingPage() {
         <div style={cardStyle}>
           <div style={{ ...titleStyle, color: '#32ff7e' }}>SUBSCRIPTION ACTIVE</div>
           <div style={subtitleStyle}>
-            Promo code applied. Redirecting to your dashboard...
+            Promo code applied. Redirecting{plan === 'wl' ? ' to white-label setup' : ' to your dashboard'}...
           </div>
         </div>
       </main>
@@ -180,27 +253,66 @@ export default function BillingPage() {
   return (
     <main style={pageStyle}>
       <div style={cardStyle}>
-        <div style={titleStyle}>START YOUR SUBSCRIPTION</div>
-        <div style={subtitleStyle}>
-          Pay $35 today and start dialing immediately.
+        {/* ── PLAN TOGGLE BANNER ────────────────────────────────────── */}
+        {/* Shows current plan + offers to switch to the other one. The
+            non-selected plan is presented as a small button below the
+            title, not a competing visual element — keeps the primary
+            payment CTA the main focus. */}
+        <div style={planBadgeStyle}>
+          <span style={planBadgeLabelStyle}>{'\u25B8'} PLAN</span>
+          <span style={planBadgeNameStyle}>{planInfo.label}</span>
+          <span style={planBadgePriceStyle}>${planInfo.price}/WK</span>
         </div>
 
+        <div style={titleStyle}>{planInfo.title}</div>
+        <div style={subtitleStyle}>{planInfo.subtitle}</div>
+
+        <div style={planDescStyle}>{planInfo.description}</div>
+
+        {/* Switch to the OTHER plan */}
+        {plan === 'standard' ? (
+          <button
+            type="button"
+            onClick={() => switchTo('wl')}
+            disabled={switchingPlan}
+            style={planSwitchStyle}
+          >
+            {switchingPlan ? 'SWITCHING...' : '↗ SWITCH TO WHITE LABEL ($115/WK)'}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => switchTo('standard')}
+            disabled={switchingPlan}
+            style={planSwitchStyle}
+          >
+            {switchingPlan ? 'SWITCHING...' : '↘ SWITCH TO STANDARD ($35/WK)'}
+          </button>
+        )}
+
+        {/* ── BILLING TERMS ─────────────────────────────────────────── */}
         <div style={termsBoxStyle}>
           <div style={termsHeaderStyle}>{'\u25B8'} BILLING TERMS</div>
           <ul style={termsListStyle}>
             <li>
-              <strong style={{ color: '#4a9eff' }}>$35.00 USD</strong> charged today to start your subscription
+              <strong style={{ color: '#4a9eff' }}>{planInfo.weeklyBlurb}</strong> charged today to start your subscription
             </li>
             <li>
               You will be billed{' '}
-              <strong style={{ color: '#4a9eff' }}>$35.00 USD weekly</strong>{' '}
+              <strong style={{ color: '#4a9eff' }}>{planInfo.weeklyBlurb} weekly</strong>{' '}
               automatically thereafter
             </li>
             <li>Cancel anytime in Settings {'\u2014'} service continues until period end</li>
             <li>Subscription is non-refundable once a billing cycle has been charged</li>
+            {plan === 'wl' && (
+              <li style={{ color: '#ffd96a' }}>
+                After payment you'll choose your subdomain, upload your logo, and set your brand colors.
+              </li>
+            )}
           </ul>
         </div>
 
+        {/* ── PROMO CODE ────────────────────────────────────────────── */}
         <div style={promoBoxStyle}>
           {promoApplied ? (
             <div style={promoAppliedStyle}>
@@ -268,7 +380,11 @@ export default function BillingPage() {
           }}
           key={clientSecret}
         >
-          <CheckoutForm onAbandon={abandonAndSignOut} abandoning={abandoning} />
+          <CheckoutForm
+            onAbandon={abandonAndSignOut}
+            abandoning={abandoning}
+            plan={plan}
+          />
         </Elements>
 
         <div style={footerNoteStyle}>
@@ -282,15 +398,19 @@ export default function BillingPage() {
 function CheckoutForm({
   onAbandon,
   abandoning,
+  plan,
 }: {
   onAbandon: () => void
   abandoning: boolean
+  plan: Plan
 }) {
   const stripe = useStripe()
   const elements = useElements()
   const [submitting, setSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [agreed, setAgreed] = useState(false)
+
+  const planInfo = PLAN_INFO[plan]
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -299,10 +419,16 @@ function CheckoutForm({
     setSubmitting(true)
     setErrorMsg(null)
 
+    // The return_url tells Stripe where to redirect after 3DS or
+    // bank confirmation. For WL we land on a setup page, not the dashboard.
+    const successUrl = plan === 'wl'
+      ? `${window.location.origin}/billing/success?plan=wl`
+      : `${window.location.origin}/billing/success`
+
     const { error } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        return_url: `${window.location.origin}/billing/success`,
+        return_url: successUrl,
       },
     })
 
@@ -334,8 +460,8 @@ function CheckoutForm({
           style={{ marginRight: 10, accentColor: '#4a9eff' }}
         />
         <span>
-          I agree my card will be charged <strong>$35.00 USD today</strong> and{' '}
-          <strong>$35.00 USD weekly</strong> thereafter unless I cancel.
+          I agree my card will be charged <strong>{planInfo.weeklyBlurb} today</strong> and{' '}
+          <strong>{planInfo.weeklyBlurb} weekly</strong> thereafter unless I cancel.
         </span>
       </label>
 
@@ -391,6 +517,67 @@ const cardStyle: React.CSSProperties = {
   fontFamily: FUTURA,
 }
 
+const planBadgeStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8,
+  background: 'rgba(74,158,255,0.08)',
+  border: '1px solid #2a4a8a',
+  borderLeft: '3px solid #4a9eff',
+  padding: '6px 10px',
+  borderRadius: 3,
+  marginBottom: 16,
+  fontFamily: FUTURA,
+}
+
+const planBadgeLabelStyle: React.CSSProperties = {
+  fontSize: 9,
+  letterSpacing: 3,
+  color: '#888a92',
+  fontWeight: 700,
+}
+
+const planBadgeNameStyle: React.CSSProperties = {
+  fontSize: 11,
+  letterSpacing: 2,
+  color: '#4a9eff',
+  fontWeight: 700,
+}
+
+const planBadgePriceStyle: React.CSSProperties = {
+  fontSize: 11,
+  letterSpacing: 1,
+  color: '#c0c2ca',
+  fontWeight: 700,
+  marginLeft: 'auto',
+}
+
+const planSwitchStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '10px 14px',
+  background: 'transparent',
+  border: '1px dashed #4a4a5e',
+  borderRadius: 3,
+  color: '#888a92',
+  fontSize: 11,
+  letterSpacing: 2,
+  fontWeight: 700,
+  cursor: 'pointer',
+  fontFamily: FUTURA,
+  marginBottom: 16,
+}
+
+const planDescStyle: React.CSSProperties = {
+  fontSize: 11,
+  lineHeight: 1.6,
+  color: '#c0c2ca',
+  marginBottom: 16,
+  padding: '10px 12px',
+  background: '#0d0e14',
+  border: '1px solid #2a2c34',
+  borderRadius: 3,
+}
+
 const titleStyle: React.CSSProperties = {
   fontSize: 16,
   fontWeight: 700,
@@ -404,7 +591,7 @@ const subtitleStyle: React.CSSProperties = {
   fontSize: 12,
   letterSpacing: 1,
   color: '#888a92',
-  marginBottom: 20,
+  marginBottom: 16,
   fontFamily: FUTURA,
 }
 
