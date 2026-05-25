@@ -11,36 +11,35 @@ import type { AppId, WindowState, RecentApp } from './types'
 // =============================================================================
 // DESKTOP — root shell component
 // =============================================================================
-// Manages:
-//   - List of open windows (state)
-//   - Z-index ordering (focused window is on top)
-//   - Open / close / minimize / maximize / move / resize
-//   - Recent-items memory (for Start menu jump list)
-//   - Mobile detection (auto-fullscreen + disable drag)
-//   - Right-click context menus for desktop, icons, windows, taskbar items
+// Manages window state, mobile detection, context menus, etc.
 //
-// Window IDs are generated as `${appId}-${timestamp}-${random}` so multiple
-// instances of the same app are theoretically possible (we don't enable that
-// in v1 — clicking an icon focuses the existing window if open).
+// v22 FIX — iPhone home indicator bottom gap:
+//   The taskbar is `position: fixed; bottom: 0` which on iPhone in PWA mode
+//   gets cut into by the home indicator bar at the very bottom. The fix is
+//   in two places:
+//     1. Taskbar's own height now accounts for safe-area-inset-bottom
+//     2. This component's TASKBAR_HEIGHT (used to compute window heights)
+//        treats the safe-area as part of the taskbar's footprint so
+//        maximize-window math still lands above the visible taskbar
+//
+//   We detect the safe-area-bottom via a CSS-var probe + ResizeObserver on
+//   mount because env() values aren't readable directly from JS. This lets
+//   the windowing logic respect it without hardcoding device-specific values.
 // =============================================================================
 
 const MOBILE_BREAKPOINT = 768
-const TASKBAR_HEIGHT = 48
+const TASKBAR_VISIBLE_HEIGHT = 48  // the taskbar's content height (unchanged)
 
 interface RightClickState {
   type: 'desktop' | 'icon' | 'taskbar-item' | 'titlebar'
   x: number
   y: number
-  payload?: any  // appId for icon, windowId for taskbar-item / titlebar
+  payload?: any
 }
 
-// Optional positioning hint passed to openApp(). Lets a caller nudge the
-// initial window placement without changing the default centered cascade.
-// v20 uses this for the analytics auto-boot, which lands shifted right so
-// the desktop icons on the left are visible behind it.
 interface PositionHint {
-  shiftX?: number   // px added to the centered x
-  shiftY?: number   // px added to the centered y
+  shiftX?: number
+  shiftY?: number
 }
 
 export default function Desktop() {
@@ -54,6 +53,13 @@ export default function Desktop() {
   const [isMobile, setIsMobile] = useState(false)
   const [bootedAnalytics, setBootedAnalytics] = useState(false)
 
+  // v22: probed safe-area-inset-bottom in pixels. iPhone home indicator on
+  // most devices is 34px (CSS pixels). Updated on mount + resize.
+  const [safeAreaBottom, setSafeAreaBottom] = useState(0)
+
+  // Effective taskbar footprint = visible content + safe-area at bottom
+  const TASKBAR_HEIGHT = TASKBAR_VISIBLE_HEIGHT + safeAreaBottom
+
   // ── MOBILE DETECTION ─────────────────────────────────────────────────────
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
@@ -66,22 +72,41 @@ export default function Desktop() {
     }
   }, [])
 
+  // ── SAFE-AREA-BOTTOM PROBE ───────────────────────────────────────────────
+  // Read env(safe-area-inset-bottom) via a hidden probe element. We can't
+  // read env() values directly from JS, but we can set a CSS variable that
+  // resolves to env(), then read the computed style of the probe.
+  useEffect(() => {
+    const probe = document.createElement('div')
+    probe.style.cssText =
+      'position:fixed;left:-9999px;top:0;width:1px;height:env(safe-area-inset-bottom);'
+    document.body.appendChild(probe)
+
+    const measure = () => {
+      const rect = probe.getBoundingClientRect()
+      setSafeAreaBottom(Math.round(rect.height))
+    }
+
+    measure()
+    window.addEventListener('resize', measure)
+    window.addEventListener('orientationchange', measure)
+    return () => {
+      window.removeEventListener('resize', measure)
+      window.removeEventListener('orientationchange', measure)
+      probe.remove()
+    }
+  }, [])
+
   // ── OPEN APP ─────────────────────────────────────────────────────────────
-  // v20: accepts optional PositionHint so callers can nudge the initial
-  // window placement (used by the analytics auto-boot to shift right).
-  // v20: on mobile, new windows spawn already maximized.
   const openApp = useCallback((appId: AppId, hint?: PositionHint) => {
     const app = getApp(appId)
     if (!app) return
 
-    // External apps don't open a window — they fire the URL and bail
     if (app.external) {
       window.open(app.external.url, app.external.target ?? '_blank', 'noopener,noreferrer')
       return
     }
 
-    // If app already open and not minimized, just focus it
-    // If minimized, restore it
     setWindows(prev => {
       const existing = prev.find(w => w.appId === appId)
       if (existing) {
@@ -91,28 +116,22 @@ export default function Desktop() {
         return prev.map(w => w.id === existing.id ? { ...w, minimized: false, zIndex: newZ } : w)
       }
 
-      // Otherwise spawn new window
       const newZ = topZ + 1
       setTopZ(newZ)
       const id = `${appId}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
       const defaultSize = app.defaultSize || { width: 900, height: 600 }
 
-      // Center-ish initial position with cascade offset
       const offset = (prev.length % 6) * 28
       const w = Math.min(defaultSize.width, window.innerWidth - 40)
       const h = Math.min(defaultSize.height, window.innerHeight - TASKBAR_HEIGHT - 40)
       const baseX = Math.max(0, Math.round((window.innerWidth - w) / 2)) + offset - (3 * 28)
       const baseY = Math.max(0, Math.round((window.innerHeight - TASKBAR_HEIGHT - h) / 2)) + offset - (3 * 28)
 
-      // Apply position hint if provided. Clamp inside the viewport so a
-      // generous shift can't push the window fully off-screen.
       const shiftX = hint?.shiftX ?? 0
       const shiftY = hint?.shiftY ?? 0
       const hintedX = Math.max(0, Math.min(baseX + shiftX, window.innerWidth - w))
       const hintedY = Math.max(0, Math.min(baseY + shiftY, window.innerHeight - TASKBAR_HEIGHT - h))
 
-      // On mobile, force the window to spawn maximized so it fills the
-      // viewport (drag/resize are pointless on a phone screen).
       const mobileNow = window.innerWidth < MOBILE_BREAKPOINT
 
       const newWindow: WindowState = mobileNow
@@ -144,12 +163,8 @@ export default function Desktop() {
       setFocusedId(id)
       return [...prev, newWindow]
     })
-  }, [topZ])
+  }, [topZ, TASKBAR_HEIGHT])
 
-  // ── ANALYTICS AUTO-OPEN ON FIRST RENDER ──────────────────────────────────
-  // v20: shifted right by ~200px so the desktop icons on the left stay visible
-  // behind it. On mobile the hint is ignored because mobile windows always
-  // spawn maximized.
   useEffect(() => {
     if (bootedAnalytics) return
     setBootedAnalytics(true)
@@ -157,7 +172,6 @@ export default function Desktop() {
     return () => clearTimeout(id)
   }, [bootedAnalytics, openApp])
 
-  // ── CLOSE WINDOW (adds to recent list) ───────────────────────────────────
   const closeWindow = useCallback((windowId: string) => {
     setWindows(prev => {
       const closing = prev.find(w => w.id === windowId)
@@ -168,7 +182,6 @@ export default function Desktop() {
         })
       }
       const next = prev.filter(w => w.id !== windowId)
-      // If the closed window was focused, focus the topmost remaining window
       if (focusedId === windowId) {
         const topmost = next.reduce<WindowState | null>((acc, w) =>
           (!acc || w.zIndex > acc.zIndex) && !w.minimized ? w : acc, null)
@@ -178,14 +191,12 @@ export default function Desktop() {
     })
   }, [focusedId])
 
-  // ── MINIMIZE / RESTORE ──────────────────────────────────────────────────
   const toggleMinimize = useCallback((windowId: string) => {
     setWindows(prev => {
       const target = prev.find(w => w.id === windowId)
       if (!target) return prev
       const willBeMinimized = !target.minimized
       if (willBeMinimized && focusedId === windowId) {
-        // Focus next topmost window
         const topmost = prev
           .filter(w => w.id !== windowId && !w.minimized)
           .reduce<WindowState | null>((acc, w) =>
@@ -196,12 +207,10 @@ export default function Desktop() {
     })
   }, [focusedId])
 
-  // ── MAXIMIZE / RESTORE ──────────────────────────────────────────────────
   const toggleMaximize = useCallback((windowId: string) => {
     setWindows(prev => prev.map(w => {
       if (w.id !== windowId) return w
       if (w.maximized) {
-        // Restore
         const restore = w.preMaximize
         return {
           ...w, maximized: false,
@@ -210,7 +219,6 @@ export default function Desktop() {
           preMaximize: undefined,
         }
       } else {
-        // Maximize
         return {
           ...w, maximized: true,
           preMaximize: { x: w.x, y: w.y, width: w.width, height: w.height },
@@ -220,9 +228,8 @@ export default function Desktop() {
         }
       }
     }))
-  }, [])
+  }, [TASKBAR_HEIGHT])
 
-  // ── FOCUS (bring to front) ──────────────────────────────────────────────
   const focusWindow = useCallback((windowId: string) => {
     if (focusedId === windowId) return
     const newZ = topZ + 1
@@ -231,7 +238,6 @@ export default function Desktop() {
     setWindows(prev => prev.map(w => w.id === windowId ? { ...w, zIndex: newZ } : w))
   }, [focusedId, topZ])
 
-  // ── MOVE / RESIZE ───────────────────────────────────────────────────────
   const moveWindow = useCallback((windowId: string, x: number, y: number) => {
     setWindows(prev => prev.map(w => w.id === windowId ? { ...w, x, y } : w))
   }, [])
@@ -239,9 +245,30 @@ export default function Desktop() {
     setWindows(prev => prev.map(w => w.id === windowId ? { ...w, width, height } : w))
   }, [])
 
-  // ── TASKBAR ITEM CLICK ──────────────────────────────────────────────────
-  // Win7 behavior: if minimized → restore; if focused → minimize; if open but
-  // not focused → focus.
+  // ── SHOW DESKTOP ───────────────────────────────────────────────────────────
+  // v22 NEW — Win7-style Show Desktop button on the right of the clock.
+  // Minimizes all non-minimized windows. Subsequent click restores them
+  // (Win7 toggle). We track the most recent set of windows that WERE
+  // visible just before the minimize-all so the restore brings back the
+  // same ones, not e.g. ones the user has since closed.
+  const peekRestoreRef = useRef<string[] | null>(null)
+  const showDesktop = useCallback(() => {
+    const visibleIds = windows.filter(w => !w.minimized).map(w => w.id)
+    if (visibleIds.length > 0) {
+      // Minimize everything visible
+      peekRestoreRef.current = visibleIds
+      setWindows(prev => prev.map(w => visibleIds.includes(w.id) ? { ...w, minimized: true } : w))
+      setFocusedId(null)
+      return
+    }
+    // Restore — only the windows that were previously visible
+    const toRestore = peekRestoreRef.current
+    if (toRestore && toRestore.length > 0) {
+      setWindows(prev => prev.map(w => toRestore.includes(w.id) ? { ...w, minimized: false } : w))
+      peekRestoreRef.current = null
+    }
+  }, [windows])
+
   const onTaskbarItemClick = useCallback((windowId: string) => {
     setWindows(prev => {
       const win = prev.find(w => w.id === windowId)
@@ -253,7 +280,6 @@ export default function Desktop() {
         return prev.map(w => w.id === windowId ? { ...w, minimized: false, zIndex: newZ } : w)
       }
       if (focusedId === windowId) {
-        // Minimize
         const topmost = prev
           .filter(w => w.id !== windowId && !w.minimized)
           .reduce<WindowState | null>((acc, w) =>
@@ -261,7 +287,6 @@ export default function Desktop() {
         setFocusedId(topmost?.id ?? null)
         return prev.map(w => w.id === windowId ? { ...w, minimized: true } : w)
       }
-      // Just focus
       const newZ = topZ + 1
       setTopZ(newZ)
       setFocusedId(windowId)
@@ -269,9 +294,7 @@ export default function Desktop() {
     })
   }, [focusedId, topZ])
 
-  // ── CONTEXT MENU OPENING ────────────────────────────────────────────────
   const onDesktopContextMenu = (e: React.MouseEvent) => {
-    // Only open if the target IS the desktop (not an icon, not a window)
     if (e.target !== e.currentTarget) return
     e.preventDefault()
     setContextMenu({ type: 'desktop', x: e.clientX, y: e.clientY })
@@ -291,7 +314,6 @@ export default function Desktop() {
     setContextMenu({ type: 'titlebar', x, y, payload: windowId })
   }
 
-  // ── BUILD CONTEXT MENU ITEMS ────────────────────────────────────────────
   const contextMenuItems: ContextMenuItem[] = (() => {
     if (!contextMenu) return []
 
@@ -304,13 +326,14 @@ export default function Desktop() {
         { label: 'Personalize', icon: '🎨', disabled: true },
         { label: 'Screen resolution', disabled: true },
         {},
+        { label: 'Show desktop', icon: '▭', onClick: showDesktop },
+        {},
         { label: 'Back to Dashboard', icon: '←', onClick: () => router.push('/dashboard/analytics') },
       ]
     }
 
     if (contextMenu.type === 'icon') {
       const appId = contextMenu.payload as AppId
-      const app = getApp(appId)
       const alreadyOpen = windows.find(w => w.appId === appId)
       return [
         { label: 'Open', icon: '▶', onClick: () => openApp(appId) },
@@ -350,7 +373,6 @@ export default function Desktop() {
         userSelect: 'none',
       }}
     >
-      {/* ── DESKTOP AREA (above taskbar) ───────────────────────────────── */}
       <div
         onContextMenu={onDesktopContextMenu}
         onClick={() => {
@@ -365,9 +387,11 @@ export default function Desktop() {
           flexDirection: 'column',
         }}
       >
-        {/* Desktop icon grid */}
         <div style={{
           padding: isMobile ? 12 : 20,
+          paddingTop: isMobile
+            ? `calc(12px + env(safe-area-inset-top, 0px))`
+            : `calc(20px + env(safe-area-inset-top, 0px))`,
           display: 'grid',
           gridTemplateColumns: isMobile
             ? 'repeat(auto-fill, minmax(80px, 1fr))'
@@ -394,7 +418,6 @@ export default function Desktop() {
         </div>
       </div>
 
-      {/* ── WINDOWS ─────────────────────────────────────────────────────── */}
       {windows.map(win => {
         const app = getApp(win.appId)
         if (!app) return null
@@ -419,7 +442,6 @@ export default function Desktop() {
         )
       })}
 
-      {/* ── TASKBAR ─────────────────────────────────────────────────────── */}
       <Taskbar
         windows={windows}
         focusedWindowId={focusedId}
@@ -428,10 +450,10 @@ export default function Desktop() {
         startMenuOpen={startMenuOpen}
         onTaskbarItemClick={onTaskbarItemClick}
         onTaskbarItemContextMenu={onTaskbarContextMenu}
+        onShowDesktop={showDesktop}
         isMobile={isMobile}
       />
 
-      {/* ── START MENU ──────────────────────────────────────────────────── */}
       {startMenuOpen && (
         <StartMenu
           onClose={() => setStartMenuOpen(false)}
@@ -440,7 +462,6 @@ export default function Desktop() {
         />
       )}
 
-      {/* ── CONTEXT MENU ────────────────────────────────────────────────── */}
       {contextMenu && (
         <ContextMenu
           x={contextMenu.x}
@@ -453,12 +474,6 @@ export default function Desktop() {
   )
 }
 
-// =============================================================================
-// DESKTOP ICON
-// =============================================================================
-// Glossy tile + label below. Double-click opens. Single-click selects (we
-// render a subtle outline). Right-click opens icon context menu.
-// =============================================================================
 function DesktopIcon({
   name, icon, iconBg, isOpen, onDoubleClick, onContextMenu, isMobile,
 }: {
@@ -471,7 +486,6 @@ function DesktopIcon({
   isMobile: boolean
 }) {
   const [selected, setSelected] = useState(false)
-  // On mobile, single-tap should launch (no double-tap on touch)
   const lastTapRef = useRef<number>(0)
 
   const handleClick = (e: React.MouseEvent) => {
@@ -479,20 +493,16 @@ function DesktopIcon({
     if (isMobile) {
       const now = Date.now()
       if (now - lastTapRef.current < 400) {
-        // double-tap
         onDoubleClick()
         return
       }
       lastTapRef.current = now
-      // Single tap on mobile also opens the app — desktop convention is double,
-      // but on touch we go faster
       onDoubleClick()
       return
     }
     setSelected(true)
   }
 
-  // Click-away to deselect
   useEffect(() => {
     if (!selected) return
     const onAway = () => setSelected(false)

@@ -8,25 +8,10 @@ import WLCallout from '@/components/wl-callout'
 // =============================================================================
 // LANDING PAGE
 // =============================================================================
-// Default behavior:
-//   - Logged out → renders landing with ORIGINAL layout (logo left, links right)
-//   - Logged in → REDIRECTS to /dashboard
-//
-// Override:
-//   - Logged in + ?view=landing query param → renders landing with the
-//     logged-in nav variant: DASHBOARD button left, logo center, profile+name
-//     right. The "LANDING PAGE" button on the analytics page header links
-//     here with that param so paying users can review the public marketing
-//     site without being kicked back to the app.
-//
-// Body CTAs:
-//   - Logged-in landing visitor → GO TO DASHBOARD (→ /dashboard)
-//   - Logged-out visitor → GET STARTED (→ /sign-up)
-//
-// v20: White-label callout added between PRICING and FINAL CTA sections.
-// Placement is intentional — the visitor either takes the $35/wk signup CTA
-// from PRICING or forks to the agency-reseller mailto. WL doesn't dilute the
-// primary conversion path because it appears AFTER the pricing card's CTA.
+// v22 FIX: nav padding-top uses env(safe-area-inset-top) so the SIGN UP
+// button doesn't hide behind iPhone status bar / Dynamic Island. The fix
+// applies to both nav variants (logged-out + logged-in) and to the hero
+// padding-top so content below isn't pushed behind the status bar either.
 // =============================================================================
 
 interface PageProps {
@@ -56,20 +41,37 @@ export default async function Home({ searchParams }: PageProps) {
           --cta-fs: 52px;
         }
 
-        .ds-nav { padding: 20px 60px; }
-        .ds-nav-links { display: flex; align-items: center; gap: 40px; }
-        .ds-nav-link { display: inline-block; }
-
-        /* Logged-in 3-column nav variant */
+        /* v22 — both nav variants now respect iPhone safe-area-inset-top.
+           env() resolves to 0 on non-notched / desktop, so layout is
+           unchanged there. */
+        .ds-nav {
+          padding-top: max(20px, calc(env(safe-area-inset-top, 0px) + 12px));
+          padding-bottom: 20px;
+          padding-left: 60px;
+          padding-right: 60px;
+        }
         .ds-nav-3col {
-          padding: 16px 32px;
+          padding-top: max(16px, calc(env(safe-area-inset-top, 0px) + 8px));
+          padding-bottom: 16px;
+          padding-left: 32px;
+          padding-right: 32px;
           display: grid;
           grid-template-columns: 1fr auto 1fr;
           align-items: center;
           gap: 16px;
         }
+        .ds-nav-links { display: flex; align-items: center; gap: 40px; }
+        .ds-nav-link { display: inline-block; }
 
-        .ds-hero { padding: 120px 40px 80px; }
+        /* v22 — hero starts below safe area + the fixed nav height so the
+           first hero element isn't masked by the nav on small screens */
+        .ds-hero {
+          padding-top: max(120px, calc(env(safe-area-inset-top, 0px) + 100px));
+          padding-bottom: 80px;
+          padding-left: 40px;
+          padding-right: 40px;
+        }
+
         .ds-stats { flex-direction: row; padding: 32px 60px; gap: 48px; }
         .ds-section { padding: 120px 60px; }
         .ds-grid-3 { grid-template-columns: repeat(3, 1fr); }
@@ -82,12 +84,27 @@ export default async function Home({ searchParams }: PageProps) {
             --section-fs: 26px;
             --cta-fs: 32px;
           }
-          .ds-nav { padding: 14px 20px; }
+          .ds-nav {
+            padding-top: max(14px, calc(env(safe-area-inset-top, 0px) + 8px));
+            padding-bottom: 14px;
+            padding-left: 20px;
+            padding-right: 20px;
+          }
           .ds-nav-links { gap: 0; }
           .ds-nav-link { display: none; }
           .ds-nav-link.ds-show-mobile { display: inline-block; }
-          .ds-nav-3col { padding: 12px 16px; }
-          .ds-hero { padding: 100px 20px 60px; }
+          .ds-nav-3col {
+            padding-top: max(12px, calc(env(safe-area-inset-top, 0px) + 6px));
+            padding-bottom: 12px;
+            padding-left: 16px;
+            padding-right: 16px;
+          }
+          .ds-hero {
+            padding-top: max(100px, calc(env(safe-area-inset-top, 0px) + 80px));
+            padding-bottom: 60px;
+            padding-left: 20px;
+            padding-right: 20px;
+          }
           .ds-hero-h1 { letter-spacing: -1px !important; line-height: 1.1 !important; }
           .ds-hero-p { font-size: 15px !important; }
           .ds-stats {
@@ -118,9 +135,6 @@ export default async function Home({ searchParams }: PageProps) {
         }
       `}</style>
 
-      {/* NAV — two variants:
-            * Logged out: original layout (logo left, links right). DO NOT CHANGE.
-            * Logged in:  3-column (DASHBOARD left, logo center, profile+name right) */}
       {isLoggedIn ? (
         <nav className="ds-nav-3col" style={{
           position: 'fixed',
@@ -132,7 +146,6 @@ export default async function Home({ searchParams }: PageProps) {
           backdropFilter: 'blur(20px)',
           borderBottom: '1px solid var(--border)',
         }}>
-          {/* LEFT — Go to dashboard */}
           <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
             <Link href="/dashboard" style={{
               fontSize: '12px',
@@ -149,7 +162,6 @@ export default async function Home({ searchParams }: PageProps) {
             </Link>
           </div>
 
-          {/* CENTER — Brand */}
           <Link href="/?view=landing" style={{
             display: 'flex',
             alignItems: 'center',
@@ -177,7 +189,6 @@ export default async function Home({ searchParams }: PageProps) {
             }}>DIALERSEAT</span>
           </Link>
 
-          {/* RIGHT — Profile + name */}
           <LandingNavProfile />
         </nav>
       ) : (
@@ -226,7 +237,6 @@ export default async function Home({ searchParams }: PageProps) {
         </nav>
       )}
 
-      {/* HERO */}
       <section className="ds-hero" style={{
         display: 'flex',
         flexDirection: 'column',
@@ -325,7 +335,6 @@ export default async function Home({ searchParams }: PageProps) {
           $35/WEEK · NO CONTRACTS · CANCEL ANYTIME
         </p>
 
-        {/* STATS BAR */}
         <div className="ds-stats" style={{
           display: 'flex',
           alignItems: 'center',
@@ -360,7 +369,6 @@ export default async function Home({ searchParams }: PageProps) {
         </div>
       </section>
 
-      {/* FEATURES */}
       <section id="features" className="ds-section" style={{ maxWidth: '1200px', margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: '64px' }}>
           <h2 style={{
@@ -411,7 +419,6 @@ export default async function Home({ searchParams }: PageProps) {
         </div>
       </section>
 
-      {/* HOW IT WORKS */}
       <section className="ds-section" style={{ maxWidth: '900px', margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: '64px' }}>
           <h2 style={{
@@ -470,7 +477,6 @@ export default async function Home({ searchParams }: PageProps) {
         </div>
       </section>
 
-      {/* COMPARE */}
       <section id="compare" className="ds-section" style={{ maxWidth: '900px', margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: '64px' }}>
           <h2 style={{
@@ -531,7 +537,6 @@ export default async function Home({ searchParams }: PageProps) {
           ))}
         </div>
 
-        {/* SEE ALL COMPARISONS BUTTON */}
         <div style={{ textAlign: 'center', marginTop: '40px' }}>
           <Link href="/vs" style={{
             display: 'inline-block',
@@ -550,7 +555,6 @@ export default async function Home({ searchParams }: PageProps) {
         </div>
       </section>
 
-      {/* PRICING */}
       <section id="pricing" className="ds-section">
         <div style={{ textAlign: 'center', marginBottom: '64px' }}>
           <h2 style={{
@@ -665,13 +669,8 @@ export default async function Home({ searchParams }: PageProps) {
         </div>
       </section>
 
-      {/* WHITE-LABEL CALLOUT — v20 */}
-      {/* Sits between PRICING and FINAL CTA. Forks the agency/reseller
-          audience to whitelabel@dialerseat.com while regular $35/wk
-          shoppers continue down to the final CTA below. */}
       <WLCallout variant="centered" />
 
-      {/* FINAL CTA */}
       <section className="ds-section" style={{
         textAlign: 'center',
         maxWidth: '800px',
@@ -720,7 +719,6 @@ export default async function Home({ searchParams }: PageProps) {
         </p>
       </section>
 
-      {/* FOOTER */}
       <SiteFooter />
     </main>
   )

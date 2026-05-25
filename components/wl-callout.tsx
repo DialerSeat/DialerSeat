@@ -1,29 +1,31 @@
 // =============================================================================
-// WL CALLOUT
+// WL CALLOUT — v21
 // =============================================================================
 // Small "FOR AGENCIES" callout block, used on:
 //   - Landing page (between PRICING and FINAL CTA)
-//   - Every /vs/<competitor>/view.tsx page (between "Where DialerSeat Wins"
-//     and the final CTA section)
+//   - Every /vs/<competitor>/view.tsx page
+//
+// v21 CHANGES:
+//   - CTAs now go to `/sign-up?plan=wl` (not mailto). The WL Stripe price
+//     ($115/wk) is now configured in Stripe, the webhook routes new WL subs
+//     into the tenant onboarding flow, and /onboarding/whitelabel collects
+//     subdomain + logo + colors after payment. So there's no "request" step
+//     anymore — visitors sign up directly with their card, exactly like the
+//     $35 standard plan.
+//
+//   The query string `?plan=wl` is read by `app/billing/page.tsx` (after
+//   Clerk auth) to default to the $115/wk plan. From there the user can
+//   still toggle back to $35 standard, but most won't.
 //
 // DESIGN:
 //   Matches the existing dark-on-light section rhythm used across the site —
-//   centered, dark surface card with blue glow, mailto CTA. Stays out of the
-//   primary conversion path (the $35/wk signup CTA) so it doesn't dilute it.
-//
-// COPY:
-//   Leads with the agency-reseller angle. Mentions weekly billing + no
-//   contract because that's the genuine differentiator against Convoso /
-//   CallTools / ReadyMode reseller programs ($500-2k/mo minimums + annual
-//   commits). Email goes to whitelabel@dialerseat.com (must be created as
-//   a Google Workspace alias before this ships — see v20 reminders).
+//   centered, dark surface card with blue glow, primary CTA. Stays out of
+//   the primary $35 conversion path (the standard signup CTA) so it doesn't
+//   dilute it.
 //
 // VARIANTS:
-//   Two layout variants so the callout reads naturally in two different
-//   page contexts:
-//     - "centered" — for landing-style pages where everything else is centered
-//     - "card"     — for /vs pages where everything is in a 1080px column
-//   Both share copy and CTA; only the chrome differs.
+//   - "centered" — for landing-style pages
+//   - "card"     — for /vs pages (inline card variant)
 // =============================================================================
 
 import Link from 'next/link'
@@ -32,15 +34,16 @@ interface WLCalloutProps {
   variant?: 'centered' | 'card'
 }
 
+// Single source of truth for the signup deep link. If you change the
+// plan-selection query param in app/billing/page.tsx, change it here too.
+const WL_SIGNUP_HREF = '/sign-up?plan=wl'
+
 export default function WLCallout({ variant = 'centered' }: WLCalloutProps) {
   if (variant === 'card') return <CardVariant />
   return <CenteredVariant />
 }
 
 // ── CENTERED VARIANT (landing) ─────────────────────────────────────────────
-// Full-width section that drops between PRICING and FINAL CTA on the landing.
-// Mirrors the visual rhythm of other landing sections (section padding,
-// centered headline + lede).
 function CenteredVariant() {
   return (
     <section className="ds-section ds-wl-section" style={{
@@ -121,7 +124,7 @@ function CenteredVariant() {
 
       <div>
         <Link
-          href="mailto:whitelabel@dialerseat.com?subject=White-Label%20Inquiry"
+          href={WL_SIGNUP_HREF}
           style={{
             display: 'inline-block',
             padding: '16px 36px',
@@ -135,7 +138,7 @@ function CenteredVariant() {
             boxShadow: '0 0 40px rgba(74,158,255,0.3)',
           }}
         >
-          REQUEST WHITE-LABEL →
+          SIGN UP FOR WHITE LABEL →
         </Link>
       </div>
     </section>
@@ -143,9 +146,6 @@ function CenteredVariant() {
 }
 
 // ── CARD VARIANT (/vs pages) ──────────────────────────────────────────────
-// Inline card meant to drop into the existing /vs/<x>/view.tsx layout, which
-// uses a 1080px content column with `.vs-section` padding. The card is
-// constrained to that column and uses the local Futura PT styling.
 function CardVariant() {
   return (
     <div className="vs-section" style={{ paddingTop: 0 }}>
@@ -159,7 +159,6 @@ function CardVariant() {
         position: 'relative',
         overflow: 'hidden',
       }}>
-        {/* Atmospheric glow, same trick the /vs hero uses */}
         <div style={{
           position: 'absolute',
           inset: 0,
@@ -185,7 +184,7 @@ function CardVariant() {
             margin: '0 0 14px 0',
             lineHeight: 1.15,
           }}>
-            White-label DialerSeat — without the enterprise contract.
+            White-label DialerSeat — sign up directly.
           </h2>
 
           <p style={{
@@ -198,11 +197,12 @@ function CardVariant() {
             Run your own branded dialer on your own domain. $115/week base
             + $35/week per agent seat. Weekly billing, no annual contract,
             cancel any time — unlike most reseller programs that lock you
-            into multi-thousand-dollar monthly minimums.
+            into multi-thousand-dollar monthly minimums. Pay, configure
+            your subdomain + logo + colors, and go live the same day.
           </p>
 
           <Link
-            href="mailto:whitelabel@dialerseat.com?subject=White-Label%20Inquiry"
+            href={WL_SIGNUP_HREF}
             style={{
               display: 'inline-block',
               padding: '14px 32px',
@@ -216,7 +216,7 @@ function CardVariant() {
               boxShadow: '0 0 24px rgba(74,158,255,0.4)',
             }}
           >
-            REQUEST WHITE-LABEL →
+            SIGN UP FOR WHITE LABEL →
           </Link>
         </div>
       </div>

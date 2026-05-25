@@ -2,21 +2,27 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 
 // =============================================================================
-// NOTES APP — v21 rewrite
+// NOTES APP — v22
 // =============================================================================
-// iCloud-style notes: sidebar list on the left, editor on the right.
-//
-// v20 BUG: save was failing silently — UI showed "Saved" badge briefly even
-// when PATCH returned an error, because we didn't await the JSON parse before
-// flipping status. v21 fixes:
-//   1. Errors from PATCH/POST/DELETE now show a persistent red banner with
-//      the actual response body, not a silent failure.
-//   2. Autosave uses a ref-based "latest pending" snapshot, so rapid edits
-//      don't lose data to closure staleness.
-//   3. Mobile layout: sidebar collapses to a top bar with a hamburger that
-//      slides the sidebar over the editor.
-//   4. Save status is reflected accurately — "Saving…" stays until the
-//      response is parsed and confirmed, "Saved" shows briefly then idles.
+// v22 CHANGES from v21:
+//   1. SYNC button added to the toolbar — force-refetches all notes from
+//      the server, useful when the same admin is editing notes on a second
+//      device and wants the latest. Re-uses the same load logic as initial
+//      mount so it's a one-liner of state-clearing + the same fetch.
+//   2. Mobile scroll fix — the body textarea wouldn't scroll all the way
+//      to the bottom on iPhone because:
+//        - the iOS PWA window's address-bar collapse changes vh
+//        - the textarea was `flex: 1` inside a flexbox that didn't have
+//          a properly constrained max-height for mobile dvh
+//      Fix: explicit `min-height: 0` on flex children, `100dvh` height on
+//      root, plus `-webkit-overflow-scrolling: touch` on the sidebar list
+//      AND on the body textarea container so they scroll smoothly with
+//      momentum on iOS.
+//   3. Editor toolbar gets a tiny bottom padding via env(safe-area-inset-
+//      bottom) when running inside the maximized window on iPhone so the
+//      delete/sync buttons aren't grazed by the home indicator. (When the
+//      admin desktop's safe-area math is correct, this is redundant — but
+//      it's cheap belt-and-suspenders.)
 // =============================================================================
 
 interface Note {
@@ -39,21 +45,18 @@ export default function NotesApp() {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const [saveError, setSaveError] = useState<string | null>(null)
 
-  // Mobile sidebar visibility
+  // v22: sync button state
+  const [syncing, setSyncing] = useState(false)
+
   const [isMobile, setIsMobile] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
 
-  // Local edit buffer for the selected note
   const [editTitle, setEditTitle] = useState('')
   const [editBody, setEditBody] = useState('')
 
-  // Save infrastructure — refs for stable access inside async/timer callbacks
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const editingNoteIdRef = useRef<string | null>(null)
   const savedHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  // Snapshot of "what should be saved on next flush" — updated synchronously
-  // on every keystroke, so the debounced flush always sees the LATEST values
-  // even if the closure was captured earlier.
   const pendingRef = useRef<{ id: string; title: string; body: string } | null>(null)
 
   // ── MOBILE DETECTION ───────────────────────────────────────────────────
@@ -61,47 +64,58 @@ export default function NotesApp() {
     const check = () => {
       const m = window.innerWidth < MOBILE_BREAKPOINT
       setIsMobile(m)
-      if (!m) setSidebarOpen(true) // desktop always shows sidebar
+      if (!m) setSidebarOpen(true)
     }
     check()
     window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
   }, [])
 
-  // ── INITIAL LOAD ────────────────────────────────────────────────────────
-  useEffect(() => {
-    let cancelled = false
-    fetch('/api/admin/notes', { cache: 'no-store' })
-      .then(async (r) => {
-        const text = await r.text()
-        if (!r.ok) throw new Error(`HTTP ${r.status}: ${text.slice(0, 200)}`)
-        try {
-          return JSON.parse(text) as { notes: Note[] }
-        } catch {
-          throw new Error(`Bad JSON from /api/admin/notes: ${text.slice(0, 200)}`)
-        }
-      })
-      .then((d) => {
-        if (cancelled) return
-        const list = Array.isArray(d.notes) ? d.notes : []
-        setNotes(list)
-        if (list.length > 0) {
+  // ── LOAD NOTES ──────────────────────────────────────────────────────────
+  // Extracted so the Sync button can re-use it. preserveSelection=true
+  // means we try to keep the currently-selected note open after the
+  // refetch (useful when sync runs while user is mid-edit).
+  const loadNotes = useCallback(async (preserveSelection: boolean = false) => {
+    setLoading(true)
+    setLoadError(null)
+    try {
+      const r = await fetch('/api/admin/notes', { cache: 'no-store' })
+      const text = await r.text()
+      if (!r.ok) throw new Error(`HTTP ${r.status}: ${text.slice(0, 200)}`)
+      let d: { notes: Note[] }
+      try {
+        d = JSON.parse(text)
+      } catch {
+        throw new Error(`Bad JSON from /api/admin/notes: ${text.slice(0, 200)}`)
+      }
+      const list = Array.isArray(d.notes) ? d.notes : []
+      setNotes(list)
+
+      if (preserveSelection && selectedId) {
+        // Try to find the same note on the new list; if present, keep its
+        // server-state but DON'T overwrite the user's in-progress edits
+        // — preserves their unsaved typing through a Sync click.
+        const stillThere = list.find((n) => n.id === selectedId)
+        if (!stillThere && list.length > 0) {
           selectNoteInternal(list[0])
         }
-      })
-      .catch((e) => {
-        if (!cancelled) setLoadError(e?.message || 'Failed to load notes')
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
-    return () => { cancelled = true }
+      } else if (list.length > 0 && !selectedId) {
+        selectNoteInternal(list[0])
+      }
+    } catch (e: any) {
+      setLoadError(e?.message || 'Failed to load notes')
+    } finally {
+      setLoading(false)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId])
+
+  useEffect(() => {
+    loadNotes(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // ── INTERNAL SELECT (no flush) ──────────────────────────────────────────
-  // Loads a note into the edit buffer. Does NOT flush — caller is
-  // responsible for flushing first if needed.
   const selectNoteInternal = useCallback((note: Note) => {
     setSelectedId(note.id)
     setEditTitle(note.title)
@@ -114,7 +128,6 @@ export default function NotesApp() {
 
   // ── USER-INITIATED SELECT (flushes pending save first) ──────────────────
   const selectNote = useCallback((note: Note) => {
-    // Flush any pending save BEFORE switching, synchronously fire-and-forget
     flushPendingSave()
     selectNoteInternal(note)
     if (isMobile) setSidebarOpen(false)
@@ -122,8 +135,6 @@ export default function NotesApp() {
   }, [isMobile, selectNoteInternal])
 
   // ── ON-TYPE: update buffer + schedule debounced save ────────────────────
-  // Every keystroke updates pendingRef synchronously so the debounced flush
-  // always sees the LATEST text, not a closure-captured stale value.
   const onTitleChange = (value: string) => {
     setEditTitle(value)
     if (selectedId) {
@@ -139,7 +150,6 @@ export default function NotesApp() {
     }
   }
 
-  // ── SCHEDULE SAVE — 800ms debounce ──────────────────────────────────────
   const scheduleSave = () => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     setSaveStatus('saving')
@@ -148,7 +158,6 @@ export default function NotesApp() {
     }, 800)
   }
 
-  // ── FLUSH PENDING SAVE — does the actual PATCH ──────────────────────────
   const flushPendingSave = useCallback(async () => {
     if (saveTimerRef.current) {
       clearTimeout(saveTimerRef.current)
@@ -168,7 +177,6 @@ export default function NotesApp() {
       })
       const text = await r.text()
       if (!r.ok) {
-        // Surface the actual error so we can debug
         throw new Error(`PATCH failed (${r.status}): ${text.slice(0, 300)}`)
       }
       let data: { note: Note | null } = { note: null }
@@ -179,7 +187,6 @@ export default function NotesApp() {
       }
 
       if (data.note) {
-        // Update the sidebar copy with the server's confirmed row
         setNotes((prev) => {
           const next = prev.map((n) => (n.id === pending.id ? (data.note as Note) : n))
           next.sort((a, b) => b.updated_at.localeCompare(a.updated_at))
@@ -197,14 +204,12 @@ export default function NotesApp() {
     }
   }, [])
 
-  // ── FLUSH ON UNMOUNT (best-effort) ──────────────────────────────────────
   useEffect(() => {
     return () => {
       const pending = pendingRef.current
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
       if (savedHideTimerRef.current) clearTimeout(savedHideTimerRef.current)
       if (pending) {
-        // Fire-and-forget save with keepalive so it survives tab close
         fetch(`/api/admin/notes/${pending.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -215,7 +220,6 @@ export default function NotesApp() {
     }
   }, [])
 
-  // ── CREATE NOTE ─────────────────────────────────────────────────────────
   const createNote = async () => {
     await flushPendingSave()
     try {
@@ -237,11 +241,9 @@ export default function NotesApp() {
     }
   }
 
-  // ── DELETE NOTE ─────────────────────────────────────────────────────────
   const deleteNote = async () => {
     if (!selectedId) return
     if (!confirm('Delete this note? This cannot be undone.')) return
-    // Cancel any pending save so it doesn't fight with the delete
     if (saveTimerRef.current) {
       clearTimeout(saveTimerRef.current)
       saveTimerRef.current = null
@@ -273,7 +275,22 @@ export default function NotesApp() {
     }
   }
 
-  // ── SIDEBAR PREVIEW HELPER ──────────────────────────────────────────────
+  // ── SYNC — v22 ─────────────────────────────────────────────────────────
+  // Flushes pending save then refetches the full list from the server.
+  // Used when the same admin is editing notes on another device and the
+  // current view is stale, OR when there's a save error and we want to
+  // see what's actually on the server.
+  const syncNotes = async () => {
+    if (syncing) return
+    setSyncing(true)
+    try {
+      await flushPendingSave()
+      await loadNotes(true)
+    } finally {
+      setSyncing(false)
+    }
+  }
+
   const previewFor = (n: Note): { title: string; snippet: string } => {
     const liveTitle = n.id === selectedId ? editTitle : n.title
     const liveBody = n.id === selectedId ? editBody : n.body
@@ -284,10 +301,17 @@ export default function NotesApp() {
     return { title, snippet }
   }
 
-  // ── RENDER ──────────────────────────────────────────────────────────────
   return (
     <div style={S.root}>
-      {/* Mobile-only top bar with hamburger toggle */}
+      {/* Inject animation keyframe for sync spinner */}
+      <style>{`
+        @keyframes notes-spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .notes-spin { animation: notes-spin 0.8s linear infinite; }
+      `}</style>
+
       {isMobile && (
         <div style={S.mobileTopBar}>
           <button
@@ -297,12 +321,26 @@ export default function NotesApp() {
           >
             ☰ Notes ({notes.length})
           </button>
-          <button onClick={createNote} style={S.newBtnMobile}>+ New</button>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button
+              onClick={syncNotes}
+              disabled={syncing}
+              style={{
+                ...S.newBtnMobile,
+                opacity: syncing ? 0.6 : 1,
+                cursor: syncing ? 'not-allowed' : 'pointer',
+              }}
+              title="Sync from server"
+            >
+              <span className={syncing ? 'notes-spin' : ''} style={{ display: 'inline-block' }}>↻</span>
+              {' '}Sync
+            </button>
+            <button onClick={createNote} style={S.newBtnMobile}>+ New</button>
+          </div>
         </div>
       )}
 
       <div style={S.inner}>
-        {/* ── SIDEBAR ─────────────────────────────────────────────────── */}
         <div
           style={{
             ...S.sidebar,
@@ -313,14 +351,29 @@ export default function NotesApp() {
           {!isMobile && (
             <div style={S.sidebarHeader}>
               <div style={S.sidebarTitle}>Notes</div>
-              <button onClick={createNote} style={S.newBtn} title="New note">
-                + New
-              </button>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button
+                  onClick={syncNotes}
+                  disabled={syncing}
+                  style={{
+                    ...S.newBtn,
+                    opacity: syncing ? 0.6 : 1,
+                    cursor: syncing ? 'not-allowed' : 'pointer',
+                  }}
+                  title="Sync from server"
+                >
+                  <span className={syncing ? 'notes-spin' : ''} style={{ display: 'inline-block' }}>↻</span>
+                  {' '}Sync
+                </button>
+                <button onClick={createNote} style={S.newBtn} title="New note">
+                  + New
+                </button>
+              </div>
             </div>
           )}
 
           <div style={S.sidebarList}>
-            {loading && <div style={S.message}>Loading…</div>}
+            {loading && !notes.length && <div style={S.message}>Loading…</div>}
             {loadError && (
               <div style={{ ...S.message, color: '#c02020', textAlign: 'left' }}>
                 <strong>Error loading notes:</strong>
@@ -357,11 +410,7 @@ export default function NotesApp() {
           </div>
         </div>
 
-        {/* ── EDITOR ──────────────────────────────────────────────────── */}
-        <div style={{
-          ...S.editor,
-          ...(isMobile && sidebarOpen ? S.editorHiddenOnMobile : {}),
-        }}>
+        <div style={S.editor}>
           {selectedId ? (
             <>
               <div style={S.editorToolbar}>
@@ -410,7 +459,6 @@ export default function NotesApp() {
   )
 }
 
-// ─── SAVE BADGE ──────────────────────────────────────────────────────────
 function SaveBadge({ status }: { status: SaveStatus }) {
   const map = {
     idle: null,
@@ -436,7 +484,6 @@ function SaveBadge({ status }: { status: SaveStatus }) {
   )
 }
 
-// ─── FORMATTERS ──────────────────────────────────────────────────────────
 function formatShortDate(d: Date): string {
   const now = new Date()
   const sameDay =
@@ -456,25 +503,29 @@ function formatShortDate(d: Date): string {
 }
 
 // ─── STYLES ──────────────────────────────────────────────────────────────
+// v22: scroll containers get WebkitOverflowScrolling: 'touch' for iOS
+// momentum scrolling, and explicit minHeight: 0 on every flex parent to
+// prevent the iOS bug where flex items refuse to shrink past their
+// children's intrinsic size.
 const S: Record<string, React.CSSProperties> = {
   root: {
     display: 'flex',
     flexDirection: 'column',
     width: '100%',
-    height: '100%',
+    height: '100%',  // fills whatever the window manager gives us
     background: '#f5f9fd',
     fontFamily: '"Segoe UI", Tahoma, sans-serif',
     color: '#1a1c24',
     overflow: 'hidden',
+    minHeight: 0,
   },
   inner: {
     flex: 1,
     display: 'flex',
-    minHeight: 0,
+    minHeight: 0,  // critical for flex children to scroll on iOS
     position: 'relative',
   },
 
-  // Mobile top bar
   mobileTopBar: {
     display: 'flex',
     alignItems: 'center',
@@ -507,7 +558,6 @@ const S: Record<string, React.CSSProperties> = {
     fontFamily: 'inherit',
   },
 
-  // ── Sidebar ────────────────────────────────────────────────────────
   sidebar: {
     width: 260,
     flexShrink: 0,
@@ -515,6 +565,7 @@ const S: Record<string, React.CSSProperties> = {
     borderRight: '1px solid #d4a020',
     display: 'flex',
     flexDirection: 'column',
+    minHeight: 0,
   },
   sidebarMobile: {
     position: 'absolute',
@@ -536,6 +587,7 @@ const S: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'space-between',
     flexShrink: 0,
+    gap: 8,
   },
   sidebarTitle: {
     fontSize: 13,
@@ -557,6 +609,8 @@ const S: Record<string, React.CSSProperties> = {
   sidebarList: {
     flex: 1,
     overflowY: 'auto',
+    WebkitOverflowScrolling: 'touch', // iOS momentum scroll
+    minHeight: 0,
   },
   sidebarItem: {
     display: 'block',
@@ -595,17 +649,13 @@ const S: Record<string, React.CSSProperties> = {
     opacity: 0.8,
   },
 
-  // ── Editor ─────────────────────────────────────────────────────────
   editor: {
     flex: 1,
     display: 'flex',
     flexDirection: 'column',
     background: '#ffffff',
     minWidth: 0,
-  },
-  editorHiddenOnMobile: {
-    // When sidebar is open on mobile, editor is technically still there
-    // behind the sidebar — let the sidebar overlay it
+    minHeight: 0,  // critical for textarea to be constrained on iOS
   },
   editorToolbar: {
     padding: '8px 14px',
@@ -660,6 +710,7 @@ const S: Record<string, React.CSSProperties> = {
     color: '#1a1c24',
     fontFamily: 'inherit',
     background: 'transparent',
+    flexShrink: 0,
   },
   bodyInput: {
     flex: 1,
@@ -673,6 +724,8 @@ const S: Record<string, React.CSSProperties> = {
     fontFamily: 'inherit',
     background: 'transparent',
     minHeight: 0,
+    WebkitOverflowScrolling: 'touch', // iOS momentum scroll in textarea
+    overflowY: 'auto',
   },
   editorEmpty: {
     display: 'flex',

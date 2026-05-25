@@ -25,18 +25,20 @@ const T = {
 // Global header rendered (probably) by the root layout. Shows brand + auth
 // state + DASHBOARD button on every page that doesn't suppress it.
 //
+// v22 FIX — iPhone status bar overlap:
+//   With `apple-mobile-web-app-status-bar-style: 'black-translucent'` set in
+//   app/layout.tsx, iOS lays web content UNDER the status bar / Dynamic
+//   Island. The header's previous `padding: 12px 24px` wasn't enough — the
+//   signup button on iPhone sat behind the battery/Wi-Fi icons.
+//
+//   Fix: use `env(safe-area-inset-top)` (enabled by `viewport-fit=cover`)
+//   to add additional top padding equal to the status-bar height on
+//   notched devices. On non-notched / desktop, env() resolves to 0 and
+//   the header looks identical.
+//
 // v21 FIX — admin desktop suppression:
-//   The Win7 admin shell at /dashboard/admin/desktop owns the entire viewport.
-//   On mobile especially, the site-header was bleeding through over the
-//   Win7 taskbar/desktop. A CSS-based hide via the route's layout.tsx
-//   wasn't sticking (suspect: Next 16 layout style ordering / hydration).
-//
-//   This early-return makes the header DOM-absent on that route at all
-//   viewport sizes. usePathname reads on the client during render, so
-//   the first paint after navigation already has no header — no FOUC.
-//
-//   Pattern matches both `/dashboard/admin/desktop` and any future
-//   sub-routes like `/dashboard/admin/desktop/x` if they appear.
+//   The Win7 admin shell at /dashboard/admin/desktop owns the entire
+//   viewport. The header is suppressed on that route via early-return.
 // =============================================================================
 
 const SUPPRESS_HEADER_PREFIXES = [
@@ -56,30 +58,16 @@ export default function SiteHeader() {
   const [isAdmin, setIsAdmin] = useState(false)
 
   // ── WHITE-LABEL BRANDING ──────────────────────────────────────────────
-  // useBranding() returns null on the standard dialerseat.com domain, so
-  // every reference below has a default. White-label tenants override only
-  // what they've explicitly set:
-  //   - brand_name (always required for tenants)
-  //   - logo_url (optional — falls back to the gradient "D" placeholder)
-  //   - primary_color (used to tint the brand link color and accent border)
   const branding = useBranding()
   const brandName = branding?.brand_name?.toUpperCase() || 'DIALERSEAT'
   const brandLogoUrl = branding?.logo_url || null
   const brandPrimary = branding?.primary_color || T.blue
 
-  // We render UserButton inside a wrapper. To make the username text "open
-  // the dropdown" when clicked, we forward a click to the avatar element
-  // inside the wrapper. Clerk doesn't expose a programmatic open, so this
-  // synthetic-click approach is the standard workaround. Works across
-  // Clerk v6+ because UserButton always renders a clickable .cl-userButtonTrigger.
   const userButtonRef = useRef<HTMLDivElement | null>(null)
 
-  // Look up admin status to pick the right DASHBOARD destination.
-  // Hooks above this line will still run when suppressed, which is fine —
-  // we just don't render anything.
   useEffect(() => {
     if (!isLoaded || !isSignedIn || !user?.id) return
-    if (suppressed) return  // skip the lookup on routes we don't render
+    if (suppressed) return
 
     let cancelled = false
     const lookup = async () => {
@@ -104,18 +92,10 @@ export default function SiteHeader() {
     }
   }, [isLoaded, isSignedIn, user?.id, suppressed])
 
-  // ── EARLY RETURN: suppress header entirely on admin desktop route ────
-  // This is THE fix — the header simply doesn't render. CSS hide attempts
-  // were unreliable, so we go to the source.
   if (suppressed) return null
 
-  // v20: admins land on the Win7 desktop shell. The old /dashboard/admin/analytics
-  // route is being removed (per the v20 cleanup list), so this needed to point
-  // somewhere that actually exists.
   const dashboardHref = isAdmin ? '/dashboard/admin/desktop' : '/dashboard/analytics'
 
-  // Build display name for the signed-in user.
-  // Prefer first + last name; fall back to email username; fall back to empty.
   const displayName = (() => {
     if (!user) return ''
     const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ').trim()
@@ -124,9 +104,6 @@ export default function SiteHeader() {
     return email.split('@')[0] || ''
   })()
 
-  // Click handler for the username text. Finds the Clerk avatar button inside
-  // our wrapper and synthetically clicks it to open the popover. If the avatar
-  // isn't there yet (Clerk still loading), the click is a no-op.
   const openUserMenu = () => {
     const root = userButtonRef.current
     if (!root) return
@@ -142,7 +119,13 @@ export default function SiteHeader() {
       style={{
         background: T.darker,
         borderBottom: `1px solid ${T.border}`,
-        padding: '12px 24px',
+        // v22 FIX: padding-top accounts for iPhone status bar / notch via
+        // env(safe-area-inset-top). max() ensures non-notched devices still
+        // get at least 12px of padding.
+        paddingTop: 'max(12px, env(safe-area-inset-top, 12px))',
+        paddingBottom: 12,
+        paddingLeft: 'max(24px, env(safe-area-inset-left, 24px))',
+        paddingRight: 'max(24px, env(safe-area-inset-right, 24px))',
         position: 'sticky',
         top: 0,
         zIndex: 50,
@@ -159,11 +142,6 @@ export default function SiteHeader() {
           gap: 16,
         }}
       >
-        {/*
-          LEFT: DASHBOARD button (signed in only).
-          Arrow points LEFT (←) because clicking this sends the user back to
-          the dashboard they came from — they're currently on a marketing page.
-        */}
         <div className="site-header-left" style={{ display: 'flex', alignItems: 'center' }}>
           {isLoaded && isSignedIn && (
             <Link
@@ -195,9 +173,6 @@ export default function SiteHeader() {
           )}
         </div>
 
-        {/* CENTER: brand mark + brand name. Both come from useBranding()
-            on white-label subdomains, fall back to the gradient "D" logo
-            and "DIALERSEAT" text on the main domain. */}
         <Link
           href="/"
           className="site-header-brand"
@@ -263,7 +238,6 @@ export default function SiteHeader() {
           </span>
         </Link>
 
-        {/* RIGHT: avatar + name when signed in, auth links when not */}
         <div
           className="site-header-right"
           style={{
@@ -364,17 +338,10 @@ export default function SiteHeader() {
       </div>
 
       <style>{`
-        /* Default (desktop): show full "← DASHBOARD" text, hide the short arrow-only version */
         .site-header-dashboard-btn-short { display: none; }
         .site-header-dashboard-btn-full { display: inline; }
 
-        /* ──────────────────────────────────────────────────────────────── */
-        /* TABLET / NARROW LAPTOP (≤ 768px)                                 */
-        /* ──────────────────────────────────────────────────────────────── */
         @media (max-width: 768px) {
-          .site-header {
-            padding: 10px 14px !important;
-          }
           .site-header-grid {
             gap: 8px !important;
           }
@@ -409,13 +376,7 @@ export default function SiteHeader() {
           }
         }
 
-        /* ──────────────────────────────────────────────────────────────── */
-        /* SMALL PHONE (≤ 380px)                                            */
-        /* ──────────────────────────────────────────────────────────────── */
         @media (max-width: 380px) {
-          .site-header {
-            padding: 8px 10px !important;
-          }
           .site-header-brand-text {
             font-size: 10px !important;
             letter-spacing: 2px !important;
