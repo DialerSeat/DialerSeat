@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react'
 import type { WindowState, AppDefinition } from './types'
 import { getApp } from './registry'
-import { jost } from '@/lib/fonts'
 
 interface TaskbarProps {
   windows: WindowState[]
@@ -20,14 +19,18 @@ interface TaskbarProps {
 // =============================================================================
 // Win7 taskbar:
 //   - 48px tall
-//   - Start button (gradient circle) on the left
-//       • v20: replaced the fake 4-pane Windows glyph with the "DialerSeat"
-//         wordmark in Jost (Futura clone) with blue glow.
+//   - Start button (gradient surface, blue square D logo glyph)
+//       • v21: replaced the Jost "DialerSeat" wordmark with an inline SVG
+//         of the brand mark — a blue gradient rounded square with a white
+//         "D". Matches the brand logo used elsewhere on the site.
 //   - Open-window pills in the middle (icon + name, glow if focused)
 //   - System tray on the right:
-//       • v20: added a "View Landing" globe icon left of the clock that
-//         opens / in a new tab. Replaces the old desktop icon for it.
-//       • Clock (no system icons since we're in a browser)
+//       • View Landing globe icon
+//         v21 FIX: now opens `/?view=landing` so logged-in admins see the
+//         landing page (the `?view=landing` query bypasses the dashboard
+//         redirect in app/page.tsx — same behavior agents get when they
+//         click "LANDING PAGE" from their analytics page).
+//       • Clock
 // =============================================================================
 
 export default function Taskbar({
@@ -47,8 +50,11 @@ export default function Taskbar({
   }, [])
 
   // ── VIEW LANDING TRAY HANDLER ────────────────────────────────────────
+  // Opens the public landing page in a new tab. The ?view=landing param
+  // tells app/page.tsx NOT to redirect logged-in users to /dashboard —
+  // exactly how agents get to the landing from their analytics page.
   const openLanding = () => {
-    window.open('/', '_blank', 'noopener,noreferrer')
+    window.open('/?view=landing', '_blank', 'noopener,noreferrer')
   }
 
   return (
@@ -72,9 +78,8 @@ export default function Taskbar({
       }}
     >
       {/* ── START BUTTON ───────────────────────────────────────────────── */}
-      {/* v20: DialerSeat wordmark in Jost (Futura clone) with blue glow.
-          Keeps the same circular gradient surface as before so the rest
-          of the taskbar styling is undisturbed. */}
+      {/* v21: blue square D logo (inline SVG) instead of "DialerSeat"
+          wordmark. Glow effect preserved. */}
       <button
         onClick={(e) => {
           e.stopPropagation()
@@ -82,9 +87,8 @@ export default function Taskbar({
         }}
         aria-label="Start"
         title="Start"
-        className={jost.className}
         style={{
-          width: isMobile ? 64 : 96,
+          width: isMobile ? 56 : 64,
           height: 48,
           border: 'none',
           background: startMenuOpen
@@ -110,27 +114,7 @@ export default function Taskbar({
           }
         }}
       >
-        <span
-          style={{
-            color: '#ffffff',
-            fontSize: isMobile ? 10 : 13,
-            fontWeight: 700,
-            letterSpacing: isMobile ? 0.5 : 1,
-            // Blue glow — layered shadows produce a real bloom effect rather
-            // than a single soft halo. Inner white shadow lifts the letters.
-            textShadow: `
-              0 0 4px rgba(180,220,255,0.95),
-              0 0 10px rgba(120,180,255,0.85),
-              0 0 18px rgba(74,158,255,0.7),
-              0 1px 0 rgba(0,0,0,0.5)
-            `,
-            whiteSpace: 'nowrap',
-            textTransform: 'uppercase',
-            fontFamily: jost.style.fontFamily,
-          }}
-        >
-          {isMobile ? 'DS' : 'DialerSeat'}
-        </span>
+        <DBrandMark size={isMobile ? 28 : 32} />
       </button>
 
       {/* ── OPEN-WINDOW PILLS ──────────────────────────────────────────── */}
@@ -222,9 +206,10 @@ export default function Taskbar({
         borderLeft: '1px solid #0a1020',
         boxShadow: 'inset 1px 0 0 rgba(255,255,255,0.04)',
       }}>
-        {/* View Landing icon — new in v20.
-            Replaces the desktop icon for / so the icon grid stays tight.
-            Single-click opens in a new tab. */}
+        {/* View Landing icon — v21 FIX: now opens /?view=landing instead
+            of /, so the logged-in admin sees the actual landing page
+            (the bare / would redirect them right back to /dashboard
+            and then to /dashboard/admin/desktop, looping). */}
         <button
           onClick={openLanding}
           title="View landing page"
@@ -296,5 +281,68 @@ export default function Taskbar({
         </div>
       </div>
     </div>
+  )
+}
+
+// =============================================================================
+// D BRAND MARK
+// =============================================================================
+// Inline SVG of the DialerSeat brand mark: a blue gradient rounded square
+// with a centered white "D". Matches the brand mark used in app/page.tsx
+// nav (gradient #4a9eff → #2a6eff, 22% radius, white bold D).
+//
+// Drop shadow + inner highlight give the icon presence on the dark taskbar.
+// =============================================================================
+function DBrandMark({ size = 32 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 32 32"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{
+        // Outer glow for taskbar visibility
+        filter: 'drop-shadow(0 0 6px rgba(120,180,255,0.6)) drop-shadow(0 1px 2px rgba(0,0,0,0.4))',
+      }}
+    >
+      <defs>
+        <linearGradient id="dsBrandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#4a9eff" />
+          <stop offset="100%" stopColor="#2a6eff" />
+        </linearGradient>
+        <linearGradient id="dsBrandHighlight" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="rgba(255,255,255,0.35)" />
+          <stop offset="50%" stopColor="rgba(255,255,255,0)" />
+        </linearGradient>
+      </defs>
+      {/* Background rounded square */}
+      <rect x="1" y="1" width="30" height="30" rx="7" fill="url(#dsBrandGrad)" />
+      {/* Glossy inner highlight */}
+      <rect x="1" y="1" width="30" height="14" rx="7" fill="url(#dsBrandHighlight)" />
+      {/* Subtle inner border */}
+      <rect
+        x="1.5"
+        y="1.5"
+        width="29"
+        height="29"
+        rx="6.5"
+        fill="none"
+        stroke="rgba(0,0,0,0.25)"
+        strokeWidth="1"
+      />
+      {/* The "D" — Segoe-style bold, centered */}
+      <text
+        x="16"
+        y="22.5"
+        textAnchor="middle"
+        fontFamily='"Segoe UI", Tahoma, sans-serif'
+        fontSize="20"
+        fontWeight="800"
+        fill="#ffffff"
+        style={{ letterSpacing: '-0.5px' }}
+      >
+        D
+      </text>
+    </svg>
   )
 }

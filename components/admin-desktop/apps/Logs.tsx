@@ -2,16 +2,26 @@
 import { useEffect, useState } from 'react'
 
 // =============================================================================
-// LOGS APP
+// LOGS APP — v21
 // =============================================================================
-// Scrollable timeline of customer events (signup / renewal / cancel) sourced
-// from /api/admin/logs. Sorted most-recent-first. Each row shows:
-//   - Avatar circle (initial of user name)
-//   - User name + email
-//   - Event badge (color-coded)
-//   - Amount paid (or "—" for cancels)
-//   - Date (relative + absolute)
-//   - Retention pill (e.g. "4 wk")
+// Terminal green-on-black aesthetic. Renders the same data the v20 Logs app
+// did (signup/renewal/cancel events merged from Stripe + Supabase via
+// /api/admin/logs), but styled as a monospace terminal log instead of a
+// Win7 list.
+//
+// v21 changes from v20:
+//   1. Terminal aesthetic: #00ff41 (matrix green) on #0a0a0a (near-black),
+//      monospace font, scanline overlay, blinking cursor on the prompt line.
+//   2. ACTUAL ERROR VISIBILITY: when the API returns non-200 or bad JSON,
+//      the response body is displayed verbatim in the terminal. Previous
+//      version showed "Couldn't load logs" with no debug info.
+//   3. Quick filter chips render as terminal `[1] all  [2] signup ...`
+//      switches with bracket-based selection state.
+//
+// FORMAT:
+//   Each entry shows as:
+//     [TIMESTAMP] EVENT  user_name (email)  $amount  retention_weeks
+//   With color-coded event type in the same row.
 // =============================================================================
 
 interface LogEntry {
@@ -33,38 +43,65 @@ interface LogsResponse {
 
 type FilterMode = 'all' | 'signup' | 'renewal' | 'cancel'
 
+// Terminal palette
+const C = {
+  bg: '#0a0a0a',
+  bgDim: '#0f0f0f',
+  text: '#00ff41',         // Matrix green — primary
+  textDim: '#00a02a',      // Dimmer green for secondary
+  textMute: '#0a5a18',     // Even dimmer for labels
+  signup: '#00ff41',       // Green
+  renewal: '#5cb6ff',      // Cyan-blue
+  cancel: '#ff4444',       // Red
+  error: '#ff8844',        // Amber for errors
+  amount: '#ffe048',       // Yellow for money
+} as const
+
+const FONT = '"SF Mono", "Cascadia Mono", "JetBrains Mono", "Fira Code", Menlo, Consolas, "Courier New", monospace'
+
 export default function LogsApp() {
   const [data, setData] = useState<LogsResponse | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<{ message: string; body?: string } | null>(null)
   const [filter, setFilter] = useState<FilterMode>('all')
 
-  useEffect(() => {
+  // ── FETCH ────────────────────────────────────────────────────────────
+  const refetch = () => {
     let cancelled = false
     setLoading(true)
     setError(null)
 
     fetch('/api/admin/logs', { cache: 'no-store' })
       .then(async (r) => {
+        const text = await r.text()
         if (!r.ok) {
-          const text = await r.text().catch(() => '')
-          throw new Error(`HTTP ${r.status}: ${text || r.statusText}`)
+          throw new Error(`HTTP ${r.status}: ${text.slice(0, 500)}`)
         }
-        return r.json() as Promise<LogsResponse>
+        try {
+          return JSON.parse(text) as LogsResponse
+        } catch {
+          throw new Error(`Bad JSON response. First 500 chars:\n${text.slice(0, 500)}`)
+        }
       })
       .then((d) => {
         if (!cancelled) setData(d)
       })
       .catch((e) => {
-        if (!cancelled) setError(e?.message || 'Failed to load')
+        if (!cancelled) {
+          setError({ message: e?.message || 'Failed to load' })
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
       })
 
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
+  }
+
+  useEffect(() => {
+    const cleanup = refetch()
+    return cleanup
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const entries = data?.entries ?? []
@@ -72,327 +109,269 @@ export default function LogsApp() {
 
   return (
     <div style={S.root}>
-      {/* ── TOOLBAR ─────────────────────────────────────────────────── */}
-      <div style={S.toolbar}>
-        <div style={S.title}>Customer Activity</div>
-        <div style={S.filterBar}>
-          <FilterChip
-            label={`All (${entries.length})`}
-            active={filter === 'all'}
-            onClick={() => setFilter('all')}
-          />
-          <FilterChip
-            label={`Signups (${data?.counts.signups ?? 0})`}
-            active={filter === 'signup'}
-            onClick={() => setFilter('signup')}
-            color="#1a8a3a"
-          />
-          <FilterChip
-            label={`Renewals (${data?.counts.renewals ?? 0})`}
-            active={filter === 'renewal'}
-            onClick={() => setFilter('renewal')}
-            color="#2a6eff"
-          />
-          <FilterChip
-            label={`Cancels (${data?.counts.cancels ?? 0})`}
-            active={filter === 'cancel'}
-            onClick={() => setFilter('cancel')}
-            color="#c02020"
-          />
-        </div>
+      {/* Scanline overlay — subtle CRT vibe */}
+      <style>{`
+        @keyframes ds-cursor-blink {
+          0%, 50% { opacity: 1; }
+          51%, 100% { opacity: 0; }
+        }
+        @keyframes ds-scanline {
+          0% { background-position: 0 0; }
+          100% { background-position: 0 4px; }
+        }
+        .logs-cursor::after {
+          content: '█';
+          color: ${C.text};
+          margin-left: 4px;
+          animation: ds-cursor-blink 1.1s infinite;
+        }
+        .logs-row:hover {
+          background: rgba(0, 255, 65, 0.06);
+        }
+      `}</style>
+
+      {/* HEADER LINE */}
+      <div style={S.header}>
+        <span style={{ color: C.textDim }}>admin@dialerseat</span>
+        <span style={{ color: C.textMute }}>:~$</span>
+        <span style={{ color: C.text, marginLeft: 8 }}>
+          tail -f /var/log/customer-events.log
+        </span>
       </div>
 
-      {/* ── BODY ────────────────────────────────────────────────────── */}
+      {/* FILTER TOOLBAR */}
+      <div style={S.toolbar}>
+        <span style={{ color: C.textMute, marginRight: 8 }}>$ filter</span>
+        {([
+          { key: 'all', label: 'all', count: entries.length },
+          { key: 'signup', label: 'signup', count: data?.counts.signups ?? 0 },
+          { key: 'renewal', label: 'renewal', count: data?.counts.renewals ?? 0 },
+          { key: 'cancel', label: 'cancel', count: data?.counts.cancels ?? 0 },
+        ] as const).map((f, i) => (
+          <button
+            key={f.key}
+            onClick={() => setFilter(f.key)}
+            style={{
+              ...S.chip,
+              color: filter === f.key ? C.bg : C.text,
+              background: filter === f.key ? C.text : 'transparent',
+            }}
+          >
+            [{i + 1}] {f.label} ({f.count})
+          </button>
+        ))}
+
+        <button
+          onClick={refetch}
+          style={{ ...S.chip, marginLeft: 'auto', color: C.textDim }}
+          title="Refetch"
+        >
+          [r] refresh
+        </button>
+      </div>
+
+      {/* BODY */}
       <div style={S.body}>
-        {loading && <div style={S.message}>Loading customer activity…</div>}
+        {loading && (
+          <div style={S.line}>
+            <span style={{ color: C.textMute }}>{'>'}</span>{' '}
+            <span className="logs-cursor">Loading customer events</span>
+          </div>
+        )}
 
         {error && (
-          <div style={{ ...S.message, color: '#c02020' }}>
-            Couldn't load logs.
-            <div style={{ fontSize: 11, marginTop: 8, opacity: 0.8 }}>{error}</div>
+          <div style={S.errorBlock}>
+            <div style={{ color: C.error, fontWeight: 700, marginBottom: 6 }}>
+              {'>'} ERROR fetching /api/admin/logs
+            </div>
+            <pre style={S.errorPre}>{error.message}</pre>
+            <div style={{ marginTop: 12 }}>
+              <button onClick={refetch} style={S.chip}>[r] retry</button>
+            </div>
           </div>
         )}
 
         {!loading && !error && visible.length === 0 && (
-          <div style={S.message}>
-            {filter === 'all'
-              ? 'No customer activity in the last 90 days yet.'
-              : `No ${filter} events in the last 90 days.`}
+          <div style={S.line}>
+            <span style={{ color: C.textMute }}>{'>'}</span>{' '}
+            <span style={{ color: C.textDim }}>
+              {filter === 'all'
+                ? 'No customer events in the last 90 days.'
+                : `No ${filter} events in the last 90 days.`}
+            </span>
           </div>
         )}
 
         {!loading && !error && visible.length > 0 && (
-          <div style={S.list}>
+          <>
             {visible.map((entry) => (
-              <LogRow key={entry.id} entry={entry} />
+              <LogLine key={entry.id} entry={entry} />
             ))}
-          </div>
+            {/* End-of-stream indicator with cursor */}
+            <div style={{ ...S.line, marginTop: 16 }}>
+              <span style={{ color: C.textMute }}>{'>'}</span>{' '}
+              <span style={{ color: C.textDim }}>--end of stream--</span>
+            </div>
+            <div style={S.line}>
+              <span style={{ color: C.textDim }}>admin@dialerseat</span>
+              <span style={{ color: C.textMute }}>:~$</span>
+              <span className="logs-cursor"></span>
+            </div>
+          </>
         )}
       </div>
 
-      {/* ── FOOTER ──────────────────────────────────────────────────── */}
+      {/* FOOTER STATUS */}
       {data && (
         <div style={S.footer}>
-          Last {data.window_days} days · {entries.length} events
-          {entries.length === 200 && ' (capped at 200)'}
+          <span>window: last {data.window_days}d</span>
+          <span>events: {entries.length}{entries.length === 200 ? ' (capped)' : ''}</span>
+          <span>signups: {data.counts.signups}</span>
+          <span>renewals: {data.counts.renewals}</span>
+          <span>cancels: {data.counts.cancels}</span>
         </div>
       )}
     </div>
   )
 }
 
-// =============================================================================
-// ROW
-// =============================================================================
-
-function LogRow({ entry }: { entry: LogEntry }) {
-  const eventStyle = EVENT_STYLES[entry.event_type]
+// ─── LOG LINE ────────────────────────────────────────────────────────────
+function LogLine({ entry }: { entry: LogEntry }) {
   const date = new Date(entry.date_iso)
-  const initial = (entry.user_name?.[0] || '?').toUpperCase()
+  const ts = formatTimestamp(date)
+  const eventColor =
+    entry.event_type === 'signup' ? C.signup
+    : entry.event_type === 'renewal' ? C.renewal
+    : C.cancel
+  const eventLabel = entry.event_type.toUpperCase().padEnd(7, ' ')
 
   return (
-    <div style={S.row}>
-      <div style={{ ...S.avatar, background: eventStyle.avatarBg }}>{initial}</div>
-
-      <div style={S.rowMain}>
-        <div style={S.rowName}>{entry.user_name || '(unknown)'}</div>
-        {entry.user_email && <div style={S.rowEmail}>{entry.user_email}</div>}
-      </div>
-
-      <div style={{ ...S.badge, background: eventStyle.badgeBg, color: eventStyle.badgeText }}>
-        {eventStyle.label}
-      </div>
-
-      <div style={S.amount}>
-        {entry.event_type === 'cancel'
-          ? <span style={{ opacity: 0.5 }}>—</span>
-          : formatMoney(entry.amount_cents)}
-      </div>
-
-      {entry.retention_weeks !== null && (
-        <div style={S.retention} title={`Customer for ${entry.retention_weeks} week(s)`}>
-          {entry.retention_weeks} wk
-        </div>
+    <div className="logs-row" style={S.line}>
+      <span style={{ color: C.textMute }}>[{ts}]</span>{' '}
+      <span style={{ color: eventColor, fontWeight: 700 }}>{eventLabel}</span>{' '}
+      <span style={{ color: C.text }}>{entry.user_name || '(unknown)'}</span>
+      {entry.user_email && (
+        <>
+          {' '}
+          <span style={{ color: C.textMute }}>&lt;{entry.user_email}&gt;</span>
+        </>
       )}
-
-      <div style={S.date}>
-        <div style={S.dateAbs}>{formatDate(date)}</div>
-        <div style={S.dateRel}>{formatRelative(date)}</div>
-      </div>
+      {entry.event_type !== 'cancel' && (
+        <>
+          {' '}
+          <span style={{ color: C.amount }}>${(entry.amount_cents / 100).toFixed(2)}</span>
+        </>
+      )}
+      {entry.retention_weeks !== null && (
+        <>
+          {' '}
+          <span style={{ color: C.textDim }}>
+            (retention: {entry.retention_weeks}w)
+          </span>
+        </>
+      )}
     </div>
   )
 }
 
-function FilterChip({
-  label,
-  active,
-  onClick,
-  color = '#2a4a8a',
-}: {
-  label: string
-  active: boolean
-  onClick: () => void
-  color?: string
-}) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        padding: '6px 12px',
-        fontSize: 11,
-        fontWeight: 600,
-        border: '1px solid ' + (active ? color : '#c4c8d0'),
-        background: active ? color : '#ffffff',
-        color: active ? '#ffffff' : '#5a5e6a',
-        borderRadius: 4,
-        cursor: 'pointer',
-        fontFamily: 'inherit',
-        letterSpacing: 0.3,
-      }}
-    >
-      {label}
-    </button>
-  )
+// ─── FORMATTERS ──────────────────────────────────────────────────────────
+function formatTimestamp(d: Date): string {
+  // Format: 2026-05-25 14:32:08
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  const h = String(d.getHours()).padStart(2, '0')
+  const min = String(d.getMinutes()).padStart(2, '0')
+  const s = String(d.getSeconds()).padStart(2, '0')
+  return `${y}-${m}-${day} ${h}:${min}:${s}`
 }
 
-// =============================================================================
-// FORMATTERS
-// =============================================================================
-
-function formatMoney(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`
-}
-
-function formatDate(d: Date): string {
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-}
-
-function formatRelative(d: Date): string {
-  const seconds = Math.floor((Date.now() - d.getTime()) / 1000)
-  if (seconds < 60) return 'just now'
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  if (days < 7) return `${days}d ago`
-  const weeks = Math.floor(days / 7)
-  if (weeks < 4) return `${weeks}w ago`
-  const months = Math.floor(days / 30)
-  return `${months}mo ago`
-}
-
-// =============================================================================
-// STYLES
-// =============================================================================
-
-const EVENT_STYLES = {
-  signup: {
-    label: 'SIGNUP',
-    avatarBg: 'linear-gradient(135deg, #5ad17a, #1a6a1a)',
-    badgeBg: '#e4f5e8',
-    badgeText: '#1a6a1a',
-  },
-  renewal: {
-    label: 'RENEWAL',
-    avatarBg: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
-    badgeBg: '#e4eef8',
-    badgeText: '#2a4a8a',
-  },
-  cancel: {
-    label: 'CANCEL',
-    avatarBg: 'linear-gradient(135deg, #ff6464, #c02020)',
-    badgeBg: '#fae0e0',
-    badgeText: '#a01a1a',
-  },
-} as const
-
+// ─── STYLES ──────────────────────────────────────────────────────────────
 const S: Record<string, React.CSSProperties> = {
   root: {
     display: 'flex',
     flexDirection: 'column',
     width: '100%',
     height: '100%',
-    background: '#f5f9fd',
-    fontFamily: '"Segoe UI", Tahoma, sans-serif',
-    color: '#1a1c24',
+    background: C.bg,
+    color: C.text,
+    fontFamily: FONT,
+    fontSize: 13,
+    lineHeight: 1.5,
+    overflow: 'hidden',
+    // Subtle scanline texture
+    backgroundImage:
+      'repeating-linear-gradient(0deg, rgba(0,255,65,0.02) 0px, rgba(0,255,65,0.02) 1px, transparent 1px, transparent 3px)',
   },
-  toolbar: {
-    padding: '12px 16px',
-    background: 'linear-gradient(to bottom, #ffffff 0%, #e8edf3 100%)',
-    borderBottom: '1px solid #c4c8d0',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 10,
+  header: {
+    padding: '10px 14px',
+    background: C.bgDim,
+    borderBottom: '1px solid #0a3a1a',
+    fontSize: 12,
     flexShrink: 0,
   },
-  title: {
-    fontSize: 14,
-    fontWeight: 700,
-    letterSpacing: 0.3,
-    color: '#1a1c24',
-  },
-  filterBar: {
+  toolbar: {
+    padding: '6px 14px',
+    background: C.bgDim,
+    borderBottom: '1px solid #0a3a1a',
     display: 'flex',
-    gap: 6,
+    alignItems: 'center',
+    gap: 4,
+    flexShrink: 0,
+    fontSize: 12,
     flexWrap: 'wrap',
+  },
+  chip: {
+    padding: '3px 8px',
+    fontSize: 11,
+    fontFamily: FONT,
+    background: 'transparent',
+    color: C.text,
+    border: '1px solid ' + C.textMute,
+    borderRadius: 2,
+    cursor: 'pointer',
+    letterSpacing: 0,
   },
   body: {
     flex: 1,
     overflowY: 'auto',
-    overflowX: 'hidden',
+    overflowX: 'auto',
+    padding: '12px 14px',
+    minHeight: 0,
   },
-  list: {
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  row: {
-    display: 'grid',
-    gridTemplateColumns: '36px 1fr auto auto auto auto',
-    alignItems: 'center',
-    gap: 12,
-    padding: '10px 16px',
-    borderBottom: '1px solid #e2e4ea',
-    fontSize: 12,
-    background: '#ffffff',
-  },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: '50%',
-    color: '#ffffff',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: 14,
-    fontWeight: 700,
-    boxShadow: '0 1px 3px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.3)',
-  },
-  rowMain: {
-    minWidth: 0,
-  },
-  rowName: {
-    fontWeight: 600,
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
+  line: {
+    padding: '2px 0',
     whiteSpace: 'nowrap',
   },
-  rowEmail: {
+  errorBlock: {
+    padding: 12,
+    border: '1px solid ' + C.error,
+    borderRadius: 2,
+    background: 'rgba(255, 136, 68, 0.04)',
+    margin: '8px 0',
+  },
+  errorPre: {
+    margin: 0,
+    padding: 8,
+    background: C.bgDim,
+    color: C.error,
+    fontFamily: FONT,
     fontSize: 11,
-    color: '#5a5e6a',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
-  },
-  badge: {
-    padding: '3px 8px',
-    fontSize: 10,
-    fontWeight: 700,
-    letterSpacing: 0.6,
-    borderRadius: 3,
-    whiteSpace: 'nowrap',
-  },
-  amount: {
-    fontWeight: 600,
-    minWidth: 64,
-    textAlign: 'right',
-    fontVariantNumeric: 'tabular-nums',
-  },
-  retention: {
-    padding: '2px 8px',
-    fontSize: 10,
-    fontWeight: 600,
-    color: '#5a5e6a',
-    background: '#f0f1f4',
-    border: '1px solid #d4d8e0',
-    borderRadius: 10,
-    whiteSpace: 'nowrap',
-  },
-  date: {
-    textAlign: 'right',
-    minWidth: 90,
-  },
-  dateAbs: {
-    fontSize: 11,
-    color: '#1a1c24',
-  },
-  dateRel: {
-    fontSize: 10,
-    color: '#8a8e96',
-  },
-  message: {
-    padding: 32,
-    textAlign: 'center',
-    color: '#5a5e6a',
-    fontSize: 12,
+    whiteSpace: 'pre-wrap',
+    wordBreak: 'break-word',
+    maxHeight: 240,
+    overflow: 'auto',
+    border: '1px solid #1a1a1a',
   },
   footer: {
-    padding: '8px 16px',
-    background: '#e8edf3',
-    borderTop: '1px solid #c4c8d0',
-    fontSize: 10,
-    color: '#5a5e6a',
-    textAlign: 'center',
+    padding: '6px 14px',
+    background: C.bgDim,
+    borderTop: '1px solid #0a3a1a',
+    fontSize: 11,
+    color: C.textDim,
+    display: 'flex',
+    gap: 16,
     flexShrink: 0,
+    overflowX: 'auto',
   },
 }

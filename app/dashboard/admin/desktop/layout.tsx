@@ -1,35 +1,73 @@
+import type { ReactNode } from 'react'
+
 // =============================================================================
-// ADMIN DESKTOP LAYOUT
+// /dashboard/admin/desktop — Layout
 // =============================================================================
-// Route-scoped layout for /dashboard/admin/desktop. Renders children with no
-// chrome — no site-header, no sidebar, nothing. The Desktop component owns
-// the entire viewport from top to bottom.
+// The Win7-style admin shell takes over the full viewport. This layout
+// explicitly removes any chrome that might bleed in from parent layouts:
 //
-// We disable scrolling on body via a style tag because the desktop uses
-// position: fixed everywhere and any inherited scroll behavior would create
-// rubber-banding on mobile.
+//   1. <SiteHeader> is bypassed because this route is OUTSIDE the
+//      <SiteHeader>-rendering parent (we render <main> only, no header).
+//   2. v21 FIX: on mobile, the site-header was still showing through —
+//      because something higher up the React tree (probably app/layout.tsx
+//      or a Clerk/ClerkProvider wrapper) renders <SiteHeader> globally and
+//      this layout never explicitly counteracted it.
+//
+//   The fix: this layout injects a <style> block that hard-hides any
+//   element with class `site-header` whenever the desktop route is mounted.
+//   The selector targets the existing component's outer <header className
+//   ="site-header"> defined in components/site-header.tsx — so we can hide
+//   it without modifying that component (which is shared with the rest of
+//   the site, where it SHOULD render).
+//
+//   Same trick hides any `.ds-nav` or `.ds-nav-3col` from app/page.tsx in
+//   case someone ever lands here via /?view=landing then back-navigates
+//   into the admin and the nav stuck around.
+//
+//   3. We also lock body/html height + overflow so the desktop's fixed
+//      taskbar + window manager get a true 100vh playground without the
+//      mobile address bar reshape problem.
 // =============================================================================
 
-export default function AdminDesktopLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function AdminDesktopLayout({ children }: { children: ReactNode }) {
   return (
     <>
       <style>{`
-        /* Lock viewport while on the desktop route */
-        html, body { margin: 0; padding: 0; overflow: hidden; height: 100%; }
-        /* Prevent iOS rubber-band scroll */
-        body { overscroll-behavior: none; -webkit-overflow-scrolling: auto; }
-        /* Disable text selection on the desktop chrome (apps re-enable it) */
-        .ds-admin-desktop-root { user-select: none; -webkit-user-select: none; }
-        /* Allow text selection inside open app windows */
-        .ds-admin-desktop-root [role="dialog"] { user-select: text; -webkit-user-select: text; }
+        /* Hide every flavor of site chrome whenever this layout is mounted */
+        body > .site-header,
+        body header.site-header,
+        .site-header,
+        body .ds-nav,
+        body .ds-nav-3col {
+          display: none !important;
+        }
+
+        /* Lock the viewport so the Win7 desktop owns the screen */
+        html, body {
+          margin: 0 !important;
+          padding: 0 !important;
+          height: 100% !important;
+          overflow: hidden !important;
+          overscroll-behavior: none !important;
+        }
+        body {
+          /* Prevent iOS Safari bounce that lets you see header behind */
+          position: fixed !important;
+          top: 0; left: 0; right: 0; bottom: 0;
+          width: 100% !important;
+        }
+        #__next, [data-nextjs-scroll-focus-boundary] {
+          height: 100% !important;
+          overflow: hidden !important;
+        }
+
+        /* Belt-and-suspenders: hide ALL <header> tags at this layout level */
+        body > header,
+        #__next > header {
+          display: none !important;
+        }
       `}</style>
-      <div className="ds-admin-desktop-root">
-        {children}
-      </div>
+      {children}
     </>
   )
 }
