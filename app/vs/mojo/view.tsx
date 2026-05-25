@@ -389,7 +389,7 @@ export default function VsMojoView() {
             </div>
           </div>
         </div>
-
+<WLCallout variant="card" />
         <div className="vs-final-cta">
           <div className="vs-final-cta-inner">
             <h2 className="vs-final-cta-h2">Dialing is dialing. Pay less for the same thing.</h2>

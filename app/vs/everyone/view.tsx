@@ -754,7 +754,7 @@ export default function VsEveryoneView() {
             })}
           </div>
         </div>
-
+<WLCallout variant="card" />
         <div className="vs-final-cta">
           <div className="vs-final-cta-inner">
             <h2 className="vs-final-cta-h2">Beat every legacy dialer. $35 a week.</h2>

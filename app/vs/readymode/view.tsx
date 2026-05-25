@@ -393,7 +393,7 @@ export default function VsReadymodeView() {
             </div>
           </div>
         </div>
-
+<WLCallout variant="card" />
         <div className="vs-final-cta">
           <div className="vs-final-cta-inner">
             <h2 className="vs-final-cta-h2">Stop paying monthly. Start paying weekly.</h2>
