@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from "next/link"
 import SiteFooter from '@/components/site-footer'
 import LandingNavProfile from '@/components/landing-nav-profile'
+import WLCallout from '@/components/wl-callout'
 
 // =============================================================================
 // LANDING PAGE
@@ -21,6 +22,11 @@ import LandingNavProfile from '@/components/landing-nav-profile'
 // Body CTAs:
 //   - Logged-in landing visitor → GO TO DASHBOARD (→ /dashboard)
 //   - Logged-out visitor → GET STARTED (→ /sign-up)
+//
+// v20: White-label callout added between PRICING and FINAL CTA sections.
+// Placement is intentional — the visitor either takes the $35/wk signup CTA
+// from PRICING or forks to the agency-reseller mailto. WL doesn't dilute the
+// primary conversion path because it appears AFTER the pricing card's CTA.
 // =============================================================================
 
 interface PageProps {
@@ -658,6 +664,12 @@ export default async function Home({ searchParams }: PageProps) {
           </p>
         </div>
       </section>
+
+      {/* WHITE-LABEL CALLOUT — v20 */}
+      {/* Sits between PRICING and FINAL CTA. Forks the agency/reseller
+          audience to whitelabel@dialerseat.com while regular $35/wk
+          shoppers continue down to the final CTA below. */}
+      <WLCallout variant="centered" />
 
       {/* FINAL CTA */}
       <section className="ds-section" style={{
