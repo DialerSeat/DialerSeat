@@ -15,7 +15,8 @@ export type AppId =
   | 'teams'
   | 'numbers'
   | 'whitelabel'
-  | 'view-landing'
+  | 'logs'
+  | 'notes'
 
 export interface AppDefinition {
   id: AppId
@@ -25,8 +26,9 @@ export interface AppDefinition {
   iconBg: string              // background color for the icon tile
   description: string         // tooltip + recent-items subtitle
   // The actual content component. Receives no props — apps are self-contained.
-  // Some apps (view-landing) don't render anything and just trigger a side
-  // effect (open new tab); those provide `external` instead.
+  // Some apps don't render anything and just trigger a side effect (open new
+  // tab); those provide `external` instead. v20 removed view-landing from
+  // the registry — it's now a system-tray icon in the taskbar instead.
   Component?: ComponentType
   external?: { url: string; target?: '_blank' | '_self' }
   // Default window size in pixels. Falls back to 900x600 if omitted.

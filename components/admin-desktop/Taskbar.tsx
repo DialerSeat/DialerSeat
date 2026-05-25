@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import type { WindowState, AppDefinition } from './types'
 import { getApp } from './registry'
+import { jost } from '@/lib/fonts'
 
 interface TaskbarProps {
   windows: WindowState[]
@@ -19,9 +20,14 @@ interface TaskbarProps {
 // =============================================================================
 // Win7 taskbar:
 //   - 48px tall
-//   - Start button (gradient circle with Windows-like glyph) on the left
+//   - Start button (gradient circle) on the left
+//       • v20: replaced the fake 4-pane Windows glyph with the "DialerSeat"
+//         wordmark in Jost (Futura clone) with blue glow.
 //   - Open-window pills in the middle (icon + name, glow if focused)
-//   - System tray on the right (clock, no system icons since we're in a browser)
+//   - System tray on the right:
+//       • v20: added a "View Landing" globe icon left of the clock that
+//         opens / in a new tab. Replaces the old desktop icon for it.
+//       • Clock (no system icons since we're in a browser)
 // =============================================================================
 
 export default function Taskbar({
@@ -39,6 +45,11 @@ export default function Taskbar({
     const id = setInterval(() => setNow(new Date()), 30_000)
     return () => clearInterval(id)
   }, [])
+
+  // ── VIEW LANDING TRAY HANDLER ────────────────────────────────────────
+  const openLanding = () => {
+    window.open('/', '_blank', 'noopener,noreferrer')
+  }
 
   return (
     <div
@@ -61,6 +72,9 @@ export default function Taskbar({
       }}
     >
       {/* ── START BUTTON ───────────────────────────────────────────────── */}
+      {/* v20: DialerSeat wordmark in Jost (Futura clone) with blue glow.
+          Keeps the same circular gradient surface as before so the rest
+          of the taskbar styling is undisturbed. */}
       <button
         onClick={(e) => {
           e.stopPropagation()
@@ -68,8 +82,9 @@ export default function Taskbar({
         }}
         aria-label="Start"
         title="Start"
+        className={jost.className}
         style={{
-          width: 56,
+          width: isMobile ? 64 : 96,
           height: 48,
           border: 'none',
           background: startMenuOpen
@@ -82,6 +97,7 @@ export default function Taskbar({
           borderRight: '1px solid #0a1020',
           padding: 0,
           position: 'relative',
+          overflow: 'hidden',
         }}
         onMouseEnter={(e) => {
           if (!startMenuOpen) {
@@ -94,19 +110,27 @@ export default function Taskbar({
           }
         }}
       >
-        {/* Pseudo-Windows logo: 4 panes from gradient D colors */}
-        <div style={{
-          width: 22, height: 22,
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gridTemplateRows: '1fr 1fr',
-          gap: 2,
-        }}>
-          <div style={{ background: '#ff5252', transform: 'skewX(-12deg)' }} />
-          <div style={{ background: '#52ff52', transform: 'skewX(-12deg)' }} />
-          <div style={{ background: '#5252ff', transform: 'skewX(-12deg)' }} />
-          <div style={{ background: '#ffcc00', transform: 'skewX(-12deg)' }} />
-        </div>
+        <span
+          style={{
+            color: '#ffffff',
+            fontSize: isMobile ? 10 : 13,
+            fontWeight: 700,
+            letterSpacing: isMobile ? 0.5 : 1,
+            // Blue glow — layered shadows produce a real bloom effect rather
+            // than a single soft halo. Inner white shadow lifts the letters.
+            textShadow: `
+              0 0 4px rgba(180,220,255,0.95),
+              0 0 10px rgba(120,180,255,0.85),
+              0 0 18px rgba(74,158,255,0.7),
+              0 1px 0 rgba(0,0,0,0.5)
+            `,
+            whiteSpace: 'nowrap',
+            textTransform: 'uppercase',
+            fontFamily: jost.style.fontFamily,
+          }}
+        >
+          {isMobile ? 'DS' : 'DialerSeat'}
+        </span>
       </button>
 
       {/* ── OPEN-WINDOW PILLS ──────────────────────────────────────────── */}
@@ -192,27 +216,84 @@ export default function Taskbar({
 
       {/* ── SYSTEM TRAY ────────────────────────────────────────────────── */}
       <div style={{
-        padding: '0 14px',
         height: '100%',
         display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'flex-end',
-        justifyContent: 'center',
+        alignItems: 'center',
         borderLeft: '1px solid #0a1020',
-        color: 'white',
-        textShadow: '0 1px 0 rgba(0,0,0,0.5)',
-        fontSize: 11,
-        lineHeight: 1.2,
-        minWidth: isMobile ? 64 : 90,
+        boxShadow: 'inset 1px 0 0 rgba(255,255,255,0.04)',
       }}>
-        <div style={{ fontWeight: 600 }}>
-          {now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
-        </div>
-        {!isMobile && (
-          <div style={{ fontSize: 10, opacity: 0.85 }}>
-            {now.toLocaleDateString([], { month: 'numeric', day: 'numeric', year: 'numeric' })}
+        {/* View Landing icon — new in v20.
+            Replaces the desktop icon for / so the icon grid stays tight.
+            Single-click opens in a new tab. */}
+        <button
+          onClick={openLanding}
+          title="View landing page"
+          aria-label="View landing page"
+          style={{
+            width: isMobile ? 36 : 40,
+            height: 40,
+            margin: '0 4px',
+            padding: 0,
+            border: '1px solid transparent',
+            background: 'transparent',
+            borderRadius: 4,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'background 0.12s, border-color 0.12s',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'linear-gradient(to bottom, #3a5a8a 0%, #1a3a6a 100%)'
+            e.currentTarget.style.borderColor = '#5a7ba8'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'transparent'
+            e.currentTarget.style.borderColor = 'transparent'
+          }}
+        >
+          {/* Glossy globe tile to match desktop-icon styling */}
+          <div style={{
+            width: 22, height: 22,
+            borderRadius: 4,
+            background: 'linear-gradient(135deg, #5dd5d5, #2a8a8a)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 14,
+            boxShadow: '0 1px 3px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.4)',
+            border: '1px solid rgba(0,0,0,0.2)',
+            lineHeight: 1,
+          }}>
+            🌐
           </div>
-        )}
+        </button>
+
+        {/* Clock */}
+        <div style={{
+          padding: '0 14px',
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'flex-end',
+          justifyContent: 'center',
+          borderLeft: '1px solid rgba(0,0,0,0.4)',
+          boxShadow: 'inset 1px 0 0 rgba(255,255,255,0.04)',
+          color: 'white',
+          textShadow: '0 1px 0 rgba(0,0,0,0.5)',
+          fontSize: 11,
+          lineHeight: 1.2,
+          minWidth: isMobile ? 64 : 90,
+        }}>
+          <div style={{ fontWeight: 600 }}>
+            {now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+          </div>
+          {!isMobile && (
+            <div style={{ fontSize: 10, opacity: 0.85 }}>
+              {now.toLocaleDateString([], { month: 'numeric', day: 'numeric', year: 'numeric' })}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

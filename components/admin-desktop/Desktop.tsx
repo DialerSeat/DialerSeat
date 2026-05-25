@@ -34,6 +34,15 @@ interface RightClickState {
   payload?: any  // appId for icon, windowId for taskbar-item / titlebar
 }
 
+// Optional positioning hint passed to openApp(). Lets a caller nudge the
+// initial window placement without changing the default centered cascade.
+// v20 uses this for the analytics auto-boot, which lands shifted right so
+// the desktop icons on the left are visible behind it.
+interface PositionHint {
+  shiftX?: number   // px added to the centered x
+  shiftY?: number   // px added to the centered y
+}
+
 export default function Desktop() {
   const router = useRouter()
   const [windows, setWindows] = useState<WindowState[]>([])
@@ -58,7 +67,10 @@ export default function Desktop() {
   }, [])
 
   // ── OPEN APP ─────────────────────────────────────────────────────────────
-  const openApp = useCallback((appId: AppId) => {
+  // v20: accepts optional PositionHint so callers can nudge the initial
+  // window placement (used by the analytics auto-boot to shift right).
+  // v20: on mobile, new windows spawn already maximized.
+  const openApp = useCallback((appId: AppId, hint?: PositionHint) => {
     const app = getApp(appId)
     if (!app) return
 
@@ -89,32 +101,59 @@ export default function Desktop() {
       const offset = (prev.length % 6) * 28
       const w = Math.min(defaultSize.width, window.innerWidth - 40)
       const h = Math.min(defaultSize.height, window.innerHeight - TASKBAR_HEIGHT - 40)
-      const x = Math.max(0, Math.round((window.innerWidth - w) / 2)) + offset - (3 * 28)
-      const y = Math.max(0, Math.round((window.innerHeight - TASKBAR_HEIGHT - h) / 2)) + offset - (3 * 28)
+      const baseX = Math.max(0, Math.round((window.innerWidth - w) / 2)) + offset - (3 * 28)
+      const baseY = Math.max(0, Math.round((window.innerHeight - TASKBAR_HEIGHT - h) / 2)) + offset - (3 * 28)
 
-      const newWindow: WindowState = {
-        id,
-        appId,
-        x: Math.max(0, x),
-        y: Math.max(0, y),
-        width: w,
-        height: h,
-        zIndex: newZ,
-        minimized: false,
-        maximized: false,
-        openedAt: Date.now(),
-      }
+      // Apply position hint if provided. Clamp inside the viewport so a
+      // generous shift can't push the window fully off-screen.
+      const shiftX = hint?.shiftX ?? 0
+      const shiftY = hint?.shiftY ?? 0
+      const hintedX = Math.max(0, Math.min(baseX + shiftX, window.innerWidth - w))
+      const hintedY = Math.max(0, Math.min(baseY + shiftY, window.innerHeight - TASKBAR_HEIGHT - h))
+
+      // On mobile, force the window to spawn maximized so it fills the
+      // viewport (drag/resize are pointless on a phone screen).
+      const mobileNow = window.innerWidth < MOBILE_BREAKPOINT
+
+      const newWindow: WindowState = mobileNow
+        ? {
+            id,
+            appId,
+            x: 0,
+            y: 0,
+            width: window.innerWidth,
+            height: window.innerHeight - TASKBAR_HEIGHT,
+            zIndex: newZ,
+            minimized: false,
+            maximized: true,
+            preMaximize: { x: hintedX, y: hintedY, width: w, height: h },
+            openedAt: Date.now(),
+          }
+        : {
+            id,
+            appId,
+            x: hintedX,
+            y: hintedY,
+            width: w,
+            height: h,
+            zIndex: newZ,
+            minimized: false,
+            maximized: false,
+            openedAt: Date.now(),
+          }
       setFocusedId(id)
       return [...prev, newWindow]
     })
   }, [topZ])
 
   // ── ANALYTICS AUTO-OPEN ON FIRST RENDER ──────────────────────────────────
+  // v20: shifted right by ~200px so the desktop icons on the left stay visible
+  // behind it. On mobile the hint is ignored because mobile windows always
+  // spawn maximized.
   useEffect(() => {
     if (bootedAnalytics) return
     setBootedAnalytics(true)
-    // Tiny delay so initial paint is the desktop, then analytics opens on top
-    const id = setTimeout(() => openApp('analytics'), 250)
+    const id = setTimeout(() => openApp('analytics', { shiftX: 200 }), 250)
     return () => clearTimeout(id)
   }, [bootedAnalytics, openApp])
 

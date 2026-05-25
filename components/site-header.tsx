@@ -69,7 +69,10 @@ export default function SiteHeader() {
     }
   }, [isLoaded, isSignedIn, user?.id])
 
-  const dashboardHref = isAdmin ? '/dashboard/admin/analytics' : '/dashboard/analytics'
+  // v20: admins land on the Win7 desktop shell. The old /dashboard/admin/analytics
+  // route is being removed (per the v20 cleanup list), so this needed to point
+  // somewhere that actually exists.
+  const dashboardHref = isAdmin ? '/dashboard/admin/desktop' : '/dashboard/analytics'
 
   // Build display name for the signed-in user.
   // Prefer first + last name; fall back to email username; fall back to empty.

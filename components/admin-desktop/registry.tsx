@@ -17,6 +17,11 @@ import type { AppDefinition } from './types'
 //   2. Import lazily here
 //   3. Add an APP entry below
 //   That's it — the desktop picks it up automatically.
+//
+// v20 CHANGES:
+//   - Removed `view-landing` — replaced by a system-tray icon in Taskbar
+//   - Added `logs` — purchases + renewals + cancels timeline
+//   - Added `notes` — iCloud-style sidebar + editor, Supabase-backed
 // =============================================================================
 
 const AnalyticsApp = dynamic(() => import('./apps/Analytics'), {
@@ -36,6 +41,14 @@ const NumbersApp = dynamic(() => import('./apps/Numbers'), {
   ssr: false,
 })
 const WhiteLabelApp = dynamic(() => import('./apps/WhiteLabel'), {
+  loading: () => <AppLoading />,
+  ssr: false,
+})
+const LogsApp = dynamic(() => import('./apps/Logs'), {
+  loading: () => <AppLoading />,
+  ssr: false,
+})
+const NotesApp = dynamic(() => import('./apps/Notes'), {
   loading: () => <AppLoading />,
   ssr: false,
 })
@@ -102,13 +115,22 @@ export const APPS: AppDefinition[] = [
     defaultSize: { width: 1200, height: 760 },
   },
   {
-    id: 'view-landing',
-    name: 'View Landing',
-    shortName: 'Landing',
-    icon: '🌐',
-    iconBg: 'linear-gradient(135deg, #5dd5d5, #2a8a8a)',
-    description: 'Open dialerseat.com landing page in a new tab',
-    external: { url: '/', target: '_blank' },
+    id: 'logs',
+    name: 'Logs',
+    icon: '🧾',
+    iconBg: 'linear-gradient(135deg, #ffd96a, #c48a1a)',
+    description: 'Purchases, renewals, and cancels across all customers',
+    Component: LogsApp,
+    defaultSize: { width: 1000, height: 700 },
+  },
+  {
+    id: 'notes',
+    name: 'Notes',
+    icon: '📝',
+    iconBg: 'linear-gradient(135deg, #ffe27a, #d4a020)',
+    description: 'Personal admin scratchpad — auto-saved',
+    Component: NotesApp,
+    defaultSize: { width: 1000, height: 700 },
   },
 ]
 
