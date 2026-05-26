@@ -2,7 +2,6 @@ import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import Link from "next/link"
 import SiteFooter from '@/components/site-footer'
-import LandingNavProfile from '@/components/landing-nav-profile'
 import WLCallout from '@/components/wl-callout'
 
 // =============================================================================
@@ -50,16 +49,6 @@ export default async function Home({ searchParams }: PageProps) {
           padding-left: 60px;
           padding-right: 60px;
         }
-        .ds-nav-3col {
-          padding-top: max(16px, calc(env(safe-area-inset-top, 0px) + 8px));
-          padding-bottom: 16px;
-          padding-left: 32px;
-          padding-right: 32px;
-          display: grid;
-          grid-template-columns: 1fr auto 1fr;
-          align-items: center;
-          gap: 16px;
-        }
         .ds-nav-links { display: flex; align-items: center; gap: 40px; }
         .ds-nav-link { display: inline-block; }
 
@@ -93,40 +82,6 @@ export default async function Home({ searchParams }: PageProps) {
           .ds-nav-links { gap: 0; }
           .ds-nav-link { display: none; }
           .ds-nav-link.ds-show-mobile { display: inline-block; }
-          .ds-nav-3col {
-            padding-top: max(12px, calc(env(safe-area-inset-top, 0px) + 6px));
-            padding-bottom: 12px;
-            padding-left: 12px;
-            padding-right: 12px;
-            gap: 8px;
-          }
-          /* v22 FIX — logged-in landing nav was cut off on iPhone because
-             grid-template-columns: 1fr auto 1fr + full-width CTA button +
-             "GO TO DASHBOARD" text + brand wordmark needed ~600px minimum.
-             On 375px the grid overflowed and only the left column was
-             visible. Mobile-only rules:
-               • Shrink the GO TO DASHBOARD CTA to an icon-only pill
-               • Reduce brand letter-spacing + font-size
-               • Reduce brand mark size
-               • The profile column at right already auto-sizes */
-          .ds-nav-3col .ds-nav-3col-cta {
-            padding: 8px 12px !important;
-            font-size: 10px !important;
-            letter-spacing: 1.5px !important;
-          }
-          .ds-nav-3col .ds-nav-3col-cta-full { display: none !important; }
-          .ds-nav-3col .ds-nav-3col-cta-short { display: inline !important; }
-          .ds-nav-3col .ds-nav-3col-brand-mark {
-            width: 28px !important;
-            height: 28px !important;
-          }
-          .ds-nav-3col .ds-nav-3col-brand-mark span {
-            font-size: 13px !important;
-          }
-          .ds-nav-3col .ds-nav-3col-brand-text {
-            font-size: 12px !important;
-            letter-spacing: 2px !important;
-          }
           .ds-hero {
             padding-top: max(100px, calc(env(safe-area-inset-top, 0px) + 80px));
             padding-bottom: 60px;
@@ -163,64 +118,7 @@ export default async function Home({ searchParams }: PageProps) {
         }
       `}</style>
 
-      {isLoggedIn ? (
-        <nav className="ds-nav-3col" style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 50,
-          background: 'rgba(10,10,15,0.9)',
-          backdropFilter: 'blur(20px)',
-          borderBottom: '1px solid var(--border)',
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-            <Link href="/dashboard" className="ds-nav-3col-cta" style={{
-              fontSize: '12px',
-              letterSpacing: '3px',
-              color: 'white',
-              textDecoration: 'none',
-              padding: '10px 20px',
-              borderRadius: '8px',
-              background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
-              whiteSpace: 'nowrap',
-              fontWeight: 'bold',
-            }}>
-              <span className="ds-nav-3col-cta-full">GO TO DASHBOARD</span>
-              <span className="ds-nav-3col-cta-short" style={{ display: 'none' }}>DASHBOARD →</span>
-            </Link>
-          </div>
-
-          <Link href="/?view=landing" style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            textDecoration: 'none',
-          }}>
-            <div className="ds-nav-3col-brand-mark" style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '8px',
-              background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}>
-              <span style={{ color: 'white', fontWeight: 'bold', fontSize: '16px' }}>D</span>
-            </div>
-            <span className="ds-nav-3col-brand-text" style={{
-              fontSize: '16px',
-              fontWeight: 'bold',
-              letterSpacing: '4px',
-              color: 'var(--text-primary)',
-              whiteSpace: 'nowrap',
-            }}>DIALERSEAT</span>
-          </Link>
-
-          <LandingNavProfile />
-        </nav>
-      ) : (
+      {!isLoggedIn && (
         <nav className="ds-nav" style={{
           position: 'fixed',
           top: 0,

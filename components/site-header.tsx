@@ -174,7 +174,11 @@ export default function SiteHeader() {
         </div>
 
         <Link
-          href="/"
+          href={
+            !isLoaded || !isSignedIn
+              ? '/'
+              : (pathname?.startsWith('/dashboard') ? '/dashboard' : '/?view=landing')
+          }
           className="site-header-brand"
           style={{
             display: 'flex',
