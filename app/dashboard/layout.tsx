@@ -30,9 +30,60 @@ interface SubsSummary {
   counts: { ownerPaid: number; agentPaid: number; totalSeats: number }
 }
 
+// =============================================================================
+// /dashboard — LAYOUT
+// =============================================================================
+// v22 FIX #1 — mobile topbar behind iPhone status bar:
+//   The `.ds-mobile-topbar` had `padding: 12px 16px` and `position: sticky;
+//   top: 0` with no safe-area-inset-top accommodation. On iPhone PWA
+//   install with `apple-mobile-web-app-status-bar-style: black-translucent`
+//   set in app/layout.tsx, the topbar sits UNDER the status bar / Dynamic
+//   Island, so the profile avatar and hamburger button get covered by the
+//   battery / Wi-Fi icons.
+//
+//   Fix: paddingTop on the mobile topbar uses `env(safe-area-inset-top)`
+//   so iOS pushes the visible content below the status bar. Identical
+//   approach used in site-header.tsx + app/page.tsx in v21/v22 batches.
+//
+//   We also add safe-area-inset to the sidebar drawer's top padding so
+//   the menu items don't sit under the status bar when the drawer is open.
+//
+// v22 FIX #2 — admin desktop route bypasses this layout's chrome:
+//   The Win7 admin shell at /dashboard/admin/desktop owns the full viewport.
+//   Previously we tried to hide site-header via the desktop route's
+//   layout.tsx — but the REAL chrome bleeding through on mobile wasn't
+//   <SiteHeader />, it was THIS layout's `.ds-mobile-topbar` and
+//   `.ds-sidebar-mobile`. Because app/dashboard/layout.tsx is the PARENT
+//   of app/dashboard/admin/desktop/, no child layout could suppress us
+//   from underneath.
+//
+//   Fix: detect the desktop route here via usePathname() and bypass our
+//   own JSX entirely — return children with a stripped wrapper, no
+//   sidebar, no topbar. The Win7 desktop is then the only thing on
+//   screen. This is the only layer that can do it correctly.
+// =============================================================================
+
+// Routes where this layout should NOT render its own chrome (sidebar +
+// mobile topbar). The Win7 admin desktop owns the full viewport so it
+// can't tolerate any parent layout's overlay.
+const BARE_LAYOUT_PREFIXES = [
+  '/dashboard/admin/desktop',
+]
+
+function shouldRenderBare(pathname: string | null): boolean {
+  if (!pathname) return false
+  return BARE_LAYOUT_PREFIXES.some((p) => pathname.startsWith(p))
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user } = useUser()
   const pathname = usePathname()
+
+  // v22 FIX #2: detect admin desktop route. We can't early-return until
+  // AFTER all hooks are declared below (React rules-of-hooks). The bare
+  // return happens further down once all useState/useEffect have run.
+  const bare = shouldRenderBare(pathname)
+
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
   const [tier, setTier] = useState<AccessTier>(null)
@@ -44,23 +95,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [pathname])
 
   useEffect(() => {
+    if (bare) return
     if (drawerOpen) document.body.style.overflow = 'hidden'
     else document.body.style.overflow = ''
     return () => { document.body.style.overflow = '' }
-  }, [drawerOpen])
+  }, [drawerOpen, bare])
 
   useEffect(() => {
-    if (!user) return
+    if (!user || bare) return
     let cancelled = false
     fetch('/api/admin/check')
       .then(r => r.json())
       .then(d => { if (!cancelled) setIsAdmin(!!d.isAdmin) })
       .catch(() => { if (!cancelled) setIsAdmin(false) })
     return () => { cancelled = true }
-  }, [user])
+  }, [user, bare])
 
   useEffect(() => {
-    if (!user) return
+    if (!user || bare) return
     let cancelled = false
     const loadTier = () => {
       fetch('/api/stripe/status')
@@ -91,14 +143,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       cancelled = true
       window.removeEventListener('focus', onFocus)
     }
-  }, [user, pathname])
+  }, [user, pathname, bare])
 
-  // NOTE: Dashboard-wide /api/heartbeat ping removed.
-  // Replaced by the per-dialer heartbeat in app/dashboard/dialer/page.tsx,
-  // which posts to /api/dialer/heartbeat every 5 seconds with full agent
-  // state (idle/dialing/on_call/wrapping/paused), feeds the predictive
-  // controller, and runs the stale-session sweep. The old dashboard ping
-  // was a coarser "user is online" heartbeat that's now redundant.
+  // v22 FIX #2: bare bypass — all hooks above have been declared, so React's
+  // rules-of-hooks are satisfied. Now we can safely early-return for the
+  // admin desktop route. This is what removes the dashboard sidebar +
+  // mobile topbar from showing through the Win7 shell.
+  if (bare) {
+    return <>{children}</>
+  }
 
   const navItems = isAdmin ? adminNavItems : userNavItems
 
@@ -273,6 +326,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         className="ds-profile-row"
         style={{
           padding: '14px 24px',
+          // v22: include safe-area-inset-bottom so on mobile drawer (which
+          // is `position: fixed; bottom: 0`) the profile row sits above
+          // the iPhone home indicator gesture bar.
+          paddingBottom: 'max(14px, calc(env(safe-area-inset-bottom, 0px) + 8px))',
           borderTop: '1px solid var(--border)',
           display: 'flex',
           alignItems: 'center',
@@ -321,16 +378,32 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         @media (max-width: 768px) {
           .ds-sidebar-desktop { display: none; }
+
+          /* v22 FIX — mobile topbar respects iPhone status bar / Dynamic
+             Island. paddingTop uses max() so non-notched devices still get
+             at least 12px of padding; env() resolves to 0 on those. */
           .ds-mobile-topbar {
             display: flex; position: sticky; top: 0; left: 0; right: 0; z-index: 40;
             align-items: center; justify-content: space-between;
-            padding: 12px 16px; background: var(--surface); border-bottom: 1px solid var(--border);
+            padding-top: max(12px, env(safe-area-inset-top, 12px));
+            padding-bottom: 12px;
+            padding-left: max(16px, env(safe-area-inset-left, 16px));
+            padding-right: max(16px, env(safe-area-inset-right, 16px));
+            background: var(--surface); border-bottom: 1px solid var(--border);
           }
+
+          /* v22 — mobile drawer also pushes content below the status bar.
+             The drawer is 'position: fixed; top: 0', so without this fix
+             the top menu items sat behind the notch when the drawer was
+             open. */
           .ds-sidebar-mobile {
             display: flex; position: fixed; top: 0; left: 0; bottom: 0;
             width: 280px; max-width: 85vw;
             background: var(--surface); border-right: 1px solid var(--border);
-            flex-direction: column; padding: 24px 0; z-index: 60;
+            flex-direction: column;
+            padding-top: max(24px, calc(env(safe-area-inset-top, 0px) + 16px));
+            padding-bottom: 0;
+            z-index: 60;
             transform: translateX(-100%); transition: transform 0.25s ease;
           }
           .ds-sidebar-mobile.open { transform: translateX(0); }

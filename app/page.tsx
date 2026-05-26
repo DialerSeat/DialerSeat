@@ -96,8 +96,36 @@ export default async function Home({ searchParams }: PageProps) {
           .ds-nav-3col {
             padding-top: max(12px, calc(env(safe-area-inset-top, 0px) + 6px));
             padding-bottom: 12px;
-            padding-left: 16px;
-            padding-right: 16px;
+            padding-left: 12px;
+            padding-right: 12px;
+            gap: 8px;
+          }
+          /* v22 FIX — logged-in landing nav was cut off on iPhone because
+             grid-template-columns: 1fr auto 1fr + full-width CTA button +
+             "GO TO DASHBOARD" text + brand wordmark needed ~600px minimum.
+             On 375px the grid overflowed and only the left column was
+             visible. Mobile-only rules:
+               • Shrink the GO TO DASHBOARD CTA to an icon-only pill
+               • Reduce brand letter-spacing + font-size
+               • Reduce brand mark size
+               • The profile column at right already auto-sizes */
+          .ds-nav-3col .ds-nav-3col-cta {
+            padding: 8px 12px !important;
+            font-size: 10px !important;
+            letter-spacing: 1.5px !important;
+          }
+          .ds-nav-3col .ds-nav-3col-cta-full { display: none !important; }
+          .ds-nav-3col .ds-nav-3col-cta-short { display: inline !important; }
+          .ds-nav-3col .ds-nav-3col-brand-mark {
+            width: 28px !important;
+            height: 28px !important;
+          }
+          .ds-nav-3col .ds-nav-3col-brand-mark span {
+            font-size: 13px !important;
+          }
+          .ds-nav-3col .ds-nav-3col-brand-text {
+            font-size: 12px !important;
+            letter-spacing: 2px !important;
           }
           .ds-hero {
             padding-top: max(100px, calc(env(safe-area-inset-top, 0px) + 80px));
@@ -147,7 +175,7 @@ export default async function Home({ searchParams }: PageProps) {
           borderBottom: '1px solid var(--border)',
         }}>
           <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-            <Link href="/dashboard" style={{
+            <Link href="/dashboard" className="ds-nav-3col-cta" style={{
               fontSize: '12px',
               letterSpacing: '3px',
               color: 'white',
@@ -158,7 +186,8 @@ export default async function Home({ searchParams }: PageProps) {
               whiteSpace: 'nowrap',
               fontWeight: 'bold',
             }}>
-              GO TO DASHBOARD
+              <span className="ds-nav-3col-cta-full">GO TO DASHBOARD</span>
+              <span className="ds-nav-3col-cta-short" style={{ display: 'none' }}>DASHBOARD →</span>
             </Link>
           </div>
 
@@ -168,7 +197,7 @@ export default async function Home({ searchParams }: PageProps) {
             gap: '12px',
             textDecoration: 'none',
           }}>
-            <div style={{
+            <div className="ds-nav-3col-brand-mark" style={{
               width: '36px',
               height: '36px',
               borderRadius: '8px',
@@ -180,7 +209,7 @@ export default async function Home({ searchParams }: PageProps) {
             }}>
               <span style={{ color: 'white', fontWeight: 'bold', fontSize: '16px' }}>D</span>
             </div>
-            <span style={{
+            <span className="ds-nav-3col-brand-text" style={{
               fontSize: '16px',
               fontWeight: 'bold',
               letterSpacing: '4px',
