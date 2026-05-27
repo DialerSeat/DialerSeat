@@ -3,7 +3,7 @@ import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import BackToVsButton from '@/components/back-to-vs-button'
-import WLCallout from '@/components/wl-callout'
+
 
 const T = {
   bg: '#f0f1f4',
@@ -403,7 +403,7 @@ export default function VsFive9View() {
             </div>
           </div>
         </div>
-<WLCallout variant="card" />
+
         <div className="vs-final-cta">
           <div className="vs-final-cta-inner">
             <h2 className="vs-final-cta-h2">Skip the enterprise sales cycle.</h2>

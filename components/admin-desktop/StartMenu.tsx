@@ -12,10 +12,25 @@ interface StartMenuProps {
 }
 
 // =============================================================================
-// START MENU
+// START MENU — v22.d
 // =============================================================================
 // Win7 Start menu — left column with pinned apps, right column with profile
 // header + recent items + Shut Down. Closes on outside click or Escape.
+//
+// v22.d FIX — Manage Account routes to a page instead of opening a modal.
+//   Clerk's <UserButton> default opens its profile manager as a modal
+//   rendered through a React portal at document.body. Inside the admin
+//   desktop the StartMenu container has `overflow: hidden`, AND the
+//   <UserButton> sits inside a small 48x48 white box for visual fit.
+//   Even though Clerk's portal escapes the DOM ancestry, the modal layer
+//   was rendering inconsistently — sometimes invisible, sometimes
+//   clipped, depending on stacking context.
+//
+//   The fix is to use Clerk's routing-mode "path" with userProfileUrl
+//   pointing at a real /dashboard/admin/profile route. Now "Manage
+//   Account" navigates to that page (which renders <UserProfile />
+//   inline). Predictable, always works, and matches the desktop's
+//   spatial metaphor — clicking it feels like opening a window.
 // =============================================================================
 
 export default function StartMenu({ onClose, onLaunchApp, recent }: StartMenuProps) {
@@ -101,6 +116,8 @@ export default function StartMenu({ onClose, onLaunchApp, recent }: StartMenuPro
         }}>
           {isLoaded && (
             <UserButton
+              userProfileMode="navigation"
+              userProfileUrl="/dashboard/admin/profile"
               appearance={{
                 elements: {
                   avatarBox: { width: 44, height: 44 },

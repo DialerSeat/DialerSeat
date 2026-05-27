@@ -2,37 +2,37 @@ import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import Link from "next/link"
 import SiteFooter from '@/components/site-footer'
-import WLCallout from '@/components/wl-callout'
+import SiteHeader from '@/components/site-header'
 
 // =============================================================================
 // LANDING PAGE — v22.d
 // =============================================================================
-// v22.d fix — SiteHeader missing for logged-in users on /?view=landing:
+// v22.d fixes:
 //
-// In v22-batchC we removed the logged-in 3-col nav from this page because
-// SiteHeader (from app/layout.tsx) renders globally. That's still correct
-// — but there was a leftover layout artifact: the .ds-hero rule had
-// `padding-top: max(120px, calc(env(safe-area-inset-top, 0px) + 100px))`,
-// designed for the OLD `position: fixed` nav from the logged-OUT path.
+// 1. SITEHEADER NOW SHOWS FOR LOGGED-IN USERS
+//    Previous attempts assumed SiteHeader was global in layout.tsx — it
+//    isn't. SiteHeader is rendered only by pages that explicitly import
+//    it (/faq, /vs, /terms, etc). The landing page didn't, so logged-in
+//    users saw nothing at the top of /?view=landing.
 //
-// For the logged-IN path SiteHeader is `position: sticky; top: 0` — it
-// sits in normal flow above <main>. The leftover 120px padding made it
-// look like the hero owned the top of the viewport, which combined with
-// the hero's `minHeight: 100vh` meant SiteHeader was rendering but the
-// hero pushed it off-screen on mobile (where 100vh > visible viewport
-// height in iOS Safari PWA mode).
+//    Fix: import SiteHeader and render it for the logged-IN case only.
+//    The logged-OUT path keeps its fixed `.ds-nav` exactly as before
+//    (JC liked it; nothing about the logged-out experience changes).
 //
-// The fix is surgical:
-//   1. Split .ds-hero padding-top into two variants:
-//        - .ds-hero-logged-out: keeps the old 120/100px padding because
-//          the fixed nav still covers the top
-//        - .ds-hero-logged-in: tiny padding (40/24px) because SiteHeader
-//          is sticky-in-flow and already takes its own height
-//   2. Remove `minHeight: 100vh` from the hero section for the logged-in
-//      variant. The hero content sizes naturally and SiteHeader is the
-//      first thing visible on page load.
+// 2. WHITELABEL CALLOUT REMOVED
+//    WLCallout import gone. We'll reintroduce WL marketing once the
+//    full WL flow is built; for now the landing page stays focused on
+//    the single $35/week product.
 //
-// LOGGED-OUT EXPERIENCE IS UNCHANGED. JC explicitly liked it.
+// 3. HERO PADDING SPLIT INTO TWO CLASSES
+//    - .ds-hero-logged-out keeps the original 120/100px padding-top to
+//      clear the fixed .ds-nav.
+//    - .ds-hero-logged-in uses 40/24px padding-top because SiteHeader
+//      is in normal document flow above <main>. The old 120px padding
+//      created a phantom gap below SiteHeader for logged-in users.
+//    - <main>'s minHeight: 100vh removed for logged-in users so the
+//      header is visible at page load on iOS Safari (where 100vh
+//      overshoots the visible viewport).
 // =============================================================================
 
 interface PageProps {
@@ -54,14 +54,16 @@ export default async function Home({ searchParams }: PageProps) {
   const ctaLabel = isLoggedIn ? 'GO TO DASHBOARD' : 'GET STARTED'
 
   return (
-    <main style={{
-      background: 'var(--background)',
-      // v22.d — don't force minHeight on <main>. SiteHeader sits above us in
-      // sticky flow on the logged-in path; forcing <main> to 100vh was
-      // creating a phantom gap on small viewports.
-      minHeight: isLoggedIn ? 'auto' : '100vh',
-      overflowX: 'hidden',
-    }}>
+    <>
+      {/* SiteHeader only renders for logged-in users. Logged-out keeps the
+          custom .ds-nav below. */}
+      {isLoggedIn && <SiteHeader />}
+
+      <main style={{
+        background: 'var(--background)',
+        minHeight: isLoggedIn ? 'auto' : '100vh',
+        overflowX: 'hidden',
+      }}>
       <style>{`
         :root {
           --hero-fs: 80px;
@@ -69,8 +71,7 @@ export default async function Home({ searchParams }: PageProps) {
           --cta-fs: 52px;
         }
 
-        /* LOGGED-OUT nav — unchanged. Fixed position so it overlaps hero,
-           hero needs ~120px top padding to clear it. */
+        /* LOGGED-OUT nav — unchanged from earlier deploys */
         .ds-nav {
           padding-top: max(20px, calc(env(safe-area-inset-top, 0px) + 12px));
           padding-bottom: 20px;
@@ -80,9 +81,7 @@ export default async function Home({ searchParams }: PageProps) {
         .ds-nav-links { display: flex; align-items: center; gap: 40px; }
         .ds-nav-link { display: inline-block; }
 
-        /* v22.d — TWO hero variants depending on whether SiteHeader is in flow */
-
-        /* Logged-OUT hero: original 120/100px padding to clear the fixed .ds-nav */
+        /* TWO hero variants depending on whether SiteHeader is in flow */
         .ds-hero-logged-out {
           padding-top: max(120px, calc(env(safe-area-inset-top, 0px) + 100px));
           padding-bottom: 80px;
@@ -90,10 +89,6 @@ export default async function Home({ searchParams }: PageProps) {
           padding-right: 40px;
           min-height: 100vh;
         }
-
-        /* Logged-IN hero: SiteHeader is sticky-in-flow, takes its own height.
-           We just need normal section padding. NO minHeight: 100vh — that
-           was causing the SiteHeader to appear pushed off-screen on iOS. */
         .ds-hero-logged-in {
           padding-top: 40px;
           padding-bottom: 80px;
@@ -646,7 +641,8 @@ export default async function Home({ searchParams }: PageProps) {
         </div>
       </section>
 
-      <WLCallout variant="centered" />
+      {/* v22.d: WLCallout removed. We'll reintroduce WL marketing once
+          the full WL flow is built. */}
 
       <section className="ds-section" style={{
         textAlign: 'center',
@@ -697,6 +693,7 @@ export default async function Home({ searchParams }: PageProps) {
       </section>
 
       <SiteFooter />
-    </main>
+      </main>
+    </>
   )
 }

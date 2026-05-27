@@ -5,19 +5,9 @@
       <stop offset="100%" stop-color="#2a6eff"/>
     </linearGradient>
   </defs>
-  <!--
-    MASKABLE icon, Android/PWA spec. The "safe zone" is the central 80% of
-    the viewBox; Android may crop the outer 10% (or 20%) when applying its
-    device-specific masks. Full-bleed gradient (no rounded corners since
-    Android adds those), with the D glyph confined to the inner safe zone.
-  -->
   <rect width="512" height="512" fill="url(#bg)"/>
-  <!--
-    Same Jost Bold D path as master.svg. Same transform — the 340px-tall
-    glyph centered at (256, 256) already leaves >50px margin on every
-    side, which is within the maskable safe-zone spec (10% margin).
-  -->
-  <g transform="translate(68.27, 426) scale(0.48571, -0.48571)" fill="white" fill-rule="evenodd">
+  <!-- Same recentered Jost D as master.svg. See master.svg for path comments. -->
+  <g transform="translate(78, 426) scale(0.48571, -0.48571)" fill="white" fill-rule="evenodd">
     <path d="M324 0H74V700H324Q439 700 523.0 657.5Q607 615 653.0 536.5Q699 458 699 350Q699 242 653.0 163.5Q607 85 523.0 42.5Q439 0 324 0ZM318 550H248V150H318Q372 150 419.0 168.5Q466 187 495.0 231.0Q524 275 524 350Q524 425 495.0 469.0Q466 513 419.0 531.5Q372 550 318 550Z"/>
   </g>
 </svg>
