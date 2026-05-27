@@ -120,9 +120,7 @@ export default function Taskbar({
           }}
         >
           <DBrandMark size={isMobile ? 28 : 32} />
-        </button>
-
-        {/* ── OPEN-WINDOW PILLS ──────────────────────────────────────────── */}
+        </button>        {/* ── OPEN-WINDOW PILLS ──────────────────────────────────────────── */}
         <div style={{
           flex: 1,
           display: 'flex',
@@ -314,81 +312,39 @@ export default function Taskbar({
 }
 
 // =============================================================================
-// D BRAND MARK
+// D BRAND MARK — v22.1
 // =============================================================================
-// v22 — switched from <text> to <path> for the D glyph. iOS Safari is
-// inconsistent about applying page fonts to SVG <text> elements: the D
-// would render in the system default font on iPhone instead of the
-// Segoe UI / sans-serif specified in fontFamily. A path-based glyph is
-// identical across every browser/device because it's literally a vector
-// shape with no font dependency.
+// v22.0 used an inline <path> SVG to draw the "D" so it didn't depend on
+// fonts. Problem: the geometry I authored didn't match the rest of the
+// product's brand glyph, so it looked off (you flagged it as "not Futura"
+// — which it wasn't because nothing in the codebase actually USES Futura
+// for the brand mark; the brand glyph everywhere else is a vector D
+// inside a rounded square).
+//
+// v22.1: use the existing brand SVG file at /public/icons/master.svg.
+// It's the canonical vector and renders identically to the favicon,
+// PWA icons, og:image, and apple-touch-icon. No font dependency, no
+// hand-drawn path geometry — just the actual brand mark, shrunk.
+//
+// The drop-shadow filter is preserved to match the Win7 Start-button
+// glow effect.
 // =============================================================================
 function DBrandMark({ size = 32 }: { size?: number }) {
   return (
-    <svg
+    <img
+      src="/icons/master.svg"
+      alt="DialerSeat"
       width={size}
       height={size}
-      viewBox="0 0 32 32"
-      xmlns="http://www.w3.org/2000/svg"
       style={{
+        width: size,
+        height: size,
+        display: 'block',
         filter: 'drop-shadow(0 0 6px rgba(120,180,255,0.6)) drop-shadow(0 1px 2px rgba(0,0,0,0.4))',
+        userSelect: 'none',
+        pointerEvents: 'none',
       }}
-    >
-      <defs>
-        <linearGradient id="dsBrandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#4a9eff" />
-          <stop offset="100%" stopColor="#2a6eff" />
-        </linearGradient>
-        <linearGradient id="dsBrandHighlight" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="rgba(255,255,255,0.35)" />
-          <stop offset="50%" stopColor="rgba(255,255,255,0)" />
-        </linearGradient>
-      </defs>
-      {/* Background rounded square */}
-      <rect x="1" y="1" width="30" height="30" rx="7" fill="url(#dsBrandGrad)" />
-      {/* Glossy inner highlight */}
-      <rect x="1" y="1" width="30" height="14" rx="7" fill="url(#dsBrandHighlight)" />
-      {/* Subtle inner border */}
-      <rect
-        x="1.5"
-        y="1.5"
-        width="29"
-        height="29"
-        rx="6.5"
-        fill="none"
-        stroke="rgba(0,0,0,0.25)"
-        strokeWidth="1"
-      />
-      {/*
-        The "D" — drawn as path coordinates so font availability doesn't
-        affect rendering. Geometry: an outer rounded rectangle minus an
-        inner rounded rectangle, shifted slightly to give the D its
-        characteristic flat-left/round-right shape.
-
-        Outer hull starts at top-left (10, 7), runs across to (18, 7),
-        curves down through (24.5, 16) to (18, 25), back to (10, 25),
-        and up to (10, 7). The inner cutout is a smaller rounded shape
-        that creates the open interior of the D. Drawn as a single path
-        with fill-rule="evenodd" so the inner subpath produces a hole.
-      */}
-      <path
-        d="
-          M 10 7
-          L 18 7
-          C 23.5 7, 25 12, 25 16
-          C 25 20, 23.5 25, 18 25
-          L 10 25
-          Z
-          M 13.5 10.2
-          L 13.5 21.8
-          L 17.6 21.8
-          C 20.5 21.8, 21.5 19, 21.5 16
-          C 21.5 13, 20.5 10.2, 17.6 10.2
-          Z
-        "
-        fill="#ffffff"
-        fillRule="evenodd"
-      />
-    </svg>
+      draggable={false}
+    />
   )
 }

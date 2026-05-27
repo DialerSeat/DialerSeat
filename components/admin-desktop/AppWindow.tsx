@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useRef, useState, useCallback } from 'react'
-import type { ComponentType, ReactNode } from 'react'
+import type { ComponentType } from 'react'
 import type { WindowState } from './types'
 
 interface AppWindowProps {
@@ -21,19 +21,35 @@ interface AppWindowProps {
 }
 
 // =============================================================================
-// APP WINDOW
+// APP WINDOW — v22.1
 // =============================================================================
-// Authentic Win7 Aero window:
-//   - Frosted-blue gradient title bar
-//   - 16px icon + window title on the left
-//   - Min / Max / X controls on the right (Win7 oblong style)
-//   - 1px window border with subtle outer shadow
-//   - Double-click title bar toggles maximize
-//   - Drag title bar to move (desktop only — mobile auto-fullscreens)
-//   - Right-click title bar opens context menu
+// Authentic Win7 Aero window. v22.1 fixes two long-standing bugs on iPhone PWA:
 //
-// The actual app content renders in the body via Component. We don't pass any
-// props — apps are self-contained and read their own data from APIs.
+//   1. SCROLL CONTAINER CONFLICT — Before v22.1 the AppWindow body wrapper
+//      had `overflow: auto`, which meant apps inside (Notes, Logs, etc) had
+//      a scroll container OUTSIDE their root. Apps that ALSO declared their
+//      own scroll regions (Notes' textarea, Logs' message list) ended up
+//      with two competing scroll boundaries: iOS would grow the inner
+//      content past the outer container's visible area instead of clipping
+//      it. Result: Notes body textarea on iPhone would never scroll to the
+//      bottom — the textarea was effectively taller than the AppWindow.
+//
+//      Fix: body wrapper now uses `overflow: hidden`. Apps that need to
+//      scroll declare their OWN scroll containers internally with proper
+//      `min-height: 0` constraints. This is the standard pattern — let the
+//      app own its scroll behavior, the window just clips.
+//
+//   2. MOBILE FULL-SCREEN IGNORES SAFE AREAS — Before v22.1 mobile maximize
+//      used `width: 100vw; height: calc(100vh - 48px)`. iPhone PWA with
+//      `apple-mobile-web-app-status-bar-style: black-translucent` lays
+//      content UNDER the status bar / Dynamic Island AND under the home
+//      indicator. So the title bar was hidden by the notch, and the bottom
+//      of the app got grazed by the home indicator. Same fix as elsewhere
+//      in v22: use `env(safe-area-inset-*)` for the four edges.
+//
+//      The Desktop component still probes safe-area-bottom and adjusts
+//      TASKBAR_HEIGHT — that's how the bottom of the window finds the
+//      right stopping point. This component handles the TOP safe area.
 // =============================================================================
 
 export default function AppWindow({
@@ -61,9 +77,8 @@ export default function AppWindow({
   // ── DRAG TO MOVE (desktop only) ──────────────────────────────────────────
   const onTitleMouseDown = useCallback((e: React.MouseEvent) => {
     if (isMobile || state.maximized) return
-    if (e.button !== 0) return // left only
+    if (e.button !== 0) return
     const target = e.target as HTMLElement
-    // Ignore drags that start on the window controls themselves
     if (target.closest('[data-window-control]')) return
 
     onFocus()
@@ -80,9 +95,8 @@ export default function AppWindow({
     const onMove_ = (e: MouseEvent) => {
       const newX = e.clientX - dragOffsetRef.current.x
       const newY = e.clientY - dragOffsetRef.current.y
-      // Clamp so title bar stays on screen (keep at least 100px of title visible)
       const minY = 0
-      const maxY = window.innerHeight - 60 // taskbar height
+      const maxY = window.innerHeight - 60
       const minX = -state.width + 120
       const maxX = window.innerWidth - 120
       onMove(
@@ -119,7 +133,6 @@ export default function AppWindow({
       const dy = e.clientY - resizeStartRef.current.y
       const newW = Math.max(360, resizeStartRef.current.w + dx)
       const newH = Math.max(240, resizeStartRef.current.h + dy)
-      // Don't exceed viewport
       const maxW = window.innerWidth - state.x - 8
       const maxH = window.innerHeight - state.y - 60
       onResize(Math.min(maxW, newW), Math.min(maxH, newH))
@@ -133,16 +146,14 @@ export default function AppWindow({
     }
   }, [resizing, state.x, state.y, onResize])
 
-  // ── KEYBOARD: Escape to close, Win+Down to minimize (when focused) ───────
+  // ── KEYBOARD: Alt+F4 to close ────────────────────────────────────────────
   useEffect(() => {
     if (!isFocused) return
     const onKey = (e: KeyboardEvent) => {
-      // Only handle if we're not in an input
       const target = e.target as HTMLElement
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
         return
       }
-      // Alt+F4 to close
       if (e.altKey && e.key === 'F4') {
         e.preventDefault()
         onClose()
@@ -153,21 +164,49 @@ export default function AppWindow({
   }, [isFocused, onClose])
 
   // ── COMPUTED GEOMETRY ────────────────────────────────────────────────────
-  // Mobile or maximized: full screen (above taskbar).
-  // Otherwise: positioned per state.
+  // Mobile or maximized: full screen ABOVE the taskbar.
+  //
+  // v22.1 — safe-area awareness:
+  //   On iPhone PWA the top inset (status bar / notch / Dynamic Island) can
+  //   be 20–60+ px depending on device. Without accommodation the title bar
+  //   sits behind the battery icon. We pin top:0 and add padding-top on the
+  //   title bar so its CONTENT (icon + name + controls) sits below the
+  //   notch. We DON'T just push top: by safe-area because then there'd be
+  //   a transparent gap above the title bar showing the wallpaper.
+  //
+  //   Bottom safe area is handled by Desktop.tsx which subtracts it from
+  //   the viewport height when computing window geometry — Desktop's
+  //   TASKBAR_HEIGHT already includes safe-area-inset-bottom. So we just
+  //   honor the geometry the parent passes us.
+  // ────────────────────────────────────────────────────────────────────────
   const geom: React.CSSProperties = (isMobile || state.maximized) ? {
-    left: 0, top: 0,
+    left: 0,
+    top: 0,
     width: '100vw',
-    height: 'calc(100vh - 48px)', // taskbar height
+    // Height comes from Desktop which already accounts for safe-area-bottom
+    height: 'calc(100vh - 48px - env(safe-area-inset-bottom, 0px))',
   } : {
     left: state.x, top: state.y,
     width: state.width, height: state.height,
   }
 
   if (state.minimized) {
-    // Minimized windows aren't rendered; taskbar holds them
     return null
   }
+
+  // Title bar gets extra padding-top in mobile/maximized so it clears the
+  // notch. In windowed (non-maximized) desktop mode, padding-top is the
+  // standard 4px because the user controls placement.
+  const titleBarPaddingTop =
+    (isMobile || state.maximized)
+      ? 'max(4px, calc(env(safe-area-inset-top, 0px) + 4px))'
+      : '4px'
+
+  // Title bar height needs to grow to match the larger padding-top
+  const titleBarHeight =
+    (isMobile || state.maximized)
+      ? 'calc(30px + env(safe-area-inset-top, 0px))'
+      : '30px'
 
   return (
     <div
@@ -205,19 +244,28 @@ export default function AppWindow({
             ? 'linear-gradient(to bottom, #d0e4f8 0%, #93b8de 45%, #5a8ac0 100%)'
             : 'linear-gradient(to bottom, #e8eef5 0%, #c8d4df 100%)',
           color: '#1c1c2c',
-          padding: '4px 6px 4px 8px',
+          paddingTop: titleBarPaddingTop,
+          paddingBottom: 4,
+          paddingLeft: 'max(8px, env(safe-area-inset-left, 8px))',
+          paddingRight: 'max(6px, env(safe-area-inset-right, 6px))',
           display: 'flex',
-          alignItems: 'center',
+          alignItems: 'flex-end',
           justifyContent: 'space-between',
           borderBottom: '1px solid ' + (isFocused ? '#3a6ea5' : '#9aa8b8'),
           cursor: (isMobile || state.maximized) ? 'default' : (dragging ? 'grabbing' : 'grab'),
           userSelect: 'none',
           flexShrink: 0,
-          height: 30,
+          height: titleBarHeight,
           boxSizing: 'border-box',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          minWidth: 0,
+          height: 22,
+        }}>
           <div style={{
             width: 16, height: 16, borderRadius: 3,
             background: iconBg,
@@ -235,14 +283,10 @@ export default function AppWindow({
           }}>{appName}</span>
         </div>
 
-        <div style={{ display: 'flex', gap: 0 }}>
+        <div style={{ display: 'flex', gap: 0, height: 22 }}>
           {!isMobile && (
             <>
-              <WindowControl
-                kind="min"
-                onClick={onMinimize}
-                title="Minimize"
-              />
+              <WindowControl kind="min" onClick={onMinimize} title="Minimize" />
               <WindowControl
                 kind="max"
                 onClick={onToggleMaximize}
@@ -251,20 +295,22 @@ export default function AppWindow({
               />
             </>
           )}
-          <WindowControl
-            kind="close"
-            onClick={onClose}
-            title="Close"
-          />
+          <WindowControl kind="close" onClick={onClose} title="Close" />
         </div>
       </div>
 
       {/* ── BODY (app content) ────────────────────────────────────────── */}
+      {/* v22.1 — `overflow: hidden`, NOT auto. Apps manage their own scroll
+          containers. Without this, iOS lets the app's inner content grow
+          past the visible window area. */}
       <div style={{
         flex: 1,
-        overflow: 'auto',
+        minHeight: 0,
+        overflow: 'hidden',
         background: '#f5f9fd',
         position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
       }}>
         {Component ? <Component /> : (
           <div style={{

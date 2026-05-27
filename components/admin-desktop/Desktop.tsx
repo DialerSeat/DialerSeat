@@ -25,10 +25,55 @@ import type { AppId, WindowState, RecentApp } from './types'
 //   We detect the safe-area-bottom via a CSS-var probe + ResizeObserver on
 //   mount because env() values aren't readable directly from JS. This lets
 //   the windowing logic respect it without hardcoding device-specific values.
+//
+// v22.1 — WINDOW STATE PERSISTENCE:
+//   On every windows/focus/topZ change we serialize to localStorage. On
+//   mount we hydrate from localStorage so a page refresh doesn't blow
+//   away the open apps. The auto-open-analytics behavior only fires when
+//   there's NO saved state (i.e., the user has never visited the desktop
+//   before, or cleared their storage).
+//
+//   Schema (versioned via LS_KEY suffix — bump on breaking changes):
+//     ds:admin-desktop:v1 → { windows: WindowState[], focusedId, topZ }
+//
+//   The schema doesn't persist transient UI like the start menu open
+//   state, context menu position, or recent-apps list — those are
+//   ephemeral. Just the windows + which one had focus + the z-counter
+//   so subsequent opens still land on top.
 // =============================================================================
 
 const MOBILE_BREAKPOINT = 768
 const TASKBAR_VISIBLE_HEIGHT = 48  // the taskbar's content height (unchanged)
+const LS_KEY = 'ds:admin-desktop:v1'
+
+interface PersistedState {
+  windows: WindowState[]
+  focusedId: string | null
+  topZ: number
+}
+
+function loadPersistedState(): PersistedState | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = localStorage.getItem(LS_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as PersistedState
+    if (!Array.isArray(parsed.windows)) return null
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+function savePersistedState(state: PersistedState): void {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(state))
+  } catch {
+    // Storage full or disabled — silently drop. Persistence is a nice-to-
+    // have, not a correctness requirement.
+  }
+}
 
 interface RightClickState {
   type: 'desktop' | 'icon' | 'taskbar-item' | 'titlebar'
@@ -44,14 +89,22 @@ interface PositionHint {
 
 export default function Desktop() {
   const router = useRouter()
-  const [windows, setWindows] = useState<WindowState[]>([])
-  const [focusedId, setFocusedId] = useState<string | null>(null)
-  const [topZ, setTopZ] = useState(100)
+
+  // v22.1 — hydrate from localStorage on first render. Lazy initializer
+  // runs once; subsequent renders use the persisted-then-mutated state.
+  // SSR-safe: loadPersistedState() returns null on the server.
+  const initial = (typeof window !== 'undefined') ? loadPersistedState() : null
+  const [windows, setWindows] = useState<WindowState[]>(initial?.windows ?? [])
+  const [focusedId, setFocusedId] = useState<string | null>(initial?.focusedId ?? null)
+  const [topZ, setTopZ] = useState(initial?.topZ ?? 100)
   const [startMenuOpen, setStartMenuOpen] = useState(false)
   const [contextMenu, setContextMenu] = useState<RightClickState | null>(null)
   const [recentApps, setRecentApps] = useState<RecentApp[]>([])
   const [isMobile, setIsMobile] = useState(false)
-  const [bootedAnalytics, setBootedAnalytics] = useState(false)
+  // v22.1 — if we hydrated SOMETHING from storage, skip auto-open-analytics.
+  // Otherwise the user opens the desktop fresh and we boot analytics like
+  // before.
+  const [bootedAnalytics, setBootedAnalytics] = useState((initial?.windows.length ?? 0) > 0)
 
   // v22: probed safe-area-inset-bottom in pixels. iPhone home indicator on
   // most devices is 34px (CSS pixels). Updated on mount + resize.
@@ -97,7 +150,22 @@ export default function Desktop() {
     }
   }, [])
 
-  // ── OPEN APP ─────────────────────────────────────────────────────────────
+  // ── PERSIST WINDOW STATE ─────────────────────────────────────────────────
+  // v22.1 — every change to windows/focusedId/topZ flushes to localStorage.
+  // On mobile the browser may evict tabs aggressively, but localStorage
+  // survives. We persist three things:
+  //   - windows: full WindowState[] including position/size/z/min/max
+  //   - focusedId: which window had focus
+  //   - topZ: so newly opened windows still stack correctly above restored
+  //     ones (otherwise a fresh open would have z=101 and could land
+  //     UNDER persisted windows that had z=120+)
+  // We don't debounce — these state updates are infrequent (drag/resize
+  // doesn't fire dozens of times per second the way text input would).
+  useEffect(() => {
+    savePersistedState({ windows, focusedId, topZ })
+  }, [windows, focusedId, topZ])
+
+
   const openApp = useCallback((appId: AppId, hint?: PositionHint) => {
     const app = getApp(appId)
     if (!app) return

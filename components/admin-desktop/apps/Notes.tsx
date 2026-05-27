@@ -2,40 +2,90 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 
 // =============================================================================
-// NOTES APP — v22
+// NOTES APP — v22.d
 // =============================================================================
-// v22 CHANGES from v21:
-//   1. SYNC button added to the toolbar — force-refetches all notes from
-//      the server, useful when the same admin is editing notes on a second
-//      device and wants the latest. Re-uses the same load logic as initial
-//      mount so it's a one-liner of state-clearing + the same fetch.
-//   2. Mobile scroll fix — the body textarea wouldn't scroll all the way
-//      to the bottom on iPhone because:
-//        - the iOS PWA window's address-bar collapse changes vh
-//        - the textarea was `flex: 1` inside a flexbox that didn't have
-//          a properly constrained max-height for mobile dvh
-//      Fix: explicit `min-height: 0` on flex children, `100dvh` height on
-//      root, plus `-webkit-overflow-scrolling: touch` on the sidebar list
-//      AND on the body textarea container so they scroll smoothly with
-//      momentum on iOS.
-//   3. Editor toolbar gets a tiny bottom padding via env(safe-area-inset-
-//      bottom) when running inside the maximized window on iPhone so the
-//      delete/sync buttons aren't grazed by the home indicator. (When the
-//      admin desktop's safe-area math is correct, this is redundant — but
-//      it's cheap belt-and-suspenders.)
+// Changes from v22:
+//   1. SYNC button removed — was solving a problem that didn't exist for a
+//      single-admin setup. Refresh handles re-sync now.
+//   2. CHECKLIST NOTE TYPE added. The same notes table holds both types;
+//      checklists are differentiated by the `body` column containing JSON
+//      with shape:
+//        { "type": "checklist", "items": [{"text": "...", "done": false}, ...] }
+//      Anything that doesn't parse as that shape is treated as a regular
+//      text note (backwards compatible — all existing notes stay text notes).
+//   3. Toolbar has TWO create buttons: "+ Note" and "+ Checklist". Selecting
+//      a checklist row in the sidebar shows the checklist editor on the
+//      right; selecting a text note shows the standard textarea.
+//   4. Mobile scroll bug — fixed at the AppWindow layer (v22.1), which
+//      now uses `overflow: hidden` on the window body and lets each app
+//      manage its own scroll containers. So Notes' inner scroll regions
+//      (sidebar list, body textarea, checklist items list) work properly
+//      on iPhone without competing scroll boundaries.
 // =============================================================================
 
 interface Note {
   id: string
   title: string
-  body: string
+  body: string  // For checklists this is a JSON string. For text notes, raw text.
   created_at: string
   updated_at: string
 }
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
+interface ChecklistItem {
+  text: string
+  done: boolean
+}
+
+interface ChecklistPayload {
+  type: 'checklist'
+  items: ChecklistItem[]
+}
+
 const MOBILE_BREAKPOINT = 720
+const CHECKLIST_MARKER = '"type":"checklist"'  // quick string check before parsing
+
+// ── CHECKLIST <-> JSON helpers ─────────────────────────────────────────────
+// We round-trip the items array through the body string. A checklist's
+// "title" stays in the title field same as a text note.
+function parseChecklist(body: string): ChecklistPayload | null {
+  // Cheap pre-check — avoids JSON.parse on the 99% of notes that are text
+  if (!body || !body.includes(CHECKLIST_MARKER)) return null
+  try {
+    const parsed = JSON.parse(body)
+    if (parsed?.type === 'checklist' && Array.isArray(parsed.items)) {
+      return {
+        type: 'checklist',
+        items: parsed.items
+          .filter((i: any) => typeof i?.text === 'string')
+          .map((i: any) => ({
+            text: String(i.text),
+            done: !!i.done,
+          })),
+      }
+    }
+  } catch {
+    return null
+  }
+  return null
+}
+
+function serializeChecklist(items: ChecklistItem[]): string {
+  const payload: ChecklistPayload = { type: 'checklist', items }
+  return JSON.stringify(payload)
+}
+
+// Splits a comma-pasted string into items. Trims, drops blanks. Used
+// both for the initial paste-into-input and the add-more flow.
+function parseCommaList(raw: string): string[] {
+  return raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0)
+}
+
+// ============================================================================
 
 export default function NotesApp() {
   const [notes, setNotes] = useState<Note[]>([])
@@ -45,21 +95,30 @@ export default function NotesApp() {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const [saveError, setSaveError] = useState<string | null>(null)
 
-  // v22: sync button state
-  const [syncing, setSyncing] = useState(false)
-
   const [isMobile, setIsMobile] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
 
+  // Edit buffers
   const [editTitle, setEditTitle] = useState('')
-  const [editBody, setEditBody] = useState('')
+  const [editBody, setEditBody] = useState('')              // for text notes
+  const [editItems, setEditItems] = useState<ChecklistItem[]>([])  // for checklists
+  const [addItemsInput, setAddItemsInput] = useState('')    // "type more items, comma-separated"
 
+  // What note type is currently being edited
+  const [editingKind, setEditingKind] = useState<'text' | 'checklist' | null>(null)
+
+  // Save infra
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const editingNoteIdRef = useRef<string | null>(null)
   const savedHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const pendingRef = useRef<{ id: string; title: string; body: string } | null>(null)
+  // Snapshot of what to save on next flush — updated synchronously so the
+  // debounced flush sees latest values
+  const pendingRef = useRef<{
+    id: string
+    title: string
+    body: string  // either raw text or serialized JSON; whatever ends up in DB
+  } | null>(null)
 
-  // ── MOBILE DETECTION ───────────────────────────────────────────────────
+  // ── MOBILE DETECTION ─────────────────────────────────────────────────────
   useEffect(() => {
     const check = () => {
       const m = window.innerWidth < MOBILE_BREAKPOINT
@@ -71,11 +130,8 @@ export default function NotesApp() {
     return () => window.removeEventListener('resize', check)
   }, [])
 
-  // ── LOAD NOTES ──────────────────────────────────────────────────────────
-  // Extracted so the Sync button can re-use it. preserveSelection=true
-  // means we try to keep the currently-selected note open after the
-  // refetch (useful when sync runs while user is mid-edit).
-  const loadNotes = useCallback(async (preserveSelection: boolean = false) => {
+  // ── LOAD NOTES ───────────────────────────────────────────────────────────
+  const loadNotes = useCallback(async () => {
     setLoading(true)
     setLoadError(null)
     try {
@@ -90,16 +146,7 @@ export default function NotesApp() {
       }
       const list = Array.isArray(d.notes) ? d.notes : []
       setNotes(list)
-
-      if (preserveSelection && selectedId) {
-        // Try to find the same note on the new list; if present, keep its
-        // server-state but DON'T overwrite the user's in-progress edits
-        // — preserves their unsaved typing through a Sync click.
-        const stillThere = list.find((n) => n.id === selectedId)
-        if (!stillThere && list.length > 0) {
-          selectNoteInternal(list[0])
-        }
-      } else if (list.length > 0 && !selectedId) {
+      if (list.length > 0 && !selectedId) {
         selectNoteInternal(list[0])
       }
     } catch (e: any) {
@@ -111,22 +158,40 @@ export default function NotesApp() {
   }, [selectedId])
 
   useEffect(() => {
-    loadNotes(false)
+    loadNotes()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // ── INTERNAL SELECT (no flush) ──────────────────────────────────────────
+  // ── SELECT NOTE — populates the right edit buffer based on note type ────
   const selectNoteInternal = useCallback((note: Note) => {
     setSelectedId(note.id)
     setEditTitle(note.title)
-    setEditBody(note.body)
-    editingNoteIdRef.current = note.id
-    pendingRef.current = { id: note.id, title: note.title, body: note.body }
     setSaveStatus('idle')
     setSaveError(null)
+    setAddItemsInput('')
+
+    const checklist = parseChecklist(note.body)
+    if (checklist) {
+      setEditingKind('checklist')
+      setEditBody('')
+      setEditItems(checklist.items)
+      pendingRef.current = {
+        id: note.id,
+        title: note.title,
+        body: serializeChecklist(checklist.items),
+      }
+    } else {
+      setEditingKind('text')
+      setEditBody(note.body)
+      setEditItems([])
+      pendingRef.current = {
+        id: note.id,
+        title: note.title,
+        body: note.body,
+      }
+    }
   }, [])
 
-  // ── USER-INITIATED SELECT (flushes pending save first) ──────────────────
   const selectNote = useCallback((note: Note) => {
     flushPendingSave()
     selectNoteInternal(note)
@@ -134,21 +199,72 @@ export default function NotesApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMobile, selectNoteInternal])
 
-  // ── ON-TYPE: update buffer + schedule debounced save ────────────────────
+  // ── EDIT HANDLERS ───────────────────────────────────────────────────────
+
   const onTitleChange = (value: string) => {
     setEditTitle(value)
-    if (selectedId) {
-      pendingRef.current = { id: selectedId, title: value, body: editBody }
-      scheduleSave()
+    if (!selectedId || !pendingRef.current) return
+    pendingRef.current = {
+      id: selectedId,
+      title: value,
+      body: pendingRef.current.body,
     }
+    scheduleSave()
   }
+
   const onBodyChange = (value: string) => {
     setEditBody(value)
-    if (selectedId) {
-      pendingRef.current = { id: selectedId, title: editTitle, body: value }
-      scheduleSave()
+    if (!selectedId) return
+    pendingRef.current = {
+      id: selectedId,
+      title: editTitle,
+      body: value,
     }
+    scheduleSave()
   }
+
+  // Mutating items always reserializes and schedules a save
+  const updateItems = (next: ChecklistItem[]) => {
+    setEditItems(next)
+    if (!selectedId) return
+    pendingRef.current = {
+      id: selectedId,
+      title: editTitle,
+      body: serializeChecklist(next),
+    }
+    scheduleSave()
+  }
+
+  const toggleItem = (idx: number) => {
+    const next = editItems.map((item, i) =>
+      i === idx ? { ...item, done: !item.done } : item
+    )
+    updateItems(next)
+  }
+
+  const removeItem = (idx: number) => {
+    const next = editItems.filter((_, i) => i !== idx)
+    updateItems(next)
+  }
+
+  const editItemText = (idx: number, text: string) => {
+    const next = editItems.map((item, i) =>
+      i === idx ? { ...item, text } : item
+    )
+    updateItems(next)
+  }
+
+  const addItemsFromInput = () => {
+    const additions = parseCommaList(addItemsInput).map((text) => ({
+      text,
+      done: false,
+    }))
+    if (additions.length === 0) return
+    updateItems([...editItems, ...additions])
+    setAddItemsInput('')
+  }
+
+  // ── SAVE ─────────────────────────────────────────────────────────────────
 
   const scheduleSave = () => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
@@ -204,6 +320,7 @@ export default function NotesApp() {
     }
   }, [])
 
+  // Best-effort flush on unmount (e.g. tab close)
   useEffect(() => {
     return () => {
       const pending = pendingRef.current
@@ -220,7 +337,9 @@ export default function NotesApp() {
     }
   }, [])
 
-  const createNote = async () => {
+  // ── CREATE ───────────────────────────────────────────────────────────────
+
+  const createNote = async (kind: 'text' | 'checklist') => {
     await flushPendingSave()
     try {
       const r = await fetch('/api/admin/notes', { method: 'POST' })
@@ -232,18 +351,42 @@ export default function NotesApp() {
       } catch {
         throw new Error(`Bad JSON from POST: ${text.slice(0, 300)}`)
       }
-      setNotes((prev) => [data.note, ...prev])
-      selectNoteInternal(data.note)
+
+      // If checklist, immediately PATCH the new note with the checklist
+      // payload so its body is the JSON form from row zero. Otherwise the
+      // existing body (likely empty) stays as plain text.
+      let newNote = data.note
+      if (kind === 'checklist') {
+        const initialBody = serializeChecklist([])
+        try {
+          const pr = await fetch(`/api/admin/notes/${newNote.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'New Checklist', body: initialBody }),
+          })
+          if (pr.ok) {
+            const pd = await pr.json()
+            if (pd?.note) newNote = pd.note
+          }
+        } catch {
+          // Non-fatal — note still exists, body will be set on first edit
+        }
+      }
+
+      setNotes((prev) => [newNote, ...prev])
+      selectNoteInternal(newNote)
       if (isMobile) setSidebarOpen(false)
     } catch (e: any) {
       console.error('[NotesApp create]', e)
-      alert(`Couldn't create a new note.\n\n${e?.message || 'Unknown error'}`)
+      alert(`Couldn't create. ${e?.message || 'Unknown error'}`)
     }
   }
 
+  // ── DELETE ───────────────────────────────────────────────────────────────
+
   const deleteNote = async () => {
     if (!selectedId) return
-    if (!confirm('Delete this note? This cannot be undone.')) return
+    if (!confirm('Delete this? This cannot be undone.')) return
     if (saveTimerRef.current) {
       clearTimeout(saveTimerRef.current)
       saveTimerRef.current = null
@@ -264,78 +407,78 @@ export default function NotesApp() {
           setSelectedId(null)
           setEditTitle('')
           setEditBody('')
-          editingNoteIdRef.current = null
+          setEditItems([])
+          setEditingKind(null)
           pendingRef.current = null
         }
         return next
       })
     } catch (e: any) {
       console.error('[NotesApp delete]', e)
-      alert(`Couldn't delete that note.\n\n${e?.message || 'Unknown error'}`)
+      alert(`Couldn't delete. ${e?.message || 'Unknown error'}`)
     }
   }
 
-  // ── SYNC — v22 ─────────────────────────────────────────────────────────
-  // Flushes pending save then refetches the full list from the server.
-  // Used when the same admin is editing notes on another device and the
-  // current view is stale, OR when there's a save error and we want to
-  // see what's actually on the server.
-  const syncNotes = async () => {
-    if (syncing) return
-    setSyncing(true)
-    try {
-      await flushPendingSave()
-      await loadNotes(true)
-    } finally {
-      setSyncing(false)
-    }
-  }
-
-  const previewFor = (n: Note): { title: string; snippet: string } => {
+  // ── SIDEBAR PREVIEW HELPER ──────────────────────────────────────────────
+  // For checklists: title from title field, snippet = "3 / 7 done" + first items.
+  // For text notes: title fallback + body snippet (same as before).
+  const previewFor = (n: Note): {
+    title: string
+    snippet: string
+    badge: string
+    isChecklist: boolean
+  } => {
     const liveTitle = n.id === selectedId ? editTitle : n.title
-    const liveBody = n.id === selectedId ? editBody : n.body
+
+    // Try checklist first
+    const liveBody = n.id === selectedId
+      ? (editingKind === 'checklist' ? serializeChecklist(editItems) : editBody)
+      : n.body
+    const checklist = parseChecklist(liveBody)
+
+    if (checklist) {
+      const done = checklist.items.filter((i) => i.done).length
+      const total = checklist.items.length
+      const title = liveTitle?.trim() || 'Checklist'
+      const snippet = total === 0
+        ? 'Empty'
+        : `${done} / ${total} done` + (total > 0 ? ' — ' + checklist.items.slice(0, 3).map((i) => i.text).join(', ') : '')
+      return {
+        title: title.length > 60 ? title.slice(0, 60) + '…' : title,
+        snippet: snippet.slice(0, 120),
+        badge: '☑',
+        isChecklist: true,
+      }
+    }
+
+    // Text note
     const lines = liveBody.split('\n').filter((l) => l.trim())
     let title = liveTitle?.trim() || lines[0]?.slice(0, 60) || 'New Note'
     if (title.length > 60) title = title.slice(0, 60) + '…'
     const snippet = lines.slice(liveTitle ? 0 : 1).join(' ').slice(0, 120) || 'No additional text'
-    return { title, snippet }
+    return {
+      title,
+      snippet,
+      badge: '📝',
+      isChecklist: false,
+    }
   }
 
+  // ── RENDER ───────────────────────────────────────────────────────────────
   return (
     <div style={S.root}>
-      {/* Inject animation keyframe for sync spinner */}
-      <style>{`
-        @keyframes notes-spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        .notes-spin { animation: notes-spin 0.8s linear infinite; }
-      `}</style>
-
       {isMobile && (
         <div style={S.mobileTopBar}>
           <button
             onClick={() => setSidebarOpen((v) => !v)}
             style={S.hamburger}
-            aria-label="Toggle notes list"
+            aria-label="Toggle list"
           >
-            ☰ Notes ({notes.length})
+            ☰ {notes.length}
           </button>
           <div style={{ display: 'flex', gap: 6 }}>
-            <button
-              onClick={syncNotes}
-              disabled={syncing}
-              style={{
-                ...S.newBtnMobile,
-                opacity: syncing ? 0.6 : 1,
-                cursor: syncing ? 'not-allowed' : 'pointer',
-              }}
-              title="Sync from server"
-            >
-              <span className={syncing ? 'notes-spin' : ''} style={{ display: 'inline-block' }}>↻</span>
-              {' '}Sync
-            </button>
-            <button onClick={createNote} style={S.newBtnMobile}>+ New</button>
+            <button onClick={() => createNote('text')} style={S.newBtnMobile}>+ Note</button>
+            <button onClick={() => createNote('checklist')} style={S.newBtnMobile}>+ List</button>
           </div>
         </div>
       )}
@@ -352,21 +495,11 @@ export default function NotesApp() {
             <div style={S.sidebarHeader}>
               <div style={S.sidebarTitle}>Notes</div>
               <div style={{ display: 'flex', gap: 6 }}>
-                <button
-                  onClick={syncNotes}
-                  disabled={syncing}
-                  style={{
-                    ...S.newBtn,
-                    opacity: syncing ? 0.6 : 1,
-                    cursor: syncing ? 'not-allowed' : 'pointer',
-                  }}
-                  title="Sync from server"
-                >
-                  <span className={syncing ? 'notes-spin' : ''} style={{ display: 'inline-block' }}>↻</span>
-                  {' '}Sync
+                <button onClick={() => createNote('text')} style={S.newBtn} title="New text note">
+                  + Note
                 </button>
-                <button onClick={createNote} style={S.newBtn} title="New note">
-                  + New
+                <button onClick={() => createNote('checklist')} style={S.newBtn} title="New checklist">
+                  + List
                 </button>
               </div>
             </div>
@@ -376,18 +509,18 @@ export default function NotesApp() {
             {loading && !notes.length && <div style={S.message}>Loading…</div>}
             {loadError && (
               <div style={{ ...S.message, color: '#c02020', textAlign: 'left' }}>
-                <strong>Error loading notes:</strong>
+                <strong>Error loading:</strong>
                 <div style={{ marginTop: 6, fontSize: 10, opacity: 0.9 }}>{loadError}</div>
               </div>
             )}
             {!loading && !loadError && notes.length === 0 && (
               <div style={S.message}>
-                No notes yet.<br /><br />
-                Click <strong>+ New</strong> to start.
+                Nothing yet.<br /><br />
+                Click <strong>+ Note</strong> or <strong>+ List</strong> to start.
               </div>
             )}
             {notes.map((n) => {
-              const { title, snippet } = previewFor(n)
+              const { title, snippet, badge } = previewFor(n)
               const isSelected = n.id === selectedId
               return (
                 <button
@@ -399,7 +532,10 @@ export default function NotesApp() {
                     borderLeft: '3px solid ' + (isSelected ? '#d4a020' : 'transparent'),
                   }}
                 >
-                  <div style={S.sidebarItemTitle}>{title}</div>
+                  <div style={S.sidebarItemTitle}>
+                    <span style={S.sidebarItemBadge}>{badge}</span>
+                    {title}
+                  </div>
                   <div style={S.sidebarItemMeta}>
                     <span style={S.sidebarItemDate}>{formatShortDate(new Date(n.updated_at))}</span>
                     <span style={S.sidebarItemSnippet}>{snippet}</span>
@@ -415,7 +551,7 @@ export default function NotesApp() {
             <>
               <div style={S.editorToolbar}>
                 <SaveBadge status={saveStatus} />
-                <button onClick={deleteNote} style={S.deleteBtn} title="Delete note">
+                <button onClick={deleteNote} style={S.deleteBtn} title="Delete">
                   Delete
                 </button>
               </div>
@@ -435,22 +571,36 @@ export default function NotesApp() {
               <input
                 value={editTitle}
                 onChange={(e) => onTitleChange(e.target.value)}
-                placeholder="Title"
+                placeholder={editingKind === 'checklist' ? 'Checklist title' : 'Title'}
                 style={S.titleInput}
                 maxLength={500}
               />
 
-              <textarea
-                value={editBody}
-                onChange={(e) => onBodyChange(e.target.value)}
-                placeholder="Start typing..."
-                style={S.bodyInput}
-                maxLength={100_000}
-              />
+              {editingKind === 'checklist' ? (
+                <ChecklistEditor
+                  items={editItems}
+                  onToggle={toggleItem}
+                  onRemove={removeItem}
+                  onEditText={editItemText}
+                  addInput={addItemsInput}
+                  setAddInput={setAddItemsInput}
+                  onAddItems={addItemsFromInput}
+                />
+              ) : (
+                <textarea
+                  value={editBody}
+                  onChange={(e) => onBodyChange(e.target.value)}
+                  placeholder="Start typing..."
+                  style={S.bodyInput}
+                  maxLength={100_000}
+                />
+              )}
             </>
           ) : (
             <div style={S.editorEmpty}>
-              {notes.length === 0 ? 'Create a note to get started' : 'Select a note from the sidebar'}
+              {notes.length === 0
+                ? 'Create a note or checklist to get started'
+                : 'Select something from the sidebar'}
             </div>
           )}
         </div>
@@ -459,6 +609,114 @@ export default function NotesApp() {
   )
 }
 
+// =============================================================================
+// CHECKLIST EDITOR
+// =============================================================================
+function ChecklistEditor({
+  items,
+  onToggle,
+  onRemove,
+  onEditText,
+  addInput,
+  setAddInput,
+  onAddItems,
+}: {
+  items: ChecklistItem[]
+  onToggle: (idx: number) => void
+  onRemove: (idx: number) => void
+  onEditText: (idx: number, text: string) => void
+  addInput: string
+  setAddInput: (s: string) => void
+  onAddItems: () => void
+}) {
+  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      onAddItems()
+    }
+  }
+
+  return (
+    <div style={S.checklistRoot}>
+      <div style={S.checklistList}>
+        {items.length === 0 ? (
+          <div style={S.checklistEmpty}>
+            No items yet. Paste comma-separated items below to add (e.g., <em>eggs, milk, bread</em>).
+          </div>
+        ) : (
+          items.map((item, idx) => (
+            <div
+              key={idx}
+              style={{
+                ...S.checklistRow,
+                opacity: item.done ? 0.55 : 1,
+              }}
+            >
+              <button
+                onClick={() => onToggle(idx)}
+                style={{
+                  ...S.checkbox,
+                  background: item.done ? '#2d7a2d' : '#ffffff',
+                  borderColor: item.done ? '#2d7a2d' : '#8a6a00',
+                  color: item.done ? '#fff' : 'transparent',
+                }}
+                aria-label={item.done ? 'Mark not done' : 'Mark done'}
+              >
+                ✓
+              </button>
+              <input
+                type="text"
+                value={item.text}
+                onChange={(e) => onEditText(idx, e.target.value)}
+                style={{
+                  ...S.checklistText,
+                  textDecoration: item.done ? 'line-through' : 'none',
+                  color: item.done ? '#5a4500' : '#1a1c24',
+                }}
+                maxLength={300}
+              />
+              <button
+                onClick={() => onRemove(idx)}
+                style={S.removeBtn}
+                aria-label="Remove item"
+                title="Remove"
+              >
+                ×
+              </button>
+            </div>
+          ))
+        )}
+      </div>
+
+      <div style={S.checklistAddRow}>
+        <input
+          type="text"
+          value={addInput}
+          onChange={(e) => setAddInput(e.target.value)}
+          onKeyDown={onKeyDown}
+          placeholder="Add items, comma-separated (eggs, milk, bread)"
+          style={S.checklistAddInput}
+          maxLength={2000}
+        />
+        <button
+          onClick={onAddItems}
+          disabled={!addInput.trim()}
+          style={{
+            ...S.checklistAddBtn,
+            opacity: addInput.trim() ? 1 : 0.5,
+            cursor: addInput.trim() ? 'pointer' : 'not-allowed',
+          }}
+        >
+          + Add
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// =============================================================================
+// SAVE BADGE
+// =============================================================================
 function SaveBadge({ status }: { status: SaveStatus }) {
   const map = {
     idle: null,
@@ -484,6 +742,9 @@ function SaveBadge({ status }: { status: SaveStatus }) {
   )
 }
 
+// =============================================================================
+// FORMATTERS
+// =============================================================================
 function formatShortDate(d: Date): string {
   const now = new Date()
   const sameDay =
@@ -502,17 +763,19 @@ function formatShortDate(d: Date): string {
   )
 }
 
-// ─── STYLES ──────────────────────────────────────────────────────────────
-// v22: scroll containers get WebkitOverflowScrolling: 'touch' for iOS
-// momentum scrolling, and explicit minHeight: 0 on every flex parent to
-// prevent the iOS bug where flex items refuse to shrink past their
-// children's intrinsic size.
+// =============================================================================
+// STYLES
+// =============================================================================
+// Notes manages its own scroll containers. AppWindow's body wrapper is
+// `overflow: hidden` (v22.1) so we don't fight with it. Every flex parent
+// that has a scrolling child gets `minHeight: 0` to keep iOS from growing
+// past the visible area.
 const S: Record<string, React.CSSProperties> = {
   root: {
     display: 'flex',
     flexDirection: 'column',
     width: '100%',
-    height: '100%',  // fills whatever the window manager gives us
+    height: '100%',
     background: '#f5f9fd',
     fontFamily: '"Segoe UI", Tahoma, sans-serif',
     color: '#1a1c24',
@@ -522,8 +785,9 @@ const S: Record<string, React.CSSProperties> = {
   inner: {
     flex: 1,
     display: 'flex',
-    minHeight: 0,  // critical for flex children to scroll on iOS
+    minHeight: 0,
     position: 'relative',
+    overflow: 'hidden',
   },
 
   mobileTopBar: {
@@ -534,6 +798,7 @@ const S: Record<string, React.CSSProperties> = {
     background: 'linear-gradient(to bottom, #ffd96a, #d4a020)',
     borderBottom: '1px solid #b48a18',
     flexShrink: 0,
+    gap: 8,
   },
   hamburger: {
     padding: '6px 12px',
@@ -547,8 +812,8 @@ const S: Record<string, React.CSSProperties> = {
     fontFamily: 'inherit',
   },
   newBtnMobile: {
-    padding: '6px 12px',
-    fontSize: 12,
+    padding: '6px 10px',
+    fontSize: 11,
     fontWeight: 700,
     border: '1px solid #8a6a00',
     background: '#fffaf0',
@@ -556,6 +821,7 @@ const S: Record<string, React.CSSProperties> = {
     borderRadius: 4,
     cursor: 'pointer',
     fontFamily: 'inherit',
+    whiteSpace: 'nowrap',
   },
 
   sidebar: {
@@ -596,8 +862,8 @@ const S: Record<string, React.CSSProperties> = {
     color: '#3a2a00',
   },
   newBtn: {
-    padding: '4px 10px',
-    fontSize: 11,
+    padding: '4px 8px',
+    fontSize: 10,
     fontWeight: 700,
     border: '1px solid #8a6a00',
     background: '#fffaf0',
@@ -605,11 +871,12 @@ const S: Record<string, React.CSSProperties> = {
     borderRadius: 3,
     cursor: 'pointer',
     fontFamily: 'inherit',
+    whiteSpace: 'nowrap',
   },
   sidebarList: {
     flex: 1,
     overflowY: 'auto',
-    WebkitOverflowScrolling: 'touch', // iOS momentum scroll
+    WebkitOverflowScrolling: 'touch',
     minHeight: 0,
   },
   sidebarItem: {
@@ -623,6 +890,12 @@ const S: Record<string, React.CSSProperties> = {
     fontFamily: 'inherit',
     fontSize: 12,
     color: '#1a1c24',
+  },
+  sidebarItemBadge: {
+    display: 'inline-block',
+    marginRight: 6,
+    opacity: 0.7,
+    fontSize: 11,
   },
   sidebarItemTitle: {
     fontWeight: 600,
@@ -655,7 +928,8 @@ const S: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     background: '#ffffff',
     minWidth: 0,
-    minHeight: 0,  // critical for textarea to be constrained on iOS
+    minHeight: 0,
+    overflow: 'hidden',
   },
   editorToolbar: {
     padding: '8px 14px',
@@ -724,7 +998,7 @@ const S: Record<string, React.CSSProperties> = {
     fontFamily: 'inherit',
     background: 'transparent',
     minHeight: 0,
-    WebkitOverflowScrolling: 'touch', // iOS momentum scroll in textarea
+    WebkitOverflowScrolling: 'touch',
     overflowY: 'auto',
   },
   editorEmpty: {
@@ -742,5 +1016,113 @@ const S: Record<string, React.CSSProperties> = {
     fontSize: 11,
     color: '#5a4500',
     textAlign: 'center',
+  },
+
+  // ── CHECKLIST EDITOR ────────────────────────────────────────────────────
+  checklistRoot: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    minHeight: 0,
+    overflow: 'hidden',
+  },
+  checklistList: {
+    flex: 1,
+    overflowY: 'auto',
+    WebkitOverflowScrolling: 'touch',
+    minHeight: 0,
+    padding: '8px 14px',
+  },
+  checklistEmpty: {
+    padding: '12px 4px',
+    fontSize: 12,
+    color: '#8a8e96',
+    fontStyle: 'italic',
+  },
+  checklistRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    padding: '6px 4px',
+    borderBottom: '1px solid #f0eddd',
+    transition: 'opacity 0.15s',
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    minWidth: 22,
+    border: '2px solid #8a6a00',
+    borderRadius: 4,
+    cursor: 'pointer',
+    fontSize: 14,
+    fontWeight: 800,
+    lineHeight: 1,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 0,
+    fontFamily: 'inherit',
+    transition: 'background 0.12s, border-color 0.12s',
+  },
+  checklistText: {
+    flex: 1,
+    border: 'none',
+    outline: 'none',
+    background: 'transparent',
+    fontSize: 14,
+    lineHeight: 1.4,
+    fontFamily: 'inherit',
+    padding: '4px 2px',
+    minWidth: 0,
+  },
+  removeBtn: {
+    width: 22,
+    height: 22,
+    minWidth: 22,
+    border: '1px solid #c8b070',
+    background: 'transparent',
+    color: '#8a6a00',
+    borderRadius: 4,
+    cursor: 'pointer',
+    fontSize: 16,
+    fontWeight: 700,
+    lineHeight: 1,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 0,
+    fontFamily: 'inherit',
+  },
+  checklistAddRow: {
+    flexShrink: 0,
+    padding: '10px 14px',
+    borderTop: '1px solid #e2e4ea',
+    background: '#f8fafd',
+    display: 'flex',
+    gap: 8,
+    alignItems: 'center',
+  },
+  checklistAddInput: {
+    flex: 1,
+    minWidth: 0,
+    padding: '8px 10px',
+    fontSize: 13,
+    border: '1px solid #c4c8d0',
+    borderRadius: 4,
+    fontFamily: 'inherit',
+    outline: 'none',
+    background: '#ffffff',
+    color: '#1a1c24',
+  },
+  checklistAddBtn: {
+    padding: '8px 14px',
+    fontSize: 12,
+    fontWeight: 700,
+    border: '1px solid #8a6a00',
+    background: '#fffaf0',
+    color: '#5a4500',
+    borderRadius: 4,
+    fontFamily: 'inherit',
+    whiteSpace: 'nowrap',
   },
 }
