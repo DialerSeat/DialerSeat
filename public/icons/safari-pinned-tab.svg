@@ -1,9 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
-  <text x="8" y="8"
-        font-family="Futura PT, Futura, Trebuchet MS, sans-serif"
-        font-weight="700"
-        font-size="14"
-        fill="black"
-        text-anchor="middle"
-        dominant-baseline="central">D</text>
+  <!--
+    Small black "D" using the Jost Bold path. Same glyph as master.svg,
+    just scaled to fit a 16x16 viewBox and rendered in black instead of
+    white-on-blue.
+
+    Target glyph height: 14 SVG units (matches original font-size=14)
+    Scale: 14 / 700 = 0.02
+    Baseline lands at SVG Y = 8 + 14/2 = 15 (vertically centered at 8)
+    Horizontal centering: midpoint of glyph (font space 386.5) * 0.02 = 7.73,
+                          shift = 8 - 7.73 = 0.27
+  -->
+  <g transform="translate(0.27, 15) scale(0.02, -0.02)" fill="black" fill-rule="evenodd">
+    <path d="M324 0H74V700H324Q439 700 523.0 657.5Q607 615 653.0 536.5Q699 458 699 350Q699 242 653.0 163.5Q607 85 523.0 42.5Q439 0 324 0ZM318 550H248V150H318Q372 150 419.0 168.5Q466 187 495.0 231.0Q524 275 524 350Q524 425 495.0 469.0Q466 513 419.0 531.5Q372 550 318 550Z"/>
+  </g>
 </svg>

@@ -6,11 +6,25 @@
     </linearGradient>
   </defs>
   <rect width="512" height="512" rx="96" ry="96" fill="url(#bg)"/>
-  <text x="256" y="256"
-        font-family="Futura PT, Futura, Trebuchet MS, sans-serif"
-        font-weight="700"
-        font-size="340"
-        fill="white"
-        text-anchor="middle"
-        dominant-baseline="central">D</text>
+  <!--
+    Jost Bold "D" glyph extracted from the official OFL-licensed font
+    (indestructible-type/Jost, weight 700). Embedded as a vector path so it
+    renders identically on every device regardless of installed fonts.
+
+    Jost is a geometric sans-serif inspired by Futura. Glyph metrics:
+      Font units-per-em: 1000
+      Cap height: 700 font units
+      D glyph bounds: x in [74, 699], y in [0, 700] (font space, Y-up)
+
+    Transform reasoning:
+      Target visual size: 340 SVG units tall (matches the original font-size=340)
+      Scale factor: 340 / 700 = 0.48571
+      Font space is Y-up; SVG is Y-down. We flip with scale(s, -s).
+      The translate moves (font 0,0) to where we want the baseline in SVG.
+      Baseline lands at SVG Y = 256 + 340/2 = 426 (vertical center at 256).
+      X shift centers the glyph midpoint (187.7 in scaled space) on SVG X=256.
+  -->
+  <g transform="translate(68.27, 426) scale(0.48571, -0.48571)" fill="white" fill-rule="evenodd">
+    <path d="M324 0H74V700H324Q439 700 523.0 657.5Q607 615 653.0 536.5Q699 458 699 350Q699 242 653.0 163.5Q607 85 523.0 42.5Q439 0 324 0ZM318 550H248V150H318Q372 150 419.0 168.5Q466 187 495.0 231.0Q524 275 524 350Q524 425 495.0 469.0Q466 513 419.0 531.5Q372 550 318 550Z"/>
+  </g>
 </svg>

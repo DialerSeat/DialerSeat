@@ -25,10 +25,18 @@ interface TaskbarProps {
 //      with a home indicator so the visible 48px stays above the gesture
 //      bar. iOS PWA installations no longer cut off the bottom of the
 //      taskbar visually.
-//   3. D brand mark switched from <text> to <path> — iOS Safari doesn't
-//      reliably apply page fonts to SVG <text>, so the D rendered in a
-//      different font on mobile. A path-based glyph renders identically
-//      across all browsers and devices.
+//   3. D brand mark switched to /icons/master.svg — the canonical brand
+//      vector. Identical to the favicon and PWA icons.
+//
+// v22.d CHANGES:
+//   4. Safe-area bottom region now renders as a solid dark color that
+//      matches the bottom edge of the gradient (#0a1020). Before this,
+//      the gradient extended into the safe-area zone but its visual
+//      density at the bottom looked like wallpaper showing through. The
+//      fix: split rendering into two layers — gradient bar (top 48px)
+//      and solid bottom strip (safe-area-inset-bottom). Together they
+//      look like one continuous taskbar that reaches the hardware
+//      bottom, instead of "taskbar floating above a gap."
 // =============================================================================
 
 export default function Taskbar({
@@ -42,6 +50,43 @@ export default function Taskbar({
   isMobile,
 }: TaskbarProps) {
   const [now, setNow] = useState<Date>(new Date())
+
+  // ── KEYBOARD OFFSET (v22.d, mobile) ───────────────────────────────────────
+  // When iOS opens the on-screen keyboard, the visual viewport shrinks but
+  // `position: fixed; bottom: 0` keeps the taskbar pinned to the LAYOUT
+  // viewport (full screen), so it slides behind the keyboard. We use the
+  // visualViewport API to measure the offset and lift the taskbar by that
+  // amount via translateY.
+  //
+  // The keyboard's height equals the gap between the visual viewport's
+  // bottom and the layout viewport's bottom:
+  //   keyboardHeight = window.innerHeight - (visualViewport.height + visualViewport.offsetTop)
+  //
+  // We listen to BOTH `resize` (keyboard appears/disappears) and `scroll`
+  // (iOS sometimes fires scroll instead of resize during the transition).
+  // The offset is applied only on mobile — desktop doesn't have this issue
+  // and applying a transform would interfere with the show-desktop animation.
+  const [keyboardOffset, setKeyboardOffset] = useState(0)
+
+  useEffect(() => {
+    if (!isMobile) return
+    const vv = window.visualViewport
+    if (!vv) return  // older browser without API; nothing we can do
+
+    const recompute = () => {
+      const gap = window.innerHeight - (vv.height + vv.offsetTop)
+      // Clamp to non-negative; some browsers can briefly report negatives
+      // during orientation/keyboard transitions
+      setKeyboardOffset(Math.max(0, gap))
+    }
+    recompute()
+    vv.addEventListener('resize', recompute)
+    vv.addEventListener('scroll', recompute)
+    return () => {
+      vv.removeEventListener('resize', recompute)
+      vv.removeEventListener('scroll', recompute)
+    }
+  }, [isMobile])
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 30_000)
@@ -59,31 +104,51 @@ export default function Taskbar({
       style={{
         position: 'fixed',
         bottom: 0, left: 0, right: 0,
-        // v22: visible 48px + safe-area-inset-bottom for iPhone home indicator.
-        // The taskbar's interactive content stays at the top 48px of this
-        // container; the rest is padding that pushes above the gesture bar.
+        // v22.d: outer container is solid #0a1020 (matches the bottom of
+        // the gradient). This is what fills the safe-area zone. The
+        // gradient strip lives in an inner div constrained to height 48
+        // at the top of this container.
         height: `calc(48px + env(safe-area-inset-bottom, 0px))`,
-        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-        background: 'linear-gradient(to bottom, #1a1f2e 0%, #1a2540 18%, #2a3a5a 50%, #1a2540 82%, #0a1020 100%)',
-        borderTop: '1px solid #5a7ba8',
+        background: '#0a1020',
         boxShadow: '0 -1px 0 rgba(255,255,255,0.08) inset, 0 -8px 24px rgba(0,0,0,0.3)',
         zIndex: 10000,
         display: 'flex',
-        alignItems: 'stretch',
-        paddingLeft: 0,
-        paddingRight: 4,
+        flexDirection: 'column',
         userSelect: 'none',
+        // v22.d: lift taskbar above iOS on-screen keyboard. keyboardOffset
+        // is 0 when keyboard is closed (so this is a no-op for desktop and
+        // mobile-with-no-keyboard). The transition makes the lift feel
+        // smooth instead of jumpy when the keyboard animates in/out.
+        transform: keyboardOffset > 0 ? `translateY(-${keyboardOffset}px)` : 'none',
+        transition: 'transform 0.18s ease-out',
         fontFamily: '"Segoe UI", Tahoma, sans-serif',
       }}
     >
-      {/* Interactive content row — height locked to 48 so the safe-area
-          padding doesn't stretch buttons */}
+      {/* Gradient bar — fixed 48px, contains all interactive content.
+          The remaining height (safe-area-inset-bottom) is solid #0a1020
+          from the outer container, blending visually into the gradient's
+          bottom stop. On laptop (no safe-area), this is the entire
+          taskbar. On iPhone PWA, the gradient ends right where the home
+          indicator zone begins, with a seamless dark continuation. */}
       <div style={{
+        height: 48,
+        flexShrink: 0,
+        background: 'linear-gradient(to bottom, #1a1f2e 0%, #1a2540 18%, #2a3a5a 50%, #1a2540 82%, #0a1020 100%)',
+        borderTop: '1px solid #5a7ba8',
         display: 'flex',
         alignItems: 'center',
+        paddingLeft: 0,
+        paddingRight: 4,
         width: '100%',
-        height: 48,
+        boxSizing: 'border-box',
       }}>
+        {/* Interactive content row */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          width: '100%',
+          height: 48,
+        }}>
         {/* ── START BUTTON ───────────────────────────────────────────────── */}
         <button
           onClick={(e) => {
@@ -306,6 +371,7 @@ export default function Taskbar({
             }}
           />
         </div>
+      </div>
       </div>
     </div>
   )

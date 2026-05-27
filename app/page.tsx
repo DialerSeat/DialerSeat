@@ -5,12 +5,34 @@ import SiteFooter from '@/components/site-footer'
 import WLCallout from '@/components/wl-callout'
 
 // =============================================================================
-// LANDING PAGE
+// LANDING PAGE — v22.d
 // =============================================================================
-// v22 FIX: nav padding-top uses env(safe-area-inset-top) so the SIGN UP
-// button doesn't hide behind iPhone status bar / Dynamic Island. The fix
-// applies to both nav variants (logged-out + logged-in) and to the hero
-// padding-top so content below isn't pushed behind the status bar either.
+// v22.d fix — SiteHeader missing for logged-in users on /?view=landing:
+//
+// In v22-batchC we removed the logged-in 3-col nav from this page because
+// SiteHeader (from app/layout.tsx) renders globally. That's still correct
+// — but there was a leftover layout artifact: the .ds-hero rule had
+// `padding-top: max(120px, calc(env(safe-area-inset-top, 0px) + 100px))`,
+// designed for the OLD `position: fixed` nav from the logged-OUT path.
+//
+// For the logged-IN path SiteHeader is `position: sticky; top: 0` — it
+// sits in normal flow above <main>. The leftover 120px padding made it
+// look like the hero owned the top of the viewport, which combined with
+// the hero's `minHeight: 100vh` meant SiteHeader was rendering but the
+// hero pushed it off-screen on mobile (where 100vh > visible viewport
+// height in iOS Safari PWA mode).
+//
+// The fix is surgical:
+//   1. Split .ds-hero padding-top into two variants:
+//        - .ds-hero-logged-out: keeps the old 120/100px padding because
+//          the fixed nav still covers the top
+//        - .ds-hero-logged-in: tiny padding (40/24px) because SiteHeader
+//          is sticky-in-flow and already takes its own height
+//   2. Remove `minHeight: 100vh` from the hero section for the logged-in
+//      variant. The hero content sizes naturally and SiteHeader is the
+//      first thing visible on page load.
+//
+// LOGGED-OUT EXPERIENCE IS UNCHANGED. JC explicitly liked it.
 // =============================================================================
 
 interface PageProps {
@@ -32,7 +54,14 @@ export default async function Home({ searchParams }: PageProps) {
   const ctaLabel = isLoggedIn ? 'GO TO DASHBOARD' : 'GET STARTED'
 
   return (
-    <main style={{ background: 'var(--background)', minHeight: '100vh', overflowX: 'hidden' }}>
+    <main style={{
+      background: 'var(--background)',
+      // v22.d — don't force minHeight on <main>. SiteHeader sits above us in
+      // sticky flow on the logged-in path; forcing <main> to 100vh was
+      // creating a phantom gap on small viewports.
+      minHeight: isLoggedIn ? 'auto' : '100vh',
+      overflowX: 'hidden',
+    }}>
       <style>{`
         :root {
           --hero-fs: 80px;
@@ -40,9 +69,8 @@ export default async function Home({ searchParams }: PageProps) {
           --cta-fs: 52px;
         }
 
-        /* v22 — both nav variants now respect iPhone safe-area-inset-top.
-           env() resolves to 0 on non-notched / desktop, so layout is
-           unchanged there. */
+        /* LOGGED-OUT nav — unchanged. Fixed position so it overlaps hero,
+           hero needs ~120px top padding to clear it. */
         .ds-nav {
           padding-top: max(20px, calc(env(safe-area-inset-top, 0px) + 12px));
           padding-bottom: 20px;
@@ -52,10 +80,22 @@ export default async function Home({ searchParams }: PageProps) {
         .ds-nav-links { display: flex; align-items: center; gap: 40px; }
         .ds-nav-link { display: inline-block; }
 
-        /* v22 — hero starts below safe area + the fixed nav height so the
-           first hero element isn't masked by the nav on small screens */
-        .ds-hero {
+        /* v22.d — TWO hero variants depending on whether SiteHeader is in flow */
+
+        /* Logged-OUT hero: original 120/100px padding to clear the fixed .ds-nav */
+        .ds-hero-logged-out {
           padding-top: max(120px, calc(env(safe-area-inset-top, 0px) + 100px));
+          padding-bottom: 80px;
+          padding-left: 40px;
+          padding-right: 40px;
+          min-height: 100vh;
+        }
+
+        /* Logged-IN hero: SiteHeader is sticky-in-flow, takes its own height.
+           We just need normal section padding. NO minHeight: 100vh — that
+           was causing the SiteHeader to appear pushed off-screen on iOS. */
+        .ds-hero-logged-in {
+          padding-top: 40px;
           padding-bottom: 80px;
           padding-left: 40px;
           padding-right: 40px;
@@ -82,12 +122,20 @@ export default async function Home({ searchParams }: PageProps) {
           .ds-nav-links { gap: 0; }
           .ds-nav-link { display: none; }
           .ds-nav-link.ds-show-mobile { display: inline-block; }
-          .ds-hero {
+
+          .ds-hero-logged-out {
             padding-top: max(100px, calc(env(safe-area-inset-top, 0px) + 80px));
             padding-bottom: 60px;
             padding-left: 20px;
             padding-right: 20px;
           }
+          .ds-hero-logged-in {
+            padding-top: 24px;
+            padding-bottom: 60px;
+            padding-left: 20px;
+            padding-right: 20px;
+          }
+
           .ds-hero-h1 { letter-spacing: -1px !important; line-height: 1.1 !important; }
           .ds-hero-p { font-size: 15px !important; }
           .ds-stats {
@@ -164,14 +212,16 @@ export default async function Home({ searchParams }: PageProps) {
         </nav>
       )}
 
-      <section className="ds-hero" style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '100vh',
-        textAlign: 'center',
-      }}>
+      <section
+        className={isLoggedIn ? 'ds-hero-logged-in' : 'ds-hero-logged-out'}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          textAlign: 'center',
+        }}
+      >
         <div style={{
           display: 'inline-flex',
           alignItems: 'center',
