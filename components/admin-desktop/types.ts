@@ -17,6 +17,7 @@ export type AppId =
   | 'whitelabel'
   | 'logs'
   | 'notes'
+  | 'gmail'
 
 export interface AppDefinition {
   id: AppId

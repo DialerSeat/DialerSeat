@@ -52,6 +52,10 @@ const NotesApp = dynamic(() => import('./apps/Notes'), {
   loading: () => <AppLoading />,
   ssr: false,
 })
+const GmailApp = dynamic(() => import('./apps/Gmail'), {
+  loading: () => <AppLoading />,
+  ssr: false,
+})
 
 function AppLoading() {
   return (
@@ -132,6 +136,15 @@ export const APPS: AppDefinition[] = [
     Component: NotesApp,
     defaultSize: { width: 1000, height: 700 },
   },
+  {
+  id: 'gmail',
+  name: 'Gmail',
+  icon: '✉',
+  iconBg: 'linear-gradient(135deg, #ea4335, #b8281a)',
+  description: 'Read, send, and manage your DialerSeat business inbox',
+  Component: GmailApp,
+  defaultSize: { width: 1100, height: 720 },
+},
 ]
 
 export function getApp(id: string): AppDefinition | undefined {
