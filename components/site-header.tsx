@@ -25,6 +25,12 @@ const T = {
 // Global header rendered (probably) by the root layout. Shows brand + auth
 // state + DASHBOARD button on every page that doesn't suppress it.
 //
+// v23 FIX — removed borderBottom:
+//   The `borderBottom: 1px solid ${T.border}` rendered as a stray light
+//   line under the header on /faq, /vs, /terms, /privacy, and the
+//   logged-in /?view=landing. Removed entirely — the sticky header now
+//   sits flush against the page background with no divider.
+//
 // v22 FIX — iPhone status bar overlap:
 //   With `apple-mobile-web-app-status-bar-style: 'black-translucent'` set in
 //   app/layout.tsx, iOS lays web content UNDER the status bar / Dynamic
@@ -118,7 +124,9 @@ export default function SiteHeader() {
       className="site-header"
       style={{
         background: T.darker,
-        borderBottom: `1px solid ${T.border}`,
+        // v23: borderBottom removed (was `1px solid ${T.border}`) — it
+        // showed as a stray light divider line on every page using this
+        // header. Header now sits flush against the page background.
         // v22 FIX: padding-top accounts for iPhone status bar / notch via
         // env(safe-area-inset-top). max() ensures non-notched devices still
         // get at least 12px of padding.

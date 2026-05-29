@@ -95,6 +95,7 @@ export default function DialingModesView() {
               <tbody>
                 <ModeRow
                   mode="PREVIEW"
+                  slug="preview"
                   modeColor={T.muted}
                   how="Lead profile loads. Agent reviews context. Agent clicks DIAL or SKIP."
                   speed="Slowest"
@@ -103,6 +104,7 @@ export default function DialingModesView() {
                 />
                 <ModeRow
                   mode="POWER"
+                  slug="power"
                   modeColor={T.accent}
                   how="Agent clicks DIAL. One call at a time. Agent handles voicemails."
                   speed="Moderate"
@@ -111,6 +113,7 @@ export default function DialingModesView() {
                 />
                 <ModeRow
                   mode="PROGRESSIVE"
+                  slug="progressive"
                   modeColor={T.green}
                   how="Auto-dials next lead after disposition. AMD filters voicemails."
                   speed="Fast"
@@ -119,6 +122,7 @@ export default function DialingModesView() {
                 />
                 <ModeRow
                   mode="PREDICTIVE"
+                  slug="predictive"
                   modeColor={T.red}
                   how="Multi-line dialing. Pacing algorithm. Auto-throttles at 2.5% abandon rate."
                   speed="Fastest"
@@ -127,6 +131,15 @@ export default function DialingModesView() {
                 />
               </tbody>
             </table>
+          </div>
+          <div style={{
+            marginTop: 10,
+            fontSize: 11,
+            letterSpacing: 1,
+            color: T.muted,
+            textAlign: 'right',
+          }}>
+            Click any mode for the full deep dive →
           </div>
         </section>
 
@@ -198,6 +211,7 @@ export default function DialingModesView() {
 
           <ModeBlock
             label="PREVIEW"
+            slug="preview"
             color={T.muted}
             tagline="Manual gate before every call. Agent reviews lead context, then chooses."
             mechanics={[
@@ -212,6 +226,7 @@ export default function DialingModesView() {
 
           <ModeBlock
             label="POWER"
+            slug="power"
             color={T.accent}
             tagline="Agent-initiated. One call at a time. Agent handles voicemails personally."
             mechanics={[
@@ -226,6 +241,7 @@ export default function DialingModesView() {
 
           <ModeBlock
             label="PROGRESSIVE"
+            slug="progressive"
             color={T.green}
             tagline="Auto-dial next lead. Answering Machine Detection (AMD) filters voicemails out."
             mechanics={[
@@ -241,6 +257,7 @@ export default function DialingModesView() {
 
           <ModeBlock
             label="PREDICTIVE"
+            slug="predictive"
             color={T.red}
             tagline="Multi-line dialing. Pacing algorithm. Hard-capped at 3% abandon rate by software."
             mechanics={[
@@ -434,11 +451,24 @@ const SectionLabel = ({ children }: { children: React.ReactNode }) => (
   </div>
 )
 
-const ModeRow = ({ mode, modeColor, how, speed, abandons, bestFor }: {
-  mode: string; modeColor: string; how: string; speed: string; abandons: string; bestFor: string
+const ModeRow = ({ mode, slug, modeColor, how, speed, abandons, bestFor }: {
+  mode: string; slug: string; modeColor: string; how: string; speed: string; abandons: string; bestFor: string
 }) => (
   <tr style={{ borderBottom: `1px solid ${T.border}` }}>
-    <td style={{ ...td, fontWeight: 'bold', color: modeColor, letterSpacing: 2, fontSize: 11 }}>{mode}</td>
+    <td style={{ ...td, fontWeight: 'bold', color: modeColor, letterSpacing: 2, fontSize: 11 }}>
+      <Link
+        href={`/dialing-modes/${slug}`}
+        style={{
+          color: modeColor,
+          textDecoration: 'none',
+          borderBottom: `1px dotted ${modeColor}`,
+          paddingBottom: 1,
+        }}
+        title={`Read the full ${mode.toLowerCase()} deep dive`}
+      >
+        {mode}
+      </Link>
+    </td>
     <td style={td}>{how}</td>
     <td style={{ ...td, fontFamily: 'monospace', fontSize: 11 }}>{speed}</td>
     <td style={{ ...td, fontFamily: 'monospace', fontSize: 11 }}>{abandons}</td>
@@ -448,6 +478,7 @@ const ModeRow = ({ mode, modeColor, how, speed, abandons, bestFor }: {
 
 interface ModeBlockProps {
   label: string
+  slug: string
   color: string
   tagline: string
   mechanics: string[]
@@ -456,7 +487,7 @@ interface ModeBlockProps {
   extraNote?: string
 }
 
-const ModeBlock = ({ label, color, tagline, mechanics, compliance, bestFor, extraNote }: ModeBlockProps) => (
+const ModeBlock = ({ label, slug, color, tagline, mechanics, compliance, bestFor, extraNote }: ModeBlockProps) => (
   <div style={{
     background: T.surface,
     border: `1px solid ${T.border}`,
@@ -548,6 +579,29 @@ const ModeBlock = ({ label, color, tagline, mechanics, compliance, bestFor, extr
         fontStyle: 'italic',
       }}>{extraNote}</div>
     )}
+
+    {/* Deep-dive link — origins, mechanics in more depth, use-case grid */}
+    <div style={{
+      marginTop: 18,
+      paddingTop: 14,
+      borderTop: `1px dashed ${T.border}`,
+    }}>
+      <Link
+        href={`/dialing-modes/${slug}`}
+        style={{
+          fontSize: 11,
+          letterSpacing: 3,
+          fontWeight: 'bold',
+          color,
+          textDecoration: 'none',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
+        }}
+      >
+        READ THE FULL {label} DEEP DIVE →
+      </Link>
+    </div>
   </div>
 )
 

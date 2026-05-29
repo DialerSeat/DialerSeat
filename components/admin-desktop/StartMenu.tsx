@@ -12,25 +12,23 @@ interface StartMenuProps {
 }
 
 // =============================================================================
-// START MENU — v22.d
+// START MENU — v23
 // =============================================================================
 // Win7 Start menu — left column with pinned apps, right column with profile
-// header + recent items + Shut Down. Closes on outside click or Escape.
+// header + recent items + footer actions. Closes on outside click or Escape.
 //
-// v22.d FIX — Manage Account routes to a page instead of opening a modal.
-//   Clerk's <UserButton> default opens its profile manager as a modal
-//   rendered through a React portal at document.body. Inside the admin
-//   desktop the StartMenu container has `overflow: hidden`, AND the
-//   <UserButton> sits inside a small 48x48 white box for visual fit.
-//   Even though Clerk's portal escapes the DOM ancestry, the modal layer
-//   was rendering inconsistently — sometimes invisible, sometimes
-//   clipped, depending on stacking context.
+// v23 FIX — Manage Account opens the draggable ClerkProfile desktop window.
+//   Earlier attempts (modal, then path-routing to /dashboard/admin/profile)
+//   were inconsistent. The clean fix: the profile lives as a real desktop
+//   app ('clerk-profile') rendered inside an AppWindow. The StartMenu now
+//   fires a `open-desktop-app` CustomEvent that Desktop.tsx listens for and
+//   opens via its window manager. This matches the desktop's spatial
+//   metaphor and never gets trapped behind overlays.
 //
-//   The fix is to use Clerk's routing-mode "path" with userProfileUrl
-//   pointing at a real /dashboard/admin/profile route. Now "Manage
-//   Account" navigates to that page (which renders <UserProfile />
-//   inline). Predictable, always works, and matches the desktop's
-//   spatial metaphor — clicking it feels like opening a window.
+//   - The header avatar still uses <UserButton> for the avatar visual, but
+//     its built-in "Manage Account" is bypassed in favor of the explicit
+//     footer button + a dedicated handler.
+//   - A "Manage Account" footer button dispatches the open-desktop-app event.
 // =============================================================================
 
 export default function StartMenu({ onClose, onLaunchApp, recent }: StartMenuProps) {
@@ -57,6 +55,14 @@ export default function StartMenu({ onClose, onLaunchApp, recent }: StartMenuPro
       document.removeEventListener('keydown', onKey)
     }
   }, [onClose])
+
+  // v23: open the draggable Account window instead of routing/modal.
+  const openAccountWindow = () => {
+    window.dispatchEvent(
+      new CustomEvent('open-desktop-app', { detail: { appId: 'clerk-profile' } })
+    )
+    onClose()
+  }
 
   const fullName = user
     ? (`${user.firstName || ''} ${user.lastName || ''}`.trim() || user.primaryEmailAddress?.emailAddress?.split('@')[0] || 'User')
@@ -103,21 +109,25 @@ export default function StartMenu({ onClose, onLaunchApp, recent }: StartMenuPro
         alignItems: 'center',
         gap: 12,
       }}>
-        <div style={{
-          width: 48, height: 48,
-          borderRadius: 6,
-          background: 'white',
-          border: '2px solid white',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-          overflow: 'hidden',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}>
+        <div
+          onClick={openAccountWindow}
+          title="Manage account"
+          style={{
+            width: 48, height: 48,
+            borderRadius: 6,
+            background: 'white',
+            border: '2px solid white',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+            overflow: 'hidden',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+          }}
+        >
           {isLoaded && (
             <UserButton
-              userProfileMode="navigation"
-              userProfileUrl="/dashboard/admin/profile"
+              afterSignOutUrl="/"
               appearance={{
                 elements: {
                   avatarBox: { width: 44, height: 44 },
@@ -200,22 +210,20 @@ export default function StartMenu({ onClose, onLaunchApp, recent }: StartMenuPro
         display: 'flex',
         gap: 4,
       }}>
+        {/* v23: Manage Account — opens the draggable ClerkProfile window */}
+        <button
+          style={footerBtnStyle}
+          onClick={openAccountWindow}
+        >
+          <span style={{ marginRight: 6 }}>👤</span>
+          Manage Account
+        </button>
         <SignOutButton redirectUrl="/">
           <button style={footerBtnStyle}>
             <span style={{ marginRight: 6 }}>🔒</span>
             Log Off
           </button>
         </SignOutButton>
-        <button
-          style={footerBtnStyle}
-          onClick={() => {
-            onClose()
-            router.push('/dashboard/analytics')
-          }}
-        >
-          <span style={{ marginRight: 6 }}>⏻</span>
-          Shut Down
-        </button>
       </div>
     </div>
   )

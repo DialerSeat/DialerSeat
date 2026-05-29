@@ -230,7 +230,11 @@ export default async function RootLayout({
   const branding = await getTenantBranding(tenantSlug);
 
   return (
-    <ClerkProvider localization={dialerseatLocalization}>
+    // v23 quick win: afterSignOutUrl="/" sends signed-out users back to
+    // the marketing landing page instead of Clerk's default destination
+    // (which can otherwise land on /sign-in or a 404 depending on where
+    // the user signed out from).
+    <ClerkProvider localization={dialerseatLocalization} afterSignOutUrl="/">
       <html lang="en">
         <head>
           {/* iOS splash screens — emitted as raw <link> tags with the

@@ -87,16 +87,29 @@ async function countInFlightCalls(campaignId: string): Promise<number> {
 }
 
 /**
- * Counts active dialer sessions for a campaign in last 60s.
+ * Counts active dialer sessions for a campaign in the last 60s.
+ *
+ * Migration note (v23 bugfix): this used to read from `dialer_sessions`
+ * (which no longer exists) and filtered on `ended_at IS NULL` +
+ * `last_heartbeat_at`. The replacement table is `agent_sessions`, which
+ * has no `ended_at` column — session lifecycle is tracked via the `state`
+ * text column (one of: ready, dialing, on_call, wrapping, paused). The
+ * heartbeat column was also renamed `last_heartbeat_at` → `last_heartbeat`.
+ *
+ * "Active" here = any non-paused agent with a recent heartbeat. This
+ * preserves the original semantics (everyone currently engaged with the
+ * dialer, including agents on calls or wrapping). If predictive ever
+ * over-dials, consider tightening this to state='ready' only — that's a
+ * behavior change, not a bug fix, so it's deferred.
  */
 async function countActiveAgents(campaignId: string): Promise<number> {
   const sixtySecondsAgo = new Date(Date.now() - 60 * 1000).toISOString()
   const { data } = await supabaseAdmin
-    .from('dialer_sessions')
+    .from('agent_sessions')
     .select('user_id')
     .eq('campaign_id', campaignId)
-    .is('ended_at', null)
-    .gte('last_heartbeat_at', sixtySecondsAgo)
+    .neq('state', 'paused')
+    .gte('last_heartbeat', sixtySecondsAgo)
   if (!data) return 0
   return new Set(data.map(s => s.user_id)).size
 }

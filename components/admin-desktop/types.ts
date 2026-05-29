@@ -18,7 +18,8 @@ export type AppId =
   | 'logs'
   | 'notes'
   | 'gmail'
-
+  | 'clerk-profile'
+  | 'browser'
 export interface AppDefinition {
   id: AppId
   name: string                // shown on the desktop icon + taskbar

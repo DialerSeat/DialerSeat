@@ -48,6 +48,18 @@ export const runtime = 'nodejs'
 //     • Their team members effectively see the default DialerSeat branding
 //   Same logic for any agent seats charged via team_seat_charges on that
 //   team — already handled by the existing seat-charge handler.
+//
+// v23 bugfix (routeSubscriptionDeleted):
+//   The team_seat path used to do `.eq('stripe_subscription_id', sub.id)`
+//   against team_seat_charges — but that column DOES NOT EXIST on that
+//   table. The schema is:
+//     id (uuid), team_id, owner_id, agent_id, team_member_id,
+//     stripe_invoice_id, stripe_subscription_item_id, ...
+//   The lookup column is `stripe_subscription_item_id` (the `si_xxx`
+//   Stripe subscription ITEM id, NOT the `sub_xxx` subscription id).
+//   Result: voided seat charges were silently NOT being marked voided on
+//   subscription.deleted events. Fixed below by mirroring syncSeatCharge:
+//   prefer `seat_charge_id` from metadata, fall back to the item id.
 // =============================================================================
 
 export async function POST(req: Request) {
@@ -148,10 +160,39 @@ async function routeSubscriptionDeleted(subscription: Stripe.Subscription) {
   const subKind = subscription.metadata?.sub_kind
 
   if (subKind === 'team_seat') {
-    await supabase
-      .from('team_seat_charges')
-      .update({ status: 'voided' })
-      .eq('stripe_subscription_id', subscription.id)
+    // v23 bugfix: team_seat_charges has NO `stripe_subscription_id` column.
+    // The table stores `stripe_subscription_item_id` (Stripe's `si_xxx`,
+    // not `sub_xxx`). The cleanest identifier is the row id, which we
+    // already stash in subscription metadata at creation time as
+    // `seat_charge_id` (see syncSeatCharge). Prefer that, fall back to
+    // the item id if metadata is somehow missing on an older sub.
+    const seatChargeId = subscription.metadata?.seat_charge_id
+    if (seatChargeId) {
+      const { error } = await supabase
+        .from('team_seat_charges')
+        .update({ status: 'voided' })
+        .eq('id', seatChargeId)
+      if (error) {
+        console.error('[team_seat] failed to void by seat_charge_id:', error)
+      }
+    } else {
+      const itemId = subscription.items.data[0]?.id
+      if (itemId) {
+        const { error } = await supabase
+          .from('team_seat_charges')
+          .update({ status: 'voided' })
+          .eq('stripe_subscription_item_id', itemId)
+        if (error) {
+          console.error('[team_seat] failed to void by item id:', error)
+        }
+      } else {
+        console.error(
+          '[team_seat] subscription.deleted has neither seat_charge_id metadata ' +
+          'nor a subscription item id — cannot void charge for sub:',
+          subscription.id
+        )
+      }
+    }
     return
   }
 

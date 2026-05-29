@@ -4,7 +4,7 @@
 // GMAIL APP — three-pane mail client embedded in the admin desktop
 // =============================================================================
 // Layout:
-//   Left:   labels/folders (INBOX, STARRED, SENT, DRAFT, custom labels)
+//   Left:   labels/folders (INBOX, custom labels, SENT, then "More" expander)
 //   Middle: message list for selected label, with search box
 //   Right:  message detail (sender, subject, body), with reply/star/trash/archive
 //
@@ -17,6 +17,13 @@
 // The app is wrapped by AppWindow (the Win7 frame), so we render only the
 // inside. We own our own scroll containers — AppWindow's body wrapper is
 // overflow:hidden per the v22.d contract.
+//
+// v23 LABELS CHANGE:
+//   The left pane previously dumped every label flat. Now labels are bucketed:
+//   ALWAYS VISIBLE (in order): Inbox → custom (user) labels alphabetical → Sent.
+//   Everything else (Starred, Important, Drafts, Spam, Trash, Chat, all
+//   Categories, other system labels) is hidden under a "More ▾" expander.
+//   No API change — we bucket client-side.
 // =============================================================================
 
 import { useEffect, useState, useCallback } from 'react'
@@ -66,6 +73,7 @@ const LABEL_DISPLAY: Record<string, string> = {
   IMPORTANT: 'Important',
   SPAM: 'Spam',
   TRASH: 'Trash',
+  CHAT: 'Chat',
   CATEGORY_PERSONAL: 'Personal',
   CATEGORY_SOCIAL: 'Social',
   CATEGORY_PROMOTIONS: 'Promotions',
@@ -75,6 +83,29 @@ const LABEL_DISPLAY: Record<string, string> = {
 
 function displayLabelName(l: Label): string {
   return LABEL_DISPLAY[l.id] ?? l.name
+}
+
+// v23: split labels into the always-visible set (Inbox, custom alpha, Sent)
+// and the "More" set (everything else). Pure function of the labels array.
+function bucketLabels(labels: Label[]): { primary: Label[]; more: Label[] } {
+  const byId = (id: string) => labels.find((l) => l.id === id)
+
+  const inbox = byId('INBOX')
+  const sent = byId('SENT')
+
+  const custom = labels
+    .filter((l) => l.type === 'user')
+    .sort((a, b) => displayLabelName(a).localeCompare(displayLabelName(b)))
+
+  const primary: Label[] = []
+  if (inbox) primary.push(inbox)
+  primary.push(...custom)
+  if (sent) primary.push(sent)
+
+  const primaryIds = new Set(primary.map((l) => l.id))
+  const more = labels.filter((l) => !primaryIds.has(l.id))
+
+  return { primary, more }
 }
 
 function formatDate(iso: string): string {
@@ -134,6 +165,7 @@ export default function GmailApp() {
   const [isMobile, setIsMobile] = useState(false)
   // On mobile we use 2 visible panes max: list or detail (toggle).
   const [mobileView, setMobileView] = useState<'labels' | 'list' | 'detail'>('list')
+  const [showMoreLabels, setShowMoreLabels] = useState(false)
 
   // ----- effects -----
 
@@ -465,32 +497,62 @@ export default function GmailApp() {
         ✎  Compose
       </button>
       <div style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
-        {labels.map((l) => {
-          const isSelected = l.id === selectedLabelId
-          const unreadCount = l.messagesUnread ?? 0
+        {(() => {
+          const { primary, more } = bucketLabels(labels)
+
+          const renderLabelButton = (l: Label) => {
+            const isSelected = l.id === selectedLabelId
+            const unreadCount = l.messagesUnread ?? 0
+            return (
+              <button
+                key={l.id}
+                onClick={() => {
+                  setSelectedLabelId(l.id)
+                  if (isMobile) setMobileView('list')
+                }}
+                style={{
+                  ...labelButtonStyle,
+                  background: isSelected ? '#e8f0fe' : 'transparent',
+                  color: isSelected ? '#1a73e8' : '#333',
+                  fontWeight: isSelected ? 600 : 400,
+                }}
+              >
+                <span style={{ flex: 1, textAlign: 'left' }}>{displayLabelName(l)}</span>
+                {unreadCount > 0 && (
+                  <span style={{ fontSize: 11, color: isSelected ? '#1a73e8' : '#888' }}>
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+            )
+          }
+
           return (
-            <button
-              key={l.id}
-              onClick={() => {
-                setSelectedLabelId(l.id)
-                if (isMobile) setMobileView('list')
-              }}
-              style={{
-                ...labelButtonStyle,
-                background: isSelected ? '#e8f0fe' : 'transparent',
-                color: isSelected ? '#1a73e8' : '#333',
-                fontWeight: isSelected ? 600 : 400,
-              }}
-            >
-              <span style={{ flex: 1, textAlign: 'left' }}>{displayLabelName(l)}</span>
-              {unreadCount > 0 && (
-                <span style={{ fontSize: 11, color: isSelected ? '#1a73e8' : '#888' }}>
-                  {unreadCount}
-                </span>
+            <>
+              {primary.map(renderLabelButton)}
+
+              {more.length > 0 && (
+                <>
+                  <button
+                    onClick={() => setShowMoreLabels((v) => !v)}
+                    style={{
+                      ...labelButtonStyle,
+                      color: '#888',
+                      fontWeight: 600,
+                      fontSize: 12,
+                    }}
+                  >
+                    <span style={{ flex: 1, textAlign: 'left' }}>
+                      {showMoreLabels ? 'Less' : 'More'}
+                    </span>
+                    <span style={{ fontSize: 10 }}>{showMoreLabels ? '▴' : '▾'}</span>
+                  </button>
+                  {showMoreLabels && more.map(renderLabelButton)}
+                </>
               )}
-            </button>
+            </>
           )
-        })}
+        })()}
       </div>
     </div>
   )

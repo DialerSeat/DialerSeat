@@ -56,7 +56,14 @@ const GmailApp = dynamic(() => import('./apps/Gmail'), {
   loading: () => <AppLoading />,
   ssr: false,
 })
-
+const ClerkProfileApp = dynamic(() => import('./apps/ClerkProfile'), {
+  loading: () => <AppLoading />,
+  ssr: false,
+})
+const BrowserApp = dynamic(() => import('./apps/Browser'), {
+  loading: () => <AppLoading />,
+  ssr: false,
+})
 function AppLoading() {
   return (
     <div style={{
@@ -144,6 +151,27 @@ export const APPS: AppDefinition[] = [
   description: 'Read, send, and manage your DialerSeat business inbox',
   Component: GmailApp,
   defaultSize: { width: 1100, height: 720 },
+},
+{
+  id: 'browser',
+  name: 'Browser',
+  icon: '🌐',
+  iconBg: 'linear-gradient(135deg, #5dd5d5, #2a8a8a)',
+  description: 'Open web pages (embeds where allowed, opens in tab otherwise)',
+  Component: BrowserApp,
+  defaultSize: { width: 1024, height: 720 },
+},
+{
+  // Not shown as a desktop icon by default — opened from the tray/StartMenu.
+  // If you WANT a desktop icon too, leave it here; if not, it's harmless as
+  // the tray/StartMenu open it by id regardless.
+  id: 'clerk-profile',
+  name: 'Account',
+  icon: '👤',
+  iconBg: 'linear-gradient(135deg, #b478ff, #6a30d0)',
+  description: 'Manage your DialerSeat account',
+  Component: ClerkProfileApp,
+  defaultSize: { width: 920, height: 720 },
 },
 ]
 
