@@ -1,3 +1,25 @@
+// app/api/leads/delete/route.ts
+// =============================================================================
+// DELETE LEADS
+// =============================================================================
+// Two modes (unchanged from the previous version):
+//   1. Pass `lead_ids: string[]` — bulk delete specific leads (used by the
+//      Sheets-style editor in /dashboard/campaigns).
+//   2. Pass `campaign_id` only — wipe ALL leads in a campaign (used by the
+//      campaign-clear flow; doesn't delete the campaign itself).
+//
+// FIX from previous version:
+//   The earlier recount-affected-campaigns logic queried for campaign_ids
+//   AFTER the delete had run, so it always returned empty. That meant if the
+//   caller deleted leads spanning multiple campaigns by lead_ids and didn't
+//   pass campaign_id, total_leads counters drifted off forever.
+//
+//   Now we collect affected campaign_ids BEFORE the delete (via the same
+//   ownership-verification query), then recount each affected campaign
+//   AFTER the delete. Single source of truth: total_leads always matches
+//   the actual row count.
+// =============================================================================
+
 import { supabaseAdmin } from '@/lib/supabase'
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
@@ -12,16 +34,18 @@ export async function POST(req: Request) {
     const body = await req.json()
     const { lead_ids, campaign_id } = body
 
-    // Two modes: delete a list of specific leads, OR delete by campaign id.
-    // Both require ownership verification.
-
+    // ── Mode 1: bulk delete by lead_ids ─────────────────────────────────
     if (Array.isArray(lead_ids) && lead_ids.length > 0) {
-      // Bulk delete by IDs — verify ALL leads belong to caller before deleting.
-      const { data: ownedLeads } = await supabaseAdmin
+      // Verify ownership AND capture campaign_ids in one query.
+      const { data: ownedLeads, error: ownErr } = await supabaseAdmin
         .from('leads')
-        .select('id')
+        .select('id, campaign_id')
         .in('id', lead_ids)
         .eq('user_id', userId)
+
+      if (ownErr) {
+        return NextResponse.json({ success: false, error: ownErr.message }, { status: 500 })
+      }
 
       if (!ownedLeads || ownedLeads.length !== lead_ids.length) {
         return NextResponse.json(
@@ -30,37 +54,30 @@ export async function POST(req: Request) {
         )
       }
 
-      const { error } = await supabaseAdmin
+      // Collect affected campaign_ids BEFORE deleting so we can recount them after.
+      const affectedCampaignIds = Array.from(
+        new Set(ownedLeads.map(l => l.campaign_id).filter(Boolean))
+      )
+
+      // Delete
+      const { error: delErr } = await supabaseAdmin
         .from('leads')
         .delete()
         .in('id', lead_ids)
         .eq('user_id', userId) // belt-and-suspenders
 
-      if (error) throw error
-
-      // Recompute total_leads for any campaigns affected.
-      // (calls.lead_id has ON DELETE SET NULL so call rows survive.)
-      const affectedCampaigns = Array.from(
-        new Set(
-          (await supabaseAdmin
-            .from('leads')
-            .select('campaign_id')
-            .in('id', lead_ids))
-            .data?.map((l: any) => l.campaign_id) ?? []
-        )
-      )
-      // Note: at this point the leads are deleted, so the above query returns
-      // nothing. We get affected campaigns from the request side instead.
-      // Simpler: if caller passed campaign_id explicitly, recount that one.
-      if (campaign_id) {
-        await recountCampaign(campaign_id)
+      if (delErr) {
+        return NextResponse.json({ success: false, error: delErr.message }, { status: 500 })
       }
+
+      // Recount every affected campaign.
+      await Promise.all(affectedCampaignIds.map(cid => recountCampaign(cid)))
 
       return NextResponse.json({ success: true, deleted: lead_ids.length })
     }
 
+    // ── Mode 2: wipe all leads in a campaign ────────────────────────────
     if (campaign_id) {
-      // Delete all leads in a campaign (without deleting the campaign itself).
       const { data: campaign } = await supabaseAdmin
         .from('campaigns')
         .select('id, user_id')
@@ -100,6 +117,8 @@ export async function POST(req: Request) {
   }
 }
 
+// ── Helper: recount total_leads for a campaign ───────────────────────────
+// Uses a head:true count query (cheap — doesn't materialize rows).
 async function recountCampaign(campaignId: string) {
   const { count } = await supabaseAdmin
     .from('leads')

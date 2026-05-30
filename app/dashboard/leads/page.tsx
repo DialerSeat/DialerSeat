@@ -3,6 +3,23 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
 
+// =============================================================================
+// LEADS PAGE — v25
+// =============================================================================
+// Visual refresh to match the new Drive-style campaigns aesthetic:
+//   - System sans-serif throughout (no monospace tracking on labels)
+//   - Clean white surfaces, subtle borders, soft hover states
+//   - Light header bar instead of the dark terminal header
+//   - Filters bar with proper labels, no all-caps spaced-out chrome
+//   - Lead rows: white cards with hover lift, expand inline to edit
+//   - Disposition badges: soft fills, not the heavy colored borders
+//   - Lapsed banner kept (amber)
+//   - Mobile: filters collapse via a clean toggle
+//
+// Functional changes: NONE. Same endpoints, same query params, same
+// infinite scroll, same expand-and-edit-disposition flow.
+// =============================================================================
+
 type AccessTier = 'active' | 'lapsed' | 'new' | null
 
 interface Lead {
@@ -50,18 +67,6 @@ const T = {
   red: '#8a1a1a',
   warn: '#ffaa3e',
   amber: '#8a6a1a',
-}
-
-const dispositionTint = (disp: string | null): string => {
-  switch (disp) {
-    case 'CLOSED': return 'rgba(26, 106, 26, 0.10)'
-    case 'APPOINTMENT': return 'rgba(26, 74, 138, 0.10)'
-    case 'NOT INTERESTED': return 'rgba(138, 106, 26, 0.10)'
-    case 'DO NOT CALL': return 'rgba(138, 26, 26, 0.10)'
-    case 'NO_ANSWER': return 'rgba(90, 94, 106, 0.06)'
-    case 'SKIPPED': return 'rgba(90, 94, 106, 0.04)'
-    default: return T.surface
-  }
 }
 
 export default function LeadsPage() {
@@ -208,8 +213,8 @@ export default function LeadsPage() {
     return DISPOSITIONS.find(d => d.label === disp)?.color || T.muted
   }
   const dispBg = (disp: string | null) => {
-    if (!disp) return '#e8e8ec'
-    return DISPOSITIONS.find(d => d.label === disp)?.bg || '#e8e8ec'
+    if (!disp) return '#eef0f3'
+    return DISPOSITIONS.find(d => d.label === disp)?.bg || '#eef0f3'
   }
 
   const campaignName = (id: string) =>
@@ -228,289 +233,456 @@ export default function LeadsPage() {
       display: 'flex',
       flexDirection: 'column',
       overflow: 'hidden',
+      fontFamily: 'system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif',
+      color: T.text,
     }}>
       <style>{`
         .leads-root * { box-sizing: border-box; }
+
+        /* Top header — light + clean, no more dark terminal */
         .leads-header {
-          background: ${T.dark};
-          padding: 12px 20px;
-          border-bottom: 2px solid ${T.accent};
+          background: white;
+          padding: 18px 28px;
+          border-bottom: 1px solid ${T.border};
           display: flex;
           align-items: center;
           justify-content: space-between;
           gap: 16px;
           flex-wrap: wrap;
         }
+        .leads-header-title h1 {
+          font-size: 22px;
+          font-weight: 500;
+          color: ${T.text};
+          margin: 0;
+          letter-spacing: -0.2px;
+        }
+        .leads-header-title p {
+          font-size: 12px;
+          color: ${T.muted};
+          margin: 3px 0 0;
+        }
+        .leads-export-btn {
+          padding: 8px 16px;
+          background: white;
+          border: 1px solid ${T.border};
+          border-radius: 6px;
+          color: ${T.text};
+          font-size: 12px;
+          font-weight: 500;
+          cursor: pointer;
+          font-family: inherit;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          transition: background 0.12s, border-color 0.12s;
+        }
+        .leads-export-btn:hover {
+          background: #f8f9fa;
+          border-color: ${T.muted};
+        }
+
         .leads-lapsed-banner {
-          padding: 10px 20px;
-          background: rgba(255,170,62,0.08);
-          border-bottom: 1px solid #8a6a1a;
-          font-size: 11px;
-          letter-spacing: 2px;
-          color: ${T.warn};
+          padding: 12px 28px;
+          background: rgba(255,170,62,0.06);
+          border-bottom: 1px solid #d4b86a;
+          font-size: 13px;
+          color: ${T.text};
           display: flex;
           align-items: center;
           justify-content: space-between;
           gap: 12px;
           flex-wrap: wrap;
         }
+        .leads-lapsed-banner strong { color: ${T.warn}; }
+        .leads-lapsed-banner a {
+          padding: 6px 12px;
+          background: linear-gradient(135deg, #ffaa3e, #ff8a1a);
+          color: white;
+          font-size: 11px;
+          font-weight: 600;
+          border-radius: 4px;
+          text-decoration: none;
+        }
+
+        /* Filters bar — clean white surface with bordered inputs */
         .leads-controls {
-          padding: 12px 16px;
-          background: ${T.surface};
+          padding: 14px 28px;
+          background: white;
           border-bottom: 1px solid ${T.border};
           display: grid;
-          grid-template-columns: 2fr 1fr 1fr 1fr auto;
-          gap: 8px;
+          grid-template-columns: 2fr 1fr 1fr 1fr;
+          gap: 12px;
           align-items: end;
         }
-        .leads-controls .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-        .leads-controls label {
-          font-size: 9px; letter-spacing: 2px; color: ${T.muted}; font-weight: bold;
+        .leads-controls .field {
+          display: flex; flex-direction: column; gap: 5px; min-width: 0;
         }
-        .leads-controls select, .leads-controls input {
+        .leads-controls label {
+          font-size: 11px;
+          color: ${T.muted};
+          font-weight: 500;
+          letter-spacing: 0.2px;
+        }
+        .leads-controls input, .leads-controls select {
           width: 100%;
-          padding: 8px 10px;
-          background: ${T.bg};
+          padding: 8px 11px;
+          background: white;
           border: 1px solid ${T.border};
-          border-radius: 4px;
-          font-family: monospace;
-          font-size: 12px;
+          border-radius: 6px;
+          font-size: 13px;
           color: ${T.text};
           outline: none;
+          font-family: inherit;
           min-width: 0;
+          transition: border-color 0.12s, box-shadow 0.12s;
         }
+        .leads-controls input:focus, .leads-controls select:focus {
+          border-color: ${T.blue};
+          box-shadow: 0 0 0 3px rgba(74,158,255,0.12);
+        }
+
         .leads-mobile-toggle { display: none; }
-        .leads-list { flex: 1; overflow-y: auto; padding: 12px 16px; }
+
+        /* Counter strip */
+        .leads-counter {
+          padding: 8px 28px;
+          font-size: 11px;
+          color: ${T.muted};
+          background: #f8f9fa;
+          border-bottom: 1px solid ${T.border};
+        }
+
+        /* List body */
+        .leads-list {
+          flex: 1;
+          overflow-y: auto;
+          padding: 14px 24px 24px;
+        }
+
         .lead-card {
+          background: white;
           border: 1px solid ${T.border};
-          border-radius: 4px;
-          padding: 12px 14px;
+          border-radius: 8px;
+          padding: 12px 16px;
           margin-bottom: 6px;
           display: grid;
-          grid-template-columns: 1.7fr 1.3fr 0.6fr 1fr 0.7fr 0.5fr 0.7fr;
-          gap: 10px;
+          grid-template-columns: 1.7fr 1.3fr 0.6fr 1fr 0.7fr 0.5fr 0.9fr;
+          gap: 14px;
           align-items: center;
           cursor: pointer;
-          transition: border-color 0.1s, background 0.15s;
-          font-size: 12px;
+          transition: border-color 0.12s, box-shadow 0.12s;
+          font-size: 13px;
         }
-        .lead-card:hover { border-color: ${T.blue}; }
-        .lead-card.expanded { border-color: ${T.blue}; }
+        .lead-card:hover {
+          border-color: ${T.muted};
+          box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+        }
+        .lead-card.expanded {
+          border-color: ${T.blue};
+          border-bottom-left-radius: 0;
+          border-bottom-right-radius: 0;
+        }
+
         .lead-cell { min-width: 0; }
         .lead-name {
-          font-weight: bold; font-family: monospace; color: ${T.text};
-          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+          font-weight: 500;
+          color: ${T.text};
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          font-size: 13px;
         }
         .lead-phone {
-          font-family: monospace; color: ${T.accent}; font-weight: bold;
+          font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+          color: ${T.accent};
+          font-weight: 500;
+          font-size: 12px;
+        }
+        .lead-meta-light {
+          font-size: 11px;
+          color: ${T.muted};
+          margin-top: 2px;
         }
         .lead-meta-mobile { display: none; }
+
+        .disp-badge {
+          display: inline-block;
+          padding: 3px 9px;
+          border-radius: 10px;
+          font-size: 10px;
+          font-weight: 500;
+          letter-spacing: 0.3px;
+          white-space: nowrap;
+        }
+
+        /* Expanded edit panel */
         .lead-expand {
-          padding: 16px;
-          background: ${T.bg};
+          background: white;
           border: 1px solid ${T.blue};
           border-top: none;
-          border-radius: 0 0 4px 4px;
-          margin-top: -7px;
-          margin-bottom: 6px;
+          border-radius: 0 0 8px 8px;
+          margin: -7px 0 6px;
+          padding: 16px;
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 16px;
+          gap: 20px;
         }
-        .lead-extra { display: grid; gap: 6px; }
+        .lead-section-title {
+          font-size: 10px;
+          color: ${T.muted};
+          font-weight: 600;
+          letter-spacing: 0.8px;
+          text-transform: uppercase;
+          margin-bottom: 8px;
+        }
         .lead-extra-row {
           display: flex;
           justify-content: space-between;
-          padding: 6px 10px;
-          background: ${T.surface};
-          border: 1px solid ${T.border};
-          border-radius: 3px;
-          font-size: 11px;
+          padding: 7px 12px;
+          background: #f8f9fa;
+          border: 1px solid #eef0f3;
+          border-radius: 5px;
+          font-size: 12px;
+          margin-bottom: 4px;
         }
-        .lead-edit { display: flex; flex-direction: column; gap: 10px; }
-        .disp-badge {
-          display: inline-block;
-          padding: 3px 10px;
-          border-radius: 3px;
-          font-size: 9px;
-          letter-spacing: 1px;
-          font-weight: bold;
-          font-family: 'Futura PT', Futura, sans-serif;
+        .lead-extra-row .key {
+          color: ${T.muted};
+          font-size: 11px;
+          text-transform: uppercase;
+          letter-spacing: 0.3px;
+        }
+        .lead-extra-row .val {
+          font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+          color: ${T.text};
+          font-weight: 500;
+          font-size: 12px;
+          text-align: right;
+          max-width: 220px;
+          overflow: hidden;
+          text-overflow: ellipsis;
           white-space: nowrap;
         }
+
         .disp-grid {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
           gap: 6px;
         }
         .disp-btn {
-          padding: 8px 4px;
-          border-radius: 3px;
-          font-size: 9px;
-          font-weight: bold;
-          letter-spacing: 1px;
+          padding: 8px 6px;
+          border-radius: 6px;
+          font-size: 10px;
+          font-weight: 500;
+          letter-spacing: 0.3px;
           cursor: pointer;
-          font-family: 'Futura PT', Futura, sans-serif;
+          font-family: inherit;
           border: 1px solid ${T.border};
           background: white;
+          color: ${T.text};
+          transition: background 0.12s, border-color 0.12s;
         }
-        .disp-btn:disabled { cursor: not-allowed; opacity: 0.5; }
+        .disp-btn:hover { background: #f8f9fa; }
+
+        .lead-notes-textarea {
+          width: 100%;
+          padding: 10px 12px;
+          border: 1px solid ${T.border};
+          border-radius: 6px;
+          font-size: 13px;
+          font-family: inherit;
+          background: white;
+          color: ${T.text};
+          outline: none;
+          resize: vertical;
+          box-sizing: border-box;
+          transition: border-color 0.12s, box-shadow 0.12s;
+        }
+        .lead-notes-textarea:focus {
+          border-color: ${T.blue};
+          box-shadow: 0 0 0 3px rgba(74,158,255,0.12);
+        }
+
+        .lead-edit-actions {
+          display: flex; gap: 8px;
+        }
+        .lead-edit-actions button {
+          flex: 1;
+          padding: 10px;
+          border-radius: 6px;
+          font-size: 12px;
+          font-weight: 500;
+          cursor: pointer;
+          font-family: inherit;
+        }
+        .lead-edit-actions .cancel {
+          background: white;
+          border: 1px solid ${T.border};
+          color: ${T.muted};
+        }
+        .lead-edit-actions .cancel:hover { background: #f8f9fa; }
+        .lead-edit-actions .save {
+          flex: 2;
+          background: ${T.dark};
+          border: 1px solid ${T.dark};
+          color: white;
+        }
+        .lead-edit-actions .save:hover { background: #2a2a4a; }
+        .lead-edit-actions .save:disabled { opacity: 0.6; cursor: not-allowed; }
 
         @media (max-width: 768px) {
-          .leads-header { padding: 10px 12px; }
-          .leads-header-stats { display: none; }
-          .leads-controls { display: grid; grid-template-columns: 1fr 1fr; padding: 12px; }
-          .leads-controls.open-mobile { display: grid !important; grid-template-columns: 1fr 1fr !important; padding: 12px !important; }
-          .leads-controls.closed-mobile { display: none !important; }
-          .leads-controls .search-field { grid-column: span 2; }
-          .leads-controls .export-btn-cell { grid-column: span 2; }
+          .leads-header { padding: 14px 16px; }
+          .leads-header-title h1 { font-size: 18px; }
+          .leads-counter { padding: 6px 16px; }
+          .leads-lapsed-banner { padding: 10px 16px; }
+          .leads-list { padding: 10px 14px 24px; }
+
+          .leads-controls {
+            grid-template-columns: 1fr 1fr;
+            padding: 12px 16px;
+          }
+          .leads-controls.closed-mobile { display: none; }
+          .leads-controls.open-mobile {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+          }
+          .leads-controls .field.search-field { grid-column: span 2; }
+
           .leads-mobile-toggle {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 10px 16px;
-            background: ${T.surface};
+            padding: 12px 16px;
+            background: white;
             border-bottom: 1px solid ${T.border};
-            font-size: 11px;
-            letter-spacing: 2px;
+            font-size: 13px;
             color: ${T.text};
             cursor: pointer;
+            font-weight: 500;
           }
+          .leads-mobile-toggle .chev { color: ${T.muted}; font-size: 11px; }
+
           .lead-card {
             grid-template-columns: 1fr auto;
             grid-template-areas:
-              "name attempts"
+              "name disp"
               "phone phone"
-              "meta disp";
-            gap: 6px;
-            padding: 12px;
+              "meta meta";
+            gap: 4px;
           }
           .lead-cell-name { grid-area: name; }
           .lead-cell-phone { grid-area: phone; }
-          .lead-cell-state, .lead-cell-campaign, .lead-cell-called {
+          .lead-cell-disp { grid-area: disp; text-align: right; }
+          .lead-cell-state, .lead-cell-campaign, .lead-cell-called, .lead-cell-attempts {
             display: none;
           }
-          .lead-cell-attempts { grid-area: attempts; text-align: right; }
-          .lead-cell-disp { grid-area: disp; text-align: right; }
           .lead-meta-mobile {
             grid-area: meta;
             display: flex;
-            gap: 12px;
-            font-size: 10px;
+            gap: 10px;
+            font-size: 11px;
             color: ${T.muted};
-            font-family: monospace;
+            margin-top: 2px;
           }
           .lead-expand {
             grid-template-columns: 1fr;
-            padding: 12px;
+            padding: 14px;
           }
-          .leads-list { padding: 8px 12px; }
         }
       `}</style>
 
+      {/* HEADER */}
       <div className="leads-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <span style={{ fontSize: 11, fontWeight: 'bold', letterSpacing: 4, color: T.blue }}>
-            LEADS DATABASE
-          </span>
-          <span className="leads-header-stats" style={{
-            fontSize: 10, fontFamily: 'monospace', color: '#8888aa', letterSpacing: 1,
-          }}>
-            {total.toLocaleString()} TOTAL · {leads.length} LOADED
-          </span>
+        <div className="leads-header-title">
+          <h1>Leads</h1>
+          <p>
+            {isLapsed
+              ? 'Read-only — your data is preserved, editing locked until you resubscribe.'
+              : 'Search, filter, and update any lead in your database.'}
+          </p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button onClick={handleExport} style={{
-            padding: '6px 14px',
-            background: 'transparent',
-            border: `1px solid ${T.blue}`,
-            borderRadius: 3,
-            color: T.blue,
-            fontSize: 10,
-            letterSpacing: 2,
-            fontWeight: 'bold',
-            cursor: 'pointer',
-            fontFamily: 'Futura PT, Futura, sans-serif',
-          }}>↓ EXPORT CSV</button>
-        </div>
+        <button className="leads-export-btn" onClick={handleExport}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          Export CSV
+        </button>
       </div>
 
       {isLapsed && (
         <div className="leads-lapsed-banner">
           <span>
-            <strong style={{ marginRight: 6 }}>▸ READ-ONLY</strong>
-            Your leads are still here. Export anytime. Editing disabled until you resubscribe.
+            <strong>Read-only mode.</strong> Your leads are still here. Export
+            anytime. Editing is disabled until you resubscribe.
           </span>
-          <Link href="/billing" style={{
-            padding: '5px 12px',
-            background: 'linear-gradient(135deg, #ffaa3e, #ff8a1a)',
-            color: 'white',
-            fontSize: 10,
-            letterSpacing: 2,
-            fontWeight: 'bold',
-            borderRadius: 3,
-            textDecoration: 'none',
-            fontFamily: 'Futura PT, Futura, sans-serif',
-          }}>↻ RESUBSCRIBE</Link>
+          <Link href="/billing">Resubscribe →</Link>
         </div>
       )}
 
-      <div className="leads-mobile-toggle" onClick={() => setFiltersOpen(v => !v)}>
-        <span>{filtersOpen ? '▲ HIDE' : '▼ SHOW'} FILTERS</span>
-        <span style={{ fontSize: 10, color: T.muted, fontFamily: 'monospace' }}>
-          {total.toLocaleString()} leads
-        </span>
+      {/* COUNTER */}
+      <div className="leads-counter">
+        {total.toLocaleString()} total · {leads.length.toLocaleString()} loaded
       </div>
 
+      {/* MOBILE FILTERS TOGGLE */}
+      <div className="leads-mobile-toggle" onClick={() => setFiltersOpen(v => !v)}>
+        <span>Filters &amp; sort</span>
+        <span className="chev">{filtersOpen ? '▲' : '▼'}</span>
+      </div>
+
+      {/* FILTERS */}
       <div className={`leads-controls ${filtersOpen ? 'open-mobile' : 'closed-mobile'}`}>
         <div className="field search-field">
-          <label>SEARCH NAME OR PHONE</label>
+          <label>Search name or phone</label>
           <input
             type="text"
-            placeholder="e.g. Brown, 8033..."
+            placeholder="e.g. Brown, 8033…"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
         </div>
         <div className="field">
-          <label>CAMPAIGN</label>
+          <label>Campaign</label>
           <select value={campaignFilter} onChange={e => setCampaignFilter(e.target.value)}>
-            <option value="all">[ ALL CAMPAIGNS ]</option>
+            <option value="all">All campaigns</option>
             {campaigns.map(c => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
         </div>
         <div className="field">
-          <label>DISPOSITION</label>
+          <label>Disposition</label>
           <select value={dispositionFilter} onChange={e => setDispositionFilter(e.target.value)}>
-            <option value="all">[ ALL ]</option>
-            <option value="uncalled">UNCALLED</option>
+            <option value="all">All</option>
+            <option value="uncalled">Uncalled</option>
             {DISPOSITIONS.map(d => (
               <option key={d.label} value={d.label}>{d.label}</option>
             ))}
           </select>
         </div>
         <div className="field">
-          <label>SORT</label>
+          <label>Sort</label>
           <select value={sort} onChange={e => setSort(e.target.value)}>
-            <option value="created_desc">NEWEST FIRST</option>
-            <option value="created_asc">OLDEST FIRST</option>
-            <option value="last_called_desc">RECENTLY CALLED</option>
-            <option value="attempts_desc">MOST ATTEMPTS</option>
+            <option value="created_desc">Newest first</option>
+            <option value="created_asc">Oldest first</option>
+            <option value="last_called_desc">Recently called</option>
+            <option value="attempts_desc">Most attempts</option>
           </select>
         </div>
-        <div className="field export-btn-cell"></div>
       </div>
 
+      {/* LIST */}
       <div className="leads-list">
         {leads.length === 0 && !loading && (
           <div style={{
-            textAlign: 'center', padding: 60,
-            fontSize: 11, letterSpacing: 3, color: T.muted,
+            textAlign: 'center',
+            padding: '80px 20px',
+            color: T.muted,
+            fontSize: 13,
           }}>
-            <div style={{ fontSize: 36, marginBottom: 12, opacity: 0.4 }}>📋</div>
-            NO LEADS MATCH YOUR FILTERS
+            No leads match your filters.
           </div>
         )}
 
@@ -522,12 +694,12 @@ export default function LeadsPage() {
               <div
                 className={`lead-card ${isExpanded ? 'expanded' : ''}`}
                 onClick={() => handleExpand(lead)}
-                style={{ background: dispositionTint(lead.disposition) }}
               >
                 <div className="lead-cell lead-cell-name">
                   <div className="lead-name">{lead.first_name} {lead.last_name}</div>
                   <div className="lead-meta-mobile">
                     <span>{lead.state || '—'}</span>
+                    <span>·</span>
                     <span>{campaignName(lead.campaign_id)}</span>
                   </div>
                 </div>
@@ -535,193 +707,152 @@ export default function LeadsPage() {
                   <div className="lead-phone">{lead.phone}</div>
                 </div>
                 <div className="lead-cell lead-cell-state" style={{
-                  fontSize: 11, color: T.muted, fontFamily: 'monospace',
+                  fontSize: 12, color: T.muted,
                 }}>
                   {lead.state || '—'}
                 </div>
                 <div className="lead-cell lead-cell-campaign" style={{
-                  fontSize: 10, color: T.muted, fontFamily: 'monospace',
+                  fontSize: 12, color: T.muted,
                   whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                 }}>
                   {campaignName(lead.campaign_id)}
                 </div>
                 <div className="lead-cell lead-cell-called" style={{
-                  fontSize: 10, color: T.muted, fontFamily: 'monospace',
+                  fontSize: 11, color: T.muted,
+                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
                 }}>
                   {formatDate(lead.last_called_at)}
                 </div>
                 <div className="lead-cell lead-cell-attempts" style={{
-                  fontSize: 11, color: lead.dial_attempts > 0 ? T.accent : T.muted,
-                  fontFamily: 'monospace', fontWeight: 'bold',
+                  fontSize: 12, color: lead.dial_attempts > 0 ? T.accent : T.muted,
+                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                  fontWeight: 500,
                 }}>
-                  {lead.dial_attempts}x
+                  {lead.dial_attempts}×
                 </div>
                 <div className="lead-cell lead-cell-disp">
                   {lead.disposition ? (
                     <span className="disp-badge" style={{
                       background: dispBg(lead.disposition),
                       color: dispColor(lead.disposition),
-                      border: `1px solid ${dispColor(lead.disposition)}`,
                     }}>{lead.disposition}</span>
                   ) : (
                     <span className="disp-badge" style={{
-                      background: '#e8e8ec', color: T.muted,
-                      border: `1px solid ${T.border}`,
-                    }}>NEW</span>
+                      background: '#eef0f3', color: T.muted,
+                    }}>New</span>
                   )}
                 </div>
               </div>
 
               {isExpanded && (
                 <div className="lead-expand">
-                  <div className="lead-extra">
-                    <div style={{
-                      fontSize: 9, letterSpacing: 2, color: T.muted, marginBottom: 4, fontWeight: 'bold',
-                    }}>LEAD DATA</div>
+
+                  <div>
+                    <div className="lead-section-title">Lead data</div>
                     {Object.entries(lead.extra_data || {})
                       .filter(([k, v]) => v && String(v).trim())
                       .slice(0, 8)
                       .map(([k, v]) => (
                         <div key={k} className="lead-extra-row">
-                          <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1, textTransform: 'uppercase' }}>{k}</span>
-                          <span style={{ fontFamily: 'monospace', color: T.text, fontWeight: 'bold' }}>{String(v).slice(0, 60)}</span>
+                          <span className="key">{k.replace(/_/g, ' ')}</span>
+                          <span className="val">{String(v).slice(0, 60)}</span>
                         </div>
                       ))}
                     <div className="lead-extra-row">
-                      <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>CALL ATTEMPTS</span>
-                      <span style={{ fontFamily: 'monospace', color: T.text, fontWeight: 'bold' }}>{lead.dial_attempts}</span>
+                      <span className="key">Call attempts</span>
+                      <span className="val">{lead.dial_attempts}</span>
                     </div>
                     <div className="lead-extra-row">
-                      <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>LAST CALLED</span>
-                      <span style={{ fontFamily: 'monospace', color: T.text, fontWeight: 'bold' }}>
+                      <span className="key">Last called</span>
+                      <span className="val">
                         {lead.last_called_at ? new Date(lead.last_called_at).toLocaleString() : '—'}
                       </span>
                     </div>
                   </div>
 
-                  <div className="lead-edit">
+                  <div>
                     {isLapsed ? (
                       <div style={{
-                        padding: 14,
+                        padding: 16,
                         background: 'rgba(255,170,62,0.06)',
-                        border: '1px solid #8a6a1a',
-                        borderLeft: '3px solid #ffaa3e',
-                        borderRadius: 3,
+                        border: '1px solid #d4b86a',
+                        borderLeft: `3px solid ${T.warn}`,
+                        borderRadius: 6,
                       }}>
                         <div style={{
-                          fontSize: 10, letterSpacing: 3, fontWeight: 'bold',
-                          color: T.warn, marginBottom: 6,
-                        }}>▸ EDITING LOCKED</div>
+                          fontSize: 11, fontWeight: 600, letterSpacing: 0.5,
+                          color: T.warn, marginBottom: 8, textTransform: 'uppercase',
+                        }}>Editing locked</div>
                         <div style={{
-                          fontSize: 11, lineHeight: 1.6, color: T.text,
-                          marginBottom: 12,
+                          fontSize: 13, lineHeight: 1.55, color: T.text, marginBottom: 14,
                         }}>
-                          Resubscribe to update dispositions and notes. Your current data is preserved exactly as it was.
+                          Resubscribe to update dispositions and notes. Your
+                          current data is preserved exactly as it was.
                         </div>
                         <Link href="/billing" style={{
                           display: 'block',
                           padding: '10px 14px',
-                          background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+                          background: T.dark,
                           color: 'white',
-                          fontSize: 10,
-                          fontWeight: 'bold',
-                          letterSpacing: 3,
-                          borderRadius: 3,
+                          fontSize: 12,
+                          fontWeight: 500,
+                          letterSpacing: 0.5,
+                          borderRadius: 6,
                           textAlign: 'center',
                           textDecoration: 'none',
-                          fontFamily: 'Futura PT, Futura, sans-serif',
-                        }}>RESUBSCRIBE — $35/WEEK</Link>
+                        }}>Resubscribe — $35/week</Link>
                       </div>
                     ) : (
                       <>
-                        <div>
-                          <div style={{
-                            fontSize: 9, letterSpacing: 2, color: T.muted, marginBottom: 6, fontWeight: 'bold',
-                          }}>SET DISPOSITION</div>
-                          <div className="disp-grid">
-                            {DISPOSITIONS.filter(d => d.label !== 'NO_ANSWER').map(d => (
-                              <button
-                                key={d.label}
-                                className="disp-btn"
-                                onClick={() => setEditDisposition(d.label)}
-                                style={{
-                                  background: editDisposition === d.label ? d.color : d.bg,
-                                  color: editDisposition === d.label ? 'white' : d.color,
-                                  borderColor: d.color,
-                                }}
-                              >{d.label}</button>
-                            ))}
+                        <div className="lead-section-title">Set disposition</div>
+                        <div className="disp-grid">
+                          {DISPOSITIONS.filter(d => d.label !== 'NO_ANSWER').map(d => (
                             <button
+                              key={d.label}
                               className="disp-btn"
-                              onClick={() => setEditDisposition('')}
+                              onClick={() => setEditDisposition(d.label)}
                               style={{
-                                background: editDisposition === '' ? T.muted : 'white',
-                                color: editDisposition === '' ? 'white' : T.muted,
-                                borderColor: T.border,
+                                background: editDisposition === d.label ? d.color : d.bg,
+                                color: editDisposition === d.label ? 'white' : d.color,
+                                borderColor: editDisposition === d.label ? d.color : d.bg,
                               }}
-                            >CLEAR</button>
-                          </div>
-                        </div>
-
-                        <div>
-                          <div style={{
-                            fontSize: 9, letterSpacing: 2, color: T.muted, marginBottom: 6, fontWeight: 'bold',
-                          }}>NOTES</div>
-                          <textarea
-                            value={editNotes}
-                            onChange={e => setEditNotes(e.target.value)}
-                            placeholder="Add notes about this lead..."
-                            rows={4}
+                            >{d.label}</button>
+                          ))}
+                          <button
+                            className="disp-btn"
+                            onClick={() => setEditDisposition('')}
                             style={{
-                              width: '100%',
-                              padding: 10,
-                              border: `1px solid ${T.border}`,
-                              borderRadius: 3,
-                              fontSize: 12,
-                              fontFamily: 'monospace',
-                              background: T.surface,
-                              color: T.text,
-                              outline: 'none',
-                              resize: 'vertical',
-                              boxSizing: 'border-box',
+                              background: editDisposition === '' ? T.muted : 'white',
+                              color: editDisposition === '' ? 'white' : T.muted,
+                              borderColor: editDisposition === '' ? T.muted : T.border,
                             }}
-                          />
+                          >Clear</button>
                         </div>
 
-                        <div style={{ display: 'flex', gap: 6 }}>
+                        <div className="lead-section-title" style={{ marginTop: 16 }}>Notes</div>
+                        <textarea
+                          className="lead-notes-textarea"
+                          value={editNotes}
+                          onChange={e => setEditNotes(e.target.value)}
+                          placeholder="Add notes about this lead…"
+                          rows={4}
+                        />
+
+                        <div className="lead-edit-actions" style={{ marginTop: 12 }}>
                           <button
+                            className="cancel"
                             onClick={() => setExpandedId(null)}
-                            style={{
-                              flex: 1, padding: 10,
-                              background: 'transparent',
-                              border: `1px solid ${T.border}`,
-                              borderRadius: 3,
-                              color: T.muted,
-                              fontSize: 10,
-                              letterSpacing: 2,
-                              fontWeight: 'bold',
-                              cursor: 'pointer',
-                              fontFamily: 'Futura PT, Futura, sans-serif',
-                            }}>CANCEL</button>
+                          >Cancel</button>
                           <button
+                            className="save"
                             onClick={() => handleSave(lead.id)}
                             disabled={saving}
-                            style={{
-                              flex: 2, padding: 10, border: 'none',
-                              background: T.dark,
-                              borderTop: `3px solid ${T.blue}`,
-                              borderRadius: 3,
-                              color: T.blue,
-                              fontSize: 10,
-                              letterSpacing: 2,
-                              fontWeight: 'bold',
-                              cursor: saving ? 'wait' : 'pointer',
-                              fontFamily: 'Futura PT, Futura, sans-serif',
-                            }}>{saving ? 'SAVING...' : '▶ SAVE'}</button>
+                          >{saving ? 'Saving…' : 'Save changes'}</button>
                         </div>
                       </>
                     )}
                   </div>
+
                 </div>
               )}
             </div>
@@ -730,17 +861,19 @@ export default function LeadsPage() {
 
         {cursor !== null && (
           <div ref={sentinelRef} style={{
-            padding: 20, textAlign: 'center',
-            fontSize: 10, letterSpacing: 2, color: T.muted,
+            padding: 24, textAlign: 'center',
+            fontSize: 12, color: T.muted,
           }}>
-            {loading ? 'LOADING MORE...' : 'SCROLL TO LOAD MORE'}
+            {loading ? 'Loading more…' : 'Scroll to load more'}
           </div>
         )}
         {cursor === null && leads.length > 0 && (
           <div style={{
-            padding: 20, textAlign: 'center',
-            fontSize: 10, letterSpacing: 2, color: T.muted,
-          }}>END OF LIST · {leads.length} OF {total.toLocaleString()}</div>
+            padding: 24, textAlign: 'center',
+            fontSize: 12, color: T.muted,
+          }}>
+            End of list · {leads.length.toLocaleString()} of {total.toLocaleString()}
+          </div>
         )}
       </div>
     </div>
