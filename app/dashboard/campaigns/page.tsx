@@ -3,6 +3,21 @@ import { useState, useEffect, useRef } from 'react'
 import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
 
+// =============================================================================
+// CAMPAIGNS PAGE — v24 GRID REDESIGN
+// =============================================================================
+// Replaces the v23 horizontal-row list with a Google-Docs-style grid of
+// cards. Each card has a preview thumbnail showing the campaign's actual
+// call script (the "document content"), color-themed by dialer mode, with
+// a circular SVG progress ring representing called/total leads.
+//
+// Card actions:
+//   - Click card → /dashboard/dialer?campaignId=X
+//   - ⋯ menu → toggle status, mode settings, scripts, csv upload, delete
+//
+// All existing modals (create / mode / scripts) preserved unchanged.
+// =============================================================================
+
 const T = {
   bg: '#f0f1f4',
   surface: '#e2e4ea',
@@ -28,6 +43,7 @@ interface Campaign {
   called_leads: number
   status: string
   created_at: string
+  updated_at?: string
   script?: string
   dialer_mode?: DialerMode
   amd_enabled?: boolean
@@ -45,13 +61,21 @@ interface CampaignScript {
   updated_at: string
 }
 
-const MODE_INFO: Record<DialerMode, { label: string; tagline: string; speed: string; abandons: string; color: string }> = {
+const MODE_INFO: Record<DialerMode, {
+  label: string
+  tagline: string
+  speed: string
+  abandons: string
+  color: string
+  bgGradient: string  // CSS gradient for card preview background
+}> = {
   preview: {
     label: 'PREVIEW',
     tagline: 'Review the lead, then click to dial.',
     speed: 'Slowest',
     abandons: 'Zero',
     color: '#5a5e6a',
+    bgGradient: 'linear-gradient(135deg, #f0f0f4 0%, #d8dce2 100%)',
   },
   power: {
     label: 'POWER',
@@ -59,6 +83,7 @@ const MODE_INFO: Record<DialerMode, { label: string; tagline: string; speed: str
     speed: 'Moderate',
     abandons: 'Zero',
     color: '#2a4a8a',
+    bgGradient: 'linear-gradient(135deg, #e8eef8 0%, #c8d4ec 100%)',
   },
   progressive: {
     label: 'PROGRESSIVE',
@@ -66,6 +91,7 @@ const MODE_INFO: Record<DialerMode, { label: string; tagline: string; speed: str
     speed: 'Fast',
     abandons: 'Zero',
     color: '#1a6a1a',
+    bgGradient: 'linear-gradient(135deg, #e8f5e8 0%, #c8e4c8 100%)',
   },
   predictive: {
     label: 'PREDICTIVE',
@@ -73,7 +99,154 @@ const MODE_INFO: Record<DialerMode, { label: string; tagline: string; speed: str
     speed: 'Fastest',
     abandons: 'Capped at 3% by law',
     color: '#8a1a1a',
+    bgGradient: 'linear-gradient(135deg, #f8e8e8 0%, #ecc4c4 100%)',
   },
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// "Modified X ago" helper — Google Docs-style relative time
+// ──────────────────────────────────────────────────────────────────────────
+function relativeTime(iso: string): string {
+  const then = new Date(iso).getTime()
+  const now = Date.now()
+  const diff = Math.max(0, now - then)
+  const sec = Math.floor(diff / 1000)
+  if (sec < 60) return 'just now'
+  const min = Math.floor(sec / 60)
+  if (min < 60) return `${min}m ago`
+  const hr = Math.floor(min / 60)
+  if (hr < 24) return `${hr}h ago`
+  const day = Math.floor(hr / 24)
+  if (day < 7) return `${day}d ago`
+  const wk = Math.floor(day / 7)
+  if (wk < 4) return `${wk}w ago`
+  const mo = Math.floor(day / 30)
+  if (mo < 12) return `${mo}mo ago`
+  const yr = Math.floor(day / 365)
+  return `${yr}y ago`
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// CIRCULAR PROGRESS RING — SVG donut showing called/total percent
+// ──────────────────────────────────────────────────────────────────────────
+function ProgressRing({
+  percent,
+  color,
+  size = 56,
+  thickness = 5,
+}: {
+  percent: number
+  color: string
+  size?: number
+  thickness?: number
+}) {
+  const radius = (size - thickness) / 2
+  const circumference = 2 * Math.PI * radius
+  const offset = circumference - (Math.min(100, Math.max(0, percent)) / 100) * circumference
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox={`0 0 ${size} ${size}`}
+      style={{ display: 'block' }}
+    >
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        fill="none"
+        stroke="rgba(0,0,0,0.08)"
+        strokeWidth={thickness}
+      />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        fill="none"
+        stroke={color}
+        strokeWidth={thickness}
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+        strokeLinecap="round"
+        transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        style={{ transition: 'stroke-dashoffset 0.4s ease' }}
+      />
+      <text
+        x="50%"
+        y="50%"
+        textAnchor="middle"
+        dy="0.35em"
+        style={{
+          fontSize: 11,
+          fontWeight: 700,
+          fill: color,
+          fontFamily: 'monospace',
+          letterSpacing: 0,
+        }}
+      >
+        {Math.round(percent)}%
+      </text>
+    </svg>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// SCRIPT PREVIEW — renders a snippet of the active script as faux-doc
+// thumbnail content. Lines wrap, overflow clipped. If no script, show
+// a friendly placeholder. This is the "image preview" of the card.
+// ──────────────────────────────────────────────────────────────────────────
+function ScriptThumbnail({ script, accentColor }: { script: string | null | undefined; accentColor: string }) {
+  if (!script || !script.trim()) {
+    return (
+      <div style={{
+        flex: 1,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexDirection: 'column',
+        gap: 6,
+        opacity: 0.5,
+      }}>
+        <div style={{ fontSize: 28, lineHeight: 1 }}>📝</div>
+        <div style={{
+          fontSize: 9, letterSpacing: 2, color: T.muted,
+          fontWeight: 'bold', textAlign: 'center',
+        }}>NO SCRIPT YET</div>
+      </div>
+    )
+  }
+
+  // Trim and split. The CSS line-clamp does the rest. Keep first ~600 chars
+  // so we don't ship the entire script as DOM text.
+  const trimmed = script.trim().slice(0, 600)
+
+  return (
+    <div style={{
+      flex: 1,
+      overflow: 'hidden',
+      position: 'relative',
+      padding: '14px 16px 8px',
+      background: 'rgba(255,255,255,0.85)',
+      borderRadius: 6,
+      borderLeft: `3px solid ${accentColor}`,
+      fontSize: 10,
+      lineHeight: 1.5,
+      color: '#3a3d48',
+      fontFamily: '"Georgia", "Times New Roman", serif',
+      whiteSpace: 'pre-wrap',
+      wordBreak: 'break-word',
+    }}>
+      {trimmed}
+      {/* Fade-out gradient at bottom to indicate truncation */}
+      <div style={{
+        position: 'absolute',
+        bottom: 0, left: 0, right: 0,
+        height: 28,
+        background: 'linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0.95) 100%)',
+        pointerEvents: 'none',
+      }} />
+    </div>
+  )
 }
 
 export default function CampaignsPage() {
@@ -89,6 +262,9 @@ export default function CampaignsPage() {
   const [fetching, setFetching] = useState(true)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [deleteTyped, setDeleteTyped] = useState('')
+
+  // Per-card dropdown menu state — only one open at a time
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
 
   // SCRIPTS MODAL (multi-script manager)
   const [scriptsModal, setScriptsModal] = useState<Campaign | null>(null)
@@ -120,6 +296,19 @@ export default function CampaignsPage() {
   const fileRef = useRef<HTMLInputElement>(null)
 
   const isLapsed = tier === 'lapsed' || tier === 'new'
+
+  // Click-outside handler closes the open card menu
+  useEffect(() => {
+    if (!openMenuId) return
+    const onDoc = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (!target.closest('[data-card-menu]')) {
+        setOpenMenuId(null)
+      }
+    }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [openMenuId])
 
   useEffect(() => {
     if (user) {
@@ -231,6 +420,7 @@ export default function CampaignsPage() {
   const toggleStatus = async (id: string, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'inactive' : 'active'
     setCampaigns(campaigns.map(c => c.id === id ? { ...c, status: newStatus } : c))
+    setOpenMenuId(null)
     await fetch('/api/campaigns/update', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -269,11 +459,13 @@ export default function CampaignsPage() {
   const startDelete = (id: string) => {
     setDeleteConfirm(id)
     setDeleteTyped('')
+    setOpenMenuId(null)
   }
 
   // ── SCRIPTS MODAL ──────────────────────────────────────────────────────
 
   const openScriptsModal = async (campaign: Campaign) => {
+    setOpenMenuId(null)
     setScriptsModal(campaign)
     setScripts([])
     setActiveScriptId(null)
@@ -470,7 +662,6 @@ export default function CampaignsPage() {
     if (!tabDrag || e.pointerId !== tabDrag.pointerId) return
     const row = tabsRowRef.current
     if (!row) return
-    // Find which tab the pointer is over
     const tabs = row.querySelectorAll<HTMLElement>('[data-tab-id]')
     let targetId: string | null = null
     for (const tab of Array.from(tabs)) {
@@ -511,6 +702,7 @@ export default function CampaignsPage() {
   // ── MODE MODAL ─────────────────────────────────────────────────────────
 
   const openModeModal = (campaign: Campaign) => {
+    setOpenMenuId(null)
     setModeModal(campaign)
     setModeChoice(campaign.dialer_mode || 'power')
     setAmdEnabled(campaign.amd_enabled ?? false)
@@ -561,6 +753,10 @@ export default function CampaignsPage() {
     }
   }
 
+  // ──────────────────────────────────────────────────────────────────────
+  // RENDER
+  // ──────────────────────────────────────────────────────────────────────
+
   return (
     <div className="campaigns-root" style={{
       flex: 1,
@@ -571,46 +767,276 @@ export default function CampaignsPage() {
       fontFamily: 'Futura PT, Futura, sans-serif',
     }}>
       <style>{`
-        .campaigns-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 40px; gap: 16px; flex-wrap: wrap; }
-        .campaign-row {
-          padding: 24px 28px;
-          border-radius: 16px;
-          background: ${T.surface};
-          transition: border-color 0.2s;
+        .campaigns-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; gap: 16px; flex-wrap: wrap; }
+
+        /* ── CARD GRID ───────────────────────────────────────────────────── */
+        .campaigns-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+          gap: 20px;
         }
 
-        /* ── DEFAULT (wide desktop ≥ 1200px) ─────────────────────────────── */
-        /* Top-row layout: name+toggle on the left, stats in the middle,    */
-        /* action buttons on the right. Has plenty of horizontal room.      */
-        .campaign-row-inner {
+        /* ── CARD ────────────────────────────────────────────────────────── */
+        .card {
+          background: white;
+          border: 1px solid ${T.border};
+          border-radius: 10px;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+          cursor: pointer;
+          transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+          position: relative;
+        }
+        .card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+          border-color: ${T.blue};
+        }
+        .card.inactive { opacity: 0.72; }
+        .card.inactive:hover { opacity: 1; }
+
+        /* ── PREVIEW (top of card) ───────────────────────────────────────── */
+        .card-preview {
+          height: 200px;
+          padding: 14px;
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+        .card-preview-top {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          gap: 20px;
-          flex-wrap: nowrap;
-        }
-        .campaign-left {
-          display: flex;
-          align-items: center;
-          gap: 20px;
-          min-width: 0;
-          flex: 1 1 320px;
-        }
-        .campaign-stats-row {
-          display: flex;
-          align-items: center;
-          gap: 20px;
-          flex-shrink: 0;
-        }
-        .campaign-actions {
-          display: flex;
-          align-items: center;
           gap: 8px;
-          flex-wrap: nowrap;
           flex-shrink: 0;
         }
-        .campaign-stat { text-align: center; }
+        .card-preview-badges {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          flex-wrap: wrap;
+          min-width: 0;
+        }
+        .card-status-pill {
+          padding: 3px 8px;
+          border-radius: 12px;
+          font-size: 9px;
+          letter-spacing: 1.5px;
+          font-weight: bold;
+          background: rgba(255,255,255,0.9);
+          backdrop-filter: blur(8px);
+          white-space: nowrap;
+          border: 1px solid rgba(0,0,0,0.08);
+        }
+        .card-amd-pill {
+          padding: 3px 7px;
+          border-radius: 3px;
+          font-size: 8px;
+          letter-spacing: 1.5px;
+          font-weight: bold;
+          background: rgba(255,255,255,0.7);
+          color: ${T.muted};
+          font-family: monospace;
+          border: 1px solid rgba(0,0,0,0.08);
+        }
+        .card-menu-btn {
+          width: 28px;
+          height: 28px;
+          border-radius: 14px;
+          background: rgba(255,255,255,0.85);
+          backdrop-filter: blur(8px);
+          border: 1px solid rgba(0,0,0,0.08);
+          cursor: pointer;
+          font-size: 16px;
+          line-height: 1;
+          color: ${T.text};
+          font-weight: bold;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0;
+          flex-shrink: 0;
+          transition: background 0.12s;
+        }
+        .card-menu-btn:hover { background: white; }
+        .card-preview-bottom {
+          display: flex;
+          align-items: flex-end;
+          justify-content: space-between;
+          gap: 10px;
+          margin-top: auto;
+          flex-shrink: 0;
+        }
+        .card-mode-label {
+          font-size: 11px;
+          letter-spacing: 2px;
+          font-weight: bold;
+          font-family: monospace;
+        }
+        .card-mode-leads {
+          font-size: 9px;
+          letter-spacing: 1px;
+          color: ${T.muted};
+          margin-top: 3px;
+          font-family: monospace;
+        }
 
+        /* ── FOOTER (bottom of card) ─────────────────────────────────────── */
+        .card-footer {
+          padding: 12px 14px;
+          background: white;
+          border-top: 1px solid ${T.border};
+          flex-shrink: 0;
+        }
+        .card-name {
+          font-size: 13px;
+          font-weight: bold;
+          letter-spacing: 0.5px;
+          color: ${T.text};
+          margin: 0 0 4px 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .card-meta {
+          font-size: 10px;
+          letter-spacing: 0.5px;
+          color: ${T.muted};
+          margin: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        /* ── DROPDOWN MENU ───────────────────────────────────────────────── */
+        .card-menu {
+          position: absolute;
+          top: 48px;
+          right: 14px;
+          z-index: 30;
+          min-width: 200px;
+          background: white;
+          border: 1px solid ${T.border};
+          border-radius: 8px;
+          box-shadow: 0 12px 32px rgba(0,0,0,0.18);
+          overflow: hidden;
+          padding: 4px;
+        }
+        .card-menu-item {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 9px 12px;
+          font-size: 11px;
+          letter-spacing: 1px;
+          font-weight: bold;
+          color: ${T.text};
+          cursor: pointer;
+          border-radius: 4px;
+          background: transparent;
+          border: none;
+          width: 100%;
+          text-align: left;
+          font-family: 'Futura PT', Futura, sans-serif;
+        }
+        .card-menu-item:hover { background: ${T.bg}; }
+        .card-menu-item.danger { color: #c44; }
+        .card-menu-item.danger:hover { background: #fae8e8; }
+        .card-menu-divider {
+          height: 1px;
+          background: ${T.border};
+          margin: 4px 0;
+        }
+        .card-menu-icon { font-size: 13px; line-height: 1; width: 16px; text-align: center; }
+
+        /* ── "NEW CAMPAIGN" CARD ─────────────────────────────────────────── */
+        .new-card {
+          background: white;
+          border: 2px dashed ${T.border};
+          border-radius: 10px;
+          min-height: 274px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          cursor: pointer;
+          transition: all 0.15s;
+          padding: 24px;
+          text-align: center;
+        }
+        .new-card:hover {
+          border-color: ${T.blue};
+          background: rgba(74,158,255,0.04);
+        }
+        .new-card-plus {
+          font-size: 36px;
+          color: ${T.muted};
+          line-height: 1;
+          font-weight: 300;
+        }
+        .new-card:hover .new-card-plus { color: ${T.blue}; }
+        .new-card-label {
+          font-size: 11px;
+          letter-spacing: 3px;
+          font-weight: bold;
+          color: ${T.muted};
+        }
+        .new-card:hover .new-card-label { color: ${T.blue}; }
+
+        /* ── INLINE DELETE CONFIRMATION ─────────────────────────────────── */
+        .delete-confirm-overlay {
+          position: absolute;
+          inset: 0;
+          background: rgba(255,68,68,0.95);
+          backdrop-filter: blur(4px);
+          z-index: 40;
+          padding: 20px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          gap: 12px;
+          color: white;
+          border-radius: 10px;
+        }
+        .delete-confirm-title {
+          font-size: 13px;
+          letter-spacing: 2px;
+          font-weight: bold;
+          margin: 0;
+        }
+        .delete-confirm-text {
+          font-size: 11px;
+          line-height: 1.5;
+          margin: 0;
+          opacity: 0.9;
+        }
+        .delete-confirm-input {
+          padding: 8px 10px;
+          border-radius: 4px;
+          background: white;
+          border: none;
+          color: ${T.text};
+          font-size: 11px;
+          font-family: monospace;
+          outline: none;
+          letter-spacing: 1px;
+        }
+        .delete-confirm-actions { display: flex; gap: 8px; }
+        .delete-confirm-actions button {
+          flex: 1;
+          padding: 8px;
+          border-radius: 4px;
+          font-size: 10px;
+          letter-spacing: 2px;
+          font-weight: bold;
+          cursor: pointer;
+          font-family: 'Futura PT', Futura, sans-serif;
+        }
+
+        /* ── MODALS ──────────────────────────────────────────────────────── */
         .campaign-modal {
           width: 100%;
           max-width: 500px;
@@ -622,7 +1048,6 @@ export default function CampaignsPage() {
           max-height: 90dvh;
           overflow-y: auto;
         }
-
         .modal-overlay {
           position: fixed;
           inset: 0;
@@ -636,7 +1061,6 @@ export default function CampaignsPage() {
           height: 100vh;
           height: 100dvh;
         }
-
         .scripts-modal {
           width: 100%;
           max-width: 880px;
@@ -664,7 +1088,6 @@ export default function CampaignsPage() {
         .scripts-modal-title {
           font-size: 17px;
           font-weight: bold;
-          letterSpacing: 3px;
           letter-spacing: 3px;
           color: ${T.text};
           font-family: 'Futura PT', Futura, sans-serif;
@@ -689,7 +1112,6 @@ export default function CampaignsPage() {
           font-size: 18px;
           flex-shrink: 0;
         }
-
         .scripts-tabs {
           display: flex;
           gap: 4px;
@@ -726,9 +1148,7 @@ export default function CampaignsPage() {
           border-bottom-color: ${T.bg};
           margin-bottom: -1px;
         }
-        .scripts-tab.dragging {
-          opacity: 0.4;
-        }
+        .scripts-tab.dragging { opacity: 0.4; }
         .scripts-tab.drag-over {
           border-color: ${T.blue};
           background: rgba(74,158,255,0.15);
@@ -772,7 +1192,6 @@ export default function CampaignsPage() {
           white-space: nowrap;
         }
         .scripts-add-btn:hover { color: ${T.blue}; border-color: ${T.blue}; }
-
         .scripts-modal-body {
           flex: 1;
           overflow: auto;
@@ -791,16 +1210,8 @@ export default function CampaignsPage() {
           flex-wrap: wrap;
           background: ${T.surface2};
         }
-        .scripts-modal-footer-left {
-          display: flex;
-          gap: 8px;
-          flex-wrap: wrap;
-        }
-        .scripts-modal-footer-right {
-          display: flex;
-          gap: 10px;
-          flex-wrap: wrap;
-        }
+        .scripts-modal-footer-left { display: flex; gap: 8px; flex-wrap: wrap; }
+        .scripts-modal-footer-right { display: flex; gap: 10px; flex-wrap: wrap; }
         .scripts-modal-tip {
           padding: 8px 12px;
           margin-bottom: 14px;
@@ -813,60 +1224,17 @@ export default function CampaignsPage() {
           line-height: 1.5;
         }
 
-        /* ── TABLET / LAPTOP BREAKPOINT (769px - 1199px) ─────────────────── */
-        /* This is the Dell Latitude range. The three-section row crammed       */
-        /* together caused overlap. We stack vertically: name on top, then     */
-        /* a single bottom row with stats + status + actions that wraps        */
-        /* naturally when buttons can't fit on one line.                       */
-        @media (max-width: 1199px) and (min-width: 769px) {
-          .campaign-row-inner {
-            flex-direction: column;
-            align-items: stretch;
-            gap: 14px;
-          }
-          .campaign-left {
-            width: 100%;
-            flex: 0 0 auto;
-          }
-          .campaign-stats-row {
-            justify-content: flex-start;
-            gap: 24px;
-          }
-          .campaign-actions {
-            flex-wrap: wrap;
-            gap: 8px;
-            justify-content: flex-start;
-          }
-        }
-
-        /* ── MOBILE BREAKPOINT (≤ 768px) — original mobile behavior ──────── */
+        /* ── MOBILE BREAKPOINT ──────────────────────────────────────────── */
         @media (max-width: 768px) {
           .campaigns-root { padding: 20px !important; }
           .campaigns-header h1 { font-size: 20px !important; letter-spacing: 3px !important; }
           .new-campaign-btn { width: 100%; }
-          .campaign-row { padding: 16px !important; border-radius: 12px !important; }
-          .campaign-row-inner {
-            flex-direction: column;
-            align-items: stretch;
-            gap: 14px;
+          .campaigns-grid {
+            grid-template-columns: 1fr;
+            gap: 16px;
           }
-          .campaign-left { width: 100%; flex: 0 0 auto; }
-          .campaign-actions {
-            flex-wrap: wrap;
-            gap: 8px;
-            justify-content: flex-start;
-            width: 100%;
-          }
-          .campaign-stat { flex: 1; text-align: center; }
-          .campaign-stats-row {
-            display: flex;
-            gap: 12px;
-            width: 100%;
-            justify-content: space-around;
-            padding: 12px 0;
-            border-top: 1px solid ${T.border};
-            border-bottom: 1px solid ${T.border};
-          }
+          .card-preview { height: 180px; }
+          .card-menu { right: 14px; left: 14px; min-width: 0; }
           .campaign-modal {
             padding: 24px !important;
             border-radius: 0 !important;
@@ -884,49 +1252,27 @@ export default function CampaignsPage() {
             min-height: 100vh;
             min-height: 100dvh;
           }
-          .modal-overlay {
-            padding: 0 !important;
-          }
+          .modal-overlay { padding: 0 !important; }
           .scripts-modal-header {
             padding: 14px 16px;
             padding-top: max(14px, env(safe-area-inset-top));
           }
           .scripts-modal-title { font-size: 14px; letter-spacing: 2px; }
           .scripts-modal-subtitle { font-size: 10px; }
-          .scripts-modal-close {
-            width: 44px;
-            height: 44px;
-            font-size: 20px;
-          }
-          .scripts-tabs {
-            padding: 10px 12px 0;
-          }
-          .scripts-tab {
-            padding: 10px 12px 10px 6px;
-            font-size: 10px;
-          }
-          .scripts-tab-handle {
-            width: 22px;
-            height: 28px;
-            font-size: 14px;
-          }
-          .scripts-modal-body {
-            padding: 16px;
-          }
+          .scripts-modal-close { width: 44px; height: 44px; font-size: 20px; }
+          .scripts-tabs { padding: 10px 12px 0; }
+          .scripts-tab { padding: 10px 12px 10px 6px; font-size: 10px; }
+          .scripts-tab-handle { width: 22px; height: 28px; font-size: 14px; }
+          .scripts-modal-body { padding: 16px; }
           .scripts-modal-footer {
             padding: 12px 14px;
             padding-bottom: max(12px, env(safe-area-inset-bottom));
             gap: 8px;
           }
           .scripts-modal-footer-left,
-          .scripts-modal-footer-right {
-            width: 100%;
-            justify-content: stretch;
-          }
+          .scripts-modal-footer-right { width: 100%; justify-content: stretch; }
           .scripts-modal-footer-left button,
-          .scripts-modal-footer-right button {
-            flex: 1;
-          }
+          .scripts-modal-footer-right button { flex: 1; }
         }
       `}</style>
 
@@ -934,7 +1280,7 @@ export default function CampaignsPage() {
         <div>
           <h1 style={{ fontSize: '24px', fontWeight: 'bold', letterSpacing: '4px', color: T.text, marginBottom: '8px' }}>CAMPAIGNS</h1>
           <p style={{ fontSize: '12px', letterSpacing: '2px', color: T.muted }}>
-            {isLapsed ? 'READ-ONLY · RESUBSCRIBE TO CREATE OR DIAL' : 'MANAGE YOUR LEAD LISTS AND DIALING CAMPAIGNS.'}
+            {isLapsed ? 'READ-ONLY · RESUBSCRIBE TO CREATE OR DIAL' : 'YOUR LEAD LISTS AND DIALING CAMPAIGNS.'}
           </p>
         </div>
         {!isLapsed ? (
@@ -1017,216 +1363,198 @@ export default function CampaignsPage() {
           )}
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div className="campaigns-grid">
+          {/* "+ NEW CAMPAIGN" card — only when subscribed */}
+          {!isLapsed && (
+            <div className="new-card" onClick={() => setShowModal(true)}>
+              <div className="new-card-plus">+</div>
+              <div className="new-card-label">NEW CAMPAIGN</div>
+            </div>
+          )}
+
           {campaigns.map((campaign) => {
             const mode = (campaign.dialer_mode || 'power') as DialerMode
             const modeInfo = MODE_INFO[mode]
+            const isActive = campaign.status === 'active'
+            const percent = campaign.total_leads > 0
+              ? (campaign.called_leads / campaign.total_leads) * 100
+              : 0
+            const isMenuOpen = openMenuId === campaign.id
+            const isDeleting = deleteConfirm === campaign.id
+            const lastUpdated = campaign.updated_at || campaign.created_at
+
             return (
-              <div key={campaign.id} className="campaign-row" style={{
-                border: `1px solid ${campaign.status === 'active' ? 'rgba(74,158,255,0.4)' : T.border}`,
-              }}>
-                <div className="campaign-row-inner">
-                  <div className="campaign-left">
-                    <div onClick={() => toggleStatus(campaign.id, campaign.status)} style={{
-                      width: '48px', height: '26px', borderRadius: '13px',
-                      background: campaign.status === 'active' ? T.blue : T.border,
-                      position: 'relative', cursor: 'pointer', transition: 'background 0.2s', flexShrink: 0,
-                    }}>
-                      <div style={{
-                        width: '20px', height: '20px', borderRadius: '50%', background: 'white',
-                        position: 'absolute', top: '3px',
-                        left: campaign.status === 'active' ? '25px' : '3px', transition: 'left 0.2s',
-                      }} />
-                    </div>
-
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 4 }}>
-                        <h3 style={{
-                          fontSize: '14px', fontWeight: 'bold', letterSpacing: '2px',
-                          color: T.text,
-                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                          margin: 0,
-                        }}>
-                          {campaign.name}
-                        </h3>
-                        <span style={{
-                          padding: '2px 8px',
-                          borderRadius: 3,
-                          fontSize: 9,
-                          fontWeight: 'bold',
-                          letterSpacing: 1.5,
-                          color: modeInfo.color,
-                          border: `1px solid ${modeInfo.color}`,
-                          fontFamily: 'monospace',
-                        }}>
-                          {modeInfo.label}
-                          {campaign.amd_enabled && <span style={{ marginLeft: 4, opacity: 0.7 }}>· AMD</span>}
-                        </span>
-                      </div>
-                      <p style={{ fontSize: '11px', letterSpacing: '1px', color: T.muted }}>
-                        CREATED {new Date(campaign.created_at).toLocaleDateString()}
-                        {campaign.script ? ' · SCRIPT ADDED' : ''}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="campaign-stats-row">
-                    <div className="campaign-stat">
-                      <div style={{ fontSize: '22px', fontWeight: 'bold', color: T.text, marginBottom: '2px' }}>
-                        {campaign.total_leads.toLocaleString()}
-                      </div>
-                      <div style={{ fontSize: '9px', letterSpacing: '2px', color: T.muted }}>LEADS</div>
-                    </div>
-
-                    <div className="campaign-stat">
-                      <div style={{ fontSize: '22px', fontWeight: 'bold', color: T.blue, marginBottom: '2px' }}>
-                        {campaign.called_leads.toLocaleString()}
-                      </div>
-                      <div style={{ fontSize: '9px', letterSpacing: '2px', color: T.muted }}>CALLED</div>
-                    </div>
-
-                    <div style={{
-                      padding: '6px 14px', borderRadius: '20px',
-                      background: campaign.status === 'active' ? 'rgba(74,158,255,0.1)' : T.surface2,
-                      border: `1px solid ${campaign.status === 'active' ? T.blue : T.border}`,
-                      fontSize: '10px', letterSpacing: '2px', fontWeight: 'bold',
-                      color: campaign.status === 'active' ? T.blue : T.muted,
-                      whiteSpace: 'nowrap',
-                    }}>
-                      {campaign.status === 'active' ? '● ACTIVE' : '○ INACTIVE'}
-                    </div>
-                  </div>
-
-                  <div className="campaign-actions">
-                    {!isLapsed && (
-                      <button
-                        onClick={() => openModeModal(campaign)}
-                        style={{
-                          padding: '8px 14px', borderRadius: '8px',
-                          background: 'transparent',
-                          border: `1px solid ${modeInfo.color}`,
-                          color: modeInfo.color,
-                          fontSize: '10px', letterSpacing: '2px', cursor: 'pointer',
-                          fontFamily: 'Futura PT, Futura, sans-serif',
-                          whiteSpace: 'nowrap',
-                          fontWeight: 'bold',
-                        }}>
-                        ⚙ MODE
-                      </button>
-                    )}
-
-                    {!isLapsed && (
-                      <button
-                        onClick={() => openScriptsModal(campaign)}
-                        style={{
-                          padding: '8px 14px', borderRadius: '8px',
-                          background: campaign.script ? 'rgba(74,158,255,0.1)' : 'transparent',
-                          border: `1px solid ${campaign.script ? T.blue : T.border}`,
-                          color: campaign.script ? T.blue : T.muted,
-                          fontSize: '10px', letterSpacing: '2px', cursor: 'pointer',
-                          fontFamily: 'Futura PT, Futura, sans-serif',
-                          whiteSpace: 'nowrap',
-                        }}>
-                        📝 SCRIPTS
-                      </button>
-                    )}
-
-                    {!isLapsed && (
-                      <label style={{
-                        padding: '8px 14px', borderRadius: '8px',
-                        background: 'transparent', border: `1px solid ${T.border}`,
-                        color: T.muted, fontSize: '10px',
-                        letterSpacing: '2px', cursor: 'pointer',
-                        fontFamily: 'Futura PT, Futura, sans-serif',
-                        whiteSpace: 'nowrap',
+              <div
+                key={campaign.id}
+                className={`card ${!isActive ? 'inactive' : ''}`}
+                onClick={(e) => {
+                  // Don't navigate if clicking on menu/menu items/delete confirm/etc.
+                  const target = e.target as HTMLElement
+                  if (target.closest('[data-card-menu]') || target.closest('.delete-confirm-overlay')) return
+                  if (isLapsed) return
+                  window.location.href = `/dashboard/dialer?campaignId=${campaign.id}`
+                }}
+              >
+                {/* PREVIEW (top) */}
+                <div className="card-preview" style={{ background: modeInfo.bgGradient }}>
+                  <div className="card-preview-top">
+                    <div className="card-preview-badges">
+                      <span className="card-status-pill" style={{
+                        color: isActive ? T.blue : T.muted,
+                        borderColor: isActive ? 'rgba(74,158,255,0.4)' : 'rgba(0,0,0,0.08)',
                       }}>
-                        + CSV
-                        <input type="file" accept=".csv" style={{ display: 'none' }}
-                          onChange={(e) => {
-                            const file = e.target.files?.[0]
-                            if (file) handleUploadMore(campaign.id, file)
-                          }} />
-                      </label>
-                    )}
-
-                    {!isLapsed ? (
-                      <a href={`/dashboard/dialer?campaignId=${campaign.id}`} style={{
-                        padding: '8px 18px', borderRadius: '8px',
-                        background: campaign.status === 'active' ? 'linear-gradient(135deg, #4a9eff, #2a6eff)' : T.surface2,
-                        border: 'none', color: campaign.status === 'active' ? 'white' : T.muted,
-                        fontSize: '10px', letterSpacing: '2px', cursor: 'pointer',
-                        fontFamily: 'Futura PT, Futura, sans-serif', textDecoration: 'none',
-                        boxShadow: campaign.status === 'active' ? '0 0 15px rgba(74,158,255,0.3)' : 'none',
-                        whiteSpace: 'nowrap',
-                      }}>DIAL</a>
-                    ) : (
-                      <span style={{
-                        padding: '8px 18px', borderRadius: '8px',
-                        background: T.surface2,
-                        border: `1px solid ${T.border}`,
-                        color: T.muted,
-                        fontSize: '10px', letterSpacing: '2px',
-                        fontFamily: 'Futura PT, Futura, sans-serif',
-                        whiteSpace: 'nowrap',
-                        opacity: 0.6,
-                      }}>🔒</span>
-                    )}
-
-                    {!isLapsed && (
-                      deleteConfirm === campaign.id ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: campaign.total_leads >= 100 ? 200 : 'auto' }}>
-                          {campaign.total_leads >= 100 && (
-                            <input
-                              type="text"
-                              placeholder='type "delete" to confirm'
-                              value={deleteTyped}
-                              onChange={e => setDeleteTyped(e.target.value)}
-                              autoFocus
-                              style={{
-                                padding: '6px 8px', borderRadius: '4px',
-                                background: T.surface2,
-                                border: '1px solid #ff4444',
-                                color: T.text,
-                                fontSize: '10px',
-                                fontFamily: 'monospace',
-                                outline: 'none',
-                                letterSpacing: 1,
-                              }}
-                            />
-                          )}
-                          <div style={{ display: 'flex', gap: '6px' }}>
+                        {isActive ? '● ACTIVE' : '○ INACTIVE'}
+                      </span>
+                      {campaign.amd_enabled && (
+                        <span className="card-amd-pill">AMD</span>
+                      )}
+                    </div>
+                    <div data-card-menu style={{ position: 'relative' }}>
+                      <button
+                        className="card-menu-btn"
+                        aria-label="Campaign options"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setOpenMenuId(isMenuOpen ? null : campaign.id)
+                        }}
+                      >⋯</button>
+                      {isMenuOpen && (
+                        <div className="card-menu">
+                          {!isLapsed && (
                             <button
-                              onClick={() => handleDelete(campaign.id, campaign.total_leads)}
-                              disabled={campaign.total_leads >= 100 && deleteTyped.toLowerCase().trim() !== 'delete'}
-                              style={{
-                                padding: '8px 14px', borderRadius: '8px', border: 'none',
-                                background: '#ff4444', color: 'white', fontSize: '10px',
-                                letterSpacing: '2px',
-                                cursor: campaign.total_leads >= 100 && deleteTyped.toLowerCase().trim() !== 'delete' ? 'not-allowed' : 'pointer',
-                                opacity: campaign.total_leads >= 100 && deleteTyped.toLowerCase().trim() !== 'delete' ? 0.4 : 1,
-                                fontFamily: 'Futura PT, Futura, sans-serif',
-                                flex: 1,
-                              }}>CONFIRM</button>
-                            <button onClick={() => { setDeleteConfirm(null); setDeleteTyped('') }} style={{
-                              padding: '8px 14px', borderRadius: '8px',
-                              background: 'transparent', border: `1px solid ${T.border}`,
-                              color: T.muted, fontSize: '10px',
-                              letterSpacing: '2px', cursor: 'pointer',
-                              fontFamily: 'Futura PT, Futura, sans-serif',
-                            }}>CANCEL</button>
-                          </div>
+                              className="card-menu-item"
+                              onClick={(e) => { e.stopPropagation(); window.location.href = `/dashboard/dialer?campaignId=${campaign.id}` }}
+                            >
+                              <span className="card-menu-icon">📞</span>
+                              <span>OPEN IN DIALER</span>
+                            </button>
+                          )}
+                          {!isLapsed && (
+                            <button
+                              className="card-menu-item"
+                              onClick={(e) => { e.stopPropagation(); toggleStatus(campaign.id, campaign.status) }}
+                            >
+                              <span className="card-menu-icon">{isActive ? '⏸' : '▶'}</span>
+                              <span>{isActive ? 'DEACTIVATE' : 'ACTIVATE'}</span>
+                            </button>
+                          )}
+                          {!isLapsed && <div className="card-menu-divider" />}
+                          {!isLapsed && (
+                            <button
+                              className="card-menu-item"
+                              onClick={(e) => { e.stopPropagation(); openModeModal(campaign) }}
+                            >
+                              <span className="card-menu-icon">⚙</span>
+                              <span>DIALER MODE</span>
+                            </button>
+                          )}
+                          {!isLapsed && (
+                            <button
+                              className="card-menu-item"
+                              onClick={(e) => { e.stopPropagation(); openScriptsModal(campaign) }}
+                            >
+                              <span className="card-menu-icon">📝</span>
+                              <span>EDIT SCRIPTS</span>
+                            </button>
+                          )}
+                          {!isLapsed && (
+                            <label
+                              className="card-menu-item"
+                              style={{ cursor: 'pointer' }}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <span className="card-menu-icon">+</span>
+                              <span>UPLOAD CSV</span>
+                              <input type="file" accept=".csv" style={{ display: 'none' }}
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0]
+                                  if (file) {
+                                    handleUploadMore(campaign.id, file)
+                                    setOpenMenuId(null)
+                                  }
+                                }} />
+                            </label>
+                          )}
+                          {!isLapsed && <div className="card-menu-divider" />}
+                          {!isLapsed && (
+                            <button
+                              className="card-menu-item danger"
+                              onClick={(e) => { e.stopPropagation(); startDelete(campaign.id) }}
+                            >
+                              <span className="card-menu-icon">🗑</span>
+                              <span>DELETE CAMPAIGN</span>
+                            </button>
+                          )}
+                          {isLapsed && (
+                            <div style={{ padding: 12, fontSize: 10, color: T.muted, letterSpacing: 1, textAlign: 'center' }}>
+                              READ-ONLY — RESUBSCRIBE TO EDIT
+                            </div>
+                          )}
                         </div>
-                      ) : (
-                        <button onClick={() => startDelete(campaign.id)} style={{
-                          padding: '8px 14px', borderRadius: '8px',
-                          background: 'transparent', border: '1px solid rgba(255,68,68,0.3)',
-                          color: '#ff4444', fontSize: '10px', letterSpacing: '2px',
-                          cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
-                        }}>🗑</button>
-                      )
-                    )}
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Script thumbnail — the "image preview" — shows actual document content */}
+                  <ScriptThumbnail script={campaign.script} accentColor={modeInfo.color} />
+
+                  <div className="card-preview-bottom">
+                    <div style={{ minWidth: 0 }}>
+                      <div className="card-mode-label" style={{ color: modeInfo.color }}>
+                        {modeInfo.label}
+                      </div>
+                      <div className="card-mode-leads">
+                        {campaign.total_leads.toLocaleString()} LEADS · {campaign.called_leads.toLocaleString()} CALLED
+                      </div>
+                    </div>
+                    <ProgressRing percent={percent} color={modeInfo.color} size={50} thickness={4} />
                   </div>
                 </div>
+
+                {/* FOOTER (bottom) */}
+                <div className="card-footer">
+                  <h3 className="card-name">{campaign.name}</h3>
+                  <p className="card-meta">
+                    Modified {relativeTime(lastUpdated)}
+                  </p>
+                </div>
+
+                {/* DELETE CONFIRMATION OVERLAY */}
+                {isDeleting && (
+                  <div className="delete-confirm-overlay" onClick={(e) => e.stopPropagation()}>
+                    <p className="delete-confirm-title">DELETE CAMPAIGN?</p>
+                    <p className="delete-confirm-text">
+                      &quot;{campaign.name}&quot;{campaign.total_leads >= 100
+                        ? ` has ${campaign.total_leads.toLocaleString()} leads. Type "delete" to confirm.`
+                        : '. This cannot be undone.'}
+                    </p>
+                    {campaign.total_leads >= 100 && (
+                      <input
+                        type="text"
+                        placeholder='type "delete"'
+                        value={deleteTyped}
+                        onChange={e => setDeleteTyped(e.target.value)}
+                        autoFocus
+                        className="delete-confirm-input"
+                      />
+                    )}
+                    <div className="delete-confirm-actions">
+                      <button
+                        onClick={() => { setDeleteConfirm(null); setDeleteTyped('') }}
+                        style={{ background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)', color: 'white' }}
+                      >CANCEL</button>
+                      <button
+                        onClick={() => handleDelete(campaign.id, campaign.total_leads)}
+                        disabled={campaign.total_leads >= 100 && deleteTyped.toLowerCase().trim() !== 'delete'}
+                        style={{
+                          background: 'white', border: 'none', color: '#c44',
+                          opacity: campaign.total_leads >= 100 && deleteTyped.toLowerCase().trim() !== 'delete' ? 0.4 : 1,
+                          cursor: campaign.total_leads >= 100 && deleteTyped.toLowerCase().trim() !== 'delete' ? 'not-allowed' : 'pointer',
+                        }}
+                      >DELETE</button>
+                    </div>
+                  </div>
+                )}
               </div>
             )
           })}
@@ -1558,7 +1886,6 @@ export default function CampaignsPage() {
               >×</button>
             </div>
 
-            {/* TABS */}
             <div className="scripts-tabs" ref={tabsRowRef}>
               {scripts.map(s => {
                 const isActive = activeScriptId === s.id

@@ -127,7 +127,6 @@ export default function StartMenu({ onClose, onLaunchApp, recent }: StartMenuPro
         >
           {isLoaded && (
             <UserButton
-              afterSignOutUrl="/"
               appearance={{
                 elements: {
                   avatarBox: { width: 44, height: 44 },
