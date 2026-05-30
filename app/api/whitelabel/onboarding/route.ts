@@ -1,4 +1,43 @@
-import { NextResponse } from 'next/server'
+// app/api/whitelabel/onboarding/route.ts
+// =============================================================================
+// WHITE-LABEL ONBOARDING / EDIT
+// =============================================================================
+// GET  /api/whitelabel/onboarding
+//   Returns the user's current onboarding state. Used by the page to
+//   decide: (a) redirect to /billing if not paid, (b) show empty form
+//   for first-time setup, (c) show populated form for editing.
+//
+//   Response:
+//     {
+//       status: 'not_started' | 'pending' | 'complete',
+//       existingSubdomain?: string,
+//       tenant?: {
+//         brand_name, slug, primary_color, accent_color, logo_url
+//       },
+//       canChangeSlugAt?: ISO date     // null if can change now
+//     }
+//
+// POST /api/whitelabel/onboarding
+//   Body (JSON):
+//     {
+//       brand_name: string,
+//       subdomain: string,
+//       primary_color: '#RRGGBB',
+//       accent_color: '#RRGGBB',
+//       logo_url: string       // from /api/whitelabel/upload-logo
+//     }
+//
+//   First call (status === 'pending'): creates tenant row, sets onboarding
+//   status to 'complete'.
+//
+//   Subsequent calls (status === 'complete'): updates the tenant row.
+//   If subdomain changed, writes a subdomain_history entry for 30-day
+//   grace period and updates slug_changed_at (enforces 24h cooldown).
+//
+//   Returns: { success: true, subdomain }
+// =============================================================================
+
+import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { createClient } from '@supabase/supabase-js'
 
@@ -7,49 +46,8 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-const BUCKET = process.env.NEXT_PUBLIC_TENANT_ASSETS_BUCKET || 'tenant-assets'
-
-// =============================================================================
-// /api/whitelabel/onboarding
-// =============================================================================
-// GET  → reports current onboarding state for the calling user:
-//          { status: 'not_started' | 'pending' | 'complete', existingSubdomain? }
-//        The page uses this to decide whether to render the form or redirect.
-//
-// POST → multipart/form-data with:
-//          brand_name      (string, 1-60)
-//          subdomain       (string, 3-30, /^[a-z0-9-]+$/, not reserved/taken)
-//          primary_color   (hex string, /^#[0-9a-fA-F]{6}$/)
-//          logo            (File, PNG/JPG/WebP, max 500KB)
-//
-//        SERVER VALIDATES EVERYTHING — client validation is for UX only.
-//        Failure returns 400 with a specific reason.
-//
-//        On success:
-//          1. Upload logo to `tenant-assets/<tenant_uuid>/logo.<ext>`
-//          2. Insert white_label_tenants row (or update if owner already
-//             has one; lets users retry if logo upload partially failed)
-//          3. Find owner's existing team or create one, set teams.tenant_id
-//          4. Set users.wl_onboarding_status = 'complete'
-//          5. Return { subdomain } so the page can redirect to tenant URL
-//
-// PRECONDITIONS:
-//   - User must be signed in (Clerk)
-//   - User must have wl_onboarding_status = 'pending' (i.e., their WL
-//     subscription has been confirmed by the Stripe webhook). If it's
-//     'not_started', POST returns 402 Payment Required.
-//
-// CRITICAL — server-side dimension check on the logo upload is SKIPPED
-// in this v21 ship; we trust the client validation. Adding `sharp` for
-// server-side image inspection is a follow-up. For now, the client
-// blocks anything but exactly 28×28, and the 500KB cap is enforced
-// server-side, so the failure mode is "tenant ships a weird logo" not
-// "tenant ships malware."
-// =============================================================================
-
-const LOGO_MAX_BYTES = 500 * 1024
-const ALLOWED_MIME = new Set(['image/png', 'image/jpeg', 'image/webp'])
-const RESERVED_SUBDOMAINS = new Set([
+// Same list as check-subdomain — keep in sync
+const RESERVED = new Set([
   'www', 'api', 'app', 'admin', 'mail', 'email', 'support',
   'dashboard', 'billing', 'auth', 'docs', 'help', 'status',
   'staging', 'dev', 'test', 'demo', 'preview', 'sandbox',
@@ -57,246 +55,290 @@ const RESERVED_SUBDOMAINS = new Set([
   'sip', 'voice', 'webhook', 'webhooks', 'signalwire',
   'stripe', 'clerk', 'supabase', 'vercel', 'sentry',
   'dialerseat', 'whitelabel', 'wl', 'onboarding',
+  'manager', 'managers', 'pro', 'team', 'teams',
+  'signin', 'signup', 'login', 'logout', 'account', 'settings',
+  'terms', 'privacy', 'about', 'contact', 'pricing', 'faq',
+  'home', 'blog', 'callback', 'oauth', 'saml',
+  'referral', 'promo', 'public', 'upload',
 ])
 
+const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{1,28}[a-z0-9])?$/
 const HEX_RE = /^#[0-9a-fA-F]{6}$/
-const SUBDOMAIN_RE = /^[a-z0-9][a-z0-9-]{1,28}[a-z0-9]$/
 
-// ── GET status ───────────────────────────────────────────────────
+const SLUG_COOLDOWN_HOURS = 24
+const SLUG_REDIRECT_DAYS = 30
+
+// =============================================================================
+// GET — status check (and existing config for edits)
+// =============================================================================
 export async function GET() {
   const { userId } = await auth()
   if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
 
-  const { data: u, error } = await supabase
+  const { data: user } = await supabase
     .from('users')
-    .select('wl_onboarding_status')
+    .select('wl_onboarding_status, wl_subscription_id')
     .eq('clerk_id', userId)
     .maybeSingle()
 
-  if (error) {
-    console.error('[wl/onboarding GET]', error)
-    return NextResponse.json({ error: 'Status lookup failed' }, { status: 500 })
+  if (!user) {
+    return NextResponse.json({ status: 'not_started' })
   }
 
-  const status = (u?.wl_onboarding_status as
-    'not_started' | 'pending' | 'complete') || 'not_started'
+  const status = (user.wl_onboarding_status as 'not_started' | 'pending' | 'complete' | null) || 'not_started'
 
-  // If already complete, return their tenant subdomain
-  let existingSubdomain: string | undefined
+  // Sanity check: if status is 'pending' or 'complete' but no subscription id, something's
+  // off — treat as not_started so they get bounced back to billing.
+  if ((status === 'pending' || status === 'complete') && !user.wl_subscription_id) {
+    return NextResponse.json({ status: 'not_started' })
+  }
+
   if (status === 'complete') {
-    const { data: t } = await supabase
+    const { data: tenant } = await supabase
       .from('white_label_tenants')
-      .select('subdomain')
+      .select('id, brand_name, slug, primary_color, accent_color, logo_url, slug_changed_at, is_active')
       .eq('owner_clerk_id', userId)
       .maybeSingle()
-    existingSubdomain = t?.subdomain || undefined
+
+    if (!tenant) {
+      // status says complete but no tenant row — they hit an edge case.
+      // Treat as 'pending' so they can finish onboarding.
+      return NextResponse.json({ status: 'pending' })
+    }
+
+    // Compute slug-change cooldown
+    let canChangeSlugAt: string | null = null
+    if (tenant.slug_changed_at) {
+      const lastChange = new Date(tenant.slug_changed_at).getTime()
+      const cooldownEnd = lastChange + SLUG_COOLDOWN_HOURS * 60 * 60 * 1000
+      if (cooldownEnd > Date.now()) {
+        canChangeSlugAt = new Date(cooldownEnd).toISOString()
+      }
+    }
+
+    return NextResponse.json({
+      status: 'complete',
+      existingSubdomain: tenant.slug,
+      tenant: {
+        brand_name: tenant.brand_name,
+        slug: tenant.slug,
+        primary_color: tenant.primary_color,
+        accent_color: tenant.accent_color,
+        logo_url: tenant.logo_url,
+      },
+      canChangeSlugAt,
+      isActive: tenant.is_active,
+    })
   }
 
-  return NextResponse.json({ status, existingSubdomain })
+  return NextResponse.json({ status })
 }
 
-// ── POST submission ──────────────────────────────────────────────
-export async function POST(req: Request) {
+// =============================================================================
+// POST — create or update tenant
+// =============================================================================
+export async function POST(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
 
-  // ── Verify the user has paid for WL ─────────────────────────────
-  const { data: u } = await supabase
+  let body: any
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: 'malformed_json' }, { status: 400 })
+  }
+
+  // ── Field validation ──────────────────────────────────────────────
+  const brandName = String(body.brand_name || '').trim()
+  const subdomain = String(body.subdomain || '').toLowerCase().trim()
+  const primaryColor = String(body.primary_color || '').trim()
+  const accentColor = String(body.accent_color || '').trim()
+  const logoUrl = String(body.logo_url || '').trim()
+
+  if (!brandName || brandName.length < 2 || brandName.length > 60) {
+    return NextResponse.json({ error: 'invalid_brand_name', detail: 'Brand name must be 2–60 characters.' }, { status: 400 })
+  }
+  if (!subdomain || !SLUG_RE.test(subdomain)) {
+    return NextResponse.json({ error: 'invalid_subdomain', detail: 'Subdomain must be 3–30 chars, lowercase letters/digits/hyphens.' }, { status: 400 })
+  }
+  if (RESERVED.has(subdomain)) {
+    return NextResponse.json({ error: 'reserved_subdomain' }, { status: 400 })
+  }
+  if (!HEX_RE.test(primaryColor)) {
+    return NextResponse.json({ error: 'invalid_primary_color', detail: 'Primary color must be #RRGGBB.' }, { status: 400 })
+  }
+  if (!HEX_RE.test(accentColor)) {
+    return NextResponse.json({ error: 'invalid_accent_color', detail: 'Accent color must be #RRGGBB.' }, { status: 400 })
+  }
+  if (!logoUrl) {
+    return NextResponse.json({ error: 'missing_logo', detail: 'Upload your logo first.' }, { status: 400 })
+  }
+
+  // ── WL subscription gate ──────────────────────────────────────────
+  const { data: user } = await supabase
     .from('users')
-    .select('wl_onboarding_status')
+    .select('wl_onboarding_status, wl_subscription_id, stripe_customer_id')
     .eq('clerk_id', userId)
     .maybeSingle()
 
-  if (u?.wl_onboarding_status === 'not_started') {
+  if (!user || !user.wl_subscription_id) {
     return NextResponse.json(
-      { error: 'White-label subscription required before setup.' },
-      { status: 402 }
-    )
-  }
-  if (u?.wl_onboarding_status === 'complete') {
-    return NextResponse.json(
-      { error: 'Tenant already provisioned.' },
-      { status: 409 }
+      { error: 'no_subscription', detail: 'Active white-label subscription required.', redirectTo: '/billing?plan=wl' },
+      { status: 403 }
     )
   }
 
-  // ── Parse multipart form ────────────────────────────────────────
-  let form: FormData
-  try {
-    form = await req.formData()
-  } catch (e: any) {
+  const status = user.wl_onboarding_status || 'not_started'
+  if (status !== 'pending' && status !== 'complete') {
     return NextResponse.json(
-      { error: 'Invalid form data' },
-      { status: 400 }
+      { error: 'no_subscription', detail: 'Active white-label subscription required.', redirectTo: '/billing?plan=wl' },
+      { status: 403 }
     )
   }
 
-  const brandName = (form.get('brand_name') as string | null)?.trim() || ''
-  const rawSubdomain = (form.get('subdomain') as string | null)?.trim().toLowerCase() || ''
-  const primaryColor = (form.get('primary_color') as string | null) || ''
-  const logo = form.get('logo') as File | null
-
-  // ── Validate fields ─────────────────────────────────────────────
-  if (!brandName || brandName.length > 60) {
-    return NextResponse.json({ error: 'Brand name required (1-60 chars).' }, { status: 400 })
-  }
-  if (!SUBDOMAIN_RE.test(rawSubdomain)) {
-    return NextResponse.json(
-      { error: 'Invalid subdomain. Use 3-30 lowercase letters/digits/hyphens.' },
-      { status: 400 }
-    )
-  }
-  if (RESERVED_SUBDOMAINS.has(rawSubdomain)) {
-    return NextResponse.json({ error: 'That subdomain is reserved.' }, { status: 400 })
-  }
-  if (!HEX_RE.test(primaryColor)) {
-    return NextResponse.json({ error: 'Invalid color. Use a hex like #4a9eff.' }, { status: 400 })
-  }
-  if (!logo) {
-    return NextResponse.json({ error: 'Logo file required.' }, { status: 400 })
-  }
-  if (logo.size > LOGO_MAX_BYTES) {
-    return NextResponse.json(
-      { error: `Logo too large (${Math.round(logo.size / 1024)} KB). Max 500 KB.` },
-      { status: 400 }
-    )
-  }
-  if (!ALLOWED_MIME.has(logo.type)) {
-    return NextResponse.json(
-      { error: 'Logo must be PNG, JPG, or WebP.' },
-      { status: 400 }
-    )
-  }
-
-  // ── Check subdomain not taken (by ANOTHER user) ─────────────────
-  const { data: existingTenantBySubdomain } = await supabase
+  // ── Subdomain uniqueness (excluding own) ──────────────────────────
+  const { data: collision } = await supabase
     .from('white_label_tenants')
     .select('id, owner_clerk_id')
-    .eq('subdomain', rawSubdomain)
+    .eq('slug', subdomain)
+    .eq('is_active', true)
     .maybeSingle()
 
-  if (existingTenantBySubdomain && existingTenantBySubdomain.owner_clerk_id !== userId) {
-    return NextResponse.json(
-      { error: `Subdomain "${rawSubdomain}" is already taken.` },
-      { status: 409 }
-    )
+  if (collision && collision.owner_clerk_id !== userId) {
+    return NextResponse.json({ error: 'taken' }, { status: 409 })
   }
 
-  // ── Find or stage the tenant row ────────────────────────────────
-  // If the user is retrying (e.g. first attempt failed at the logo
-  // upload step), reuse their existing tenant row instead of creating
-  // a duplicate.
-  const { data: existingTenantByOwner } = await supabase
-    .from('white_label_tenants')
-    .select('id, subdomain')
-    .eq('owner_clerk_id', userId)
+  // Also check active redirects
+  const { data: redirecting } = await supabase
+    .from('subdomain_history')
+    .select('id, tenant_id')
+    .eq('old_slug', subdomain)
+    .gt('redirects_until', new Date().toISOString())
     .maybeSingle()
 
-  let tenantId: string
+  if (redirecting) {
+    // Owned redirect? (the user is editing back to a recent slug they had)
+    const { data: t } = await supabase
+      .from('white_label_tenants')
+      .select('owner_clerk_id')
+      .eq('id', redirecting.tenant_id)
+      .maybeSingle()
+    if (!t || t.owner_clerk_id !== userId) {
+      return NextResponse.json({ error: 'redirecting', detail: 'This subdomain is being redirected from a recent change.' }, { status: 409 })
+    }
+  }
 
-  if (existingTenantByOwner) {
-    tenantId = existingTenantByOwner.id
-  } else {
-    // Insert with a placeholder logo_url; we'll patch it after upload
-    const { data: created, error: insErr } = await supabase
+  const now = new Date()
+
+  // ── BRANCH: CREATE vs UPDATE ──────────────────────────────────────
+  if (status === 'pending') {
+    // ─── CREATE new tenant row ─────────────────────────────────────
+    const { data: tenant, error: insErr } = await supabase
       .from('white_label_tenants')
       .insert({
         owner_clerk_id: userId,
+        slug: subdomain,
         brand_name: brandName,
-        subdomain: rawSubdomain,
+        logo_url: logoUrl,
         primary_color: primaryColor,
-        logo_url: '',
+        accent_color: accentColor,
+        // Other color fields use schema defaults
+        support_email: '',  // schema requires NOT NULL but we don't ask user; empty for now
+        stripe_customer_id: user.stripe_customer_id,
+        stripe_subscription_id: user.wl_subscription_id,
+        status: 'active',
         is_active: true,
+        slug_changed_at: now.toISOString(),
       })
-      .select('id')
+      .select('id, slug')
       .single()
-    if (insErr || !created) {
-      console.error('[wl/onboarding] insert tenant failed:', insErr)
-      return NextResponse.json(
-        { error: 'Could not create tenant record. ' + (insErr?.message || '') },
-        { status: 500 }
-      )
+
+    if (insErr || !tenant) {
+      console.error('tenant insert failed:', insErr)
+      // Unique-violation handler — race condition where slug was claimed
+      // between our check and the insert
+      if (insErr?.code === '23505') {
+        return NextResponse.json({ error: 'taken' }, { status: 409 })
+      }
+      return NextResponse.json({ error: 'db_error', detail: insErr?.message }, { status: 500 })
     }
-    tenantId = created.id
+
+    // Mark onboarding complete
+    await supabase
+      .from('users')
+      .update({ wl_onboarding_status: 'complete' })
+      .eq('clerk_id', userId)
+
+    return NextResponse.json({ success: true, subdomain: tenant.slug, created: true })
   }
 
-  // ── Upload logo to storage ──────────────────────────────────────
-  const ext =
-    logo.type === 'image/png' ? 'png'
-    : logo.type === 'image/webp' ? 'webp'
-    : 'jpg'
-  const logoPath = `${tenantId}/logo-${Date.now()}.${ext}`
-
-  const logoBuffer = Buffer.from(await logo.arrayBuffer())
-  const { error: uploadErr } = await supabase.storage
-    .from(BUCKET)
-    .upload(logoPath, logoBuffer, {
-      contentType: logo.type,
-      upsert: true,
-    })
-
-  if (uploadErr) {
-    console.error('[wl/onboarding] logo upload failed:', uploadErr)
-    return NextResponse.json(
-      { error: 'Logo upload failed. ' + uploadErr.message },
-      { status: 500 }
-    )
-  }
-
-  const { data: publicUrlData } = supabase.storage
-    .from(BUCKET)
-    .getPublicUrl(logoPath)
-  const logoUrl = publicUrlData.publicUrl
-
-  // ── Patch the tenant row with the actual fields ─────────────────
-  const { error: updateErr } = await supabase
+  // ─── UPDATE existing tenant ────────────────────────────────────────
+  const { data: existing } = await supabase
     .from('white_label_tenants')
-    .update({
-      brand_name: brandName,
-      subdomain: rawSubdomain,
-      primary_color: primaryColor,
-      logo_url: logoUrl,
-      is_active: true,
-    })
-    .eq('id', tenantId)
+    .select('id, slug, slug_changed_at')
+    .eq('owner_clerk_id', userId)
+    .maybeSingle()
 
-  if (updateErr) {
-    console.error('[wl/onboarding] update tenant failed:', updateErr)
-    return NextResponse.json(
-      { error: 'Tenant update failed. ' + updateErr.message },
-      { status: 500 }
-    )
+  if (!existing) {
+    return NextResponse.json({ error: 'tenant_missing' }, { status: 500 })
   }
 
-  // ── Link the owner's team to this tenant ────────────────────────
-  // If they don't have a team yet, we don't create one here — the team
-  // workflow on /dashboard/teams handles that. We just stamp tenant_id
-  // on whatever teams they currently own so their existing teams inherit
-  // the branding automatically.
-  await supabase
-    .from('teams')
-    .update({ tenant_id: tenantId })
-    .eq('owner_id', userId)
-
-  // ── Mark onboarding complete ────────────────────────────────────
-  const { error: userUpdateErr } = await supabase
-    .from('users')
-    .update({ wl_onboarding_status: 'complete' })
-    .eq('clerk_id', userId)
-
-  if (userUpdateErr) {
-    console.error('[wl/onboarding] mark complete failed:', userUpdateErr)
-    // Don't fail the whole request — tenant exists, just status flag
-    // didn't update. The user can still reach their tenant.
+  const slugChanged = existing.slug !== subdomain
+  const updates: Record<string, any> = {
+    brand_name: brandName,
+    logo_url: logoUrl,
+    primary_color: primaryColor,
+    accent_color: accentColor,
   }
 
-  return NextResponse.json({
-    subdomain: rawSubdomain,
-    tenantId,
-    logoUrl,
-  })
+  if (slugChanged) {
+    // Enforce 24-hour cooldown
+    if (existing.slug_changed_at) {
+      const lastChange = new Date(existing.slug_changed_at).getTime()
+      const cooldownEnd = lastChange + SLUG_COOLDOWN_HOURS * 60 * 60 * 1000
+      if (cooldownEnd > Date.now()) {
+        return NextResponse.json(
+          {
+            error: 'slug_cooldown',
+            detail: `You can change your subdomain again on ${new Date(cooldownEnd).toLocaleString()}.`,
+            availableAt: new Date(cooldownEnd).toISOString(),
+          },
+          { status: 429 }
+        )
+      }
+    }
+
+    // Write a 30-day redirect from the old slug to the new one
+    const redirectsUntil = new Date(now.getTime() + SLUG_REDIRECT_DAYS * 24 * 60 * 60 * 1000)
+    await supabase
+      .from('subdomain_history')
+      .insert({
+        tenant_id: existing.id,
+        old_slug: existing.slug,
+        new_slug: subdomain,
+        redirects_until: redirectsUntil.toISOString(),
+      })
+
+    updates.slug = subdomain
+    updates.slug_changed_at = now.toISOString()
+  }
+
+  const { error: updErr } = await supabase
+    .from('white_label_tenants')
+    .update(updates)
+    .eq('id', existing.id)
+
+  if (updErr) {
+    console.error('tenant update failed:', updErr)
+    if (updErr.code === '23505') {
+      return NextResponse.json({ error: 'taken' }, { status: 409 })
+    }
+    return NextResponse.json({ error: 'db_error', detail: updErr.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ success: true, subdomain, updated: true })
 }
