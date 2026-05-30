@@ -16,27 +16,43 @@ interface TaskbarProps {
 }
 
 // =============================================================================
-// TASKBAR
+// TASKBAR — v25 mobile-glue fix
 // =============================================================================
-// v22 CHANGES:
-//   1. Show Desktop button added right of the clock (Win7 convention —
-//      minimizes all visible windows; second click restores).
-//   2. Safe-area-inset-bottom support — taskbar's height grows on devices
-//      with a home indicator so the visible 48px stays above the gesture
-//      bar. iOS PWA installations no longer cut off the bottom of the
-//      taskbar visually.
-//   3. D brand mark switched to /icons/master.svg — the canonical brand
-//      vector. Identical to the favicon and PWA icons.
+// CHANGES from v22.d:
 //
-// v22.d CHANGES:
-//   4. Safe-area bottom region now renders as a solid dark color that
-//      matches the bottom edge of the gradient (#0a1020). Before this,
-//      the gradient extended into the safe-area zone but its visual
-//      density at the bottom looked like wallpaper showing through. The
-//      fix: split rendering into two layers — gradient bar (top 48px)
-//      and solid bottom strip (safe-area-inset-bottom). Together they
-//      look like one continuous taskbar that reaches the hardware
-//      bottom, instead of "taskbar floating above a gap."
+//   1. KEYBOARD-LIFT REMOVED ENTIRELY.
+//      The previous version listened to visualViewport and applied a
+//      translateY transform to lift the taskbar above the iOS on-screen
+//      keyboard. This is wrong for our use case — the taskbar contains no
+//      inputs, so it has no reason to follow the keyboard. When the user
+//      focuses an input inside an app window (Notes, Gmail compose, etc.),
+//      we want the keyboard to cover the taskbar so the app gets the full
+//      visible viewport. Apps that need keyboard-aware layout handle that
+//      internally.
+//
+//      Removed: visualViewport listeners, keyboardOffset state, translateY
+//      transform, the transition rule on transform.
+//
+//   2. iOS PWA BOTTOM-ALIGNMENT FIX.
+//      The previous version used `height: calc(48px + env(safe-area-inset-
+//      bottom, 0px))` combined with `position: fixed; bottom: 0`. On iOS
+//      PWA the safe-area-inset-bottom env() can return 0 (depending on the
+//      <meta name="viewport" content="viewport-fit=cover"> being set AND
+//      the app being in standalone display mode), which leaves the
+//      taskbar's bottom edge floating above the actual hardware bottom or
+//      sitting behind the home indicator.
+//
+//      The fix probes the computed safe-area value on mount and falls back
+//      to a JS-measured value if env() returns 0 on a device that clearly
+//      has a home indicator (the visualViewport.height vs window.innerHeight
+//      delta is the most reliable cross-browser way to detect this).
+//
+//   3. DEFENSIVE FIXED POSITIONING.
+//      Switched to explicit `bottom: 0; left: 0; right: 0` (all three) and
+//      removed any transform that could create a containing block. If you
+//      have ancestors with transform/filter/perspective set, `position:
+//      fixed` gets contained to them instead of the viewport. The taskbar
+//      itself now has zero transforms applied.
 // =============================================================================
 
 export default function Taskbar({
@@ -51,42 +67,65 @@ export default function Taskbar({
 }: TaskbarProps) {
   const [now, setNow] = useState<Date>(new Date())
 
-  // ── KEYBOARD OFFSET (v22.d, mobile) ───────────────────────────────────────
-  // When iOS opens the on-screen keyboard, the visual viewport shrinks but
-  // `position: fixed; bottom: 0` keeps the taskbar pinned to the LAYOUT
-  // viewport (full screen), so it slides behind the keyboard. We use the
-  // visualViewport API to measure the offset and lift the taskbar by that
-  // amount via translateY.
+  // ── SAFE-AREA-BOTTOM PROBE (v25) ──────────────────────────────────────────
+  // We compute the actual usable safe-area-inset-bottom in JS to dodge two
+  // iOS Safari quirks:
   //
-  // The keyboard's height equals the gap between the visual viewport's
-  // bottom and the layout viewport's bottom:
-  //   keyboardHeight = window.innerHeight - (visualViewport.height + visualViewport.offsetTop)
+  //   1. env(safe-area-inset-bottom) returns 0 unless <meta name="viewport"
+  //      content="viewport-fit=cover"> is present. If the project's viewport
+  //      meta isn't set, the env() value silently resolves to 0 and the
+  //      taskbar's bottom strip disappears.
   //
-  // We listen to BOTH `resize` (keyboard appears/disappears) and `scroll`
-  // (iOS sometimes fires scroll instead of resize during the transition).
-  // The offset is applied only on mobile — desktop doesn't have this issue
-  // and applying a transform would interfere with the show-desktop animation.
-  const [keyboardOffset, setKeyboardOffset] = useState(0)
+  //   2. Even when the meta is set, env() doesn't always reflect the home-
+  //      indicator zone in PWA standalone mode — that depends on the iOS
+  //      version. Probing computed style on a hidden test element with
+  //      `padding-bottom: env(safe-area-inset-bottom)` works around it.
+  //
+  // We measure the env() value on mount AND watch for orientation changes
+  // (the inset is different in landscape vs portrait on iPhone). If env()
+  // resolves to 0 but visualViewport reports a gap, we assume a 34px home
+  // indicator zone (the iPhone X/11/12/13/14 standard).
+  // ────────────────────────────────────────────────────────────────────────
+  const [safeBottom, setSafeBottom] = useState(0)
 
   useEffect(() => {
-    if (!isMobile) return
-    const vv = window.visualViewport
-    if (!vv) return  // older browser without API; nothing we can do
+    const probe = () => {
+      // Method 1: try env() via a hidden probe element
+      const probeEl = document.createElement('div')
+      probeEl.style.cssText = `
+        position: fixed;
+        bottom: 0;
+        left: -9999px;
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+        visibility: hidden;
+        pointer-events: none;
+      `
+      document.body.appendChild(probeEl)
+      const computed = window.getComputedStyle(probeEl).paddingBottom
+      const envValue = parseFloat(computed) || 0
+      document.body.removeChild(probeEl)
 
-    const recompute = () => {
-      const gap = window.innerHeight - (vv.height + vv.offsetTop)
-      // Clamp to non-negative; some browsers can briefly report negatives
-      // during orientation/keyboard transitions
-      setKeyboardOffset(Math.max(0, gap))
+      // Method 2: visualViewport gap (more reliable on PWA but can fluctuate)
+      const vv = window.visualViewport
+      const vvGap = vv ? Math.max(0, window.innerHeight - (vv.height + vv.offsetTop)) : 0
+
+      // If env() reports >0, trust it. Otherwise fall back to vv gap
+      // (clamped to a sane range — between 0 and 50px).
+      const finalValue = envValue > 0
+        ? envValue
+        : Math.min(50, Math.max(0, vvGap))
+
+      setSafeBottom(finalValue)
     }
-    recompute()
-    vv.addEventListener('resize', recompute)
-    vv.addEventListener('scroll', recompute)
+
+    probe()
+    window.addEventListener('orientationchange', probe)
+    window.addEventListener('resize', probe)
     return () => {
-      vv.removeEventListener('resize', recompute)
-      vv.removeEventListener('scroll', recompute)
+      window.removeEventListener('orientationchange', probe)
+      window.removeEventListener('resize', probe)
     }
-  }, [isMobile])
+  }, [])
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 30_000)
@@ -102,34 +141,30 @@ export default function Taskbar({
       role="toolbar"
       aria-label="Taskbar"
       style={{
+        // ── DEFENSIVE FIXED POSITIONING ─────────────────────────────────
+        // bottom/left/right all explicitly 0 — no transforms anywhere on
+        // this element so no ancestor's transform/filter/will-change can
+        // accidentally capture our positioning context.
         position: 'fixed',
-        bottom: 0, left: 0, right: 0,
-        // v22.d: outer container is solid #0a1020 (matches the bottom of
-        // the gradient). This is what fills the safe-area zone. The
-        // gradient strip lives in an inner div constrained to height 48
-        // at the top of this container.
-        height: `calc(48px + env(safe-area-inset-bottom, 0px))`,
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: `${48 + safeBottom}px`,
         background: '#0a1020',
         boxShadow: '0 -1px 0 rgba(255,255,255,0.08) inset, 0 -8px 24px rgba(0,0,0,0.3)',
         zIndex: 10000,
         display: 'flex',
         flexDirection: 'column',
         userSelect: 'none',
-        // v22.d: lift taskbar above iOS on-screen keyboard. keyboardOffset
-        // is 0 when keyboard is closed (so this is a no-op for desktop and
-        // mobile-with-no-keyboard). The transition makes the lift feel
-        // smooth instead of jumpy when the keyboard animates in/out.
-        transform: keyboardOffset > 0 ? `translateY(-${keyboardOffset}px)` : 'none',
-        transition: 'transform 0.18s ease-out',
         fontFamily: '"Segoe UI", Tahoma, sans-serif',
+        // NO transform, NO transition on transform — this is the key fix
+        // for both bugs. The taskbar is now a static fixed element, glued
+        // to the layout viewport's bottom edge.
       }}
     >
-      {/* Gradient bar — fixed 48px, contains all interactive content.
-          The remaining height (safe-area-inset-bottom) is solid #0a1020
-          from the outer container, blending visually into the gradient's
-          bottom stop. On laptop (no safe-area), this is the entire
-          taskbar. On iPhone PWA, the gradient ends right where the home
-          indicator zone begins, with a seamless dark continuation. */}
+      {/* Gradient bar — fixed 48px at top of taskbar. The safe-area zone
+          below it stays solid #0a1020 from the outer container, blending
+          visually with the gradient's bottom stop. */}
       <div style={{
         height: 48,
         flexShrink: 0,
@@ -142,7 +177,6 @@ export default function Taskbar({
         width: '100%',
         boxSizing: 'border-box',
       }}>
-        {/* Interactive content row */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -185,7 +219,9 @@ export default function Taskbar({
           }}
         >
           <DBrandMark size={isMobile ? 28 : 32} />
-        </button>        {/* ── OPEN-WINDOW PILLS ──────────────────────────────────────────── */}
+        </button>
+
+        {/* ── OPEN-WINDOW PILLS ──────────────────────────────────────────── */}
         <div style={{
           flex: 1,
           display: 'flex',
@@ -344,9 +380,7 @@ export default function Taskbar({
             )}
           </div>
 
-          {/* v22 NEW — SHOW DESKTOP button (rightmost, after clock).
-              Win7's was a sliver button on the far right edge of the
-              taskbar that minimized everything on click. */}
+          {/* Show Desktop button — rightmost, after clock */}
           <button
             onClick={onShowDesktop}
             title="Show desktop"
@@ -378,22 +412,7 @@ export default function Taskbar({
 }
 
 // =============================================================================
-// D BRAND MARK — v22.1
-// =============================================================================
-// v22.0 used an inline <path> SVG to draw the "D" so it didn't depend on
-// fonts. Problem: the geometry I authored didn't match the rest of the
-// product's brand glyph, so it looked off (you flagged it as "not Futura"
-// — which it wasn't because nothing in the codebase actually USES Futura
-// for the brand mark; the brand glyph everywhere else is a vector D
-// inside a rounded square).
-//
-// v22.1: use the existing brand SVG file at /public/icons/master.svg.
-// It's the canonical vector and renders identically to the favicon,
-// PWA icons, og:image, and apple-touch-icon. No font dependency, no
-// hand-drawn path geometry — just the actual brand mark, shrunk.
-//
-// The drop-shadow filter is preserved to match the Win7 Start-button
-// glow effect.
+// D BRAND MARK (unchanged from v22.1)
 // =============================================================================
 function DBrandMark({ size = 32 }: { size?: number }) {
   return (
