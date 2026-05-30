@@ -33,7 +33,7 @@ export default function ClerkProfileApp() {
       }}
     >
       <UserProfile
-        routing="virtual"
+        routing="hash"
         appearance={{
           elements: {
             rootBox: {
