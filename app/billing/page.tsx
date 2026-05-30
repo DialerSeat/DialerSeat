@@ -17,27 +17,35 @@ const stripePromise = loadStripe(
 )
 
 // =============================================================================
-// BILLING PAGE — v21
+// BILLING PAGE — v22 (Phase A: WL pricing $115 → $75)
 // =============================================================================
-// Now supports TWO plans:
+// Supports TWO plans:
 //
 //   Standard ($35/wk):
 //     - Default plan
 //     - Existing dialer flow, lands on /dashboard after payment
 //
-//   White Label ($115/wk):
+//   White Label ($75/wk):       ← was $115/wk in v21
 //     - User clicks "Switch to White Label" button OR lands here with
-//       ?plan=wl in the URL (e.g. from the landing-page WL CTA)
+//       ?plan=wl in the URL
 //     - Same payment UI, different Stripe price ID + metadata
 //     - After payment, /billing/success routes WL users to
 //       /onboarding/whitelabel (subdomain + logo + colors) instead of
 //       /dashboard
 //
+// PRICE CHANGE NOTE (v22):
+//   The $75 figure is reflected in `PLAN_INFO.wl.price` AND in all display
+//   strings. The actual Stripe price is set via the STRIPE_PRICE_WL_BASE
+//   env var in /api/stripe/create-subscription. Make sure that env var
+//   points at the new $75/wk Stripe Price before deploying this.
+//
+//   The old $115 Price should NOT be archived in Stripe until users with
+//   incomplete checkouts on the old price have abandoned. Then archive it.
+//
 // SWITCHING PLANS:
 //   When user toggles between standard/wl, we abandon the current
 //   incomplete subscription and create a fresh one with the new price.
-//   No card details are re-entered — Stripe re-uses the same client
-//   secret pattern, just bound to a new subscription.
+//   No card details are re-entered.
 // =============================================================================
 
 type Plan = 'standard' | 'wl'
@@ -53,10 +61,10 @@ const PLAN_INFO = {
   },
   wl: {
     label: 'WHITE LABEL',
-    price: 115,
+    price: 75,
     title: 'START YOUR WHITE LABEL TENANT',
-    subtitle: 'Pay $115 today to provision your branded dialer.',
-    weeklyBlurb: '$115.00 USD',
+    subtitle: 'Pay $75 today to provision your branded dialer.',
+    weeklyBlurb: '$75.00 USD',
     description:
       'White-label DialerSeat — your subdomain, your branding. After payment, you’ll pick your subdomain + upload logo + set colors.',
   },
@@ -254,10 +262,6 @@ export default function BillingPage() {
     <main style={pageStyle}>
       <div style={cardStyle}>
         {/* ── PLAN TOGGLE BANNER ────────────────────────────────────── */}
-        {/* Shows current plan + offers to switch to the other one. The
-            non-selected plan is presented as a small button below the
-            title, not a competing visual element — keeps the primary
-            payment CTA the main focus. */}
         <div style={planBadgeStyle}>
           <span style={planBadgeLabelStyle}>{'\u25B8'} PLAN</span>
           <span style={planBadgeNameStyle}>{planInfo.label}</span>
@@ -277,7 +281,7 @@ export default function BillingPage() {
             disabled={switchingPlan}
             style={planSwitchStyle}
           >
-            {switchingPlan ? 'SWITCHING...' : '↗ SWITCH TO WHITE LABEL ($115/WK)'}
+            {switchingPlan ? 'SWITCHING...' : '↗ SWITCH TO WHITE LABEL ($75/WK)'}
           </button>
         ) : (
           <button
