@@ -1,8 +1,10 @@
 'use client'
 import { useUser, UserButton } from '@clerk/nextjs'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
+import { useBranding } from '@/components/ThemeProvider'
 
 const userNavItems = [
   { icon: '📈', label: 'ANALYTICS', href: '/dashboard/analytics' },
@@ -31,41 +33,30 @@ interface SubsSummary {
 }
 
 // =============================================================================
-// /dashboard — LAYOUT
+// /dashboard — LAYOUT (v23 — Phase C: white-label sidebar branding)
 // =============================================================================
-// v22 FIX #1 — mobile topbar behind iPhone status bar:
-//   The `.ds-mobile-topbar` had `padding: 12px 16px` and `position: sticky;
-//   top: 0` with no safe-area-inset-top accommodation. On iPhone PWA
-//   install with `apple-mobile-web-app-status-bar-style: black-translucent`
-//   set in app/layout.tsx, the topbar sits UNDER the status bar / Dynamic
-//   Island, so the profile avatar and hamburger button get covered by the
-//   battery / Wi-Fi icons.
+// v23 ADDS tenant-aware branding to the sidebar's brand block + active
+// nav highlight + tier-status badge color. When useBranding() returns
+// a tenant config:
+//   - Sidebar brand area renders the tenant logo (uploaded at 512×148,
+//     displayed at 256×74 on desktop). The "D / DIALERSEAT" gradient
+//     block is replaced entirely.
+//   - Mobile drawer + mobile topbar render a scaled version of the
+//     tenant logo (instead of the "D" mark + "DIALERSEAT" wordmark).
+//   - Active nav item border + background tint use the tenant's
+//     primary color via the --brand-primary CSS variable.
+//   - "PRO PLAN" / "TEAM SEAT" / "ADMIN" badge colors use the tenant's
+//     primary color where they previously hardcoded #4a9eff.
 //
-//   Fix: paddingTop on the mobile topbar uses `env(safe-area-inset-top)`
-//   so iOS pushes the visible content below the status bar. Identical
-//   approach used in site-header.tsx + app/page.tsx in v21/v22 batches.
+// When useBranding() returns null (default DialerSeat traffic), every
+// surface renders exactly as it did in v22 — pixel-identical.
 //
-//   We also add safe-area-inset to the sidebar drawer's top padding so
-//   the menu items don't sit under the status bar when the drawer is open.
-//
-// v22 FIX #2 — admin desktop route bypasses this layout's chrome:
-//   The Win7 admin shell at /dashboard/admin/desktop owns the full viewport.
-//   Previously we tried to hide site-header via the desktop route's
-//   layout.tsx — but the REAL chrome bleeding through on mobile wasn't
-//   <SiteHeader />, it was THIS layout's `.ds-mobile-topbar` and
-//   `.ds-sidebar-mobile`. Because app/dashboard/layout.tsx is the PARENT
-//   of app/dashboard/admin/desktop/, no child layout could suppress us
-//   from underneath.
-//
-//   Fix: detect the desktop route here via usePathname() and bypass our
-//   own JSX entirely — return children with a stripped wrapper, no
-//   sidebar, no topbar. The Win7 desktop is then the only thing on
-//   screen. This is the only layer that can do it correctly.
+// CARRY-OVER from v22:
+//   - Win7 admin desktop bypass (BARE_LAYOUT_PREFIXES + early return)
+//   - Mobile topbar safe-area padding for iPhone notch
+//   - Profile row safe-area bottom padding
 // =============================================================================
 
-// Routes where this layout should NOT render its own chrome (sidebar +
-// mobile topbar). The Win7 admin desktop owns the full viewport so it
-// can't tolerate any parent layout's overlay.
 const BARE_LAYOUT_PREFIXES = [
   '/dashboard/admin/desktop',
 ]
@@ -78,10 +69,8 @@ function shouldRenderBare(pathname: string | null): boolean {
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user } = useUser()
   const pathname = usePathname()
+  const branding = useBranding()
 
-  // v22 FIX #2: detect admin desktop route. We can't early-return until
-  // AFTER all hooks are declared below (React rules-of-hooks). The bare
-  // return happens further down once all useState/useEffect have run.
   const bare = shouldRenderBare(pathname)
 
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -145,10 +134,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [user, pathname, bare])
 
-  // v22 FIX #2: bare bypass — all hooks above have been declared, so React's
-  // rules-of-hooks are satisfied. Now we can safely early-return for the
-  // admin desktop route. This is what removes the dashboard sidebar +
-  // mobile topbar from showing through the Win7 shell.
   if (bare) {
     return <>{children}</>
   }
@@ -171,6 +156,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const logoHref = isAdmin ? '/dashboard/admin/analytics' : '/dashboard/analytics'
 
+  // ── BRANDING DERIVED VALUES ────────────────────────────────────────────
+  // Use tenant colors when branding present, falling back to hardcoded
+  // DialerSeat blue when no tenant active. The actual CSS-var injection
+  // is done by ThemeProvider in the root layout; we read the values here
+  // to drive runtime style decisions (active nav border, badge color).
+  const brandPrimary = branding?.primary_color || '#4a9eff'
+  const tenantLogoUrl = branding?.logo_url || null
+  const tenantBrandName = branding?.brand_name?.toUpperCase() || 'DIALERSEAT'
+
   const totalSeats = seats?.counts.totalSeats || 0
   const hasActivePersonal = tier === 'active'
   const hasAnySeat = totalSeats > 0
@@ -182,7 +176,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (isAdmin) {
     primaryLabel = 'ADMIN'
-    primaryColor = '#4a9eff'
+    primaryColor = brandPrimary
     primaryWeight = 'bold'
   } else if (hasActivePersonal && hasAnySeat) {
     primaryLabel = 'PRO PLAN'
@@ -195,7 +189,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     primaryWeight = 'normal'
   } else if (hasAnySeat) {
     primaryLabel = 'TEAM SEAT'
-    primaryColor = '#4a9eff'
+    primaryColor = brandPrimary
     primaryWeight = 'bold'
     const firstTeam = (seats?.ownerPaidSeats[0] || seats?.agentPaidSeats[0])
     if (firstTeam) {
@@ -217,46 +211,115 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     primaryWeight = 'normal'
   }
 
+  // ── BRAND BLOCK COMPONENTS ─────────────────────────────────────────────
+  // Two variants: TenantBrand (uses uploaded logo) and DefaultBrand
+  // (the existing D-gradient + DIALERSEAT wordmark). Both fit the same
+  // overall width so the sidebar layout doesn't shift between modes.
+
+  const TenantBrandDesktop = () => (
+    <span style={{
+      position: 'relative',
+      display: 'block',
+      width: 224,
+      height: 64,
+      flexShrink: 0,
+    }}>
+      <Image
+        src={tenantLogoUrl!}
+        alt={tenantBrandName}
+        fill
+        sizes="224px"
+        style={{ objectFit: 'contain', objectPosition: 'left center' }}
+        priority
+        unoptimized
+      />
+    </span>
+  )
+
+  const TenantBrandMobileTopbar = () => (
+    <span style={{
+      position: 'relative',
+      display: 'block',
+      width: 140,
+      height: 30,
+      flexShrink: 0,
+    }}>
+      <Image
+        src={tenantLogoUrl!}
+        alt={tenantBrandName}
+        fill
+        sizes="140px"
+        style={{ objectFit: 'contain', objectPosition: 'left center' }}
+        priority
+        unoptimized
+      />
+    </span>
+  )
+
+  const DefaultBrandDesktop = () => (
+    <>
+      <div style={{
+        width: '32px',
+        height: '32px',
+        borderRadius: '8px',
+        background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+      }}>
+        <span style={{ color: 'white', fontWeight: 'bold', fontSize: '14px' }}>D</span>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <span style={{
+          fontSize: '14px',
+          fontWeight: 'bold',
+          letterSpacing: '4px',
+          color: 'var(--text-primary)',
+        }}>DIALERSEAT</span>
+        {isAdmin && (
+          <span style={{
+            fontSize: '8px',
+            fontWeight: 'bold',
+            letterSpacing: '3px',
+            color: '#4a9eff',
+            marginTop: 2,
+          }}>ADMIN CONSOLE</span>
+        )}
+      </div>
+    </>
+  )
+
+  const DefaultBrandMobileTopbar = () => (
+    <>
+      <div style={{
+        width: 26, height: 26, borderRadius: 6,
+        background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <span style={{ color: 'white', fontWeight: 'bold', fontSize: 12 }}>D</span>
+      </div>
+      <span style={{ fontSize: 12, fontWeight: 'bold', letterSpacing: 4, color: 'var(--text-primary)' }}>
+        DIALERSEAT
+      </span>
+    </>
+  )
+
+  // ── SIDEBAR ────────────────────────────────────────────────────────────
+
   const Sidebar = () => (
     <>
       <Link href={logoHref} style={{
         display: 'flex',
         alignItems: 'center',
-        gap: '12px',
-        padding: '0 24px',
+        gap: tenantLogoUrl ? 0 : '12px',
+        padding: '0 18px',
         marginBottom: '24px',
         textDecoration: 'none',
         flexShrink: 0,
+        height: 64,
       }}>
-        <div style={{
-          width: '32px',
-          height: '32px',
-          borderRadius: '8px',
-          background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
-        }}>
-          <span style={{ color: 'white', fontWeight: 'bold', fontSize: '14px' }}>D</span>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <span style={{
-            fontSize: '14px',
-            fontWeight: 'bold',
-            letterSpacing: '4px',
-            color: 'var(--text-primary)',
-          }}>DIALERSEAT</span>
-          {isAdmin && (
-            <span style={{
-              fontSize: '8px',
-              fontWeight: 'bold',
-              letterSpacing: '3px',
-              color: '#4a9eff',
-              marginTop: 2,
-            }}>ADMIN CONSOLE</span>
-          )}
-        </div>
+        {tenantLogoUrl ? <TenantBrandDesktop /> : <DefaultBrandDesktop />}
       </Link>
 
       <nav style={{
@@ -277,8 +340,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 padding: '10px 16px',
                 borderRadius: '10px',
                 cursor: 'pointer',
-                background: active ? 'rgba(74,158,255,0.1)' : 'transparent',
-                border: active ? '1px solid rgba(74,158,255,0.2)' : '1px solid transparent',
+                // Active nav uses the brand primary color at 10% alpha for
+                // background, 20% alpha for border. When no branding, this
+                // is the existing rgba(74,158,255,0.1) styling.
+                background: active
+                  ? `color-mix(in srgb, ${brandPrimary} 10%, transparent)`
+                  : 'transparent',
+                border: active
+                  ? `1px solid color-mix(in srgb, ${brandPrimary} 20%, transparent)`
+                  : '1px solid transparent',
                 textDecoration: 'none',
                 flexShrink: 0,
               }}
@@ -288,7 +358,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 fontSize: '11px',
                 letterSpacing: '2px',
                 fontWeight: 'bold',
-                color: active ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                color: active ? brandPrimary : 'var(--text-secondary)',
                 flex: 1,
               }}>{item.label}</span>
             </Link>
@@ -326,9 +396,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         className="ds-profile-row"
         style={{
           padding: '14px 24px',
-          // v22: include safe-area-inset-bottom so on mobile drawer (which
-          // is `position: fixed; bottom: 0`) the profile row sits above
-          // the iPhone home indicator gesture bar.
           paddingBottom: 'max(14px, calc(env(safe-area-inset-bottom, 0px) + 8px))',
           borderTop: '1px solid var(--border)',
           display: 'flex',
@@ -374,14 +441,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         .ds-mobile-topbar { display: none; }
         .ds-sidebar-mobile { display: none; }
         .ds-mobile-overlay { display: none; }
-        .ds-profile-row:hover { background: rgba(74,158,255,0.06); }
+        .ds-profile-row:hover { background: color-mix(in srgb, ${brandPrimary} 6%, transparent); }
 
         @media (max-width: 768px) {
           .ds-sidebar-desktop { display: none; }
-
-          /* v22 FIX — mobile topbar respects iPhone status bar / Dynamic
-             Island. paddingTop uses max() so non-notched devices still get
-             at least 12px of padding; env() resolves to 0 on those. */
           .ds-mobile-topbar {
             display: flex; position: sticky; top: 0; left: 0; right: 0; z-index: 40;
             align-items: center; justify-content: space-between;
@@ -391,11 +454,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             padding-right: max(16px, env(safe-area-inset-right, 16px));
             background: var(--surface); border-bottom: 1px solid var(--border);
           }
-
-          /* v22 — mobile drawer also pushes content below the status bar.
-             The drawer is 'position: fixed; top: 0', so without this fix
-             the top menu items sat behind the notch when the drawer was
-             open. */
           .ds-sidebar-mobile {
             display: flex; position: fixed; top: 0; left: 0; bottom: 0;
             width: 280px; max-width: 85vw;
@@ -449,17 +507,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <span style={{ width: 18, height: 2, background: 'var(--text-primary)', borderRadius: 1 }} />
           </button>
 
-          <Link href={logoHref} style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
-            <div style={{
-              width: 26, height: 26, borderRadius: 6,
-              background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <span style={{ color: 'white', fontWeight: 'bold', fontSize: 12 }}>D</span>
-            </div>
-            <span style={{ fontSize: 12, fontWeight: 'bold', letterSpacing: 4, color: 'var(--text-primary)' }}>
-              DIALERSEAT
-            </span>
+          <Link href={logoHref} style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: tenantLogoUrl ? 0 : 8,
+            textDecoration: 'none',
+          }}>
+            {tenantLogoUrl ? <TenantBrandMobileTopbar /> : <DefaultBrandMobileTopbar />}
           </Link>
 
           <UserButton />

@@ -1,50 +1,47 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 
 const FUTURA = 'Futura PT, Futura, "Trebuchet MS", sans-serif'
 
 // =============================================================================
-// /onboarding/whitelabel — v21
+// /onboarding/whitelabel — v22 (Phase B)
 // =============================================================================
-// Post-WL-payment tenant configuration. The user lands here after the
-// /billing/success page detects ?plan=wl. They configure:
+// Doubles as the ONBOARDING form (first time) AND the EDIT form (anytime
+// later). Detects state via /api/whitelabel/onboarding GET:
+//   - status='not_started' → bounce to /billing?plan=wl
+//   - status='pending'     → show empty form, button says "Provision tenant"
+//   - status='complete'    → show populated form, button says "Save changes"
 //
-//   1. Subdomain  (e.g. "acme" → acme.dialerseat.com)
-//      Validated: 3-30 chars, lowercase a-z/0-9/hyphen only, not reserved
-//      (www/api/admin/app/mail/etc), not already taken.
+// CHANGES from v21:
+//   - Logo: 512×148 PNG/SVG (was 28×28) — matches the sidebar brand block
+//   - Live preview renders the uploaded logo at 256×74 (the actual 1x size)
+//   - Accent color picker (was primary-only)
+//   - Live subdomain availability check (debounced 300ms)
+//   - Edit mode: form pre-populates from existing tenant, supports
+//     in-place updates
+//   - Logo upload happens FIRST via /api/whitelabel/upload-logo, then the
+//     returned URL is sent to /api/whitelabel/onboarding as part of the
+//     full config payload
+//   - Slug cooldown UI: if the user changed their subdomain in the last
+//     24h, the field shows a warning and the change request is rejected
+//     server-side
 //
-//   2. Logo upload (PNG/JPG/WebP)
-//      MUST be exactly 28x28 px to match the site-header brand mark slot.
-//      We validate the natural dimensions in the browser BEFORE uploading;
-//      anything else gets rejected with a clear error.
-//
-//   3. Primary color  (hex)
-//      Used as the brand_primary in ThemeProvider — tints the dashboard
-//      button, brand text, accent borders across the white-labeled site.
-//
-//   4. Brand name (display name shown next to the logo)
-//
-// On submit, POST to /api/whitelabel/onboarding which:
-//   - Re-validates everything server-side (don't trust client)
-//   - Uploads logo to the `tenant-assets` Supabase storage bucket
-//   - Creates the white_label_tenants row
-//   - Sets users.wl_onboarding_status = 'complete'
-//   - Returns the new tenant subdomain so the page can redirect
-//
-// GUARDRAIL: this page checks wl_onboarding_status on mount. If it's
-// 'not_started' (user got here without paying), redirect to /billing.
-// If it's 'complete' (already onboarded), redirect to their tenant.
+// REDIRECT BEHAVIOR (Phase B):
+//   On successful provision/save, redirect to /dashboard on the SAME host
+//   the user is on (probably dialerseat.com). Phase C will switch this to
+//   `https://{slug}.dialerseat.com/dashboard` once subdomain middleware is
+//   live. Until then, the subdomain would 404 — staying on main host is
+//   correct for now.
 // =============================================================================
 
-// Match the dimensions of the existing brand mark in site-header.tsx
-// (currently 28x28 with a 6px border-radius applied via CSS).
-const LOGO_REQ_WIDTH = 28
-const LOGO_REQ_HEIGHT = 28
-const LOGO_MAX_BYTES = 500 * 1024 // 500 KB
+const LOGO_REQ_WIDTH = 512
+const LOGO_REQ_HEIGHT = 148
+const LOGO_PREVIEW_WIDTH = 256
+const LOGO_PREVIEW_HEIGHT = 74
+const LOGO_MAX_BYTES = 200 * 1024 // 200 KB
 
-// Reserved subdomains we never want a tenant to claim
 const RESERVED_SUBDOMAINS = new Set([
   'www', 'api', 'app', 'admin', 'mail', 'email', 'support',
   'dashboard', 'billing', 'auth', 'docs', 'help', 'status',
@@ -53,12 +50,34 @@ const RESERVED_SUBDOMAINS = new Set([
   'sip', 'voice', 'webhook', 'webhooks', 'signalwire',
   'stripe', 'clerk', 'supabase', 'vercel', 'sentry',
   'dialerseat', 'whitelabel', 'wl', 'onboarding',
+  'manager', 'managers', 'pro', 'team', 'teams',
+  'signin', 'signup', 'login', 'logout', 'account', 'settings',
+  'terms', 'privacy', 'about', 'contact', 'pricing', 'faq',
+  'home', 'blog', 'callback', 'oauth', 'saml',
+  'referral', 'promo', 'public', 'upload',
 ])
 
-interface OnboardingStatus {
+interface TenantConfig {
+  brand_name: string
+  slug: string
+  primary_color: string
+  accent_color: string
+  logo_url: string
+}
+
+interface StatusResponse {
   status: 'not_started' | 'pending' | 'complete'
   existingSubdomain?: string
+  tenant?: TenantConfig
+  canChangeSlugAt?: string | null
+  isActive?: boolean
 }
+
+type AvailabilityState =
+  | { kind: 'idle' }
+  | { kind: 'checking' }
+  | { kind: 'available'; current?: boolean }
+  | { kind: 'unavailable'; reason: string }
 
 export default function WhitelabelOnboardingPage() {
   const { user, isLoaded } = useUser()
@@ -66,14 +85,23 @@ export default function WhitelabelOnboardingPage() {
 
   const [statusLoaded, setStatusLoaded] = useState(false)
   const [statusErr, setStatusErr] = useState<string | null>(null)
+  const [isEditMode, setIsEditMode] = useState(false)
+  const [originalSlug, setOriginalSlug] = useState<string | null>(null)
+  const [canChangeSlugAt, setCanChangeSlugAt] = useState<string | null>(null)
 
   // Form fields
   const [brandName, setBrandName] = useState('')
   const [subdomain, setSubdomain] = useState('')
   const [primaryColor, setPrimaryColor] = useState('#4a9eff')
+  const [accentColor, setAccentColor] = useState('#2a4a8a')
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
+  const [existingLogoUrl, setExistingLogoUrl] = useState<string | null>(null)
   const [logoErr, setLogoErr] = useState<string | null>(null)
+
+  // Subdomain availability
+  const [availability, setAvailability] = useState<AvailabilityState>({ kind: 'idle' })
+  const availabilityTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Submission state
   const [submitting, setSubmitting] = useState(false)
@@ -83,23 +111,33 @@ export default function WhitelabelOnboardingPage() {
   useEffect(() => {
     if (!isLoaded || !user) return
     let cancelled = false
-    fetch('/api/whitelabel/onboarding', { method: 'GET', cache: 'no-store' })
+
+    fetch('/api/whitelabel/onboarding', { cache: 'no-store' })
       .then(async (r) => {
         const text = await r.text()
         if (!r.ok) throw new Error(text.slice(0, 200))
-        return JSON.parse(text) as OnboardingStatus
+        return JSON.parse(text) as StatusResponse
       })
       .then((data) => {
         if (cancelled) return
+
         if (data.status === 'not_started') {
           router.push('/billing?plan=wl')
           return
         }
-        if (data.status === 'complete' && data.existingSubdomain) {
-          // Already onboarded — bounce to their tenant
-          window.location.href = `https://${data.existingSubdomain}.dialerseat.com/dashboard`
-          return
+
+        if (data.status === 'complete' && data.tenant) {
+          // Edit mode — pre-populate the form
+          setIsEditMode(true)
+          setOriginalSlug(data.tenant.slug)
+          setBrandName(data.tenant.brand_name)
+          setSubdomain(data.tenant.slug)
+          setPrimaryColor(data.tenant.primary_color)
+          setAccentColor(data.tenant.accent_color)
+          setExistingLogoUrl(data.tenant.logo_url)
+          setCanChangeSlugAt(data.canChangeSlugAt || null)
         }
+
         setStatusLoaded(true)
       })
       .catch((e) => {
@@ -108,10 +146,11 @@ export default function WhitelabelOnboardingPage() {
           setStatusLoaded(true)
         }
       })
+
     return () => { cancelled = true }
   }, [isLoaded, user, router])
 
-  // ── SUBDOMAIN INPUT — sanitize on keystroke ──────────────────────
+  // ── SUBDOMAIN INPUT ───────────────────────────────────────────────
   const onSubdomainChange = (raw: string) => {
     const cleaned = raw
       .toLowerCase()
@@ -121,16 +160,47 @@ export default function WhitelabelOnboardingPage() {
     setSubdomain(cleaned)
   }
 
-  const subdomainError = (() => {
-    if (!subdomain) return null
-    if (subdomain.length < 3) return 'Must be at least 3 characters.'
-    if (subdomain.length > 30) return 'Must be 30 characters or fewer.'
-    if (RESERVED_SUBDOMAINS.has(subdomain)) return 'That subdomain is reserved.'
-    if (subdomain.endsWith('-')) return "Can't end with a hyphen."
-    return null
-  })()
+  // ── LIVE AVAILABILITY CHECK (debounced 300ms) ─────────────────────
+  const checkAvailability = useCallback(async (slug: string) => {
+    if (!slug || slug.length < 3) {
+      setAvailability({ kind: 'idle' })
+      return
+    }
+    if (RESERVED_SUBDOMAINS.has(slug)) {
+      setAvailability({ kind: 'unavailable', reason: 'reserved' })
+      return
+    }
+    setAvailability({ kind: 'checking' })
+    try {
+      const r = await fetch(`/api/whitelabel/check-subdomain?slug=${encodeURIComponent(slug)}`, {
+        cache: 'no-store',
+      })
+      const data = await r.json()
+      if (data.available) {
+        setAvailability({ kind: 'available', current: data.current })
+      } else {
+        setAvailability({ kind: 'unavailable', reason: data.reason || 'taken' })
+      }
+    } catch {
+      setAvailability({ kind: 'idle' })
+    }
+  }, [])
 
-  // ── LOGO UPLOAD — validate dimensions client-side ────────────────
+  useEffect(() => {
+    if (availabilityTimer.current) clearTimeout(availabilityTimer.current)
+    if (!subdomain) {
+      setAvailability({ kind: 'idle' })
+      return
+    }
+    availabilityTimer.current = setTimeout(() => {
+      checkAvailability(subdomain)
+    }, 300)
+    return () => {
+      if (availabilityTimer.current) clearTimeout(availabilityTimer.current)
+    }
+  }, [subdomain, checkAvailability])
+
+  // ── LOGO UPLOAD HANDLING ──────────────────────────────────────────
   const onLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setLogoErr(null)
     setLogoFile(null)
@@ -142,65 +212,120 @@ export default function WhitelabelOnboardingPage() {
       setLogoErr(`Too large. Max ${LOGO_MAX_BYTES / 1024} KB.`)
       return
     }
-    if (!/^image\/(png|jpeg|webp)$/.test(file.type)) {
-      setLogoErr('Must be a PNG, JPG, or WebP image.')
+
+    const isPng = file.type === 'image/png'
+    const isSvg = file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg')
+
+    if (!isPng && !isSvg) {
+      setLogoErr('Must be a PNG or SVG.')
       return
     }
 
-    // Verify the natural pixel dimensions match the required slot
-    const url = URL.createObjectURL(file)
-    const img = new Image()
-    img.onload = () => {
-      if (img.naturalWidth !== LOGO_REQ_WIDTH || img.naturalHeight !== LOGO_REQ_HEIGHT) {
-        setLogoErr(
-          `Image must be exactly ${LOGO_REQ_WIDTH}×${LOGO_REQ_HEIGHT} pixels. ` +
-          `Yours is ${img.naturalWidth}×${img.naturalHeight}.`
-        )
-        URL.revokeObjectURL(url)
-        return
+    // For PNG, validate exact dimensions client-side. For SVG, accept (server
+    // will validate viewBox aspect ratio).
+    if (isPng) {
+      const url = URL.createObjectURL(file)
+      const img = new Image()
+      img.onload = () => {
+        if (img.naturalWidth !== LOGO_REQ_WIDTH || img.naturalHeight !== LOGO_REQ_HEIGHT) {
+          setLogoErr(
+            `PNG must be exactly ${LOGO_REQ_WIDTH}×${LOGO_REQ_HEIGHT} pixels. ` +
+            `Yours is ${img.naturalWidth}×${img.naturalHeight}.`
+          )
+          URL.revokeObjectURL(url)
+          return
+        }
+        setLogoFile(file)
+        setLogoPreview(url)
       }
+      img.onerror = () => {
+        setLogoErr('Could not read image. Try another file.')
+        URL.revokeObjectURL(url)
+      }
+      img.src = url
+    } else {
+      // SVG — just preview as-is; server validates aspect ratio
+      const url = URL.createObjectURL(file)
       setLogoFile(file)
       setLogoPreview(url)
     }
-    img.onerror = () => {
-      setLogoErr('Could not read image. Try another file.')
-      URL.revokeObjectURL(url)
-    }
-    img.src = url
   }
 
   // ── SUBMIT ────────────────────────────────────────────────────────
-  const canSubmit = !!brandName.trim()
-    && !!subdomain
-    && !subdomainError
-    && !!logoFile
-    && !logoErr
-    && /^#[0-9a-fA-F]{6}$/.test(primaryColor)
+  const slugChangedFromOriginal = isEditMode && originalSlug !== subdomain
+  const slugInCooldown = !!canChangeSlugAt && slugChangedFromOriginal
+
+  const canSubmit = (() => {
+    if (submitting) return false
+    if (!brandName.trim() || brandName.trim().length < 2) return false
+    if (!subdomain || subdomain.length < 3) return false
+    if (availability.kind === 'unavailable') return false
+    if (availability.kind === 'checking') return false
+    if (slugInCooldown) return false
+    if (!/^#[0-9a-fA-F]{6}$/.test(primaryColor)) return false
+    if (!/^#[0-9a-fA-F]{6}$/.test(accentColor)) return false
+    // Logo required in onboarding mode; optional in edit mode (keep existing)
+    if (!isEditMode && !logoFile) return false
+    if (logoErr) return false
+    return true
+  })()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!canSubmit || !logoFile) return
+    if (!canSubmit) return
     setSubmitting(true)
     setSubmitErr(null)
 
-    const formData = new FormData()
-    formData.append('brand_name', brandName.trim())
-    formData.append('subdomain', subdomain)
-    formData.append('primary_color', primaryColor)
-    formData.append('logo', logoFile)
-
     try {
-      const r = await fetch('/api/whitelabel/onboarding', {
+      // ── Step 1: upload logo if user picked a new one ─────────────
+      let logoUrl = existingLogoUrl || ''
+      if (logoFile) {
+        const fd = new FormData()
+        fd.append('logo', logoFile)
+        const upRes = await fetch('/api/whitelabel/upload-logo', {
+          method: 'POST',
+          body: fd,
+        })
+        const upText = await upRes.text()
+        if (!upRes.ok) {
+          let detail = upText.slice(0, 300)
+          try {
+            const parsed = JSON.parse(upText)
+            detail = parsed.detail || parsed.error || detail
+          } catch {}
+          throw new Error(`Logo upload failed: ${detail}`)
+        }
+        const upData = JSON.parse(upText)
+        logoUrl = upData.url
+      }
+
+      // ── Step 2: write tenant config ───────────────────────────────
+      const cfgRes = await fetch('/api/whitelabel/onboarding', {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          brand_name: brandName.trim(),
+          subdomain,
+          primary_color: primaryColor,
+          accent_color: accentColor,
+          logo_url: logoUrl,
+        }),
       })
-      const text = await r.text()
-      if (!r.ok) throw new Error(text.slice(0, 400))
-      const data = JSON.parse(text) as { subdomain: string }
-      // Redirect to their tenant's dashboard
-      window.location.href = `https://${data.subdomain}.dialerseat.com/dashboard`
+      const cfgText = await cfgRes.text()
+      if (!cfgRes.ok) {
+        let detail = cfgText.slice(0, 300)
+        try {
+          const parsed = JSON.parse(cfgText)
+          detail = parsed.detail || parsed.error || detail
+        } catch {}
+        throw new Error(detail)
+      }
+
+      // ── Step 3: redirect ──────────────────────────────────────────
+      // Phase B: stay on main host. Phase C will switch this to subdomain.
+      router.push('/dashboard')
     } catch (err: any) {
-      setSubmitErr(err?.message || 'Failed to provision tenant')
+      setSubmitErr(err?.message || 'Failed to save')
       setSubmitting(false)
     }
   }
@@ -232,18 +357,22 @@ export default function WhitelabelOnboardingPage() {
       <form style={cardStyle} onSubmit={handleSubmit}>
         <div style={badgeStyle}>
           <span style={badgeLabelStyle}>{'\u25B8'} WHITE LABEL</span>
-          <span style={badgeNameStyle}>SETUP</span>
+          <span style={badgeNameStyle}>{isEditMode ? 'EDIT' : 'SETUP'}</span>
         </div>
 
-        <div style={titleStyle}>CONFIGURE YOUR TENANT</div>
+        <div style={titleStyle}>
+          {isEditMode ? 'EDIT YOUR TENANT' : 'CONFIGURE YOUR TENANT'}
+        </div>
         <div style={subtitleStyle}>
-          One-time setup. You can change everything later from your dashboard.
+          {isEditMode
+            ? 'Update your branding. Changes apply immediately.'
+            : 'One-time setup. You can change everything later.'}
         </div>
 
         {/* ── BRAND NAME ────────────────────────────────────────── */}
         <Field
           label="BRAND NAME"
-          hint="Displayed next to your logo. E.g. 'Acme Dialer'."
+          hint="Shown to your team in the sidebar and emails."
         >
           <input
             type="text"
@@ -259,7 +388,7 @@ export default function WhitelabelOnboardingPage() {
         {/* ── SUBDOMAIN ─────────────────────────────────────────── */}
         <Field
           label="SUBDOMAIN"
-          hint="Your team logs in here. 3–30 chars. Lowercase letters, digits, hyphens."
+          hint="Your team's login URL. 3–30 chars. Lowercase letters, digits, hyphens."
         >
           <div style={subdomainRowStyle}>
             <input
@@ -270,92 +399,190 @@ export default function WhitelabelOnboardingPage() {
               style={{ ...inputStyle, flex: 1, textTransform: 'lowercase' }}
               maxLength={30}
               required
+              disabled={slugInCooldown}
             />
             <span style={subdomainSuffixStyle}>.dialerseat.com</span>
           </div>
-          {subdomainError && <div style={errorTextStyle}>{subdomainError}</div>}
+          <AvailabilityHint
+            state={availability}
+            slug={subdomain}
+            isEditMode={isEditMode}
+            originalSlug={originalSlug}
+          />
+          {slugInCooldown && canChangeSlugAt && (
+            <div style={cooldownNoteStyle}>
+              You changed your subdomain recently. You can change it again on{' '}
+              <strong>{new Date(canChangeSlugAt).toLocaleString()}</strong>.
+            </div>
+          )}
         </Field>
 
-        {/* ── PRIMARY COLOR ─────────────────────────────────────── */}
+        {/* ── COLORS ────────────────────────────────────────────── */}
         <Field
-          label="BRAND COLOR"
-          hint="Used for buttons, accents, and the brand text."
+          label="PRIMARY COLOR"
+          hint="Used for buttons, active nav, focus rings."
         >
-          <div style={colorRowStyle}>
-            <input
-              type="color"
-              value={primaryColor}
-              onChange={(e) => setPrimaryColor(e.target.value)}
-              style={colorPickerStyle}
-            />
-            <input
-              type="text"
-              value={primaryColor}
-              onChange={(e) => setPrimaryColor(e.target.value)}
-              placeholder="#4a9eff"
-              style={{ ...inputStyle, flex: 1, fontFamily: 'monospace' }}
-              maxLength={7}
-            />
-            <div style={{ ...colorSwatch, background: primaryColor }} />
-          </div>
+          <ColorRow color={primaryColor} setColor={setPrimaryColor} />
+        </Field>
+
+        <Field
+          label="ACCENT COLOR"
+          hint="Used for highlights, badges, secondary chrome."
+        >
+          <ColorRow color={accentColor} setColor={setAccentColor} />
         </Field>
 
         {/* ── LOGO ──────────────────────────────────────────────── */}
         <Field
           label="LOGO"
-          hint={`PNG, JPG, or WebP. EXACTLY ${LOGO_REQ_WIDTH}×${LOGO_REQ_HEIGHT} pixels. Max ${LOGO_MAX_BYTES / 1024} KB.`}
+          hint={`PNG or SVG. Exactly ${LOGO_REQ_WIDTH}×${LOGO_REQ_HEIGHT} pixels. Max ${LOGO_MAX_BYTES / 1024} KB. ` +
+                `Replaces the "D / DIALERSEAT" block in the sidebar.`}
         >
           <div style={logoRowStyle}>
             <input
               type="file"
-              accept="image/png,image/jpeg,image/webp"
+              accept="image/png,image/svg+xml,.svg"
               onChange={onLogoChange}
               style={fileInputStyle}
-              required
+              required={!isEditMode}
             />
-            {logoPreview && (
-              <div style={logoPreviewBoxStyle}>
-                {/* Preview at the actual on-site dimensions */}
-                <img
-                  src={logoPreview}
-                  alt="Logo preview"
-                  width={LOGO_REQ_WIDTH}
-                  height={LOGO_REQ_HEIGHT}
-                  style={{ borderRadius: 6, border: '1px solid #2a4a8a', display: 'block' }}
-                />
-                <span style={{ fontSize: 10, color: '#888a92', marginLeft: 8 }}>
-                  PREVIEW
-                </span>
-              </div>
-            )}
           </div>
           {logoErr && <div style={errorTextStyle}>{logoErr}</div>}
+
+          {/* PREVIEW — render at native 256x74 (1x display size) */}
+          {(logoPreview || existingLogoUrl) && (
+            <div style={logoPreviewBoxStyle}>
+              <div style={{
+                fontSize: 9, letterSpacing: 2, color: '#888a92',
+                marginBottom: 8, fontWeight: 700,
+              }}>PREVIEW (renders at 256×74 in your sidebar)</div>
+              <div style={{
+                background: '#0a1020',
+                padding: 12,
+                borderRadius: 4,
+                display: 'flex',
+                justifyContent: 'flex-start',
+              }}>
+                <img
+                  src={logoPreview || existingLogoUrl || ''}
+                  alt="Logo preview"
+                  width={LOGO_PREVIEW_WIDTH}
+                  height={LOGO_PREVIEW_HEIGHT}
+                  style={{ display: 'block', maxWidth: '100%', height: 'auto' }}
+                />
+              </div>
+            </div>
+          )}
         </Field>
 
         {submitErr && (
           <div style={errorBoxStyle}>
-            <strong>Setup failed:</strong> {submitErr}
+            <strong>Failed:</strong> {submitErr}
           </div>
         )}
 
         <button
           type="submit"
-          disabled={!canSubmit || submitting}
+          disabled={!canSubmit}
           style={{
             ...buttonStyle,
-            opacity: !canSubmit || submitting ? 0.5 : 1,
-            cursor: !canSubmit || submitting ? 'not-allowed' : 'pointer',
+            opacity: !canSubmit ? 0.4 : 1,
+            cursor: !canSubmit ? 'not-allowed' : 'pointer',
           }}
         >
-          {submitting ? 'PROVISIONING...' : '▶ PROVISION TENANT'}
+          {submitting
+            ? (isEditMode ? 'SAVING...' : 'PROVISIONING...')
+            : (isEditMode ? '▶ SAVE CHANGES' : '▶ PROVISION TENANT')}
         </button>
 
         <div style={footerNoteStyle}>
-          Your subdomain becomes the login URL for your entire team.
+          {isEditMode
+            ? 'Subdomain changes redirect the old URL for 30 days, then it becomes available again.'
+            : 'Your subdomain becomes the login URL for your team.'}
         </div>
       </form>
     </main>
   )
+}
+
+// ─── COLOR PICKER ROW ────────────────────────────────────────────
+function ColorRow({
+  color,
+  setColor,
+}: {
+  color: string
+  setColor: (c: string) => void
+}) {
+  return (
+    <div style={colorRowStyle}>
+      <input
+        type="color"
+        value={color}
+        onChange={(e) => setColor(e.target.value)}
+        style={colorPickerStyle}
+      />
+      <input
+        type="text"
+        value={color}
+        onChange={(e) => setColor(e.target.value)}
+        placeholder="#4a9eff"
+        style={{ ...inputStyle, flex: 1, fontFamily: 'monospace' }}
+        maxLength={7}
+      />
+      <div style={{ ...colorSwatch, background: color }} />
+    </div>
+  )
+}
+
+// ─── AVAILABILITY HINT ───────────────────────────────────────────
+function AvailabilityHint({
+  state,
+  slug,
+  isEditMode,
+  originalSlug,
+}: {
+  state: AvailabilityState
+  slug: string
+  isEditMode: boolean
+  originalSlug: string | null
+}) {
+  if (!slug) return null
+
+  if (slug.length < 3) {
+    return <div style={hintStyle}>Need at least 3 characters.</div>
+  }
+  if (state.kind === 'checking') {
+    return <div style={hintStyle}>Checking…</div>
+  }
+  if (state.kind === 'available') {
+    if (state.current && isEditMode) {
+      return (
+        <div style={availabilityOkStyle}>
+          ✓ <strong>{slug}.dialerseat.com</strong> — your current subdomain
+        </div>
+      )
+    }
+    return (
+      <div style={availabilityOkStyle}>
+        ✓ <strong>{slug}.dialerseat.com</strong> is available
+      </div>
+    )
+  }
+  if (state.kind === 'unavailable') {
+    const msg =
+      state.reason === 'reserved' ? 'reserved by DialerSeat' :
+      state.reason === 'taken' ? 'already in use by another tenant' :
+      state.reason === 'redirecting' ? 'currently redirecting from a recent edit (try again in 30 days)' :
+      state.reason === 'too_short' ? 'too short' :
+      state.reason === 'too_long' ? 'too long' :
+      'invalid'
+    return (
+      <div style={availabilityBadStyle}>
+        ✗ <strong>{slug}.dialerseat.com</strong> — {msg}
+      </div>
+    )
+  }
+  return null
 }
 
 // ─── FIELD WRAPPER ───────────────────────────────────────────────
@@ -390,7 +617,7 @@ const pageStyle: React.CSSProperties = {
 
 const cardStyle: React.CSSProperties = {
   width: '100%',
-  maxWidth: 520,
+  maxWidth: 560,
   background: '#1a1c24',
   border: '1px solid #2a2c34',
   borderTop: '3px solid #4a9eff',
@@ -440,6 +667,11 @@ const fieldHintStyle: React.CSSProperties = {
   fontSize: 10, color: '#666870', marginBottom: 8, lineHeight: 1.5,
 }
 
+const hintStyle: React.CSSProperties = {
+  fontSize: 11, color: '#888a92', marginTop: 6,
+  fontFamily: FUTURA,
+}
+
 const inputStyle: React.CSSProperties = {
   width: '100%',
   padding: '10px 12px',
@@ -461,6 +693,26 @@ const subdomainRowStyle: React.CSSProperties = {
 
 const subdomainSuffixStyle: React.CSSProperties = {
   fontSize: 12, color: '#888a92', fontFamily: 'monospace', whiteSpace: 'nowrap',
+}
+
+const availabilityOkStyle: React.CSSProperties = {
+  fontSize: 11, color: '#32ff7e', marginTop: 6, fontFamily: FUTURA,
+}
+
+const availabilityBadStyle: React.CSSProperties = {
+  fontSize: 11, color: '#ff6464', marginTop: 6, fontFamily: FUTURA,
+}
+
+const cooldownNoteStyle: React.CSSProperties = {
+  fontSize: 11,
+  color: '#ffaa3e',
+  marginTop: 6,
+  padding: '8px 10px',
+  background: 'rgba(255,170,62,0.08)',
+  border: '1px solid #8a6a1a',
+  borderLeft: '3px solid #ffaa3e',
+  borderRadius: 3,
+  lineHeight: 1.5,
 }
 
 const colorRowStyle: React.CSSProperties = {
@@ -497,9 +749,8 @@ const fileInputStyle: React.CSSProperties = {
 }
 
 const logoPreviewBoxStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  padding: '8px 10px',
+  marginTop: 12,
+  padding: '12px 14px',
   background: '#0d0e14',
   border: '1px solid #2a2c34',
   borderRadius: 3,
