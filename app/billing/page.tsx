@@ -35,12 +35,12 @@ type Plan = 'standard' | 'wl'
 
 const PLAN_INFO = {
   standard: {
-    label: 'STANDARD',
+    label: 'PRO',
     price: 35,
     title: 'START YOUR SUBSCRIPTION',
     subtitle: 'Pay $35 today and start dialing immediately.',
     weeklyBlurb: '$35.00 USD',
-    description: 'Standard DialerSeat — one agent seat, all features, billed weekly.',
+    description: 'DialerSeat Pro \u2014 one agent seat, all features, billed weekly.',
   },
   wl: {
     label: 'MANAGER+',
@@ -286,7 +286,7 @@ export default function BillingPage() {
               e.currentTarget.style.borderColor = '#2a4a8a'
             }}
           >
-            {switchingPlan ? 'SWITCHING...' : '↘ SWITCH TO STANDARD ($35/WK)'}
+            {switchingPlan ? 'SWITCHING...' : '↘ SWITCH TO PRO ($35/WK)'}
           </button>
         )}
 

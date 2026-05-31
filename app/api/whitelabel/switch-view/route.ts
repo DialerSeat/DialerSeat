@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error: 'no_standard_access',
-          detail: 'Standard DialerSeat view requires your own subscription. ' +
+          detail: 'Pro view requires your own subscription. ' +
                   'Subscribe at /billing or contact your team owner.',
         },
         { status: 403 }

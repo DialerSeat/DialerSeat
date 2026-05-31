@@ -302,7 +302,7 @@ export default function SettingsPage() {
             >
               {brandOptions.canSeeStandard && (
                 <option value="standard">
-                  Standard DialerSeat (default view)
+                  DialerSeat Pro (default view)
                 </option>
               )}
               {brandOptions.available.map(t => (
