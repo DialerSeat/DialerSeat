@@ -1,9 +1,35 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
+import Image from 'next/image'
+import { useBranding } from '@/components/ThemeProvider'
+
+const FUTURA = 'Futura PT, Futura, "Trebuchet MS", sans-serif'
+
+// =============================================================================
+// /billing/success — v23 (Phase D1)
+// =============================================================================
+// FIXED from v22:
+//   - Removed "TRIAL ACTIVATED" + "7-day free trial" + "starting day 8"
+//     copy. There IS NO TRIAL — the create-subscription route charges
+//     immediately. That text was wrong on every previous deploy.
+//   - Reads ?plan=wl from URL to redirect WL signups to onboarding instead
+//     of dashboard (matches what BillingPage.return_url passes through).
+//   - Tier-aware price text: $35 for standard, $75 for WL.
+//   - Reads useBranding() so the page is themed on tenant subdomains.
+//     (Though most users hit this on dialerseat.com after a fresh signup —
+//     subdomain branding kicks in only if they signed up via subdomain.)
+// =============================================================================
 
 export default function BillingSuccessPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const branding = useBranding()
+
+  const isWl = searchParams.get('plan') === 'wl'
+  const destination = isWl ? '/onboarding/whitelabel' : '/dashboard'
+  const price = isWl ? '$75.00' : '$35.00'
+
   const [countdown, setCountdown] = useState(3)
 
   useEffect(() => {
@@ -11,29 +37,72 @@ export default function BillingSuccessPage() {
       setCountdown((c) => {
         if (c <= 1) {
           clearInterval(interval)
-          router.push('/dashboard')
+          router.push(destination)
           return 0
         }
         return c - 1
       })
     }, 1000)
     return () => clearInterval(interval)
-  }, [router])
+  }, [router, destination])
+
+  const brandName = branding?.brand_name?.toUpperCase() || null
+  const logoUrl = branding?.logo_url || null
 
   return (
     <main style={pageStyle}>
       <div style={cardStyle}>
+        {logoUrl && (
+          <div style={{ marginBottom: 24 }}>
+            <span style={{
+              position: 'relative',
+              display: 'inline-block',
+              width: 200,
+              height: 58,
+            }}>
+              <Image
+                src={logoUrl}
+                alt={brandName || 'Brand'}
+                fill
+                sizes="200px"
+                style={{ objectFit: 'contain' }}
+                priority
+                unoptimized
+              />
+            </span>
+          </div>
+        )}
+
         <div style={iconStyle}>✓</div>
-        <div style={titleStyle}>TRIAL ACTIVATED</div>
+
+        <div style={titleStyle}>SUBSCRIPTION ACTIVE</div>
+
         <div style={subtitleStyle}>
-          Your 7-day free trial has started.<br />
-          Your card will be charged $35.00/week starting day 8 unless you cancel.
+          {isWl ? (
+            <>
+              Your Manager+ subscription is live.<br />
+              You&apos;ll be charged <strong style={{ color: '#e0e2ea' }}>{price}/week</strong> weekly from today.
+              <br /><br />
+              Next: set up your tenant — subdomain, logo, and brand colors.
+            </>
+          ) : (
+            <>
+              Your subscription is live.<br />
+              You&apos;ll be charged <strong style={{ color: '#e0e2ea' }}>{price}/week</strong> weekly from today.
+              Cancel anytime in Settings.
+            </>
+          )}
         </div>
+
         <div style={countdownStyle}>
-          Redirecting to dashboard in {countdown}...
+          Redirecting to {isWl ? 'tenant setup' : 'dashboard'} in {countdown}…
         </div>
-        <button onClick={() => router.push('/dashboard')} style={buttonStyle}>
-          ▶ GO TO DASHBOARD NOW
+
+        <button
+          onClick={() => router.push(destination)}
+          style={buttonStyle}
+        >
+          ▶ {isWl ? 'CONTINUE TO SETUP' : 'GO TO DASHBOARD'}
         </button>
       </div>
     </main>
@@ -47,7 +116,7 @@ const pageStyle: React.CSSProperties = {
   alignItems: 'center',
   justifyContent: 'center',
   padding: 20,
-  fontFamily: 'monospace',
+  fontFamily: FUTURA,
 }
 
 const cardStyle: React.CSSProperties = {
@@ -75,12 +144,12 @@ const titleStyle: React.CSSProperties = {
   letterSpacing: 5,
   color: '#32ff7e',
   marginBottom: 16,
-  fontFamily: 'Futura PT, Futura, sans-serif',
+  fontFamily: FUTURA,
 }
 
 const subtitleStyle: React.CSSProperties = {
   fontSize: 12,
-  lineHeight: 1.6,
+  lineHeight: 1.7,
   color: '#c0c2ca',
   marginBottom: 24,
 }
@@ -104,5 +173,5 @@ const buttonStyle: React.CSSProperties = {
   fontWeight: 700,
   letterSpacing: 4,
   cursor: 'pointer',
-  fontFamily: 'Futura PT, Futura, sans-serif',
+  fontFamily: FUTURA,
 }

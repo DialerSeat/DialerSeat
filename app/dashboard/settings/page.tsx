@@ -1,7 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useUser } from '@clerk/nextjs'
-import Link from 'next/link'
 
 const FUTURA = 'Futura PT, Futura, "Trebuchet MS", sans-serif'
 
@@ -45,6 +44,35 @@ interface SubsSummary {
   counts: { ownerPaid: number; agentPaid: number; totalSeats: number }
 }
 
+interface AvailableTenant {
+  id: string
+  slug: string
+  brand_name: string
+  logo_url: string | null
+  role: 'owner' | 'member'
+}
+
+interface BrandOptions {
+  available: AvailableTenant[]
+  canSeeStandard: boolean
+  currentTenantId: string | null
+}
+
+// =============================================================================
+// SETTINGS PAGE (v23 — Phase D1: brand-view toggle)
+// =============================================================================
+// Adds a "WHITE-LABEL VIEW" section between subscription + team-seats.
+// Section is HIDDEN entirely when the user has nothing to toggle:
+//   - No accessible tenants AND no standard access  → hidden (default Pro user)
+//   - 1 accessible tenant AND no standard access    → hidden (seat-only single-team)
+// Section is SHOWN when:
+//   - 2+ accessible tenants, OR
+//   - 1+ accessible tenants AND canSeeStandard, OR
+//   - canSeeStandard AND has no tenants but has a tenant id selected (rare edge)
+//
+// All other functionality identical to v22.
+// =============================================================================
+
 export default function SettingsPage() {
   const { user } = useUser()
   const [sub, setSub] = useState<SubStatus | null>(null)
@@ -57,16 +85,20 @@ export default function SettingsPage() {
   const [error, setError] = useState<string | null>(null)
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
 
-  // Per-seat cancel state
   const [seatCancelling, setSeatCancelling] = useState<string | null>(null)
   const [seatConfirmTarget, setSeatConfirmTarget] = useState<AgentPaidSeat | null>(null)
   const [seatTypedConfirm, setSeatTypedConfirm] = useState('')
 
+  // ── BRAND VIEW STATE (Phase D1) ──────────────────────────────────────
+  const [brandOptions, setBrandOptions] = useState<BrandOptions | null>(null)
+  const [switchingBrand, setSwitchingBrand] = useState(false)
+
   const loadStatus = async () => {
     try {
-      const [statusRes, summaryRes] = await Promise.all([
+      const [statusRes, summaryRes, brandRes] = await Promise.all([
         fetch('/api/stripe/status'),
         fetch('/api/subscriptions/summary'),
+        fetch('/api/whitelabel/available-tenants'),
       ])
       const statusData = await statusRes.json()
       setSub(statusData)
@@ -76,6 +108,14 @@ export default function SettingsPage() {
           ownerPaidSeats: summaryData.ownerPaidSeats || [],
           agentPaidSeats: summaryData.agentPaidSeats || [],
           counts: summaryData.counts || { ownerPaid: 0, agentPaid: 0, totalSeats: 0 },
+        })
+      }
+      if (brandRes.ok) {
+        const brandData = await brandRes.json()
+        setBrandOptions({
+          available: brandData.available || [],
+          canSeeStandard: !!brandData.canSeeStandard,
+          currentTenantId: brandData.currentTenantId ?? null,
         })
       }
     } catch {
@@ -124,33 +164,19 @@ export default function SettingsPage() {
   }
 
   const handleStartCancel = () => {
-    setConfirming(true)
-    setTypedConfirm('')
-    setError(null)
-    setMessage(null)
+    setConfirming(true); setTypedConfirm(''); setError(null); setMessage(null)
   }
+  const handleAbortCancel = () => { setConfirming(false); setTypedConfirm('') }
+  const handleResubscribe = () => { window.location.href = '/billing' }
 
-  const handleAbortCancel = () => {
-    setConfirming(false)
-    setTypedConfirm('')
-  }
-
-  const handleResubscribe = () => {
-    window.location.href = '/billing'
-  }
-
-  // Cancel an agent-paid team seat (loses campaign access, stays on team)
   const startCancelSeat = (seat: AgentPaidSeat) => {
-    setSeatConfirmTarget(seat)
-    setSeatTypedConfirm('')
+    setSeatConfirmTarget(seat); setSeatTypedConfirm('')
   }
-
   const submitCancelSeat = async () => {
     if (!seatConfirmTarget) return
     if (seatTypedConfirm.toLowerCase().trim() !== 'cancel') return
     setSeatCancelling(seatConfirmTarget.id)
-    setError(null)
-    setMessage(null)
+    setError(null); setMessage(null)
     try {
       const res = await fetch('/api/teams/access/revoke', {
         method: 'POST',
@@ -163,17 +189,42 @@ export default function SettingsPage() {
       })
       const data = await res.json()
       if (!data.success) {
-        setError(data.error || 'Failed to cancel seat')
-        return
+        setError(data.error || 'Failed to cancel seat'); return
       }
       setMessage(`Canceled access to ${seatConfirmTarget.campaignName || 'the campaign'}. You're still a member of ${seatConfirmTarget.teamName}.`)
-      setSeatConfirmTarget(null)
-      setSeatTypedConfirm('')
+      setSeatConfirmTarget(null); setSeatTypedConfirm('')
       await loadStatus()
     } catch (err: any) {
       setError(err.message || 'Failed to cancel seat')
     } finally {
       setSeatCancelling(null)
+    }
+  }
+
+  // ── BRAND-VIEW SWITCH HANDLER ────────────────────────────────────────
+  const handleSwitchBrand = async (value: string) => {
+    // value is either a tenant_id (uuid) or the literal string 'standard'
+    const tenant_id = value === 'standard' ? null : value
+    setSwitchingBrand(true)
+    setError(null); setMessage(null)
+    try {
+      const res = await fetch('/api/whitelabel/switch-view', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenant_id }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.detail || data.error || 'Failed to switch view')
+        setSwitchingBrand(false)
+        return
+      }
+      // Reload so the layout reads the new branding. We can't update in-
+      // place because the brand is resolved server-side in root layout.
+      window.location.reload()
+    } catch (err: any) {
+      setError(err.message || 'Failed to switch view')
+      setSwitchingBrand(false)
     }
   }
 
@@ -192,6 +243,14 @@ export default function SettingsPage() {
     (sub?.tier === 'lapsed' || (sub?.cancelAtPeriodEnd && sub?.isActive))
 
   const hasAnySeats = (seats?.counts.totalSeats || 0) > 0
+
+  // ── BRAND TOGGLE VISIBILITY (Phase D1) ──────────────────────────────
+  const optionCount = (brandOptions?.available.length || 0) +
+                      (brandOptions?.canSeeStandard ? 1 : 0)
+  const showBrandToggle = optionCount >= 2
+
+  // Current dropdown value
+  const currentBrandValue = brandOptions?.currentTenantId ?? 'standard'
 
   return (
     <div className="settings-root" style={pageStyle}>
@@ -214,6 +273,52 @@ export default function SettingsPage() {
             <span style={{ marginLeft: 8, fontSize: 9, letterSpacing: 3, color: '#ffaa3e', fontWeight: 'bold' }}>· UNSUBSCRIBED</span>
           )}
         </div>
+
+        {/* ── BRAND VIEW TOGGLE (Phase D1) ──────────────────────────── */}
+        {showBrandToggle && brandOptions && (
+          <div style={sectionStyle}>
+            <div style={sectionHeaderStyle}>▸ WHITE-LABEL VIEW</div>
+            <div style={{ ...mutedStyle, marginBottom: 12, lineHeight: 1.6 }}>
+              Which brand do you want to view the app as? Your selection is
+              saved to your account and applies on every device.
+            </div>
+
+            <select
+              value={currentBrandValue}
+              onChange={(e) => handleSwitchBrand(e.target.value)}
+              disabled={switchingBrand}
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                background: '#0d0e14',
+                border: '1px solid #2a4a8a',
+                borderRadius: 3,
+                color: '#e0e2ea',
+                fontSize: 13,
+                fontFamily: FUTURA,
+                outline: 'none',
+                cursor: switchingBrand ? 'wait' : 'pointer',
+              }}
+            >
+              {brandOptions.canSeeStandard && (
+                <option value="standard">
+                  Standard DialerSeat (default view)
+                </option>
+              )}
+              {brandOptions.available.map(t => (
+                <option key={t.id} value={t.id}>
+                  {t.brand_name}{t.role === 'owner' ? ' (your tenant)' : ''}
+                </option>
+              ))}
+            </select>
+
+            {switchingBrand && (
+              <div style={{ ...mutedStyle, marginTop: 8, fontSize: 10 }}>
+                Switching view…
+              </div>
+            )}
+          </div>
+        )}
 
         {/* PERSONAL SUBSCRIPTION */}
         <div style={sectionStyle}>
@@ -256,14 +361,13 @@ export default function SettingsPage() {
           )}
         </div>
 
-        {/* TEAM SEATS — new section */}
+        {/* TEAM SEATS */}
         {hasAnySeats && (
           <div style={sectionStyle}>
             <div style={sectionHeaderStyle}>
               ▸ TEAM SEATS ({seats!.counts.totalSeats})
             </div>
 
-            {/* Owner-paid: read-only */}
             {seats!.ownerPaidSeats.map(seat => (
               <div key={seat.id} style={seatRowStyle('#1a4a8a')}>
                 <div style={seatHeaderStyle}>
@@ -282,7 +386,6 @@ export default function SettingsPage() {
               </div>
             ))}
 
-            {/* Agent-paid: cancellable */}
             {seats!.agentPaidSeats.map(seat => (
               <div key={seat.id} style={seatRowStyle('#8a6a1a')}>
                 <div style={seatHeaderStyle}>
@@ -310,13 +413,8 @@ export default function SettingsPage() {
             ))}
 
             <div style={{
-              fontSize: 10,
-              color: '#666870',
-              letterSpacing: 1,
-              lineHeight: 1.5,
-              marginTop: 12,
-              paddingTop: 12,
-              borderTop: '1px solid #2a2c34',
+              fontSize: 10, color: '#666870', letterSpacing: 1, lineHeight: 1.5,
+              marginTop: 12, paddingTop: 12, borderTop: '1px solid #2a2c34',
             }}>
               Canceling a seat ends campaign access only. You remain on the team and can rejoin a campaign anytime. Refunds for partial periods are only available via dispute through your bank.
             </div>
@@ -420,15 +518,9 @@ export default function SettingsPage() {
           <div
             onClick={e => e.stopPropagation()}
             style={{
-              background: '#1a1c24',
-              border: '1px solid #2a2c34',
-              borderTop: '3px solid #8a1a1a',
-              borderRadius: 4,
-              padding: 28,
-              maxWidth: 460,
-              width: '100%',
-              fontFamily: FUTURA,
-              color: '#e0e2ea',
+              background: '#1a1c24', border: '1px solid #2a2c34',
+              borderTop: '3px solid #8a1a1a', borderRadius: 4, padding: 28,
+              maxWidth: 460, width: '100%', fontFamily: FUTURA, color: '#e0e2ea',
             }}
           >
             <div style={{
@@ -497,26 +589,16 @@ function tierStatusColor(sub: SubStatus): string {
 }
 
 const pageStyle: React.CSSProperties = {
-  flex: 1,
-  minHeight: 'calc(100vh - 64px)',
-  display: 'flex',
-  alignItems: 'flex-start',
-  justifyContent: 'center',
-  padding: 40,
-  fontFamily: FUTURA,
+  flex: 1, minHeight: 'calc(100vh - 64px)',
+  display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+  padding: 40, fontFamily: FUTURA,
 }
 
 const cardStyle: React.CSSProperties = {
-  width: '100%',
-  maxWidth: 560,
-  background: '#1a1c24',
-  border: '1px solid #2a2c34',
-  borderTop: '3px solid #4a9eff',
-  borderRadius: 4,
-  padding: 32,
-  color: '#e0e2ea',
-  fontFamily: FUTURA,
-  boxSizing: 'border-box',
+  width: '100%', maxWidth: 560, background: '#1a1c24',
+  border: '1px solid #2a2c34', borderTop: '3px solid #4a9eff',
+  borderRadius: 4, padding: 32, color: '#e0e2ea',
+  fontFamily: FUTURA, boxSizing: 'border-box',
 }
 
 const titleStyle: React.CSSProperties = {
@@ -528,12 +610,9 @@ const subtitleStyle: React.CSSProperties = {
 }
 
 const sectionStyle: React.CSSProperties = {
-  background: '#0d0e14',
-  border: '1px solid #2a2c34',
-  borderLeft: '3px solid #4a9eff',
-  borderRadius: 3,
-  padding: 16,
-  marginBottom: 20,
+  background: '#0d0e14', border: '1px solid #2a2c34',
+  borderLeft: '3px solid #4a9eff', borderRadius: 3,
+  padding: 16, marginBottom: 20,
 }
 
 const sectionHeaderStyle: React.CSSProperties = {
@@ -633,12 +712,9 @@ const resubscribeButtonStyle: React.CSSProperties = {
 
 function seatRowStyle(borderColor: string): React.CSSProperties {
   return {
-    background: '#0d0e14',
-    border: `1px solid ${borderColor}`,
-    borderLeft: `3px solid ${borderColor}`,
-    borderRadius: 3,
-    padding: 14,
-    marginBottom: 10,
+    background: '#0d0e14', border: `1px solid ${borderColor}`,
+    borderLeft: `3px solid ${borderColor}`, borderRadius: 3,
+    padding: 14, marginBottom: 10,
   }
 }
 

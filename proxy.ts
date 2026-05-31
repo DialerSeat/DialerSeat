@@ -23,7 +23,6 @@ const isPublicRoute = createRouteMatcher([
   '/api/cron/(.*)',
 ])
 
-// Auth required, no tier check needed.
 const isBillingOrOnboardingRoute = createRouteMatcher([
   '/billing(.*)',
   '/onboarding(.*)',
@@ -42,6 +41,13 @@ const isActiveOnlyRoute = createRouteMatcher([
   '/api/leads/update',
 ])
 
+// Routes that REQUIRE access enforcement. Dashboard, API mutations, etc.
+// Sign-in/up/billing/onboarding etc. are deliberately excluded — those are
+// reachable from any host regardless of tenant membership.
+const isProtectedAppRoute = createRouteMatcher([
+  '/dashboard(.*)',
+])
+
 const ACTIVE_STATUSES = ['trialing', 'active', 'past_due']
 
 type AccessTier = 'active' | 'lapsed' | 'new'
@@ -52,34 +58,38 @@ interface AccessState {
   isPreserved: boolean
 }
 
+interface UserBrandAccess {
+  /** Tenant slugs the user is allowed to view branded as (own + active teams' tenants). */
+  accessibleSlugs: Set<string>
+  /** The slug of the user's active_tenant_id selection (null if standard). */
+  selectedSlug: string | null
+  /** True if user has a self-paid sub OR owns a tenant (eligible for standard view). */
+  canSeeStandard: boolean
+}
+
 // =============================================================================
-// SUBDOMAIN / TENANT EXTRACTION (v23 — Phase C)
+// SUBDOMAIN ROUTING (v23 — Phase C)
+// + ACCESS ENFORCEMENT  (v24 — Phase D)
 // =============================================================================
-// White-label tenants live at <slug>.dialerseat.com. We extract the slug
-// from the request hostname and attach it as the x-tenant-slug header.
+// v23 (Phase C) — subdomain extraction, marketing redirect, cancelled
+// tenant redirect, subdomain_history grace-period redirect.
 //
-// v23 (Phase C) ADDS subdomain-level routing decisions:
+// v24 (Phase D) — adds enforcement for logged-in users:
 //
-//   1. If a request comes in on a tenant subdomain and the tenant DOES NOT
-//      EXIST or is CANCELLED or INACTIVE → redirect to dialerseat.com{path}
-//      (so typo'd subdomains and cancelled tenants gracefully bounce to
-//      the main site instead of 404'ing).
+//   1. If user visits acme.dialerseat.com but isn't an active member of
+//      acme's tenant (and doesn't own it) → 307 redirect to their actual
+//      tenant subdomain OR dialerseat.com if they're a standard user.
 //
-//   2. If a request comes in on a tenant subdomain for a marketing route
-//      (/, /faq, /vs, /dialing-modes, /terms, /privacy) → redirect to
-//      dialerseat.com{path}. Marketing pages live ONLY under the main
-//      domain; tenant subdomains are for the app experience (sign-in /
-//      sign-up / dashboard / billing / onboarding).
+//   2. If user is a seat-only agent (no self-sub) visiting
+//      dialerseat.com/dashboard* → 307 redirect to their tenant subdomain.
+//      Seat-only agents are locked to their tenant. They can't see
+//      standard DialerSeat unless they pay for their own subscription.
 //
-//   3. If a request comes in on a subdomain that matches subdomain_history
-//      (i.e. the tenant CHANGED their slug in the last 30 days) →
-//      redirect to {new_slug}.dialerseat.com{path}. Preserves bookmarks
-//      across subdomain edits.
-//
-// In-memory cache (60s TTL) keeps Supabase load reasonable. Cache scope
-// is the serverless function instance — so caches don't share across
-// regional invocations, which is fine because each region's cache fills
-// quickly under normal traffic patterns.
+// Manual URL entry to a subdomain you DO belong to is always honored —
+// the active_tenant_id selection is a default, not a hard lock. If you're
+// a member of both 3 and 4 and have 4 selected, manually navigating to
+// 3.dialerseat.com works fine; only the default LOGIN destination is
+// driven by the selection.
 // =============================================================================
 
 const RESERVED_SUBDOMAINS = new Set([
@@ -91,10 +101,6 @@ const RESERVED_SUBDOMAINS = new Set([
 
 const PRIMARY_DOMAINS = ['dialerseat.com', 'localhost']
 
-// Routes that should NEVER appear on a tenant subdomain. Marketing,
-// comparison pages, legal — all live on the main domain only. If a
-// tenant subdomain requests one of these, redirect to dialerseat.com
-// at the SAME path.
 const MARKETING_ONLY_PATHS = [
   /^\/$/,
   /^\/faq(\/.*)?$/,
@@ -124,45 +130,25 @@ function extractTenantSlug(hostname: string): string | null {
   if (!primary) return null
 
   const subdomain = host.slice(0, -1 - primary.length)
-
   if (subdomain.includes('.')) return null
   if (RESERVED_SUBDOMAINS.has(subdomain)) return null
   if (!/^[a-z0-9][a-z0-9-]{0,28}[a-z0-9]$/.test(subdomain)) return null
-
   return subdomain
 }
 
-// ─── TENANT LOOKUP CACHE ────────────────────────────────────────────────
-// Per-instance in-memory cache for tenant resolution. Keys are slugs.
-// Values are { status, redirectTo? } where status is one of:
-//   'active'      — tenant exists and is currently rendering
-//   'inactive'    — tenant exists but cancelled/inactive
-//   'missing'     — no tenant with this slug
-//   'history'     — slug points at a recent old-slug redirect
-// We cache for 60 seconds. Branding edits don't matter here (those are
-// re-fetched by the layout via lib/tenant.ts which has its own cache);
-// what we cache here is just "should we redirect or proceed?"
-// ────────────────────────────────────────────────────────────────────────
-
+// ─── TENANT ROUTE CACHE (v23) ──────────────────────────────────────────
 type TenantRouteState =
   | { status: 'active' }
   | { status: 'inactive' }
   | { status: 'missing' }
   | { status: 'history'; newSlug: string }
 
-interface CacheEntry {
-  state: TenantRouteState
-  expires: number
-}
-
-const TENANT_ROUTE_CACHE = new Map<string, CacheEntry>()
-const TENANT_ROUTE_CACHE_TTL_MS = 60 * 1000
+const TENANT_ROUTE_CACHE = new Map<string, { state: TenantRouteState; expires: number }>()
+const CACHE_TTL_MS = 60 * 1000
 
 async function lookupTenantRoute(slug: string): Promise<TenantRouteState> {
   const cached = TENANT_ROUTE_CACHE.get(slug)
-  if (cached && cached.expires > Date.now()) {
-    return cached.state
-  }
+  if (cached && cached.expires > Date.now()) return cached.state
 
   let state: TenantRouteState
   try {
@@ -171,7 +157,6 @@ async function lookupTenantRoute(slug: string): Promise<TenantRouteState> {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // First: active tenant by slug?
     const { data: tenant } = await supabase
       .from('white_label_tenants')
       .select('slug, status, is_active')
@@ -179,13 +164,10 @@ async function lookupTenantRoute(slug: string): Promise<TenantRouteState> {
       .maybeSingle()
 
     if (tenant) {
-      if (tenant.status === 'active' && tenant.is_active === true) {
-        state = { status: 'active' }
-      } else {
-        state = { status: 'inactive' }
-      }
+      state = (tenant.status === 'active' && tenant.is_active === true)
+        ? { status: 'active' }
+        : { status: 'inactive' }
     } else {
-      // Second: is this a recent old-slug from a tenant who edited theirs?
       const { data: history } = await supabase
         .from('subdomain_history')
         .select('new_slug, redirects_until')
@@ -194,26 +176,122 @@ async function lookupTenantRoute(slug: string): Promise<TenantRouteState> {
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle()
-
-      if (history) {
-        state = { status: 'history', newSlug: history.new_slug }
-      } else {
-        state = { status: 'missing' }
-      }
+      state = history
+        ? { status: 'history', newSlug: history.new_slug }
+        : { status: 'missing' }
     }
   } catch (err) {
     console.error('[proxy] tenant route lookup failed:', err)
-    // Fail-open: assume active. Better than blocking all subdomains
-    // during a Supabase outage. The layout will fall back to default
-    // branding if its own lookup fails too.
-    state = { status: 'active' }
+    state = { status: 'active' } // fail-open
   }
 
-  TENANT_ROUTE_CACHE.set(slug, {
-    state,
-    expires: Date.now() + TENANT_ROUTE_CACHE_TTL_MS,
-  })
+  TENANT_ROUTE_CACHE.set(slug, { state, expires: Date.now() + CACHE_TTL_MS })
   return state
+}
+
+// ─── USER BRAND ACCESS CACHE (v24 — Phase D) ───────────────────────────
+const USER_BRAND_CACHE = new Map<string, { access: UserBrandAccess; expires: number }>()
+
+async function lookupUserBrandAccess(clerkId: string): Promise<UserBrandAccess> {
+  const cached = USER_BRAND_CACHE.get(clerkId)
+  if (cached && cached.expires > Date.now()) return cached.access
+
+  let access: UserBrandAccess = {
+    accessibleSlugs: new Set(),
+    selectedSlug: null,
+    canSeeStandard: false,
+  }
+
+  try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    const [
+      { data: userRow },
+      { data: ownedTenant },
+      { data: memberRows },
+      { data: selfSubs },
+    ] = await Promise.all([
+      supabase
+        .from('users')
+        .select('active_tenant_id')
+        .eq('clerk_id', clerkId)
+        .maybeSingle(),
+      supabase
+        .from('white_label_tenants')
+        .select('id, slug')
+        .eq('owner_clerk_id', clerkId)
+        .eq('status', 'active')
+        .eq('is_active', true)
+        .maybeSingle(),
+      supabase
+        .from('team_members')
+        .select('team_id, teams!inner(owner_id)')
+        .eq('user_id', clerkId)
+        .eq('status', 'active'),
+      supabase
+        .from('subscriptions')
+        .select('status, current_period_end')
+        .eq('user_id', clerkId),
+    ])
+
+    const accessibleTenantIds: string[] = []
+    const slugById = new Map<string, string>()
+
+    if (ownedTenant) {
+      accessibleTenantIds.push(ownedTenant.id)
+      slugById.set(ownedTenant.id, ownedTenant.slug)
+    }
+
+    const ownerClerkIds: string[] = []
+    for (const row of memberRows || []) {
+      const ownerId = (row as any).teams?.owner_id
+      if (ownerId) ownerClerkIds.push(ownerId)
+    }
+
+    if (ownerClerkIds.length > 0) {
+      const { data: teamTenants } = await supabase
+        .from('white_label_tenants')
+        .select('id, slug, owner_clerk_id')
+        .in('owner_clerk_id', ownerClerkIds)
+        .eq('status', 'active')
+        .eq('is_active', true)
+
+      for (const t of teamTenants || []) {
+        if (!slugById.has(t.id)) {
+          accessibleTenantIds.push(t.id)
+          slugById.set(t.id, t.slug)
+        }
+      }
+    }
+
+    const accessibleSlugs = new Set(Array.from(slugById.values()))
+
+    const selectedTenantId = userRow?.active_tenant_id || null
+    const selectedSlug = selectedTenantId ? slugById.get(selectedTenantId) || null : null
+
+    const now = Date.now()
+    const hasSelfSub = (selfSubs || []).some(s => {
+      if (ACTIVE_STATUSES.includes(s.status)) return true
+      if (s.status === 'canceled' && s.current_period_end &&
+          new Date(s.current_period_end).getTime() > now) return true
+      return false
+    })
+    const canSeeStandard = hasSelfSub || !!ownedTenant
+
+    access = { accessibleSlugs, selectedSlug, canSeeStandard }
+  } catch (err) {
+    console.error('[proxy] user brand access lookup failed:', err)
+    // Fail-open: pretend they can see standard and any subdomain. The
+    // page-level branding will fall back to default if its lookup also
+    // fails. Better than blocking access during an outage.
+    access = { accessibleSlugs: new Set(), selectedSlug: null, canSeeStandard: true }
+  }
+
+  USER_BRAND_CACHE.set(clerkId, { access, expires: Date.now() + CACHE_TTL_MS })
+  return access
 }
 
 // =============================================================================
@@ -226,48 +304,33 @@ export default clerkMiddleware(async (auth, request) => {
   const url = request.nextUrl
 
   const withTenantHeader = (res: NextResponse): NextResponse => {
-    if (tenantSlug) {
-      res.headers.set('x-tenant-slug', tenantSlug)
-    }
+    if (tenantSlug) res.headers.set('x-tenant-slug', tenantSlug)
     return res
   }
 
-  // ── TENANT SUBDOMAIN ROUTING (v23 — Phase C) ────────────────────────────
-  // We do this BEFORE auth checks because we may need to redirect to the
-  // main domain regardless of auth state. Static assets bypass this whole
-  // middleware via the matcher exclusions below, so this only runs on
-  // real page / API requests.
+  // ── PHASE C: tenant subdomain validity routing ──────────────────────────
   if (tenantSlug) {
-    // (1) Marketing-only paths bounce to dialerseat.com
     if (isMarketingOnlyPath(url.pathname)) {
       const mainUrl = new URL(url.pathname + url.search, 'https://dialerseat.com')
       return NextResponse.redirect(mainUrl, 308)
     }
 
-    // (2) Look up the tenant to decide if subdomain is valid
     const route = await lookupTenantRoute(tenantSlug)
-
     if (route.status === 'missing' || route.status === 'inactive') {
-      // Bounce to main site at the same path so a bookmark like
-      // acme.dialerseat.com/dashboard becomes dialerseat.com/dashboard
-      // (where the auth gate kicks in normally).
       const mainUrl = new URL(url.pathname + url.search, 'https://dialerseat.com')
       return NextResponse.redirect(mainUrl, 307)
     }
-
     if (route.status === 'history') {
-      // Redirect to the new slug, preserving path + query
       const newUrl = new URL(
         url.pathname + url.search,
         `https://${route.newSlug}.dialerseat.com`
       )
       return NextResponse.redirect(newUrl, 308)
     }
-
-    // route.status === 'active' → fall through to the normal auth flow
+    // route.status === 'active' → fall through
   }
 
-  // ── NORMAL AUTH FLOW (unchanged from v22) ──────────────────────────────
+  // ── PUBLIC ROUTES ──────────────────────────────────────────────────────
   if (isPublicRoute(request)) {
     return withTenantHeader(NextResponse.next())
   }
@@ -291,6 +354,38 @@ export default clerkMiddleware(async (auth, request) => {
     return withTenantHeader(res)
   }
 
+  // ── PHASE D: BRAND ACCESS ENFORCEMENT ──────────────────────────────────
+  // Runs ONLY on protected app routes (/dashboard*). API routes are gated
+  // separately by their own auth + tier checks. Admins already bypassed.
+  if (isProtectedAppRoute(request)) {
+    const brandAccess = await lookupUserBrandAccess(userId)
+
+    // Case A: user is on a tenant subdomain
+    if (tenantSlug) {
+      // Block if they don't belong to this tenant's team
+      if (!brandAccess.accessibleSlugs.has(tenantSlug)) {
+        // Redirect them to their actual destination
+        const dest = pickRedirectDestination(brandAccess, url.pathname + url.search)
+        return NextResponse.redirect(dest, 307)
+      }
+      // They belong here — proceed
+    } else {
+      // Case B: user is on the main domain (no subdomain)
+      // If they CAN'T see standard view, redirect them to their tenant.
+      // This is the "seat-only agent locked to WL" enforcement.
+      if (!brandAccess.canSeeStandard) {
+        const dest = pickRedirectDestination(brandAccess, url.pathname + url.search)
+        // Don't redirect to dialerseat.com — that's where we are. If we
+        // can't find a tenant subdomain to send them to, fall through
+        // (better to show the dashboard than infinite-loop redirect).
+        if (dest.host !== url.host) {
+          return NextResponse.redirect(dest, 307)
+        }
+      }
+    }
+  }
+
+  // ── NORMAL TIER GATES (unchanged from v22/v23) ─────────────────────────
   if (tier === 'active') {
     const res = NextResponse.next()
     res.headers.set('x-access-tier', 'active')
@@ -300,15 +395,10 @@ export default clerkMiddleware(async (auth, request) => {
   if (isPreserved) {
     if (isActiveOnlyRoute(request)) {
       return NextResponse.json(
-        {
-          error: 'Active subscription required',
-          tier,
-          redirectTo: '/billing',
-        },
+        { error: 'Active subscription required', tier, redirectTo: '/billing' },
         { status: 403 }
       )
     }
-
     const res = NextResponse.next()
     res.headers.set('x-access-tier', tier)
     res.headers.set('x-data-preserved', '1')
@@ -318,6 +408,31 @@ export default clerkMiddleware(async (auth, request) => {
   const billingUrl = new URL('/billing', request.url)
   return NextResponse.redirect(billingUrl)
 })
+
+/**
+ * Where should this user be redirected when they hit a subdomain they
+ * don't belong to (or when a seat-only agent hits the main domain)?
+ *
+ * Order:
+ *   1. Their selected tenant (active_tenant_id) — if still in their
+ *      accessible set, which is the normal case
+ *   2. The first accessible tenant slug — fallback if selection is stale
+ *   3. dialerseat.com — last resort (only reached if user has NO
+ *      accessible tenants at all, which means lookup didn't find anything)
+ */
+function pickRedirectDestination(
+  brandAccess: UserBrandAccess,
+  pathAndQuery: string
+): URL {
+  if (brandAccess.selectedSlug && brandAccess.accessibleSlugs.has(brandAccess.selectedSlug)) {
+    return new URL(pathAndQuery, `https://${brandAccess.selectedSlug}.dialerseat.com`)
+  }
+  const firstSlug = Array.from(brandAccess.accessibleSlugs)[0]
+  if (firstSlug) {
+    return new URL(pathAndQuery, `https://${firstSlug}.dialerseat.com`)
+  }
+  return new URL(pathAndQuery, 'https://dialerseat.com')
+}
 
 async function getAccessState(clerkId: string): Promise<AccessState> {
   try {

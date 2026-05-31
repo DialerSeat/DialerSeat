@@ -1,10 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { ClerkProvider } from '@clerk/nextjs';
+import { auth } from '@clerk/nextjs/server';
 import { headers } from 'next/headers';
 import "./globals.css";
 import StructuredData from './components/StructuredData';
 import { ThemeProvider } from '@/components/ThemeProvider';
-import { getTenantBranding } from '@/lib/tenant';
+import { getTenantBranding, getActiveTenantForUser } from '@/lib/tenant';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://dialerseat.com'),
@@ -13,63 +14,28 @@ export const metadata: Metadata = {
     "The professional outbound dialer built for solo agents up through larger teams. $35/week per seat. No contracts. Cancel anytime. Four dialer modes, automatic voicemail detection, inbound reception, unlimited numbers.",
   applicationName: 'DialerSeat',
   keywords: [
-    // core category
-    'power dialer',
-    'predictive dialer',
-    'progressive dialer',
-    'preview dialer',
-    'outbound dialer',
-    'auto dialer',
-    'sales dialer',
-    'cold calling software',
-    'lead dialer',
-    'call center software',
-    // vertical-specific
-    'insurance dialer',
-    'real estate dialer',
-    'mortgage dialer',
-    'solar sales dialer',
-    'debt collection dialer',
-    'SDR dialer',
-    'B2B sales dialer',
-    // competitor alternative terms (high-intent SEO)
-    'ReadyMode alternative',
-    'Mojo Dialer alternative',
-    'PhoneBurner alternative',
-    'Five9 alternative',
-    'CallTools alternative',
-    'Vicidial alternative',
-    'cheap predictive dialer',
-    'low cost dialer',
-    'no contract dialer',
-    // capability-driven queries
-    'automatic voicemail detection',
-    'AMD dialer',
-    'TCPA compliant dialer',
-    'mobile dialer',
-    'browser dialer',
-    'inbound outbound dialer',
-    'team dialer',
-    'multi seat dialer',
-    'lead vendor dialer',
-    // white-label tier
-    'white label dialer',
-    'agency dialer',
-    'reseller dialer',
+    'power dialer', 'predictive dialer', 'progressive dialer', 'preview dialer',
+    'outbound dialer', 'auto dialer', 'sales dialer', 'cold calling software',
+    'lead dialer', 'call center software',
+    'insurance dialer', 'real estate dialer', 'mortgage dialer',
+    'solar sales dialer', 'debt collection dialer', 'SDR dialer', 'B2B sales dialer',
+    'ReadyMode alternative', 'Mojo Dialer alternative', 'PhoneBurner alternative',
+    'Five9 alternative', 'CallTools alternative', 'Vicidial alternative',
+    'cheap predictive dialer', 'low cost dialer', 'no contract dialer',
+    'automatic voicemail detection', 'AMD dialer', 'TCPA compliant dialer',
+    'mobile dialer', 'browser dialer', 'inbound outbound dialer',
+    'team dialer', 'multi seat dialer', 'lead vendor dialer',
+    'white label dialer', 'agency dialer', 'reseller dialer',
   ],
   authors: [{ name: 'DialerSeat' }],
   creator: 'DialerSeat',
   publisher: 'DialerSeat',
   manifest: '/manifest.json',
   robots: {
-    index: true,
-    follow: true,
+    index: true, follow: true,
     googleBot: {
-      index: true,
-      follow: true,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
-      'max-video-preview': -1,
+      index: true, follow: true,
+      'max-image-preview': 'large', 'max-snippet': -1, 'max-video-preview': -1,
     },
   },
   icons: {
@@ -110,12 +76,7 @@ export const metadata: Metadata = {
     url: 'https://dialerseat.com',
     siteName: 'DialerSeat',
     images: [
-      {
-        url: '/icons/og-image.png',
-        width: 1200,
-        height: 630,
-        alt: 'DialerSeat — Dial Smarter. Close Faster.',
-      },
+      { url: '/icons/og-image.png', width: 1200, height: 630, alt: 'DialerSeat — Dial Smarter. Close Faster.' },
     ],
     locale: 'en_US',
     type: 'website',
@@ -123,21 +84,17 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'DialerSeat — Dial Smarter. Close Faster.',
-    description:
-      'The professional outbound dialer. $35/week per seat. No contracts. Cancel anytime.',
+    description: 'The professional outbound dialer. $35/week per seat. No contracts. Cancel anytime.',
     images: ['/icons/twitter-image.png'],
   },
   other: {
-    // Microsoft tile configuration
     'msapplication-TileColor': '#4a9eff',
     'msapplication-TileImage': '/icons/mstile-144x144.png',
     'msapplication-config': '/browserconfig.xml',
-    // Apple PWA hints
     'apple-mobile-web-app-capable': 'yes',
     'apple-mobile-web-app-status-bar-style': 'black-translucent',
     'apple-mobile-web-app-title': 'DialerSeat',
     'mobile-web-app-capable': 'yes',
-    // Format detection — keep phone numbers as plain text in marketing copy
     'format-detection': 'telephone=no',
   },
 };
@@ -153,12 +110,6 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 };
 
-// Clerk localization override — lowercases every "Delete account" surface
-// inside the UserProfile so the button, the modal title, the confirm
-// description, and the typed-in confirmation string all match. If we
-// lowercased only the button, the confirmation flow ("Type 'Delete account'
-// below") would still display the uppercase string and the user input
-// requirement would mismatch what they were shown.
 const dialerseatLocalization = {
   userProfile: {
     start: {
@@ -175,9 +126,6 @@ const dialerseatLocalization = {
   },
 } as const;
 
-// iOS splash screens — every documented device size + orientation.
-// Next.js doesn't have first-class metadata support for these, so we
-// emit them via the head as raw <link> tags below.
 const IOS_SPLASH_SCREENS: Array<{ w: number; h: number; orient: 'portrait' | 'landscape' }> = [
   { w: 640, h: 1136, orient: 'portrait' },
   { w: 750, h: 1334, orient: 'portrait' },
@@ -194,7 +142,6 @@ const IOS_SPLASH_SCREENS: Array<{ w: number; h: number; orient: 'portrait' | 'la
   { w: 1668, h: 2224, orient: 'portrait' },
   { w: 1668, h: 2388, orient: 'portrait' },
   { w: 2048, h: 2732, orient: 'portrait' },
-  // landscape
   { w: 1792, h: 828, orient: 'landscape' },
   { w: 2160, h: 1620, orient: 'landscape' },
   { w: 2208, h: 1242, orient: 'landscape' },
@@ -214,39 +161,34 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // ── WHITE-LABEL TENANT RESOLUTION ─────────────────────────────────────
-  // proxy.ts extracts the subdomain slug from the request hostname and
-  // attaches it as the x-tenant-slug header. We read it here and look up
-  // the tenant's branding via the cached helper. If no header is present
-  // (standard dialerseat.com traffic) or no matching tenant exists, we
-  // get null back and the ThemeProvider passes through unchanged — the
-  // app looks exactly like it does today.
+  // ── WHITE-LABEL TENANT RESOLUTION (v2 — Phase D) ──────────────────────
+  // Two-tier lookup:
+  //   1. If proxy.ts set x-tenant-slug (subdomain visit), use that.
+  //   2. Else, if user is logged in, look up their selected tenant via
+  //      lib/tenant.ts → getActiveTenantForUser. This is what makes the
+  //      brand follow the user across devices/domains.
+  //   3. Else (no subdomain, not logged in) → null → default DialerSeat.
   //
-  // The tenant lookup uses unstable_cache with a 60s TTL + per-tenant tag.
-  // The admin "save branding" API revalidates the tag immediately so
-  // changes propagate without waiting for the TTL.
+  // The two-tier means: a logged-in user on a tenant subdomain still
+  // gets that subdomain's branding (subdomain wins). A logged-in user
+  // on dialerseat.com still gets their selected/default tenant's brand.
+  // Both feel right.
   const h = await headers();
   const tenantSlug = h.get('x-tenant-slug');
-  const branding = await getTenantBranding(tenantSlug);
+
+  let branding = await getTenantBranding(tenantSlug);
+  if (!branding) {
+    const { userId } = await auth();
+    if (userId) {
+      branding = await getActiveTenantForUser(userId);
+    }
+  }
 
   return (
-    // v23 quick win: afterSignOutUrl="/" sends signed-out users back to
-    // the marketing landing page instead of Clerk's default destination
-    // (which can otherwise land on /sign-in or a 404 depending on where
-    // the user signed out from).
     <ClerkProvider localization={dialerseatLocalization} afterSignOutUrl="/">
       <html lang="en">
         <head>
-          {/* iOS splash screens — emitted as raw <link> tags with the
-              specific media query iOS expects. The `device-width` and
-              `device-height` values below correspond to the unscaled
-              CSS pixel dimensions of each device. */}
           {IOS_SPLASH_SCREENS.map(({ w, h, orient }) => {
-            // iOS expects splash images in physical (retina) pixels, but
-            // the media query uses CSS pixels — divide by the device's
-            // pixel ratio. For modern devices that's 2x or 3x. We emit
-            // the link with the raw retina dimensions in the href and
-            // let iOS pick the matching one via the media query below.
             const media =
               `(device-width: ${Math.round(w / 2)}px) and ` +
               `(device-height: ${Math.round(h / 2)}px) and ` +
@@ -262,25 +204,13 @@ export default async function RootLayout({
             );
           })}
 
-          {/* If this is a white-label tenant, point favicon to the tenant's
-              uploaded favicon. Falls through to the default favicon set by
-              metadata.icons when branding is null. */}
           {branding?.favicon_url && (
             <link rel="icon" href={branding.favicon_url} />
           )}
         </head>
         <body>
-          {/* JSON-LD structured data — must be inside <body> in the
-              App Router. Google reads it from anywhere on the page.
-              Only emitted for standard DialerSeat traffic — we don't want
-              to claim "DialerSeat" as the Organization on a white-label
-              subdomain, that would confuse search engines. */}
           {!branding && <StructuredData />}
 
-          {/* ThemeProvider wraps everything. When branding is null it's
-              a pass-through and the app renders as standard DialerSeat.
-              When branding is set, --brand-* CSS variables are injected
-              at :root and useBranding() returns the brand object. */}
           <ThemeProvider branding={branding}>
             {children}
           </ThemeProvider>

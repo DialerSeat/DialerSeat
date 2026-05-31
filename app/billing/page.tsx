@@ -17,35 +17,15 @@ const stripePromise = loadStripe(
 )
 
 // =============================================================================
-// BILLING PAGE — v22 (Phase A: WL pricing $115 → $75)
+// BILLING PAGE — v23 (Phase D1: wording change only)
 // =============================================================================
-// Supports TWO plans:
+// All v22 (Phase A) functionality preserved. ONLY changes:
+//   - PLAN_INFO.wl.label: 'WHITE LABEL' → 'MANAGER+ & WHITELABEL'
+//   - PLAN_INFO.wl.title: 'START YOUR WHITE LABEL TENANT' → 'START YOUR MANAGER+ TENANT'
+//   - PLAN_INFO.wl.description: small reword to mention Manager+ identity
+//   - Switch button text: '↗ SWITCH TO WHITE LABEL ($75/WK)' → '↗ SWITCH TO MANAGER+ & WHITELABEL ($75/WK)'
 //
-//   Standard ($35/wk):
-//     - Default plan
-//     - Existing dialer flow, lands on /dashboard after payment
-//
-//   White Label ($75/wk):       ← was $115/wk in v21
-//     - User clicks "Switch to White Label" button OR lands here with
-//       ?plan=wl in the URL
-//     - Same payment UI, different Stripe price ID + metadata
-//     - After payment, /billing/success routes WL users to
-//       /onboarding/whitelabel (subdomain + logo + colors) instead of
-//       /dashboard
-//
-// PRICE CHANGE NOTE (v22):
-//   The $75 figure is reflected in `PLAN_INFO.wl.price` AND in all display
-//   strings. The actual Stripe price is set via the STRIPE_PRICE_WL_BASE
-//   env var in /api/stripe/create-subscription. Make sure that env var
-//   points at the new $75/wk Stripe Price before deploying this.
-//
-//   The old $115 Price should NOT be archived in Stripe until users with
-//   incomplete checkouts on the old price have abandoned. Then archive it.
-//
-// SWITCHING PLANS:
-//   When user toggles between standard/wl, we abandon the current
-//   incomplete subscription and create a fresh one with the new price.
-//   No card details are re-entered.
+// No logic changes. Same Stripe Price ID. Same env vars. Same routing.
 // =============================================================================
 
 type Plan = 'standard' | 'wl'
@@ -60,13 +40,13 @@ const PLAN_INFO = {
     description: 'Standard DialerSeat — one agent seat, all features, billed weekly.',
   },
   wl: {
-    label: 'WHITE LABEL',
+    label: 'MANAGER+ & WHITELABEL',
     price: 75,
-    title: 'START YOUR WHITE LABEL TENANT',
+    title: 'START YOUR MANAGER+ TENANT',
     subtitle: 'Pay $75 today to provision your branded dialer.',
     weeklyBlurb: '$75.00 USD',
     description:
-      'White-label DialerSeat — your subdomain, your branding. After payment, you’ll pick your subdomain + upload logo + set colors.',
+      'Manager+ unlocks white-label DialerSeat — your subdomain, your branding, full team control. After payment, you\u2019ll pick your subdomain, upload your logo, and set your brand colors.',
   },
 } as const
 
@@ -76,7 +56,6 @@ export default function BillingPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  // Initial plan: from URL ?plan=wl if present, else standard
   const initialPlan: Plan = searchParams.get('plan') === 'wl' ? 'wl' : 'standard'
   const [plan, setPlan] = useState<Plan>(initialPlan)
   const planInfo = PLAN_INFO[plan]
@@ -90,7 +69,6 @@ export default function BillingPage() {
   const [promoApplied, setPromoApplied] = useState<string | null>(null)
   const [freeWithCoupon, setFreeWithCoupon] = useState(false)
   const [abandoning, setAbandoning] = useState(false)
-  // True while we're re-creating a sub because the user switched plans
   const [switchingPlan, setSwitchingPlan] = useState(false)
 
   async function abandonAndSignOut() {
@@ -168,13 +146,11 @@ export default function BillingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded, user])
 
-  // ── PLAN SWITCH ────────────────────────────────────────────────────
   const switchTo = async (newPlan: Plan) => {
     if (newPlan === plan) return
     setPlan(newPlan)
     setClientSecret(null)
     setSwitchingPlan(true)
-    // Reset promo on plan switch — different prices may have different rules
     setPromoCode('')
     setPromoApplied(null)
     setShowPromo(false)
@@ -261,7 +237,6 @@ export default function BillingPage() {
   return (
     <main style={pageStyle}>
       <div style={cardStyle}>
-        {/* ── PLAN TOGGLE BANNER ────────────────────────────────────── */}
         <div style={planBadgeStyle}>
           <span style={planBadgeLabelStyle}>{'\u25B8'} PLAN</span>
           <span style={planBadgeNameStyle}>{planInfo.label}</span>
@@ -273,7 +248,6 @@ export default function BillingPage() {
 
         <div style={planDescStyle}>{planInfo.description}</div>
 
-        {/* Switch to the OTHER plan */}
         {plan === 'standard' ? (
           <button
             type="button"
@@ -281,7 +255,7 @@ export default function BillingPage() {
             disabled={switchingPlan}
             style={planSwitchStyle}
           >
-            {switchingPlan ? 'SWITCHING...' : '↗ SWITCH TO WHITE LABEL ($75/WK)'}
+            {switchingPlan ? 'SWITCHING...' : '↗ SWITCH TO MANAGER+ & WHITELABEL ($75/WK)'}
           </button>
         ) : (
           <button
@@ -294,7 +268,6 @@ export default function BillingPage() {
           </button>
         )}
 
-        {/* ── BILLING TERMS ─────────────────────────────────────────── */}
         <div style={termsBoxStyle}>
           <div style={termsHeaderStyle}>{'\u25B8'} BILLING TERMS</div>
           <ul style={termsListStyle}>
@@ -310,13 +283,12 @@ export default function BillingPage() {
             <li>Subscription is non-refundable once a billing cycle has been charged</li>
             {plan === 'wl' && (
               <li style={{ color: '#ffd96a' }}>
-                After payment you'll choose your subdomain, upload your logo, and set your brand colors.
+                After payment you&apos;ll choose your subdomain, upload your logo, and set your brand colors.
               </li>
             )}
           </ul>
         </div>
 
-        {/* ── PROMO CODE ────────────────────────────────────────────── */}
         <div style={promoBoxStyle}>
           {promoApplied ? (
             <div style={promoAppliedStyle}>
@@ -423,8 +395,6 @@ function CheckoutForm({
     setSubmitting(true)
     setErrorMsg(null)
 
-    // The return_url tells Stripe where to redirect after 3DS or
-    // bank confirmation. For WL we land on a setup page, not the dashboard.
     const successUrl = plan === 'wl'
       ? `${window.location.origin}/billing/success?plan=wl`
       : `${window.location.origin}/billing/success`
