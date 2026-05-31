@@ -4,25 +4,29 @@ import { createContext, useContext, ReactNode } from 'react'
 import type { TenantBranding } from '@/lib/tenant'
 
 // =============================================================================
-// THEME PROVIDER — CSS variables + React context for tenant branding
+// THEME PROVIDER — v2 (Phase D2 foundation)
 // =============================================================================
-// Two responsibilities:
-//   1. Inject CSS variables (--brand-primary, etc.) at the document root so
-//      any component can use them via Tailwind arbitrary values or inline
-//      styles. e.g. style={{ background: 'var(--brand-bg)' }}
-//   2. Provide BrandingContext so React components can read brand_name,
-//      logo_url, etc. via the useBranding() hook.
+// Strategy change vs v1:
 //
-// When no branding is passed (the default DialerSeat experience), the
-// provider passes null through the context — components fall back to their
-// hardcoded defaults. This means white-label is purely additive: no existing
-// component breaks if we never wrap it.
+// Previously this component injected --brand-* CSS variables and individual
+// pieces of code had to opt-in by writing var(--brand-primary) etc.
 //
-// Why a client component:
-//   The context provider has to be a client component because useContext
-//   only runs on the client. The CSS variable injection happens in the
-//   server-rendered HTML stream via the <style> tag, so there's no flash
-//   of unstyled content — variables are available before React hydrates.
+// Now we lean on globals.css. The semantic tokens (--surface, --background,
+// --text-primary, --border, etc.) are ALREADY defined there in terms of
+// --brand-* primitives via color-mix. So all we need to do here is override
+// the --brand-* values at runtime. Everything else updates automatically.
+//
+// Result:
+//   - No code change needed to existing components that already use
+//     --surface, --background, --text-primary, --border, etc.
+//   - Components that want direct access to a specific brand color can
+//     read --brand-primary, --brand-surface, etc.
+//   - Tenant chooses 5 colors in onboarding → those become CSS variables
+//     → entire app re-themes.
+//
+// IMPORTANT: white-label tenants must NEVER override the semantic status
+// colors (--color-error, --color-success, --color-warning). Errors are
+// always red, success always green. Those stay platform defaults.
 // =============================================================================
 
 const BrandingContext = createContext<TenantBranding | null>(null)
@@ -37,7 +41,6 @@ interface ThemeProviderProps {
 }
 
 export function ThemeProvider({ branding, children }: ThemeProviderProps) {
-  // No branding → pass-through. Existing DialerSeat behavior unchanged.
   if (!branding) {
     return (
       <BrandingContext.Provider value={null}>
@@ -46,19 +49,16 @@ export function ThemeProvider({ branding, children }: ThemeProviderProps) {
     )
   }
 
-  // Build the CSS variable block. We use a small set of named tokens so
-  // components can opt-in to theming via Tailwind arbitrary values or
-  // inline styles. Components that don't reference these tokens get the
-  // standard DialerSeat appearance even on a tenant subdomain — which is
-  // fine for v1.
-  //
-  // Variable naming: --brand-* prefix to avoid collisions with any other
-  // CSS systems (Tailwind's --color-*, shadcn/ui's --primary, etc.).
+  // Map tenant color columns → CSS brand variables.
+  // NOTE: the DB schema has `accent_color` which we semantically reinterpret
+  // as the SURFACE color in v2. Phase B onboarding originally labeled it
+  // "accent" but its actual usage is the dark plate underneath everything.
+  // No DB migration needed — only the meaning changed.
   const cssVars = `
     :root {
       --brand-primary: ${branding.primary_color};
       --brand-secondary: ${branding.secondary_color};
-      --brand-accent: ${branding.accent_color};
+      --brand-surface: ${branding.accent_color};
       --brand-bg: ${branding.background_color};
       --brand-text: ${branding.text_color};
     }
@@ -66,8 +66,8 @@ export function ThemeProvider({ branding, children }: ThemeProviderProps) {
 
   return (
     <>
-      {/* Injected as a server-rendered <style> tag so vars are available
-          before any client JS runs. No flash, no flicker. */}
+      {/* Server-rendered <style> so brand colors are available before any
+          client JS runs — no flash of unstyled content. */}
       <style dangerouslySetInnerHTML={{ __html: cssVars }} />
       <BrandingContext.Provider value={branding}>
         {children}

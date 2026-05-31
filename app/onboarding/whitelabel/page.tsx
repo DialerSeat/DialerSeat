@@ -1,284 +1,287 @@
 'use client'
-import { useEffect, useState, useRef, useCallback } from 'react'
+
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 
-const FUTURA = 'Futura PT, Futura, "Trebuchet MS", sans-serif'
-
 // =============================================================================
-// /onboarding/whitelabel — v22 (Phase B)
+// /onboarding/whitelabel — v2 (Phase D2 foundation: live-themed)
 // =============================================================================
-// Doubles as the ONBOARDING form (first time) AND the EDIT form (anytime
-// later). Detects state via /api/whitelabel/onboarding GET:
-//   - status='not_started' → bounce to /billing?plan=wl
-//   - status='pending'     → show empty form, button says "Provision tenant"
-//   - status='complete'    → show populated form, button says "Save changes"
+// The entire page IS the preview. Every surface, button, border, text
+// color is bound to a --brand-* CSS variable. As the user picks colors,
+// an inline <style> block updates those variables and the whole page
+// re-themes in real-time.
 //
-// CHANGES from v21:
-//   - Logo: 512×148 PNG/SVG (was 28×28) — matches the sidebar brand block
-//   - Live preview renders the uploaded logo at 256×74 (the actual 1x size)
-//   - Accent color picker (was primary-only)
-//   - Live subdomain availability check (debounced 300ms)
-//   - Edit mode: form pre-populates from existing tenant, supports
-//     in-place updates
-//   - Logo upload happens FIRST via /api/whitelabel/upload-logo, then the
-//     returned URL is sent to /api/whitelabel/onboarding as part of the
-//     full config payload
-//   - Slug cooldown UI: if the user changed their subdomain in the last
-//     24h, the field shows a warning and the change request is rejected
-//     server-side
+// Six built-in presets at the top let users grab a polished look in
+// 5 seconds. "Custom" unlocks the individual color pickers for power
+// users.
 //
-// REDIRECT BEHAVIOR (Phase B):
-//   On successful provision/save, redirect to /dashboard on the SAME host
-//   the user is on (probably dialerseat.com). Phase C will switch this to
-//   `https://{slug}.dialerseat.com/dashboard` once subdomain middleware is
-//   live. Until then, the subdomain would 404 — staying on main host is
-//   correct for now.
+// Logo upload is exactly 512×148 PNG/SVG. The block displays at 256×74
+// in the sidebar (matching the dashboard layout). Anything else is
+// rejected server-side by the upload API.
+//
+// On successful save, redirects to /dashboard. The save sets
+// wl_onboarding_status='complete' which clears the proxy.ts hard-lock.
 // =============================================================================
 
-const LOGO_REQ_WIDTH = 512
-const LOGO_REQ_HEIGHT = 148
-const LOGO_PREVIEW_WIDTH = 256
-const LOGO_PREVIEW_HEIGHT = 74
-const LOGO_MAX_BYTES = 200 * 1024 // 200 KB
-
-const RESERVED_SUBDOMAINS = new Set([
-  'www', 'api', 'app', 'admin', 'mail', 'email', 'support',
-  'dashboard', 'billing', 'auth', 'docs', 'help', 'status',
-  'staging', 'dev', 'test', 'demo', 'preview', 'sandbox',
-  'cdn', 'assets', 'static', 'media', 'images', 'files',
-  'sip', 'voice', 'webhook', 'webhooks', 'signalwire',
-  'stripe', 'clerk', 'supabase', 'vercel', 'sentry',
-  'dialerseat', 'whitelabel', 'wl', 'onboarding',
-  'manager', 'managers', 'pro', 'team', 'teams',
-  'signin', 'signup', 'login', 'logout', 'account', 'settings',
-  'terms', 'privacy', 'about', 'contact', 'pricing', 'faq',
-  'home', 'blog', 'callback', 'oauth', 'saml',
-  'referral', 'promo', 'public', 'upload',
-])
-
-interface TenantConfig {
-  brand_name: string
-  slug: string
-  primary_color: string
-  accent_color: string
-  logo_url: string
+interface Preset {
+  key: string
+  label: string
+  description: string
+  primary: string
+  secondary: string
+  surface: string
+  background: string
+  text: string
 }
 
-interface StatusResponse {
-  status: 'not_started' | 'pending' | 'complete'
-  existingSubdomain?: string
-  tenant?: TenantConfig
-  canChangeSlugAt?: string | null
-  isActive?: boolean
+const PRESETS: Preset[] = [
+  {
+    key: 'default',
+    label: 'DialerSeat Default',
+    description: 'The original dark theme. Clean, professional, neutral.',
+    primary: '#4a9eff',
+    secondary: '#2a6eff',
+    surface: '#1a1c24',
+    background: '#0a0a0f',
+    text: '#e0e2ea',
+  },
+  {
+    key: 'midnight',
+    label: 'Midnight',
+    description: 'Deep black backgrounds with electric blue accents.',
+    primary: '#5fb3ff',
+    secondary: '#3a7fff',
+    surface: '#0d0d18',
+    background: '#000005',
+    text: '#f0f2fa',
+  },
+  {
+    key: 'crimson',
+    label: 'Crimson',
+    description: 'Dark plum surface with bold red brand color.',
+    primary: '#ff4d6d',
+    secondary: '#d92645',
+    surface: '#1f1018',
+    background: '#0d0608',
+    text: '#f0e0e4',
+  },
+  {
+    key: 'forest',
+    label: 'Forest',
+    description: 'Dark green surface with bright lime primary.',
+    primary: '#5fe78a',
+    secondary: '#2dba5a',
+    surface: '#0f1a12',
+    background: '#06090a',
+    text: '#e0f0e4',
+  },
+  {
+    key: 'slate',
+    label: 'Slate',
+    description: 'Neutral gray surface with crisp white primary. Minimal.',
+    primary: '#f0f2f5',
+    secondary: '#c0c4cc',
+    surface: '#222428',
+    background: '#0e0f12',
+    text: '#e6e8ec',
+  },
+  {
+    key: 'sunrise',
+    label: 'Sunrise',
+    description: 'Warm dark surface with amber and orange highlights.',
+    primary: '#ffa53e',
+    secondary: '#ff6e1a',
+    surface: '#1e1812',
+    background: '#0a0805',
+    text: '#f5ead8',
+  },
+]
+
+interface BrandState {
+  primary: string
+  secondary: string
+  surface: string
+  background: string
+  text: string
 }
 
-type AvailabilityState =
-  | { kind: 'idle' }
-  | { kind: 'checking' }
-  | { kind: 'available'; current?: boolean }
-  | { kind: 'unavailable'; reason: string }
+const DEFAULT_BRAND: BrandState = {
+  primary: PRESETS[0].primary,
+  secondary: PRESETS[0].secondary,
+  surface: PRESETS[0].surface,
+  background: PRESETS[0].background,
+  text: PRESETS[0].text,
+}
+
+// Subdomain regex must match what middleware + DB constraint expect.
+// 2-30 chars, lowercase a-z 0-9 -, can't start/end with -.
+const SLUG_REGEX = /^[a-z0-9][a-z0-9-]{0,28}[a-z0-9]$/
 
 export default function WhitelabelOnboardingPage() {
   const { user, isLoaded } = useUser()
   const router = useRouter()
 
-  const [statusLoaded, setStatusLoaded] = useState(false)
-  const [statusErr, setStatusErr] = useState<string | null>(null)
-  const [isEditMode, setIsEditMode] = useState(false)
-  const [originalSlug, setOriginalSlug] = useState<string | null>(null)
-  const [canChangeSlugAt, setCanChangeSlugAt] = useState<string | null>(null)
-
-  // Form fields
+  // ── State ────────────────────────────────────────────────────────────
+  const [loading, setLoading] = useState(true)
+  const [editMode, setEditMode] = useState(false)
   const [brandName, setBrandName] = useState('')
-  const [subdomain, setSubdomain] = useState('')
-  const [primaryColor, setPrimaryColor] = useState('#4a9eff')
-  const [accentColor, setAccentColor] = useState('#2a4a8a')
+  const [slug, setSlug] = useState('')
   const [logoFile, setLogoFile] = useState<File | null>(null)
-  const [logoPreview, setLogoPreview] = useState<string | null>(null)
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null)
   const [existingLogoUrl, setExistingLogoUrl] = useState<string | null>(null)
-  const [logoErr, setLogoErr] = useState<string | null>(null)
+  const [presetKey, setPresetKey] = useState<string>('default')
+  const [colors, setColors] = useState<BrandState>(DEFAULT_BRAND)
 
-  // Subdomain availability
-  const [availability, setAvailability] = useState<AvailabilityState>({ kind: 'idle' })
-  const availabilityTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Subdomain live availability check
+  const [slugStatus, setSlugStatus] = useState<
+    | { kind: 'idle' }
+    | { kind: 'checking' }
+    | { kind: 'available' }
+    | { kind: 'taken' }
+    | { kind: 'reserved' }
+    | { kind: 'invalid'; reason: string }
+  >({ kind: 'idle' })
 
-  // Submission state
   const [submitting, setSubmitting] = useState(false)
-  const [submitErr, setSubmitErr] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
-  // ── STATUS CHECK ─────────────────────────────────────────────────
+  // ── Load existing tenant if user has already onboarded ───────────────
   useEffect(() => {
     if (!isLoaded || !user) return
     let cancelled = false
 
-    fetch('/api/whitelabel/onboarding', { cache: 'no-store' })
-      .then(async (r) => {
-        const text = await r.text()
-        if (!r.ok) throw new Error(text.slice(0, 200))
-        return JSON.parse(text) as StatusResponse
-      })
-      .then((data) => {
+    fetch('/api/whitelabel/onboarding')
+      .then(r => r.json())
+      .then(data => {
         if (cancelled) return
+        if (data.tenant) {
+          setEditMode(true)
+          setBrandName(data.tenant.brand_name || '')
+          setSlug(data.tenant.slug || '')
+          setExistingLogoUrl(data.tenant.logo_url || null)
+          setColors({
+            primary: data.tenant.primary_color || DEFAULT_BRAND.primary,
+            secondary: data.tenant.secondary_color || DEFAULT_BRAND.secondary,
+            surface: data.tenant.accent_color || DEFAULT_BRAND.surface,
+            background: data.tenant.background_color || DEFAULT_BRAND.background,
+            text: data.tenant.text_color || DEFAULT_BRAND.text,
+          })
 
-        if (data.status === 'not_started') {
-          router.push('/billing?plan=wl')
-          return
+          // Detect which preset (if any) matches the loaded colors
+          const matchPreset = PRESETS.find(p =>
+            p.primary === data.tenant.primary_color &&
+            p.secondary === data.tenant.secondary_color &&
+            p.surface === data.tenant.accent_color &&
+            p.background === data.tenant.background_color &&
+            p.text === data.tenant.text_color
+          )
+          setPresetKey(matchPreset?.key || 'custom')
         }
-
-        if (data.status === 'complete' && data.tenant) {
-          // Edit mode — pre-populate the form
-          setIsEditMode(true)
-          setOriginalSlug(data.tenant.slug)
-          setBrandName(data.tenant.brand_name)
-          setSubdomain(data.tenant.slug)
-          setPrimaryColor(data.tenant.primary_color)
-          setAccentColor(data.tenant.accent_color)
-          setExistingLogoUrl(data.tenant.logo_url)
-          setCanChangeSlugAt(data.canChangeSlugAt || null)
-        }
-
-        setStatusLoaded(true)
+        setLoading(false)
       })
-      .catch((e) => {
-        if (!cancelled) {
-          setStatusErr(e?.message || 'Status check failed')
-          setStatusLoaded(true)
-        }
+      .catch(() => {
+        if (!cancelled) setLoading(false)
       })
 
     return () => { cancelled = true }
-  }, [isLoaded, user, router])
+  }, [isLoaded, user])
 
-  // ── SUBDOMAIN INPUT ───────────────────────────────────────────────
-  const onSubdomainChange = (raw: string) => {
-    const cleaned = raw
-      .toLowerCase()
-      .replace(/[^a-z0-9-]/g, '')
-      .replace(/^-+/, '')
-      .slice(0, 30)
-    setSubdomain(cleaned)
-  }
-
-  // ── LIVE AVAILABILITY CHECK (debounced 300ms) ─────────────────────
-  const checkAvailability = useCallback(async (slug: string) => {
-    if (!slug || slug.length < 3) {
-      setAvailability({ kind: 'idle' })
-      return
-    }
-    if (RESERVED_SUBDOMAINS.has(slug)) {
-      setAvailability({ kind: 'unavailable', reason: 'reserved' })
-      return
-    }
-    setAvailability({ kind: 'checking' })
-    try {
-      const r = await fetch(`/api/whitelabel/check-subdomain?slug=${encodeURIComponent(slug)}`, {
-        cache: 'no-store',
-      })
-      const data = await r.json()
-      if (data.available) {
-        setAvailability({ kind: 'available', current: data.current })
-      } else {
-        setAvailability({ kind: 'unavailable', reason: data.reason || 'taken' })
-      }
-    } catch {
-      setAvailability({ kind: 'idle' })
-    }
-  }, [])
-
+  // ── Subdomain availability check (debounced) ─────────────────────────
   useEffect(() => {
-    if (availabilityTimer.current) clearTimeout(availabilityTimer.current)
-    if (!subdomain) {
-      setAvailability({ kind: 'idle' })
+    if (!slug) {
+      setSlugStatus({ kind: 'idle' })
       return
     }
-    availabilityTimer.current = setTimeout(() => {
-      checkAvailability(subdomain)
-    }, 300)
-    return () => {
-      if (availabilityTimer.current) clearTimeout(availabilityTimer.current)
-    }
-  }, [subdomain, checkAvailability])
-
-  // ── LOGO UPLOAD HANDLING ──────────────────────────────────────────
-  const onLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setLogoErr(null)
-    setLogoFile(null)
-    setLogoPreview(null)
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    if (file.size > LOGO_MAX_BYTES) {
-      setLogoErr(`Too large. Max ${LOGO_MAX_BYTES / 1024} KB.`)
+    if (!SLUG_REGEX.test(slug)) {
+      setSlugStatus({
+        kind: 'invalid',
+        reason: 'Use only lowercase letters, numbers, and hyphens (2-30 chars, no leading/trailing dash).',
+      })
       return
     }
-
-    const isPng = file.type === 'image/png'
-    const isSvg = file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg')
-
-    if (!isPng && !isSvg) {
-      setLogoErr('Must be a PNG or SVG.')
-      return
-    }
-
-    // For PNG, validate exact dimensions client-side. For SVG, accept (server
-    // will validate viewBox aspect ratio).
-    if (isPng) {
-      const url = URL.createObjectURL(file)
-      const img = new Image()
-      img.onload = () => {
-        if (img.naturalWidth !== LOGO_REQ_WIDTH || img.naturalHeight !== LOGO_REQ_HEIGHT) {
-          setLogoErr(
-            `PNG must be exactly ${LOGO_REQ_WIDTH}×${LOGO_REQ_HEIGHT} pixels. ` +
-            `Yours is ${img.naturalWidth}×${img.naturalHeight}.`
-          )
-          URL.revokeObjectURL(url)
-          return
-        }
-        setLogoFile(file)
-        setLogoPreview(url)
+    // In edit mode, if slug hasn't changed from the saved value, skip the check
+    setSlugStatus({ kind: 'checking' })
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/whitelabel/check-subdomain?slug=${encodeURIComponent(slug)}`)
+        const data = await res.json()
+        if (data.reserved) setSlugStatus({ kind: 'reserved' })
+        else if (data.available) setSlugStatus({ kind: 'available' })
+        else setSlugStatus({ kind: 'taken' })
+      } catch {
+        setSlugStatus({ kind: 'idle' })
       }
-      img.onerror = () => {
-        setLogoErr('Could not read image. Try another file.')
-        URL.revokeObjectURL(url)
-      }
-      img.src = url
-    } else {
-      // SVG — just preview as-is; server validates aspect ratio
-      const url = URL.createObjectURL(file)
-      setLogoFile(file)
-      setLogoPreview(url)
+    }, 350)
+    return () => clearTimeout(t)
+  }, [slug])
+
+  // ── Logo file → object URL for live preview ──────────────────────────
+  useEffect(() => {
+    if (!logoFile) {
+      setLogoPreviewUrl(null)
+      return
+    }
+    const url = URL.createObjectURL(logoFile)
+    setLogoPreviewUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [logoFile])
+
+  // ── Handlers ─────────────────────────────────────────────────────────
+  const applyPreset = (key: string) => {
+    setPresetKey(key)
+    if (key === 'custom') return
+    const p = PRESETS.find(p => p.key === key)
+    if (p) {
+      setColors({
+        primary: p.primary,
+        secondary: p.secondary,
+        surface: p.surface,
+        background: p.background,
+        text: p.text,
+      })
     }
   }
 
-  // ── SUBMIT ────────────────────────────────────────────────────────
-  const slugChangedFromOriginal = isEditMode && originalSlug !== subdomain
-  const slugInCooldown = !!canChangeSlugAt && slugChangedFromOriginal
-
-  const canSubmit = (() => {
-    if (submitting) return false
-    if (!brandName.trim() || brandName.trim().length < 2) return false
-    if (!subdomain || subdomain.length < 3) return false
-    if (availability.kind === 'unavailable') return false
-    if (availability.kind === 'checking') return false
-    if (slugInCooldown) return false
-    if (!/^#[0-9a-fA-F]{6}$/.test(primaryColor)) return false
-    if (!/^#[0-9a-fA-F]{6}$/.test(accentColor)) return false
-    // Logo required in onboarding mode; optional in edit mode (keep existing)
-    if (!isEditMode && !logoFile) return false
-    if (logoErr) return false
-    return true
-  })()
+  const updateColor = (field: keyof BrandState, value: string) => {
+    setColors(prev => ({ ...prev, [field]: value }))
+    // Picking a custom color demotes the preset selection to "custom"
+    setPresetKey('custom')
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!canSubmit) return
-    setSubmitting(true)
-    setSubmitErr(null)
+    setError(null)
 
+    if (!brandName.trim()) {
+      setError('Brand name is required.')
+      return
+    }
+    if (!slug.trim()) {
+      setError('Subdomain is required.')
+      return
+    }
+    if (slugStatus.kind === 'invalid') {
+      setError(slugStatus.reason)
+      return
+    }
+    if (slugStatus.kind === 'taken' || slugStatus.kind === 'reserved') {
+      setError('This subdomain is not available. Pick another.')
+      return
+    }
+    if (!editMode && !logoFile) {
+      setError('Logo is required. Upload a 512×148 PNG or SVG.')
+      return
+    }
+    if (editMode && !logoFile && !existingLogoUrl) {
+      setError('Logo is required.')
+      return
+    }
+
+    setSubmitting(true)
     try {
-      // ── Step 1: upload logo if user picked a new one ─────────────
-      let logoUrl = existingLogoUrl || ''
+      // Step 1: upload logo if a new file was selected
+      let logoUrl = existingLogoUrl
       if (logoFile) {
         const fd = new FormData()
         fd.append('logo', logoFile)
@@ -286,508 +289,629 @@ export default function WhitelabelOnboardingPage() {
           method: 'POST',
           body: fd,
         })
-        const upText = await upRes.text()
+        const upData = await upRes.json()
         if (!upRes.ok) {
-          let detail = upText.slice(0, 300)
-          try {
-            const parsed = JSON.parse(upText)
-            detail = parsed.detail || parsed.error || detail
-          } catch {}
-          throw new Error(`Logo upload failed: ${detail}`)
+          setError(upData.error || 'Logo upload failed.')
+          setSubmitting(false)
+          return
         }
-        const upData = JSON.parse(upText)
-        logoUrl = upData.url
+        logoUrl = upData.logo_url
       }
 
-      // ── Step 2: write tenant config ───────────────────────────────
-      const cfgRes = await fetch('/api/whitelabel/onboarding', {
+      // Step 2: provision / update tenant
+      const res = await fetch('/api/whitelabel/onboarding', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           brand_name: brandName.trim(),
-          subdomain,
-          primary_color: primaryColor,
-          accent_color: accentColor,
+          slug: slug.trim(),
           logo_url: logoUrl,
+          primary_color: colors.primary,
+          secondary_color: colors.secondary,
+          // The DB column is still called accent_color — we send our
+          // "surface" picker value into that column. Reinterpretation
+          // only; no migration.
+          accent_color: colors.surface,
+          background_color: colors.background,
+          text_color: colors.text,
         }),
       })
-      const cfgText = await cfgRes.text()
-      if (!cfgRes.ok) {
-        let detail = cfgText.slice(0, 300)
-        try {
-          const parsed = JSON.parse(cfgText)
-          detail = parsed.detail || parsed.error || detail
-        } catch {}
-        throw new Error(detail)
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || 'Failed to save.')
+        setSubmitting(false)
+        return
       }
 
-      // ── Step 3: redirect ──────────────────────────────────────────
-      // Phase B: stay on main host. Phase C will switch this to subdomain.
+      // Success → /dashboard. The hard-lock in proxy.ts clears now that
+      // wl_onboarding_status is 'complete'.
       router.push('/dashboard')
     } catch (err: any) {
-      setSubmitErr(err?.message || 'Failed to save')
+      setError(err.message || 'Something went wrong.')
       setSubmitting(false)
     }
   }
 
-  // ── RENDER ─────────────────────────────────────────────────────────
-  if (!isLoaded || !statusLoaded) {
+  // ── Live-theming style block ─────────────────────────────────────────
+  // This injects --brand-* primitives at :root, which cascades through
+  // globals.css's semantic tokens to re-theme the entire page in real time.
+  const liveThemeStyle = useMemo(() => `
+    :root {
+      --brand-primary: ${colors.primary};
+      --brand-secondary: ${colors.secondary};
+      --brand-surface: ${colors.surface};
+      --brand-bg: ${colors.background};
+      --brand-text: ${colors.text};
+    }
+  `, [colors])
+
+  if (loading) {
     return (
-      <main style={pageStyle}>
-        <div style={cardStyle}>
-          <div style={titleStyle}>LOADING...</div>
-        </div>
-      </main>
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'var(--text-secondary)',
+        fontSize: 12,
+        letterSpacing: 3,
+      }}>
+        LOADING...
+      </div>
     )
   }
 
-  if (statusErr) {
-    return (
-      <main style={pageStyle}>
-        <div style={cardStyle}>
-          <div style={{ ...titleStyle, color: '#ff6464' }}>ERROR</div>
-          <div style={subtitleStyle}>{statusErr}</div>
-        </div>
-      </main>
-    )
-  }
+  const displayLogo = logoPreviewUrl || existingLogoUrl
 
   return (
-    <main style={pageStyle}>
-      <form style={cardStyle} onSubmit={handleSubmit}>
-        <div style={badgeStyle}>
-          <span style={badgeLabelStyle}>{'\u25B8'} WHITE LABEL</span>
-          <span style={badgeNameStyle}>{isEditMode ? 'EDIT' : 'SETUP'}</span>
-        </div>
+    <>
+      {/* Live theme injection — updates as the user picks colors */}
+      <style dangerouslySetInnerHTML={{ __html: liveThemeStyle }} />
 
-        <div style={titleStyle}>
-          {isEditMode ? 'EDIT YOUR TENANT' : 'CONFIGURE YOUR TENANT'}
-        </div>
-        <div style={subtitleStyle}>
-          {isEditMode
-            ? 'Update your branding. Changes apply immediately.'
-            : 'One-time setup. You can change everything later.'}
-        </div>
+      <main style={pageStyle}>
+        <div style={cardStyle}>
 
-        {/* ── BRAND NAME ────────────────────────────────────────── */}
-        <Field
-          label="BRAND NAME"
-          hint="Shown to your team in the sidebar and emails."
-        >
-          <input
-            type="text"
-            value={brandName}
-            onChange={(e) => setBrandName(e.target.value.slice(0, 60))}
-            placeholder="Acme Dialer"
-            style={inputStyle}
-            maxLength={60}
-            required
-          />
-        </Field>
-
-        {/* ── SUBDOMAIN ─────────────────────────────────────────── */}
-        <Field
-          label="SUBDOMAIN"
-          hint="Your team's login URL. 3–30 chars. Lowercase letters, digits, hyphens."
-        >
-          <div style={subdomainRowStyle}>
-            <input
-              type="text"
-              value={subdomain}
-              onChange={(e) => onSubdomainChange(e.target.value)}
-              placeholder="acme"
-              style={{ ...inputStyle, flex: 1, textTransform: 'lowercase' }}
-              maxLength={30}
-              required
-              disabled={slugInCooldown}
-            />
-            <span style={subdomainSuffixStyle}>.dialerseat.com</span>
-          </div>
-          <AvailabilityHint
-            state={availability}
-            slug={subdomain}
-            isEditMode={isEditMode}
-            originalSlug={originalSlug}
-          />
-          {slugInCooldown && canChangeSlugAt && (
-            <div style={cooldownNoteStyle}>
-              You changed your subdomain recently. You can change it again on{' '}
-              <strong>{new Date(canChangeSlugAt).toLocaleString()}</strong>.
+          {/* Header */}
+          <div style={{ marginBottom: 28 }}>
+            <div style={titleStyle}>
+              {editMode ? 'EDIT YOUR WHITELABEL DIALER' : 'CUSTOMIZE YOUR WHITELABEL DIALER'}
             </div>
-          )}
-        </Field>
-
-        {/* ── COLORS ────────────────────────────────────────────── */}
-        <Field
-          label="PRIMARY COLOR"
-          hint="Used for buttons, active nav, focus rings."
-        >
-          <ColorRow color={primaryColor} setColor={setPrimaryColor} />
-        </Field>
-
-        <Field
-          label="ACCENT COLOR"
-          hint="Used for highlights, badges, secondary chrome."
-        >
-          <ColorRow color={accentColor} setColor={setAccentColor} />
-        </Field>
-
-        {/* ── LOGO ──────────────────────────────────────────────── */}
-        <Field
-          label="LOGO"
-          hint={`PNG or SVG. Exactly ${LOGO_REQ_WIDTH}×${LOGO_REQ_HEIGHT} pixels. Max ${LOGO_MAX_BYTES / 1024} KB. ` +
-                `Replaces the "D / DIALERSEAT" block in the sidebar.`}
-        >
-          <div style={logoRowStyle}>
-            <input
-              type="file"
-              accept="image/png,image/svg+xml,.svg"
-              onChange={onLogoChange}
-              style={fileInputStyle}
-              required={!isEditMode}
-            />
+            <div style={subtitleStyle}>
+              {editMode
+                ? 'Your tenant is live. Make changes anytime — they propagate within 60 seconds.'
+                : 'Pick your brand, your subdomain, your colors. Your customers see your dialer, not ours.'}
+            </div>
           </div>
-          {logoErr && <div style={errorTextStyle}>{logoErr}</div>}
 
-          {/* PREVIEW — render at native 256x74 (1x display size) */}
-          {(logoPreview || existingLogoUrl) && (
-            <div style={logoPreviewBoxStyle}>
-              <div style={{
-                fontSize: 9, letterSpacing: 2, color: '#888a92',
-                marginBottom: 8, fontWeight: 700,
-              }}>PREVIEW (renders at 256×74 in your sidebar)</div>
-              <div style={{
-                background: '#0a1020',
-                padding: 12,
-                borderRadius: 4,
-                display: 'flex',
-                justifyContent: 'flex-start',
-              }}>
-                <img
-                  src={logoPreview || existingLogoUrl || ''}
-                  alt="Logo preview"
-                  width={LOGO_PREVIEW_WIDTH}
-                  height={LOGO_PREVIEW_HEIGHT}
-                  style={{ display: 'block', maxWidth: '100%', height: 'auto' }}
-                />
+          {/* PRESETS */}
+          <div style={sectionStyle}>
+            <div style={sectionLabelStyle}>▸ THEME</div>
+            <div style={presetGridStyle}>
+              {PRESETS.map(p => (
+                <button
+                  key={p.key}
+                  type="button"
+                  onClick={() => applyPreset(p.key)}
+                  style={presetCardStyle(p, presetKey === p.key)}
+                >
+                  <div style={presetSwatchRowStyle}>
+                    <div style={{ ...presetSwatchStyle, background: p.background }} />
+                    <div style={{ ...presetSwatchStyle, background: p.surface }} />
+                    <div style={{ ...presetSwatchStyle, background: p.primary }} />
+                    <div style={{ ...presetSwatchStyle, background: p.secondary }} />
+                  </div>
+                  <div style={presetNameStyle(presetKey === p.key)}>{p.label}</div>
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => applyPreset('custom')}
+                style={presetCardStyle(null, presetKey === 'custom')}
+              >
+                <div style={{
+                  ...presetSwatchRowStyle,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: 24,
+                  color: 'var(--text-secondary)',
+                  fontSize: 18,
+                  letterSpacing: 2,
+                }}>
+                  ✎
+                </div>
+                <div style={presetNameStyle(presetKey === 'custom')}>Custom</div>
+              </button>
+            </div>
+            <div style={presetHintStyle}>
+              {presetKey !== 'custom'
+                ? PRESETS.find(p => p.key === presetKey)?.description
+                : 'Tweak any color below to fine-tune.'}
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit}>
+
+            {/* BRAND NAME */}
+            <div style={sectionStyle}>
+              <label style={sectionLabelStyle}>▸ BRAND NAME</label>
+              <input
+                type="text"
+                value={brandName}
+                onChange={e => setBrandName(e.target.value)}
+                placeholder="Acme Sales Group"
+                maxLength={64}
+                style={inputStyle}
+              />
+              <div style={hintStyle}>
+                Shown in your dashboard sidebar header and on your sign-in page.
               </div>
             </div>
-          )}
-        </Field>
 
-        {submitErr && (
-          <div style={errorBoxStyle}>
-            <strong>Failed:</strong> {submitErr}
-          </div>
-        )}
+            {/* SUBDOMAIN */}
+            <div style={sectionStyle}>
+              <label style={sectionLabelStyle}>▸ SUBDOMAIN</label>
+              <div style={subdomainRowStyle}>
+                <input
+                  type="text"
+                  value={slug}
+                  onChange={e => setSlug(e.target.value.toLowerCase())}
+                  placeholder="acme"
+                  maxLength={30}
+                  style={{ ...inputStyle, flex: 1, marginBottom: 0 }}
+                />
+                <div style={subdomainSuffixStyle}>.dialerseat.com</div>
+              </div>
+              <div style={hintStyle}>
+                {renderSlugStatus(slugStatus, slug)}
+              </div>
+            </div>
 
-        <button
-          type="submit"
-          disabled={!canSubmit}
-          style={{
-            ...buttonStyle,
-            opacity: !canSubmit ? 0.4 : 1,
-            cursor: !canSubmit ? 'not-allowed' : 'pointer',
-          }}
-        >
-          {submitting
-            ? (isEditMode ? 'SAVING...' : 'PROVISIONING...')
-            : (isEditMode ? '▶ SAVE CHANGES' : '▶ PROVISION TENANT')}
-        </button>
+            {/* LOGO */}
+            <div style={sectionStyle}>
+              <label style={sectionLabelStyle}>▸ LOGO</label>
+              <div style={hintStyle}>
+                PNG or SVG. <strong>Exactly 512×148 pixels.</strong> Max 200 KB.
+                Transparent backgrounds recommended — they blend into the sidebar.
+              </div>
 
-        <div style={footerNoteStyle}>
-          {isEditMode
-            ? 'Subdomain changes redirect the old URL for 30 days, then it becomes available again.'
-            : 'Your subdomain becomes the login URL for your team.'}
+              {/* Live preview — uses the actual sidebar block dimensions */}
+              {displayLogo && (
+                <div style={logoPreviewWrapStyle}>
+                  <div style={logoPreviewLabelStyle}>
+                    PREVIEW (256×74 — your sidebar block):
+                  </div>
+                  <div style={logoPreviewBoxStyle}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={displayLogo}
+                      alt="Your logo"
+                      style={{
+                        width: 256,
+                        height: 74,
+                        objectFit: 'contain',
+                        objectPosition: 'left center',
+                        display: 'block',
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <input
+                type="file"
+                accept="image/png,image/svg+xml"
+                onChange={e => {
+                  const f = e.target.files?.[0] || null
+                  setLogoFile(f)
+                }}
+                style={{ ...inputStyle, padding: 8, marginTop: 8 }}
+              />
+            </div>
+
+            {/* COLORS — only shown when "custom" is selected */}
+            {presetKey === 'custom' && (
+              <div style={sectionStyle}>
+                <label style={sectionLabelStyle}>▸ COLORS</label>
+                <div style={hintStyle}>
+                  Page is themeing live as you pick. Status colors (errors, success) stay red and green.
+                </div>
+
+                <div style={colorPickerGridStyle}>
+                  <ColorRow
+                    label="Primary"
+                    description="Buttons, links, active nav"
+                    value={colors.primary}
+                    onChange={v => updateColor('primary', v)}
+                  />
+                  <ColorRow
+                    label="Secondary"
+                    description="Button gradients, hover states"
+                    value={colors.secondary}
+                    onChange={v => updateColor('secondary', v)}
+                  />
+                  <ColorRow
+                    label="Surface"
+                    description="Sidebar, cards, modal backgrounds"
+                    value={colors.surface}
+                    onChange={v => updateColor('surface', v)}
+                  />
+                  <ColorRow
+                    label="Background"
+                    description="Page background, deepest layer"
+                    value={colors.background}
+                    onChange={v => updateColor('background', v)}
+                  />
+                  <ColorRow
+                    label="Text"
+                    description="Body text, headings"
+                    value={colors.text}
+                    onChange={v => updateColor('text', v)}
+                  />
+                </div>
+              </div>
+            )}
+
+            {error && (
+              <div style={errorBoxStyle}>{error}</div>
+            )}
+
+            {/* SUBMIT */}
+            <button
+              type="submit"
+              disabled={submitting}
+              style={{
+                ...submitButtonStyle,
+                opacity: submitting ? 0.6 : 1,
+                cursor: submitting ? 'wait' : 'pointer',
+              }}
+            >
+              {submitting
+                ? (editMode ? 'SAVING...' : 'PROVISIONING...')
+                : (editMode ? '▶ SAVE CHANGES' : '▶ PROVISION TENANT')}
+            </button>
+
+            {!editMode && (
+              <div style={{ ...hintStyle, textAlign: 'center', marginTop: 12 }}>
+                You can change everything later from this same page.
+              </div>
+            )}
+          </form>
         </div>
-      </form>
-    </main>
+      </main>
+    </>
   )
 }
 
-// ─── COLOR PICKER ROW ────────────────────────────────────────────
+// =============================================================================
+// SUBCOMPONENTS
+// =============================================================================
+
 function ColorRow({
-  color,
-  setColor,
+  label,
+  description,
+  value,
+  onChange,
 }: {
-  color: string
-  setColor: (c: string) => void
+  label: string
+  description: string
+  value: string
+  onChange: (v: string) => void
 }) {
   return (
     <div style={colorRowStyle}>
       <input
         type="color"
-        value={color}
-        onChange={(e) => setColor(e.target.value)}
-        style={colorPickerStyle}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        style={colorSwatchInputStyle}
       />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={colorRowLabelStyle}>{label}</div>
+        <div style={colorRowDescStyle}>{description}</div>
+      </div>
       <input
         type="text"
-        value={color}
-        onChange={(e) => setColor(e.target.value)}
-        placeholder="#4a9eff"
-        style={{ ...inputStyle, flex: 1, fontFamily: 'monospace' }}
+        value={value}
+        onChange={e => onChange(e.target.value)}
         maxLength={7}
+        style={colorHexInputStyle}
       />
-      <div style={{ ...colorSwatch, background: color }} />
     </div>
   )
 }
 
-// ─── AVAILABILITY HINT ───────────────────────────────────────────
-function AvailabilityHint({
-  state,
-  slug,
-  isEditMode,
-  originalSlug,
-}: {
-  state: AvailabilityState
-  slug: string
-  isEditMode: boolean
-  originalSlug: string | null
-}) {
-  if (!slug) return null
-
-  if (slug.length < 3) {
-    return <div style={hintStyle}>Need at least 3 characters.</div>
+function renderSlugStatus(
+  status:
+    | { kind: 'idle' }
+    | { kind: 'checking' }
+    | { kind: 'available' }
+    | { kind: 'taken' }
+    | { kind: 'reserved' }
+    | { kind: 'invalid'; reason: string },
+  slug: string,
+): React.ReactNode {
+  if (status.kind === 'idle') {
+    return <>Pick something memorable. 2-30 chars, lowercase, dashes ok.</>
   }
-  if (state.kind === 'checking') {
-    return <div style={hintStyle}>Checking…</div>
+  if (status.kind === 'checking') {
+    return <span style={{ color: 'var(--text-muted)' }}>Checking availability...</span>
   }
-  if (state.kind === 'available') {
-    if (state.current && isEditMode) {
-      return (
-        <div style={availabilityOkStyle}>
-          ✓ <strong>{slug}.dialerseat.com</strong> — your current subdomain
-        </div>
-      )
-    }
+  if (status.kind === 'available') {
     return (
-      <div style={availabilityOkStyle}>
-        ✓ <strong>{slug}.dialerseat.com</strong> is available
-      </div>
+      <span style={{ color: 'var(--color-success)' }}>
+        ✓ {slug}.dialerseat.com is available
+      </span>
     )
   }
-  if (state.kind === 'unavailable') {
-    const msg =
-      state.reason === 'reserved' ? 'reserved by DialerSeat' :
-      state.reason === 'taken' ? 'already in use by another tenant' :
-      state.reason === 'redirecting' ? 'currently redirecting from a recent edit (try again in 30 days)' :
-      state.reason === 'too_short' ? 'too short' :
-      state.reason === 'too_long' ? 'too long' :
-      'invalid'
+  if (status.kind === 'taken') {
     return (
-      <div style={availabilityBadStyle}>
-        ✗ <strong>{slug}.dialerseat.com</strong> — {msg}
-      </div>
+      <span style={{ color: 'var(--color-error)' }}>
+        ✗ {slug}.dialerseat.com is taken
+      </span>
     )
+  }
+  if (status.kind === 'reserved') {
+    return (
+      <span style={{ color: 'var(--color-error)' }}>
+        ✗ {slug} is reserved by DialerSeat
+      </span>
+    )
+  }
+  if (status.kind === 'invalid') {
+    return <span style={{ color: 'var(--color-warning)' }}>{status.reason}</span>
   }
   return null
 }
 
-// ─── FIELD WRAPPER ───────────────────────────────────────────────
-function Field({
-  label,
-  hint,
-  children,
-}: {
-  label: string
-  hint?: string
-  children: React.ReactNode
-}) {
-  return (
-    <div style={fieldStyle}>
-      <div style={fieldLabelStyle}>{label}</div>
-      {hint && <div style={fieldHintStyle}>{hint}</div>}
-      {children}
-    </div>
-  )
-}
+// =============================================================================
+// STYLES — all use CSS variables so the page re-themes live
+// =============================================================================
 
-// ─── STYLES ───────────────────────────────────────────────────────
 const pageStyle: React.CSSProperties = {
   minHeight: '100vh',
-  background: '#0d0e14',
+  background: 'var(--background)',
   display: 'flex',
-  alignItems: 'center',
+  alignItems: 'flex-start',
   justifyContent: 'center',
-  padding: 20,
-  fontFamily: FUTURA,
+  padding: '40px 20px',
+  fontFamily: 'var(--font-futura)',
 }
 
 const cardStyle: React.CSSProperties = {
   width: '100%',
-  maxWidth: 560,
-  background: '#1a1c24',
-  border: '1px solid #2a2c34',
-  borderTop: '3px solid #4a9eff',
-  borderRadius: 4,
-  padding: 32,
-  color: '#e0e2ea',
-  fontFamily: FUTURA,
-}
-
-const badgeStyle: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 8,
-  background: 'rgba(74,158,255,0.08)',
-  border: '1px solid #2a4a8a',
-  borderLeft: '3px solid #4a9eff',
-  padding: '4px 10px',
-  borderRadius: 3,
-  marginBottom: 14,
-}
-const badgeLabelStyle: React.CSSProperties = {
-  fontSize: 9, letterSpacing: 3, color: '#888a92', fontWeight: 700,
-}
-const badgeNameStyle: React.CSSProperties = {
-  fontSize: 11, letterSpacing: 2, color: '#4a9eff', fontWeight: 700,
+  maxWidth: 640,
+  background: 'var(--surface)',
+  border: '1px solid var(--border)',
+  borderTop: '3px solid var(--brand-primary)',
+  borderRadius: 6,
+  padding: 36,
+  color: 'var(--text-primary)',
 }
 
 const titleStyle: React.CSSProperties = {
-  fontSize: 16, fontWeight: 700, letterSpacing: 4,
-  color: '#4a9eff', marginBottom: 8, fontFamily: FUTURA,
+  fontSize: 20,
+  fontWeight: 700,
+  letterSpacing: 4,
+  color: 'var(--brand-primary)',
+  marginBottom: 8,
 }
 
 const subtitleStyle: React.CSSProperties = {
-  fontSize: 12, letterSpacing: 1, color: '#888a92', marginBottom: 20, fontFamily: FUTURA,
+  fontSize: 13,
+  letterSpacing: 0.5,
+  lineHeight: 1.6,
+  color: 'var(--text-secondary)',
 }
 
-const fieldStyle: React.CSSProperties = {
-  marginBottom: 18,
+const sectionStyle: React.CSSProperties = {
+  marginBottom: 28,
 }
 
-const fieldLabelStyle: React.CSSProperties = {
-  fontSize: 10, letterSpacing: 3, color: '#888a92',
-  fontWeight: 700, marginBottom: 4,
-}
-
-const fieldHintStyle: React.CSSProperties = {
-  fontSize: 10, color: '#666870', marginBottom: 8, lineHeight: 1.5,
-}
-
-const hintStyle: React.CSSProperties = {
-  fontSize: 11, color: '#888a92', marginTop: 6,
-  fontFamily: FUTURA,
+const sectionLabelStyle: React.CSSProperties = {
+  display: 'block',
+  fontSize: 10,
+  letterSpacing: 3,
+  color: 'var(--text-muted)',
+  marginBottom: 10,
+  fontWeight: 700,
 }
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
-  padding: '10px 12px',
-  background: '#0d0e14',
-  border: '1px solid #2a2c34',
-  borderRadius: 3,
-  color: '#e0e2ea',
+  padding: '12px 14px',
+  background: 'var(--background)',
+  border: '1px solid var(--border)',
+  borderRadius: 4,
+  color: 'var(--text-primary)',
   fontSize: 14,
+  letterSpacing: 0.5,
+  fontFamily: 'var(--font-futura)',
   outline: 'none',
-  fontFamily: FUTURA,
+  marginBottom: 8,
   boxSizing: 'border-box',
+}
+
+const hintStyle: React.CSSProperties = {
+  fontSize: 11,
+  letterSpacing: 0.5,
+  color: 'var(--text-muted)',
+  lineHeight: 1.6,
+  marginTop: 4,
 }
 
 const subdomainRowStyle: React.CSSProperties = {
   display: 'flex',
-  alignItems: 'center',
-  gap: 8,
+  alignItems: 'stretch',
+  gap: 0,
 }
 
 const subdomainSuffixStyle: React.CSSProperties = {
-  fontSize: 12, color: '#888a92', fontFamily: 'monospace', whiteSpace: 'nowrap',
+  display: 'flex',
+  alignItems: 'center',
+  padding: '0 14px',
+  background: 'var(--background)',
+  border: '1px solid var(--border)',
+  borderLeft: 'none',
+  borderRadius: '0 4px 4px 0',
+  color: 'var(--text-muted)',
+  fontSize: 13,
+  whiteSpace: 'nowrap',
 }
 
-const availabilityOkStyle: React.CSSProperties = {
-  fontSize: 11, color: '#32ff7e', marginTop: 6, fontFamily: FUTURA,
+const presetGridStyle: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+  gap: 10,
+  marginBottom: 12,
 }
 
-const availabilityBadStyle: React.CSSProperties = {
-  fontSize: 11, color: '#ff6464', marginTop: 6, fontFamily: FUTURA,
+function presetCardStyle(p: Preset | null, selected: boolean): React.CSSProperties {
+  return {
+    background: 'var(--background)',
+    border: selected ? '2px solid var(--brand-primary)' : '1px solid var(--border)',
+    padding: selected ? 11 : 12,
+    borderRadius: 4,
+    cursor: 'pointer',
+    textAlign: 'left',
+    fontFamily: 'var(--font-futura)',
+    transition: 'border-color 0.15s',
+  }
 }
 
-const cooldownNoteStyle: React.CSSProperties = {
-  fontSize: 11,
-  color: '#ffaa3e',
-  marginTop: 6,
-  padding: '8px 10px',
-  background: 'rgba(255,170,62,0.08)',
-  border: '1px solid #8a6a1a',
-  borderLeft: '3px solid #ffaa3e',
+const presetSwatchRowStyle: React.CSSProperties = {
+  display: 'flex',
+  gap: 4,
+  marginBottom: 10,
+}
+
+const presetSwatchStyle: React.CSSProperties = {
+  width: 24,
+  height: 24,
   borderRadius: 3,
-  lineHeight: 1.5,
+  border: '1px solid rgba(255,255,255,0.08)',
+}
+
+function presetNameStyle(selected: boolean): React.CSSProperties {
+  return {
+    fontSize: 11,
+    letterSpacing: 1,
+    fontWeight: 700,
+    color: selected ? 'var(--brand-primary)' : 'var(--text-primary)',
+  }
+}
+
+const presetHintStyle: React.CSSProperties = {
+  fontSize: 11,
+  letterSpacing: 0.5,
+  color: 'var(--text-muted)',
+  lineHeight: 1.6,
+}
+
+const logoPreviewWrapStyle: React.CSSProperties = {
+  marginTop: 12,
+  marginBottom: 8,
+}
+
+const logoPreviewLabelStyle: React.CSSProperties = {
+  fontSize: 10,
+  letterSpacing: 2,
+  color: 'var(--text-muted)',
+  marginBottom: 8,
+  fontWeight: 700,
+}
+
+// Preview box uses the actual sidebar surface color so user sees exactly
+// what their logo will look like in the sidebar. Width matches 256+padding.
+const logoPreviewBoxStyle: React.CSSProperties = {
+  background: 'var(--brand-surface)',
+  border: '1px solid var(--border)',
+  borderRadius: 4,
+  padding: 16,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'flex-start',
+}
+
+const colorPickerGridStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 10,
+  marginTop: 8,
 }
 
 const colorRowStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  gap: 8,
-}
-
-const colorPickerStyle: React.CSSProperties = {
-  width: 40,
-  height: 40,
-  border: '1px solid #2a2c34',
-  borderRadius: 3,
-  background: '#0d0e14',
-  cursor: 'pointer',
-  padding: 2,
-}
-
-const colorSwatch: React.CSSProperties = {
-  width: 40, height: 40, borderRadius: 3, border: '1px solid #2a2c34',
-}
-
-const logoRowStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
   gap: 12,
+  padding: 10,
+  background: 'var(--background)',
+  border: '1px solid var(--border)',
+  borderRadius: 4,
 }
 
-const fileInputStyle: React.CSSProperties = {
-  flex: 1,
+const colorSwatchInputStyle: React.CSSProperties = {
+  width: 44,
+  height: 44,
+  padding: 0,
+  border: '1px solid var(--border)',
+  borderRadius: 4,
+  background: 'transparent',
+  cursor: 'pointer',
+}
+
+const colorRowLabelStyle: React.CSSProperties = {
   fontSize: 12,
-  color: '#c0c2ca',
-  fontFamily: FUTURA,
+  letterSpacing: 1,
+  fontWeight: 700,
+  color: 'var(--text-primary)',
 }
 
-const logoPreviewBoxStyle: React.CSSProperties = {
-  marginTop: 12,
-  padding: '12px 14px',
-  background: '#0d0e14',
-  border: '1px solid #2a2c34',
+const colorRowDescStyle: React.CSSProperties = {
+  fontSize: 10,
+  letterSpacing: 0.5,
+  color: 'var(--text-muted)',
+  marginTop: 2,
+}
+
+const colorHexInputStyle: React.CSSProperties = {
+  width: 90,
+  padding: '8px 10px',
+  background: 'var(--surface)',
+  border: '1px solid var(--border)',
   borderRadius: 3,
-}
-
-const errorTextStyle: React.CSSProperties = {
-  fontSize: 11, color: '#ff6464', marginTop: 6, fontFamily: FUTURA,
+  color: 'var(--text-primary)',
+  fontSize: 12,
+  letterSpacing: 0.5,
+  fontFamily: 'var(--font-mono)',
+  outline: 'none',
+  boxSizing: 'border-box',
 }
 
 const errorBoxStyle: React.CSSProperties = {
-  padding: '10px 12px',
-  background: '#2a1a1a',
-  border: '1px solid #8a1a1a',
-  color: '#ff6464',
-  fontSize: 11,
-  borderRadius: 3,
-  marginBottom: 12,
-  fontFamily: FUTURA,
+  background: 'var(--color-error-bg)',
+  border: '1px solid var(--color-error-border)',
+  borderLeft: '3px solid var(--color-error)',
+  color: 'var(--color-error)',
+  padding: '12px 14px',
+  borderRadius: 4,
+  fontSize: 12,
+  letterSpacing: 0.5,
+  marginBottom: 16,
+  lineHeight: 1.5,
 }
 
-const buttonStyle: React.CSSProperties = {
+const submitButtonStyle: React.CSSProperties = {
   width: '100%',
-  padding: 14,
-  background: '#0d0e14',
+  padding: 16,
+  background: 'linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))',
   border: 'none',
-  borderTop: '3px solid #4a9eff',
   borderRadius: 4,
-  color: '#4a9eff',
-  fontSize: 12,
+  color: 'var(--brand-text)',
+  fontSize: 13,
   fontWeight: 700,
   letterSpacing: 4,
-  fontFamily: FUTURA,
+  fontFamily: 'var(--font-futura)',
+  cursor: 'pointer',
   marginTop: 8,
-}
-
-const footerNoteStyle: React.CSSProperties = {
-  fontSize: 10, letterSpacing: 1, color: '#666870',
-  textAlign: 'center', marginTop: 20,
-  paddingTop: 16, borderTop: '1px solid #2a2c34', fontFamily: FUTURA,
+  boxShadow: '0 0 30px color-mix(in srgb, var(--brand-primary) 25%, transparent)',
 }

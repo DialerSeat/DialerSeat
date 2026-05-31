@@ -41,11 +41,27 @@ const isActiveOnlyRoute = createRouteMatcher([
   '/api/leads/update',
 ])
 
-// Routes that REQUIRE access enforcement. Dashboard, API mutations, etc.
-// Sign-in/up/billing/onboarding etc. are deliberately excluded — those are
-// reachable from any host regardless of tenant membership.
 const isProtectedAppRoute = createRouteMatcher([
   '/dashboard(.*)',
+])
+
+// ── HARD-LOCK ALLOWLIST (Phase D2) ────────────────────────────────────
+// Manager+ users with wl_onboarding_status != 'complete' are locked OUT
+// of every route EXCEPT these. The allowlist covers:
+//   1. The onboarding page itself (so they can complete it)
+//   2. Onboarding APIs (so the page can save)
+//   3. Billing + cancel APIs (so they can get a refund if regret)
+//   4. Sign-out (so they can leave)
+//   5. Stripe webhooks (always allowed, public route)
+//
+// Everything else → 307 redirect to /onboarding/whitelabel.
+const isOnboardingAllowedRoute = createRouteMatcher([
+  '/onboarding/whitelabel(.*)',
+  '/api/whitelabel/onboarding(.*)',
+  '/api/whitelabel/upload-logo(.*)',
+  '/api/whitelabel/check-subdomain(.*)',
+  '/billing(.*)',
+  '/api/stripe/(.*)',
 ])
 
 const ACTIVE_STATUSES = ['trialing', 'active', 'past_due']
@@ -56,40 +72,20 @@ interface AccessState {
   tier: AccessTier
   isAdmin: boolean
   isPreserved: boolean
+  /** True if this user has paid for WL but not completed onboarding. */
+  wlOnboardingPending: boolean
 }
 
 interface UserBrandAccess {
-  /** Tenant slugs the user is allowed to view branded as (own + active teams' tenants). */
   accessibleSlugs: Set<string>
-  /** The slug of the user's active_tenant_id selection (null if standard). */
   selectedSlug: string | null
-  /** True if user has a self-paid sub OR owns a tenant (eligible for standard view). */
   canSeeStandard: boolean
 }
 
 // =============================================================================
 // SUBDOMAIN ROUTING (v23 — Phase C)
-// + ACCESS ENFORCEMENT  (v24 — Phase D)
-// =============================================================================
-// v23 (Phase C) — subdomain extraction, marketing redirect, cancelled
-// tenant redirect, subdomain_history grace-period redirect.
-//
-// v24 (Phase D) — adds enforcement for logged-in users:
-//
-//   1. If user visits acme.dialerseat.com but isn't an active member of
-//      acme's tenant (and doesn't own it) → 307 redirect to their actual
-//      tenant subdomain OR dialerseat.com if they're a standard user.
-//
-//   2. If user is a seat-only agent (no self-sub) visiting
-//      dialerseat.com/dashboard* → 307 redirect to their tenant subdomain.
-//      Seat-only agents are locked to their tenant. They can't see
-//      standard DialerSeat unless they pay for their own subscription.
-//
-// Manual URL entry to a subdomain you DO belong to is always honored —
-// the active_tenant_id selection is a default, not a hard lock. If you're
-// a member of both 3 and 4 and have 4 selected, manually navigating to
-// 3.dialerseat.com works fine; only the default LOGIN destination is
-// driven by the selection.
+// + ACCESS ENFORCEMENT  (v24 — Phase D1)
+// + ONBOARDING HARD-LOCK (v25 — Phase D2)
 // =============================================================================
 
 const RESERVED_SUBDOMAINS = new Set([
@@ -118,17 +114,12 @@ function isMarketingOnlyPath(pathname: string): boolean {
 
 function extractTenantSlug(hostname: string): string | null {
   const host = hostname.split(':')[0].toLowerCase()
-
   let primary: string | null = null
   for (const p of PRIMARY_DOMAINS) {
     if (host === p) return null
-    if (host.endsWith('.' + p)) {
-      primary = p
-      break
-    }
+    if (host.endsWith('.' + p)) { primary = p; break }
   }
   if (!primary) return null
-
   const subdomain = host.slice(0, -1 - primary.length)
   if (subdomain.includes('.')) return null
   if (RESERVED_SUBDOMAINS.has(subdomain)) return null
@@ -136,7 +127,7 @@ function extractTenantSlug(hostname: string): string | null {
   return subdomain
 }
 
-// ─── TENANT ROUTE CACHE (v23) ──────────────────────────────────────────
+// ─── TENANT ROUTE CACHE ─────────────────────────────────────────────────
 type TenantRouteState =
   | { status: 'active' }
   | { status: 'inactive' }
@@ -182,14 +173,14 @@ async function lookupTenantRoute(slug: string): Promise<TenantRouteState> {
     }
   } catch (err) {
     console.error('[proxy] tenant route lookup failed:', err)
-    state = { status: 'active' } // fail-open
+    state = { status: 'active' }
   }
 
   TENANT_ROUTE_CACHE.set(slug, { state, expires: Date.now() + CACHE_TTL_MS })
   return state
 }
 
-// ─── USER BRAND ACCESS CACHE (v24 — Phase D) ───────────────────────────
+// ─── USER BRAND ACCESS CACHE (Phase D1) ─────────────────────────────────
 const USER_BRAND_CACHE = new Map<string, { access: UserBrandAccess; expires: number }>()
 
 async function lookupUserBrandAccess(clerkId: string): Promise<UserBrandAccess> {
@@ -214,27 +205,12 @@ async function lookupUserBrandAccess(clerkId: string): Promise<UserBrandAccess> 
       { data: memberRows },
       { data: selfSubs },
     ] = await Promise.all([
-      supabase
-        .from('users')
-        .select('active_tenant_id')
-        .eq('clerk_id', clerkId)
-        .maybeSingle(),
-      supabase
-        .from('white_label_tenants')
-        .select('id, slug')
-        .eq('owner_clerk_id', clerkId)
-        .eq('status', 'active')
-        .eq('is_active', true)
-        .maybeSingle(),
-      supabase
-        .from('team_members')
-        .select('team_id, teams!inner(owner_id)')
-        .eq('user_id', clerkId)
-        .eq('status', 'active'),
-      supabase
-        .from('subscriptions')
-        .select('status, current_period_end')
-        .eq('user_id', clerkId),
+      supabase.from('users').select('active_tenant_id').eq('clerk_id', clerkId).maybeSingle(),
+      supabase.from('white_label_tenants').select('id, slug')
+        .eq('owner_clerk_id', clerkId).eq('status', 'active').eq('is_active', true).maybeSingle(),
+      supabase.from('team_members').select('team_id, teams!inner(owner_id)')
+        .eq('user_id', clerkId).eq('status', 'active'),
+      supabase.from('subscriptions').select('status, current_period_end').eq('user_id', clerkId),
     ])
 
     const accessibleTenantIds: string[] = []
@@ -256,8 +232,7 @@ async function lookupUserBrandAccess(clerkId: string): Promise<UserBrandAccess> 
         .from('white_label_tenants')
         .select('id, slug, owner_clerk_id')
         .in('owner_clerk_id', ownerClerkIds)
-        .eq('status', 'active')
-        .eq('is_active', true)
+        .eq('status', 'active').eq('is_active', true)
 
       for (const t of teamTenants || []) {
         if (!slugById.has(t.id)) {
@@ -268,7 +243,6 @@ async function lookupUserBrandAccess(clerkId: string): Promise<UserBrandAccess> 
     }
 
     const accessibleSlugs = new Set(Array.from(slugById.values()))
-
     const selectedTenantId = userRow?.active_tenant_id || null
     const selectedSlug = selectedTenantId ? slugById.get(selectedTenantId) || null : null
 
@@ -284,9 +258,6 @@ async function lookupUserBrandAccess(clerkId: string): Promise<UserBrandAccess> 
     access = { accessibleSlugs, selectedSlug, canSeeStandard }
   } catch (err) {
     console.error('[proxy] user brand access lookup failed:', err)
-    // Fail-open: pretend they can see standard and any subdomain. The
-    // page-level branding will fall back to default if its lookup also
-    // fails. Better than blocking access during an outage.
     access = { accessibleSlugs: new Set(), selectedSlug: null, canSeeStandard: true }
   }
 
@@ -327,7 +298,6 @@ export default clerkMiddleware(async (auth, request) => {
       )
       return NextResponse.redirect(newUrl, 308)
     }
-    // route.status === 'active' → fall through
   }
 
   // ── PUBLIC ROUTES ──────────────────────────────────────────────────────
@@ -341,11 +311,25 @@ export default clerkMiddleware(async (auth, request) => {
     return withTenantHeader(NextResponse.next())
   }
 
-  if (isBillingOrOnboardingRoute(request)) {
+  const { tier, isAdmin, isPreserved, wlOnboardingPending } = await getAccessState(userId)
+
+  // ── PHASE D2: ONBOARDING HARD-LOCK ─────────────────────────────────────
+  // Manager+ user paid for WL but hasn't finished onboarding → lock them
+  // to the allowlist. Admins bypass.
+  if (wlOnboardingPending && !isAdmin) {
+    if (!isOnboardingAllowedRoute(request)) {
+      const lockUrl = new URL('/onboarding/whitelabel', request.url)
+      return NextResponse.redirect(lockUrl, 307)
+    }
+    // They're on an allowed route — let it through. We still set the
+    // tenant header if applicable.
     return withTenantHeader(NextResponse.next())
   }
 
-  const { tier, isAdmin, isPreserved } = await getAccessState(userId)
+  // Existing billing/onboarding bypass for non-locked users
+  if (isBillingOrOnboardingRoute(request)) {
+    return withTenantHeader(NextResponse.next())
+  }
 
   if (isAdmin) {
     const res = NextResponse.next()
@@ -354,30 +338,18 @@ export default clerkMiddleware(async (auth, request) => {
     return withTenantHeader(res)
   }
 
-  // ── PHASE D: BRAND ACCESS ENFORCEMENT ──────────────────────────────────
-  // Runs ONLY on protected app routes (/dashboard*). API routes are gated
-  // separately by their own auth + tier checks. Admins already bypassed.
+  // ── PHASE D1: BRAND ACCESS ENFORCEMENT ─────────────────────────────────
   if (isProtectedAppRoute(request)) {
     const brandAccess = await lookupUserBrandAccess(userId)
 
-    // Case A: user is on a tenant subdomain
     if (tenantSlug) {
-      // Block if they don't belong to this tenant's team
       if (!brandAccess.accessibleSlugs.has(tenantSlug)) {
-        // Redirect them to their actual destination
         const dest = pickRedirectDestination(brandAccess, url.pathname + url.search)
         return NextResponse.redirect(dest, 307)
       }
-      // They belong here — proceed
     } else {
-      // Case B: user is on the main domain (no subdomain)
-      // If they CAN'T see standard view, redirect them to their tenant.
-      // This is the "seat-only agent locked to WL" enforcement.
       if (!brandAccess.canSeeStandard) {
         const dest = pickRedirectDestination(brandAccess, url.pathname + url.search)
-        // Don't redirect to dialerseat.com — that's where we are. If we
-        // can't find a tenant subdomain to send them to, fall through
-        // (better to show the dashboard than infinite-loop redirect).
         if (dest.host !== url.host) {
           return NextResponse.redirect(dest, 307)
         }
@@ -385,7 +357,7 @@ export default clerkMiddleware(async (auth, request) => {
     }
   }
 
-  // ── NORMAL TIER GATES (unchanged from v22/v23) ─────────────────────────
+  // ── NORMAL TIER GATES ──────────────────────────────────────────────────
   if (tier === 'active') {
     const res = NextResponse.next()
     res.headers.set('x-access-tier', 'active')
@@ -409,17 +381,6 @@ export default clerkMiddleware(async (auth, request) => {
   return NextResponse.redirect(billingUrl)
 })
 
-/**
- * Where should this user be redirected when they hit a subdomain they
- * don't belong to (or when a seat-only agent hits the main domain)?
- *
- * Order:
- *   1. Their selected tenant (active_tenant_id) — if still in their
- *      accessible set, which is the normal case
- *   2. The first accessible tenant slug — fallback if selection is stale
- *   3. dialerseat.com — last resort (only reached if user has NO
- *      accessible tenants at all, which means lookup didn't find anything)
- */
 function pickRedirectDestination(
   brandAccess: UserBrandAccess,
   pathAndQuery: string
@@ -448,12 +409,12 @@ async function getAccessState(clerkId: string): Promise<AccessState> {
     ] = await Promise.all([
       supabase
         .from('subscriptions')
-        .select('status, current_period_end')
+        .select('status, current_period_end, stripe_subscription_id')
         .eq('user_id', clerkId)
         .order('created_at', { ascending: false }),
       supabase
         .from('users')
-        .select('is_admin')
+        .select('is_admin, wl_onboarding_status, wl_subscription_id')
         .eq('clerk_id', clerkId)
         .maybeSingle(),
       supabase
@@ -466,27 +427,39 @@ async function getAccessState(clerkId: string): Promise<AccessState> {
     const isAdmin = !!userRow?.is_admin
     const isPreserved = !!preservedRow
 
-    if (!subs || subs.length === 0) {
-      return { tier: 'new', isAdmin, isPreserved }
+    // ── WL ONBOARDING PENDING CHECK ──────────────────────────────────────
+    // User has paid for WL (wl_subscription_id set) but hasn't completed
+    // setup yet (wl_onboarding_status != 'complete'). They must finish
+    // the wizard before they can use anything else.
+    const wlOnboardingPending =
+      !!userRow?.wl_subscription_id &&
+      userRow?.wl_onboarding_status !== 'complete'
+
+    // Determine tier from subscriptions
+    let tier: AccessTier = 'new'
+    if (subs && subs.length > 0) {
+      const now = Date.now()
+      tier = 'lapsed'
+      for (const sub of subs) {
+        if (ACTIVE_STATUSES.includes(sub.status)) {
+          tier = 'active'
+          break
+        }
+        if (
+          sub.status === 'canceled' &&
+          sub.current_period_end &&
+          new Date(sub.current_period_end).getTime() > now
+        ) {
+          tier = 'active'
+          break
+        }
+      }
     }
 
-    const now = Date.now()
-    for (const sub of subs) {
-      if (ACTIVE_STATUSES.includes(sub.status)) {
-        return { tier: 'active', isAdmin, isPreserved }
-      }
-      if (
-        sub.status === 'canceled' &&
-        sub.current_period_end &&
-        new Date(sub.current_period_end).getTime() > now
-      ) {
-        return { tier: 'active', isAdmin, isPreserved }
-      }
-    }
-    return { tier: 'lapsed', isAdmin, isPreserved }
+    return { tier, isAdmin, isPreserved, wlOnboardingPending }
   } catch (err) {
     console.error('[proxy] access state lookup failed:', err)
-    return { tier: 'active', isAdmin: false, isPreserved: true }
+    return { tier: 'active', isAdmin: false, isPreserved: true, wlOnboardingPending: false }
   }
 }
 
