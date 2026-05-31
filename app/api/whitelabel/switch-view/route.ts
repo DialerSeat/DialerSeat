@@ -92,7 +92,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'db_error', detail: error.message }, { status: 500 })
     }
 
-    revalidateTag(userCacheTag(userId))
+    // Next.js 16: revalidateTag requires a cacheLife profile (second arg).
+    // We use { expire: 0 } for immediate expiry because the user clicking
+    // "switch view" expects to see the new brand on the NEXT page load,
+    // not after a stale-while-revalidate window.
+    revalidateTag(userCacheTag(userId), { expire: 0 })
     return NextResponse.json({ success: true, tenant_id: null })
   }
 
@@ -146,6 +150,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'db_error', detail: updErr.message }, { status: 500 })
   }
 
-  revalidateTag(userCacheTag(userId))
+  revalidateTag(userCacheTag(userId), { expire: 0 })
   return NextResponse.json({ success: true, tenant_id: targetId })
 }

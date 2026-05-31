@@ -17,15 +17,18 @@ const stripePromise = loadStripe(
 )
 
 // =============================================================================
-// BILLING PAGE — v23 (Phase D1: wording change only)
+// BILLING PAGE — v23b (Phase D1 wording polish)
 // =============================================================================
-// All v22 (Phase A) functionality preserved. ONLY changes:
-//   - PLAN_INFO.wl.label: 'WHITE LABEL' → 'MANAGER+ & WHITELABEL'
-//   - PLAN_INFO.wl.title: 'START YOUR WHITE LABEL TENANT' → 'START YOUR MANAGER+ TENANT'
-//   - PLAN_INFO.wl.description: small reword to mention Manager+ identity
-//   - Switch button text: '↗ SWITCH TO WHITE LABEL ($75/WK)' → '↗ SWITCH TO MANAGER+ & WHITELABEL ($75/WK)'
+// Diff vs v22:
+//   - PLAN_INFO.wl.label: 'WHITE LABEL' → 'MANAGER+'
+//   - PLAN_INFO.wl.title: 'START YOUR WHITE LABEL TENANT' → 'CUSTOMIZE YOUR WHITELABEL DIALER'
+//   - PLAN_INFO.wl.subtitle: tightened to match
+//   - Plan switch button: restyled to be visible — solid blue-tinted
+//     background, accent-blue text, bright border. Was a faint dashed
+//     border on transparent (easy to miss).
+//   - Switch button labels reference 'MANAGER+' not 'WHITE LABEL'
 //
-// No logic changes. Same Stripe Price ID. Same env vars. Same routing.
+// No logic changes. Same Stripe price IDs, same env vars, same flow.
 // =============================================================================
 
 type Plan = 'standard' | 'wl'
@@ -40,9 +43,9 @@ const PLAN_INFO = {
     description: 'Standard DialerSeat — one agent seat, all features, billed weekly.',
   },
   wl: {
-    label: 'MANAGER+ & WHITELABEL',
+    label: 'MANAGER+',
     price: 75,
-    title: 'START YOUR MANAGER+ TENANT',
+    title: 'CUSTOMIZE YOUR WHITELABEL DIALER',
     subtitle: 'Pay $75 today to provision your branded dialer.',
     weeklyBlurb: '$75.00 USD',
     description:
@@ -248,14 +251,24 @@ export default function BillingPage() {
 
         <div style={planDescStyle}>{planInfo.description}</div>
 
+        {/* ── PLAN SWITCH — restyled to be visibly clickable ─────────── */}
         {plan === 'standard' ? (
           <button
             type="button"
             onClick={() => switchTo('wl')}
             disabled={switchingPlan}
             style={planSwitchStyle}
+            onMouseEnter={(e) => {
+              if (switchingPlan) return
+              e.currentTarget.style.background = 'rgba(74,158,255,0.18)'
+              e.currentTarget.style.borderColor = '#4a9eff'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(74,158,255,0.08)'
+              e.currentTarget.style.borderColor = '#2a4a8a'
+            }}
           >
-            {switchingPlan ? 'SWITCHING...' : '↗ SWITCH TO MANAGER+ & WHITELABEL ($75/WK)'}
+            {switchingPlan ? 'SWITCHING...' : '↗ SWITCH TO MANAGER+ ($75/WK)'}
           </button>
         ) : (
           <button
@@ -263,6 +276,15 @@ export default function BillingPage() {
             onClick={() => switchTo('standard')}
             disabled={switchingPlan}
             style={planSwitchStyle}
+            onMouseEnter={(e) => {
+              if (switchingPlan) return
+              e.currentTarget.style.background = 'rgba(74,158,255,0.18)'
+              e.currentTarget.style.borderColor = '#4a9eff'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(74,158,255,0.08)'
+              e.currentTarget.style.borderColor = '#2a4a8a'
+            }}
           >
             {switchingPlan ? 'SWITCHING...' : '↘ SWITCH TO STANDARD ($35/WK)'}
           </button>
@@ -526,19 +548,24 @@ const planBadgePriceStyle: React.CSSProperties = {
   marginLeft: 'auto',
 }
 
+// ── plan switch button — restyled v23b ─────────────────────────────────
+// Was: faint dashed border, transparent bg, gray text — easy to miss.
+// Now: solid tinted background, accent-blue text + border, looks
+// clickable. Hover handlers in JSX brighten it further on hover.
 const planSwitchStyle: React.CSSProperties = {
   width: '100%',
-  padding: '10px 14px',
-  background: 'transparent',
-  border: '1px dashed #4a4a5e',
-  borderRadius: 3,
-  color: '#888a92',
-  fontSize: 11,
+  padding: '12px 14px',
+  background: 'rgba(74,158,255,0.08)',
+  border: '1px solid #2a4a8a',
+  borderRadius: 4,
+  color: '#4a9eff',
+  fontSize: 12,
   letterSpacing: 2,
   fontWeight: 700,
   cursor: 'pointer',
   fontFamily: FUTURA,
   marginBottom: 16,
+  transition: 'background 0.15s, border-color 0.15s',
 }
 
 const planDescStyle: React.CSSProperties = {
