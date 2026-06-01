@@ -2,6 +2,7 @@
 
 import { SignIn } from '@clerk/nextjs'
 import Image from 'next/image'
+import Link from 'next/link'
 import { useBranding } from '@/components/ThemeProvider'
 
 // =============================================================================
@@ -17,11 +18,9 @@ import { useBranding } from '@/components/ThemeProvider'
 //   - The "WELCOME BACK" tagline becomes "WELCOME TO {BRAND_NAME}".
 //   - The hardcoded #4a9eff gradient on the default mark isn't rendered.
 //
-// Clerk's <SignIn /> component itself appears as-is. Tenant-specific
-// theming of the Clerk widget (input borders, button colors) can be a
-// future polish pass via Clerk's `appearance` prop and our brandPrimary
-// value — for v1 we leave Clerk's defaults so it's recognizable and
-// trustworthy regardless of which subdomain a user lands on.
+// v25 polish: the logo is now a Link to `/`. Relative href means tenants
+// land on their own subdomain root; default DialerSeat users land on the
+// marketing site. Hover opacity gives the visual affordance.
 // =============================================================================
 
 export default function SignInPage() {
@@ -39,14 +38,29 @@ export default function SignInPage() {
       justifyContent: 'center',
       padding: '40px 20px',
     }}>
+      <style>{`
+        .auth-logo-link {
+          transition: opacity 0.15s ease;
+        }
+        .auth-logo-link:hover {
+          opacity: 0.75;
+        }
+      `}</style>
       <div style={{ marginBottom: '40px', textAlign: 'center' }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: logoUrl ? 0 : '12px',
-          marginBottom: '12px',
-        }}>
+        <Link
+          href="/"
+          aria-label={`${brandName} — return to home`}
+          className="auth-logo-link"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: logoUrl ? 0 : '12px',
+            marginBottom: '12px',
+            textDecoration: 'none',
+            cursor: 'pointer',
+          }}
+        >
           {logoUrl ? (
             <span style={{
               position: 'relative',
@@ -85,7 +99,7 @@ export default function SignInPage() {
               }}>DIALERSEAT</span>
             </>
           )}
-        </div>
+        </Link>
         <p style={{ fontSize: '12px', letterSpacing: '3px', color: 'var(--text-secondary)' }}>
           {logoUrl ? `WELCOME TO ${brandName}` : 'WELCOME BACK'}
         </p>
