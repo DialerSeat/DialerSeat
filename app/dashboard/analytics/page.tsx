@@ -1,6 +1,12 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useUser } from '@clerk/nextjs'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import {
+  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+} from 'recharts'
 
 const T = {
   bg: '#f0f1f4',
@@ -10,614 +16,647 @@ const T = {
   text: '#1a1c24',
   muted: '#5a5e6a',
   accent: '#2a4a8a',
-  blue: 'var(--brand-primary)',
+  blue: '#4a9eff',
   green: '#1a6a1a',
   red: '#8a1a1a',
   amber: '#8a6a1a',
 }
 
-interface Stats {
-  totalCalls: number
-  totalTalkTime: number
-  totalLeads: number
-  closedLeads: number
-  appointmentLeads: number
-  notInterestedLeads: number
-  dncLeads: number
-  uncalledLeads: number
-  conversionRate: number
-  avgTalkTime: number
-  callsToday: number
-  callsThisWeek: number
-  topCampaign: { name: string; closes: number } | null
-  dailyActivity: { date: string; calls: number; closes: number }[]
+const DISPOSITION_COLORS: Record<string, string> = {
+  'CLOSED': T.green,
+  'APPOINTMENT': T.accent,
+  'NOT INTERESTED': T.amber,
+  'DO NOT CALL': T.red,
+  'SKIPPED': '#888',
+  'NO ANSWER': '#bbb',
+  'NO_ANSWER': '#bbb',
+}
+
+type Range = 'today' | 'week' | 'month' | 'all' | 'custom'
+
+function getRangeBounds(range: Range, customStart?: string, customEnd?: string): { start: string | null; end: string | null } {
+  if (range === 'all') return { start: null, end: null }
+  const now = new Date()
+
+  if (range === 'today') {
+    const start = new Date(now); start.setHours(0, 0, 0, 0)
+    const end = new Date(now); end.setHours(23, 59, 59, 999)
+    return { start: start.toISOString(), end: end.toISOString() }
+  }
+  if (range === 'week') {
+    // Current CALENDAR week — Sunday 00:00 of this week → now.
+    // Resets every Sunday at midnight local time.
+    // getDay(): 0=Sun, 1=Mon, ..., 6=Sat.
+    const start = new Date(now)
+    start.setDate(start.getDate() - start.getDay())
+    start.setHours(0, 0, 0, 0)
+    return { start: start.toISOString(), end: now.toISOString() }
+  }
+  if (range === 'month') {
+    // Current CALENDAR month — 1st 00:00 of this month → now.
+    // Resets on the 1st of every month at midnight local time.
+    const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0)
+    return { start: start.toISOString(), end: now.toISOString() }
+  }
+  if (range === 'custom') {
+    if (!customStart || !customEnd) return { start: null, end: null }
+    const start = new Date(customStart); start.setHours(0, 0, 0, 0)
+    const end = new Date(customEnd); end.setHours(23, 59, 59, 999)
+    return { start: start.toISOString(), end: end.toISOString() }
+  }
+  return { start: null, end: null }
+}
+
+function todayBounds() {
+  const now = new Date()
+  const start = new Date(now); start.setHours(0, 0, 0, 0)
+  const end = new Date(now); end.setHours(23, 59, 59, 999)
+  return { start: start.toISOString(), end: end.toISOString() }
+}
+
+// Used as the secondary fetch when range='today'. Returns the same calendar
+// week as getRangeBounds('week') so the "This week" sub-stats stay aligned
+// with whatever the WEEK tab would show.
+function weekBounds() {
+  const now = new Date()
+  const start = new Date(now)
+  start.setDate(start.getDate() - start.getDay())
+  start.setHours(0, 0, 0, 0)
+  return { start: start.toISOString(), end: now.toISOString() }
 }
 
 function formatDuration(seconds: number) {
-  if (!seconds) return '0m'
+  if (!seconds) return '0s'
   const h = Math.floor(seconds / 3600)
   const m = Math.floor((seconds % 3600) / 60)
+  const s = seconds % 60
   if (h > 0) return `${h}h ${m}m`
-  return `${m}m`
+  if (m > 0) return `${m}m ${s}s`
+  return `${s}s`
 }
 
-function formatNumber(n: number) {
-  return n.toLocaleString()
-}
-
-// ──────────────────────────────────────────────────────────────────────────
-// DEMO / PREVIEW DATA
-// Shown when the user has no real stats yet. Scaled per date range so the
-// preview feels appropriately sized. Numbers are arbitrary-but-plausible
-// for a single agent putting in real hours — chosen to make the bars and
-// percentages look healthy without screaming "fake data."
-// ──────────────────────────────────────────────────────────────────────────
-function buildDemoStats(range: '7d' | '30d' | '90d' | 'all'): Stats {
-  const days =
-    range === '7d' ? 7
-    : range === '30d' ? 30
-    : range === '90d' ? 90
-    : 180
-
-  // Average ~85 calls/day with weekend dips, a steady ~6% close rate, and
-  // some appointment activity. Deterministic-ish via a seeded sin curve so
-  // each render is stable (no flicker between hot reloads).
-  const dailyActivity = Array.from({ length: days }, (_, i) => {
-    const dayOfWeek = i % 7
-    const isWeekend = dayOfWeek >= 5
-    const wave = Math.sin(i * 0.6) * 12
-    const baseCalls = isWeekend ? 22 : 88
-    const calls = Math.max(0, Math.round(baseCalls + wave))
-    const closes = Math.max(0, Math.round(calls * 0.06 + (i % 4 === 0 ? 1 : 0)))
-    const date = new Date()
-    date.setDate(date.getDate() - (days - 1 - i))
-    return {
-      date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      calls,
-      closes,
-    }
-  })
-
-  const totalCalls = dailyActivity.reduce((s, d) => s + d.calls, 0)
-  const closedLeads = dailyActivity.reduce((s, d) => s + d.closes, 0)
-  const appointmentLeads = Math.round(closedLeads * 1.8)
-  const notInterestedLeads = Math.round(totalCalls * 0.22)
-  const dncLeads = Math.round(totalCalls * 0.04)
-  const totalLeads = Math.round(totalCalls * 1.6)
-  const uncalledLeads = Math.max(0, totalLeads - totalCalls)
-
-  return {
-    totalCalls,
-    totalTalkTime: totalCalls * 95, // avg ~1m35s per call
-    totalLeads,
-    closedLeads,
-    appointmentLeads,
-    notInterestedLeads,
-    dncLeads,
-    uncalledLeads,
-    conversionRate: totalCalls > 0 ? closedLeads / totalCalls : 0,
-    avgTalkTime: 95,
-    callsToday: dailyActivity[dailyActivity.length - 1]?.calls || 0,
-    callsThisWeek: dailyActivity.slice(-7).reduce((s, d) => s + d.calls, 0),
-    topCampaign: { name: 'EXAMPLE CAMPAIGN', closes: Math.round(closedLeads * 0.6) },
-    dailyActivity,
+function formatHours(seconds: number) {
+  const hours = seconds / 3600
+  if (hours >= 10) return `${Math.round(hours)}h`
+  if (hours >= 1) return `${hours.toFixed(1)}h`
+  if (hours > 0) {
+    const m = Math.round(seconds / 60)
+    return `${m}m`
   }
+  return '0h'
 }
+
+function buildEmptySeries(range: Range): any[] {
+  const points = range === 'today' ? 12 : 14
+  const out: any[] = []
+  for (let i = 0; i < points; i++) {
+    out.push({
+      label: range === 'today' ? `${i * 2}:00` : `D${i + 1}`,
+      calls: 0,
+      conversionRate: 0,
+    })
+  }
+  return out
+}
+
+const EMPTY_DISPOSITIONS = [
+  { disposition: 'NO DATA', count: 1 },
+]
+
+const EMPTY_CAMPAIGNS = [
+  { name: '—', total: 0, contacted: 0, converted: 0 },
+]
 
 export default function AnalyticsPage() {
   const { user } = useUser()
-  const [stats, setStats] = useState<Stats | null>(null)
+  const router = useRouter()
+  const [adminChecked, setAdminChecked] = useState(false)
+  const [range, setRange] = useState<Range>('week')
+  const [customStart, setCustomStart] = useState('')
+  const [customEnd, setCustomEnd] = useState('')
+  const [summary, setSummary] = useState<any>(null)
+  const [secondarySummary, setSecondarySummary] = useState<any>(null)
+  const [series, setSeries] = useState<any[]>([])
+  const [dispositions, setDispositions] = useState<any[]>([])
+  const [campaigns, setCampaigns] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d' | 'all'>('30d')
-  const [isPreview, setIsPreview] = useState(false)
 
+  // Admin redirect
   useEffect(() => {
     if (!user) return
-    const params = new URLSearchParams({
-      user_id: user.id,
-      range: dateRange,
-    })
-    setLoading(true)
-    fetch(`/api/analytics/stats?${params}`)
+    fetch('/api/admin/check')
       .then(r => r.json())
       .then(d => {
-        if (d.success && d.stats && d.stats.totalCalls > 0) {
-          setStats(d.stats)
-          setIsPreview(false)
+        if (d.isAdmin) {
+          router.replace('/dashboard/admin/analytics')
         } else {
-          // No real data → show preview/demo stats so users can SEE the layout
-          setStats(buildDemoStats(dateRange))
-          setIsPreview(true)
+          setAdminChecked(true)
         }
       })
-      .catch(() => {
-        setStats(buildDemoStats(dateRange))
-        setIsPreview(true)
-      })
-      .finally(() => setLoading(false))
-  }, [user, dateRange])
+      .catch(() => setAdminChecked(true))
+  }, [user, router])
 
-  if (loading && !stats) {
-    return (
-      <div style={{
-        flex: 1,
-        background: T.bg,
-        minHeight: 'calc(100vh - 64px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontFamily: 'Futura PT, Futura, sans-serif',
-        fontSize: 11,
-        letterSpacing: 2,
-        color: T.muted,
-      }}>
-        LOADING ANALYTICS...
-      </div>
-    )
+  const bounds = useMemo(() => getRangeBounds(range, customStart, customEnd), [range, customStart, customEnd])
+
+  // Secondary fetch: when range is 'today', secondary = current calendar WEEK;
+  // otherwise, secondary = TODAY.
+  const secondaryBounds = useMemo(() => {
+    return range === 'today' ? weekBounds() : todayBounds()
+  }, [range])
+
+  const secondaryLabel = range === 'today' ? 'This week' : 'Today'
+
+  useEffect(() => {
+    if (!user || !adminChecked) return
+    if (range === 'custom' && (!customStart || !customEnd)) return
+
+    const params = new URLSearchParams({ user_id: user.id })
+    if (bounds.start) params.append('start', bounds.start)
+    if (bounds.end) params.append('end', bounds.end)
+
+    const tsParams = new URLSearchParams(params)
+    tsParams.append('bucket', range === 'today' ? 'hour' : 'day')
+
+    const secondaryParams = new URLSearchParams({
+      user_id: user.id,
+      start: secondaryBounds.start,
+      end: secondaryBounds.end,
+    })
+
+    setLoading(true)
+    Promise.all([
+      fetch(`/api/analytics/summary?${params}`).then(r => r.json()),
+      fetch(`/api/analytics/timeseries?${tsParams}`).then(r => r.json()),
+      fetch(`/api/analytics/dispositions?${params}`).then(r => r.json()),
+      fetch(`/api/analytics/campaigns?${params}`).then(r => r.json()),
+      fetch(`/api/analytics/summary?${secondaryParams}`).then(r => r.json()),
+    ]).then(([s, ts, d, c, sec]) => {
+      if (s.success) setSummary(s.summary)
+      if (ts.success) setSeries(ts.series)
+      if (d.success) setDispositions(d.breakdown)
+      if (c.success) setCampaigns(c.breakdown)
+      if (sec.success) setSecondarySummary(sec.summary)
+      setLoading(false)
+    }).catch(() => setLoading(false))
+  }, [user, adminChecked, range, customStart, customEnd, bounds.start, bounds.end, secondaryBounds.start, secondaryBounds.end])
+
+  const ranges: { key: Range; label: string }[] = [
+    { key: 'today', label: 'TODAY' },
+    { key: 'week', label: 'WEEK' },
+    { key: 'month', label: 'MONTH' },
+    { key: 'all', label: 'ALL TIME' },
+    { key: 'custom', label: 'CUSTOM' },
+  ]
+
+  const s = summary || {
+    totalCalls: 0,
+    contactsReached: 0,
+    contactRate: 0,
+    conversions: 0,
+    conversionRate: 0,
+    closed: 0,
+    appointments: 0,
+    totalDuration: 0,
+    avgCallLength: 0,
+    bestCampaign: null,
+    bestCampaignRate: 0,
   }
 
-  if (!stats) {
-    // Shouldn't happen now — buildDemoStats always returns something —
-    // but kept as a final safety net.
+  const sec = secondarySummary || {
+    totalCalls: 0,
+    totalDuration: 0,
+    conversions: 0,
+    closed: 0,
+  }
+
+  const hasData = !!summary && summary.totalCalls > 0
+  const seriesToRender = series.length > 0 ? series : buildEmptySeries(range)
+  const dispositionsToRender = dispositions.length > 0 ? dispositions : EMPTY_DISPOSITIONS
+  const campaignsToRender = campaigns.length > 0 ? campaigns : EMPTY_CAMPAIGNS
+
+  const fullName = user
+    ? [user.firstName, user.lastName].filter(Boolean).join(' ').toUpperCase()
+    : ''
+
+  if (!adminChecked) {
     return (
       <div style={{
-        flex: 1,
-        background: T.bg,
+        flex: 1, background: T.bg,
         minHeight: 'calc(100vh - 64px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontFamily: 'Futura PT, Futura, sans-serif',
-        fontSize: 12,
-        color: T.muted,
-      }}>UNABLE TO LOAD ANALYTICS</div>
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 11, letterSpacing: 3, color: T.muted,
+      }}>LOADING...</div>
     )
   }
 
   return (
-    <div style={{
+    <div className="analytics-root" style={{
       flex: 1,
       background: T.bg,
       minHeight: 'calc(100vh - 64px)',
       display: 'flex',
       flexDirection: 'column',
-      fontFamily: 'Futura PT, Futura, sans-serif',
-      color: T.text,
+      overflow: 'auto',
     }}>
-      {/* HEADER */}
-      <div style={{
-        background: T.dark,
-        padding: '12px 20px',
-        borderBottom: `2px solid ${T.accent}`,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 12,
-        flexWrap: 'wrap',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <span style={{
-            fontSize: 11,
-            fontWeight: 'bold',
-            letterSpacing: 4,
-            color: T.blue,
-          }}>ANALYTICS</span>
-          <span style={{
-            fontSize: 10,
-            fontFamily: 'monospace',
-            color: '#8888aa',
-            letterSpacing: 1,
-          }}>
-            {formatNumber(stats.totalCalls)} TOTAL CALLS · {formatDuration(stats.totalTalkTime)} TALK TIME
-          </span>
-        </div>
+      <style>{`
+        .analytics-root * { box-sizing: border-box; }
 
-        <div style={{ display: 'flex', gap: 6 }}>
-          {(['7d', '30d', '90d', 'all'] as const).map(range => (
+        /* ── DESKTOP HEADER (default) ──────────────────────────────────── */
+        /* Flex row — title, range tabs, spacer pushing the LANDING button  */
+        /* to the far right. Original behavior preserved.                   */
+        .analytics-header {
+          background: ${T.dark};
+          padding: 12px 20px;
+          border-bottom: 2px solid ${T.accent};
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          flex-wrap: wrap;
+        }
+        .analytics-header-title-row { display: contents; }
+        .analytics-header-spacer { flex: 1 1 auto; }
+
+        .landing-page-btn {
+          padding: 6px 14px;
+          background: rgba(74,158,255,0.08);
+          border: 1px solid ${T.blue};
+          border-radius: 4px;
+          font-size: 10px;
+          letter-spacing: 2px;
+          color: ${T.blue};
+          cursor: pointer;
+          font-family: 'Futura PT', Futura, sans-serif;
+          font-weight: bold;
+          text-decoration: none;
+          transition: background 0.15s;
+          white-space: nowrap;
+        }
+        .landing-page-btn:hover {
+          background: rgba(74,158,255,0.18);
+        }
+
+        .welcome-row {
+          background: ${T.bg};
+          padding: 18px 20px 4px;
+        }
+        .welcome-line {
+          font-size: 18px;
+          font-weight: bold;
+          color: ${T.text};
+          letter-spacing: 2px;
+          font-family: 'Futura PT', Futura, sans-serif;
+        }
+        .range-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+        .range-tab {
+          padding: 6px 14px;
+          background: transparent;
+          border: 1px solid #4a4a5e;
+          border-radius: 3px;
+          font-size: 10px;
+          letter-spacing: 2px;
+          color: #8888aa;
+          cursor: pointer;
+          font-family: 'Futura PT', Futura, sans-serif;
+          font-weight: bold;
+        }
+        .range-tab.active {
+          background: ${T.blue};
+          border-color: ${T.blue};
+          color: white;
+        }
+        .custom-range { display: flex; gap: 6px; align-items: center; }
+        .custom-range input {
+          padding: 4px 8px;
+          background: #2a2a3e;
+          border: 1px solid #4a4a5e;
+          border-radius: 3px;
+          color: white;
+          font-size: 11px;
+          font-family: monospace;
+        }
+        .stat-grid {
+          display: grid;
+          grid-template-columns: repeat(6, 1fr);
+          gap: 8px;
+          padding: 16px;
+        }
+        .stat-card {
+          padding: 12px 14px;
+          background: ${T.surface};
+          border: 1px solid ${T.border};
+          border-radius: 4px;
+          border-top: 3px solid ${T.blue};
+          position: relative;
+        }
+        .stat-card.empty { opacity: 0.55; }
+        .stat-label {
+          font-size: 9px;
+          letter-spacing: 2px;
+          color: ${T.muted};
+          margin-bottom: 6px;
+          font-weight: bold;
+        }
+        .stat-value {
+          font-size: 22px;
+          font-weight: bold;
+          font-family: monospace;
+          color: ${T.text};
+          letter-spacing: -0.5px;
+        }
+        .stat-sub {
+          font-size: 10px;
+          color: ${T.muted};
+          margin-top: 4px;
+          font-family: monospace;
+        }
+        .charts-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+          padding: 0 16px 16px;
+        }
+        .chart-card {
+          background: ${T.surface};
+          border: 1px solid ${T.border};
+          border-radius: 4px;
+          padding: 14px;
+          position: relative;
+        }
+        .chart-title {
+          font-size: 10px;
+          letter-spacing: 3px;
+          color: ${T.muted};
+          margin-bottom: 12px;
+          font-weight: bold;
+        }
+        .chart-empty-overlay {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          pointer-events: none;
+          z-index: 2;
+        }
+        .chart-empty-pill {
+          background: rgba(26, 26, 46, 0.85);
+          color: white;
+          font-size: 10px;
+          letter-spacing: 3px;
+          font-weight: bold;
+          padding: 8px 18px;
+          border-radius: 4px;
+          font-family: 'Futura PT', Futura, sans-serif;
+        }
+        .chart-faded { opacity: 0.35; }
+        .empty-state {
+          padding: 60px 20px;
+          text-align: center;
+          font-size: 11px;
+          letter-spacing: 3px;
+          color: ${T.muted};
+        }
+
+        /* ── MOBILE HEADER (≤ 768px) ───────────────────────────────────── */
+        /* Two-row layout:                                                  */
+        /*   Row 1: ANALYTICS OVERVIEW [left] · LANDING PAGE → [right]      */
+        /*   Row 2: range tabs spanning full width                          */
+        /* This puts the LANDING button at the same vertical level as the   */
+        /* page title, which is what you asked for.                         */
+        @media (max-width: 768px) {
+          .analytics-header {
+            padding: 10px 12px;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            grid-template-areas:
+              "title  landing"
+              "tabs   tabs";
+            gap: 10px 12px;
+            align-items: center;
+          }
+          .analytics-header-title { grid-area: title; }
+          .landing-page-btn {
+            grid-area: landing;
+            padding: 5px 10px;
+            font-size: 9px;
+            letter-spacing: 1.5px;
+          }
+          .range-tabs {
+            grid-area: tabs;
+            width: 100%;
+            justify-content: flex-start;
+          }
+          .analytics-header-spacer { display: none; }
+
+          .welcome-row { padding: 14px 12px 4px; }
+          .welcome-line { font-size: 15px; letter-spacing: 1px; }
+          .range-tab { padding: 6px 10px; font-size: 9px; letter-spacing: 1px; }
+          .stat-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+            padding: 12px;
+            gap: 8px;
+          }
+          .stat-card { padding: 10px; }
+          .stat-value { font-size: 18px; }
+          .charts-grid {
+            grid-template-columns: 1fr !important;
+            padding: 0 12px 12px;
+          }
+          .custom-range { flex-wrap: wrap; grid-column: 1 / -1; }
+        }
+      `}</style>
+
+      <div className="analytics-header">
+        <span className="analytics-header-title" style={{ fontSize: 11, fontWeight: 'bold', letterSpacing: 4, color: T.blue }}>
+          ANALYTICS OVERVIEW
+        </span>
+        <div className="range-tabs">
+          {ranges.map(r => (
             <button
-              key={range}
-              onClick={() => setDateRange(range)}
-              style={{
-                padding: '5px 10px',
-                background: dateRange === range ? T.blue : 'transparent',
-                border: `1px solid ${T.blue}`,
-                borderRadius: 3,
-                color: dateRange === range ? '#fff' : T.blue,
-                fontSize: 9,
-                letterSpacing: 2,
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                fontFamily: 'Futura PT, Futura, sans-serif',
-              }}
-            >
-              {range === '7d' ? '7 DAYS' :
-               range === '30d' ? '30 DAYS' :
-               range === '90d' ? '90 DAYS' : 'ALL TIME'}
-            </button>
+              key={r.key}
+              className={`range-tab ${range === r.key ? 'active' : ''}`}
+              onClick={() => setRange(r.key)}
+            >{r.label}</button>
           ))}
         </div>
-      </div>
-
-      {/* PREVIEW BANNER */}
-      {isPreview && (
-        <div style={{
-          padding: '10px 20px',
-          background: '#fdf4e8',
-          borderBottom: `1px solid ${T.amber}`,
-          color: T.amber,
-          fontSize: 11,
-          letterSpacing: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: 10,
-        }}>
-          <span>
-            ▸ <strong>PREVIEW MODE</strong> — example numbers shown so you can see the layout. Make calls and your real analytics will replace this view.
-          </span>
-        </div>
-      )}
-
-      <div style={{
-        flex: 1,
-        padding: 20,
-        overflow: 'auto',
-        // Visual cue that this is a preview without making it unreadable
-        opacity: isPreview ? 0.85 : 1,
-      }}>
-        {/* KPI GRID */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-          gap: 10,
-          marginBottom: 16,
-        }}>
-          <KPICard label="TOTAL LEADS" value={formatNumber(stats.totalLeads)} accent={T.blue} />
-          <KPICard label="CALLS MADE" value={formatNumber(stats.totalCalls)} accent={T.accent} />
-          <KPICard label="CLOSES" value={formatNumber(stats.closedLeads)} accent={T.green} />
-          <KPICard label="APPOINTMENTS" value={formatNumber(stats.appointmentLeads)} accent={T.blue} />
-          <KPICard
-            label="CONVERSION"
-            value={`${(stats.conversionRate * 100).toFixed(1)}%`}
-            accent={stats.conversionRate >= 0.05 ? T.green : T.amber}
-          />
-          <KPICard label="AVG TALK TIME" value={formatDuration(stats.avgTalkTime)} accent={T.muted} />
-        </div>
-
-        {/* DISPOSITION BREAKDOWN */}
-        <div style={{
-          background: T.surface,
-          border: `1px solid ${T.border}`,
-          borderLeft: `3px solid ${T.blue}`,
-          borderRadius: 3,
-          padding: 16,
-          marginBottom: 16,
-        }}>
-          <div style={{
-            fontSize: 10,
-            letterSpacing: 3,
-            color: T.muted,
-            fontWeight: 'bold',
-            marginBottom: 14,
-          }}>▸ DISPOSITION BREAKDOWN</div>
-
-          <DispBar
-            label="CLOSED"
-            count={stats.closedLeads}
-            total={stats.totalLeads}
-            color={T.green}
-          />
-          <DispBar
-            label="APPOINTMENT"
-            count={stats.appointmentLeads}
-            total={stats.totalLeads}
-            color="#1a4a8a"
-          />
-          <DispBar
-            label="NOT INTERESTED"
-            count={stats.notInterestedLeads}
-            total={stats.totalLeads}
-            color={T.amber}
-          />
-          <DispBar
-            label="DO NOT CALL"
-            count={stats.dncLeads}
-            total={stats.totalLeads}
-            color={T.red}
-          />
-          <DispBar
-            label="UNCALLED"
-            count={stats.uncalledLeads}
-            total={stats.totalLeads}
-            color={T.muted}
-          />
-        </div>
-
-        {/* ACTIVITY + TOP CAMPAIGN */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-          gap: 12,
-        }}>
-          {/* Daily activity */}
-          <div style={{
-            background: T.surface,
-            border: `1px solid ${T.border}`,
-            borderLeft: `3px solid ${T.accent}`,
-            borderRadius: 3,
-            padding: 16,
-          }}>
-            <div style={{
-              fontSize: 10,
-              letterSpacing: 3,
-              color: T.muted,
-              fontWeight: 'bold',
-              marginBottom: 14,
-            }}>▸ ACTIVITY OVERVIEW</div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <ActivityRow
-                label="TODAY"
-                calls={stats.callsToday}
-                color={T.blue}
-              />
-              <ActivityRow
-                label="THIS WEEK"
-                calls={stats.callsThisWeek}
-                color={T.accent}
-              />
-              <ActivityRow
-                label="DAILY ACTIVITY"
-                calls={
-                  stats.dailyActivity.length > 0
-                    ? Math.round(
-                        stats.dailyActivity.reduce((s, d) => s + d.calls, 0) /
-                        stats.dailyActivity.length
-                      )
-                    : 0
-                }
-                color={T.muted}
-                suffix="AVG/DAY"
-              />
-            </div>
-          </div>
-
-          {/* Top campaign */}
-          <div style={{
-            background: T.surface,
-            border: `1px solid ${T.border}`,
-            borderLeft: `3px solid ${T.green}`,
-            borderRadius: 3,
-            padding: 16,
-          }}>
-            <div style={{
-              fontSize: 10,
-              letterSpacing: 3,
-              color: T.muted,
-              fontWeight: 'bold',
-              marginBottom: 14,
-            }}>▸ TOP CAMPAIGN</div>
-
-            {stats.topCampaign ? (
-              <div>
-                <div style={{
-                  fontSize: 18,
-                  fontWeight: 'bold',
-                  color: T.text,
-                  letterSpacing: 1,
-                  marginBottom: 6,
-                  fontFamily: 'monospace',
-                }}>{stats.topCampaign.name}</div>
-                <div style={{
-                  fontSize: 11,
-                  color: T.muted,
-                  letterSpacing: 1,
-                }}>
-                  <span style={{ color: T.green, fontWeight: 'bold' }}>
-                    {formatNumber(stats.topCampaign.closes)}
-                  </span>{' '}
-                  CLOSES THIS PERIOD
-                </div>
-              </div>
-            ) : (
-              <div style={{
-                fontSize: 11,
-                color: T.muted,
-                letterSpacing: 1,
-                padding: '12px 0',
-              }}>
-                NO CLOSES YET. KEEP DIALING.
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Daily chart */}
-        {stats.dailyActivity.length > 0 && (
-          <div style={{
-            background: T.surface,
-            border: `1px solid ${T.border}`,
-            borderLeft: `3px solid ${T.muted}`,
-            borderRadius: 3,
-            padding: 16,
-            marginTop: 12,
-          }}>
-            <div style={{
-              fontSize: 10,
-              letterSpacing: 3,
-              color: T.muted,
-              fontWeight: 'bold',
-              marginBottom: 14,
-            }}>▸ DAILY CALLS</div>
-
-            <div style={{
-              display: 'flex',
-              alignItems: 'flex-end',
-              gap: 3,
-              height: 100,
-              borderBottom: `1px solid ${T.border}`,
-              paddingBottom: 4,
-            }}>
-              {stats.dailyActivity.map((day, i) => {
-                const max = Math.max(...stats.dailyActivity.map(d => d.calls), 1)
-                const heightPct = (day.calls / max) * 100
-                return (
-                  <div
-                    key={i}
-                    title={`${day.date}: ${day.calls} calls, ${day.closes} closes`}
-                    style={{
-                      flex: 1,
-                      minWidth: 4,
-                      height: `${heightPct}%`,
-                      background: day.closes > 0 ? T.green : T.blue,
-                      opacity: 0.7,
-                      borderRadius: '2px 2px 0 0',
-                      cursor: 'help',
-                    }}
-                  />
-                )
-              })}
-            </div>
-            <div style={{
-              fontSize: 9,
-              letterSpacing: 1,
-              color: T.muted,
-              marginTop: 6,
-              fontFamily: 'monospace',
-              display: 'flex',
-              justifyContent: 'space-between',
-            }}>
-              <span>{stats.dailyActivity[0]?.date}</span>
-              <span>{stats.dailyActivity[stats.dailyActivity.length - 1]?.date}</span>
-            </div>
-            <div style={{
-              fontSize: 9,
-              letterSpacing: 1,
-              color: T.muted,
-              marginTop: 8,
-              display: 'flex',
-              gap: 12,
-              alignItems: 'center',
-            }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <span style={{ width: 8, height: 8, background: T.blue, borderRadius: 1 }}></span>
-                CALLS ONLY
-              </span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <span style={{ width: 8, height: 8, background: T.green, borderRadius: 1 }}></span>
-                CALLS + CLOSES
-              </span>
-            </div>
+        {range === 'custom' && (
+          <div className="custom-range">
+            <input
+              type="date"
+              value={customStart}
+              onChange={e => setCustomStart(e.target.value)}
+            />
+            <span style={{ color: '#8888aa', fontSize: 10 }}>→</span>
+            <input
+              type="date"
+              value={customEnd}
+              onChange={e => setCustomEnd(e.target.value)}
+            />
           </div>
         )}
-      </div>
-    </div>
-  )
-}
 
-// KPI CARD
-function KPICard({ label, value, accent }: { label: string; value: string; accent: string }) {
-  return (
-    <div style={{
-      background: '#e2e4ea',
-      border: `1px solid #c4c8d0`,
-      borderTop: `3px solid ${accent}`,
-      borderRadius: 3,
-      padding: 14,
-    }}>
-      <div style={{
-        fontSize: 9,
-        letterSpacing: 2,
-        color: '#5a5e6a',
-        fontWeight: 'bold',
-        marginBottom: 6,
-      }}>{label}</div>
-      <div style={{
-        fontSize: 22,
-        fontWeight: 'bold',
-        color: accent,
-        fontFamily: 'monospace',
-        letterSpacing: 1,
-      }}>{value}</div>
-    </div>
-  )
-}
+        {/* Spacer — pushes LANDING button right on desktop. Hidden on mobile
+            (replaced by grid placement). */}
+        <div className="analytics-header-spacer" />
 
-// DISPOSITION BAR
-function DispBar({ label, count, total, color }: {
-  label: string; count: number; total: number; color: string
-}) {
-  const pct = total > 0 ? (count / total) * 100 : 0
-  return (
-    <div style={{ marginBottom: 8 }}>
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        fontSize: 10,
-        letterSpacing: 1,
-        marginBottom: 3,
-        color: '#1a1c24',
-      }}>
-        <span style={{ fontWeight: 'bold' }}>{label}</span>
-        <span style={{ color: '#5a5e6a', fontFamily: 'monospace' }}>
-          {count.toLocaleString()} ({pct.toFixed(1)}%)
-        </span>
+        {/*
+          LANDING PAGE button — links to landing with ?view=landing param.
+          Without that param, app/page.tsx would redirect us right back to
+          /dashboard because logged-in users normally get sent there.
+          The param tells page.tsx "render the landing for this visit".
+        */}
+        <Link href="/?view=landing" className="landing-page-btn">
+          LANDING PAGE →
+        </Link>
       </div>
-      <div style={{
-        height: 6,
-        background: '#f0f1f4',
-        border: `1px solid #c4c8d0`,
-        borderRadius: 2,
-        overflow: 'hidden',
-      }}>
-        <div style={{
-          height: '100%',
-          width: `${Math.min(pct, 100)}%`,
-          background: color,
-          borderRadius: 1,
-          transition: 'width 0.3s',
-        }} />
-      </div>
-    </div>
-  )
-}
 
-// ACTIVITY ROW
-function ActivityRow({ label, calls, color, suffix }: {
-  label: string; calls: number; color: string; suffix?: string
-}) {
-  return (
-    <div style={{
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      padding: '8px 10px',
-      background: '#f0f1f4',
-      border: `1px solid #c4c8d0`,
-      borderLeft: `3px solid ${color}`,
-      borderRadius: 2,
-    }}>
-      <span style={{
-        fontSize: 10,
-        letterSpacing: 1,
-        color: '#5a5e6a',
-        fontWeight: 'bold',
-      }}>{label}</span>
-      <span style={{
-        fontSize: 14,
-        fontWeight: 'bold',
-        color,
-        fontFamily: 'monospace',
-        letterSpacing: 1,
-      }}>
-        {calls.toLocaleString()} {suffix && <span style={{
-          fontSize: 9,
-          color: '#5a5e6a',
-          fontWeight: 'normal',
-          letterSpacing: 0.5,
-        }}>{suffix}</span>}
-      </span>
+      <div className="welcome-row">
+        <div className="welcome-line">
+          WELCOME BACK{fullName ? `, ${fullName}` : ''}.
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="empty-state">LOADING ANALYTICS...</div>
+      ) : (
+        <>
+          <div className="stat-grid">
+            <div className={`stat-card ${!hasData ? 'empty' : ''}`}>
+              <div className="stat-label">TOTAL CALLS</div>
+              <div className="stat-value">{(s.totalCalls || 0).toLocaleString()}</div>
+              <div className="stat-sub">{secondaryLabel} {(sec.totalCalls || 0).toLocaleString()}</div>
+            </div>
+            <div className={`stat-card ${!hasData ? 'empty' : ''}`} style={{ borderTopColor: T.accent }}>
+              <div className="stat-label">HOURS DIALED</div>
+              <div className="stat-value" style={{ color: T.accent }}>{formatHours(s.totalDuration || 0)}</div>
+              <div className="stat-sub">{secondaryLabel} {formatHours(sec.totalDuration || 0)}</div>
+            </div>
+            <div className={`stat-card ${!hasData ? 'empty' : ''}`} style={{ borderTopColor: T.green }}>
+              <div className="stat-label">CONVERSIONS</div>
+              <div className="stat-value" style={{ color: T.green }}>{(s.conversions || 0).toLocaleString()}</div>
+              <div className="stat-sub">{secondaryLabel} {(sec.conversions || 0).toLocaleString()}</div>
+            </div>
+            <div className={`stat-card ${!hasData ? 'empty' : ''}`} style={{ borderTopColor: T.green }}>
+              <div className="stat-label">CLOSED</div>
+              <div className="stat-value" style={{ color: T.green }}>{(s.closed || 0).toLocaleString()}</div>
+              <div className="stat-sub">{secondaryLabel} {(sec.closed || 0).toLocaleString()}</div>
+            </div>
+            <div className={`stat-card ${!hasData ? 'empty' : ''}`}>
+              <div className="stat-label">TALK TIME</div>
+              <div className="stat-value">{formatDuration(s.totalDuration || 0)}</div>
+              <div className="stat-sub">avg {formatDuration(s.avgCallLength || 0)}/call</div>
+            </div>
+            <div className={`stat-card ${!hasData ? 'empty' : ''}`} style={{ borderTopColor: T.amber }}>
+              <div className="stat-label">BEST CAMPAIGN</div>
+              <div className="stat-value" style={{ fontSize: s.bestCampaign ? 13 : 22, color: T.amber }}>
+                {s.bestCampaign || '—'}
+              </div>
+              <div className="stat-sub">{s.bestCampaign ? `${s.bestCampaignRate}% conv` : 'need 5+ calls'}</div>
+            </div>
+          </div>
+
+          <div className="charts-grid">
+
+            <div className="chart-card">
+              <div className="chart-title">▸ CALL VOLUME OVER TIME</div>
+              <div className={series.length === 0 ? 'chart-faded' : ''}>
+                <ResponsiveContainer width="100%" height={240}>
+                  <LineChart data={seriesToRender}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
+                    <XAxis dataKey="label" stroke={T.muted} fontSize={10} />
+                    <YAxis stroke={T.muted} fontSize={10} allowDecimals={false} domain={[0, 'auto']} />
+                    <Tooltip contentStyle={{ background: T.dark, border: `1px solid ${T.border}`, color: 'white', fontSize: 11 }} />
+                    <Line type="monotone" dataKey="calls" stroke={T.blue} strokeWidth={2} dot={{ fill: T.blue, r: 3 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+              {series.length === 0 && (
+                <div className="chart-empty-overlay">
+                  <div className="chart-empty-pill">AWAITING DATA</div>
+                </div>
+              )}
+            </div>
+
+            <div className="chart-card">
+              <div className="chart-title">▸ CONVERSION RATE OVER TIME</div>
+              <div className={series.length === 0 ? 'chart-faded' : ''}>
+                <ResponsiveContainer width="100%" height={240}>
+                  <LineChart data={seriesToRender}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
+                    <XAxis dataKey="label" stroke={T.muted} fontSize={10} />
+                    <YAxis stroke={T.muted} fontSize={10} unit="%" domain={[0, 100]} />
+                    <Tooltip
+                      contentStyle={{ background: T.dark, border: `1px solid ${T.border}`, color: 'white', fontSize: 11 }}
+                      formatter={(v: any) => `${v}%`}
+                    />
+                    <Line type="monotone" dataKey="conversionRate" stroke={T.green} strokeWidth={2} dot={{ fill: T.green, r: 3 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+              {series.length === 0 && (
+                <div className="chart-empty-overlay">
+                  <div className="chart-empty-pill">AWAITING DATA</div>
+                </div>
+              )}
+            </div>
+
+            <div className="chart-card">
+              <div className="chart-title">▸ DISPOSITION BREAKDOWN</div>
+              <div className={dispositions.length === 0 ? 'chart-faded' : ''}>
+                <ResponsiveContainer width="100%" height={240}>
+                  <PieChart>
+                    <Pie
+                      data={dispositionsToRender}
+                      dataKey="count"
+                      nameKey="disposition"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={75}
+                      label={(entry: any) => `${entry.disposition}`}
+                      labelLine={false}
+                    >
+                      {dispositionsToRender.map((d, i) => (
+                        <Cell key={i} fill={DISPOSITION_COLORS[d.disposition] || '#bbb'} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{ background: T.dark, border: `1px solid ${T.border}`, color: 'white', fontSize: 11 }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              {dispositions.length === 0 && (
+                <div className="chart-empty-overlay">
+                  <div className="chart-empty-pill">AWAITING DATA</div>
+                </div>
+              )}
+            </div>
+
+            <div className="chart-card">
+              <div className="chart-title">▸ CAMPAIGN PERFORMANCE</div>
+              <div className={campaigns.length === 0 ? 'chart-faded' : ''}>
+                <ResponsiveContainer width="100%" height={240}>
+                  <BarChart data={campaignsToRender} layout="horizontal">
+                    <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
+                    <XAxis dataKey="name" stroke={T.muted} fontSize={9} />
+                    <YAxis stroke={T.muted} fontSize={10} allowDecimals={false} domain={[0, 'auto']} />
+                    <Tooltip contentStyle={{ background: T.dark, border: `1px solid ${T.border}`, color: 'white', fontSize: 11 }} />
+                    <Legend wrapperStyle={{ fontSize: 10 }} />
+                    <Bar dataKey="total" fill={T.blue} name="Total" />
+                    <Bar dataKey="contacted" fill={T.accent} name="Contacted" />
+                    <Bar dataKey="converted" fill={T.green} name="Converted" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              {campaigns.length === 0 && (
+                <div className="chart-empty-overlay">
+                  <div className="chart-empty-pill">AWAITING DATA</div>
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }
