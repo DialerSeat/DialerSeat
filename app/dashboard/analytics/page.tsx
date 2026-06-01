@@ -45,11 +45,71 @@ function formatNumber(n: number) {
   return n.toLocaleString()
 }
 
+// ──────────────────────────────────────────────────────────────────────────
+// DEMO / PREVIEW DATA
+// Shown when the user has no real stats yet. Scaled per date range so the
+// preview feels appropriately sized. Numbers are arbitrary-but-plausible
+// for a single agent putting in real hours — chosen to make the bars and
+// percentages look healthy without screaming "fake data."
+// ──────────────────────────────────────────────────────────────────────────
+function buildDemoStats(range: '7d' | '30d' | '90d' | 'all'): Stats {
+  const days =
+    range === '7d' ? 7
+    : range === '30d' ? 30
+    : range === '90d' ? 90
+    : 180
+
+  // Average ~85 calls/day with weekend dips, a steady ~6% close rate, and
+  // some appointment activity. Deterministic-ish via a seeded sin curve so
+  // each render is stable (no flicker between hot reloads).
+  const dailyActivity = Array.from({ length: days }, (_, i) => {
+    const dayOfWeek = i % 7
+    const isWeekend = dayOfWeek >= 5
+    const wave = Math.sin(i * 0.6) * 12
+    const baseCalls = isWeekend ? 22 : 88
+    const calls = Math.max(0, Math.round(baseCalls + wave))
+    const closes = Math.max(0, Math.round(calls * 0.06 + (i % 4 === 0 ? 1 : 0)))
+    const date = new Date()
+    date.setDate(date.getDate() - (days - 1 - i))
+    return {
+      date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      calls,
+      closes,
+    }
+  })
+
+  const totalCalls = dailyActivity.reduce((s, d) => s + d.calls, 0)
+  const closedLeads = dailyActivity.reduce((s, d) => s + d.closes, 0)
+  const appointmentLeads = Math.round(closedLeads * 1.8)
+  const notInterestedLeads = Math.round(totalCalls * 0.22)
+  const dncLeads = Math.round(totalCalls * 0.04)
+  const totalLeads = Math.round(totalCalls * 1.6)
+  const uncalledLeads = Math.max(0, totalLeads - totalCalls)
+
+  return {
+    totalCalls,
+    totalTalkTime: totalCalls * 95, // avg ~1m35s per call
+    totalLeads,
+    closedLeads,
+    appointmentLeads,
+    notInterestedLeads,
+    dncLeads,
+    uncalledLeads,
+    conversionRate: totalCalls > 0 ? closedLeads / totalCalls : 0,
+    avgTalkTime: 95,
+    callsToday: dailyActivity[dailyActivity.length - 1]?.calls || 0,
+    callsThisWeek: dailyActivity.slice(-7).reduce((s, d) => s + d.calls, 0),
+    topCampaign: { name: 'EXAMPLE CAMPAIGN', closes: Math.round(closedLeads * 0.6) },
+    dailyActivity,
+  }
+}
+
 export default function AnalyticsPage() {
   const { user } = useUser()
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
   const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d' | 'all'>('30d')
+  const [isPreview, setIsPreview] = useState(false)
 
   useEffect(() => {
     if (!user) return
@@ -61,12 +121,23 @@ export default function AnalyticsPage() {
     fetch(`/api/analytics/stats?${params}`)
       .then(r => r.json())
       .then(d => {
-        if (d.success) setStats(d.stats)
+        if (d.success && d.stats && d.stats.totalCalls > 0) {
+          setStats(d.stats)
+          setIsPreview(false)
+        } else {
+          // No real data → show preview/demo stats so users can SEE the layout
+          setStats(buildDemoStats(dateRange))
+          setIsPreview(true)
+        }
+      })
+      .catch(() => {
+        setStats(buildDemoStats(dateRange))
+        setIsPreview(true)
       })
       .finally(() => setLoading(false))
   }, [user, dateRange])
 
-  if (loading) {
+  if (loading && !stats) {
     return (
       <div style={{
         flex: 1,
@@ -86,6 +157,8 @@ export default function AnalyticsPage() {
   }
 
   if (!stats) {
+    // Shouldn't happen now — buildDemoStats always returns something —
+    // but kept as a final safety net.
     return (
       <div style={{
         flex: 1,
@@ -97,13 +170,7 @@ export default function AnalyticsPage() {
         fontFamily: 'Futura PT, Futura, sans-serif',
         fontSize: 12,
         color: T.muted,
-        flexDirection: 'column',
-        gap: 8,
-      }}>
-        <div style={{ fontSize: 36, opacity: 0.4 }}>📊</div>
-        <div style={{ letterSpacing: 2 }}>NO DATA YET</div>
-        <div style={{ fontSize: 11 }}>Make some calls to see analytics here.</div>
-      </div>
+      }}>UNABLE TO LOAD ANALYTICS</div>
     )
   }
 
@@ -171,10 +238,33 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
+      {/* PREVIEW BANNER */}
+      {isPreview && (
+        <div style={{
+          padding: '10px 20px',
+          background: '#fdf4e8',
+          borderBottom: `1px solid ${T.amber}`,
+          color: T.amber,
+          fontSize: 11,
+          letterSpacing: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 10,
+        }}>
+          <span>
+            ▸ <strong>PREVIEW MODE</strong> — example numbers shown so you can see the layout. Make calls and your real analytics will replace this view.
+          </span>
+        </div>
+      )}
+
       <div style={{
         flex: 1,
         padding: 20,
         overflow: 'auto',
+        // Visual cue that this is a preview without making it unreadable
+        opacity: isPreview ? 0.85 : 1,
       }}>
         {/* KPI GRID */}
         <div style={{
