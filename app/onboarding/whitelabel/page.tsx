@@ -35,6 +35,30 @@ interface Preset {
   text: string
 }
 
+// ──────────────────────────────────────────────────────────────────────────
+// Pick a contrast-safe text color (black or white) for any background hex.
+// Used for buttons that fill with --brand-primary as their background — the
+// "PROVISION TENANT" submit button being the main one. Without this, a
+// light primary like Slate's #f0f2f5 paired with the brand's near-white
+// text color renders an invisible button label.
+//
+// Uses the standard sRGB relative luminance formula: anything above ~0.55
+// is light enough that black text reads better; below uses white. The
+// threshold is biased slightly toward picking black to be safe (white on
+// medium-saturation primaries can still be hard to read).
+// ──────────────────────────────────────────────────────────────────────────
+function pickContrastText(hex: string): string {
+  const h = hex.replace('#', '')
+  if (h.length !== 6) return '#ffffff'
+  const r = parseInt(h.slice(0, 2), 16) / 255
+  const g = parseInt(h.slice(2, 4), 16) / 255
+  const b = parseInt(h.slice(4, 6), 16) / 255
+  // Linearize
+  const lin = (c: number) => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
+  const luminance = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
+  return luminance > 0.55 ? '#1a1c24' : '#ffffff'
+}
+
 const PRESETS: Preset[] = [
   {
     key: 'default',
@@ -304,7 +328,7 @@ export default function WhitelabelOnboardingPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           brand_name: brandName.trim(),
-          slug: slug.trim(),
+          subdomain: slug.trim(),
           logo_url: logoUrl,
           primary_color: colors.primary,
           secondary_color: colors.secondary,
@@ -561,6 +585,7 @@ export default function WhitelabelOnboardingPage() {
               disabled={submitting}
               style={{
                 ...submitButtonStyle,
+                color: pickContrastText(colors.primary),
                 opacity: submitting ? 0.6 : 1,
                 cursor: submitting ? 'wait' : 'pointer',
               }}
