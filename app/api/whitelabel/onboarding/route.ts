@@ -50,7 +50,7 @@ const supabase = createClient(
 const RESERVED = new Set([
   'www', 'api', 'app', 'admin', 'mail', 'email', 'support',
   'dashboard', 'billing', 'auth', 'docs', 'help', 'status',
-  'staging', 'dev', 'test', 'demo', 'preview', 'sandbox',
+  'staging', 'dev', 'test', 'preview', 'sandbox',
   'cdn', 'assets', 'static', 'media', 'images', 'files',
   'sip', 'voice', 'webhook', 'webhooks', 'signalwire',
   'stripe', 'clerk', 'supabase', 'vercel', 'sentry',

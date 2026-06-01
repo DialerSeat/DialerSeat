@@ -94,7 +94,6 @@ const RESERVED_SUBDOMAINS = new Set([
   'www', 'app', 'api', 'admin', 'dashboard', 'static', 'cdn', 'assets',
   'mail', 'email', 'smtp', 'imap', 'pop',
   'docs', 'blog', 'help', 'support', 'status',
-  'demo',
 ])
 
 const PRIMARY_DOMAINS = ['dialerseat.com', 'localhost']
