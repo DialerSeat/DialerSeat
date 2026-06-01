@@ -39,7 +39,7 @@ const T = {
   text: '#1a1c24',
   muted: '#5a5e6a',
   accent: '#2a4a8a',
-  blue: '#4a9eff',
+  blue: 'var(--brand-primary)',
   green: '#1a6a1a',
   red: '#8a1a1a',
   amber: '#8a6a1a',

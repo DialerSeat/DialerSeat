@@ -1,886 +1,2787 @@
 'use client'
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
 import { useUser } from '@clerk/nextjs'
+import { useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 
-const T = {
-  bg: '#f0f1f4',
-  surface: '#e2e4ea',
-  border: '#c4c8d0',
-  dark: '#1a1a2e',
-  text: '#1a1c24',
-  muted: '#5a5e6a',
-  accent: '#2a4a8a',
-  blue: '#4a9eff',
-  green: '#1a6a1a',
-  red: '#8a1a1a',
-  amber: '#8a6a1a',
-}
+type CallStatus = 'idle' | 'calling' | 'connected' | 'ended' | 'preview_ready'
+type AccessTier = 'active' | 'lapsed' | 'new' | null
+type DialerMode = 'preview' | 'power' | 'progressive' | 'predictive'
+type AgentState = 'ready' | 'dialing' | 'on_call' | 'wrapping' | 'paused'
 
-const DISPOSITIONS = [
-  'CLOSED', 'APPOINTMENT', 'NOT INTERESTED', 'DO NOT CALL', 'SKIPPED', 'NO_ANSWER',
-]
-
-const dispColor = (disp: string | null): string => {
-  switch (disp) {
-    case 'CLOSED': return T.green
-    case 'APPOINTMENT': return '#1a4a8a'
-    case 'NOT INTERESTED': return T.amber
-    case 'DO NOT CALL': return T.red
-    case 'SKIPPED':
-    case 'NO_ANSWER':
-    default: return T.muted
-  }
-}
-
-const dispBg = (disp: string | null): string => {
-  switch (disp) {
-    case 'CLOSED': return '#e8f5e8'
-    case 'APPOINTMENT': return '#e8eef8'
-    case 'NOT INTERESTED': return '#f8f4e8'
-    case 'DO NOT CALL': return '#f8e8e8'
-    case 'SKIPPED':
-    case 'NO_ANSWER':
-    default: return '#f0f0f4'
-  }
-}
-
-const dispositionTint = (disp: string | null): string => {
-  switch (disp) {
-    case 'CLOSED': return 'rgba(26, 106, 26, 0.10)'
-    case 'APPOINTMENT': return 'rgba(26, 74, 138, 0.10)'
-    case 'NOT INTERESTED': return 'rgba(138, 106, 26, 0.10)'
-    case 'DO NOT CALL': return 'rgba(138, 26, 26, 0.10)'
-    case 'NO_ANSWER': return 'rgba(90, 94, 106, 0.06)'
-    case 'SKIPPED': return 'rgba(90, 94, 106, 0.04)'
-    default: return T.surface
-  }
-}
-
-interface Recording {
+interface Lead {
   id: string
+  first_name: string
+  last_name: string
+  phone: string
+  city: string
+  state: string
   campaign_id: string
-  lead_id: string
-  phone_number: string | null
-  disposition: string
-  duration: number
-  recording_url: string
-  recording_duration: number
-  recording_expires_at: string | null
-  created_at: string
-  notes?: string | null
-  leads: { first_name: string; last_name: string; phone: string; notes?: string | null } | null
-  campaigns: { name: string } | null
+  dial_attempts?: number
+  extra_data: Record<string, any>
 }
 
 interface Campaign {
   id: string
   name: string
+  status: string
+  total_leads: number
+  script?: string
+  dialer_mode?: DialerMode
+  amd_enabled?: boolean
+  predictive_lines_per_agent?: number
 }
 
-function formatDuration(s: number) {
-  if (!s) return '0:00'
-  const m = Math.floor(s / 60)
-  const sec = s % 60
-  return `${m}:${String(sec).padStart(2, '0')}`
+interface TeamScopeCampaign {
+  campaignId: string
+  accessMode: 'owner_pays' | 'agent_pays' | 'public'
+  campaign: { id: string; name: string; total_leads: number; called_leads: number; status: string } | null
 }
 
-function formatDateClean(iso: string) {
-  const d = new Date(iso)
-  const date = d.toLocaleDateString('en-US', {
-    month: 'short', day: 'numeric', year: 'numeric',
-  })
-  const time = d.toLocaleTimeString('en-US', {
-    hour: 'numeric', minute: '2-digit', hour12: true,
-  })
-  return { date, time }
+interface TeamScope {
+  id: string
+  name: string
+  viewerRole: 'owner' | 'member'
+  teamCampaigns: TeamScopeCampaign[]
 }
 
-function daysUntilExpire(iso: string | null) {
-  if (!iso) return null
-  const days = Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000)
-  return days > 0 ? days : 0
+interface PacingInfo {
+  activeAgents: number
+  readyAgents: number
+  dialingAgents: number
+  onCallAgents: number
+  abandonRate: number
+  isDegraded: boolean
+  isPredictiveTeam: boolean
+  configuredLines: number
+  effectiveLines: number
 }
 
-export default function RecordingsPage() {
+interface LinesPrefInfo {
+  effective_lines: number
+  preferred_lines: number | null
+  campaign_default: number
+  campaign_min: number
+  campaign_max: number
+  hard_cap: number
+}
+
+interface HeartbeatControllerSummary {
+  fired: number
+  desired: number
+  inFlight: number
+  effectiveLines: number
+  degraded: boolean
+  reason: string
+  callSids?: string[]
+  skipped?: number
+  released?: number
+  dedupedPhones?: number
+}
+
+interface IncomingRouteResponse {
+  incoming: boolean
+  reason?: string
+  call?: {
+    id: string
+    sid: string
+    lead_id: string | null
+    phone_number: string
+    started_at: string
+    room_name: string | null
+  }
+  lead?: Lead | null
+  session_state?: string
+  session_id?: string
+}
+
+interface SessionStats {
+  calls: number
+  connected: number
+  appointments: number
+  closed: number
+  dnc: number
+  notInterested: number
+}
+
+const ZERO_STATS: SessionStats = {
+  calls: 0, connected: 0, appointments: 0, closed: 0, dnc: 0, notInterested: 0,
+}
+
+const PERSONAL_SCOPE = '__personal__'
+const ALL_ACTIVE = '__all_active__'
+const LS_LAST_CAMPAIGN = 'dialer:lastCampaign'
+const LS_LAST_SCOPE = 'dialer:lastScope'
+const LS_SESSION_STATS = 'dialer:sessionStats'
+const LS_ALL_ACTIVE_MODE = 'dialer:allActiveMode'
+
+const VALID_MODES: DialerMode[] = ['preview', 'power', 'progressive', 'predictive']
+
+const MODE_OPTIONS: { value: DialerMode; label: string; color: string }[] = [
+  { value: 'preview', label: 'PREVIEW', color: '#5a5e6a' },
+  { value: 'power', label: 'POWER', color: '#2a4a8a' },
+  { value: 'progressive', label: 'PROGRESSIVE', color: '#1a6a1a' },
+  { value: 'predictive', label: 'PREDICTIVE', color: '#8a1a1a' },
+]
+
+const HEARTBEAT_INTERVAL_MS = 5_000
+const PACING_POLL_INTERVAL_MS = 10_000
+const INCOMING_POLL_INTERVAL_MS = 2_000
+
+const LINES_OPTIONS = [1, 2, 3, 4, 5]
+
+function todayKey(): string {
+  return new Date().toISOString().split('T')[0]
+}
+
+function DialerPageInner() {
   const { user } = useUser()
-  const [recordings, setRecordings] = useState<Recording[]>([])
-  const [campaigns, setCampaigns] = useState<Campaign[]>([])
-  const [campaignFilter, setCampaignFilter] = useState('all')
-  const [dispositionFilter, setDispositionFilter] = useState('all')
-  const [search, setSearch] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [cursor, setCursor] = useState<number | null>(0)
-  const [total, setTotal] = useState(0)
-  const [loading, setLoading] = useState(false)
-  const [syncing, setSyncing] = useState(false)
-  const [syncMessage, setSyncMessage] = useState<string | null>(null)
-  const [playingId, setPlayingId] = useState<string | null>(null)
-  const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [filtersOpen, setFiltersOpen] = useState(false)
-  const [disclosureOpen, setDisclosureOpen] = useState(false)
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
-  const sentinelRef = useRef<HTMLDivElement | null>(null)
+  const searchParams = useSearchParams()
+  const [notes, setNotes] = useState('')
+  const [tier, setTier] = useState<AccessTier>(null)
+  const [tierLoaded, setTierLoaded] = useState(false)
 
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(search), 350)
-    return () => clearTimeout(t)
-  }, [search])
+  const [clockTick, setClockTick] = useState(0)
+
+  const [status, setStatus] = useState<CallStatus>('idle')
+  const [manualNumber, setManualNumber] = useState('')
+  const [seconds, setSeconds] = useState(0)
+  const [available, setAvailable] = useState(false)
+
+  // ─── PREDICTIVE ENGINE — explicit "started" flag ──────────────────────────
+  // The dialer no longer auto-starts when going LIVE in predictive mode.
+  // The user must click "INITIATE DIAL SEQUENCE" to start the engine,
+  // which mirrors the flow of other modes. The incoming-route polling
+  // (which detects routed humans) only fires while this is true.
+  // Going OFFLINE always resets this to false.
+  const [predictiveEngineStarted, setPredictiveEngineStarted] = useState(false)
+
+  const [disposition, setDisposition] = useState('')
+  const [showDisposition, setShowDisposition] = useState(false)
+  const [currentLead, setCurrentLead] = useState<Lead | null>(null)
+  const [previewLead, setPreviewLead] = useState<Lead | null>(null)
+  const [campaigns, setCampaigns] = useState<Campaign[]>([])
+  const [selectedCampaign, setSelectedCampaign] = useState<string>('')
+  const [campaignsLoaded, setCampaignsLoaded] = useState(false)
+  const [showSelectCampaignMsg, setShowSelectCampaignMsg] = useState(false)
+  const [callStart, setCallStart] = useState(0)
+  const [noLeads, setNoLeads] = useState(false)
+  const [activeCallSid, setActiveCallSid] = useState<string | null>(null)
+  const [mounted, setMounted] = useState(false)
+  const [swReady, setSwReady] = useState(false)
+  const [micGranted, setMicGranted] = useState(false)
+  const [rightSidebarOpen, setRightSidebarOpen] = useState(false)
+  const [dialZoomed, setDialZoomed] = useState(false)
+
+  const [sessionStats, setSessionStats] = useState<SessionStats>(ZERO_STATS)
+  const [sessionStatsLoaded, setSessionStatsLoaded] = useState(false)
+  const [sessionDate, setSessionDate] = useState<string>(todayKey())
+
+  const [teamScopes, setTeamScopes] = useState<TeamScope[]>([])
+  const [selectedScope, setSelectedScope] = useState<string>(PERSONAL_SCOPE)
+  const [scopesLoaded, setScopesLoaded] = useState(false)
+
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
+  const [pacingInfo, setPacingInfo] = useState<PacingInfo | null>(null)
+  const [amdActivity, setAmdActivity] = useState<string[]>([])
+
+  const [linesPref, setLinesPref] = useState<LinesPrefInfo | null>(null)
+  const [linesPrefSaving, setLinesPrefSaving] = useState(false)
+
+  const [lastControllerSummary, setLastControllerSummary] =
+    useState<HeartbeatControllerSummary | null>(null)
+
+  const [shouldYield, setShouldYield] = useState(false)
+  const [tcpaBlockedAll, setTcpaBlockedAll] = useState(false)
+
+  const [modeDropdownOpen, setModeDropdownOpen] = useState(false)
+  const [modeSaving, setModeSaving] = useState(false)
+
+  const [allActiveOverrideMode, setAllActiveOverrideMode] = useState<DialerMode>('power')
+
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const audioCtxRef = useRef<AudioContext | null>(null)
+  const activePollRef = useRef<NodeJS.Timeout | null>(null)
+  const swClientRef = useRef<any>(null)
+  const swCallRef = useRef<any>(null)
+
+  const sessionHeartbeatRef = useRef<NodeJS.Timeout | null>(null)
+  const sessionIdRef = useRef<string | null>(null)
+
+  const heartbeatRef = useRef<NodeJS.Timeout | null>(null)
+  const pacingPollRef = useRef<NodeJS.Timeout | null>(null)
+
+  const incomingPollRef = useRef<NodeJS.Timeout | null>(null)
+  const lastIncomingCallSidRef = useRef<string | null>(null)
+
+  const urlParamsConsumedRef = useRef(false)
+  const currentLeadRef = useRef<Lead | null>(null)
+  const lsRestoredRef = useRef(false)
+
+  // v24 fix: ref-mirror of activeCallSid so the beforeunload handler can read
+  // it from its stale-closure context. Without this, tab-close can't terminate
+  // an in-flight call because the captured value of activeCallSid is whatever
+  // it was when the handler effect first ran (usually null).
+  const activeCallSidRef = useRef<string | null>(null)
+
+  useEffect(() => setMounted(true), [])
+  useEffect(() => { currentLeadRef.current = currentLead }, [currentLead])
+  useEffect(() => { activeCallSidRef.current = activeCallSid }, [activeCallSid])
 
   useEffect(() => {
     if (!user) return
-    fetch(`/api/campaigns/list?user_id=${user.id}`)
+    fetch('/api/stripe/status')
       .then(r => r.json())
-      .then(d => { if (d.success) setCampaigns(d.campaigns) })
+      .then(d => {
+        setTier(d.tier || null)
+        setTierLoaded(true)
+      })
+      .catch(() => {
+        setTier(null)
+        setTierLoaded(true)
+      })
+  }, [user])
+
+  const isActive = tier === 'active'
+
+  const isAllActive = selectedCampaign === ALL_ACTIVE
+  const isSpecificCampaign = !!selectedCampaign && !isAllActive
+
+  const currentCampaign: Campaign | undefined =
+    isSpecificCampaign
+      ? campaigns.find(c => c.id === selectedCampaign)
+      : undefined
+
+  const dialerMode: DialerMode =
+    isSpecificCampaign
+      ? ((currentCampaign?.dialer_mode as DialerMode) || 'power')
+      : isAllActive
+        ? allActiveOverrideMode
+        : 'power'
+
+  const isPredictive = dialerMode === 'predictive'
+  const isProgressive = dialerMode === 'progressive'
+  const isPreview = dialerMode === 'preview'
+
+  // v24 fix: renamed from `autoDials` for clarity. This flag governs whether
+  // the dialer auto-chains to the next dial after an EARLY failure (phone
+  // too short, TCPA window block, AMD voicemail filter — anything that
+  // prevents the call from reaching live conversation). It does NOT govern
+  // post-disposition advance — power mode also auto-advances after a
+  // completed call, just via the disposition handler.
+  // Only progressive currently auto-chains on early failures; power waits
+  // for the user to re-initiate.
+  const autoChainOnFailure = isProgressive
+
+  const modeRequiresSpecific = false
+
+  const modeTileInteractive = isSpecificCampaign || isAllActive
+
+  const agentState: AgentState = (() => {
+    if (!available) return 'paused'
+    if (status === 'connected') return 'on_call'
+    if (status === 'calling') return 'dialing'
+    if (showDisposition) return 'wrapping'
+    return 'ready'
+  })()
+
+  // ────────────────────────────────────────────────────────────────────────
+  // PREDICTIVE UI STATE — derived
+  // ────────────────────────────────────────────────────────────────────────
+  // The 4-state predictive view drives the center panel. AVAILABLE means
+  // the engine is running and waiting for a human. Going LIVE alone is
+  // NOT enough to enter AVAILABLE anymore — the user must also click
+  // INITIATE DIAL SEQUENCE (which sets predictiveEngineStarted=true).
+  // ────────────────────────────────────────────────────────────────────────
+  type PredictiveView = 'offline' | 'available' | 'on_call' | 'wrapping'
+  const predictiveView: PredictiveView = (() => {
+    if (!available) return 'offline'
+    if (showDisposition) return 'wrapping'
+    if (status === 'connected' && currentLead) return 'on_call'
+    return 'available'
+  })()
+
+  // ── SESSION METRICS PERSISTENCE ─────────────────────────────────────────
+  useEffect(() => {
+    if (!user) return
+    try {
+      const today = todayKey()
+      const raw = localStorage.getItem(`${LS_SESSION_STATS}:${user.id}`)
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (parsed.date === today && parsed.stats) {
+          setSessionStats({ ...ZERO_STATS, ...parsed.stats })
+        } else {
+          setSessionStats(ZERO_STATS)
+        }
+      }
+      setSessionDate(today)
+    } catch {}
+    setSessionStatsLoaded(true)
   }, [user])
 
   useEffect(() => {
+    if (!user || !sessionStatsLoaded) return
+    try {
+      localStorage.setItem(
+        `${LS_SESSION_STATS}:${user.id}`,
+        JSON.stringify({ date: sessionDate, stats: sessionStats })
+      )
+    } catch {}
+  }, [sessionStats, sessionDate, user, sessionStatsLoaded])
+
+  useEffect(() => {
     if (!user) return
-    setRecordings([])
-    setCursor(0)
-    setPlayingId(null)
-    setExpandedId(null)
-  }, [campaignFilter, dispositionFilter, debouncedSearch, user])
-
-  const fetchMore = useCallback(async () => {
-    if (!user || cursor === null || loading) return
-    setLoading(true)
-    try {
-      const params = new URLSearchParams({
-        user_id: user.id,
-        campaign_id: campaignFilter,
-        disposition: dispositionFilter,
-        search: debouncedSearch,
-        cursor: String(cursor),
-      })
-      const res = await fetch(`/api/recordings/list?${params}`)
-      const data = await res.json()
-      if (data.success) {
-        setRecordings(prev => cursor === 0 ? data.recordings : [...prev, ...data.recordings])
-        setTotal(data.total)
-        setCursor(data.nextCursor)
+    const id = setInterval(() => {
+      const today = todayKey()
+      if (today !== sessionDate) {
+        setSessionStats(ZERO_STATS)
+        setSessionDate(today)
       }
-    } finally {
-      setLoading(false)
+    }, 60_000)
+    return () => clearInterval(id)
+  }, [sessionDate, user])
+
+  useEffect(() => {
+    if (!user || !lsRestoredRef.current) return
+    if (selectedCampaign) {
+      try { localStorage.setItem(`${LS_LAST_CAMPAIGN}:${user.id}`, selectedCampaign) } catch {}
+    } else {
+      try { localStorage.removeItem(`${LS_LAST_CAMPAIGN}:${user.id}`) } catch {}
     }
-  }, [user, cursor, loading, campaignFilter, dispositionFilter, debouncedSearch])
+  }, [selectedCampaign, user])
 
   useEffect(() => {
-    if (cursor === 0) fetchMore()
-  }, [cursor, fetchMore])
+    if (!user || !lsRestoredRef.current) return
+    try { localStorage.setItem(`${LS_LAST_SCOPE}:${user.id}`, selectedScope) } catch {}
+  }, [selectedScope, user])
 
   useEffect(() => {
-    if (!sentinelRef.current || cursor === null) return
-    const observer = new IntersectionObserver(
-      entries => { if (entries[0].isIntersecting && !loading) fetchMore() },
-      { rootMargin: '300px' }
-    )
-    observer.observe(sentinelRef.current)
-    return () => observer.disconnect()
-  }, [fetchMore, loading, cursor, recordings.length])
+    if (!user || !lsRestoredRef.current) return
+    try { localStorage.setItem(`${LS_ALL_ACTIVE_MODE}:${user.id}`, allActiveOverrideMode) } catch {}
+  }, [allActiveOverrideMode, user])
 
-  const handleSync = async () => {
-    setSyncing(true)
-    setSyncMessage(null)
+  useEffect(() => {
+    if (!user || !isActive) return
+    let cancelled = false
+    fetch('/api/teams/list?detail=owned')
+      .then(r => r.json())
+      .then(async data => {
+        if (cancelled || !data.success) {
+          setScopesLoaded(true)
+          return
+        }
+        const scopes: TeamScope[] = []
+        for (const t of data.teams.owned || []) {
+          if ((t.teamCampaigns || []).length > 0) {
+            scopes.push({
+              id: t.id,
+              name: t.name,
+              viewerRole: 'owner',
+              teamCampaigns: t.teamCampaigns,
+            })
+          }
+        }
+        const memberTeams = data.teams.member || []
+        if (memberTeams.length > 0) {
+          await Promise.all(memberTeams.map(async (t: any) => {
+            try {
+              const r = await fetch(`/api/teams/${t.id}/get`)
+              const d = await r.json()
+              if (d.success && d.team.teamCampaigns?.length > 0) {
+                scopes.push({
+                  id: t.id,
+                  name: t.name,
+                  viewerRole: 'member',
+                  teamCampaigns: d.team.teamCampaigns,
+                })
+              }
+            } catch {}
+          }))
+        }
+        if (!cancelled) {
+          setTeamScopes(scopes)
+          setScopesLoaded(true)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setScopesLoaded(true)
+      })
+    return () => { cancelled = true }
+  }, [user, isActive])
+
+  useEffect(() => {
+    if (!user || !campaignsLoaded || !scopesLoaded || lsRestoredRef.current) return
+
+    const teamIdParam = searchParams.get('teamId')
+    const campaignIdParam = searchParams.get('campaignId')
+
+    if (teamIdParam && teamScopes.find(s => s.id === teamIdParam)) {
+      setSelectedScope(teamIdParam)
+    } else {
+      try {
+        const lastScope = localStorage.getItem(`${LS_LAST_SCOPE}:${user.id}`)
+        if (lastScope && (lastScope === PERSONAL_SCOPE || teamScopes.find(s => s.id === lastScope))) {
+          setSelectedScope(lastScope)
+        }
+      } catch {}
+    }
+
+    if (campaignIdParam && campaigns.find(c => c.id === campaignIdParam && c.status === 'active')) {
+      setSelectedCampaign(campaignIdParam)
+    } else {
+      try {
+        const lastCampaign = localStorage.getItem(`${LS_LAST_CAMPAIGN}:${user.id}`)
+        if (
+          lastCampaign === ALL_ACTIVE ||
+          (lastCampaign && campaigns.find(c => c.id === lastCampaign && c.status === 'active'))
+        ) {
+          setSelectedCampaign(lastCampaign)
+        }
+      } catch {}
+    }
+
     try {
-      const res = await fetch('/api/recordings/sync', { method: 'POST' })
-      const data = await res.json()
-      if (data.success) {
-        setSyncMessage(`Synced ${data.synced} new recording${data.synced === 1 ? '' : 's'}.`)
-        setRecordings([])
-        setCursor(0)
-      } else {
-        setSyncMessage(`Sync failed: ${data.error}`)
+      const lastAllActiveMode = localStorage.getItem(`${LS_ALL_ACTIVE_MODE}:${user.id}`)
+      if (lastAllActiveMode && VALID_MODES.includes(lastAllActiveMode as DialerMode)) {
+        setAllActiveOverrideMode(lastAllActiveMode as DialerMode)
       }
-    } catch (err: any) {
-      setSyncMessage(`Sync error: ${err.message}`)
-    } finally {
-      setSyncing(false)
-      setTimeout(() => setSyncMessage(null), 8000)
+    } catch {}
+
+    lsRestoredRef.current = true
+    urlParamsConsumedRef.current = true
+  }, [user, campaignsLoaded, scopesLoaded, teamScopes, campaigns, searchParams])
+
+  useEffect(() => {
+    if (user && isActive) fetchCampaigns()
+  }, [user, isActive])
+
+  useEffect(() => {
+    if (!lsRestoredRef.current) return
+    setSelectedCampaign('')
+    // Switching scope kills the predictive engine — fresh start
+    setPredictiveEngineStarted(false)
+  }, [selectedScope])
+
+  // Same protection when the campaign itself changes
+  useEffect(() => {
+    setPredictiveEngineStarted(false)
+  }, [selectedCampaign])
+
+  useEffect(() => {
+    if (!isActive) return
+    const interval = setInterval(() => setClockTick(t => t + 1), 1000)
+    return () => clearInterval(interval)
+  }, [isActive])
+
+  useEffect(() => {
+    if (!isActive) return
+    const warmUp = () => {
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
+        const buffer = audioCtxRef.current.createBuffer(1, 1, 22050)
+        const source = audioCtxRef.current.createBufferSource()
+        source.buffer = buffer
+        source.connect(audioCtxRef.current.destination)
+        source.start()
+      }
+      window.removeEventListener('click', warmUp)
+      window.removeEventListener('keydown', warmUp)
+    }
+    window.addEventListener('click', warmUp)
+    window.addEventListener('keydown', warmUp)
+    return () => {
+      window.removeEventListener('click', warmUp)
+      window.removeEventListener('keydown', warmUp)
+    }
+  }, [isActive])
+
+  useEffect(() => {
+    if (!isActive) return
+    const initSW = async () => {
+      try {
+        const sipUsername = process.env.NEXT_PUBLIC_SIGNALWIRE_SIP_USERNAME
+        const sipPassword = process.env.NEXT_PUBLIC_SIGNALWIRE_SIP_PASSWORD
+        const sipDomain = process.env.NEXT_PUBLIC_SIGNALWIRE_SIP_DOMAIN
+
+        if (!sipUsername || !sipPassword || !sipDomain) return
+
+        const { UserAgent, Registerer } = await import('sip.js')
+        const uri = UserAgent.makeURI(`sip:${sipUsername}@${sipDomain}`)
+        if (!uri) return
+
+        const userAgent = new UserAgent({
+          uri,
+          authorizationUsername: sipUsername,
+          authorizationPassword: sipPassword,
+          transportOptions: { server: `wss://${sipDomain}` },
+          sessionDescriptionHandlerFactoryOptions: {
+            constraints: { audio: true, video: false },
+          },
+        })
+
+        userAgent.delegate = {
+          onInvite: async (invitation: any) => {
+            try {
+              const { SessionState: SS } = await import('sip.js')
+              invitation.stateChange.addListener((state: any) => {
+                if (state === SS.Established) {
+                  swCallRef.current = invitation
+                  attachSIPAudio(invitation)
+                } else if (state === SS.Terminated) {
+                  if (swCallRef.current === invitation) swCallRef.current = null
+                }
+              })
+              await invitation.accept({
+                sessionDescriptionHandlerOptions: { constraints: { audio: true, video: false } },
+              })
+            } catch (err) {
+              console.error('Error accepting SIP invite:', err)
+            }
+          },
+        }
+
+        await userAgent.start()
+        const registerer = new Registerer(userAgent)
+        await registerer.register()
+        swClientRef.current = userAgent
+        setSwReady(true)
+      } catch (err: any) {
+        console.error('SIP init error:', err?.message || err)
+      }
+    }
+    initSW()
+  }, [isActive])
+
+  const attachSIPAudio = (session: any) => {
+    const tryAttach = () => {
+      try {
+        const sdh = session.sessionDescriptionHandler
+        if (!sdh) return false
+        const pc = sdh.peerConnection
+        if (!pc) return false
+
+        pc.ontrack = (event: RTCTrackEvent) => {
+          if (event.streams && event.streams[0]) {
+            let audioEl = document.getElementById('sip-audio') as HTMLAudioElement
+            if (!audioEl) {
+              audioEl = document.createElement('audio')
+              audioEl.id = 'sip-audio'
+              audioEl.autoplay = true
+              document.body.appendChild(audioEl)
+            }
+            audioEl.srcObject = event.streams[0]
+            audioEl.play().catch(console.error)
+          }
+        }
+
+        pc.getReceivers().forEach((receiver: RTCRtpReceiver) => {
+          if (receiver.track && receiver.track.kind === 'audio') {
+            const stream = new MediaStream([receiver.track])
+            let audioEl = document.getElementById('sip-audio') as HTMLAudioElement
+            if (!audioEl) {
+              audioEl = document.createElement('audio')
+              audioEl.id = 'sip-audio'
+              audioEl.autoplay = true
+              document.body.appendChild(audioEl)
+            }
+            audioEl.srcObject = stream
+            audioEl.play().catch(console.error)
+          }
+        })
+        return true
+      } catch (err) {
+        return false
+      }
+    }
+
+    if (!tryAttach()) {
+      setTimeout(() => tryAttach(), 500)
+      setTimeout(() => tryAttach(), 1500)
+      setTimeout(() => tryAttach(), 3000)
+    } else {
+      setTimeout(() => tryAttach(), 1000)
     }
   }
 
-  const handleDelete = async (id: string) => {
-    setDeletingId(id)
+  const startSession = useCallback(async (campaignId: string) => {
     try {
-      const res = await fetch('/api/recordings/delete', {
+      const teamId = selectedScope !== PERSONAL_SCOPE ? selectedScope : undefined
+      const res = await fetch('/api/dialer/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ call_id: id }),
+        body: JSON.stringify({ campaignId, teamId }),
       })
       const data = await res.json()
       if (data.success) {
-        setRecordings(prev => prev.filter(r => r.id !== id))
-        setTotal(t => Math.max(0, t - 1))
-        setSyncMessage('Recording deleted.')
-        setTimeout(() => setSyncMessage(null), 4000)
-      } else {
-        setSyncMessage(`Delete failed: ${data.error}`)
-        setTimeout(() => setSyncMessage(null), 6000)
+        setCurrentSessionId(data.sessionId)
+        sessionIdRef.current = data.sessionId
       }
-    } catch (err: any) {
-      setSyncMessage(`Delete error: ${err.message}`)
-      setTimeout(() => setSyncMessage(null), 6000)
+    } catch (err) {
+      console.error('startSession error:', err)
+    }
+  }, [selectedScope])
+
+  const endSession = useCallback(async () => {
+    const sid = sessionIdRef.current
+    if (!sid) return
+    try {
+      await fetch('/api/dialer/session', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: sid }),
+      })
+    } catch {}
+    setCurrentSessionId(null)
+    sessionIdRef.current = null
+  }, [])
+
+  useEffect(() => {
+    if (!isActive) return
+    const shouldHaveSession = available && isSpecificCampaign && currentCampaign
+
+    if (shouldHaveSession) {
+      if (!sessionIdRef.current) {
+        startSession(selectedCampaign)
+      }
+      if (!sessionHeartbeatRef.current) {
+        sessionHeartbeatRef.current = setInterval(() => {
+          if (isSpecificCampaign) startSession(selectedCampaign)
+        }, 30000)
+      }
+    } else {
+      if (sessionIdRef.current) endSession()
+      if (sessionHeartbeatRef.current) {
+        clearInterval(sessionHeartbeatRef.current)
+        sessionHeartbeatRef.current = null
+      }
+    }
+
+    return () => {
+      if (sessionHeartbeatRef.current) {
+        clearInterval(sessionHeartbeatRef.current)
+        sessionHeartbeatRef.current = null
+      }
+    }
+  }, [available, selectedCampaign, currentCampaign, isActive, isSpecificCampaign, startSession, endSession])
+
+  useEffect(() => {
+    if (!isActive) return
+
+    const sendHeartbeat = async () => {
+      try {
+        const res = await fetch('/api/dialer/heartbeat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            state: agentState,
+            campaign_id: isSpecificCampaign ? selectedCampaign : null,
+            dialer_mode: dialerMode,
+            current_call_id: activeCallSid || null,
+          }),
+        })
+        if (!res.ok) return
+        const data = await res.json()
+        if (typeof data.should_yield === 'boolean') {
+          setShouldYield(data.should_yield)
+        }
+        if (data.controller_invoked && data.controller) {
+          setLastControllerSummary(data.controller as HeartbeatControllerSummary)
+          const summary = data.controller as HeartbeatControllerSummary
+          if (summary.fired > 0) {
+            setAmdActivity(prev => [
+              `CONTROLLER FIRED ${summary.fired} LINE${summary.fired === 1 ? '' : 'S'} (${summary.effectiveLines}x target)`,
+              ...prev,
+            ].slice(0, 5))
+          } else if (summary.degraded) {
+            setAmdActivity(prev => [
+              `⚠ AUTO-DEGRADED — abandon rate trigger`,
+              ...prev,
+            ].slice(0, 5))
+          }
+        }
+      } catch {
+        // Network blip — next heartbeat will retry
+      }
+    }
+
+    sendHeartbeat()
+    heartbeatRef.current = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL_MS)
+
+    return () => {
+      if (heartbeatRef.current) {
+        clearInterval(heartbeatRef.current)
+        heartbeatRef.current = null
+      }
+    }
+  }, [
+    isActive,
+    agentState,
+    isSpecificCampaign,
+    selectedCampaign,
+    dialerMode,
+    activeCallSid,
+  ])
+
+  // ────────────────────────────────────────────────────────────────────────
+  // INCOMING-ROUTE POLLING — predictive AVAILABLE + ENGINE STARTED
+  // ────────────────────────────────────────────────────────────────────────
+  // New gate: predictiveEngineStarted. Without it, going LIVE does NOT begin
+  // polling for routed humans. The user must click INITIATE DIAL SEQUENCE
+  // first. This matches the non-predictive flow where "LIVE" makes you
+  // available but doesn't dial — you still need to click INITIATE.
+  // ────────────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (
+      !isActive ||
+      !isPredictive ||
+      predictiveView !== 'available' ||
+      !predictiveEngineStarted
+    ) {
+      if (incomingPollRef.current) {
+        clearInterval(incomingPollRef.current)
+        incomingPollRef.current = null
+      }
+      return
+    }
+
+    const pollIncoming = async () => {
+      try {
+        const res = await fetch('/api/calls/incoming-route')
+        if (!res.ok) return
+        const data = (await res.json()) as IncomingRouteResponse
+        if (!data.incoming || !data.call) return
+
+        if (lastIncomingCallSidRef.current === data.call.sid) return
+        lastIncomingCallSidRef.current = data.call.sid
+
+        setAmdActivity(prev => [
+          `HUMAN ROUTED — ${data.lead?.first_name || ''} ${data.lead?.last_name || ''}`.trim(),
+          ...prev,
+        ].slice(0, 5))
+
+        playPickup()
+        setActiveCallSid(data.call.sid)
+        if (data.lead) {
+          setCurrentLead(data.lead)
+        }
+        setStatus('connected')
+        setSessionStats(s => ({ ...s, calls: s.calls + 1, connected: s.connected + 1 }))
+
+        startHangupPolling(data.call.sid)
+      } catch {
+        // Network blip — next poll will retry
+      }
+    }
+
+    pollIncoming()
+    incomingPollRef.current = setInterval(pollIncoming, INCOMING_POLL_INTERVAL_MS)
+
+    return () => {
+      if (incomingPollRef.current) {
+        clearInterval(incomingPollRef.current)
+        incomingPollRef.current = null
+      }
+    }
+  }, [isActive, isPredictive, predictiveView, predictiveEngineStarted])
+
+  useEffect(() => {
+    if (!isActive || !isPredictive || !isSpecificCampaign) {
+      setLinesPref(null)
+      return
+    }
+
+    let cancelled = false
+    fetch(`/api/predictive/prefs?campaign_id=${selectedCampaign}`)
+      .then(r => r.json())
+      .then(d => {
+        if (cancelled) return
+        if (d.error) {
+          setLinesPref(null)
+          return
+        }
+        setLinesPref(d as LinesPrefInfo)
+      })
+      .catch(() => {
+        if (!cancelled) setLinesPref(null)
+      })
+    return () => { cancelled = true }
+  }, [isActive, isPredictive, isSpecificCampaign, selectedCampaign])
+
+  const handleLinesChange = async (newLines: number) => {
+    if (!selectedCampaign || !isPredictive) return
+    setLinesPrefSaving(true)
+    try {
+      const res = await fetch('/api/predictive/prefs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          campaign_id: selectedCampaign,
+          preferred_lines: newLines,
+        }),
+      })
+      const data = await res.json()
+      if (!data.error) {
+        setLinesPref(data as LinesPrefInfo)
+        setAmdActivity(prev => [
+          `LINES PREFERENCE → ${data.effective_lines}`,
+          ...prev,
+        ].slice(0, 5))
+      }
+    } catch (err) {
+      console.error('lines pref save failed:', err)
     } finally {
-      setDeletingId(null)
-      setConfirmDeleteId(null)
+      setLinesPrefSaving(false)
     }
   }
 
-  const handleDownload = (id: string) => {
-    window.location.href = `/api/recordings/play?call_id=${id}&download=1`
+  // ── BEFOREUNLOAD HANDLER ────────────────────────────────────────────────
+  // v24 fix: when the user closes the tab or navigates away mid-call, we
+  // now also fire a sendBeacon to /api/calls/hangup for the active call.
+  // Previously, session-end and a paused heartbeat were sent but the call
+  // itself kept ringing/talking on SignalWire's side until something else
+  // killed it. Using activeCallSidRef.current here (not the closure-stale
+  // activeCallSid state) so we read the live value at unload time.
+  useEffect(() => {
+    const handleUnload = () => {
+      const sid = sessionIdRef.current
+      if (sid && navigator.sendBeacon) {
+        const blob = new Blob(
+          [JSON.stringify({ sessionId: sid })],
+          { type: 'application/json' }
+        )
+        navigator.sendBeacon('/api/dialer/session-end', blob)
+      }
+      if (navigator.sendBeacon) {
+        try {
+          const blob = new Blob(
+            [JSON.stringify({ state: 'paused' })],
+            { type: 'application/json' }
+          )
+          navigator.sendBeacon('/api/dialer/heartbeat', blob)
+        } catch {}
+      }
+      // v24: kill the active call too so SignalWire stops billing for it.
+      const callSid = activeCallSidRef.current
+      if (callSid && navigator.sendBeacon) {
+        try {
+          const blob = new Blob(
+            [JSON.stringify({ sid: callSid })],
+            { type: 'application/json' }
+          )
+          navigator.sendBeacon('/api/calls/hangup', blob)
+        } catch {}
+      }
+    }
+    window.addEventListener('beforeunload', handleUnload)
+    window.addEventListener('pagehide', handleUnload)
+    return () => {
+      window.removeEventListener('beforeunload', handleUnload)
+      window.removeEventListener('pagehide', handleUnload)
+      endSession()
+    }
+  }, [endSession])
+
+  useEffect(() => {
+    if (!isActive || !isPredictive || !available || !isSpecificCampaign) {
+      setPacingInfo(null)
+      if (pacingPollRef.current) {
+        clearInterval(pacingPollRef.current)
+        pacingPollRef.current = null
+      }
+      return
+    }
+
+    const fetchPacing = async () => {
+      try {
+        const res = await fetch(`/api/dialer/active-agents?campaign_id=${selectedCampaign}`)
+        if (!res.ok) return
+        const data = await res.json()
+        const cp = data.campaign_pacing
+        if (!cp) {
+          setPacingInfo(null)
+          return
+        }
+
+        const configuredLines = linesPref?.effective_lines || currentCampaign?.predictive_lines_per_agent || 3
+        const abandonRateDecimal = (cp.abandon_rate_pct ?? 0) / 100
+        const isDegraded = abandonRateDecimal >= 0.025
+
+        setPacingInfo({
+          activeAgents: cp.active_agents,
+          readyAgents: cp.ready_agents,
+          dialingAgents: cp.dialing_agents,
+          onCallAgents: cp.on_call_agents,
+          abandonRate: abandonRateDecimal,
+          isDegraded,
+          isPredictiveTeam: cp.is_predictive_team,
+          configuredLines,
+          effectiveLines: isDegraded ? 1.0 : configuredLines,
+        })
+      } catch {}
+    }
+
+    fetchPacing()
+    pacingPollRef.current = setInterval(fetchPacing, PACING_POLL_INTERVAL_MS)
+    return () => {
+      if (pacingPollRef.current) {
+        clearInterval(pacingPollRef.current)
+        pacingPollRef.current = null
+      }
+    }
+  }, [isActive, isPredictive, available, isSpecificCampaign, selectedCampaign, currentCampaign, linesPref])
+
+  // ── AVAILABILITY TOGGLE — also resets predictive engine + hangs up call ─
+  // Going OFFLINE now:
+  //   1. hangs up any in-flight call (was previously left ringing/talking)
+  //   2. resets the predictive engine flag
+  //   3. clears the current lead, disposition UI, timer
+  //   4. flips available off
+  // Going LIVE doesn't auto-start the predictive engine; user must click
+  // INITIATE DIAL SEQUENCE explicitly. (Same as before — non-predictive
+  // modes still require an INITIATE click after going LIVE too.)
+  const handleSetAvailable = async () => {
+    let granted = micGranted
+    if (!granted) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        stream.getTracks().forEach(track => track.stop())
+        setMicGranted(true)
+        granted = true
+      } catch (err) {
+        console.warn('Microphone permission denied:', err)
+        return
+      }
+    }
+
+    // v24 fix: if we're about to flip OFFLINE, clean up everything first.
+    // The state we're reading here (`available`) is the CURRENT value, so
+    // `goingOffline === true` means we are right now LIVE and going OFFLINE.
+    const goingOffline = available
+    if (goingOffline) {
+      if (activeCallSid) {
+        await hangupCall(activeCallSid)
+      }
+      setStatus('idle')
+      setCurrentLead(null)
+      setPreviewLead(null)
+      setShowDisposition(false)
+      setDisposition('')
+      setSeconds(0)
+      setPredictiveEngineStarted(false)
+      lastIncomingCallSidRef.current = null
+    }
+
+    setAvailable(prev => !prev)
+  }
+
+  const getAudioCtx = () => {
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
+    }
+    if (audioCtxRef.current.state === 'suspended') audioCtxRef.current.resume()
+    return audioCtxRef.current
+  }
+
+  const playInitiateBlip = () => {
+    const ctx = getAudioCtx()
+    const gain = ctx.createGain()
+    gain.gain.setValueAtTime(0.12, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18)
+    gain.connect(ctx.destination)
+    const osc = ctx.createOscillator()
+    osc.frequency.value = 660
+    osc.connect(gain)
+    osc.start()
+    osc.stop(ctx.currentTime + 0.18)
+  }
+
+  const playDTMF = (key: string) => {
+    const freqs: Record<string, [number, number]> = {
+      '1': [697, 1209], '2': [697, 1336], '3': [697, 1477],
+      '4': [770, 1209], '5': [770, 1336], '6': [770, 1477],
+      '7': [852, 1209], '8': [852, 1336], '9': [852, 1477],
+      '*': [941, 1209], '0': [941, 1336], '#': [941, 1477],
+    }
+    const ctx = getAudioCtx()
+    const pair = freqs[key]
+    if (!pair) return
+    const duration = 0.4
+    const gainNode = ctx.createGain()
+    gainNode.gain.setValueAtTime(0.12, ctx.currentTime)
+    gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration)
+    gainNode.connect(ctx.destination)
+    pair.forEach(freq => {
+      const osc = ctx.createOscillator()
+      osc.frequency.value = freq
+      osc.connect(gainNode)
+      osc.start()
+      osc.stop(ctx.currentTime + duration)
+    })
+  }
+
+  const playPickup = () => {
+    const ctx = getAudioCtx()
+    ;[0, 0.11].forEach((delay, i) => {
+      const gain = ctx.createGain()
+      gain.gain.setValueAtTime(0, ctx.currentTime + delay)
+      gain.gain.linearRampToValueAtTime(0.2, ctx.currentTime + delay + 0.01)
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.3)
+      gain.connect(ctx.destination)
+      const osc = ctx.createOscillator()
+      osc.type = 'sine'
+      osc.frequency.value = i === 0 ? 1046 : 1318
+      osc.connect(gain)
+      osc.start(ctx.currentTime + delay)
+      osc.stop(ctx.currentTime + delay + 0.3)
+    })
+  }
+
+  const hangupCall = async (sid: string | null) => {
+    if (!sid) return
+    if (activePollRef.current) clearInterval(activePollRef.current)
+    activePollRef.current = null
+    if (swCallRef.current) {
+      try {
+        if (swCallRef.current.bye) await swCallRef.current.bye()
+        else if (swCallRef.current.hangup) await swCallRef.current.hangup()
+      } catch {}
+      swCallRef.current = null
+    }
+    await fetch('/api/calls/hangup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sid }),
+    })
+    setActiveCallSid(null)
+  }
+
+  const fetchCampaigns = async () => {
+    const res = await fetch(`/api/campaigns/list?user_id=${user?.id}`)
+    const data = await res.json()
+    if (data.success) {
+      setCampaigns(data.campaigns)
+    }
+    setCampaignsLoaded(true)
+  }
+
+  const isPersonalScope = selectedScope === PERSONAL_SCOPE
+  const currentScope = teamScopes.find(s => s.id === selectedScope) || null
+
+  const scopeCampaigns: { id: string; name: string; total_leads: number; status: string }[] = isPersonalScope
+    ? campaigns.map(c => ({ id: c.id, name: c.name, total_leads: c.total_leads, status: c.status }))
+    : (currentScope?.teamCampaigns
+        .filter(tc => tc.campaign)
+        .map(tc => ({
+          id: tc.campaign!.id,
+          name: tc.campaign!.name,
+          total_leads: tc.campaign!.total_leads,
+          status: tc.campaign!.status,
+        })) || [])
+
+  const activeScopeCampaigns = scopeCampaigns.filter(c => c.status === 'active')
+  const activeCampaignsCount = activeScopeCampaigns.length
+
+  const fetchNextLead = async (): Promise<Lead | null> => {
+    const params = new URLSearchParams({ user_id: user?.id || '' })
+    if (isSpecificCampaign) params.append('campaign_id', selectedCampaign)
+    if (!isPersonalScope) params.append('team_id', selectedScope)
+    const res = await fetch(`/api/leads/next?${params}`)
+    const data = await res.json()
+    if (data.success) {
+      setNoLeads(false)
+      setTcpaBlockedAll(false)
+      return data.lead
+    } else {
+      setNoLeads(true)
+      setTcpaBlockedAll(!!data.tcpaBlocked)
+      return null
+    }
+  }
+
+  const formatTime = (s: number) => {
+    const m = Math.floor(s / 60)
+    const sec = s % 60
+    return `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`
+  }
+
+  const now = new Date()
+  const timeStr = mounted ? now.toLocaleTimeString('en-US', { hour12: false }) : '--:--:--'
+  const dateStr = mounted ? now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : ''
+  void clockTick
+
+  useEffect(() => {
+    if (status === 'connected') {
+      setCallStart(Date.now())
+      timerRef.current = setInterval(() => setSeconds(s => s + 1), 1000)
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current)
+      if (status !== 'calling') setSeconds(0)
+    }
+    return () => { if (timerRef.current) clearInterval(timerRef.current) }
+  }, [status])
+
+  useEffect(() => {
+    if (dialZoomed) document.body.style.overflow = 'hidden'
+    else document.body.style.overflow = ''
+    return () => { document.body.style.overflow = '' }
+  }, [dialZoomed])
+
+  const fetchPreviewLead = async () => {
+    setShowDisposition(false)
+    setDisposition('')
+    setNoLeads(false)
+    const lead = await fetchNextLead()
+    if (!lead) return
+    setPreviewLead(lead)
+    setStatus('preview_ready')
+  }
+
+  const dialPreviewLead = async () => {
+    if (!previewLead) return
+    const lead = previewLead
+    setPreviewLead(null)
+    setCurrentLead(lead)
+    await dialLeadCall(lead)
+  }
+
+  const skipPreviewLead = async () => {
+    if (!previewLead) return
+    await fetch('/api/leads/dispose', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        lead_id: previewLead.id,
+        campaign_id: previewLead.campaign_id,
+        user_id: user?.id,
+        disposition: 'SKIPPED',
+        duration: 0,
+        source: 'preview_skip',
+      }),
+    })
+    setPreviewLead(null)
+    setStatus('idle')
+    fetchPreviewLead()
+  }
+
+  const dialLeadCall = async (lead: Lead) => {
+    const rawPhone = lead.phone?.replace(/\D/g, '')
+    if (!rawPhone || rawPhone.length < 10) {
+      await fetch('/api/leads/dispose', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lead_id: lead.id,
+          campaign_id: lead.campaign_id,
+          user_id: user?.id,
+          disposition: 'SKIPPED',
+          duration: 0,
+        }),
+      })
+      setCurrentLead(null)
+      if (autoChainOnFailure) setTimeout(() => handleDial(), 300)
+      else setStatus('idle')
+      return
+    }
+
+    setStatus('calling')
+    setSessionStats(s => ({ ...s, calls: s.calls + 1 }))
+    playInitiateBlip()
+
+    setAmdActivity(prev => [`AMD ENABLED — analyzing pickup`, ...prev].slice(0, 5))
+
+    try {
+      const res = await fetch('/api/calls/outbound', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: lead.phone,
+          leadId: lead.id,
+          campaignId: lead.campaign_id,
+          teamId: isPersonalScope ? undefined : selectedScope,
+        }),
+      })
+      const data = await res.json()
+
+      if (data.success) {
+        setActiveCallSid(data.callSid)
+        startCallPolling(data.callSid)
+      } else {
+        if (res.status === 403) {
+          setTier('lapsed')
+          return
+        }
+        if (res.status === 451) {
+          console.warn('TCPA window block:', data.detail)
+          await fetch('/api/leads/dispose', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              lead_id: lead.id,
+              campaign_id: lead.campaign_id,
+              disposition: 'TCPA_BLOCKED',
+              duration: 0,
+              notes: data.detail,
+              source: 'tcpa_block',
+            }),
+          })
+          setAmdActivity(prev => [
+            `TCPA SKIP — ${data.leadState || '?'}: ${data.detail}`,
+            ...prev,
+          ].slice(0, 5))
+          setStatus('idle')
+          setCurrentLead(null)
+          if (autoChainOnFailure) setTimeout(() => handleDial(), 500)
+          else setTimeout(() => handleDial(), 300)
+          return
+        }
+        await fetch('/api/leads/dispose', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            lead_id: lead.id,
+            campaign_id: lead.campaign_id,
+            user_id: user?.id,
+            disposition: 'SKIPPED',
+            duration: 0,
+          }),
+        })
+        setStatus('idle')
+        setCurrentLead(null)
+        if (autoChainOnFailure) setTimeout(() => handleDial(), 500)
+      }
+    } catch (error) {
+      console.error('Call error:', error)
+      setStatus('idle')
+      setCurrentLead(null)
+    }
+  }
+
+  const isNotHuman = (amd?: string): boolean => {
+    if (!amd) return false
+    return amd.startsWith('machine_') || amd === 'fax' || amd === 'unknown'
+  }
+
+  const startHangupPolling = (callSid: string) => {
+    const hangupPoll = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/calls/check?sid=${callSid}`)
+        const d = await res.json()
+        if (d.status === 'completed' || d.status === 'canceled' || d.status === 'failed') {
+          clearInterval(hangupPoll)
+          activePollRef.current = null
+          setActiveCallSid(null)
+          if (swCallRef.current) {
+            try { await swCallRef.current.bye() } catch {}
+            swCallRef.current = null
+          }
+
+          if (isNotHuman(d.amd_result)) {
+            setAmdActivity(prev =>
+              [`VOICEMAIL FILTERED LATE — ${d.amd_result}`, ...prev].slice(0, 5)
+            )
+            setStatus('idle')
+            setCurrentLead(null)
+            if (autoChainOnFailure) setTimeout(() => handleDial(), 600)
+          } else {
+            setStatus('ended')
+            setShowDisposition(true)
+          }
+        }
+      } catch {
+        clearInterval(hangupPoll)
+        activePollRef.current = null
+      }
+    }, 2000)
+    activePollRef.current = hangupPoll
+  }
+
+  const startCallPolling = (callSid: string) => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const statusRes = await fetch(`/api/calls/check?sid=${callSid}`)
+        const statusData = await statusRes.json()
+
+        if (statusData.status === 'in-progress') {
+          clearInterval(pollInterval)
+          activePollRef.current = null
+
+          if (isNotHuman(statusData.amd_result)) {
+            setAmdActivity(prev =>
+              [`VOICEMAIL FILTERED — ${statusData.amd_result}`, ...prev].slice(0, 5)
+            )
+            setActiveCallSid(null)
+            setStatus('idle')
+            setCurrentLead(null)
+            setTimeout(() => handleDial(), 600)
+            return
+          }
+
+          playPickup()
+          setStatus('connected')
+          setSessionStats(s => ({ ...s, connected: s.connected + 1 }))
+
+          startHangupPolling(callSid)
+
+        } else if (
+          statusData.status === 'completed' ||
+          statusData.status === 'busy' ||
+          statusData.status === 'failed' ||
+          statusData.status === 'no-answer' ||
+          statusData.status === 'canceled'
+        ) {
+          clearInterval(pollInterval)
+          activePollRef.current = null
+          setActiveCallSid(null)
+
+          if (isNotHuman(statusData.amd_result)) {
+            setAmdActivity(prev =>
+              [`VOICEMAIL FILTERED — ${statusData.amd_result}`, ...prev].slice(0, 5)
+            )
+          }
+
+          const ld = currentLeadRef.current
+          if (ld) {
+            const isAmdHangup = isNotHuman(statusData.amd_result)
+            if (!isAmdHangup) {
+              await fetch('/api/leads/dispose', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  lead_id: ld.id,
+                  campaign_id: ld.campaign_id,
+                  user_id: user?.id,
+                  disposition: 'NO_ANSWER',
+                  duration: 0,
+                }),
+              })
+            }
+          }
+          setStatus('idle')
+          setCurrentLead(null)
+
+          setTimeout(() => handleDial(), 800)
+        }
+      } catch (err) {
+        clearInterval(pollInterval)
+        activePollRef.current = null
+      }
+    }, 1500)
+    activePollRef.current = pollInterval
+  }
+
+  // ── INITIATE DIAL — unified entry point ─────────────────────────────────
+  // Non-predictive: fetches the next lead and dials it (or loads preview).
+  // Predictive: flips on predictiveEngineStarted, which kicks off the
+  // incoming-route polling effect. No actual call is initiated here for
+  // predictive — the server-side controller fires lines based on the
+  // heartbeat, and we just wait for a routed human to land via polling.
+  const handleDial = async () => {
+    setShowDisposition(false)
+    setDisposition('')
+    setNoLeads(false)
+
+    if (!selectedCampaign) {
+      setShowSelectCampaignMsg(true)
+      setTimeout(() => setShowSelectCampaignMsg(false), 4000)
+      return
+    }
+
+    if (isPredictive) {
+      // INITIATE DIAL SEQUENCE in predictive mode = start the engine.
+      // The incoming-route polling effect picks this up and begins
+      // checking for routed humans.
+      setPredictiveEngineStarted(true)
+      lastIncomingCallSidRef.current = null
+      setAmdActivity(prev => [
+        `PREDICTIVE ENGINE STARTED`,
+        ...prev,
+      ].slice(0, 5))
+      return
+    }
+
+    if (isPreview) {
+      await fetchPreviewLead()
+      return
+    }
+
+    const lead = await fetchNextLead()
+    if (!lead) return
+    setCurrentLead(lead)
+    await dialLeadCall(lead)
+  }
+
+  const handleSkip = async () => {
+    if (activePollRef.current) clearInterval(activePollRef.current)
+    if (activeCallSid) await hangupCall(activeCallSid)
+    if (currentLead) {
+      await fetch('/api/leads/dispose', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lead_id: currentLead.id,
+          campaign_id: currentLead.campaign_id,
+          disposition: 'SKIPPED',
+          duration: Math.floor((Date.now() - callStart) / 1000),
+          notes: notes.trim() || undefined,
+          source: 'skip',
+        }),
+      })
+    }
+    setNotes('')
+    setCurrentLead(null)
+    setStatus('idle')
+
+    if (isPredictive) {
+      lastIncomingCallSidRef.current = null
+      // Engine stays running — next routed human comes in via polling
+    } else {
+      setTimeout(() => handleDial(), 300)
+    }
+  }
+
+  const handleDisposition = async (disp: string) => {
+    if (disp === 'SKIP') { handleSkip(); return }
+    setDisposition(disp)
+    setSessionStats(s => ({
+      ...s,
+      appointments: disp === 'APPOINTMENT' ? s.appointments + 1 : s.appointments,
+      closed: disp === 'CLOSED' ? s.closed + 1 : s.closed,
+      dnc: disp === 'DO NOT CALL' ? s.dnc + 1 : s.dnc,
+      notInterested: disp === 'NOT INTERESTED' ? s.notInterested + 1 : s.notInterested,
+    }))
+    if (currentLead) {
+      await fetch('/api/leads/dispose', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lead_id: currentLead.id,
+          campaign_id: currentLead.campaign_id,
+          disposition: disp,
+          duration: Math.floor((Date.now() - callStart) / 1000),
+          notes: notes.trim() || undefined,
+          source: 'dialer',
+        }),
+      })
+    }
+
+    setTimeout(async () => {
+      setStatus('idle')
+      setShowDisposition(false)
+      setDisposition('')
+      setNotes('')
+      setSeconds(0)
+      setCurrentLead(null)
+
+      if (isPredictive) {
+        lastIncomingCallSidRef.current = null
+        // Engine stays running — next routed human comes in via polling
+        return
+      }
+      await handleDial()
+    }, autoChainOnFailure ? 800 : 600)
+  }
+
+  const handleManualDial = async () => {
+    if (!manualNumber) return
+    setDialZoomed(false)
+    setStatus('calling')
+    setSessionStats(s => ({ ...s, calls: s.calls + 1 }))
+    playInitiateBlip()
+    try {
+      const res = await fetch('/api/calls/outbound', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: manualNumber }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setActiveCallSid(data.callSid)
+        startCallPolling(data.callSid)
+      } else {
+        if (res.status === 403) {
+          setTier('lapsed')
+          return
+        }
+        if (res.status === 451) {
+          alert(`Cannot dial: ${data.detail}\n\nLocal time at destination: ${data.leadLocalTime || 'unknown'}`)
+          setStatus('idle')
+          return
+        }
+        setStatus('idle')
+      }
+    } catch {
+      setStatus('idle')
+    }
+  }
+
+  const handleKeypad = (key: string) => {
+    if (manualNumber.length < 14) {
+      setManualNumber(prev => prev + key)
+      playDTMF(key)
+    }
+  }
+
+  const handleBackspace = () => setManualNumber(prev => prev.slice(0, -1))
+
+  useEffect(() => {
+    if (!isActive) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement?.tagName
+      if (activeEl === 'INPUT' || activeEl === 'TEXTAREA' || activeEl === 'SELECT') return
+      if (e.key >= '0' && e.key <= '9') handleKeypad(e.key)
+      if (e.key === '*' || e.key === '#') handleKeypad(e.key)
+      if (e.key === 'Backspace') handleBackspace()
+      if (e.key === 'Enter' && manualNumber) handleManualDial()
+      if (e.key === 'Escape' && dialZoomed) setDialZoomed(false)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [manualNumber, status, dialZoomed, isActive])
+
+  const handleModeChange = async (newMode: DialerMode) => {
+    if (newMode === dialerMode) {
+      setModeDropdownOpen(false)
+      return
+    }
+
+    if (isAllActive) {
+      setAllActiveOverrideMode(newMode)
+      setModeDropdownOpen(false)
+      return
+    }
+
+    if (!currentCampaign) {
+      setModeDropdownOpen(false)
+      return
+    }
+
+    setModeSaving(true)
+    try {
+      const amd = newMode === 'progressive' || newMode === 'predictive'
+      const res = await fetch('/api/campaigns/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: currentCampaign.id,
+          dialer_mode: newMode,
+          amd_enabled: amd,
+        }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setCampaigns(prev => prev.map(c =>
+          c.id === currentCampaign.id ? { ...c, dialer_mode: newMode, amd_enabled: amd } : c
+        ))
+      }
+    } catch (err) {
+      console.error('Mode change failed:', err)
+    } finally {
+      setModeSaving(false)
+      setModeDropdownOpen(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!modeDropdownOpen) return
+    const onDoc = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (!target.closest('.mode-tile-wrap')) {
+        setModeDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [modeDropdownOpen])
+
+  const nameKeys = ['name', 'first_name', 'last_name', 'full_name', 'fname', 'lname', 'firstname', 'lastname']
+  const filteredExtraData = (data: Record<string, any>) => {
+    return Object.entries(data).filter(([k, v]) =>
+      v && String(v).trim() && !nameKeys.some(n => k.toLowerCase().replace(/[^a-z]/g, '') === n.replace(/[^a-z]/g, ''))
+    )
+  }
+
+  const dispositions = [
+    { label: 'CLOSED', color: '#2d7a2d', bg: '#e8f5e8' },
+    { label: 'APPOINTMENT', color: '#1a4a8a', bg: '#e8eef8' },
+    { label: 'NOT INTERESTED', color: '#8a6a1a', bg: '#f8f4e8' },
+    { label: 'DO NOT CALL', color: '#8a1a1a', bg: '#f8e8e8' },
+    { label: 'SKIP', color: '#5a5e6a', bg: '#f0f0f4' },
+  ]
+
+  let activeScript: string | null = null
+  if (isSpecificCampaign) {
+    activeScript = currentCampaign?.script || null
+  } else if (isAllActive && isPersonalScope) {
+    activeScript = campaigns.find(c => c.script)?.script || null
+  }
+
+  const terminalBg = '#f0f1f4'
+  const terminalSurface = '#e2e4ea'
+  const terminalBorder = '#c4c8d0'
+  const terminalDark = '#1a1a2e'
+  const terminalText = '#1a1c24'
+  const terminalMuted = '#5a5e6a'
+  const terminalAccent = '#2a4a8a'
+  const terminalGreen = '#1a6a1a'
+  const terminalRed = '#8a1a1a'
+  const terminalAmber = '#8a6a1a'
+
+  const modeColor = isPredictive ? terminalRed
+    : isProgressive ? terminalGreen
+    : isPreview ? terminalMuted
+    : terminalAccent
+
+  const connectedRate = sessionStats.calls > 0
+    ? ((sessionStats.connected / sessionStats.calls) * 100).toFixed(0) + '%'
+    : '—'
+
+  if (tierLoaded && !isActive) {
+    return (
+      <div style={{
+        flex: 1, background: terminalBg,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 24, minHeight: 'calc(100vh - 64px)',
+        fontFamily: 'Futura PT, Futura, sans-serif',
+      }}>
+        <div style={{
+          width: '100%', maxWidth: 520,
+          background: terminalDark, border: `1px solid ${terminalBorder}`,
+          borderTop: `3px solid #ffaa3e`, borderRadius: 4, padding: 36,
+          color: '#e0e2ea', textAlign: 'center', boxSizing: 'border-box',
+        }}>
+          <div style={{ fontSize: 56, marginBottom: 16, opacity: 0.85 }}>📞</div>
+          <div style={{ fontSize: 16, fontWeight: 700, letterSpacing: 5, color: '#ffaa3e', marginBottom: 12 }}>
+            SUBSCRIBE TO DIAL
+          </div>
+          <div style={{ fontSize: 12, lineHeight: 1.7, color: '#c0c2ca', letterSpacing: 1, marginBottom: 28 }}>
+            {tier === 'lapsed'
+              ? 'Your subscription has lapsed. Resubscribe to restore dialing access. Your leads, recordings, and campaigns are still here waiting for you.'
+              : 'An active subscription is required to make outbound calls.'}
+          </div>
+          <Link href="/billing" style={{
+            display: 'block', padding: '16px 28px',
+            background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+            border: 'none', borderRadius: 4, color: 'white',
+            fontSize: 13, fontWeight: 700, letterSpacing: 4,
+            textDecoration: 'none', boxShadow: '0 0 20px rgba(74,158,255,0.3)',
+            marginBottom: 16, fontFamily: 'Futura PT, Futura, sans-serif',
+          }}>RESUBSCRIBE — $35/WEEK</Link>
+          <div style={{ fontSize: 9, letterSpacing: 3, color: '#888a92', marginBottom: 24 }}>
+            NO CONTRACTS · CANCEL ANYTIME
+          </div>
+          <div style={{
+            paddingTop: 20, borderTop: '1px solid #2a2c34',
+            display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap',
+          }}>
+            <Link href="/dashboard/leads" style={navLinkStyle}>VIEW LEADS</Link>
+            <Link href="/dashboard/recordings" style={navLinkStyle}>RECORDINGS</Link>
+            <Link href="/dashboard/analytics" style={navLinkStyle}>ANALYTICS</Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!tierLoaded) {
+    return (
+      <div style={{
+        flex: 1, background: terminalBg,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        minHeight: 'calc(100vh - 64px)',
+        fontFamily: 'Futura PT, Futura, sans-serif',
+      }}>
+        <div style={{ fontSize: 11, letterSpacing: 4, color: terminalMuted }}>LOADING TERMINAL...</div>
+      </div>
+    )
+  }
+
+  const displayLead = previewLead || currentLead
+
+  const ManualDialer = ({ inOverlay = false }: { inOverlay?: boolean }) => (
+    <>
+      <div style={{
+        background: terminalDark, padding: inOverlay ? '14px 20px' : '8px 16px',
+        borderBottom: `1px solid ${terminalBorder}`, flexShrink: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <span style={{
+          fontSize: inOverlay ? '11px' : '9px', letterSpacing: '3px',
+          color: '#8888aa', fontWeight: 'bold',
+        }}>MANUAL DIAL</span>
+        <button
+          onClick={() => setDialZoomed(!inOverlay)}
+          aria-label={inOverlay ? 'Close fullscreen dialer' : 'Open fullscreen dialer'}
+          style={{
+            background: 'transparent', border: '1px solid #4a4a5e', borderRadius: 4,
+            color: '#8888aa', width: 28, height: 28,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', fontSize: 14, fontWeight: 'bold', padding: 0,
+          }}
+        >{inOverlay ? '×' : '⛶'}</button>
+      </div>
+
+      <div style={{
+        padding: inOverlay ? '20px 24px' : '12px',
+        background: terminalBg, flex: 1,
+        display: 'flex', flexDirection: 'column',
+        maxWidth: inOverlay ? 480 : 'none',
+        margin: inOverlay ? '0 auto' : 0,
+        width: inOverlay ? '100%' : 'auto',
+        boxSizing: 'border-box',
+        overflowY: inOverlay ? 'auto' : 'visible',
+        paddingBottom: inOverlay ? 'calc(20px + env(safe-area-inset-bottom, 0px))' : 12,
+      }}>
+        <div style={{
+          background: terminalSurface, border: `1px solid ${terminalBorder}`, borderRadius: '4px',
+          padding: inOverlay ? '20px 16px' : '10px 12px',
+          fontFamily: 'monospace', fontSize: inOverlay ? '32px' : '18px',
+          fontWeight: 'bold', color: manualNumber ? terminalText : terminalMuted,
+          letterSpacing: '3px', textAlign: 'center',
+          marginBottom: inOverlay ? '20px' : '10px',
+          minHeight: inOverlay ? '64px' : '44px',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+        }}>
+          {manualNumber || '_ _ _ _ _ _ _ _'}
+        </div>
+
+        <div style={{
+          display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: inOverlay ? '12px' : '6px', marginBottom: inOverlay ? '12px' : '6px',
+          flex: inOverlay ? '0 0 auto' : 1,
+        }}>
+          {['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'].map((key) => (
+            <button key={key} onClick={() => handleKeypad(key)} style={{
+              borderRadius: '3px', background: terminalSurface,
+              border: `1px solid ${terminalBorder}`, borderBottom: `3px solid ${terminalBorder}`,
+              color: terminalText, fontSize: inOverlay ? '28px' : '16px',
+              fontWeight: 'bold', cursor: 'pointer', fontFamily: 'monospace',
+              transition: 'all 0.05s', padding: inOverlay ? '20px 0' : '12px 0',
+              minHeight: inOverlay ? 64 : 'auto',
+            }}>{key}</button>
+          ))}
+        </div>
+
+        <div style={{
+          display: 'grid', gridTemplateColumns: '1fr 2fr',
+          gap: inOverlay ? '12px' : '6px', flexShrink: 0,
+        }}>
+          <button onClick={handleBackspace} style={{
+            padding: inOverlay ? '20px' : '12px', borderRadius: '3px',
+            background: terminalSurface, border: `1px solid ${terminalBorder}`,
+            borderBottom: `3px solid ${terminalBorder}`, color: terminalMuted,
+            fontSize: inOverlay ? '24px' : '16px', cursor: 'pointer',
+          }}>⌫</button>
+          {/* v22.d: removed ▶ emoji from DIAL button */}
+          <button onClick={handleManualDial} disabled={!manualNumber} style={{
+            padding: inOverlay ? '20px' : '12px', borderRadius: '3px', border: 'none',
+            background: manualNumber ? terminalDark : terminalSurface,
+            borderBottom: `3px solid ${manualNumber ? 'var(--brand-primary)' : terminalBorder}`,
+            color: manualNumber ? 'var(--brand-primary)' : terminalMuted,
+            fontSize: inOverlay ? '14px' : '11px', fontWeight: 'bold', letterSpacing: '2px',
+            cursor: manualNumber ? 'pointer' : 'not-allowed',
+            fontFamily: 'Futura PT, Futura, sans-serif',
+          }}>DIAL</button>
+        </div>
+      </div>
+    </>
+  )
+
+  // ────────────────────────────────────────────────────────────────────────
+  // PREDICTIVE — AVAILABLE state UI
+  // ────────────────────────────────────────────────────────────────────────
+  // Big calm status card. Only rendered when the engine is actually
+  // running (predictiveEngineStarted). If LIVE but engine not started,
+  // the empty-state card (matching INITIATE DIAL SEQUENCE flow) shows.
+  // ────────────────────────────────────────────────────────────────────────
+  const PredictiveAvailableCard = () => {
+    const linesActive = lastControllerSummary?.inFlight ?? 0
+    const linesTarget = linesPref?.effective_lines || pacingInfo?.configuredLines || 3
+    return (
+      <div style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '20px 16px',
+        background: terminalSurface,
+        border: `1px solid ${terminalBorder}`,
+        borderLeft: `3px solid ${terminalAccent}`,
+        borderRadius: 4,
+        minHeight: 280,
+      }}>
+        <style>{`
+          @keyframes predictiveAvailablePulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 12px ${terminalAccent}; }
+            50% { opacity: 0.4; box-shadow: 0 0 4px ${terminalAccent}; }
+          }
+          .predictive-pulse-dot {
+            animation: predictiveAvailablePulse 1.4s ease-in-out infinite;
+          }
+        `}</style>
+        <div style={{
+          width: 24, height: 24, borderRadius: '50%',
+          background: terminalAccent, marginBottom: 18,
+        }} className="predictive-pulse-dot" />
+        <div style={{
+          fontSize: 20, fontWeight: 'bold', letterSpacing: 6,
+          color: terminalAccent, marginBottom: 10, textAlign: 'center',
+        }}>
+          AVAILABLE
+        </div>
+        <div style={{
+          fontSize: 11, letterSpacing: 2, color: terminalMuted,
+          textAlign: 'center', lineHeight: 1.7, maxWidth: 360, marginBottom: 22,
+        }}>
+          System is dialing in the background.<br/>
+          A live human will be routed to you automatically.
+        </div>
+        <div style={{
+          display: 'flex', gap: 14, flexWrap: 'wrap', justifyContent: 'center',
+        }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 8, letterSpacing: 2, color: terminalMuted }}>LINES IN FLIGHT</div>
+            <div style={{ fontSize: 18, fontFamily: 'monospace', fontWeight: 'bold', color: terminalText }}>
+              {linesActive} / {linesTarget}
+            </div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 8, letterSpacing: 2, color: terminalMuted }}>CONNECTED TODAY</div>
+            <div style={{ fontSize: 18, fontFamily: 'monospace', fontWeight: 'bold', color: terminalAccent }}>
+              {sessionStats.connected}
+            </div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 8, letterSpacing: 2, color: terminalMuted }}>30D ABANDON</div>
+            <div style={{
+              fontSize: 18, fontFamily: 'monospace', fontWeight: 'bold',
+              color: pacingInfo && pacingInfo.abandonRate >= 0.025 ? terminalRed
+                : pacingInfo && pacingInfo.abandonRate >= 0.020 ? terminalAmber : terminalGreen,
+            }}>
+              {pacingInfo ? `${(pacingInfo.abandonRate * 100).toFixed(2)}%` : '—'}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="rec-root" style={{
-      flex: 1,
-      background: T.bg,
-      minHeight: 'calc(100vh - 64px)',
-      display: 'flex',
-      flexDirection: 'column',
-      overflow: 'hidden',
+    <div className="dialer-root" style={{
+      flex: 1, background: terminalBg,
+      display: 'flex', flexDirection: 'column',
+      overflow: 'hidden', minHeight: 0, position: 'relative',
     }}>
       <style>{`
-        .rec-root * { box-sizing: border-box; }
-        .rec-header {
-          background: ${T.dark};
-          padding: 12px 20px;
-          border-bottom: 2px solid ${T.accent};
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 16px;
-          flex-wrap: wrap;
+        .dialer-root { height: 100vh; height: 100dvh; }
+        .dialer-status-bar { display: flex; align-items: center; justify-content: space-between; }
+        .dialer-status-bar-left { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+        .dialer-status-bar-right { display: flex; align-items: center; gap: 18px; }
+        .dialer-stat-grid { grid-template-columns: repeat(4, 1fr) !important; }
+        .dialer-right-sidebar {
+          width: 280px; border-left: 1px solid ${terminalBorder};
+          display: flex; flex-direction: column; flex-shrink: 0; overflow: hidden;
         }
-        .rec-disclosure {
-          background: #fff8e8;
-          border-bottom: 1px solid #d4b86a;
+        .dialer-right-toggle { display: none; }
+        .dialer-right-overlay { display: none; }
+        .dialer-connected-pill {
+          display: flex; align-items: center; gap: 6px;
+          padding: 3px 10px; background: rgba(74,158,255,0.12);
+          border: 1px solid rgba(74,158,255,0.3); border-radius: 3px;
+          font-family: monospace; font-size: 10px; letter-spacing: 1px;
+          color: var(--brand-primary); font-weight: bold;
         }
-        .rec-disclosure-summary {
-          padding: 8px 20px;
-          font-size: 11px;
-          color: ${T.amber};
-          letter-spacing: 1px;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 12px;
-          cursor: pointer;
-          user-select: none;
-          font-weight: bold;
-          font-family: 'Futura PT', Futura, sans-serif;
+        .mode-tile-wrap { position: relative; cursor: pointer; }
+        .mode-tile-dropdown {
+          position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+          background: ${terminalDark}; border: 1px solid #4a4a5e;
+          border-radius: 4px; padding: 4px; z-index: 200;
+          min-width: 160px; box-shadow: 0 4px 16px rgba(0,0,0,0.4);
         }
-        .rec-disclosure-summary:hover { background: #fdf2d6; }
-        .rec-disclosure-summary .chev {
-          font-family: monospace;
-          font-size: 10px;
-          color: ${T.amber};
-          transition: transform 0.15s;
+        .mode-dropdown-item {
+          display: flex; align-items: center; gap: 8px;
+          padding: 8px 10px; cursor: pointer;
+          font-size: 10px; font-weight: bold; letter-spacing: 2px;
+          font-family: monospace; border-radius: 3px;
+          transition: background 0.1s;
         }
-        .rec-disclosure-summary.open .chev { transform: rotate(180deg); }
-        .rec-disclosure-body {
-          padding: 4px 20px 12px 20px;
-          font-size: 11px;
-          color: ${T.amber};
-          letter-spacing: 0.5px;
-          line-height: 1.6;
-          border-top: 1px dashed #d4b86a;
-          font-family: system-ui, -apple-system, sans-serif;
+        .mode-dropdown-item:hover { background: rgba(255,255,255,0.05); }
+        .mode-dropdown-item.current { background: rgba(74,158,255,0.1); }
+        .lines-selector {
+          display: flex; align-items: center; gap: 6px;
+          padding: 4px 10px; background: ${terminalBg};
+          border: 1px solid ${terminalBorder}; border-radius: 3px;
         }
-        .rec-disclosure-body p {
-          margin: 8px 0 0 0;
+        .lines-selector select {
+          background: transparent; border: none; outline: none;
+          font-family: monospace; font-size: 12px; font-weight: bold;
+          color: ${terminalText}; cursor: pointer; padding: 2px 4px;
         }
-        .rec-disclosure-body p:first-child { margin-top: 6px; }
-        .rec-controls {
-          padding: 12px 16px;
-          background: ${T.surface};
-          border-bottom: 1px solid ${T.border};
-          display: grid;
-          grid-template-columns: 2fr 1fr 1fr;
-          gap: 8px;
-          align-items: end;
-        }
-        .rec-controls .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-        .rec-controls label {
-          font-size: 9px; letter-spacing: 2px; color: ${T.muted}; font-weight: bold;
-        }
-        .rec-controls input, .rec-controls select {
-          padding: 8px 10px;
-          background: ${T.bg};
-          border: 1px solid ${T.border};
-          border-radius: 4px;
-          font-family: monospace;
-          font-size: 12px;
-          color: ${T.text};
-          outline: none;
-          width: 100%;
-          min-width: 0;
-        }
-        .rec-mobile-toggle { display: none; }
-        .rec-list { flex: 1; overflow-y: auto; padding: 12px 16px; }
-        .rec-card {
-          border: 1px solid ${T.border};
-          border-radius: 4px;
-          padding: 14px 16px;
-          margin-bottom: 6px;
-          cursor: pointer;
-          transition: border-color 0.1s, background 0.15s;
-        }
-        .rec-card:hover { border-color: ${T.blue}; }
-        .rec-card.expanded { border-color: ${T.blue}; }
-        .rec-desktop-row {
-          display: grid;
-          grid-template-columns: 1.6fr 1.2fr 1fr 1.2fr auto;
-          gap: 16px;
-          align-items: center;
-        }
-        .rec-mobile-row { display: none; }
-        .rec-name {
-          font-weight: bold;
-          font-family: monospace;
-          color: ${T.text};
-          font-size: 13px;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-        .rec-name-sub {
-          font-size: 10px;
-          color: ${T.muted};
-          font-family: monospace;
-          font-weight: normal;
-          letter-spacing: 1px;
-          margin-top: 2px;
-        }
-        .rec-phone {
-          font-family: monospace;
-          color: ${T.accent};
-          font-weight: bold;
-          font-size: 12px;
-          white-space: nowrap;
-        }
-        .rec-datetime {
-          font-family: monospace;
-          font-size: 11px;
-          color: ${T.text};
-          line-height: 1.5;
-        }
-        .rec-datetime .date {
-          font-weight: bold;
-          letter-spacing: 0.5px;
-        }
-        .rec-datetime .time {
-          color: ${T.muted};
-          font-size: 10px;
-          margin-top: 2px;
-        }
-        .rec-datetime .duration {
-          color: ${T.muted};
-          font-size: 10px;
-          margin-top: 2px;
-        }
-        .rec-disp-badge {
-          display: inline-block;
-          padding: 5px 12px;
-          border-radius: 3px;
-          font-size: 10px;
-          letter-spacing: 1px;
-          font-weight: bold;
-          font-family: 'Futura PT', Futura, sans-serif;
-          white-space: nowrap;
-        }
-        .rec-camp {
-          font-family: monospace;
-          font-size: 11px;
-          color: ${T.muted};
-          letter-spacing: 0.5px;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-        .rec-actions {
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-          align-items: stretch;
-          min-width: 130px;
-        }
-        .rec-actions-row {
-          display: flex;
-          gap: 4px;
-        }
-        .rec-btn {
-          padding: 7px 12px;
-          background: transparent;
-          border: 1px solid ${T.blue};
-          border-radius: 3px;
-          color: ${T.blue};
-          font-size: 10px;
-          letter-spacing: 1px;
-          font-weight: bold;
-          cursor: pointer;
-          font-family: 'Futura PT', Futura, sans-serif;
-          flex: 1;
-          white-space: nowrap;
-        }
-        .rec-btn-danger {
-          border-color: ${T.red};
-          color: ${T.red};
-        }
-        .rec-btn-active {
-          background: ${T.dark};
-          color: ${T.blue};
-        }
-        .rec-expand {
-          margin-top: 12px;
-          padding: 14px;
-          background: ${T.bg};
-          border: 1px solid ${T.blue};
-          border-radius: 3px;
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 16px;
-        }
-        .rec-expand-section-label {
-          font-size: 9px;
-          letter-spacing: 2px;
-          color: ${T.muted};
-          font-weight: bold;
-          margin-bottom: 6px;
-        }
-        .rec-expand-row {
-          display: flex;
-          justify-content: space-between;
-          padding: 6px 10px;
-          background: ${T.surface};
-          border: 1px solid ${T.border};
-          border-radius: 3px;
-          font-size: 11px;
-          margin-bottom: 4px;
-        }
-        .rec-notes-block {
-          padding: 12px;
-          background: ${T.surface};
-          border: 1px solid ${T.border};
-          border-radius: 3px;
-          font-family: monospace;
-          font-size: 12px;
-          line-height: 1.6;
-          color: ${T.text};
-          white-space: pre-wrap;
-          min-height: 60px;
-        }
-        .rec-notes-empty {
-          color: ${T.muted};
-          font-style: italic;
-        }
-        .rec-player {
-          margin-top: 12px;
-          padding-top: 12px;
-          border-top: 1px solid ${T.border};
-        }
-        .rec-player audio { width: 100%; }
-        .rec-sync-msg {
-          padding: 8px 16px;
-          background: #e8f5e8;
-          border-bottom: 1px solid #6abf6a;
-          color: ${T.green};
-          font-size: 11px;
-          letter-spacing: 1px;
-        }
+
         @media (max-width: 768px) {
-          .rec-header { padding: 10px 12px; }
-          .rec-disclosure-summary { padding: 8px 12px; font-size: 10px; }
-          .rec-disclosure-body { padding: 4px 12px 10px 12px; font-size: 10px; }
-          .rec-mobile-toggle {
+          .dialer-root { height: calc(100vh - 64px); height: calc(100dvh - 64px); }
+          .dialer-status-bar { padding: 6px 12px !important; }
+          .dialer-status-bar-left { gap: 10px; }
+          .dialer-status-bar-right { gap: 10px; }
+          .dialer-status-bar-right .dialer-time-block { display: none !important; }
+          .dialer-stat-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .dialer-right-sidebar {
+            position: fixed; right: 0; top: 0; bottom: 0; z-index: 60;
+            width: 280px; max-width: 85vw;
+            transform: translateX(100%); transition: transform 0.25s ease;
+            background: ${terminalBg}; border-left: 1px solid ${terminalBorder};
+          }
+          .dialer-right-sidebar.open { transform: translateX(0); }
+
+          /* v23 — right-edge vertical arrow tab. Moved from dead-center
+             (top:50%) down to between center and bottom (top:66%) per
+             request. translateY(-50%) still centers the tab's own height
+             on that anchor point. Attached to the right edge, with a
+             chevron pointing left. Tap to open the metrics + manual-dial
+             sidebar. */
+          .dialer-right-toggle {
             display: flex;
+            position: fixed;
+            right: 0;
+            top: 66%;
+            transform: translateY(-50%);
+            z-index: 50;
+            width: 22px;
+            height: 64px;
+            border-radius: 8px 0 0 8px;
+            background: ${terminalDark};
+            border: 1px solid #4a4a5e;
+            border-right: none;
+            color: var(--brand-primary);
             align-items: center;
-            justify-content: space-between;
-            padding: 10px 16px;
-            background: ${T.surface};
-            border-bottom: 1px solid ${T.border};
-            font-size: 11px;
-            letter-spacing: 2px;
-            color: ${T.text};
+            justify-content: center;
             cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            box-shadow: -2px 4px 12px rgba(0,0,0,0.25);
+            padding: 0;
           }
-          .rec-controls.closed-mobile { display: none; }
-          .rec-controls.open-mobile {
-            display: grid;
-            grid-template-columns: 1fr;
-            padding: 12px;
+          .dialer-right-toggle:active {
+            background: #252736;
           }
-          .rec-desktop-row { display: none; }
-          .rec-mobile-row {
-            display: grid;
-            grid-template-columns: 1fr auto;
-            gap: 8px;
-            grid-template-areas:
-              "name disp"
-              "phone phone"
-              "meta meta"
-              "actions actions";
+          .dialer-right-overlay {
+            display: block; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.5); z-index: 55;
+            opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
           }
-          .rec-mobile-row .col-name { grid-area: name; }
-          .rec-mobile-row .col-phone { grid-area: phone; }
-          .rec-mobile-row .col-disp { grid-area: disp; }
-          .rec-mobile-row .col-meta {
-            grid-area: meta;
-            display: flex;
-            gap: 12px;
-            font-size: 10px;
-            color: ${T.muted};
-            font-family: monospace;
-          }
-          .rec-mobile-row .col-actions { grid-area: actions; align-items: stretch; min-width: auto; }
-          .rec-mobile-row .rec-actions-row { width: 100%; }
-          .rec-list { padding: 8px 12px; }
-          .rec-expand { grid-template-columns: 1fr; }
+          .dialer-right-overlay.open { opacity: 1; pointer-events: auto; }
         }
       `}</style>
 
-      <div className="rec-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <span style={{ fontSize: 11, fontWeight: 'bold', letterSpacing: 4, color: T.blue }}>
-            CALL RECORDINGS
+      <div className="dialer-status-bar" style={{
+        background: terminalDark, padding: '8px 20px',
+        borderBottom: `2px solid ${terminalAccent}`, flexShrink: 0,
+      }}>
+        <div className="dialer-status-bar-left">
+          <span style={{ fontSize: '11px', fontWeight: 'bold', letterSpacing: '4px', color: 'var(--brand-primary)' }}>
+            DIALERSEAT TERMINAL
           </span>
-          <span style={{
-            fontSize: 10, fontFamily: 'monospace', color: '#8888aa', letterSpacing: 1,
-          }}>
-            {total.toLocaleString()} TOTAL · {recordings.length} LOADED
-          </span>
-        </div>
-        <button
-          onClick={handleSync}
-          disabled={syncing}
-          style={{
-            padding: '6px 14px',
-            background: 'transparent',
-            border: `1px solid ${T.blue}`,
-            borderRadius: 3,
-            color: T.blue,
-            fontSize: 10,
-            letterSpacing: 2,
-            fontWeight: 'bold',
-            cursor: syncing ? 'wait' : 'pointer',
-            fontFamily: 'Futura PT, Futura, sans-serif',
-          }}
-        >{syncing ? '⟳ SYNCING...' : '⟳ SYNC'}</button>
-      </div>
-
-      {syncMessage && (
-        <div className="rec-sync-msg">{syncMessage}</div>
-      )}
-
-      <div className="rec-disclosure">
-        <div
-          className={`rec-disclosure-summary ${disclosureOpen ? 'open' : ''}`}
-          onClick={() => setDisclosureOpen(v => !v)}
-          role="button"
-          aria-expanded={disclosureOpen}
-        >
-          <span>⚠️ DISCLOSURE & 30-DAY RECORDINGS BACKUP:</span>
-          <span className="chev">▾</span>
-        </div>
-        {disclosureOpen && (
-          <div className="rec-disclosure-body">
-            <p>
-              <strong>RECORDING DISCLOSURE:</strong> You must verbally inform the
-              other party they are on a recorded line by law in CA, CT, FL, IL, MD,
-              MA, MI, MT, NV, NH, PA, WA.
-            </p>
-            <p>
-              <strong>30-DAY BACKUP:</strong> Recordings are kept for 30 days, then
-              auto-removed. Click DOWNLOAD to save permanently.
-            </p>
-          </div>
-        )}
-      </div>
-
-      <div className="rec-mobile-toggle" onClick={() => setFiltersOpen(v => !v)}>
-        <span>{filtersOpen ? '▲ HIDE' : '▼ SHOW'} FILTERS</span>
-        <span style={{ fontSize: 10, color: T.muted, fontFamily: 'monospace' }}>
-          {total.toLocaleString()} recordings
-        </span>
-      </div>
-
-      <div className={`rec-controls ${filtersOpen ? 'open-mobile' : 'closed-mobile'}`}>
-        <div className="field">
-          <label>SEARCH NAME OR PHONE</label>
-          <input type="text" placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} />
-        </div>
-        <div className="field">
-          <label>CAMPAIGN</label>
-          <select value={campaignFilter} onChange={e => setCampaignFilter(e.target.value)}>
-            <option value="all">[ ALL CAMPAIGNS ]</option>
-            {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-        </div>
-        <div className="field">
-          <label>DISPOSITION</label>
-          <select value={dispositionFilter} onChange={e => setDispositionFilter(e.target.value)}>
-            <option value="all">[ ALL ]</option>
-            {DISPOSITIONS.map(d => <option key={d} value={d}>{d}</option>)}
-          </select>
-        </div>
-      </div>
-
-      <div className="rec-list">
-        {recordings.length === 0 && !loading && (
-          <div style={{
-            textAlign: 'center', padding: 60,
-            fontSize: 11, letterSpacing: 3, color: T.muted,
-          }}>
-            <div style={{ fontSize: 36, marginBottom: 12, opacity: 0.4 }}>🎙️</div>
-            NO RECORDINGS YET<br />
-            <span style={{ fontSize: 10, marginTop: 8, display: 'inline-block' }}>
-              MAKE A CALL — THEN HIT SYNC IF IT DOESN'T APPEAR.
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div onClick={handleSetAvailable} style={{
+              width: '36px', height: '20px', borderRadius: '10px',
+              background: available ? 'var(--brand-primary)' : '#444460',
+              position: 'relative', cursor: 'pointer', transition: 'background 0.2s',
+              flexShrink: 0,
+            }}>
+              <div style={{
+                width: '14px', height: '14px', borderRadius: '50%', background: 'white',
+                position: 'absolute', top: '3px', left: available ? '19px' : '3px', transition: 'left 0.2s',
+              }} />
+            </div>
+            <div style={{
+              width: '8px', height: '8px', borderRadius: '50%',
+              background: available ? '#32ff7e' : '#ff6464',
+              boxShadow: available ? '0 0 6px #32ff7e' : '0 0 6px #ff6464',
+            }} />
+            <span style={{ fontSize: '10px', letterSpacing: '2px', color: available ? '#32ff7e' : '#ff6464' }}>
+              {available ? 'LIVE' : 'OFFLINE'}
             </span>
           </div>
-        )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: swReady ? 'var(--brand-primary)' : '#666688' }} />
+            <span style={{ fontSize: '9px', letterSpacing: '2px', color: swReady ? 'var(--brand-primary)' : '#666688' }}>
+              {swReady ? 'AUDIO' : '...'}
+            </span>
+          </div>
+        </div>
+        <div className="dialer-status-bar-right">
+          <div className="dialer-connected-pill" title="Connected calls today">
+            <span style={{ fontSize: 8, letterSpacing: 2, opacity: 0.75 }}>CONNECTED TODAY</span>
+            <span>{sessionStats.connected}</span>
+          </div>
+          <div className="dialer-time-block" style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+            <span style={{ fontSize: '11px', fontFamily: 'monospace', color: '#8888aa', letterSpacing: '2px' }}>{dateStr}</span>
+            <span style={{ fontSize: '14px', fontFamily: 'monospace', fontWeight: 'bold', color: 'var(--brand-primary)', letterSpacing: '3px' }}>{timeStr}</span>
+          </div>
+        </div>
+      </div>
 
-        {recordings.map(r => {
-          const expDays = daysUntilExpire(r.recording_expires_at)
-          const isPlaying = playingId === r.id
-          const isExpanded = expandedId === r.id
-          const isConfirming = confirmDeleteId === r.id
-          const isDeleting = deletingId === r.id
+      {isPredictive && pacingInfo?.isDegraded && (
+        <div style={{
+          padding: '8px 20px',
+          background: '#f8e8e8',
+          borderBottom: `2px solid ${terminalRed}`,
+          color: terminalRed,
+          fontSize: 11,
+          letterSpacing: 1,
+          textAlign: 'center',
+          fontWeight: 'bold',
+        }}>
+          ⚠ AUTO-DEGRADED TO PROGRESSIVE — abandon rate {(pacingInfo.abandonRate * 100).toFixed(2)}% (legal cap 3%)
+        </div>
+      )}
 
-          const hasLead = !!r.leads
-          const leadName = hasLead
-            ? `${r.leads!.first_name || ''} ${r.leads!.last_name || ''}`.trim() || 'Unnamed Lead'
-            : 'Manual Dial'
-          const phone = r.leads?.phone || r.phone_number || '—'
-          const campName = r.campaigns?.name || (hasLead ? '—' : 'Direct')
-          const { date, time } = formatDateClean(r.created_at)
-          const dur = formatDuration(r.recording_duration || r.duration)
-          const notes = r.leads?.notes || (r as any).notes || ''
+      {isPredictive && shouldYield && !pacingInfo?.isDegraded && (
+        <div style={{
+          padding: '8px 20px',
+          background: '#fdf4e8',
+          borderBottom: `2px solid ${terminalAmber}`,
+          color: terminalAmber,
+          fontSize: 11,
+          letterSpacing: 1,
+          textAlign: 'center',
+          fontWeight: 'bold',
+        }}>
+          ⚠ YIELDING — abandon rate approaching FTC 3% cap. Dialing paused briefly.
+        </div>
+      )}
 
-          const dispBadgeStyle = r.disposition ? {
-            background: dispBg(r.disposition),
-            color: dispColor(r.disposition),
-            border: `1px solid ${dispColor(r.disposition)}`,
-          } : {}
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
+        <div style={{ flex: 1, padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px', overflow: 'auto', minHeight: 0 }}>
 
-          return (
+          <div className="dialer-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', flexShrink: 0 }}>
+            <div style={{
+              padding: '8px 12px', background: terminalSurface,
+              border: `1px solid ${terminalBorder}`, borderRadius: '4px',
+            }}>
+              <div style={{ fontSize: '9px', letterSpacing: '2px', color: terminalMuted, marginBottom: '3px' }}>STATUS</div>
+              <div style={{
+                fontSize: '12px', fontWeight: 'bold', fontFamily: 'monospace',
+                color: status === 'connected' ? terminalGreen : status === 'calling' ? '#8a6a1a' : status === 'preview_ready' ? terminalAccent : terminalMuted,
+                letterSpacing: '1px',
+              }}>{status === 'preview_ready' ? 'PREVIEW' : status.toUpperCase()}</div>
+            </div>
+            <div style={{
+              padding: '8px 12px', background: terminalSurface,
+              border: `1px solid ${terminalBorder}`, borderRadius: '4px',
+            }}>
+              <div style={{ fontSize: '9px', letterSpacing: '2px', color: terminalMuted, marginBottom: '3px' }}>DURATION</div>
+              <div style={{ fontSize: '12px', fontWeight: 'bold', fontFamily: 'monospace', color: terminalAccent, letterSpacing: '1px' }}>
+                {status === 'connected' ? formatTime(seconds) : '--:--'}
+              </div>
+            </div>
+            <div style={{
+              padding: '8px 12px', background: terminalSurface,
+              border: `1px solid ${terminalBorder}`, borderRadius: '4px',
+            }}>
+              <div style={{ fontSize: '9px', letterSpacing: '2px', color: terminalMuted, marginBottom: '3px' }}>CONNECTED RATE</div>
+              <div style={{ fontSize: '12px', fontWeight: 'bold', fontFamily: 'monospace', color: terminalAccent, letterSpacing: '1px' }}>
+                {connectedRate}
+              </div>
+            </div>
             <div
-              key={r.id}
-              className={`rec-card ${isExpanded ? 'expanded' : ''}`}
-              style={{ background: dispositionTint(r.disposition) }}
-              onClick={(e) => {
-                const target = e.target as HTMLElement
-                if (target.closest('button, audio, .rec-actions')) return
-                setExpandedId(isExpanded ? null : r.id)
+              className="mode-tile-wrap"
+              onClick={() => {
+                if (!modeTileInteractive || modeSaving) return
+                setModeDropdownOpen(o => !o)
               }}
+              style={{
+                padding: '8px 12px', background: terminalSurface,
+                border: `1px solid ${modeTileInteractive ? modeColor : terminalBorder}`,
+                borderRadius: '4px',
+                cursor: modeTileInteractive ? 'pointer' : 'default',
+                opacity: modeSaving ? 0.5 : 1,
+                userSelect: 'none',
+              }}
+              title={
+                isAllActive
+                  ? 'Click to change mode for ALL ACTIVE session (does not modify individual campaign settings)'
+                  : isSpecificCampaign
+                    ? 'Click to change mode for this campaign'
+                    : 'Select a campaign to change mode'
+              }
             >
-              {/* DESKTOP */}
-              <div className="rec-desktop-row">
-                <div>
-                  <div className="rec-name">{leadName}</div>
-                  {!hasLead && (
-                    <div className="rec-name-sub">no campaign attached</div>
-                  )}
-                </div>
-
-                <div className="rec-phone">{phone}</div>
-
-                <div className="rec-datetime">
-                  <div className="date">{date}</div>
-                  <div className="time">{time}</div>
-                  <div className="duration">▸ {dur}</div>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
-                  <div className="rec-camp">{campName}</div>
-                  {r.disposition ? (
-                    <span className="rec-disp-badge" style={dispBadgeStyle}>{r.disposition}</span>
-                  ) : (
-                    <span className="rec-disp-badge" style={{
-                      background: '#e8e8ec', color: T.muted,
-                      border: `1px solid ${T.border}`,
-                    }}>NO DISPOSITION</span>
-                  )}
-                </div>
-
-                <div className="rec-actions">
-                  <div className="rec-actions-row">
-                    <button
-                      className={`rec-btn ${isPlaying ? 'rec-btn-active' : ''}`}
-                      onClick={() => setPlayingId(isPlaying ? null : r.id)}
-                    >{isPlaying ? '✕ CLOSE' : '▶ PLAY'}</button>
-                    <button
-                      className="rec-btn"
-                      onClick={() => handleDownload(r.id)}
-                    >↓ SAVE</button>
-                  </div>
-                  <div className="rec-actions-row">
-                    {isConfirming ? (
-                      <>
-                        <button
-                          className="rec-btn rec-btn-danger"
-                          disabled={isDeleting}
-                          onClick={() => handleDelete(r.id)}
-                          style={{ background: isDeleting ? 'transparent' : T.red, color: isDeleting ? T.red : '#fff' }}
-                        >{isDeleting ? '...' : '✓ CONFIRM'}</button>
-                        <button
-                          className="rec-btn"
-                          disabled={isDeleting}
-                          onClick={() => setConfirmDeleteId(null)}
-                        >CANCEL</button>
-                      </>
-                    ) : (
-                      <button
-                        className="rec-btn rec-btn-danger"
-                        onClick={() => setConfirmDeleteId(r.id)}
-                        style={{ width: '100%' }}
-                      >🗑 DELETE</button>
-                    )}
-                  </div>
-                </div>
+              <div style={{
+                fontSize: '9px', letterSpacing: '2px', color: terminalMuted, marginBottom: '3px',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              }}>
+                <span>MODE{isAllActive ? ' (SESSION)' : ''}</span>
+                {modeTileInteractive && (
+                  <span style={{ fontSize: 8, opacity: 0.7 }}>{modeDropdownOpen ? '▲' : '▼'}</span>
+                )}
               </div>
-
-              {/* MOBILE */}
-              <div className="rec-mobile-row">
-                <div className="col-name">
-                  <div className="rec-name">{leadName}</div>
-                  {!hasLead && (
-                    <div className="rec-name-sub">no campaign attached</div>
-                  )}
-                </div>
-                <div className="col-disp">
-                  {r.disposition ? (
-                    <span className="rec-disp-badge" style={dispBadgeStyle}>{r.disposition}</span>
-                  ) : (
-                    <span className="rec-disp-badge" style={{
-                      background: '#e8e8ec', color: T.muted,
-                      border: `1px solid ${T.border}`,
-                    }}>NO DISP</span>
-                  )}
-                </div>
-                <div className="col-phone rec-phone">{phone}</div>
-                <div className="col-meta">
-                  <span>{date} · {time}</span>
-                  <span>{dur}</span>
-                  <span>{campName}</span>
-                </div>
-                <div className="col-actions rec-actions">
-                  <div className="rec-actions-row">
-                    <button
-                      className={`rec-btn ${isPlaying ? 'rec-btn-active' : ''}`}
-                      onClick={() => setPlayingId(isPlaying ? null : r.id)}
-                    >{isPlaying ? '✕ CLOSE' : '▶ PLAY'}</button>
-                    <button
-                      className="rec-btn"
-                      onClick={() => handleDownload(r.id)}
-                    >↓ SAVE</button>
-                  </div>
-                  <div className="rec-actions-row">
-                    {isConfirming ? (
-                      <>
-                        <button
-                          className="rec-btn rec-btn-danger"
-                          disabled={isDeleting}
-                          onClick={() => handleDelete(r.id)}
-                          style={{ background: isDeleting ? 'transparent' : T.red, color: isDeleting ? T.red : '#fff' }}
-                        >{isDeleting ? '...' : '✓ CONFIRM'}</button>
-                        <button
-                          className="rec-btn"
-                          disabled={isDeleting}
-                          onClick={() => setConfirmDeleteId(null)}
-                        >CANCEL</button>
-                      </>
-                    ) : (
-                      <button
-                        className="rec-btn rec-btn-danger"
-                        onClick={() => setConfirmDeleteId(r.id)}
-                      >🗑 DELETE</button>
-                    )}
-                  </div>
-                </div>
+              <div style={{
+                fontSize: '12px', fontWeight: 'bold', fontFamily: 'monospace',
+                color: modeColor, letterSpacing: '1px',
+              }}>
+                {dialerMode.toUpperCase()}
               </div>
-
-              {/* EXPANDED */}
-              {isExpanded && (
-                <div className="rec-expand">
-                  <div>
-                    <div className="rec-expand-section-label">CALL DETAILS</div>
-                    <div className="rec-expand-row">
-                      <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>DISPOSITION</span>
-                      <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: dispColor(r.disposition) }}>
-                        {r.disposition || '—'}
-                      </span>
+              {modeDropdownOpen && modeTileInteractive && (
+                <div className="mode-tile-dropdown" onClick={e => e.stopPropagation()}>
+                  {MODE_OPTIONS.map(opt => (
+                    <div
+                      key={opt.value}
+                      className={`mode-dropdown-item ${opt.value === dialerMode ? 'current' : ''}`}
+                      onClick={() => handleModeChange(opt.value)}
+                      style={{ color: opt.color }}
+                    >
+                      <span style={{
+                        width: 8, height: 8, borderRadius: '50%',
+                        background: opt.color, flexShrink: 0,
+                      }} />
+                      {opt.label}
+                      {opt.value === dialerMode && (
+                        <span style={{ marginLeft: 'auto', color: 'var(--brand-primary)' }}>✓</span>
+                      )}
                     </div>
-                    <div className="rec-expand-row">
-                      <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>CAMPAIGN</span>
-                      <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: T.text }}>{campName}</span>
-                    </div>
-                    <div className="rec-expand-row">
-                      <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>DURATION</span>
-                      <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: T.text }}>{dur}</span>
-                    </div>
-                    <div className="rec-expand-row">
-                      <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>RECORDED</span>
-                      <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: T.text }}>{date} · {time}</span>
-                    </div>
-                    {expDays !== null && (
-                      <div className="rec-expand-row">
-                        <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>EXPIRES</span>
-                        <span style={{
-                          fontFamily: 'monospace', fontWeight: 'bold',
-                          color: expDays < 7 ? T.red : T.text,
-                        }}>
-                          {expDays} day{expDays === 1 ? '' : 's'}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <div className="rec-expand-section-label">CALL NOTES</div>
-                    <div className={`rec-notes-block ${!notes ? 'rec-notes-empty' : ''}`}>
-                      {notes || 'No notes recorded for this call.'}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {isPlaying && (
-                <div className="rec-player">
-                  <audio controls autoPlay style={{ width: '100%' }}>
-                    <source src={`/api/recordings/play?call_id=${r.id}`} type="audio/mpeg" />
-                    Your browser does not support audio playback.
-                  </audio>
-                  {expDays !== null && (
-                    <div style={{
-                      marginTop: 6,
-                      fontSize: 10,
-                      letterSpacing: 1,
-                      color: expDays < 7 ? T.red : T.muted,
-                      fontFamily: 'monospace',
-                    }}>
-                      EXPIRES IN {expDays} DAY{expDays === 1 ? '' : 'S'} · DOWNLOAD TO KEEP
-                    </div>
-                  )}
+                  ))}
                 </div>
               )}
             </div>
-          )
-        })}
-
-        {cursor !== null && (
-          <div ref={sentinelRef} style={{
-            padding: 20, textAlign: 'center',
-            fontSize: 10, letterSpacing: 2, color: T.muted,
-          }}>
-            {loading ? 'LOADING MORE...' : 'SCROLL TO LOAD MORE'}
           </div>
-        )}
-        {cursor === null && recordings.length > 0 && (
-          <div style={{
-            padding: 20, textAlign: 'center',
-            fontSize: 10, letterSpacing: 2, color: T.muted,
-          }}>END OF LIST · {recordings.length} OF {total.toLocaleString()}</div>
-        )}
+
+          {isPredictive && pacingInfo && (
+            <div style={{
+              padding: '10px 14px', background: terminalSurface,
+              border: `1px solid ${terminalBorder}`, borderLeft: `3px solid ${pacingInfo.isDegraded ? terminalRed : terminalAccent}`,
+              borderRadius: '4px', flexShrink: 0,
+              display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10,
+            }}>
+              <div>
+                <div style={{ fontSize: 9, letterSpacing: 2, color: terminalMuted, marginBottom: 3 }}>ACTIVE AGENTS</div>
+                <div style={{ fontSize: 14, fontWeight: 'bold', fontFamily: 'monospace', color: terminalText }}>
+                  {pacingInfo.activeAgents}{pacingInfo.isPredictiveTeam && (
+                    <span style={{ fontSize: 9, color: terminalGreen, marginLeft: 6, letterSpacing: 1 }}>TEAM</span>
+                  )}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 9, letterSpacing: 2, color: terminalMuted, marginBottom: 3 }}>MY LINES</div>
+                {linesPref ? (
+                  <div className="lines-selector" style={{ padding: '2px 8px', opacity: linesPrefSaving ? 0.5 : 1 }}>
+                    <select
+                      value={linesPref.preferred_lines ?? linesPref.campaign_default}
+                      disabled={linesPrefSaving}
+                      onChange={e => handleLinesChange(parseInt(e.target.value))}
+                    >
+                      {LINES_OPTIONS
+                        .filter(n => n <= linesPref.campaign_max && n >= linesPref.campaign_min)
+                        .map(n => (
+                          <option key={n} value={n}>{n}</option>
+                        ))}
+                    </select>
+                    <span style={{ fontSize: 9, color: terminalMuted, letterSpacing: 1 }}>
+                      {linesPref.preferred_lines === null ? '(default)' : ''}
+                    </span>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 14, fontFamily: 'monospace', color: terminalMuted }}>—</div>
+                )}
+              </div>
+              <div>
+                <div style={{ fontSize: 9, letterSpacing: 2, color: terminalMuted, marginBottom: 3 }}>EFFECTIVE LINES</div>
+                <div style={{ fontSize: 14, fontWeight: 'bold', fontFamily: 'monospace', color: pacingInfo.isDegraded ? terminalRed : terminalAccent }}>
+                  {pacingInfo.effectiveLines.toFixed(1)}×{pacingInfo.isDegraded && ' (degraded)'}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 9, letterSpacing: 2, color: terminalMuted, marginBottom: 3 }}>30D ABANDON RATE</div>
+                <div style={{
+                  fontSize: 14, fontWeight: 'bold', fontFamily: 'monospace',
+                  color: pacingInfo.abandonRate >= 0.025 ? terminalRed : pacingInfo.abandonRate >= 0.020 ? '#8a6a1a' : terminalGreen,
+                }}>
+                  {(pacingInfo.abandonRate * 100).toFixed(2)}%
+                </div>
+              </div>
+            </div>
+          )}
+
+          {teamScopes.length > 0 && (
+            <div style={{
+              padding: '10px 14px', background: terminalSurface,
+              border: `1px solid ${terminalBorder}`, borderRadius: '4px', flexShrink: 0,
+            }}>
+              <div style={{ fontSize: '9px', letterSpacing: '3px', color: terminalMuted, marginBottom: '6px' }}>▸ SOURCE</div>
+              <select
+                value={selectedScope}
+                onChange={(e) => setSelectedScope(e.target.value)}
+                style={{
+                  width: '100%', padding: '6px 10px', borderRadius: '4px',
+                  background: terminalBg, border: `1px solid ${terminalBorder}`,
+                  color: terminalText, fontSize: '12px', outline: 'none',
+                  fontFamily: 'monospace', cursor: 'pointer',
+                }}
+              >
+                <option value={PERSONAL_SCOPE}>MY LEADS (PERSONAL)</option>
+                {teamScopes.map(s => (
+                  <option key={s.id} value={s.id}>
+                    {s.viewerRole === 'owner' ? 'TEAM (OWNER): ' : 'TEAM: '}{s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div style={{ padding: '10px 14px', background: terminalSurface, border: `1px solid ${terminalBorder}`, borderRadius: '4px', flexShrink: 0 }}>
+            <div style={{ fontSize: '9px', letterSpacing: '3px', color: terminalMuted, marginBottom: '6px' }}>▸ SELECT CAMPAIGN</div>
+            <select value={selectedCampaign} onChange={(e) => setSelectedCampaign(e.target.value)} style={{
+              width: '100%', padding: '6px 10px', borderRadius: '4px',
+              background: terminalBg, border: `1px solid ${selectedCampaign ? terminalBorder : '#ffaa3e'}`,
+              color: selectedCampaign ? terminalText : terminalMuted,
+              fontSize: '12px', outline: 'none',
+              fontFamily: 'monospace', cursor: 'pointer',
+            }}>
+              <option value="">— SELECT A CAMPAIGN —</option>
+              {activeCampaignsCount > 0 && (
+                <option value={ALL_ACTIVE}>ALL ACTIVE CAMPAIGNS ({activeCampaignsCount})</option>
+              )}
+              {activeScopeCampaigns.map(c => (
+                <option key={c.id} value={c.id}>
+                  {c.name} — {c.total_leads} leads
+                </option>
+              ))}
+            </select>
+            {activeScopeCampaigns.length === 0 && (
+              <div style={{
+                marginTop: '6px', padding: '5px 8px', background: '#f8e8e8',
+                border: '1px solid #d0a0a0', borderRadius: '4px',
+                fontSize: '10px', letterSpacing: '2px', color: terminalRed,
+              }}>
+                ⚠ {scopeCampaigns.length === 0
+                    ? (isPersonalScope ? 'NO CAMPAIGNS FOUND' : 'NO CAMPAIGNS ACCESSIBLE FROM THIS TEAM')
+                    : 'NO ACTIVE CAMPAIGNS — ACTIVATE A CAMPAIGN TO START DIALING'}
+              </div>
+            )}
+            {showSelectCampaignMsg && (
+              <div style={{
+                marginTop: 6, padding: '6px 10px',
+                background: '#fdf4e8',
+                border: `1px solid ${terminalAmber}`,
+                borderLeft: `3px solid ${terminalAmber}`,
+                borderRadius: 4,
+                fontSize: 11, color: terminalAmber, letterSpacing: 0.5, fontWeight: 'bold',
+              }}>
+                ⚠ YOU MUST SELECT A CAMPAIGN BEFORE DIALING
+              </div>
+            )}
+          </div>
+
+          {/* ──────────────────────────────────────────────────────────── */}
+          {/* CENTER PANEL — branches on mode + predictive view             */}
+          {/* ──────────────────────────────────────────────────────────── */}
+          {/* PREDICTIVE branches:                                           */}
+          {/*   - OFFLINE: empty state ("system will auto-dial when live") */}
+          {/*   - AVAILABLE + engine NOT started: empty state with hint    */}
+          {/*   - AVAILABLE + engine started: PredictiveAvailableCard      */}
+          {/*   - ON CALL / WRAPPING: standard lead profile                 */}
+          {isPredictive && predictiveView === 'available' && isSpecificCampaign && predictiveEngineStarted ? (
+            <PredictiveAvailableCard />
+          ) : isPredictive && (predictiveView === 'offline' || (predictiveView === 'available' && !predictiveEngineStarted)) ? (
+            <div style={{
+              flex: 1, background: terminalSurface, border: `1px solid ${terminalBorder}`,
+              borderRadius: '4px', overflow: 'hidden', display: 'flex',
+              flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              minHeight: 280, padding: 20,
+            }}>
+              <div style={{ fontSize: 36, marginBottom: 12, opacity: 0.4 }}>📞</div>
+              <p style={{ fontSize: 11, letterSpacing: 3, color: terminalMuted, textAlign: 'center' }}>
+                {!isSpecificCampaign
+                  ? 'SELECT A CAMPAIGN TO BEGIN'
+                  : !available
+                    ? 'SET AVAILABLE TO BEGIN'
+                    : 'CLICK INITIATE DIAL SEQUENCE TO START'}
+              </p>
+            </div>
+          ) : (
+            <div style={{
+              flex: 1, background: terminalSurface, border: `1px solid ${terminalBorder}`,
+              borderRadius: '4px', overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 200,
+            }}>
+              <div style={{
+                padding: '7px 14px', background: terminalDark, borderBottom: `1px solid ${terminalBorder}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
+              }}>
+                <span style={{ fontSize: '10px', letterSpacing: '3px', color: '#8888aa', fontWeight: 'bold' }}>
+                  {previewLead ? 'LEAD PREVIEW — REVIEW BEFORE DIALING' : 'LEAD PROFILE'}
+                </span>
+                {displayLead && (status === 'connected' || status === 'preview_ready') && (
+                  <span style={{ fontSize: '10px', fontFamily: 'monospace', color: 'var(--brand-primary)' }}>ID: {displayLead.id.substring(0, 8)}</span>
+                )}
+              </div>
+
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
+                {(!displayLead || status === 'calling') ? (
+                  <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                    <div style={{ fontSize: '36px', marginBottom: '12px', filter: 'grayscale(1)', opacity: 0.4 }}>📋</div>
+                    <p style={{ fontSize: '11px', letterSpacing: '3px', color: terminalMuted }}>
+                      {noLeads ? 'NO MORE LEADS AVAILABLE' : status === 'calling' ? 'DIALING IN QUEUE...' : 'AWAITING DIAL COMMAND'}
+                    </p>
+                    {noLeads && (
+                      <p style={{
+                        fontSize: '10px',
+                        color: tcpaBlockedAll ? terminalAmber : terminalRed,
+                        marginTop: '8px',
+                        letterSpacing: '2px',
+                      }}>
+                        {tcpaBlockedAll
+                          ? '⏰ ALL LEADS OUTSIDE 8AM-9PM WINDOW — TRY LATER'
+                          : isPersonalScope
+                            ? 'UPLOAD MORE LEADS TO CONTINUE'
+                            : 'NO MORE TEAM LEADS — TRY ANOTHER CAMPAIGN OR SCOPE'}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ padding: '12px', flexShrink: 0 }}>
+                      <div style={{
+                        padding: '10px 14px', background: terminalBg,
+                        border: `2px solid ${status === 'connected' ? terminalGreen : status === 'preview_ready' ? terminalAccent : terminalBorder}`,
+                        borderRadius: '4px', marginBottom: '10px',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                          <div>
+                            <div style={{ fontSize: '19px', fontWeight: 'bold', fontFamily: 'monospace', color: terminalText, letterSpacing: '1px', marginBottom: '3px' }}>
+                              {displayLead.first_name} {displayLead.last_name}
+                            </div>
+                            <div style={{ fontSize: '15px', fontFamily: 'monospace', color: terminalAccent, fontWeight: 'bold', letterSpacing: '2px' }}>
+                              {displayLead.phone}
+                            </div>
+                          </div>
+                          <div style={{
+                            padding: '4px 10px', borderRadius: '2px',
+                            background: status === 'connected' ? '#e8f5e8' : status === 'preview_ready' ? '#e8eef8' : '#f0f0f0',
+                            border: `1px solid ${status === 'connected' ? terminalGreen : status === 'preview_ready' ? terminalAccent : terminalBorder}`,
+                            fontSize: '9px', letterSpacing: '2px', fontWeight: 'bold',
+                            color: status === 'connected' ? terminalGreen : status === 'preview_ready' ? terminalAccent : terminalMuted,
+                          }}>
+                            {status === 'connected' ? '● LIVE' : status === 'preview_ready' ? '◉ PREVIEW' : '○ IDLE'}
+                          </div>
+                        </div>
+                      </div>
+                      {displayLead.extra_data && Object.keys(displayLead.extra_data).length > 0 && (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '5px' }}>
+                          {filteredExtraData(displayLead.extra_data).map(([key, value]) => (
+                            <div key={key} style={{ padding: '7px 10px', background: terminalBg, border: `1px solid ${terminalBorder}`, borderRadius: '3px' }}>
+                              <div style={{ fontSize: '8px', letterSpacing: '2px', color: terminalMuted, marginBottom: '2px', textTransform: 'uppercase' }}>{key}</div>
+                              <div style={{ fontSize: '11px', fontWeight: 'bold', fontFamily: 'monospace', color: terminalText }}>{String(value)}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {activeScript && (
+                      <div style={{
+                        flex: 1, margin: '0 12px 12px', padding: '10px 12px',
+                        background: terminalBg, border: `1px solid ${terminalBorder}`,
+                        borderLeft: `3px solid ${terminalAccent}`, borderRadius: '3px',
+                        display: 'flex', flexDirection: 'column', minHeight: 80,
+                      }}>
+                        <div style={{ fontSize: '8px', letterSpacing: '2px', color: terminalMuted, marginBottom: '6px', flexShrink: 0 }}>CALL SCRIPT</div>
+                        <div style={{
+                          fontSize: '11px', lineHeight: '1.7', color: terminalText,
+                          fontFamily: 'monospace', whiteSpace: 'pre-wrap', overflowY: 'auto', flex: 1,
+                        }}>{activeScript}</div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {showDisposition && (
+            <div style={{
+              padding: '10px 14px', background: terminalSurface,
+              border: `2px solid ${terminalAccent}`, borderRadius: '4px', flexShrink: 0,
+            }}>
+              <div style={{ fontSize: '9px', letterSpacing: '3px', color: terminalMuted, marginBottom: '6px' }}>▸ NOTES <span style={{ opacity: 0.6 }}>(OPTIONAL)</span></div>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Anything to remember about this call..."
+                rows={2}
+                style={{
+                  width: '100%', padding: '8px 10px',
+                  background: terminalBg, border: `1px solid ${terminalBorder}`,
+                  borderRadius: 3, fontFamily: 'monospace', fontSize: 12,
+                  color: terminalText, outline: 'none', resize: 'vertical',
+                  marginBottom: 10, boxSizing: 'border-box',
+                }}
+              />
+              {isPredictive && (
+                <div style={{
+                  marginBottom: 10, padding: '6px 10px',
+                  background: 'rgba(42,74,138,0.08)',
+                  borderLeft: `3px solid ${terminalAccent}`,
+                  fontSize: 10, color: terminalAccent, letterSpacing: 0.5,
+                }}>
+                  ⓘ System is still dialing in background. Next human routes automatically.
+                </div>
+              )}
+              <div style={{ fontSize: '9px', letterSpacing: '3px', color: terminalMuted, marginBottom: '8px' }}>▸ SELECT DISPOSITION</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: '6px' }}>
+                {dispositions.map((d) => (
+                  <button key={d.label} onClick={() => handleDisposition(d.label)} style={{
+                    padding: '10px 4px', borderRadius: '3px',
+                    background: disposition === d.label ? d.color : d.bg,
+                    border: `1px solid ${d.color}`,
+                    color: disposition === d.label ? 'white' : d.color,
+                    fontSize: '8px', fontWeight: 'bold', letterSpacing: '1px',
+                    cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                  }}>{d.label}</button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ──────────────────────────────────────────────────────────── */}
+          {/* BUTTONS — v24: predictive label fixes                        */}
+          {/* ──────────────────────────────────────────────────────────── */}
+          {/*                                                              */}
+          {/* Predictive 3-state flow (same shape as non-predictive):      */}
+          {/*   1. OFFLINE → "[ SET AVAILABLE TO DIAL ]" (grey)            */}
+          {/*      Click toggles LIVE switch on.                            */}
+          {/*   2. LIVE + engine NOT started → "INITIATE DIAL SEQUENCE"    */}
+          {/*      (blue, dark bg). Click flips predictiveEngineStarted    */}
+          {/*      on; incoming-route polling begins.                       */}
+          {/*   3a. LIVE + engine started + NO call yet                    */}
+          {/*       → "■ STOP DIAL SEQUENCE" (red). Click stops the       */}
+          {/*       engine; goes back to LIVE-not-started state.          */}
+          {/*       v24 fix: was "ABORT CALL" but there is no call to     */}
+          {/*       abort while the engine is just polling.               */}
+          {/*   3b. LIVE + engine started + ON CALL                       */}
+          {/*       → "SKIP" / "■ TERMINATE CALL" (red). Terminate also  */}
+          {/*       stops the engine.                                     */}
+
+          {isPredictive ? (
+            <>
+              {/* STATE 1 — OFFLINE: SET AVAILABLE TO DIAL button (grey) */}
+              {predictiveView === 'offline' && isSpecificCampaign && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', flexShrink: 0 }}>
+                  <button onClick={handleSetAvailable} style={{
+                    padding: '14px', borderRadius: '4px', border: 'none',
+                    background: terminalSurface, color: terminalMuted,
+                    fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
+                    cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                    borderTop: `3px solid ${terminalBorder}`, transition: 'all 0.15s',
+                  }}>[ SET AVAILABLE TO DIAL ]</button>
+                </div>
+              )}
+
+              {/* OFFLINE + no campaign — placeholder */}
+              {predictiveView === 'offline' && !isSpecificCampaign && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', flexShrink: 0 }}>
+                  <div style={{
+                    padding: '14px', borderRadius: '4px', background: terminalSurface, color: terminalMuted,
+                    fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
+                    textAlign: 'center', borderTop: `3px solid ${terminalBorder}`,
+                  }}>[ SELECT A CAMPAIGN TO BEGIN ]</div>
+                </div>
+              )}
+
+              {/* STATE 2 — LIVE + engine NOT started: INITIATE DIAL SEQUENCE (blue) */}
+              {predictiveView === 'available' && !predictiveEngineStarted && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', flexShrink: 0 }}>
+                  <button onClick={handleDial} style={{
+                    padding: '14px', borderRadius: '4px', border: 'none',
+                    background: terminalDark, color: 'var(--brand-primary)',
+                    fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
+                    cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                    borderTop: `3px solid var(--brand-primary)`, transition: 'all 0.15s',
+                  }}>INITIATE DIAL SEQUENCE</button>
+                </div>
+              )}
+
+              {/* STATE 3a — LIVE + engine started, no call yet: STOP DIAL SEQUENCE (red)
+                  v24 fix: was "ABORT CALL" which was misleading (no call to abort
+                  while engine is just polling). Symmetric to "INITIATE DIAL SEQUENCE". */}
+              {predictiveView === 'available' && predictiveEngineStarted && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', flexShrink: 0 }}>
+                  <button onClick={() => {
+                    setPredictiveEngineStarted(false)
+                    lastIncomingCallSidRef.current = null
+                    setAmdActivity(prev => [
+                      `PREDICTIVE ENGINE STOPPED`,
+                      ...prev,
+                    ].slice(0, 5))
+                  }} style={{
+                    padding: '14px', borderRadius: '4px', border: 'none',
+                    background: '#f8e8e8', color: terminalRed,
+                    fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
+                    cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                    borderTop: `3px solid ${terminalRed}`,
+                  }}>■ STOP DIAL SEQUENCE</button>
+                </div>
+              )}
+
+              {/* STATE 3b — ON CALL: SKIP + TERMINATE (TERMINATE also stops engine) */}
+              {status === 'connected' && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, flexShrink: 0 }}>
+                  <button onClick={handleSkip} style={{
+                    padding: '14px', borderRadius: '4px',
+                    background: '#f8f4e8', border: `1px solid #8a6a1a`,
+                    borderTop: `3px solid #8a6a1a`, color: '#8a6a1a',
+                    fontSize: '11px', fontWeight: 'bold', letterSpacing: '3px',
+                    cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                  }}>SKIP / NEXT LEAD</button>
+                  <button onClick={async () => {
+                    await hangupCall(activeCallSid)
+                    setStatus('idle')
+                    setCurrentLead(null)
+                    setShowDisposition(false)
+                    setDisposition('')
+                    setSeconds(0)
+                    setPredictiveEngineStarted(false)
+                    lastIncomingCallSidRef.current = null
+                  }} style={{
+                    padding: '14px', borderRadius: '4px', border: 'none',
+                    background: '#f8e8e8', borderTop: `3px solid ${terminalRed}`,
+                    color: terminalRed, fontSize: '11px', fontWeight: 'bold',
+                    letterSpacing: '3px', cursor: 'pointer',
+                    fontFamily: 'Futura PT, Futura, sans-serif',
+                  }}>■ TERMINATE CALL</button>
+                </div>
+              )}
+            </>
+          ) : (
+            // NON-PREDICTIVE — original 3-state flow preserved, ▶ emojis removed
+            <div style={{ display: 'grid', gridTemplateColumns: status === 'connected' ? '1fr 1fr' : status === 'preview_ready' ? '1fr 1fr' : '1fr', gap: '8px', flexShrink: 0 }}>
+              {status === 'idle' && !available && (
+                <button onClick={handleSetAvailable} style={{
+                  padding: '14px', borderRadius: '4px', border: 'none',
+                  background: terminalSurface, color: terminalMuted,
+                  fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
+                  cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                  borderTop: `3px solid ${terminalBorder}`, transition: 'all 0.15s',
+                }}>[ SET AVAILABLE TO DIAL ]</button>
+              )}
+              {status === 'idle' && available && activeScopeCampaigns.length === 0 && (
+                <div style={{
+                  padding: '14px', borderRadius: '4px', background: terminalSurface, color: terminalMuted,
+                  fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
+                  textAlign: 'center', borderTop: `3px solid ${terminalBorder}`,
+                }}>[ NO ACTIVE CAMPAIGNS IN SCOPE ]</div>
+              )}
+              {status === 'idle' && available && activeScopeCampaigns.length > 0 && (
+                <button onClick={handleDial} style={{
+                  padding: '14px', borderRadius: '4px', border: 'none',
+                  background: terminalDark, color: 'var(--brand-primary)',
+                  fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
+                  cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                  borderTop: `3px solid var(--brand-primary)`, transition: 'all 0.15s',
+                }}>
+                  {isPreview ? 'LOAD NEXT LEAD' : 'INITIATE DIAL SEQUENCE'}
+                </button>
+              )}
+              {status === 'preview_ready' && previewLead && (
+                <>
+                  <button onClick={skipPreviewLead} style={{
+                    padding: '14px', borderRadius: '4px',
+                    background: '#f8f4e8', border: `1px solid #8a6a1a`,
+                    borderTop: `3px solid #8a6a1a`, color: '#8a6a1a',
+                    fontSize: '11px', fontWeight: 'bold', letterSpacing: '3px',
+                    cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                  }}>SKIP THIS LEAD</button>
+                  <button onClick={dialPreviewLead} style={{
+                    padding: '14px', borderRadius: '4px', border: 'none',
+                    background: terminalDark, color: 'var(--brand-primary)',
+                    fontSize: '12px', fontWeight: 'bold', letterSpacing: '3px',
+                    cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                    borderTop: `3px solid var(--brand-primary)`,
+                  }}>DIAL THIS LEAD</button>
+                </>
+              )}
+              {status === 'calling' && (
+                <button onClick={async () => {
+                  await hangupCall(activeCallSid)
+                  setStatus('idle')
+                  setCurrentLead(null)
+                }} style={{
+                  padding: '14px', borderRadius: '4px', border: 'none',
+                  background: '#f8e8e8', color: terminalRed,
+                  fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
+                  cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                  borderTop: `3px solid ${terminalRed}`,
+                }}>■ ABORT CALL</button>
+              )}
+              {status === 'connected' && (
+                <>
+                  <button onClick={handleSkip} style={{
+                    padding: '14px', borderRadius: '4px',
+                    background: '#f8f4e8', border: `1px solid #8a6a1a`,
+                    borderTop: `3px solid #8a6a1a`, color: '#8a6a1a',
+                    fontSize: '11px', fontWeight: 'bold', letterSpacing: '3px',
+                    cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                  }}>SKIP / NEXT LEAD</button>
+                  <button onClick={async () => {
+                    await hangupCall(activeCallSid)
+                    setStatus('idle')
+                    setCurrentLead(null)
+                    setShowDisposition(false)
+                    setDisposition('')
+                    setSeconds(0)
+                  }} style={{
+                    padding: '14px', borderRadius: '4px', border: 'none',
+                    background: '#f8e8e8', borderTop: `3px solid ${terminalRed}`,
+                    color: terminalRed, fontSize: '11px', fontWeight: 'bold',
+                    letterSpacing: '3px', cursor: 'pointer',
+                    fontFamily: 'Futura PT, Futura, sans-serif',
+                  }}>■ TERMINATE CALL</button>
+                </>
+              )}
+              {status === 'ended' && !showDisposition && (
+                <button onClick={handleDial} style={{
+                  padding: '14px', borderRadius: '4px', border: 'none',
+                  background: terminalDark, color: 'var(--brand-primary)',
+                  fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
+                  cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                  borderTop: `3px solid var(--brand-primary)`,
+                }}>NEXT LEAD</button>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div
+          className={`dialer-right-overlay ${rightSidebarOpen ? 'open' : ''}`}
+          onClick={() => setRightSidebarOpen(false)}
+        />
+
+        <aside className={`dialer-right-sidebar ${rightSidebarOpen ? 'open' : ''}`}>
+          <div style={{ background: terminalDark, padding: '8px 16px', borderBottom: `1px solid ${terminalBorder}`, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '9px', letterSpacing: '3px', color: '#8888aa', fontWeight: 'bold' }}>TODAY&apos;S METRICS</span>
+          </div>
+
+          <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '5px', flexShrink: 0 }}>
+            {[
+              { label: 'CONNECTED', value: sessionStats.connected, color: 'var(--brand-primary)' },
+              { label: 'CLOSED', value: sessionStats.closed, color: terminalGreen },
+              { label: 'APPOINTMENTS', value: sessionStats.appointments, color: '#1a4a8a' },
+              { label: 'NOT INTERESTED', value: sessionStats.notInterested, color: '#8a6a1a' },
+              { label: 'DO NOT CALL', value: sessionStats.dnc, color: terminalRed },
+            ].map((stat) => (
+              <div key={stat.label} style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '8px 12px', background: terminalSurface,
+                border: `1px solid ${terminalBorder}`, borderRadius: '3px',
+                borderLeft: `3px solid ${stat.color}`,
+              }}>
+                <span style={{ fontSize: '9px', letterSpacing: '2px', color: terminalMuted }}>{stat.label}</span>
+                <span style={{ fontSize: '18px', fontWeight: 'bold', fontFamily: 'monospace', color: stat.color }}>{stat.value}</span>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ padding: '0 12px 10px', flexShrink: 0 }}>
+            <div style={{
+              padding: '10px 12px', background: terminalSurface,
+              border: `1px solid ${terminalBorder}`, borderRadius: '3px',
+              borderTop: `3px solid ${terminalAccent}`,
+            }}>
+              <div style={{ fontSize: '8px', letterSpacing: '1px', color: terminalMuted, marginBottom: '3px' }}>
+                TODAY&apos;S CONVERSION RATE
+              </div>
+              <div style={{ fontSize: '20px', fontWeight: 'bold', fontFamily: 'monospace', color: terminalAccent }}>
+                {sessionStats.calls > 0
+                  ? `${(((sessionStats.appointments + sessionStats.closed) / sessionStats.calls) * 100).toFixed(1)}%`
+                  : '0.0%'}
+              </div>
+            </div>
+          </div>
+
+          <ManualDialer />
+
+          <div style={{ background: terminalDark, padding: '6px 16px', borderBottom: `1px solid ${terminalBorder}`, flexShrink: 0 }}>
+            <span style={{ fontSize: '9px', letterSpacing: '3px', color: '#8888aa', fontWeight: 'bold' }}>SYSTEM LOG</span>
+          </div>
+          <div style={{ padding: '5px 12px', background: '#1a1c24', height: '88px', overflowY: 'auto', flexShrink: 0 }}>
+            {[
+              ...amdActivity.map(a => `> ${a}`),
+              status === 'connected' && `> CONNECTED — ${currentLead?.first_name} ${currentLead?.last_name}`,
+              status === 'calling' && '> DIALING IN QUEUE...',
+              status === 'preview_ready' && `> PREVIEW LOADED — ${previewLead?.first_name} ${previewLead?.last_name}`,
+              isSpecificCampaign && currentCampaign && `> CAMPAIGN MODE: ${dialerMode.toUpperCase()} + AMD`,
+              isAllActive && `> ALL ACTIVE · SESSION MODE: ${dialerMode.toUpperCase()}`,
+              isPredictive && pacingInfo && `> AGENTS: ${pacingInfo.activeAgents} (READY:${pacingInfo.readyAgents}/DIALING:${pacingInfo.dialingAgents}/ONCALL:${pacingInfo.onCallAgents})`,
+              isPredictive && pacingInfo && `> ABANDON: ${(pacingInfo.abandonRate * 100).toFixed(2)}%`,
+              isPredictive && lastControllerSummary && `> CTRL: fired=${lastControllerSummary.fired} desired=${lastControllerSummary.desired} inflight=${lastControllerSummary.inFlight}`,
+              isPredictive && lastControllerSummary && lastControllerSummary.reason && `> CTRL: ${lastControllerSummary.reason}`,
+              isPredictive && shouldYield && `> SERVER ASKED TO YIELD — abandon rate near cap`,
+              isPredictive && pacingInfo?.isPredictiveTeam && `> TEAM PREDICTIVE — reroute on disconnect enabled`,
+              currentSessionId && '> SESSION ACTIVE',
+              !isPersonalScope && currentScope && `> SCOPE: ${currentScope.name.toUpperCase()}`,
+              swReady && '> AUDIO READY',
+              available && `> AGENT STATE: ${agentState.toUpperCase()}`,
+            ].filter(Boolean).slice(0, 14).map((log, i) => (
+              <div key={i} style={{
+                fontSize: '9px', fontFamily: 'monospace',
+                color: i === 0 ? 'var(--brand-primary)' : '#4a5a4a',
+                letterSpacing: '1px', marginBottom: '2px',
+              }}>{log as string}</div>
+            ))}
+          </div>
+        </aside>
       </div>
+
+      {/* v23: right-edge arrow tab moved from dead-center to top:66%
+          (between center and bottom). Chevron < points left, indicating
+          "drawer opens to the left when tapped." */}
+      <button
+        className="dialer-right-toggle"
+        onClick={() => setRightSidebarOpen(true)}
+        aria-label="Open metrics & dial pad"
+      >‹</button>
+
+      {dialZoomed && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 100,
+            background: terminalBg, display: 'flex', flexDirection: 'column',
+            height: '100vh', ['height' as any]: '100dvh',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setDialZoomed(false)
+          }}
+        >
+          <ManualDialer inOverlay />
+        </div>
+      )}
     </div>
+  )
+}
+
+const navLinkStyle: React.CSSProperties = {
+  padding: '10px 16px', background: 'transparent',
+  border: '1px solid #2a4a8a', borderRadius: 3,
+  color: 'var(--brand-primary)', fontSize: 10, fontWeight: 700, letterSpacing: 2,
+  textDecoration: 'none', fontFamily: 'Futura PT, Futura, sans-serif',
+}
+
+export default function DialerPage() {
+  return (
+    <Suspense fallback={
+      <div style={{
+        flex: 1,
+        background: '#f0f1f4',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: 'calc(100vh - 64px)',
+        fontFamily: 'Futura PT, Futura, sans-serif',
+      }}>
+        <div style={{ fontSize: 11, letterSpacing: 4, color: '#5a5e6a' }}>
+          LOADING TERMINAL...
+        </div>
+      </div>
+    }>
+      <DialerPageInner />
+    </Suspense>
   )
 }

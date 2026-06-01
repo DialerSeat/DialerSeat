@@ -1,12 +1,6 @@
 'use client'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useUser } from '@clerk/nextjs'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import {
-  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-} from 'recharts'
 
 const T = {
   bg: '#f0f1f4',
@@ -16,647 +10,877 @@ const T = {
   text: '#1a1c24',
   muted: '#5a5e6a',
   accent: '#2a4a8a',
-  blue: '#4a9eff',
+  blue: 'var(--brand-primary)',
   green: '#1a6a1a',
   red: '#8a1a1a',
   amber: '#8a6a1a',
 }
 
-const DISPOSITION_COLORS: Record<string, string> = {
-  'CLOSED': T.green,
-  'APPOINTMENT': T.accent,
-  'NOT INTERESTED': T.amber,
-  'DO NOT CALL': T.red,
-  'SKIPPED': '#888',
-  'NO ANSWER': '#bbb',
-  'NO_ANSWER': '#bbb',
-}
-
-type Range = 'today' | 'week' | 'month' | 'all' | 'custom'
-
-function getRangeBounds(range: Range, customStart?: string, customEnd?: string): { start: string | null; end: string | null } {
-  if (range === 'all') return { start: null, end: null }
-  const now = new Date()
-
-  if (range === 'today') {
-    const start = new Date(now); start.setHours(0, 0, 0, 0)
-    const end = new Date(now); end.setHours(23, 59, 59, 999)
-    return { start: start.toISOString(), end: end.toISOString() }
-  }
-  if (range === 'week') {
-    // Current CALENDAR week — Sunday 00:00 of this week → now.
-    // Resets every Sunday at midnight local time.
-    // getDay(): 0=Sun, 1=Mon, ..., 6=Sat.
-    const start = new Date(now)
-    start.setDate(start.getDate() - start.getDay())
-    start.setHours(0, 0, 0, 0)
-    return { start: start.toISOString(), end: now.toISOString() }
-  }
-  if (range === 'month') {
-    // Current CALENDAR month — 1st 00:00 of this month → now.
-    // Resets on the 1st of every month at midnight local time.
-    const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0)
-    return { start: start.toISOString(), end: now.toISOString() }
-  }
-  if (range === 'custom') {
-    if (!customStart || !customEnd) return { start: null, end: null }
-    const start = new Date(customStart); start.setHours(0, 0, 0, 0)
-    const end = new Date(customEnd); end.setHours(23, 59, 59, 999)
-    return { start: start.toISOString(), end: end.toISOString() }
-  }
-  return { start: null, end: null }
-}
-
-function todayBounds() {
-  const now = new Date()
-  const start = new Date(now); start.setHours(0, 0, 0, 0)
-  const end = new Date(now); end.setHours(23, 59, 59, 999)
-  return { start: start.toISOString(), end: end.toISOString() }
-}
-
-// Used as the secondary fetch when range='today'. Returns the same calendar
-// week as getRangeBounds('week') so the "This week" sub-stats stay aligned
-// with whatever the WEEK tab would show.
-function weekBounds() {
-  const now = new Date()
-  const start = new Date(now)
-  start.setDate(start.getDate() - start.getDay())
-  start.setHours(0, 0, 0, 0)
-  return { start: start.toISOString(), end: now.toISOString() }
-}
-
-function formatDuration(seconds: number) {
-  if (!seconds) return '0s'
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  const s = seconds % 60
-  if (h > 0) return `${h}h ${m}m`
-  if (m > 0) return `${m}m ${s}s`
-  return `${s}s`
-}
-
-function formatHours(seconds: number) {
-  const hours = seconds / 3600
-  if (hours >= 10) return `${Math.round(hours)}h`
-  if (hours >= 1) return `${hours.toFixed(1)}h`
-  if (hours > 0) {
-    const m = Math.round(seconds / 60)
-    return `${m}m`
-  }
-  return '0h'
-}
-
-function buildEmptySeries(range: Range): any[] {
-  const points = range === 'today' ? 12 : 14
-  const out: any[] = []
-  for (let i = 0; i < points; i++) {
-    out.push({
-      label: range === 'today' ? `${i * 2}:00` : `D${i + 1}`,
-      calls: 0,
-      conversionRate: 0,
-    })
-  }
-  return out
-}
-
-const EMPTY_DISPOSITIONS = [
-  { disposition: 'NO DATA', count: 1 },
+const DISPOSITIONS = [
+  'CLOSED', 'APPOINTMENT', 'NOT INTERESTED', 'DO NOT CALL', 'SKIPPED', 'NO_ANSWER',
 ]
 
-const EMPTY_CAMPAIGNS = [
-  { name: '—', total: 0, contacted: 0, converted: 0 },
-]
+const dispColor = (disp: string | null): string => {
+  switch (disp) {
+    case 'CLOSED': return T.green
+    case 'APPOINTMENT': return '#1a4a8a'
+    case 'NOT INTERESTED': return T.amber
+    case 'DO NOT CALL': return T.red
+    case 'SKIPPED':
+    case 'NO_ANSWER':
+    default: return T.muted
+  }
+}
 
-export default function AnalyticsPage() {
+const dispBg = (disp: string | null): string => {
+  switch (disp) {
+    case 'CLOSED': return '#e8f5e8'
+    case 'APPOINTMENT': return '#e8eef8'
+    case 'NOT INTERESTED': return '#f8f4e8'
+    case 'DO NOT CALL': return '#f8e8e8'
+    case 'SKIPPED':
+    case 'NO_ANSWER':
+    default: return '#f0f0f4'
+  }
+}
+
+const dispositionTint = (disp: string | null): string => {
+  switch (disp) {
+    case 'CLOSED': return 'rgba(26, 106, 26, 0.10)'
+    case 'APPOINTMENT': return 'rgba(26, 74, 138, 0.10)'
+    case 'NOT INTERESTED': return 'rgba(138, 106, 26, 0.10)'
+    case 'DO NOT CALL': return 'rgba(138, 26, 26, 0.10)'
+    case 'NO_ANSWER': return 'rgba(90, 94, 106, 0.06)'
+    case 'SKIPPED': return 'rgba(90, 94, 106, 0.04)'
+    default: return T.surface
+  }
+}
+
+interface Recording {
+  id: string
+  campaign_id: string
+  lead_id: string
+  phone_number: string | null
+  disposition: string
+  duration: number
+  recording_url: string
+  recording_duration: number
+  recording_expires_at: string | null
+  created_at: string
+  notes?: string | null
+  leads: { first_name: string; last_name: string; phone: string; notes?: string | null } | null
+  campaigns: { name: string } | null
+}
+
+interface Campaign {
+  id: string
+  name: string
+}
+
+function formatDuration(s: number) {
+  if (!s) return '0:00'
+  const m = Math.floor(s / 60)
+  const sec = s % 60
+  return `${m}:${String(sec).padStart(2, '0')}`
+}
+
+function formatDateClean(iso: string) {
+  const d = new Date(iso)
+  const date = d.toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric',
+  })
+  const time = d.toLocaleTimeString('en-US', {
+    hour: 'numeric', minute: '2-digit', hour12: true,
+  })
+  return { date, time }
+}
+
+function daysUntilExpire(iso: string | null) {
+  if (!iso) return null
+  const days = Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000)
+  return days > 0 ? days : 0
+}
+
+export default function RecordingsPage() {
   const { user } = useUser()
-  const router = useRouter()
-  const [adminChecked, setAdminChecked] = useState(false)
-  const [range, setRange] = useState<Range>('week')
-  const [customStart, setCustomStart] = useState('')
-  const [customEnd, setCustomEnd] = useState('')
-  const [summary, setSummary] = useState<any>(null)
-  const [secondarySummary, setSecondarySummary] = useState<any>(null)
-  const [series, setSeries] = useState<any[]>([])
-  const [dispositions, setDispositions] = useState<any[]>([])
-  const [campaigns, setCampaigns] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const [recordings, setRecordings] = useState<Recording[]>([])
+  const [campaigns, setCampaigns] = useState<Campaign[]>([])
+  const [campaignFilter, setCampaignFilter] = useState('all')
+  const [dispositionFilter, setDispositionFilter] = useState('all')
+  const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [cursor, setCursor] = useState<number | null>(0)
+  const [total, setTotal] = useState(0)
+  const [loading, setLoading] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+  const [syncMessage, setSyncMessage] = useState<string | null>(null)
+  const [playingId, setPlayingId] = useState<string | null>(null)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [disclosureOpen, setDisclosureOpen] = useState(false)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const sentinelRef = useRef<HTMLDivElement | null>(null)
 
-  // Admin redirect
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 350)
+    return () => clearTimeout(t)
+  }, [search])
+
   useEffect(() => {
     if (!user) return
-    fetch('/api/admin/check')
+    fetch(`/api/campaigns/list?user_id=${user.id}`)
       .then(r => r.json())
-      .then(d => {
-        if (d.isAdmin) {
-          router.replace('/dashboard/admin/analytics')
-        } else {
-          setAdminChecked(true)
-        }
-      })
-      .catch(() => setAdminChecked(true))
-  }, [user, router])
-
-  const bounds = useMemo(() => getRangeBounds(range, customStart, customEnd), [range, customStart, customEnd])
-
-  // Secondary fetch: when range is 'today', secondary = current calendar WEEK;
-  // otherwise, secondary = TODAY.
-  const secondaryBounds = useMemo(() => {
-    return range === 'today' ? weekBounds() : todayBounds()
-  }, [range])
-
-  const secondaryLabel = range === 'today' ? 'This week' : 'Today'
+      .then(d => { if (d.success) setCampaigns(d.campaigns) })
+  }, [user])
 
   useEffect(() => {
-    if (!user || !adminChecked) return
-    if (range === 'custom' && (!customStart || !customEnd)) return
+    if (!user) return
+    setRecordings([])
+    setCursor(0)
+    setPlayingId(null)
+    setExpandedId(null)
+  }, [campaignFilter, dispositionFilter, debouncedSearch, user])
 
-    const params = new URLSearchParams({ user_id: user.id })
-    if (bounds.start) params.append('start', bounds.start)
-    if (bounds.end) params.append('end', bounds.end)
-
-    const tsParams = new URLSearchParams(params)
-    tsParams.append('bucket', range === 'today' ? 'hour' : 'day')
-
-    const secondaryParams = new URLSearchParams({
-      user_id: user.id,
-      start: secondaryBounds.start,
-      end: secondaryBounds.end,
-    })
-
+  const fetchMore = useCallback(async () => {
+    if (!user || cursor === null || loading) return
     setLoading(true)
-    Promise.all([
-      fetch(`/api/analytics/summary?${params}`).then(r => r.json()),
-      fetch(`/api/analytics/timeseries?${tsParams}`).then(r => r.json()),
-      fetch(`/api/analytics/dispositions?${params}`).then(r => r.json()),
-      fetch(`/api/analytics/campaigns?${params}`).then(r => r.json()),
-      fetch(`/api/analytics/summary?${secondaryParams}`).then(r => r.json()),
-    ]).then(([s, ts, d, c, sec]) => {
-      if (s.success) setSummary(s.summary)
-      if (ts.success) setSeries(ts.series)
-      if (d.success) setDispositions(d.breakdown)
-      if (c.success) setCampaigns(c.breakdown)
-      if (sec.success) setSecondarySummary(sec.summary)
+    try {
+      const params = new URLSearchParams({
+        user_id: user.id,
+        campaign_id: campaignFilter,
+        disposition: dispositionFilter,
+        search: debouncedSearch,
+        cursor: String(cursor),
+      })
+      const res = await fetch(`/api/recordings/list?${params}`)
+      const data = await res.json()
+      if (data.success) {
+        setRecordings(prev => cursor === 0 ? data.recordings : [...prev, ...data.recordings])
+        setTotal(data.total)
+        setCursor(data.nextCursor)
+      }
+    } finally {
       setLoading(false)
-    }).catch(() => setLoading(false))
-  }, [user, adminChecked, range, customStart, customEnd, bounds.start, bounds.end, secondaryBounds.start, secondaryBounds.end])
+    }
+  }, [user, cursor, loading, campaignFilter, dispositionFilter, debouncedSearch])
 
-  const ranges: { key: Range; label: string }[] = [
-    { key: 'today', label: 'TODAY' },
-    { key: 'week', label: 'WEEK' },
-    { key: 'month', label: 'MONTH' },
-    { key: 'all', label: 'ALL TIME' },
-    { key: 'custom', label: 'CUSTOM' },
-  ]
+  useEffect(() => {
+    if (cursor === 0) fetchMore()
+  }, [cursor, fetchMore])
 
-  const s = summary || {
-    totalCalls: 0,
-    contactsReached: 0,
-    contactRate: 0,
-    conversions: 0,
-    conversionRate: 0,
-    closed: 0,
-    appointments: 0,
-    totalDuration: 0,
-    avgCallLength: 0,
-    bestCampaign: null,
-    bestCampaignRate: 0,
-  }
-
-  const sec = secondarySummary || {
-    totalCalls: 0,
-    totalDuration: 0,
-    conversions: 0,
-    closed: 0,
-  }
-
-  const hasData = !!summary && summary.totalCalls > 0
-  const seriesToRender = series.length > 0 ? series : buildEmptySeries(range)
-  const dispositionsToRender = dispositions.length > 0 ? dispositions : EMPTY_DISPOSITIONS
-  const campaignsToRender = campaigns.length > 0 ? campaigns : EMPTY_CAMPAIGNS
-
-  const fullName = user
-    ? [user.firstName, user.lastName].filter(Boolean).join(' ').toUpperCase()
-    : ''
-
-  if (!adminChecked) {
-    return (
-      <div style={{
-        flex: 1, background: T.bg,
-        minHeight: 'calc(100vh - 64px)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 11, letterSpacing: 3, color: T.muted,
-      }}>LOADING...</div>
+  useEffect(() => {
+    if (!sentinelRef.current || cursor === null) return
+    const observer = new IntersectionObserver(
+      entries => { if (entries[0].isIntersecting && !loading) fetchMore() },
+      { rootMargin: '300px' }
     )
+    observer.observe(sentinelRef.current)
+    return () => observer.disconnect()
+  }, [fetchMore, loading, cursor, recordings.length])
+
+  const handleSync = async () => {
+    setSyncing(true)
+    setSyncMessage(null)
+    try {
+      const res = await fetch('/api/recordings/sync', { method: 'POST' })
+      const data = await res.json()
+      if (data.success) {
+        setSyncMessage(`Synced ${data.synced} new recording${data.synced === 1 ? '' : 's'}.`)
+        setRecordings([])
+        setCursor(0)
+      } else {
+        setSyncMessage(`Sync failed: ${data.error}`)
+      }
+    } catch (err: any) {
+      setSyncMessage(`Sync error: ${err.message}`)
+    } finally {
+      setSyncing(false)
+      setTimeout(() => setSyncMessage(null), 8000)
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    setDeletingId(id)
+    try {
+      const res = await fetch('/api/recordings/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ call_id: id }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setRecordings(prev => prev.filter(r => r.id !== id))
+        setTotal(t => Math.max(0, t - 1))
+        setSyncMessage('Recording deleted.')
+        setTimeout(() => setSyncMessage(null), 4000)
+      } else {
+        setSyncMessage(`Delete failed: ${data.error}`)
+        setTimeout(() => setSyncMessage(null), 6000)
+      }
+    } catch (err: any) {
+      setSyncMessage(`Delete error: ${err.message}`)
+      setTimeout(() => setSyncMessage(null), 6000)
+    } finally {
+      setDeletingId(null)
+      setConfirmDeleteId(null)
+    }
+  }
+
+  const handleDownload = (id: string) => {
+    window.location.href = `/api/recordings/play?call_id=${id}&download=1`
   }
 
   return (
-    <div className="analytics-root" style={{
+    <div className="rec-root" style={{
       flex: 1,
       background: T.bg,
       minHeight: 'calc(100vh - 64px)',
       display: 'flex',
       flexDirection: 'column',
-      overflow: 'auto',
+      overflow: 'hidden',
     }}>
       <style>{`
-        .analytics-root * { box-sizing: border-box; }
-
-        /* ── DESKTOP HEADER (default) ──────────────────────────────────── */
-        /* Flex row — title, range tabs, spacer pushing the LANDING button  */
-        /* to the far right. Original behavior preserved.                   */
-        .analytics-header {
+        .rec-root * { box-sizing: border-box; }
+        .rec-header {
           background: ${T.dark};
           padding: 12px 20px;
           border-bottom: 2px solid ${T.accent};
           display: flex;
           align-items: center;
+          justify-content: space-between;
           gap: 16px;
           flex-wrap: wrap;
         }
-        .analytics-header-title-row { display: contents; }
-        .analytics-header-spacer { flex: 1 1 auto; }
-
-        .landing-page-btn {
-          padding: 6px 14px;
-          background: rgba(74,158,255,0.08);
-          border: 1px solid ${T.blue};
-          border-radius: 4px;
-          font-size: 10px;
-          letter-spacing: 2px;
-          color: ${T.blue};
-          cursor: pointer;
-          font-family: 'Futura PT', Futura, sans-serif;
-          font-weight: bold;
-          text-decoration: none;
-          transition: background 0.15s;
-          white-space: nowrap;
+        .rec-disclosure {
+          background: #fff8e8;
+          border-bottom: 1px solid #d4b86a;
         }
-        .landing-page-btn:hover {
-          background: rgba(74,158,255,0.18);
-        }
-
-        .welcome-row {
-          background: ${T.bg};
-          padding: 18px 20px 4px;
-        }
-        .welcome-line {
-          font-size: 18px;
-          font-weight: bold;
-          color: ${T.text};
-          letter-spacing: 2px;
-          font-family: 'Futura PT', Futura, sans-serif;
-        }
-        .range-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
-        .range-tab {
-          padding: 6px 14px;
-          background: transparent;
-          border: 1px solid #4a4a5e;
-          border-radius: 3px;
-          font-size: 10px;
-          letter-spacing: 2px;
-          color: #8888aa;
-          cursor: pointer;
-          font-family: 'Futura PT', Futura, sans-serif;
-          font-weight: bold;
-        }
-        .range-tab.active {
-          background: ${T.blue};
-          border-color: ${T.blue};
-          color: white;
-        }
-        .custom-range { display: flex; gap: 6px; align-items: center; }
-        .custom-range input {
-          padding: 4px 8px;
-          background: #2a2a3e;
-          border: 1px solid #4a4a5e;
-          border-radius: 3px;
-          color: white;
+        .rec-disclosure-summary {
+          padding: 8px 20px;
           font-size: 11px;
+          color: ${T.amber};
+          letter-spacing: 1px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          cursor: pointer;
+          user-select: none;
+          font-weight: bold;
+          font-family: 'Futura PT', Futura, sans-serif;
+        }
+        .rec-disclosure-summary:hover { background: #fdf2d6; }
+        .rec-disclosure-summary .chev {
           font-family: monospace;
+          font-size: 10px;
+          color: ${T.amber};
+          transition: transform 0.15s;
         }
-        .stat-grid {
-          display: grid;
-          grid-template-columns: repeat(6, 1fr);
-          gap: 8px;
-          padding: 16px;
+        .rec-disclosure-summary.open .chev { transform: rotate(180deg); }
+        .rec-disclosure-body {
+          padding: 4px 20px 12px 20px;
+          font-size: 11px;
+          color: ${T.amber};
+          letter-spacing: 0.5px;
+          line-height: 1.6;
+          border-top: 1px dashed #d4b86a;
+          font-family: system-ui, -apple-system, sans-serif;
         }
-        .stat-card {
-          padding: 12px 14px;
+        .rec-disclosure-body p {
+          margin: 8px 0 0 0;
+        }
+        .rec-disclosure-body p:first-child { margin-top: 6px; }
+        .rec-controls {
+          padding: 12px 16px;
           background: ${T.surface};
+          border-bottom: 1px solid ${T.border};
+          display: grid;
+          grid-template-columns: 2fr 1fr 1fr;
+          gap: 8px;
+          align-items: end;
+        }
+        .rec-controls .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+        .rec-controls label {
+          font-size: 9px; letter-spacing: 2px; color: ${T.muted}; font-weight: bold;
+        }
+        .rec-controls input, .rec-controls select {
+          padding: 8px 10px;
+          background: ${T.bg};
           border: 1px solid ${T.border};
           border-radius: 4px;
-          border-top: 3px solid ${T.blue};
-          position: relative;
+          font-family: monospace;
+          font-size: 12px;
+          color: ${T.text};
+          outline: none;
+          width: 100%;
+          min-width: 0;
         }
-        .stat-card.empty { opacity: 0.55; }
-        .stat-label {
+        .rec-mobile-toggle { display: none; }
+        .rec-list { flex: 1; overflow-y: auto; padding: 12px 16px; }
+        .rec-card {
+          border: 1px solid ${T.border};
+          border-radius: 4px;
+          padding: 14px 16px;
+          margin-bottom: 6px;
+          cursor: pointer;
+          transition: border-color 0.1s, background 0.15s;
+        }
+        .rec-card:hover { border-color: ${T.blue}; }
+        .rec-card.expanded { border-color: ${T.blue}; }
+        .rec-desktop-row {
+          display: grid;
+          grid-template-columns: 1.6fr 1.2fr 1fr 1.2fr auto;
+          gap: 16px;
+          align-items: center;
+        }
+        .rec-mobile-row { display: none; }
+        .rec-name {
+          font-weight: bold;
+          font-family: monospace;
+          color: ${T.text};
+          font-size: 13px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .rec-name-sub {
+          font-size: 10px;
+          color: ${T.muted};
+          font-family: monospace;
+          font-weight: normal;
+          letter-spacing: 1px;
+          margin-top: 2px;
+        }
+        .rec-phone {
+          font-family: monospace;
+          color: ${T.accent};
+          font-weight: bold;
+          font-size: 12px;
+          white-space: nowrap;
+        }
+        .rec-datetime {
+          font-family: monospace;
+          font-size: 11px;
+          color: ${T.text};
+          line-height: 1.5;
+        }
+        .rec-datetime .date {
+          font-weight: bold;
+          letter-spacing: 0.5px;
+        }
+        .rec-datetime .time {
+          color: ${T.muted};
+          font-size: 10px;
+          margin-top: 2px;
+        }
+        .rec-datetime .duration {
+          color: ${T.muted};
+          font-size: 10px;
+          margin-top: 2px;
+        }
+        .rec-disp-badge {
+          display: inline-block;
+          padding: 5px 12px;
+          border-radius: 3px;
+          font-size: 10px;
+          letter-spacing: 1px;
+          font-weight: bold;
+          font-family: 'Futura PT', Futura, sans-serif;
+          white-space: nowrap;
+        }
+        .rec-camp {
+          font-family: monospace;
+          font-size: 11px;
+          color: ${T.muted};
+          letter-spacing: 0.5px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .rec-actions {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          align-items: stretch;
+          min-width: 130px;
+        }
+        .rec-actions-row {
+          display: flex;
+          gap: 4px;
+        }
+        .rec-btn {
+          padding: 7px 12px;
+          background: transparent;
+          border: 1px solid ${T.blue};
+          border-radius: 3px;
+          color: ${T.blue};
+          font-size: 10px;
+          letter-spacing: 1px;
+          font-weight: bold;
+          cursor: pointer;
+          font-family: 'Futura PT', Futura, sans-serif;
+          flex: 1;
+          white-space: nowrap;
+        }
+        .rec-btn-danger {
+          border-color: ${T.red};
+          color: ${T.red};
+        }
+        .rec-btn-active {
+          background: ${T.dark};
+          color: ${T.blue};
+        }
+        .rec-expand {
+          margin-top: 12px;
+          padding: 14px;
+          background: ${T.bg};
+          border: 1px solid ${T.blue};
+          border-radius: 3px;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+        }
+        .rec-expand-section-label {
           font-size: 9px;
           letter-spacing: 2px;
           color: ${T.muted};
+          font-weight: bold;
           margin-bottom: 6px;
-          font-weight: bold;
         }
-        .stat-value {
-          font-size: 22px;
-          font-weight: bold;
-          font-family: monospace;
-          color: ${T.text};
-          letter-spacing: -0.5px;
-        }
-        .stat-sub {
-          font-size: 10px;
-          color: ${T.muted};
-          margin-top: 4px;
-          font-family: monospace;
-        }
-        .charts-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 12px;
-          padding: 0 16px 16px;
-        }
-        .chart-card {
+        .rec-expand-row {
+          display: flex;
+          justify-content: space-between;
+          padding: 6px 10px;
           background: ${T.surface};
           border: 1px solid ${T.border};
-          border-radius: 4px;
-          padding: 14px;
-          position: relative;
-        }
-        .chart-title {
-          font-size: 10px;
-          letter-spacing: 3px;
-          color: ${T.muted};
-          margin-bottom: 12px;
-          font-weight: bold;
-        }
-        .chart-empty-overlay {
-          position: absolute;
-          inset: 0;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          pointer-events: none;
-          z-index: 2;
-        }
-        .chart-empty-pill {
-          background: rgba(26, 26, 46, 0.85);
-          color: white;
-          font-size: 10px;
-          letter-spacing: 3px;
-          font-weight: bold;
-          padding: 8px 18px;
-          border-radius: 4px;
-          font-family: 'Futura PT', Futura, sans-serif;
-        }
-        .chart-faded { opacity: 0.35; }
-        .empty-state {
-          padding: 60px 20px;
-          text-align: center;
+          border-radius: 3px;
           font-size: 11px;
-          letter-spacing: 3px;
-          color: ${T.muted};
+          margin-bottom: 4px;
         }
-
-        /* ── MOBILE HEADER (≤ 768px) ───────────────────────────────────── */
-        /* Two-row layout:                                                  */
-        /*   Row 1: ANALYTICS OVERVIEW [left] · LANDING PAGE → [right]      */
-        /*   Row 2: range tabs spanning full width                          */
-        /* This puts the LANDING button at the same vertical level as the   */
-        /* page title, which is what you asked for.                         */
+        .rec-notes-block {
+          padding: 12px;
+          background: ${T.surface};
+          border: 1px solid ${T.border};
+          border-radius: 3px;
+          font-family: monospace;
+          font-size: 12px;
+          line-height: 1.6;
+          color: ${T.text};
+          white-space: pre-wrap;
+          min-height: 60px;
+        }
+        .rec-notes-empty {
+          color: ${T.muted};
+          font-style: italic;
+        }
+        .rec-player {
+          margin-top: 12px;
+          padding-top: 12px;
+          border-top: 1px solid ${T.border};
+        }
+        .rec-player audio { width: 100%; }
+        .rec-sync-msg {
+          padding: 8px 16px;
+          background: #e8f5e8;
+          border-bottom: 1px solid #6abf6a;
+          color: ${T.green};
+          font-size: 11px;
+          letter-spacing: 1px;
+        }
         @media (max-width: 768px) {
-          .analytics-header {
-            padding: 10px 12px;
+          .rec-header { padding: 10px 12px; }
+          .rec-disclosure-summary { padding: 8px 12px; font-size: 10px; }
+          .rec-disclosure-body { padding: 4px 12px 10px 12px; font-size: 10px; }
+          .rec-mobile-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 16px;
+            background: ${T.surface};
+            border-bottom: 1px solid ${T.border};
+            font-size: 11px;
+            letter-spacing: 2px;
+            color: ${T.text};
+            cursor: pointer;
+          }
+          .rec-controls.closed-mobile { display: none; }
+          .rec-controls.open-mobile {
+            display: grid;
+            grid-template-columns: 1fr;
+            padding: 12px;
+          }
+          .rec-desktop-row { display: none; }
+          .rec-mobile-row {
             display: grid;
             grid-template-columns: 1fr auto;
-            grid-template-areas:
-              "title  landing"
-              "tabs   tabs";
-            gap: 10px 12px;
-            align-items: center;
-          }
-          .analytics-header-title { grid-area: title; }
-          .landing-page-btn {
-            grid-area: landing;
-            padding: 5px 10px;
-            font-size: 9px;
-            letter-spacing: 1.5px;
-          }
-          .range-tabs {
-            grid-area: tabs;
-            width: 100%;
-            justify-content: flex-start;
-          }
-          .analytics-header-spacer { display: none; }
-
-          .welcome-row { padding: 14px 12px 4px; }
-          .welcome-line { font-size: 15px; letter-spacing: 1px; }
-          .range-tab { padding: 6px 10px; font-size: 9px; letter-spacing: 1px; }
-          .stat-grid {
-            grid-template-columns: repeat(2, 1fr) !important;
-            padding: 12px;
             gap: 8px;
+            grid-template-areas:
+              "name disp"
+              "phone phone"
+              "meta meta"
+              "actions actions";
           }
-          .stat-card { padding: 10px; }
-          .stat-value { font-size: 18px; }
-          .charts-grid {
-            grid-template-columns: 1fr !important;
-            padding: 0 12px 12px;
+          .rec-mobile-row .col-name { grid-area: name; }
+          .rec-mobile-row .col-phone { grid-area: phone; }
+          .rec-mobile-row .col-disp { grid-area: disp; }
+          .rec-mobile-row .col-meta {
+            grid-area: meta;
+            display: flex;
+            gap: 12px;
+            font-size: 10px;
+            color: ${T.muted};
+            font-family: monospace;
           }
-          .custom-range { flex-wrap: wrap; grid-column: 1 / -1; }
+          .rec-mobile-row .col-actions { grid-area: actions; align-items: stretch; min-width: auto; }
+          .rec-mobile-row .rec-actions-row { width: 100%; }
+          .rec-list { padding: 8px 12px; }
+          .rec-expand { grid-template-columns: 1fr; }
         }
       `}</style>
 
-      <div className="analytics-header">
-        <span className="analytics-header-title" style={{ fontSize: 11, fontWeight: 'bold', letterSpacing: 4, color: T.blue }}>
-          ANALYTICS OVERVIEW
-        </span>
-        <div className="range-tabs">
-          {ranges.map(r => (
-            <button
-              key={r.key}
-              className={`range-tab ${range === r.key ? 'active' : ''}`}
-              onClick={() => setRange(r.key)}
-            >{r.label}</button>
-          ))}
+      <div className="rec-header">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <span style={{ fontSize: 11, fontWeight: 'bold', letterSpacing: 4, color: T.blue }}>
+            CALL RECORDINGS
+          </span>
+          <span style={{
+            fontSize: 10, fontFamily: 'monospace', color: '#8888aa', letterSpacing: 1,
+          }}>
+            {total.toLocaleString()} TOTAL · {recordings.length} LOADED
+          </span>
         </div>
-        {range === 'custom' && (
-          <div className="custom-range">
-            <input
-              type="date"
-              value={customStart}
-              onChange={e => setCustomStart(e.target.value)}
-            />
-            <span style={{ color: '#8888aa', fontSize: 10 }}>→</span>
-            <input
-              type="date"
-              value={customEnd}
-              onChange={e => setCustomEnd(e.target.value)}
-            />
+        <button
+          onClick={handleSync}
+          disabled={syncing}
+          style={{
+            padding: '6px 14px',
+            background: 'transparent',
+            border: `1px solid ${T.blue}`,
+            borderRadius: 3,
+            color: T.blue,
+            fontSize: 10,
+            letterSpacing: 2,
+            fontWeight: 'bold',
+            cursor: syncing ? 'wait' : 'pointer',
+            fontFamily: 'Futura PT, Futura, sans-serif',
+          }}
+        >{syncing ? '⟳ SYNCING...' : '⟳ SYNC'}</button>
+      </div>
+
+      {syncMessage && (
+        <div className="rec-sync-msg">{syncMessage}</div>
+      )}
+
+      <div className="rec-disclosure">
+        <div
+          className={`rec-disclosure-summary ${disclosureOpen ? 'open' : ''}`}
+          onClick={() => setDisclosureOpen(v => !v)}
+          role="button"
+          aria-expanded={disclosureOpen}
+        >
+          <span>⚠️ DISCLOSURE & 30-DAY RECORDINGS BACKUP:</span>
+          <span className="chev">▾</span>
+        </div>
+        {disclosureOpen && (
+          <div className="rec-disclosure-body">
+            <p>
+              <strong>RECORDING DISCLOSURE:</strong> You must verbally inform the
+              other party they are on a recorded line by law in CA, CT, FL, IL, MD,
+              MA, MI, MT, NV, NH, PA, WA.
+            </p>
+            <p>
+              <strong>30-DAY BACKUP:</strong> Recordings are kept for 30 days, then
+              auto-removed. Click DOWNLOAD to save permanently.
+            </p>
+          </div>
+        )}
+      </div>
+
+      <div className="rec-mobile-toggle" onClick={() => setFiltersOpen(v => !v)}>
+        <span>{filtersOpen ? '▲ HIDE' : '▼ SHOW'} FILTERS</span>
+        <span style={{ fontSize: 10, color: T.muted, fontFamily: 'monospace' }}>
+          {total.toLocaleString()} recordings
+        </span>
+      </div>
+
+      <div className={`rec-controls ${filtersOpen ? 'open-mobile' : 'closed-mobile'}`}>
+        <div className="field">
+          <label>SEARCH NAME OR PHONE</label>
+          <input type="text" placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+        <div className="field">
+          <label>CAMPAIGN</label>
+          <select value={campaignFilter} onChange={e => setCampaignFilter(e.target.value)}>
+            <option value="all">[ ALL CAMPAIGNS ]</option>
+            {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </div>
+        <div className="field">
+          <label>DISPOSITION</label>
+          <select value={dispositionFilter} onChange={e => setDispositionFilter(e.target.value)}>
+            <option value="all">[ ALL ]</option>
+            {DISPOSITIONS.map(d => <option key={d} value={d}>{d}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <div className="rec-list">
+        {recordings.length === 0 && !loading && (
+          <div style={{
+            textAlign: 'center', padding: 60,
+            fontSize: 11, letterSpacing: 3, color: T.muted,
+          }}>
+            <div style={{ fontSize: 36, marginBottom: 12, opacity: 0.4 }}>🎙️</div>
+            NO RECORDINGS YET<br />
+            <span style={{ fontSize: 10, marginTop: 8, display: 'inline-block' }}>
+              MAKE A CALL — THEN HIT SYNC IF IT DOESN'T APPEAR.
+            </span>
           </div>
         )}
 
-        {/* Spacer — pushes LANDING button right on desktop. Hidden on mobile
-            (replaced by grid placement). */}
-        <div className="analytics-header-spacer" />
+        {recordings.map(r => {
+          const expDays = daysUntilExpire(r.recording_expires_at)
+          const isPlaying = playingId === r.id
+          const isExpanded = expandedId === r.id
+          const isConfirming = confirmDeleteId === r.id
+          const isDeleting = deletingId === r.id
 
-        {/*
-          LANDING PAGE button — links to landing with ?view=landing param.
-          Without that param, app/page.tsx would redirect us right back to
-          /dashboard because logged-in users normally get sent there.
-          The param tells page.tsx "render the landing for this visit".
-        */}
-        <Link href="/?view=landing" className="landing-page-btn">
-          LANDING PAGE →
-        </Link>
-      </div>
+          const hasLead = !!r.leads
+          const leadName = hasLead
+            ? `${r.leads!.first_name || ''} ${r.leads!.last_name || ''}`.trim() || 'Unnamed Lead'
+            : 'Manual Dial'
+          const phone = r.leads?.phone || r.phone_number || '—'
+          const campName = r.campaigns?.name || (hasLead ? '—' : 'Direct')
+          const { date, time } = formatDateClean(r.created_at)
+          const dur = formatDuration(r.recording_duration || r.duration)
+          const notes = r.leads?.notes || (r as any).notes || ''
 
-      <div className="welcome-row">
-        <div className="welcome-line">
-          WELCOME BACK{fullName ? `, ${fullName}` : ''}.
-        </div>
-      </div>
+          const dispBadgeStyle = r.disposition ? {
+            background: dispBg(r.disposition),
+            color: dispColor(r.disposition),
+            border: `1px solid ${dispColor(r.disposition)}`,
+          } : {}
 
-      {loading ? (
-        <div className="empty-state">LOADING ANALYTICS...</div>
-      ) : (
-        <>
-          <div className="stat-grid">
-            <div className={`stat-card ${!hasData ? 'empty' : ''}`}>
-              <div className="stat-label">TOTAL CALLS</div>
-              <div className="stat-value">{(s.totalCalls || 0).toLocaleString()}</div>
-              <div className="stat-sub">{secondaryLabel} {(sec.totalCalls || 0).toLocaleString()}</div>
-            </div>
-            <div className={`stat-card ${!hasData ? 'empty' : ''}`} style={{ borderTopColor: T.accent }}>
-              <div className="stat-label">HOURS DIALED</div>
-              <div className="stat-value" style={{ color: T.accent }}>{formatHours(s.totalDuration || 0)}</div>
-              <div className="stat-sub">{secondaryLabel} {formatHours(sec.totalDuration || 0)}</div>
-            </div>
-            <div className={`stat-card ${!hasData ? 'empty' : ''}`} style={{ borderTopColor: T.green }}>
-              <div className="stat-label">CONVERSIONS</div>
-              <div className="stat-value" style={{ color: T.green }}>{(s.conversions || 0).toLocaleString()}</div>
-              <div className="stat-sub">{secondaryLabel} {(sec.conversions || 0).toLocaleString()}</div>
-            </div>
-            <div className={`stat-card ${!hasData ? 'empty' : ''}`} style={{ borderTopColor: T.green }}>
-              <div className="stat-label">CLOSED</div>
-              <div className="stat-value" style={{ color: T.green }}>{(s.closed || 0).toLocaleString()}</div>
-              <div className="stat-sub">{secondaryLabel} {(sec.closed || 0).toLocaleString()}</div>
-            </div>
-            <div className={`stat-card ${!hasData ? 'empty' : ''}`}>
-              <div className="stat-label">TALK TIME</div>
-              <div className="stat-value">{formatDuration(s.totalDuration || 0)}</div>
-              <div className="stat-sub">avg {formatDuration(s.avgCallLength || 0)}/call</div>
-            </div>
-            <div className={`stat-card ${!hasData ? 'empty' : ''}`} style={{ borderTopColor: T.amber }}>
-              <div className="stat-label">BEST CAMPAIGN</div>
-              <div className="stat-value" style={{ fontSize: s.bestCampaign ? 13 : 22, color: T.amber }}>
-                {s.bestCampaign || '—'}
+          return (
+            <div
+              key={r.id}
+              className={`rec-card ${isExpanded ? 'expanded' : ''}`}
+              style={{ background: dispositionTint(r.disposition) }}
+              onClick={(e) => {
+                const target = e.target as HTMLElement
+                if (target.closest('button, audio, .rec-actions')) return
+                setExpandedId(isExpanded ? null : r.id)
+              }}
+            >
+              {/* DESKTOP */}
+              <div className="rec-desktop-row">
+                <div>
+                  <div className="rec-name">{leadName}</div>
+                  {!hasLead && (
+                    <div className="rec-name-sub">no campaign attached</div>
+                  )}
+                </div>
+
+                <div className="rec-phone">{phone}</div>
+
+                <div className="rec-datetime">
+                  <div className="date">{date}</div>
+                  <div className="time">{time}</div>
+                  <div className="duration">▸ {dur}</div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
+                  <div className="rec-camp">{campName}</div>
+                  {r.disposition ? (
+                    <span className="rec-disp-badge" style={dispBadgeStyle}>{r.disposition}</span>
+                  ) : (
+                    <span className="rec-disp-badge" style={{
+                      background: '#e8e8ec', color: T.muted,
+                      border: `1px solid ${T.border}`,
+                    }}>NO DISPOSITION</span>
+                  )}
+                </div>
+
+                <div className="rec-actions">
+                  <div className="rec-actions-row">
+                    <button
+                      className={`rec-btn ${isPlaying ? 'rec-btn-active' : ''}`}
+                      onClick={() => setPlayingId(isPlaying ? null : r.id)}
+                    >{isPlaying ? '✕ CLOSE' : '▶ PLAY'}</button>
+                    <button
+                      className="rec-btn"
+                      onClick={() => handleDownload(r.id)}
+                    >↓ SAVE</button>
+                  </div>
+                  <div className="rec-actions-row">
+                    {isConfirming ? (
+                      <>
+                        <button
+                          className="rec-btn rec-btn-danger"
+                          disabled={isDeleting}
+                          onClick={() => handleDelete(r.id)}
+                          style={{ background: isDeleting ? 'transparent' : T.red, color: isDeleting ? T.red : '#fff' }}
+                        >{isDeleting ? '...' : '✓ CONFIRM'}</button>
+                        <button
+                          className="rec-btn"
+                          disabled={isDeleting}
+                          onClick={() => setConfirmDeleteId(null)}
+                        >CANCEL</button>
+                      </>
+                    ) : (
+                      <button
+                        className="rec-btn rec-btn-danger"
+                        onClick={() => setConfirmDeleteId(r.id)}
+                        style={{ width: '100%' }}
+                      >🗑 DELETE</button>
+                    )}
+                  </div>
+                </div>
               </div>
-              <div className="stat-sub">{s.bestCampaign ? `${s.bestCampaignRate}% conv` : 'need 5+ calls'}</div>
+
+              {/* MOBILE */}
+              <div className="rec-mobile-row">
+                <div className="col-name">
+                  <div className="rec-name">{leadName}</div>
+                  {!hasLead && (
+                    <div className="rec-name-sub">no campaign attached</div>
+                  )}
+                </div>
+                <div className="col-disp">
+                  {r.disposition ? (
+                    <span className="rec-disp-badge" style={dispBadgeStyle}>{r.disposition}</span>
+                  ) : (
+                    <span className="rec-disp-badge" style={{
+                      background: '#e8e8ec', color: T.muted,
+                      border: `1px solid ${T.border}`,
+                    }}>NO DISP</span>
+                  )}
+                </div>
+                <div className="col-phone rec-phone">{phone}</div>
+                <div className="col-meta">
+                  <span>{date} · {time}</span>
+                  <span>{dur}</span>
+                  <span>{campName}</span>
+                </div>
+                <div className="col-actions rec-actions">
+                  <div className="rec-actions-row">
+                    <button
+                      className={`rec-btn ${isPlaying ? 'rec-btn-active' : ''}`}
+                      onClick={() => setPlayingId(isPlaying ? null : r.id)}
+                    >{isPlaying ? '✕ CLOSE' : '▶ PLAY'}</button>
+                    <button
+                      className="rec-btn"
+                      onClick={() => handleDownload(r.id)}
+                    >↓ SAVE</button>
+                  </div>
+                  <div className="rec-actions-row">
+                    {isConfirming ? (
+                      <>
+                        <button
+                          className="rec-btn rec-btn-danger"
+                          disabled={isDeleting}
+                          onClick={() => handleDelete(r.id)}
+                          style={{ background: isDeleting ? 'transparent' : T.red, color: isDeleting ? T.red : '#fff' }}
+                        >{isDeleting ? '...' : '✓ CONFIRM'}</button>
+                        <button
+                          className="rec-btn"
+                          disabled={isDeleting}
+                          onClick={() => setConfirmDeleteId(null)}
+                        >CANCEL</button>
+                      </>
+                    ) : (
+                      <button
+                        className="rec-btn rec-btn-danger"
+                        onClick={() => setConfirmDeleteId(r.id)}
+                      >🗑 DELETE</button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* EXPANDED */}
+              {isExpanded && (
+                <div className="rec-expand">
+                  <div>
+                    <div className="rec-expand-section-label">CALL DETAILS</div>
+                    <div className="rec-expand-row">
+                      <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>DISPOSITION</span>
+                      <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: dispColor(r.disposition) }}>
+                        {r.disposition || '—'}
+                      </span>
+                    </div>
+                    <div className="rec-expand-row">
+                      <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>CAMPAIGN</span>
+                      <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: T.text }}>{campName}</span>
+                    </div>
+                    <div className="rec-expand-row">
+                      <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>DURATION</span>
+                      <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: T.text }}>{dur}</span>
+                    </div>
+                    <div className="rec-expand-row">
+                      <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>RECORDED</span>
+                      <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: T.text }}>{date} · {time}</span>
+                    </div>
+                    {expDays !== null && (
+                      <div className="rec-expand-row">
+                        <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>EXPIRES</span>
+                        <span style={{
+                          fontFamily: 'monospace', fontWeight: 'bold',
+                          color: expDays < 7 ? T.red : T.text,
+                        }}>
+                          {expDays} day{expDays === 1 ? '' : 's'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <div className="rec-expand-section-label">CALL NOTES</div>
+                    <div className={`rec-notes-block ${!notes ? 'rec-notes-empty' : ''}`}>
+                      {notes || 'No notes recorded for this call.'}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {isPlaying && (
+                <div className="rec-player">
+                  <audio controls autoPlay style={{ width: '100%' }}>
+                    <source src={`/api/recordings/play?call_id=${r.id}`} type="audio/mpeg" />
+                    Your browser does not support audio playback.
+                  </audio>
+                  {expDays !== null && (
+                    <div style={{
+                      marginTop: 6,
+                      fontSize: 10,
+                      letterSpacing: 1,
+                      color: expDays < 7 ? T.red : T.muted,
+                      fontFamily: 'monospace',
+                    }}>
+                      EXPIRES IN {expDays} DAY{expDays === 1 ? '' : 'S'} · DOWNLOAD TO KEEP
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
+          )
+        })}
+
+        {cursor !== null && (
+          <div ref={sentinelRef} style={{
+            padding: 20, textAlign: 'center',
+            fontSize: 10, letterSpacing: 2, color: T.muted,
+          }}>
+            {loading ? 'LOADING MORE...' : 'SCROLL TO LOAD MORE'}
           </div>
-
-          <div className="charts-grid">
-
-            <div className="chart-card">
-              <div className="chart-title">▸ CALL VOLUME OVER TIME</div>
-              <div className={series.length === 0 ? 'chart-faded' : ''}>
-                <ResponsiveContainer width="100%" height={240}>
-                  <LineChart data={seriesToRender}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
-                    <XAxis dataKey="label" stroke={T.muted} fontSize={10} />
-                    <YAxis stroke={T.muted} fontSize={10} allowDecimals={false} domain={[0, 'auto']} />
-                    <Tooltip contentStyle={{ background: T.dark, border: `1px solid ${T.border}`, color: 'white', fontSize: 11 }} />
-                    <Line type="monotone" dataKey="calls" stroke={T.blue} strokeWidth={2} dot={{ fill: T.blue, r: 3 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-              {series.length === 0 && (
-                <div className="chart-empty-overlay">
-                  <div className="chart-empty-pill">AWAITING DATA</div>
-                </div>
-              )}
-            </div>
-
-            <div className="chart-card">
-              <div className="chart-title">▸ CONVERSION RATE OVER TIME</div>
-              <div className={series.length === 0 ? 'chart-faded' : ''}>
-                <ResponsiveContainer width="100%" height={240}>
-                  <LineChart data={seriesToRender}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
-                    <XAxis dataKey="label" stroke={T.muted} fontSize={10} />
-                    <YAxis stroke={T.muted} fontSize={10} unit="%" domain={[0, 100]} />
-                    <Tooltip
-                      contentStyle={{ background: T.dark, border: `1px solid ${T.border}`, color: 'white', fontSize: 11 }}
-                      formatter={(v: any) => `${v}%`}
-                    />
-                    <Line type="monotone" dataKey="conversionRate" stroke={T.green} strokeWidth={2} dot={{ fill: T.green, r: 3 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-              {series.length === 0 && (
-                <div className="chart-empty-overlay">
-                  <div className="chart-empty-pill">AWAITING DATA</div>
-                </div>
-              )}
-            </div>
-
-            <div className="chart-card">
-              <div className="chart-title">▸ DISPOSITION BREAKDOWN</div>
-              <div className={dispositions.length === 0 ? 'chart-faded' : ''}>
-                <ResponsiveContainer width="100%" height={240}>
-                  <PieChart>
-                    <Pie
-                      data={dispositionsToRender}
-                      dataKey="count"
-                      nameKey="disposition"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={75}
-                      label={(entry: any) => `${entry.disposition}`}
-                      labelLine={false}
-                    >
-                      {dispositionsToRender.map((d, i) => (
-                        <Cell key={i} fill={DISPOSITION_COLORS[d.disposition] || '#bbb'} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{ background: T.dark, border: `1px solid ${T.border}`, color: 'white', fontSize: 11 }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              {dispositions.length === 0 && (
-                <div className="chart-empty-overlay">
-                  <div className="chart-empty-pill">AWAITING DATA</div>
-                </div>
-              )}
-            </div>
-
-            <div className="chart-card">
-              <div className="chart-title">▸ CAMPAIGN PERFORMANCE</div>
-              <div className={campaigns.length === 0 ? 'chart-faded' : ''}>
-                <ResponsiveContainer width="100%" height={240}>
-                  <BarChart data={campaignsToRender} layout="horizontal">
-                    <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
-                    <XAxis dataKey="name" stroke={T.muted} fontSize={9} />
-                    <YAxis stroke={T.muted} fontSize={10} allowDecimals={false} domain={[0, 'auto']} />
-                    <Tooltip contentStyle={{ background: T.dark, border: `1px solid ${T.border}`, color: 'white', fontSize: 11 }} />
-                    <Legend wrapperStyle={{ fontSize: 10 }} />
-                    <Bar dataKey="total" fill={T.blue} name="Total" />
-                    <Bar dataKey="contacted" fill={T.accent} name="Contacted" />
-                    <Bar dataKey="converted" fill={T.green} name="Converted" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-              {campaigns.length === 0 && (
-                <div className="chart-empty-overlay">
-                  <div className="chart-empty-pill">AWAITING DATA</div>
-                </div>
-              )}
-            </div>
-          </div>
-        </>
-      )}
+        )}
+        {cursor === null && recordings.length > 0 && (
+          <div style={{
+            padding: 20, textAlign: 'center',
+            fontSize: 10, letterSpacing: 2, color: T.muted,
+          }}>END OF LIST · {recordings.length} OF {total.toLocaleString()}</div>
+        )}
+      </div>
     </div>
   )
 }

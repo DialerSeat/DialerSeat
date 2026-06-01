@@ -263,14 +263,6 @@ function DialerPageInner() {
   const isProgressive = dialerMode === 'progressive'
   const isPreview = dialerMode === 'preview'
 
-  // v24 fix: renamed from `autoDials` for clarity. This flag governs whether
-  // the dialer auto-chains to the next dial after an EARLY failure (phone
-  // too short, TCPA window block, AMD voicemail filter — anything that
-  // prevents the call from reaching live conversation). It does NOT govern
-  // post-disposition advance — power mode also auto-advances after a
-  // completed call, just via the disposition handler.
-  // Only progressive currently auto-chains on early failures; power waits
-  // for the user to re-initiate.
   const autoChainOnFailure = isProgressive
 
   const modeRequiresSpecific = false
@@ -285,14 +277,6 @@ function DialerPageInner() {
     return 'ready'
   })()
 
-  // ────────────────────────────────────────────────────────────────────────
-  // PREDICTIVE UI STATE — derived
-  // ────────────────────────────────────────────────────────────────────────
-  // The 4-state predictive view drives the center panel. AVAILABLE means
-  // the engine is running and waiting for a human. Going LIVE alone is
-  // NOT enough to enter AVAILABLE anymore — the user must also click
-  // INITIATE DIAL SEQUENCE (which sets predictiveEngineStarted=true).
-  // ────────────────────────────────────────────────────────────────────────
   type PredictiveView = 'offline' | 'available' | 'on_call' | 'wrapping'
   const predictiveView: PredictiveView = (() => {
     if (!available) return 'offline'
@@ -459,11 +443,9 @@ function DialerPageInner() {
   useEffect(() => {
     if (!lsRestoredRef.current) return
     setSelectedCampaign('')
-    // Switching scope kills the predictive engine — fresh start
     setPredictiveEngineStarted(false)
   }, [selectedScope])
 
-  // Same protection when the campaign itself changes
   useEffect(() => {
     setPredictiveEngineStarted(false)
   }, [selectedCampaign])
@@ -723,14 +705,6 @@ function DialerPageInner() {
     activeCallSid,
   ])
 
-  // ────────────────────────────────────────────────────────────────────────
-  // INCOMING-ROUTE POLLING — predictive AVAILABLE + ENGINE STARTED
-  // ────────────────────────────────────────────────────────────────────────
-  // New gate: predictiveEngineStarted. Without it, going LIVE does NOT begin
-  // polling for routed humans. The user must click INITIATE DIAL SEQUENCE
-  // first. This matches the non-predictive flow where "LIVE" makes you
-  // available but doesn't dial — you still need to click INITIATE.
-  // ────────────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (
       !isActive ||
@@ -835,13 +809,6 @@ function DialerPageInner() {
     }
   }
 
-  // ── BEFOREUNLOAD HANDLER ────────────────────────────────────────────────
-  // v24 fix: when the user closes the tab or navigates away mid-call, we
-  // now also fire a sendBeacon to /api/calls/hangup for the active call.
-  // Previously, session-end and a paused heartbeat were sent but the call
-  // itself kept ringing/talking on SignalWire's side until something else
-  // killed it. Using activeCallSidRef.current here (not the closure-stale
-  // activeCallSid state) so we read the live value at unload time.
   useEffect(() => {
     const handleUnload = () => {
       const sid = sessionIdRef.current
@@ -861,7 +828,6 @@ function DialerPageInner() {
           navigator.sendBeacon('/api/dialer/heartbeat', blob)
         } catch {}
       }
-      // v24: kill the active call too so SignalWire stops billing for it.
       const callSid = activeCallSidRef.current
       if (callSid && navigator.sendBeacon) {
         try {
@@ -931,15 +897,6 @@ function DialerPageInner() {
     }
   }, [isActive, isPredictive, available, isSpecificCampaign, selectedCampaign, currentCampaign, linesPref])
 
-  // ── AVAILABILITY TOGGLE — also resets predictive engine + hangs up call ─
-  // Going OFFLINE now:
-  //   1. hangs up any in-flight call (was previously left ringing/talking)
-  //   2. resets the predictive engine flag
-  //   3. clears the current lead, disposition UI, timer
-  //   4. flips available off
-  // Going LIVE doesn't auto-start the predictive engine; user must click
-  // INITIATE DIAL SEQUENCE explicitly. (Same as before — non-predictive
-  // modes still require an INITIATE click after going LIVE too.)
   const handleSetAvailable = async () => {
     let granted = micGranted
     if (!granted) {
@@ -954,9 +911,6 @@ function DialerPageInner() {
       }
     }
 
-    // v24 fix: if we're about to flip OFFLINE, clean up everything first.
-    // The state we're reading here (`available`) is the CURRENT value, so
-    // `goingOffline === true` means we are right now LIVE and going OFFLINE.
     const goingOffline = available
     if (goingOffline) {
       if (activeCallSid) {
@@ -1370,12 +1324,6 @@ function DialerPageInner() {
     activePollRef.current = pollInterval
   }
 
-  // ── INITIATE DIAL — unified entry point ─────────────────────────────────
-  // Non-predictive: fetches the next lead and dials it (or loads preview).
-  // Predictive: flips on predictiveEngineStarted, which kicks off the
-  // incoming-route polling effect. No actual call is initiated here for
-  // predictive — the server-side controller fires lines based on the
-  // heartbeat, and we just wait for a routed human to land via polling.
   const handleDial = async () => {
     setShowDisposition(false)
     setDisposition('')
@@ -1388,9 +1336,6 @@ function DialerPageInner() {
     }
 
     if (isPredictive) {
-      // INITIATE DIAL SEQUENCE in predictive mode = start the engine.
-      // The incoming-route polling effect picks this up and begins
-      // checking for routed humans.
       setPredictiveEngineStarted(true)
       lastIncomingCallSidRef.current = null
       setAmdActivity(prev => [
@@ -1434,7 +1379,6 @@ function DialerPageInner() {
 
     if (isPredictive) {
       lastIncomingCallSidRef.current = null
-      // Engine stays running — next routed human comes in via polling
     } else {
       setTimeout(() => handleDial(), 300)
     }
@@ -1475,7 +1419,6 @@ function DialerPageInner() {
 
       if (isPredictive) {
         lastIncomingCallSidRef.current = null
-        // Engine stays running — next routed human comes in via polling
         return
       }
       await handleDial()
@@ -1776,8 +1719,8 @@ function DialerPageInner() {
           <button onClick={handleManualDial} disabled={!manualNumber} style={{
             padding: inOverlay ? '20px' : '12px', borderRadius: '3px', border: 'none',
             background: manualNumber ? terminalDark : terminalSurface,
-            borderBottom: `3px solid ${manualNumber ? '#4a9eff' : terminalBorder}`,
-            color: manualNumber ? '#4a9eff' : terminalMuted,
+            borderBottom: `3px solid ${manualNumber ? 'var(--brand-primary)' : terminalBorder}`,
+            color: manualNumber ? 'var(--brand-primary)' : terminalMuted,
             fontSize: inOverlay ? '14px' : '11px', fontWeight: 'bold', letterSpacing: '2px',
             cursor: manualNumber ? 'pointer' : 'not-allowed',
             fontFamily: 'Futura PT, Futura, sans-serif',
@@ -1787,13 +1730,7 @@ function DialerPageInner() {
     </>
   )
 
-  // ────────────────────────────────────────────────────────────────────────
   // PREDICTIVE — AVAILABLE state UI
-  // ────────────────────────────────────────────────────────────────────────
-  // Big calm status card. Only rendered when the engine is actually
-  // running (predictiveEngineStarted). If LIVE but engine not started,
-  // the empty-state card (matching INITIATE DIAL SEQUENCE flow) shows.
-  // ────────────────────────────────────────────────────────────────────────
   const PredictiveAvailableCard = () => {
     const linesActive = lastControllerSummary?.inFlight ?? 0
     const linesTarget = linesPref?.effective_lines || pacingInfo?.configuredLines || 3
@@ -1890,7 +1827,7 @@ function DialerPageInner() {
           padding: 3px 10px; background: rgba(74,158,255,0.12);
           border: 1px solid rgba(74,158,255,0.3); border-radius: 3px;
           font-family: monospace; font-size: 10px; letter-spacing: 1px;
-          color: #4a9eff; font-weight: bold;
+          color: var(--brand-primary); font-weight: bold;
         }
         .mode-tile-wrap { position: relative; cursor: pointer; }
         .mode-tile-dropdown {
@@ -1934,12 +1871,6 @@ function DialerPageInner() {
           }
           .dialer-right-sidebar.open { transform: translateX(0); }
 
-          /* v23 — right-edge vertical arrow tab. Moved from dead-center
-             (top:50%) down to between center and bottom (top:66%) per
-             request. translateY(-50%) still centers the tab's own height
-             on that anchor point. Attached to the right edge, with a
-             chevron pointing left. Tap to open the metrics + manual-dial
-             sidebar. */
           .dialer-right-toggle {
             display: flex;
             position: fixed;
@@ -1953,7 +1884,7 @@ function DialerPageInner() {
             background: ${terminalDark};
             border: 1px solid #4a4a5e;
             border-right: none;
-            color: #4a9eff;
+            color: var(--brand-primary);
             align-items: center;
             justify-content: center;
             cursor: pointer;
@@ -1979,13 +1910,13 @@ function DialerPageInner() {
         borderBottom: `2px solid ${terminalAccent}`, flexShrink: 0,
       }}>
         <div className="dialer-status-bar-left">
-          <span style={{ fontSize: '11px', fontWeight: 'bold', letterSpacing: '4px', color: '#4a9eff' }}>
+          <span style={{ fontSize: '11px', fontWeight: 'bold', letterSpacing: '4px', color: 'var(--brand-primary)' }}>
             DIALERSEAT TERMINAL
           </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div onClick={handleSetAvailable} style={{
               width: '36px', height: '20px', borderRadius: '10px',
-              background: available ? '#4a9eff' : '#444460',
+              background: available ? 'var(--brand-primary)' : '#444460',
               position: 'relative', cursor: 'pointer', transition: 'background 0.2s',
               flexShrink: 0,
             }}>
@@ -2004,8 +1935,8 @@ function DialerPageInner() {
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: swReady ? '#4a9eff' : '#666688' }} />
-            <span style={{ fontSize: '9px', letterSpacing: '2px', color: swReady ? '#4a9eff' : '#666688' }}>
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: swReady ? 'var(--brand-primary)' : '#666688' }} />
+            <span style={{ fontSize: '9px', letterSpacing: '2px', color: swReady ? 'var(--brand-primary)' : '#666688' }}>
               {swReady ? 'AUDIO' : '...'}
             </span>
           </div>
@@ -2017,7 +1948,7 @@ function DialerPageInner() {
           </div>
           <div className="dialer-time-block" style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
             <span style={{ fontSize: '11px', fontFamily: 'monospace', color: '#8888aa', letterSpacing: '2px' }}>{dateStr}</span>
-            <span style={{ fontSize: '14px', fontFamily: 'monospace', fontWeight: 'bold', color: '#4a9eff', letterSpacing: '3px' }}>{timeStr}</span>
+            <span style={{ fontSize: '14px', fontFamily: 'monospace', fontWeight: 'bold', color: 'var(--brand-primary)', letterSpacing: '3px' }}>{timeStr}</span>
           </div>
         </div>
       </div>
@@ -2137,7 +2068,7 @@ function DialerPageInner() {
                       }} />
                       {opt.label}
                       {opt.value === dialerMode && (
-                        <span style={{ marginLeft: 'auto', color: '#4a9eff' }}>✓</span>
+                        <span style={{ marginLeft: 'auto', color: 'var(--brand-primary)' }}>✓</span>
                       )}
                     </div>
                   ))}
@@ -2272,14 +2203,7 @@ function DialerPageInner() {
             )}
           </div>
 
-          {/* ──────────────────────────────────────────────────────────── */}
-          {/* CENTER PANEL — branches on mode + predictive view             */}
-          {/* ──────────────────────────────────────────────────────────── */}
-          {/* PREDICTIVE branches:                                           */}
-          {/*   - OFFLINE: empty state ("system will auto-dial when live") */}
-          {/*   - AVAILABLE + engine NOT started: empty state with hint    */}
-          {/*   - AVAILABLE + engine started: PredictiveAvailableCard      */}
-          {/*   - ON CALL / WRAPPING: standard lead profile                 */}
+          {/* CENTER PANEL */}
           {isPredictive && predictiveView === 'available' && isSpecificCampaign && predictiveEngineStarted ? (
             <PredictiveAvailableCard />
           ) : isPredictive && (predictiveView === 'offline' || (predictiveView === 'available' && !predictiveEngineStarted)) ? (
@@ -2311,7 +2235,7 @@ function DialerPageInner() {
                   {previewLead ? 'LEAD PREVIEW — REVIEW BEFORE DIALING' : 'LEAD PROFILE'}
                 </span>
                 {displayLead && (status === 'connected' || status === 'preview_ready') && (
-                  <span style={{ fontSize: '10px', fontFamily: 'monospace', color: '#4a9eff' }}>ID: {displayLead.id.substring(0, 8)}</span>
+                  <span style={{ fontSize: '10px', fontFamily: 'monospace', color: 'var(--brand-primary)' }}>ID: {displayLead.id.substring(0, 8)}</span>
                 )}
               </div>
 
@@ -2441,28 +2365,11 @@ function DialerPageInner() {
             </div>
           )}
 
-          {/* ──────────────────────────────────────────────────────────── */}
-          {/* BUTTONS — v24: predictive label fixes                        */}
-          {/* ──────────────────────────────────────────────────────────── */}
-          {/*                                                              */}
-          {/* Predictive 3-state flow (same shape as non-predictive):      */}
-          {/*   1. OFFLINE → "[ SET AVAILABLE TO DIAL ]" (grey)            */}
-          {/*      Click toggles LIVE switch on.                            */}
-          {/*   2. LIVE + engine NOT started → "INITIATE DIAL SEQUENCE"    */}
-          {/*      (blue, dark bg). Click flips predictiveEngineStarted    */}
-          {/*      on; incoming-route polling begins.                       */}
-          {/*   3a. LIVE + engine started + NO call yet                    */}
-          {/*       → "■ STOP DIAL SEQUENCE" (red). Click stops the       */}
-          {/*       engine; goes back to LIVE-not-started state.          */}
-          {/*       v24 fix: was "ABORT CALL" but there is no call to     */}
-          {/*       abort while the engine is just polling.               */}
-          {/*   3b. LIVE + engine started + ON CALL                       */}
-          {/*       → "SKIP" / "■ TERMINATE CALL" (red). Terminate also  */}
-          {/*       stops the engine.                                     */}
+          {/* BUTTONS — predictive 4-state + non-predictive 3-state flows */}
 
           {isPredictive ? (
             <>
-              {/* STATE 1 — OFFLINE: SET AVAILABLE TO DIAL button (grey) */}
+              {/* STATE 1 — OFFLINE: SET AVAILABLE TO DIAL */}
               {predictiveView === 'offline' && isSpecificCampaign && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', flexShrink: 0 }}>
                   <button onClick={handleSetAvailable} style={{
@@ -2475,7 +2382,6 @@ function DialerPageInner() {
                 </div>
               )}
 
-              {/* OFFLINE + no campaign — placeholder */}
               {predictiveView === 'offline' && !isSpecificCampaign && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', flexShrink: 0 }}>
                   <div style={{
@@ -2486,22 +2392,20 @@ function DialerPageInner() {
                 </div>
               )}
 
-              {/* STATE 2 — LIVE + engine NOT started: INITIATE DIAL SEQUENCE (blue) */}
+              {/* STATE 2 — LIVE + engine NOT started: INITIATE DIAL SEQUENCE */}
               {predictiveView === 'available' && !predictiveEngineStarted && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', flexShrink: 0 }}>
                   <button onClick={handleDial} style={{
                     padding: '14px', borderRadius: '4px', border: 'none',
-                    background: terminalDark, color: '#4a9eff',
+                    background: terminalDark, color: 'var(--brand-primary)',
                     fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
                     cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
-                    borderTop: `3px solid #4a9eff`, transition: 'all 0.15s',
+                    borderTop: `3px solid var(--brand-primary)`, transition: 'all 0.15s',
                   }}>INITIATE DIAL SEQUENCE</button>
                 </div>
               )}
 
-              {/* STATE 3a — LIVE + engine started, no call yet: STOP DIAL SEQUENCE (red)
-                  v24 fix: was "ABORT CALL" which was misleading (no call to abort
-                  while engine is just polling). Symmetric to "INITIATE DIAL SEQUENCE". */}
+              {/* STATE 3a — LIVE + engine started, no call yet: STOP DIAL SEQUENCE */}
               {predictiveView === 'available' && predictiveEngineStarted && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', flexShrink: 0 }}>
                   <button onClick={() => {
@@ -2521,7 +2425,7 @@ function DialerPageInner() {
                 </div>
               )}
 
-              {/* STATE 3b — ON CALL: SKIP + TERMINATE (TERMINATE also stops engine) */}
+              {/* STATE 3b — ON CALL */}
               {status === 'connected' && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, flexShrink: 0 }}>
                   <button onClick={handleSkip} style={{
@@ -2551,7 +2455,7 @@ function DialerPageInner() {
               )}
             </>
           ) : (
-            // NON-PREDICTIVE — original 3-state flow preserved, ▶ emojis removed
+            // NON-PREDICTIVE
             <div style={{ display: 'grid', gridTemplateColumns: status === 'connected' ? '1fr 1fr' : status === 'preview_ready' ? '1fr 1fr' : '1fr', gap: '8px', flexShrink: 0 }}>
               {status === 'idle' && !available && (
                 <button onClick={handleSetAvailable} style={{
@@ -2572,10 +2476,10 @@ function DialerPageInner() {
               {status === 'idle' && available && activeScopeCampaigns.length > 0 && (
                 <button onClick={handleDial} style={{
                   padding: '14px', borderRadius: '4px', border: 'none',
-                  background: terminalDark, color: '#4a9eff',
+                  background: terminalDark, color: 'var(--brand-primary)',
                   fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
                   cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
-                  borderTop: `3px solid #4a9eff`, transition: 'all 0.15s',
+                  borderTop: `3px solid var(--brand-primary)`, transition: 'all 0.15s',
                 }}>
                   {isPreview ? 'LOAD NEXT LEAD' : 'INITIATE DIAL SEQUENCE'}
                 </button>
@@ -2591,10 +2495,10 @@ function DialerPageInner() {
                   }}>SKIP THIS LEAD</button>
                   <button onClick={dialPreviewLead} style={{
                     padding: '14px', borderRadius: '4px', border: 'none',
-                    background: terminalDark, color: '#4a9eff',
+                    background: terminalDark, color: 'var(--brand-primary)',
                     fontSize: '12px', fontWeight: 'bold', letterSpacing: '3px',
                     cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
-                    borderTop: `3px solid #4a9eff`,
+                    borderTop: `3px solid var(--brand-primary)`,
                   }}>DIAL THIS LEAD</button>
                 </>
               )}
@@ -2639,10 +2543,10 @@ function DialerPageInner() {
               {status === 'ended' && !showDisposition && (
                 <button onClick={handleDial} style={{
                   padding: '14px', borderRadius: '4px', border: 'none',
-                  background: terminalDark, color: '#4a9eff',
+                  background: terminalDark, color: 'var(--brand-primary)',
                   fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
                   cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
-                  borderTop: `3px solid #4a9eff`,
+                  borderTop: `3px solid var(--brand-primary)`,
                 }}>NEXT LEAD</button>
               )}
             </div>
@@ -2661,7 +2565,7 @@ function DialerPageInner() {
 
           <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '5px', flexShrink: 0 }}>
             {[
-              { label: 'CONNECTED', value: sessionStats.connected, color: '#4a9eff' },
+              { label: 'CONNECTED', value: sessionStats.connected, color: 'var(--brand-primary)' },
               { label: 'CLOSED', value: sessionStats.closed, color: terminalGreen },
               { label: 'APPOINTMENTS', value: sessionStats.appointments, color: '#1a4a8a' },
               { label: 'NOT INTERESTED', value: sessionStats.notInterested, color: '#8a6a1a' },
@@ -2722,7 +2626,7 @@ function DialerPageInner() {
             ].filter(Boolean).slice(0, 14).map((log, i) => (
               <div key={i} style={{
                 fontSize: '9px', fontFamily: 'monospace',
-                color: i === 0 ? '#4a9eff' : '#4a5a4a',
+                color: i === 0 ? 'var(--brand-primary)' : '#4a5a4a',
                 letterSpacing: '1px', marginBottom: '2px',
               }}>{log as string}</div>
             ))}
@@ -2730,9 +2634,7 @@ function DialerPageInner() {
         </aside>
       </div>
 
-      {/* v23: right-edge arrow tab moved from dead-center to top:66%
-          (between center and bottom). Chevron < points left, indicating
-          "drawer opens to the left when tapped." */}
+      {/* v23: right-edge arrow tab */}
       <button
         className="dialer-right-toggle"
         onClick={() => setRightSidebarOpen(true)}
@@ -2760,7 +2662,7 @@ function DialerPageInner() {
 const navLinkStyle: React.CSSProperties = {
   padding: '10px 16px', background: 'transparent',
   border: '1px solid #2a4a8a', borderRadius: 3,
-  color: '#4a9eff', fontSize: 10, fontWeight: 700, letterSpacing: 2,
+  color: 'var(--brand-primary)', fontSize: 10, fontWeight: 700, letterSpacing: 2,
   textDecoration: 'none', fontFamily: 'Futura PT, Futura, sans-serif',
 }
 
