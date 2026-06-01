@@ -5,34 +5,32 @@ import SiteFooter from '@/components/site-footer'
 import SiteHeader from '@/components/site-header'
 
 // =============================================================================
-// LANDING PAGE — v22.d
+// LANDING PAGE — v21.d + Manager+ pricing tier
 // =============================================================================
-// v22.d fixes:
+// v21.d fixes (kept):
 //
 // 1. SITEHEADER NOW SHOWS FOR LOGGED-IN USERS
-//    Previous attempts assumed SiteHeader was global in layout.tsx — it
-//    isn't. SiteHeader is rendered only by pages that explicitly import
-//    it (/faq, /vs, /terms, etc). The landing page didn't, so logged-in
+//    SiteHeader is rendered only by pages that explicitly import it
+//    (/faq, /vs, /terms, etc). The landing page didn't, so logged-in
 //    users saw nothing at the top of /?view=landing.
-//
 //    Fix: import SiteHeader and render it for the logged-IN case only.
-//    The logged-OUT path keeps its fixed `.ds-nav` exactly as before
-//    (JC liked it; nothing about the logged-out experience changes).
+//    The logged-OUT path keeps its fixed `.ds-nav` exactly as before.
 //
-// 2. WHITELABEL CALLOUT REMOVED
-//    WLCallout import gone. We'll reintroduce WL marketing once the
-//    full WL flow is built; for now the landing page stays focused on
-//    the single $35/week product.
+// 2. HERO PADDING SPLIT INTO TWO CLASSES
+//    - .ds-hero-logged-out keeps original 120/100px padding-top to clear
+//      the fixed .ds-nav.
+//    - .ds-hero-logged-in uses 40/24px padding-top because SiteHeader is
+//      in normal flow above <main>.
 //
-// 3. HERO PADDING SPLIT INTO TWO CLASSES
-//    - .ds-hero-logged-out keeps the original 120/100px padding-top to
-//      clear the fixed .ds-nav.
-//    - .ds-hero-logged-in uses 40/24px padding-top because SiteHeader
-//      is in normal document flow above <main>. The old 120px padding
-//      created a phantom gap below SiteHeader for logged-in users.
-//    - <main>'s minHeight: 100vh removed for logged-in users so the
-//      header is visible at page load on iOS Safari (where 100vh
-//      overshoots the visible viewport).
+// MANAGER+ ADDITION (this revision):
+//    - The single Pro pricing card is now wrapped in a flex container.
+//    - A Manager+ tier ($75/wk) sits to the right of Pro on desktop.
+//    - On mobile (≤768px), the two cards stack vertically.
+//    - Nothing else on the landing changes. The section's "ONE PLAN"
+//      subhead is intentionally left alone per the change-nothing-else
+//      instruction; tweak later if desired.
+//    - Manager+ CTA routes to /sign-up?plan=wl (logged-out) or
+//      /billing?plan=wl (logged-in) so the WL intent flows through.
 // =============================================================================
 
 interface PageProps {
@@ -52,6 +50,12 @@ export default async function Home({ searchParams }: PageProps) {
 
   const ctaHref = isLoggedIn ? '/dashboard' : '/sign-up'
   const ctaLabel = isLoggedIn ? 'GO TO DASHBOARD' : 'GET STARTED'
+
+  // Manager+ CTA — logged-in users upgrading go to billing with WL plan
+  // pre-selected; logged-out users sign up with WL intent in the query
+  // string so the post-signup billing step knows which plan to default to.
+  const wlCtaHref = isLoggedIn ? '/billing?plan=wl' : '/sign-up?plan=wl'
+  const wlCtaLabel = 'GET MANAGER+'
 
   return (
     <>
@@ -102,6 +106,25 @@ export default async function Home({ searchParams }: PageProps) {
         .ds-pricing-card { padding: 60px; }
         .ds-cta-buttons { flex-direction: row; }
 
+        /* Manager+ pricing — two-card layout */
+        .ds-pricing-grid {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 24px;
+          justify-content: center;
+          align-items: stretch;
+          max-width: 960px;
+          margin: 0 auto;
+          padding: 0 20px;
+        }
+        .ds-pricing-grid > .ds-pricing-card {
+          flex: 1 1 380px;
+          max-width: 460px;
+          margin: 0;
+          display: flex;
+          flex-direction: column;
+        }
+
         @media (max-width: 768px) {
           :root {
             --hero-fs: 44px;
@@ -145,6 +168,7 @@ export default async function Home({ searchParams }: PageProps) {
           .ds-section { padding: 60px 20px; }
           .ds-grid-3 { grid-template-columns: 1fr; }
           .ds-pricing-card { padding: 32px 24px !important; }
+          .ds-pricing-grid { gap: 16px; padding: 0 8px; }
           .ds-cta-buttons { flex-direction: column; width: 100%; }
           .ds-cta-buttons > a { width: 100%; box-sizing: border-box; text-align: center; }
           .ds-feature-card { padding: 28px !important; }
@@ -541,103 +565,209 @@ export default async function Home({ searchParams }: PageProps) {
           </p>
         </div>
 
-        <div className="ds-pricing-card" style={{
-          maxWidth: '440px',
-          margin: '0 auto',
-          borderRadius: '24px',
-          background: 'var(--surface)',
-          border: '1px solid var(--accent-blue)',
-          boxShadow: '0 0 80px rgba(74,158,255,0.08)',
-          textAlign: 'center',
-        }}>
-          <div style={{
-            fontSize: '11px',
-            letterSpacing: '4px',
-            color: 'var(--accent-blue)',
-            marginBottom: '24px',
-          }}>DIALERSEAT PRO</div>
+        {/* ── PRICING GRID — Pro + Manager+ ──────────────────────────── */}
+        <div className="ds-pricing-grid">
 
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
-            <span style={{ fontSize: '64px', fontWeight: 'bold', lineHeight: 1, color: 'var(--text-primary)' }}>$35</span>
-            <span style={{ fontSize: '16px', color: 'var(--text-secondary)', marginBottom: '10px' }}>/week</span>
-          </div>
-
-          <p style={{
-            fontSize: '11px',
-            letterSpacing: '3px',
-            color: 'var(--text-secondary)',
-            marginBottom: '16px',
-          }}>PER SEAT · BILLED WEEKLY · CANCEL ANYTIME</p>
-
-          <div style={{
-            display: 'inline-block',
-            padding: '8px 20px',
-            borderRadius: '100px',
-            background: 'rgba(74,158,255,0.1)',
+          {/* PRO TIER — unchanged content, only structural margin moved
+              to the grid container above. */}
+          <div className="ds-pricing-card" style={{
+            borderRadius: '24px',
+            background: 'var(--surface)',
             border: '1px solid var(--accent-blue)',
-            fontSize: '11px',
-            letterSpacing: '3px',
-            color: 'var(--accent-blue)',
-            marginBottom: '40px',
+            boxShadow: '0 0 80px rgba(74,158,255,0.08)',
+            textAlign: 'center',
           }}>
-            FIRST CHARGE TODAY · CANCEL ANYTIME
-          </div>
+            <div style={{
+              fontSize: '11px',
+              letterSpacing: '4px',
+              color: 'var(--accent-blue)',
+              marginBottom: '24px',
+            }}>DIALERSEAT PRO</div>
 
-          <div style={{ marginBottom: '40px', textAlign: 'left' }}>
-            {[
-              'Predictive dialing engine',
-              'Voicemail detection',
-              'Unlimited outbound calling',
-              'Unlimited lead uploads',
-              'Multiple simultaneous campaigns',
-              'Disposition memory across sessions',
-              'Team seat management',
-              'Works globally',
-              'Your data saved forever',
-              'No setup fees ever',
-            ].map((feature, i) => (
-              <div key={i} style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '14px',
-                marginBottom: '16px',
-              }}>
-                <div style={{
-                  width: '20px',
-                  height: '20px',
-                  borderRadius: '50%',
-                  background: 'rgba(74,158,255,0.1)',
-                  border: '1px solid var(--accent-blue)',
+            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
+              <span style={{ fontSize: '64px', fontWeight: 'bold', lineHeight: 1, color: 'var(--text-primary)' }}>$35</span>
+              <span style={{ fontSize: '16px', color: 'var(--text-secondary)', marginBottom: '10px' }}>/week</span>
+            </div>
+
+            <p style={{
+              fontSize: '11px',
+              letterSpacing: '3px',
+              color: 'var(--text-secondary)',
+              marginBottom: '16px',
+            }}>PER SEAT · BILLED WEEKLY · CANCEL ANYTIME</p>
+
+            <div style={{
+              display: 'inline-block',
+              padding: '8px 20px',
+              borderRadius: '100px',
+              background: 'rgba(74,158,255,0.1)',
+              border: '1px solid var(--accent-blue)',
+              fontSize: '11px',
+              letterSpacing: '3px',
+              color: 'var(--accent-blue)',
+              marginBottom: '40px',
+            }}>
+              FIRST CHARGE TODAY · CANCEL ANYTIME
+            </div>
+
+            <div style={{ marginBottom: '40px', textAlign: 'left', flex: 1 }}>
+              {[
+                'Predictive dialing engine',
+                'Voicemail detection',
+                'Unlimited outbound calling',
+                'Unlimited lead uploads',
+                'Multiple simultaneous campaigns',
+                'Disposition memory across sessions',
+                'Team seat management',
+                'Works globally',
+                'Your data saved forever',
+                'No setup fees ever',
+              ].map((feature, i) => (
+                <div key={i} style={{
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
+                  gap: '14px',
+                  marginBottom: '16px',
                 }}>
-                  <span style={{ fontSize: '10px', color: 'var(--accent-blue)' }}>✓</span>
+                  <div style={{
+                    width: '20px',
+                    height: '20px',
+                    borderRadius: '50%',
+                    background: 'rgba(74,158,255,0.1)',
+                    border: '1px solid var(--accent-blue)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}>
+                    <span style={{ fontSize: '10px', color: 'var(--accent-blue)' }}>✓</span>
+                  </div>
+                  <span style={{ fontSize: '13px', letterSpacing: '0.5px', color: 'var(--text-secondary)' }}>{feature}</span>
                 </div>
-                <span style={{ fontSize: '13px', letterSpacing: '0.5px', color: 'var(--text-secondary)' }}>{feature}</span>
-              </div>
-            ))}
+              ))}
+            </div>
+
+            <Link href={ctaHref} style={{
+              display: 'block',
+              padding: '16px',
+              borderRadius: '12px',
+              fontSize: '13px',
+              fontWeight: 'bold',
+              letterSpacing: '3px',
+              color: 'white',
+              textDecoration: 'none',
+              background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+              boxShadow: '0 0 30px rgba(74,158,255,0.3)',
+              marginBottom: '16px',
+            }}>
+              {ctaLabel}
+            </Link>
+            <p style={{ fontSize: '11px', letterSpacing: '2px', color: 'var(--text-secondary)' }}>
+              $35 CHARGED TODAY · CANCEL ANYTIME
+            </p>
           </div>
 
-          <Link href={ctaHref} style={{
-            display: 'block',
-            padding: '16px',
-            borderRadius: '12px',
-            fontSize: '13px',
-            fontWeight: 'bold',
-            letterSpacing: '3px',
-            color: 'white',
-            textDecoration: 'none',
-            background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
-            boxShadow: '0 0 30px rgba(74,158,255,0.3)',
-            marginBottom: '16px',
+          {/* MANAGER+ TIER — new ($75/wk, white-label) */}
+          <div className="ds-pricing-card" style={{
+            borderRadius: '24px',
+            background: 'var(--surface)',
+            border: '1px solid var(--accent-blue)',
+            boxShadow: '0 0 80px rgba(74,158,255,0.08)',
+            textAlign: 'center',
           }}>
-            {ctaLabel}
-          </Link>
-          <p style={{ fontSize: '11px', letterSpacing: '2px', color: 'var(--text-secondary)' }}>
-            $35 CHARGED TODAY · CANCEL ANYTIME
-          </p>
+            <div style={{
+              fontSize: '11px',
+              letterSpacing: '4px',
+              color: 'var(--accent-blue)',
+              marginBottom: '24px',
+            }}>DIALERSEAT MANAGER+</div>
+
+            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
+              <span style={{ fontSize: '64px', fontWeight: 'bold', lineHeight: 1, color: 'var(--text-primary)' }}>$75</span>
+              <span style={{ fontSize: '16px', color: 'var(--text-secondary)', marginBottom: '10px' }}>/week</span>
+            </div>
+
+            <p style={{
+              fontSize: '11px',
+              letterSpacing: '3px',
+              color: 'var(--text-secondary)',
+              marginBottom: '16px',
+            }}>PER OWNER · BILLED WEEKLY · CANCEL ANYTIME</p>
+
+            <div style={{
+              display: 'inline-block',
+              padding: '8px 20px',
+              borderRadius: '100px',
+              background: 'rgba(74,158,255,0.1)',
+              border: '1px solid var(--accent-blue)',
+              fontSize: '11px',
+              letterSpacing: '3px',
+              color: 'var(--accent-blue)',
+              marginBottom: '40px',
+            }}>
+              CUSTOMIZE YOUR WHITELABEL DIALER
+            </div>
+
+            <div style={{ marginBottom: '40px', textAlign: 'left', flex: 1 }}>
+              {[
+                'Everything in Pro, plus:',
+                'Your own subdomain (you.dialerseat.com)',
+                'Upload your logo',
+                'Customize brand colors and theme',
+                'Branded sign-in for your team',
+                'Unlimited team seats under your brand',
+                'Your customers see your dialer, not ours',
+                'Priority manager-tier support',
+              ].map((feature, i) => (
+                <div key={i} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '14px',
+                  marginBottom: '16px',
+                }}>
+                  <div style={{
+                    width: '20px',
+                    height: '20px',
+                    borderRadius: '50%',
+                    background: 'rgba(74,158,255,0.1)',
+                    border: '1px solid var(--accent-blue)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}>
+                    <span style={{ fontSize: '10px', color: 'var(--accent-blue)' }}>✓</span>
+                  </div>
+                  <span style={{
+                    fontSize: '13px',
+                    letterSpacing: '0.5px',
+                    color: 'var(--text-secondary)',
+                    fontWeight: i === 0 ? 'bold' : 'normal',
+                  }}>{feature}</span>
+                </div>
+              ))}
+            </div>
+
+            <Link href={wlCtaHref} style={{
+              display: 'block',
+              padding: '16px',
+              borderRadius: '12px',
+              fontSize: '13px',
+              fontWeight: 'bold',
+              letterSpacing: '3px',
+              color: 'white',
+              textDecoration: 'none',
+              background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+              boxShadow: '0 0 30px rgba(74,158,255,0.3)',
+              marginBottom: '16px',
+            }}>
+              {wlCtaLabel}
+            </Link>
+            <p style={{ fontSize: '11px', letterSpacing: '2px', color: 'var(--text-secondary)' }}>
+              $75 CHARGED TODAY · CANCEL ANYTIME
+            </p>
+          </div>
+
         </div>
       </section>
 
