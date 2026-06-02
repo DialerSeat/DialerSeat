@@ -79,7 +79,7 @@ export async function GET() {
 
   const { data: user } = await supabase
     .from('users')
-    .select('wl_onboarding_status, wl_subscription_id')
+    .select('email, wl_onboarding_status, wl_subscription_id, stripe_customer_id')
     .eq('clerk_id', userId)
     .maybeSingle()
 
@@ -179,9 +179,13 @@ export async function POST(req: NextRequest) {
   }
 
   // ── WL subscription gate ──────────────────────────────────────────
+  // email is selected here so we can populate support_email on insert.
+  // The DB has a CHECK constraint requiring a valid email format; empty
+  // string fails it. Falling back to support@dialerseat.com only if the
+  // user row somehow has no email (shouldn't happen with Clerk signup).
   const { data: user } = await supabase
     .from('users')
-    .select('wl_onboarding_status, wl_subscription_id, stripe_customer_id')
+    .select('email, wl_onboarding_status, wl_subscription_id, stripe_customer_id')
     .eq('clerk_id', userId)
     .maybeSingle()
 
@@ -246,8 +250,7 @@ export async function POST(req: NextRequest) {
         logo_url: logoUrl,
         primary_color: primaryColor,
         accent_color: accentColor,
-        // Other color fields use schema defaults
-        support_email: '',  // schema requires NOT NULL but we don't ask user; empty for now
+        support_email: user.email || 'support@dialerseat.com',
         stripe_customer_id: user.stripe_customer_id,
         stripe_subscription_id: user.wl_subscription_id,
         status: 'active',
