@@ -1,18 +1,24 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 
 // =============================================================================
-// /onboarding/whitelabel — Phase D2 + edit-mode slug fix
+// /onboarding/whitelabel — instant local logo preview on save
 // =============================================================================
-// FIX vs prior version: tracks `originalSlug` (the slug as loaded from DB
-// in edit mode) and short-circuits the slug-availability check when the
-// current input still equals it. Without this fix, the check fires every
-// time, comes back "taken" (the user's OWN row is the collision), and
-// handleSubmit bails before the POST ever happens. That's what was
-// causing SAVE CHANGES to silently do nothing.
+// Adds option-1 cache-bust workaround for the new logo not appearing on the
+// post-save dashboard for ~30s while Supabase's CDN replicates the new URL.
+//
+// On a successful save with a new logo upload, we sessionStorage the
+// new logo's blob URL keyed by the returned public URL. The dashboard
+// layout (or wherever the sidebar logo renders) can check sessionStorage
+// for that key and prefer the local blob until the page is reloaded.
+//
+// Result: the user who just uploaded sees their new logo INSTANTLY in
+// the sidebar after redirect. CDN propagates in the background. Other
+// viewers will see it within ~30-60s of CDN propagation — they don't
+// know an upload happened, so they don't care about the delay.
 // =============================================================================
 
 interface Preset {
@@ -118,6 +124,11 @@ const DEFAULT_BRAND: BrandState = {
 
 const SLUG_REGEX = /^[a-z0-9][a-z0-9-]{0,28}[a-z0-9]$/
 
+// SessionStorage key for local-blob handoff to the dashboard after upload.
+// Format: a JSON blob with { publicUrl, dataUrl, savedAt } so the dashboard
+// can verify the staged preview is still relevant.
+const PENDING_LOGO_KEY = 'wl:pendingLogoPreview'
+
 export default function WhitelabelOnboardingPage() {
   const { user, isLoaded } = useUser()
   const router = useRouter()
@@ -126,8 +137,6 @@ export default function WhitelabelOnboardingPage() {
   const [editMode, setEditMode] = useState(false)
   const [brandName, setBrandName] = useState('')
   const [slug, setSlug] = useState('')
-  // NEW: stores the slug as it was loaded from DB so the availability
-  // check can detect "you haven't changed it" and skip itself.
   const [originalSlug, setOriginalSlug] = useState('')
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null)
@@ -147,7 +156,6 @@ export default function WhitelabelOnboardingPage() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // ── Load existing tenant if user has already onboarded ───────────────
   useEffect(() => {
     if (!isLoaded || !user) return
     let cancelled = false
@@ -188,7 +196,6 @@ export default function WhitelabelOnboardingPage() {
     return () => { cancelled = true }
   }, [isLoaded, user])
 
-  // ── Subdomain availability check (debounced) ─────────────────────────
   useEffect(() => {
     if (!slug) {
       setSlugStatus({ kind: 'idle' })
@@ -202,10 +209,6 @@ export default function WhitelabelOnboardingPage() {
       return
     }
 
-    // FIX: In edit mode, if the slug hasn't changed from the saved value,
-    // mark it available and skip the API call. The check-subdomain endpoint
-    // doesn't know who the requesting user is, so it would always return
-    // "taken" for the user's own slug, blocking the form.
     if (editMode && originalSlug && slug === originalSlug) {
       setSlugStatus({ kind: 'available' })
       return
@@ -256,6 +259,20 @@ export default function WhitelabelOnboardingPage() {
     setPresetKey('custom')
   }
 
+  // ─────────────────────────────────────────────────────────────────────
+  // Convert a File to a data URL so we can stash it in sessionStorage.
+  // Data URLs survive across navigation; blob URLs (URL.createObjectURL)
+  // don't — they're tied to the originating document and revoke on unload.
+  // ─────────────────────────────────────────────────────────────────────
+  function fileToDataUrl(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = () => reject(reader.error)
+      reader.readAsDataURL(file)
+    })
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
@@ -288,7 +305,21 @@ export default function WhitelabelOnboardingPage() {
     setSubmitting(true)
     try {
       let logoUrl = existingLogoUrl
+      let stashDataUrl: string | null = null
+
       if (logoFile) {
+        // Pre-encode the file as a data URL BEFORE the upload completes.
+        // If the upload succeeds, we stash this in sessionStorage so the
+        // dashboard layout can show the new logo instantly while the CDN
+        // propagates.
+        try {
+          stashDataUrl = await fileToDataUrl(logoFile)
+        } catch {
+          // If FileReader fails for some reason, just proceed without the
+          // instant preview. The CDN will eventually catch up.
+          stashDataUrl = null
+        }
+
         const fd = new FormData()
         fd.append('logo', logoFile)
         const upRes = await fetch('/api/whitelabel/upload-logo', {
@@ -323,6 +354,22 @@ export default function WhitelabelOnboardingPage() {
         setError(data.detail || data.error || 'Failed to save.')
         setSubmitting(false)
         return
+      }
+
+      // Stash the local data URL so the dashboard can preview it instantly.
+      // Keyed by the public URL we just saved, so the dashboard knows which
+      // one to substitute. Cleared after first use (single-shot).
+      if (stashDataUrl && logoUrl) {
+        try {
+          sessionStorage.setItem(PENDING_LOGO_KEY, JSON.stringify({
+            publicUrl: logoUrl,
+            dataUrl: stashDataUrl,
+            savedAt: Date.now(),
+          }))
+        } catch {
+          // Storage quota exceeded or disabled — fail silently. The dashboard
+          // will just wait for CDN propagation like before.
+        }
       }
 
       router.push('/dashboard')

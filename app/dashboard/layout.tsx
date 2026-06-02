@@ -33,20 +33,10 @@ interface SubsSummary {
   counts: { ownerPaid: number; agentPaid: number; totalSeats: number }
 }
 
-// =============================================================================
-// /dashboard — LAYOUT (v24 — Phase D2: MANAGER+ awareness)
-// =============================================================================
-// Reads `plan` from /api/stripe/status response (added in Phase D2 status
-// route) and shows MANAGER+ / PRO + MANAGER+ in the sidebar profile row
-// when the user owns a white-label tenant.
-//
-// Everything else from v23 preserved verbatim — tenant logo, mobile drawer,
-// admin nav, brand-aware active nav highlight, etc.
-// =============================================================================
+const PENDING_LOGO_KEY = 'wl:pendingLogoPreview'
+const PENDING_LOGO_MAX_AGE_MS = 5 * 60 * 1000  // 5 minutes safety expiry
 
-const BARE_LAYOUT_PREFIXES = [
-  '/dashboard/admin/desktop',
-]
+const BARE_LAYOUT_PREFIXES = ['/dashboard/admin/desktop']
 
 function shouldRenderBare(pathname: string | null): boolean {
   if (!pathname) return false
@@ -65,11 +55,42 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [tier, setTier] = useState<AccessTier>(null)
   const [plan, setPlan] = useState<Plan>(null)
   const [seats, setSeats] = useState<SubsSummary | null>(null)
+  // Pending logo preview from onboarding — data URL we substitute for the
+  // public CDN URL while Supabase's CDN propagates the new file.
+  const [pendingLogo, setPendingLogo] = useState<{ publicUrl: string; dataUrl: string } | null>(null)
   const profileRowRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     setDrawerOpen(false)
   }, [pathname])
+
+  // ── Check for pending logo preview on mount ──────────────────────────
+  // Onboarding sets this in sessionStorage after a successful save. We
+  // honor it for up to 5 minutes, then it expires (so a stale data URL
+  // can't override a future logo update).
+  useEffect(() => {
+    if (bare) return
+    try {
+      const raw = sessionStorage.getItem(PENDING_LOGO_KEY)
+      if (!raw) return
+      const parsed = JSON.parse(raw) as { publicUrl?: string; dataUrl?: string; savedAt?: number }
+      if (!parsed.publicUrl || !parsed.dataUrl || !parsed.savedAt) {
+        sessionStorage.removeItem(PENDING_LOGO_KEY)
+        return
+      }
+      const age = Date.now() - parsed.savedAt
+      if (age > PENDING_LOGO_MAX_AGE_MS) {
+        // Expired — CDN should be propagated by now anyway.
+        sessionStorage.removeItem(PENDING_LOGO_KEY)
+        return
+      }
+      setPendingLogo({ publicUrl: parsed.publicUrl, dataUrl: parsed.dataUrl })
+    } catch {
+      // If sessionStorage is unavailable or the JSON is malformed, skip
+      // silently. The CDN will catch up like before.
+      try { sessionStorage.removeItem(PENDING_LOGO_KEY) } catch {}
+    }
+  }, [bare])
 
   useEffect(() => {
     if (bare) return
@@ -153,7 +174,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const logoHref = isAdmin ? '/dashboard/admin/analytics' : '/dashboard/analytics'
 
   const brandPrimary = branding?.primary_color || '#4a9eff'
-  const tenantLogoUrl = branding?.logo_url || null
+  // Substitute the pending data URL if the branding's logo_url matches what
+  // the user just uploaded. This avoids the CDN propagation delay.
+  const rawLogoUrl = branding?.logo_url || null
+  const tenantLogoUrl = (pendingLogo && rawLogoUrl === pendingLogo.publicUrl)
+    ? pendingLogo.dataUrl
+    : rawLogoUrl
   const tenantBrandName = branding?.brand_name?.toUpperCase() || 'DIALERSEAT'
 
   const totalSeats = seats?.counts.totalSeats || 0
@@ -166,15 +192,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   let primaryWeight: 'bold' | 'normal'
   let secondaryText: string | null = null
 
-  // ── Label ladder (v24 — Manager+ branch added) ──────────────────────
   if (isAdmin) {
     primaryLabel = 'ADMIN'
     primaryColor = brandPrimary
     primaryWeight = 'bold'
   } else if (hasManagerPlus) {
-    // Manager+ is the highest tier — show it whether or not they ALSO have Pro.
-    // If they have both, layout still shows MANAGER+ since it's the higher tier
-    // and supersedes Pro for display purposes. Settings page shows both.
     primaryLabel = plan === 'both' ? 'PRO + MANAGER+' : 'MANAGER+'
     primaryColor = brandPrimary
     primaryWeight = 'bold'
