@@ -12,18 +12,12 @@ import {
 } from 'recharts'
 
 // =============================================================================
-// ANALYTICS APP — ported from /dashboard/admin/analytics
+// ANALYTICS APP — embedded in admin desktop
 // =============================================================================
-// Identical logic + visuals to the original page. The only difference is that
-// the outer container uses `height: 100%` (it fills the AppWindow body)
-// instead of `minHeight: calc(100vh - 64px)`. Everything else — the dark
-// header with range pills, the stat grid, the Recharts chart, the custom
-// date inputs — is unchanged from the existing /dashboard/admin/analytics
-// implementation.
-//
-// The window title bar already shows "Analytics" so the in-app dark header
-// is kept because it carries app-specific context (range label + count of
-// "DIALERSEAT PERFORMANCE · 30 DAYS").
+// couponSubsCount removed from the interface (Phase D2 — coupon-discounted
+// subs are not subscriptions for analytics purposes). Backend still returns
+// the field for now but we don't display it. If you want it gone from the
+// API response too, remove it from app/api/admin/analytics/route.ts.
 // =============================================================================
 
 type Range = '7d' | '30d' | '90d' | '1y' | 'all' | 'custom'
@@ -34,7 +28,6 @@ interface AnalyticsData {
   summary: {
     totalUsers: number
     payingActiveSubs: number
-    couponSubsCount: number
     wrr: number
     mrr: number
     signupsInRange: number
@@ -334,7 +327,6 @@ export default function AnalyticsApp() {
         {!loading && !error && data && (
           <>
             <div className="an-grid-4">
-              {/* PAYING USERS — always reflects CURRENT state, not range-bound */}
               <div className="an-stat-card hero" style={{
                 borderTopColor: data.summary.wowDelta >= 0 ? T.green : T.red,
               }}>
@@ -349,7 +341,6 @@ export default function AnalyticsApp() {
                 </div>
               </div>
 
-              {/* WEEKLY REVENUE — always reflects CURRENT state, not range-bound */}
               <div className="an-stat-card hero" style={{ borderTopColor: T.accent }}>
                 <div className="an-stat-label">WEEKLY REVENUE · NOW</div>
                 <div className="an-stat-value" style={{ color: T.accent }}>
