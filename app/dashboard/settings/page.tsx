@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useUser } from '@clerk/nextjs'
+import Link from 'next/link'
 
 const FUTURA = 'Futura PT, Futura, "Trebuchet MS", sans-serif'
 
@@ -12,6 +13,10 @@ interface SubStatus {
   trialEnd: string | null
   cancelAtPeriodEnd: boolean
   tier?: 'active' | 'lapsed' | 'new'
+  // NEW — Manager+ awareness fields from /api/stripe/status
+  plan?: 'pro' | 'manager_plus' | 'both' | null
+  wlActive?: boolean
+  weeklyPrice?: number
 }
 
 interface OwnerPaidSeat {
@@ -59,18 +64,14 @@ interface BrandOptions {
 }
 
 // =============================================================================
-// SETTINGS PAGE (v23 — Phase D1: brand-view toggle)
+// SETTINGS PAGE (v24 — Phase D2: Manager+ display + edit-whitelabel link)
 // =============================================================================
-// Adds a "WHITE-LABEL VIEW" section between subscription + team-seats.
-// Section is HIDDEN entirely when the user has nothing to toggle:
-//   - No accessible tenants AND no standard access  → hidden (default Pro user)
-//   - 1 accessible tenant AND no standard access    → hidden (seat-only single-team)
-// Section is SHOWN when:
-//   - 2+ accessible tenants, OR
-//   - 1+ accessible tenants AND canSeeStandard, OR
-//   - canSeeStandard AND has no tenants but has a tenant id selected (rare edge)
-//
-// All other functionality identical to v22.
+// Changes vs v23:
+// - Reads plan / wlActive / weeklyPrice from /api/stripe/status response
+// - PRICE row reflects total weekly price (Pro=$35, Manager+=$75, both=$110)
+// - Subtitle shows plan label next to email (PRO / MANAGER+ / PRO + MANAGER+)
+// - New ▸ YOUR WHITELABEL section with "Edit your whitelabel" button,
+//   visible only when wlActive
 // =============================================================================
 
 export default function SettingsPage() {
@@ -89,7 +90,6 @@ export default function SettingsPage() {
   const [seatConfirmTarget, setSeatConfirmTarget] = useState<AgentPaidSeat | null>(null)
   const [seatTypedConfirm, setSeatTypedConfirm] = useState('')
 
-  // ── BRAND VIEW STATE (Phase D1) ──────────────────────────────────────
   const [brandOptions, setBrandOptions] = useState<BrandOptions | null>(null)
   const [switchingBrand, setSwitchingBrand] = useState(false)
 
@@ -201,9 +201,7 @@ export default function SettingsPage() {
     }
   }
 
-  // ── BRAND-VIEW SWITCH HANDLER ────────────────────────────────────────
   const handleSwitchBrand = async (value: string) => {
-    // value is either a tenant_id (uuid) or the literal string 'standard'
     const tenant_id = value === 'standard' ? null : value
     setSwitchingBrand(true)
     setError(null); setMessage(null)
@@ -219,8 +217,6 @@ export default function SettingsPage() {
         setSwitchingBrand(false)
         return
       }
-      // Reload so the layout reads the new branding. We can't update in-
-      // place because the brand is resolved server-side in root layout.
       window.location.reload()
     } catch (err: any) {
       setError(err.message || 'Failed to switch view')
@@ -244,13 +240,16 @@ export default function SettingsPage() {
 
   const hasAnySeats = (seats?.counts.totalSeats || 0) > 0
 
-  // ── BRAND TOGGLE VISIBILITY (Phase D1) ──────────────────────────────
   const optionCount = (brandOptions?.available.length || 0) +
                       (brandOptions?.canSeeStandard ? 1 : 0)
   const showBrandToggle = optionCount >= 2
 
-  // Current dropdown value
   const currentBrandValue = brandOptions?.currentTenantId ?? 'standard'
+
+  // ── Manager+ derived display values ─────────────────────────────────
+  const wlActive = !!sub?.wlActive
+  const planLabel = planLabelFor(sub?.plan)
+  const weeklyPrice = sub?.weeklyPrice ?? (sub?.hasSubscription ? 35 : 0)
 
   return (
     <div className="settings-root" style={pageStyle}>
@@ -269,12 +268,15 @@ export default function SettingsPage() {
           {isAdmin && (
             <span style={{ marginLeft: 8, fontSize: 9, letterSpacing: 3, color: '#4a9eff', fontWeight: 'bold' }}>· ADMIN</span>
           )}
-          {!isAdmin && sub?.tier === 'lapsed' && (
+          {!isAdmin && planLabel && (
+            <span style={{ marginLeft: 8, fontSize: 9, letterSpacing: 3, color: '#4a9eff', fontWeight: 'bold' }}>· {planLabel}</span>
+          )}
+          {!isAdmin && sub?.tier === 'lapsed' && !wlActive && (
             <span style={{ marginLeft: 8, fontSize: 9, letterSpacing: 3, color: '#ffaa3e', fontWeight: 'bold' }}>· UNSUBSCRIBED</span>
           )}
         </div>
 
-        {/* ── BRAND VIEW TOGGLE (Phase D1) ──────────────────────────── */}
+        {/* BRAND VIEW TOGGLE */}
         {showBrandToggle && brandOptions && (
           <div style={sectionStyle}>
             <div style={sectionHeaderStyle}>▸ WHITE-LABEL VIEW</div>
@@ -320,31 +322,69 @@ export default function SettingsPage() {
           </div>
         )}
 
+        {/* YOUR WHITELABEL — only when user has a Manager+ tenant */}
+        {wlActive && (
+          <div style={sectionStyle}>
+            <div style={sectionHeaderStyle}>▸ YOUR WHITELABEL</div>
+            <div style={{ ...mutedStyle, marginBottom: 14, lineHeight: 1.6 }}>
+              Change your subdomain, logo, brand name, or colors. Changes go
+              live within 60 seconds and apply to your sign-in page, sidebar,
+              and dashboard chrome.
+            </div>
+            <Link
+              href="/onboarding/whitelabel"
+              style={{
+                display: 'block',
+                width: '100%',
+                padding: 14,
+                background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+                border: 'none',
+                borderRadius: 4,
+                color: 'white',
+                fontSize: 12,
+                fontWeight: 700,
+                letterSpacing: 3,
+                textAlign: 'center',
+                textDecoration: 'none',
+                fontFamily: FUTURA,
+                boxSizing: 'border-box',
+              }}
+            >
+              EDIT YOUR WHITELABEL →
+            </Link>
+          </div>
+        )}
+
         {/* PERSONAL SUBSCRIPTION */}
         <div style={sectionStyle}>
           <div style={sectionHeaderStyle}>▸ YOUR SUBSCRIPTION</div>
 
-          {!sub?.hasSubscription && (
+          {!sub?.hasSubscription && !wlActive && (
             <div style={mutedStyle}>No active subscription on file.</div>
           )}
 
-          {sub?.hasSubscription && (
+          {(sub?.hasSubscription || wlActive) && (
             <>
+              <div style={rowStyle}>
+                <span style={labelStyle}>PLAN</span>
+                <span style={valueStyle}>{planLabel || 'PRO'}</span>
+              </div>
+
               <div style={rowStyle}>
                 <span style={labelStyle}>STATUS</span>
                 <span style={{ ...valueStyle, color: tierStatusColor(sub) }}>
-                  {tierStatusLabel(sub)}
+                  {tierStatusLabel(sub, wlActive)}
                 </span>
               </div>
 
-              {sub.status === 'trialing' && sub.trialEnd && (
+              {sub?.status === 'trialing' && sub?.trialEnd && (
                 <div style={rowStyle}>
                   <span style={labelStyle}>TRIAL ENDS</span>
                   <span style={valueStyle}>{formatDate(sub.trialEnd)}</span>
                 </div>
               )}
 
-              {sub.currentPeriodEnd && sub.tier !== 'lapsed' && (
+              {sub?.currentPeriodEnd && sub?.tier !== 'lapsed' && (
                 <div style={rowStyle}>
                   <span style={labelStyle}>
                     {sub.cancelAtPeriodEnd ? 'ACCESS UNTIL' : 'NEXT BILLING'}
@@ -355,7 +395,7 @@ export default function SettingsPage() {
 
               <div style={rowStyle}>
                 <span style={labelStyle}>PRICE</span>
-                <span style={valueStyle}>$35.00 / WEEK</span>
+                <span style={valueStyle}>${weeklyPrice.toFixed(2)} / WEEK</span>
               </div>
             </>
           )}
@@ -505,7 +545,6 @@ export default function SettingsPage() {
         )}
       </div>
 
-      {/* SEAT CANCEL CONFIRM MODAL */}
       {seatConfirmTarget && (
         <div
           onClick={() => seatCancelling === null && (setSeatConfirmTarget(null), setSeatTypedConfirm(''))}
@@ -575,16 +614,28 @@ function formatDate(iso: string) {
   })
 }
 
-function tierStatusLabel(sub: SubStatus): string {
-  if (sub.tier === 'lapsed') return 'UNSUBSCRIBED'
-  if (sub.cancelAtPeriodEnd) return `${sub.status?.toUpperCase()} (CANCELING)`
-  return sub.status?.toUpperCase() || '—'
+function planLabelFor(plan: SubStatus['plan']): string {
+  switch (plan) {
+    case 'manager_plus': return 'MANAGER+'
+    case 'both': return 'PRO + MANAGER+'
+    case 'pro': return 'PRO'
+    default: return ''
+  }
 }
 
-function tierStatusColor(sub: SubStatus): string {
-  if (sub.tier === 'lapsed') return '#ffaa3e'
+function tierStatusLabel(sub: SubStatus | null, wlActive: boolean): string {
+  if (!sub) return wlActive ? 'ACTIVE' : '—'
+  if (sub.tier === 'lapsed' && !wlActive) return 'UNSUBSCRIBED'
+  if (sub.cancelAtPeriodEnd) return `${sub.status?.toUpperCase()} (CANCELING)`
+  return sub.status?.toUpperCase() || (wlActive ? 'ACTIVE' : '—')
+}
+
+function tierStatusColor(sub: SubStatus | null): string {
+  if (!sub) return '#32ff7e'
+  if (sub.tier === 'lapsed' && !sub.wlActive) return '#ffaa3e'
   if (sub.status === 'active' || sub.status === 'trialing') return '#32ff7e'
   if (sub.status === 'past_due') return '#ffaa3e'
+  if (sub.wlActive) return '#32ff7e'
   return '#ff6464'
 }
 

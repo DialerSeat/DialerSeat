@@ -25,6 +25,7 @@ const adminNavItems = [
 ]
 
 type AccessTier = 'active' | 'lapsed' | 'new' | null
+type Plan = 'pro' | 'manager_plus' | 'both' | null
 
 interface SubsSummary {
   ownerPaidSeats: { teamId: string; teamName: string }[]
@@ -33,28 +34,14 @@ interface SubsSummary {
 }
 
 // =============================================================================
-// /dashboard — LAYOUT (v23 — Phase C: white-label sidebar branding)
+// /dashboard — LAYOUT (v24 — Phase D2: MANAGER+ awareness)
 // =============================================================================
-// v23 ADDS tenant-aware branding to the sidebar's brand block + active
-// nav highlight + tier-status badge color. When useBranding() returns
-// a tenant config:
-//   - Sidebar brand area renders the tenant logo (uploaded at 512×148,
-//     displayed at 256×74 on desktop). The "D / DIALERSEAT" gradient
-//     block is replaced entirely.
-//   - Mobile drawer + mobile topbar render a scaled version of the
-//     tenant logo (instead of the "D" mark + "DIALERSEAT" wordmark).
-//   - Active nav item border + background tint use the tenant's
-//     primary color via the --brand-primary CSS variable.
-//   - "PRO PLAN" / "TEAM SEAT" / "ADMIN" badge colors use the tenant's
-//     primary color where they previously hardcoded #4a9eff.
+// Reads `plan` from /api/stripe/status response (added in Phase D2 status
+// route) and shows MANAGER+ / PRO + MANAGER+ in the sidebar profile row
+// when the user owns a white-label tenant.
 //
-// When useBranding() returns null (default DialerSeat traffic), every
-// surface renders exactly as it did in v22 — pixel-identical.
-//
-// CARRY-OVER from v22:
-//   - Win7 admin desktop bypass (BARE_LAYOUT_PREFIXES + early return)
-//   - Mobile topbar safe-area padding for iPhone notch
-//   - Profile row safe-area bottom padding
+// Everything else from v23 preserved verbatim — tenant logo, mobile drawer,
+// admin nav, brand-aware active nav highlight, etc.
 // =============================================================================
 
 const BARE_LAYOUT_PREFIXES = [
@@ -76,6 +63,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
   const [tier, setTier] = useState<AccessTier>(null)
+  const [plan, setPlan] = useState<Plan>(null)
   const [seats, setSeats] = useState<SubsSummary | null>(null)
   const profileRowRef = useRef<HTMLDivElement | null>(null)
 
@@ -103,11 +91,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     if (!user || bare) return
     let cancelled = false
-    const loadTier = () => {
+    const loadStatus = () => {
       fetch('/api/stripe/status')
         .then(r => r.json())
-        .then(d => { if (!cancelled) setTier(d.tier || null) })
-        .catch(() => { if (!cancelled) setTier(null) })
+        .then(d => {
+          if (cancelled) return
+          setTier(d.tier || null)
+          setPlan((d.plan as Plan) ?? null)
+        })
+        .catch(() => {
+          if (cancelled) return
+          setTier(null)
+          setPlan(null)
+        })
     }
     const loadSeats = () => {
       fetch('/api/subscriptions/summary')
@@ -124,9 +120,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         })
         .catch(() => {})
     }
-    loadTier()
+    loadStatus()
     loadSeats()
-    const onFocus = () => { loadTier(); loadSeats() }
+    const onFocus = () => { loadStatus(); loadSeats() }
     window.addEventListener('focus', onFocus)
     return () => {
       cancelled = true
@@ -156,11 +152,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const logoHref = isAdmin ? '/dashboard/admin/analytics' : '/dashboard/analytics'
 
-  // ── BRANDING DERIVED VALUES ────────────────────────────────────────────
-  // Use tenant colors when branding present, falling back to hardcoded
-  // DialerSeat blue when no tenant active. The actual CSS-var injection
-  // is done by ThemeProvider in the root layout; we read the values here
-  // to drive runtime style decisions (active nav border, badge color).
   const brandPrimary = branding?.primary_color || '#4a9eff'
   const tenantLogoUrl = branding?.logo_url || null
   const tenantBrandName = branding?.brand_name?.toUpperCase() || 'DIALERSEAT'
@@ -168,16 +159,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const totalSeats = seats?.counts.totalSeats || 0
   const hasActivePersonal = tier === 'active'
   const hasAnySeat = totalSeats > 0
+  const hasManagerPlus = plan === 'manager_plus' || plan === 'both'
 
   let primaryLabel: string
   let primaryColor: string
   let primaryWeight: 'bold' | 'normal'
   let secondaryText: string | null = null
 
+  // ── Label ladder (v24 — Manager+ branch added) ──────────────────────
   if (isAdmin) {
     primaryLabel = 'ADMIN'
     primaryColor = brandPrimary
     primaryWeight = 'bold'
+  } else if (hasManagerPlus) {
+    // Manager+ is the highest tier — show it whether or not they ALSO have Pro.
+    // If they have both, layout still shows MANAGER+ since it's the higher tier
+    // and supersedes Pro for display purposes. Settings page shows both.
+    primaryLabel = plan === 'both' ? 'PRO + MANAGER+' : 'MANAGER+'
+    primaryColor = brandPrimary
+    primaryWeight = 'bold'
+    if (hasAnySeat) {
+      secondaryText = `+ ${totalSeats} TEAM SEAT${totalSeats === 1 ? '' : 'S'}`
+    }
   } else if (hasActivePersonal && hasAnySeat) {
     primaryLabel = 'PRO PLAN'
     primaryColor = 'var(--text-secondary)'
@@ -210,11 +213,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     primaryColor = 'var(--text-secondary)'
     primaryWeight = 'normal'
   }
-
-  // ── BRAND BLOCK COMPONENTS ─────────────────────────────────────────────
-  // Two variants: TenantBrand (uses uploaded logo) and DefaultBrand
-  // (the existing D-gradient + DIALERSEAT wordmark). Both fit the same
-  // overall width so the sidebar layout doesn't shift between modes.
 
   const TenantBrandDesktop = () => (
     <span style={{
@@ -305,8 +303,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     </>
   )
 
-  // ── SIDEBAR ────────────────────────────────────────────────────────────
-
   const Sidebar = () => (
     <>
       <Link href={logoHref} style={{
@@ -340,9 +336,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 padding: '10px 16px',
                 borderRadius: '10px',
                 cursor: 'pointer',
-                // Active nav uses the brand primary color at 10% alpha for
-                // background, 20% alpha for border. When no branding, this
-                // is the existing rgba(74,158,255,0.1) styling.
                 background: active
                   ? `color-mix(in srgb, ${brandPrimary} 10%, transparent)`
                   : 'transparent',
@@ -366,7 +359,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         })}
       </nav>
 
-      {!isAdmin && tier === 'lapsed' && !hasAnySeat && (
+      {!isAdmin && tier === 'lapsed' && !hasAnySeat && !hasManagerPlus && (
         <Link
           href="/billing"
           style={{

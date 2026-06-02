@@ -2,39 +2,12 @@
 // =============================================================================
 // WHITE-LABEL ONBOARDING / EDIT
 // =============================================================================
-// GET  /api/whitelabel/onboarding
-//   Returns the user's current onboarding state. Used by the page to
-//   decide: (a) redirect to /billing if not paid, (b) show empty form
-//   for first-time setup, (c) show populated form for editing.
+// GET  /api/whitelabel/onboarding — returns user's current onboarding state
+// POST /api/whitelabel/onboarding — creates or updates tenant
 //
-//   Response:
-//     {
-//       status: 'not_started' | 'pending' | 'complete',
-//       existingSubdomain?: string,
-//       tenant?: {
-//         brand_name, slug, primary_color, accent_color, logo_url
-//       },
-//       canChangeSlugAt?: ISO date     // null if can change now
-//     }
-//
-// POST /api/whitelabel/onboarding
-//   Body (JSON):
-//     {
-//       brand_name: string,
-//       subdomain: string,
-//       primary_color: '#RRGGBB',
-//       accent_color: '#RRGGBB',
-//       logo_url: string       // from /api/whitelabel/upload-logo
-//     }
-//
-//   First call (status === 'pending'): creates tenant row, sets onboarding
-//   status to 'complete'.
-//
-//   Subsequent calls (status === 'complete'): updates the tenant row.
-//   If subdomain changed, writes a subdomain_history entry for 30-day
-//   grace period and updates slug_changed_at (enforces 24h cooldown).
-//
-//   Returns: { success: true, subdomain }
+// CREATE branch also sets users.active_tenant_id = new tenant id so the
+// user is auto-routed to their tenant subdomain on the very next request
+// instead of falling back to DialerSeat default.
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -46,7 +19,6 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-// Same list as check-subdomain — keep in sync
 const RESERVED = new Set([
   'www', 'api', 'app', 'admin', 'mail', 'email', 'support',
   'dashboard', 'billing', 'auth', 'docs', 'help', 'status',
@@ -68,9 +40,6 @@ const HEX_RE = /^#[0-9a-fA-F]{6}$/
 const SLUG_COOLDOWN_HOURS = 24
 const SLUG_REDIRECT_DAYS = 30
 
-// =============================================================================
-// GET — status check (and existing config for edits)
-// =============================================================================
 export async function GET() {
   const { userId } = await auth()
   if (!userId) {
@@ -89,8 +58,6 @@ export async function GET() {
 
   const status = (user.wl_onboarding_status as 'not_started' | 'pending' | 'complete' | null) || 'not_started'
 
-  // Sanity check: if status is 'pending' or 'complete' but no subscription id, something's
-  // off — treat as not_started so they get bounced back to billing.
   if ((status === 'pending' || status === 'complete') && !user.wl_subscription_id) {
     return NextResponse.json({ status: 'not_started' })
   }
@@ -103,12 +70,9 @@ export async function GET() {
       .maybeSingle()
 
     if (!tenant) {
-      // status says complete but no tenant row — they hit an edge case.
-      // Treat as 'pending' so they can finish onboarding.
       return NextResponse.json({ status: 'pending' })
     }
 
-    // Compute slug-change cooldown
     let canChangeSlugAt: string | null = null
     if (tenant.slug_changed_at) {
       const lastChange = new Date(tenant.slug_changed_at).getTime()
@@ -136,9 +100,6 @@ export async function GET() {
   return NextResponse.json({ status })
 }
 
-// =============================================================================
-// POST — create or update tenant
-// =============================================================================
 export async function POST(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) {
@@ -152,7 +113,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'malformed_json' }, { status: 400 })
   }
 
-  // ── Field validation ──────────────────────────────────────────────
   const brandName = String(body.brand_name || '').trim()
   const subdomain = String(body.subdomain || '').toLowerCase().trim()
   const primaryColor = String(body.primary_color || '').trim()
@@ -178,11 +138,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'missing_logo', detail: 'Upload your logo first.' }, { status: 400 })
   }
 
-  // ── WL subscription gate ──────────────────────────────────────────
-  // email is selected here so we can populate support_email on insert.
-  // The DB has a CHECK constraint requiring a valid email format; empty
-  // string fails it. Falling back to support@dialerseat.com only if the
-  // user row somehow has no email (shouldn't happen with Clerk signup).
   const { data: user } = await supabase
     .from('users')
     .select('email, wl_onboarding_status, wl_subscription_id, stripe_customer_id')
@@ -204,7 +159,6 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  // ── Subdomain uniqueness (excluding own) ──────────────────────────
   const { data: collision } = await supabase
     .from('white_label_tenants')
     .select('id, owner_clerk_id')
@@ -216,7 +170,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'taken' }, { status: 409 })
   }
 
-  // Also check active redirects
   const { data: redirecting } = await supabase
     .from('subdomain_history')
     .select('id, tenant_id')
@@ -225,7 +178,6 @@ export async function POST(req: NextRequest) {
     .maybeSingle()
 
   if (redirecting) {
-    // Owned redirect? (the user is editing back to a recent slug they had)
     const { data: t } = await supabase
       .from('white_label_tenants')
       .select('owner_clerk_id')
@@ -238,9 +190,7 @@ export async function POST(req: NextRequest) {
 
   const now = new Date()
 
-  // ── BRANCH: CREATE vs UPDATE ──────────────────────────────────────
   if (status === 'pending') {
-    // ─── CREATE new tenant row ─────────────────────────────────────
     const { data: tenant, error: insErr } = await supabase
       .from('white_label_tenants')
       .insert({
@@ -262,24 +212,26 @@ export async function POST(req: NextRequest) {
 
     if (insErr || !tenant) {
       console.error('tenant insert failed:', insErr)
-      // Unique-violation handler — race condition where slug was claimed
-      // between our check and the insert
       if (insErr?.code === '23505') {
         return NextResponse.json({ error: 'taken' }, { status: 409 })
       }
       return NextResponse.json({ error: 'db_error', detail: insErr?.message }, { status: 500 })
     }
 
-    // Mark onboarding complete
+    // Mark onboarding complete AND auto-select this tenant as the user's
+    // active brand. Without active_tenant_id, brand-follows-user middleware
+    // sees nothing selected and routes to DialerSeat default.
     await supabase
       .from('users')
-      .update({ wl_onboarding_status: 'complete' })
+      .update({
+        wl_onboarding_status: 'complete',
+        active_tenant_id: tenant.id,
+      })
       .eq('clerk_id', userId)
 
     return NextResponse.json({ success: true, subdomain: tenant.slug, created: true })
   }
 
-  // ─── UPDATE existing tenant ────────────────────────────────────────
   const { data: existing } = await supabase
     .from('white_label_tenants')
     .select('id, slug, slug_changed_at')
@@ -299,7 +251,6 @@ export async function POST(req: NextRequest) {
   }
 
   if (slugChanged) {
-    // Enforce 24-hour cooldown
     if (existing.slug_changed_at) {
       const lastChange = new Date(existing.slug_changed_at).getTime()
       const cooldownEnd = lastChange + SLUG_COOLDOWN_HOURS * 60 * 60 * 1000
@@ -315,7 +266,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Write a 30-day redirect from the old slug to the new one
     const redirectsUntil = new Date(now.getTime() + SLUG_REDIRECT_DAYS * 24 * 60 * 60 * 1000)
     await supabase
       .from('subdomain_history')
