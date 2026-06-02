@@ -1,13 +1,21 @@
 // app/api/whitelabel/onboarding/route.ts
 // =============================================================================
-// WHITE-LABEL ONBOARDING / EDIT
+// WHITE-LABEL ONBOARDING / EDIT — 5-color support
 // =============================================================================
-// GET  /api/whitelabel/onboarding — returns user's current onboarding state
-// POST /api/whitelabel/onboarding — creates or updates tenant
+// Fixes a bug where the POST only read/wrote primary_color + accent_color.
+// The frontend always sent all 5 colors (primary, secondary, accent=surface,
+// background, text) but only 2 of them ever hit the DB. Result: editing
+// presets in onboarding visibly updated the sidebar (primary) and chrome
+// (accent) but nothing else changed because secondary/background/text
+// silently stayed at their old values.
 //
-// CREATE branch also sets users.active_tenant_id = new tenant id so the
-// user is auto-routed to their tenant subdomain on the very next request
-// instead of falling back to DialerSeat default.
+// This version:
+//   - GET selects all 5 color columns so the edit form loads correctly
+//   - POST validates all 5 colors as valid hex
+//   - POST INSERT writes all 5 columns
+//   - POST UPDATE writes all 5 columns
+//   - Other behavior unchanged (active_tenant_id auto-set on create,
+//     support_email defaults to user.email, slug cooldown, etc.)
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -63,9 +71,13 @@ export async function GET() {
   }
 
   if (status === 'complete') {
+    // Select ALL 5 color columns so the edit form pre-fills correctly.
     const { data: tenant } = await supabase
       .from('white_label_tenants')
-      .select('id, brand_name, slug, primary_color, accent_color, logo_url, slug_changed_at, is_active')
+      .select(`
+        id, brand_name, slug, logo_url, slug_changed_at, is_active,
+        primary_color, secondary_color, accent_color, background_color, text_color
+      `)
       .eq('owner_clerk_id', userId)
       .maybeSingle()
 
@@ -88,9 +100,12 @@ export async function GET() {
       tenant: {
         brand_name: tenant.brand_name,
         slug: tenant.slug,
-        primary_color: tenant.primary_color,
-        accent_color: tenant.accent_color,
         logo_url: tenant.logo_url,
+        primary_color: tenant.primary_color,
+        secondary_color: tenant.secondary_color,
+        accent_color: tenant.accent_color,
+        background_color: tenant.background_color,
+        text_color: tenant.text_color,
       },
       canChangeSlugAt,
       isActive: tenant.is_active,
@@ -113,12 +128,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'malformed_json' }, { status: 400 })
   }
 
+  // ── Field extraction ──────────────────────────────────────────────
   const brandName = String(body.brand_name || '').trim()
   const subdomain = String(body.subdomain || '').toLowerCase().trim()
-  const primaryColor = String(body.primary_color || '').trim()
-  const accentColor = String(body.accent_color || '').trim()
   const logoUrl = String(body.logo_url || '').trim()
+  const primaryColor = String(body.primary_color || '').trim()
+  const secondaryColor = String(body.secondary_color || '').trim()
+  const accentColor = String(body.accent_color || '').trim()
+  const backgroundColor = String(body.background_color || '').trim()
+  const textColor = String(body.text_color || '').trim()
 
+  // ── Validation ────────────────────────────────────────────────────
   if (!brandName || brandName.length < 2 || brandName.length > 60) {
     return NextResponse.json({ error: 'invalid_brand_name', detail: 'Brand name must be 2–60 characters.' }, { status: 400 })
   }
@@ -131,13 +151,23 @@ export async function POST(req: NextRequest) {
   if (!HEX_RE.test(primaryColor)) {
     return NextResponse.json({ error: 'invalid_primary_color', detail: 'Primary color must be #RRGGBB.' }, { status: 400 })
   }
+  if (!HEX_RE.test(secondaryColor)) {
+    return NextResponse.json({ error: 'invalid_secondary_color', detail: 'Secondary color must be #RRGGBB.' }, { status: 400 })
+  }
   if (!HEX_RE.test(accentColor)) {
-    return NextResponse.json({ error: 'invalid_accent_color', detail: 'Accent color must be #RRGGBB.' }, { status: 400 })
+    return NextResponse.json({ error: 'invalid_accent_color', detail: 'Surface (accent) color must be #RRGGBB.' }, { status: 400 })
+  }
+  if (!HEX_RE.test(backgroundColor)) {
+    return NextResponse.json({ error: 'invalid_background_color', detail: 'Background color must be #RRGGBB.' }, { status: 400 })
+  }
+  if (!HEX_RE.test(textColor)) {
+    return NextResponse.json({ error: 'invalid_text_color', detail: 'Text color must be #RRGGBB.' }, { status: 400 })
   }
   if (!logoUrl) {
     return NextResponse.json({ error: 'missing_logo', detail: 'Upload your logo first.' }, { status: 400 })
   }
 
+  // ── WL subscription gate ──────────────────────────────────────────
   const { data: user } = await supabase
     .from('users')
     .select('email, wl_onboarding_status, wl_subscription_id, stripe_customer_id')
@@ -159,6 +189,7 @@ export async function POST(req: NextRequest) {
     )
   }
 
+  // ── Subdomain uniqueness (excluding own) ──────────────────────────
   const { data: collision } = await supabase
     .from('white_label_tenants')
     .select('id, owner_clerk_id')
@@ -190,6 +221,7 @@ export async function POST(req: NextRequest) {
 
   const now = new Date()
 
+  // ── BRANCH: CREATE vs UPDATE ──────────────────────────────────────
   if (status === 'pending') {
     const { data: tenant, error: insErr } = await supabase
       .from('white_label_tenants')
@@ -198,8 +230,12 @@ export async function POST(req: NextRequest) {
         slug: subdomain,
         brand_name: brandName,
         logo_url: logoUrl,
+        // All 5 colors written on create.
         primary_color: primaryColor,
+        secondary_color: secondaryColor,
         accent_color: accentColor,
+        background_color: backgroundColor,
+        text_color: textColor,
         support_email: user.email || 'support@dialerseat.com',
         stripe_customer_id: user.stripe_customer_id,
         stripe_subscription_id: user.wl_subscription_id,
@@ -218,9 +254,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'db_error', detail: insErr?.message }, { status: 500 })
     }
 
-    // Mark onboarding complete AND auto-select this tenant as the user's
-    // active brand. Without active_tenant_id, brand-follows-user middleware
-    // sees nothing selected and routes to DialerSeat default.
+    // Mark onboarding complete AND auto-select this tenant.
     await supabase
       .from('users')
       .update({
@@ -232,6 +266,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, subdomain: tenant.slug, created: true })
   }
 
+  // ─── UPDATE existing tenant ────────────────────────────────────────
   const { data: existing } = await supabase
     .from('white_label_tenants')
     .select('id, slug, slug_changed_at')
@@ -246,8 +281,12 @@ export async function POST(req: NextRequest) {
   const updates: Record<string, any> = {
     brand_name: brandName,
     logo_url: logoUrl,
+    // All 5 colors written on every update.
     primary_color: primaryColor,
+    secondary_color: secondaryColor,
     accent_color: accentColor,
+    background_color: backgroundColor,
+    text_color: textColor,
   }
 
   if (slugChanged) {
