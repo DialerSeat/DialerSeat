@@ -1,6 +1,6 @@
 // app/api/whitelabel/upload-logo/route.ts
 // =============================================================================
-// UPLOAD WHITE-LABEL LOGO
+// UPLOAD WHITE-LABEL LOGO — cache-busting via unique filename
 // =============================================================================
 // POST /api/whitelabel/upload-logo
 // Body: multipart/form-data with `logo` file field
@@ -14,11 +14,20 @@
 //   - Dimensions: PNG must be EXACTLY 512×148. SVG must have a viewBox
 //     with aspect ratio 256:74 (±2% tolerance).
 //
-// Storage path: tenants/{clerk_id}/logo.{png|svg}
-// (Old logo at this path is replaced — we don't keep versions; the user
-// just re-uploads if they made a mistake.)
+// Storage path: tenants/{clerk_id}/logo-{timestamp}.{png|svg}
 //
-// Returns: { url: 'https://.../tenants/{id}/logo.png', width, height }
+// CACHE-BUSTING: every upload uses a unique filename (millisecond timestamp).
+// Previously the path was a fixed `logo.png` and re-uploads returned the
+// same public URL. Browsers + Supabase's CDN cached the old image and the
+// new logo never appeared for up to an hour even though storage had been
+// updated. With unique filenames, the public URL changes every save, so
+// the new image is fetched fresh.
+//
+// Storage cleanup: before uploading the new file, all prior logo-*
+// files in this user's folder are deleted. Result is exactly one logo
+// file per user at any moment — no orphan growth over time.
+//
+// Returns: { url, width, height, format }
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -32,23 +41,13 @@ const supabase = createClient(
 
 const BUCKET = process.env.NEXT_PUBLIC_TENANT_ASSETS_BUCKET || 'tenant-assets'
 
-const MAX_BYTES = 200 * 1024            // 200 KB
+const MAX_BYTES = 200 * 1024
 const REQUIRED_W = 512
 const REQUIRED_H = 148
-const ASPECT_TOLERANCE = 0.02           // 2% wiggle for SVG viewBox
+const ASPECT_TOLERANCE = 0.02
 
-// ─────────────────────────────────────────────────────────────────────
-// PNG dimension parser (manual, no sharp dependency)
-// ─────────────────────────────────────────────────────────────────────
-// PNG file structure:
-//   bytes 0-7:    PNG signature (89 50 4E 47 0D 0A 1A 0A)
-//   bytes 8-15:   IHDR chunk length+type (00 00 00 0D 49 48 44 52)
-//   bytes 16-19:  width (big-endian uint32)
-//   bytes 20-23:  height (big-endian uint32)
-// We just read 24 bytes and extract width/height.
 function parsePngDimensions(buf: Buffer): { width: number; height: number } | null {
   if (buf.length < 24) return null
-  // Magic check
   if (
     buf[0] !== 0x89 || buf[1] !== 0x50 || buf[2] !== 0x4e || buf[3] !== 0x47 ||
     buf[4] !== 0x0d || buf[5] !== 0x0a || buf[6] !== 0x1a || buf[7] !== 0x0a
@@ -60,16 +59,11 @@ function parsePngDimensions(buf: Buffer): { width: number; height: number } | nu
   return { width, height }
 }
 
-// ─────────────────────────────────────────────────────────────────────
-// SVG dimension parser — looks at viewBox first, falls back to width/height
-// ─────────────────────────────────────────────────────────────────────
 function parseSvgDimensions(text: string): { width: number; height: number } | null {
-  // Only look at the opening <svg ...> tag, not the whole document
   const m = text.match(/<svg\b[^>]*>/i)
   if (!m) return null
   const tag = m[0]
 
-  // Prefer viewBox: gives us the aspect ratio we care about
   const vb = tag.match(/viewBox\s*=\s*["']([^"']+)["']/i)
   if (vb) {
     const parts = vb[1].trim().split(/[\s,]+/).map(Number)
@@ -78,7 +72,6 @@ function parseSvgDimensions(text: string): { width: number; height: number } | n
     }
   }
 
-  // Fallback: width + height attrs (strip 'px' if present)
   const w = tag.match(/\bwidth\s*=\s*["']?([\d.]+)/i)
   const h = tag.match(/\bheight\s*=\s*["']?([\d.]+)/i)
   if (w && h) {
@@ -87,16 +80,12 @@ function parseSvgDimensions(text: string): { width: number; height: number } | n
   return null
 }
 
-// ─────────────────────────────────────────────────────────────────────
-// POST handler
-// ─────────────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
 
-  // Gate: user must be in WL flow
   const { data: user } = await supabase
     .from('users')
     .select('wl_onboarding_status')
@@ -110,7 +99,6 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  // Read the multipart body
   let form: FormData
   try {
     form = await req.formData()
@@ -123,7 +111,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'no_file' }, { status: 400 })
   }
 
-  // Size check
   if (file.size === 0) {
     return NextResponse.json({ error: 'empty_file' }, { status: 400 })
   }
@@ -134,7 +121,6 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  // MIME / extension check
   const mime = (file.type || '').toLowerCase()
   let ext: 'png' | 'svg'
   if (mime === 'image/png') {
@@ -148,11 +134,9 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  // Read body
   const arrayBuf = await file.arrayBuffer()
   const buf = Buffer.from(arrayBuf)
 
-  // Dimension validation
   let width: number | null = null
   let height: number | null = null
 
@@ -202,20 +186,39 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Cleanup: remove any prior logo for this user (both extensions)
   const baseFolder = `tenants/${userId}`
-  await supabase.storage.from(BUCKET).remove([
-    `${baseFolder}/logo.png`,
-    `${baseFolder}/logo.svg`,
-  ]).catch(() => { /* missing files are fine */ })
 
-  // Upload
-  const path = `${baseFolder}/logo.${ext}`
+  // ── Cleanup: remove all prior logo files for this user ──────────────
+  // List the user's folder and delete anything matching logo* (both legacy
+  // logo.png/logo.svg AND any previously-uploaded timestamped logos).
+  // Filter ensures we don't accidentally remove other tenant assets that
+  // may live in this folder in the future (favicons, hero images, etc).
+  try {
+    const { data: existing } = await supabase.storage.from(BUCKET).list(baseFolder)
+    if (existing && existing.length > 0) {
+      const oldLogoPaths = existing
+        .filter(f => /^logo[-.]/.test(f.name) || f.name === 'logo.png' || f.name === 'logo.svg')
+        .map(f => `${baseFolder}/${f.name}`)
+      if (oldLogoPaths.length > 0) {
+        await supabase.storage.from(BUCKET).remove(oldLogoPaths)
+      }
+    }
+  } catch (e) {
+    // List/remove errors are non-fatal — if cleanup fails, we still upload
+    // the new file. Worst case: a few orphans accumulate, which is harmless.
+    console.warn('logo cleanup failed (non-fatal):', e)
+  }
+
+  // ── Upload with unique filename ─────────────────────────────────────
+  const filename = `logo-${Date.now()}.${ext}`
+  const path = `${baseFolder}/${filename}`
+
   const { error: upErr } = await supabase.storage
     .from(BUCKET)
     .upload(path, buf, {
       contentType: ext === 'png' ? 'image/png' : 'image/svg+xml',
       cacheControl: '3600',
+      // Not strictly needed since the path is unique each time, but harmless.
       upsert: true,
     })
 
@@ -227,7 +230,6 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  // Build public URL
   const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(path)
   const publicUrl = pub.publicUrl
 
