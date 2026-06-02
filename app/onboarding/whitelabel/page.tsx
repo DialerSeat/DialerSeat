@@ -5,23 +5,14 @@ import { useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 
 // =============================================================================
-// /onboarding/whitelabel — v2 (Phase D2 foundation: live-themed)
+// /onboarding/whitelabel — Phase D2 + edit-mode slug fix
 // =============================================================================
-// The entire page IS the preview. Every surface, button, border, text
-// color is bound to a --brand-* CSS variable. As the user picks colors,
-// an inline <style> block updates those variables and the whole page
-// re-themes in real-time.
-//
-// Six built-in presets at the top let users grab a polished look in
-// 5 seconds. "Custom" unlocks the individual color pickers for power
-// users.
-//
-// Logo upload is exactly 512×148 PNG/SVG. The block displays at 256×74
-// in the sidebar (matching the dashboard layout). Anything else is
-// rejected server-side by the upload API.
-//
-// On successful save, redirects to /dashboard. The save sets
-// wl_onboarding_status='complete' which clears the proxy.ts hard-lock.
+// FIX vs prior version: tracks `originalSlug` (the slug as loaded from DB
+// in edit mode) and short-circuits the slug-availability check when the
+// current input still equals it. Without this fix, the check fires every
+// time, comes back "taken" (the user's OWN row is the collision), and
+// handleSubmit bails before the POST ever happens. That's what was
+// causing SAVE CHANGES to silently do nothing.
 // =============================================================================
 
 interface Preset {
@@ -35,25 +26,12 @@ interface Preset {
   text: string
 }
 
-// ──────────────────────────────────────────────────────────────────────────
-// Pick a contrast-safe text color (black or white) for any background hex.
-// Used for buttons that fill with --brand-primary as their background — the
-// "PROVISION TENANT" submit button being the main one. Without this, a
-// light primary like Slate's #f0f2f5 paired with the brand's near-white
-// text color renders an invisible button label.
-//
-// Uses the standard sRGB relative luminance formula: anything above ~0.55
-// is light enough that black text reads better; below uses white. The
-// threshold is biased slightly toward picking black to be safe (white on
-// medium-saturation primaries can still be hard to read).
-// ──────────────────────────────────────────────────────────────────────────
 function pickContrastText(hex: string): string {
   const h = hex.replace('#', '')
   if (h.length !== 6) return '#ffffff'
   const r = parseInt(h.slice(0, 2), 16) / 255
   const g = parseInt(h.slice(2, 4), 16) / 255
   const b = parseInt(h.slice(4, 6), 16) / 255
-  // Linearize
   const lin = (c: number) => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
   const luminance = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
   return luminance > 0.55 ? '#1a1c24' : '#ffffff'
@@ -138,26 +116,25 @@ const DEFAULT_BRAND: BrandState = {
   text: PRESETS[0].text,
 }
 
-// Subdomain regex must match what middleware + DB constraint expect.
-// 2-30 chars, lowercase a-z 0-9 -, can't start/end with -.
 const SLUG_REGEX = /^[a-z0-9][a-z0-9-]{0,28}[a-z0-9]$/
 
 export default function WhitelabelOnboardingPage() {
   const { user, isLoaded } = useUser()
   const router = useRouter()
 
-  // ── State ────────────────────────────────────────────────────────────
   const [loading, setLoading] = useState(true)
   const [editMode, setEditMode] = useState(false)
   const [brandName, setBrandName] = useState('')
   const [slug, setSlug] = useState('')
+  // NEW: stores the slug as it was loaded from DB so the availability
+  // check can detect "you haven't changed it" and skip itself.
+  const [originalSlug, setOriginalSlug] = useState('')
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null)
   const [existingLogoUrl, setExistingLogoUrl] = useState<string | null>(null)
   const [presetKey, setPresetKey] = useState<string>('default')
   const [colors, setColors] = useState<BrandState>(DEFAULT_BRAND)
 
-  // Subdomain live availability check
   const [slugStatus, setSlugStatus] = useState<
     | { kind: 'idle' }
     | { kind: 'checking' }
@@ -183,6 +160,7 @@ export default function WhitelabelOnboardingPage() {
           setEditMode(true)
           setBrandName(data.tenant.brand_name || '')
           setSlug(data.tenant.slug || '')
+          setOriginalSlug(data.tenant.slug || '')
           setExistingLogoUrl(data.tenant.logo_url || null)
           setColors({
             primary: data.tenant.primary_color || DEFAULT_BRAND.primary,
@@ -192,7 +170,6 @@ export default function WhitelabelOnboardingPage() {
             text: data.tenant.text_color || DEFAULT_BRAND.text,
           })
 
-          // Detect which preset (if any) matches the loaded colors
           const matchPreset = PRESETS.find(p =>
             p.primary === data.tenant.primary_color &&
             p.secondary === data.tenant.secondary_color &&
@@ -224,7 +201,16 @@ export default function WhitelabelOnboardingPage() {
       })
       return
     }
-    // In edit mode, if slug hasn't changed from the saved value, skip the check
+
+    // FIX: In edit mode, if the slug hasn't changed from the saved value,
+    // mark it available and skip the API call. The check-subdomain endpoint
+    // doesn't know who the requesting user is, so it would always return
+    // "taken" for the user's own slug, blocking the form.
+    if (editMode && originalSlug && slug === originalSlug) {
+      setSlugStatus({ kind: 'available' })
+      return
+    }
+
     setSlugStatus({ kind: 'checking' })
     const t = setTimeout(async () => {
       try {
@@ -238,9 +224,8 @@ export default function WhitelabelOnboardingPage() {
       }
     }, 350)
     return () => clearTimeout(t)
-  }, [slug])
+  }, [slug, editMode, originalSlug])
 
-  // ── Logo file → object URL for live preview ──────────────────────────
   useEffect(() => {
     if (!logoFile) {
       setLogoPreviewUrl(null)
@@ -251,7 +236,6 @@ export default function WhitelabelOnboardingPage() {
     return () => URL.revokeObjectURL(url)
   }, [logoFile])
 
-  // ── Handlers ─────────────────────────────────────────────────────────
   const applyPreset = (key: string) => {
     setPresetKey(key)
     if (key === 'custom') return
@@ -269,7 +253,6 @@ export default function WhitelabelOnboardingPage() {
 
   const updateColor = (field: keyof BrandState, value: string) => {
     setColors(prev => ({ ...prev, [field]: value }))
-    // Picking a custom color demotes the preset selection to "custom"
     setPresetKey('custom')
   }
 
@@ -304,7 +287,6 @@ export default function WhitelabelOnboardingPage() {
 
     setSubmitting(true)
     try {
-      // Step 1: upload logo if a new file was selected
       let logoUrl = existingLogoUrl
       if (logoFile) {
         const fd = new FormData()
@@ -322,7 +304,6 @@ export default function WhitelabelOnboardingPage() {
         logoUrl = upData.url
       }
 
-      // Step 2: provision / update tenant
       const res = await fetch('/api/whitelabel/onboarding', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -332,9 +313,6 @@ export default function WhitelabelOnboardingPage() {
           logo_url: logoUrl,
           primary_color: colors.primary,
           secondary_color: colors.secondary,
-          // The DB column is still called accent_color — we send our
-          // "surface" picker value into that column. Reinterpretation
-          // only; no migration.
           accent_color: colors.surface,
           background_color: colors.background,
           text_color: colors.text,
@@ -342,13 +320,11 @@ export default function WhitelabelOnboardingPage() {
       })
       const data = await res.json()
       if (!res.ok) {
-        setError(data.error || 'Failed to save.')
+        setError(data.detail || data.error || 'Failed to save.')
         setSubmitting(false)
         return
       }
 
-      // Success → /dashboard. The hard-lock in proxy.ts clears now that
-      // wl_onboarding_status is 'complete'.
       router.push('/dashboard')
     } catch (err: any) {
       setError(err.message || 'Something went wrong.')
@@ -356,9 +332,6 @@ export default function WhitelabelOnboardingPage() {
     }
   }
 
-  // ── Live-theming style block ─────────────────────────────────────────
-  // This injects --brand-* primitives at :root, which cascades through
-  // globals.css's semantic tokens to re-theme the entire page in real time.
   const liveThemeStyle = useMemo(() => `
     :root {
       --brand-primary: ${colors.primary};
@@ -389,13 +362,11 @@ export default function WhitelabelOnboardingPage() {
 
   return (
     <>
-      {/* Live theme injection — updates as the user picks colors */}
       <style dangerouslySetInnerHTML={{ __html: liveThemeStyle }} />
 
       <main style={pageStyle}>
         <div style={cardStyle}>
 
-          {/* Header */}
           <div style={{ marginBottom: 28 }}>
             <div style={titleStyle}>
               {editMode ? 'EDIT YOUR WHITELABEL DIALER' : 'CUSTOMIZE YOUR WHITELABEL DIALER'}
@@ -407,7 +378,6 @@ export default function WhitelabelOnboardingPage() {
             </div>
           </div>
 
-          {/* PRESETS */}
           <div style={sectionStyle}>
             <div style={sectionLabelStyle}>▸ THEME</div>
             <div style={presetGridStyle}>
@@ -455,7 +425,6 @@ export default function WhitelabelOnboardingPage() {
 
           <form onSubmit={handleSubmit}>
 
-            {/* BRAND NAME */}
             <div style={sectionStyle}>
               <label style={sectionLabelStyle}>▸ BRAND NAME</label>
               <input
@@ -471,7 +440,6 @@ export default function WhitelabelOnboardingPage() {
               </div>
             </div>
 
-            {/* SUBDOMAIN */}
             <div style={sectionStyle}>
               <label style={sectionLabelStyle}>▸ SUBDOMAIN</label>
               <div style={subdomainRowStyle}>
@@ -486,11 +454,10 @@ export default function WhitelabelOnboardingPage() {
                 <div style={subdomainSuffixStyle}>.dialerseat.com</div>
               </div>
               <div style={hintStyle}>
-                {renderSlugStatus(slugStatus, slug)}
+                {renderSlugStatus(slugStatus, slug, editMode && slug === originalSlug)}
               </div>
             </div>
 
-            {/* LOGO */}
             <div style={sectionStyle}>
               <label style={sectionLabelStyle}>▸ LOGO</label>
               <div style={hintStyle}>
@@ -498,7 +465,6 @@ export default function WhitelabelOnboardingPage() {
                 Transparent backgrounds recommended — they blend into the sidebar.
               </div>
 
-              {/* Live preview — uses the actual sidebar block dimensions */}
               {displayLogo && (
                 <div style={logoPreviewWrapStyle}>
                   <div style={logoPreviewLabelStyle}>
@@ -532,7 +498,6 @@ export default function WhitelabelOnboardingPage() {
               />
             </div>
 
-            {/* COLORS — only shown when "custom" is selected */}
             {presetKey === 'custom' && (
               <div style={sectionStyle}>
                 <label style={sectionLabelStyle}>▸ COLORS</label>
@@ -541,6 +506,12 @@ export default function WhitelabelOnboardingPage() {
                 </div>
 
                 <div style={colorPickerGridStyle}>
+                  <ColorRow
+                    label="Surface"
+                    description="Sidebar, cards, modal backgrounds"
+                    value={colors.surface}
+                    onChange={v => updateColor('surface', v)}
+                  />
                   <ColorRow
                     label="Primary"
                     description="Buttons, links, active nav"
@@ -554,12 +525,6 @@ export default function WhitelabelOnboardingPage() {
                     onChange={v => updateColor('secondary', v)}
                   />
                   <ColorRow
-                    label="Surface"
-                    description="Sidebar, cards, modal backgrounds"
-                    value={colors.surface}
-                    onChange={v => updateColor('surface', v)}
-                  />
-                  <ColorRow
                     label="Background"
                     description="Page background, deepest layer"
                     value={colors.background}
@@ -567,7 +532,7 @@ export default function WhitelabelOnboardingPage() {
                   />
                   <ColorRow
                     label="Text"
-                    description="Body text, headings"
+                    description="Body text, headings, all foreground type"
                     value={colors.text}
                     onChange={v => updateColor('text', v)}
                   />
@@ -579,7 +544,6 @@ export default function WhitelabelOnboardingPage() {
               <div style={errorBoxStyle}>{error}</div>
             )}
 
-            {/* SUBMIT */}
             <button
               type="submit"
               disabled={submitting}
@@ -591,8 +555,8 @@ export default function WhitelabelOnboardingPage() {
               }}
             >
               {submitting
-                ? (editMode ? 'SAVING...' : 'PROVISIONING...')
-                : (editMode ? '▶ SAVE CHANGES' : '▶ PROVISION TENANT')}
+                ? (editMode ? 'SAVING...' : 'CONFIRMING...')
+                : (editMode ? '▶ SAVE CHANGES' : '▶ CONFIRM')}
             </button>
 
             {!editMode && (
@@ -606,10 +570,6 @@ export default function WhitelabelOnboardingPage() {
     </>
   )
 }
-
-// =============================================================================
-// SUBCOMPONENTS
-// =============================================================================
 
 function ColorRow({
   label,
@@ -654,6 +614,7 @@ function renderSlugStatus(
     | { kind: 'reserved' }
     | { kind: 'invalid'; reason: string },
   slug: string,
+  isUnchangedEdit: boolean,
 ): React.ReactNode {
   if (status.kind === 'idle') {
     return <>Pick something memorable. 2-30 chars, lowercase, dashes ok.</>
@@ -664,7 +625,7 @@ function renderSlugStatus(
   if (status.kind === 'available') {
     return (
       <span style={{ color: 'var(--color-success)' }}>
-        ✓ {slug}.dialerseat.com is available
+        ✓ {slug}.dialerseat.com {isUnchangedEdit ? '(your current subdomain)' : 'is available'}
       </span>
     )
   }
@@ -687,10 +648,6 @@ function renderSlugStatus(
   }
   return null
 }
-
-// =============================================================================
-// STYLES — all use CSS variables so the page re-themes live
-// =============================================================================
 
 const pageStyle: React.CSSProperties = {
   minHeight: '100vh',
@@ -845,8 +802,6 @@ const logoPreviewLabelStyle: React.CSSProperties = {
   fontWeight: 700,
 }
 
-// Preview box uses the actual sidebar surface color so user sees exactly
-// what their logo will look like in the sidebar. Width matches 256+padding.
 const logoPreviewBoxStyle: React.CSSProperties = {
   background: 'var(--brand-surface)',
   border: '1px solid var(--border)',
