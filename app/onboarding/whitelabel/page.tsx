@@ -319,7 +319,7 @@ export default function WhitelabelOnboardingPage() {
           setSubmitting(false)
           return
         }
-        logoUrl = upData.logo_url
+        logoUrl = upData.url
       }
 
       // Step 2: provision / update tenant
