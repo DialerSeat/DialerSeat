@@ -4,32 +4,13 @@ import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
 
 // =============================================================================
-// CAMPAIGNS PAGE — v25 DRIVE-STYLE GRID
+// CAMPAIGNS PAGE — Drive-style body + dark header bar
 // =============================================================================
-// Replaces the v24 themed-thumbnail grid with a Google Drive-style file
-// manager. Cards show a real preview of the campaign's lead list (first
-// rows of the actual CSV). Click card → Settings modal (the campaign's
-// hub: name, status, mode, script, lead preview, actions). Click the lead
-// preview inside Settings → full-screen Sheets-style editor (editable
-// cells, add row, delete rows, batch save).
-//
-// Visual changes from v24:
-//   - No mode color-coding on cards
-//   - No progress ring
-//   - No "+ New Campaign" tile in the grid
-//   - Footer: "You modified Xago" + "Last dialed Xago"
-//   - Empty state: no emoji, clean text
-//   - "+ NEW CAMPAIGN" header button: outlined ghost, not blue gradient
-//
-// Behavior changes:
-//   - Single-click card opens Settings, not the dialer
-//   - OPEN IN DIALER button inside Settings auto-activates the campaign if
-//     it's currently inactive, then navigates
-//   - Lead preview thumbnail in Settings is the entry point to the editor
-//   - Full-screen editor: real data, edit any user-data field, add row,
-//     delete rows, batch save via /api/leads/bulk-update
-//   - Silent refetch on tab visibility — if you add/remove leads from the
-//     leads page and switch back here, the campaign card counts update
+// Header is now a full-width dark bar matching leads/teams/dialer.
+// Inside the bar: the original "Campaigns" h1 + descriptive subtitle +
+// "+ New campaign" button — unchanged structurally. Only the text colors
+// adapt so they're readable on dark. The body (Drive-style cards, settings
+// modal, sheets editor, focus refetch) is unchanged.
 // =============================================================================
 
 const T = {
@@ -354,13 +335,6 @@ export default function CampaignsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campaigns.map(c => c.id).join(',')])
 
-  // ── Silent refetch on tab visibility ────────────────────────────────
-  // If the user adds or deletes a lead from the leads page (or anywhere
-  // else) and switches back to this tab, the campaign cards' lead counts
-  // should reflect that. Doesn't refresh preview thumbnails — those stay
-  // until the user opens the campaign settings, which loads fresh data.
-  // Skipped while any modal/editor is open so the user's in-flight work
-  // is never disturbed.
   useEffect(() => {
     const onVisibility = () => {
       if (document.hidden) return
@@ -809,23 +783,34 @@ export default function CampaignsPage() {
   return (
     <div className="cmp-root" style={{
       flex: 1,
-      padding: '32px 40px 56px',
-      overflowY: 'auto',
       background: T.bg,
       minHeight: 'calc(100vh - 64px)',
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'auto',
       fontFamily: 'system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif',
       color: T.text,
     }}>
       <style>{`
         .cmp-header {
-          display: flex; align-items: center; justify-content: space-between;
-          margin-bottom: 28px; gap: 16px; flex-wrap: wrap;
+          background: ${T.dark};
+          padding: 16px 24px;
+          border-bottom: 2px solid ${T.accent};
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          flex-wrap: wrap;
         }
         .cmp-header h1 {
-          font-size: 22px; font-weight: 500; color: ${T.text};
+          font-size: 22px; font-weight: 500; color: white;
           margin: 0; letter-spacing: -0.2px;
         }
-        .cmp-header p { font-size: 13px; color: ${T.muted}; margin: 4px 0 0; }
+        .cmp-header p { font-size: 13px; color: #8888aa; margin: 4px 0 0; }
+
+        .cmp-body {
+          padding: 32px 40px 56px;
+        }
 
         .cmp-new-btn {
           padding: 9px 18px;
@@ -1352,7 +1337,9 @@ export default function CampaignsPage() {
         }
 
         @media (max-width: 768px) {
-          .cmp-root { padding: 20px 16px 48px; }
+          .cmp-header { padding: 14px 16px; }
+          .cmp-header h1 { font-size: 19px; }
+          .cmp-body { padding: 20px 16px 48px; }
           .cmp-grid { grid-template-columns: 1fr; gap: 12px; }
           .settings-modal { max-height: 100vh; max-height: 100dvh; border-radius: 0; }
           .modal-overlay { padding: 0; }
@@ -1360,6 +1347,7 @@ export default function CampaignsPage() {
         }
       `}</style>
 
+      {/* ─── DARK HEADER BAR — original content, just dark background ─── */}
       <div className="cmp-header">
         <div>
           <h1>Campaigns</h1>
@@ -1380,113 +1368,117 @@ export default function CampaignsPage() {
         )}
       </div>
 
-      {isLapsed && (
-        <div style={{
-          padding: '14px 18px',
-          marginBottom: 20,
-          background: 'rgba(255,170,62,0.06)',
-          border: '1px solid #8a6a1a',
-          borderLeft: '3px solid #ffaa3e',
-          borderRadius: 6,
-          fontSize: 13,
-          color: T.text,
-          lineHeight: 1.5,
-        }}>
-          <strong style={{ color: '#ffaa3e' }}>Read-only mode.</strong>{' '}
-          Your campaigns are still here. Creating, deleting, importing, and
-          dialing require an active subscription.
-        </div>
-      )}
-
-      {fetching ? (
-        <div style={{ textAlign: 'center', padding: '80px 20px', fontSize: 13, color: T.muted }}>
-          Loading campaigns…
-        </div>
-      ) : campaigns.length === 0 ? (
-        <div style={{
-          textAlign: 'center',
-          padding: '80px 24px',
-          background: 'white',
-          border: `1px solid ${T.border}`,
-          borderRadius: 12,
-          maxWidth: 480,
-          margin: '40px auto',
-        }}>
-          <h2 style={{
-            fontSize: 18,
-            fontWeight: 500,
-            color: T.text,
-            margin: '0 0 12px',
-            letterSpacing: '-0.2px',
-          }}>No campaigns yet</h2>
-          <p style={{
+      {/* ─── BODY ─── */}
+      <div className="cmp-body">
+        {isLapsed && (
+          <div style={{
+            padding: '14px 18px',
+            marginBottom: 20,
+            background: 'rgba(255,170,62,0.06)',
+            border: '1px solid #8a6a1a',
+            borderLeft: '3px solid #ffaa3e',
+            borderRadius: 6,
             fontSize: 13,
-            color: T.muted,
-            margin: '0 0 24px',
-            lineHeight: 1.6,
+            color: T.text,
+            lineHeight: 1.5,
           }}>
-            {isLapsed
-              ? 'Resubscribe to create your first campaign and upload your leads.'
-              : 'Create your first campaign, upload a leads CSV, and start dialing.'}
-          </p>
-          {!isLapsed ? (
-            <button className="cmp-new-btn" onClick={() => setShowCreate(true)}>
-              <span className="plus">+</span> New campaign
-            </button>
-          ) : (
-            <Link href="/billing" className="cmp-new-btn" style={{ textDecoration: 'none' }}>
-              Resubscribe — $35/week
-            </Link>
-          )}
-        </div>
-      ) : (
-        <div className="cmp-grid">
-          {campaigns.map(campaign => {
-            const isActive = campaign.status === 'active'
-            const leadsForPreview = previews[campaign.id] || []
-            const lastModified = campaign.updated_at || campaign.created_at
-            const lastDialed = campaign.last_dialed_at || null
+            <strong style={{ color: '#ffaa3e' }}>Read-only mode.</strong>{' '}
+            Your campaigns are still here. Creating, deleting, importing, and
+            dialing require an active subscription.
+          </div>
+        )}
 
-            return (
-              <div
-                key={campaign.id}
-                className={`cmp-card ${!isActive ? 'inactive' : ''}`}
-                onClick={() => openSettings(campaign)}
-              >
-                <div className="cmp-card-preview">
-                  <span className="cmp-card-status-pin" style={{
-                    color: isActive ? T.green : T.muted,
-                  }}>
-                    {isActive ? '● Active' : '○ Inactive'}
-                  </span>
-                  <LeadPreviewThumb
-                    leads={leadsForPreview}
-                    totalLeads={campaign.total_leads}
-                    height="100%"
-                  />
-                </div>
+        {fetching ? (
+          <div style={{ textAlign: 'center', padding: '80px 20px', fontSize: 13, color: T.muted }}>
+            Loading campaigns…
+          </div>
+        ) : campaigns.length === 0 ? (
+          <div style={{
+            textAlign: 'center',
+            padding: '80px 24px',
+            background: 'white',
+            border: `1px solid ${T.border}`,
+            borderRadius: 12,
+            maxWidth: 480,
+            margin: '40px auto',
+          }}>
+            <h2 style={{
+              fontSize: 18,
+              fontWeight: 500,
+              color: T.text,
+              margin: '0 0 12px',
+              letterSpacing: '-0.2px',
+            }}>No campaigns yet</h2>
+            <p style={{
+              fontSize: 13,
+              color: T.muted,
+              margin: '0 0 24px',
+              lineHeight: 1.6,
+            }}>
+              {isLapsed
+                ? 'Resubscribe to create your first campaign and upload your leads.'
+                : 'Create your first campaign, upload a leads CSV, and start dialing.'}
+            </p>
+            {!isLapsed ? (
+              <button className="cmp-new-btn" onClick={() => setShowCreate(true)}>
+                <span className="plus">+</span> New campaign
+              </button>
+            ) : (
+              <Link href="/billing" className="cmp-new-btn" style={{ textDecoration: 'none' }}>
+                Resubscribe — $35/week
+              </Link>
+            )}
+          </div>
+        ) : (
+          <div className="cmp-grid">
+            {campaigns.map(campaign => {
+              const isActive = campaign.status === 'active'
+              const leadsForPreview = previews[campaign.id] || []
+              const lastModified = campaign.updated_at || campaign.created_at
+              const lastDialed = campaign.last_dialed_at || null
 
-                <div className="cmp-card-footer">
-                  <svg className="cmp-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="3" width="18" height="18" rx="2" />
-                    <line x1="3" y1="9" x2="21" y2="9" />
-                    <line x1="9" y1="21" x2="9" y2="9" />
-                  </svg>
-                  <div className="cmp-card-meta">
-                    <h3 className="cmp-card-name">{campaign.name}</h3>
-                    <div className="cmp-card-sub">
-                      <span>You modified {relativeTime(lastModified)}</span>
-                      <span className="dot">·</span>
-                      <span>Last dialed {relativeTime(lastDialed)}</span>
+              return (
+                <div
+                  key={campaign.id}
+                  className={`cmp-card ${!isActive ? 'inactive' : ''}`}
+                  onClick={() => openSettings(campaign)}
+                >
+                  <div className="cmp-card-preview">
+                    <span className="cmp-card-status-pin" style={{
+                      color: isActive ? T.green : T.muted,
+                    }}>
+                      {isActive ? '● Active' : '○ Inactive'}
+                    </span>
+                    <LeadPreviewThumb
+                      leads={leadsForPreview}
+                      totalLeads={campaign.total_leads}
+                      height="100%"
+                    />
+                  </div>
+
+                  <div className="cmp-card-footer">
+                    <svg className="cmp-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2" />
+                      <line x1="3" y1="9" x2="21" y2="9" />
+                      <line x1="9" y1="21" x2="9" y2="9" />
+                    </svg>
+                    <div className="cmp-card-meta">
+                      <h3 className="cmp-card-name">{campaign.name}</h3>
+                      <div className="cmp-card-sub">
+                        <span>You modified {relativeTime(lastModified)}</span>
+                        <span className="dot">·</span>
+                        <span>Last dialed {relativeTime(lastDialed)}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
+              )
+            })}
+          </div>
+        )}
+      </div>
 
+      {/* ─── CREATE MODAL ─── */}
       {!isLapsed && showCreate && (
         <div className="modal-overlay" onClick={() => !creating && setShowCreate(false)}>
           <div className="settings-modal" style={{ maxWidth: 540 }} onClick={e => e.stopPropagation()}>
@@ -1601,6 +1593,7 @@ export default function CampaignsPage() {
         </div>
       )}
 
+      {/* ─── SETTINGS MODAL ─── */}
       {settingsCampaign && !editorOpen && (
         <div className="modal-overlay" onClick={closeSettings}>
           <div className="settings-modal" onClick={e => e.stopPropagation()}>
@@ -1833,6 +1826,7 @@ export default function CampaignsPage() {
         </div>
       )}
 
+      {/* ─── DELETE CONFIRM MODAL ─── */}
       {deleteConfirm && (() => {
         const c = campaigns.find(c => c.id === deleteConfirm)
         if (!c) return null
@@ -1900,6 +1894,7 @@ export default function CampaignsPage() {
         )
       })()}
 
+      {/* ─── SHEETS EDITOR ─── */}
       {editorOpen && settingsCampaign && (
         <div className="editor-fullscreen">
           <div className="editor-toolbar">
