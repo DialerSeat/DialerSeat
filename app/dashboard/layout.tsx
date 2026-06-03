@@ -359,6 +359,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 background: active
                   ? `color-mix(in srgb, ${brandPrimary} 12%, transparent)`
                   : 'transparent',
+                border: active
+                  ? '1px solid #1a1a2e'
+                  : '1px solid transparent',
+                boxSizing: 'border-box',
                 textDecoration: 'none',
                 flexShrink: 0,
               }}
