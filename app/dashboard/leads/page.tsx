@@ -45,7 +45,7 @@ const T = {
   text: '#1a1c24',
   muted: '#5a5e6a',
   accent: '#2a4a8a',
-  blue: '#4a9eff',
+  blue: 'var(--brand-primary)',
   green: '#1a6a1a',
   red: '#8a1a1a',
   warn: '#ffaa3e',
@@ -62,6 +62,28 @@ const dispositionTint = (disp: string | null): string => {
     case 'SKIPPED': return 'rgba(90, 94, 106, 0.04)'
     default: return T.surface
   }
+}
+
+interface NewLeadDraft {
+  campaign_id: string
+  first_name: string
+  last_name: string
+  phone: string
+  email: string
+  state: string
+  city: string
+  notes: string
+}
+
+const EMPTY_NEW_LEAD: NewLeadDraft = {
+  campaign_id: '',
+  first_name: '',
+  last_name: '',
+  phone: '',
+  email: '',
+  state: '',
+  city: '',
+  notes: '',
 }
 
 export default function LeadsPage() {
@@ -83,6 +105,15 @@ export default function LeadsPage() {
   const [saving, setSaving] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const sentinelRef = useRef<HTMLDivElement | null>(null)
+
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [newLead, setNewLead] = useState<NewLeadDraft>(EMPTY_NEW_LEAD)
+  const [adding, setAdding] = useState(false)
+  const [addError, setAddError] = useState<string | null>(null)
+
+  const [deleteConfirmLead, setDeleteConfirmLead] = useState<Lead | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const isLapsed = tier === 'lapsed' || tier === 'new'
 
@@ -155,6 +186,52 @@ export default function LeadsPage() {
     return () => observer.disconnect()
   }, [fetchMore, loading, cursor, leads.length])
 
+  // ── Silent refetch on tab visibility ──────────────────────────────────
+  // When the user comes back to this tab after editing leads elsewhere
+  // (e.g. campaigns editor), silently refresh the first page and merge
+  // into the existing list. New leads appear at top, removed leads drop
+  // out. The user's pagination state past page 1 and scroll position are
+  // preserved. Skipped if any modal is open or any operation is in flight
+  // so unsaved edits aren't lost.
+  const silentRefetch = useCallback(async () => {
+    if (!user) return
+    try {
+      const params = new URLSearchParams({
+        user_id: user.id,
+        campaign_id: campaignFilter,
+        disposition: dispositionFilter,
+        search: debouncedSearch,
+        sort,
+        cursor: '0',
+      })
+      const res = await fetch(`/api/leads/list?${params}`)
+      const data = await res.json()
+      if (data.success) {
+        setLeads(prev => {
+          const newIds = new Set<string>(data.leads.map((l: Lead) => l.id))
+          const tail = prev.filter(l => !newIds.has(l.id))
+          return [...data.leads, ...tail]
+        })
+        setTotal(data.total)
+      }
+    } catch {
+      // silent — focus refetches must never disrupt the user
+    }
+  }, [user, campaignFilter, dispositionFilter, debouncedSearch, sort])
+
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.hidden) return
+      // Skip refetch if anything's in-flight or any modal is open.
+      // Don't want to nuke the user's draft new lead, delete confirm,
+      // or unsaved disposition edits.
+      if (showAddModal || deleteConfirmLead || adding || deleting || saving) return
+      silentRefetch()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
+  }, [silentRefetch, showAddModal, deleteConfirmLead, adding, deleting, saving])
+
   const handleExpand = (lead: Lead) => {
     if (expandedId === lead.id) {
       setExpandedId(null)
@@ -201,6 +278,114 @@ export default function LeadsPage() {
       search: debouncedSearch,
     })
     window.location.href = `/api/leads/export?${params}`
+  }
+
+  const openAddModal = () => {
+    if (isLapsed || campaigns.length === 0) return
+    setNewLead({
+      ...EMPTY_NEW_LEAD,
+      campaign_id: campaignFilter !== 'all' ? campaignFilter : campaigns[0]?.id || '',
+    })
+    setAddError(null)
+    setShowAddModal(true)
+  }
+
+  const closeAddModal = () => {
+    if (adding) return
+    setShowAddModal(false)
+    setAddError(null)
+  }
+
+  const handleAdd = async () => {
+    if (!newLead.campaign_id) {
+      setAddError('Pick a campaign.')
+      return
+    }
+    if (!newLead.phone.trim()) {
+      setAddError('Phone number is required.')
+      return
+    }
+    setAdding(true)
+    setAddError(null)
+    try {
+      const res = await fetch('/api/leads/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          campaign_id: newLead.campaign_id,
+          first_name: newLead.first_name.trim(),
+          last_name: newLead.last_name.trim(),
+          phone: newLead.phone.trim(),
+          email: newLead.email.trim() || null,
+          state: newLead.state.trim() || null,
+          city: newLead.city.trim() || null,
+          notes: newLead.notes.trim() || '',
+        }),
+      })
+      const data = await res.json()
+      if (!data.success) {
+        if (res.status === 403) {
+          setTier('lapsed')
+          setAddError('Subscription required to add leads.')
+        } else {
+          setAddError(data.error || 'Failed to add lead.')
+        }
+        setAdding(false)
+        return
+      }
+      setShowAddModal(false)
+      setNewLead(EMPTY_NEW_LEAD)
+      setLeads([])
+      setCursor(0)
+      setExpandedId(null)
+    } catch (err: any) {
+      setAddError(err.message || 'Failed to add lead.')
+    } finally {
+      setAdding(false)
+    }
+  }
+
+  const requestDelete = (lead: Lead) => {
+    setDeleteError(null)
+    setDeleteConfirmLead(lead)
+  }
+
+  const cancelDelete = () => {
+    if (deleting) return
+    setDeleteConfirmLead(null)
+    setDeleteError(null)
+  }
+
+  const handleDelete = async () => {
+    if (!deleteConfirmLead) return
+    setDeleting(true)
+    setDeleteError(null)
+    try {
+      const res = await fetch('/api/leads/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lead_ids: [deleteConfirmLead.id] }),
+      })
+      const data = await res.json()
+      if (!data.success) {
+        if (res.status === 403) {
+          setTier('lapsed')
+          setDeleteError('Subscription required to delete leads.')
+        } else {
+          setDeleteError(data.error || 'Failed to delete lead.')
+        }
+        setDeleting(false)
+        return
+      }
+      setLeads(prev => prev.filter(l => l.id !== deleteConfirmLead.id))
+      setTotal(prev => Math.max(0, prev - 1))
+      setExpandedId(null)
+      setDeleteConfirmLead(null)
+    } catch (err: any) {
+      setDeleteError(err.message || 'Failed to delete lead.')
+    } finally {
+      setDeleting(false)
+    }
   }
 
   const dispColor = (disp: string | null) => {
@@ -356,6 +541,87 @@ export default function LeadsPage() {
         }
         .disp-btn:disabled { cursor: not-allowed; opacity: 0.5; }
 
+        .leads-modal-overlay {
+          position: fixed; inset: 0;
+          background: rgba(0,0,0,0.55);
+          display: flex; align-items: center; justify-content: center;
+          z-index: 200; padding: 16px;
+        }
+        .leads-modal {
+          width: 100%; max-width: 480px;
+          background: ${T.bg};
+          border: 1px solid ${T.border};
+          border-top: 3px solid ${T.blue};
+          border-radius: 6px;
+          display: flex;
+          flex-direction: column;
+          max-height: 92vh;
+          font-family: 'Futura PT', Futura, sans-serif;
+        }
+        .leads-modal.danger { border-top-color: ${T.red}; }
+        .leads-modal-head {
+          padding: 16px 20px;
+          border-bottom: 1px solid ${T.border};
+          display: flex; align-items: center; justify-content: space-between;
+        }
+        .leads-modal-title {
+          font-size: 12px; font-weight: bold;
+          letter-spacing: 3px;
+          color: ${T.blue};
+        }
+        .leads-modal-title.danger { color: ${T.red}; }
+        .leads-modal-close {
+          background: transparent; border: none; color: ${T.muted};
+          font-size: 18px; cursor: pointer; padding: 4px 8px;
+          font-family: inherit;
+        }
+        .leads-modal-body {
+          padding: 18px 20px;
+          overflow-y: auto;
+          display: flex; flex-direction: column; gap: 12px;
+        }
+        .leads-modal-field { display: flex; flex-direction: column; gap: 4px; }
+        .leads-modal-label {
+          font-size: 9px; letter-spacing: 2px; color: ${T.muted};
+          font-weight: bold;
+        }
+        .leads-modal-input, .leads-modal-select, .leads-modal-textarea {
+          width: 100%;
+          padding: 9px 11px;
+          background: white;
+          border: 1px solid ${T.border};
+          border-radius: 3px;
+          font-family: monospace;
+          font-size: 12px;
+          color: ${T.text};
+          outline: none;
+          box-sizing: border-box;
+        }
+        .leads-modal-input:focus,
+        .leads-modal-select:focus,
+        .leads-modal-textarea:focus { border-color: ${T.blue}; }
+        .leads-modal-textarea { resize: vertical; min-height: 60px; }
+        .leads-modal-row-2 {
+          display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+        }
+        .leads-modal-error {
+          padding: 8px 12px;
+          background: #f8e8e8;
+          border: 1px solid ${T.red};
+          border-left: 3px solid ${T.red};
+          border-radius: 3px;
+          font-size: 11px;
+          color: ${T.red};
+          letter-spacing: 0.5px;
+          line-height: 1.5;
+        }
+        .leads-modal-footer {
+          padding: 14px 20px;
+          border-top: 1px solid ${T.border};
+          display: flex; gap: 8px; justify-content: flex-end;
+          flex-wrap: wrap;
+        }
+
         @media (max-width: 768px) {
           .leads-header { padding: 10px 12px; }
           .leads-header-stats { display: none; }
@@ -405,6 +671,7 @@ export default function LeadsPage() {
             padding: 12px;
           }
           .leads-list { padding: 8px 12px; }
+          .leads-modal-row-2 { grid-template-columns: 1fr; }
         }
       `}</style>
 
@@ -420,6 +687,28 @@ export default function LeadsPage() {
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button
+            onClick={openAddModal}
+            disabled={isLapsed || campaigns.length === 0}
+            title={
+              isLapsed ? 'Subscription required'
+              : campaigns.length === 0 ? 'Create a campaign first'
+              : 'Add a new lead'
+            }
+            style={{
+              padding: '6px 14px',
+              background: 'transparent',
+              border: `1px solid ${T.blue}`,
+              borderRadius: 3,
+              color: T.blue,
+              fontSize: 10,
+              letterSpacing: 2,
+              fontWeight: 'bold',
+              cursor: (isLapsed || campaigns.length === 0) ? 'not-allowed' : 'pointer',
+              opacity: (isLapsed || campaigns.length === 0) ? 0.5 : 1,
+              fontFamily: 'Futura PT, Futura, sans-serif',
+            }}
+          >+ ADD LEAD</button>
           <button onClick={handleExport} style={{
             padding: '6px 14px',
             background: 'transparent',
@@ -621,7 +910,7 @@ export default function LeadsPage() {
                         <Link href="/billing" style={{
                           display: 'block',
                           padding: '10px 14px',
-                          background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+                          background: `linear-gradient(135deg, ${T.blue}, var(--brand-secondary, #2a6eff))`,
                           color: 'white',
                           fontSize: 10,
                           fontWeight: 'bold',
@@ -690,6 +979,22 @@ export default function LeadsPage() {
 
                         <div style={{ display: 'flex', gap: 6 }}>
                           <button
+                            onClick={() => requestDelete(lead)}
+                            disabled={saving}
+                            style={{
+                              flex: 1, padding: 10,
+                              background: 'transparent',
+                              border: `1px solid ${T.red}`,
+                              borderRadius: 3,
+                              color: T.red,
+                              fontSize: 10,
+                              letterSpacing: 2,
+                              fontWeight: 'bold',
+                              cursor: saving ? 'not-allowed' : 'pointer',
+                              opacity: saving ? 0.5 : 1,
+                              fontFamily: 'Futura PT, Futura, sans-serif',
+                            }}>DELETE</button>
+                          <button
                             onClick={() => setExpandedId(null)}
                             style={{
                               flex: 1, padding: 10,
@@ -743,6 +1048,225 @@ export default function LeadsPage() {
           }}>END OF LIST · {leads.length} OF {total.toLocaleString()}</div>
         )}
       </div>
+
+      {showAddModal && (
+        <div className="leads-modal-overlay" onClick={closeAddModal}>
+          <div className="leads-modal" onClick={e => e.stopPropagation()}>
+            <div className="leads-modal-head">
+              <span className="leads-modal-title">+ ADD LEAD</span>
+              <button className="leads-modal-close" onClick={closeAddModal}>×</button>
+            </div>
+            <div className="leads-modal-body">
+              <div className="leads-modal-field">
+                <label className="leads-modal-label">CAMPAIGN *</label>
+                <select
+                  className="leads-modal-select"
+                  value={newLead.campaign_id}
+                  onChange={e => setNewLead(l => ({ ...l, campaign_id: e.target.value }))}
+                  disabled={adding}
+                >
+                  <option value="">— Select a campaign —</option>
+                  {campaigns.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="leads-modal-row-2">
+                <div className="leads-modal-field">
+                  <label className="leads-modal-label">FIRST NAME</label>
+                  <input
+                    className="leads-modal-input"
+                    type="text"
+                    value={newLead.first_name}
+                    onChange={e => setNewLead(l => ({ ...l, first_name: e.target.value }))}
+                    disabled={adding}
+                    maxLength={64}
+                  />
+                </div>
+                <div className="leads-modal-field">
+                  <label className="leads-modal-label">LAST NAME</label>
+                  <input
+                    className="leads-modal-input"
+                    type="text"
+                    value={newLead.last_name}
+                    onChange={e => setNewLead(l => ({ ...l, last_name: e.target.value }))}
+                    disabled={adding}
+                    maxLength={64}
+                  />
+                </div>
+              </div>
+
+              <div className="leads-modal-field">
+                <label className="leads-modal-label">PHONE *</label>
+                <input
+                  className="leads-modal-input"
+                  type="tel"
+                  placeholder="+18005551234"
+                  value={newLead.phone}
+                  onChange={e => setNewLead(l => ({ ...l, phone: e.target.value }))}
+                  disabled={adding}
+                  maxLength={32}
+                />
+              </div>
+
+              <div className="leads-modal-field">
+                <label className="leads-modal-label">EMAIL</label>
+                <input
+                  className="leads-modal-input"
+                  type="email"
+                  value={newLead.email}
+                  onChange={e => setNewLead(l => ({ ...l, email: e.target.value }))}
+                  disabled={adding}
+                  maxLength={128}
+                />
+              </div>
+
+              <div className="leads-modal-row-2">
+                <div className="leads-modal-field">
+                  <label className="leads-modal-label">STATE</label>
+                  <input
+                    className="leads-modal-input"
+                    type="text"
+                    value={newLead.state}
+                    onChange={e => setNewLead(l => ({ ...l, state: e.target.value.toUpperCase() }))}
+                    disabled={adding}
+                    maxLength={4}
+                  />
+                </div>
+                <div className="leads-modal-field">
+                  <label className="leads-modal-label">CITY</label>
+                  <input
+                    className="leads-modal-input"
+                    type="text"
+                    value={newLead.city}
+                    onChange={e => setNewLead(l => ({ ...l, city: e.target.value }))}
+                    disabled={adding}
+                    maxLength={64}
+                  />
+                </div>
+              </div>
+
+              <div className="leads-modal-field">
+                <label className="leads-modal-label">NOTES</label>
+                <textarea
+                  className="leads-modal-textarea"
+                  value={newLead.notes}
+                  onChange={e => setNewLead(l => ({ ...l, notes: e.target.value }))}
+                  disabled={adding}
+                  rows={3}
+                  placeholder="Anything you want to remember about this lead..."
+                />
+              </div>
+
+              {addError && (
+                <div className="leads-modal-error">{addError}</div>
+              )}
+            </div>
+
+            <div className="leads-modal-footer">
+              <button
+                onClick={closeAddModal}
+                disabled={adding}
+                style={{
+                  padding: '9px 16px',
+                  background: 'transparent',
+                  border: `1px solid ${T.border}`,
+                  borderRadius: 3,
+                  color: T.muted,
+                  fontSize: 10,
+                  letterSpacing: 2,
+                  fontWeight: 'bold',
+                  cursor: adding ? 'not-allowed' : 'pointer',
+                  fontFamily: 'Futura PT, Futura, sans-serif',
+                }}
+              >CANCEL</button>
+              <button
+                onClick={handleAdd}
+                disabled={adding || !newLead.campaign_id || !newLead.phone.trim()}
+                style={{
+                  padding: '9px 18px',
+                  background: T.dark,
+                  border: 'none',
+                  borderTop: `3px solid ${T.blue}`,
+                  borderRadius: 3,
+                  color: T.blue,
+                  fontSize: 10,
+                  letterSpacing: 2,
+                  fontWeight: 'bold',
+                  cursor: adding ? 'wait' : 'pointer',
+                  opacity: (adding || !newLead.campaign_id || !newLead.phone.trim()) ? 0.5 : 1,
+                  fontFamily: 'Futura PT, Futura, sans-serif',
+                }}
+              >{adding ? 'ADDING...' : '▶ ADD LEAD'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteConfirmLead && (
+        <div className="leads-modal-overlay" onClick={cancelDelete}>
+          <div className="leads-modal danger" onClick={e => e.stopPropagation()}>
+            <div className="leads-modal-head">
+              <span className="leads-modal-title danger">DELETE LEAD</span>
+              <button className="leads-modal-close" onClick={cancelDelete}>×</button>
+            </div>
+            <div className="leads-modal-body">
+              <div style={{
+                fontSize: 13, lineHeight: 1.6, color: T.text, letterSpacing: 0.3,
+              }}>
+                Permanently delete <strong style={{ fontFamily: 'monospace' }}>
+                  {deleteConfirmLead.first_name} {deleteConfirmLead.last_name}
+                </strong> ({deleteConfirmLead.phone})?
+              </div>
+              <div style={{
+                fontSize: 11, color: T.muted, lineHeight: 1.6, marginTop: 4,
+              }}>
+                This removes the lead and all its dial history. Cannot be undone.
+              </div>
+              {deleteError && (
+                <div className="leads-modal-error">{deleteError}</div>
+              )}
+            </div>
+            <div className="leads-modal-footer">
+              <button
+                onClick={cancelDelete}
+                disabled={deleting}
+                style={{
+                  padding: '9px 16px',
+                  background: 'transparent',
+                  border: `1px solid ${T.border}`,
+                  borderRadius: 3,
+                  color: T.muted,
+                  fontSize: 10,
+                  letterSpacing: 2,
+                  fontWeight: 'bold',
+                  cursor: deleting ? 'not-allowed' : 'pointer',
+                  fontFamily: 'Futura PT, Futura, sans-serif',
+                }}
+              >CANCEL</button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                style={{
+                  padding: '9px 18px',
+                  background: T.dark,
+                  border: 'none',
+                  borderTop: `3px solid ${T.red}`,
+                  borderRadius: 3,
+                  color: T.red,
+                  fontSize: 10,
+                  letterSpacing: 2,
+                  fontWeight: 'bold',
+                  cursor: deleting ? 'wait' : 'pointer',
+                  opacity: deleting ? 0.5 : 1,
+                  fontFamily: 'Futura PT, Futura, sans-serif',
+                }}
+              >{deleting ? 'DELETING...' : '▶ DELETE FOREVER'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

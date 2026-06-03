@@ -28,6 +28,8 @@ import Link from 'next/link'
 //   - Lead preview thumbnail in Settings is the entry point to the editor
 //   - Full-screen editor: real data, edit any user-data field, add row,
 //     delete rows, batch save via /api/leads/bulk-update
+//   - Silent refetch on tab visibility — if you add/remove leads from the
+//     leads page and switch back here, the campaign card counts update
 // =============================================================================
 
 const T = {
@@ -97,9 +99,6 @@ const MODE_LABELS: Record<DialerMode, string> = {
   predictive: 'Predictive',
 }
 
-// ──────────────────────────────────────────────────────────────────────────
-// "Modified X ago" — Google Drive-style relative time
-// ──────────────────────────────────────────────────────────────────────────
 function relativeTime(iso: string | null | undefined): string {
   if (!iso) return '—'
   const then = new Date(iso).getTime()
@@ -121,11 +120,6 @@ function relativeTime(iso: string | null | undefined): string {
   return `${yr}y ago`
 }
 
-// ──────────────────────────────────────────────────────────────────────────
-// LEAD-PREVIEW THUMBNAIL — renders first ~7 rows of leads as a faux
-// spreadsheet, the same way Drive renders a Sheets preview. Click handler
-// is on the parent in Settings; here we're pure-visual.
-// ──────────────────────────────────────────────────────────────────────────
 function LeadPreviewThumb({
   leads,
   totalLeads,
@@ -165,8 +159,6 @@ function LeadPreviewThumb({
     )
   }
 
-  // Pick the columns to show. Always show name + phone + state at minimum.
-  // Add a 4th column from extra_data if present.
   const rows = leads.slice(0, 8)
   const extraKey = (() => {
     if (!rows[0]?.extra_data) return null
@@ -229,7 +221,6 @@ function LeadPreviewThumb({
           ))}
         </tbody>
       </table>
-      {/* Fade to indicate truncation */}
       <div style={{
         position: 'absolute',
         bottom: 0, left: 0, right: 0,
@@ -237,7 +228,6 @@ function LeadPreviewThumb({
         background: 'linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0.95) 100%)',
         pointerEvents: 'none',
       }} />
-      {/* Row count badge bottom-right */}
       <div style={{
         position: 'absolute',
         bottom: 4,
@@ -276,20 +266,14 @@ const tdStyle: React.CSSProperties = {
   textOverflow: 'ellipsis',
 }
 
-// ─────────────────────────────────────────────────────────────────────────
-// MAIN COMPONENT
-// ─────────────────────────────────────────────────────────────────────────
-
 export default function CampaignsPage() {
   const { user } = useUser()
   const [tier, setTier] = useState<AccessTier>(null)
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [fetching, setFetching] = useState(true)
 
-  // Per-campaign cached lead previews. Loaded lazily as cards render.
   const [previews, setPreviews] = useState<Record<string, Lead[]>>({})
 
-  // Create modal state
   const [showCreate, setShowCreate] = useState(false)
   const [campaignName, setCampaignName] = useState('')
   const [createMode, setCreateMode] = useState<DialerMode>('power')
@@ -299,7 +283,6 @@ export default function CampaignsPage() {
   const [creating, setCreating] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  // Settings modal state (the campaign hub)
   const [settingsId, setSettingsId] = useState<string | null>(null)
   const settingsCampaign = campaigns.find(c => c.id === settingsId) || null
   const [settingsScripts, setSettingsScripts] = useState<CampaignScript[]>([])
@@ -310,27 +293,20 @@ export default function CampaignsPage() {
   const [dirtyScript, setDirtyScript] = useState(false)
   const [savingScript, setSavingScript] = useState(false)
 
-  // Sheets-style editor state
   const [editorOpen, setEditorOpen] = useState(false)
   const [editorLeads, setEditorLeads] = useState<Lead[]>([])
   const [editorLoading, setEditorLoading] = useState(false)
-  // Edits accumulate in a map keyed by lead_id with patched fields.
-  // Adds are stored separately with __new__ prefixed temporary ids.
   const [editorEdits, setEditorEdits] = useState<Record<string, Partial<Lead>>>({})
   const [editorAdds, setEditorAdds] = useState<Lead[]>([])
   const [editorDeletes, setEditorDeletes] = useState<Set<string>>(new Set())
   const [editorSaving, setEditorSaving] = useState(false)
   const [editorSelected, setEditorSelected] = useState<Set<string>>(new Set())
 
-  // Delete confirmation
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [deleteTyped, setDeleteTyped] = useState('')
 
   const isLapsed = tier === 'lapsed' || tier === 'new'
 
-  // ───────────────────────────────────────────────────────────────────────
-  // Bootstrap
-  // ───────────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!user) return
     fetchCampaigns()
@@ -351,9 +327,8 @@ export default function CampaignsPage() {
     }
   }
 
-  // ─── Load lead preview for a campaign (first 8 rows) ───────────────────
   const loadPreview = useCallback(async (campaignId: string) => {
-    if (previews[campaignId]) return  // already cached
+    if (previews[campaignId]) return
     try {
       const params = new URLSearchParams({
         user_id: user?.id || '',
@@ -371,20 +346,33 @@ export default function CampaignsPage() {
     }
   }, [user, previews])
 
-  // Trigger preview loads after campaigns arrive
   useEffect(() => {
     if (campaigns.length === 0) return
-    // Stagger by ~80ms so we don't blast the leads endpoint with 20 parallel
-    // requests on page load. Drive-style — thumbnails resolve as they show up.
     campaigns.forEach((c, i) => {
       setTimeout(() => loadPreview(c.id), i * 80)
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campaigns.map(c => c.id).join(',')])
 
-  // ───────────────────────────────────────────────────────────────────────
-  // CSV PARSER (shared between create-modal upload and add-leads-to-existing)
-  // ───────────────────────────────────────────────────────────────────────
+  // ── Silent refetch on tab visibility ────────────────────────────────
+  // If the user adds or deletes a lead from the leads page (or anywhere
+  // else) and switches back to this tab, the campaign cards' lead counts
+  // should reflect that. Doesn't refresh preview thumbnails — those stay
+  // until the user opens the campaign settings, which loads fresh data.
+  // Skipped while any modal/editor is open so the user's in-flight work
+  // is never disturbed.
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.hidden) return
+      if (showCreate || settingsId || editorOpen || deleteConfirm) return
+      if (creating || savingScript || editorSaving) return
+      fetchCampaigns()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showCreate, settingsId, editorOpen, deleteConfirm, creating, savingScript, editorSaving, user?.id])
+
   const parseCSV = (text: string) => {
     const lines = text.trim().split('\n').filter(l => l.trim())
     if (lines.length === 0) return []
@@ -418,9 +406,6 @@ export default function CampaignsPage() {
     reader.readAsText(file)
   }
 
-  // ───────────────────────────────────────────────────────────────────────
-  // CREATE
-  // ───────────────────────────────────────────────────────────────────────
   const handleCreate = async () => {
     if (!campaignName || !user) return
     setCreating(true)
@@ -454,9 +439,6 @@ export default function CampaignsPage() {
     }
   }
 
-  // ───────────────────────────────────────────────────────────────────────
-  // STATUS / MODE
-  // ───────────────────────────────────────────────────────────────────────
   const toggleStatus = async (id: string, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'inactive' : 'active'
     setCampaigns(cs => cs.map(c => c.id === id ? { ...c, status: newStatus } : c))
@@ -488,9 +470,6 @@ export default function CampaignsPage() {
     })
   }
 
-  // ───────────────────────────────────────────────────────────────────────
-  // OPEN IN DIALER — auto-activates if inactive
-  // ───────────────────────────────────────────────────────────────────────
   const openInDialer = async (campaign: Campaign) => {
     if (campaign.status !== 'active') {
       await fetch('/api/campaigns/update', {
@@ -502,9 +481,6 @@ export default function CampaignsPage() {
     window.location.href = `/dashboard/dialer?campaignId=${campaign.id}`
   }
 
-  // ───────────────────────────────────────────────────────────────────────
-  // DELETE CAMPAIGN
-  // ───────────────────────────────────────────────────────────────────────
   const handleDelete = async (id: string, leadCount: number) => {
     if (leadCount >= 100 && deleteTyped.toLowerCase().trim() !== 'delete') return
     await fetch('/api/campaigns/delete', {
@@ -518,9 +494,6 @@ export default function CampaignsPage() {
     setSettingsId(null)
   }
 
-  // ───────────────────────────────────────────────────────────────────────
-  // UPLOAD MORE LEADS TO EXISTING
-  // ───────────────────────────────────────────────────────────────────────
   const handleUploadMore = async (campaignId: string, file: File) => {
     const reader = new FileReader()
     reader.onload = async e => {
@@ -532,7 +505,6 @@ export default function CampaignsPage() {
         body: JSON.stringify({ campaign_id: campaignId, leads: parsed }),
       })
       if (res.status === 403) setTier('lapsed')
-      // Refresh that campaign's preview + counts
       setPreviews(prev => {
         const { [campaignId]: _, ...rest } = prev
         return rest
@@ -543,9 +515,6 @@ export default function CampaignsPage() {
     reader.readAsText(file)
   }
 
-  // ───────────────────────────────────────────────────────────────────────
-  // SETTINGS MODAL (campaign hub) — scripts loader
-  // ───────────────────────────────────────────────────────────────────────
   const openSettings = async (campaign: Campaign) => {
     setSettingsId(campaign.id)
     setScriptsLoading(true)
@@ -672,9 +641,6 @@ export default function CampaignsPage() {
     }
   }
 
-  // ───────────────────────────────────────────────────────────────────────
-  // SHEETS-STYLE EDITOR
-  // ───────────────────────────────────────────────────────────────────────
   const openEditor = async () => {
     if (!settingsCampaign) return
     setEditorOpen(true)
@@ -684,8 +650,6 @@ export default function CampaignsPage() {
     setEditorDeletes(new Set())
     setEditorSelected(new Set())
     try {
-      // Load up to 500 leads for the editor. For very large campaigns
-      // we'd need pagination inside the editor; that's a follow-up.
       const params = new URLSearchParams({
         user_id: user?.id || '',
         campaign_id: settingsCampaign.id,
@@ -715,7 +679,6 @@ export default function CampaignsPage() {
   }
 
   const editCell = (leadId: string, field: string, value: any) => {
-    // For adds (temporary __new__ ids), mutate the row in editorAdds directly.
     if (leadId.startsWith('__new__')) {
       setEditorAdds(prev => prev.map(l =>
         l.id === leadId ? { ...l, [field]: value } : l
@@ -778,7 +741,6 @@ export default function CampaignsPage() {
     if (!settingsCampaign) return
     setEditorSaving(true)
     try {
-      // 1. Deletes
       if (editorDeletes.size > 0) {
         await fetch('/api/leads/delete', {
           method: 'POST',
@@ -787,7 +749,6 @@ export default function CampaignsPage() {
         })
       }
 
-      // 2. Bulk updates
       const updateList = Object.entries(editorEdits).map(([lead_id, fields]) => ({
         lead_id,
         fields,
@@ -800,7 +761,6 @@ export default function CampaignsPage() {
         })
       }
 
-      // 3. Adds
       for (const add of editorAdds) {
         const { id, campaign_id, ...fields } = add
         await fetch('/api/leads/create', {
@@ -810,7 +770,6 @@ export default function CampaignsPage() {
         })
       }
 
-      // 4. Refresh
       setEditorEdits({})
       setEditorAdds([])
       setEditorDeletes(new Set())
@@ -820,7 +779,6 @@ export default function CampaignsPage() {
       })
       loadPreview(settingsCampaign.id)
       fetchCampaigns()
-      // Reload editor leads to pick up server-generated ids
       const params = new URLSearchParams({
         user_id: user?.id || '',
         campaign_id: settingsCampaign.id,
@@ -840,7 +798,6 @@ export default function CampaignsPage() {
     editorAdds.length > 0 ||
     editorDeletes.size > 0
 
-  // Effective lead in editor (apply edits over base, exclude deletes, append adds)
   const editorRows = [
     ...editorLeads.filter(l => !editorDeletes.has(l.id)).map(l => ({
       ...l,
@@ -848,10 +805,6 @@ export default function CampaignsPage() {
     })),
     ...editorAdds,
   ]
-
-  // ───────────────────────────────────────────────────────────────────────
-  // RENDER
-  // ───────────────────────────────────────────────────────────────────────
 
   return (
     <div className="cmp-root" style={{
@@ -874,7 +827,6 @@ export default function CampaignsPage() {
         }
         .cmp-header p { font-size: 13px; color: ${T.muted}; margin: 4px 0 0; }
 
-        /* Outlined ghost "+ New Campaign" button — professional, not blue */
         .cmp-new-btn {
           padding: 9px 18px;
           background: white;
@@ -897,14 +849,12 @@ export default function CampaignsPage() {
         }
         .cmp-new-btn .plus { font-size: 16px; line-height: 1; color: ${T.muted}; }
 
-        /* Grid */
         .cmp-grid {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
           gap: 16px;
         }
 
-        /* Card — Drive-style */
         .cmp-card {
           background: white;
           border: 1px solid ${T.border};
@@ -986,7 +936,6 @@ export default function CampaignsPage() {
         .cmp-card-sub span { white-space: nowrap; }
         .cmp-card-sub .dot { opacity: 0.5; }
 
-        /* Settings modal */
         .modal-overlay {
           position: fixed; inset: 0;
           background: rgba(0,0,0,0.55);
@@ -1141,7 +1090,6 @@ export default function CampaignsPage() {
         .lead-preview-wrap:hover .open-editor-hint { opacity: 1; }
         .lead-preview-wrap:hover > div { border-color: ${T.blue} !important; }
 
-        /* Script editor inside settings */
         .script-tabs {
           display: flex;
           gap: 4px;
@@ -1227,7 +1175,6 @@ export default function CampaignsPage() {
         .script-actions button.danger:hover { background: #fae8e8; }
         .script-actions button:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        /* Footer actions */
         .settings-footer {
           padding: 14px 20px;
           background: #f8f9fa;
@@ -1268,7 +1215,6 @@ export default function CampaignsPage() {
         .settings-action.primary:hover { background: #2a2a4a; }
         .settings-action input[type="file"] { display: none; }
 
-        /* Sheets-style editor — full screen */
         .editor-fullscreen {
           position: fixed; inset: 0;
           background: white;
@@ -1414,7 +1360,6 @@ export default function CampaignsPage() {
         }
       `}</style>
 
-      {/* HEADER */}
       <div className="cmp-header">
         <div>
           <h1>Campaigns</h1>
@@ -1435,7 +1380,6 @@ export default function CampaignsPage() {
         )}
       </div>
 
-      {/* LAPSED BANNER */}
       {isLapsed && (
         <div style={{
           padding: '14px 18px',
@@ -1454,7 +1398,6 @@ export default function CampaignsPage() {
         </div>
       )}
 
-      {/* GRID / EMPTY STATE */}
       {fetching ? (
         <div style={{ textAlign: 'center', padding: '80px 20px', fontSize: 13, color: T.muted }}>
           Loading campaigns…
@@ -1544,7 +1487,6 @@ export default function CampaignsPage() {
         </div>
       )}
 
-      {/* ─── CREATE MODAL ───────────────────────────────────────────────── */}
       {!isLapsed && showCreate && (
         <div className="modal-overlay" onClick={() => !creating && setShowCreate(false)}>
           <div className="settings-modal" style={{ maxWidth: 540 }} onClick={e => e.stopPropagation()}>
@@ -1659,7 +1601,6 @@ export default function CampaignsPage() {
         </div>
       )}
 
-      {/* ─── SETTINGS MODAL ─────────────────────────────────────────────── */}
       {settingsCampaign && !editorOpen && (
         <div className="modal-overlay" onClick={closeSettings}>
           <div className="settings-modal" onClick={e => e.stopPropagation()}>
@@ -1676,7 +1617,6 @@ export default function CampaignsPage() {
 
             <div className="settings-body">
 
-              {/* ─── STATUS / MODE row group ─── */}
               <div>
                 <div className="settings-section-title">Campaign</div>
 
@@ -1718,7 +1658,6 @@ export default function CampaignsPage() {
                 )}
               </div>
 
-              {/* ─── LEADS PREVIEW (click to open editor) ─── */}
               <div>
                 <div className="settings-section-title">
                   Leads &middot; {settingsCampaign.total_leads.toLocaleString()} total
@@ -1740,7 +1679,6 @@ export default function CampaignsPage() {
                 </div>
               </div>
 
-              {/* ─── SCRIPTS ─── */}
               <div>
                 <div className="settings-section-title">Call scripts</div>
                 {scriptsLoading ? (
@@ -1859,7 +1797,6 @@ export default function CampaignsPage() {
 
             </div>
 
-            {/* ─── FOOTER ACTIONS ─── */}
             <div className="settings-footer">
               <div className="settings-footer-left">
                 {!isLapsed && (
@@ -1896,7 +1833,6 @@ export default function CampaignsPage() {
         </div>
       )}
 
-      {/* ─── DELETE CONFIRMATION ───────────────────────────────────────── */}
       {deleteConfirm && (() => {
         const c = campaigns.find(c => c.id === deleteConfirm)
         if (!c) return null
@@ -1964,7 +1900,6 @@ export default function CampaignsPage() {
         )
       })()}
 
-      {/* ─── SHEETS-STYLE EDITOR ───────────────────────────────────────── */}
       {editorOpen && settingsCampaign && (
         <div className="editor-fullscreen">
           <div className="editor-toolbar">
