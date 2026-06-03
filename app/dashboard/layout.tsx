@@ -7,21 +7,21 @@ import { useState, useEffect, useRef } from 'react'
 import { useBranding } from '@/components/ThemeProvider'
 
 const userNavItems = [
-  { icon: '📈', label: 'ANALYTICS', href: '/dashboard/analytics' },
-  { icon: '📞', label: 'DIALER', href: '/dashboard/dialer' },
-  { icon: '📋', label: 'CAMPAIGNS', href: '/dashboard/campaigns' },
-  { icon: '🎙️', label: 'RECORDINGS', href: '/dashboard/recordings' },
-  { icon: '👥', label: 'LEADS', href: '/dashboard/leads' },
-  { icon: '🏢', label: 'TEAMS', href: '/dashboard/teams' },
-  { icon: '⚙️', label: 'SETTINGS', href: '/dashboard/settings' },
+  { label: 'ANALYTICS', href: '/dashboard/analytics' },
+  { label: 'DIALER', href: '/dashboard/dialer' },
+  { label: 'CAMPAIGNS', href: '/dashboard/campaigns' },
+  { label: 'RECORDINGS', href: '/dashboard/recordings' },
+  { label: 'LEADS', href: '/dashboard/leads' },
+  { label: 'TEAMS', href: '/dashboard/teams' },
+  { label: 'SETTINGS', href: '/dashboard/settings' },
 ]
 
 const adminNavItems = [
-  { icon: '📈', label: 'ANALYTICS', href: '/dashboard/admin/analytics' },
-  { icon: '📋', label: 'OVERVIEW', href: '/dashboard/admin/overview' },
-  { icon: '🏢', label: 'TEAMS', href: '/dashboard/admin/teams' },
-  { icon: '📞', label: 'NUMBERS', href: '/dashboard/admin/numbers' },
-  { icon: '⚙️', label: 'SETTINGS', href: '/dashboard/admin/settings' },
+  { label: 'ANALYTICS', href: '/dashboard/admin/analytics' },
+  { label: 'OVERVIEW', href: '/dashboard/admin/overview' },
+  { label: 'TEAMS', href: '/dashboard/admin/teams' },
+  { label: 'NUMBERS', href: '/dashboard/admin/numbers' },
+  { label: 'SETTINGS', href: '/dashboard/admin/settings' },
 ]
 
 type AccessTier = 'active' | 'lapsed' | 'new' | null
@@ -354,7 +354,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '12px',
                 padding: '10px 16px',
                 borderRadius: '10px',
                 cursor: 'pointer',
@@ -368,7 +367,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 flexShrink: 0,
               }}
             >
-              <span style={{ fontSize: '16px' }}>{item.icon}</span>
               <span style={{
                 fontSize: '11px',
                 letterSpacing: '2px',
