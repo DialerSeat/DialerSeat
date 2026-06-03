@@ -341,8 +341,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </Link>
 
       <nav style={{
-        flex: 1, minHeight: 0, padding: '0 12px',
-        display: 'flex', flexDirection: 'column', gap: '2px',
+        flex: 1, minHeight: 0, padding: 0,
+        display: 'flex', flexDirection: 'column',
         overflowY: 'auto',
       }}>
         {navItems.map((item) => {
@@ -354,15 +354,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                padding: '10px 16px',
-                borderRadius: '10px',
+                padding: '12px 18px',
                 cursor: 'pointer',
                 background: active
-                  ? `color-mix(in srgb, ${brandPrimary} 10%, transparent)`
+                  ? `color-mix(in srgb, ${brandPrimary} 12%, transparent)`
                   : 'transparent',
-                border: active
-                  ? `1px solid color-mix(in srgb, ${brandPrimary} 20%, transparent)`
-                  : '1px solid transparent',
                 textDecoration: 'none',
                 flexShrink: 0,
               }}
