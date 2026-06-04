@@ -18,6 +18,8 @@ const T = {
   amber: '#8a6a1a',
 }
 
+const FUTURA = `'Futura PT', Futura, 'Helvetica Neue', Helvetica, Arial, sans-serif`
+
 interface TeamUser {
   email: string | null
   first_name: string | null
@@ -764,11 +766,12 @@ export default function TeamsPage() {
     <div style={{
       flex: 1,
       background: T.bg,
-      minHeight: 'calc(100vh - 64px)',
+      minHeight: '100vh',
       display: 'flex',
       flexDirection: 'column',
       overflow: 'auto',
-      fontFamily: 'Futura PT, Futura, sans-serif',
+      fontFamily: FUTURA,
+      color: T.text,
     }}>
       <div style={{
         background: T.dark,
@@ -1282,7 +1285,6 @@ export default function TeamsPage() {
             background: T.surface, border: `1px dashed ${T.border}`,
             borderRadius: 4, padding: '32px 24px', textAlign: 'center', marginBottom: 16,
           }}>
-            <div style={{ fontSize: 32, marginBottom: 8 }}>👥</div>
             <div style={{ fontSize: 13, fontWeight: 'bold', letterSpacing: 3, color: T.muted, marginBottom: 6 }}>
               NO TEAMS YET
             </div>
@@ -1355,10 +1357,10 @@ export default function TeamsPage() {
             </p>
             <Link href="/billing" style={{
               display: 'block', padding: '14px 24px',
-              background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
-              border: 'none', borderRadius: 4, color: 'white',
+              background: 'transparent',
+              border: `1px solid #ffaa3e`, borderRadius: 4, color: '#ffaa3e',
               fontSize: 12, fontWeight: 'bold', letterSpacing: 4, textDecoration: 'none', marginBottom: 10,
-              fontFamily: 'Futura PT, Futura, sans-serif',
+              fontFamily: FUTURA,
             }}>SUBSCRIBE — $35/WEEK</Link>
             <button onClick={() => setShowSubGate(false)} style={{
               background: 'transparent', border: 'none', color: '#888a92',

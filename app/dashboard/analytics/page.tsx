@@ -242,7 +242,7 @@ export default function AnalyticsPage() {
     return (
       <div style={{
         flex: 1, background: T.bg,
-        minHeight: 'calc(100vh - 64px)',
+        minHeight: '100vh',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontSize: 11, letterSpacing: 3, color: T.muted,
       }}>LOADING...</div>
@@ -253,7 +253,7 @@ export default function AnalyticsPage() {
     <div className="analytics-root" style={{
       flex: 1,
       background: T.bg,
-      minHeight: 'calc(100vh - 64px)',
+      minHeight: '100vh',
       display: 'flex',
       flexDirection: 'column',
       overflow: 'auto',

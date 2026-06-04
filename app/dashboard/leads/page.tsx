@@ -52,6 +52,8 @@ const T = {
   amber: '#8a6a1a',
 }
 
+const FUTURA = `'Futura PT', Futura, 'Helvetica Neue', Helvetica, Arial, sans-serif`
+
 const dispositionTint = (disp: string | null): string => {
   switch (disp) {
     case 'CLOSED': return 'rgba(26, 106, 26, 0.10)'
@@ -409,10 +411,12 @@ export default function LeadsPage() {
     <div className="leads-root" style={{
       flex: 1,
       background: T.bg,
-      minHeight: 'calc(100vh - 64px)',
+      minHeight: '100vh',
       display: 'flex',
       flexDirection: 'column',
       overflow: 'hidden',
+      fontFamily: FUTURA,
+      color: T.text,
     }}>
       <style>{`
         .leads-root * { box-sizing: border-box; }
@@ -520,7 +524,7 @@ export default function LeadsPage() {
           font-size: 9px;
           letter-spacing: 1px;
           font-weight: bold;
-          font-family: 'Futura PT', Futura, sans-serif;
+          font-family: ${FUTURA};
           white-space: nowrap;
         }
         .disp-grid {
@@ -535,7 +539,7 @@ export default function LeadsPage() {
           font-weight: bold;
           letter-spacing: 1px;
           cursor: pointer;
-          font-family: 'Futura PT', Futura, sans-serif;
+          font-family: ${FUTURA};
           border: 1px solid ${T.border};
           background: white;
         }
@@ -556,7 +560,7 @@ export default function LeadsPage() {
           display: flex;
           flex-direction: column;
           max-height: 92vh;
-          font-family: 'Futura PT', Futura, sans-serif;
+          font-family: ${FUTURA};
         }
         .leads-modal.danger { border-top-color: ${T.red}; }
         .leads-modal-head {
@@ -706,7 +710,7 @@ export default function LeadsPage() {
               fontWeight: 'bold',
               cursor: (isLapsed || campaigns.length === 0) ? 'not-allowed' : 'pointer',
               opacity: (isLapsed || campaigns.length === 0) ? 0.5 : 1,
-              fontFamily: 'Futura PT, Futura, sans-serif',
+              fontFamily: FUTURA,
             }}
           >+ ADD LEAD</button>
           <button onClick={handleExport} style={{
@@ -719,7 +723,7 @@ export default function LeadsPage() {
             letterSpacing: 2,
             fontWeight: 'bold',
             cursor: 'pointer',
-            fontFamily: 'Futura PT, Futura, sans-serif',
+            fontFamily: FUTURA,
           }}>↓ EXPORT CSV</button>
         </div>
       </div>
@@ -732,14 +736,15 @@ export default function LeadsPage() {
           </span>
           <Link href="/billing" style={{
             padding: '5px 12px',
-            background: 'linear-gradient(135deg, #ffaa3e, #ff8a1a)',
-            color: 'white',
+            background: 'transparent',
+            border: `1px solid ${T.warn}`,
+            borderRadius: 3,
+            color: T.warn,
             fontSize: 10,
             letterSpacing: 2,
             fontWeight: 'bold',
-            borderRadius: 3,
             textDecoration: 'none',
-            fontFamily: 'Futura PT, Futura, sans-serif',
+            fontFamily: FUTURA,
           }}>↻ RESUBSCRIBE</Link>
         </div>
       )}
@@ -798,7 +803,6 @@ export default function LeadsPage() {
             textAlign: 'center', padding: 60,
             fontSize: 11, letterSpacing: 3, color: T.muted,
           }}>
-            <div style={{ fontSize: 36, marginBottom: 12, opacity: 0.4 }}>📋</div>
             NO LEADS MATCH YOUR FILTERS
           </div>
         )}
@@ -910,15 +914,17 @@ export default function LeadsPage() {
                         <Link href="/billing" style={{
                           display: 'block',
                           padding: '10px 14px',
-                          background: `linear-gradient(135deg, ${T.blue}, var(--brand-secondary, #2a6eff))`,
-                          color: 'white',
+                          background: T.dark,
+                          border: `1px solid ${T.dark}`,
+                          borderTop: `3px solid ${T.blue}`,
+                          color: T.blue,
                           fontSize: 10,
                           fontWeight: 'bold',
                           letterSpacing: 3,
                           borderRadius: 3,
                           textAlign: 'center',
                           textDecoration: 'none',
-                          fontFamily: 'Futura PT, Futura, sans-serif',
+                          fontFamily: FUTURA,
                         }}>RESUBSCRIBE — $35/WEEK</Link>
                       </div>
                     ) : (
@@ -992,7 +998,7 @@ export default function LeadsPage() {
                               fontWeight: 'bold',
                               cursor: saving ? 'not-allowed' : 'pointer',
                               opacity: saving ? 0.5 : 1,
-                              fontFamily: 'Futura PT, Futura, sans-serif',
+                              fontFamily: FUTURA,
                             }}>DELETE</button>
                           <button
                             onClick={() => setExpandedId(null)}
@@ -1006,7 +1012,7 @@ export default function LeadsPage() {
                               letterSpacing: 2,
                               fontWeight: 'bold',
                               cursor: 'pointer',
-                              fontFamily: 'Futura PT, Futura, sans-serif',
+                              fontFamily: FUTURA,
                             }}>CANCEL</button>
                           <button
                             onClick={() => handleSave(lead.id)}
@@ -1021,7 +1027,7 @@ export default function LeadsPage() {
                               letterSpacing: 2,
                               fontWeight: 'bold',
                               cursor: saving ? 'wait' : 'pointer',
-                              fontFamily: 'Futura PT, Futura, sans-serif',
+                              fontFamily: FUTURA,
                             }}>{saving ? 'SAVING...' : '▶ SAVE'}</button>
                         </div>
                       </>
@@ -1178,7 +1184,7 @@ export default function LeadsPage() {
                   letterSpacing: 2,
                   fontWeight: 'bold',
                   cursor: adding ? 'not-allowed' : 'pointer',
-                  fontFamily: 'Futura PT, Futura, sans-serif',
+                  fontFamily: FUTURA,
                 }}
               >CANCEL</button>
               <button
@@ -1196,7 +1202,7 @@ export default function LeadsPage() {
                   fontWeight: 'bold',
                   cursor: adding ? 'wait' : 'pointer',
                   opacity: (adding || !newLead.campaign_id || !newLead.phone.trim()) ? 0.5 : 1,
-                  fontFamily: 'Futura PT, Futura, sans-serif',
+                  fontFamily: FUTURA,
                 }}
               >{adding ? 'ADDING...' : '▶ ADD LEAD'}</button>
             </div>
@@ -1242,7 +1248,7 @@ export default function LeadsPage() {
                   letterSpacing: 2,
                   fontWeight: 'bold',
                   cursor: deleting ? 'not-allowed' : 'pointer',
-                  fontFamily: 'Futura PT, Futura, sans-serif',
+                  fontFamily: FUTURA,
                 }}
               >CANCEL</button>
               <button
@@ -1260,7 +1266,7 @@ export default function LeadsPage() {
                   fontWeight: 'bold',
                   cursor: deleting ? 'wait' : 'pointer',
                   opacity: deleting ? 0.5 : 1,
-                  fontFamily: 'Futura PT, Futura, sans-serif',
+                  fontFamily: FUTURA,
                 }}
               >{deleting ? 'DELETING...' : '▶ DELETE FOREVER'}</button>
             </div>

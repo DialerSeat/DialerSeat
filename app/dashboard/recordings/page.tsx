@@ -16,6 +16,8 @@ const T = {
   amber: '#8a6a1a',
 }
 
+const FUTURA = `'Futura PT', Futura, 'Helvetica Neue', Helvetica, Arial, sans-serif`
+
 const DISPOSITIONS = [
   'CLOSED', 'APPOINTMENT', 'NOT INTERESTED', 'DO NOT CALL', 'SKIPPED', 'NO_ANSWER',
 ]
@@ -235,10 +237,12 @@ export default function RecordingsPage() {
     <div className="rec-root" style={{
       flex: 1,
       background: T.bg,
-      minHeight: 'calc(100vh - 64px)',
+      minHeight: '100vh',
       display: 'flex',
       flexDirection: 'column',
       overflow: 'hidden',
+      fontFamily: FUTURA,
+      color: T.text,
     }}>
       <style>{`
         .rec-root * { box-sizing: border-box; }
@@ -268,7 +272,7 @@ export default function RecordingsPage() {
           cursor: pointer;
           user-select: none;
           font-weight: bold;
-          font-family: 'Futura PT', Futura, sans-serif;
+          font-family: ${FUTURA};
         }
         .rec-disclosure-summary:hover { background: #fdf2d6; }
         .rec-disclosure-summary .chev {
@@ -285,7 +289,6 @@ export default function RecordingsPage() {
           letter-spacing: 0.5px;
           line-height: 1.6;
           border-top: 1px dashed #d4b86a;
-          font-family: system-ui, -apple-system, sans-serif;
         }
         .rec-disclosure-body p {
           margin: 8px 0 0 0;
@@ -386,7 +389,7 @@ export default function RecordingsPage() {
           font-size: 10px;
           letter-spacing: 1px;
           font-weight: bold;
-          font-family: 'Futura PT', Futura, sans-serif;
+          font-family: ${FUTURA};
           white-space: nowrap;
         }
         .rec-camp {
@@ -419,7 +422,7 @@ export default function RecordingsPage() {
           letter-spacing: 1px;
           font-weight: bold;
           cursor: pointer;
-          font-family: 'Futura PT', Futura, sans-serif;
+          font-family: ${FUTURA};
           flex: 1;
           white-space: nowrap;
         }
@@ -631,7 +634,6 @@ export default function RecordingsPage() {
             textAlign: 'center', padding: 60,
             fontSize: 11, letterSpacing: 3, color: T.muted,
           }}>
-            <div style={{ fontSize: 36, marginBottom: 12, opacity: 0.4 }}>🎙️</div>
             NO RECORDINGS YET<br />
             <span style={{ fontSize: 10, marginTop: 8, display: 'inline-block' }}>
               MAKE A CALL — THEN HIT SYNC IF IT DOESN'T APPEAR.

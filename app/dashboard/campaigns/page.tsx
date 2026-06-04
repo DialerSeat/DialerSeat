@@ -4,13 +4,12 @@ import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
 
 // =============================================================================
-// CAMPAIGNS PAGE — Drive-style body + dark header bar
+// CAMPAIGNS PAGE — Full dialer color correction
 // =============================================================================
-// Header is now a full-width dark bar matching leads/teams/dialer.
-// Inside the bar: the original "Campaigns" h1 + descriptive subtitle +
-// "+ New campaign" button — unchanged structurally. Only the text colors
-// adapt so they're readable on dark. The body (Drive-style cards, settings
-// modal, sheets editor, focus refetch) is unchanged.
+// Futura font system-wide (with monospace preserved for data — lead names,
+// phone numbers, IDs, script content, sheets editor cells). Terminal palette
+// applied across all surfaces, sharp corners, dialer-style buttons and
+// section labels. ZERO functional changes from previous version.
 // =============================================================================
 
 const T = {
@@ -27,6 +26,8 @@ const T = {
   red: '#8a1a1a',
   amber: '#8a6a1a',
 }
+
+const FUTURA = `'Futura PT', Futura, 'Helvetica Neue', Helvetica, Arial, sans-serif`
 
 type AccessTier = 'active' | 'lapsed' | 'new' | null
 type DialerMode = 'preview' | 'power' | 'progressive' | 'predictive'
@@ -74,10 +75,10 @@ interface Lead {
 }
 
 const MODE_LABELS: Record<DialerMode, string> = {
-  preview: 'Preview',
-  power: 'Power',
-  progressive: 'Progressive',
-  predictive: 'Predictive',
+  preview: 'PREVIEW',
+  power: 'POWER',
+  progressive: 'PROGRESSIVE',
+  predictive: 'PREDICTIVE',
 }
 
 function relativeTime(iso: string | null | undefined): string {
@@ -104,7 +105,7 @@ function relativeTime(iso: string | null | undefined): string {
 function LeadPreviewThumb({
   leads,
   totalLeads,
-  emptyHint = 'No leads uploaded',
+  emptyHint = 'NO LEADS UPLOADED',
   onClick,
   interactive = false,
   height = '100%',
@@ -127,8 +128,10 @@ function LeadPreviewThumb({
           alignItems: 'center',
           justifyContent: 'center',
           color: T.muted,
-          fontSize: 11,
-          letterSpacing: 1,
+          fontSize: 10,
+          letterSpacing: 2,
+          fontFamily: FUTURA,
+          fontWeight: 'bold',
           background: 'white',
           borderRadius: 4,
           border: `1px solid ${T.border}`,
@@ -170,23 +173,23 @@ function LeadPreviewThumb({
         width: '100%',
         borderCollapse: 'collapse',
         fontSize: 9,
-        fontFamily: 'system-ui, -apple-system, sans-serif',
+        fontFamily: 'monospace',
         color: T.text,
         tableLayout: 'fixed',
       }}>
         <thead>
-          <tr style={{ background: '#f8f9fa', borderBottom: `1px solid ${T.border}` }}>
-            <th style={thStyle}>Name</th>
-            <th style={thStyle}>Phone</th>
-            <th style={thStyle}>State</th>
-            {extraKey && <th style={thStyle}>{extraKey}</th>}
+          <tr style={{ background: T.surface, borderBottom: `1px solid ${T.border}` }}>
+            <th style={thStyle}>NAME</th>
+            <th style={thStyle}>PHONE</th>
+            <th style={thStyle}>STATE</th>
+            {extraKey && <th style={thStyle}>{extraKey.toUpperCase()}</th>}
           </tr>
         </thead>
         <tbody>
           {rows.map((lead, i) => (
             <tr key={lead.id} style={{
-              borderBottom: `1px solid #eef0f3`,
-              background: i % 2 === 0 ? 'white' : '#fafbfc',
+              borderBottom: `1px solid ${T.bg}`,
+              background: i % 2 === 0 ? 'white' : T.bg,
             }}>
               <td style={tdStyle}>
                 {lead.first_name} {lead.last_name}
@@ -214,14 +217,15 @@ function LeadPreviewThumb({
         bottom: 4,
         right: 6,
         fontSize: 9,
-        color: T.muted,
+        color: 'white',
         fontFamily: 'monospace',
-        letterSpacing: 0.5,
-        background: 'rgba(255,255,255,0.85)',
-        padding: '1px 5px',
+        fontWeight: 'bold',
+        letterSpacing: 1,
+        background: 'rgba(26, 26, 46, 0.92)',
+        padding: '2px 6px',
         borderRadius: 2,
       }}>
-        {totalLeads.toLocaleString()} {totalLeads === 1 ? 'lead' : 'leads'}
+        {totalLeads.toLocaleString()} {totalLeads === 1 ? 'LEAD' : 'LEADS'}
       </div>
     </div>
   )
@@ -230,18 +234,19 @@ function LeadPreviewThumb({
 const thStyle: React.CSSProperties = {
   padding: '4px 6px',
   textAlign: 'left',
-  fontSize: 9,
-  fontWeight: 600,
+  fontSize: 8,
+  fontWeight: 'bold',
   color: T.muted,
-  letterSpacing: 0.5,
+  letterSpacing: 1.5,
   textTransform: 'uppercase',
   borderRight: `1px solid ${T.border}`,
+  fontFamily: FUTURA,
 }
 
 const tdStyle: React.CSSProperties = {
   padding: '3px 6px',
   fontSize: 10,
-  borderRight: `1px solid #eef0f3`,
+  borderRight: `1px solid ${T.bg}`,
   whiteSpace: 'nowrap',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
@@ -784,17 +789,20 @@ export default function CampaignsPage() {
     <div className="cmp-root" style={{
       flex: 1,
       background: T.bg,
-      minHeight: 'calc(100vh - 64px)',
+      minHeight: '100vh',
       display: 'flex',
       flexDirection: 'column',
       overflow: 'auto',
-      fontFamily: 'system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif',
+      fontFamily: FUTURA,
       color: T.text,
     }}>
       <style>{`
+        .cmp-root * { box-sizing: border-box; }
+
+        /* ── HEADER (matches analytics / dialer / leads) ──────────────── */
         .cmp-header {
           background: ${T.dark};
-          padding: 16px 24px;
+          padding: 12px 20px;
           border-bottom: 2px solid ${T.accent};
           display: flex;
           align-items: center;
@@ -802,66 +810,81 @@ export default function CampaignsPage() {
           gap: 16px;
           flex-wrap: wrap;
         }
-        .cmp-header h1 {
-          font-size: 22px; font-weight: 500; color: white;
-          margin: 0; letter-spacing: -0.2px;
+        .cmp-header-title-block {
+          display: flex; flex-direction: column; gap: 3px;
         }
-        .cmp-header p { font-size: 13px; color: #8888aa; margin: 4px 0 0; }
-
-        .cmp-body {
-          padding: 32px 40px 56px;
+        .cmp-header-title {
+          font-size: 11px; font-weight: bold; letter-spacing: 4px;
+          color: ${T.blue};
+          font-family: ${FUTURA};
+        }
+        .cmp-header-sub {
+          font-size: 10px; font-family: monospace;
+          color: #8888aa; letter-spacing: 1px;
         }
 
+        /* ── HEADER BUTTONS — dialer outlined pattern ─────────────────── */
         .cmp-new-btn {
-          padding: 9px 18px;
-          background: white;
-          border: 1px solid ${T.border};
-          border-radius: 6px;
-          color: ${T.text};
-          font-size: 13px;
-          font-weight: 500;
+          padding: 6px 14px;
+          background: transparent;
+          border: 1px solid ${T.blue};
+          border-radius: 3px;
+          color: ${T.blue};
+          font-size: 10px;
+          letter-spacing: 2px;
+          font-weight: bold;
           cursor: pointer;
-          font-family: inherit;
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          transition: background 0.12s, border-color 0.12s, box-shadow 0.12s;
+          font-family: ${FUTURA};
+          text-decoration: none;
+          transition: background 0.12s;
         }
         .cmp-new-btn:hover {
-          background: #f8f9fa;
-          border-color: ${T.muted};
-          box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+          background: rgba(74,158,255,0.10);
         }
-        .cmp-new-btn .plus { font-size: 16px; line-height: 1; color: ${T.muted}; }
+        .cmp-new-btn.amber {
+          border-color: #ffaa3e;
+          color: #ffaa3e;
+        }
+        .cmp-new-btn.amber:hover {
+          background: rgba(255,170,62,0.10);
+        }
+
+        /* ── BODY ─────────────────────────────────────────────────────── */
+        .cmp-body { padding: 28px 32px 56px; }
 
         .cmp-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-          gap: 16px;
+          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+          gap: 14px;
         }
 
+        /* ── CAMPAIGN CARDS ───────────────────────────────────────────── */
         .cmp-card {
-          background: white;
+          background: ${T.surface};
           border: 1px solid ${T.border};
-          border-radius: 8px;
+          border-top: 3px solid ${T.blue};
+          border-radius: 4px;
           overflow: hidden;
           display: flex;
           flex-direction: column;
           cursor: pointer;
-          transition: box-shadow 0.12s, border-color 0.12s;
+          transition: border-color 0.12s, transform 0.08s;
           position: relative;
         }
         .cmp-card:hover {
-          box-shadow: 0 2px 8px rgba(0,0,0,0.08);
           border-color: ${T.muted};
+          border-top-color: ${T.blue};
         }
-        .cmp-card.inactive { opacity: 0.78; }
+        .cmp-card.inactive {
+          border-top-color: ${T.border};
+          opacity: 0.82;
+        }
         .cmp-card.inactive:hover { opacity: 1; }
 
         .cmp-card-preview {
           height: 168px;
           padding: 8px;
-          background: #f6f7f8;
+          background: ${T.bg};
           border-bottom: 1px solid ${T.border};
           display: flex;
           flex-direction: column;
@@ -872,19 +895,19 @@ export default function CampaignsPage() {
           top: 12px;
           left: 12px;
           z-index: 2;
-          font-size: 9px;
-          letter-spacing: 0.8px;
-          font-weight: 600;
-          padding: 2px 7px;
-          border-radius: 10px;
-          background: rgba(255,255,255,0.92);
-          backdrop-filter: blur(4px);
-          border: 1px solid rgba(0,0,0,0.08);
+          font-size: 8px;
+          letter-spacing: 2px;
+          font-weight: bold;
+          padding: 3px 8px;
+          border-radius: 2px;
+          background: ${T.surface};
+          border: 1px solid ${T.border};
+          font-family: ${FUTURA};
         }
 
         .cmp-card-footer {
           padding: 10px 14px 12px;
-          background: white;
+          background: ${T.surface};
           display: flex;
           align-items: flex-start;
           gap: 8px;
@@ -896,34 +919,35 @@ export default function CampaignsPage() {
           margin-top: 1px;
           color: ${T.muted};
         }
-        .cmp-card-meta {
-          flex: 1;
-          min-width: 0;
-        }
+        .cmp-card-meta { flex: 1; min-width: 0; }
         .cmp-card-name {
           font-size: 13px;
-          font-weight: 500;
+          font-weight: bold;
           color: ${T.text};
           margin: 0;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
-          letter-spacing: -0.1px;
+          letter-spacing: 0.5px;
+          font-family: ${FUTURA};
         }
         .cmp-card-sub {
-          font-size: 11px;
+          font-size: 10px;
           color: ${T.muted};
-          margin: 2px 0 0;
+          margin: 3px 0 0;
           display: flex;
           gap: 8px;
           flex-wrap: wrap;
+          font-family: monospace;
+          letter-spacing: 0.5px;
         }
         .cmp-card-sub span { white-space: nowrap; }
         .cmp-card-sub .dot { opacity: 0.5; }
 
+        /* ── MODAL ────────────────────────────────────────────────────── */
         .modal-overlay {
           position: fixed; inset: 0;
-          background: rgba(0,0,0,0.55);
+          background: rgba(0,0,0,0.6);
           display: flex; align-items: center; justify-content: center;
           z-index: 100; padding: 16px;
           backdrop-filter: blur(6px);
@@ -932,68 +956,88 @@ export default function CampaignsPage() {
           width: 100%; max-width: 720px;
           max-height: 90vh; max-height: 90dvh;
           background: white;
-          border-radius: 12px;
+          border: 1px solid ${T.border};
+          border-radius: 4px;
           display: flex;
           flex-direction: column;
           overflow: hidden;
-          box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+          box-shadow: 0 20px 60px rgba(0,0,0,0.45);
         }
         .settings-head {
-          padding: 18px 22px;
-          border-bottom: 1px solid ${T.border};
+          background: ${T.dark};
+          padding: 12px 20px;
+          border-bottom: 2px solid ${T.accent};
           display: flex;
           align-items: center;
           gap: 12px;
         }
         .settings-name-input {
           flex: 1;
-          font-size: 17px;
-          font-weight: 500;
-          color: ${T.text};
+          font-size: 13px;
+          font-weight: bold;
+          letter-spacing: 2px;
+          color: ${T.blue};
           border: 1px solid transparent;
           background: transparent;
           padding: 6px 10px;
-          border-radius: 4px;
+          border-radius: 3px;
           outline: none;
-          font-family: inherit;
-          letter-spacing: -0.2px;
+          font-family: ${FUTURA};
           min-width: 0;
         }
+        .settings-name-input::placeholder {
+          color: #8888aa; letter-spacing: 2px;
+        }
         .settings-name-input:hover {
-          background: #f6f7f8;
+          background: rgba(255,255,255,0.05);
         }
         .settings-name-input:focus {
-          background: white;
+          background: rgba(255,255,255,0.08);
           border-color: ${T.blue};
         }
         .settings-close {
           background: transparent;
-          border: none;
-          color: ${T.muted};
-          width: 32px; height: 32px;
-          border-radius: 50%;
+          border: 1px solid #4a4a5e;
+          color: #8888aa;
+          width: 28px; height: 28px;
+          border-radius: 3px;
           cursor: pointer;
-          font-size: 20px;
+          font-size: 16px;
           display: flex; align-items: center; justify-content: center;
+          font-family: ${FUTURA};
+          padding: 0;
+          line-height: 1;
         }
-        .settings-close:hover { background: #f0f0f0; color: ${T.text}; }
+        .settings-close:hover {
+          background: rgba(255,255,255,0.05);
+          color: white;
+        }
 
         .settings-body {
           flex: 1;
           overflow-y: auto;
-          padding: 20px 24px;
+          padding: 22px 24px;
           display: flex;
           flex-direction: column;
-          gap: 20px;
+          gap: 22px;
+          background: ${T.bg};
         }
 
         .settings-section-title {
-          font-size: 11px;
-          letter-spacing: 1.5px;
+          font-size: 10px;
+          letter-spacing: 3px;
           text-transform: uppercase;
-          font-weight: 600;
+          font-weight: bold;
           color: ${T.muted};
-          margin-bottom: 8px;
+          margin-bottom: 10px;
+          font-family: ${FUTURA};
+        }
+
+        .settings-section-card {
+          background: ${T.surface};
+          border: 1px solid ${T.border};
+          border-radius: 4px;
+          padding: 14px 16px;
         }
 
         .settings-row {
@@ -1006,29 +1050,36 @@ export default function CampaignsPage() {
           border-top: 1px solid ${T.border};
         }
         .settings-row-label {
-          font-size: 13px;
+          font-size: 11px;
+          letter-spacing: 1.5px;
           color: ${T.text};
+          font-weight: bold;
           flex: 1;
+          font-family: ${FUTURA};
         }
         .settings-row-label small {
           display: block;
-          font-size: 11px;
+          font-size: 10px;
           color: ${T.muted};
-          margin-top: 2px;
+          margin-top: 3px;
+          font-weight: normal;
+          letter-spacing: 0.5px;
+          font-family: monospace;
         }
 
+        /* ── TOGGLE — dialer LIVE/OFFLINE pattern ─────────────────────── */
         .settings-toggle {
-          width: 38px; height: 22px;
-          border-radius: 12px;
+          width: 38px; height: 20px;
+          border-radius: 10px;
           background: ${T.border};
           position: relative;
           cursor: pointer;
           transition: background 0.15s;
           flex-shrink: 0;
         }
-        .settings-toggle.on { background: ${T.green}; }
+        .settings-toggle.on { background: ${T.blue}; }
         .settings-toggle .knob {
-          width: 16px; height: 16px;
+          width: 14px; height: 14px;
           border-radius: 50%;
           background: white;
           position: absolute;
@@ -1036,22 +1087,26 @@ export default function CampaignsPage() {
           transition: left 0.15s;
           box-shadow: 0 1px 3px rgba(0,0,0,0.2);
         }
-        .settings-toggle.on .knob { left: 19px; }
+        .settings-toggle.on .knob { left: 21px; }
 
         .settings-mode-select {
-          padding: 7px 10px;
-          background: white;
+          padding: 6px 10px;
+          background: ${T.bg};
           border: 1px solid ${T.border};
-          border-radius: 6px;
-          font-size: 13px;
+          border-radius: 3px;
+          font-size: 11px;
+          letter-spacing: 1.5px;
+          font-weight: bold;
           color: ${T.text};
           cursor: pointer;
-          font-family: inherit;
+          font-family: ${FUTURA};
           outline: none;
-          min-width: 140px;
+          min-width: 150px;
         }
         .settings-mode-select:hover { border-color: ${T.muted}; }
+        .settings-mode-select:focus { border-color: ${T.blue}; }
 
+        /* ── LEAD PREVIEW WRAP — clickable thumb in settings ──────────── */
         .lead-preview-wrap {
           height: 200px;
           position: relative;
@@ -1060,21 +1115,24 @@ export default function CampaignsPage() {
           position: absolute;
           top: 50%; left: 50%;
           transform: translate(-50%, -50%);
-          background: rgba(26,26,46,0.92);
-          color: white;
+          background: ${T.dark};
+          color: ${T.blue};
           padding: 8px 16px;
-          border-radius: 6px;
-          font-size: 11px;
-          letter-spacing: 1px;
-          font-weight: 600;
+          border: 1px solid ${T.blue};
+          border-radius: 3px;
+          font-size: 10px;
+          letter-spacing: 2.5px;
+          font-weight: bold;
           opacity: 0;
           transition: opacity 0.15s;
           pointer-events: none;
           z-index: 5;
+          font-family: ${FUTURA};
         }
         .lead-preview-wrap:hover .open-editor-hint { opacity: 1; }
         .lead-preview-wrap:hover > div { border-color: ${T.blue} !important; }
 
+        /* ── SCRIPT TABS ──────────────────────────────────────────────── */
         .script-tabs {
           display: flex;
           gap: 4px;
@@ -1084,16 +1142,19 @@ export default function CampaignsPage() {
         }
         .script-tab {
           padding: 6px 12px;
-          background: #f6f7f8;
+          background: ${T.bg};
           border: 1px solid ${T.border};
           border-bottom: none;
-          border-radius: 6px 6px 0 0;
-          font-size: 12px;
+          border-radius: 3px 3px 0 0;
+          font-size: 10px;
+          letter-spacing: 1.5px;
+          font-weight: bold;
           color: ${T.muted};
           cursor: pointer;
           white-space: nowrap;
           display: flex; align-items: center; gap: 5px;
-          font-family: inherit;
+          font-family: ${FUTURA};
+          text-transform: uppercase;
         }
         .script-tab.active {
           background: white;
@@ -1102,23 +1163,26 @@ export default function CampaignsPage() {
           margin-bottom: -1px;
         }
         .script-tab .def-mark {
-          font-size: 9px;
+          font-size: 8px;
           padding: 1px 5px;
           background: ${T.green};
           color: white;
-          border-radius: 3px;
-          letter-spacing: 0.5px;
+          border-radius: 2px;
+          letter-spacing: 1px;
+          font-weight: bold;
         }
         .script-add {
           padding: 6px 12px;
           background: transparent;
           border: 1px dashed ${T.border};
           border-bottom: none;
-          border-radius: 6px 6px 0 0;
-          font-size: 12px;
+          border-radius: 3px 3px 0 0;
+          font-size: 10px;
+          letter-spacing: 1.5px;
+          font-weight: bold;
           color: ${T.muted};
           cursor: pointer;
-          font-family: inherit;
+          font-family: ${FUTURA};
         }
         .script-add:hover { color: ${T.blue}; border-color: ${T.blue}; }
 
@@ -1127,42 +1191,79 @@ export default function CampaignsPage() {
           padding: 10px 12px;
           background: white;
           border: 1px solid ${T.border};
-          border-radius: 6px;
-          font-size: 13px;
+          border-radius: 3px;
+          font-size: 12px;
           color: ${T.text};
           outline: none;
-          font-family: inherit;
+          font-family: ${FUTURA};
           box-sizing: border-box;
           margin-bottom: 10px;
         }
-        .script-name-input:focus, .script-body-textarea:focus { border-color: ${T.blue}; }
-        .script-body-textarea { line-height: 1.6; resize: vertical; }
-        .script-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-        .script-actions button {
-          padding: 8px 14px;
-          border-radius: 6px;
+        .script-body-textarea {
+          font-family: monospace;
           font-size: 12px;
-          font-weight: 500;
+          line-height: 1.7;
+          resize: vertical;
+        }
+        .script-name-input:focus, .script-body-textarea:focus {
+          border-color: ${T.blue};
+        }
+
+        .script-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+        /* ── BUTTONS — dialer pattern (dark bg + border-top accent) ───── */
+        .ds-btn {
+          padding: 9px 16px;
+          border-radius: 3px;
+          font-size: 10px;
+          letter-spacing: 2px;
+          font-weight: bold;
           cursor: pointer;
-          font-family: inherit;
+          font-family: ${FUTURA};
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          text-decoration: none;
+          transition: background 0.12s, opacity 0.12s;
           border: 1px solid ${T.border};
-          background: white;
+          background: ${T.bg};
           color: ${T.text};
+          border-top: 3px solid ${T.border};
         }
-        .script-actions button:hover { background: #f6f7f8; }
-        .script-actions button.primary {
+        .ds-btn:hover { background: ${T.surface}; }
+        .ds-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+        .ds-btn.primary {
           background: ${T.dark};
-          color: white;
           border-color: ${T.dark};
+          color: ${T.blue};
+          border-top: 3px solid ${T.blue};
         }
-        .script-actions button.primary:hover { background: #2a2a4a; }
-        .script-actions button.danger { color: ${T.red}; border-color: rgba(138,26,26,0.3); }
-        .script-actions button.danger:hover { background: #fae8e8; }
-        .script-actions button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .ds-btn.primary:hover { background: #252740; }
+        .ds-btn.primary:disabled { background: ${T.muted}; border-color: ${T.muted}; color: white; border-top-color: ${T.muted}; }
+
+        .ds-btn.danger {
+          background: #f8e8e8;
+          border-color: rgba(138,26,26,0.3);
+          color: ${T.red};
+          border-top: 3px solid ${T.red};
+        }
+        .ds-btn.danger:hover { background: #f0d8d8; }
+
+        .ds-btn.amber {
+          background: #fdf4e8;
+          border-color: rgba(138,106,26,0.3);
+          color: ${T.amber};
+          border-top: 3px solid ${T.amber};
+        }
+        .ds-btn.amber:hover { background: #f5ead8; }
+
+        .ds-btn input[type="file"] { display: none; }
 
         .settings-footer {
           padding: 14px 20px;
-          background: #f8f9fa;
+          background: ${T.surface};
           border-top: 1px solid ${T.border};
           display: flex;
           gap: 8px;
@@ -1172,34 +1273,8 @@ export default function CampaignsPage() {
         .settings-footer-left, .settings-footer-right {
           display: flex; gap: 8px; flex-wrap: wrap;
         }
-        .settings-action {
-          padding: 9px 16px;
-          border-radius: 6px;
-          font-size: 12px;
-          font-weight: 500;
-          cursor: pointer;
-          font-family: inherit;
-          border: 1px solid ${T.border};
-          background: white;
-          color: ${T.text};
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-        }
-        .settings-action:hover { background: #f6f7f8; }
-        .settings-action.danger {
-          color: ${T.red};
-          border-color: rgba(138,26,26,0.25);
-        }
-        .settings-action.danger:hover { background: #fae8e8; }
-        .settings-action.primary {
-          background: ${T.dark};
-          color: white;
-          border-color: ${T.dark};
-        }
-        .settings-action.primary:hover { background: #2a2a4a; }
-        .settings-action input[type="file"] { display: none; }
 
+        /* ── SHEETS EDITOR — fullscreen lead editor ───────────────────── */
         .editor-fullscreen {
           position: fixed; inset: 0;
           background: white;
@@ -1208,56 +1283,77 @@ export default function CampaignsPage() {
           flex-direction: column;
         }
         .editor-toolbar {
-          padding: 10px 16px;
-          background: #f6f7f8;
-          border-bottom: 1px solid ${T.border};
+          padding: 10px 20px;
+          background: ${T.dark};
+          border-bottom: 2px solid ${T.accent};
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 10px;
           flex-wrap: wrap;
         }
-        .editor-toolbar h2 {
-          font-size: 14px;
-          font-weight: 500;
-          color: ${T.text};
+        .editor-toolbar-title {
+          font-size: 11px;
+          font-weight: bold;
+          letter-spacing: 3px;
+          color: ${T.blue};
+          font-family: ${FUTURA};
           margin: 0;
           flex: 1;
           min-width: 0;
-          letter-spacing: -0.1px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
         .editor-tb-btn {
-          padding: 7px 12px;
-          background: white;
-          border: 1px solid ${T.border};
-          border-radius: 5px;
-          font-size: 12px;
-          color: ${T.text};
+          padding: 6px 12px;
+          background: transparent;
+          border: 1px solid #4a4a5e;
+          border-radius: 3px;
+          font-size: 9px;
+          letter-spacing: 2px;
+          font-weight: bold;
+          color: #8888aa;
           cursor: pointer;
-          font-family: inherit;
+          font-family: ${FUTURA};
+          transition: background 0.12s, color 0.12s, border-color 0.12s;
         }
-        .editor-tb-btn:hover { background: #f0f0f0; }
-        .editor-tb-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .editor-tb-btn.primary {
-          background: ${T.dark};
+        .editor-tb-btn:hover {
+          background: rgba(255,255,255,0.05);
           color: white;
-          border-color: ${T.dark};
+          border-color: #6a6a7e;
         }
-        .editor-tb-btn.primary:hover { background: #2a2a4a; }
-        .editor-tb-btn.primary:disabled { background: ${T.muted}; border-color: ${T.muted}; }
+        .editor-tb-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .editor-tb-btn.primary {
+          background: transparent;
+          border-color: ${T.blue};
+          color: ${T.blue};
+        }
+        .editor-tb-btn.primary:hover {
+          background: rgba(74,158,255,0.12);
+          color: ${T.blue};
+        }
+        .editor-tb-btn.primary:disabled {
+          border-color: #4a4a5e;
+          color: #6a6a7e;
+        }
         .editor-tb-btn.danger {
-          color: ${T.red};
-          border-color: rgba(138,26,26,0.3);
+          border-color: rgba(255,100,100,0.4);
+          color: #ff8888;
         }
-        .editor-tb-btn.danger:hover { background: #fae8e8; }
+        .editor-tb-btn.danger:hover {
+          background: rgba(138,26,26,0.18);
+          color: #ffaaaa;
+        }
         .editor-tb-changes {
-          font-size: 11px;
-          color: ${T.amber};
-          letter-spacing: 0.5px;
-          font-weight: 500;
+          font-size: 9px;
+          color: #ffaa3e;
+          letter-spacing: 1.5px;
+          font-weight: bold;
           padding: 4px 9px;
-          background: #fff8e8;
-          border: 1px solid #f0d680;
-          border-radius: 4px;
+          background: rgba(255,170,62,0.10);
+          border: 1px solid rgba(255,170,62,0.4);
+          border-radius: 3px;
+          font-family: ${FUTURA};
         }
 
         .editor-grid-wrap {
@@ -1267,8 +1363,8 @@ export default function CampaignsPage() {
         }
         .editor-grid {
           border-collapse: collapse;
-          font-size: 13px;
-          font-family: inherit;
+          font-size: 12px;
+          font-family: monospace;
         }
         .editor-grid th, .editor-grid td {
           border: 1px solid ${T.border};
@@ -1276,28 +1372,30 @@ export default function CampaignsPage() {
           background: white;
         }
         .editor-grid th {
-          background: #f6f7f8;
-          font-weight: 600;
-          font-size: 11px;
+          background: ${T.surface};
+          font-weight: bold;
+          font-size: 10px;
           color: ${T.muted};
-          padding: 6px 10px;
-          letter-spacing: 0.5px;
+          padding: 7px 10px;
+          letter-spacing: 1.5px;
           text-transform: uppercase;
           position: sticky;
           top: 0;
           z-index: 2;
           text-align: left;
+          font-family: ${FUTURA};
         }
         .editor-grid th.row-header, .editor-grid td.row-header {
-          background: #f6f7f8;
+          background: ${T.surface};
           color: ${T.muted};
-          font-size: 11px;
+          font-size: 10px;
           text-align: center;
-          font-weight: 500;
+          font-weight: bold;
           width: 44px;
           position: sticky;
           left: 0;
           z-index: 3;
+          font-family: monospace;
         }
         .editor-grid th.row-header { z-index: 4; }
         .editor-grid td.row-header.deleted {
@@ -1309,123 +1407,171 @@ export default function CampaignsPage() {
           padding: 7px 10px;
           border: none;
           background: transparent;
-          font-family: inherit;
-          font-size: 13px;
+          font-family: monospace;
+          font-size: 12px;
           color: ${T.text};
           outline: none;
           box-sizing: border-box;
         }
         .editor-cell-input:focus {
-          background: #e8f2ff;
+          background: rgba(74,158,255,0.10);
           box-shadow: inset 0 0 0 2px ${T.blue};
         }
-        .editor-grid tr.row-edited td { background: #fff8e8; }
-        .editor-grid tr.row-new td { background: #f0fae8; }
+        .editor-grid tr.row-edited td { background: rgba(255,170,62,0.10); }
+        .editor-grid tr.row-new td { background: rgba(26,106,26,0.08); }
         .editor-grid tr.row-deleted td { background: #fae8e8; opacity: 0.6; }
-        .editor-grid tr.row-selected td:not(.row-header) { background: #d8e8f8; }
+        .editor-grid tr.row-selected td:not(.row-header) { background: rgba(74,158,255,0.15); }
         .editor-grid tr.row-deleted td:not(.row-header) { text-decoration: line-through; }
-        .editor-grid input[type="checkbox"] {
-          margin: 0;
-          cursor: pointer;
-        }
+        .editor-grid input[type="checkbox"] { margin: 0; cursor: pointer; }
 
         .editor-empty {
           padding: 100px 20px;
           text-align: center;
           color: ${T.muted};
-          font-size: 14px;
+          font-size: 11px;
+          letter-spacing: 3px;
+          font-weight: bold;
+          font-family: ${FUTURA};
         }
 
+        /* ── EMPTY / LOADING STATES ───────────────────────────────────── */
+        .cmp-empty-card {
+          text-align: center;
+          padding: 60px 24px;
+          background: ${T.surface};
+          border: 1px solid ${T.border};
+          border-top: 3px solid ${T.blue};
+          border-radius: 4px;
+          max-width: 480px;
+          margin: 40px auto;
+        }
+        .cmp-empty-title {
+          font-size: 14px;
+          font-weight: bold;
+          letter-spacing: 3px;
+          color: ${T.text};
+          margin: 0 0 12px;
+          font-family: ${FUTURA};
+        }
+        .cmp-empty-sub {
+          font-size: 11px;
+          color: ${T.muted};
+          letter-spacing: 1.5px;
+          margin: 0 0 24px;
+          line-height: 1.7;
+          font-family: monospace;
+        }
+
+        /* ── LAPSED BANNER ────────────────────────────────────────────── */
+        .cmp-lapsed-banner {
+          padding: 12px 16px;
+          margin-bottom: 22px;
+          background: rgba(255,170,62,0.08);
+          border: 1px solid rgba(138,106,26,0.5);
+          border-left: 3px solid #ffaa3e;
+          border-radius: 4px;
+          font-size: 11px;
+          letter-spacing: 1px;
+          color: ${T.text};
+          line-height: 1.7;
+          font-family: monospace;
+        }
+        .cmp-lapsed-banner strong {
+          color: #ffaa3e;
+          letter-spacing: 2px;
+          font-family: ${FUTURA};
+        }
+
+        /* ── DROP ZONE (CSV upload in create modal) ───────────────────── */
+        .cmp-drop-zone {
+          padding: 28px;
+          border-radius: 3px;
+          cursor: pointer;
+          text-align: center;
+          transition: all 0.12s;
+          font-family: ${FUTURA};
+        }
+
+        /* ── HELPER TEXT ──────────────────────────────────────────────── */
+        .cmp-helper {
+          font-size: 10px;
+          color: ${T.muted};
+          margin-top: 8px;
+          margin-bottom: 0;
+          letter-spacing: 1px;
+          font-family: monospace;
+        }
+        .cmp-helper a { color: ${T.blue}; text-decoration: none; }
+        .cmp-helper a:hover { text-decoration: underline; }
+
+        /* ── MOBILE ───────────────────────────────────────────────────── */
         @media (max-width: 768px) {
-          .cmp-header { padding: 14px 16px; }
-          .cmp-header h1 { font-size: 19px; }
-          .cmp-body { padding: 20px 16px 48px; }
+          .cmp-header { padding: 10px 12px; }
+          .cmp-header-title { font-size: 10px; letter-spacing: 3px; }
+          .cmp-header-sub { font-size: 9px; }
+          .cmp-body { padding: 20px 12px 48px; }
           .cmp-grid { grid-template-columns: 1fr; gap: 12px; }
           .settings-modal { max-height: 100vh; max-height: 100dvh; border-radius: 0; }
           .modal-overlay { padding: 0; }
           .editor-toolbar { padding: 10px 12px; gap: 8px; }
+          .editor-toolbar-title { font-size: 10px; letter-spacing: 2px; }
         }
       `}</style>
 
-      {/* ─── DARK HEADER BAR — original content, just dark background ─── */}
+      {/* ─── HEADER ─────────────────────────────────────────────────── */}
       <div className="cmp-header">
-        <div>
-          <h1>Campaigns</h1>
-          <p>
+        <div className="cmp-header-title-block">
+          <span className="cmp-header-title">CAMPAIGNS</span>
+          <span className="cmp-header-sub">
             {isLapsed
-              ? 'Read-only — resubscribe to create or dial campaigns.'
-              : 'Your lead lists and dialing campaigns.'}
-          </p>
+              ? 'READ-ONLY · RESUBSCRIBE TO RESUME'
+              : 'LEAD LISTS · DIALING CAMPAIGNS'}
+          </span>
         </div>
         {!isLapsed ? (
           <button className="cmp-new-btn" onClick={() => setShowCreate(true)}>
-            <span className="plus">+</span> New campaign
+            + NEW CAMPAIGN
           </button>
         ) : (
-          <Link href="/billing" className="cmp-new-btn" style={{ textDecoration: 'none' }}>
-            Resubscribe →
+          <Link href="/billing" className="cmp-new-btn amber">
+            ↻ RESUBSCRIBE
           </Link>
         )}
       </div>
 
-      {/* ─── BODY ─── */}
+      {/* ─── BODY ─────────────────────────────────────────────────────── */}
       <div className="cmp-body">
         {isLapsed && (
-          <div style={{
-            padding: '14px 18px',
-            marginBottom: 20,
-            background: 'rgba(255,170,62,0.06)',
-            border: '1px solid #8a6a1a',
-            borderLeft: '3px solid #ffaa3e',
-            borderRadius: 6,
-            fontSize: 13,
-            color: T.text,
-            lineHeight: 1.5,
-          }}>
-            <strong style={{ color: '#ffaa3e' }}>Read-only mode.</strong>{' '}
+          <div className="cmp-lapsed-banner">
+            <strong>READ-ONLY MODE.</strong>{' '}
             Your campaigns are still here. Creating, deleting, importing, and
             dialing require an active subscription.
           </div>
         )}
 
         {fetching ? (
-          <div style={{ textAlign: 'center', padding: '80px 20px', fontSize: 13, color: T.muted }}>
-            Loading campaigns…
+          <div style={{
+            textAlign: 'center', padding: '80px 20px',
+            fontSize: 11, letterSpacing: 3, fontWeight: 'bold',
+            color: T.muted, fontFamily: FUTURA,
+          }}>
+            LOADING CAMPAIGNS…
           </div>
         ) : campaigns.length === 0 ? (
-          <div style={{
-            textAlign: 'center',
-            padding: '80px 24px',
-            background: 'white',
-            border: `1px solid ${T.border}`,
-            borderRadius: 12,
-            maxWidth: 480,
-            margin: '40px auto',
-          }}>
-            <h2 style={{
-              fontSize: 18,
-              fontWeight: 500,
-              color: T.text,
-              margin: '0 0 12px',
-              letterSpacing: '-0.2px',
-            }}>No campaigns yet</h2>
-            <p style={{
-              fontSize: 13,
-              color: T.muted,
-              margin: '0 0 24px',
-              lineHeight: 1.6,
-            }}>
+          <div className="cmp-empty-card">
+            <div className="cmp-empty-title">NO CAMPAIGNS YET</div>
+            <div className="cmp-empty-sub">
               {isLapsed
-                ? 'Resubscribe to create your first campaign and upload your leads.'
-                : 'Create your first campaign, upload a leads CSV, and start dialing.'}
-            </p>
+                ? 'RESUBSCRIBE TO CREATE YOUR FIRST CAMPAIGN AND UPLOAD LEADS.'
+                : 'CREATE YOUR FIRST CAMPAIGN, UPLOAD A LEADS CSV, AND START DIALING.'}
+            </div>
             {!isLapsed ? (
               <button className="cmp-new-btn" onClick={() => setShowCreate(true)}>
-                <span className="plus">+</span> New campaign
+                + NEW CAMPAIGN
               </button>
             ) : (
-              <Link href="/billing" className="cmp-new-btn" style={{ textDecoration: 'none' }}>
-                Resubscribe — $35/week
+              <Link href="/billing" className="cmp-new-btn amber">
+                ↻ RESUBSCRIBE — $35/WEEK
               </Link>
             )}
           </div>
@@ -1447,7 +1593,7 @@ export default function CampaignsPage() {
                     <span className="cmp-card-status-pin" style={{
                       color: isActive ? T.green : T.muted,
                     }}>
-                      {isActive ? '● Active' : '○ Inactive'}
+                      {isActive ? '● ACTIVE' : '○ INACTIVE'}
                     </span>
                     <LeadPreviewThumb
                       leads={leadsForPreview}
@@ -1465,9 +1611,9 @@ export default function CampaignsPage() {
                     <div className="cmp-card-meta">
                       <h3 className="cmp-card-name">{campaign.name}</h3>
                       <div className="cmp-card-sub">
-                        <span>You modified {relativeTime(lastModified)}</span>
+                        <span>MOD {relativeTime(lastModified)}</span>
                         <span className="dot">·</span>
-                        <span>Last dialed {relativeTime(lastDialed)}</span>
+                        <span>DIAL {relativeTime(lastDialed)}</span>
                       </div>
                     </div>
                   </div>
@@ -1478,7 +1624,7 @@ export default function CampaignsPage() {
         )}
       </div>
 
-      {/* ─── CREATE MODAL ─── */}
+      {/* ─── CREATE MODAL ─────────────────────────────────────────────── */}
       {!isLapsed && showCreate && (
         <div className="modal-overlay" onClick={() => !creating && setShowCreate(false)}>
           <div className="settings-modal" style={{ maxWidth: 540 }} onClick={e => e.stopPropagation()}>
@@ -1486,7 +1632,7 @@ export default function CampaignsPage() {
               <input
                 className="settings-name-input"
                 type="text"
-                placeholder="Campaign name"
+                placeholder="NEW CAMPAIGN NAME"
                 value={campaignName}
                 onChange={e => setCampaignName(e.target.value)}
                 autoFocus
@@ -1495,8 +1641,8 @@ export default function CampaignsPage() {
             </div>
 
             <div className="settings-body">
-              <div>
-                <div className="settings-section-title">Dialer mode</div>
+              <div className="settings-section-card">
+                <div className="settings-section-title">▸ DIALER MODE</div>
                 <select
                   className="settings-mode-select"
                   value={createMode}
@@ -1507,17 +1653,18 @@ export default function CampaignsPage() {
                     <option key={m} value={m}>{MODE_LABELS[m]}</option>
                   ))}
                 </select>
-                <p style={{ fontSize: 11, color: T.muted, marginTop: 6, marginBottom: 0 }}>
-                  Not sure? Start with Power. You can change it anytime.{' '}
-                  <Link href="/dialing-modes" target="_blank" rel="noopener" style={{ color: T.blue }}>
-                    Compare modes
+                <p className="cmp-helper">
+                  Not sure? Start with POWER. Change it anytime.{' '}
+                  <Link href="/dialing-modes" target="_blank" rel="noopener">
+                    COMPARE MODES
                   </Link>
                 </p>
               </div>
 
-              <div>
-                <div className="settings-section-title">Leads CSV (optional)</div>
+              <div className="settings-section-card">
+                <div className="settings-section-title">▸ LEADS CSV (OPTIONAL)</div>
                 <div
+                  className="cmp-drop-zone"
                   onDragOver={e => { e.preventDefault(); setDragging(true) }}
                   onDragLeave={() => setDragging(false)}
                   onDrop={e => {
@@ -1528,13 +1675,8 @@ export default function CampaignsPage() {
                   }}
                   onClick={() => fileRef.current?.click()}
                   style={{
-                    padding: 28,
-                    borderRadius: 8,
-                    cursor: 'pointer',
                     border: `2px dashed ${dragging || csvData.length > 0 ? T.blue : T.border}`,
-                    background: dragging ? 'rgba(74,158,255,0.04)' : '#f8f9fa',
-                    textAlign: 'center',
-                    transition: 'all 0.15s',
+                    background: dragging ? 'rgba(74,158,255,0.05)' : T.bg,
                   }}
                 >
                   <input
@@ -1549,18 +1691,30 @@ export default function CampaignsPage() {
                   />
                   {csvData.length > 0 ? (
                     <>
-                      <p style={{ fontSize: 13, fontWeight: 500, color: T.blue, margin: '0 0 4px' }}>
-                        {csvData.length.toLocaleString()} leads loaded
+                      <p style={{
+                        fontSize: 12, fontWeight: 'bold', letterSpacing: 2,
+                        color: T.blue, margin: '0 0 4px', fontFamily: FUTURA,
+                      }}>
+                        {csvData.length.toLocaleString()} LEADS LOADED
                       </p>
-                      <p style={{ fontSize: 11, color: T.muted, margin: 0 }}>{csvName}</p>
+                      <p style={{
+                        fontSize: 10, color: T.muted, margin: 0,
+                        fontFamily: 'monospace', letterSpacing: 1,
+                      }}>{csvName}</p>
                     </>
                   ) : (
                     <>
-                      <p style={{ fontSize: 13, color: T.muted, margin: '0 0 4px' }}>
-                        Drop your CSV here
+                      <p style={{
+                        fontSize: 11, color: T.muted, margin: '0 0 4px',
+                        letterSpacing: 2, fontWeight: 'bold', fontFamily: FUTURA,
+                      }}>
+                        DROP YOUR CSV HERE
                       </p>
-                      <p style={{ fontSize: 11, color: T.muted, opacity: 0.7, margin: 0 }}>
-                        or click to browse
+                      <p style={{
+                        fontSize: 9, color: T.muted, opacity: 0.7, margin: 0,
+                        letterSpacing: 1.5, fontFamily: FUTURA,
+                      }}>
+                        OR CLICK TO BROWSE
                       </p>
                     </>
                   )}
@@ -1572,7 +1726,7 @@ export default function CampaignsPage() {
               <div className="settings-footer-left"></div>
               <div className="settings-footer-right">
                 <button
-                  className="settings-action"
+                  className="ds-btn"
                   onClick={() => {
                     setShowCreate(false)
                     setCampaignName('')
@@ -1580,20 +1734,19 @@ export default function CampaignsPage() {
                     setCsvName('')
                     setCreateMode('power')
                   }}
-                >Cancel</button>
+                >CANCEL</button>
                 <button
-                  className="settings-action primary"
+                  className="ds-btn primary"
                   onClick={handleCreate}
                   disabled={!campaignName || creating}
-                  style={{ opacity: !campaignName || creating ? 0.5 : 1 }}
-                >{creating ? 'Creating…' : 'Create campaign'}</button>
+                >{creating ? 'CREATING…' : 'CREATE CAMPAIGN'}</button>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ─── SETTINGS MODAL ─── */}
+      {/* ─── SETTINGS MODAL ───────────────────────────────────────────── */}
       {settingsCampaign && !editorOpen && (
         <div className="modal-overlay" onClick={closeSettings}>
           <div className="settings-modal" onClick={e => e.stopPropagation()}>
@@ -1610,13 +1763,13 @@ export default function CampaignsPage() {
 
             <div className="settings-body">
 
-              <div>
-                <div className="settings-section-title">Campaign</div>
+              <div className="settings-section-card">
+                <div className="settings-section-title">▸ CAMPAIGN</div>
 
                 <div className="settings-row">
                   <div className="settings-row-label">
-                    Active
-                    <small>Inactive campaigns won&apos;t appear in the dialer&apos;s campaign list.</small>
+                    ACTIVE
+                    <small>Inactive campaigns won't appear in the dialer's campaign list.</small>
                   </div>
                   <div
                     className={`settings-toggle ${settingsCampaign.status === 'active' ? 'on' : ''}`}
@@ -1626,8 +1779,8 @@ export default function CampaignsPage() {
 
                 <div className="settings-row">
                   <div className="settings-row-label">
-                    Dialer mode
-                    <small>How this campaign dials. Change anytime — affects future calls only.</small>
+                    DIALER MODE
+                    <small>How this campaign dials. Affects future calls only.</small>
                   </div>
                   <select
                     className="settings-mode-select"
@@ -1644,24 +1797,24 @@ export default function CampaignsPage() {
                 {settingsCampaign.amd_enabled && (
                   <div className="settings-row">
                     <div className="settings-row-label">
-                      Answering Machine Detection
-                      <small>On — calls that hit a voicemail are auto-ended.</small>
+                      ANSWERING MACHINE DETECTION
+                      <small>ON — calls that hit a voicemail are auto-ended.</small>
                     </div>
                   </div>
                 )}
               </div>
 
-              <div>
+              <div className="settings-section-card">
                 <div className="settings-section-title">
-                  Leads &middot; {settingsCampaign.total_leads.toLocaleString()} total
-                  &middot; {settingsCampaign.called_leads.toLocaleString()} called
+                  ▸ LEADS · {settingsCampaign.total_leads.toLocaleString()} TOTAL
+                  · {settingsCampaign.called_leads.toLocaleString()} CALLED
                 </div>
                 <div
                   className="lead-preview-wrap"
                   onClick={() => !isLapsed && openEditor()}
                 >
                   <div className="open-editor-hint">
-                    {isLapsed ? 'Subscribe to edit' : 'Click to open editor'}
+                    {isLapsed ? 'SUBSCRIBE TO EDIT' : 'CLICK TO OPEN EDITOR'}
                   </div>
                   <LeadPreviewThumb
                     leads={previews[settingsCampaign.id] || []}
@@ -1672,11 +1825,15 @@ export default function CampaignsPage() {
                 </div>
               </div>
 
-              <div>
-                <div className="settings-section-title">Call scripts</div>
+              <div className="settings-section-card">
+                <div className="settings-section-title">▸ CALL SCRIPTS</div>
                 {scriptsLoading ? (
-                  <div style={{ fontSize: 12, color: T.muted, padding: 20, textAlign: 'center' }}>
-                    Loading scripts…
+                  <div style={{
+                    fontSize: 10, letterSpacing: 2, fontWeight: 'bold',
+                    color: T.muted, padding: 20, textAlign: 'center',
+                    fontFamily: FUTURA,
+                  }}>
+                    LOADING SCRIPTS…
                   </div>
                 ) : (
                   <>
@@ -1688,13 +1845,13 @@ export default function CampaignsPage() {
                             className={`script-tab ${activeScriptId === s.id ? 'active' : ''}`}
                             onClick={() => switchScript(s.id)}
                           >
-                            {s.name || 'Untitled'}
+                            {(s.name || 'UNTITLED').toUpperCase()}
                             {s.is_default && <span className="def-mark">DEFAULT</span>}
                           </div>
                         ))}
                         {!isLapsed && (
                           <button className="script-add" onClick={addScript} disabled={savingScript}>
-                            + Add
+                            + ADD
                           </button>
                         )}
                       </div>
@@ -1702,30 +1859,24 @@ export default function CampaignsPage() {
 
                     {settingsScripts.length === 0 ? (
                       <div style={{
-                        padding: '30px 20px',
+                        padding: '32px 20px',
                         textAlign: 'center',
-                        background: '#f8f9fa',
+                        background: T.bg,
                         border: `1px dashed ${T.border}`,
-                        borderRadius: 8,
+                        borderRadius: 3,
                       }}>
-                        <p style={{ fontSize: 13, color: T.muted, margin: '0 0 12px' }}>
+                        <p style={{
+                          fontSize: 11, letterSpacing: 1.5, color: T.muted,
+                          margin: '0 0 14px', fontFamily: 'monospace',
+                        }}>
                           No scripts yet. Add one to display during calls.
                         </p>
                         {!isLapsed && (
                           <button
+                            className="ds-btn primary"
                             onClick={addScript}
                             disabled={savingScript}
-                            style={{
-                              padding: '7px 14px',
-                              background: T.dark,
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: 6,
-                              fontSize: 12,
-                              cursor: 'pointer',
-                              fontFamily: 'inherit',
-                            }}
-                          >+ Add a script</button>
+                          >+ ADD A SCRIPT</button>
                         )}
                       </div>
                     ) : activeScriptId && (
@@ -1748,7 +1899,7 @@ export default function CampaignsPage() {
                         />
                         <div className="script-actions">
                           {!settingsScripts.find(s => s.id === activeScriptId)?.is_default && !isLapsed && (
-                            <button onClick={async () => {
+                            <button className="ds-btn" onClick={async () => {
                               if (!activeScriptId) return
                               setSavingScript(true)
                               try {
@@ -1766,20 +1917,20 @@ export default function CampaignsPage() {
                               } finally {
                                 setSavingScript(false)
                               }
-                            }}>★ Make default</button>
+                            }}>★ MAKE DEFAULT</button>
                           )}
                           {!isLapsed && (
-                            <button className="danger" onClick={deleteScript} disabled={savingScript}>
-                              Delete script
+                            <button className="ds-btn danger" onClick={deleteScript} disabled={savingScript}>
+                              DELETE SCRIPT
                             </button>
                           )}
                           {!isLapsed && (
                             <button
-                              className="primary"
+                              className="ds-btn primary"
                               onClick={saveScript}
                               disabled={savingScript || !dirtyScript}
                               style={{ marginLeft: 'auto' }}
-                            >{savingScript ? 'Saving…' : dirtyScript ? 'Save script' : 'Saved'}</button>
+                            >{savingScript ? 'SAVING…' : dirtyScript ? 'SAVE SCRIPT' : 'SAVED'}</button>
                           )}
                         </div>
                       </div>
@@ -1794,8 +1945,8 @@ export default function CampaignsPage() {
               <div className="settings-footer-left">
                 {!isLapsed && (
                   <>
-                    <label className="settings-action">
-                      Upload more leads
+                    <label className="ds-btn">
+                      ↑ UPLOAD MORE LEADS
                       <input
                         type="file"
                         accept=".csv"
@@ -1806,19 +1957,19 @@ export default function CampaignsPage() {
                       />
                     </label>
                     <button
-                      className="settings-action danger"
+                      className="ds-btn danger"
                       onClick={() => setDeleteConfirm(settingsCampaign.id)}
-                    >Delete campaign</button>
+                    >DELETE CAMPAIGN</button>
                   </>
                 )}
               </div>
               <div className="settings-footer-right">
-                <button className="settings-action" onClick={closeSettings}>Close</button>
+                <button className="ds-btn" onClick={closeSettings}>CLOSE</button>
                 {!isLapsed && (
                   <button
-                    className="settings-action primary"
+                    className="ds-btn primary"
                     onClick={() => openInDialer(settingsCampaign)}
-                  >Open in dialer →</button>
+                  >OPEN IN DIALER →</button>
                 )}
               </div>
             </div>
@@ -1826,27 +1977,34 @@ export default function CampaignsPage() {
         </div>
       )}
 
-      {/* ─── DELETE CONFIRM MODAL ─── */}
+      {/* ─── DELETE CONFIRM MODAL ─────────────────────────────────────── */}
       {deleteConfirm && (() => {
         const c = campaigns.find(c => c.id === deleteConfirm)
         if (!c) return null
         return (
           <div className="modal-overlay" onClick={() => { setDeleteConfirm(null); setDeleteTyped('') }}>
             <div className="settings-modal" style={{ maxWidth: 440 }} onClick={e => e.stopPropagation()}>
-              <div className="settings-head">
-                <div style={{ flex: 1, fontSize: 16, fontWeight: 500, color: T.red, padding: '6px 10px' }}>
-                  Delete campaign?
+              <div className="settings-head" style={{ borderBottomColor: T.red }}>
+                <div style={{
+                  flex: 1, fontSize: 11, fontWeight: 'bold', letterSpacing: 3,
+                  color: '#ff8888', padding: '6px 10px', fontFamily: FUTURA,
+                }}>
+                  ⚠ DELETE CAMPAIGN?
                 </div>
                 <button className="settings-close" onClick={() => { setDeleteConfirm(null); setDeleteTyped('') }}>×</button>
               </div>
               <div className="settings-body">
-                <p style={{ fontSize: 13, lineHeight: 1.6, color: T.text, margin: 0 }}>
-                  Delete <strong>&quot;{c.name}&quot;</strong>?
+                <p style={{
+                  fontSize: 12, lineHeight: 1.7, color: T.text, margin: 0,
+                  letterSpacing: 0.5, fontFamily: 'monospace',
+                }}>
+                  Delete <strong style={{ color: T.red }}>"{c.name}"</strong>?
                   {c.total_leads >= 100 && (
                     <> It has <strong>{c.total_leads.toLocaleString()} leads.</strong> Type
                     {' '}<code style={{
-                      background: '#f0f0f0', padding: '1px 5px', borderRadius: 3,
-                      fontFamily: 'monospace', fontSize: 12,
+                      background: T.surface, padding: '2px 6px', borderRadius: 2,
+                      fontFamily: 'monospace', fontSize: 11, color: T.text,
+                      border: `1px solid ${T.border}`,
                     }}>delete</code> to confirm.</>
                   )}
                   {c.total_leads < 100 && ' This cannot be undone.'}
@@ -1862,12 +2020,13 @@ export default function CampaignsPage() {
                       width: '100%',
                       padding: '10px 12px',
                       border: `1px solid ${T.border}`,
-                      borderRadius: 6,
-                      fontSize: 13,
+                      borderRadius: 3,
+                      fontSize: 12,
                       fontFamily: 'monospace',
                       outline: 'none',
-                      marginTop: 12,
+                      marginTop: 14,
                       boxSizing: 'border-box',
+                      background: 'white',
                     }}
                   />
                 )}
@@ -1876,17 +2035,14 @@ export default function CampaignsPage() {
                 <div className="settings-footer-left"></div>
                 <div className="settings-footer-right">
                   <button
-                    className="settings-action"
+                    className="ds-btn"
                     onClick={() => { setDeleteConfirm(null); setDeleteTyped('') }}
-                  >Cancel</button>
+                  >CANCEL</button>
                   <button
-                    className="settings-action danger"
+                    className="ds-btn danger"
                     onClick={() => handleDelete(c.id, c.total_leads)}
                     disabled={c.total_leads >= 100 && deleteTyped.toLowerCase().trim() !== 'delete'}
-                    style={{
-                      opacity: c.total_leads >= 100 && deleteTyped.toLowerCase().trim() !== 'delete' ? 0.4 : 1,
-                    }}
-                  >Delete</button>
+                  >DELETE</button>
                 </div>
               </div>
             </div>
@@ -1894,42 +2050,44 @@ export default function CampaignsPage() {
         )
       })()}
 
-      {/* ─── SHEETS EDITOR ─── */}
+      {/* ─── SHEETS EDITOR ────────────────────────────────────────────── */}
       {editorOpen && settingsCampaign && (
         <div className="editor-fullscreen">
           <div className="editor-toolbar">
-            <h2>{settingsCampaign.name} — Lead editor</h2>
+            <h2 className="editor-toolbar-title">
+              {settingsCampaign.name.toUpperCase()} — LEAD EDITOR
+            </h2>
             {hasEditorChanges && (
               <span className="editor-tb-changes">
-                {Object.keys(editorEdits).length > 0 && `${Object.keys(editorEdits).length} edit${Object.keys(editorEdits).length === 1 ? '' : 's'}`}
+                {Object.keys(editorEdits).length > 0 && `${Object.keys(editorEdits).length} EDIT${Object.keys(editorEdits).length === 1 ? '' : 'S'}`}
                 {Object.keys(editorEdits).length > 0 && (editorAdds.length > 0 || editorDeletes.size > 0) && ' · '}
-                {editorAdds.length > 0 && `${editorAdds.length} new`}
+                {editorAdds.length > 0 && `${editorAdds.length} NEW`}
                 {editorAdds.length > 0 && editorDeletes.size > 0 && ' · '}
-                {editorDeletes.size > 0 && `${editorDeletes.size} to delete`}
-                {' · unsaved'}
+                {editorDeletes.size > 0 && `${editorDeletes.size} TO DELETE`}
+                {' · UNSAVED'}
               </span>
             )}
-            <button className="editor-tb-btn" onClick={addRow}>+ Add row</button>
+            <button className="editor-tb-btn" onClick={addRow}>+ ADD ROW</button>
             {editorSelected.size > 0 && (
               <button className="editor-tb-btn danger" onClick={deleteSelected}>
-                Delete {editorSelected.size} selected
+                DELETE {editorSelected.size} SELECTED
               </button>
             )}
             <button
               className="editor-tb-btn primary"
               onClick={saveEditor}
               disabled={!hasEditorChanges || editorSaving}
-            >{editorSaving ? 'Saving…' : 'Save changes'}</button>
-            <button className="editor-tb-btn" onClick={closeEditor}>Close</button>
+            >{editorSaving ? 'SAVING…' : 'SAVE CHANGES'}</button>
+            <button className="editor-tb-btn" onClick={closeEditor}>CLOSE</button>
           </div>
 
           <div className="editor-grid-wrap">
             {editorLoading ? (
-              <div className="editor-empty">Loading leads…</div>
+              <div className="editor-empty">LOADING LEADS…</div>
             ) : editorRows.length === 0 ? (
               <div className="editor-empty">
-                No leads. Click <strong>+ Add row</strong> to create the first one,
-                or close and use Upload more leads to import a CSV.
+                NO LEADS. CLICK <strong>+ ADD ROW</strong> TO CREATE THE FIRST ONE,
+                <br />OR CLOSE AND USE UPLOAD MORE LEADS TO IMPORT A CSV.
               </div>
             ) : (
               <table className="editor-grid">
@@ -1937,13 +2095,13 @@ export default function CampaignsPage() {
                   <tr>
                     <th className="row-header">#</th>
                     <th style={{ width: 40 }}></th>
-                    <th>First name</th>
-                    <th>Last name</th>
-                    <th>Phone</th>
-                    <th>Email</th>
-                    <th>State</th>
-                    <th>City</th>
-                    <th>Notes</th>
+                    <th>FIRST NAME</th>
+                    <th>LAST NAME</th>
+                    <th>PHONE</th>
+                    <th>EMAIL</th>
+                    <th>STATE</th>
+                    <th>CITY</th>
+                    <th>NOTES</th>
                   </tr>
                 </thead>
                 <tbody>
