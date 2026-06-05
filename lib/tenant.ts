@@ -3,18 +3,24 @@ import { createClient } from '@supabase/supabase-js'
 import { unstable_cache } from 'next/cache'
 
 // =============================================================================
-// TENANT BRANDING LOOKUP — server-side helper (v3 — Pass 2 Phase B2)
+// TENANT BRANDING LOOKUP — server-side helper (v4 — Pass 2 expansion)
 // =============================================================================
-// Pass 2 changes vs Pass 1 Phase D:
-//   - TenantBranding interface trimmed from 5 color fields to 2:
+// Pass 2 expansion (migration 003): 2 colors → 3 colors
+//   - TenantBranding interface adds page_bg_color (dashboard page body bg)
+//   - TENANT_BRANDING_COLS adds page_bg_color to the explicit select list
+//
+// Pass 2 Phase B2 (preserved from v3):
+//   - TenantBranding interface had been trimmed from 5 color fields to 2:
 //       primary_color + sidebar_color
+//   - Now 3 with the page_bg_color addition above
 //   - Dropped from the type: secondary_color, accent_color,
 //     background_color, text_color
 //     (migration 002 — destructive — will drop them from the DB after
-//     all Phase B code is deployed)
-//   - SELECTs from tenant_branding now use an explicit column list so a
-//     missing column (e.g. tenant_branding view not updated to include
-//     sidebar_color) fails loud instead of silently returning undefined
+//     all Phase B+C code is deployed)
+//   - SELECTs from tenant_branding use an explicit column list so a
+//     missing column (e.g. tenant_branding view not yet updated to
+//     include page_bg_color) fails loud instead of silently returning
+//     undefined
 //
 // Function contracts unchanged:
 //   getTenantBranding(slug)         — subdomain → branding
@@ -33,6 +39,7 @@ export interface TenantBranding {
   footer_text: string
   primary_color: string
   sidebar_color: string
+  page_bg_color: string  // ← NEW Pass 2 expansion (migration 003)
   custom_landing: Record<string, unknown>
 }
 
@@ -67,10 +74,10 @@ function getSupabaseAdmin() {
 
 // Explicit branding column list. Used in both subdomain and user-tenant
 // branding fetches. Listing columns explicitly means a missing column
-// (e.g. tenant_branding view not yet updated to include sidebar_color)
+// (e.g. tenant_branding view not yet updated to include page_bg_color)
 // surfaces as a query error instead of silently returning undefined.
 const TENANT_BRANDING_COLS =
-  'id, slug, brand_name, logo_url, favicon_url, footer_text, primary_color, sidebar_color, custom_landing'
+  'id, slug, brand_name, logo_url, favicon_url, footer_text, primary_color, sidebar_color, page_bg_color, custom_landing'
 
 // =============================================================================
 // SUBDOMAIN LOOKUP (v1 contract preserved)

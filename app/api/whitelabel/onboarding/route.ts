@@ -1,21 +1,29 @@
 // app/api/whitelabel/onboarding/route.ts
 // =============================================================================
-// WHITE-LABEL ONBOARDING / EDIT — Pass 2 Phase B3 (2-color)
+// WHITE-LABEL ONBOARDING / EDIT — Pass 2 expansion (3-color)
 // =============================================================================
-// Pass 2 changes vs v1 (5-color):
+// Pass 2 expansion (migration 003): 2 colors → 3 colors
+//   - Body now carries 3 colors: primary_color + sidebar_color + page_bg_color
+//   - All three validated as #RRGGBB hex
+//   - INSERT writes all 3 active columns
+//   - UPDATE writes all 3 active columns
+//   - GET selects and returns all 3
 //
-//   - Body now carries 2 colors: primary_color + sidebar_color
+// Pass 2 Phase B3 (preserved from prior 2-color version):
 //   - Removed: secondary_color, accent_color, background_color, text_color
 //     from body parsing, validation, and response
-//   - INSERT writes primary_color + sidebar_color (the 2 active columns).
-//     Pre-002 safety: also mirrors sidebar_color into accent_color (the
-//     vestigial Pass 1 column) and sets sensible defaults for
-//     secondary/background/text so any NOT NULL constraints don't fire.
-//     After migration 002 drops those 4 columns, this mirroring becomes
-//     a no-op and the writes silently fail at the column level — at that
-//     point we drop these lines too.
-//   - UPDATE writes primary_color + sidebar_color + accent_color mirror.
-//   - GET selects and returns primary_color + sidebar_color only.
+//   - Pre-002 safety: INSERT still mirrors sidebar_color into accent_color
+//     (vestigial Pass 1 column) and sets sensible defaults for the other
+//     three vestigial columns so any NOT NULL constraints don't fire.
+//     After migration 002 drops these columns (Phase D cleanup), this
+//     mirroring becomes a no-op and the writes silently fail at the
+//     column level — at that point we drop these lines.
+//   - UPDATE also mirrors accent_color from sidebar_color.
+//
+// NOTE: background_color (vestigial, dark Pass 1 body bg) and page_bg_color
+// (Pass 2 active, themed dashboard page bg) are DIFFERENT concepts. We
+// don't mirror between them. background_color gets its legacy dark default
+// for pre-002 NOT NULL safety; page_bg_color gets the user's actual pick.
 //
 // Unchanged behavior:
 //   - Slug regex, RESERVED subdomain set, 24h cooldown, 30-day redirect
@@ -87,12 +95,12 @@ export async function GET() {
   }
 
   if (status === 'complete') {
-    // 2-color SELECT. Vestigial columns no longer included in the response.
+    // 3-color SELECT (Pass 2 expansion).
     const { data: tenant } = await supabase
       .from('white_label_tenants')
       .select(`
         id, brand_name, slug, logo_url, slug_changed_at, is_active,
-        primary_color, sidebar_color
+        primary_color, sidebar_color, page_bg_color
       `)
       .eq('owner_clerk_id', userId)
       .maybeSingle()
@@ -119,6 +127,7 @@ export async function GET() {
         logo_url: tenant.logo_url,
         primary_color: tenant.primary_color,
         sidebar_color: tenant.sidebar_color,
+        page_bg_color: tenant.page_bg_color,
       },
       canChangeSlugAt,
       isActive: tenant.is_active,
@@ -151,6 +160,7 @@ export async function POST(req: NextRequest) {
   const logoUrl = String(body.logo_url || '').trim()
   const primaryColor = String(body.primary_color || '').trim()
   const sidebarColor = String(body.sidebar_color || '').trim()
+  const pageBgColor = String(body.page_bg_color || '').trim()
 
   // ── Validation ────────────────────────────────────────────────────
   if (!brandName || brandName.length < 2 || brandName.length > 60) {
@@ -177,6 +187,12 @@ export async function POST(req: NextRequest) {
   if (!HEX_RE.test(sidebarColor)) {
     return NextResponse.json(
       { error: 'invalid_sidebar_color', detail: 'Sidebar color must be #RRGGBB.' },
+      { status: 400 }
+    )
+  }
+  if (!HEX_RE.test(pageBgColor)) {
+    return NextResponse.json(
+      { error: 'invalid_page_bg_color', detail: 'Page background color must be #RRGGBB.' },
       { status: 400 }
     )
   }
@@ -253,12 +269,15 @@ export async function POST(req: NextRequest) {
         slug: subdomain,
         brand_name: brandName,
         logo_url: logoUrl,
-        // Pass 2 active columns
+        // Pass 2 active columns (3-color expansion)
         primary_color: primaryColor,
         sidebar_color: sidebarColor,
+        page_bg_color: pageBgColor,
         // Pre-002 safety: vestigial columns still exist on the table.
         // Mirror sidebar into accent_color to keep them in sync. Default
         // the other three so any NOT NULL constraints don't fire.
+        // background_color is NOT mirrored from page_bg_color — they
+        // are different concepts (dark Pass 1 body vs Pass 2 themed page).
         // These four lines all become no-ops after migration 002 drops
         // these columns from the table.
         accent_color: sidebarColor,
@@ -316,6 +335,7 @@ export async function POST(req: NextRequest) {
     logo_url: logoUrl,
     primary_color: primaryColor,
     sidebar_color: sidebarColor,
+    page_bg_color: pageBgColor,
     // Pre-002 safety: keep accent_color mirrored to sidebar_color.
     // Becomes a no-op after migration 002.
     accent_color: sidebarColor,

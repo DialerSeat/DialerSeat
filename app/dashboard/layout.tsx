@@ -6,6 +6,37 @@ import { usePathname } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
 import { useBranding } from '@/components/ThemeProvider'
 
+// =============================================================================
+// app/dashboard/layout.tsx — Pass 2 Phase C1 (sidebar binding sweep)
+// =============================================================================
+// Surgical rebinding of vestigial Pass 1 tokens to the Pass 2 brand tokens
+// injected by ThemeProvider v4. The structural / behavioral code (sidebar
+// markup, drawer state, profile-row Clerk retarget, sessionStorage logo
+// handoff, admin check, status fetches) is preserved byte-for-byte.
+//
+// Pass 1 → Pass 2 rebindings:
+//   --background           → --brand-page-bg
+//   --surface (sidebar)    → --brand-sidebar-bg
+//   --border (sidebar)     → --brand-sidebar-active-bg
+//                            (context-aware faint divider: primary-tinted
+//                             overlay that adapts to both light + dark
+//                             sidebars without requiring a new token)
+//   --text-primary (in sidebar) → --brand-on-sidebar
+//   --text-secondary (in sidebar) → --brand-on-sidebar-muted
+//   inline color-mix(${brandPrimary} 12%, transparent) → --brand-primary-soft
+//   inline ${brandPrimary} for active nav label → var(--brand-primary)
+//
+// What stays unchanged:
+//   - brandPrimary JS const (still used by profile-row primaryColor for
+//     manager+/admin/team-seat conditional badges)
+//   - #ffaa3e amber semantic color for UNSUBSCRIBED / NO PLAN / RESUBSCRIBE
+//   - #4a9eff hardcoded for "ADMIN CONSOLE" subtitle (only renders in the
+//     default-brand state, which only appears on the dark navy default
+//     sidebar — blue is fine there)
+//   - DefaultBrandDesktop / DefaultBrandMobileTopbar gradient D logo
+//     (only renders when no tenant logo uploaded)
+// =============================================================================
+
 const userNavItems = [
   { label: 'ANALYTICS', href: '/dashboard/analytics' },
   { label: 'DIALER', href: '/dashboard/dialer' },
@@ -205,12 +236,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   } else if (hasActivePersonal && hasAnySeat) {
     primaryLabel = 'PRO PLAN'
-    primaryColor = 'var(--text-secondary)'
+    primaryColor = 'var(--brand-on-sidebar-muted)'
     primaryWeight = 'normal'
     secondaryText = `+ ${totalSeats} TEAM SEAT${totalSeats === 1 ? '' : 'S'}`
   } else if (hasActivePersonal) {
     primaryLabel = 'PRO PLAN'
-    primaryColor = 'var(--text-secondary)'
+    primaryColor = 'var(--brand-on-sidebar-muted)'
     primaryWeight = 'normal'
   } else if (hasAnySeat) {
     primaryLabel = 'TEAM SEAT'
@@ -232,7 +263,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     primaryWeight = 'bold'
   } else {
     primaryLabel = '...'
-    primaryColor = 'var(--text-secondary)'
+    primaryColor = 'var(--brand-on-sidebar-muted)'
     primaryWeight = 'normal'
   }
 
@@ -295,7 +326,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           fontSize: '14px',
           fontWeight: 'bold',
           letterSpacing: '4px',
-          color: 'var(--text-primary)',
+          color: 'var(--brand-on-sidebar)',
         }}>DIALERSEAT</span>
         {isAdmin && (
           <span style={{
@@ -319,7 +350,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       }}>
         <span style={{ color: 'white', fontWeight: 'bold', fontSize: 12 }}>D</span>
       </div>
-      <span style={{ fontSize: 12, fontWeight: 'bold', letterSpacing: 4, color: 'var(--text-primary)' }}>
+      <span style={{ fontSize: 12, fontWeight: 'bold', letterSpacing: 4, color: 'var(--brand-on-sidebar)' }}>
         DIALERSEAT
       </span>
     </>
@@ -357,10 +388,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 padding: '12px 18px',
                 cursor: 'pointer',
                 background: active
-                  ? `color-mix(in srgb, ${brandPrimary} 12%, transparent)`
+                  ? 'var(--brand-primary-soft)'
                   : 'transparent',
                 border: active
-                  ? '1px solid var(--border)'
+                  ? '1px solid var(--brand-sidebar-active-bg)'
                   : '1px solid transparent',
                 boxSizing: 'border-box',
                 textDecoration: 'none',
@@ -371,7 +402,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 fontSize: '11px',
                 letterSpacing: '2px',
                 fontWeight: 'bold',
-                color: active ? brandPrimary : 'var(--text-secondary)',
+                color: active ? 'var(--brand-primary)' : 'var(--brand-on-sidebar-muted)',
                 flex: 1,
               }}>{item.label}</span>
             </Link>
@@ -398,7 +429,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             fontSize: 9, letterSpacing: 2, fontWeight: 'bold', color: '#ffaa3e',
           }}>▸ RESUBSCRIBE</span>
           <span style={{
-            fontSize: 9, color: 'var(--text-secondary)', letterSpacing: 1,
+            fontSize: 9, color: 'var(--brand-on-sidebar-muted)', letterSpacing: 1,
           }}>Restore dialing access</span>
         </Link>
       )}
@@ -410,7 +441,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         style={{
           padding: '14px 24px',
           paddingBottom: 'max(14px, calc(env(safe-area-inset-bottom, 0px) + 8px))',
-          borderTop: '1px solid var(--border)',
+          borderTop: '1px solid var(--brand-sidebar-active-bg)',
           display: 'flex',
           alignItems: 'center',
           gap: '12px',
@@ -422,7 +453,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <UserButton />
         <div style={{ flex: 1, minWidth: 0, pointerEvents: 'none' }}>
           <div style={{
-            fontSize: '12px', fontWeight: 'bold', color: 'var(--text-primary)',
+            fontSize: '12px', fontWeight: 'bold', color: 'var(--brand-on-sidebar)',
             letterSpacing: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           }}>{user?.firstName} {user?.lastName}</div>
           <div style={{
@@ -432,7 +463,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           }}>{primaryLabel}</div>
           {secondaryText && (
             <div style={{
-              fontSize: '9px', color: 'var(--text-secondary)',
+              fontSize: '9px', color: 'var(--brand-on-sidebar-muted)',
               letterSpacing: '0.5px', marginTop: 1,
               whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
             }}>{secondaryText}</div>
@@ -443,18 +474,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   )
 
   return (
-    <main style={{ minHeight: '100vh', background: 'var(--background)', display: 'flex' }}>
+    <main style={{ minHeight: '100vh', background: 'var(--brand-page-bg)', display: 'flex' }}>
       <style>{`
         .ds-sidebar-desktop {
           width: 260px; height: 100vh; position: sticky; top: 0;
-          background: var(--surface); border-right: 1px solid var(--border);
+          background: var(--brand-sidebar-bg); border-right: 1px solid var(--brand-sidebar-active-bg);
           display: flex; flex-direction: column; padding: 20px 0;
           flex-shrink: 0; overflow: hidden;
         }
         .ds-mobile-topbar { display: none; }
         .ds-sidebar-mobile { display: none; }
         .ds-mobile-overlay { display: none; }
-        .ds-profile-row:hover { background: color-mix(in srgb, ${brandPrimary} 6%, transparent); }
+        .ds-profile-row:hover { background: color-mix(in srgb, var(--brand-primary) 6%, transparent); }
 
         @media (max-width: 768px) {
           .ds-sidebar-desktop { display: none; }
@@ -465,12 +496,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             padding-bottom: 12px;
             padding-left: max(16px, env(safe-area-inset-left, 16px));
             padding-right: max(16px, env(safe-area-inset-right, 16px));
-            background: var(--surface); border-bottom: 1px solid var(--border);
+            background: var(--brand-sidebar-bg); border-bottom: 1px solid var(--brand-sidebar-active-bg);
           }
           .ds-sidebar-mobile {
             display: flex; position: fixed; top: 0; left: 0; bottom: 0;
             width: 280px; max-width: 85vw;
-            background: var(--surface); border-right: 1px solid var(--border);
+            background: var(--brand-sidebar-bg); border-right: 1px solid var(--brand-sidebar-active-bg);
             flex-direction: column;
             padding-top: max(24px, calc(env(safe-area-inset-top, 0px) + 16px));
             padding-bottom: 0;
@@ -509,15 +540,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             onClick={() => setDrawerOpen(true)}
             aria-label="Open menu"
             style={{
-              width: 40, height: 40, border: '1px solid var(--border)',
-              background: 'var(--surface)', borderRadius: 8,
+              width: 40, height: 40, border: '1px solid var(--brand-sidebar-active-bg)',
+              background: 'var(--brand-sidebar-bg)', borderRadius: 8,
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
               gap: 4, cursor: 'pointer', padding: 0,
             }}
           >
-            <span style={{ width: 18, height: 2, background: 'var(--text-primary)', borderRadius: 1 }} />
-            <span style={{ width: 18, height: 2, background: 'var(--text-primary)', borderRadius: 1 }} />
-            <span style={{ width: 18, height: 2, background: 'var(--text-primary)', borderRadius: 1 }} />
+            <span style={{ width: 18, height: 2, background: 'var(--brand-on-sidebar)', borderRadius: 1 }} />
+            <span style={{ width: 18, height: 2, background: 'var(--brand-on-sidebar)', borderRadius: 1 }} />
+            <span style={{ width: 18, height: 2, background: 'var(--brand-on-sidebar)', borderRadius: 1 }} />
           </button>
 
           <Link href={logoHref} style={{

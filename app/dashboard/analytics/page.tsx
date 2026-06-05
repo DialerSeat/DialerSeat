@@ -8,6 +8,44 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts'
 
+// =============================================================================
+// app/dashboard/analytics/page.tsx — Pass 2 Phase C2 (binding sweep)
+// =============================================================================
+// All CSS-context token uses (the <style> block, inline style props, and
+// recharts contentStyle inline-style objects) are rebound from hardcoded
+// T.* hex constants to Pass 2 brand tokens via var() references.
+//
+// What's themed:
+//   - Page body bg + body text                → brand-page-bg / brand-on-page-bg
+//   - Header strip bg + accent line           → brand-sidebar-bg / brand-header-top-accent
+//   - Card surfaces, borders, muted text      → brand-card-surface / brand-card-border / brand-muted-text
+//   - Stat card TOTAL CALLS/TALK TIME stripes → brand-primary
+//   - Range tabs (active + inactive states)   → brand-primary / brand-on-sidebar-muted
+//   - Custom date inputs in header            → brand-sidebar-active-bg / brand-on-sidebar
+//   - Landing page CTA button                 → brand-primary-soft / brand-primary
+//   - AWAITING DATA empty-state pill          → brand-primary / brand-on-primary
+//   - Recharts tooltip popover styling        → brand-sidebar-bg / brand-on-sidebar
+//
+// What stays semantic (never themed):
+//   - T.green (#1a6a1a)  — CONVERSIONS, CLOSED stat stripes + values; CLOSED disposition
+//   - T.amber (#8a6a1a)  — BEST CAMPAIGN stat stripe + value; NOT INTERESTED disposition
+//   - T.red   (#8a1a1a)  — DO NOT CALL disposition
+//   - T.accent (#2a4a8a) — HOURS DIALED stat stripe + value; APPOINTMENT disposition;
+//                          Contacted bar in CAMPAIGN PERFORMANCE
+//   - DISPOSITION_COLORS pie chart category mapping
+//
+// Known limitation (NOT introduced by this push, pre-existing):
+//   - Recharts SVG attribute props (CartesianGrid stroke, XAxis/YAxis
+//     stroke, Line stroke + dot fill, Bar fill) are passed directly as
+//     SVG attributes, which do NOT resolve CSS custom properties per
+//     spec. These remain using T.* hex values for guaranteed legibility.
+//     Chart axes/gridlines/bars stay in default colors regardless of
+//     tenant theme. T.blue is kept as var(--brand-primary) per the
+//     pre-existing pattern; in CSS contexts it resolves, in SVG attrs
+//     it falls back to browser default.
+//     A future polish push could runtime-resolve via getComputedStyle.
+// =============================================================================
+
 const T = {
   bg: '#f0f1f4',
   surface: '#e2e4ea',
@@ -241,10 +279,10 @@ export default function AnalyticsPage() {
   if (!adminChecked) {
     return (
       <div style={{
-        flex: 1, background: T.bg,
+        flex: 1, background: 'var(--brand-page-bg)',
         minHeight: '100vh',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 11, letterSpacing: 3, color: T.muted,
+        fontSize: 11, letterSpacing: 3, color: 'var(--brand-muted-text)',
       }}>LOADING...</div>
     )
   }
@@ -252,7 +290,7 @@ export default function AnalyticsPage() {
   return (
     <div className="analytics-root" style={{
       flex: 1,
-      background: T.bg,
+      background: 'var(--brand-page-bg)',
       minHeight: '100vh',
       display: 'flex',
       flexDirection: 'column',
@@ -265,9 +303,9 @@ export default function AnalyticsPage() {
         /* Flex row — title, range tabs, spacer pushing the LANDING button  */
         /* to the far right. Original behavior preserved.                   */
         .analytics-header {
-          background: ${T.dark};
+          background: var(--brand-sidebar-bg);
           padding: 12px 20px;
-          border-bottom: 2px solid ${T.accent};
+          border-bottom: 2px solid var(--brand-header-top-accent);
           display: flex;
           align-items: center;
           gap: 16px;
@@ -278,12 +316,12 @@ export default function AnalyticsPage() {
 
         .landing-page-btn {
           padding: 6px 14px;
-          background: rgba(74,158,255,0.08);
-          border: 1px solid ${T.blue};
+          background: var(--brand-primary-soft);
+          border: 1px solid var(--brand-primary);
           border-radius: 4px;
           font-size: 10px;
           letter-spacing: 2px;
-          color: ${T.blue};
+          color: var(--brand-primary);
           cursor: pointer;
           font-family: 'Futura PT', Futura, sans-serif;
           font-weight: bold;
@@ -292,17 +330,17 @@ export default function AnalyticsPage() {
           white-space: nowrap;
         }
         .landing-page-btn:hover {
-          background: rgba(74,158,255,0.18);
+          background: color-mix(in srgb, var(--brand-primary) 18%, transparent);
         }
 
         .welcome-row {
-          background: ${T.bg};
+          background: var(--brand-page-bg);
           padding: 18px 20px 4px;
         }
         .welcome-line {
           font-size: 18px;
           font-weight: bold;
-          color: ${T.text};
+          color: var(--brand-on-page-bg);
           letter-spacing: 2px;
           font-family: 'Futura PT', Futura, sans-serif;
         }
@@ -310,27 +348,27 @@ export default function AnalyticsPage() {
         .range-tab {
           padding: 6px 14px;
           background: transparent;
-          border: 1px solid #4a4a5e;
+          border: 1px solid var(--brand-sidebar-active-bg);
           border-radius: 3px;
           font-size: 10px;
           letter-spacing: 2px;
-          color: #8888aa;
+          color: var(--brand-on-sidebar-muted);
           cursor: pointer;
           font-family: 'Futura PT', Futura, sans-serif;
           font-weight: bold;
         }
         .range-tab.active {
-          background: ${T.blue};
-          border-color: ${T.blue};
-          color: white;
+          background: var(--brand-primary);
+          border-color: var(--brand-primary);
+          color: var(--brand-on-primary);
         }
         .custom-range { display: flex; gap: 6px; align-items: center; }
         .custom-range input {
           padding: 4px 8px;
-          background: #2a2a3e;
-          border: 1px solid #4a4a5e;
+          background: var(--brand-sidebar-active-bg);
+          border: 1px solid var(--brand-sidebar-active-bg);
           border-radius: 3px;
-          color: white;
+          color: var(--brand-on-sidebar);
           font-size: 11px;
           font-family: monospace;
         }
@@ -342,17 +380,17 @@ export default function AnalyticsPage() {
         }
         .stat-card {
           padding: 12px 14px;
-          background: ${T.surface};
-          border: 1px solid ${T.border};
+          background: var(--brand-card-surface);
+          border: 1px solid var(--brand-card-border);
           border-radius: 4px;
-          border-top: 3px solid ${T.blue};
+          border-top: 3px solid var(--brand-primary);
           position: relative;
         }
         .stat-card.empty { opacity: 0.55; }
         .stat-label {
           font-size: 9px;
           letter-spacing: 2px;
-          color: ${T.muted};
+          color: var(--brand-muted-text);
           margin-bottom: 6px;
           font-weight: bold;
         }
@@ -360,12 +398,12 @@ export default function AnalyticsPage() {
           font-size: 22px;
           font-weight: bold;
           font-family: monospace;
-          color: ${T.text};
+          color: var(--brand-on-page-bg);
           letter-spacing: -0.5px;
         }
         .stat-sub {
           font-size: 10px;
-          color: ${T.muted};
+          color: var(--brand-muted-text);
           margin-top: 4px;
           font-family: monospace;
         }
@@ -376,8 +414,8 @@ export default function AnalyticsPage() {
           padding: 0 16px 16px;
         }
         .chart-card {
-          background: ${T.surface};
-          border: 1px solid ${T.border};
+          background: var(--brand-card-surface);
+          border: 1px solid var(--brand-card-border);
           border-radius: 4px;
           padding: 14px;
           position: relative;
@@ -385,7 +423,7 @@ export default function AnalyticsPage() {
         .chart-title {
           font-size: 10px;
           letter-spacing: 3px;
-          color: ${T.muted};
+          color: var(--brand-muted-text);
           margin-bottom: 12px;
           font-weight: bold;
         }
@@ -399,8 +437,8 @@ export default function AnalyticsPage() {
           z-index: 2;
         }
         .chart-empty-pill {
-          background: rgba(26, 26, 46, 0.85);
-          color: white;
+          background: var(--brand-primary);
+          color: var(--brand-on-primary);
           font-size: 10px;
           letter-spacing: 3px;
           font-weight: bold;
@@ -414,7 +452,7 @@ export default function AnalyticsPage() {
           text-align: center;
           font-size: 11px;
           letter-spacing: 3px;
-          color: ${T.muted};
+          color: var(--brand-muted-text);
         }
 
         /* ── MOBILE HEADER (≤ 768px) ───────────────────────────────────── */
@@ -467,7 +505,7 @@ export default function AnalyticsPage() {
       `}</style>
 
       <div className="analytics-header">
-        <span className="analytics-header-title" style={{ fontSize: 11, fontWeight: 'bold', letterSpacing: 4, color: T.blue }}>
+        <span className="analytics-header-title" style={{ fontSize: 11, fontWeight: 'bold', letterSpacing: 4, color: 'var(--brand-primary)' }}>
           ANALYTICS OVERVIEW
         </span>
         <div className="range-tabs">
@@ -486,7 +524,7 @@ export default function AnalyticsPage() {
               value={customStart}
               onChange={e => setCustomStart(e.target.value)}
             />
-            <span style={{ color: '#8888aa', fontSize: 10 }}>→</span>
+            <span style={{ color: 'var(--brand-on-sidebar-muted)', fontSize: 10 }}>→</span>
             <input
               type="date"
               value={customEnd}
@@ -565,7 +603,7 @@ export default function AnalyticsPage() {
                     <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
                     <XAxis dataKey="label" stroke={T.muted} fontSize={10} />
                     <YAxis stroke={T.muted} fontSize={10} allowDecimals={false} domain={[0, 'auto']} />
-                    <Tooltip contentStyle={{ background: T.dark, border: `1px solid ${T.border}`, color: 'white', fontSize: 11 }} />
+                    <Tooltip contentStyle={{ background: 'var(--brand-sidebar-bg)', border: '1px solid var(--brand-card-border)', color: 'var(--brand-on-sidebar)', fontSize: 11 }} />
                     <Line type="monotone" dataKey="calls" stroke={T.blue} strokeWidth={2} dot={{ fill: T.blue, r: 3 }} />
                   </LineChart>
                 </ResponsiveContainer>
@@ -586,7 +624,7 @@ export default function AnalyticsPage() {
                     <XAxis dataKey="label" stroke={T.muted} fontSize={10} />
                     <YAxis stroke={T.muted} fontSize={10} unit="%" domain={[0, 100]} />
                     <Tooltip
-                      contentStyle={{ background: T.dark, border: `1px solid ${T.border}`, color: 'white', fontSize: 11 }}
+                      contentStyle={{ background: 'var(--brand-sidebar-bg)', border: '1px solid var(--brand-card-border)', color: 'var(--brand-on-sidebar)', fontSize: 11 }}
                       formatter={(v: any) => `${v}%`}
                     />
                     <Line type="monotone" dataKey="conversionRate" stroke={T.green} strokeWidth={2} dot={{ fill: T.green, r: 3 }} />
@@ -620,7 +658,7 @@ export default function AnalyticsPage() {
                       ))}
                     </Pie>
                     <Tooltip
-                      contentStyle={{ background: T.dark, border: `1px solid ${T.border}`, color: 'white', fontSize: 11 }}
+                      contentStyle={{ background: 'var(--brand-sidebar-bg)', border: '1px solid var(--brand-card-border)', color: 'var(--brand-on-sidebar)', fontSize: 11 }}
                     />
                   </PieChart>
                 </ResponsiveContainer>
@@ -640,7 +678,7 @@ export default function AnalyticsPage() {
                     <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
                     <XAxis dataKey="name" stroke={T.muted} fontSize={9} />
                     <YAxis stroke={T.muted} fontSize={10} allowDecimals={false} domain={[0, 'auto']} />
-                    <Tooltip contentStyle={{ background: T.dark, border: `1px solid ${T.border}`, color: 'white', fontSize: 11 }} />
+                    <Tooltip contentStyle={{ background: 'var(--brand-sidebar-bg)', border: '1px solid var(--brand-card-border)', color: 'var(--brand-on-sidebar)', fontSize: 11 }} />
                     <Legend wrapperStyle={{ fontSize: 10 }} />
                     <Bar dataKey="total" fill={T.blue} name="Total" />
                     <Bar dataKey="contacted" fill={T.accent} name="Contacted" />

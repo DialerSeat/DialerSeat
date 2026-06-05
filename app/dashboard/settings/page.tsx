@@ -7,12 +7,22 @@ import { WhitelabelLivePreview } from '@/components/WhitelabelLivePreview'
 const FUTURA = 'Futura PT, Futura, "Trebuchet MS", sans-serif'
 
 // =============================================================================
-// SETTINGS PAGE (v25 — Pass 2 Phase B5: inline theme editor)
+// SETTINGS PAGE (v26 — Pass 2 expansion: 3-color theme editor)
 // =============================================================================
-// Changes vs v24:
+// Changes vs v25:
+//   - Inline theme editor now handles 3 colors (sidebar + primary + page-bg)
+//     to match the migration 003 expansion. Custom mode shows a third
+//     DarkColorRow for Page background.
+//   - WhitelabelLivePreview receives pageBg so the user sees themed page-bg
+//     with auto-contrast body text + derived card surfaces inline.
+//   - Preset matching on load now checks all 3 colors (falls to Custom
+//     if any differ).
+//   - POST body sends page_bg_color.
+//
+// Preserved from v25:
 //   - The ▸ YOUR WHITELABEL section (which was a single "EDIT YOUR
 //     WHITELABEL →" link to /onboarding/whitelabel) is replaced with
-//     ▸ YOUR WHITELABEL THEME — an inline editor with 3 presets, custom
+//     ▸ YOUR WHITELABEL THEME — an inline editor with presets, custom
 //     picker, WhitelabelLivePreview, 60-sec disclaimer, and a SAVE
 //     THEME button. POSTs to the same /api/whitelabel/onboarding endpoint
 //     used by the full onboarding page.
@@ -91,6 +101,7 @@ interface TenantData {
   logo_url: string | null
   primary_color: string
   sidebar_color: string
+  page_bg_color: string
 }
 
 interface Preset {
@@ -99,29 +110,33 @@ interface Preset {
   description: string
   primary: string
   sidebar: string
+  pageBg: string
 }
 
 const PRESETS: Preset[] = [
   {
     key: 'stone-lavender',
     label: 'Stone & Lavender',
-    description: 'Light gray-white sidebar with soft lavender accents.',
+    description: 'Gray-white sidebar, lavender accents, faint lavender page.',
     primary: '#b8a3e0',
     sidebar: '#e4e6eb',
+    pageBg: '#f1ecf7',
   },
   {
     key: 'forest',
     label: 'Forest',
-    description: 'Deep forest sidebar with bright leaf-green accents.',
+    description: 'Forest sidebar, leaf-green accents, fresh green page.',
     primary: '#5fb87a',
     sidebar: '#1a3a26',
+    pageBg: '#ecf5e8',
   },
   {
     key: 'bloom',
     label: 'Bloom',
-    description: 'Warm brown sidebar with rose pink accents.',
+    description: 'Brown sidebar, rose pink accents, soft rose page.',
     primary: '#e8b8c5',
     sidebar: '#6e5142',
+    pageBg: '#fbeef2',
   },
 ]
 
@@ -146,11 +161,12 @@ export default function SettingsPage() {
   const [brandOptions, setBrandOptions] = useState<BrandOptions | null>(null)
   const [switchingBrand, setSwitchingBrand] = useState(false)
 
-  // ── NEW: inline theme editor state ─────────────────────────────────
+  // ── Inline theme editor state (Pass 2 expansion: 3 colors) ────────
   const [tenantData, setTenantData] = useState<TenantData | null>(null)
   const [presetKey, setPresetKey] = useState<string>(PRESETS[0].key)
   const [primary, setPrimary] = useState<string>(PRESETS[0].primary)
   const [sidebar, setSidebar] = useState<string>(PRESETS[0].sidebar)
+  const [pageBg, setPageBg] = useState<string>(PRESETS[0].pageBg)
   const [themeSaving, setThemeSaving] = useState(false)
   const [themeFeedback, setThemeFeedback] = useState<
     { kind: 'success' | 'error'; text: string } | null
@@ -191,14 +207,17 @@ export default function SettingsPage() {
             logo_url: tenantPayload.tenant.logo_url,
             primary_color: tenantPayload.tenant.primary_color || PRESETS[0].primary,
             sidebar_color: tenantPayload.tenant.sidebar_color || PRESETS[0].sidebar,
+            page_bg_color: tenantPayload.tenant.page_bg_color || PRESETS[0].pageBg,
           }
           setTenantData(t)
           setPrimary(t.primary_color)
           setSidebar(t.sidebar_color)
+          setPageBg(t.page_bg_color)
           const match = PRESETS.find(
             p =>
               p.primary.toLowerCase() === t.primary_color.toLowerCase() &&
-              p.sidebar.toLowerCase() === t.sidebar_color.toLowerCase()
+              p.sidebar.toLowerCase() === t.sidebar_color.toLowerCase() &&
+              p.pageBg.toLowerCase() === t.page_bg_color.toLowerCase()
           )
           setPresetKey(match?.key || 'custom')
         }
@@ -309,7 +328,7 @@ export default function SettingsPage() {
     }
   }
 
-  // ── NEW: theme editor handlers ─────────────────────────────────────
+  // ── Theme editor handlers (3-color) ───────────────────────────────
   const applyPreset = (key: string) => {
     setPresetKey(key)
     setThemeFeedback(null)
@@ -318,12 +337,14 @@ export default function SettingsPage() {
     if (p) {
       setPrimary(p.primary)
       setSidebar(p.sidebar)
+      setPageBg(p.pageBg)
     }
   }
 
-  const updateColor = (field: 'primary' | 'sidebar', value: string) => {
+  const updateColor = (field: 'primary' | 'sidebar' | 'pageBg', value: string) => {
     if (field === 'primary') setPrimary(value)
-    else setSidebar(value)
+    else if (field === 'sidebar') setSidebar(value)
+    else setPageBg(value)
     setPresetKey('custom')
     setThemeFeedback(null)
   }
@@ -336,6 +357,10 @@ export default function SettingsPage() {
     }
     if (!HEX_RE.test(sidebar)) {
       setThemeFeedback({ kind: 'error', text: 'Sidebar must be a #RRGGBB hex value.' })
+      return
+    }
+    if (!HEX_RE.test(pageBg)) {
+      setThemeFeedback({ kind: 'error', text: 'Page background must be a #RRGGBB hex value.' })
       return
     }
 
@@ -351,6 +376,7 @@ export default function SettingsPage() {
           logo_url: tenantData.logo_url,
           primary_color: primary,
           sidebar_color: sidebar,
+          page_bg_color: pageBg,
         }),
       })
       const data = await res.json()
@@ -366,7 +392,12 @@ export default function SettingsPage() {
         text: 'Theme saved. Propagating site-wide now — up to 60 seconds for everyone else.',
       })
       // Update locally so a refresh isn't needed for the live preview
-      setTenantData({ ...tenantData, primary_color: primary, sidebar_color: sidebar })
+      setTenantData({
+        ...tenantData,
+        primary_color: primary,
+        sidebar_color: sidebar,
+        page_bg_color: pageBg,
+      })
     } catch (err: any) {
       setThemeFeedback({ kind: 'error', text: err.message || 'Network error.' })
     } finally {
@@ -473,7 +504,7 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {/* ── NEW: YOUR WHITELABEL THEME (inline editor) ── */}
+        {/* ── YOUR WHITELABEL THEME (3-color inline editor) ── */}
         {wlActive && tenantData && (
           <div style={sectionStyle}>
             <div style={sectionHeaderStyle}>▸ YOUR WHITELABEL THEME</div>
@@ -494,6 +525,7 @@ export default function SettingsPage() {
                   <div style={themePresetSwatchRowStyle}>
                     <div style={{ ...themePresetSwatchStyle, background: p.sidebar }} />
                     <div style={{ ...themePresetSwatchStyle, background: p.primary }} />
+                    <div style={{ ...themePresetSwatchStyle, background: p.pageBg }} />
                   </div>
                   <div style={themePresetNameStyle(presetKey === p.key)}>{p.label}</div>
                 </button>
@@ -522,7 +554,7 @@ export default function SettingsPage() {
 
             <div style={{ fontSize: 11, color: '#888a92', letterSpacing: 0.5, lineHeight: 1.6, marginBottom: 14 }}>
               {presetKey === 'custom'
-                ? 'Pick your own sidebar and primary colors below.'
+                ? 'Pick your own sidebar, primary, and page background colors below.'
                 : activePreset?.description}
             </div>
 
@@ -540,6 +572,12 @@ export default function SettingsPage() {
                   value={primary}
                   onChange={v => updateColor('primary', v)}
                 />
+                <DarkColorRow
+                  label="Page background"
+                  description="Main background of every dashboard page — body text auto-contrasts"
+                  value={pageBg}
+                  onChange={v => updateColor('pageBg', v)}
+                />
               </div>
             )}
 
@@ -551,6 +589,7 @@ export default function SettingsPage() {
               <WhitelabelLivePreview
                 primary={primary}
                 sidebar={sidebar}
+                pageBg={pageBg}
                 brandName={tenantData.brand_name}
                 logoUrl={tenantData.logo_url}
               />
@@ -1094,7 +1133,7 @@ const seatDetailStyle: React.CSSProperties = {
   fontSize: 11, color: '#888a92', letterSpacing: 0.5, lineHeight: 1.5, marginTop: 4,
 }
 
-// ─── New styles for the inline theme editor section ────────────────
+// ─── Inline theme editor styles ─────────────────────────────────────
 
 const themePresetGridStyle: React.CSSProperties = {
   display: 'grid',
@@ -1123,7 +1162,7 @@ const themePresetSwatchRowStyle: React.CSSProperties = {
 }
 
 const themePresetSwatchStyle: React.CSSProperties = {
-  width: 28,
+  width: 26,
   height: 24,
   borderRadius: 3,
   border: '1px solid rgba(255,255,255,0.08)',

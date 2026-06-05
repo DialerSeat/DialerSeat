@@ -3,76 +3,91 @@
 import type { CSSProperties } from 'react'
 
 // =============================================================================
-// WHITELABEL LIVE EXACT PREVIEW — Pass 2 Phase B3
+// WHITELABEL LIVE EXACT PREVIEW v3 — Pass 2 expansion (3-color)
 // =============================================================================
-// Self-contained preview that renders a mini dashboard chunk themed by the
-// two colors the user has picked. Drop into onboarding or settings; it
-// scopes its CSS variables to its outer container so it doesn't override
-// the surrounding page's chrome.
+// Adds optional pageBg prop. When provided, the outer container bg, card
+// surfaces, card borders, body text, and muted text all derive from it
+// via auto-contrast + color-mix — matching what ThemeProvider v4 does
+// for real dashboard surfaces in production.
 //
-// What's rendered:
-//   - Sidebar (144px wide): logo box (padding 0, fills entirety) + 5 nav
-//     items (one active with primary-colored left border) + MANAGER+ pill
-//   - Header strip: title + segmented control with one active button
-//   - Page area: 2 KPI tiles (semantic stripes — green & amber, NOT themed),
-//     AWAITING DATA pill, primary CTA button
+// Backward compatible: pageBg is optional. If not passed (existing
+// 2-color callers), defaults to #f0f1f4 (Pass 2 light dashboard page bg).
 //
-// Bindings:
-//   --brand-primary, --brand-sidebar-bg + 5 derived tokens, all scoped to
-//   this component's outer <div> via inline style. The mini-dashboard JSX
-//   binds to those tokens with var(--brand-*) — same bindings the real
-//   dashboard will use after Phase C.
+// What's rendered (4 readability points visible at once):
+//   1. Sidebar — sidebar bg + auto-contrast text + active nav with primary
+//      left border + MANAGER+ pill (primary bg + auto-contrast text)
+//   2. Header strip — sidebar bg with title in primary + segmented control
+//      (active button = primary bg + auto-contrast text)
+//   3. Page body — NEW: "WELCOME BACK." headline (full on-page-bg) + muted
+//      helper paragraph (60/40 mix toward on-page-bg). Demonstrates
+//      body-text readability on the user's chosen page bg.
+//   4. CTA button — INITIATE DIAL SEQUENCE on sidebar bg with primary top
+//      accent and primary text. Demonstrates CTA readability.
 //
-// What stays semantic:
-//   KPI tile stripes (CONVERSIONS green, BEST CAMPAIGN amber) and the
-//   #f0f1f4 / #e2e4ea / #c4c8d0 / #5a5e6a Pass 1 page-chrome tokens are
-//   hardcoded. Per spec, these are never tenant-themed.
+// What stays semantic (NEVER themed):
+//   - KPI tile top stripes (green for CONVERSIONS, amber for BEST CAMPAIGN)
+//   - KPI tile value colors (match their semantic stripe)
+//   - All status pill colors (handled outside this component)
+//
+// Auto-contrast (pickContrastText):
+//   Computes WCAG relative luminance, returns true white (#ffffff) for
+//   dark colors (L ≤ 0.18) or app-standard near-black (#1a1c24) for
+//   lighter colors. Threshold tuned for the preset palette so mid-
+//   saturation primaries (lavender, forest green, rose) and dark
+//   sidebars all correctly get the higher-contrast text choice.
+//   Matches ThemeProvider v4 exactly. Per JC: "true white or black".
+//
+// Derived tokens (matching ThemeProvider v4's color-mix expressions):
+//   card-surface  page-bg shifted 8% toward on-page-bg
+//   card-border   page-bg shifted 18% toward on-page-bg
+//   muted-text    60% on-page-bg + 40% page-bg
 // =============================================================================
 
 const FUTURA = `'Futura PT', Futura, 'Helvetica Neue', Helvetica, Arial, sans-serif`
+const DEFAULT_PAGE_BG = '#f0f1f4'
 
 interface WhitelabelLivePreviewProps {
   primary: string
   sidebar: string
+  pageBg?: string
   brandName: string
   logoUrl: string | null
 }
 
 function pickContrastText(hex: string): string {
-  const h = hex.replace('#', '')
-  if (h.length !== 6) return '#ffffff'
+  const h = (hex || '').replace('#', '').padEnd(6, '0').slice(0, 6)
+  if (!/^[0-9a-fA-F]{6}$/.test(h)) return '#1a1c24'
   const r = parseInt(h.slice(0, 2), 16) / 255
   const g = parseInt(h.slice(2, 4), 16) / 255
   const b = parseInt(h.slice(4, 6), 16) / 255
   const lin = (c: number) =>
     c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
   const luminance = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
-  return luminance > 0.55 ? '#1a1c24' : '#ffffff'
+  return luminance > 0.18 ? '#1a1c24' : '#ffffff'
 }
 
 export function WhitelabelLivePreview({
   primary,
   sidebar,
+  pageBg = DEFAULT_PAGE_BG,
   brandName,
   logoUrl,
 }: WhitelabelLivePreviewProps) {
   const onPrimary = pickContrastText(primary)
   const onSidebar = pickContrastText(sidebar)
+  const onPageBg = pickContrastText(pageBg)
+
+  // Derived — match ThemeProvider v4 expressions exactly so what the
+  // user sees here is what they get on the real dashboard.
+  const cardSurface = `color-mix(in srgb, ${pageBg} 92%, ${onPageBg} 8%)`
+  const cardBorder = `color-mix(in srgb, ${pageBg} 82%, ${onPageBg} 18%)`
+  const mutedText = `color-mix(in srgb, ${onPageBg} 60%, ${pageBg} 40%)`
+
+  // Sidebar derived — same heuristic as ThemeProvider v4
   const sidebarTextMuted =
     onSidebar === '#ffffff' ? 'rgba(255,255,255,0.55)' : 'rgba(26,28,36,0.55)'
   const sidebarActiveBg =
     onSidebar === '#ffffff' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'
-
-  // Scoped CSS variable container. Children read these via var(--brand-*).
-  const scopedStyle = {
-    '--brand-primary': primary,
-    '--brand-sidebar-bg': sidebar,
-    '--brand-on-primary': onPrimary,
-    '--brand-on-sidebar': onSidebar,
-    '--brand-on-sidebar-muted': sidebarTextMuted,
-    '--brand-sidebar-active-bg': sidebarActiveBg,
-    '--brand-header-top-accent': primary,
-  } as CSSProperties
 
   const navItems = [
     { label: 'ANALYTICS', active: true },
@@ -85,12 +100,11 @@ export function WhitelabelLivePreview({
   return (
     <div
       style={{
-        ...scopedStyle,
         width: '100%',
         borderRadius: 6,
-        border: '1px solid #c4c8d0',
+        border: `1px solid ${cardBorder}`,
         overflow: 'hidden',
-        background: '#f0f1f4',
+        background: pageBg,
         display: 'flex',
         minHeight: 380,
         fontFamily: FUTURA,
@@ -101,8 +115,8 @@ export function WhitelabelLivePreview({
       <div
         style={{
           width: 152,
-          background: 'var(--brand-sidebar-bg)',
-          color: 'var(--brand-on-sidebar)',
+          background: sidebar,
+          color: onSidebar,
           display: 'flex',
           flexDirection: 'column',
           flexShrink: 0,
@@ -114,7 +128,7 @@ export function WhitelabelLivePreview({
             height: 64,
             padding: 0,
             overflow: 'hidden',
-            background: 'var(--brand-sidebar-bg)',
+            background: sidebar,
             borderBottom: `1px solid ${sidebarActiveBg}`,
             display: 'flex',
             alignItems: 'center',
@@ -139,7 +153,7 @@ export function WhitelabelLivePreview({
               style={{
                 fontSize: 9,
                 letterSpacing: 2,
-                color: 'var(--brand-on-sidebar-muted)',
+                color: sidebarTextMuted,
                 fontWeight: 700,
                 textAlign: 'center',
                 padding: '0 8px',
@@ -158,13 +172,11 @@ export function WhitelabelLivePreview({
               key={item.label}
               style={{
                 padding: '8px 14px',
-                background: item.active ? 'var(--brand-sidebar-active-bg)' : 'transparent',
+                background: item.active ? sidebarActiveBg : 'transparent',
                 borderLeft: item.active
-                  ? '2px solid var(--brand-primary)'
+                  ? `2px solid ${primary}`
                   : '2px solid transparent',
-                color: item.active
-                  ? 'var(--brand-on-sidebar)'
-                  : 'var(--brand-on-sidebar-muted)',
+                color: item.active ? onSidebar : sidebarTextMuted,
                 fontSize: 9,
                 letterSpacing: 2,
                 fontWeight: item.active ? 700 : 500,
@@ -179,8 +191,8 @@ export function WhitelabelLivePreview({
         <div style={{ padding: 12 }}>
           <div
             style={{
-              background: 'var(--brand-primary)',
-              color: 'var(--brand-on-primary)',
+              background: primary,
+              color: onPrimary,
               padding: '4px 9px',
               borderRadius: 3,
               fontSize: 8,
@@ -206,10 +218,10 @@ export function WhitelabelLivePreview({
         {/* Header strip */}
         <div
           style={{
-            background: 'var(--brand-sidebar-bg)',
-            color: 'var(--brand-on-sidebar)',
+            background: sidebar,
+            color: onSidebar,
             padding: '10px 16px',
-            borderBottom: '2px solid var(--brand-header-top-accent)',
+            borderBottom: `2px solid ${primary}`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -220,7 +232,7 @@ export function WhitelabelLivePreview({
             style={{
               fontSize: 10,
               letterSpacing: 3,
-              color: 'var(--brand-primary)',
+              color: primary,
               fontWeight: 700,
             }}
           >
@@ -233,8 +245,8 @@ export function WhitelabelLivePreview({
                 key={label}
                 style={{
                   padding: '4px 9px',
-                  background: i === 1 ? 'var(--brand-primary)' : 'transparent',
-                  color: i === 1 ? 'var(--brand-on-primary)' : 'var(--brand-on-sidebar-muted)',
+                  background: i === 1 ? primary : 'transparent',
+                  color: i === 1 ? onPrimary : sidebarTextMuted,
                   fontSize: 8,
                   letterSpacing: 2,
                   fontWeight: 700,
@@ -247,7 +259,7 @@ export function WhitelabelLivePreview({
           </div>
         </div>
 
-        {/* Page content */}
+        {/* Page content on themed page-bg */}
         <div
           style={{
             flex: 1,
@@ -257,13 +269,39 @@ export function WhitelabelLivePreview({
             gap: 10,
           }}
         >
-          {/* KPI tiles — semantic stripes, NOT themed per spec */}
+          {/* ── Readability demo: body text + muted helper on page-bg ── */}
+          <div style={{ marginBottom: 2 }}>
+            <div
+              style={{
+                fontSize: 14,
+                fontWeight: 700,
+                color: onPageBg,
+                letterSpacing: 1,
+                marginBottom: 4,
+              }}
+            >
+              WELCOME BACK.
+            </div>
+            <div
+              style={{
+                fontSize: 10,
+                color: mutedText,
+                lineHeight: 1.5,
+                letterSpacing: 0.3,
+              }}
+            >
+              Body text on your chosen background. Auto-contrast keeps it
+              readable on any color.
+            </div>
+          </div>
+
+          {/* KPI tiles — derived card surface, semantic stripes never themed */}
           <div style={{ display: 'flex', gap: 8 }}>
             <div
               style={{
-                background: '#e2e4ea',
-                border: '1px solid #c4c8d0',
-                borderTop: '3px solid #1a6a1a', /* semantic green — NOT themed */
+                background: cardSurface,
+                border: `1px solid ${cardBorder}`,
+                borderTop: '3px solid #1a6a1a',
                 borderRadius: 4,
                 padding: 9,
                 flex: 1,
@@ -273,7 +311,7 @@ export function WhitelabelLivePreview({
                 style={{
                   fontSize: 7,
                   letterSpacing: 2,
-                  color: '#5a5e6a',
+                  color: mutedText,
                   marginBottom: 3,
                   fontWeight: 700,
                 }}
@@ -293,9 +331,9 @@ export function WhitelabelLivePreview({
             </div>
             <div
               style={{
-                background: '#e2e4ea',
-                border: '1px solid #c4c8d0',
-                borderTop: '3px solid #8a6a1a', /* semantic amber — NOT themed */
+                background: cardSurface,
+                border: `1px solid ${cardBorder}`,
+                borderTop: '3px solid #8a6a1a',
                 borderRadius: 4,
                 padding: 9,
                 flex: 1,
@@ -305,7 +343,7 @@ export function WhitelabelLivePreview({
                 style={{
                   fontSize: 7,
                   letterSpacing: 2,
-                  color: '#5a5e6a',
+                  color: mutedText,
                   marginBottom: 3,
                   fontWeight: 700,
                 }}
@@ -329,20 +367,20 @@ export function WhitelabelLivePreview({
           <div
             style={{
               flex: 1,
-              background: '#e2e4ea',
-              border: '1px solid #c4c8d0',
+              background: cardSurface,
+              border: `1px solid ${cardBorder}`,
               borderRadius: 4,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              minHeight: 70,
+              minHeight: 50,
             }}
           >
             <div
               style={{
                 padding: '6px 14px',
-                background: 'var(--brand-primary)',
-                color: 'var(--brand-on-primary)',
+                background: primary,
+                color: onPrimary,
                 fontSize: 8,
                 letterSpacing: 2,
                 fontWeight: 700,
@@ -353,17 +391,17 @@ export function WhitelabelLivePreview({
             </div>
           </div>
 
-          {/* Primary CTA button — canonical Pass 1 shape: dark bg + colored top stripe */}
+          {/* Primary CTA button */}
           <button
             type="button"
             disabled
             style={{
               padding: 11,
-              background: 'var(--brand-sidebar-bg)',
-              borderTop: '3px solid var(--brand-primary)',
+              background: sidebar,
+              borderTop: `3px solid ${primary}`,
               border: 'none',
               borderRadius: 4,
-              color: 'var(--brand-primary)',
+              color: primary,
               fontSize: 10,
               fontWeight: 700,
               letterSpacing: 3,

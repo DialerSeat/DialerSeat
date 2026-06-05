@@ -1,52 +1,60 @@
+// components/ThemeProvider.tsx
 'use client'
 
-import { createContext, useContext, ReactNode } from 'react'
+import { createContext, useContext, useMemo } from 'react'
 import type { TenantBranding } from '@/lib/tenant'
 
 // =============================================================================
-// THEME PROVIDER — v3 (Pass 2 Phase B2)
+// THEME PROVIDER v4 — Pass 2 expansion: 3-color model
 // =============================================================================
-// Pass 2 changes vs v2:
+// Injects 15 CSS variables onto :root — 3 user-picked + 12 derived.
+// Tenant branding is server-fetched (in the root layout, via subdomain
+// resolution in proxy/middleware) and passed in as initialBranding.
 //
-//   v2 read 5 brand colors and injected --brand-primary, --brand-secondary,
-//   --brand-surface, --brand-bg, --brand-text. Tenants could override all 5.
+// Token tiers:
 //
-//   v3 reads 2 brand colors and injects 10 tokens total:
-//     - 2 user-picked (--brand-primary, --brand-sidebar-bg)
-//     - 8 derived (contrast text colors, hover variants, soft overlays)
+// Tier 1 — user-picked (3, DB-stored):
+//   --brand-primary       buttons, accents, focus rings, AWAITING DATA
+//                         pill, chart line, MANAGER+ badge, segmented
+//                         active state, header top accent
+//   --brand-sidebar-bg    sidebar background, header strip, primary
+//                         button background
+//   --brand-page-bg       dashboard page body bg (NEW Pass 2 expansion)
 //
-//   The dropped tokens (--brand-secondary, --brand-bg, --brand-text) are
-//   no longer overridden — they keep their globals.css defaults, which
-//   matters for any landing-page code still binding to them. This is how
-//   we honor "landing page stays the exact same" without route-gating.
+// Tier 2 — derived (12, computed here):
+//   Primary family:
+//     --brand-on-primary           text/icon color on primary surfaces
+//     --brand-primary-hover        primary mixed 88% with black
+//     --brand-primary-soft         primary mixed 12% with transparent
+//   Sidebar family:
+//     --brand-on-sidebar           text/icon color on sidebar
+//     --brand-on-sidebar-muted     same hue at 65% alpha (low-emphasis)
+//     --brand-sidebar-active-bg    primary at 18% over sidebar (active nav)
+//     --brand-sidebar-hover-bg     primary at 9% over sidebar (hover)
+//     --brand-header-top-accent    primary (semantic: header accent line)
+//   Page-bg family (NEW):
+//     --brand-on-page-bg           body text color, auto-contrast picked
+//     --brand-card-surface         page-bg shifted 8% toward on-page-bg
+//     --brand-card-border          page-bg shifted 18% toward on-page-bg
+//     --brand-muted-text           60% on-page-bg + 40% page-bg (low emphasis)
 //
-// Token map (when a tenant is active):
+// Contrast picker (pickContrastText):
+//   Computes WCAG relative luminance, returns true white (#ffffff) for
+//   dark colors (L ≤ 0.18) or app-standard near-black (#1a1c24) for
+//   lighter colors. Threshold tuned so mid-saturation primaries like
+//   lavender (#b8a3e0), forest green (#5fb87a), and rose (#e8b8c5) all
+//   correctly get dark text (the higher-contrast choice).
 //
-//   Tier 1 (from DB):
-//     --brand-primary               tenant's brand color
-//     --brand-sidebar-bg            tenant's sidebar/header/button-bg color
-//
-//   Tier 2 (derived from Tier 1):
-//     --brand-on-primary            contrast pick (white or dark) on primary
-//     --brand-primary-hover         88% mix of primary toward black
-//     --brand-primary-soft          12% primary on transparent (focus rings)
-//     --brand-on-sidebar            contrast pick on sidebar bg
-//     --brand-on-sidebar-muted      55% alpha version of on-sidebar
-//     --brand-sidebar-active-bg     low-alpha overlay for active nav band
-//     --brand-sidebar-hover-bg      half-alpha of active
-//     --brand-header-top-accent     equals primary (the 2px accent strip)
-//
-// What is NEVER injected (kept as globals.css defaults always):
-//
-//   --brand-secondary, --brand-bg, --brand-text — vestigial Pass 1 tokens
-//   that landing-page code may still reference. Pinned to DialerSeat
-//   defaults so the landing page renders identically regardless of tenant.
-//
-//   --color-error, --color-success, --color-warning, all status pill
-//   tokens, all disposition tokens, all KPI tile semantic colors — these
-//   are GLOBAL by spec. Don't add token plumbing that lets tenants
-//   override them.
+// Per JC's directive: "as long as text is subjected to automation or
+// recommendation (true white or black) but if not its still fine" — we
+// pick one of two extremes, never a mid-tone. #1a1c24 is the app's
+// standard near-black used everywhere else (T.text from Pass 1),
+// preserving visual consistency.
 // =============================================================================
+
+const DEFAULT_PRIMARY = '#4a9eff'
+const DEFAULT_SIDEBAR_BG = '#1a1c24'
+const DEFAULT_PAGE_BG = '#f0f1f4'
 
 const BrandingContext = createContext<TenantBranding | null>(null)
 
@@ -54,78 +62,80 @@ export function useBranding(): TenantBranding | null {
   return useContext(BrandingContext)
 }
 
-interface ThemeProviderProps {
-  branding: TenantBranding | null
-  children: ReactNode
-}
-
-// ─── Pure contrast helper (mirrors the copy in onboarding) ──────────────
-// luminance > 0.55 → use dark text; else white text.
 function pickContrastText(hex: string): string {
-  const h = hex.replace('#', '')
-  if (h.length !== 6) return '#ffffff'
-  const r = parseInt(h.slice(0, 2), 16) / 255
-  const g = parseInt(h.slice(2, 4), 16) / 255
-  const b = parseInt(h.slice(4, 6), 16) / 255
-  const lin = (c: number) =>
+  const clean = (hex || '').replace('#', '').padEnd(6, '0').slice(0, 6)
+  const r = parseInt(clean.slice(0, 2), 16) / 255
+  const g = parseInt(clean.slice(2, 4), 16) / 255
+  const b = parseInt(clean.slice(4, 6), 16) / 255
+  const toLinear = (c: number) =>
     c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
-  const luminance = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
-  return luminance > 0.55 ? '#1a1c24' : '#ffffff'
+  const luminance =
+    0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b)
+  return luminance > 0.18 ? '#1a1c24' : '#ffffff'
 }
 
-export function ThemeProvider({ branding, children }: ThemeProviderProps) {
-  if (!branding) {
-    return (
-      <BrandingContext.Provider value={null}>
-        {children}
-      </BrandingContext.Provider>
-    )
-  }
+function isValidHex(c: string | null | undefined): c is string {
+  return !!c && /^#[0-9a-fA-F]{6}$/.test(c)
+}
 
-  // Defensive defaults — if the underlying tenant_branding view hasn't
-  // been updated to expose sidebar_color yet, fall back to Pass 1
-  // dialerseat dark navy so the dashboard still renders something
-  // sensible. Same safety on primary, even though primary has always
-  // been present.
-  const primaryColor = branding.primary_color || '#4a9eff'
-  const sidebarBg = branding.sidebar_color || '#1a1a2e'
+export function ThemeProvider({
+  initialBranding,
+  children,
+}: {
+  initialBranding?: TenantBranding | null
+  children: React.ReactNode
+}) {
+  const branding = initialBranding ?? null
 
-  const onPrimary = pickContrastText(primaryColor)
-  const onSidebar = pickContrastText(sidebarBg)
+  const cssVars = useMemo(() => {
+    const primary = isValidHex(branding?.primary_color)
+      ? (branding!.primary_color as string)
+      : DEFAULT_PRIMARY
+    const sidebar = isValidHex(branding?.sidebar_color)
+      ? (branding!.sidebar_color as string)
+      : DEFAULT_SIDEBAR_BG
+    const pageBg = isValidHex(branding?.page_bg_color)
+      ? (branding!.page_bg_color as string)
+      : DEFAULT_PAGE_BG
 
-  const sidebarTextMuted =
-    onSidebar === '#ffffff' ? 'rgba(255,255,255,0.55)' : 'rgba(26,28,36,0.55)'
-  const sidebarActiveBg =
-    onSidebar === '#ffffff' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'
-  const sidebarHoverBg =
-    onSidebar === '#ffffff' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'
+    const onPrimary = pickContrastText(primary)
+    const onSidebar = pickContrastText(sidebar)
+    const onPageBg = pickContrastText(pageBg)
 
-  const cssVars = `
-    :root {
-      /* Tier 1 — user-picked (from DB) */
-      --brand-primary: ${primaryColor};
-      --brand-sidebar-bg: ${sidebarBg};
+    return `:root {
+  /* Tier 1 — user-picked (3) */
+  --brand-primary: ${primary};
+  --brand-sidebar-bg: ${sidebar};
+  --brand-page-bg: ${pageBg};
 
-      /* Tier 2 — derived from Tier 1 */
-      --brand-on-primary: ${onPrimary};
-      --brand-primary-hover: color-mix(in srgb, ${primaryColor} 88%, black);
-      --brand-primary-soft: color-mix(in srgb, ${primaryColor} 12%, transparent);
-      --brand-on-sidebar: ${onSidebar};
-      --brand-on-sidebar-muted: ${sidebarTextMuted};
-      --brand-sidebar-active-bg: ${sidebarActiveBg};
-      --brand-sidebar-hover-bg: ${sidebarHoverBg};
-      --brand-header-top-accent: ${primaryColor};
-    }
-  `
+  /* Tier 2 — derived: primary family */
+  --brand-on-primary: ${onPrimary};
+  --brand-primary-hover: color-mix(in srgb, ${primary} 88%, black);
+  --brand-primary-soft: color-mix(in srgb, ${primary} 12%, transparent);
+
+  /* Tier 2 — derived: sidebar family */
+  --brand-on-sidebar: ${onSidebar};
+  --brand-on-sidebar-muted: color-mix(in srgb, ${onSidebar} 65%, transparent);
+  --brand-sidebar-active-bg: color-mix(in srgb, ${primary} 18%, transparent);
+  --brand-sidebar-hover-bg: color-mix(in srgb, ${primary} 9%, transparent);
+  --brand-header-top-accent: ${primary};
+
+  /* Tier 2 — derived: page-bg family (Pass 2 expansion) */
+  --brand-on-page-bg: ${onPageBg};
+  --brand-card-surface: color-mix(in srgb, ${pageBg} 92%, ${onPageBg} 8%);
+  --brand-card-border: color-mix(in srgb, ${pageBg} 82%, ${onPageBg} 18%);
+  --brand-muted-text: color-mix(in srgb, ${onPageBg} 60%, ${pageBg} 40%);
+}`
+  }, [
+    branding?.primary_color,
+    branding?.sidebar_color,
+    branding?.page_bg_color,
+  ])
 
   return (
-    <>
-      {/* Server-rendered <style> so brand colors are available before any
-          client JS runs — no flash of unstyled content. */}
+    <BrandingContext.Provider value={branding}>
       <style dangerouslySetInnerHTML={{ __html: cssVars }} />
-      <BrandingContext.Provider value={branding}>
-        {children}
-      </BrandingContext.Provider>
-    </>
+      {children}
+    </BrandingContext.Provider>
   )
 }

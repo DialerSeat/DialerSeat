@@ -5,25 +5,28 @@
 @tailwind utilities;
 
 /* =============================================================================
- * DIALERSEAT GLOBALS — v24 (Pass 2 Phase B2 foundation)
+ * DIALERSEAT GLOBALS — v25 (Pass 2 expansion — 3-color theming)
  * =============================================================================
  * Three-tier CSS variable system for white-label theming.
  *
- *   Tier 1: --brand-primary, --brand-sidebar-bg
- *     The 2 user-picked colors. Defaults below for non-tenant rendering
+ *   Tier 1: --brand-primary, --brand-sidebar-bg, --brand-page-bg
+ *     The 3 user-picked colors. Defaults below for non-tenant rendering
  *     (landing page, signed-out users, admins). ThemeProvider overrides
  *     them when a tenant is active.
  *
  *   Tier 2: --brand-on-primary, --brand-primary-hover, --brand-primary-soft,
  *           --brand-on-sidebar, --brand-on-sidebar-muted,
  *           --brand-sidebar-active-bg, --brand-sidebar-hover-bg,
- *           --brand-header-top-accent
+ *           --brand-header-top-accent,
+ *           --brand-on-page-bg, --brand-card-surface,
+ *           --brand-card-border, --brand-muted-text
  *     Derived from Tier 1. Defaults below match the Pass 1 dark sidebar
- *     palette; ThemeProvider recomputes them per tenant.
+ *     palette + Pass 2 light dashboard palette; ThemeProvider recomputes
+ *     them per tenant via contrast picking + color-mix.
  *
  *   Tier 3 — vestigial Pass 1 brand tokens (preserved for landing):
  *     --brand-secondary, --brand-surface, --brand-bg, --brand-text
- *     ThemeProvider v3 NO LONGER OVERRIDES these. They keep their defaults
+ *     ThemeProvider v3+ NO LONGER OVERRIDES these. They keep their defaults
  *     below so the landing page renders identically regardless of tenant.
  *
  *   Status / semantic tokens — NEVER themed:
@@ -34,7 +37,8 @@
  * the Pass 1 LIGHT palette via hardcoded values (T.bg #f0f1f4, T.surface
  * #e2e4ea, etc.). The dark --background / --surface / --text-primary
  * tokens below are kept for the landing page and any other pre-Pass-2
- * code that still references them.
+ * code that still references them. Phase C will bind dashboard surfaces
+ * to the new --brand-page-bg / --brand-card-surface / etc. tokens.
  * =============================================================================
  */
 
@@ -42,6 +46,7 @@
   /* ── Tier 1: User-picked (overridable by ThemeProvider when tenant active) */
   --brand-primary: #4a9eff;       /* DialerSeat Classic blue */
   --brand-sidebar-bg: #1a1a2e;    /* DialerSeat Classic dark navy */
+  --brand-page-bg: #f0f1f4;       /* Pass 2 dashboard page bg (migration 003) */
 
   /* ── Tier 2: Derived from Tier 1 (recomputed per tenant) ────────────── */
   /* Defaults assume Tier 1 defaults (dark navy sidebar + blue primary). */
@@ -54,8 +59,16 @@
   --brand-sidebar-hover-bg: rgba(255, 255, 255, 0.04);
   --brand-header-top-accent: var(--brand-primary);
 
+  /* ── Tier 2: Derived from page-bg (NEW — Pass 2 expansion, migration 003) */
+  /* Defaults assume the Pass 2 light dashboard palette. ThemeProvider
+     recomputes these per tenant via contrast picking + color-mix. */
+  --brand-on-page-bg: #1a1c24;       /* body text on page bg */
+  --brand-card-surface: #e2e4ea;     /* card / panel bg */
+  --brand-card-border: #c4c8d0;      /* card / divider border */
+  --brand-muted-text: #5a5e6a;       /* low-emphasis text */
+
   /* ── Tier 3: Vestigial Pass 1 brand primitives ──────────────────────── */
-  /* These three are NO LONGER overridden by ThemeProvider in Pass 2.
+  /* These are NO LONGER overridden by ThemeProvider in Pass 2.
      They stay at these defaults forever, so any landing-page code that
      references them renders identically regardless of tenant. */
   --brand-secondary: #2a6eff;

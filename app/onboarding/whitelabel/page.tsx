@@ -6,21 +6,21 @@ import { useRouter } from 'next/navigation'
 import { WhitelabelLivePreview } from '@/components/WhitelabelLivePreview'
 
 // =============================================================================
-// /onboarding/whitelabel — Pass 2 Phase B3
+// /onboarding/whitelabel — Pass 2 expansion (3-color)
 // =============================================================================
-// Full rewrite of the onboarding page.
+// Pass 2 expansion (migration 003): 2 colors → 3 colors.
+//   - PRESETS now carry pageBg per preset
+//   - Custom picker now shows 3 ColorRows: Sidebar, Primary, Page background
+//   - WhitelabelLivePreview receives pageBg and renders themed page-bg with
+//     auto-contrast body text + derived card surfaces, so the user sees
+//     readability on all 4 contrast points (sidebar, header, page body,
+//     buttons) before saving
+//   - POST body adds page_bg_color
+//   - GET response includes page_bg_color
+//   - Preset matching on initial load now checks all 3 colors
 //
-// Changes from v1 (Pass 1):
-//   - 5 colors → 2 colors (primary + sidebar). Spec mandate.
-//   - 6 presets → 3 presets (Stone & Lavender / Forest / Bloom) + Custom
-//   - Live Exact Preview replaces the "256×74 logo block" mockup
-//   - 60-second propagation disclaimer added above the Confirm button
-//   - Onboarding chrome itself NO LONGER themes live with user's picks —
-//     only the preview component does. The onboarding stays in the
-//     DialerSeat-platform default look (it's helping you configure YOUR
-//     brand, not BE your brand). Cleaner conceptual separation.
-//
-// Preserved from v1:
+// Preserved from B3:
+//   - 60-second propagation disclaimer
 //   - Brand name input, subdomain input + 350ms debounced availability
 //     check, 24h slug cooldown for edit mode, redirect grace logic
 //   - Logo upload with sessionStorage handoff (so the dashboard sidebar
@@ -28,6 +28,8 @@ import { WhitelabelLivePreview } from '@/components/WhitelabelLivePreview'
 //     propagates the new URL)
 //   - Edit mode (pre-fills from GET /api/whitelabel/onboarding)
 //   - All error handling and submit flow
+//   - Onboarding chrome stays DialerSeat default — only the preview
+//     component reflects the user's color picks
 // =============================================================================
 
 interface Preset {
@@ -36,6 +38,7 @@ interface Preset {
   description: string
   primary: string
   sidebar: string
+  pageBg: string
 }
 
 const PRESETS: Preset[] = [
@@ -43,25 +46,28 @@ const PRESETS: Preset[] = [
     key: 'stone-lavender',
     label: 'Stone & Lavender',
     description:
-      'Light gray-white sidebar with soft lavender accents. Calm, professional, easy on the eyes.',
+      'Light gray-white sidebar, soft lavender accents, faint lavender page wash. Calm and easy on the eyes.',
     primary: '#b8a3e0',
     sidebar: '#e4e6eb',
+    pageBg: '#f1ecf7',
   },
   {
     key: 'forest',
     label: 'Forest',
     description:
-      'Deep forest sidebar with bright leaf-green accents. Earthy, grounded, confident.',
+      'Deep forest sidebar, bright leaf-green accents, fresh green page wash. Earthy, grounded, confident.',
     primary: '#5fb87a',
     sidebar: '#1a3a26',
+    pageBg: '#ecf5e8',
   },
   {
     key: 'bloom',
     label: 'Bloom',
     description:
-      'Warm brown sidebar with rose pink accents. Soft, distinctive, memorable.',
+      'Warm brown sidebar, rose pink accents, soft rose page wash. Soft, distinctive, memorable.',
     primary: '#e8b8c5',
     sidebar: '#6e5142',
+    pageBg: '#fbeef2',
   },
 ]
 
@@ -95,6 +101,7 @@ export default function WhitelabelOnboardingPage() {
   const [presetKey, setPresetKey] = useState<string>(DEFAULT_PRESET.key)
   const [primary, setPrimary] = useState<string>(DEFAULT_PRESET.primary)
   const [sidebar, setSidebar] = useState<string>(DEFAULT_PRESET.sidebar)
+  const [pageBg, setPageBg] = useState<string>(DEFAULT_PRESET.pageBg)
 
   const [slugStatus, setSlugStatus] = useState<SlugStatus>({ kind: 'idle' })
   const [submitting, setSubmitting] = useState(false)
@@ -118,14 +125,17 @@ export default function WhitelabelOnboardingPage() {
 
           const loadedPrimary = data.tenant.primary_color || DEFAULT_PRESET.primary
           const loadedSidebar = data.tenant.sidebar_color || DEFAULT_PRESET.sidebar
+          const loadedPageBg = data.tenant.page_bg_color || DEFAULT_PRESET.pageBg
           setPrimary(loadedPrimary)
           setSidebar(loadedSidebar)
+          setPageBg(loadedPageBg)
 
-          // Match loaded colors against the preset list
+          // Match loaded colors against the preset list (all 3 must match)
           const match = PRESETS.find(
             p =>
               p.primary.toLowerCase() === loadedPrimary.toLowerCase() &&
-              p.sidebar.toLowerCase() === loadedSidebar.toLowerCase()
+              p.sidebar.toLowerCase() === loadedSidebar.toLowerCase() &&
+              p.pageBg.toLowerCase() === loadedPageBg.toLowerCase()
           )
           setPresetKey(match?.key || 'custom')
         }
@@ -194,12 +204,14 @@ export default function WhitelabelOnboardingPage() {
     if (p) {
       setPrimary(p.primary)
       setSidebar(p.sidebar)
+      setPageBg(p.pageBg)
     }
   }
 
-  const updateColor = (field: 'primary' | 'sidebar', value: string) => {
+  const updateColor = (field: 'primary' | 'sidebar' | 'pageBg', value: string) => {
     if (field === 'primary') setPrimary(value)
-    else setSidebar(value)
+    else if (field === 'sidebar') setSidebar(value)
+    else setPageBg(value)
     setPresetKey('custom')
   }
 
@@ -238,6 +250,10 @@ export default function WhitelabelOnboardingPage() {
     }
     if (!HEX_RE.test(sidebar)) {
       setError('Sidebar color must be a #RRGGBB hex value.')
+      return
+    }
+    if (!HEX_RE.test(pageBg)) {
+      setError('Page background color must be a #RRGGBB hex value.')
       return
     }
     if (!editMode && !logoFile) {
@@ -286,6 +302,7 @@ export default function WhitelabelOnboardingPage() {
           logo_url: logoUrl,
           primary_color: primary,
           sidebar_color: sidebar,
+          page_bg_color: pageBg,
         }),
       })
       const data = await res.json()
@@ -424,6 +441,7 @@ export default function WhitelabelOnboardingPage() {
                   <div style={presetSwatchRowStyle}>
                     <div style={{ ...presetSwatchStyle, background: p.sidebar }} />
                     <div style={{ ...presetSwatchStyle, background: p.primary }} />
+                    <div style={{ ...presetSwatchStyle, background: p.pageBg }} />
                   </div>
                   <div style={presetNameStyle(presetKey === p.key)}>{p.label}</div>
                 </button>
@@ -451,7 +469,7 @@ export default function WhitelabelOnboardingPage() {
             </div>
             <div style={presetHintStyle}>
               {presetKey === 'custom'
-                ? 'Pick your own sidebar and primary colors below.'
+                ? 'Pick your own sidebar, primary, and page background colors below.'
                 : activePreset?.description}
             </div>
 
@@ -469,6 +487,12 @@ export default function WhitelabelOnboardingPage() {
                   value={primary}
                   onChange={v => updateColor('primary', v)}
                 />
+                <ColorRow
+                  label="Page background"
+                  description="The main background of every dashboard page — body text auto-contrasts against it"
+                  value={pageBg}
+                  onChange={v => updateColor('pageBg', v)}
+                />
               </div>
             )}
           </div>
@@ -478,11 +502,13 @@ export default function WhitelabelOnboardingPage() {
             <div style={sectionLabelStyle}>▸ EXACT PREVIEW</div>
             <div style={{ ...hintStyle, marginBottom: 12 }}>
               This is exactly what your dashboard will look like with the colors and
-              logo you've picked. Updates as you change anything above.
+              logo you've picked. Body text auto-picks white or near-black so it's
+              always readable on your chosen background.
             </div>
             <WhitelabelLivePreview
               primary={primary}
               sidebar={sidebar}
+              pageBg={pageBg}
               brandName={brandName}
               logoUrl={displayLogo}
             />
@@ -724,7 +750,7 @@ const presetSwatchRowStyle: React.CSSProperties = {
 }
 
 const presetSwatchStyle: React.CSSProperties = {
-  width: 32,
+  width: 28,
   height: 28,
   borderRadius: 3,
   border: '1px solid rgba(255,255,255,0.08)',
