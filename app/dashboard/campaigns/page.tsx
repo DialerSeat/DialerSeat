@@ -811,7 +811,8 @@ export default function CampaignsPage() {
           flex-wrap: wrap;
         }
         .cmp-header-title-block {
-          display: flex; flex-direction: column; gap: 3px;
+          display: flex; flex-direction: row; align-items: baseline;
+          gap: 14px; flex-wrap: wrap;
         }
         .cmp-header-title {
           font-size: 11px; font-weight: bold; letter-spacing: 4px;
@@ -1459,7 +1460,7 @@ export default function CampaignsPage() {
           letter-spacing: 1.5px;
           margin: 0 0 24px;
           line-height: 1.7;
-          font-family: monospace;
+          font-family: ${FUTURA};
         }
 
         /* ── LAPSED BANNER ────────────────────────────────────────────── */

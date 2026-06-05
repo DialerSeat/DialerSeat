@@ -5,75 +5,81 @@
 @tailwind utilities;
 
 /* =============================================================================
- * DIALERSEAT GLOBALS — v23 (Phase D2 foundation)
+ * DIALERSEAT GLOBALS — v24 (Pass 2 Phase B2 foundation)
  * =============================================================================
- * Two-tier CSS variable system for white-label theming.
+ * Three-tier CSS variable system for white-label theming.
  *
- *   Tier 1: --brand-* primitives.
- *     The 5 base colors. Either default DialerSeat (set below) or
- *     overridden at runtime by ThemeProvider when a tenant is active.
+ *   Tier 1: --brand-primary, --brand-sidebar-bg
+ *     The 2 user-picked colors. Defaults below for non-tenant rendering
+ *     (landing page, signed-out users, admins). ThemeProvider overrides
+ *     them when a tenant is active.
  *
- *   Tier 2: --background, --surface, --text-primary, etc.
- *     The semantic tokens used throughout the codebase. Each one is
- *     now derived from a --brand-* primitive, so changing the brand
- *     re-themes everything downstream automatically.
+ *   Tier 2: --brand-on-primary, --brand-primary-hover, --brand-primary-soft,
+ *           --brand-on-sidebar, --brand-on-sidebar-muted,
+ *           --brand-sidebar-active-bg, --brand-sidebar-hover-bg,
+ *           --brand-header-top-accent
+ *     Derived from Tier 1. Defaults below match the Pass 1 dark sidebar
+ *     palette; ThemeProvider recomputes them per tenant.
  *
- * IMPORTANT: defaults below match the previous hardcoded values exactly.
- * Non-tenant DialerSeat looks pixel-identical to before this change.
- * Only white-label tenants see different colors.
+ *   Tier 3 — vestigial Pass 1 brand tokens (preserved for landing):
+ *     --brand-secondary, --brand-surface, --brand-bg, --brand-text
+ *     ThemeProvider v3 NO LONGER OVERRIDES these. They keep their defaults
+ *     below so the landing page renders identically regardless of tenant.
+ *
+ *   Status / semantic tokens — NEVER themed:
+ *     --color-error, --color-success, --color-warning + bg/border pairs.
+ *     Errors red, success green, warnings amber, period.
+ *
+ * IMPORTANT: Pass 2 dashboard pages (analytics, campaigns, etc.) use
+ * the Pass 1 LIGHT palette via hardcoded values (T.bg #f0f1f4, T.surface
+ * #e2e4ea, etc.). The dark --background / --surface / --text-primary
+ * tokens below are kept for the landing page and any other pre-Pass-2
+ * code that still references them.
  * =============================================================================
  */
 
 :root {
-  /* ── Tier 1: Brand primitives (overridable by ThemeProvider) ────────── */
-  /* Defaults match the original hardcoded values 1:1 so the standard
-     DialerSeat experience is unchanged. */
-  --brand-primary: #4a9eff;       /* old: --accent-blue */
-  --brand-secondary: #2a6eff;     /* used by gradients in buttons */
-  --brand-surface: #111118;       /* old: --surface */
-  --brand-bg: #0a0a0f;            /* old: --background */
-  --brand-text: #f0f0f5;          /* old: --text-primary */
+  /* ── Tier 1: User-picked (overridable by ThemeProvider when tenant active) */
+  --brand-primary: #4a9eff;       /* DialerSeat Classic blue */
+  --brand-sidebar-bg: #1a1a2e;    /* DialerSeat Classic dark navy */
 
-  /* ── Tier 2: Semantic tokens (derived from brand primitives) ─────── */
-  /* All existing variables preserved EXACTLY. They're now defined in
-     terms of brand primitives, so tenant overrides propagate everywhere
-     that uses var(--surface), var(--background), etc. */
+  /* ── Tier 2: Derived from Tier 1 (recomputed per tenant) ────────────── */
+  /* Defaults assume Tier 1 defaults (dark navy sidebar + blue primary). */
+  --brand-on-primary: #ffffff;
+  --brand-primary-hover: color-mix(in srgb, var(--brand-primary) 88%, black);
+  --brand-primary-soft: color-mix(in srgb, var(--brand-primary) 12%, transparent);
+  --brand-on-sidebar: #ffffff;
+  --brand-on-sidebar-muted: rgba(255, 255, 255, 0.55);
+  --brand-sidebar-active-bg: rgba(255, 255, 255, 0.08);
+  --brand-sidebar-hover-bg: rgba(255, 255, 255, 0.04);
+  --brand-header-top-accent: var(--brand-primary);
 
+  /* ── Tier 3: Vestigial Pass 1 brand primitives ──────────────────────── */
+  /* These three are NO LONGER overridden by ThemeProvider in Pass 2.
+     They stay at these defaults forever, so any landing-page code that
+     references them renders identically regardless of tenant. */
+  --brand-secondary: #2a6eff;
+  --brand-surface: #111118;
+  --brand-bg: #0a0a0f;
+  --brand-text: #f0f0f5;
+
+  /* ── Semantic tokens (Pass 1 dark theme, used by landing) ──────────── */
+  /* These derive from the Tier 3 vestigial primitives above. Pass 2
+     dashboard pages use Pass 1 LIGHT hardcoded values instead and don't
+     touch these tokens — they exist for the landing page. */
   --background: var(--brand-bg);
   --surface: var(--brand-surface);
-
-  /* --surface-2 is a slightly raised plate. Original value was #1a1a24.
-     We preserve it via color-mix — surface mixed toward text 8% gives
-     a brighter plate that follows the brand. For DialerSeat defaults
-     this resolves to a near-identical value. */
   --surface-2: color-mix(in srgb, var(--brand-surface) 92%, var(--brand-text));
-
-  /* --border original was #2a2a3a. Derived as text @ 15% alpha so it
-     contrasts subtly against the surface regardless of brand. */
   --border: color-mix(in srgb, var(--brand-text) 15%, transparent);
-
-  /* Text tokens */
   --text-primary: var(--brand-text);
-  --text-secondary: #8888aa;  /* kept as-is — many components rely on this exact value */
+  --text-secondary: #8888aa;
   --text-muted: color-mix(in srgb, var(--brand-text) 45%, transparent);
-
-  /* Accent — kept name-compatible. Many components reference --accent-blue
-     by name; that name now points at the brand primary so they brand
-     automatically. --accent-silver kept stable. */
   --accent-blue: var(--brand-primary);
   --accent-silver: #c0c0d0;
-
-  /* Chrome gradient — used by some sidebar / panel decorations.
-     Preserved with the original colors since this is a decorative
-     gradient, not a brand surface. */
   --chrome: linear-gradient(135deg, #2a2a3a 0%, #1a1a24 50%, #2a2a3a 100%);
-
-  /* Divider — new in v2, used by Phase D2 components that need a
-     subtler line than --border. */
   --divider: color-mix(in srgb, var(--brand-text) 10%, transparent);
 
-  /* ── Semantic / status colors (NEVER themed) ──────────────────────── */
-  /* Errors always red, success always green, warnings amber. */
+  /* ── Status / semantic colors (NEVER themed) ────────────────────────── */
   --color-error: #ff6464;
   --color-error-bg: rgba(138, 26, 26, 0.18);
   --color-error-border: #8a1a1a;

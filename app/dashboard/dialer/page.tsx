@@ -130,6 +130,8 @@ const INCOMING_POLL_INTERVAL_MS = 2_000
 
 const LINES_OPTIONS = [1, 2, 3, 4, 5]
 
+const FUTURA = `'Futura PT', Futura, 'Helvetica Neue', Helvetica, Arial, sans-serif`
+
 function todayKey(): string {
   return new Date().toISOString().split('T')[0]
 }
@@ -1585,7 +1587,7 @@ function DialerPageInner() {
         flex: 1, background: terminalBg,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: 24, minHeight: 'calc(100vh - 64px)',
-        fontFamily: 'Futura PT, Futura, sans-serif',
+        fontFamily: FUTURA,
       }}>
         <div style={{
           width: '100%', maxWidth: 520,
@@ -1608,7 +1610,7 @@ function DialerPageInner() {
             border: 'none', borderRadius: 4, color: 'white',
             fontSize: 13, fontWeight: 700, letterSpacing: 4,
             textDecoration: 'none', boxShadow: '0 0 20px rgba(74,158,255,0.3)',
-            marginBottom: 16, fontFamily: 'Futura PT, Futura, sans-serif',
+            marginBottom: 16, fontFamily: FUTURA,
           }}>RESUBSCRIBE — $35/WEEK</Link>
           <div style={{ fontSize: 9, letterSpacing: 3, color: '#888a92', marginBottom: 24 }}>
             NO CONTRACTS · CANCEL ANYTIME
@@ -1632,7 +1634,7 @@ function DialerPageInner() {
         flex: 1, background: terminalBg,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         minHeight: 'calc(100vh - 64px)',
-        fontFamily: 'Futura PT, Futura, sans-serif',
+        fontFamily: FUTURA,
       }}>
         <div style={{ fontSize: 11, letterSpacing: 4, color: terminalMuted }}>LOADING TERMINAL...</div>
       </div>
@@ -1723,7 +1725,7 @@ function DialerPageInner() {
             color: manualNumber ? 'var(--brand-primary)' : terminalMuted,
             fontSize: inOverlay ? '14px' : '11px', fontWeight: 'bold', letterSpacing: '2px',
             cursor: manualNumber ? 'pointer' : 'not-allowed',
-            fontFamily: 'Futura PT, Futura, sans-serif',
+            fontFamily: FUTURA,
           }}>DIAL</button>
         </div>
       </div>
@@ -1809,6 +1811,7 @@ function DialerPageInner() {
       flex: 1, background: terminalBg,
       display: 'flex', flexDirection: 'column',
       overflow: 'hidden', minHeight: 0, position: 'relative',
+      fontFamily: FUTURA, color: terminalText,
     }}>
       <style>{`
         .dialer-root { height: 100vh; height: 100dvh; }
@@ -2166,7 +2169,7 @@ function DialerPageInner() {
               background: terminalBg, border: `1px solid ${selectedCampaign ? terminalBorder : '#ffaa3e'}`,
               color: selectedCampaign ? terminalText : terminalMuted,
               fontSize: '12px', outline: 'none',
-              fontFamily: 'monospace', cursor: 'pointer',
+              fontFamily: FUTURA, cursor: 'pointer',
             }}>
               <option value="">— SELECT A CAMPAIGN —</option>
               {activeCampaignsCount > 0 && (
@@ -2213,7 +2216,6 @@ function DialerPageInner() {
               flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
               minHeight: 280, padding: 20,
             }}>
-              <div style={{ fontSize: 36, marginBottom: 12, opacity: 0.4 }}>📞</div>
               <p style={{ fontSize: 11, letterSpacing: 3, color: terminalMuted, textAlign: 'center' }}>
                 {!isSpecificCampaign
                   ? 'SELECT A CAMPAIGN TO BEGIN'
@@ -2242,7 +2244,6 @@ function DialerPageInner() {
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
                 {(!displayLead || status === 'calling') ? (
                   <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                    <div style={{ fontSize: '36px', marginBottom: '12px', filter: 'grayscale(1)', opacity: 0.4 }}>📋</div>
                     <p style={{ fontSize: '11px', letterSpacing: '3px', color: terminalMuted }}>
                       {noLeads ? 'NO MORE LEADS AVAILABLE' : status === 'calling' ? 'DIALING IN QUEUE...' : 'AWAITING DIAL COMMAND'}
                     </p>
@@ -2358,7 +2359,7 @@ function DialerPageInner() {
                     border: `1px solid ${d.color}`,
                     color: disposition === d.label ? 'white' : d.color,
                     fontSize: '8px', fontWeight: 'bold', letterSpacing: '1px',
-                    cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                    cursor: 'pointer', fontFamily: FUTURA,
                   }}>{d.label}</button>
                 ))}
               </div>
@@ -2376,7 +2377,7 @@ function DialerPageInner() {
                     padding: '14px', borderRadius: '4px', border: 'none',
                     background: terminalSurface, color: terminalMuted,
                     fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
-                    cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                    cursor: 'pointer', fontFamily: FUTURA,
                     borderTop: `3px solid ${terminalBorder}`, transition: 'all 0.15s',
                   }}>[ SET AVAILABLE TO DIAL ]</button>
                 </div>
@@ -2399,7 +2400,7 @@ function DialerPageInner() {
                     padding: '14px', borderRadius: '4px', border: 'none',
                     background: terminalDark, color: 'var(--brand-primary)',
                     fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
-                    cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                    cursor: 'pointer', fontFamily: FUTURA,
                     borderTop: `3px solid var(--brand-primary)`, transition: 'all 0.15s',
                   }}>INITIATE DIAL SEQUENCE</button>
                 </div>
@@ -2419,7 +2420,7 @@ function DialerPageInner() {
                     padding: '14px', borderRadius: '4px', border: 'none',
                     background: '#f8e8e8', color: terminalRed,
                     fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
-                    cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                    cursor: 'pointer', fontFamily: FUTURA,
                     borderTop: `3px solid ${terminalRed}`,
                   }}>■ STOP DIAL SEQUENCE</button>
                 </div>
@@ -2433,7 +2434,7 @@ function DialerPageInner() {
                     background: '#f8f4e8', border: `1px solid #8a6a1a`,
                     borderTop: `3px solid #8a6a1a`, color: '#8a6a1a',
                     fontSize: '11px', fontWeight: 'bold', letterSpacing: '3px',
-                    cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                    cursor: 'pointer', fontFamily: FUTURA,
                   }}>SKIP / NEXT LEAD</button>
                   <button onClick={async () => {
                     await hangupCall(activeCallSid)
@@ -2449,7 +2450,7 @@ function DialerPageInner() {
                     background: '#f8e8e8', borderTop: `3px solid ${terminalRed}`,
                     color: terminalRed, fontSize: '11px', fontWeight: 'bold',
                     letterSpacing: '3px', cursor: 'pointer',
-                    fontFamily: 'Futura PT, Futura, sans-serif',
+                    fontFamily: FUTURA,
                   }}>■ TERMINATE CALL</button>
                 </div>
               )}
@@ -2462,7 +2463,7 @@ function DialerPageInner() {
                   padding: '14px', borderRadius: '4px', border: 'none',
                   background: terminalSurface, color: terminalMuted,
                   fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
-                  cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                  cursor: 'pointer', fontFamily: FUTURA,
                   borderTop: `3px solid ${terminalBorder}`, transition: 'all 0.15s',
                 }}>[ SET AVAILABLE TO DIAL ]</button>
               )}
@@ -2478,7 +2479,7 @@ function DialerPageInner() {
                   padding: '14px', borderRadius: '4px', border: 'none',
                   background: terminalDark, color: 'var(--brand-primary)',
                   fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
-                  cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                  cursor: 'pointer', fontFamily: FUTURA,
                   borderTop: `3px solid var(--brand-primary)`, transition: 'all 0.15s',
                 }}>
                   {isPreview ? 'LOAD NEXT LEAD' : 'INITIATE DIAL SEQUENCE'}
@@ -2491,13 +2492,13 @@ function DialerPageInner() {
                     background: '#f8f4e8', border: `1px solid #8a6a1a`,
                     borderTop: `3px solid #8a6a1a`, color: '#8a6a1a',
                     fontSize: '11px', fontWeight: 'bold', letterSpacing: '3px',
-                    cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                    cursor: 'pointer', fontFamily: FUTURA,
                   }}>SKIP THIS LEAD</button>
                   <button onClick={dialPreviewLead} style={{
                     padding: '14px', borderRadius: '4px', border: 'none',
                     background: terminalDark, color: 'var(--brand-primary)',
                     fontSize: '12px', fontWeight: 'bold', letterSpacing: '3px',
-                    cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                    cursor: 'pointer', fontFamily: FUTURA,
                     borderTop: `3px solid var(--brand-primary)`,
                   }}>DIAL THIS LEAD</button>
                 </>
@@ -2511,7 +2512,7 @@ function DialerPageInner() {
                   padding: '14px', borderRadius: '4px', border: 'none',
                   background: '#f8e8e8', color: terminalRed,
                   fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
-                  cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                  cursor: 'pointer', fontFamily: FUTURA,
                   borderTop: `3px solid ${terminalRed}`,
                 }}>■ ABORT CALL</button>
               )}
@@ -2522,7 +2523,7 @@ function DialerPageInner() {
                     background: '#f8f4e8', border: `1px solid #8a6a1a`,
                     borderTop: `3px solid #8a6a1a`, color: '#8a6a1a',
                     fontSize: '11px', fontWeight: 'bold', letterSpacing: '3px',
-                    cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                    cursor: 'pointer', fontFamily: FUTURA,
                   }}>SKIP / NEXT LEAD</button>
                   <button onClick={async () => {
                     await hangupCall(activeCallSid)
@@ -2536,7 +2537,7 @@ function DialerPageInner() {
                     background: '#f8e8e8', borderTop: `3px solid ${terminalRed}`,
                     color: terminalRed, fontSize: '11px', fontWeight: 'bold',
                     letterSpacing: '3px', cursor: 'pointer',
-                    fontFamily: 'Futura PT, Futura, sans-serif',
+                    fontFamily: FUTURA,
                   }}>■ TERMINATE CALL</button>
                 </>
               )}
@@ -2545,7 +2546,7 @@ function DialerPageInner() {
                   padding: '14px', borderRadius: '4px', border: 'none',
                   background: terminalDark, color: 'var(--brand-primary)',
                   fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
-                  cursor: 'pointer', fontFamily: 'Futura PT, Futura, sans-serif',
+                  cursor: 'pointer', fontFamily: FUTURA,
                   borderTop: `3px solid var(--brand-primary)`,
                 }}>NEXT LEAD</button>
               )}
@@ -2645,8 +2646,9 @@ function DialerPageInner() {
         <div
           style={{
             position: 'fixed', inset: 0, zIndex: 100,
-            background: terminalBg, display: 'flex', flexDirection: 'column',
+            background: terminalDark, display: 'flex', flexDirection: 'column',
             height: '100vh', ['height' as any]: '100dvh',
+            paddingTop: 'env(safe-area-inset-top)',
           }}
           onClick={(e) => {
             if (e.target === e.currentTarget) setDialZoomed(false)

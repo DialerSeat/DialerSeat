@@ -3,29 +3,25 @@ import { createClient } from '@supabase/supabase-js'
 import { unstable_cache } from 'next/cache'
 
 // =============================================================================
-// TENANT BRANDING LOOKUP — server-side helper (v2 — Phase D)
+// TENANT BRANDING LOOKUP — server-side helper (v3 — Pass 2 Phase B2)
 // =============================================================================
-// v1 (Phase C) had: getTenantBranding(slug) — looks up tenant by subdomain.
+// Pass 2 changes vs Pass 1 Phase D:
+//   - TenantBranding interface trimmed from 5 color fields to 2:
+//       primary_color + sidebar_color
+//   - Dropped from the type: secondary_color, accent_color,
+//     background_color, text_color
+//     (migration 002 — destructive — will drop them from the DB after
+//     all Phase B code is deployed)
+//   - SELECTs from tenant_branding now use an explicit column list so a
+//     missing column (e.g. tenant_branding view not updated to include
+//     sidebar_color) fails loud instead of silently returning undefined
 //
-// v2 (Phase D) adds:
-//   getActiveTenantForUser(clerkId)
-//     → Returns the tenant the user has currently SELECTED to view as.
-//       Honors users.active_tenant_id IF the user still has access to it
-//       (owns it OR is an active team member). Otherwise resolves to a
-//       sensible default (own tenant if owner, else most-recent WL team).
+// Function contracts unchanged:
+//   getTenantBranding(slug)         — subdomain → branding
+//   getActiveTenantForUser(clerkId) — user → their selected tenant
+//   getAvailableTenantsForUser(clerkId) — user → list of brand options
 //
-//   getAvailableTenantsForUser(clerkId)
-//     → Returns the list of brands available in the settings toggle:
-//       { tenant_id, slug, brand_name, role: 'owner'|'member', logo_url }[]
-//       Plus a separate canSeeStandard boolean computed from self-sub status.
-//
-//   userCacheTag(clerkId) — tag for invalidating per-user lookups
-//
-// Caching:
-//   Each function is wrapped in unstable_cache with both a tenant tag AND a
-//   user tag. Switching brands busts the user tag instantly so the
-//   selection reflects on the next request. Updating a tenant's branding
-//   busts the tenant tag so all users currently viewing it see the change.
+// Caching unchanged. Tags unchanged.
 // =============================================================================
 
 export interface TenantBranding {
@@ -36,10 +32,7 @@ export interface TenantBranding {
   favicon_url: string | null
   footer_text: string
   primary_color: string
-  secondary_color: string
-  accent_color: string
-  background_color: string
-  text_color: string
+  sidebar_color: string
   custom_landing: Record<string, unknown>
 }
 
@@ -72,15 +65,22 @@ function getSupabaseAdmin() {
   )
 }
 
+// Explicit branding column list. Used in both subdomain and user-tenant
+// branding fetches. Listing columns explicitly means a missing column
+// (e.g. tenant_branding view not yet updated to include sidebar_color)
+// surfaces as a query error instead of silently returning undefined.
+const TENANT_BRANDING_COLS =
+  'id, slug, brand_name, logo_url, favicon_url, footer_text, primary_color, sidebar_color, custom_landing'
+
 // =============================================================================
-// SUBDOMAIN LOOKUP (v1 — unchanged from Phase C)
+// SUBDOMAIN LOOKUP (v1 contract preserved)
 // =============================================================================
 
 async function fetchTenantBranding(slug: string): Promise<TenantBranding | null> {
   const supabase = getSupabaseAnon()
   const { data, error } = await supabase
     .from('tenant_branding')
-    .select('*')
+    .select(TENANT_BRANDING_COLS)
     .eq('slug', slug)
     .maybeSingle()
 
@@ -116,33 +116,30 @@ export const tenantCacheTag = (slug: string) => `tenant:${slug}`
 export const userCacheTag = (clerkId: string) => `user-tenant:${clerkId}`
 
 // =============================================================================
-// USER → TENANT LOOKUP (v2 — Phase D)
+// USER → TENANT LOOKUP (Phase D — preserved)
 // =============================================================================
 
 /**
  * Returns the tenant to render for this user, based on their selected
  * preference (users.active_tenant_id) AND their actual access rights.
  *
- * If active_tenant_id is set but the user has lost access to it (left the
- * team, sub canceled, etc.), we fall back to a sensible default:
+ * Fallback chain if active_tenant_id is missing or no longer accessible:
  *   1. If user owns a WL tenant → that
  *   2. Else: most-recently-joined active team whose owner has an active WL
  *   3. Else: null (standard view)
  *
- * Cached with both a user tag AND the tenant tag — so switching, joining,
- * or having a tenant's branding edited all bust the cache correctly.
+ * Cached with both a user tag AND the tenant tag — switching brands,
+ * joining a team, or editing a tenant's branding all bust the cache.
  */
 async function fetchActiveTenantForUser(clerkId: string): Promise<TenantBranding | null> {
   const supabase = getSupabaseAdmin()
 
-  // ── Load user's selection + accessible tenant set in one round ─────────
   const [{ data: user }, { data: ownedTenant }, { data: memberRows }] = await Promise.all([
     supabase
       .from('users')
       .select('active_tenant_id')
       .eq('clerk_id', clerkId)
       .maybeSingle(),
-    // Tenant the user owns (if any)
     supabase
       .from('white_label_tenants')
       .select('id, slug, status, is_active')
@@ -150,10 +147,6 @@ async function fetchActiveTenantForUser(clerkId: string): Promise<TenantBranding
       .eq('status', 'active')
       .eq('is_active', true)
       .maybeSingle(),
-    // Teams the user is an active member of, ordered most-recent-first.
-    // We then join in Node-side to the WL tenants table because the
-    // team→owner→tenant join is a 2-hop chain that's cleaner to do here
-    // than in a single Supabase select.
     supabase
       .from('team_members')
       .select('team_id, created_at, teams!inner(id, owner_id)')
@@ -164,7 +157,6 @@ async function fetchActiveTenantForUser(clerkId: string): Promise<TenantBranding
 
   const selectedTenantId = user?.active_tenant_id || null
 
-  // ── Build the list of tenant ids the user has access to ───────────────
   const accessibleTenantIds: string[] = []
   const ownerClerkIds: string[] = []
 
@@ -174,7 +166,6 @@ async function fetchActiveTenantForUser(clerkId: string): Promise<TenantBranding
     if (ownerId) ownerClerkIds.push(ownerId)
   }
 
-  // Resolve owner clerk_ids → tenant ids
   if (ownerClerkIds.length > 0) {
     const { data: teamOwnerTenants } = await supabase
       .from('white_label_tenants')
@@ -188,11 +179,8 @@ async function fetchActiveTenantForUser(clerkId: string): Promise<TenantBranding
     }
   }
 
-  // Dedupe while preserving insertion order (own tenant first, then teams
-  // in most-recent-membership order)
   const uniqueAccessible = Array.from(new Set(accessibleTenantIds))
 
-  // ── Pick which tenant to render ───────────────────────────────────────
   let pickedId: string | null = null
   if (selectedTenantId && uniqueAccessible.includes(selectedTenantId)) {
     pickedId = selectedTenantId
@@ -202,10 +190,9 @@ async function fetchActiveTenantForUser(clerkId: string): Promise<TenantBranding
 
   if (!pickedId) return null
 
-  // ── Fetch branding for the picked tenant ──────────────────────────────
   const { data: branding } = await supabase
     .from('tenant_branding')
-    .select('*')
+    .select(TENANT_BRANDING_COLS)
     .eq('id', pickedId)
     .maybeSingle()
 
@@ -235,7 +222,7 @@ export async function getActiveTenantForUser(
 }
 
 // =============================================================================
-// AVAILABLE BRAND OPTIONS (settings page toggle)
+// AVAILABLE BRAND OPTIONS (settings page toggle) — Phase D, preserved
 // =============================================================================
 
 /**
@@ -245,13 +232,8 @@ export async function getActiveTenantForUser(
  * (regardless of whether they're also on a seat). Manager+ tenant owners
  * always qualify because their $75 subscription covers personal-sub status.
  *
- * The toggle is HIDDEN entirely if:
- *   - User is a pure seat-only agent on exactly 1 team (nothing to toggle)
- *   - User has no WL teams AND no own tenant (no brand options at all)
- *
- * That hidden-state decision is made in the settings page, not here. This
- * function just returns the raw access list — the UI decides whether to
- * render it.
+ * The settings page decides whether to render the toggle (hides it if
+ * there's only 1 option). This function just returns the raw access list.
  */
 async function fetchAvailableTenantsForUser(clerkId: string): Promise<UserBrandOptions> {
   const supabase = getSupabaseAdmin()
@@ -280,7 +262,6 @@ async function fetchAvailableTenantsForUser(clerkId: string): Promise<UserBrandO
       .eq('user_id', clerkId)
       .eq('status', 'active')
       .order('created_at', { ascending: false }),
-    // Self-sub check: any active personal subscription
     supabase
       .from('subscriptions')
       .select('status, current_period_end, cancel_at_period_end')
@@ -289,7 +270,6 @@ async function fetchAvailableTenantsForUser(clerkId: string): Promise<UserBrandO
 
   const available: AvailableTenant[] = []
 
-  // Owned tenant (if any) goes first
   if (ownedTenant) {
     available.push({
       id: ownedTenant.id,
@@ -300,7 +280,6 @@ async function fetchAvailableTenantsForUser(clerkId: string): Promise<UserBrandO
     })
   }
 
-  // Member tenants — resolve via team owners
   const ownerClerkIds = (memberRows || [])
     .map((r: any) => r.teams?.owner_id)
     .filter(Boolean)
@@ -313,7 +292,6 @@ async function fetchAvailableTenantsForUser(clerkId: string): Promise<UserBrandO
       .eq('status', 'active')
       .eq('is_active', true)
 
-    // Preserve most-recent-membership order
     const ownerOrder = new Map<string, number>()
     ownerClerkIds.forEach((id, idx) => {
       if (!ownerOrder.has(id)) ownerOrder.set(id, idx)
@@ -336,7 +314,6 @@ async function fetchAvailableTenantsForUser(clerkId: string): Promise<UserBrandO
     }
   }
 
-  // canSeeStandard: user has any currently-active personal subscription
   const now = Date.now()
   const hasSelfSub = (selfSubs || []).some(s => {
     if (['trialing', 'active', 'past_due'].includes(s.status)) return true
@@ -348,8 +325,6 @@ async function fetchAvailableTenantsForUser(clerkId: string): Promise<UserBrandO
     return false
   })
 
-  // Tenant owners always qualify (their Manager+ sub is a self-sub from
-  // the user's perspective — they bought it)
   const canSeeStandard = hasSelfSub || !!ownedTenant
 
   return {

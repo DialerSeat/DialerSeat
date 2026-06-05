@@ -1,24 +1,33 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
+import { WhitelabelLivePreview } from '@/components/WhitelabelLivePreview'
 
 // =============================================================================
-// /onboarding/whitelabel — instant local logo preview on save
+// /onboarding/whitelabel — Pass 2 Phase B3
 // =============================================================================
-// Adds option-1 cache-bust workaround for the new logo not appearing on the
-// post-save dashboard for ~30s while Supabase's CDN replicates the new URL.
+// Full rewrite of the onboarding page.
 //
-// On a successful save with a new logo upload, we sessionStorage the
-// new logo's blob URL keyed by the returned public URL. The dashboard
-// layout (or wherever the sidebar logo renders) can check sessionStorage
-// for that key and prefer the local blob until the page is reloaded.
+// Changes from v1 (Pass 1):
+//   - 5 colors → 2 colors (primary + sidebar). Spec mandate.
+//   - 6 presets → 3 presets (Stone & Lavender / Forest / Bloom) + Custom
+//   - Live Exact Preview replaces the "256×74 logo block" mockup
+//   - 60-second propagation disclaimer added above the Confirm button
+//   - Onboarding chrome itself NO LONGER themes live with user's picks —
+//     only the preview component does. The onboarding stays in the
+//     DialerSeat-platform default look (it's helping you configure YOUR
+//     brand, not BE your brand). Cleaner conceptual separation.
 //
-// Result: the user who just uploaded sees their new logo INSTANTLY in
-// the sidebar after redirect. CDN propagates in the background. Other
-// viewers will see it within ~30-60s of CDN propagation — they don't
-// know an upload happened, so they don't care about the delay.
+// Preserved from v1:
+//   - Brand name input, subdomain input + 350ms debounced availability
+//     check, 24h slug cooldown for edit mode, redirect grace logic
+//   - Logo upload with sessionStorage handoff (so the dashboard sidebar
+//     shows the new logo instantly after redirect, while the CDN
+//     propagates the new URL)
+//   - Edit mode (pre-fills from GET /api/whitelabel/onboarding)
+//   - All error handling and submit flow
 // =============================================================================
 
 interface Preset {
@@ -26,108 +35,50 @@ interface Preset {
   label: string
   description: string
   primary: string
-  secondary: string
-  surface: string
-  background: string
-  text: string
-}
-
-function pickContrastText(hex: string): string {
-  const h = hex.replace('#', '')
-  if (h.length !== 6) return '#ffffff'
-  const r = parseInt(h.slice(0, 2), 16) / 255
-  const g = parseInt(h.slice(2, 4), 16) / 255
-  const b = parseInt(h.slice(4, 6), 16) / 255
-  const lin = (c: number) => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
-  const luminance = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
-  return luminance > 0.55 ? '#1a1c24' : '#ffffff'
+  sidebar: string
 }
 
 const PRESETS: Preset[] = [
   {
-    key: 'default',
-    label: 'DialerSeat Default',
-    description: 'The original dark theme. Clean, professional, neutral.',
-    primary: '#4a9eff',
-    secondary: '#2a6eff',
-    surface: '#1a1c24',
-    background: '#0a0a0f',
-    text: '#e0e2ea',
-  },
-  {
-    key: 'midnight',
-    label: 'Midnight',
-    description: 'Deep black backgrounds with electric blue accents.',
-    primary: '#5fb3ff',
-    secondary: '#3a7fff',
-    surface: '#0d0d18',
-    background: '#000005',
-    text: '#f0f2fa',
-  },
-  {
-    key: 'crimson',
-    label: 'Crimson',
-    description: 'Dark plum surface with bold red brand color.',
-    primary: '#ff4d6d',
-    secondary: '#d92645',
-    surface: '#1f1018',
-    background: '#0d0608',
-    text: '#f0e0e4',
+    key: 'stone-lavender',
+    label: 'Stone & Lavender',
+    description:
+      'Light gray-white sidebar with soft lavender accents. Calm, professional, easy on the eyes.',
+    primary: '#b8a3e0',
+    sidebar: '#e4e6eb',
   },
   {
     key: 'forest',
     label: 'Forest',
-    description: 'Dark green surface with bright lime primary.',
-    primary: '#5fe78a',
-    secondary: '#2dba5a',
-    surface: '#0f1a12',
-    background: '#06090a',
-    text: '#e0f0e4',
+    description:
+      'Deep forest sidebar with bright leaf-green accents. Earthy, grounded, confident.',
+    primary: '#5fb87a',
+    sidebar: '#1a3a26',
   },
   {
-    key: 'slate',
-    label: 'Slate',
-    description: 'Neutral gray surface with crisp white primary. Minimal.',
-    primary: '#f0f2f5',
-    secondary: '#c0c4cc',
-    surface: '#222428',
-    background: '#0e0f12',
-    text: '#e6e8ec',
-  },
-  {
-    key: 'sunrise',
-    label: 'Sunrise',
-    description: 'Warm dark surface with amber and orange highlights.',
-    primary: '#ffa53e',
-    secondary: '#ff6e1a',
-    surface: '#1e1812',
-    background: '#0a0805',
-    text: '#f5ead8',
+    key: 'bloom',
+    label: 'Bloom',
+    description:
+      'Warm brown sidebar with rose pink accents. Soft, distinctive, memorable.',
+    primary: '#e8b8c5',
+    sidebar: '#6e5142',
   },
 ]
 
-interface BrandState {
-  primary: string
-  secondary: string
-  surface: string
-  background: string
-  text: string
-}
-
-const DEFAULT_BRAND: BrandState = {
-  primary: PRESETS[0].primary,
-  secondary: PRESETS[0].secondary,
-  surface: PRESETS[0].surface,
-  background: PRESETS[0].background,
-  text: PRESETS[0].text,
-}
-
+const DEFAULT_PRESET = PRESETS[0] // Stone & Lavender — confirmed default
 const SLUG_REGEX = /^[a-z0-9][a-z0-9-]{0,28}[a-z0-9]$/
+const HEX_RE = /^#[0-9a-fA-F]{6}$/
 
 // SessionStorage key for local-blob handoff to the dashboard after upload.
-// Format: a JSON blob with { publicUrl, dataUrl, savedAt } so the dashboard
-// can verify the staged preview is still relevant.
 const PENDING_LOGO_KEY = 'wl:pendingLogoPreview'
+
+type SlugStatus =
+  | { kind: 'idle' }
+  | { kind: 'checking' }
+  | { kind: 'available' }
+  | { kind: 'taken' }
+  | { kind: 'reserved' }
+  | { kind: 'invalid'; reason: string }
 
 export default function WhitelabelOnboardingPage() {
   const { user, isLoaded } = useUser()
@@ -141,21 +92,15 @@ export default function WhitelabelOnboardingPage() {
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null)
   const [existingLogoUrl, setExistingLogoUrl] = useState<string | null>(null)
-  const [presetKey, setPresetKey] = useState<string>('default')
-  const [colors, setColors] = useState<BrandState>(DEFAULT_BRAND)
+  const [presetKey, setPresetKey] = useState<string>(DEFAULT_PRESET.key)
+  const [primary, setPrimary] = useState<string>(DEFAULT_PRESET.primary)
+  const [sidebar, setSidebar] = useState<string>(DEFAULT_PRESET.sidebar)
 
-  const [slugStatus, setSlugStatus] = useState<
-    | { kind: 'idle' }
-    | { kind: 'checking' }
-    | { kind: 'available' }
-    | { kind: 'taken' }
-    | { kind: 'reserved' }
-    | { kind: 'invalid'; reason: string }
-  >({ kind: 'idle' })
-
+  const [slugStatus, setSlugStatus] = useState<SlugStatus>({ kind: 'idle' })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // ─── Load existing tenant data ──────────────────────────────────────
   useEffect(() => {
     if (!isLoaded || !user) return
     let cancelled = false
@@ -170,22 +115,19 @@ export default function WhitelabelOnboardingPage() {
           setSlug(data.tenant.slug || '')
           setOriginalSlug(data.tenant.slug || '')
           setExistingLogoUrl(data.tenant.logo_url || null)
-          setColors({
-            primary: data.tenant.primary_color || DEFAULT_BRAND.primary,
-            secondary: data.tenant.secondary_color || DEFAULT_BRAND.secondary,
-            surface: data.tenant.accent_color || DEFAULT_BRAND.surface,
-            background: data.tenant.background_color || DEFAULT_BRAND.background,
-            text: data.tenant.text_color || DEFAULT_BRAND.text,
-          })
 
-          const matchPreset = PRESETS.find(p =>
-            p.primary === data.tenant.primary_color &&
-            p.secondary === data.tenant.secondary_color &&
-            p.surface === data.tenant.accent_color &&
-            p.background === data.tenant.background_color &&
-            p.text === data.tenant.text_color
+          const loadedPrimary = data.tenant.primary_color || DEFAULT_PRESET.primary
+          const loadedSidebar = data.tenant.sidebar_color || DEFAULT_PRESET.sidebar
+          setPrimary(loadedPrimary)
+          setSidebar(loadedSidebar)
+
+          // Match loaded colors against the preset list
+          const match = PRESETS.find(
+            p =>
+              p.primary.toLowerCase() === loadedPrimary.toLowerCase() &&
+              p.sidebar.toLowerCase() === loadedSidebar.toLowerCase()
           )
-          setPresetKey(matchPreset?.key || 'custom')
+          setPresetKey(match?.key || 'custom')
         }
         setLoading(false)
       })
@@ -193,9 +135,12 @@ export default function WhitelabelOnboardingPage() {
         if (!cancelled) setLoading(false)
       })
 
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [isLoaded, user])
 
+  // ─── Slug availability check (350ms debounce) ──────────────────────
   useEffect(() => {
     if (!slug) {
       setSlugStatus({ kind: 'idle' })
@@ -204,11 +149,11 @@ export default function WhitelabelOnboardingPage() {
     if (!SLUG_REGEX.test(slug)) {
       setSlugStatus({
         kind: 'invalid',
-        reason: 'Use only lowercase letters, numbers, and hyphens (2-30 chars, no leading/trailing dash).',
+        reason:
+          'Use only lowercase letters, numbers, and hyphens (2-30 chars, no leading/trailing dash).',
       })
       return
     }
-
     if (editMode && originalSlug && slug === originalSlug) {
       setSlugStatus({ kind: 'available' })
       return
@@ -217,7 +162,9 @@ export default function WhitelabelOnboardingPage() {
     setSlugStatus({ kind: 'checking' })
     const t = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/whitelabel/check-subdomain?slug=${encodeURIComponent(slug)}`)
+        const res = await fetch(
+          `/api/whitelabel/check-subdomain?slug=${encodeURIComponent(slug)}`
+        )
         const data = await res.json()
         if (data.reserved) setSlugStatus({ kind: 'reserved' })
         else if (data.available) setSlugStatus({ kind: 'available' })
@@ -229,6 +176,7 @@ export default function WhitelabelOnboardingPage() {
     return () => clearTimeout(t)
   }, [slug, editMode, originalSlug])
 
+  // ─── Logo preview blob URL lifecycle ────────────────────────────────
   useEffect(() => {
     if (!logoFile) {
       setLogoPreviewUrl(null)
@@ -244,26 +192,17 @@ export default function WhitelabelOnboardingPage() {
     if (key === 'custom') return
     const p = PRESETS.find(p => p.key === key)
     if (p) {
-      setColors({
-        primary: p.primary,
-        secondary: p.secondary,
-        surface: p.surface,
-        background: p.background,
-        text: p.text,
-      })
+      setPrimary(p.primary)
+      setSidebar(p.sidebar)
     }
   }
 
-  const updateColor = (field: keyof BrandState, value: string) => {
-    setColors(prev => ({ ...prev, [field]: value }))
+  const updateColor = (field: 'primary' | 'sidebar', value: string) => {
+    if (field === 'primary') setPrimary(value)
+    else setSidebar(value)
     setPresetKey('custom')
   }
 
-  // ─────────────────────────────────────────────────────────────────────
-  // Convert a File to a data URL so we can stash it in sessionStorage.
-  // Data URLs survive across navigation; blob URLs (URL.createObjectURL)
-  // don't — they're tied to the originating document and revoke on unload.
-  // ─────────────────────────────────────────────────────────────────────
   function fileToDataUrl(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
@@ -293,6 +232,14 @@ export default function WhitelabelOnboardingPage() {
       setError('This subdomain is not available. Pick another.')
       return
     }
+    if (!HEX_RE.test(primary)) {
+      setError('Primary color must be a #RRGGBB hex value.')
+      return
+    }
+    if (!HEX_RE.test(sidebar)) {
+      setError('Sidebar color must be a #RRGGBB hex value.')
+      return
+    }
     if (!editMode && !logoFile) {
       setError('Logo is required. Upload a 512×148 PNG or SVG.')
       return
@@ -308,15 +255,10 @@ export default function WhitelabelOnboardingPage() {
       let stashDataUrl: string | null = null
 
       if (logoFile) {
-        // Pre-encode the file as a data URL BEFORE the upload completes.
-        // If the upload succeeds, we stash this in sessionStorage so the
-        // dashboard layout can show the new logo instantly while the CDN
-        // propagates.
+        // Pre-encode for instant-preview handoff to the dashboard
         try {
           stashDataUrl = await fileToDataUrl(logoFile)
         } catch {
-          // If FileReader fails for some reason, just proceed without the
-          // instant preview. The CDN will eventually catch up.
           stashDataUrl = null
         }
 
@@ -342,11 +284,8 @@ export default function WhitelabelOnboardingPage() {
           brand_name: brandName.trim(),
           subdomain: slug.trim(),
           logo_url: logoUrl,
-          primary_color: colors.primary,
-          secondary_color: colors.secondary,
-          accent_color: colors.surface,
-          background_color: colors.background,
-          text_color: colors.text,
+          primary_color: primary,
+          sidebar_color: sidebar,
         }),
       })
       const data = await res.json()
@@ -356,19 +295,20 @@ export default function WhitelabelOnboardingPage() {
         return
       }
 
-      // Stash the local data URL so the dashboard can preview it instantly.
-      // Keyed by the public URL we just saved, so the dashboard knows which
-      // one to substitute. Cleared after first use (single-shot).
+      // Instant-preview handoff: dashboard sidebar shows the new logo
+      // immediately while CDN propagates the new URL.
       if (stashDataUrl && logoUrl) {
         try {
-          sessionStorage.setItem(PENDING_LOGO_KEY, JSON.stringify({
-            publicUrl: logoUrl,
-            dataUrl: stashDataUrl,
-            savedAt: Date.now(),
-          }))
+          sessionStorage.setItem(
+            PENDING_LOGO_KEY,
+            JSON.stringify({
+              publicUrl: logoUrl,
+              dataUrl: stashDataUrl,
+              savedAt: Date.now(),
+            })
+          )
         } catch {
-          // Storage quota exceeded or disabled — fail silently. The dashboard
-          // will just wait for CDN propagation like before.
+          // Storage quota exceeded or disabled — fail silently.
         }
       }
 
@@ -379,52 +319,98 @@ export default function WhitelabelOnboardingPage() {
     }
   }
 
-  const liveThemeStyle = useMemo(() => `
-    :root {
-      --brand-primary: ${colors.primary};
-      --brand-secondary: ${colors.secondary};
-      --brand-surface: ${colors.surface};
-      --brand-bg: ${colors.background};
-      --brand-text: ${colors.text};
-    }
-  `, [colors])
-
   if (loading) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'var(--text-secondary)',
-        fontSize: 12,
-        letterSpacing: 3,
-      }}>
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'var(--text-secondary)',
+          fontSize: 12,
+          letterSpacing: 3,
+        }}
+      >
         LOADING...
       </div>
     )
   }
 
   const displayLogo = logoPreviewUrl || existingLogoUrl
+  const activePreset = PRESETS.find(p => p.key === presetKey)
 
   return (
-    <>
-      <style dangerouslySetInnerHTML={{ __html: liveThemeStyle }} />
+    <main style={pageStyle}>
+      <div style={cardStyle}>
+        {/* Title + subtitle */}
+        <div style={{ marginBottom: 28 }}>
+          <div style={titleStyle}>
+            {editMode ? 'EDIT YOUR WHITELABEL DIALER' : 'CUSTOMIZE YOUR WHITELABEL DIALER'}
+          </div>
+          <div style={subtitleStyle}>
+            {editMode
+              ? 'Your tenant is live. Make changes anytime — they propagate within 60 seconds.'
+              : 'Pick your brand, your subdomain, your colors. Your customers see your dialer, not ours.'}
+          </div>
+        </div>
 
-      <main style={pageStyle}>
-        <div style={cardStyle}>
-
-          <div style={{ marginBottom: 28 }}>
-            <div style={titleStyle}>
-              {editMode ? 'EDIT YOUR WHITELABEL DIALER' : 'CUSTOMIZE YOUR WHITELABEL DIALER'}
-            </div>
-            <div style={subtitleStyle}>
-              {editMode
-                ? 'Your tenant is live. Make changes anytime — they propagate within 60 seconds.'
-                : 'Pick your brand, your subdomain, your colors. Your customers see your dialer, not ours.'}
+        <form onSubmit={handleSubmit}>
+          {/* ── BRAND NAME ── */}
+          <div style={sectionStyle}>
+            <label style={sectionLabelStyle}>▸ BRAND NAME</label>
+            <input
+              type="text"
+              value={brandName}
+              onChange={e => setBrandName(e.target.value)}
+              placeholder="Acme Sales Group"
+              maxLength={64}
+              style={inputStyle}
+            />
+            <div style={hintStyle}>
+              Shown in your dashboard sidebar header and on your sign-in page.
             </div>
           </div>
 
+          {/* ── SUBDOMAIN ── */}
+          <div style={sectionStyle}>
+            <label style={sectionLabelStyle}>▸ SUBDOMAIN</label>
+            <div style={subdomainRowStyle}>
+              <input
+                type="text"
+                value={slug}
+                onChange={e => setSlug(e.target.value.toLowerCase())}
+                placeholder="acme"
+                maxLength={30}
+                style={{ ...inputStyle, flex: 1, marginBottom: 0 }}
+              />
+              <div style={subdomainSuffixStyle}>.dialerseat.com</div>
+            </div>
+            <div style={hintStyle}>
+              {renderSlugStatus(slugStatus, slug, editMode && slug === originalSlug)}
+            </div>
+          </div>
+
+          {/* ── LOGO ── */}
+          <div style={sectionStyle}>
+            <label style={sectionLabelStyle}>▸ LOGO</label>
+            <div style={hintStyle}>
+              PNG or SVG. <strong>Exactly 512×148 pixels recommended</strong> (max 200 KB).
+              Transparent backgrounds blend best. The preview below shows exactly how
+              it'll fill the sidebar logo box — edge to edge, no padding.
+            </div>
+            <input
+              type="file"
+              accept="image/png,image/svg+xml"
+              onChange={e => {
+                const f = e.target.files?.[0] || null
+                setLogoFile(f)
+              }}
+              style={{ ...inputStyle, padding: 8, marginTop: 8 }}
+            />
+          </div>
+
+          {/* ── THEME ── */}
           <div style={sectionStyle}>
             <div style={sectionLabelStyle}>▸ THEME</div>
             <div style={presetGridStyle}>
@@ -433,13 +419,11 @@ export default function WhitelabelOnboardingPage() {
                   key={p.key}
                   type="button"
                   onClick={() => applyPreset(p.key)}
-                  style={presetCardStyle(p, presetKey === p.key)}
+                  style={presetCardStyle(presetKey === p.key)}
                 >
                   <div style={presetSwatchRowStyle}>
-                    <div style={{ ...presetSwatchStyle, background: p.background }} />
-                    <div style={{ ...presetSwatchStyle, background: p.surface }} />
+                    <div style={{ ...presetSwatchStyle, background: p.sidebar }} />
                     <div style={{ ...presetSwatchStyle, background: p.primary }} />
-                    <div style={{ ...presetSwatchStyle, background: p.secondary }} />
                   </div>
                   <div style={presetNameStyle(presetKey === p.key)}>{p.label}</div>
                 </button>
@@ -447,176 +431,106 @@ export default function WhitelabelOnboardingPage() {
               <button
                 type="button"
                 onClick={() => applyPreset('custom')}
-                style={presetCardStyle(null, presetKey === 'custom')}
+                style={presetCardStyle(presetKey === 'custom')}
               >
-                <div style={{
-                  ...presetSwatchRowStyle,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: 24,
-                  color: 'var(--text-secondary)',
-                  fontSize: 18,
-                  letterSpacing: 2,
-                }}>
+                <div
+                  style={{
+                    ...presetSwatchRowStyle,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: 28,
+                    color: 'var(--text-secondary)',
+                    fontSize: 20,
+                    letterSpacing: 0,
+                  }}
+                >
                   ✎
                 </div>
                 <div style={presetNameStyle(presetKey === 'custom')}>Custom</div>
               </button>
             </div>
             <div style={presetHintStyle}>
-              {presetKey !== 'custom'
-                ? PRESETS.find(p => p.key === presetKey)?.description
-                : 'Tweak any color below to fine-tune.'}
-            </div>
-          </div>
-
-          <form onSubmit={handleSubmit}>
-
-            <div style={sectionStyle}>
-              <label style={sectionLabelStyle}>▸ BRAND NAME</label>
-              <input
-                type="text"
-                value={brandName}
-                onChange={e => setBrandName(e.target.value)}
-                placeholder="Acme Sales Group"
-                maxLength={64}
-                style={inputStyle}
-              />
-              <div style={hintStyle}>
-                Shown in your dashboard sidebar header and on your sign-in page.
-              </div>
-            </div>
-
-            <div style={sectionStyle}>
-              <label style={sectionLabelStyle}>▸ SUBDOMAIN</label>
-              <div style={subdomainRowStyle}>
-                <input
-                  type="text"
-                  value={slug}
-                  onChange={e => setSlug(e.target.value.toLowerCase())}
-                  placeholder="acme"
-                  maxLength={30}
-                  style={{ ...inputStyle, flex: 1, marginBottom: 0 }}
-                />
-                <div style={subdomainSuffixStyle}>.dialerseat.com</div>
-              </div>
-              <div style={hintStyle}>
-                {renderSlugStatus(slugStatus, slug, editMode && slug === originalSlug)}
-              </div>
-            </div>
-
-            <div style={sectionStyle}>
-              <label style={sectionLabelStyle}>▸ LOGO</label>
-              <div style={hintStyle}>
-                PNG or SVG. <strong>Exactly 512×148 pixels.</strong> Max 200 KB.
-                Transparent backgrounds recommended — they blend into the sidebar.
-              </div>
-
-              {displayLogo && (
-                <div style={logoPreviewWrapStyle}>
-                  <div style={logoPreviewLabelStyle}>
-                    PREVIEW (256×74 — your sidebar block):
-                  </div>
-                  <div style={logoPreviewBoxStyle}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={displayLogo}
-                      alt="Your logo"
-                      style={{
-                        width: 256,
-                        height: 74,
-                        objectFit: 'contain',
-                        objectPosition: 'left center',
-                        display: 'block',
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              <input
-                type="file"
-                accept="image/png,image/svg+xml"
-                onChange={e => {
-                  const f = e.target.files?.[0] || null
-                  setLogoFile(f)
-                }}
-                style={{ ...inputStyle, padding: 8, marginTop: 8 }}
-              />
+              {presetKey === 'custom'
+                ? 'Pick your own sidebar and primary colors below.'
+                : activePreset?.description}
             </div>
 
             {presetKey === 'custom' && (
-              <div style={sectionStyle}>
-                <label style={sectionLabelStyle}>▸ COLORS</label>
-                <div style={hintStyle}>
-                  Page is themeing live as you pick. Status colors (errors, success) stay red and green.
-                </div>
-
-                <div style={colorPickerGridStyle}>
-                  <ColorRow
-                    label="Surface"
-                    description="Sidebar, cards, modal backgrounds"
-                    value={colors.surface}
-                    onChange={v => updateColor('surface', v)}
-                  />
-                  <ColorRow
-                    label="Primary"
-                    description="Buttons, links, active nav"
-                    value={colors.primary}
-                    onChange={v => updateColor('primary', v)}
-                  />
-                  <ColorRow
-                    label="Secondary"
-                    description="Button gradients, hover states"
-                    value={colors.secondary}
-                    onChange={v => updateColor('secondary', v)}
-                  />
-                  <ColorRow
-                    label="Background"
-                    description="Page background, deepest layer"
-                    value={colors.background}
-                    onChange={v => updateColor('background', v)}
-                  />
-                  <ColorRow
-                    label="Text"
-                    description="Body text, headings, all foreground type"
-                    value={colors.text}
-                    onChange={v => updateColor('text', v)}
-                  />
-                </div>
+              <div style={colorPickerGridStyle}>
+                <ColorRow
+                  label="Sidebar"
+                  description="Sidebar background, header strip, and primary button background"
+                  value={sidebar}
+                  onChange={v => updateColor('sidebar', v)}
+                />
+                <ColorRow
+                  label="Primary"
+                  description="Buttons, accents, active states, focus rings, chart line"
+                  value={primary}
+                  onChange={v => updateColor('primary', v)}
+                />
               </div>
             )}
+          </div>
 
-            {error && (
-              <div style={errorBoxStyle}>{error}</div>
-            )}
+          {/* ── EXACT PREVIEW ── */}
+          <div style={sectionStyle}>
+            <div style={sectionLabelStyle}>▸ EXACT PREVIEW</div>
+            <div style={{ ...hintStyle, marginBottom: 12 }}>
+              This is exactly what your dashboard will look like with the colors and
+              logo you've picked. Updates as you change anything above.
+            </div>
+            <WhitelabelLivePreview
+              primary={primary}
+              sidebar={sidebar}
+              brandName={brandName}
+              logoUrl={displayLogo}
+            />
+          </div>
 
-            <button
-              type="submit"
-              disabled={submitting}
-              style={{
-                ...submitButtonStyle,
-                color: pickContrastText(colors.primary),
-                opacity: submitting ? 0.6 : 1,
-                cursor: submitting ? 'wait' : 'pointer',
-              }}
-            >
-              {submitting
-                ? (editMode ? 'SAVING...' : 'CONFIRMING...')
-                : (editMode ? '▶ SAVE CHANGES' : '▶ CONFIRM')}
-            </button>
+          {/* ── PROPAGATION DISCLAIMER ── */}
+          <div style={disclaimerBoxStyle}>
+            <strong style={disclaimerHeadingStyle}>ⓘ HEADS UP</strong>
+            <div style={{ marginTop: 6 }}>
+              Color and logo changes propagate site-wide within 60 seconds. Your own
+              browser updates instantly on save. Other users (your team, your
+              customers) will see the new look after their next page load, up to a
+              minute later.
+            </div>
+          </div>
 
-            {!editMode && (
-              <div style={{ ...hintStyle, textAlign: 'center', marginTop: 12 }}>
-                You can change everything later from this same page.
-              </div>
-            )}
-          </form>
-        </div>
-      </main>
-    </>
+          {error && <div style={errorBoxStyle}>{error}</div>}
+
+          <button
+            type="submit"
+            disabled={submitting}
+            style={{
+              ...submitButtonStyle,
+              opacity: submitting ? 0.6 : 1,
+              cursor: submitting ? 'wait' : 'pointer',
+            }}
+          >
+            {submitting
+              ? editMode
+                ? 'SAVING...'
+                : 'CONFIRMING...'
+              : editMode
+                ? '▶ SAVE CHANGES'
+                : '▶ CONFIRM'}
+          </button>
+
+          {!editMode && (
+            <div style={{ ...hintStyle, textAlign: 'center', marginTop: 12 }}>
+              You can change everything later from this same page.
+            </div>
+          )}
+        </form>
+      </div>
+    </main>
   )
 }
+
+// ─── Inline helper component ─────────────────────────────────────────
 
 function ColorRow({
   label,
@@ -653,13 +567,7 @@ function ColorRow({
 }
 
 function renderSlugStatus(
-  status:
-    | { kind: 'idle' }
-    | { kind: 'checking' }
-    | { kind: 'available' }
-    | { kind: 'taken' }
-    | { kind: 'reserved' }
-    | { kind: 'invalid'; reason: string },
+  status: SlugStatus,
   slug: string,
   isUnchangedEdit: boolean,
 ): React.ReactNode {
@@ -696,6 +604,8 @@ function renderSlugStatus(
   return null
 }
 
+// ─── Styles ──────────────────────────────────────────────────────────
+
 const pageStyle: React.CSSProperties = {
   minHeight: '100vh',
   background: 'var(--background)',
@@ -708,7 +618,7 @@ const pageStyle: React.CSSProperties = {
 
 const cardStyle: React.CSSProperties = {
   width: '100%',
-  maxWidth: 640,
+  maxWidth: 720,
   background: 'var(--surface)',
   border: '1px solid var(--border)',
   borderTop: '3px solid var(--brand-primary)',
@@ -794,7 +704,7 @@ const presetGridStyle: React.CSSProperties = {
   marginBottom: 12,
 }
 
-function presetCardStyle(p: Preset | null, selected: boolean): React.CSSProperties {
+function presetCardStyle(selected: boolean): React.CSSProperties {
   return {
     background: 'var(--background)',
     border: selected ? '2px solid var(--brand-primary)' : '1px solid var(--border)',
@@ -814,8 +724,8 @@ const presetSwatchRowStyle: React.CSSProperties = {
 }
 
 const presetSwatchStyle: React.CSSProperties = {
-  width: 24,
-  height: 24,
+  width: 32,
+  height: 28,
   borderRadius: 3,
   border: '1px solid rgba(255,255,255,0.08)',
 }
@@ -834,36 +744,14 @@ const presetHintStyle: React.CSSProperties = {
   letterSpacing: 0.5,
   color: 'var(--text-muted)',
   lineHeight: 1.6,
-}
-
-const logoPreviewWrapStyle: React.CSSProperties = {
-  marginTop: 12,
-  marginBottom: 8,
-}
-
-const logoPreviewLabelStyle: React.CSSProperties = {
-  fontSize: 10,
-  letterSpacing: 2,
-  color: 'var(--text-muted)',
-  marginBottom: 8,
-  fontWeight: 700,
-}
-
-const logoPreviewBoxStyle: React.CSSProperties = {
-  background: 'var(--brand-surface)',
-  border: '1px solid var(--border)',
-  borderRadius: 4,
-  padding: 16,
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'flex-start',
+  marginBottom: 12,
 }
 
 const colorPickerGridStyle: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   gap: 10,
-  marginTop: 8,
+  marginTop: 12,
 }
 
 const colorRowStyle: React.CSSProperties = {
@@ -898,6 +786,7 @@ const colorRowDescStyle: React.CSSProperties = {
   letterSpacing: 0.5,
   color: 'var(--text-muted)',
   marginTop: 2,
+  lineHeight: 1.5,
 }
 
 const colorHexInputStyle: React.CSSProperties = {
@@ -912,6 +801,26 @@ const colorHexInputStyle: React.CSSProperties = {
   fontFamily: 'var(--font-mono)',
   outline: 'none',
   boxSizing: 'border-box',
+}
+
+const disclaimerBoxStyle: React.CSSProperties = {
+  background: 'rgba(74, 158, 255, 0.06)',
+  border: '1px solid rgba(74, 158, 255, 0.3)',
+  borderLeft: '3px solid var(--brand-primary)',
+  borderRadius: 4,
+  padding: '14px 16px',
+  marginBottom: 20,
+  fontSize: 12,
+  lineHeight: 1.6,
+  color: 'var(--text-primary)',
+  letterSpacing: 0.3,
+}
+
+const disclaimerHeadingStyle: React.CSSProperties = {
+  fontSize: 11,
+  letterSpacing: 3,
+  color: 'var(--brand-primary)',
+  fontWeight: 700,
 }
 
 const errorBoxStyle: React.CSSProperties = {
@@ -930,15 +839,15 @@ const errorBoxStyle: React.CSSProperties = {
 const submitButtonStyle: React.CSSProperties = {
   width: '100%',
   padding: 16,
-  background: 'linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))',
+  background: 'var(--surface)',
+  borderTop: '3px solid var(--brand-primary)',
   border: 'none',
   borderRadius: 4,
-  color: 'var(--brand-text)',
+  color: 'var(--brand-primary)',
   fontSize: 13,
   fontWeight: 700,
   letterSpacing: 4,
   fontFamily: 'var(--font-futura)',
   cursor: 'pointer',
   marginTop: 8,
-  boxShadow: '0 0 30px color-mix(in srgb, var(--brand-primary) 25%, transparent)',
 }

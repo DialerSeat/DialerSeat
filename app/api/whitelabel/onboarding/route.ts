@@ -1,21 +1,26 @@
 // app/api/whitelabel/onboarding/route.ts
 // =============================================================================
-// WHITE-LABEL ONBOARDING / EDIT — 5-color support
+// WHITE-LABEL ONBOARDING / EDIT — Pass 2 Phase B3 (2-color)
 // =============================================================================
-// Fixes a bug where the POST only read/wrote primary_color + accent_color.
-// The frontend always sent all 5 colors (primary, secondary, accent=surface,
-// background, text) but only 2 of them ever hit the DB. Result: editing
-// presets in onboarding visibly updated the sidebar (primary) and chrome
-// (accent) but nothing else changed because secondary/background/text
-// silently stayed at their old values.
+// Pass 2 changes vs v1 (5-color):
 //
-// This version:
-//   - GET selects all 5 color columns so the edit form loads correctly
-//   - POST validates all 5 colors as valid hex
-//   - POST INSERT writes all 5 columns
-//   - POST UPDATE writes all 5 columns
-//   - Other behavior unchanged (active_tenant_id auto-set on create,
-//     support_email defaults to user.email, slug cooldown, etc.)
+//   - Body now carries 2 colors: primary_color + sidebar_color
+//   - Removed: secondary_color, accent_color, background_color, text_color
+//     from body parsing, validation, and response
+//   - INSERT writes primary_color + sidebar_color (the 2 active columns).
+//     Pre-002 safety: also mirrors sidebar_color into accent_color (the
+//     vestigial Pass 1 column) and sets sensible defaults for
+//     secondary/background/text so any NOT NULL constraints don't fire.
+//     After migration 002 drops those 4 columns, this mirroring becomes
+//     a no-op and the writes silently fail at the column level — at that
+//     point we drop these lines too.
+//   - UPDATE writes primary_color + sidebar_color + accent_color mirror.
+//   - GET selects and returns primary_color + sidebar_color only.
+//
+// Unchanged behavior:
+//   - Slug regex, RESERVED subdomain set, 24h cooldown, 30-day redirect
+//     grace, subscription gate, support_email default, active_tenant_id
+//     auto-set on tenant creation, slug collision handling.
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -48,6 +53,17 @@ const HEX_RE = /^#[0-9a-fA-F]{6}$/
 const SLUG_COOLDOWN_HOURS = 24
 const SLUG_REDIRECT_DAYS = 30
 
+// Sensible defaults for the vestigial Pass 1 columns we no longer expose.
+// Used on INSERT to satisfy any NOT NULL constraints until migration 002
+// drops these columns entirely.
+const LEGACY_SECONDARY_DEFAULT = '#2a6eff'
+const LEGACY_BACKGROUND_DEFAULT = '#0a0a0f'
+const LEGACY_TEXT_DEFAULT = '#f0f0f5'
+
+// =============================================================================
+// GET — fetch current tenant for the edit form
+// =============================================================================
+
 export async function GET() {
   const { userId } = await auth()
   if (!userId) {
@@ -71,12 +87,12 @@ export async function GET() {
   }
 
   if (status === 'complete') {
-    // Select ALL 5 color columns so the edit form pre-fills correctly.
+    // 2-color SELECT. Vestigial columns no longer included in the response.
     const { data: tenant } = await supabase
       .from('white_label_tenants')
       .select(`
         id, brand_name, slug, logo_url, slug_changed_at, is_active,
-        primary_color, secondary_color, accent_color, background_color, text_color
+        primary_color, sidebar_color
       `)
       .eq('owner_clerk_id', userId)
       .maybeSingle()
@@ -102,10 +118,7 @@ export async function GET() {
         slug: tenant.slug,
         logo_url: tenant.logo_url,
         primary_color: tenant.primary_color,
-        secondary_color: tenant.secondary_color,
-        accent_color: tenant.accent_color,
-        background_color: tenant.background_color,
-        text_color: tenant.text_color,
+        sidebar_color: tenant.sidebar_color,
       },
       canChangeSlugAt,
       isActive: tenant.is_active,
@@ -114,6 +127,10 @@ export async function GET() {
 
   return NextResponse.json({ status })
 }
+
+// =============================================================================
+// POST — create or update tenant
+// =============================================================================
 
 export async function POST(req: NextRequest) {
   const { userId } = await auth()
@@ -133,38 +150,41 @@ export async function POST(req: NextRequest) {
   const subdomain = String(body.subdomain || '').toLowerCase().trim()
   const logoUrl = String(body.logo_url || '').trim()
   const primaryColor = String(body.primary_color || '').trim()
-  const secondaryColor = String(body.secondary_color || '').trim()
-  const accentColor = String(body.accent_color || '').trim()
-  const backgroundColor = String(body.background_color || '').trim()
-  const textColor = String(body.text_color || '').trim()
+  const sidebarColor = String(body.sidebar_color || '').trim()
 
   // ── Validation ────────────────────────────────────────────────────
   if (!brandName || brandName.length < 2 || brandName.length > 60) {
-    return NextResponse.json({ error: 'invalid_brand_name', detail: 'Brand name must be 2–60 characters.' }, { status: 400 })
+    return NextResponse.json(
+      { error: 'invalid_brand_name', detail: 'Brand name must be 2–60 characters.' },
+      { status: 400 }
+    )
   }
   if (!subdomain || !SLUG_RE.test(subdomain)) {
-    return NextResponse.json({ error: 'invalid_subdomain', detail: 'Subdomain must be 3–30 chars, lowercase letters/digits/hyphens.' }, { status: 400 })
+    return NextResponse.json(
+      { error: 'invalid_subdomain', detail: 'Subdomain must be 3–30 chars, lowercase letters/digits/hyphens.' },
+      { status: 400 }
+    )
   }
   if (RESERVED.has(subdomain)) {
     return NextResponse.json({ error: 'reserved_subdomain' }, { status: 400 })
   }
   if (!HEX_RE.test(primaryColor)) {
-    return NextResponse.json({ error: 'invalid_primary_color', detail: 'Primary color must be #RRGGBB.' }, { status: 400 })
+    return NextResponse.json(
+      { error: 'invalid_primary_color', detail: 'Primary color must be #RRGGBB.' },
+      { status: 400 }
+    )
   }
-  if (!HEX_RE.test(secondaryColor)) {
-    return NextResponse.json({ error: 'invalid_secondary_color', detail: 'Secondary color must be #RRGGBB.' }, { status: 400 })
-  }
-  if (!HEX_RE.test(accentColor)) {
-    return NextResponse.json({ error: 'invalid_accent_color', detail: 'Surface (accent) color must be #RRGGBB.' }, { status: 400 })
-  }
-  if (!HEX_RE.test(backgroundColor)) {
-    return NextResponse.json({ error: 'invalid_background_color', detail: 'Background color must be #RRGGBB.' }, { status: 400 })
-  }
-  if (!HEX_RE.test(textColor)) {
-    return NextResponse.json({ error: 'invalid_text_color', detail: 'Text color must be #RRGGBB.' }, { status: 400 })
+  if (!HEX_RE.test(sidebarColor)) {
+    return NextResponse.json(
+      { error: 'invalid_sidebar_color', detail: 'Sidebar color must be #RRGGBB.' },
+      { status: 400 }
+    )
   }
   if (!logoUrl) {
-    return NextResponse.json({ error: 'missing_logo', detail: 'Upload your logo first.' }, { status: 400 })
+    return NextResponse.json(
+      { error: 'missing_logo', detail: 'Upload your logo first.' },
+      { status: 400 }
+    )
   }
 
   // ── WL subscription gate ──────────────────────────────────────────
@@ -215,7 +235,10 @@ export async function POST(req: NextRequest) {
       .eq('id', redirecting.tenant_id)
       .maybeSingle()
     if (!t || t.owner_clerk_id !== userId) {
-      return NextResponse.json({ error: 'redirecting', detail: 'This subdomain is being redirected from a recent change.' }, { status: 409 })
+      return NextResponse.json(
+        { error: 'redirecting', detail: 'This subdomain is being redirected from a recent change.' },
+        { status: 409 }
+      )
     }
   }
 
@@ -230,12 +253,19 @@ export async function POST(req: NextRequest) {
         slug: subdomain,
         brand_name: brandName,
         logo_url: logoUrl,
-        // All 5 colors written on create.
+        // Pass 2 active columns
         primary_color: primaryColor,
-        secondary_color: secondaryColor,
-        accent_color: accentColor,
-        background_color: backgroundColor,
-        text_color: textColor,
+        sidebar_color: sidebarColor,
+        // Pre-002 safety: vestigial columns still exist on the table.
+        // Mirror sidebar into accent_color to keep them in sync. Default
+        // the other three so any NOT NULL constraints don't fire.
+        // These four lines all become no-ops after migration 002 drops
+        // these columns from the table.
+        accent_color: sidebarColor,
+        secondary_color: LEGACY_SECONDARY_DEFAULT,
+        background_color: LEGACY_BACKGROUND_DEFAULT,
+        text_color: LEGACY_TEXT_DEFAULT,
+        // Identity / billing
         support_email: user.email || 'support@dialerseat.com',
         stripe_customer_id: user.stripe_customer_id,
         stripe_subscription_id: user.wl_subscription_id,
@@ -251,7 +281,10 @@ export async function POST(req: NextRequest) {
       if (insErr?.code === '23505') {
         return NextResponse.json({ error: 'taken' }, { status: 409 })
       }
-      return NextResponse.json({ error: 'db_error', detail: insErr?.message }, { status: 500 })
+      return NextResponse.json(
+        { error: 'db_error', detail: insErr?.message },
+        { status: 500 }
+      )
     }
 
     // Mark onboarding complete AND auto-select this tenant.
@@ -281,12 +314,11 @@ export async function POST(req: NextRequest) {
   const updates: Record<string, any> = {
     brand_name: brandName,
     logo_url: logoUrl,
-    // All 5 colors written on every update.
     primary_color: primaryColor,
-    secondary_color: secondaryColor,
-    accent_color: accentColor,
-    background_color: backgroundColor,
-    text_color: textColor,
+    sidebar_color: sidebarColor,
+    // Pre-002 safety: keep accent_color mirrored to sidebar_color.
+    // Becomes a no-op after migration 002.
+    accent_color: sidebarColor,
   }
 
   if (slugChanged) {
@@ -329,7 +361,10 @@ export async function POST(req: NextRequest) {
     if (updErr.code === '23505') {
       return NextResponse.json({ error: 'taken' }, { status: 409 })
     }
-    return NextResponse.json({ error: 'db_error', detail: updErr.message }, { status: 500 })
+    return NextResponse.json(
+      { error: 'db_error', detail: updErr.message },
+      { status: 500 }
+    )
   }
 
   return NextResponse.json({ success: true, subdomain, updated: true })

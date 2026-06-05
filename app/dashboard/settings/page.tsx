@@ -2,8 +2,31 @@
 import { useEffect, useState } from 'react'
 import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
+import { WhitelabelLivePreview } from '@/components/WhitelabelLivePreview'
 
 const FUTURA = 'Futura PT, Futura, "Trebuchet MS", sans-serif'
+
+// =============================================================================
+// SETTINGS PAGE (v25 — Pass 2 Phase B5: inline theme editor)
+// =============================================================================
+// Changes vs v24:
+//   - The ▸ YOUR WHITELABEL section (which was a single "EDIT YOUR
+//     WHITELABEL →" link to /onboarding/whitelabel) is replaced with
+//     ▸ YOUR WHITELABEL THEME — an inline editor with 3 presets, custom
+//     picker, WhitelabelLivePreview, 60-sec disclaimer, and a SAVE
+//     THEME button. POSTs to the same /api/whitelabel/onboarding endpoint
+//     used by the full onboarding page.
+//   - A small footnote link to /onboarding/whitelabel is kept for users
+//     who need to change brand name, subdomain, or logo.
+//   - All other sections (brand view toggle, subscription, team seats,
+//     cancel flow, resubscribe, seat-cancel modal) preserved byte-for-byte.
+//
+// JC's directive: "keep the background of this page the same for all
+// whitelabel accounts. only change the center content to match." Honored:
+// the page chrome stays in DialerSeat dark default. The only element
+// reflecting the tenant's chosen colors is the WhitelabelLivePreview
+// component inside the new theme section.
+// =============================================================================
 
 interface SubStatus {
   hasSubscription: boolean
@@ -13,7 +36,6 @@ interface SubStatus {
   trialEnd: string | null
   cancelAtPeriodEnd: boolean
   tier?: 'active' | 'lapsed' | 'new'
-  // NEW — Manager+ awareness fields from /api/stripe/status
   plan?: 'pro' | 'manager_plus' | 'both' | null
   wlActive?: boolean
   weeklyPrice?: number
@@ -63,16 +85,47 @@ interface BrandOptions {
   currentTenantId: string | null
 }
 
-// =============================================================================
-// SETTINGS PAGE (v24 — Phase D2: Manager+ display + edit-whitelabel link)
-// =============================================================================
-// Changes vs v23:
-// - Reads plan / wlActive / weeklyPrice from /api/stripe/status response
-// - PRICE row reflects total weekly price (Pro=$35, Manager+=$75, both=$110)
-// - Subtitle shows plan label next to email (PRO / MANAGER+ / PRO + MANAGER+)
-// - New ▸ YOUR WHITELABEL section with "Edit your whitelabel" button,
-//   visible only when wlActive
-// =============================================================================
+interface TenantData {
+  brand_name: string
+  slug: string
+  logo_url: string | null
+  primary_color: string
+  sidebar_color: string
+}
+
+interface Preset {
+  key: string
+  label: string
+  description: string
+  primary: string
+  sidebar: string
+}
+
+const PRESETS: Preset[] = [
+  {
+    key: 'stone-lavender',
+    label: 'Stone & Lavender',
+    description: 'Light gray-white sidebar with soft lavender accents.',
+    primary: '#b8a3e0',
+    sidebar: '#e4e6eb',
+  },
+  {
+    key: 'forest',
+    label: 'Forest',
+    description: 'Deep forest sidebar with bright leaf-green accents.',
+    primary: '#5fb87a',
+    sidebar: '#1a3a26',
+  },
+  {
+    key: 'bloom',
+    label: 'Bloom',
+    description: 'Warm brown sidebar with rose pink accents.',
+    primary: '#e8b8c5',
+    sidebar: '#6e5142',
+  },
+]
+
+const HEX_RE = /^#[0-9a-fA-F]{6}$/
 
 export default function SettingsPage() {
   const { user } = useUser()
@@ -93,12 +146,23 @@ export default function SettingsPage() {
   const [brandOptions, setBrandOptions] = useState<BrandOptions | null>(null)
   const [switchingBrand, setSwitchingBrand] = useState(false)
 
+  // ── NEW: inline theme editor state ─────────────────────────────────
+  const [tenantData, setTenantData] = useState<TenantData | null>(null)
+  const [presetKey, setPresetKey] = useState<string>(PRESETS[0].key)
+  const [primary, setPrimary] = useState<string>(PRESETS[0].primary)
+  const [sidebar, setSidebar] = useState<string>(PRESETS[0].sidebar)
+  const [themeSaving, setThemeSaving] = useState(false)
+  const [themeFeedback, setThemeFeedback] = useState<
+    { kind: 'success' | 'error'; text: string } | null
+  >(null)
+
   const loadStatus = async () => {
     try {
-      const [statusRes, summaryRes, brandRes] = await Promise.all([
+      const [statusRes, summaryRes, brandRes, tenantRes] = await Promise.all([
         fetch('/api/stripe/status'),
         fetch('/api/subscriptions/summary'),
         fetch('/api/whitelabel/available-tenants'),
+        fetch('/api/whitelabel/onboarding'),
       ])
       const statusData = await statusRes.json()
       setSub(statusData)
@@ -117,6 +181,27 @@ export default function SettingsPage() {
           canSeeStandard: !!brandData.canSeeStandard,
           currentTenantId: brandData.currentTenantId ?? null,
         })
+      }
+      if (tenantRes.ok) {
+        const tenantPayload = await tenantRes.json()
+        if (tenantPayload.tenant) {
+          const t: TenantData = {
+            brand_name: tenantPayload.tenant.brand_name,
+            slug: tenantPayload.tenant.slug,
+            logo_url: tenantPayload.tenant.logo_url,
+            primary_color: tenantPayload.tenant.primary_color || PRESETS[0].primary,
+            sidebar_color: tenantPayload.tenant.sidebar_color || PRESETS[0].sidebar,
+          }
+          setTenantData(t)
+          setPrimary(t.primary_color)
+          setSidebar(t.sidebar_color)
+          const match = PRESETS.find(
+            p =>
+              p.primary.toLowerCase() === t.primary_color.toLowerCase() &&
+              p.sidebar.toLowerCase() === t.sidebar_color.toLowerCase()
+          )
+          setPresetKey(match?.key || 'custom')
+        }
       }
     } catch {
       setError('Failed to load subscription status')
@@ -224,6 +309,71 @@ export default function SettingsPage() {
     }
   }
 
+  // ── NEW: theme editor handlers ─────────────────────────────────────
+  const applyPreset = (key: string) => {
+    setPresetKey(key)
+    setThemeFeedback(null)
+    if (key === 'custom') return
+    const p = PRESETS.find(p => p.key === key)
+    if (p) {
+      setPrimary(p.primary)
+      setSidebar(p.sidebar)
+    }
+  }
+
+  const updateColor = (field: 'primary' | 'sidebar', value: string) => {
+    if (field === 'primary') setPrimary(value)
+    else setSidebar(value)
+    setPresetKey('custom')
+    setThemeFeedback(null)
+  }
+
+  const handleSaveTheme = async () => {
+    if (!tenantData) return
+    if (!HEX_RE.test(primary)) {
+      setThemeFeedback({ kind: 'error', text: 'Primary must be a #RRGGBB hex value.' })
+      return
+    }
+    if (!HEX_RE.test(sidebar)) {
+      setThemeFeedback({ kind: 'error', text: 'Sidebar must be a #RRGGBB hex value.' })
+      return
+    }
+
+    setThemeSaving(true)
+    setThemeFeedback(null)
+    try {
+      const res = await fetch('/api/whitelabel/onboarding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          brand_name: tenantData.brand_name,
+          subdomain: tenantData.slug,
+          logo_url: tenantData.logo_url,
+          primary_color: primary,
+          sidebar_color: sidebar,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setThemeFeedback({
+          kind: 'error',
+          text: data.detail || data.error || 'Failed to save theme.',
+        })
+        return
+      }
+      setThemeFeedback({
+        kind: 'success',
+        text: 'Theme saved. Propagating site-wide now — up to 60 seconds for everyone else.',
+      })
+      // Update locally so a refresh isn't needed for the live preview
+      setTenantData({ ...tenantData, primary_color: primary, sidebar_color: sidebar })
+    } catch (err: any) {
+      setThemeFeedback({ kind: 'error', text: err.message || 'Network error.' })
+    } finally {
+      setThemeSaving(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="settings-root" style={pageStyle}>
@@ -246,10 +396,11 @@ export default function SettingsPage() {
 
   const currentBrandValue = brandOptions?.currentTenantId ?? 'standard'
 
-  // ── Manager+ derived display values ─────────────────────────────────
   const wlActive = !!sub?.wlActive
   const planLabel = planLabelFor(sub?.plan)
   const weeklyPrice = sub?.weeklyPrice ?? (sub?.hasSubscription ? 35 : 0)
+
+  const activePreset = PRESETS.find(p => p.key === presetKey)
 
   return (
     <div className="settings-root" style={pageStyle}>
@@ -322,36 +473,126 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {/* YOUR WHITELABEL — only when user has a Manager+ tenant */}
-        {wlActive && (
+        {/* ── NEW: YOUR WHITELABEL THEME (inline editor) ── */}
+        {wlActive && tenantData && (
           <div style={sectionStyle}>
-            <div style={sectionHeaderStyle}>▸ YOUR WHITELABEL</div>
+            <div style={sectionHeaderStyle}>▸ YOUR WHITELABEL THEME</div>
             <div style={{ ...mutedStyle, marginBottom: 14, lineHeight: 1.6 }}>
-              Change your subdomain, logo, brand name, or colors. Changes go
-              live within 60 seconds and apply to your sign-in page, sidebar,
-              and dashboard chrome.
+              Pick a preset or fine-tune your colors. Saves apply to your
+              sign-in page, sidebar, and dashboard chrome within 60 seconds.
             </div>
-            <Link
-              href="/onboarding/whitelabel"
+
+            {/* Preset cards */}
+            <div style={themePresetGridStyle}>
+              {PRESETS.map(p => (
+                <button
+                  key={p.key}
+                  type="button"
+                  onClick={() => applyPreset(p.key)}
+                  style={themePresetCardStyle(presetKey === p.key)}
+                >
+                  <div style={themePresetSwatchRowStyle}>
+                    <div style={{ ...themePresetSwatchStyle, background: p.sidebar }} />
+                    <div style={{ ...themePresetSwatchStyle, background: p.primary }} />
+                  </div>
+                  <div style={themePresetNameStyle(presetKey === p.key)}>{p.label}</div>
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => applyPreset('custom')}
+                style={themePresetCardStyle(presetKey === 'custom')}
+              >
+                <div
+                  style={{
+                    ...themePresetSwatchRowStyle,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: 24,
+                    color: '#888a92',
+                    fontSize: 18,
+                    letterSpacing: 0,
+                  }}
+                >
+                  ✎
+                </div>
+                <div style={themePresetNameStyle(presetKey === 'custom')}>Custom</div>
+              </button>
+            </div>
+
+            <div style={{ fontSize: 11, color: '#888a92', letterSpacing: 0.5, lineHeight: 1.6, marginBottom: 14 }}>
+              {presetKey === 'custom'
+                ? 'Pick your own sidebar and primary colors below.'
+                : activePreset?.description}
+            </div>
+
+            {presetKey === 'custom' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+                <DarkColorRow
+                  label="Sidebar"
+                  description="Sidebar background, header strip, primary button background"
+                  value={sidebar}
+                  onChange={v => updateColor('sidebar', v)}
+                />
+                <DarkColorRow
+                  label="Primary"
+                  description="Buttons, accents, active states, focus rings, chart line"
+                  value={primary}
+                  onChange={v => updateColor('primary', v)}
+                />
+              </div>
+            )}
+
+            {/* Live preview — the ONLY element on this page reflecting tenant colors */}
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 9, letterSpacing: 2, color: '#888a92', marginBottom: 8, fontWeight: 700 }}>
+                EXACT PREVIEW
+              </div>
+              <WhitelabelLivePreview
+                primary={primary}
+                sidebar={sidebar}
+                brandName={tenantData.brand_name}
+                logoUrl={tenantData.logo_url}
+              />
+            </div>
+
+            {/* Disclaimer */}
+            <div style={themeDisclaimerStyle}>
+              <strong style={{ color: '#4a9eff', letterSpacing: 2 }}>ⓘ HEADS UP</strong>
+              <div style={{ marginTop: 4 }}>
+                Your browser updates instantly on save. Other users (your team,
+                your customers) will see the new look after their next page load,
+                up to 60 seconds later.
+              </div>
+            </div>
+
+            {/* Feedback */}
+            {themeFeedback && (
+              <div style={themeFeedback.kind === 'success' ? themeSuccessStyle : themeErrorStyle}>
+                {themeFeedback.text}
+              </div>
+            )}
+
+            {/* Save button */}
+            <button
+              onClick={handleSaveTheme}
+              disabled={themeSaving}
               style={{
-                display: 'block',
-                width: '100%',
-                padding: 14,
-                background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
-                border: 'none',
-                borderRadius: 4,
-                color: 'white',
-                fontSize: 12,
-                fontWeight: 700,
-                letterSpacing: 3,
-                textAlign: 'center',
-                textDecoration: 'none',
-                fontFamily: FUTURA,
-                boxSizing: 'border-box',
+                ...themeSaveButtonStyle,
+                opacity: themeSaving ? 0.6 : 1,
+                cursor: themeSaving ? 'wait' : 'pointer',
               }}
             >
-              EDIT YOUR WHITELABEL →
-            </Link>
+              {themeSaving ? 'SAVING...' : 'SAVE THEME'}
+            </button>
+
+            {/* Small link to full editor */}
+            <div style={{ marginTop: 14, fontSize: 11, letterSpacing: 0.5, color: '#888a92', lineHeight: 1.6 }}>
+              Need to change your brand name, subdomain, or logo?{' '}
+              <Link href="/onboarding/whitelabel" style={{ color: '#4a9eff', textDecoration: 'underline' }}>
+                Open the full editor →
+              </Link>
+            </div>
           </div>
         )}
 
@@ -608,6 +849,69 @@ export default function SettingsPage() {
   )
 }
 
+// ─── Dark-themed ColorRow for the theme editor ──────────────────────
+function DarkColorRow({
+  label,
+  description,
+  value,
+  onChange,
+}: {
+  label: string
+  description: string
+  value: string
+  onChange: (v: string) => void
+}) {
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 12,
+      padding: 10,
+      background: '#0a0b10',
+      border: '1px solid #2a2c34',
+      borderRadius: 4,
+    }}>
+      <input
+        type="color"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        style={{
+          width: 40,
+          height: 40,
+          padding: 0,
+          border: '1px solid #2a2c34',
+          borderRadius: 4,
+          background: 'transparent',
+          cursor: 'pointer',
+        }}
+      />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 1, color: '#e0e2ea' }}>{label}</div>
+        <div style={{ fontSize: 10, color: '#888a92', letterSpacing: 0.5, marginTop: 2, lineHeight: 1.5 }}>{description}</div>
+      </div>
+      <input
+        type="text"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        maxLength={7}
+        style={{
+          width: 90,
+          padding: '8px 10px',
+          background: '#1a1c24',
+          border: '1px solid #2a2c34',
+          borderRadius: 3,
+          color: '#e0e2ea',
+          fontSize: 12,
+          fontFamily: 'monospace',
+          outline: 'none',
+          boxSizing: 'border-box',
+          letterSpacing: 0.5,
+        }}
+      />
+    </div>
+  )
+}
+
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', {
     month: 'long', day: 'numeric', year: 'numeric',
@@ -646,7 +950,7 @@ const pageStyle: React.CSSProperties = {
 }
 
 const cardStyle: React.CSSProperties = {
-  width: '100%', maxWidth: 560, background: '#1a1c24',
+  width: '100%', maxWidth: 640, background: '#1a1c24',
   border: '1px solid #2a2c34', borderTop: '3px solid #4a9eff',
   borderRadius: 4, padding: 32, color: '#e0e2ea',
   fontFamily: FUTURA, boxSizing: 'border-box',
@@ -788,4 +1092,101 @@ function seatBadgeStyle(color: string): React.CSSProperties {
 
 const seatDetailStyle: React.CSSProperties = {
   fontSize: 11, color: '#888a92', letterSpacing: 0.5, lineHeight: 1.5, marginTop: 4,
+}
+
+// ─── New styles for the inline theme editor section ────────────────
+
+const themePresetGridStyle: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+  gap: 8,
+  marginBottom: 12,
+}
+
+function themePresetCardStyle(selected: boolean): React.CSSProperties {
+  return {
+    background: '#0a0b10',
+    border: selected ? '2px solid #4a9eff' : '1px solid #2a2c34',
+    padding: selected ? 9 : 10,
+    borderRadius: 4,
+    cursor: 'pointer',
+    textAlign: 'left',
+    fontFamily: FUTURA,
+    transition: 'border-color 0.15s',
+  }
+}
+
+const themePresetSwatchRowStyle: React.CSSProperties = {
+  display: 'flex',
+  gap: 4,
+  marginBottom: 8,
+}
+
+const themePresetSwatchStyle: React.CSSProperties = {
+  width: 28,
+  height: 24,
+  borderRadius: 3,
+  border: '1px solid rgba(255,255,255,0.08)',
+}
+
+function themePresetNameStyle(selected: boolean): React.CSSProperties {
+  return {
+    fontSize: 10,
+    letterSpacing: 1,
+    fontWeight: 700,
+    color: selected ? '#4a9eff' : '#e0e2ea',
+  }
+}
+
+const themeDisclaimerStyle: React.CSSProperties = {
+  background: 'rgba(74,158,255,0.06)',
+  border: '1px solid rgba(74,158,255,0.3)',
+  borderLeft: '3px solid #4a9eff',
+  borderRadius: 4,
+  padding: '10px 14px',
+  marginBottom: 14,
+  fontSize: 11,
+  lineHeight: 1.6,
+  color: '#e0e2ea',
+  letterSpacing: 0.3,
+}
+
+const themeSuccessStyle: React.CSSProperties = {
+  background: '#1a2a1a',
+  border: '1px solid #1a6a1a',
+  borderLeft: '3px solid #32ff7e',
+  color: '#32ff7e',
+  padding: 12,
+  borderRadius: 3,
+  fontSize: 11,
+  letterSpacing: 0.5,
+  lineHeight: 1.5,
+  marginBottom: 12,
+}
+
+const themeErrorStyle: React.CSSProperties = {
+  background: '#2a1a1a',
+  border: '1px solid #8a1a1a',
+  borderLeft: '3px solid #ff6464',
+  color: '#ff6464',
+  padding: 12,
+  borderRadius: 3,
+  fontSize: 11,
+  letterSpacing: 0.5,
+  lineHeight: 1.5,
+  marginBottom: 12,
+}
+
+const themeSaveButtonStyle: React.CSSProperties = {
+  width: '100%',
+  padding: 14,
+  background: '#0d0e14',
+  borderTop: '3px solid #4a9eff',
+  border: 'none',
+  borderRadius: 4,
+  color: '#4a9eff',
+  fontSize: 12,
+  fontWeight: 700,
+  letterSpacing: 4,
+  fontFamily: FUTURA,
 }
