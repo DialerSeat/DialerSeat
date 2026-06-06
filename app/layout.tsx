@@ -211,7 +211,7 @@ export default async function RootLayout({
         <body>
           {!branding && <StructuredData />}
 
-          <ThemeProvider branding={branding}>
+          <ThemeProvider initialBranding={branding}>
             {children}
           </ThemeProvider>
         </body>
