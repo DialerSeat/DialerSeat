@@ -3,6 +3,35 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
 
+// =============================================================================
+// LEADS PAGE — Pass 2 Phase C5 (binding sweep)
+// =============================================================================
+// Same pattern as C3/C4 (no recharts). Themable T tokens rebound at source.
+//
+// What's themed:
+//   T.bg      → var(--brand-page-bg)
+//   T.surface → var(--brand-card-surface)
+//   T.border  → var(--brand-card-border)
+//   T.dark    → var(--brand-sidebar-bg)  (header strip + primary CTA bg)
+//   T.text    → var(--brand-on-page-bg)
+//   T.muted   → var(--brand-muted-text)
+//   T.blue    → var(--brand-primary)  (unchanged — was already themed)
+//
+// What stays semantic (NEVER themed):
+//   T.accent  (#2a4a8a) — phone number color AND attempted-call indicator
+//                         color (dial_attempts > 0). Same role as recordings.
+//   T.green / T.red / T.amber — disposition palette (CLOSED/DO NOT CALL/
+//                               NOT INTERESTED) + delete buttons + danger
+//                               modal accents.
+//   T.warn    (#ffaa3e) — lapsed banner accent, lapsed editing-locked notice.
+//   DISPOSITIONS array hex palette (label/color/bg) — semantic, untouched.
+//   dispositionTint() rgba per-row card-bg tints — semantic, untouched.
+//   '#e8e8ec' NEW badge bg, '#f8e8e8' modal-error bg — semantic.
+//   'white' disp-btn UI affordances — semantic active/inactive contrast.
+//   'rgba(0,0,0,0.55)' modal overlay — semantic.
+//   Header bottom accent rebinds to var(--brand-header-top-accent) directly.
+// =============================================================================
+
 type AccessTier = 'active' | 'lapsed' | 'new' | null
 
 interface Lead {
@@ -38,13 +67,13 @@ const DISPOSITIONS = [
 ]
 
 const T = {
-  bg: '#f0f1f4',
-  surface: '#e2e4ea',
-  border: '#c4c8d0',
-  dark: '#1a1a2e',
-  text: '#1a1c24',
-  muted: '#5a5e6a',
-  accent: '#2a4a8a',
+  bg: 'var(--brand-page-bg)',
+  surface: 'var(--brand-card-surface)',
+  border: 'var(--brand-card-border)',
+  dark: 'var(--brand-sidebar-bg)',
+  text: 'var(--brand-on-page-bg)',
+  muted: 'var(--brand-muted-text)',
+  accent: '#2a4a8a', // semantic info dark blue (phone + attempted-call color)
   blue: 'var(--brand-primary)',
   green: '#1a6a1a',
   red: '#8a1a1a',
@@ -423,7 +452,7 @@ export default function LeadsPage() {
         .leads-header {
           background: ${T.dark};
           padding: 12px 20px;
-          border-bottom: 2px solid ${T.accent};
+          border-bottom: 2px solid var(--brand-header-top-accent);
           display: flex;
           align-items: center;
           justify-content: space-between;
@@ -685,7 +714,7 @@ export default function LeadsPage() {
             LEADS DATABASE
           </span>
           <span className="leads-header-stats" style={{
-            fontSize: 10, fontFamily: 'monospace', color: '#8888aa', letterSpacing: 1,
+            fontSize: 10, fontFamily: 'monospace', color: 'var(--brand-on-sidebar-muted)', letterSpacing: 1,
           }}>
             {total.toLocaleString()} TOTAL · {leads.length} LOADED
           </span>

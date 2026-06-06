@@ -2,14 +2,48 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useUser } from '@clerk/nextjs'
 
+// =============================================================================
+// RECORDINGS PAGE — Pass 2 Phase C4 (binding sweep)
+// =============================================================================
+// Same pattern as C3 (no recharts, no SVG attr props). Themable T tokens
+// rebound at the source — all downstream consumers (template strings in
+// <style>, inline style props, dispColor/dispBg/dispositionTint return
+// values used as inline styles) auto-pick up the themed value.
+//
+// What's themed:
+//   T.bg      → var(--brand-page-bg)
+//   T.surface → var(--brand-card-surface)
+//   T.border  → var(--brand-card-border)
+//   T.dark    → var(--brand-sidebar-bg)  (header strip + .rec-btn-active)
+//   T.text    → var(--brand-on-page-bg)
+//   T.muted   → var(--brand-muted-text)
+//   T.blue    → var(--brand-primary)  (unchanged — was already themed)
+//
+// What stays semantic (NEVER themed):
+//   T.accent  (#2a4a8a) — phone number color in .rec-phone (semantic info
+//                         dark blue, same role as HOURS DIALED in analytics)
+//   T.green   (#1a6a1a) — CLOSED disposition, sync success message
+//   T.red     (#8a1a1a) — DO NOT CALL disposition, delete buttons, <7 day
+//                         expires warning
+//   T.amber   (#8a6a1a) — NOT INTERESTED disposition, disclosure banner
+//   '#1a4a8a' — APPOINTMENT disposition (distinct semantic dark blue)
+//   dispBg() pale tint pills — #e8f5e8 / #e8eef8 / #f8f4e8 / #f8e8e8 / #f0f0f4
+//   dispositionTint() — semantic rgba card-bg tints per-row
+//   Disclosure banner amber palette (#fff8e8 / #d4b86a / #fdf2d6)
+//   Sync message green palette (#e8f5e8 / #6abf6a)
+//   NO DISPOSITION fallback badge (#e8e8ec gray)
+//   Confirm-delete solid-red button "white text on T.red bg"
+//   Header bottom accent rebinds to var(--brand-header-top-accent) directly.
+// =============================================================================
+
 const T = {
-  bg: '#f0f1f4',
-  surface: '#e2e4ea',
-  border: '#c4c8d0',
-  dark: '#1a1a2e',
-  text: '#1a1c24',
-  muted: '#5a5e6a',
-  accent: '#2a4a8a',
+  bg: 'var(--brand-page-bg)',
+  surface: 'var(--brand-card-surface)',
+  border: 'var(--brand-card-border)',
+  dark: 'var(--brand-sidebar-bg)',
+  text: 'var(--brand-on-page-bg)',
+  muted: 'var(--brand-muted-text)',
+  accent: '#2a4a8a', // semantic info dark blue (phone number color)
   blue: 'var(--brand-primary)',
   green: '#1a6a1a',
   red: '#8a1a1a',
@@ -249,7 +283,7 @@ export default function RecordingsPage() {
         .rec-header {
           background: ${T.dark};
           padding: 12px 20px;
-          border-bottom: 2px solid ${T.accent};
+          border-bottom: 2px solid var(--brand-header-top-accent);
           display: flex;
           align-items: center;
           justify-content: space-between;
@@ -548,7 +582,7 @@ export default function RecordingsPage() {
             CALL RECORDINGS
           </span>
           <span style={{
-            fontSize: 10, fontFamily: 'monospace', color: '#8888aa', letterSpacing: 1,
+            fontSize: 10, fontFamily: 'monospace', color: 'var(--brand-on-sidebar-muted)', letterSpacing: 1,
           }}>
             {total.toLocaleString()} TOTAL · {recordings.length} LOADED
           </span>

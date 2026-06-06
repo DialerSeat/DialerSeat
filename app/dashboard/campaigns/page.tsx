@@ -4,23 +4,48 @@ import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
 
 // =============================================================================
-// CAMPAIGNS PAGE — Full dialer color correction
+// CAMPAIGNS PAGE — Pass 2 Phase C3 (binding sweep)
 // =============================================================================
-// Futura font system-wide (with monospace preserved for data — lead names,
-// phone numbers, IDs, script content, sheets editor cells). Terminal palette
-// applied across all surfaces, sharp corners, dialer-style buttons and
-// section labels. ZERO functional changes from previous version.
+// All CSS-context token uses (template strings in <style>, inline style
+// props) are rebound to Pass 2 brand tokens. Since this file has zero
+// recharts, the cleanest pattern is to rebind T.* values directly to var()
+// strings at the source — every downstream consumer auto-picks up the
+// themed value.
+//
+// What's themed:
+//   T.bg      → var(--brand-page-bg)
+//   T.surface → var(--brand-card-surface)
+//   T.border  → var(--brand-card-border)
+//   T.dark    → var(--brand-sidebar-bg)  (header strip, modal head, editor toolbar)
+//   T.text    → var(--brand-on-page-bg)
+//   T.muted   → var(--brand-muted-text)
+//   T.blue    → var(--brand-primary)  (unchanged — was already themed)
+//
+// What stays semantic (NEVER themed):
+//   T.green (#1a6a1a)  — ACTIVE status pin, DEFAULT script badge, editor row-new indicator
+//   T.red (#8a1a1a)    — DELETE buttons, danger borders, delete confirm prompt, editor row-deleted indicator
+//   T.amber (#8a6a1a)  — Amber button variant (RESUBSCRIBE)
+//   T.accent (#2a4a8a) — kept in T for parity with analytics but unreferenced after surgery
+//   White spreadsheet cells in editor-grid th/td (Google-Sheets-style cell convention)
+//   "white" active script-tab background (UI affordance — active tab visually pops)
+//   LeadPreviewThumb white table + dark navy pill (info badge on data table)
+//   All rgba(255,170,62,*) amber + rgba(138,26,26,*) red + #fae8e8/#f8e8e8/#fdf4e8 button shades
+//
+// All other functional behavior preserved byte-for-byte: fetch logic, CSV
+// parsing, lead editor cell-level state machine (edits/adds/deletes/selected
+// sets), script CRUD, delete-confirm type-to-confirm gate (>100 leads),
+// lapsed read-only mode, LeadPreviewThumb thumbnail rendering.
 // =============================================================================
 
 const T = {
-  bg: '#f0f1f4',
-  surface: '#e2e4ea',
-  surface2: '#d4d7df',
-  border: '#c4c8d0',
-  dark: '#1a1a2e',
-  text: '#1a1c24',
-  muted: '#5a5e6a',
-  accent: '#2a4a8a',
+  bg: 'var(--brand-page-bg)',
+  surface: 'var(--brand-card-surface)',
+  surface2: '#d4d7df', // vestigial: declared but unreferenced in this file
+  border: 'var(--brand-card-border)',
+  dark: 'var(--brand-sidebar-bg)',
+  text: 'var(--brand-on-page-bg)',
+  muted: 'var(--brand-muted-text)',
+  accent: '#2a4a8a', // semantic dark blue; retained for parity, unused here
   blue: 'var(--brand-primary)',
   green: '#1a6a1a',
   red: '#8a1a1a',
@@ -803,7 +828,7 @@ export default function CampaignsPage() {
         .cmp-header {
           background: ${T.dark};
           padding: 12px 20px;
-          border-bottom: 2px solid ${T.accent};
+          border-bottom: 2px solid var(--brand-header-top-accent);
           display: flex;
           align-items: center;
           justify-content: space-between;
@@ -821,7 +846,7 @@ export default function CampaignsPage() {
         }
         .cmp-header-sub {
           font-size: 10px; font-family: monospace;
-          color: #8888aa; letter-spacing: 1px;
+          color: var(--brand-on-sidebar-muted); letter-spacing: 1px;
         }
 
         /* ── HEADER BUTTONS — dialer outlined pattern ─────────────────── */
@@ -840,7 +865,7 @@ export default function CampaignsPage() {
           transition: background 0.12s;
         }
         .cmp-new-btn:hover {
-          background: rgba(74,158,255,0.10);
+          background: var(--brand-primary-soft);
         }
         .cmp-new-btn.amber {
           border-color: #ffaa3e;
@@ -967,7 +992,7 @@ export default function CampaignsPage() {
         .settings-head {
           background: ${T.dark};
           padding: 12px 20px;
-          border-bottom: 2px solid ${T.accent};
+          border-bottom: 2px solid var(--brand-header-top-accent);
           display: flex;
           align-items: center;
           gap: 12px;
@@ -987,19 +1012,19 @@ export default function CampaignsPage() {
           min-width: 0;
         }
         .settings-name-input::placeholder {
-          color: #8888aa; letter-spacing: 2px;
+          color: var(--brand-on-sidebar-muted); letter-spacing: 2px;
         }
         .settings-name-input:hover {
-          background: rgba(255,255,255,0.05);
+          background: color-mix(in srgb, var(--brand-on-sidebar) 5%, transparent);
         }
         .settings-name-input:focus {
-          background: rgba(255,255,255,0.08);
+          background: color-mix(in srgb, var(--brand-on-sidebar) 8%, transparent);
           border-color: ${T.blue};
         }
         .settings-close {
           background: transparent;
-          border: 1px solid #4a4a5e;
-          color: #8888aa;
+          border: 1px solid var(--brand-sidebar-active-bg);
+          color: var(--brand-on-sidebar-muted);
           width: 28px; height: 28px;
           border-radius: 3px;
           cursor: pointer;
@@ -1010,8 +1035,8 @@ export default function CampaignsPage() {
           line-height: 1;
         }
         .settings-close:hover {
-          background: rgba(255,255,255,0.05);
-          color: white;
+          background: color-mix(in srgb, var(--brand-on-sidebar) 5%, transparent);
+          color: var(--brand-on-sidebar);
         }
 
         .settings-body {
@@ -1241,8 +1266,15 @@ export default function CampaignsPage() {
           color: ${T.blue};
           border-top: 3px solid ${T.blue};
         }
-        .ds-btn.primary:hover { background: #252740; }
-        .ds-btn.primary:disabled { background: ${T.muted}; border-color: ${T.muted}; color: white; border-top-color: ${T.muted}; }
+        .ds-btn.primary:hover {
+          background: color-mix(in srgb, var(--brand-on-sidebar) 6%, var(--brand-sidebar-bg));
+        }
+        .ds-btn.primary:disabled {
+          background: ${T.muted};
+          border-color: ${T.muted};
+          color: ${T.bg};
+          border-top-color: ${T.muted};
+        }
 
         .ds-btn.danger {
           background: #f8e8e8;
@@ -1276,9 +1308,11 @@ export default function CampaignsPage() {
         }
 
         /* ── SHEETS EDITOR — fullscreen lead editor ───────────────────── */
+        /* Frame (toolbar + scrollable wrap) themed; individual table cells */
+        /* stay "white" to preserve the spreadsheet convention.             */
         .editor-fullscreen {
           position: fixed; inset: 0;
-          background: white;
+          background: ${T.bg};
           z-index: 200;
           display: flex;
           flex-direction: column;
@@ -1286,7 +1320,7 @@ export default function CampaignsPage() {
         .editor-toolbar {
           padding: 10px 20px;
           background: ${T.dark};
-          border-bottom: 2px solid ${T.accent};
+          border-bottom: 2px solid var(--brand-header-top-accent);
           display: flex;
           align-items: center;
           gap: 10px;
@@ -1308,20 +1342,20 @@ export default function CampaignsPage() {
         .editor-tb-btn {
           padding: 6px 12px;
           background: transparent;
-          border: 1px solid #4a4a5e;
+          border: 1px solid var(--brand-sidebar-active-bg);
           border-radius: 3px;
           font-size: 9px;
           letter-spacing: 2px;
           font-weight: bold;
-          color: #8888aa;
+          color: var(--brand-on-sidebar-muted);
           cursor: pointer;
           font-family: ${FUTURA};
           transition: background 0.12s, color 0.12s, border-color 0.12s;
         }
         .editor-tb-btn:hover {
-          background: rgba(255,255,255,0.05);
-          color: white;
-          border-color: #6a6a7e;
+          background: color-mix(in srgb, var(--brand-on-sidebar) 5%, transparent);
+          color: var(--brand-on-sidebar);
+          border-color: var(--brand-on-sidebar-muted);
         }
         .editor-tb-btn:disabled { opacity: 0.4; cursor: not-allowed; }
         .editor-tb-btn.primary {
@@ -1330,12 +1364,12 @@ export default function CampaignsPage() {
           color: ${T.blue};
         }
         .editor-tb-btn.primary:hover {
-          background: rgba(74,158,255,0.12);
+          background: var(--brand-primary-soft);
           color: ${T.blue};
         }
         .editor-tb-btn.primary:disabled {
-          border-color: #4a4a5e;
-          color: #6a6a7e;
+          border-color: var(--brand-sidebar-active-bg);
+          color: var(--brand-on-sidebar-muted);
         }
         .editor-tb-btn.danger {
           border-color: rgba(255,100,100,0.4);
@@ -1360,7 +1394,7 @@ export default function CampaignsPage() {
         .editor-grid-wrap {
           flex: 1;
           overflow: auto;
-          background: white;
+          background: ${T.bg};
         }
         .editor-grid {
           border-collapse: collapse;
@@ -1415,13 +1449,13 @@ export default function CampaignsPage() {
           box-sizing: border-box;
         }
         .editor-cell-input:focus {
-          background: rgba(74,158,255,0.10);
+          background: var(--brand-primary-soft);
           box-shadow: inset 0 0 0 2px ${T.blue};
         }
         .editor-grid tr.row-edited td { background: rgba(255,170,62,0.10); }
         .editor-grid tr.row-new td { background: rgba(26,106,26,0.08); }
         .editor-grid tr.row-deleted td { background: #fae8e8; opacity: 0.6; }
-        .editor-grid tr.row-selected td:not(.row-header) { background: rgba(74,158,255,0.15); }
+        .editor-grid tr.row-selected td:not(.row-header) { background: color-mix(in srgb, var(--brand-primary) 18%, transparent); }
         .editor-grid tr.row-deleted td:not(.row-header) { text-decoration: line-through; }
         .editor-grid input[type="checkbox"] { margin: 0; cursor: pointer; }
 
@@ -1677,7 +1711,7 @@ export default function CampaignsPage() {
                   onClick={() => fileRef.current?.click()}
                   style={{
                     border: `2px dashed ${dragging || csvData.length > 0 ? T.blue : T.border}`,
-                    background: dragging ? 'rgba(74,158,255,0.05)' : T.bg,
+                    background: dragging ? 'color-mix(in srgb, var(--brand-primary) 6%, transparent)' : T.bg,
                   }}
                 >
                   <input

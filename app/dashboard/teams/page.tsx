@@ -4,13 +4,58 @@ import { useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
+// =============================================================================
+// TEAMS PAGE — Pass 2 Phase C6 (binding sweep)
+// =============================================================================
+// Largest file in the sweep. Rebinding strategy is the same as C3-C5 (no
+// recharts, all CSS contexts), but with one wrinkle: this file has helper
+// components (Section, EmptyHint, Badge, FieldLabel, SegmentedTwo,
+// ErrorInline) and bottom-level style constants (overlayStyle,
+// modalShellStyle, modalInput, btnPrimary, btnDanger, btnSubtle,
+// modalCancelBtn, modalConfirmBtn) defined OUTSIDE the main component.
+// Those helpers were originally written for self-containment with
+// hardcoded hex duplicates of T values. They get surgically updated to
+// reference var() tokens directly so themed values propagate.
+//
+// What's themed (via T rebinding + helper-literal swaps):
+//   T.bg      → var(--brand-page-bg)
+//   T.surface → var(--brand-card-surface)
+//   T.border  → var(--brand-card-border)
+//   T.dark    → var(--brand-sidebar-bg)  (header strip + primary CTA bg)
+//   T.text    → var(--brand-on-page-bg)
+//   T.muted   → var(--brand-muted-text)
+//   T.blue    → var(--brand-primary)  (unchanged — was already themed)
+//
+// What stays semantic (NEVER themed):
+//   T.accent  (#2a4a8a) — Section heading accents (PENDING/ATTACHED/CODES/
+//                         ACTIVE MEMBERS), MEMBER role badge, "▸ AS AN AGENT/
+//                         OWNER" info card headers, info card left border
+//   T.green   (#1a6a1a) — Owner-pays payer badge, has-access border accent,
+//                         redeem success message, copy-success flash
+//   T.red     (#8a1a1a) — Delete buttons, danger modals, error backgrounds,
+//                         REVOKE/DETACH/KICK actions
+//   T.amber   (#8a6a1a) — Agent-pays payer badge, no-access border accent,
+//                         PENDING REQUESTS section accent
+//   '#ffaa3e' — Sub gate modal warning amber + sub gate CTA (semantic
+//               "subscription required" yellow accent, distinct from amber)
+//   Three '#dde0e8' "selected/hover surface lift" instances → adaptive
+//                  color-mix(var(--brand-card-surface) 85%, on-page-bg 15%)
+//   Sub gate hardcoded light-on-dark text values ('#e0e2ea', '#c0c2ca',
+//   '#888a92') → var(--brand-on-sidebar) / var(--brand-on-sidebar-muted)
+//   OWNER role badge bg rgba(74,158,255,0.12) → var(--brand-primary-soft)
+//   Direct: header border-bottom T.accent → var(--brand-header-top-accent);
+//           '#8888aa' header stats → var(--brand-on-sidebar-muted)
+//
+// All structural code (fetches, state machines, modal flows) byte-for-byte.
+// =============================================================================
+
 const T = {
-  bg: '#f0f1f4',
-  surface: '#e2e4ea',
-  border: '#c4c8d0',
-  dark: '#1a1a2e',
-  text: '#1a1c24',
-  muted: '#5a5e6a',
+  bg: 'var(--brand-page-bg)',
+  surface: 'var(--brand-card-surface)',
+  border: 'var(--brand-card-border)',
+  dark: 'var(--brand-sidebar-bg)',
+  text: 'var(--brand-on-page-bg)',
+  muted: 'var(--brand-muted-text)',
   accent: '#2a4a8a',
   blue: 'var(--brand-primary)',
   green: '#1a6a1a',
@@ -98,6 +143,11 @@ interface Campaign {
   name: string
   status: string
 }
+
+// Adaptive "selected/hover surface lift" — a slight shift of card-surface
+// toward the text color, used in three places: expanded team card header,
+// attach modal radio selected state, SegmentedTwo selected button.
+const SURFACE_LIFT = 'color-mix(in srgb, var(--brand-card-surface) 85%, var(--brand-on-page-bg) 15%)'
 
 function displayName(u: TeamUser, fallback: string): string {
   const fn = (u.first_name || '').trim()
@@ -776,7 +826,7 @@ export default function TeamsPage() {
       <div style={{
         background: T.dark,
         padding: '12px 20px',
-        borderBottom: `2px solid ${T.accent}`,
+        borderBottom: '2px solid var(--brand-header-top-accent)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -787,7 +837,7 @@ export default function TeamsPage() {
           <span style={{ fontSize: 11, fontWeight: 'bold', letterSpacing: 4, color: T.blue }}>
             TEAMS
           </span>
-          <span style={{ fontSize: 10, fontFamily: 'monospace', color: '#8888aa', letterSpacing: 1 }}>
+          <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--brand-on-sidebar-muted)', letterSpacing: 1 }}>
             {ownedTeams.length} OWNED · {memberTeams.length} MEMBER
             {totalPending > 0 && ` · ${totalPending} PENDING`}
           </span>
@@ -955,7 +1005,7 @@ export default function TeamsPage() {
                         style={{
                           padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12,
                           cursor: 'pointer', userSelect: 'none',
-                          background: isExpanded ? '#dde0e8' : T.surface,
+                          background: isExpanded ? SURFACE_LIFT : T.surface,
                           borderBottom: isExpanded ? `1px solid ${T.border}` : 'none',
                         }}
                       >
@@ -989,7 +1039,7 @@ export default function TeamsPage() {
                         >OPEN ›</Link>
                         <div style={{
                           padding: '3px 10px', borderRadius: 3, fontSize: 9, fontWeight: 'bold', letterSpacing: 2,
-                          background: 'rgba(74,158,255,0.12)', color: T.blue, border: `1px solid ${T.blue}`,
+                          background: 'var(--brand-primary-soft)', color: T.blue, border: `1px solid ${T.blue}`,
                           whiteSpace: 'nowrap',
                         }}>OWNER</div>
                       </div>
@@ -1346,13 +1396,13 @@ export default function TeamsPage() {
         <div onClick={() => setShowSubGate(false)} style={overlayStyle}>
           <div onClick={e => e.stopPropagation()} style={{
             ...modalShellStyle, background: T.dark, borderTop: `3px solid #ffaa3e`,
-            color: '#e0e2ea', textAlign: 'center', maxWidth: 440,
+            color: 'var(--brand-on-sidebar)', textAlign: 'center', maxWidth: 440,
           }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>🔒</div>
             <div style={{ fontSize: 14, fontWeight: 'bold', letterSpacing: 4, color: '#ffaa3e', marginBottom: 12 }}>
               SUBSCRIPTION REQUIRED
             </div>
-            <p style={{ fontSize: 12, lineHeight: 1.7, color: '#c0c2ca', letterSpacing: 1, marginBottom: 24 }}>
+            <p style={{ fontSize: 12, lineHeight: 1.7, color: 'var(--brand-on-sidebar-muted)', letterSpacing: 1, marginBottom: 24 }}>
               Creating teams requires an active personal subscription. Subscribe for $35/week to upload your own leads, build teams, and start selling seats to other agents.
             </p>
             <Link href="/billing" style={{
@@ -1363,7 +1413,7 @@ export default function TeamsPage() {
               fontFamily: FUTURA,
             }}>SUBSCRIBE — $35/WEEK</Link>
             <button onClick={() => setShowSubGate(false)} style={{
-              background: 'transparent', border: 'none', color: '#888a92',
+              background: 'transparent', border: 'none', color: 'var(--brand-on-sidebar-muted)',
               fontSize: 11, letterSpacing: 2, cursor: 'pointer',
               fontFamily: 'Futura PT, Futura, sans-serif', padding: 8,
             }}>CLOSE</button>
@@ -1567,7 +1617,7 @@ export default function TeamsPage() {
                   ] as const).map(opt => (
                     <label key={opt.v} style={{
                       display: 'flex', gap: 10, padding: '10px 12px',
-                      background: attachAccessMode === opt.v ? '#dde0e8' : T.surface,
+                      background: attachAccessMode === opt.v ? SURFACE_LIFT : T.surface,
                       border: `1px solid ${attachAccessMode === opt.v ? T.blue : T.border}`,
                       borderRadius: 3, cursor: 'pointer',
                     }}>
@@ -1737,8 +1787,8 @@ function Section({ title, accent, action, children }: {
 function EmptyHint({ text }: { text: string }) {
   return (
     <div style={{
-      background: '#f0f1f4', border: '1px dashed #c4c8d0', borderRadius: 3,
-      padding: '12px 14px', fontSize: 11, color: '#5a5e6a',
+      background: 'var(--brand-page-bg)', border: '1px dashed var(--brand-card-border)', borderRadius: 3,
+      padding: '12px 14px', fontSize: 11, color: 'var(--brand-muted-text)',
       letterSpacing: 0.5, lineHeight: 1.5,
     }}>{text}</div>
   )
@@ -1757,7 +1807,7 @@ function Badge({ color, children }: { color: string; children: React.ReactNode }
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
     <label style={{
-      display: 'block', fontSize: 9, letterSpacing: 2, color: '#5a5e6a',
+      display: 'block', fontSize: 9, letterSpacing: 2, color: 'var(--brand-muted-text)',
       fontWeight: 'bold', marginBottom: 6,
     }}>{children}</label>
   )
@@ -1776,16 +1826,18 @@ function SegmentedTwo({ left, right, value, onChange }: {
         return (
           <button key={opt.value} onClick={() => onChange(opt.value)} style={{
             flex: 1, padding: '10px 12px', textAlign: 'left',
-            background: selected ? '#dde0e8' : '#e2e4ea',
-            border: `1px solid ${selected ? 'var(--brand-primary)' : '#c4c8d0'}`,
+            background: selected
+              ? 'color-mix(in srgb, var(--brand-card-surface) 85%, var(--brand-on-page-bg) 15%)'
+              : 'var(--brand-card-surface)',
+            border: `1px solid ${selected ? 'var(--brand-primary)' : 'var(--brand-card-border)'}`,
             borderRadius: 3, cursor: 'pointer',
             fontFamily: 'Futura PT, Futura, sans-serif',
           }}>
             <div style={{
               fontSize: 11, fontWeight: 'bold', letterSpacing: 2,
-              color: selected ? 'var(--brand-primary)' : '#1a1c24', marginBottom: 4,
+              color: selected ? 'var(--brand-primary)' : 'var(--brand-on-page-bg)', marginBottom: 4,
             }}>{opt.label}</div>
-            <div style={{ fontSize: 10, color: '#5a5e6a', lineHeight: 1.4 }}>{opt.desc}</div>
+            <div style={{ fontSize: 10, color: 'var(--brand-muted-text)', lineHeight: 1.4 }}>{opt.desc}</div>
           </button>
         )
       })}
@@ -1809,21 +1861,21 @@ const overlayStyle: React.CSSProperties = {
 }
 
 const modalShellStyle: React.CSSProperties = {
-  background: '#f0f1f4', border: '1px solid #c4c8d0',
+  background: 'var(--brand-page-bg)', border: '1px solid var(--brand-card-border)',
   borderRadius: 4, padding: 28, maxWidth: 480, width: '100%',
   fontFamily: 'Futura PT, Futura, sans-serif',
 }
 
 const modalInput: React.CSSProperties = {
   width: '100%', padding: '10px 12px',
-  background: '#e2e4ea', border: '1px solid #c4c8d0', borderRadius: 3,
-  fontFamily: 'monospace', fontSize: 13, color: '#1a1c24',
+  background: 'var(--brand-card-surface)', border: '1px solid var(--brand-card-border)', borderRadius: 3,
+  fontFamily: 'monospace', fontSize: 13, color: 'var(--brand-on-page-bg)',
   outline: 'none', boxSizing: 'border-box',
 }
 
 function btnPrimary(disabled: boolean): React.CSSProperties {
   return {
-    padding: '6px 12px', background: '#1a1a2e', border: 'none', borderRadius: 3,
+    padding: '6px 12px', background: 'var(--brand-sidebar-bg)', border: 'none', borderRadius: 3,
     borderTop: '2px solid var(--brand-primary)', color: 'var(--brand-primary)',
     fontSize: 10, fontWeight: 'bold', letterSpacing: 2,
     cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1,
@@ -1853,8 +1905,8 @@ function btnSubtle(disabled: boolean, color: string): React.CSSProperties {
 
 function modalCancelBtn(disabled: boolean): React.CSSProperties {
   return {
-    flex: 1, padding: '10px', background: 'transparent', border: '1px solid #c4c8d0',
-    borderRadius: 3, color: '#5a5e6a',
+    flex: 1, padding: '10px', background: 'transparent', border: '1px solid var(--brand-card-border)',
+    borderRadius: 3, color: 'var(--brand-muted-text)',
     fontSize: 11, fontWeight: 'bold', letterSpacing: 2,
     cursor: disabled ? 'not-allowed' : 'pointer',
     fontFamily: 'Futura PT, Futura, sans-serif',
@@ -1863,7 +1915,7 @@ function modalCancelBtn(disabled: boolean): React.CSSProperties {
 
 function modalConfirmBtn(disabled: boolean, accent: string): React.CSSProperties {
   return {
-    flex: 2, padding: '10px', background: '#1a1a2e', border: 'none', borderRadius: 3,
+    flex: 2, padding: '10px', background: 'var(--brand-sidebar-bg)', border: 'none', borderRadius: 3,
     borderTop: `3px solid ${accent}`, color: accent,
     fontSize: 11, fontWeight: 'bold', letterSpacing: 2,
     cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1,
