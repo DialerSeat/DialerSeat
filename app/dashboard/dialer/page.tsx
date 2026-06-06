@@ -4,6 +4,69 @@ import { useUser } from '@clerk/nextjs'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
+// =============================================================================
+// DIALER PAGE — Pass 2 Phase C7 (binding sweep, final page)
+// =============================================================================
+// Unlike C2-C6, this file has no top-level T object. Instead, "terminal*"
+// constants are declared inside the component body, named to reflect JC's
+// "dialer terminal" design intent. Rebinding pattern is the same as C3-C6:
+// themable values become var(--brand-*) at source, semantic stays hex.
+//
+// What's themed:
+//   terminalBg      → var(--brand-page-bg)
+//   terminalSurface → var(--brand-card-surface)
+//   terminalBorder  → var(--brand-card-border)
+//   terminalDark    → var(--brand-sidebar-bg)  (status bar + dialer chrome)
+//   terminalText    → var(--brand-on-page-bg)
+//   terminalMuted   → var(--brand-muted-text)
+//
+// What stays semantic (NEVER themed):
+//   terminalAccent (#2a4a8a) — phone number color, lead profile border accent,
+//                              predictive available pulse dot, status indicators
+//   terminalGreen / Red / Amber — status/disposition/danger/warning
+//   '#2d7a2d', '#1a4a8a', '#8a6a1a', '#8a1a1a', '#5a5e6a' — local dispositions
+//                              palette (slightly different from terminal*
+//                              values; intentionally bright for button contrast)
+//   '#32ff7e' / '#ff6464' — bright neon LIVE/OFFLINE indicators with glow
+//   '#4a5a4a' green-on-black SYSTEM LOG text
+//   '#1a1c24' SYSTEM LOG container bg — preserved as semantic dark "CRT
+//   terminal screen" regardless of theme (matches green text aesthetic)
+//   '#ffaa3e' subscribe gate warning amber
+//   '#1a4a8a' APPOINTMENT distinct dark blue (different from terminalAccent)
+//   navLinkStyle '#2a4a8a' info dark blue border (outside component)
+//
+// Surgical replacements:
+//   '#8888aa' → var(--brand-on-sidebar-muted) (header strip muted labels)
+//   '#4a4a5e' → var(--brand-sidebar-active-bg) (dark element borders)
+//   '#444460' (LIVE/OFFLINE toggle off bg) → color-mix lift
+//   '#666688' (audio-not-ready dot) → var(--brand-on-sidebar-muted)
+//   rgba(74,158,255,0.12) (connected pill, mode current) → primary-soft
+//   rgba(74,158,255,0.3) (pill border) → color-mix primary 30%
+//   rgba(255,255,255,0.05) (mode hover) → color-mix on-sidebar 5%
+//   '#252736' (right-toggle:active) → color-mix lift
+//   Header borderBottom 2px solid terminalAccent → var(--brand-header-top-accent)
+//
+// Subscribe gate (rendered when tier !== active):
+//   Modal bg terminalDark → already themed via terminalDark rebinding
+//   '#e0e2ea' (heading light text) → var(--brand-on-sidebar)
+//   '#c0c2ca' (paragraph muted light) → var(--brand-on-sidebar-muted)
+//   '#888a92' (close subtext) → var(--brand-on-sidebar-muted)
+//   '#2a2c34' (border above nav links) → var(--brand-sidebar-active-bg)
+//   RESUBSCRIBE CTA: '#4a9eff'/'#2a6eff' gradient → themed primary gradient
+//     with 75% darker stop, var(--brand-on-primary) text, color-mix glow
+//
+// Suspense fallback (outside component, default export):
+//   '#f0f1f4' bg → var(--brand-page-bg)
+//   '#5a5e6a' color → var(--brand-muted-text)
+//
+// All structural code byte-for-byte: SIP UserAgent + Registerer init, AMD
+// voicemail filter polling, predictive engine state machine (offline →
+// available-not-started → available-started → on_call → wrapping), heartbeat
+// + pacing + incoming-route polls, manual dialer zoom overlay, mobile
+// right-sidebar slide-out, beforeunload sendBeacon cleanup with
+// activeCallSidRef mirror.
+// =============================================================================
+
 type CallStatus = 'idle' | 'calling' | 'connected' | 'ended' | 'preview_ready'
 type AccessTier = 'active' | 'lapsed' | 'new' | null
 type DialerMode = 'preview' | 'power' | 'progressive' | 'predictive'
@@ -151,11 +214,6 @@ function DialerPageInner() {
   const [available, setAvailable] = useState(false)
 
   // ─── PREDICTIVE ENGINE — explicit "started" flag ──────────────────────────
-  // The dialer no longer auto-starts when going LIVE in predictive mode.
-  // The user must click "INITIATE DIAL SEQUENCE" to start the engine,
-  // which mirrors the flow of other modes. The incoming-route polling
-  // (which detects routed humans) only fires while this is true.
-  // Going OFFLINE always resets this to false.
   const [predictiveEngineStarted, setPredictiveEngineStarted] = useState(false)
 
   const [disposition, setDisposition] = useState('')
@@ -219,11 +277,6 @@ function DialerPageInner() {
   const urlParamsConsumedRef = useRef(false)
   const currentLeadRef = useRef<Lead | null>(null)
   const lsRestoredRef = useRef(false)
-
-  // v24 fix: ref-mirror of activeCallSid so the beforeunload handler can read
-  // it from its stale-closure context. Without this, tab-close can't terminate
-  // an in-flight call because the captured value of activeCallSid is whatever
-  // it was when the handler effect first ran (usually null).
   const activeCallSidRef = useRef<string | null>(null)
 
   useEffect(() => setMounted(true), [])
@@ -1546,6 +1599,9 @@ function DialerPageInner() {
     )
   }
 
+  // Disposition palette stays semantic — these colors are intentionally
+  // slightly different from the terminal* set for button contrast against
+  // their pale tint backgrounds.
   const dispositions = [
     { label: 'CLOSED', color: '#2d7a2d', bg: '#e8f5e8' },
     { label: 'APPOINTMENT', color: '#1a4a8a', bg: '#e8eef8' },
@@ -1561,12 +1617,18 @@ function DialerPageInner() {
     activeScript = campaigns.find(c => c.script)?.script || null
   }
 
-  const terminalBg = '#f0f1f4'
-  const terminalSurface = '#e2e4ea'
-  const terminalBorder = '#c4c8d0'
-  const terminalDark = '#1a1a2e'
-  const terminalText = '#1a1c24'
-  const terminalMuted = '#5a5e6a'
+  // ═════════════════════════════════════════════════════════════════════════
+  // TERMINAL CONSTANTS — rebinding point.
+  // bg/surface/border/dark/text/muted theme via var(--brand-*).
+  // accent/green/red/amber stay semantic hex for status, dispositions,
+  // disposition buttons, phone numbers, lead profile accent, etc.
+  // ═════════════════════════════════════════════════════════════════════════
+  const terminalBg = 'var(--brand-page-bg)'
+  const terminalSurface = 'var(--brand-card-surface)'
+  const terminalBorder = 'var(--brand-card-border)'
+  const terminalDark = 'var(--brand-sidebar-bg)'
+  const terminalText = 'var(--brand-on-page-bg)'
+  const terminalMuted = 'var(--brand-muted-text)'
   const terminalAccent = '#2a4a8a'
   const terminalGreen = '#1a6a1a'
   const terminalRed = '#8a1a1a'
@@ -1593,30 +1655,30 @@ function DialerPageInner() {
           width: '100%', maxWidth: 520,
           background: terminalDark, border: `1px solid ${terminalBorder}`,
           borderTop: `3px solid #ffaa3e`, borderRadius: 4, padding: 36,
-          color: '#e0e2ea', textAlign: 'center', boxSizing: 'border-box',
+          color: 'var(--brand-on-sidebar)', textAlign: 'center', boxSizing: 'border-box',
         }}>
           <div style={{ fontSize: 56, marginBottom: 16, opacity: 0.85 }}>📞</div>
           <div style={{ fontSize: 16, fontWeight: 700, letterSpacing: 5, color: '#ffaa3e', marginBottom: 12 }}>
             SUBSCRIBE TO DIAL
           </div>
-          <div style={{ fontSize: 12, lineHeight: 1.7, color: '#c0c2ca', letterSpacing: 1, marginBottom: 28 }}>
+          <div style={{ fontSize: 12, lineHeight: 1.7, color: 'var(--brand-on-sidebar-muted)', letterSpacing: 1, marginBottom: 28 }}>
             {tier === 'lapsed'
               ? 'Your subscription has lapsed. Resubscribe to restore dialing access. Your leads, recordings, and campaigns are still here waiting for you.'
               : 'An active subscription is required to make outbound calls.'}
           </div>
           <Link href="/billing" style={{
             display: 'block', padding: '16px 28px',
-            background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
-            border: 'none', borderRadius: 4, color: 'white',
+            background: 'linear-gradient(135deg, var(--brand-primary), color-mix(in srgb, var(--brand-primary) 75%, black))',
+            border: 'none', borderRadius: 4, color: 'var(--brand-on-primary)',
             fontSize: 13, fontWeight: 700, letterSpacing: 4,
-            textDecoration: 'none', boxShadow: '0 0 20px rgba(74,158,255,0.3)',
+            textDecoration: 'none', boxShadow: '0 0 20px color-mix(in srgb, var(--brand-primary) 30%, transparent)',
             marginBottom: 16, fontFamily: FUTURA,
           }}>RESUBSCRIBE — $35/WEEK</Link>
-          <div style={{ fontSize: 9, letterSpacing: 3, color: '#888a92', marginBottom: 24 }}>
+          <div style={{ fontSize: 9, letterSpacing: 3, color: 'var(--brand-on-sidebar-muted)', marginBottom: 24 }}>
             NO CONTRACTS · CANCEL ANYTIME
           </div>
           <div style={{
-            paddingTop: 20, borderTop: '1px solid #2a2c34',
+            paddingTop: 20, borderTop: '1px solid var(--brand-sidebar-active-bg)',
             display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap',
           }}>
             <Link href="/dashboard/leads" style={navLinkStyle}>VIEW LEADS</Link>
@@ -1652,14 +1714,14 @@ function DialerPageInner() {
       }}>
         <span style={{
           fontSize: inOverlay ? '11px' : '9px', letterSpacing: '3px',
-          color: '#8888aa', fontWeight: 'bold',
+          color: 'var(--brand-on-sidebar-muted)', fontWeight: 'bold',
         }}>MANUAL DIAL</span>
         <button
           onClick={() => setDialZoomed(!inOverlay)}
           aria-label={inOverlay ? 'Close fullscreen dialer' : 'Open fullscreen dialer'}
           style={{
-            background: 'transparent', border: '1px solid #4a4a5e', borderRadius: 4,
-            color: '#8888aa', width: 28, height: 28,
+            background: 'transparent', border: '1px solid var(--brand-sidebar-active-bg)', borderRadius: 4,
+            color: 'var(--brand-on-sidebar-muted)', width: 28, height: 28,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             cursor: 'pointer', fontSize: 14, fontWeight: 'bold', padding: 0,
           }}
@@ -1717,7 +1779,6 @@ function DialerPageInner() {
             borderBottom: `3px solid ${terminalBorder}`, color: terminalMuted,
             fontSize: inOverlay ? '24px' : '16px', cursor: 'pointer',
           }}>⌫</button>
-          {/* v22.d: removed ▶ emoji from DIAL button */}
           <button onClick={handleManualDial} disabled={!manualNumber} style={{
             padding: inOverlay ? '20px' : '12px', borderRadius: '3px', border: 'none',
             background: manualNumber ? terminalDark : terminalSurface,
@@ -1827,15 +1888,15 @@ function DialerPageInner() {
         .dialer-right-overlay { display: none; }
         .dialer-connected-pill {
           display: flex; align-items: center; gap: 6px;
-          padding: 3px 10px; background: rgba(74,158,255,0.12);
-          border: 1px solid rgba(74,158,255,0.3); border-radius: 3px;
+          padding: 3px 10px; background: var(--brand-primary-soft);
+          border: 1px solid color-mix(in srgb, var(--brand-primary) 30%, transparent); border-radius: 3px;
           font-family: monospace; font-size: 10px; letter-spacing: 1px;
           color: var(--brand-primary); font-weight: bold;
         }
         .mode-tile-wrap { position: relative; cursor: pointer; }
         .mode-tile-dropdown {
           position: absolute; top: calc(100% + 4px); left: 0; right: 0;
-          background: ${terminalDark}; border: 1px solid #4a4a5e;
+          background: ${terminalDark}; border: 1px solid var(--brand-sidebar-active-bg);
           border-radius: 4px; padding: 4px; z-index: 200;
           min-width: 160px; box-shadow: 0 4px 16px rgba(0,0,0,0.4);
         }
@@ -1846,8 +1907,8 @@ function DialerPageInner() {
           font-family: monospace; border-radius: 3px;
           transition: background 0.1s;
         }
-        .mode-dropdown-item:hover { background: rgba(255,255,255,0.05); }
-        .mode-dropdown-item.current { background: rgba(74,158,255,0.1); }
+        .mode-dropdown-item:hover { background: color-mix(in srgb, var(--brand-on-sidebar) 5%, transparent); }
+        .mode-dropdown-item.current { background: var(--brand-primary-soft); }
         .lines-selector {
           display: flex; align-items: center; gap: 6px;
           padding: 4px 10px; background: ${terminalBg};
@@ -1885,7 +1946,7 @@ function DialerPageInner() {
             height: 64px;
             border-radius: 8px 0 0 8px;
             background: ${terminalDark};
-            border: 1px solid #4a4a5e;
+            border: 1px solid var(--brand-sidebar-active-bg);
             border-right: none;
             color: var(--brand-primary);
             align-items: center;
@@ -1897,7 +1958,7 @@ function DialerPageInner() {
             padding: 0;
           }
           .dialer-right-toggle:active {
-            background: #252736;
+            background: color-mix(in srgb, var(--brand-on-sidebar) 6%, var(--brand-sidebar-bg));
           }
           .dialer-right-overlay {
             display: block; position: fixed; inset: 0;
@@ -1910,7 +1971,7 @@ function DialerPageInner() {
 
       <div className="dialer-status-bar" style={{
         background: terminalDark, padding: '8px 20px',
-        borderBottom: `2px solid ${terminalAccent}`, flexShrink: 0,
+        borderBottom: '2px solid var(--brand-header-top-accent)', flexShrink: 0,
       }}>
         <div className="dialer-status-bar-left">
           <span style={{ fontSize: '11px', fontWeight: 'bold', letterSpacing: '4px', color: 'var(--brand-primary)' }}>
@@ -1919,7 +1980,7 @@ function DialerPageInner() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div onClick={handleSetAvailable} style={{
               width: '36px', height: '20px', borderRadius: '10px',
-              background: available ? 'var(--brand-primary)' : '#444460',
+              background: available ? 'var(--brand-primary)' : 'color-mix(in srgb, var(--brand-on-sidebar) 30%, var(--brand-sidebar-bg))',
               position: 'relative', cursor: 'pointer', transition: 'background 0.2s',
               flexShrink: 0,
             }}>
@@ -1938,8 +1999,8 @@ function DialerPageInner() {
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: swReady ? 'var(--brand-primary)' : '#666688' }} />
-            <span style={{ fontSize: '9px', letterSpacing: '2px', color: swReady ? 'var(--brand-primary)' : '#666688' }}>
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: swReady ? 'var(--brand-primary)' : 'var(--brand-on-sidebar-muted)' }} />
+            <span style={{ fontSize: '9px', letterSpacing: '2px', color: swReady ? 'var(--brand-primary)' : 'var(--brand-on-sidebar-muted)' }}>
               {swReady ? 'AUDIO' : '...'}
             </span>
           </div>
@@ -1950,7 +2011,7 @@ function DialerPageInner() {
             <span>{sessionStats.connected}</span>
           </div>
           <div className="dialer-time-block" style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
-            <span style={{ fontSize: '11px', fontFamily: 'monospace', color: '#8888aa', letterSpacing: '2px' }}>{dateStr}</span>
+            <span style={{ fontSize: '11px', fontFamily: 'monospace', color: 'var(--brand-on-sidebar-muted)', letterSpacing: '2px' }}>{dateStr}</span>
             <span style={{ fontSize: '14px', fontFamily: 'monospace', fontWeight: 'bold', color: 'var(--brand-primary)', letterSpacing: '3px' }}>{timeStr}</span>
           </div>
         </div>
@@ -2233,7 +2294,7 @@ function DialerPageInner() {
                 padding: '7px 14px', background: terminalDark, borderBottom: `1px solid ${terminalBorder}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
               }}>
-                <span style={{ fontSize: '10px', letterSpacing: '3px', color: '#8888aa', fontWeight: 'bold' }}>
+                <span style={{ fontSize: '10px', letterSpacing: '3px', color: 'var(--brand-on-sidebar-muted)', fontWeight: 'bold' }}>
                   {previewLead ? 'LEAD PREVIEW — REVIEW BEFORE DIALING' : 'LEAD PROFILE'}
                 </span>
                 {displayLead && (status === 'connected' || status === 'preview_ready') && (
@@ -2561,7 +2622,7 @@ function DialerPageInner() {
 
         <aside className={`dialer-right-sidebar ${rightSidebarOpen ? 'open' : ''}`}>
           <div style={{ background: terminalDark, padding: '8px 16px', borderBottom: `1px solid ${terminalBorder}`, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '9px', letterSpacing: '3px', color: '#8888aa', fontWeight: 'bold' }}>TODAY&apos;S METRICS</span>
+            <span style={{ fontSize: '9px', letterSpacing: '3px', color: 'var(--brand-on-sidebar-muted)', fontWeight: 'bold' }}>TODAY&apos;S METRICS</span>
           </div>
 
           <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '5px', flexShrink: 0 }}>
@@ -2604,8 +2665,11 @@ function DialerPageInner() {
           <ManualDialer />
 
           <div style={{ background: terminalDark, padding: '6px 16px', borderBottom: `1px solid ${terminalBorder}`, flexShrink: 0 }}>
-            <span style={{ fontSize: '9px', letterSpacing: '3px', color: '#8888aa', fontWeight: 'bold' }}>SYSTEM LOG</span>
+            <span style={{ fontSize: '9px', letterSpacing: '3px', color: 'var(--brand-on-sidebar-muted)', fontWeight: 'bold' }}>SYSTEM LOG</span>
           </div>
+          {/* SYSTEM LOG container — semantic dark "CRT terminal screen" — stays
+              hardcoded #1a1c24 regardless of theme. The green-on-black log
+              aesthetic is intentional design language. */}
           <div style={{ padding: '5px 12px', background: '#1a1c24', height: '88px', overflowY: 'auto', flexShrink: 0 }}>
             {[
               ...amdActivity.map(a => `> ${a}`),
@@ -2661,6 +2725,9 @@ function DialerPageInner() {
   )
 }
 
+// navLinkStyle — outside the component, no terminal* constants in scope.
+// Border stays semantic dark blue (#2a4a8a) as info accent; color uses
+// var(--brand-primary) for adaptive primary text.
 const navLinkStyle: React.CSSProperties = {
   padding: '10px 16px', background: 'transparent',
   border: '1px solid #2a4a8a', borderRadius: 3,
@@ -2673,14 +2740,14 @@ export default function DialerPage() {
     <Suspense fallback={
       <div style={{
         flex: 1,
-        background: '#f0f1f4',
+        background: 'var(--brand-page-bg)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         minHeight: 'calc(100vh - 64px)',
         fontFamily: 'Futura PT, Futura, sans-serif',
       }}>
-        <div style={{ fontSize: 11, letterSpacing: 4, color: '#5a5e6a' }}>
+        <div style={{ fontSize: 11, letterSpacing: 4, color: 'var(--brand-muted-text)' }}>
           LOADING TERMINAL...
         </div>
       </div>
