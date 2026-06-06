@@ -5,24 +5,36 @@
 @tailwind utilities;
 
 /* =============================================================================
- * DIALERSEAT GLOBALS — v25 (Pass 2 expansion — 3-color theming)
+ * DIALERSEAT GLOBALS — v26 (Pass 2 — header/sidebar split, migration 004)
  * =============================================================================
- * Three-tier CSS variable system for white-label theming.
+ * Four-tier CSS variable system for white-label theming.
  *
- *   Tier 1: --brand-primary, --brand-sidebar-bg, --brand-page-bg
- *     The 3 user-picked colors. Defaults below for non-tenant rendering
+ *   Tier 1: --brand-primary, --brand-sidebar-bg, --brand-header-bg,
+ *           --brand-page-bg
+ *     The 4 user-picked colors. Defaults below for non-tenant rendering
  *     (landing page, signed-out users, admins). ThemeProvider overrides
  *     them when a tenant is active.
  *
- *   Tier 2: --brand-on-primary, --brand-primary-hover, --brand-primary-soft,
- *           --brand-on-sidebar, --brand-on-sidebar-muted,
- *           --brand-sidebar-active-bg, --brand-sidebar-hover-bg,
- *           --brand-header-top-accent,
- *           --brand-on-page-bg, --brand-card-surface,
- *           --brand-card-border, --brand-muted-text
- *     Derived from Tier 1. Defaults below match the Pass 1 dark sidebar
- *     palette + Pass 2 light dashboard palette; ThemeProvider recomputes
- *     them per tenant via contrast picking + color-mix.
+ *     NEW in v26: --brand-header-bg is independent of --brand-sidebar-bg.
+ *     Tenants previously had a single dark-chrome color driving both the
+ *     sidebar AND the header strip; now they pick each. The default is
+ *     the same as --brand-sidebar-bg so existing unbranded renders look
+ *     identical, and migration 004 backfilled existing tenant rows with
+ *     header_bg_color = sidebar_color so existing branded renders also
+ *     look identical until tenants intentionally pick a different value.
+ *
+ *   Tier 2: Derived from Tier 1.
+ *     Primary family:
+ *       --brand-on-primary, --brand-primary-hover, --brand-primary-soft
+ *     Sidebar family:
+ *       --brand-on-sidebar, --brand-on-sidebar-muted,
+ *       --brand-sidebar-active-bg, --brand-sidebar-hover-bg
+ *     Header family (NEW v26):
+ *       --brand-on-header, --brand-on-header-muted,
+ *       --brand-header-top-accent (= primary)
+ *     Page-bg family:
+ *       --brand-on-page-bg, --brand-card-surface,
+ *       --brand-card-border, --brand-muted-text
  *
  *   Tier 3 — vestigial Pass 1 brand tokens (preserved for landing):
  *     --brand-secondary, --brand-surface, --brand-bg, --brand-text
@@ -37,8 +49,10 @@
  * the Pass 1 LIGHT palette via hardcoded values (T.bg #f0f1f4, T.surface
  * #e2e4ea, etc.). The dark --background / --surface / --text-primary
  * tokens below are kept for the landing page and any other pre-Pass-2
- * code that still references them. Phase C will bind dashboard surfaces
- * to the new --brand-page-bg / --brand-card-surface / etc. tokens.
+ * code that still references them. Phase C bound the dashboard surfaces
+ * to the new --brand-page-bg / --brand-card-surface tokens; v26 adds
+ * the header split, ready for the dashboard layout's header strip to
+ * bind to --brand-header-bg in the next push.
  * =============================================================================
  */
 
@@ -46,22 +60,26 @@
   /* ── Tier 1: User-picked (overridable by ThemeProvider when tenant active) */
   --brand-primary: #4a9eff;       /* DialerSeat Classic blue */
   --brand-sidebar-bg: #1a1a2e;    /* DialerSeat Classic dark navy */
-  --brand-page-bg: #f0f1f4;       /* Pass 2 dashboard page bg (migration 003) */
+  --brand-header-bg: #1a1a2e;     /* NEW v26 — defaults to sidebar value */
+  --brand-page-bg: #f0f1f4;       /* Pass 2 dashboard page bg */
 
-  /* ── Tier 2: Derived from Tier 1 (recomputed per tenant) ────────────── */
-  /* Defaults assume Tier 1 defaults (dark navy sidebar + blue primary). */
+  /* ── Tier 2: Derived — primary family ───────────────────────────────── */
   --brand-on-primary: #ffffff;
   --brand-primary-hover: color-mix(in srgb, var(--brand-primary) 88%, black);
   --brand-primary-soft: color-mix(in srgb, var(--brand-primary) 12%, transparent);
+
+  /* ── Tier 2: Derived — sidebar family ───────────────────────────────── */
   --brand-on-sidebar: #ffffff;
   --brand-on-sidebar-muted: rgba(255, 255, 255, 0.55);
   --brand-sidebar-active-bg: rgba(255, 255, 255, 0.08);
   --brand-sidebar-hover-bg: rgba(255, 255, 255, 0.04);
+
+  /* ── Tier 2: Derived — header family (NEW v26) ──────────────────────── */
+  --brand-on-header: #ffffff;
+  --brand-on-header-muted: rgba(255, 255, 255, 0.55);
   --brand-header-top-accent: var(--brand-primary);
 
-  /* ── Tier 2: Derived from page-bg (NEW — Pass 2 expansion, migration 003) */
-  /* Defaults assume the Pass 2 light dashboard palette. ThemeProvider
-     recomputes these per tenant via contrast picking + color-mix. */
+  /* ── Tier 2: Derived — page-bg family ───────────────────────────────── */
   --brand-on-page-bg: #1a1c24;       /* body text on page bg */
   --brand-card-surface: #e2e4ea;     /* card / panel bg */
   --brand-card-border: #c4c8d0;      /* card / divider border */
@@ -77,9 +95,6 @@
   --brand-text: #f0f0f5;
 
   /* ── Semantic tokens (Pass 1 dark theme, used by landing) ──────────── */
-  /* These derive from the Tier 3 vestigial primitives above. Pass 2
-     dashboard pages use Pass 1 LIGHT hardcoded values instead and don't
-     touch these tokens — they exist for the landing page. */
   --background: var(--brand-bg);
   --surface: var(--brand-surface);
   --surface-2: color-mix(in srgb, var(--brand-surface) 92%, var(--brand-text));
