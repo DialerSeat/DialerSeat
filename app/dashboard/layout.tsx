@@ -7,34 +7,41 @@ import { useState, useEffect, useRef } from 'react'
 import { useBranding } from '@/components/ThemeProvider'
 
 // =============================================================================
-// app/dashboard/layout.tsx — Pass 2 Phase C1 (sidebar binding sweep)
+// app/dashboard/layout.tsx — C2 (post-migration-004 header/sidebar split)
 // =============================================================================
-// Surgical rebinding of vestigial Pass 1 tokens to the Pass 2 brand tokens
-// injected by ThemeProvider v4. The structural / behavioral code (sidebar
-// markup, drawer state, profile-row Clerk retarget, sessionStorage logo
-// handoff, admin check, status fetches) is preserved byte-for-byte.
+// Builds on C1 (Pass 2 sidebar binding sweep). C2 adds:
 //
-// Pass 1 → Pass 2 rebindings:
-//   --background           → --brand-page-bg
-//   --surface (sidebar)    → --brand-sidebar-bg
-//   --border (sidebar)     → --brand-sidebar-active-bg
-//                            (context-aware faint divider: primary-tinted
-//                             overlay that adapts to both light + dark
-//                             sidebars without requiring a new token)
-//   --text-primary (in sidebar) → --brand-on-sidebar
-//   --text-secondary (in sidebar) → --brand-on-sidebar-muted
-//   inline color-mix(${brandPrimary} 12%, transparent) → --brand-primary-soft
-//   inline ${brandPrimary} for active nav label → var(--brand-primary)
+//   - Desktop tenant logo box → --brand-header-bg, full-width edge-to-edge
+//     fit (260x74) when a tenant logo is present. Box height 64 → 74 to
+//     match the recommended 512x148 logo aspect ratio so a properly-sized
+//     logo fits with effectively zero letterbox or cropping.
+//     Padding removed so the logo touches the sidebar edges ("no outer
+//     space"). Default-brand state (no tenant logo) preserves the original
+//     '0 18px' padding and 64px height so the gradient D + DIALERSEAT text
+//     don't get stretched.
 //
-// What stays unchanged:
-//   - brandPrimary JS const (still used by profile-row primaryColor for
-//     manager+/admin/team-seat conditional badges)
-//   - #ffaa3e amber semantic color for UNSUBSCRIBED / NO PLAN / RESUBSCRIBE
-//   - #4a9eff hardcoded for "ADMIN CONSOLE" subtitle (only renders in the
-//     default-brand state, which only appears on the dark navy default
-//     sidebar — blue is fine there)
+//   - Mobile topbar background → --brand-header-bg. The topbar IS the
+//     header strip on mobile (the bar across the top of every dashboard
+//     page).
+//
+//   - Hamburger button → --brand-header-bg background, --brand-on-header
+//     bar lines. Border stays --brand-sidebar-active-bg because that
+//     token's value (primary at 18% over transparent) is theme-independent.
+//
+// What stays from C1 (untouched):
+//   - Desktop sidebar background, mobile drawer background → --brand-sidebar-bg
+//   - Nav items, profile row, drawer chrome → sidebar-tinted tokens
+//   - Lapsed RESUBSCRIBE banner → semantic amber #ffaa3e
+//   - ADMIN CONSOLE subtitle blue (#4a9eff) — only renders on default brand
+//     which only exists on the default dark sidebar
 //   - DefaultBrandDesktop / DefaultBrandMobileTopbar gradient D logo
-//     (only renders when no tenant logo uploaded)
+//   - brandPrimary JS const for profile-row conditional badge color
+//
+// Default-brand fallback: when header_bg_color is missing or equals
+// sidebar_color (every existing tenant via migration 004 backfill, plus
+// signed-out / no-tenant users), --brand-header-bg == --brand-sidebar-bg
+// and the chrome looks identical to C1. Divergence is only visible once a
+// tenant intentionally picks different values in the onboarding picker.
 // =============================================================================
 
 const userNavItems = [
@@ -86,8 +93,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [tier, setTier] = useState<AccessTier>(null)
   const [plan, setPlan] = useState<Plan>(null)
   const [seats, setSeats] = useState<SubsSummary | null>(null)
-  // Pending logo preview from onboarding — data URL we substitute for the
-  // public CDN URL while Supabase's CDN propagates the new file.
   const [pendingLogo, setPendingLogo] = useState<{ publicUrl: string; dataUrl: string } | null>(null)
   const profileRowRef = useRef<HTMLDivElement | null>(null)
 
@@ -96,9 +101,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [pathname])
 
   // ── Check for pending logo preview on mount ──────────────────────────
-  // Onboarding sets this in sessionStorage after a successful save. We
-  // honor it for up to 5 minutes, then it expires (so a stale data URL
-  // can't override a future logo update).
   useEffect(() => {
     if (bare) return
     try {
@@ -111,14 +113,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       }
       const age = Date.now() - parsed.savedAt
       if (age > PENDING_LOGO_MAX_AGE_MS) {
-        // Expired — CDN should be propagated by now anyway.
         sessionStorage.removeItem(PENDING_LOGO_KEY)
         return
       }
       setPendingLogo({ publicUrl: parsed.publicUrl, dataUrl: parsed.dataUrl })
     } catch {
-      // If sessionStorage is unavailable or the JSON is malformed, skip
-      // silently. The CDN will catch up like before.
       try { sessionStorage.removeItem(PENDING_LOGO_KEY) } catch {}
     }
   }, [bare])
@@ -205,8 +204,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const logoHref = isAdmin ? '/dashboard/admin/analytics' : '/dashboard/analytics'
 
   const brandPrimary = branding?.primary_color || '#4a9eff'
-  // Substitute the pending data URL if the branding's logo_url matches what
-  // the user just uploaded. This avoids the CDN propagation delay.
   const rawLogoUrl = branding?.logo_url || null
   const tenantLogoUrl = (pendingLogo && rawLogoUrl === pendingLogo.publicUrl)
     ? pendingLogo.dataUrl
@@ -267,20 +264,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     primaryWeight = 'normal'
   }
 
+  // Tenant logo box — full-width edge-to-edge fit. 260x74 matches the
+  // recommended 512x148 logo aspect ratio (3.459) closely enough that a
+  // properly-sized logo touches both top and bottom of the box with
+  // effectively zero letterbox via objectFit:contain.
   const TenantBrandDesktop = () => (
     <span style={{
       position: 'relative',
       display: 'block',
-      width: 224,
-      height: 64,
+      width: '100%',
+      height: 74,
       flexShrink: 0,
     }}>
       <Image
         src={tenantLogoUrl!}
         alt={tenantBrandName}
         fill
-        sizes="224px"
-        style={{ objectFit: 'contain', objectPosition: 'left center' }}
+        sizes="260px"
+        style={{ objectFit: 'contain', objectPosition: 'center center' }}
         priority
         unoptimized
       />
@@ -356,17 +357,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     </>
   )
 
+  // Logo box. Two presentations:
+  //   - With tenant logo: padding 0, height 74, bg = --brand-header-bg.
+  //     The TenantBrandDesktop fills 100% of the 260px sidebar width and
+  //     the 74px height edge-to-edge.
+  //   - Default brand: padding '0 18px', height 64, bg transparent.
+  //     The gradient D + DIALERSEAT text sits with comfortable left
+  //     padding on top of the sidebar bg.
+  // When --brand-header-bg == --brand-sidebar-bg (default and every
+  // migration-004-backfilled tenant), both presentations look identical
+  // to C1 (no visible regression).
   const Sidebar = () => (
     <>
       <Link href={logoHref} style={{
         display: 'flex',
         alignItems: 'center',
         gap: tenantLogoUrl ? 0 : '12px',
-        padding: '0 18px',
+        padding: tenantLogoUrl ? 0 : '0 18px',
         marginBottom: '24px',
         textDecoration: 'none',
         flexShrink: 0,
-        height: 64,
+        height: tenantLogoUrl ? 74 : 64,
+        background: tenantLogoUrl ? 'var(--brand-header-bg)' : 'transparent',
       }}>
         {tenantLogoUrl ? <TenantBrandDesktop /> : <DefaultBrandDesktop />}
       </Link>
@@ -496,7 +508,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             padding-bottom: 12px;
             padding-left: max(16px, env(safe-area-inset-left, 16px));
             padding-right: max(16px, env(safe-area-inset-right, 16px));
-            background: var(--brand-sidebar-bg); border-bottom: 1px solid var(--brand-sidebar-active-bg);
+            background: var(--brand-header-bg); border-bottom: 1px solid var(--brand-sidebar-active-bg);
           }
           .ds-sidebar-mobile {
             display: flex; position: fixed; top: 0; left: 0; bottom: 0;
@@ -541,14 +553,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             aria-label="Open menu"
             style={{
               width: 40, height: 40, border: '1px solid var(--brand-sidebar-active-bg)',
-              background: 'var(--brand-sidebar-bg)', borderRadius: 8,
+              background: 'var(--brand-header-bg)', borderRadius: 8,
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
               gap: 4, cursor: 'pointer', padding: 0,
             }}
           >
-            <span style={{ width: 18, height: 2, background: 'var(--brand-on-sidebar)', borderRadius: 1 }} />
-            <span style={{ width: 18, height: 2, background: 'var(--brand-on-sidebar)', borderRadius: 1 }} />
-            <span style={{ width: 18, height: 2, background: 'var(--brand-on-sidebar)', borderRadius: 1 }} />
+            <span style={{ width: 18, height: 2, background: 'var(--brand-on-header)', borderRadius: 1 }} />
+            <span style={{ width: 18, height: 2, background: 'var(--brand-on-header)', borderRadius: 1 }} />
+            <span style={{ width: 18, height: 2, background: 'var(--brand-on-header)', borderRadius: 1 }} />
           </button>
 
           <Link href={logoHref} style={{

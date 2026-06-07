@@ -2,40 +2,48 @@
 import { useEffect, useState } from 'react'
 import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
-import { WhitelabelLivePreview } from '@/components/WhitelabelLivePreview'
 
 const FUTURA = 'Futura PT, Futura, "Trebuchet MS", sans-serif'
 
 // =============================================================================
-// SETTINGS PAGE (v26 — Pass 2 expansion: 3-color theme editor)
+// SETTINGS PAGE (v27 — editor extracted to onboarding + chrome themed)
 // =============================================================================
-// Changes vs v25:
-//   - Inline theme editor now handles 3 colors (sidebar + primary + page-bg)
-//     to match the migration 003 expansion. Custom mode shows a third
-//     DarkColorRow for Page background.
-//   - WhitelabelLivePreview receives pageBg so the user sees themed page-bg
-//     with auto-contrast body text + derived card surfaces inline.
-//   - Preset matching on load now checks all 3 colors (falls to Custom
-//     if any differ).
-//   - POST body sends page_bg_color.
+// Changes vs v26:
+//   - Removed the inline 3-color theme editor (preset cards, custom color
+//     pickers, WhitelabelLivePreview, save button, disclaimer, feedback).
+//     Per JC: "remove your whitelabel theme as a editor in settings, make
+//     it always redirect as a button to onboarding page."
+//   - The ▸ WHITELABEL EDITOR section is now a single ▶ OPEN WHITELABEL
+//     EDITOR button linking to /onboarding/whitelabel. Same condition
+//     (wlActive) as the old editor section.
+//   - Page chrome themed to the tenant's chosen colors. DialerSeat blue
+//     (#4a9eff) accents → var(--brand-primary). Card chrome (#1a1c24 +
+//     #2a2c34) → var(--brand-card-surface) + var(--brand-card-border).
+//     Section insets (#0d0e14) → var(--brand-page-bg) (sections "punch
+//     through" the card to show the page color). Per JC: "make the
+//     dialerseat settings page blue turn into the colors they chose."
+//   - Semantic colors (danger red, success green, warning amber) kept hex
+//     but switched to light-theme pale-tint backgrounds (#f8e8e8 / #e8f5e8
+//     / #fdf4e8) since the page is now light-themed.
+//   - Cancel-seat modal card-surface themed; danger border-top semantic.
+//   - Resubscribe button gradient + glow themed via color-mix with
+//     var(--brand-primary).
 //
-// Preserved from v25:
-//   - The ▸ YOUR WHITELABEL section (which was a single "EDIT YOUR
-//     WHITELABEL →" link to /onboarding/whitelabel) is replaced with
-//     ▸ YOUR WHITELABEL THEME — an inline editor with presets, custom
-//     picker, WhitelabelLivePreview, 60-sec disclaimer, and a SAVE
-//     THEME button. POSTs to the same /api/whitelabel/onboarding endpoint
-//     used by the full onboarding page.
-//   - A small footnote link to /onboarding/whitelabel is kept for users
-//     who need to change brand name, subdomain, or logo.
-//   - All other sections (brand view toggle, subscription, team seats,
-//     cancel flow, resubscribe, seat-cancel modal) preserved byte-for-byte.
+// Preserved from v26:
+//   - Brand view toggle (themed)
+//   - Personal subscription summary, team seats, cancel flow, seat cancel
+//     modal, resubscribe flow — all structural logic byte-for-byte
+//   - Admin detection and ADMIN CANNOT CANCEL notice (themed)
 //
-// JC's directive: "keep the background of this page the same for all
-// whitelabel accounts. only change the center content to match." Honored:
-// the page chrome stays in DialerSeat dark default. The only element
-// reflecting the tenant's chosen colors is the WhitelabelLivePreview
-// component inside the new theme section.
+// Removed imports/code (was used only by the theme editor):
+//   - WhitelabelLivePreview component import
+//   - Preset / TenantData interfaces, PRESETS array, HEX_RE constant
+//   - tenantData / presetKey / primary / sidebar / pageBg state
+//   - themeSaving / themeFeedback state
+//   - applyPreset / updateColor / handleSaveTheme handlers
+//   - DarkColorRow helper component
+//   - All theme* CSS-in-JS style objects
+//   - The tenantRes fetch in loadStatus
 // =============================================================================
 
 interface SubStatus {
@@ -95,53 +103,6 @@ interface BrandOptions {
   currentTenantId: string | null
 }
 
-interface TenantData {
-  brand_name: string
-  slug: string
-  logo_url: string | null
-  primary_color: string
-  sidebar_color: string
-  page_bg_color: string
-}
-
-interface Preset {
-  key: string
-  label: string
-  description: string
-  primary: string
-  sidebar: string
-  pageBg: string
-}
-
-const PRESETS: Preset[] = [
-  {
-    key: 'stone-lavender',
-    label: 'Stone & Lavender',
-    description: 'Gray-white sidebar, lavender accents, faint lavender page.',
-    primary: '#b8a3e0',
-    sidebar: '#e4e6eb',
-    pageBg: '#f1ecf7',
-  },
-  {
-    key: 'forest',
-    label: 'Forest',
-    description: 'Forest sidebar, leaf-green accents, fresh green page.',
-    primary: '#5fb87a',
-    sidebar: '#1a3a26',
-    pageBg: '#ecf5e8',
-  },
-  {
-    key: 'bloom',
-    label: 'Bloom',
-    description: 'Brown sidebar, rose pink accents, soft rose page.',
-    primary: '#e8b8c5',
-    sidebar: '#6e5142',
-    pageBg: '#fbeef2',
-  },
-]
-
-const HEX_RE = /^#[0-9a-fA-F]{6}$/
-
 export default function SettingsPage() {
   const { user } = useUser()
   const [sub, setSub] = useState<SubStatus | null>(null)
@@ -161,24 +122,12 @@ export default function SettingsPage() {
   const [brandOptions, setBrandOptions] = useState<BrandOptions | null>(null)
   const [switchingBrand, setSwitchingBrand] = useState(false)
 
-  // ── Inline theme editor state (Pass 2 expansion: 3 colors) ────────
-  const [tenantData, setTenantData] = useState<TenantData | null>(null)
-  const [presetKey, setPresetKey] = useState<string>(PRESETS[0].key)
-  const [primary, setPrimary] = useState<string>(PRESETS[0].primary)
-  const [sidebar, setSidebar] = useState<string>(PRESETS[0].sidebar)
-  const [pageBg, setPageBg] = useState<string>(PRESETS[0].pageBg)
-  const [themeSaving, setThemeSaving] = useState(false)
-  const [themeFeedback, setThemeFeedback] = useState<
-    { kind: 'success' | 'error'; text: string } | null
-  >(null)
-
   const loadStatus = async () => {
     try {
-      const [statusRes, summaryRes, brandRes, tenantRes] = await Promise.all([
+      const [statusRes, summaryRes, brandRes] = await Promise.all([
         fetch('/api/stripe/status'),
         fetch('/api/subscriptions/summary'),
         fetch('/api/whitelabel/available-tenants'),
-        fetch('/api/whitelabel/onboarding'),
       ])
       const statusData = await statusRes.json()
       setSub(statusData)
@@ -197,30 +146,6 @@ export default function SettingsPage() {
           canSeeStandard: !!brandData.canSeeStandard,
           currentTenantId: brandData.currentTenantId ?? null,
         })
-      }
-      if (tenantRes.ok) {
-        const tenantPayload = await tenantRes.json()
-        if (tenantPayload.tenant) {
-          const t: TenantData = {
-            brand_name: tenantPayload.tenant.brand_name,
-            slug: tenantPayload.tenant.slug,
-            logo_url: tenantPayload.tenant.logo_url,
-            primary_color: tenantPayload.tenant.primary_color || PRESETS[0].primary,
-            sidebar_color: tenantPayload.tenant.sidebar_color || PRESETS[0].sidebar,
-            page_bg_color: tenantPayload.tenant.page_bg_color || PRESETS[0].pageBg,
-          }
-          setTenantData(t)
-          setPrimary(t.primary_color)
-          setSidebar(t.sidebar_color)
-          setPageBg(t.page_bg_color)
-          const match = PRESETS.find(
-            p =>
-              p.primary.toLowerCase() === t.primary_color.toLowerCase() &&
-              p.sidebar.toLowerCase() === t.sidebar_color.toLowerCase() &&
-              p.pageBg.toLowerCase() === t.page_bg_color.toLowerCase()
-          )
-          setPresetKey(match?.key || 'custom')
-        }
       }
     } catch {
       setError('Failed to load subscription status')
@@ -328,83 +253,6 @@ export default function SettingsPage() {
     }
   }
 
-  // ── Theme editor handlers (3-color) ───────────────────────────────
-  const applyPreset = (key: string) => {
-    setPresetKey(key)
-    setThemeFeedback(null)
-    if (key === 'custom') return
-    const p = PRESETS.find(p => p.key === key)
-    if (p) {
-      setPrimary(p.primary)
-      setSidebar(p.sidebar)
-      setPageBg(p.pageBg)
-    }
-  }
-
-  const updateColor = (field: 'primary' | 'sidebar' | 'pageBg', value: string) => {
-    if (field === 'primary') setPrimary(value)
-    else if (field === 'sidebar') setSidebar(value)
-    else setPageBg(value)
-    setPresetKey('custom')
-    setThemeFeedback(null)
-  }
-
-  const handleSaveTheme = async () => {
-    if (!tenantData) return
-    if (!HEX_RE.test(primary)) {
-      setThemeFeedback({ kind: 'error', text: 'Primary must be a #RRGGBB hex value.' })
-      return
-    }
-    if (!HEX_RE.test(sidebar)) {
-      setThemeFeedback({ kind: 'error', text: 'Sidebar must be a #RRGGBB hex value.' })
-      return
-    }
-    if (!HEX_RE.test(pageBg)) {
-      setThemeFeedback({ kind: 'error', text: 'Page background must be a #RRGGBB hex value.' })
-      return
-    }
-
-    setThemeSaving(true)
-    setThemeFeedback(null)
-    try {
-      const res = await fetch('/api/whitelabel/onboarding', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          brand_name: tenantData.brand_name,
-          subdomain: tenantData.slug,
-          logo_url: tenantData.logo_url,
-          primary_color: primary,
-          sidebar_color: sidebar,
-          page_bg_color: pageBg,
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        setThemeFeedback({
-          kind: 'error',
-          text: data.detail || data.error || 'Failed to save theme.',
-        })
-        return
-      }
-      setThemeFeedback({
-        kind: 'success',
-        text: 'Theme saved. Propagating site-wide now — up to 60 seconds for everyone else.',
-      })
-      // Update locally so a refresh isn't needed for the live preview
-      setTenantData({
-        ...tenantData,
-        primary_color: primary,
-        sidebar_color: sidebar,
-        page_bg_color: pageBg,
-      })
-    } catch (err: any) {
-      setThemeFeedback({ kind: 'error', text: err.message || 'Network error.' })
-    } finally {
-      setThemeSaving(false)
-    }
-  }
-
   if (loading) {
     return (
       <div className="settings-root" style={pageStyle}>
@@ -431,8 +279,6 @@ export default function SettingsPage() {
   const planLabel = planLabelFor(sub?.plan)
   const weeklyPrice = sub?.weeklyPrice ?? (sub?.hasSubscription ? 35 : 0)
 
-  const activePreset = PRESETS.find(p => p.key === presetKey)
-
   return (
     <div className="settings-root" style={pageStyle}>
       <style>{`
@@ -448,13 +294,13 @@ export default function SettingsPage() {
         <div style={subtitleStyle}>
           {user?.primaryEmailAddress?.emailAddress}
           {isAdmin && (
-            <span style={{ marginLeft: 8, fontSize: 9, letterSpacing: 3, color: '#4a9eff', fontWeight: 'bold' }}>· ADMIN</span>
+            <span style={{ marginLeft: 8, fontSize: 9, letterSpacing: 3, color: 'var(--brand-primary)', fontWeight: 'bold' }}>· ADMIN</span>
           )}
           {!isAdmin && planLabel && (
-            <span style={{ marginLeft: 8, fontSize: 9, letterSpacing: 3, color: '#4a9eff', fontWeight: 'bold' }}>· {planLabel}</span>
+            <span style={{ marginLeft: 8, fontSize: 9, letterSpacing: 3, color: 'var(--brand-primary)', fontWeight: 'bold' }}>· {planLabel}</span>
           )}
           {!isAdmin && sub?.tier === 'lapsed' && !wlActive && (
-            <span style={{ marginLeft: 8, fontSize: 9, letterSpacing: 3, color: '#ffaa3e', fontWeight: 'bold' }}>· UNSUBSCRIBED</span>
+            <span style={{ marginLeft: 8, fontSize: 9, letterSpacing: 3, color: '#8a6a1a', fontWeight: 'bold' }}>· UNSUBSCRIBED</span>
           )}
         </div>
 
@@ -471,18 +317,7 @@ export default function SettingsPage() {
               value={currentBrandValue}
               onChange={(e) => handleSwitchBrand(e.target.value)}
               disabled={switchingBrand}
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                background: '#0d0e14',
-                border: '1px solid #2a4a8a',
-                borderRadius: 3,
-                color: '#e0e2ea',
-                fontSize: 13,
-                fontFamily: FUTURA,
-                outline: 'none',
-                cursor: switchingBrand ? 'wait' : 'pointer',
-              }}
+              style={brandSelectStyle(switchingBrand)}
             >
               {brandOptions.canSeeStandard && (
                 <option value="standard">
@@ -504,134 +339,18 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {/* ── YOUR WHITELABEL THEME (3-color inline editor) ── */}
-        {wlActive && tenantData && (
+        {/* ── WHITELABEL EDITOR (button only, no inline editor) ── */}
+        {wlActive && (
           <div style={sectionStyle}>
-            <div style={sectionHeaderStyle}>▸ YOUR WHITELABEL THEME</div>
-            <div style={{ ...mutedStyle, marginBottom: 14, lineHeight: 1.6 }}>
-              Pick a preset or fine-tune your colors. Saves apply to your
-              sign-in page, sidebar, and dashboard chrome within 60 seconds.
+            <div style={sectionHeaderStyle}>▸ WHITELABEL EDITOR</div>
+            <div style={{ ...mutedStyle, marginBottom: 12, lineHeight: 1.6 }}>
+              Manage your colors, presets, custom themes, brand name,
+              subdomain, and logo in the onboarding editor. Changes propagate
+              site-wide within 60 seconds.
             </div>
-
-            {/* Preset cards */}
-            <div style={themePresetGridStyle}>
-              {PRESETS.map(p => (
-                <button
-                  key={p.key}
-                  type="button"
-                  onClick={() => applyPreset(p.key)}
-                  style={themePresetCardStyle(presetKey === p.key)}
-                >
-                  <div style={themePresetSwatchRowStyle}>
-                    <div style={{ ...themePresetSwatchStyle, background: p.sidebar }} />
-                    <div style={{ ...themePresetSwatchStyle, background: p.primary }} />
-                    <div style={{ ...themePresetSwatchStyle, background: p.pageBg }} />
-                  </div>
-                  <div style={themePresetNameStyle(presetKey === p.key)}>{p.label}</div>
-                </button>
-              ))}
-              <button
-                type="button"
-                onClick={() => applyPreset('custom')}
-                style={themePresetCardStyle(presetKey === 'custom')}
-              >
-                <div
-                  style={{
-                    ...themePresetSwatchRowStyle,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    height: 24,
-                    color: '#888a92',
-                    fontSize: 18,
-                    letterSpacing: 0,
-                  }}
-                >
-                  ✎
-                </div>
-                <div style={themePresetNameStyle(presetKey === 'custom')}>Custom</div>
-              </button>
-            </div>
-
-            <div style={{ fontSize: 11, color: '#888a92', letterSpacing: 0.5, lineHeight: 1.6, marginBottom: 14 }}>
-              {presetKey === 'custom'
-                ? 'Pick your own sidebar, primary, and page background colors below.'
-                : activePreset?.description}
-            </div>
-
-            {presetKey === 'custom' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
-                <DarkColorRow
-                  label="Sidebar"
-                  description="Sidebar background, header strip, primary button background"
-                  value={sidebar}
-                  onChange={v => updateColor('sidebar', v)}
-                />
-                <DarkColorRow
-                  label="Primary"
-                  description="Buttons, accents, active states, focus rings, chart line"
-                  value={primary}
-                  onChange={v => updateColor('primary', v)}
-                />
-                <DarkColorRow
-                  label="Page background"
-                  description="Main background of every dashboard page — body text auto-contrasts"
-                  value={pageBg}
-                  onChange={v => updateColor('pageBg', v)}
-                />
-              </div>
-            )}
-
-            {/* Live preview — the ONLY element on this page reflecting tenant colors */}
-            <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 9, letterSpacing: 2, color: '#888a92', marginBottom: 8, fontWeight: 700 }}>
-                EXACT PREVIEW
-              </div>
-              <WhitelabelLivePreview
-                primary={primary}
-                sidebar={sidebar}
-                pageBg={pageBg}
-                brandName={tenantData.brand_name}
-                logoUrl={tenantData.logo_url}
-              />
-            </div>
-
-            {/* Disclaimer */}
-            <div style={themeDisclaimerStyle}>
-              <strong style={{ color: '#4a9eff', letterSpacing: 2 }}>ⓘ HEADS UP</strong>
-              <div style={{ marginTop: 4 }}>
-                Your browser updates instantly on save. Other users (your team,
-                your customers) will see the new look after their next page load,
-                up to 60 seconds later.
-              </div>
-            </div>
-
-            {/* Feedback */}
-            {themeFeedback && (
-              <div style={themeFeedback.kind === 'success' ? themeSuccessStyle : themeErrorStyle}>
-                {themeFeedback.text}
-              </div>
-            )}
-
-            {/* Save button */}
-            <button
-              onClick={handleSaveTheme}
-              disabled={themeSaving}
-              style={{
-                ...themeSaveButtonStyle,
-                opacity: themeSaving ? 0.6 : 1,
-                cursor: themeSaving ? 'wait' : 'pointer',
-              }}
-            >
-              {themeSaving ? 'SAVING...' : 'SAVE THEME'}
-            </button>
-
-            {/* Small link to full editor */}
-            <div style={{ marginTop: 14, fontSize: 11, letterSpacing: 0.5, color: '#888a92', lineHeight: 1.6 }}>
-              Need to change your brand name, subdomain, or logo?{' '}
-              <Link href="/onboarding/whitelabel" style={{ color: '#4a9eff', textDecoration: 'underline' }}>
-                Open the full editor →
-              </Link>
-            </div>
+            <Link href="/onboarding/whitelabel" style={editorButtonStyle}>
+              ▶ OPEN WHITELABEL EDITOR
+            </Link>
           </div>
         )}
 
@@ -689,18 +408,18 @@ export default function SettingsPage() {
             </div>
 
             {seats!.ownerPaidSeats.map(seat => (
-              <div key={seat.id} style={seatRowStyle('#1a4a8a')}>
+              <div key={seat.id} style={seatRowStyle('var(--brand-primary)')}>
                 <div style={seatHeaderStyle}>
                   <span style={seatTeamStyle}>{seat.teamName}</span>
-                  <span style={seatBadgeStyle('#4a9eff')}>OWNER PAID</span>
+                  <span style={seatBadgeStyle('var(--brand-primary)')}>OWNER PAID</span>
                 </div>
                 <div style={seatDetailStyle}>
-                  Paid by <strong style={{ color: '#e0e2ea' }}>{seat.ownerName}</strong> · ${(seat.amountCents / 100).toFixed(2)} / WEEK
+                  Paid by <strong style={{ color: 'var(--brand-on-page-bg)' }}>{seat.ownerName}</strong> · ${(seat.amountCents / 100).toFixed(2)} / WEEK
                 </div>
                 <div style={seatDetailStyle}>
                   Period: {formatDate(seat.periodStart)} → {formatDate(seat.periodEnd)}
                 </div>
-                <div style={{ ...seatDetailStyle, color: '#666870', fontSize: 10, marginTop: 6 }}>
+                <div style={{ ...seatDetailStyle, color: 'var(--brand-muted-text)', fontSize: 10, marginTop: 6 }}>
                   Only the team owner can cancel this seat.
                 </div>
               </div>
@@ -710,10 +429,10 @@ export default function SettingsPage() {
               <div key={seat.id} style={seatRowStyle('#8a6a1a')}>
                 <div style={seatHeaderStyle}>
                   <span style={seatTeamStyle}>{seat.teamName}</span>
-                  <span style={seatBadgeStyle('#ffaa3e')}>AGENT PAID</span>
+                  <span style={seatBadgeStyle('#8a6a1a')}>AGENT PAID</span>
                 </div>
                 <div style={seatDetailStyle}>
-                  Campaign: <strong style={{ color: '#e0e2ea' }}>{seat.campaignName || '—'}</strong>
+                  Campaign: <strong style={{ color: 'var(--brand-on-page-bg)' }}>{seat.campaignName || '—'}</strong>
                 </div>
                 <div style={seatDetailStyle}>
                   Owner: {seat.ownerName} · $35.00 / WEEK
@@ -733,8 +452,8 @@ export default function SettingsPage() {
             ))}
 
             <div style={{
-              fontSize: 10, color: '#666870', letterSpacing: 1, lineHeight: 1.5,
-              marginTop: 12, paddingTop: 12, borderTop: '1px solid #2a2c34',
+              fontSize: 10, color: 'var(--brand-muted-text)', letterSpacing: 1, lineHeight: 1.5,
+              marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--brand-card-border)',
             }}>
               Canceling a seat ends campaign access only. You remain on the team and can rejoin a campaign anytime. Refunds for partial periods are only available via dispute through your bank.
             </div>
@@ -779,14 +498,14 @@ export default function SettingsPage() {
               <div style={confirmBoxStyle}>
                 <div style={confirmTextStyle}>
                   Cancel your subscription? You&apos;ll keep access until{' '}
-                  <strong style={{ color: '#4a9eff' }}>
+                  <strong style={{ color: 'var(--brand-primary)' }}>
                     {sub.currentPeriodEnd ? formatDate(sub.currentPeriodEnd) : 'period end'}
                   </strong>
                   . No further charges. Refunds for partial periods are only available via dispute through your bank.
                 </div>
 
                 <div style={typePromptStyle}>
-                  Type <strong style={{ color: '#ff6464' }}>cancel</strong> to confirm:
+                  Type <strong style={{ color: '#8a1a1a' }}>cancel</strong> to confirm:
                 </div>
                 <input
                   type="text"
@@ -829,7 +548,7 @@ export default function SettingsPage() {
         <div
           onClick={() => seatCancelling === null && (setSeatConfirmTarget(null), setSeatTypedConfirm(''))}
           style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             zIndex: 100, padding: 20,
           }}
@@ -837,22 +556,25 @@ export default function SettingsPage() {
           <div
             onClick={e => e.stopPropagation()}
             style={{
-              background: '#1a1c24', border: '1px solid #2a2c34',
-              borderTop: '3px solid #8a1a1a', borderRadius: 4, padding: 28,
-              maxWidth: 460, width: '100%', fontFamily: FUTURA, color: '#e0e2ea',
+              background: 'var(--brand-card-surface)',
+              border: '1px solid var(--brand-card-border)',
+              borderTop: '3px solid #8a1a1a',
+              borderRadius: 4, padding: 28,
+              maxWidth: 460, width: '100%', fontFamily: FUTURA,
+              color: 'var(--brand-on-page-bg)',
             }}
           >
             <div style={{
-              fontSize: 12, fontWeight: 700, letterSpacing: 4, color: '#ff6464', marginBottom: 14,
+              fontSize: 12, fontWeight: 700, letterSpacing: 4, color: '#8a1a1a', marginBottom: 14,
             }}>CANCEL SEAT ACCESS</div>
-            <p style={{ fontSize: 13, lineHeight: 1.6, color: '#e0e2ea', margin: '0 0 14px 0' }}>
+            <p style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--brand-on-page-bg)', margin: '0 0 14px 0' }}>
               Cancel your access to <strong>{seatConfirmTarget.campaignName || 'this campaign'}</strong> on team <strong>{seatConfirmTarget.teamName}</strong>?
             </p>
-            <p style={{ fontSize: 12, lineHeight: 1.6, color: '#888a92', margin: '0 0 16px 0' }}>
+            <p style={{ fontSize: 12, lineHeight: 1.6, color: 'var(--brand-muted-text)', margin: '0 0 16px 0' }}>
               You stay on the team but lose dialing access to this campaign. Your $35/wk for this seat stops at period close. Refunds for partial periods are only available via dispute through your bank.
             </p>
             <div style={typePromptStyle}>
-              Type <strong style={{ color: '#ff6464' }}>cancel</strong> to confirm:
+              Type <strong style={{ color: '#8a1a1a' }}>cancel</strong> to confirm:
             </div>
             <input
               type="text"
@@ -888,69 +610,6 @@ export default function SettingsPage() {
   )
 }
 
-// ─── Dark-themed ColorRow for the theme editor ──────────────────────
-function DarkColorRow({
-  label,
-  description,
-  value,
-  onChange,
-}: {
-  label: string
-  description: string
-  value: string
-  onChange: (v: string) => void
-}) {
-  return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: 12,
-      padding: 10,
-      background: '#0a0b10',
-      border: '1px solid #2a2c34',
-      borderRadius: 4,
-    }}>
-      <input
-        type="color"
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        style={{
-          width: 40,
-          height: 40,
-          padding: 0,
-          border: '1px solid #2a2c34',
-          borderRadius: 4,
-          background: 'transparent',
-          cursor: 'pointer',
-        }}
-      />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 1, color: '#e0e2ea' }}>{label}</div>
-        <div style={{ fontSize: 10, color: '#888a92', letterSpacing: 0.5, marginTop: 2, lineHeight: 1.5 }}>{description}</div>
-      </div>
-      <input
-        type="text"
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        maxLength={7}
-        style={{
-          width: 90,
-          padding: '8px 10px',
-          background: '#1a1c24',
-          border: '1px solid #2a2c34',
-          borderRadius: 3,
-          color: '#e0e2ea',
-          fontSize: 12,
-          fontFamily: 'monospace',
-          outline: 'none',
-          boxSizing: 'border-box',
-          letterSpacing: 0.5,
-        }}
-      />
-    </div>
-  )
-}
-
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', {
     month: 'long', day: 'numeric', year: 'numeric',
@@ -974,139 +633,231 @@ function tierStatusLabel(sub: SubStatus | null, wlActive: boolean): string {
 }
 
 function tierStatusColor(sub: SubStatus | null): string {
-  if (!sub) return '#32ff7e'
-  if (sub.tier === 'lapsed' && !sub.wlActive) return '#ffaa3e'
-  if (sub.status === 'active' || sub.status === 'trialing') return '#32ff7e'
-  if (sub.status === 'past_due') return '#ffaa3e'
-  if (sub.wlActive) return '#32ff7e'
-  return '#ff6464'
+  if (!sub) return '#1a6a1a'
+  if (sub.tier === 'lapsed' && !sub.wlActive) return '#8a6a1a'
+  if (sub.status === 'active' || sub.status === 'trialing') return '#1a6a1a'
+  if (sub.status === 'past_due') return '#8a6a1a'
+  if (sub.wlActive) return '#1a6a1a'
+  return '#8a1a1a'
 }
+
+// ─── Styles ──────────────────────────────────────────────────────────
 
 const pageStyle: React.CSSProperties = {
   flex: 1, minHeight: 'calc(100vh - 64px)',
+  background: 'var(--brand-page-bg)',
   display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
   padding: 40, fontFamily: FUTURA,
 }
 
 const cardStyle: React.CSSProperties = {
-  width: '100%', maxWidth: 640, background: '#1a1c24',
-  border: '1px solid #2a2c34', borderTop: '3px solid #4a9eff',
-  borderRadius: 4, padding: 32, color: '#e0e2ea',
+  width: '100%', maxWidth: 640,
+  background: 'var(--brand-card-surface)',
+  border: '1px solid var(--brand-card-border)',
+  borderTop: '3px solid var(--brand-primary)',
+  borderRadius: 4, padding: 32,
+  color: 'var(--brand-on-page-bg)',
   fontFamily: FUTURA, boxSizing: 'border-box',
 }
 
 const titleStyle: React.CSSProperties = {
-  fontSize: 18, fontWeight: 700, letterSpacing: 5, color: '#4a9eff', marginBottom: 4,
+  fontSize: 18, fontWeight: 700, letterSpacing: 5,
+  color: 'var(--brand-primary)', marginBottom: 4,
 }
 
 const subtitleStyle: React.CSSProperties = {
-  fontSize: 12, letterSpacing: 1, color: '#888a92', marginBottom: 28, wordBreak: 'break-word',
+  fontSize: 12, letterSpacing: 1,
+  color: 'var(--brand-muted-text)',
+  marginBottom: 28, wordBreak: 'break-word',
 }
 
 const sectionStyle: React.CSSProperties = {
-  background: '#0d0e14', border: '1px solid #2a2c34',
-  borderLeft: '3px solid #4a9eff', borderRadius: 3,
+  background: 'var(--brand-page-bg)',
+  border: '1px solid var(--brand-card-border)',
+  borderLeft: '3px solid var(--brand-primary)',
+  borderRadius: 3,
   padding: 16, marginBottom: 20,
 }
 
 const sectionHeaderStyle: React.CSSProperties = {
-  fontSize: 9, letterSpacing: 3, color: '#888a92', marginBottom: 14, fontWeight: 700,
+  fontSize: 9, letterSpacing: 3,
+  color: 'var(--brand-muted-text)',
+  marginBottom: 14, fontWeight: 700,
 }
 
 const rowStyle: React.CSSProperties = {
   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-  padding: '8px 0', borderBottom: '1px solid #2a2c34', gap: 12, flexWrap: 'wrap',
+  padding: '8px 0',
+  borderBottom: '1px solid var(--brand-card-border)',
+  gap: 12, flexWrap: 'wrap',
 }
 
-const labelStyle: React.CSSProperties = { fontSize: 10, letterSpacing: 2, color: '#888a92' }
-const valueStyle: React.CSSProperties = { fontSize: 12, letterSpacing: 1, color: '#e0e2ea', fontWeight: 700 }
-const mutedStyle: React.CSSProperties = { fontSize: 12, color: '#888a92', letterSpacing: 1 }
+const labelStyle: React.CSSProperties = {
+  fontSize: 10, letterSpacing: 2, color: 'var(--brand-muted-text)',
+}
+const valueStyle: React.CSSProperties = {
+  fontSize: 12, letterSpacing: 1,
+  color: 'var(--brand-on-page-bg)', fontWeight: 700,
+}
+const mutedStyle: React.CSSProperties = {
+  fontSize: 12, color: 'var(--brand-muted-text)', letterSpacing: 1,
+}
+
+function brandSelectStyle(disabled: boolean): React.CSSProperties {
+  return {
+    width: '100%',
+    padding: '10px 12px',
+    background: 'var(--brand-card-surface)',
+    border: '1px solid var(--brand-card-border)',
+    borderRadius: 3,
+    color: 'var(--brand-on-page-bg)',
+    fontSize: 13,
+    fontFamily: FUTURA,
+    outline: 'none',
+    cursor: disabled ? 'wait' : 'pointer',
+  }
+}
+
+// ▶ OPEN WHITELABEL EDITOR — primary CTA pattern, sits inside a section
+// whose bg is page-bg, so the button bg is card-surface for contrast.
+const editorButtonStyle: React.CSSProperties = {
+  display: 'block',
+  width: '100%',
+  padding: 14,
+  background: 'var(--brand-card-surface)',
+  borderTop: '3px solid var(--brand-primary)',
+  border: 'none',
+  borderRadius: 4,
+  color: 'var(--brand-primary)',
+  fontSize: 12,
+  fontWeight: 700,
+  letterSpacing: 4,
+  fontFamily: FUTURA,
+  textAlign: 'center',
+  textDecoration: 'none',
+  cursor: 'pointer',
+  boxSizing: 'border-box',
+}
 
 const dangerButtonStyle: React.CSSProperties = {
-  width: '100%', padding: 14, background: '#0d0e14', border: 'none',
-  borderTop: '3px solid #8a1a1a', borderRadius: 4, color: '#ff6464',
+  width: '100%', padding: 14,
+  background: 'var(--brand-card-surface)',
+  border: 'none',
+  borderTop: '3px solid #8a1a1a',
+  borderRadius: 4, color: '#8a1a1a',
   fontSize: 12, fontWeight: 700, letterSpacing: 4, cursor: 'pointer',
   fontFamily: FUTURA, marginTop: 8,
 }
 
 const miniDangerButtonStyle: React.CSSProperties = {
   marginTop: 10, padding: '8px 14px', background: 'transparent',
-  border: '1px solid #8a1a1a', borderRadius: 3, color: '#ff6464',
+  border: '1px solid #8a1a1a', borderRadius: 3, color: '#8a1a1a',
   fontSize: 10, fontWeight: 700, letterSpacing: 2, cursor: 'pointer',
   fontFamily: FUTURA,
 }
 
 const secondaryButtonStyle: React.CSSProperties = {
-  flex: 1, padding: 14, background: '#0d0e14', border: 'none',
-  borderTop: '3px solid #4a9eff', borderRadius: 4, color: '#4a9eff',
+  flex: 1, padding: 14,
+  background: 'var(--brand-card-surface)',
+  border: 'none',
+  borderTop: '3px solid var(--brand-primary)',
+  borderRadius: 4, color: 'var(--brand-primary)',
   fontSize: 11, fontWeight: 700, letterSpacing: 3, cursor: 'pointer', fontFamily: FUTURA,
 }
 
 const confirmBoxStyle: React.CSSProperties = {
-  background: '#2a1a1a', border: '1px solid #8a1a1a', borderRadius: 4, padding: 16, marginTop: 8,
+  background: '#f8e8e8',
+  border: '1px solid #8a1a1a',
+  borderLeft: '3px solid #8a1a1a',
+  borderRadius: 4, padding: 16, marginTop: 8,
 }
 
 const confirmTextStyle: React.CSSProperties = {
-  fontSize: 12, lineHeight: 1.6, color: '#e0c2c2', marginBottom: 16,
+  fontSize: 12, lineHeight: 1.6,
+  color: '#5a1a1a',
+  marginBottom: 16,
 }
 
 const typePromptStyle: React.CSSProperties = {
-  fontSize: 11, letterSpacing: 1, color: '#e0c2c2', marginBottom: 8,
+  fontSize: 11, letterSpacing: 1,
+  color: '#5a1a1a',
+  marginBottom: 8,
 }
 
 const typeInputStyle: React.CSSProperties = {
-  width: '100%', padding: '10px 12px', background: '#0d0e14',
-  border: '1px solid #4a2a2a', borderRadius: 3,
-  fontFamily: 'monospace', fontSize: 13, color: '#ff8888',
+  width: '100%', padding: '10px 12px',
+  background: 'var(--brand-card-surface)',
+  border: '1px solid #8a1a1a',
+  borderRadius: 3,
+  fontFamily: 'monospace', fontSize: 13, color: '#8a1a1a',
   outline: 'none', marginBottom: 16, letterSpacing: 1, boxSizing: 'border-box',
 }
 
 const confirmButtonsStyle: React.CSSProperties = { display: 'flex', gap: 8 }
 
 const successStyle: React.CSSProperties = {
-  background: '#1a2a1a', border: '1px solid #1a6a1a', color: '#32ff7e',
+  background: '#e8f5e8',
+  border: '1px solid #1a6a1a',
+  borderLeft: '3px solid #1a6a1a',
+  color: '#1a6a1a',
   padding: 12, borderRadius: 3, fontSize: 11, letterSpacing: 1, marginBottom: 16,
 }
 
 const errorStyle: React.CSSProperties = {
-  background: '#2a1a1a', border: '1px solid #8a1a1a', color: '#ff6464',
+  background: '#f8e8e8',
+  border: '1px solid #8a1a1a',
+  borderLeft: '3px solid #8a1a1a',
+  color: '#8a1a1a',
   padding: 12, borderRadius: 3, fontSize: 11, letterSpacing: 1, marginBottom: 16,
 }
 
 const warnStyle: React.CSSProperties = {
-  background: '#2a221a', border: '1px solid #8a6a1a', color: '#ffaa3e',
+  background: '#fdf4e8',
+  border: '1px solid #8a6a1a',
+  borderLeft: '3px solid #8a6a1a',
+  color: '#8a6a1a',
   padding: 12, borderRadius: 3, fontSize: 11, letterSpacing: 1, marginTop: 16,
 }
 
 const adminNoticeStyle: React.CSSProperties = {
-  background: 'rgba(74,158,255,0.06)', border: '1px solid #2a4a8a',
-  borderLeft: '3px solid #4a9eff', color: '#4a9eff',
+  background: 'var(--brand-primary-soft)',
+  border: '1px solid color-mix(in srgb, var(--brand-primary) 30%, transparent)',
+  borderLeft: '3px solid var(--brand-primary)',
+  color: 'var(--brand-primary)',
   padding: 12, borderRadius: 3, fontSize: 10, letterSpacing: 3, fontWeight: 700, marginTop: 16,
 }
 
 const resubscribeBoxStyle: React.CSSProperties = {
-  background: 'rgba(255,170,62,0.06)', border: '1px solid #8a6a1a',
-  borderLeft: '3px solid #ffaa3e', borderRadius: 3, padding: 16, marginBottom: 16,
+  background: '#fdf4e8',
+  border: '1px solid #8a6a1a',
+  borderLeft: '3px solid #8a6a1a',
+  borderRadius: 3, padding: 16, marginBottom: 16,
 }
 
 const resubscribeHeaderStyle: React.CSSProperties = {
-  fontSize: 11, letterSpacing: 3, color: '#ffaa3e', fontWeight: 700, marginBottom: 8,
+  fontSize: 11, letterSpacing: 3, color: '#8a6a1a', fontWeight: 700, marginBottom: 8,
 }
 
 const resubscribeTextStyle: React.CSSProperties = {
-  fontSize: 12, lineHeight: 1.6, color: '#e0e2ea', marginBottom: 14,
+  fontSize: 12, lineHeight: 1.6,
+  color: 'var(--brand-on-page-bg)',
+  marginBottom: 14,
 }
 
 const resubscribeButtonStyle: React.CSSProperties = {
-  width: '100%', padding: 14, background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
-  border: 'none', borderRadius: 4, color: 'white',
+  width: '100%', padding: 14,
+  background: 'linear-gradient(135deg, var(--brand-primary), color-mix(in srgb, var(--brand-primary) 75%, black))',
+  border: 'none', borderRadius: 4,
+  color: 'var(--brand-on-primary)',
   fontSize: 12, fontWeight: 700, letterSpacing: 4, cursor: 'pointer',
-  fontFamily: FUTURA, boxShadow: '0 0 15px rgba(74,158,255,0.25)',
+  fontFamily: FUTURA,
+  boxShadow: '0 0 15px color-mix(in srgb, var(--brand-primary) 25%, transparent)',
 }
 
 function seatRowStyle(borderColor: string): React.CSSProperties {
   return {
-    background: '#0d0e14', border: `1px solid ${borderColor}`,
+    background: 'var(--brand-card-surface)',
+    border: `1px solid ${borderColor}`,
     borderLeft: `3px solid ${borderColor}`, borderRadius: 3,
     padding: 14, marginBottom: 10,
   }
@@ -1118,7 +869,8 @@ const seatHeaderStyle: React.CSSProperties = {
 }
 
 const seatTeamStyle: React.CSSProperties = {
-  fontSize: 13, fontWeight: 700, letterSpacing: 1, color: '#e0e2ea',
+  fontSize: 13, fontWeight: 700, letterSpacing: 1,
+  color: 'var(--brand-on-page-bg)',
 }
 
 function seatBadgeStyle(color: string): React.CSSProperties {
@@ -1130,102 +882,7 @@ function seatBadgeStyle(color: string): React.CSSProperties {
 }
 
 const seatDetailStyle: React.CSSProperties = {
-  fontSize: 11, color: '#888a92', letterSpacing: 0.5, lineHeight: 1.5, marginTop: 4,
-}
-
-// ─── Inline theme editor styles ─────────────────────────────────────
-
-const themePresetGridStyle: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
-  gap: 8,
-  marginBottom: 12,
-}
-
-function themePresetCardStyle(selected: boolean): React.CSSProperties {
-  return {
-    background: '#0a0b10',
-    border: selected ? '2px solid #4a9eff' : '1px solid #2a2c34',
-    padding: selected ? 9 : 10,
-    borderRadius: 4,
-    cursor: 'pointer',
-    textAlign: 'left',
-    fontFamily: FUTURA,
-    transition: 'border-color 0.15s',
-  }
-}
-
-const themePresetSwatchRowStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: 4,
-  marginBottom: 8,
-}
-
-const themePresetSwatchStyle: React.CSSProperties = {
-  width: 26,
-  height: 24,
-  borderRadius: 3,
-  border: '1px solid rgba(255,255,255,0.08)',
-}
-
-function themePresetNameStyle(selected: boolean): React.CSSProperties {
-  return {
-    fontSize: 10,
-    letterSpacing: 1,
-    fontWeight: 700,
-    color: selected ? '#4a9eff' : '#e0e2ea',
-  }
-}
-
-const themeDisclaimerStyle: React.CSSProperties = {
-  background: 'rgba(74,158,255,0.06)',
-  border: '1px solid rgba(74,158,255,0.3)',
-  borderLeft: '3px solid #4a9eff',
-  borderRadius: 4,
-  padding: '10px 14px',
-  marginBottom: 14,
   fontSize: 11,
-  lineHeight: 1.6,
-  color: '#e0e2ea',
-  letterSpacing: 0.3,
-}
-
-const themeSuccessStyle: React.CSSProperties = {
-  background: '#1a2a1a',
-  border: '1px solid #1a6a1a',
-  borderLeft: '3px solid #32ff7e',
-  color: '#32ff7e',
-  padding: 12,
-  borderRadius: 3,
-  fontSize: 11,
-  letterSpacing: 0.5,
-  lineHeight: 1.5,
-  marginBottom: 12,
-}
-
-const themeErrorStyle: React.CSSProperties = {
-  background: '#2a1a1a',
-  border: '1px solid #8a1a1a',
-  borderLeft: '3px solid #ff6464',
-  color: '#ff6464',
-  padding: 12,
-  borderRadius: 3,
-  fontSize: 11,
-  letterSpacing: 0.5,
-  lineHeight: 1.5,
-  marginBottom: 12,
-}
-
-const themeSaveButtonStyle: React.CSSProperties = {
-  width: '100%',
-  padding: 14,
-  background: '#0d0e14',
-  borderTop: '3px solid #4a9eff',
-  border: 'none',
-  borderRadius: 4,
-  color: '#4a9eff',
-  fontSize: 12,
-  fontWeight: 700,
-  letterSpacing: 4,
-  fontFamily: FUTURA,
+  color: 'var(--brand-muted-text)',
+  letterSpacing: 0.5, lineHeight: 1.5, marginTop: 4,
 }

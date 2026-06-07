@@ -6,32 +6,61 @@ import Link from 'next/link'
 import { useBranding } from '@/components/ThemeProvider'
 
 // =============================================================================
-// /sign-in — branded login (v23, Phase C)
+// /sign-in — branded login (v24, Pass-2 token sweep + Clerk widget themed)
 // =============================================================================
-// Reads useBranding() so the sign-in page reflects the tenant when
-// accessed via a tenant subdomain. On dialerseat.com (no branding), the
-// page renders exactly as it did in v22.
+// Reads useBranding() so the sign-in page reflects the tenant when accessed
+// via a tenant subdomain. On dialerseat.com (no branding), renders
+// identically to v23 because default Pass-2 tokens equal the previous
+// Pass-1 defaults.
 //
-// What changes when branding is active:
-//   - The "D" gradient mark + "DIALERSEAT" wordmark are replaced by the
-//     tenant logo at 256×74.
-//   - The "WELCOME BACK" tagline becomes "WELCOME TO {BRAND_NAME}".
-//   - The hardcoded #4a9eff gradient on the default mark isn't rendered.
+// What changes from v23:
+//   - Page background, wordmark color, tagline color migrated from
+//     Pass-1 vestigial tokens to Pass-2 brand tokens:
+//       var(--background)      → var(--brand-page-bg)
+//       var(--text-primary)    → var(--brand-on-page-bg)
+//       var(--text-secondary)  → var(--brand-muted-text)
+//   - Clerk <SignIn /> gets an appearance prop. variables.colorPrimary
+//     receives the concrete hex from branding.primary_color (Clerk needs
+//     a value, not a CSS var, for internal derivations like focus rings
+//     and hover states). elements.* use var() directly so live theme
+//     changes propagate without remount.
 //
-// v25 polish: the logo is now a Link to `/`. Relative href means tenants
-// land on their own subdomain root; default DialerSeat users land on the
-// marketing site. Hover opacity gives the visual affordance.
+// What stays from v23:
+//   - Tenant logo at 256×74 with objectFit:contain (recommended 512×148
+//     aspect ratio fits with zero letterbox).
+//   - Default-brand state: gradient D + DIALERSEAT wordmark (only renders
+//     when no tenant logo present).
+//   - Conditional tagline: "WELCOME TO {BRAND}" vs "WELCOME BACK".
+//   - Logo as Link to "/" with hover opacity affordance.
+//
+// Clerk theming choices:
+//   - card: --brand-card-surface bg + --brand-card-border, no shadow.
+//   - inputs: --brand-page-bg bg, --brand-on-page-bg text. Inputs being
+//     bg-darker (page-bg) than the card (card-surface) reads as inset
+//     wells on light themes and floating wells on dark themes.
+//   - primary CTA: --brand-primary bg, --brand-on-primary text, uppercase
+//     Futura with letterSpacing to match the rest of the dashboard's
+//     button typography.
+//   - Auto-derivations Clerk does from variables.colorPrimary (hover,
+//     focus rings, link colors inside form fields) inherit the tenant
+//     hue naturally because we pass the hex.
 // =============================================================================
+
+const FUTURA = 'Futura PT, Futura, "Trebuchet MS", sans-serif'
 
 export default function SignInPage() {
   const branding = useBranding()
   const brandName = branding?.brand_name?.toUpperCase() || 'DIALERSEAT'
   const logoUrl = branding?.logo_url || null
+  // Clerk's variables.colorPrimary needs a concrete hex value (it's used
+  // internally to compute hover/focus/link colors). Default to the
+  // DialerSeat blue if no tenant branding is present.
+  const primary = branding?.primary_color || '#4a9eff'
 
   return (
     <main style={{
       minHeight: '100vh',
-      background: 'var(--background)',
+      background: 'var(--brand-page-bg)',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
@@ -95,16 +124,104 @@ export default function SignInPage() {
                 fontSize: '18px',
                 fontWeight: 'bold',
                 letterSpacing: '6px',
-                color: 'var(--text-primary)',
+                color: 'var(--brand-on-page-bg)',
               }}>DIALERSEAT</span>
             </>
           )}
         </Link>
-        <p style={{ fontSize: '12px', letterSpacing: '3px', color: 'var(--text-secondary)' }}>
+        <p style={{
+          fontSize: '12px',
+          letterSpacing: '3px',
+          color: 'var(--brand-muted-text)',
+        }}>
           {logoUrl ? `WELCOME TO ${brandName}` : 'WELCOME BACK'}
         </p>
       </div>
-      <SignIn />
+      <SignIn
+        appearance={{
+          variables: {
+            colorPrimary: primary,
+            borderRadius: '4px',
+            fontFamily: FUTURA,
+          },
+          elements: {
+            card: {
+              background: 'var(--brand-card-surface)',
+              border: '1px solid var(--brand-card-border)',
+              boxShadow: 'none',
+            },
+            headerTitle: {
+              color: 'var(--brand-on-page-bg)',
+              fontFamily: FUTURA,
+            },
+            headerSubtitle: {
+              color: 'var(--brand-muted-text)',
+              fontFamily: FUTURA,
+            },
+            socialButtonsBlockButton: {
+              background: 'var(--brand-page-bg)',
+              border: '1px solid var(--brand-card-border)',
+              color: 'var(--brand-on-page-bg)',
+            },
+            socialButtonsBlockButtonText: {
+              color: 'var(--brand-on-page-bg)',
+            },
+            dividerText: {
+              color: 'var(--brand-muted-text)',
+            },
+            dividerLine: {
+              background: 'var(--brand-card-border)',
+            },
+            formFieldLabel: {
+              color: 'var(--brand-on-page-bg)',
+              fontFamily: FUTURA,
+              letterSpacing: '0.5px',
+            },
+            formFieldInput: {
+              background: 'var(--brand-page-bg)',
+              border: '1px solid var(--brand-card-border)',
+              color: 'var(--brand-on-page-bg)',
+            },
+            formFieldInputShowPasswordButton: {
+              color: 'var(--brand-muted-text)',
+            },
+            formButtonPrimary: {
+              background: 'var(--brand-primary)',
+              color: 'var(--brand-on-primary)',
+              textTransform: 'uppercase',
+              letterSpacing: '2px',
+              fontWeight: 700,
+              fontFamily: FUTURA,
+            },
+            footerActionText: {
+              color: 'var(--brand-muted-text)',
+              fontFamily: FUTURA,
+            },
+            footerActionLink: {
+              color: 'var(--brand-primary)',
+              fontFamily: FUTURA,
+            },
+            identityPreviewText: {
+              color: 'var(--brand-on-page-bg)',
+              fontFamily: FUTURA,
+            },
+            identityPreviewEditButton: {
+              color: 'var(--brand-primary)',
+            },
+            formResendCodeLink: {
+              color: 'var(--brand-primary)',
+            },
+            otpCodeFieldInput: {
+              background: 'var(--brand-page-bg)',
+              border: '1px solid var(--brand-card-border)',
+              color: 'var(--brand-on-page-bg)',
+            },
+            alertText: {
+              color: 'var(--brand-on-page-bg)',
+            },
+          },
+        }}
+      />
     </main>
   )
 }

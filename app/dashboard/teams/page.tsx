@@ -5,17 +5,14 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 // =============================================================================
-// TEAMS PAGE — Pass 2 Phase C6 (binding sweep)
+// TEAMS PAGE — Pass 2 Phase C6 + item-1 copy-block primary swap
 // =============================================================================
 // Largest file in the sweep. Rebinding strategy is the same as C3-C5 (no
-// recharts, all CSS contexts), but with one wrinkle: this file has helper
-// components (Section, EmptyHint, Badge, FieldLabel, SegmentedTwo,
-// ErrorInline) and bottom-level style constants (overlayStyle,
-// modalShellStyle, modalInput, btnPrimary, btnDanger, btnSubtle,
-// modalCancelBtn, modalConfirmBtn) defined OUTSIDE the main component.
-// Those helpers were originally written for self-containment with
-// hardcoded hex duplicates of T values. They get surgically updated to
-// reference var() tokens directly so themed values propagate.
+// recharts, all CSS contexts), with helper components (Section, EmptyHint,
+// Badge, FieldLabel, SegmentedTwo, ErrorInline) and bottom-level style
+// constants (overlayStyle, modalShellStyle, modalInput, btnPrimary,
+// btnDanger, btnSubtle, modalCancelBtn, modalConfirmBtn) referencing
+// var() tokens directly so themed values propagate.
 //
 // What's themed (via T rebinding + helper-literal swaps):
 //   T.bg      → var(--brand-page-bg)
@@ -24,27 +21,37 @@ import Link from 'next/link'
 //   T.dark    → var(--brand-sidebar-bg)  (header strip + primary CTA bg)
 //   T.text    → var(--brand-on-page-bg)
 //   T.muted   → var(--brand-muted-text)
-//   T.blue    → var(--brand-primary)  (unchanged — was already themed)
+//   T.blue    → var(--brand-primary)
 //
 // What stays semantic (NEVER themed):
 //   T.accent  (#2a4a8a) — Section heading accents (PENDING/ATTACHED/CODES/
-//                         ACTIVE MEMBERS), MEMBER role badge, "▸ AS AN AGENT/
-//                         OWNER" info card headers, info card left border
+//                         ACTIVE MEMBERS), MEMBER role badge, RECRUIT code
+//                         badge, redeem-info message border + text
 //   T.green   (#1a6a1a) — Owner-pays payer badge, has-access border accent,
 //                         redeem success message, copy-success flash
 //   T.red     (#8a1a1a) — Delete buttons, danger modals, error backgrounds,
 //                         REVOKE/DETACH/KICK actions
 //   T.amber   (#8a6a1a) — Agent-pays payer badge, no-access border accent,
 //                         PENDING REQUESTS section accent
-//   '#ffaa3e' — Sub gate modal warning amber + sub gate CTA (semantic
-//               "subscription required" yellow accent, distinct from amber)
-//   Three '#dde0e8' "selected/hover surface lift" instances → adaptive
-//                  color-mix(var(--brand-card-surface) 85%, on-page-bg 15%)
-//   Sub gate hardcoded light-on-dark text values ('#e0e2ea', '#c0c2ca',
-//   '#888a92') → var(--brand-on-sidebar) / var(--brand-on-sidebar-muted)
+//   '#ffaa3e' — Sub gate modal warning amber + sub gate CTA
+//   Adaptive SURFACE_LIFT — color-mix(card-surface 85%, on-page-bg 15%) for
+//                  expanded team header, attach modal radio, SegmentedTwo
+//   Sub gate hardcoded light-on-dark text values → var(--brand-on-sidebar) /
+//                                                  var(--brand-on-sidebar-muted)
 //   OWNER role badge bg rgba(74,158,255,0.12) → var(--brand-primary-soft)
-//   Direct: header border-bottom T.accent → var(--brand-header-top-accent);
-//           '#8888aa' header stats → var(--brand-on-sidebar-muted)
+//   Direct: header border-bottom → var(--brand-header-top-accent);
+//           header stats text → var(--brand-on-sidebar-muted)
+//
+// ── Item-1 change (this push) ────────────────────────────────────────
+// The "▸ WHAT IS A DIALERSEAT TEAM?" copy block had three uses of
+// T.accent (semantic dark blue) that JC asked to swap to primary:
+//   1. Card border-left  (T.accent → T.blue)
+//   2. "▸ AS AN AGENT" subheader color  (T.accent → T.blue)
+//   3. "▸ AS AN OWNER" subheader color  (T.accent → T.blue)
+// Section title ("▸ WHAT IS A DIALERSEAT TEAM?") stays T.muted to match
+// every other section header on the page ("▸ TEAMS YOU OWN",
+// "▸ HAVE A CODE?", etc.). All other T.accent uses elsewhere on the page
+// are unchanged.
 //
 // All structural code (fetches, state machines, modal flows) byte-for-byte.
 // =============================================================================
@@ -1344,9 +1351,12 @@ export default function TeamsPage() {
           </div>
         )}
 
+        {/* ── ▸ WHAT IS A DIALERSEAT TEAM? — item-1 primary swap ───────── */}
+        {/*    Card border-left + AS AN AGENT / AS AN OWNER subheaders     */}
+        {/*    moved from T.accent (semantic blue) to T.blue (primary).    */}
         <div style={{
           background: T.surface, border: `1px solid ${T.border}`,
-          borderLeft: `3px solid ${T.accent}`, borderRadius: 4,
+          borderLeft: `3px solid ${T.blue}`, borderRadius: 4,
           padding: '28px 32px', marginBottom: 16,
         }}>
           <div style={{
@@ -1360,7 +1370,7 @@ export default function TeamsPage() {
           </p>
 
           <div style={{ marginBottom: 22 }}>
-            <div style={{ fontSize: 15, fontWeight: 'bold', color: T.accent, letterSpacing: 2, marginBottom: 10 }}>
+            <div style={{ fontSize: 15, fontWeight: 'bold', color: T.blue, letterSpacing: 2, marginBottom: 10 }}>
               ▸ AS AN AGENT
             </div>
             <p style={{ fontSize: 16, lineHeight: 1.7, color: T.text, margin: 0 }}>
@@ -1369,7 +1379,7 @@ export default function TeamsPage() {
           </div>
 
           <div style={{ marginBottom: 22 }}>
-            <div style={{ fontSize: 15, fontWeight: 'bold', color: T.accent, letterSpacing: 2, marginBottom: 10 }}>
+            <div style={{ fontSize: 15, fontWeight: 'bold', color: T.blue, letterSpacing: 2, marginBottom: 10 }}>
               ▸ AS AN OWNER
             </div>
             <p style={{ fontSize: 16, lineHeight: 1.7, color: T.text, margin: 0 }}>
