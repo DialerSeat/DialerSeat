@@ -5,7 +5,7 @@
 @tailwind utilities;
 
 /* =============================================================================
- * DIALERSEAT GLOBALS — v26 (Pass 2 — header/sidebar split, migration 004)
+ * DIALERSEAT GLOBALS — v27 (restore original default sidebar value)
  * =============================================================================
  * Four-tier CSS variable system for white-label theming.
  *
@@ -15,13 +15,18 @@
  *     (landing page, signed-out users, admins). ThemeProvider overrides
  *     them when a tenant is active.
  *
- *     NEW in v26: --brand-header-bg is independent of --brand-sidebar-bg.
- *     Tenants previously had a single dark-chrome color driving both the
- *     sidebar AND the header strip; now they pick each. The default is
- *     the same as --brand-sidebar-bg so existing unbranded renders look
- *     identical, and migration 004 backfilled existing tenant rows with
- *     header_bg_color = sidebar_color so existing branded renders also
- *     look identical until tenants intentionally pick a different value.
+ *     Original DialerSeat default palette:
+ *       --brand-sidebar-bg  #111118  (darker)
+ *       --brand-header-bg   #1a1a2e  (slightly less dark; intentionally
+ *                                     different from sidebar)
+ *       --brand-primary     #4a9eff  (DialerSeat blue)
+ *       --brand-page-bg     #f0f1f4  (light gray dashboard body)
+ *
+ *     v26 had sidebar=#1a1a2e/header=#1a1a2e (collapsed). v27 restores
+ *     the intentional two-shade distinction. Migration 004 backfilled
+ *     existing tenant rows with header_bg_color = sidebar_color so
+ *     existing branded renders still look identical until a tenant picks
+ *     a different header value.
  *
  *   Tier 2: Derived from Tier 1.
  *     Primary family:
@@ -29,7 +34,7 @@
  *     Sidebar family:
  *       --brand-on-sidebar, --brand-on-sidebar-muted,
  *       --brand-sidebar-active-bg, --brand-sidebar-hover-bg
- *     Header family (NEW v26):
+ *     Header family:
  *       --brand-on-header, --brand-on-header-muted,
  *       --brand-header-top-accent (= primary)
  *     Page-bg family:
@@ -50,17 +55,15 @@
  * #e2e4ea, etc.). The dark --background / --surface / --text-primary
  * tokens below are kept for the landing page and any other pre-Pass-2
  * code that still references them. Phase C bound the dashboard surfaces
- * to the new --brand-page-bg / --brand-card-surface tokens; v26 adds
- * the header split, ready for the dashboard layout's header strip to
- * bind to --brand-header-bg in the next push.
+ * to the new --brand-page-bg / --brand-card-surface tokens.
  * =============================================================================
  */
 
 :root {
   /* ── Tier 1: User-picked (overridable by ThemeProvider when tenant active) */
   --brand-primary: #4a9eff;       /* DialerSeat Classic blue */
-  --brand-sidebar-bg: #1a1a2e;    /* DialerSeat Classic dark navy */
-  --brand-header-bg: #1a1a2e;     /* NEW v26 — defaults to sidebar value */
+  --brand-sidebar-bg: #111118;    /* Original DialerSeat sidebar — darker */
+  --brand-header-bg: #1a1a2e;     /* Original DialerSeat header strip — slightly lighter */
   --brand-page-bg: #f0f1f4;       /* Pass 2 dashboard page bg */
 
   /* ── Tier 2: Derived — primary family ───────────────────────────────── */
@@ -74,14 +77,14 @@
   --brand-sidebar-active-bg: rgba(255, 255, 255, 0.08);
   --brand-sidebar-hover-bg: rgba(255, 255, 255, 0.04);
 
-  /* ── Tier 2: Derived — header family (NEW v26) ──────────────────────── */
+  /* ── Tier 2: Derived — header family ────────────────────────────────── */
   --brand-on-header: #ffffff;
   --brand-on-header-muted: rgba(255, 255, 255, 0.55);
   --brand-header-top-accent: var(--brand-primary);
 
   /* ── Tier 2: Derived — page-bg family ───────────────────────────────── */
   --brand-on-page-bg: #1a1c24;       /* body text on page bg */
-  --brand-card-surface: #e2e4ea;     /* card / panel bg */
+  --brand-card-surface: #e2e4ea;     /* card / panel bg (original DialerSeat) */
   --brand-card-border: #c4c8d0;      /* card / divider border */
   --brand-muted-text: #5a5e6a;       /* low-emphasis text */
 

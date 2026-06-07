@@ -5,7 +5,7 @@ import { createContext, useContext, useMemo } from 'react'
 import type { TenantBranding } from '@/lib/tenant'
 
 // =============================================================================
-// THEME PROVIDER v5 — header/sidebar split (migration 004)
+// THEME PROVIDER v6 — restore original DialerSeat default palette
 // =============================================================================
 // Injects 18 CSS variables onto :root — 4 user-picked + 14 derived.
 // Tenant branding is server-fetched in the root layout (via subdomain
@@ -14,11 +14,12 @@ import type { TenantBranding } from '@/lib/tenant'
 // Token tiers:
 //
 // Tier 1 — user-picked (4, DB-stored):
-//   --brand-primary        buttons, accents, focus rings, AWAITING DATA
-//                          pill, chart line, MANAGER+ badge, segmented
-//                          active state, header top accent
-//   --brand-sidebar-bg     sidebar background, primary button background
-//   --brand-header-bg      header strip background (NEW v5)
+//   --brand-primary        buttons, accents, focus rings, MANAGER+ badge,
+//                          segmented active state, header top accent
+//   --brand-sidebar-bg     sidebar background, primary button background,
+//                          analytics AWAITING DATA pills
+//   --brand-header-bg      header strip background (the bar at top of each
+//                          dashboard page, distinct from sidebar)
 //   --brand-page-bg        dashboard page body bg
 //
 // Tier 2 — derived (14, computed here):
@@ -31,7 +32,7 @@ import type { TenantBranding } from '@/lib/tenant'
 //     --brand-on-sidebar-muted     same hue at 65% alpha (low-emphasis)
 //     --brand-sidebar-active-bg    primary at 18% over sidebar (active nav)
 //     --brand-sidebar-hover-bg     primary at 9% over sidebar (hover)
-//   Header family (NEW v5):
+//   Header family:
 //     --brand-on-header            text/icon color on header strip
 //     --brand-on-header-muted      same hue at 65% alpha (low-emphasis)
 //     --brand-header-top-accent    primary (semantic: header accent line)
@@ -41,27 +42,28 @@ import type { TenantBranding } from '@/lib/tenant'
 //     --brand-card-border          page-bg shifted 18% toward on-page-bg
 //     --brand-muted-text           60% on-page-bg + 40% page-bg (low emphasis)
 //
-// Contrast picker (pickContrastText):
-//   Computes WCAG relative luminance, returns true white (#ffffff) for
-//   dark colors (L ≤ 0.18) or app-standard near-black (#1a1c24) for
-//   lighter colors. Threshold tuned so mid-saturation primaries like
-//   lavender (#b8a3e0), forest green (#5fb87a), and rose (#e8b8c5) all
-//   correctly get dark text (the higher-contrast choice).
+// v6 — DEFAULT VALUES RESTORED (vs v5):
+//   DEFAULT_SIDEBAR_BG  #1a1c24 → #111118  (the original darker sidebar)
+//   DEFAULT_HEADER_BG   NEW = #1a1a2e      (distinct from sidebar)
 //
-// Per JC's directive: "as long as text is subjected to automation or
-// recommendation (true white or black) but if not its still fine" — we
-// pick one of two extremes, never a mid-tone. #1a1c24 is the app's
-// standard near-black used everywhere else, preserving visual consistency.
+// Header-bg fallback semantics:
+//   - branding has valid header_bg_color → use it
+//   - branding present but header_bg_color invalid/missing → fall back to
+//     sidebar (preserves migration 004 backfill, which set
+//     header_bg_color = sidebar_color on every existing tenant row so they
+//     keep looking like they did before the 4-color split)
+//   - branding null (no tenant — landing, signed-out, admin) → use
+//     DEFAULT_HEADER_BG so default DialerSeat shows the two-shade chrome
 //
-// Header-bg fallback: if branding.header_bg_color is missing or invalid
-// hex (very old cached row from before migration 004), we fall back to
-// the user's actual sidebar value — NOT to DEFAULT_SIDEBAR_BG. That
-// matches how migration 004 backfilled existing rows (header_bg_color =
-// sidebar_color) so unchanged tenants render identically.
+// Contrast picker (pickContrastText): WCAG relative luminance, returns
+// #ffffff for dark colors (L ≤ 0.18) or #1a1c24 (app near-black) for
+// lighter ones. Threshold tuned so mid-saturation primaries like lavender
+// (#b8a3e0), forest (#5fb87a), rose (#e8b8c5) correctly get dark text.
 // =============================================================================
 
 const DEFAULT_PRIMARY = '#4a9eff'
-const DEFAULT_SIDEBAR_BG = '#1a1c24'
+const DEFAULT_SIDEBAR_BG = '#111118'  // v6 — was '#1a1c24', restored to original
+const DEFAULT_HEADER_BG = '#1a1a2e'   // v6 — NEW; distinct from sidebar default
 const DEFAULT_PAGE_BG = '#f0f1f4'
 
 const BrandingContext = createContext<TenantBranding | null>(null)
@@ -102,11 +104,17 @@ export function ThemeProvider({
     const sidebar = isValidHex(branding?.sidebar_color)
       ? (branding!.sidebar_color as string)
       : DEFAULT_SIDEBAR_BG
-    // Header-bg falls back to sidebar value (not the constant) if missing —
-    // matches the migration 004 backfill behavior.
+    // Header-bg fallback chain:
+    //   1. Use branding.header_bg_color if valid
+    //   2. Else if branding object is present (tenant active but header_bg
+    //      somehow missing — shouldn't happen post-migration-004 backfill,
+    //      but defensive), use sidebar to preserve their look
+    //   3. Else (no tenant at all), use DEFAULT_HEADER_BG — restores the
+    //      two-shade DialerSeat default chrome (#111118 sidebar /
+    //      #1a1a2e header)
     const headerBg = isValidHex(branding?.header_bg_color)
       ? (branding!.header_bg_color as string)
-      : sidebar
+      : (branding ? sidebar : DEFAULT_HEADER_BG)
     const pageBg = isValidHex(branding?.page_bg_color)
       ? (branding!.page_bg_color as string)
       : DEFAULT_PAGE_BG
@@ -134,7 +142,7 @@ export function ThemeProvider({
   --brand-sidebar-active-bg: color-mix(in srgb, ${primary} 18%, transparent);
   --brand-sidebar-hover-bg: color-mix(in srgb, ${primary} 9%, transparent);
 
-  /* Tier 2 — derived: header family (NEW v5) */
+  /* Tier 2 — derived: header family */
   --brand-on-header: ${onHeader};
   --brand-on-header-muted: color-mix(in srgb, ${onHeader} 65%, transparent);
   --brand-header-top-accent: ${primary};
