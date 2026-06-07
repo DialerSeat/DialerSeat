@@ -5,66 +5,83 @@ import { createContext, useContext, useMemo } from 'react'
 import type { TenantBranding } from '@/lib/tenant'
 
 // =============================================================================
-// THEME PROVIDER v6 — restore original DialerSeat default palette
+// THEME PROVIDER v7 — exact original-spec defaults for the no-tenant case
 // =============================================================================
-// Injects 18 CSS variables onto :root — 4 user-picked + 14 derived.
-// Tenant branding is server-fetched in the root layout (via subdomain
-// resolution in proxy/middleware) and passed in as initialBranding.
+// v7 fixes a class of visual drift: Tier-2 tokens were being computed via
+// color-mix() / pickContrastText() even when no tenant branding was
+// present. The derivations produced values close to but not identical to
+// JC's original palette (e.g. card surface computed as ~#dfe0e3 instead
+// of the spec'd #e2e4ea; sidebar muted text as white at 65% alpha instead
+// of the spec'd #8888aa; on-primary as #1a1c24 dark instead of #ffffff
+// because WCAG pickContrastText returned dark for the default blue).
 //
-// Token tiers:
+// v7 behavior:
+//   - When initialBranding is null (regular dialerseat.com user, signed-
+//     out, landing, admin), emit the EXACT hardcoded original-spec values
+//     for every Tier-2 token.
+//   - When initialBranding is present, derive Tier-2 tokens from Tier-1
+//     via the existing color-mix + pickContrastText logic. Same behavior
+//     as v6.
 //
-// Tier 1 — user-picked (4, DB-stored):
-//   --brand-primary        buttons, accents, focus rings, MANAGER+ badge,
-//                          segmented active state, header top accent
-//   --brand-sidebar-bg     sidebar background, primary button background,
-//                          analytics AWAITING DATA pills
-//   --brand-header-bg      header strip background (the bar at top of each
-//                          dashboard page, distinct from sidebar)
-//   --brand-page-bg        dashboard page body bg
+//   Net effect: default DialerSeat looks pixel-perfect to JC's spec.
+//   Branded tenants (Preset 1-4 or custom) render identically to v6.
 //
-// Tier 2 — derived (14, computed here):
-//   Primary family:
-//     --brand-on-primary           text/icon color on primary surfaces
-//     --brand-primary-hover        primary mixed 88% with black
-//     --brand-primary-soft         primary mixed 12% with transparent
-//   Sidebar family:
-//     --brand-on-sidebar           text/icon color on sidebar
-//     --brand-on-sidebar-muted     same hue at 65% alpha (low-emphasis)
-//     --brand-sidebar-active-bg    primary at 18% over sidebar (active nav)
-//     --brand-sidebar-hover-bg     primary at 9% over sidebar (hover)
-//   Header family:
-//     --brand-on-header            text/icon color on header strip
-//     --brand-on-header-muted      same hue at 65% alpha (low-emphasis)
-//     --brand-header-top-accent    primary (semantic: header accent line)
-//   Page-bg family:
-//     --brand-on-page-bg           body text color, auto-contrast picked
-//     --brand-card-surface         page-bg shifted 8% toward on-page-bg
-//     --brand-card-border          page-bg shifted 18% toward on-page-bg
-//     --brand-muted-text           60% on-page-bg + 40% page-bg (low emphasis)
+// Original-spec palette (no-tenant defaults):
+//   Tier 1:
+//     --brand-primary             #4a9eff
+//     --brand-sidebar-bg          #111118
+//     --brand-header-bg           #1a1a2e
+//     --brand-page-bg             #f0f1f4
+//   Tier 2 — primary family:
+//     --brand-on-primary          #ffffff
+//     --brand-primary-hover       (derived) — color-mix(primary 88%, black)
+//     --brand-primary-soft        (derived) — primary at 12% alpha
+//   Tier 2 — sidebar family:
+//     --brand-on-sidebar          #ffffff
+//     --brand-on-sidebar-muted    #8888aa
+//     --brand-sidebar-active-bg   rgba(255,255,255,0.08)
+//     --brand-sidebar-hover-bg    rgba(255,255,255,0.04)
+//   Tier 2 — header family:
+//     --brand-on-header           #ffffff
+//     --brand-on-header-muted     #8888aa
+//     --brand-header-top-accent   (= primary, always derived)
+//   Tier 2 — page-bg family:
+//     --brand-on-page-bg          #1a1c24
+//     --brand-card-surface        #e2e4ea
+//     --brand-card-border         #c4c8d0
+//     --brand-muted-text          #5a5e6a
 //
-// v6 — DEFAULT VALUES RESTORED (vs v5):
-//   DEFAULT_SIDEBAR_BG  #1a1c24 → #111118  (the original darker sidebar)
-//   DEFAULT_HEADER_BG   NEW = #1a1a2e      (distinct from sidebar)
+// Primary-hover, primary-soft, and header-top-accent stay derived even in
+// the no-tenant case because they're mathematically dependent on primary
+// (not specifically spec'd by JC). The derivations produce sensible
+// values for #4a9eff.
 //
-// Header-bg fallback semantics:
-//   - branding has valid header_bg_color → use it
-//   - branding present but header_bg_color invalid/missing → fall back to
-//     sidebar (preserves migration 004 backfill, which set
-//     header_bg_color = sidebar_color on every existing tenant row so they
-//     keep looking like they did before the 4-color split)
-//   - branding null (no tenant — landing, signed-out, admin) → use
-//     DEFAULT_HEADER_BG so default DialerSeat shows the two-shade chrome
-//
-// Contrast picker (pickContrastText): WCAG relative luminance, returns
-// #ffffff for dark colors (L ≤ 0.18) or #1a1c24 (app near-black) for
-// lighter ones. Threshold tuned so mid-saturation primaries like lavender
-// (#b8a3e0), forest (#5fb87a), rose (#e8b8c5) correctly get dark text.
+// Header-bg fallback chain unchanged from v6:
+//   - branding.header_bg_color valid → use it
+//   - branding present but header_bg_color invalid → fall back to sidebar
+//     (matches migration 004 backfill semantics)
+//   - no branding → use DEFAULT_HEADER_BG
 // =============================================================================
 
+// Tier 1 defaults
 const DEFAULT_PRIMARY = '#4a9eff'
-const DEFAULT_SIDEBAR_BG = '#111118'  // v6 — was '#1a1c24', restored to original
-const DEFAULT_HEADER_BG = '#1a1a2e'   // v6 — NEW; distinct from sidebar default
+const DEFAULT_SIDEBAR_BG = '#111118'
+const DEFAULT_HEADER_BG = '#1a1a2e'
 const DEFAULT_PAGE_BG = '#f0f1f4'
+
+// Tier 2 hardcoded defaults — used only when no tenant branding present.
+// Match JC's confirmed original DialerSeat spec exactly.
+const DEFAULT_ON_PRIMARY = '#ffffff'
+const DEFAULT_ON_SIDEBAR = '#ffffff'
+const DEFAULT_ON_SIDEBAR_MUTED = '#8888aa'
+const DEFAULT_SIDEBAR_ACTIVE_BG = 'rgba(255,255,255,0.08)'
+const DEFAULT_SIDEBAR_HOVER_BG = 'rgba(255,255,255,0.04)'
+const DEFAULT_ON_HEADER = '#ffffff'
+const DEFAULT_ON_HEADER_MUTED = '#8888aa'
+const DEFAULT_ON_PAGE_BG = '#1a1c24'
+const DEFAULT_CARD_SURFACE = '#e2e4ea'
+const DEFAULT_CARD_BORDER = '#c4c8d0'
+const DEFAULT_MUTED_TEXT = '#5a5e6a'
 
 const BrandingContext = createContext<TenantBranding | null>(null)
 
@@ -98,31 +115,49 @@ export function ThemeProvider({
   const branding = initialBranding ?? null
 
   const cssVars = useMemo(() => {
+    const hasBranding = !!branding
+
+    // Tier 1 — user-picked, with fallback to defaults
     const primary = isValidHex(branding?.primary_color)
       ? (branding!.primary_color as string)
       : DEFAULT_PRIMARY
     const sidebar = isValidHex(branding?.sidebar_color)
       ? (branding!.sidebar_color as string)
       : DEFAULT_SIDEBAR_BG
-    // Header-bg fallback chain:
-    //   1. Use branding.header_bg_color if valid
-    //   2. Else if branding object is present (tenant active but header_bg
-    //      somehow missing — shouldn't happen post-migration-004 backfill,
-    //      but defensive), use sidebar to preserve their look
-    //   3. Else (no tenant at all), use DEFAULT_HEADER_BG — restores the
-    //      two-shade DialerSeat default chrome (#111118 sidebar /
-    //      #1a1a2e header)
     const headerBg = isValidHex(branding?.header_bg_color)
       ? (branding!.header_bg_color as string)
-      : (branding ? sidebar : DEFAULT_HEADER_BG)
+      : (hasBranding ? sidebar : DEFAULT_HEADER_BG)
     const pageBg = isValidHex(branding?.page_bg_color)
       ? (branding!.page_bg_color as string)
       : DEFAULT_PAGE_BG
 
-    const onPrimary = pickContrastText(primary)
-    const onSidebar = pickContrastText(sidebar)
-    const onHeader = pickContrastText(headerBg)
-    const onPageBg = pickContrastText(pageBg)
+    // Tier 2 — either derived (branded) or hardcoded original-spec (no branding)
+    const onPrimary = hasBranding ? pickContrastText(primary) : DEFAULT_ON_PRIMARY
+    const onSidebar = hasBranding ? pickContrastText(sidebar) : DEFAULT_ON_SIDEBAR
+    const onHeader = hasBranding ? pickContrastText(headerBg) : DEFAULT_ON_HEADER
+    const onPageBg = hasBranding ? pickContrastText(pageBg) : DEFAULT_ON_PAGE_BG
+
+    const onSidebarMutedExpr = hasBranding
+      ? `color-mix(in srgb, ${onSidebar} 65%, transparent)`
+      : DEFAULT_ON_SIDEBAR_MUTED
+    const sidebarActiveBgExpr = hasBranding
+      ? `color-mix(in srgb, ${primary} 18%, transparent)`
+      : DEFAULT_SIDEBAR_ACTIVE_BG
+    const sidebarHoverBgExpr = hasBranding
+      ? `color-mix(in srgb, ${primary} 9%, transparent)`
+      : DEFAULT_SIDEBAR_HOVER_BG
+    const onHeaderMutedExpr = hasBranding
+      ? `color-mix(in srgb, ${onHeader} 65%, transparent)`
+      : DEFAULT_ON_HEADER_MUTED
+    const cardSurfaceExpr = hasBranding
+      ? `color-mix(in srgb, ${pageBg} 92%, ${onPageBg} 8%)`
+      : DEFAULT_CARD_SURFACE
+    const cardBorderExpr = hasBranding
+      ? `color-mix(in srgb, ${pageBg} 82%, ${onPageBg} 18%)`
+      : DEFAULT_CARD_BORDER
+    const mutedTextExpr = hasBranding
+      ? `color-mix(in srgb, ${onPageBg} 60%, ${pageBg} 40%)`
+      : DEFAULT_MUTED_TEXT
 
     return `:root {
   /* Tier 1 — user-picked (4) */
@@ -131,27 +166,27 @@ export function ThemeProvider({
   --brand-header-bg: ${headerBg};
   --brand-page-bg: ${pageBg};
 
-  /* Tier 2 — derived: primary family */
+  /* Tier 2 — primary family */
   --brand-on-primary: ${onPrimary};
   --brand-primary-hover: color-mix(in srgb, ${primary} 88%, black);
   --brand-primary-soft: color-mix(in srgb, ${primary} 12%, transparent);
 
-  /* Tier 2 — derived: sidebar family */
+  /* Tier 2 — sidebar family */
   --brand-on-sidebar: ${onSidebar};
-  --brand-on-sidebar-muted: color-mix(in srgb, ${onSidebar} 65%, transparent);
-  --brand-sidebar-active-bg: color-mix(in srgb, ${primary} 18%, transparent);
-  --brand-sidebar-hover-bg: color-mix(in srgb, ${primary} 9%, transparent);
+  --brand-on-sidebar-muted: ${onSidebarMutedExpr};
+  --brand-sidebar-active-bg: ${sidebarActiveBgExpr};
+  --brand-sidebar-hover-bg: ${sidebarHoverBgExpr};
 
-  /* Tier 2 — derived: header family */
+  /* Tier 2 — header family */
   --brand-on-header: ${onHeader};
-  --brand-on-header-muted: color-mix(in srgb, ${onHeader} 65%, transparent);
+  --brand-on-header-muted: ${onHeaderMutedExpr};
   --brand-header-top-accent: ${primary};
 
-  /* Tier 2 — derived: page-bg family */
+  /* Tier 2 — page-bg family */
   --brand-on-page-bg: ${onPageBg};
-  --brand-card-surface: color-mix(in srgb, ${pageBg} 92%, ${onPageBg} 8%);
-  --brand-card-border: color-mix(in srgb, ${pageBg} 82%, ${onPageBg} 18%);
-  --brand-muted-text: color-mix(in srgb, ${onPageBg} 60%, ${pageBg} 40%);
+  --brand-card-surface: ${cardSurfaceExpr};
+  --brand-card-border: ${cardBorderExpr};
+  --brand-muted-text: ${mutedTextExpr};
 }`
   }, [
     branding?.primary_color,
