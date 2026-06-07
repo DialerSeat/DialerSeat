@@ -9,41 +9,24 @@ import {
 } from 'recharts'
 
 // =============================================================================
-// app/dashboard/analytics/page.tsx — Pass 2 Phase C2 (binding sweep)
+// app/dashboard/analytics/page.tsx — Pass 2 Phase C2 + header-strip rebind
 // =============================================================================
-// All CSS-context token uses (the <style> block, inline style props, and
-// recharts contentStyle inline-style objects) are rebound from hardcoded
-// T.* hex constants to Pass 2 brand tokens via var() references.
+// Changes vs prior C2:
+//   - .analytics-header background: --brand-sidebar-bg → --brand-header-bg
+//     (the strip is the page header, not the sidebar — was a bug from C2
+//     that made every page's header strip follow the sidebar color)
+//   - .range-tab color: --brand-on-sidebar-muted → --brand-on-header-muted
+//   - .custom-range input bg + arrow color: sidebar tokens → header tokens
+//     (input bg still uses --brand-sidebar-active-bg because that token's
+//     value — primary at 18% alpha — is theme-independent and reads
+//     correctly over header-bg too)
+//   - AWAITING DATA pill: var(--brand-primary) bg + var(--brand-on-primary)
+//     text → hardcoded #363647 bg + #ffffff text (semantic dark accent,
+//     never themed)
 //
-// What's themed:
-//   - Page body bg + body text                → brand-page-bg / brand-on-page-bg
-//   - Header strip bg + accent line           → brand-sidebar-bg / brand-header-top-accent
-//   - Card surfaces, borders, muted text      → brand-card-surface / brand-card-border / brand-muted-text
-//   - Stat card TOTAL CALLS/TALK TIME stripes → brand-primary
-//   - Range tabs (active + inactive states)   → brand-primary / brand-on-sidebar-muted
-//   - Custom date inputs in header            → brand-sidebar-active-bg / brand-on-sidebar
-//   - Landing page CTA button                 → brand-primary-soft / brand-primary
-//   - AWAITING DATA empty-state pill          → brand-primary / brand-on-primary
-//   - Recharts tooltip popover styling        → brand-sidebar-bg / brand-on-sidebar
-//
-// What stays semantic (never themed):
-//   - T.green (#1a6a1a)  — CONVERSIONS, CLOSED stat stripes + values; CLOSED disposition
-//   - T.amber (#8a6a1a)  — BEST CAMPAIGN stat stripe + value; NOT INTERESTED disposition
-//   - T.red   (#8a1a1a)  — DO NOT CALL disposition
-//   - T.accent (#2a4a8a) — HOURS DIALED stat stripe + value; APPOINTMENT disposition;
-//                          Contacted bar in CAMPAIGN PERFORMANCE
-//   - DISPOSITION_COLORS pie chart category mapping
-//
-// Known limitation (NOT introduced by this push, pre-existing):
-//   - Recharts SVG attribute props (CartesianGrid stroke, XAxis/YAxis
-//     stroke, Line stroke + dot fill, Bar fill) are passed directly as
-//     SVG attributes, which do NOT resolve CSS custom properties per
-//     spec. These remain using T.* hex values for guaranteed legibility.
-//     Chart axes/gridlines/bars stay in default colors regardless of
-//     tenant theme. T.blue is kept as var(--brand-primary) per the
-//     pre-existing pattern; in CSS contexts it resolves, in SVG attrs
-//     it falls back to browser default.
-//     A future polish push could runtime-resolve via getComputedStyle.
+// Everything else preserved byte-for-byte: structural code, recharts SVG
+// attrs (T.muted, T.border, T.green etc.), stat card stripes, welcome
+// row, semantic colors, range-tab inactive border, landing-page button.
 // =============================================================================
 
 const T = {
@@ -303,7 +286,7 @@ export default function AnalyticsPage() {
         /* Flex row — title, range tabs, spacer pushing the LANDING button  */
         /* to the far right. Original behavior preserved.                   */
         .analytics-header {
-          background: var(--brand-sidebar-bg);
+          background: var(--brand-header-bg);
           padding: 12px 20px;
           border-bottom: 2px solid var(--brand-header-top-accent);
           display: flex;
@@ -352,7 +335,7 @@ export default function AnalyticsPage() {
           border-radius: 3px;
           font-size: 10px;
           letter-spacing: 2px;
-          color: var(--brand-on-sidebar-muted);
+          color: var(--brand-on-header-muted);
           cursor: pointer;
           font-family: 'Futura PT', Futura, sans-serif;
           font-weight: bold;
@@ -368,7 +351,7 @@ export default function AnalyticsPage() {
           background: var(--brand-sidebar-active-bg);
           border: 1px solid var(--brand-sidebar-active-bg);
           border-radius: 3px;
-          color: var(--brand-on-sidebar);
+          color: var(--brand-on-header);
           font-size: 11px;
           font-family: monospace;
         }
@@ -437,8 +420,8 @@ export default function AnalyticsPage() {
           z-index: 2;
         }
         .chart-empty-pill {
-          background: var(--brand-primary);
-          color: var(--brand-on-primary);
+          background: #363647;
+          color: #ffffff;
           font-size: 10px;
           letter-spacing: 3px;
           font-weight: bold;
@@ -524,7 +507,7 @@ export default function AnalyticsPage() {
               value={customStart}
               onChange={e => setCustomStart(e.target.value)}
             />
-            <span style={{ color: 'var(--brand-on-sidebar-muted)', fontSize: 10 }}>→</span>
+            <span style={{ color: 'var(--brand-on-header-muted)', fontSize: 10 }}>→</span>
             <input
               type="date"
               value={customEnd}
