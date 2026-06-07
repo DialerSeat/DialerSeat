@@ -6,44 +6,32 @@ import Link from 'next/link'
 import { useBranding } from '@/components/ThemeProvider'
 
 // =============================================================================
-// /sign-in — branded login (v24, Pass-2 token sweep + Clerk widget themed)
+// /sign-in — branded login (v25, smart post-signin routing)
 // =============================================================================
-// Reads useBranding() so the sign-in page reflects the tenant when accessed
-// via a tenant subdomain. On dialerseat.com (no branding), renders
-// identically to v23 because default Pass-2 tokens equal the previous
-// Pass-1 defaults.
+// Same as v24 (Pass-2 token sweep + Clerk widget themed) but with
+// forceRedirectUrl wired to /api/auth/post-signin. That handler decides
+// which subdomain to land the user on based on tenant affiliation:
 //
-// What changes from v23:
-//   - Page background, wordmark color, tagline color migrated from
-//     Pass-1 vestigial tokens to Pass-2 brand tokens:
-//       var(--background)      → var(--brand-page-bg)
-//       var(--text-primary)    → var(--brand-on-page-bg)
-//       var(--text-secondary)  → var(--brand-muted-text)
-//   - Clerk <SignIn /> gets an appearance prop. variables.colorPrimary
-//     receives the concrete hex from branding.primary_color (Clerk needs
-//     a value, not a CSS var, for internal derivations like focus rings
-//     and hover states). elements.* use var() directly so live theme
-//     changes propagate without remount.
+//   - Signed in on blank.dialerseat.com AND user is part of blank →
+//     stay on blank.dialerseat.com/dashboard/analytics
+//   - Signed in on blank.dialerseat.com AND user is NOT part of blank →
+//     redirect to their tenant's subdomain (active_tenant_id > owned >
+//     member-of)
+//   - Signed in on dialerseat.com AND user is affiliated with a tenant →
+//     auto-redirect to that tenant's subdomain
+//   - No tenant affiliation anywhere → dialerseat.com/dashboard/analytics
 //
-// What stays from v23:
-//   - Tenant logo at 256×74 with objectFit:contain (recommended 512×148
-//     aspect ratio fits with zero letterbox).
-//   - Default-brand state: gradient D + DIALERSEAT wordmark (only renders
-//     when no tenant logo present).
-//   - Conditional tagline: "WELCOME TO {BRAND}" vs "WELCOME BACK".
-//   - Logo as Link to "/" with hover opacity affordance.
+// forceRedirectUrl takes priority over any other Clerk redirect URL (the
+// dashboard's ClerkProvider default, query-string after_sign_in_url, etc).
+// Every successful sign-in goes through the routing handler.
 //
-// Clerk theming choices:
-//   - card: --brand-card-surface bg + --brand-card-border, no shadow.
-//   - inputs: --brand-page-bg bg, --brand-on-page-bg text. Inputs being
-//     bg-darker (page-bg) than the card (card-surface) reads as inset
-//     wells on light themes and floating wells on dark themes.
-//   - primary CTA: --brand-primary bg, --brand-on-primary text, uppercase
-//     Futura with letterSpacing to match the rest of the dashboard's
-//     button typography.
-//   - Auto-derivations Clerk does from variables.colorPrimary (hover,
-//     focus rings, link colors inside form fields) inherit the tenant
-//     hue naturally because we pass the hex.
+// Theming (unchanged from v24):
+//   - Page bg / wordmark / tagline → --brand-page-bg / --brand-on-page-bg /
+//     --brand-muted-text
+//   - Clerk widget: variables.colorPrimary = concrete hex from branding;
+//     elements.* use var() for live theme propagation across card, header,
+//     inputs, primary CTA, footer links, identity preview, dividers, and
+//     social buttons.
 // =============================================================================
 
 const FUTURA = 'Futura PT, Futura, "Trebuchet MS", sans-serif'
@@ -138,6 +126,7 @@ export default function SignInPage() {
         </p>
       </div>
       <SignIn
+        forceRedirectUrl="/api/auth/post-signin"
         appearance={{
           variables: {
             colorPrimary: primary,
