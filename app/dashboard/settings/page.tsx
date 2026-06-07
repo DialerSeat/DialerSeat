@@ -6,44 +6,36 @@ import Link from 'next/link'
 const FUTURA = 'Futura PT, Futura, "Trebuchet MS", sans-serif'
 
 // =============================================================================
-// SETTINGS PAGE (v27 — editor extracted to onboarding + chrome themed)
+// SETTINGS PAGE (v28 — dark mode restored, editor extraction preserved)
 // =============================================================================
-// Changes vs v26:
-//   - Removed the inline 3-color theme editor (preset cards, custom color
-//     pickers, WhitelabelLivePreview, save button, disclaimer, feedback).
-//     Per JC: "remove your whitelabel theme as a editor in settings, make
-//     it always redirect as a button to onboarding page."
-//   - The ▸ WHITELABEL EDITOR section is now a single ▶ OPEN WHITELABEL
-//     EDITOR button linking to /onboarding/whitelabel. Same condition
-//     (wlActive) as the old editor section.
-//   - Page chrome themed to the tenant's chosen colors. DialerSeat blue
-//     (#4a9eff) accents → var(--brand-primary). Card chrome (#1a1c24 +
-//     #2a2c34) → var(--brand-card-surface) + var(--brand-card-border).
-//     Section insets (#0d0e14) → var(--brand-page-bg) (sections "punch
-//     through" the card to show the page color). Per JC: "make the
-//     dialerseat settings page blue turn into the colors they chose."
-//   - Semantic colors (danger red, success green, warning amber) kept hex
-//     but switched to light-theme pale-tint backgrounds (#f8e8e8 / #e8f5e8
-//     / #fdf4e8) since the page is now light-themed.
-//   - Cancel-seat modal card-surface themed; danger border-top semantic.
-//   - Resubscribe button gradient + glow themed via color-mix with
-//     var(--brand-primary).
+// v28 changes vs v27:
+//   - All chrome reverted from light themed (var(--brand-page-bg) +
+//     var(--brand-card-surface)) back to original v26 hardcoded dark values:
+//       outer page bg     var(--brand-sidebar-bg)   (was --brand-page-bg)
+//       card              #1a1c24                    (was --brand-card-surface)
+//       sections / inputs #0d0e14                    (was --brand-page-bg)
+//       borders           #2a2c34                    (was --brand-card-border)
+//       primary text      #e0e2ea                    (was --brand-on-page-bg)
+//       muted text        #888a92                    (was --brand-muted-text)
+//   - Page outer bg specifically mapped to var(--brand-sidebar-bg) per JC's
+//     "map background to sidebar color" directive: default DialerSeat shows
+//     #111118, tenants get their sidebar color.
+//   - Semantic colors (danger / success / warning) reverted from light-theme
+//     pale-tint backgrounds (#f8e8e8 / #e8f5e8 / #fdf4e8) back to dark-theme
+//     alpha bg + light text pattern: rgba(138,26,26,0.18) bg + #ff8888 text
+//     for danger; matching pattern for success / warning.
+//   - Cancel-seat modal reverted to dark card + semantic dark red border-top.
 //
-// Preserved from v26:
-//   - Brand view toggle (themed)
-//   - Personal subscription summary, team seats, cancel flow, seat cancel
-//     modal, resubscribe flow — all structural logic byte-for-byte
-//   - Admin detection and ADMIN CANNOT CANCEL notice (themed)
-//
-// Removed imports/code (was used only by the theme editor):
-//   - WhitelabelLivePreview component import
-//   - Preset / TenantData interfaces, PRESETS array, HEX_RE constant
-//   - tenantData / presetKey / primary / sidebar / pageBg state
-//   - themeSaving / themeFeedback state
-//   - applyPreset / updateColor / handleSaveTheme handlers
-//   - DarkColorRow helper component
-//   - All theme* CSS-in-JS style objects
-//   - The tenantRes fetch in loadStatus
+// PRESERVED FROM v27:
+//   - Editor extraction: ▸ WHITELABEL EDITOR section is a single
+//     ▶ OPEN WHITELABEL EDITOR button linking to /onboarding/whitelabel
+//     (no inline editor). Per JC: "remove your whitelabel theme as a editor
+//     in settings, make it always redirect as a button to onboarding page."
+//   - var(--brand-primary) accents (was #4a9eff in v26). The "blue → primary"
+//     swap still applies — tenants see their primary on the settings page.
+//   - All functional logic byte-for-byte: brand-view toggle, personal
+//     subscription, team seats, cancel flow, seat-cancel modal,
+//     resubscribe flow, admin notice.
 // =============================================================================
 
 interface SubStatus {
@@ -300,7 +292,7 @@ export default function SettingsPage() {
             <span style={{ marginLeft: 8, fontSize: 9, letterSpacing: 3, color: 'var(--brand-primary)', fontWeight: 'bold' }}>· {planLabel}</span>
           )}
           {!isAdmin && sub?.tier === 'lapsed' && !wlActive && (
-            <span style={{ marginLeft: 8, fontSize: 9, letterSpacing: 3, color: '#8a6a1a', fontWeight: 'bold' }}>· UNSUBSCRIBED</span>
+            <span style={{ marginLeft: 8, fontSize: 9, letterSpacing: 3, color: '#ffaa3e', fontWeight: 'bold' }}>· UNSUBSCRIBED</span>
           )}
         </div>
 
@@ -414,12 +406,12 @@ export default function SettingsPage() {
                   <span style={seatBadgeStyle('var(--brand-primary)')}>OWNER PAID</span>
                 </div>
                 <div style={seatDetailStyle}>
-                  Paid by <strong style={{ color: 'var(--brand-on-page-bg)' }}>{seat.ownerName}</strong> · ${(seat.amountCents / 100).toFixed(2)} / WEEK
+                  Paid by <strong style={{ color: '#e0e2ea' }}>{seat.ownerName}</strong> · ${(seat.amountCents / 100).toFixed(2)} / WEEK
                 </div>
                 <div style={seatDetailStyle}>
                   Period: {formatDate(seat.periodStart)} → {formatDate(seat.periodEnd)}
                 </div>
-                <div style={{ ...seatDetailStyle, color: 'var(--brand-muted-text)', fontSize: 10, marginTop: 6 }}>
+                <div style={{ ...seatDetailStyle, color: '#888a92', fontSize: 10, marginTop: 6 }}>
                   Only the team owner can cancel this seat.
                 </div>
               </div>
@@ -429,10 +421,10 @@ export default function SettingsPage() {
               <div key={seat.id} style={seatRowStyle('#8a6a1a')}>
                 <div style={seatHeaderStyle}>
                   <span style={seatTeamStyle}>{seat.teamName}</span>
-                  <span style={seatBadgeStyle('#8a6a1a')}>AGENT PAID</span>
+                  <span style={seatBadgeStyle('#ffaa3e')}>AGENT PAID</span>
                 </div>
                 <div style={seatDetailStyle}>
-                  Campaign: <strong style={{ color: 'var(--brand-on-page-bg)' }}>{seat.campaignName || '—'}</strong>
+                  Campaign: <strong style={{ color: '#e0e2ea' }}>{seat.campaignName || '—'}</strong>
                 </div>
                 <div style={seatDetailStyle}>
                   Owner: {seat.ownerName} · $35.00 / WEEK
@@ -452,8 +444,8 @@ export default function SettingsPage() {
             ))}
 
             <div style={{
-              fontSize: 10, color: 'var(--brand-muted-text)', letterSpacing: 1, lineHeight: 1.5,
-              marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--brand-card-border)',
+              fontSize: 10, color: '#888a92', letterSpacing: 1, lineHeight: 1.5,
+              marginTop: 12, paddingTop: 12, borderTop: '1px solid #2a2c34',
             }}>
               Canceling a seat ends campaign access only. You remain on the team and can rejoin a campaign anytime. Refunds for partial periods are only available via dispute through your bank.
             </div>
@@ -505,7 +497,7 @@ export default function SettingsPage() {
                 </div>
 
                 <div style={typePromptStyle}>
-                  Type <strong style={{ color: '#8a1a1a' }}>cancel</strong> to confirm:
+                  Type <strong style={{ color: '#ff8888' }}>cancel</strong> to confirm:
                 </div>
                 <input
                   type="text"
@@ -556,25 +548,25 @@ export default function SettingsPage() {
           <div
             onClick={e => e.stopPropagation()}
             style={{
-              background: 'var(--brand-card-surface)',
-              border: '1px solid var(--brand-card-border)',
+              background: '#1a1c24',
+              border: '1px solid #2a2c34',
               borderTop: '3px solid #8a1a1a',
               borderRadius: 4, padding: 28,
               maxWidth: 460, width: '100%', fontFamily: FUTURA,
-              color: 'var(--brand-on-page-bg)',
+              color: '#e0e2ea',
             }}
           >
             <div style={{
-              fontSize: 12, fontWeight: 700, letterSpacing: 4, color: '#8a1a1a', marginBottom: 14,
+              fontSize: 12, fontWeight: 700, letterSpacing: 4, color: '#ff8888', marginBottom: 14,
             }}>CANCEL SEAT ACCESS</div>
-            <p style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--brand-on-page-bg)', margin: '0 0 14px 0' }}>
+            <p style={{ fontSize: 13, lineHeight: 1.6, color: '#e0e2ea', margin: '0 0 14px 0' }}>
               Cancel your access to <strong>{seatConfirmTarget.campaignName || 'this campaign'}</strong> on team <strong>{seatConfirmTarget.teamName}</strong>?
             </p>
-            <p style={{ fontSize: 12, lineHeight: 1.6, color: 'var(--brand-muted-text)', margin: '0 0 16px 0' }}>
+            <p style={{ fontSize: 12, lineHeight: 1.6, color: '#888a92', margin: '0 0 16px 0' }}>
               You stay on the team but lose dialing access to this campaign. Your $35/wk for this seat stops at period close. Refunds for partial periods are only available via dispute through your bank.
             </p>
             <div style={typePromptStyle}>
-              Type <strong style={{ color: '#8a1a1a' }}>cancel</strong> to confirm:
+              Type <strong style={{ color: '#ff8888' }}>cancel</strong> to confirm:
             </div>
             <input
               type="text"
@@ -633,30 +625,30 @@ function tierStatusLabel(sub: SubStatus | null, wlActive: boolean): string {
 }
 
 function tierStatusColor(sub: SubStatus | null): string {
-  if (!sub) return '#1a6a1a'
-  if (sub.tier === 'lapsed' && !sub.wlActive) return '#8a6a1a'
-  if (sub.status === 'active' || sub.status === 'trialing') return '#1a6a1a'
-  if (sub.status === 'past_due') return '#8a6a1a'
-  if (sub.wlActive) return '#1a6a1a'
-  return '#8a1a1a'
+  if (!sub) return '#32ff7e'
+  if (sub.tier === 'lapsed' && !sub.wlActive) return '#ffaa3e'
+  if (sub.status === 'active' || sub.status === 'trialing') return '#32ff7e'
+  if (sub.status === 'past_due') return '#ffaa3e'
+  if (sub.wlActive) return '#32ff7e'
+  return '#ff8888'
 }
 
-// ─── Styles ──────────────────────────────────────────────────────────
+// ─── Styles (v28 dark mode) ──────────────────────────────────────────
 
 const pageStyle: React.CSSProperties = {
   flex: 1, minHeight: 'calc(100vh - 64px)',
-  background: 'var(--brand-page-bg)',
+  background: 'var(--brand-sidebar-bg)',
   display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
   padding: 40, fontFamily: FUTURA,
 }
 
 const cardStyle: React.CSSProperties = {
   width: '100%', maxWidth: 640,
-  background: 'var(--brand-card-surface)',
-  border: '1px solid var(--brand-card-border)',
+  background: '#1a1c24',
+  border: '1px solid #2a2c34',
   borderTop: '3px solid var(--brand-primary)',
   borderRadius: 4, padding: 32,
-  color: 'var(--brand-on-page-bg)',
+  color: '#e0e2ea',
   fontFamily: FUTURA, boxSizing: 'border-box',
 }
 
@@ -667,13 +659,13 @@ const titleStyle: React.CSSProperties = {
 
 const subtitleStyle: React.CSSProperties = {
   fontSize: 12, letterSpacing: 1,
-  color: 'var(--brand-muted-text)',
+  color: '#888a92',
   marginBottom: 28, wordBreak: 'break-word',
 }
 
 const sectionStyle: React.CSSProperties = {
-  background: 'var(--brand-page-bg)',
-  border: '1px solid var(--brand-card-border)',
+  background: '#0d0e14',
+  border: '1px solid #2a2c34',
   borderLeft: '3px solid var(--brand-primary)',
   borderRadius: 3,
   padding: 16, marginBottom: 20,
@@ -681,36 +673,36 @@ const sectionStyle: React.CSSProperties = {
 
 const sectionHeaderStyle: React.CSSProperties = {
   fontSize: 9, letterSpacing: 3,
-  color: 'var(--brand-muted-text)',
+  color: '#888a92',
   marginBottom: 14, fontWeight: 700,
 }
 
 const rowStyle: React.CSSProperties = {
   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
   padding: '8px 0',
-  borderBottom: '1px solid var(--brand-card-border)',
+  borderBottom: '1px solid #2a2c34',
   gap: 12, flexWrap: 'wrap',
 }
 
 const labelStyle: React.CSSProperties = {
-  fontSize: 10, letterSpacing: 2, color: 'var(--brand-muted-text)',
+  fontSize: 10, letterSpacing: 2, color: '#888a92',
 }
 const valueStyle: React.CSSProperties = {
   fontSize: 12, letterSpacing: 1,
-  color: 'var(--brand-on-page-bg)', fontWeight: 700,
+  color: '#e0e2ea', fontWeight: 700,
 }
 const mutedStyle: React.CSSProperties = {
-  fontSize: 12, color: 'var(--brand-muted-text)', letterSpacing: 1,
+  fontSize: 12, color: '#888a92', letterSpacing: 1,
 }
 
 function brandSelectStyle(disabled: boolean): React.CSSProperties {
   return {
     width: '100%',
     padding: '10px 12px',
-    background: 'var(--brand-card-surface)',
-    border: '1px solid var(--brand-card-border)',
+    background: '#0d0e14',
+    border: '1px solid #2a2c34',
     borderRadius: 3,
-    color: 'var(--brand-on-page-bg)',
+    color: '#e0e2ea',
     fontSize: 13,
     fontFamily: FUTURA,
     outline: 'none',
@@ -719,12 +711,12 @@ function brandSelectStyle(disabled: boolean): React.CSSProperties {
 }
 
 // ▶ OPEN WHITELABEL EDITOR — primary CTA pattern, sits inside a section
-// whose bg is page-bg, so the button bg is card-surface for contrast.
+// whose bg is #0d0e14, so the button bg is #1a1c24 for contrast lift.
 const editorButtonStyle: React.CSSProperties = {
   display: 'block',
   width: '100%',
   padding: 14,
-  background: 'var(--brand-card-surface)',
+  background: '#1a1c24',
   borderTop: '3px solid var(--brand-primary)',
   border: 'none',
   borderRadius: 4,
@@ -741,24 +733,24 @@ const editorButtonStyle: React.CSSProperties = {
 
 const dangerButtonStyle: React.CSSProperties = {
   width: '100%', padding: 14,
-  background: 'var(--brand-card-surface)',
+  background: '#1a1c24',
   border: 'none',
   borderTop: '3px solid #8a1a1a',
-  borderRadius: 4, color: '#8a1a1a',
+  borderRadius: 4, color: '#ff8888',
   fontSize: 12, fontWeight: 700, letterSpacing: 4, cursor: 'pointer',
   fontFamily: FUTURA, marginTop: 8,
 }
 
 const miniDangerButtonStyle: React.CSSProperties = {
   marginTop: 10, padding: '8px 14px', background: 'transparent',
-  border: '1px solid #8a1a1a', borderRadius: 3, color: '#8a1a1a',
+  border: '1px solid #8a1a1a', borderRadius: 3, color: '#ff8888',
   fontSize: 10, fontWeight: 700, letterSpacing: 2, cursor: 'pointer',
   fontFamily: FUTURA,
 }
 
 const secondaryButtonStyle: React.CSSProperties = {
   flex: 1, padding: 14,
-  background: 'var(--brand-card-surface)',
+  background: '#1a1c24',
   border: 'none',
   borderTop: '3px solid var(--brand-primary)',
   borderRadius: 4, color: 'var(--brand-primary)',
@@ -766,7 +758,7 @@ const secondaryButtonStyle: React.CSSProperties = {
 }
 
 const confirmBoxStyle: React.CSSProperties = {
-  background: '#f8e8e8',
+  background: 'rgba(138, 26, 26, 0.18)',
   border: '1px solid #8a1a1a',
   borderLeft: '3px solid #8a1a1a',
   borderRadius: 4, padding: 16, marginTop: 8,
@@ -774,48 +766,48 @@ const confirmBoxStyle: React.CSSProperties = {
 
 const confirmTextStyle: React.CSSProperties = {
   fontSize: 12, lineHeight: 1.6,
-  color: '#5a1a1a',
+  color: '#e0c2c2',
   marginBottom: 16,
 }
 
 const typePromptStyle: React.CSSProperties = {
   fontSize: 11, letterSpacing: 1,
-  color: '#5a1a1a',
+  color: '#e0c2c2',
   marginBottom: 8,
 }
 
 const typeInputStyle: React.CSSProperties = {
   width: '100%', padding: '10px 12px',
-  background: 'var(--brand-card-surface)',
+  background: '#0d0e14',
   border: '1px solid #8a1a1a',
   borderRadius: 3,
-  fontFamily: 'monospace', fontSize: 13, color: '#8a1a1a',
+  fontFamily: 'monospace', fontSize: 13, color: '#ff8888',
   outline: 'none', marginBottom: 16, letterSpacing: 1, boxSizing: 'border-box',
 }
 
 const confirmButtonsStyle: React.CSSProperties = { display: 'flex', gap: 8 }
 
 const successStyle: React.CSSProperties = {
-  background: '#e8f5e8',
+  background: 'rgba(26, 106, 26, 0.18)',
   border: '1px solid #1a6a1a',
   borderLeft: '3px solid #1a6a1a',
-  color: '#1a6a1a',
+  color: '#32ff7e',
   padding: 12, borderRadius: 3, fontSize: 11, letterSpacing: 1, marginBottom: 16,
 }
 
 const errorStyle: React.CSSProperties = {
-  background: '#f8e8e8',
+  background: 'rgba(138, 26, 26, 0.18)',
   border: '1px solid #8a1a1a',
   borderLeft: '3px solid #8a1a1a',
-  color: '#8a1a1a',
+  color: '#ff8888',
   padding: 12, borderRadius: 3, fontSize: 11, letterSpacing: 1, marginBottom: 16,
 }
 
 const warnStyle: React.CSSProperties = {
-  background: '#fdf4e8',
+  background: 'rgba(138, 106, 26, 0.18)',
   border: '1px solid #8a6a1a',
   borderLeft: '3px solid #8a6a1a',
-  color: '#8a6a1a',
+  color: '#ffaa3e',
   padding: 12, borderRadius: 3, fontSize: 11, letterSpacing: 1, marginTop: 16,
 }
 
@@ -828,19 +820,19 @@ const adminNoticeStyle: React.CSSProperties = {
 }
 
 const resubscribeBoxStyle: React.CSSProperties = {
-  background: '#fdf4e8',
+  background: 'rgba(138, 106, 26, 0.18)',
   border: '1px solid #8a6a1a',
   borderLeft: '3px solid #8a6a1a',
   borderRadius: 3, padding: 16, marginBottom: 16,
 }
 
 const resubscribeHeaderStyle: React.CSSProperties = {
-  fontSize: 11, letterSpacing: 3, color: '#8a6a1a', fontWeight: 700, marginBottom: 8,
+  fontSize: 11, letterSpacing: 3, color: '#ffaa3e', fontWeight: 700, marginBottom: 8,
 }
 
 const resubscribeTextStyle: React.CSSProperties = {
   fontSize: 12, lineHeight: 1.6,
-  color: 'var(--brand-on-page-bg)',
+  color: '#e0e2ea',
   marginBottom: 14,
 }
 
@@ -856,7 +848,7 @@ const resubscribeButtonStyle: React.CSSProperties = {
 
 function seatRowStyle(borderColor: string): React.CSSProperties {
   return {
-    background: 'var(--brand-card-surface)',
+    background: '#1a1c24',
     border: `1px solid ${borderColor}`,
     borderLeft: `3px solid ${borderColor}`, borderRadius: 3,
     padding: 14, marginBottom: 10,
@@ -870,7 +862,7 @@ const seatHeaderStyle: React.CSSProperties = {
 
 const seatTeamStyle: React.CSSProperties = {
   fontSize: 13, fontWeight: 700, letterSpacing: 1,
-  color: 'var(--brand-on-page-bg)',
+  color: '#e0e2ea',
 }
 
 function seatBadgeStyle(color: string): React.CSSProperties {
@@ -883,6 +875,6 @@ function seatBadgeStyle(color: string): React.CSSProperties {
 
 const seatDetailStyle: React.CSSProperties = {
   fontSize: 11,
-  color: 'var(--brand-muted-text)',
+  color: '#888a92',
   letterSpacing: 0.5, lineHeight: 1.5, marginTop: 4,
 }

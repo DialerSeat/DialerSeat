@@ -6,32 +6,35 @@ import Link from 'next/link'
 import { useBranding } from '@/components/ThemeProvider'
 
 // =============================================================================
-// /sign-in — branded login (v25, smart post-signin routing)
+// /sign-in — branded sign-in (v26 — restore dark mode)
 // =============================================================================
-// Same as v24 (Pass-2 token sweep + Clerk widget themed) but with
-// forceRedirectUrl wired to /api/auth/post-signin. That handler decides
-// which subdomain to land the user on based on tenant affiliation:
+// v26 changes vs v25:
+//   - Page background: var(--background) (Pass-1 vestigial #0a0a0f) →
+//     var(--brand-sidebar-bg). Default DialerSeat resolves to #111118
+//     (the original dark sign-in look); tenants get their sidebar color
+//     automatically — no per-tenant logic needed. JC: "easily customizable
+//     like signup page... map their background to sites sidebar color."
+//   - Wordmark fallback color: var(--text-primary) → var(--brand-on-sidebar)
+//     (white on dark, derived for tenants).
+//   - Tagline color: var(--text-secondary) → var(--brand-on-sidebar-muted)
+//     (#8888aa on default, derived for tenants).
+//   - Clerk <SignIn /> widget themed dark via appearance prop. Card uses a
+//     subtle white-3% overlay so it lifts off the sidebar bg without
+//     introducing a bright surface. Form inputs are the same lifted treatment.
+//     Primary button uses var(--brand-primary) + var(--brand-on-primary).
 //
-//   - Signed in on blank.dialerseat.com AND user is part of blank →
-//     stay on blank.dialerseat.com/dashboard/analytics
-//   - Signed in on blank.dialerseat.com AND user is NOT part of blank →
-//     redirect to their tenant's subdomain (active_tenant_id > owned >
-//     member-of)
-//   - Signed in on dialerseat.com AND user is affiliated with a tenant →
-//     auto-redirect to that tenant's subdomain
-//   - No tenant affiliation anywhere → dialerseat.com/dashboard/analytics
+// Preserved from v25:
+//   - useBranding() hook for tenant logo + primary color
+//   - Logo wrapper is a Link to "/"
+//   - forceRedirectUrl="/api/auth/post-signin" (post-signin route v2 stays
+//     on current host until subdomains are wired up)
 //
-// forceRedirectUrl takes priority over any other Clerk redirect URL (the
-// dashboard's ClerkProvider default, query-string after_sign_in_url, etc).
-// Every successful sign-in goes through the routing handler.
-//
-// Theming (unchanged from v24):
-//   - Page bg / wordmark / tagline → --brand-page-bg / --brand-on-page-bg /
-//     --brand-muted-text
-//   - Clerk widget: variables.colorPrimary = concrete hex from branding;
-//     elements.* use var() for live theme propagation across card, header,
-//     inputs, primary CTA, footer links, identity preview, dividers, and
-//     social buttons.
+// "Easily customizable" semantics:
+//   - Default DialerSeat: sidebar=#111118 → sign-in bg #111118, text white,
+//     muted #8888aa, primary #4a9eff. Dark-mode original look.
+//   - Tenant (e.g. demo): sidebar=#3b261b (brown) → sign-in bg brown,
+//     muted text derived (white at 65% alpha over brown — readable),
+//     primary tenant-chosen.
 // =============================================================================
 
 const FUTURA = 'Futura PT, Futura, "Trebuchet MS", sans-serif'
@@ -40,15 +43,16 @@ export default function SignInPage() {
   const branding = useBranding()
   const brandName = branding?.brand_name?.toUpperCase() || 'DIALERSEAT'
   const logoUrl = branding?.logo_url || null
-  // Clerk's variables.colorPrimary needs a concrete hex value (it's used
-  // internally to compute hover/focus/link colors). Default to the
-  // DialerSeat blue if no tenant branding is present.
-  const primary = branding?.primary_color || '#4a9eff'
+  // Clerk's appearance.variables.colorBackground needs a concrete hex
+  // (CSS vars aren't supported there). Default to #111118 and let tenant
+  // sidebar override. Clerk uses this for internal contrast derivations.
+  const colorBackground = branding?.sidebar_color || '#111118'
+  const colorPrimary = branding?.primary_color || '#4a9eff'
 
   return (
     <main style={{
       minHeight: '100vh',
-      background: 'var(--brand-page-bg)',
+      background: 'var(--brand-sidebar-bg)',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
@@ -112,7 +116,7 @@ export default function SignInPage() {
                 fontSize: '18px',
                 fontWeight: 'bold',
                 letterSpacing: '6px',
-                color: 'var(--brand-on-page-bg)',
+                color: 'var(--brand-on-sidebar)',
               }}>DIALERSEAT</span>
             </>
           )}
@@ -120,7 +124,7 @@ export default function SignInPage() {
         <p style={{
           fontSize: '12px',
           letterSpacing: '3px',
-          color: 'var(--brand-muted-text)',
+          color: 'var(--brand-on-sidebar-muted)',
         }}>
           {logoUrl ? `WELCOME TO ${brandName}` : 'WELCOME BACK'}
         </p>
@@ -129,50 +133,60 @@ export default function SignInPage() {
         forceRedirectUrl="/api/auth/post-signin"
         appearance={{
           variables: {
-            colorPrimary: primary,
+            colorPrimary,
+            colorBackground,
+            colorText: '#ffffff',
+            colorTextSecondary: '#8888aa',
+            colorInputBackground: 'rgba(255,255,255,0.05)',
+            colorInputText: '#ffffff',
             borderRadius: '4px',
             fontFamily: FUTURA,
           },
           elements: {
             card: {
-              background: 'var(--brand-card-surface)',
-              border: '1px solid var(--brand-card-border)',
+              background: 'rgba(255,255,255,0.03)',
+              border: '1px solid rgba(255,255,255,0.10)',
               boxShadow: 'none',
             },
             headerTitle: {
-              color: 'var(--brand-on-page-bg)',
+              color: '#ffffff',
               fontFamily: FUTURA,
+              fontWeight: 700,
+              letterSpacing: '1px',
             },
             headerSubtitle: {
-              color: 'var(--brand-muted-text)',
+              color: '#8888aa',
               fontFamily: FUTURA,
             },
             socialButtonsBlockButton: {
-              background: 'var(--brand-page-bg)',
-              border: '1px solid var(--brand-card-border)',
-              color: 'var(--brand-on-page-bg)',
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.15)',
+              color: '#ffffff',
             },
             socialButtonsBlockButtonText: {
-              color: 'var(--brand-on-page-bg)',
+              color: '#ffffff',
+              fontFamily: FUTURA,
             },
             dividerText: {
-              color: 'var(--brand-muted-text)',
+              color: '#8888aa',
+              fontFamily: FUTURA,
             },
             dividerLine: {
-              background: 'var(--brand-card-border)',
+              background: 'rgba(255,255,255,0.15)',
             },
             formFieldLabel: {
-              color: 'var(--brand-on-page-bg)',
+              color: '#ffffff',
               fontFamily: FUTURA,
               letterSpacing: '0.5px',
             },
             formFieldInput: {
-              background: 'var(--brand-page-bg)',
-              border: '1px solid var(--brand-card-border)',
-              color: 'var(--brand-on-page-bg)',
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.15)',
+              color: '#ffffff',
+              fontFamily: FUTURA,
             },
             formFieldInputShowPasswordButton: {
-              color: 'var(--brand-muted-text)',
+              color: '#8888aa',
             },
             formButtonPrimary: {
               background: 'var(--brand-primary)',
@@ -183,7 +197,7 @@ export default function SignInPage() {
               fontFamily: FUTURA,
             },
             footerActionText: {
-              color: 'var(--brand-muted-text)',
+              color: '#8888aa',
               fontFamily: FUTURA,
             },
             footerActionLink: {
@@ -191,7 +205,7 @@ export default function SignInPage() {
               fontFamily: FUTURA,
             },
             identityPreviewText: {
-              color: 'var(--brand-on-page-bg)',
+              color: '#ffffff',
               fontFamily: FUTURA,
             },
             identityPreviewEditButton: {
@@ -201,12 +215,16 @@ export default function SignInPage() {
               color: 'var(--brand-primary)',
             },
             otpCodeFieldInput: {
-              background: 'var(--brand-page-bg)',
-              border: '1px solid var(--brand-card-border)',
-              color: 'var(--brand-on-page-bg)',
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.15)',
+              color: '#ffffff',
             },
             alertText: {
-              color: 'var(--brand-on-page-bg)',
+              color: '#ffffff',
+              fontFamily: FUTURA,
+            },
+            footer: {
+              background: 'transparent',
             },
           },
         }}
