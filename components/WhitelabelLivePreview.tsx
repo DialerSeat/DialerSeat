@@ -3,24 +3,37 @@
 import type { CSSProperties } from 'react'
 
 // =============================================================================
-// WHITELABEL LIVE EXACT PREVIEW v4 — header/sidebar split (migration 004)
+// WHITELABEL LIVE EXACT PREVIEW v5 — logo on sidebar + derivations aligned
 // =============================================================================
-// Adds optional headerBg prop. When provided, the header strip AND the
-// logo box (top-left, above the sidebar nav) both use headerBg + auto-
-// contrast text. The segmented-control inactive items use onHeaderMuted
-// instead of sidebarTextMuted since they sit on the header surface.
+// v5 changes vs v4:
 //
-// Backward compatible: headerBg is optional. If not passed (existing
-// 3-color callers), defaults to the sidebar value internally so the
-// preview collapses to the current unified look (one dark band across
-// the top, logo + header reading as a single chrome surface).
+//   1. Logo box background: resolvedHeaderBg → sidebar. The top of the
+//      sidebar column is now part of the sidebar, NOT the header strip.
+//      Matches dashboard layout C3 and JC's explicit rule: "the entire
+//      sidebar should be a solid color. The tenant logo at the top of the
+//      sidebar is sidebar, not header." Dragging the header slider in
+//      onboarding no longer changes the top of the sidebar in the preview.
+//
+//   2. Logo box borderBottom removed. The actual deployed layout has no
+//      divider between the logo and the nav — just marginBottom: 24 on
+//      the logo Link. The preview's 1px border was creating a visual
+//      seam that doesn't exist in production.
+//
+//   3. Brand-name fallback text color: onHeaderMuted → sidebarTextMuted.
+//      Now that the logo box sits on the sidebar, the fallback text is on
+//      sidebar bg, so it should use the sidebar-context muted color.
+//
+//   4. Tier-2 alpha derivations aligned with ThemeProvider v7's branded math:
+//        sidebarTextMuted / onHeaderMuted   0.55 → 0.65 alpha
+//          (matches color-mix(${on*} 65%, transparent))
+//        sidebarActiveBg                    rgba(255,255,255,0.08) →
+//          color-mix(${primary} 18%, transparent)
+//          (matches primary-tinted active state in branded layouts)
 //
 // What's rendered (5 readability points visible at once):
-//   1. Logo box — uses headerBg + auto-contrast text (when no logo
-//      uploaded). When headerBg matches sidebar, looks like the sidebar
-//      top. When different, visually groups with the header strip
-//      across the top of the layout. Per JC's "logo fit entirely in
-//      the top of header" direction — fills the box, no outer padding.
+//   1. Logo box — sits on the sidebar (sidebar bg + auto-contrast text).
+//      Header changes don't affect it. Per JC's "logo fits entirely in
+//      the top of the sidebar" direction — fills the box, no outer padding.
 //   2. Sidebar — sidebar bg + auto-contrast text + active nav with
 //      primary left border + MANAGER+ pill (primary bg + auto-contrast text)
 //   3. Header strip — headerBg + onHeader text. Section label in primary,
@@ -40,13 +53,17 @@ import type { CSSProperties } from 'react'
 // Auto-contrast (pickContrastText):
 //   Computes WCAG relative luminance, returns true white (#ffffff) for
 //   dark colors (L ≤ 0.18) or app-standard near-black (#1a1c24) for
-//   lighter colors. Threshold matches ThemeProvider v5 exactly so what
-//   the user sees here is what they get on the real dashboard.
+//   lighter colors. Threshold matches ThemeProvider v7's branded behavior
+//   exactly so what the user sees here is what they get on the real
+//   dashboard.
 //
-// Derived tokens (matching ThemeProvider v5's color-mix expressions):
-//   card-surface  page-bg shifted 8% toward on-page-bg
-//   card-border   page-bg shifted 18% toward on-page-bg
-//   muted-text    60% on-page-bg + 40% page-bg
+// Derived tokens (matching ThemeProvider v7's branded color-mix expressions):
+//   card-surface       page-bg shifted 8% toward on-page-bg
+//   card-border        page-bg shifted 18% toward on-page-bg
+//   muted-text         60% on-page-bg + 40% page-bg
+//   sidebar-text-muted on-sidebar at 65% alpha
+//   sidebar-active-bg  primary at 18% alpha
+//   on-header-muted    on-header at 65% alpha
 // =============================================================================
 
 const FUTURA = `'Futura PT', Futura, 'Helvetica Neue', Helvetica, Arial, sans-serif`
@@ -91,21 +108,19 @@ export function WhitelabelLivePreview({
   const onHeader = pickContrastText(resolvedHeaderBg)
   const onPageBg = pickContrastText(pageBg)
 
-  // Derived — match ThemeProvider v5 expressions exactly so what the
-  // user sees here is what they get on the real dashboard.
+  // Derived — match ThemeProvider v7 branded expressions exactly so what
+  // the user sees here is what they get on the real dashboard.
   const cardSurface = `color-mix(in srgb, ${pageBg} 92%, ${onPageBg} 8%)`
   const cardBorder = `color-mix(in srgb, ${pageBg} 82%, ${onPageBg} 18%)`
   const mutedText = `color-mix(in srgb, ${onPageBg} 60%, ${pageBg} 40%)`
 
-  // Sidebar derived — same heuristic as ThemeProvider v5
-  const sidebarTextMuted =
-    onSidebar === '#ffffff' ? 'rgba(255,255,255,0.55)' : 'rgba(26,28,36,0.55)'
-  const sidebarActiveBg =
-    onSidebar === '#ffffff' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'
+  // Sidebar derived — match ThemeProvider v7 branded math (65% alpha,
+  // primary at 18% for active state)
+  const sidebarTextMuted = `color-mix(in srgb, ${onSidebar} 65%, transparent)`
+  const sidebarActiveBg = `color-mix(in srgb, ${primary} 18%, transparent)`
 
-  // Header derived — same heuristic as ThemeProvider v5
-  const onHeaderMuted =
-    onHeader === '#ffffff' ? 'rgba(255,255,255,0.55)' : 'rgba(26,28,36,0.55)'
+  // Header derived — same heuristic as ThemeProvider v7
+  const onHeaderMuted = `color-mix(in srgb, ${onHeader} 65%, transparent)`
 
   const navItems = [
     { label: 'ANALYTICS', active: true },
@@ -140,19 +155,16 @@ export function WhitelabelLivePreview({
           flexShrink: 0,
         }}
       >
-        {/* Logo box — sits at the top of the sidebar column, but visually
-            groups with the header strip via shared headerBg color. Padding 0
-            so the logo fills the entire box with no outer space. The
-            borderBottom uses sidebarActiveBg so it's invisible when
-            headerBg == sidebar (current unified look) and a subtle divider
-            when they differ. */}
+        {/* Logo box — sits at the top of the sidebar column AS PART OF the
+            sidebar. v5: background changed from resolvedHeaderBg to sidebar
+            so the entire sidebar reads as one solid color. Header slider
+            changes no longer affect this region. */}
         <div
           style={{
             height: 64,
             padding: 0,
             overflow: 'hidden',
-            background: resolvedHeaderBg,
-            borderBottom: `1px solid ${sidebarActiveBg}`,
+            background: sidebar,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -176,7 +188,7 @@ export function WhitelabelLivePreview({
               style={{
                 fontSize: 9,
                 letterSpacing: 2,
-                color: onHeaderMuted,
+                color: sidebarTextMuted,
                 fontWeight: 700,
                 textAlign: 'center',
                 padding: '0 8px',
@@ -238,7 +250,7 @@ export function WhitelabelLivePreview({
           minWidth: 0,
         }}
       >
-        {/* Header strip — now bound to headerBg, independent of sidebar */}
+        {/* Header strip — bound to headerBg, independent of sidebar */}
         <div
           style={{
             background: resolvedHeaderBg,
@@ -262,7 +274,7 @@ export function WhitelabelLivePreview({
             ANALYTICS OVERVIEW
           </div>
           {/* Segmented control — inactive items use onHeaderMuted since
-              they sit on the header surface (was sidebarTextMuted in v3). */}
+              they sit on the header surface. */}
           <div style={{ display: 'flex', gap: 2 }}>
             {['TODAY', 'WEEK', 'MONTH'].map((label, i) => (
               <div
@@ -416,8 +428,7 @@ export function WhitelabelLivePreview({
           </div>
 
           {/* Primary CTA button — bg uses sidebar (matches dialer's pattern
-              of dark CTA on sidebar bg). If you want CTA on headerBg or
-              card-surface, swap accordingly. */}
+              of dark CTA on sidebar bg). */}
           <button
             type="button"
             disabled

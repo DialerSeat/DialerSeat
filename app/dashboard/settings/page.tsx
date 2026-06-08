@@ -6,8 +6,16 @@ import Link from 'next/link'
 const FUTURA = 'Futura PT, Futura, "Trebuchet MS", sans-serif'
 
 // =============================================================================
-// SETTINGS PAGE (v28 — dark mode restored, editor extraction preserved)
+// SETTINGS PAGE (v29 — dark mode + bottom-bar fix)
 // =============================================================================
+// v29 changes vs v28:
+//   - pageStyle minHeight: 'calc(100vh - 64px)' → '100vh'. The -64px was
+//     meant to compensate for the mobile topbar but on desktop there's no
+//     topbar, so the page was 64px short of the viewport and the flex
+//     parent stretched the wrapper to 100vh leaving 64px showing main's
+//     var(--brand-page-bg) as a horizontal strip at the bottom. Matches
+//     the analytics page (also minHeight 100vh).
+//
 // v28 changes vs v27:
 //   - All chrome reverted from light themed (var(--brand-page-bg) +
 //     var(--brand-card-surface)) back to original v26 hardcoded dark values:
@@ -636,7 +644,7 @@ function tierStatusColor(sub: SubStatus | null): string {
 // ─── Styles (v28 dark mode) ──────────────────────────────────────────
 
 const pageStyle: React.CSSProperties = {
-  flex: 1, minHeight: 'calc(100vh - 64px)',
+  flex: 1, minHeight: '100vh',
   background: 'var(--brand-sidebar-bg)',
   display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
   padding: 40, fontFamily: FUTURA,

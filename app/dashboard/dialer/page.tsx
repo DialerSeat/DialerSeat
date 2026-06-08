@@ -5,66 +5,57 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
 // =============================================================================
-// DIALER PAGE — Pass 2 Phase C7 (binding sweep, final page)
+// DIALER PAGE — Pass 2 Phase C8 (status bar rebind to header-bg)
 // =============================================================================
-// Unlike C2-C6, this file has no top-level T object. Instead, "terminal*"
-// constants are declared inside the component body, named to reflect JC's
-// "dialer terminal" design intent. Rebinding pattern is the same as C3-C6:
-// themable values become var(--brand-*) at source, semantic stays hex.
+// C8 changes vs C7 — surgical status-bar rebind so the dialer's top bar
+// reads as the page HEADER STRIP, not as a sidebar surface:
+//
+//   .dialer-status-bar background       terminalDark → var(--brand-header-bg)
+//   LIVE/OFFLINE toggle off-state bg    sidebar-tokens color-mix →
+//                                       header-tokens color-mix
+//   AUDIO not-ready dot bg              var(--brand-on-sidebar-muted) →
+//                                       var(--brand-on-header-muted)
+//   AUDIO not-ready label color         same swap
+//   Date string color                   same swap
+//
+// What stays the same (intentional):
+//   terminalDark = var(--brand-sidebar-bg) — still used for card-internal
+//   title bars (LEAD PROFILE, MANUAL DIAL, SYSTEM LOG header, right-sidebar
+//   header), DIAL / INITIATE / NEXT LEAD CTA buttons, the subscribe gate
+//   card. These are CARD chrome not the PAGE header strip, and they keep
+//   their dialer-terminal aesthetic (dark card surfaces with primary
+//   accents and contrasted text).
+//
+//   SYSTEM LOG container — semantic hardcoded #1a1c24 "CRT terminal screen"
+//   regardless of theme. Green-on-black aesthetic is intentional design.
+//
+//   Predictive degraded/yield banners — semantic light-theme pale-red/amber
+//   tint patterns. Render correctly on the default light page bg; on
+//   tenants with dark page bg they're mildly inconsistent but functional.
+//
+// =============================================================================
+// Original C7 binding sweep (preserved):
+// All themable values bind via var(--brand-*) at source; semantic stays hex.
 //
 // What's themed:
 //   terminalBg      → var(--brand-page-bg)
 //   terminalSurface → var(--brand-card-surface)
 //   terminalBorder  → var(--brand-card-border)
-//   terminalDark    → var(--brand-sidebar-bg)  (status bar + dialer chrome)
+//   terminalDark    → var(--brand-sidebar-bg)  (cards + dialer chrome)
 //   terminalText    → var(--brand-on-page-bg)
 //   terminalMuted   → var(--brand-muted-text)
 //
 // What stays semantic (NEVER themed):
-//   terminalAccent (#2a4a8a) — phone number color, lead profile border accent,
-//                              predictive available pulse dot, status indicators
-//   terminalGreen / Red / Amber — status/disposition/danger/warning
-//   '#2d7a2d', '#1a4a8a', '#8a6a1a', '#8a1a1a', '#5a5e6a' — local dispositions
-//                              palette (slightly different from terminal*
-//                              values; intentionally bright for button contrast)
-//   '#32ff7e' / '#ff6464' — bright neon LIVE/OFFLINE indicators with glow
-//   '#4a5a4a' green-on-black SYSTEM LOG text
-//   '#1a1c24' SYSTEM LOG container bg — preserved as semantic dark "CRT
-//   terminal screen" regardless of theme (matches green text aesthetic)
-//   '#ffaa3e' subscribe gate warning amber
-//   '#1a4a8a' APPOINTMENT distinct dark blue (different from terminalAccent)
-//   navLinkStyle '#2a4a8a' info dark blue border (outside component)
-//
-// Surgical replacements:
-//   '#8888aa' → var(--brand-on-sidebar-muted) (header strip muted labels)
-//   '#4a4a5e' → var(--brand-sidebar-active-bg) (dark element borders)
-//   '#444460' (LIVE/OFFLINE toggle off bg) → color-mix lift
-//   '#666688' (audio-not-ready dot) → var(--brand-on-sidebar-muted)
-//   rgba(74,158,255,0.12) (connected pill, mode current) → primary-soft
-//   rgba(74,158,255,0.3) (pill border) → color-mix primary 30%
-//   rgba(255,255,255,0.05) (mode hover) → color-mix on-sidebar 5%
-//   '#252736' (right-toggle:active) → color-mix lift
-//   Header borderBottom 2px solid terminalAccent → var(--brand-header-top-accent)
-//
-// Subscribe gate (rendered when tier !== active):
-//   Modal bg terminalDark → already themed via terminalDark rebinding
-//   '#e0e2ea' (heading light text) → var(--brand-on-sidebar)
-//   '#c0c2ca' (paragraph muted light) → var(--brand-on-sidebar-muted)
-//   '#888a92' (close subtext) → var(--brand-on-sidebar-muted)
-//   '#2a2c34' (border above nav links) → var(--brand-sidebar-active-bg)
-//   RESUBSCRIBE CTA: '#4a9eff'/'#2a6eff' gradient → themed primary gradient
-//     with 75% darker stop, var(--brand-on-primary) text, color-mix glow
-//
-// Suspense fallback (outside component, default export):
-//   '#f0f1f4' bg → var(--brand-page-bg)
-//   '#5a5e6a' color → var(--brand-muted-text)
+//   terminalAccent (#2a4a8a), terminalGreen / Red / Amber, disposition
+//   palette, '#32ff7e'/'#ff6464' neon LIVE/OFFLINE indicators with glow,
+//   '#4a5a4a' green-on-black SYSTEM LOG text, '#1a1c24' SYSTEM LOG bg,
+//   '#ffaa3e' subscribe gate warning amber, '#1a4a8a' APPOINTMENT distinct
+//   dark blue, navLinkStyle '#2a4a8a' info dark blue border.
 //
 // All structural code byte-for-byte: SIP UserAgent + Registerer init, AMD
-// voicemail filter polling, predictive engine state machine (offline →
-// available-not-started → available-started → on_call → wrapping), heartbeat
-// + pacing + incoming-route polls, manual dialer zoom overlay, mobile
-// right-sidebar slide-out, beforeunload sendBeacon cleanup with
-// activeCallSidRef mirror.
+// voicemail filter polling, predictive engine state machine, heartbeat +
+// pacing + incoming-route polls, manual dialer zoom overlay, mobile
+// right-sidebar slide-out, beforeunload sendBeacon cleanup.
 // =============================================================================
 
 type CallStatus = 'idle' | 'calling' | 'connected' | 'ended' | 'preview_ready'
@@ -1622,6 +1613,12 @@ function DialerPageInner() {
   // bg/surface/border/dark/text/muted theme via var(--brand-*).
   // accent/green/red/amber stay semantic hex for status, dispositions,
   // disposition buttons, phone numbers, lead profile accent, etc.
+  //
+  // NOTE C8: the dialer-status-bar (page header strip) uses
+  // var(--brand-header-bg) directly — NOT terminalDark — so it reads as a
+  // separate page header tone, distinct from the sidebar. terminalDark
+  // continues to drive card-internal title bars / dialer chrome buttons
+  // because those are card surfaces, not the page header.
   // ═════════════════════════════════════════════════════════════════════════
   const terminalBg = 'var(--brand-page-bg)'
   const terminalSurface = 'var(--brand-card-surface)'
@@ -1969,8 +1966,11 @@ function DialerPageInner() {
         }
       `}</style>
 
+      {/* PAGE HEADER STRIP — C8 rebind: bg = var(--brand-header-bg) + header
+          tokens for the muted/contrast text within. Mirrors the analytics
+          page's .analytics-header pattern. */}
       <div className="dialer-status-bar" style={{
-        background: terminalDark, padding: '8px 20px',
+        background: 'var(--brand-header-bg)', padding: '8px 20px',
         borderBottom: '2px solid var(--brand-header-top-accent)', flexShrink: 0,
       }}>
         <div className="dialer-status-bar-left">
@@ -1980,7 +1980,7 @@ function DialerPageInner() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div onClick={handleSetAvailable} style={{
               width: '36px', height: '20px', borderRadius: '10px',
-              background: available ? 'var(--brand-primary)' : 'color-mix(in srgb, var(--brand-on-sidebar) 30%, var(--brand-sidebar-bg))',
+              background: available ? 'var(--brand-primary)' : 'color-mix(in srgb, var(--brand-on-header) 30%, var(--brand-header-bg))',
               position: 'relative', cursor: 'pointer', transition: 'background 0.2s',
               flexShrink: 0,
             }}>
@@ -1999,8 +1999,8 @@ function DialerPageInner() {
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: swReady ? 'var(--brand-primary)' : 'var(--brand-on-sidebar-muted)' }} />
-            <span style={{ fontSize: '9px', letterSpacing: '2px', color: swReady ? 'var(--brand-primary)' : 'var(--brand-on-sidebar-muted)' }}>
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: swReady ? 'var(--brand-primary)' : 'var(--brand-on-header-muted)' }} />
+            <span style={{ fontSize: '9px', letterSpacing: '2px', color: swReady ? 'var(--brand-primary)' : 'var(--brand-on-header-muted)' }}>
               {swReady ? 'AUDIO' : '...'}
             </span>
           </div>
@@ -2011,7 +2011,7 @@ function DialerPageInner() {
             <span>{sessionStats.connected}</span>
           </div>
           <div className="dialer-time-block" style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
-            <span style={{ fontSize: '11px', fontFamily: 'monospace', color: 'var(--brand-on-sidebar-muted)', letterSpacing: '2px' }}>{dateStr}</span>
+            <span style={{ fontSize: '11px', fontFamily: 'monospace', color: 'var(--brand-on-header-muted)', letterSpacing: '2px' }}>{dateStr}</span>
             <span style={{ fontSize: '14px', fontFamily: 'monospace', fontWeight: 'bold', color: 'var(--brand-primary)', letterSpacing: '3px' }}>{timeStr}</span>
           </div>
         </div>

@@ -7,41 +7,34 @@ import { useState, useEffect, useRef } from 'react'
 import { useBranding } from '@/components/ThemeProvider'
 
 // =============================================================================
-// app/dashboard/layout.tsx — C2 (post-migration-004 header/sidebar split)
+// app/dashboard/layout.tsx — C3 (logo box stays on sidebar)
 // =============================================================================
-// Builds on C1 (Pass 2 sidebar binding sweep). C2 adds:
+// C3 changes vs C2:
 //
-//   - Desktop tenant logo box → --brand-header-bg, full-width edge-to-edge
-//     fit (260x74) when a tenant logo is present. Box height 64 → 74 to
-//     match the recommended 512x148 logo aspect ratio so a properly-sized
-//     logo fits with effectively zero letterbox or cropping.
-//     Padding removed so the logo touches the sidebar edges ("no outer
-//     space"). Default-brand state (no tenant logo) preserves the original
-//     '0 18px' padding and 64px height so the gradient D + DIALERSEAT text
-//     don't get stretched.
+//   - Desktop tenant logo box BG: var(--brand-header-bg) → transparent.
+//     The entire desktop sidebar is now one solid color from top to bottom —
+//     the tenant logo sits ON the sidebar, not in a separate header-colored
+//     stripe at the top. Per JC's explicit rule: "the entire sidebar should
+//     be a solid color. The tenant logo at the top of the sidebar is
+//     sidebar, not header."
 //
-//   - Mobile topbar background → --brand-header-bg. The topbar IS the
-//     header strip on mobile (the bar across the top of every dashboard
-//     page).
+//   - Mobile topbar binding (var(--brand-header-bg)) PRESERVED — that
+//     genuinely is the header strip on mobile, distinct from the sidebar
+//     drawer underneath.
 //
+// What stays from C2 (untouched):
+//   - Logo box dimensions: tenantLogoUrl ? 74 : 64 (height), 0 vs '0 18px'
+//     (padding). The edge-to-edge 260×74 fit for tenant logos is unchanged;
+//     only the background color binding is reverted.
 //   - Hamburger button → --brand-header-bg background, --brand-on-header
-//     bar lines. Border stays --brand-sidebar-active-bg because that
-//     token's value (primary at 18% over transparent) is theme-independent.
-//
-// What stays from C1 (untouched):
+//     bar lines.
+//   - Mobile topbar background → --brand-header-bg.
 //   - Desktop sidebar background, mobile drawer background → --brand-sidebar-bg
 //   - Nav items, profile row, drawer chrome → sidebar-tinted tokens
 //   - Lapsed RESUBSCRIBE banner → semantic amber #ffaa3e
 //   - ADMIN CONSOLE subtitle blue (#4a9eff) — only renders on default brand
-//     which only exists on the default dark sidebar
 //   - DefaultBrandDesktop / DefaultBrandMobileTopbar gradient D logo
 //   - brandPrimary JS const for profile-row conditional badge color
-//
-// Default-brand fallback: when header_bg_color is missing or equals
-// sidebar_color (every existing tenant via migration 004 backfill, plus
-// signed-out / no-tenant users), --brand-header-bg == --brand-sidebar-bg
-// and the chrome looks identical to C1. Divergence is only visible once a
-// tenant intentionally picks different values in the onboarding picker.
 // =============================================================================
 
 const userNavItems = [
@@ -268,6 +261,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // recommended 512x148 logo aspect ratio (3.459) closely enough that a
   // properly-sized logo touches both top and bottom of the box with
   // effectively zero letterbox via objectFit:contain.
+  // C3: bg is transparent — sidebar bg shows through so the logo sits ON
+  // the sidebar rather than in a header-colored stripe.
   const TenantBrandDesktop = () => (
     <span style={{
       position: 'relative',
@@ -358,15 +353,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   )
 
   // Logo box. Two presentations:
-  //   - With tenant logo: padding 0, height 74, bg = --brand-header-bg.
-  //     The TenantBrandDesktop fills 100% of the 260px sidebar width and
-  //     the 74px height edge-to-edge.
-  //   - Default brand: padding '0 18px', height 64, bg transparent.
-  //     The gradient D + DIALERSEAT text sits with comfortable left
-  //     padding on top of the sidebar bg.
-  // When --brand-header-bg == --brand-sidebar-bg (default and every
-  // migration-004-backfilled tenant), both presentations look identical
-  // to C1 (no visible regression).
+  //   - With tenant logo: padding 0, height 74, bg transparent (sidebar
+  //     shows through). The TenantBrandDesktop fills 100% of the 260px
+  //     sidebar width and the 74px height edge-to-edge.
+  //   - Default brand: padding '0 18px', height 64, bg transparent. The
+  //     gradient D + DIALERSEAT text sits with comfortable left padding
+  //     on top of the sidebar bg.
+  // Both presentations have transparent bg in C3 — the entire sidebar is
+  // a single solid block of sidebar-bg from top to bottom.
   const Sidebar = () => (
     <>
       <Link href={logoHref} style={{
@@ -378,7 +372,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         textDecoration: 'none',
         flexShrink: 0,
         height: tenantLogoUrl ? 74 : 64,
-        background: tenantLogoUrl ? 'var(--brand-header-bg)' : 'transparent',
+        background: 'transparent',
       }}>
         {tenantLogoUrl ? <TenantBrandDesktop /> : <DefaultBrandDesktop />}
       </Link>
