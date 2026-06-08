@@ -4,30 +4,48 @@ import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
 
 // =============================================================================
-// CAMPAIGNS PAGE — Pass 2 Phase C3 (binding sweep)
+// CAMPAIGNS PAGE — Pass 2 Phase C4 (page header strips → header-bg)
 // =============================================================================
-// All CSS-context token uses (template strings in <style>, inline style
-// props) are rebound to Pass 2 brand tokens. Since this file has zero
-// recharts, the cleanest pattern is to rebind T.* values directly to var()
-// strings at the source — every downstream consumer auto-picks up the
-// themed value.
+// C4 changes vs C3 — surgical rebind so the two page-header-strip bands
+// read as page chrome, not sidebar chrome:
+//
+//   .cmp-header background       T.dark → var(--brand-header-bg)
+//   .cmp-header-sub color        on-sidebar-muted → on-header-muted
+//   .editor-toolbar background   T.dark → var(--brand-header-bg)
+//   .editor-tb-btn  border/color/hover/disabled all use header tokens,
+//                                with color-mix(on-header 8%, transparent)
+//                                standing in for the absent
+//                                --brand-header-active-bg token
+//
+// What stays the same (intentional — these are popup/card chrome, not
+// page headers):
+//   .settings-head background = T.dark (modal title bar)
+//   .ds-btn.primary background = T.dark (button chrome)
+//   .lead-preview-wrap .open-editor-hint background = T.dark (popover)
+//   LeadPreviewThumb dark navy pill = rgba(26,26,46,0.92) (semantic info)
+//
+// T constant unchanged. All structural code byte-for-byte from C3.
+//
+// =============================================================================
+// Original C3 binding sweep (preserved):
+// All CSS-context token uses bind to Pass 2 brand tokens at the source.
 //
 // What's themed:
 //   T.bg      → var(--brand-page-bg)
 //   T.surface → var(--brand-card-surface)
 //   T.border  → var(--brand-card-border)
-//   T.dark    → var(--brand-sidebar-bg)  (header strip, modal head, editor toolbar)
+//   T.dark    → var(--brand-sidebar-bg)  (modal heads, button chrome, popovers)
 //   T.text    → var(--brand-on-page-bg)
 //   T.muted   → var(--brand-muted-text)
-//   T.blue    → var(--brand-primary)  (unchanged — was already themed)
+//   T.blue    → var(--brand-primary)
 //
 // What stays semantic (NEVER themed):
 //   T.green (#1a6a1a)  — ACTIVE status pin, DEFAULT script badge, editor row-new indicator
 //   T.red (#8a1a1a)    — DELETE buttons, danger borders, delete confirm prompt, editor row-deleted indicator
 //   T.amber (#8a6a1a)  — Amber button variant (RESUBSCRIBE)
-//   T.accent (#2a4a8a) — kept in T for parity with analytics but unreferenced after surgery
-//   White spreadsheet cells in editor-grid th/td (Google-Sheets-style cell convention)
-//   "white" active script-tab background (UI affordance — active tab visually pops)
+//   T.accent (#2a4a8a) — kept in T for parity with analytics but unreferenced
+//   White spreadsheet cells in editor-grid th/td (Sheets convention)
+//   "white" active script-tab background (UI affordance — active tab pops)
 //   LeadPreviewThumb white table + dark navy pill (info badge on data table)
 //   All rgba(255,170,62,*) amber + rgba(138,26,26,*) red + #fae8e8/#f8e8e8/#fdf4e8 button shades
 //
@@ -824,9 +842,9 @@ export default function CampaignsPage() {
       <style>{`
         .cmp-root * { box-sizing: border-box; }
 
-        /* ── HEADER (matches analytics / dialer / leads) ──────────────── */
+        /* ── HEADER — page header strip, bound to header-bg (C4) ──────── */
         .cmp-header {
-          background: ${T.dark};
+          background: var(--brand-header-bg);
           padding: 12px 20px;
           border-bottom: 2px solid var(--brand-header-top-accent);
           display: flex;
@@ -846,7 +864,7 @@ export default function CampaignsPage() {
         }
         .cmp-header-sub {
           font-size: 10px; font-family: monospace;
-          color: var(--brand-on-sidebar-muted); letter-spacing: 1px;
+          color: var(--brand-on-header-muted); letter-spacing: 1px;
         }
 
         /* ── HEADER BUTTONS — dialer outlined pattern ─────────────────── */
@@ -989,6 +1007,9 @@ export default function CampaignsPage() {
           overflow: hidden;
           box-shadow: 0 20px 60px rgba(0,0,0,0.45);
         }
+        /* settings-head stays on sidebar-bg — it's modal chrome, not a
+           page header strip. Same rule as the dialer's LEAD PROFILE /
+           MANUAL DIAL card title bars keeping terminalDark. */
         .settings-head {
           background: ${T.dark};
           padding: 12px 20px;
@@ -1260,6 +1281,8 @@ export default function CampaignsPage() {
         .ds-btn:hover { background: ${T.surface}; }
         .ds-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
+        /* primary buttons stay on sidebar-bg — matches dialer's CTA pattern
+           (dark button surface with primary top accent + primary text) */
         .ds-btn.primary {
           background: ${T.dark};
           border-color: ${T.dark};
@@ -1308,8 +1331,9 @@ export default function CampaignsPage() {
         }
 
         /* ── SHEETS EDITOR — fullscreen lead editor ───────────────────── */
-        /* Frame (toolbar + scrollable wrap) themed; individual table cells */
-        /* stay "white" to preserve the spreadsheet convention.             */
+        /* C4: toolbar is the page header strip in fullscreen mode and is */
+        /* bound to header-bg. Toolbar buttons use on-header tokens. The   */
+        /* grid cells stay "white" — Sheets spreadsheet convention.       */
         .editor-fullscreen {
           position: fixed; inset: 0;
           background: ${T.bg};
@@ -1319,7 +1343,7 @@ export default function CampaignsPage() {
         }
         .editor-toolbar {
           padding: 10px 20px;
-          background: ${T.dark};
+          background: var(--brand-header-bg);
           border-bottom: 2px solid var(--brand-header-top-accent);
           display: flex;
           align-items: center;
@@ -1342,20 +1366,20 @@ export default function CampaignsPage() {
         .editor-tb-btn {
           padding: 6px 12px;
           background: transparent;
-          border: 1px solid var(--brand-sidebar-active-bg);
+          border: 1px solid color-mix(in srgb, var(--brand-on-header) 8%, transparent);
           border-radius: 3px;
           font-size: 9px;
           letter-spacing: 2px;
           font-weight: bold;
-          color: var(--brand-on-sidebar-muted);
+          color: var(--brand-on-header-muted);
           cursor: pointer;
           font-family: ${FUTURA};
           transition: background 0.12s, color 0.12s, border-color 0.12s;
         }
         .editor-tb-btn:hover {
-          background: color-mix(in srgb, var(--brand-on-sidebar) 5%, transparent);
-          color: var(--brand-on-sidebar);
-          border-color: var(--brand-on-sidebar-muted);
+          background: color-mix(in srgb, var(--brand-on-header) 5%, transparent);
+          color: var(--brand-on-header);
+          border-color: var(--brand-on-header-muted);
         }
         .editor-tb-btn:disabled { opacity: 0.4; cursor: not-allowed; }
         .editor-tb-btn.primary {
@@ -1368,8 +1392,8 @@ export default function CampaignsPage() {
           color: ${T.blue};
         }
         .editor-tb-btn.primary:disabled {
-          border-color: var(--brand-sidebar-active-bg);
-          color: var(--brand-on-sidebar-muted);
+          border-color: color-mix(in srgb, var(--brand-on-header) 8%, transparent);
+          color: var(--brand-on-header-muted);
         }
         .editor-tb-btn.danger {
           border-color: rgba(255,100,100,0.4);
