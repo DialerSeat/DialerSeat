@@ -4,18 +4,36 @@ import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
 
 // =============================================================================
-// LEADS PAGE — Pass 2 Phase C5 (binding sweep)
+// LEADS PAGE — Pass 2 Phase C6 (page header strip → header-bg)
 // =============================================================================
-// Same pattern as C3/C4 (no recharts). Themable T tokens rebound at source.
+// C6 changes vs C5 — surgical rebind so the page header strip reads as page
+// chrome, not sidebar chrome:
+//
+//   .leads-header background     T.dark → var(--brand-header-bg)
+//   .leads-header-stats color    on-sidebar-muted → on-header-muted
+//
+// What stays the same (intentional — button chrome, not page header):
+//   T.dark stays as var(--brand-sidebar-bg). All card-internal CTAs keep
+//   their dark-button-with-primary-top-accent pattern:
+//     - ▶ SAVE button in lead-edit
+//     - ▶ ADD LEAD modal submit button
+//     - ▶ DELETE FOREVER modal danger button
+//     - Resubscribe link in lapsed lead-edit notice
+//
+// T constant unchanged. All structural code byte-for-byte from C5.
+//
+// =============================================================================
+// Original C5 binding sweep (preserved):
+// Themable T tokens rebound at source.
 //
 // What's themed:
 //   T.bg      → var(--brand-page-bg)
 //   T.surface → var(--brand-card-surface)
 //   T.border  → var(--brand-card-border)
-//   T.dark    → var(--brand-sidebar-bg)  (header strip + primary CTA bg)
+//   T.dark    → var(--brand-sidebar-bg)  (CTA button chrome)
 //   T.text    → var(--brand-on-page-bg)
 //   T.muted   → var(--brand-muted-text)
-//   T.blue    → var(--brand-primary)  (unchanged — was already themed)
+//   T.blue    → var(--brand-primary)
 //
 // What stays semantic (NEVER themed):
 //   T.accent  (#2a4a8a) — phone number color AND attempted-call indicator
@@ -73,7 +91,7 @@ const T = {
   dark: 'var(--brand-sidebar-bg)',
   text: 'var(--brand-on-page-bg)',
   muted: 'var(--brand-muted-text)',
-  accent: '#2a4a8a', // semantic info dark blue (phone + attempted-call color)
+  accent: '#2a4a8a',
   blue: 'var(--brand-primary)',
   green: '#1a6a1a',
   red: '#8a1a1a',
@@ -449,8 +467,9 @@ export default function LeadsPage() {
     }}>
       <style>{`
         .leads-root * { box-sizing: border-box; }
+        /* C6: page header strip bound to var(--brand-header-bg) */
         .leads-header {
-          background: ${T.dark};
+          background: var(--brand-header-bg);
           padding: 12px 20px;
           border-bottom: 2px solid var(--brand-header-top-accent);
           display: flex;
@@ -714,7 +733,7 @@ export default function LeadsPage() {
             LEADS DATABASE
           </span>
           <span className="leads-header-stats" style={{
-            fontSize: 10, fontFamily: 'monospace', color: 'var(--brand-on-sidebar-muted)', letterSpacing: 1,
+            fontSize: 10, fontFamily: 'monospace', color: 'var(--brand-on-header-muted)', letterSpacing: 1,
           }}>
             {total.toLocaleString()} TOTAL · {leads.length} LOADED
           </span>
