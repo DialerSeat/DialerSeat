@@ -37,6 +37,11 @@ import { WhitelabelLivePreview } from '@/components/WhitelabelLivePreview'
 //   - Edit mode (pre-fills from GET /api/whitelabel/onboarding)
 //   - Onboarding chrome stays DialerSeat default — only the preview
 //     component reflects the user's color picks
+//
+// v5.1 fix:
+//   - useEffect dependency changed from `user` to `user?.id` to prevent
+//     Clerk's unstable object reference from re-running the load effect
+//     and resetting form state on every focus/color-picker interaction.
 // =============================================================================
 
 interface Preset {
@@ -151,8 +156,11 @@ export default function WhitelabelOnboardingPage() {
   const [error, setError] = useState<string | null>(null)
 
   // ─── Load existing tenant data + saved themes ──────────────────────
+  // Depend on user?.id (stable string) instead of user (new object
+  // reference every render) so this effect never re-runs mid-session
+  // and resets the user's in-progress customisation.
   useEffect(() => {
-    if (!isLoaded || !user) return
+    if (!isLoaded || !user?.id) return
     let cancelled = false
 
     Promise.all([
@@ -214,7 +222,7 @@ export default function WhitelabelOnboardingPage() {
     return () => {
       cancelled = true
     }
-  }, [isLoaded, user])
+  }, [isLoaded, user?.id])
 
   // ─── Slug availability check (350ms debounce) ──────────────────────
   useEffect(() => {
