@@ -5,7 +5,6 @@ import { useUser, UserButton } from '@clerk/nextjs'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
-import { useBranding } from '@/components/ThemeProvider'
 
 const T = {
   bg: '#f0f1f4',
@@ -24,6 +23,12 @@ const T = {
 // =============================================================================
 // Global header rendered (probably) by the root layout. Shows brand + auth
 // state + DASHBOARD button on every page that doesn't suppress it.
+//
+// v24 FIX — white-label branding removed:
+//   Header is now always the default DialerSeat brand regardless of tenant.
+//   useBranding() removed entirely. brandName, brandLogoUrl, brandPrimary
+//   are hardcoded to defaults so tenant logo/color changes never affect
+//   this component.
 //
 // v23 FIX — removed borderBottom:
 //   The `borderBottom: 1px solid ${T.border}` rendered as a stray light
@@ -63,11 +68,10 @@ export default function SiteHeader() {
   const { isSignedIn, isLoaded, user } = useUser()
   const [isAdmin, setIsAdmin] = useState(false)
 
-  // ── WHITE-LABEL BRANDING ──────────────────────────────────────────────
-  const branding = useBranding()
-  const brandName = branding?.brand_name?.toUpperCase() || 'DIALERSEAT'
-  const brandLogoUrl = branding?.logo_url || null
-  const brandPrimary = branding?.primary_color || T.blue
+  // ── ALWAYS DEFAULT BRAND — not white-label aware ──────────────────────
+  const brandName = 'DIALERSEAT'
+  const brandLogoUrl = null
+  const brandPrimary = T.blue
 
   const userButtonRef = useRef<HTMLDivElement | null>(null)
 
@@ -124,12 +128,6 @@ export default function SiteHeader() {
       className="site-header"
       style={{
         background: T.darker,
-        // v23: borderBottom removed (was `1px solid ${T.border}`) — it
-        // showed as a stray light divider line on every page using this
-        // header. Header now sits flush against the page background.
-        // v22 FIX: padding-top accounts for iPhone status bar / notch via
-        // env(safe-area-inset-top). max() ensures non-notched devices still
-        // get at least 12px of padding.
         paddingTop: 'max(12px, env(safe-area-inset-top, 12px))',
         paddingBottom: 12,
         paddingLeft: 'max(24px, env(safe-area-inset-left, 24px))',
@@ -195,48 +193,23 @@ export default function SiteHeader() {
             textDecoration: 'none',
           }}
         >
-          {brandLogoUrl ? (
-            <span
-              className="site-header-brand-mark"
-              style={{
-                position: 'relative',
-                width: 28,
-                height: 28,
-                borderRadius: 6,
-                overflow: 'hidden',
-                flexShrink: 0,
-                background: T.darker,
-              }}
-            >
-              <Image
-                src={brandLogoUrl}
-                alt={brandName}
-                fill
-                sizes="28px"
-                style={{ objectFit: 'cover' }}
-                priority
-                unoptimized
-              />
+          <div
+            className="site-header-brand-mark"
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: 6,
+              background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <span style={{ color: 'white', fontWeight: 'bold', fontSize: 13 }}>
+              D
             </span>
-          ) : (
-            <div
-              className="site-header-brand-mark"
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: 6,
-                background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              <span style={{ color: 'white', fontWeight: 'bold', fontSize: 13 }}>
-                D
-              </span>
-            </div>
-          )}
+          </div>
           <span
             className="site-header-brand-text"
             style={{
