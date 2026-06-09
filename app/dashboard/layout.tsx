@@ -296,7 +296,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         alt={tenantBrandName}
         fill
         sizes="140px"
-        style={{ objectFit: 'contain', objectPosition: 'left center' }}
+        style={{ objectFit: 'contain', objectPosition: 'center center' }}
         priority
         unoptimized
       />
@@ -550,6 +550,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               background: 'var(--brand-header-bg)', borderRadius: 8,
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
               gap: 4, cursor: 'pointer', padding: 0,
+              flexShrink: 0,
             }}
           >
             <span style={{ width: 18, height: 2, background: 'var(--brand-on-header)', borderRadius: 1 }} />
@@ -562,6 +563,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             alignItems: 'center',
             gap: tenantLogoUrl ? 0 : 8,
             textDecoration: 'none',
+            position: 'absolute',
+            left: '50%',
+            transform: 'translateX(-50%)',
           }}>
             {tenantLogoUrl ? <TenantBrandMobileTopbar /> : <DefaultBrandMobileTopbar />}
           </Link>
