@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 
 const isPublicRoute = createRouteMatcher([
   '/',
+  '/sitemap.xml',
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/terms',
