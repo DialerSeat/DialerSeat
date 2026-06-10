@@ -6,16 +6,21 @@ import { createSeatSubscription, isSeatBillingError } from '@/lib/teamBilling'
 /**
  * Owner accepts a pending team member.
  *
- * Now Stripe-wired:
- *   1. Verify owner has card on file (fail loud if not — 402)
- *   2. Create Stripe seat subscription with metadata + description
- *   3. Update team_seat_charges row with stripe_subscription_id and 'paid'
- *      status (Stripe webhook will override to actual status when invoice settles)
- *   4. Flip team_members.status to 'active'
- *   5. Activate any pre-staged team_campaign_access rows
+ * Flow branches on whether a pending team_seat_charge exists:
  *
- * On Stripe failure (no card, decline, etc.): roll back nothing — member stays
- * pending, no charges created. Owner gets a clear error.
+ *   1. Owner_pays code → pending seat_charge row exists →
+ *      verify owner has card, create Stripe seat sub, mark charge paid.
+ *
+ *   2. Agent_pays code → no pending seat_charge → skip Stripe entirely,
+ *      just activate. Agent's own personal $35/wk DialerSeat sub gates
+ *      access platform-side.
+ *
+ *   3. Free code → no pending seat_charge → skip Stripe entirely. Free
+ *      mode means no per-seat fee; agent's personal sub still required.
+ *
+ * On Stripe failure during the owner_pays branch: no rollback of the
+ * member row happens because we haven't activated it yet — pending
+ * stays pending, no charge created. Owner gets a clear error.
  *
  * Body:
  *   memberId: uuid (required)
@@ -34,7 +39,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'memberId required' }, { status: 400 })
     }
 
-    // Fetch member + team in one query
+    // Fetch member + team
     const { data: member } = await supabaseAdmin
       .from('team_members')
       .select('id, team_id, user_id, status, teams!inner(id, owner_id, name)')
@@ -60,7 +65,6 @@ export async function POST(req: Request) {
       )
     }
 
-    // Find the pending seat_charges row to attach Stripe sub to.
     // Idempotency guard: if there's already a paid charge for this member,
     // don't double-charge — just activate them.
     const { data: existingPaid } = await supabaseAdmin
@@ -76,7 +80,8 @@ export async function POST(req: Request) {
       // Idempotent: already charged, skip Stripe call
       stripeSubId = existingPaid.stripe_subscription_id
     } else {
-      // Find pending charge to wire up
+      // Find pending charge to wire up — if none exists, this is the
+      // agent_pays or free flow, where no team-level Stripe sub is required.
       const { data: pendingCharge } = await supabaseAdmin
         .from('team_seat_charges')
         .select('id')
@@ -86,61 +91,56 @@ export async function POST(req: Request) {
         .limit(1)
         .maybeSingle()
 
-      if (!pendingCharge) {
-        return NextResponse.json(
-          { success: false, error: 'No pending seat charge found for this member' },
-          { status: 500 }
-        )
-      }
+      if (pendingCharge) {
+        // ── owner_pays branch: create Stripe sub ──
+        const { data: agentUser } = await supabaseAdmin
+          .from('users')
+          .select('email')
+          .eq('clerk_id', member.user_id)
+          .maybeSingle()
 
-      // Look up agent's email for the Stripe description
-      const { data: agentUser } = await supabaseAdmin
-        .from('users')
-        .select('email')
-        .eq('clerk_id', member.user_id)
-        .maybeSingle()
+        const agentEmail = agentUser?.email || member.user_id
 
-      const agentEmail = agentUser?.email || member.user_id
-
-      // Create the Stripe subscription
-      try {
-        const result = await createSeatSubscription({
-          ownerId: userId,
-          agentId: member.user_id,
-          agentEmail,
-          teamId: team.id,
-          teamName: team.name,
-          seatChargeId: pendingCharge.id,
-          teamMemberId: memberId,
-        })
-
-        stripeSubId = result.stripeSubscriptionId
-
-        // Update the seat charge row with Stripe info + paid status
-        await supabaseAdmin
-          .from('team_seat_charges')
-          .update({
-            stripe_subscription_id: result.stripeSubscriptionId,
-            status: 'paid',
-            period_start: result.currentPeriodStart,
-            period_end: result.currentPeriodEnd,
+        try {
+          const result = await createSeatSubscription({
+            ownerId: userId,
+            agentId: member.user_id,
+            agentEmail,
+            teamId: team.id,
+            teamName: team.name,
+            seatChargeId: pendingCharge.id,
+            teamMemberId: memberId,
           })
-          .eq('id', pendingCharge.id)
-      } catch (err: any) {
-        if (isSeatBillingError(err)) {
-          if (err.code === 'no_card' || err.code === 'no_customer') {
-            return NextResponse.json(
-              { success: false, error: err.message, code: err.code },
-              { status: 402 }
-            )
+
+          stripeSubId = result.stripeSubscriptionId
+
+          await supabaseAdmin
+            .from('team_seat_charges')
+            .update({
+              stripe_subscription_id: result.stripeSubscriptionId,
+              status: 'paid',
+              period_start: result.currentPeriodStart,
+              period_end: result.currentPeriodEnd,
+            })
+            .eq('id', pendingCharge.id)
+        } catch (err: any) {
+          if (isSeatBillingError(err)) {
+            if (err.code === 'no_card' || err.code === 'no_customer') {
+              return NextResponse.json(
+                { success: false, error: err.message, code: err.code },
+                { status: 402 }
+              )
+            }
           }
+          console.error('Stripe seat sub creation failed:', err)
+          return NextResponse.json(
+            { success: false, error: err.message || 'Stripe charge failed' },
+            { status: 502 }
+          )
         }
-        console.error('Stripe seat sub creation failed:', err)
-        return NextResponse.json(
-          { success: false, error: err.message || 'Stripe charge failed' },
-          { status: 502 }
-        )
       }
+      // ── agent_pays / free branch: no pending charge → fall through
+      //    with stripeSubId still null. Member just gets activated below.
     }
 
     // Flip member to active

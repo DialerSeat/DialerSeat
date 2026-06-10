@@ -5,13 +5,31 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 // =============================================================================
-// TEAMS PAGE — Pass 2 Phase C6 + item-1 copy-block primary swap
+// TEAMS PAGE — Pass 2 Phase C6 + item-1 copy-block primary swap + FREE mode
 // =============================================================================
-// C6 header change applied (same as leads page C5→C6):
-//   header strip background  T.dark → var(--brand-header-bg)
-//   header stats color       var(--brand-on-sidebar-muted) → var(--brand-on-header-muted)
+// THIS REVISION layers three categories of change on top of the prior C6:
 //
-// All other code byte-for-byte from the prior revision.
+// 1. URL redirects updated for the new analytics page:
+//      - handleRedeem (redirect_to_team branch)
+//      - handleCreateSubmit success path
+//      - Member team card Link
+//      - Owner team OPEN > Link
+//    All four now point to /dashboard/teams/${id}/analytics (the old bare
+//    /dashboard/teams/${id} URL is a redirect shim that bounces back here).
+//
+// 2. Type unions extended with 'free':
+//      - TeamCampaignRow.accessMode
+//      - attachAccessMode state
+//      - updateCampaignAccess signature
+//
+// 3. UI for the new 'free' access mode:
+//      - Attach modal radio list gains a FREE option with copy clarifying
+//        that members STILL need their own $35/wk personal DialerSeat sub
+//        to dial — free here means no per-seat campaign fee, not free
+//        platform access.
+//      - Per-attached-campaign access mode select gains a FREE option.
+//
+// All other code byte-for-byte from C6.
 // =============================================================================
 
 const T = {
@@ -38,7 +56,7 @@ interface TeamUser {
 interface MemberCampaignAccess {
   id: string
   campaignId: string
-  payer: 'owner' | 'agent'
+  payer: 'owner' | 'agent' | 'free'
   accessSource: string | null
   createdAt: string
 }
@@ -66,7 +84,7 @@ interface TeamCode {
 }
 interface TeamCampaignRow {
   campaignId: string
-  accessMode: 'owner_pays' | 'agent_pays' | 'public'
+  accessMode: 'owner_pays' | 'agent_pays' | 'public' | 'free'
   createdAt: string
   campaign: {
     id: string
@@ -108,6 +126,8 @@ interface Campaign {
   name: string
   status: string
 }
+
+type AccessMode = 'owner_pays' | 'agent_pays' | 'public' | 'free'
 
 const SURFACE_LIFT = 'color-mix(in srgb, var(--brand-card-surface) 85%, var(--brand-on-page-bg) 15%)'
 
@@ -176,14 +196,14 @@ export default function TeamsPage() {
 
   const [attachModalTeam, setAttachModalTeam] = useState<OwnedTeam | null>(null)
   const [attachCampaignId, setAttachCampaignId] = useState<string>('')
-  const [attachAccessMode, setAttachAccessMode] = useState<'owner_pays' | 'agent_pays' | 'public'>('owner_pays')
+  const [attachAccessMode, setAttachAccessMode] = useState<AccessMode>('owner_pays')
   const [attachCampaigns, setAttachCampaigns] = useState<Campaign[]>([])
   const [attachSubmitting, setAttachSubmitting] = useState(false)
   const [attachError, setAttachError] = useState<string | null>(null)
 
   const [grantTarget, setGrantTarget] = useState<{ team: OwnedTeam; member: TeamMember } | null>(null)
   const [grantCampaignId, setGrantCampaignId] = useState('')
-  const [grantPayer, setGrantPayer] = useState<'owner' | 'agent'>('owner')
+  const [grantPayer, setGrantPayer] = useState<'owner' | 'agent' | 'free'>('owner')
   const [grantSubmitting, setGrantSubmitting] = useState(false)
   const [grantError, setGrantError] = useState<string | null>(null)
 
@@ -260,7 +280,7 @@ export default function TeamsPage() {
         loadTeams()
       } else if (data.nextStep === 'redirect_to_team') {
         setRedeemMessage({ type: 'success', text: `Joined ${data.team.name}. Redirecting...` })
-        setTimeout(() => router.push(`/dashboard/teams/${data.team.id}`), 1000)
+        setTimeout(() => router.push(`/dashboard/teams/${data.team.id}/analytics`), 1000)
       } else {
         setRedeemMessage({ type: 'success', text: 'Code redeemed.' })
         setRedeemCode('')
@@ -316,7 +336,7 @@ export default function TeamsPage() {
       setShowCreateModal(false)
       setCreateName('')
       setCreateDesc('')
-      router.push(`/dashboard/teams/${data.team.id}`)
+      router.push(`/dashboard/teams/${data.team.id}/analytics`)
     } catch (err: any) {
       setCreateError(err.message || 'Failed to create team')
       setCreating(false)
@@ -402,13 +422,19 @@ export default function TeamsPage() {
     })
   }
 
+  const payerForMode = (mode: AccessMode): 'owner' | 'agent' | 'free' => {
+    if (mode === 'owner_pays') return 'owner'
+    if (mode === 'free') return 'free'
+    return 'agent'
+  }
+
   const openGrantModal = (team: OwnedTeam, member: TeamMember) => {
     const memberAccessIds = new Set(member.campaignAccess.map(a => a.campaignId))
     const firstAvailable = team.teamCampaigns.find(tc => !memberAccessIds.has(tc.campaignId))
     setGrantTarget({ team, member })
     setGrantCampaignId(firstAvailable?.campaignId || '')
     if (firstAvailable) {
-      setGrantPayer(firstAvailable.accessMode === 'owner_pays' ? 'owner' : 'agent')
+      setGrantPayer(payerForMode(firstAvailable.accessMode))
     } else {
       setGrantPayer('owner')
     }
@@ -456,14 +482,14 @@ export default function TeamsPage() {
   const reinstateMember = (team: OwnedTeam, member: TeamMember) => {
     if (team.teamCampaigns.length === 1) {
       const tc = team.teamCampaigns[0]
-      const payer = tc.accessMode === 'owner_pays' ? 'owner' : 'agent'
+      const payer = payerForMode(tc.accessMode)
       doInstantGrant(member, tc.campaignId, payer)
       return
     }
     openGrantModal(team, member)
   }
 
-  const doInstantGrant = async (member: TeamMember, campaignId: string, payer: 'owner' | 'agent') => {
+  const doInstantGrant = async (member: TeamMember, campaignId: string, payer: 'owner' | 'agent' | 'free') => {
     setActioningId(member.id)
     setActionError(null)
     try {
@@ -637,7 +663,7 @@ export default function TeamsPage() {
   const updateCampaignAccess = async (
     teamId: string,
     campaignId: string,
-    accessMode: 'owner_pays' | 'agent_pays' | 'public'
+    accessMode: AccessMode
   ) => {
     setActioningId(`${teamId}:${campaignId}`)
     setActionError(null)
@@ -890,7 +916,7 @@ export default function TeamsPage() {
             }}>▸ TEAMS YOU&apos;VE JOINED</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {memberTeams.map(team => (
-                <Link key={team.id} href={`/dashboard/teams/${team.id}`} style={{ textDecoration: 'none' }}>
+                <Link key={team.id} href={`/dashboard/teams/${team.id}/analytics`} style={{ textDecoration: 'none' }}>
                   <div style={{
                     background: T.surface, border: `1px solid ${T.border}`,
                     borderLeft: `3px solid ${T.accent}`, borderRadius: 3,
@@ -980,7 +1006,7 @@ export default function TeamsPage() {
                           </div>
                         </div>
                         <Link
-                          href={`/dashboard/teams/${team.id}`}
+                          href={`/dashboard/teams/${team.id}/analytics`}
                           onClick={e => e.stopPropagation()}
                           style={{
                             padding: '5px 10px', background: 'transparent', border: `1px solid ${T.border}`,
@@ -1074,7 +1100,7 @@ export default function TeamsPage() {
                                       </div>
                                       <select
                                         value={tc.accessMode}
-                                        onChange={e => updateCampaignAccess(team.id, tc.campaignId, e.target.value as any)}
+                                        onChange={e => updateCampaignAccess(team.id, tc.campaignId, e.target.value as AccessMode)}
                                         disabled={busy}
                                         style={{
                                           padding: '5px 8px', background: T.surface,
@@ -1086,6 +1112,7 @@ export default function TeamsPage() {
                                         <option value="owner_pays">OWNER PAYS</option>
                                         <option value="agent_pays">AGENT PAYS</option>
                                         <option value="public">PUBLIC</option>
+                                        <option value="free">FREE</option>
                                       </select>
                                       <button
                                         onClick={() => detachCampaign(team.id, tc.campaignId, tc.campaign?.name || 'this campaign')}
@@ -1225,6 +1252,12 @@ export default function TeamsPage() {
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                                           {m.campaignAccess.map(a => {
                                             const cName = campaignNameById[a.campaignId] || 'Unknown campaign'
+                                            const payerLabel = a.payer === 'owner' ? 'OWNER PAYS'
+                                              : a.payer === 'agent' ? 'AGENT PAYS'
+                                              : 'FREE'
+                                            const payerColor = a.payer === 'owner' ? T.green
+                                              : a.payer === 'agent' ? T.amber
+                                              : T.accent
                                             return (
                                               <div key={a.id} style={{
                                                 background: T.surface,
@@ -1239,9 +1272,7 @@ export default function TeamsPage() {
                                                   fontSize: 11, color: T.text, fontWeight: 500,
                                                   whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                                                 }}>{cName}</span>
-                                                <Badge color={a.payer === 'owner' ? T.green : T.amber}>
-                                                  {a.payer === 'owner' ? 'OWNER PAYS' : 'AGENT PAYS'}
-                                                </Badge>
+                                                <Badge color={payerColor}>{payerLabel}</Badge>
                                                 <button
                                                   onClick={() => revokeAccess(team, m, a, cName)}
                                                   style={btnSubtle(false, T.red)}
@@ -1565,6 +1596,7 @@ export default function TeamsPage() {
                     { v: 'owner_pays', t: 'OWNER PAYS', d: 'You pay $35/wk per agent who joins. Agents dial without paying.' },
                     { v: 'agent_pays', t: 'AGENT PAYS', d: 'Agents must have their own $35/wk sub to access.' },
                     { v: 'public', t: 'PUBLIC', d: 'Any active subscriber can access without a code.' },
+                    { v: 'free', t: 'FREE', d: 'No per-seat fee for owner or agents. Members still need their own $35/wk DialerSeat sub to dial — free here means free campaign access, not free platform access.' },
                   ] as const).map(opt => (
                     <label key={opt.v} style={{
                       display: 'flex', gap: 10, padding: '10px 12px',
@@ -1608,6 +1640,8 @@ export default function TeamsPage() {
       {grantTarget && (() => {
         const accessibleIds = new Set(grantTarget.member.campaignAccess.map(a => a.campaignId))
         const remaining = grantTarget.team.teamCampaigns.filter(tc => !accessibleIds.has(tc.campaignId))
+        const selectedTC = remaining.find(t => t.campaignId === grantCampaignId)
+        const selectedMode: AccessMode | undefined = selectedTC?.accessMode
         return (
           <div onClick={() => !grantSubmitting && setGrantTarget(null)} style={overlayStyle}>
             <div onClick={e => e.stopPropagation()} style={{ ...modalShellStyle, borderTop: `3px solid ${T.blue}` }}>
@@ -1630,7 +1664,7 @@ export default function TeamsPage() {
                     onChange={e => {
                       setGrantCampaignId(e.target.value)
                       const tc = remaining.find(t => t.campaignId === e.target.value)
-                      if (tc) setGrantPayer(tc.accessMode === 'owner_pays' ? 'owner' : 'agent')
+                      if (tc) setGrantPayer(payerForMode(tc.accessMode))
                     }}
                     disabled={grantSubmitting}
                     style={{ ...modalInput, fontSize: 12, padding: '10px 12px', marginBottom: 14 }}
@@ -1639,27 +1673,41 @@ export default function TeamsPage() {
                     {remaining.map(tc => (
                       <option key={tc.campaignId} value={tc.campaignId}>
                         {tc.campaign?.name || tc.campaignId}
+                        {tc.accessMode === 'free' ? ' — FREE' : ''}
                       </option>
                     ))}
                   </select>
 
-                  <FieldLabel>WHO PAYS THE $35/WEEK?</FieldLabel>
-                  <SegmentedTwo
-                    left={{ label: 'OWNER PAYS', value: 'owner', desc: 'Charged to your card immediately.' }}
-                    right={{ label: 'AGENT PAYS', value: 'agent', desc: 'Uses their existing $35/wk sub.' }}
-                    value={grantPayer}
-                    onChange={v => setGrantPayer(v as 'owner' | 'agent')}
-                  />
-
-                  {grantPayer === 'owner' && (
+                  {selectedMode === 'free' ? (
                     <div style={{
-                      marginTop: 12, padding: '8px 12px',
-                      background: 'rgba(255,170,62,0.1)',
-                      border: `1px solid ${T.amber}`, borderRadius: 3,
-                      fontSize: 11, color: T.amber, lineHeight: 1.5,
+                      padding: '10px 12px',
+                      background: 'rgba(42,74,138,0.08)',
+                      border: `1px solid ${T.accent}`, borderRadius: 3,
+                      fontSize: 11, color: T.accent, lineHeight: 1.5,
                     }}>
-                      ⚠ This will start a $35/wk charge on your card on file at the next billing cycle.
+                      ▸ FREE campaign — no per-seat charge to you or the agent. Agent still needs their own $35/wk DialerSeat sub to dial.
                     </div>
+                  ) : (
+                    <>
+                      <FieldLabel>WHO PAYS THE $35/WEEK?</FieldLabel>
+                      <SegmentedTwo
+                        left={{ label: 'OWNER PAYS', value: 'owner', desc: 'Charged to your card immediately.' }}
+                        right={{ label: 'AGENT PAYS', value: 'agent', desc: 'Uses their existing $35/wk sub.' }}
+                        value={grantPayer === 'free' ? 'owner' : grantPayer}
+                        onChange={v => setGrantPayer(v as 'owner' | 'agent')}
+                      />
+
+                      {grantPayer === 'owner' && (
+                        <div style={{
+                          marginTop: 12, padding: '8px 12px',
+                          background: 'rgba(255,170,62,0.1)',
+                          border: `1px solid ${T.amber}`, borderRadius: 3,
+                          fontSize: 11, color: T.amber, lineHeight: 1.5,
+                        }}>
+                          ⚠ This will start a $35/wk charge on your card on file at the next billing cycle.
+                        </div>
+                      )}
+                    </>
                   )}
                 </>
               )}

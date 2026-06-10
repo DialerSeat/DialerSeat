@@ -3,33 +3,54 @@ import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
 
 /**
- * Per-team analytics for the dashboard at /dashboard/teams/[id].
+ * Per-team analytics for the dashboard at /dashboard/teams/[id]/analytics.
  *
- * Owner sees: leaderboard (all members), team totals, recent calls feed, own stats.
- * Member sees: only their own stats + team totals (no peer leaderboard for privacy).
+ * History: this handler used to live at app/dashboard/teams/[id]/route.ts.
+ * That path collided with the page URL — a `route.ts` and a `page.tsx`
+ * can't share an App Router segment, and the browser hitting the page
+ * URL was getting either JSON or a 404 depending on Next.js routing
+ * resolution. Moving the handler under /api decouples it from the page
+ * URL entirely.
+ *
+ * Owner sees: leaderboard (all members), team totals, recent calls feed,
+ *             plus the same totals filterable by campaign or member.
+ * Member sees: only their own stats (no peer leaderboard, no calls feed
+ *              that exposes other members' activity).
  *
  * Query params:
- *   range: 'today' | 'week' | 'month' | 'all' (default: 'week')
+ *   range:       'today' | 'week' | 'month' | 'custom' | 'all' (default 'week')
+ *   start:       ISO date string (required when range='custom')
+ *   end:         ISO date string (required when range='custom')
+ *   campaign_id: filter calls to one campaign (must be attached to this team)
+ *   user_id:     filter calls to one member (owner-only — members are auto-scoped)
  */
 
-type Range = 'today' | 'week' | 'month' | 'all'
+type Range = 'today' | 'week' | 'month' | 'custom' | 'all'
 
-function rangeStart(range: Range): Date | null {
+function rangeBounds(
+  range: Range,
+  start: string | null,
+  end: string | null
+): { since: Date | null; until: Date | null } {
+  if (range === 'custom') {
+    return {
+      since: start ? new Date(start) : null,
+      until: end ? new Date(end) : null,
+    }
+  }
   const now = new Date()
   if (range === 'today') {
-    return new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    return { since: new Date(now.getFullYear(), now.getMonth(), now.getDate()), until: null }
   }
   if (range === 'week') {
-    const d = new Date(now)
-    d.setDate(d.getDate() - 7)
-    return d
+    const d = new Date(now); d.setDate(d.getDate() - 7)
+    return { since: d, until: null }
   }
   if (range === 'month') {
-    const d = new Date(now)
-    d.setDate(d.getDate() - 30)
-    return d
+    const d = new Date(now); d.setDate(d.getDate() - 30)
+    return { since: d, until: null }
   }
-  return null
+  return { since: null, until: null }
 }
 
 const CONVERSION_DISPOS = new Set(['CLOSED', 'APPOINTMENT'])
@@ -47,10 +68,14 @@ export async function GET(
     const { id: teamId } = await params
     const { searchParams } = new URL(req.url)
     const rangeParam = (searchParams.get('range') || 'week') as Range
-    const validRanges: Range[] = ['today', 'week', 'month', 'all']
+    const validRanges: Range[] = ['today', 'week', 'month', 'custom', 'all']
     const range: Range = validRanges.includes(rangeParam) ? rangeParam : 'week'
+    const startParam = searchParams.get('start')
+    const endParam = searchParams.get('end')
+    const filterCampaignId = searchParams.get('campaign_id')
+    const filterUserId = searchParams.get('user_id')
 
-    // Verify team exists + viewer role
+    // Team + viewer role
     const { data: team, error: teamErr } = await supabaseAdmin
       .from('teams')
       .select('id, name, owner_id')
@@ -61,7 +86,6 @@ export async function GET(
     if (!team) return NextResponse.json({ success: false, error: 'Team not found' }, { status: 404 })
 
     const isOwner = team.owner_id === userId
-    let viewerMembership: any = null
 
     if (!isOwner) {
       const { data: m } = await supabaseAdmin
@@ -72,10 +96,9 @@ export async function GET(
         .eq('status', 'active')
         .maybeSingle()
       if (!m) return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
-      viewerMembership = m
     }
 
-    // Compose member id list — owner is always included as a "member" for their own stats
+    // Roster — owner always included as a "member" for their own stats
     const { data: memberRows } = await supabaseAdmin
       .from('team_members')
       .select('user_id')
@@ -87,7 +110,7 @@ export async function GET(
       ...(memberRows || []).map((m: any) => m.user_id),
     ]))
 
-    // Resolve identities
+    // Identity resolution
     const { data: userRows } = await supabaseAdmin
       .from('users')
       .select('clerk_id, email, first_name, last_name, last_seen_at')
@@ -96,26 +119,52 @@ export async function GET(
     const userById: Record<string, any> = {}
     for (const u of userRows || []) userById[u.clerk_id] = u
 
-    // Get campaigns attached to this team — calls are scoped through these
+    // Attached campaigns
     const { data: tcRows } = await supabaseAdmin
       .from('team_campaigns')
-      .select('campaign_id')
+      .select('campaign_id, access_mode, campaigns(id, name)')
       .eq('team_id', teamId)
 
-    const campaignIds = (tcRows || []).map((r: any) => r.campaign_id)
+    const teamCampaigns = (tcRows || []).map((r: any) => ({
+      campaignId: r.campaign_id,
+      accessMode: r.access_mode,
+      name: r.campaigns?.name || null,
+    }))
+    const campaignIds = teamCampaigns.map(tc => tc.campaignId)
 
-    // Build calls query — scoped to team's attached campaigns
+    // Validate campaign filter (must be attached to this team)
+    let scopedCampaignIds = campaignIds
+    if (filterCampaignId) {
+      if (!campaignIds.includes(filterCampaignId)) {
+        return NextResponse.json(
+          { success: false, error: 'Campaign not attached to this team' },
+          { status: 400 }
+        )
+      }
+      scopedCampaignIds = [filterCampaignId]
+    }
+
+    // Build calls query
     let callsQuery = supabaseAdmin
       .from('calls')
       .select('id, user_id, campaign_id, lead_id, disposition, duration, created_at, leads(first_name, last_name, phone)')
-      .in('campaign_id', campaignIds.length > 0 ? campaignIds : ['__none__'])
+      .in('campaign_id', scopedCampaignIds.length > 0 ? scopedCampaignIds : ['__none__'])
 
-    const since = rangeStart(range)
+    const { since, until } = rangeBounds(range, startParam, endParam)
     if (since) callsQuery = callsQuery.gte('created_at', since.toISOString())
+    if (until) callsQuery = callsQuery.lte('created_at', until.toISOString())
 
-    // Member sees only their own calls; owner sees all team calls
+    // Scope to user: members locked to themselves; owners default to all, optionally filter
     if (!isOwner) {
       callsQuery = callsQuery.eq('user_id', userId)
+    } else if (filterUserId) {
+      if (!memberClerkIds.includes(filterUserId)) {
+        return NextResponse.json(
+          { success: false, error: 'User not in this team' },
+          { status: 400 }
+        )
+      }
+      callsQuery = callsQuery.eq('user_id', filterUserId)
     } else {
       callsQuery = callsQuery.in('user_id', memberClerkIds)
     }
@@ -157,17 +206,17 @@ export async function GET(
       }
     }
 
-    // Seed every active member so they appear with zeros if no activity
-    for (const uid of memberClerkIds) statsByUser[uid] = seedFor(uid)
+    // Seed by relevant member set so zero-activity members still appear in leaderboard
+    const seedSet = filterUserId ? [filterUserId] : memberClerkIds
+    for (const uid of seedSet) statsByUser[uid] = seedFor(uid)
 
-    let teamTotals = { calls: 0, connected: 0, conversions: 0, talkSeconds: 0 }
+    const teamTotals = { calls: 0, connected: 0, conversions: 0, talkSeconds: 0 }
 
     for (const c of calls || []) {
       const uid = c.user_id
       if (!statsByUser[uid]) statsByUser[uid] = seedFor(uid)
       const s = statsByUser[uid]
-      s.calls++
-      teamTotals.calls++
+      s.calls++; teamTotals.calls++
       if (c.duration && c.duration > 0) {
         s.connected++
         s.talkSeconds += c.duration
@@ -185,10 +234,9 @@ export async function GET(
       return b.calls - a.calls
     })
 
-    // Viewer's own stats
     const viewerStats = statsByUser[userId] || seedFor(userId)
 
-    // Recent calls feed (owner only) — last 50
+    // Recent calls feed — owner only
     let recentCalls: any[] = []
     if (isOwner) {
       recentCalls = (calls || []).slice(0, 50).map((c: any) => {
@@ -206,6 +254,7 @@ export async function GET(
           disposition: c.disposition || null,
           duration: c.duration || 0,
           createdAt: c.created_at,
+          campaignId: c.campaign_id,
         }
       })
     }
@@ -215,10 +264,22 @@ export async function GET(
       range,
       viewerRole: isOwner ? 'owner' : 'member',
       team: { id: team.id, name: team.name },
+      campaigns: teamCampaigns,
+      members: memberClerkIds.map(uid => {
+        const u = userById[uid]
+        const name = u
+          ? [u.first_name, u.last_name].filter(Boolean).join(' ').trim() || u.email || uid.slice(0, 12)
+          : uid.slice(0, 12)
+        return { userId: uid, name, isOwner: uid === team.owner_id }
+      }),
       totals: teamTotals,
-      leaderboard: isOwner ? leaderboard : [], // members don't see peers
+      leaderboard: isOwner ? leaderboard : [],
       viewerStats,
       recentCalls,
+      filters: {
+        campaignId: filterCampaignId,
+        userId: filterUserId,
+      },
     })
   } catch (error: any) {
     console.error('Team analytics error:', error)

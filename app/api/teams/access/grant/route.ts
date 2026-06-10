@@ -5,10 +5,19 @@ import { createSeatSubscription, isSeatBillingError } from '@/lib/teamBilling'
 
 /**
  * Owner manually grants a specific agent access to a specific campaign.
- * If payer='owner', creates a real Stripe subscription for the seat.
- * If payer='agent', no charge — agent's own personal sub gates access.
  *
- * Body: { memberId, campaignId, payer: 'owner' | 'agent' }
+ * Payer semantics:
+ *   payer='owner' — creates a real Stripe subscription for the seat.
+ *                   Requires the campaign's access_mode to be 'owner_pays'
+ *                   (or other paid mode); fails 402 if owner has no card.
+ *   payer='agent' — no charge. Agent's own personal $35/wk DialerSeat sub
+ *                   gates access. No team-level Stripe.
+ *   payer='free'  — no charge. Campaign's access_mode MUST be 'free'.
+ *                   Both team owner and agents skip the per-seat fee, but
+ *                   agents still need their own personal DialerSeat sub
+ *                   to actually dial.
+ *
+ * Body: { memberId, campaignId, payer: 'owner' | 'agent' | 'free' }
  */
 export async function POST(req: Request) {
   try {
@@ -27,9 +36,9 @@ export async function POST(req: Request) {
       )
     }
 
-    if (!payer || !['owner', 'agent'].includes(payer)) {
+    if (!payer || !['owner', 'agent', 'free'].includes(payer)) {
       return NextResponse.json(
-        { success: false, error: 'payer must be "owner" or "agent"' },
+        { success: false, error: 'payer must be "owner", "agent", or "free"' },
         { status: 400 }
       )
     }
@@ -60,10 +69,10 @@ export async function POST(req: Request) {
       )
     }
 
-    // Verify campaign attached
+    // Verify campaign attached + pull access_mode for defensive validation
     const { data: tc } = await supabaseAdmin
       .from('team_campaigns')
-      .select('team_id')
+      .select('team_id, access_mode')
       .eq('team_id', member.team_id)
       .eq('campaign_id', campaignId)
       .maybeSingle()
@@ -71,6 +80,14 @@ export async function POST(req: Request) {
     if (!tc) {
       return NextResponse.json(
         { success: false, error: 'Campaign is not attached to this team' },
+        { status: 400 }
+      )
+    }
+
+    // Defensive: payer='free' is only valid on a free-mode campaign
+    if (payer === 'free' && tc.access_mode !== 'free') {
+      return NextResponse.json(
+        { success: false, error: 'Free payer is only valid on campaigns in free mode' },
         { status: 400 }
       )
     }
@@ -117,8 +134,10 @@ export async function POST(req: Request) {
 
     if (grantErr) throw grantErr
 
-    // ── If payer='agent', no Stripe needed. Agent's personal sub gates. ──
-    if (payer === 'agent') {
+    // ── If payer='agent' or payer='free', no Stripe needed. ──
+    //   agent: agent's personal sub gates
+    //   free : nobody pays per-seat; agent's personal sub still gates platform-side
+    if (payer === 'agent' || payer === 'free') {
       return NextResponse.json({
         success: true,
         access: granted,
