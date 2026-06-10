@@ -301,9 +301,11 @@ export default function Taskbar({
       </div>
       </div>
 
-      {/* Safe-area fill — same color as body bg so no strip shows */}
+      {/* Safe-area fill — only visible height on devices with a home indicator.
+          On desktop env() returns 0px so this div collapses to nothing. */}
       <div style={{
-        flex: 1,
+        height: 'env(safe-area-inset-bottom, 0px)',
+        flexShrink: 0,
         background: '#0a0a0f',
       }} />
     </div>
