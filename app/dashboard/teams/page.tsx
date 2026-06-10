@@ -5,31 +5,22 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 // =============================================================================
-// TEAMS PAGE — Pass 2 Phase C6 + item-1 copy-block primary swap + FREE mode
+// TEAMS PAGE — Pass 2 v4 (FAQ link integration)
 // =============================================================================
-// THIS REVISION layers three categories of change on top of the prior C6:
+// THIS REVISION layers one change on top of v3:
 //
-// 1. URL redirects updated for the new analytics page:
-//      - handleRedeem (redirect_to_team branch)
-//      - handleCreateSubmit success path
-//      - Member team card Link
-//      - Owner team OPEN > Link
-//    All four now point to /dashboard/teams/${id}/analytics (the old bare
-//    /dashboard/teams/${id} URL is a redirect shim that bounces back here).
+//   • FAQ link block appended INSIDE the existing "WHAT IS A DIALERSEAT
+//     TEAM?" copy block, sitting below the COST footer. It opens the
+//     public /faq/dialerseat-teams page in a new tab so the in-dashboard
+//     flow isn't interrupted.
 //
-// 2. Type unions extended with 'free':
-//      - TeamCampaignRow.accessMode
-//      - attachAccessMode state
-//      - updateCampaignAccess signature
-//
-// 3. UI for the new 'free' access mode:
-//      - Attach modal radio list gains a FREE option with copy clarifying
-//        that members STILL need their own $35/wk personal DialerSeat sub
-//        to dial — free here means no per-seat campaign fee, not free
-//        platform access.
-//      - Per-attached-campaign access mode select gains a FREE option.
-//
-// All other code byte-for-byte from C6.
+// Everything else from v3 preserved exactly:
+//   1. URL redirects to /dashboard/teams/${id}/analytics (4 sites)
+//   2. 'free' on TeamCampaignRow.accessMode, attachAccessMode state,
+//      updateCampaignAccess signature
+//   3. FREE option in attach modal radio + per-campaign access-mode select
+//   4. C6 header binding (var(--brand-header-bg))
+//   5. Item-1 copy-block primary swap intact
 // =============================================================================
 
 const T = {
@@ -1325,7 +1316,7 @@ export default function TeamsPage() {
           </div>
         )}
 
-        {/* ── ▸ WHAT IS A DIALERSEAT TEAM? — item-1 primary swap ───────── */}
+        {/* ── ▸ WHAT IS A DIALERSEAT TEAM? — item-1 primary swap + FAQ link ───── */}
         <div style={{
           background: T.surface, border: `1px solid ${T.border}`,
           borderLeft: `3px solid ${T.blue}`, borderRadius: 4,
@@ -1369,6 +1360,46 @@ export default function TeamsPage() {
             <p style={{ fontSize: 15, lineHeight: 1.6, color: T.text, margin: 0 }}>
               <strong>$35 per active seat per week</strong>, paid to DialerSeat. Whether you (the owner) pay or your agent pays is up to you per agent and per campaign. Codes you create can be set to either payer.
             </p>
+          </div>
+
+          {/* READ THE FULL FAQ */}
+          <div style={{
+            marginTop: 18,
+            paddingTop: 18,
+            borderTop: `1px solid ${T.border}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 14,
+            flexWrap: 'wrap',
+          }}>
+            <div style={{ flex: '1 1 280px', minWidth: 0 }}>
+              <div style={{
+                fontSize: 11, letterSpacing: 3, color: T.muted, fontWeight: 'bold', marginBottom: 4,
+              }}>▸ WANT THE FULL BREAKDOWN?</div>
+              <div style={{ fontSize: 13, color: T.text, lineHeight: 1.5 }}>
+                Aged-lead vendor playbook, agency floor setup, shared pool mechanics, all four billing modes, and the common pre-signup questions.
+              </div>
+            </div>
+            <Link
+              href="/faq/dialerseat-teams"
+              target="_blank"
+              rel="noopener"
+              style={{
+                padding: '10px 18px',
+                background: T.dark,
+                border: 'none',
+                borderTop: `3px solid ${T.blue}`,
+                borderRadius: 3,
+                color: T.blue,
+                fontSize: 11,
+                letterSpacing: 2.5,
+                fontWeight: 'bold',
+                textDecoration: 'none',
+                whiteSpace: 'nowrap',
+                fontFamily: FUTURA,
+              }}
+            >READ THE FULL FAQ →</Link>
           </div>
         </div>
       </div>
