@@ -42,12 +42,10 @@ export default function Taskbar({
       aria-label="Taskbar"
       style={{
         position: 'fixed',
-        bottom: 0,
+        bottom: -100,
         left: 0,
         right: 0,
-        // Height = 48px content + native safe area inset. CSS handles it,
-        // no JS probe needed. Works on iOS PWA, Android, desktop.
-        height: 'calc(48px + env(safe-area-inset-bottom, 0px))',
+        height: 148,
         background: '#0a0a0f',
         boxShadow: '0 -1px 0 rgba(255,255,255,0.08) inset, 0 -8px 24px rgba(0,0,0,0.3)',
         zIndex: 10000,
@@ -203,7 +201,6 @@ export default function Taskbar({
           borderLeft: '1px solid #0a1020',
           boxShadow: 'inset 1px 0 0 rgba(255,255,255,0.04)',
         }}>
-          {/* View Landing icon */}
           <button
             onClick={openLanding}
             title="View landing page"
@@ -273,7 +270,7 @@ export default function Taskbar({
             )}
           </div>
 
-          {/* Show Desktop button — rightmost, after clock */}
+          {/* Show Desktop button */}
           <button
             onClick={onShowDesktop}
             title="Show desktop"
@@ -300,14 +297,6 @@ export default function Taskbar({
         </div>
       </div>
       </div>
-
-      {/* Safe-area fill — only visible height on devices with a home indicator.
-          On desktop env() returns 0px so this div collapses to nothing. */}
-      <div style={{
-        height: 'env(safe-area-inset-bottom, 0px)',
-        flexShrink: 0,
-        background: '#0a0a0f',
-      }} />
     </div>
   )
 }
