@@ -80,6 +80,17 @@ export default function Desktop() {
 
   const TASKBAR_HEIGHT = TASKBAR_VISIBLE_HEIGHT + safeAreaBottom
 
+  // ── KILL BODY BACKGROUND ─────────────────────────────────────────────────
+  // globals.css sets body { background-color: #0a0a0f } which bleeds through
+  // as a black strip behind the taskbar's safe-area zone on iOS. The Desktop
+  // component owns the entire viewport so we override it to transparent on
+  // mount and restore on unmount.
+  useEffect(() => {
+    const prev = document.body.style.backgroundColor
+    document.body.style.backgroundColor = 'transparent'
+    return () => { document.body.style.backgroundColor = prev }
+  }, [])
+
   // ── MOBILE DETECTION ─────────────────────────────────────────────────────
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
