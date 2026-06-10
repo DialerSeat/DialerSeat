@@ -15,46 +15,6 @@ interface TaskbarProps {
   isMobile: boolean
 }
 
-// =============================================================================
-// TASKBAR — v25 mobile-glue fix
-// =============================================================================
-// CHANGES from v22.d:
-//
-//   1. KEYBOARD-LIFT REMOVED ENTIRELY.
-//      The previous version listened to visualViewport and applied a
-//      translateY transform to lift the taskbar above the iOS on-screen
-//      keyboard. This is wrong for our use case — the taskbar contains no
-//      inputs, so it has no reason to follow the keyboard. When the user
-//      focuses an input inside an app window (Notes, Gmail compose, etc.),
-//      we want the keyboard to cover the taskbar so the app gets the full
-//      visible viewport. Apps that need keyboard-aware layout handle that
-//      internally.
-//
-//      Removed: visualViewport listeners, keyboardOffset state, translateY
-//      transform, the transition rule on transform.
-//
-//   2. iOS PWA BOTTOM-ALIGNMENT FIX.
-//      The previous version used `height: calc(48px + env(safe-area-inset-
-//      bottom, 0px))` combined with `position: fixed; bottom: 0`. On iOS
-//      PWA the safe-area-inset-bottom env() can return 0 (depending on the
-//      <meta name="viewport" content="viewport-fit=cover"> being set AND
-//      the app being in standalone display mode), which leaves the
-//      taskbar's bottom edge floating above the actual hardware bottom or
-//      sitting behind the home indicator.
-//
-//      The fix probes the computed safe-area value on mount and falls back
-//      to a JS-measured value if env() returns 0 on a device that clearly
-//      has a home indicator (the visualViewport.height vs window.innerHeight
-//      delta is the most reliable cross-browser way to detect this).
-//
-//   3. DEFENSIVE FIXED POSITIONING.
-//      Switched to explicit `bottom: 0; left: 0; right: 0` (all three) and
-//      removed any transform that could create a containing block. If you
-//      have ancestors with transform/filter/perspective set, `position:
-//      fixed` gets contained to them instead of the viewport. The taskbar
-//      itself now has zero transforms applied.
-// =============================================================================
-
 export default function Taskbar({
   windows,
   focusedWindowId,
@@ -66,66 +26,6 @@ export default function Taskbar({
   isMobile,
 }: TaskbarProps) {
   const [now, setNow] = useState<Date>(new Date())
-
-  // ── SAFE-AREA-BOTTOM PROBE (v25) ──────────────────────────────────────────
-  // We compute the actual usable safe-area-inset-bottom in JS to dodge two
-  // iOS Safari quirks:
-  //
-  //   1. env(safe-area-inset-bottom) returns 0 unless <meta name="viewport"
-  //      content="viewport-fit=cover"> is present. If the project's viewport
-  //      meta isn't set, the env() value silently resolves to 0 and the
-  //      taskbar's bottom strip disappears.
-  //
-  //   2. Even when the meta is set, env() doesn't always reflect the home-
-  //      indicator zone in PWA standalone mode — that depends on the iOS
-  //      version. Probing computed style on a hidden test element with
-  //      `padding-bottom: env(safe-area-inset-bottom)` works around it.
-  //
-  // We measure the env() value on mount AND watch for orientation changes
-  // (the inset is different in landscape vs portrait on iPhone). If env()
-  // resolves to 0 but visualViewport reports a gap, we assume a 34px home
-  // indicator zone (the iPhone X/11/12/13/14 standard).
-  // ────────────────────────────────────────────────────────────────────────
-  const [safeBottom, setSafeBottom] = useState(0)
-
-  useEffect(() => {
-    const probe = () => {
-      // Method 1: try env() via a hidden probe element
-      const probeEl = document.createElement('div')
-      probeEl.style.cssText = `
-        position: fixed;
-        bottom: 0;
-        left: -9999px;
-        padding-bottom: env(safe-area-inset-bottom, 0px);
-        visibility: hidden;
-        pointer-events: none;
-      `
-      document.body.appendChild(probeEl)
-      const computed = window.getComputedStyle(probeEl).paddingBottom
-      const envValue = parseFloat(computed) || 0
-      document.body.removeChild(probeEl)
-
-      // Method 2: visualViewport gap (more reliable on PWA but can fluctuate)
-      const vv = window.visualViewport
-      const vvGap = vv ? Math.max(0, window.innerHeight - (vv.height + vv.offsetTop)) : 0
-
-      // If env() reports >0, trust it. Otherwise fall back to vv gap
-      // (clamped to a sane range — between 0 and 50px).
-      const finalValue = envValue > 0
-        ? envValue
-        : Math.min(50, Math.max(0, vvGap))
-
-      setSafeBottom(finalValue)
-    }
-
-    probe()
-    window.addEventListener('orientationchange', probe)
-    window.addEventListener('resize', probe)
-    return () => {
-      window.removeEventListener('orientationchange', probe)
-      window.removeEventListener('resize', probe)
-    }
-  }, [])
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 30_000)
@@ -141,15 +41,13 @@ export default function Taskbar({
       role="toolbar"
       aria-label="Taskbar"
       style={{
-        // ── DEFENSIVE FIXED POSITIONING ─────────────────────────────────
-        // bottom/left/right all explicitly 0 — no transforms anywhere on
-        // this element so no ancestor's transform/filter/will-change can
-        // accidentally capture our positioning context.
         position: 'fixed',
         bottom: 0,
         left: 0,
         right: 0,
-        height: `${48 + safeBottom}px`,
+        // Height = 48px content + native safe area inset. CSS handles it,
+        // no JS probe needed. Works on iOS PWA, Android, desktop.
+        height: 'calc(48px + env(safe-area-inset-bottom, 0px))',
         background: '#0a1020',
         boxShadow: '0 -1px 0 rgba(255,255,255,0.08) inset, 0 -8px 24px rgba(0,0,0,0.3)',
         zIndex: 10000,
@@ -157,14 +55,9 @@ export default function Taskbar({
         flexDirection: 'column',
         userSelect: 'none',
         fontFamily: '"Segoe UI", Tahoma, sans-serif',
-        // NO transform, NO transition on transform — this is the key fix
-        // for both bugs. The taskbar is now a static fixed element, glued
-        // to the layout viewport's bottom edge.
       }}
     >
-      {/* Gradient bar — fixed 48px at top of taskbar. The safe-area zone
-          below it stays solid #0a1020 from the outer container, blending
-          visually with the gradient's bottom stop. */}
+      {/* 48px interactive strip — always at top of the taskbar shell */}
       <div style={{
         height: 48,
         flexShrink: 0,
@@ -407,13 +300,17 @@ export default function Taskbar({
         </div>
       </div>
       </div>
+
+      {/* Safe-area fill — sits below the 48px strip, same bg color,
+          covers the home indicator zone on iPhone/Android with no gap. */}
+      <div style={{
+        flex: 1,
+        background: '#0a1020',
+      }} />
     </div>
   )
 }
 
-// =============================================================================
-// D BRAND MARK (unchanged from v22.1)
-// =============================================================================
 function DBrandMark({ size = 32 }: { size?: number }) {
   return (
     <img
