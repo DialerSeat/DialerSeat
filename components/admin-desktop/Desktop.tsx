@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { APPS, getApp } from './registry'
 import AppWindow from './AppWindow'
@@ -11,39 +11,19 @@ import type { AppId, WindowState, RecentApp } from './types'
 // =============================================================================
 // DESKTOP — root shell component
 // =============================================================================
-// Manages window state, mobile detection, context menus, etc.
-//
 // v22 FIX — iPhone home indicator bottom gap:
-//   The taskbar is `position: fixed; bottom: 0` which on iPhone in PWA mode
-//   gets cut into by the home indicator bar at the very bottom. The fix is
-//   in two places:
-//     1. Taskbar's own height now accounts for safe-area-inset-bottom
-//     2. This component's TASKBAR_HEIGHT (used to compute window heights)
-//        treats the safe-area as part of the taskbar's footprint so
-//        maximize-window math still lands above the visible taskbar
+//   Taskbar is `position: fixed; bottom: 0; height: calc(48px + env(safe-area-inset-bottom))`.
+//   The desktop root div now also carries `paddingBottom: env(safe-area-inset-bottom)`
+//   so the gradient background fills the safe zone and the black body never
+//   shows through behind the taskbar's safe-area fill strip.
 //
-//   We detect the safe-area-bottom via a CSS-var probe + ResizeObserver on
-//   mount because env() values aren't readable directly from JS. This lets
-//   the windowing logic respect it without hardcoding device-specific values.
-//
-// v22.1 — WINDOW STATE PERSISTENCE:
-//   On every windows/focus/topZ change we serialize to localStorage. On
-//   mount we hydrate from localStorage so a page refresh doesn't blow
-//   away the open apps. The auto-open-analytics behavior only fires when
-//   there's NO saved state (i.e., the user has never visited the desktop
-//   before, or cleared their storage).
-//
-//   Schema (versioned via LS_KEY suffix — bump on breaking changes):
-//     ds:admin-desktop:v1 → { windows: WindowState[], focusedId, topZ }
-//
-//   The schema doesn't persist transient UI like the start menu open
-//   state, context menu position, or recent-apps list — those are
-//   ephemeral. Just the windows + which one had focus + the z-counter
-//   so subsequent opens still land on top.
+//   TASKBAR_HEIGHT (used for window math) stays as 48 + safeAreaBottom via
+//   the JS probe — window geometry needs px values, not CSS strings. The
+//   visual fix (no black strip) is handled purely in CSS on the root div.
 // =============================================================================
 
 const MOBILE_BREAKPOINT = 768
-const TASKBAR_VISIBLE_HEIGHT = 48  // the taskbar's content height (unchanged)
+const TASKBAR_VISIBLE_HEIGHT = 48
 const LS_KEY = 'ds:admin-desktop:v1'
 
 interface PersistedState {
@@ -69,10 +49,7 @@ function savePersistedState(state: PersistedState): void {
   if (typeof window === 'undefined') return
   try {
     localStorage.setItem(LS_KEY, JSON.stringify(state))
-  } catch {
-    // Storage full or disabled — silently drop. Persistence is a nice-to-
-    // have, not a correctness requirement.
-  }
+  } catch {}
 }
 
 interface RightClickState {
@@ -90,9 +67,6 @@ interface PositionHint {
 export default function Desktop() {
   const router = useRouter()
 
-  // v22.1 — hydrate from localStorage on first render. Lazy initializer
-  // runs once; subsequent renders use the persisted-then-mutated state.
-  // SSR-safe: loadPersistedState() returns null on the server.
   const initial = (typeof window !== 'undefined') ? loadPersistedState() : null
   const [windows, setWindows] = useState<WindowState[]>(initial?.windows ?? [])
   const [focusedId, setFocusedId] = useState<string | null>(initial?.focusedId ?? null)
@@ -101,16 +75,9 @@ export default function Desktop() {
   const [contextMenu, setContextMenu] = useState<RightClickState | null>(null)
   const [recentApps, setRecentApps] = useState<RecentApp[]>([])
   const [isMobile, setIsMobile] = useState(false)
-  // v22.1 — if we hydrated SOMETHING from storage, skip auto-open-analytics.
-  // Otherwise the user opens the desktop fresh and we boot analytics like
-  // before.
   const [bootedAnalytics, setBootedAnalytics] = useState((initial?.windows.length ?? 0) > 0)
-
-  // v22: probed safe-area-inset-bottom in pixels. iPhone home indicator on
-  // most devices is 34px (CSS pixels). Updated on mount + resize.
   const [safeAreaBottom, setSafeAreaBottom] = useState(0)
 
-  // Effective taskbar footprint = visible content + safe-area at bottom
   const TASKBAR_HEIGHT = TASKBAR_VISIBLE_HEIGHT + safeAreaBottom
 
   // ── MOBILE DETECTION ─────────────────────────────────────────────────────
@@ -125,21 +92,16 @@ export default function Desktop() {
     }
   }, [])
 
-  // ── SAFE-AREA-BOTTOM PROBE ───────────────────────────────────────────────
-  // Read env(safe-area-inset-bottom) via a hidden probe element. We can't
-  // read env() values directly from JS, but we can set a CSS variable that
-  // resolves to env(), then read the computed style of the probe.
+  // ── SAFE-AREA-BOTTOM PROBE (for window math only) ────────────────────────
   useEffect(() => {
     const probe = document.createElement('div')
     probe.style.cssText =
       'position:fixed;left:-9999px;top:0;width:1px;height:env(safe-area-inset-bottom);'
     document.body.appendChild(probe)
-
     const measure = () => {
       const rect = probe.getBoundingClientRect()
       setSafeAreaBottom(Math.round(rect.height))
     }
-
     measure()
     window.addEventListener('resize', measure)
     window.addEventListener('orientationchange', measure)
@@ -151,20 +113,9 @@ export default function Desktop() {
   }, [])
 
   // ── PERSIST WINDOW STATE ─────────────────────────────────────────────────
-  // v22.1 — every change to windows/focusedId/topZ flushes to localStorage.
-  // On mobile the browser may evict tabs aggressively, but localStorage
-  // survives. We persist three things:
-  //   - windows: full WindowState[] including position/size/z/min/max
-  //   - focusedId: which window had focus
-  //   - topZ: so newly opened windows still stack correctly above restored
-  //     ones (otherwise a fresh open would have z=101 and could land
-  //     UNDER persisted windows that had z=120+)
-  // We don't debounce — these state updates are infrequent (drag/resize
-  // doesn't fire dozens of times per second the way text input would).
   useEffect(() => {
     savePersistedState({ windows, focusedId, topZ })
   }, [windows, focusedId, topZ])
-
 
   const openApp = useCallback((appId: AppId, hint?: PositionHint) => {
     const app = getApp(appId)
@@ -204,28 +155,21 @@ export default function Desktop() {
 
       const newWindow: WindowState = mobileNow
         ? {
-            id,
-            appId,
-            x: 0,
-            y: 0,
+            id, appId,
+            x: 0, y: 0,
             width: window.innerWidth,
             height: window.innerHeight - TASKBAR_HEIGHT,
             zIndex: newZ,
-            minimized: false,
-            maximized: true,
+            minimized: false, maximized: true,
             preMaximize: { x: hintedX, y: hintedY, width: w, height: h },
             openedAt: Date.now(),
           }
         : {
-            id,
-            appId,
-            x: hintedX,
-            y: hintedY,
-            width: w,
-            height: h,
+            id, appId,
+            x: hintedX, y: hintedY,
+            width: w, height: h,
             zIndex: newZ,
-            minimized: false,
-            maximized: false,
+            minimized: false, maximized: false,
             openedAt: Date.now(),
           }
       setFocusedId(id)
@@ -309,27 +253,20 @@ export default function Desktop() {
   const moveWindow = useCallback((windowId: string, x: number, y: number) => {
     setWindows(prev => prev.map(w => w.id === windowId ? { ...w, x, y } : w))
   }, [])
+
   const resizeWindow = useCallback((windowId: string, width: number, height: number) => {
     setWindows(prev => prev.map(w => w.id === windowId ? { ...w, width, height } : w))
   }, [])
 
-  // ── SHOW DESKTOP ───────────────────────────────────────────────────────────
-  // v22 NEW — Win7-style Show Desktop button on the right of the clock.
-  // Minimizes all non-minimized windows. Subsequent click restores them
-  // (Win7 toggle). We track the most recent set of windows that WERE
-  // visible just before the minimize-all so the restore brings back the
-  // same ones, not e.g. ones the user has since closed.
   const peekRestoreRef = useRef<string[] | null>(null)
   const showDesktop = useCallback(() => {
     const visibleIds = windows.filter(w => !w.minimized).map(w => w.id)
     if (visibleIds.length > 0) {
-      // Minimize everything visible
       peekRestoreRef.current = visibleIds
       setWindows(prev => prev.map(w => visibleIds.includes(w.id) ? { ...w, minimized: true } : w))
       setFocusedId(null)
       return
     }
-    // Restore — only the windows that were previously visible
     const toRestore = peekRestoreRef.current
     if (toRestore && toRestore.length > 0) {
       setWindows(prev => prev.map(w => toRestore.includes(w.id) ? { ...w, minimized: false } : w))
@@ -384,7 +321,6 @@ export default function Desktop() {
 
   const contextMenuItems: ContextMenuItem[] = (() => {
     if (!contextMenu) return []
-
     if (contextMenu.type === 'desktop') {
       return [
         { label: 'View', icon: '👁', disabled: true },
@@ -399,7 +335,6 @@ export default function Desktop() {
         { label: 'Back to Dashboard', icon: '←', onClick: () => router.push('/dashboard/analytics') },
       ]
     }
-
     if (contextMenu.type === 'icon') {
       const appId = contextMenu.payload as AppId
       const alreadyOpen = windows.find(w => w.appId === appId)
@@ -410,7 +345,6 @@ export default function Desktop() {
         { label: alreadyOpen ? 'Already running' : 'Properties', disabled: true },
       ]
     }
-
     if (contextMenu.type === 'taskbar-item' || contextMenu.type === 'titlebar') {
       const windowId = contextMenu.payload as string
       const win = windows.find(w => w.id === windowId)
@@ -422,7 +356,6 @@ export default function Desktop() {
         { label: 'Close', icon: '✕', danger: true, onClick: () => closeWindow(windowId) },
       ]
     }
-
     return []
   })()
 
@@ -431,6 +364,10 @@ export default function Desktop() {
       style={{
         position: 'fixed',
         inset: 0,
+        // KEY FIX: paddingBottom fills the safe-area zone with the gradient
+        // so the body/page black never shows behind the taskbar's safe-area
+        // fill strip on iPhone.
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
         background: `
           radial-gradient(ellipse at 30% 20%, rgba(255,255,255,0.15) 0%, transparent 50%),
           radial-gradient(ellipse at 70% 80%, rgba(255,255,255,0.08) 0%, transparent 60%),
