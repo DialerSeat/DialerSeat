@@ -161,26 +161,31 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // ── WHITE-LABEL TENANT RESOLUTION (v2 — Phase D) ──────────────────────
-  // Two-tier lookup:
-  //   1. If proxy.ts set x-tenant-slug (subdomain visit), use that.
-  //   2. Else, if user is logged in, look up their selected tenant via
-  //      lib/tenant.ts → getActiveTenantForUser. This is what makes the
-  //      brand follow the user across devices/domains.
-  //   3. Else (no subdomain, not logged in) → null → default DialerSeat.
-  //
-  // The two-tier means: a logged-in user on a tenant subdomain still
-  // gets that subdomain's branding (subdomain wins). A logged-in user
-  // on dialerseat.com still gets their selected/default tenant's brand.
-  // Both feel right.
   const h = await headers();
   const tenantSlug = h.get('x-tenant-slug');
 
-  let branding = await getTenantBranding(tenantSlug);
-  if (!branding) {
-    const { userId } = await auth();
-    if (userId) {
-      branding = await getActiveTenantForUser(userId);
+  // ── LANDING VIEW BYPASS ───────────────────────────────────────────────
+  // When proxy.ts detects ?view=landing it sets x-landing-view: 1.
+  // In that case skip all tenant/user branding lookups entirely so the
+  // landing page always renders with default DialerSeat styling regardless
+  // of who is logged in.
+  const isLandingView = h.get('x-landing-view') === '1';
+
+  let branding = null;
+  if (!isLandingView) {
+    // ── WHITE-LABEL TENANT RESOLUTION (v2 — Phase D) ──────────────────
+    // Two-tier lookup:
+    //   1. If proxy.ts set x-tenant-slug (subdomain visit), use that.
+    //   2. Else, if user is logged in, look up their selected tenant via
+    //      lib/tenant.ts → getActiveTenantForUser. This is what makes the
+    //      brand follow the user across devices/domains.
+    //   3. Else (no subdomain, not logged in) → null → default DialerSeat.
+    branding = await getTenantBranding(tenantSlug);
+    if (!branding) {
+      const { userId } = await auth();
+      if (userId) {
+        branding = await getActiveTenantForUser(userId);
+      }
     }
   }
 

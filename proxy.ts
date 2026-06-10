@@ -304,7 +304,13 @@ export default clerkMiddleware(async (auth, request) => {
 
   // ── PUBLIC ROUTES ──────────────────────────────────────────────────────
   if (isPublicRoute(request)) {
-    return withTenantHeader(NextResponse.next())
+    const res = NextResponse.next()
+    // Signal layout.tsx to skip whitelabel branding on the landing view
+    // so logged-in WL users see default DialerSeat styles on /?view=landing.
+    if (url.searchParams.get('view') === 'landing') {
+      res.headers.set('x-landing-view', '1')
+    }
+    return withTenantHeader(res)
   }
 
   const { userId } = await auth()
