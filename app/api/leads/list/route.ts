@@ -8,10 +8,18 @@ const supabase = createClient(
 
 const PAGE_SIZE = 50
 
+// Disposition strings for virtual sub-campaigns. These MUST match the ones
+// declared in /api/campaigns/list/route.ts. If the dialer writes different
+// disposition values, update both files together.
+const SUB_DISPOSITIONS: Record<string, string> = {
+  appointments: 'APPOINTMENT',
+  not_interested: 'NOT_INTERESTED',
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const userId = searchParams.get('user_id')
-  const campaignId = searchParams.get('campaign_id') || 'all'
+  const rawCampaignId = searchParams.get('campaign_id') || 'all'
   const disposition = searchParams.get('disposition') || 'all'
   const search = searchParams.get('search')?.trim() || ''
   const sort = searchParams.get('sort') || 'created_desc'
@@ -19,6 +27,29 @@ export async function GET(req: NextRequest) {
 
   if (!userId) {
     return NextResponse.json({ success: false, error: 'user_id required' }, { status: 400 })
+  }
+
+  // Parse virtual sub-campaign IDs of the form `${parentId}:${subType}`.
+  // When detected, treat it as the parent campaign + an enforced disposition
+  // filter. The colon split is safe: real campaign IDs are UUIDs which contain
+  // dashes but no colons.
+  let campaignId = rawCampaignId
+  let virtualDispositionFilter: string | null = null
+  if (campaignId !== 'all' && campaignId.includes(':')) {
+    const [parentId, subType] = campaignId.split(':')
+    if (parentId && subType && SUB_DISPOSITIONS[subType]) {
+      campaignId = parentId
+      virtualDispositionFilter = SUB_DISPOSITIONS[subType]
+    } else {
+      // Malformed virtual id — return empty rather than 400 so the dialer
+      // doesn't error out on a stale URL.
+      return NextResponse.json({
+        success: true,
+        leads: [],
+        total: 0,
+        nextCursor: null,
+      })
+    }
   }
 
   let query = supabase
@@ -30,7 +61,11 @@ export async function GET(req: NextRequest) {
     query = query.eq('campaign_id', campaignId)
   }
 
-  if (disposition !== 'all') {
+  // The virtual sub-campaign filter takes precedence over the disposition
+  // query param. A virtual sub is by definition pinned to one disposition.
+  if (virtualDispositionFilter) {
+    query = query.eq('disposition', virtualDispositionFilter)
+  } else if (disposition !== 'all') {
     if (disposition === 'uncalled') {
       query = query.is('disposition', null)
     } else {

@@ -12,6 +12,8 @@ const ALLOWED_FIELDS = [
   'amd_enabled',
   'predictive_lines_per_agent',
   'voicemail_drop_url',
+  'enable_appointments_sub',
+  'enable_not_interested_sub',
 ] as const
 
 export async function POST(req: Request) {
@@ -26,6 +28,14 @@ export async function POST(req: Request) {
 
     if (!id || typeof id !== 'string') {
       return NextResponse.json({ success: false, error: 'Campaign id required' }, { status: 400 })
+    }
+
+    // Reject any virtual sub-campaign ID — those are read-only views.
+    if (id.includes(':')) {
+      return NextResponse.json(
+        { success: false, error: 'Cannot update a virtual sub-campaign. Update the parent instead.' },
+        { status: 400 }
+      )
     }
 
     // Verify ownership BEFORE writing — never trust the body's user_id
@@ -79,6 +89,16 @@ export async function POST(req: Request) {
         case 'voicemail_drop_url': {
           if (v !== null && typeof v !== 'string') continue
           updates.voicemail_drop_url = v || null
+          break
+        }
+        case 'enable_appointments_sub': {
+          if (typeof v !== 'boolean') continue
+          updates.enable_appointments_sub = v
+          break
+        }
+        case 'enable_not_interested_sub': {
+          if (typeof v !== 'boolean') continue
+          updates.enable_not_interested_sub = v
           break
         }
       }

@@ -3,17 +3,14 @@
 // =============================================================================
 // /faq/dialerseat-teams — public deep dive on DialerSeat Teams
 // =============================================================================
-// Matches the founder-voice, hard-pricing, real-feature style of
-// /faq/why-dialerseat. Public route (Clerk-bypassed via proxy.ts).
+// v2 content rewrite. Premium leads is now the centerpiece; aged leads
+// is demoted to a tracked secondary callout inside the lead-vendor deep
+// dive. Title and hero no longer lead with aged leads.
 //
-// Audience coverage:
-//   1. Lead vendors selling AGED LEADS access (TCPA-conscious framing —
-//      teams is the aged-leads secondary market platform, not for fresh
-//      exclusive product where one-buyer-one-lead applies)
-//   2. Agency owners running multiple producers
-//   3. Shared lead pool operators
-//
-// Linked from the in-app teams page (see /dashboard/teams) and from /faq.
+// Pitch: rent seat-based dialer access to your premium lead campaigns,
+// with full attribution. As a bonus, the platform automatically tracks
+// which leads went un-worked so you can build secondary campaigns from
+// the aged remainder without manual list management.
 // =============================================================================
 
 import { useUser } from '@clerk/nextjs'
@@ -157,6 +154,37 @@ export default function DialerSeatTeamsFaqView() {
             line-height: 1.7;
             color: ${T.text};
           }
+
+          /* AGED LEADS CALLOUT — subdued, signals "bonus feature" */
+          .tfaq-aged-callout {
+            margin-top: 36px;
+            padding: 24px 26px;
+            background: ${T.bg};
+            border: 1px solid ${T.border};
+            border-left: 3px solid ${T.amber};
+            border-radius: 6px;
+          }
+          .tfaq-aged-callout .label {
+            font-size: 10px;
+            letter-spacing: 3px;
+            color: ${T.amber};
+            font-weight: bold;
+            margin-bottom: 8px;
+          }
+          .tfaq-aged-callout h4 {
+            font-size: 18px;
+            font-weight: 700;
+            margin: 0 0 12px 0;
+            color: ${T.text};
+            letter-spacing: 0.2px;
+          }
+          .tfaq-aged-callout p {
+            font-size: 14px;
+            line-height: 1.65;
+            color: ${T.text};
+            margin: 0 0 10px 0;
+          }
+          .tfaq-aged-callout p:last-child { margin-bottom: 0; }
 
           /* AUDIENCE CARDS (3-up) */
           .tfaq-audience-grid {
@@ -434,14 +462,14 @@ export default function DialerSeatTeamsFaqView() {
               <Link href="/faq" className="tfaq-breadcrumb">← BACK TO FAQ</Link>
               <div style={{ marginTop: 4 }} />
               <div className="tfaq-eyebrow">DIALERSEAT TEAMS</div>
-              <h1>Aged leads, agency floors, shared pools.</h1>
+              <h1>Premium leads, agency floors, shared pools.</h1>
               <p className="tfaq-lead">
-                DialerSeat Teams is the overlay that lets one account holder
-                share specific campaigns and lead pools with other DialerSeat
-                users — with full attribution back to the owner. Built for
-                lead vendors selling aged-lead access, agencies running
-                multiple producers, and any operation where more than one
-                person dials the same list.
+                DialerSeat Teams is the overlay that lets you sell seat-based
+                dialer access to your premium lead campaigns — with full
+                attribution back to you. Built for lead vendors monetizing
+                their premium files, agencies running multiple producers,
+                and any operation where more than one person dials the same
+                list.
               </p>
             </div>
           </section>
@@ -452,17 +480,18 @@ export default function DialerSeatTeamsFaqView() {
             <h2>One account holder. Many seats. Real attribution.</h2>
             <p>
               A Team is created by one DialerSeat account holder (the
-              owner). They attach their own campaigns to that team and
-              invite other DialerSeat users to dial those campaigns. Members
-              keep their own DialerSeat login. Every dial they make on team
-              campaigns rolls back into the owner&apos;s analytics view in
-              real time.
+              owner). They attach their own premium campaigns to that team
+              and invite other DialerSeat users to dial those campaigns.
+              Members keep their own DialerSeat login. Every dial they make
+              on team campaigns rolls back into the owner&apos;s analytics
+              view in real time.
             </p>
             <p>
               It is not a separate product. It does not replace your account.
               It does not bypass platform billing. It is a structured way to
-              lend dialing access to leads you own — with the audit trail
-              and analytics your business actually needs.
+              rent dialing access to premium campaigns you own — with the
+              audit trail, attribution, and analytics your business actually
+              needs.
             </p>
           </section>
 
@@ -480,10 +509,10 @@ export default function DialerSeatTeamsFaqView() {
                 <div className="tfaq-audience-card">
                   <h3>LEAD VENDORS</h3>
                   <p>
-                    You generate leads. You&apos;ve already sold them once as
-                    fresh exclusive product. Now they&apos;ve aged. Instead of
-                    dumping them as a CSV and losing the relationship, you
-                    rent seat-based dialer access on top of the aged file.
+                    You generate premium leads. Instead of selling raw CSVs
+                    and losing the relationship, you keep the file and rent
+                    seat-based dialer access on your campaigns to buyer
+                    agents — turning a one-shot sale into recurring revenue.
                   </p>
                 </div>
                 <div className="tfaq-audience-card">
@@ -508,51 +537,46 @@ export default function DialerSeatTeamsFaqView() {
             </div>
           </section>
 
-          {/* DEEP DIVE: LEAD VENDORS (AGED LEADS) */}
+          {/* DEEP DIVE: LEAD VENDORS (PREMIUM LEADS) */}
           <section className="tfaq-section">
             <div className="tfaq-label">▸ LEAD VENDORS</div>
-            <h2>Built for the aged-leads market.</h2>
+            <h2>Rent seats to your premium campaigns.</h2>
             <p>
-              Most lead vendors generate fresh leads through marketing,
-              sell them once as exclusive fresh product for full price,
-              then sit on the file. Within 30 to 90 days those leads
-              <em> age</em> — they lose pricing power as fresh exclusives,
-              but they&apos;re not dead. Aged leads still produce. They&apos;re
-              the standard secondary product in the lead-gen market, and
-              they&apos;re the segment DialerSeat Teams was built for.
+              You spend real marketing dollars generating premium leads.
+              Those leads have value. The old way of monetizing them caps
+              you at the first sale — ship the CSV, take the check, lose
+              the relationship. The buyer ghosts you, works the file out
+              their way, and you start over with the next buyer the next
+              month.
             </p>
             <p>
-              The old way of selling aged leads is to dump a CSV. That works
-              once. Then you lose attribution. You lose any audit trail. You
-              lose the chance at recurring revenue. The buyer ghosts you,
-              works the file out, and you start over with the next buyer.
+              DialerSeat Teams flips that. Upload your premium file to a
+              campaign you own, build a team around it, and rent seats to
+              your buyer agents. They dial inside your campaign on their
+              own DialerSeat account. You see every dial, every disposition,
+              every timestamp. Every call is recorded on your side. Attempt
+              counts update globally — no double-dialing across the buyer
+              pool, no TCPA risk from one buyer overworking the file.
             </p>
             <div className="tfaq-pullquote">
-              The pitch isn&apos;t &quot;come buy my old leads.&quot; The pitch
-              is &quot;come dial my aged file on my platform — I keep the
-              data, you keep the appointments, we both stay accountable.&quot;
-              That&apos;s a recurring product. CSVs aren&apos;t.
+              The pitch isn&apos;t &quot;come buy my list.&quot; The pitch
+              is &quot;come dial my premium file on my platform — I keep
+              the data, you keep the appointments, we both stay
+              accountable.&quot; That&apos;s a recurring product. CSVs
+              aren&apos;t.
             </div>
-            <p>
-              On DialerSeat Teams you upload your aged file to a campaign you
-              own, build a team around it, and rent seats to your buyer
-              agents. They dial inside your campaign on their own DialerSeat
-              account. You see who dialed what, with what disposition, at
-              what time. Every call is recorded on your side. Attempt counts
-              update globally — no double-dialing, no TCPA-overage risk
-              across the buyer pool.
-            </p>
 
-            <h3>WHAT YOU GET TO RUN ON TOP</h3>
+            <h3>FOUR PRICING MODELS</h3>
             <p>
-              Four pricing models map naturally to the seat structure:
+              The four billing modes (covered in detail below) map naturally
+              to the seat structure. Pick whichever matches how you want to
+              charge:
             </p>
             <ol style={{ paddingLeft: 22, marginTop: 14 }}>
               <li style={{ marginBottom: 12, fontSize: 15, lineHeight: 1.65 }}>
-                <strong>Per-seat-per-week.</strong> Charge buyers a flat
-                weekly markup over the $35 seat cost. You eat the seat,
-                charge them above-cost. Clean recurring revenue per
-                active dialing buyer.
+                <strong>Per-seat-per-week markup.</strong> You eat the $35
+                seat cost and charge buyers a flat weekly markup. Clean
+                recurring revenue per active dialing buyer.
               </li>
               <li style={{ marginBottom: 12, fontSize: 15, lineHeight: 1.65 }}>
                 <strong>Pass-through seat.</strong> Set the campaign to
@@ -562,7 +586,7 @@ export default function DialerSeatTeamsFaqView() {
               <li style={{ marginBottom: 12, fontSize: 15, lineHeight: 1.65 }}>
                 <strong>Flat membership, free dialing.</strong> Set the
                 campaign to FREE mode. Nobody pays per-seat. You charge a
-                recurring membership fee outside DialerSeat. Best margins
+                recurring membership fee outside DialerSeat — best margins
                 if your buyers dial heavily.
               </li>
               <li style={{ marginBottom: 12, fontSize: 15, lineHeight: 1.65 }}>
@@ -573,11 +597,33 @@ export default function DialerSeatTeamsFaqView() {
             </ol>
 
             <p style={{ marginTop: 20 }}>
-              Your aged file never leaves your account. Buyers see one lead
-              at a time in the dialer UI. They don&apos;t get the underlying
-              CSV. They can&apos;t export. When you revoke access, their
-              visibility ends within seconds.
+              Your premium file never leaves your account. Buyers see one
+              lead at a time in the dialer UI. They don&apos;t get the
+              underlying CSV. They can&apos;t export. When you revoke
+              access, their visibility ends within seconds.
             </p>
+
+            {/* AGED LEADS — tracked secondary capability */}
+            <div className="tfaq-aged-callout">
+              <div className="label">▸ BONUS — AGED LEADS, TRACKED AUTOMATICALLY</div>
+              <h4>The platform knows which premium leads went un-worked.</h4>
+              <p>
+                Premium leads that sit untouched for 30, 60, or 90 days
+                become aged. DialerSeat tracks every dial against every
+                lead — attempts, last-called timestamps, disposition
+                history — so at any point you know exactly which leads
+                from a premium batch were never worked.
+              </p>
+              <p>
+                Build a second team around those aged leads, rent seats to
+                a different buyer pool, and run the same playbook on the
+                untouched remainder. No manual list management, no separate
+                upload, no risk of stepping on the first buyer pool —
+                the platform handles the bookkeeping. Aged-lead resale is
+                a side effect of running premium properly, not a separate
+                product.
+              </p>
+            </div>
           </section>
 
           {/* DEEP DIVE: AGENCY OWNERS */}
@@ -631,9 +677,9 @@ export default function DialerSeatTeamsFaqView() {
             <div className="tfaq-label">▸ SHARED LEAD POOL</div>
             <h2>Many dialers, one file, zero collisions.</h2>
             <p>
-              Whether you&apos;re an aged-lead vendor or an agency, the
-              dialer needs to handle multiple humans hitting the same list
-              at once without stepping on each other. Teams handles this
+              Whether you&apos;re a lead vendor or an agency, the dialer
+              needs to handle multiple humans hitting the same list at
+              once without stepping on each other. Teams handles this
               automatically.
             </p>
             <p>
@@ -684,8 +730,8 @@ export default function DialerSeatTeamsFaqView() {
                   <p>
                     Each agent pays their own seat fee directly to
                     DialerSeat. Owner pays nothing per-seat. Best for
-                    aged-lead vendors selling list access where buyers
-                    cover their own usage cost.
+                    lead vendors selling premium campaign access where
+                    buyers cover their own usage cost.
                   </p>
                 </div>
                 <div className="tfaq-mode-card">
@@ -704,8 +750,8 @@ export default function DialerSeatTeamsFaqView() {
                     Neither owner nor agents pay any per-campaign seat
                     charge. Best for small agencies under corporate
                     billing, internal training accounts, comping a
-                    trial seat, or aged-lead memberships with a flat
-                    external access fee.
+                    trial seat, or premium-campaign memberships with a
+                    flat external access fee.
                   </p>
                 </div>
               </div>
@@ -733,14 +779,14 @@ export default function DialerSeatTeamsFaqView() {
             <div className="tfaq-steps-grid">
               <div className="tfaq-step-block">
                 <div className="tfaq-step-head">
-                  <span className="title">AGED-LEAD VENDOR</span>
+                  <span className="title">PREMIUM LEAD VENDOR</span>
                   <span className="badge">RECURRING REVENUE</span>
                 </div>
                 <div className="tfaq-step-body">
                   <ol>
                     <li>Sign up for DialerSeat MANAGER+ ($75/wk).</li>
-                    <li>Upload your aged lead file to a campaign in your account.</li>
-                    <li>Create a team named after the offer — e.g. &quot;Q4 Refi Aged Leads — Tier 1.&quot;</li>
+                    <li>Upload your premium lead file to a campaign in your account.</li>
+                    <li>Create a team named after the offer — e.g. &quot;Q4 Refi Premium — Tier 1.&quot;</li>
                     <li>Attach the campaign to the team.</li>
                     <li>Pick the access mode that matches your pricing — AGENT PAYS, FREE, or OWNER PAYS.</li>
                     <li>Generate a team code. Send to your buyer agents.</li>
@@ -748,9 +794,11 @@ export default function DialerSeatTeamsFaqView() {
                     <li>Watch analytics roll in. Pull QA on recordings. Kick non-performers or rule-breakers instantly.</li>
                   </ol>
                   <p>
-                    Your aged file never leaves your account. Buyers see
-                    one lead at a time. When access is revoked, their
-                    visibility ends within seconds.
+                    Your premium file never leaves your account. Buyers
+                    see one lead at a time. When access is revoked, their
+                    visibility ends within seconds. Aged leads from the
+                    same file are tracked automatically — see the lead
+                    vendor section above.
                   </p>
                 </div>
               </div>
@@ -908,9 +956,9 @@ export default function DialerSeatTeamsFaqView() {
                 <>
                   <h2>Open the teams page.</h2>
                   <p>
-                    Build your first team, attach a campaign, generate a
-                    code, send it. You&apos;ll be operational in under
-                    ten minutes.
+                    Build your first team, attach a premium campaign,
+                    generate a code, send it. You&apos;ll be operational
+                    in under ten minutes.
                   </p>
                   <div className="tfaq-cta-row">
                     <Link href="/dashboard/teams" className="tfaq-btn-primary">

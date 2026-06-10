@@ -5,21 +5,18 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 // =============================================================================
-// TEAMS PAGE — Pass 2 v4 (FAQ link integration)
+// TEAMS PAGE — Pass 2 v5 (FAQ link relocation)
 // =============================================================================
-// THIS REVISION layers one change on top of v3:
+// v5 change: the FAQ link moves from the bottom of the "WHAT IS A DIALERSEAT
+// TEAM?" copy block (where v4 placed it) up to the top-right of the card's
+// title row. The bottom FAQ block from v4 is removed entirely so we don't
+// duplicate the CTA.
 //
-//   • FAQ link block appended INSIDE the existing "WHAT IS A DIALERSEAT
-//     TEAM?" copy block, sitting below the COST footer. It opens the
-//     public /faq/dialerseat-teams page in a new tab so the in-dashboard
-//     flow isn't interrupted.
-//
-// Everything else from v3 preserved exactly:
-//   1. URL redirects to /dashboard/teams/${id}/analytics (4 sites)
-//   2. 'free' on TeamCampaignRow.accessMode, attachAccessMode state,
-//      updateCampaignAccess signature
-//   3. FREE option in attach modal radio + per-campaign access-mode select
-//   4. C6 header binding (var(--brand-header-bg))
+// All other v4 functionality preserved:
+//   1. URL redirects to /dashboard/teams/${id}/analytics
+//   2. 'free' on TeamCampaignRow.accessMode, attachAccessMode, updateCampaignAccess
+//   3. FREE option in attach modal radio + per-campaign select
+//   4. C6 header binding
 //   5. Item-1 copy-block primary swap intact
 // =============================================================================
 
@@ -1316,15 +1313,43 @@ export default function TeamsPage() {
           </div>
         )}
 
-        {/* ── ▸ WHAT IS A DIALERSEAT TEAM? — item-1 primary swap + FAQ link ───── */}
+        {/* ── ▸ WHAT IS A DIALERSEAT TEAM? — header row with FAQ link top-right ── */}
         <div style={{
           background: T.surface, border: `1px solid ${T.border}`,
           borderLeft: `3px solid ${T.blue}`, borderRadius: 4,
           padding: '28px 32px', marginBottom: 16,
         }}>
           <div style={{
-            fontSize: 13, letterSpacing: 4, color: T.muted, fontWeight: 'bold', marginBottom: 22,
-          }}>▸ WHAT IS A DIALERSEAT TEAM?</div>
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 14,
+            flexWrap: 'wrap',
+            marginBottom: 22,
+          }}>
+            <div style={{
+              fontSize: 13, letterSpacing: 4, color: T.muted, fontWeight: 'bold',
+            }}>▸ WHAT IS A DIALERSEAT TEAM?</div>
+            <Link
+              href="/faq/dialerseat-teams"
+              target="_blank"
+              rel="noopener"
+              style={{
+                padding: '8px 16px',
+                background: T.dark,
+                border: 'none',
+                borderTop: `3px solid ${T.blue}`,
+                borderRadius: 3,
+                color: T.blue,
+                fontSize: 10,
+                letterSpacing: 2.5,
+                fontWeight: 'bold',
+                textDecoration: 'none',
+                whiteSpace: 'nowrap',
+                fontFamily: FUTURA,
+              }}
+            >READ THE FULL FAQ →</Link>
+          </div>
 
           <p style={{
             fontSize: 18, lineHeight: 1.7, color: T.text, marginBottom: 24, marginTop: 0,
@@ -1360,46 +1385,6 @@ export default function TeamsPage() {
             <p style={{ fontSize: 15, lineHeight: 1.6, color: T.text, margin: 0 }}>
               <strong>$35 per active seat per week</strong>, paid to DialerSeat. Whether you (the owner) pay or your agent pays is up to you per agent and per campaign. Codes you create can be set to either payer.
             </p>
-          </div>
-
-          {/* READ THE FULL FAQ */}
-          <div style={{
-            marginTop: 18,
-            paddingTop: 18,
-            borderTop: `1px solid ${T.border}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 14,
-            flexWrap: 'wrap',
-          }}>
-            <div style={{ flex: '1 1 280px', minWidth: 0 }}>
-              <div style={{
-                fontSize: 11, letterSpacing: 3, color: T.muted, fontWeight: 'bold', marginBottom: 4,
-              }}>▸ WANT THE FULL BREAKDOWN?</div>
-              <div style={{ fontSize: 13, color: T.text, lineHeight: 1.5 }}>
-                Aged-lead vendor playbook, agency floor setup, shared pool mechanics, all four billing modes, and the common pre-signup questions.
-              </div>
-            </div>
-            <Link
-              href="/faq/dialerseat-teams"
-              target="_blank"
-              rel="noopener"
-              style={{
-                padding: '10px 18px',
-                background: T.dark,
-                border: 'none',
-                borderTop: `3px solid ${T.blue}`,
-                borderRadius: 3,
-                color: T.blue,
-                fontSize: 11,
-                letterSpacing: 2.5,
-                fontWeight: 'bold',
-                textDecoration: 'none',
-                whiteSpace: 'nowrap',
-                fontFamily: FUTURA,
-              }}
-            >READ THE FULL FAQ →</Link>
           </div>
         </div>
       </div>
