@@ -3,26 +3,21 @@ import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
 
 /**
- * Per-team analytics for the dashboard at /dashboard/teams/[id]/analytics.
- *
- * History: this handler used to live at app/dashboard/teams/[id]/route.ts.
- * That path collided with the page URL — a `route.ts` and a `page.tsx`
- * can't share an App Router segment, and the browser hitting the page
- * URL was getting either JSON or a 404 depending on Next.js routing
- * resolution. Moving the handler under /api decouples it from the page
- * URL entirely.
- *
- * Owner sees: leaderboard (all members), team totals, recent calls feed,
- *             plus the same totals filterable by campaign or member.
- * Member sees: only their own stats (no peer leaderboard, no calls feed
- *              that exposes other members' activity).
+ * Per-team analytics for /dashboard/teams/[id]/analytics.
  *
  * Query params:
  *   range:       'today' | 'week' | 'month' | 'custom' | 'all' (default 'week')
  *   start:       ISO date string (required when range='custom')
  *   end:         ISO date string (required when range='custom')
  *   campaign_id: filter calls to one campaign (must be attached to this team)
- *   user_id:     filter calls to one member (owner-only — members are auto-scoped)
+ *   user_id:     filter calls to one member (owner-only)
+ *
+ * v2 fix: when no campaigns are attached (or the filtered campaign list
+ * is empty), the original code passed `['__none__']` to .in('campaign_id', ...)
+ * which Postgres rejected as an invalid UUID. This rev skips the calls
+ * fetch entirely in that case — the rest of the aggregation flows through
+ * with an empty array, returning a fully-zeroed payload the page can
+ * render as an AWAITING DATA template.
  */
 
 type Range = 'today' | 'week' | 'month' | 'custom' | 'all'
@@ -98,7 +93,7 @@ export async function GET(
       if (!m) return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
     }
 
-    // Roster — owner always included as a "member" for their own stats
+    // Roster — owner always included
     const { data: memberRows } = await supabaseAdmin
       .from('team_members')
       .select('user_id')
@@ -109,6 +104,14 @@ export async function GET(
       team.owner_id,
       ...(memberRows || []).map((m: any) => m.user_id),
     ]))
+
+    // Validate filterUserId up front so it fires even in the empty-campaigns path
+    if (filterUserId && !memberClerkIds.includes(filterUserId)) {
+      return NextResponse.json(
+        { success: false, error: 'User not in this team' },
+        { status: 400 }
+      )
+    }
 
     // Identity resolution
     const { data: userRows } = await supabaseAdmin
@@ -144,35 +147,34 @@ export async function GET(
       scopedCampaignIds = [filterCampaignId]
     }
 
-    // Build calls query
-    let callsQuery = supabaseAdmin
-      .from('calls')
-      .select('id, user_id, campaign_id, lead_id, disposition, duration, created_at, leads(first_name, last_name, phone)')
-      .in('campaign_id', scopedCampaignIds.length > 0 ? scopedCampaignIds : ['__none__'])
+    // Calls fetch — only runs if there ARE campaigns to scope to.
+    // No campaigns attached (or filter yields zero) ⇒ skip query entirely,
+    // calls stays []. Downstream aggregation handles empty cleanly.
+    let calls: any[] = []
+    if (scopedCampaignIds.length > 0) {
+      let callsQuery = supabaseAdmin
+        .from('calls')
+        .select('id, user_id, campaign_id, lead_id, disposition, duration, created_at, leads(first_name, last_name, phone)')
+        .in('campaign_id', scopedCampaignIds)
 
-    const { since, until } = rangeBounds(range, startParam, endParam)
-    if (since) callsQuery = callsQuery.gte('created_at', since.toISOString())
-    if (until) callsQuery = callsQuery.lte('created_at', until.toISOString())
+      const { since, until } = rangeBounds(range, startParam, endParam)
+      if (since) callsQuery = callsQuery.gte('created_at', since.toISOString())
+      if (until) callsQuery = callsQuery.lte('created_at', until.toISOString())
 
-    // Scope to user: members locked to themselves; owners default to all, optionally filter
-    if (!isOwner) {
-      callsQuery = callsQuery.eq('user_id', userId)
-    } else if (filterUserId) {
-      if (!memberClerkIds.includes(filterUserId)) {
-        return NextResponse.json(
-          { success: false, error: 'User not in this team' },
-          { status: 400 }
-        )
+      if (!isOwner) {
+        callsQuery = callsQuery.eq('user_id', userId)
+      } else if (filterUserId) {
+        callsQuery = callsQuery.eq('user_id', filterUserId)
+      } else {
+        callsQuery = callsQuery.in('user_id', memberClerkIds)
       }
-      callsQuery = callsQuery.eq('user_id', filterUserId)
-    } else {
-      callsQuery = callsQuery.in('user_id', memberClerkIds)
+
+      callsQuery = callsQuery.order('created_at', { ascending: false }).limit(2000)
+
+      const { data, error: callsErr } = await callsQuery
+      if (callsErr) throw callsErr
+      calls = data || []
     }
-
-    callsQuery = callsQuery.order('created_at', { ascending: false }).limit(2000)
-
-    const { data: calls, error: callsErr } = await callsQuery
-    if (callsErr) throw callsErr
 
     // Roll up per-member stats
     type MemberStat = {
@@ -206,13 +208,13 @@ export async function GET(
       }
     }
 
-    // Seed by relevant member set so zero-activity members still appear in leaderboard
+    // Seed by relevant member set so zero-activity members still appear
     const seedSet = filterUserId ? [filterUserId] : memberClerkIds
     for (const uid of seedSet) statsByUser[uid] = seedFor(uid)
 
     const teamTotals = { calls: 0, connected: 0, conversions: 0, talkSeconds: 0 }
 
-    for (const c of calls || []) {
+    for (const c of calls) {
       const uid = c.user_id
       if (!statsByUser[uid]) statsByUser[uid] = seedFor(uid)
       const s = statsByUser[uid]
@@ -239,7 +241,7 @@ export async function GET(
     // Recent calls feed — owner only
     let recentCalls: any[] = []
     if (isOwner) {
-      recentCalls = (calls || []).slice(0, 50).map((c: any) => {
+      recentCalls = calls.slice(0, 50).map((c: any) => {
         const lead = c.leads || {}
         const u = userById[c.user_id]
         const memberName = u

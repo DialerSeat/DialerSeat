@@ -5,17 +5,15 @@ import Link from 'next/link'
 // =============================================================================
 // /dashboard/teams/[id]/analytics — TEAM ANALYTICS DASHBOARD
 // =============================================================================
-// Replaces the old /dashboard/teams/[id] 404. The API used to live at
-// /dashboard/teams/[id]/route.ts, which conflicted with the page URL —
-// it's been moved to /api/teams/[id]/analytics. This page consumes that.
+// v2: empty-template rebuild. Page ALWAYS renders the full structure
+// regardless of data presence. Cells that would otherwise show 0 or
+// be empty get a small AWAITING DATA pill. Leaderboard seeds one row
+// per active member; recent calls shows 4 placeholder pill-rows when
+// empty so owners see the layout they'll get once data flows in.
 //
-// Layout:
-//   - Page header strip (var(--brand-header-bg)) with team name + back link
-//   - Controls strip: range buttons (TODAY / 7-DAY / 30-DAY / CUSTOM),
-//     campaign filter dropdown, member filter dropdown (owner only)
-//   - KPI tiles: calls / connect rate / conversions / talk time
-//   - Owner: leaderboard table + recent calls feed
-//   - Member: own stats only (no peer data exposure)
+// AWAITING DATA pill: #363647 bg / #ffffff text. Semantic — does NOT
+// theme. Same pattern used on agent analytics and other empty-state
+// templates across the app.
 // =============================================================================
 
 const T = {
@@ -117,6 +115,24 @@ function dispColor(disp: string | null): string {
   }
 }
 
+// AWAITING DATA pill — semantic, does NOT theme. Same pattern across app.
+function Awaiting() {
+  return (
+    <span style={{
+      display: 'inline-block',
+      padding: '2px 8px',
+      background: '#363647',
+      color: '#ffffff',
+      fontSize: 9,
+      letterSpacing: 1.5,
+      fontWeight: 'bold',
+      borderRadius: 3,
+      fontFamily: FUTURA,
+      whiteSpace: 'nowrap',
+    }}>AWAITING DATA</span>
+  )
+}
+
 export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: teamId } = use(params)
 
@@ -130,7 +146,6 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
   const [error, setError] = useState<string | null>(null)
 
   const fetchAnalytics = useCallback(async () => {
-    // Skip the fetch if custom range chosen but dates not filled in yet
     if (range === 'custom' && (!customStart || !customEnd)) {
       setLoading(false)
       return
@@ -141,7 +156,6 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
       const qs = new URLSearchParams({ range })
       if (range === 'custom') {
         qs.set('start', new Date(customStart).toISOString())
-        // end-of-day on custom end so the picker feels inclusive
         const endDate = new Date(customEnd)
         endDate.setHours(23, 59, 59, 999)
         qs.set('end', endDate.toISOString())
@@ -170,7 +184,11 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
 
   const connectRate = data && data.totals.calls > 0
     ? `${Math.round((data.totals.connected / data.totals.calls) * 100)}%`
-    : '—'
+    : null
+
+  // Owner sees the full leaderboard (always includes every active member,
+  // seeded with zeros server-side). Member view doesn't get peer data.
+  const leaderboardRows = isOwner ? (data?.leaderboard || []) : []
 
   return (
     <div className="ta-root" style={{
@@ -283,6 +301,8 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
           font-size: 24px; font-weight: bold;
           font-family: monospace;
           color: ${T.text}; letter-spacing: 1px;
+          min-height: 28px;
+          display: flex; align-items: center;
         }
         .ta-section {
           background: ${T.surface};
@@ -433,54 +453,72 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
 
         {data && (
           <>
+            {/* KPI TILES — full template, Awaiting pills for zero values */}
             <div className="ta-kpi-grid">
               <div className="ta-kpi">
                 <div className="ta-kpi-label">TOTAL CALLS</div>
-                <div className="ta-kpi-value">{data.totals.calls.toLocaleString()}</div>
+                <div className="ta-kpi-value">
+                  {data.totals.calls > 0 ? data.totals.calls.toLocaleString() : <Awaiting />}
+                </div>
               </div>
               <div className="ta-kpi">
                 <div className="ta-kpi-label">CONNECT RATE</div>
-                <div className="ta-kpi-value">{connectRate}</div>
+                <div className="ta-kpi-value">
+                  {connectRate || <Awaiting />}
+                </div>
               </div>
               <div className="ta-kpi">
                 <div className="ta-kpi-label">CONVERSIONS</div>
                 <div className="ta-kpi-value" style={{
                   color: data.totals.conversions > 0 ? T.green : T.text,
                 }}>
-                  {data.totals.conversions.toLocaleString()}
+                  {data.totals.conversions > 0
+                    ? data.totals.conversions.toLocaleString()
+                    : <Awaiting />}
                 </div>
               </div>
               <div className="ta-kpi">
                 <div className="ta-kpi-label">TALK TIME</div>
-                <div className="ta-kpi-value">{fmtTime(data.totals.talkSeconds)}</div>
+                <div className="ta-kpi-value">
+                  {data.totals.talkSeconds > 0 ? fmtTime(data.totals.talkSeconds) : <Awaiting />}
+                </div>
               </div>
             </div>
 
+            {/* LEADERBOARD — owner only, always renders, pills for zero cells */}
             {isOwner && (
               <div className="ta-section">
                 <div className="ta-section-head">
                   ▸ LEADERBOARD
-                  {memberFilter !== 'all' && <span style={{ color: T.amber, marginLeft: 8 }}>· FILTERED</span>}
-                  {campaignFilter !== 'all' && <span style={{ color: T.amber, marginLeft: 8 }}>· CAMPAIGN FILTERED</span>}
+                  {memberFilter !== 'all' && (
+                    <span style={{ color: T.amber, marginLeft: 8 }}>· MEMBER FILTERED</span>
+                  )}
+                  {campaignFilter !== 'all' && (
+                    <span style={{ color: T.amber, marginLeft: 8 }}>· CAMPAIGN FILTERED</span>
+                  )}
                 </div>
-                {data.leaderboard.length === 0 ? (
-                  <div className="ta-empty">NO DATA IN THIS RANGE</div>
-                ) : (
-                  <table className="ta-table">
-                    <thead>
+                <table className="ta-table">
+                  <thead>
+                    <tr>
+                      <th>MEMBER</th>
+                      <th style={{ textAlign: 'right' }}>CALLS</th>
+                      <th style={{ textAlign: 'right' }}>CONNECTED</th>
+                      <th style={{ textAlign: 'right' }}>CONV</th>
+                      <th style={{ textAlign: 'right' }}>TALK</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {leaderboardRows.length === 0 ? (
                       <tr>
-                        <th>MEMBER</th>
-                        <th style={{ textAlign: 'right' }}>CALLS</th>
-                        <th style={{ textAlign: 'right' }}>CONNECTED</th>
-                        <th style={{ textAlign: 'right' }}>CONV</th>
-                        <th style={{ textAlign: 'right' }}>TALK</th>
+                        <td colSpan={5} style={{ textAlign: 'center', padding: '20px', color: T.muted, letterSpacing: 2 }}>
+                          NO ACTIVE MEMBERS YET
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {data.leaderboard.map(m => {
+                    ) : (
+                      leaderboardRows.map(m => {
                         const cr = m.calls > 0
                           ? `${Math.round((m.connected / m.calls) * 100)}%`
-                          : '—'
+                          : null
                         return (
                           <tr key={m.userId}>
                             <td>
@@ -495,66 +533,75 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
                                 }}>OWNER</span>
                               )}
                             </td>
-                            <td style={{ textAlign: 'right' }}>{m.calls.toLocaleString()}</td>
                             <td style={{ textAlign: 'right' }}>
-                              {m.connected.toLocaleString()}{' '}
-                              <span style={{ color: T.muted }}>({cr})</span>
+                              {m.calls > 0 ? m.calls.toLocaleString() : <Awaiting />}
+                            </td>
+                            <td style={{ textAlign: 'right' }}>
+                              {m.calls > 0 ? (
+                                <>
+                                  {m.connected.toLocaleString()}{' '}
+                                  <span style={{ color: T.muted }}>({cr})</span>
+                                </>
+                              ) : <Awaiting />}
                             </td>
                             <td style={{
                               textAlign: 'right',
                               color: m.conversions > 0 ? T.green : T.muted,
                               fontWeight: 'bold',
                             }}>
-                              {m.conversions.toLocaleString()}
+                              {m.conversions > 0 ? m.conversions.toLocaleString() : <Awaiting />}
                             </td>
-                            <td style={{ textAlign: 'right' }}>{fmtTime(m.talkSeconds)}</td>
+                            <td style={{ textAlign: 'right' }}>
+                              {m.talkSeconds > 0 ? fmtTime(m.talkSeconds) : <Awaiting />}
+                            </td>
                           </tr>
                         )
-                      })}
-                    </tbody>
-                  </table>
-                )}
+                      })
+                    )}
+                  </tbody>
+                </table>
               </div>
             )}
 
+            {/* MEMBER STATS — member view, pills for zero cells */}
             {!isOwner && (
               <div className="ta-section">
                 <div className="ta-section-head">▸ YOUR STATS</div>
                 <table className="ta-table">
                   <tbody>
                     <tr>
-                      <td style={{ width: 200, color: T.muted, fontSize: 10, letterSpacing: 1.5 }}>
-                        CALLS
-                      </td>
+                      <td style={{ width: 200, color: T.muted, fontSize: 10, letterSpacing: 1.5 }}>CALLS</td>
                       <td style={{ textAlign: 'right', fontWeight: 'bold' }}>
-                        {data.viewerStats.calls.toLocaleString()}
+                        {data.viewerStats.calls > 0
+                          ? data.viewerStats.calls.toLocaleString()
+                          : <Awaiting />}
                       </td>
                     </tr>
                     <tr>
-                      <td style={{ color: T.muted, fontSize: 10, letterSpacing: 1.5 }}>
-                        CONNECTED
-                      </td>
+                      <td style={{ color: T.muted, fontSize: 10, letterSpacing: 1.5 }}>CONNECTED</td>
                       <td style={{ textAlign: 'right', fontWeight: 'bold' }}>
-                        {data.viewerStats.connected.toLocaleString()}
+                        {data.viewerStats.connected > 0
+                          ? data.viewerStats.connected.toLocaleString()
+                          : <Awaiting />}
                       </td>
                     </tr>
                     <tr>
-                      <td style={{ color: T.muted, fontSize: 10, letterSpacing: 1.5 }}>
-                        CONVERSIONS
-                      </td>
+                      <td style={{ color: T.muted, fontSize: 10, letterSpacing: 1.5 }}>CONVERSIONS</td>
                       <td style={{
                         textAlign: 'right', fontWeight: 'bold',
                         color: data.viewerStats.conversions > 0 ? T.green : T.text,
                       }}>
-                        {data.viewerStats.conversions.toLocaleString()}
+                        {data.viewerStats.conversions > 0
+                          ? data.viewerStats.conversions.toLocaleString()
+                          : <Awaiting />}
                       </td>
                     </tr>
                     <tr>
-                      <td style={{ color: T.muted, fontSize: 10, letterSpacing: 1.5 }}>
-                        TALK TIME
-                      </td>
+                      <td style={{ color: T.muted, fontSize: 10, letterSpacing: 1.5 }}>TALK TIME</td>
                       <td style={{ textAlign: 'right', fontWeight: 'bold' }}>
-                        {fmtTime(data.viewerStats.talkSeconds)}
+                        {data.viewerStats.talkSeconds > 0
+                          ? fmtTime(data.viewerStats.talkSeconds)
+                          : <Awaiting />}
                       </td>
                     </tr>
                   </tbody>
@@ -562,10 +609,12 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
               </div>
             )}
 
-            {isOwner && data.recentCalls.length > 0 && (
+            {/* RECENT CALLS — owner only, always renders, placeholder pill-rows when empty */}
+            {isOwner && (
               <div className="ta-section">
                 <div className="ta-section-head">
-                  ▸ RECENT CALLS (LAST {data.recentCalls.length})
+                  ▸ RECENT CALLS
+                  {data.recentCalls.length > 0 && ` (LAST ${data.recentCalls.length})`}
                 </div>
                 <table className="ta-table">
                   <thead>
@@ -578,40 +627,46 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
                     </tr>
                   </thead>
                   <tbody>
-                    {data.recentCalls.map(c => (
-                      <tr key={c.id}>
-                        <td>{fmtDateTime(c.createdAt)}</td>
-                        <td style={{ fontWeight: 'bold' }}>{c.memberName}</td>
-                        <td>
-                          {c.leadName}
-                          {c.phone && (
-                            <span style={{ color: T.muted, marginLeft: 6 }}>{c.phone}</span>
-                          )}
-                        </td>
-                        <td>
-                          {c.disposition ? (
-                            <span className="ta-disp-badge" style={{
-                              color: dispColor(c.disposition),
-                              border: `1px solid ${dispColor(c.disposition)}`,
-                            }}>
-                              {c.disposition}
-                            </span>
-                          ) : (
-                            <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>—</span>
-                          )}
-                        </td>
-                        <td style={{ textAlign: 'right' }}>{fmtTime(c.duration)}</td>
-                      </tr>
-                    ))}
+                    {data.recentCalls.length > 0 ? (
+                      data.recentCalls.map(c => (
+                        <tr key={c.id}>
+                          <td>{fmtDateTime(c.createdAt)}</td>
+                          <td style={{ fontWeight: 'bold' }}>{c.memberName}</td>
+                          <td>
+                            {c.leadName}
+                            {c.phone && (
+                              <span style={{ color: T.muted, marginLeft: 6 }}>{c.phone}</span>
+                            )}
+                          </td>
+                          <td>
+                            {c.disposition ? (
+                              <span className="ta-disp-badge" style={{
+                                color: dispColor(c.disposition),
+                                border: `1px solid ${dispColor(c.disposition)}`,
+                              }}>
+                                {c.disposition}
+                              </span>
+                            ) : (
+                              <span style={{ color: T.muted, fontSize: 9, letterSpacing: 1 }}>—</span>
+                            )}
+                          </td>
+                          <td style={{ textAlign: 'right' }}>{fmtTime(c.duration)}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      // 4 placeholder rows so owners see the column structure
+                      [0, 1, 2, 3].map(i => (
+                        <tr key={`placeholder-${i}`}>
+                          <td><Awaiting /></td>
+                          <td><Awaiting /></td>
+                          <td><Awaiting /></td>
+                          <td><Awaiting /></td>
+                          <td style={{ textAlign: 'right' }}><Awaiting /></td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
-              </div>
-            )}
-
-            {isOwner && data.recentCalls.length === 0 && data.totals.calls === 0 && (
-              <div className="ta-section">
-                <div className="ta-section-head">▸ RECENT CALLS</div>
-                <div className="ta-empty">NO CALLS YET IN THIS RANGE</div>
               </div>
             )}
           </>
