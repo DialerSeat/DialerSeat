@@ -48,7 +48,7 @@ export default function Taskbar({
         // Height = 48px content + native safe area inset. CSS handles it,
         // no JS probe needed. Works on iOS PWA, Android, desktop.
         height: 'calc(48px + env(safe-area-inset-bottom, 0px))',
-        background: '#0a1020',
+        background: '#0a0a0f',
         boxShadow: '0 -1px 0 rgba(255,255,255,0.08) inset, 0 -8px 24px rgba(0,0,0,0.3)',
         zIndex: 10000,
         display: 'flex',
@@ -301,11 +301,10 @@ export default function Taskbar({
       </div>
       </div>
 
-      {/* Safe-area fill — sits below the 48px strip, same bg color,
-          covers the home indicator zone on iPhone/Android with no gap. */}
+      {/* Safe-area fill — same color as body bg so no strip shows */}
       <div style={{
         flex: 1,
-        background: '#0a1020',
+        background: '#0a0a0f',
       }} />
     </div>
   )

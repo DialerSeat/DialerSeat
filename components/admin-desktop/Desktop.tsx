@@ -80,17 +80,6 @@ export default function Desktop() {
 
   const TASKBAR_HEIGHT = TASKBAR_VISIBLE_HEIGHT + safeAreaBottom
 
-  // ── KILL BODY BACKGROUND ─────────────────────────────────────────────────
-  // globals.css sets body { background-color: #0a0a0f } which bleeds through
-  // as a black strip behind the taskbar's safe-area zone on iOS. The Desktop
-  // component owns the entire viewport so we override it to transparent on
-  // mount and restore on unmount.
-  useEffect(() => {
-    const prev = document.body.style.backgroundColor
-    document.body.style.backgroundColor = 'transparent'
-    return () => { document.body.style.backgroundColor = prev }
-  }, [])
-
   // ── MOBILE DETECTION ─────────────────────────────────────────────────────
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
@@ -375,10 +364,6 @@ export default function Desktop() {
       style={{
         position: 'fixed',
         inset: 0,
-        // KEY FIX: paddingBottom fills the safe-area zone with the gradient
-        // so the body/page black never shows behind the taskbar's safe-area
-        // fill strip on iPhone.
-        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
         background: `
           radial-gradient(ellipse at 30% 20%, rgba(255,255,255,0.15) 0%, transparent 50%),
           radial-gradient(ellipse at 70% 80%, rgba(255,255,255,0.08) 0%, transparent 60%),
