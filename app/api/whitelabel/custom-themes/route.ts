@@ -1,27 +1,36 @@
-// app/api/whitelabel/onboarding/route.ts
+// app/api/whitelabel/custom-themes/route.ts
 // =============================================================================
-// WHITE-LABEL ONBOARDING / EDIT — header/sidebar split (migration 004)
+// CUSTOM THEMES — saved per-user color/logo presets for the WL onboarding page
 // =============================================================================
-// v5 (migration 004): 3 colors → 4 colors
-//   - Body now carries 4 colors: primary, sidebar, header_bg, page_bg
-//   - All four validated as #RRGGBB hex
-//   - INSERT/UPDATE write all 4 active columns
-//   - GET selects and returns all 4
+// REWRITTEN. The previous file in this folder was an accidental copy of
+// /api/whitelabel/onboarding/route.ts. The save-as-new button was POSTing
+// here with { name, colors, logo_url } but the onboarding code validated
+// `brand_name`, which doesn't exist on theme requests — hence the
+// permanent "Brand name must be 2–60 characters" error.
 //
-// v4 (migration 003): added page_bg_color (2 → 3 colors).
+// Endpoints:
+//   GET    /api/whitelabel/custom-themes
+//     → { themes: SavedTheme[] }
 //
-// v3 (Phase B3): trimmed body to active set + pre-002 safety mirroring.
+//   POST   /api/whitelabel/custom-themes
+//     Body: { name, sidebar_color, header_bg_color, primary_color,
+//             page_bg_color, logo_url? }
+//     → { theme: SavedTheme }
+//     Enforces 15-theme/user limit.
 //
-// Pre-002 safety (preserved): INSERT still writes accent_color (mirrored
-// from sidebar) and sensible defaults for secondary_color, background_color,
-// text_color so NOT NULL constraints don't fire. These four lines become
-// no-ops after Phase D migration 002 drops those columns; at that point
-// we delete them. background_color (vestigial dark body bg) is NOT
-// mirrored from page_bg_color — they're different concepts.
+//   PUT    /api/whitelabel/custom-themes?id=xxx
+//     Body: any subset of { name, sidebar_color, header_bg_color,
+//             primary_color, page_bg_color, logo_url }
+//     → { theme: SavedTheme }
+//     Used by the "Overwrite this theme" flow when the user has a saved
+//     theme loaded and modifies it.
 //
-// Unchanged: slug regex, RESERVED set, 24h cooldown, 30-day redirect
-// grace, subscription gate, support_email default, active_tenant_id
-// auto-set on tenant creation, slug collision handling.
+//   DELETE /api/whitelabel/custom-themes?id=xxx
+//     → { success: true }
+//
+// All write paths verify the theme's user_id matches the caller's clerk_id.
+// The user_id column on custom_themes is the Clerk ID, matching how
+// other tables (users.clerk_id, white_label_tenants.owner_clerk_id) key off it.
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -33,36 +42,16 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-const RESERVED = new Set([
-  'www', 'api', 'app', 'admin', 'mail', 'email', 'support',
-  'dashboard', 'billing', 'auth', 'docs', 'help', 'status',
-  'staging', 'dev', 'test', 'preview', 'sandbox',
-  'cdn', 'assets', 'static', 'media', 'images', 'files',
-  'sip', 'voice', 'webhook', 'webhooks', 'signalwire',
-  'stripe', 'clerk', 'supabase', 'vercel', 'sentry',
-  'dialerseat', 'whitelabel', 'wl', 'onboarding',
-  'manager', 'managers', 'pro', 'team', 'teams',
-  'signin', 'signup', 'login', 'logout', 'account', 'settings',
-  'terms', 'privacy', 'about', 'contact', 'pricing', 'faq',
-  'home', 'blog', 'callback', 'oauth', 'saml',
-  'referral', 'promo', 'public', 'upload',
-])
-
-const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{1,28}[a-z0-9])?$/
 const HEX_RE = /^#[0-9a-fA-F]{6}$/
+const MAX_THEMES_PER_USER = 15
+const NAME_MIN = 1
+const NAME_MAX = 40
 
-const SLUG_COOLDOWN_HOURS = 24
-const SLUG_REDIRECT_DAYS = 30
-
-// Sensible defaults for the vestigial Pass 1 columns we no longer expose.
-// Used on INSERT to satisfy any NOT NULL constraints until migration 002
-// drops these columns entirely.
-const LEGACY_SECONDARY_DEFAULT = '#2a6eff'
-const LEGACY_BACKGROUND_DEFAULT = '#0a0a0f'
-const LEGACY_TEXT_DEFAULT = '#f0f0f5'
+const SELECT_COLS =
+  'id, name, primary_color, sidebar_color, header_bg_color, page_bg_color, logo_url, created_at'
 
 // =============================================================================
-// GET — fetch current tenant for the edit form
+// GET — list saved themes for the current user
 // =============================================================================
 
 export async function GET() {
@@ -71,68 +60,25 @@ export async function GET() {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
 
-  const { data: user } = await supabase
-    .from('users')
-    .select('email, wl_onboarding_status, wl_subscription_id, stripe_customer_id')
-    .eq('clerk_id', userId)
-    .maybeSingle()
+  const { data, error } = await supabase
+    .from('custom_themes')
+    .select(SELECT_COLS)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: true })
 
-  if (!user) {
-    return NextResponse.json({ status: 'not_started' })
+  if (error) {
+    console.error('custom_themes list error:', error)
+    return NextResponse.json(
+      { error: 'db_error', detail: error.message },
+      { status: 500 }
+    )
   }
 
-  const status = (user.wl_onboarding_status as 'not_started' | 'pending' | 'complete' | null) || 'not_started'
-
-  if ((status === 'pending' || status === 'complete') && !user.wl_subscription_id) {
-    return NextResponse.json({ status: 'not_started' })
-  }
-
-  if (status === 'complete') {
-    // 4-color SELECT (migration 004).
-    const { data: tenant } = await supabase
-      .from('white_label_tenants')
-      .select(`
-        id, brand_name, slug, logo_url, slug_changed_at, is_active,
-        primary_color, sidebar_color, header_bg_color, page_bg_color
-      `)
-      .eq('owner_clerk_id', userId)
-      .maybeSingle()
-
-    if (!tenant) {
-      return NextResponse.json({ status: 'pending' })
-    }
-
-    let canChangeSlugAt: string | null = null
-    if (tenant.slug_changed_at) {
-      const lastChange = new Date(tenant.slug_changed_at).getTime()
-      const cooldownEnd = lastChange + SLUG_COOLDOWN_HOURS * 60 * 60 * 1000
-      if (cooldownEnd > Date.now()) {
-        canChangeSlugAt = new Date(cooldownEnd).toISOString()
-      }
-    }
-
-    return NextResponse.json({
-      status: 'complete',
-      existingSubdomain: tenant.slug,
-      tenant: {
-        brand_name: tenant.brand_name,
-        slug: tenant.slug,
-        logo_url: tenant.logo_url,
-        primary_color: tenant.primary_color,
-        sidebar_color: tenant.sidebar_color,
-        header_bg_color: tenant.header_bg_color,
-        page_bg_color: tenant.page_bg_color,
-      },
-      canChangeSlugAt,
-      isActive: tenant.is_active,
-    })
-  }
-
-  return NextResponse.json({ status })
+  return NextResponse.json({ themes: data || [] })
 }
 
 // =============================================================================
-// POST — create or update tenant
+// POST — create a new saved theme
 // =============================================================================
 
 export async function POST(req: NextRequest) {
@@ -148,30 +94,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'malformed_json' }, { status: 400 })
   }
 
-  // ── Field extraction ──────────────────────────────────────────────
-  const brandName = String(body.brand_name || '').trim()
-  const subdomain = String(body.subdomain || '').toLowerCase().trim()
-  const logoUrl = String(body.logo_url || '').trim()
+  // ── Field extraction (theme schema — name NOT brand_name) ─────────
+  const name = String(body.name || '').trim()
   const primaryColor = String(body.primary_color || '').trim()
   const sidebarColor = String(body.sidebar_color || '').trim()
   const headerBgColor = String(body.header_bg_color || '').trim()
   const pageBgColor = String(body.page_bg_color || '').trim()
+  const rawLogoUrl = body.logo_url
+  const logoUrl =
+    typeof rawLogoUrl === 'string' && rawLogoUrl.trim() ? rawLogoUrl.trim() : null
 
   // ── Validation ────────────────────────────────────────────────────
-  if (!brandName || brandName.length < 2 || brandName.length > 60) {
+  if (!name || name.length < NAME_MIN || name.length > NAME_MAX) {
     return NextResponse.json(
-      { error: 'invalid_brand_name', detail: 'Brand name must be 2–60 characters.' },
+      { error: 'invalid_name', detail: `Theme name must be ${NAME_MIN}–${NAME_MAX} characters.` },
       { status: 400 }
     )
-  }
-  if (!subdomain || !SLUG_RE.test(subdomain)) {
-    return NextResponse.json(
-      { error: 'invalid_subdomain', detail: 'Subdomain must be 3–30 chars, lowercase letters/digits/hyphens.' },
-      { status: 400 }
-    )
-  }
-  if (RESERVED.has(subdomain)) {
-    return NextResponse.json({ error: 'reserved_subdomain' }, { status: 400 })
   }
   if (!HEX_RE.test(primaryColor)) {
     return NextResponse.json(
@@ -187,7 +125,7 @@ export async function POST(req: NextRequest) {
   }
   if (!HEX_RE.test(headerBgColor)) {
     return NextResponse.json(
-      { error: 'invalid_header_bg_color', detail: 'Header background color must be #RRGGBB.' },
+      { error: 'invalid_header_bg_color', detail: 'Header color must be #RRGGBB.' },
       { status: 400 }
     )
   }
@@ -197,198 +135,231 @@ export async function POST(req: NextRequest) {
       { status: 400 }
     )
   }
-  if (!logoUrl) {
+
+  // ── 15-theme per-user limit ───────────────────────────────────────
+  const { count: existingCount, error: countErr } = await supabase
+    .from('custom_themes')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+
+  if (countErr) {
+    console.error('count error:', countErr)
     return NextResponse.json(
-      { error: 'missing_logo', detail: 'Upload your logo first.' },
+      { error: 'db_error', detail: countErr.message },
+      { status: 500 }
+    )
+  }
+  if ((existingCount || 0) >= MAX_THEMES_PER_USER) {
+    return NextResponse.json(
+      {
+        error: 'limit_reached',
+        detail: `You've hit the ${MAX_THEMES_PER_USER}-theme limit. Delete one to save another.`,
+      },
       { status: 400 }
     )
   }
 
-  // ── WL subscription gate ──────────────────────────────────────────
-  const { data: user } = await supabase
-    .from('users')
-    .select('email, wl_onboarding_status, wl_subscription_id, stripe_customer_id')
-    .eq('clerk_id', userId)
-    .maybeSingle()
+  // ── Insert ─────────────────────────────────────────────────────────
+  const { data, error: insErr } = await supabase
+    .from('custom_themes')
+    .insert({
+      user_id: userId,
+      name,
+      primary_color: primaryColor,
+      sidebar_color: sidebarColor,
+      header_bg_color: headerBgColor,
+      page_bg_color: pageBgColor,
+      logo_url: logoUrl,
+    })
+    .select(SELECT_COLS)
+    .single()
 
-  if (!user || !user.wl_subscription_id) {
+  if (insErr || !data) {
+    console.error('custom_themes insert error:', insErr)
     return NextResponse.json(
-      { error: 'no_subscription', detail: 'Active white-label subscription required.', redirectTo: '/billing?plan=wl' },
-      { status: 403 }
-    )
-  }
-
-  const status = user.wl_onboarding_status || 'not_started'
-  if (status !== 'pending' && status !== 'complete') {
-    return NextResponse.json(
-      { error: 'no_subscription', detail: 'Active white-label subscription required.', redirectTo: '/billing?plan=wl' },
-      { status: 403 }
-    )
-  }
-
-  // ── Subdomain uniqueness (excluding own) ──────────────────────────
-  const { data: collision } = await supabase
-    .from('white_label_tenants')
-    .select('id, owner_clerk_id')
-    .eq('slug', subdomain)
-    .eq('is_active', true)
-    .maybeSingle()
-
-  if (collision && collision.owner_clerk_id !== userId) {
-    return NextResponse.json({ error: 'taken' }, { status: 409 })
-  }
-
-  const { data: redirecting } = await supabase
-    .from('subdomain_history')
-    .select('id, tenant_id')
-    .eq('old_slug', subdomain)
-    .gt('redirects_until', new Date().toISOString())
-    .maybeSingle()
-
-  if (redirecting) {
-    const { data: t } = await supabase
-      .from('white_label_tenants')
-      .select('owner_clerk_id')
-      .eq('id', redirecting.tenant_id)
-      .maybeSingle()
-    if (!t || t.owner_clerk_id !== userId) {
-      return NextResponse.json(
-        { error: 'redirecting', detail: 'This subdomain is being redirected from a recent change.' },
-        { status: 409 }
-      )
-    }
-  }
-
-  const now = new Date()
-
-  // ── BRANCH: CREATE vs UPDATE ──────────────────────────────────────
-  if (status === 'pending') {
-    const { data: tenant, error: insErr } = await supabase
-      .from('white_label_tenants')
-      .insert({
-        owner_clerk_id: userId,
-        slug: subdomain,
-        brand_name: brandName,
-        logo_url: logoUrl,
-        // Active columns (4-color, migration 004)
-        primary_color: primaryColor,
-        sidebar_color: sidebarColor,
-        header_bg_color: headerBgColor,
-        page_bg_color: pageBgColor,
-        // Pre-002 safety: vestigial Pass 1 columns still exist on the
-        // table. Mirror sidebar into accent_color to keep them in sync;
-        // default the other three so any NOT NULL constraints don't
-        // fire. background_color is NOT mirrored from page_bg_color —
-        // they are different concepts (dark Pass 1 body vs Pass 2
-        // themed page). These four lines all become no-ops after
-        // migration 002 drops these columns from the table.
-        accent_color: sidebarColor,
-        secondary_color: LEGACY_SECONDARY_DEFAULT,
-        background_color: LEGACY_BACKGROUND_DEFAULT,
-        text_color: LEGACY_TEXT_DEFAULT,
-        // Identity / billing
-        support_email: user.email || 'support@dialerseat.com',
-        stripe_customer_id: user.stripe_customer_id,
-        stripe_subscription_id: user.wl_subscription_id,
-        status: 'active',
-        is_active: true,
-        slug_changed_at: now.toISOString(),
-      })
-      .select('id, slug')
-      .single()
-
-    if (insErr || !tenant) {
-      console.error('tenant insert failed:', insErr)
-      if (insErr?.code === '23505') {
-        return NextResponse.json({ error: 'taken' }, { status: 409 })
-      }
-      return NextResponse.json(
-        { error: 'db_error', detail: insErr?.message },
-        { status: 500 }
-      )
-    }
-
-    // Mark onboarding complete AND auto-select this tenant.
-    await supabase
-      .from('users')
-      .update({
-        wl_onboarding_status: 'complete',
-        active_tenant_id: tenant.id,
-      })
-      .eq('clerk_id', userId)
-
-    return NextResponse.json({ success: true, subdomain: tenant.slug, created: true })
-  }
-
-  // ─── UPDATE existing tenant ────────────────────────────────────────
-  const { data: existing } = await supabase
-    .from('white_label_tenants')
-    .select('id, slug, slug_changed_at')
-    .eq('owner_clerk_id', userId)
-    .maybeSingle()
-
-  if (!existing) {
-    return NextResponse.json({ error: 'tenant_missing' }, { status: 500 })
-  }
-
-  const slugChanged = existing.slug !== subdomain
-  const updates: Record<string, any> = {
-    brand_name: brandName,
-    logo_url: logoUrl,
-    primary_color: primaryColor,
-    sidebar_color: sidebarColor,
-    header_bg_color: headerBgColor,
-    page_bg_color: pageBgColor,
-    // Pre-002 safety: keep accent_color mirrored to sidebar_color.
-    // Becomes a no-op after migration 002.
-    accent_color: sidebarColor,
-  }
-
-  if (slugChanged) {
-    if (existing.slug_changed_at) {
-      const lastChange = new Date(existing.slug_changed_at).getTime()
-      const cooldownEnd = lastChange + SLUG_COOLDOWN_HOURS * 60 * 60 * 1000
-      if (cooldownEnd > Date.now()) {
-        return NextResponse.json(
-          {
-            error: 'slug_cooldown',
-            detail: `You can change your subdomain again on ${new Date(cooldownEnd).toLocaleString()}.`,
-            availableAt: new Date(cooldownEnd).toISOString(),
-          },
-          { status: 429 }
-        )
-      }
-    }
-
-    const redirectsUntil = new Date(now.getTime() + SLUG_REDIRECT_DAYS * 24 * 60 * 60 * 1000)
-    await supabase
-      .from('subdomain_history')
-      .insert({
-        tenant_id: existing.id,
-        old_slug: existing.slug,
-        new_slug: subdomain,
-        redirects_until: redirectsUntil.toISOString(),
-      })
-
-    updates.slug = subdomain
-    updates.slug_changed_at = now.toISOString()
-  }
-
-  const { error: updErr } = await supabase
-    .from('white_label_tenants')
-    .update(updates)
-    .eq('id', existing.id)
-
-  if (updErr) {
-    console.error('tenant update failed:', updErr)
-    if (updErr.code === '23505') {
-      return NextResponse.json({ error: 'taken' }, { status: 409 })
-    }
-    return NextResponse.json(
-      { error: 'db_error', detail: updErr.message },
+      { error: 'db_error', detail: insErr?.message || 'insert failed' },
       { status: 500 }
     )
   }
 
-  return NextResponse.json({ success: true, subdomain, updated: true })
+  return NextResponse.json({ theme: data })
+}
+
+// =============================================================================
+// PUT — overwrite an existing saved theme
+// =============================================================================
+
+export async function PUT(req: NextRequest) {
+  const { userId } = await auth()
+  if (!userId) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  }
+
+  const { searchParams } = new URL(req.url)
+  const id = searchParams.get('id')
+  if (!id) {
+    return NextResponse.json({ error: 'missing_id' }, { status: 400 })
+  }
+
+  let body: any
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: 'malformed_json' }, { status: 400 })
+  }
+
+  // Verify ownership
+  const { data: existing, error: fetchErr } = await supabase
+    .from('custom_themes')
+    .select('id, user_id')
+    .eq('id', id)
+    .maybeSingle()
+  if (fetchErr) {
+    return NextResponse.json(
+      { error: 'db_error', detail: fetchErr.message },
+      { status: 500 }
+    )
+  }
+  if (!existing) {
+    return NextResponse.json({ error: 'not_found' }, { status: 404 })
+  }
+  if (existing.user_id !== userId) {
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 })
+  }
+
+  // Build updates from whitelisted fields only
+  const updates: Record<string, any> = {}
+
+  if ('name' in body) {
+    const v = String(body.name || '').trim()
+    if (!v || v.length < NAME_MIN || v.length > NAME_MAX) {
+      return NextResponse.json(
+        { error: 'invalid_name', detail: `Theme name must be ${NAME_MIN}–${NAME_MAX} characters.` },
+        { status: 400 }
+      )
+    }
+    updates.name = v
+  }
+  if ('primary_color' in body) {
+    const v = String(body.primary_color || '').trim()
+    if (!HEX_RE.test(v)) {
+      return NextResponse.json(
+        { error: 'invalid_primary_color', detail: 'Primary color must be #RRGGBB.' },
+        { status: 400 }
+      )
+    }
+    updates.primary_color = v
+  }
+  if ('sidebar_color' in body) {
+    const v = String(body.sidebar_color || '').trim()
+    if (!HEX_RE.test(v)) {
+      return NextResponse.json(
+        { error: 'invalid_sidebar_color', detail: 'Sidebar color must be #RRGGBB.' },
+        { status: 400 }
+      )
+    }
+    updates.sidebar_color = v
+  }
+  if ('header_bg_color' in body) {
+    const v = String(body.header_bg_color || '').trim()
+    if (!HEX_RE.test(v)) {
+      return NextResponse.json(
+        { error: 'invalid_header_bg_color', detail: 'Header color must be #RRGGBB.' },
+        { status: 400 }
+      )
+    }
+    updates.header_bg_color = v
+  }
+  if ('page_bg_color' in body) {
+    const v = String(body.page_bg_color || '').trim()
+    if (!HEX_RE.test(v)) {
+      return NextResponse.json(
+        { error: 'invalid_page_bg_color', detail: 'Page background color must be #RRGGBB.' },
+        { status: 400 }
+      )
+    }
+    updates.page_bg_color = v
+  }
+  if ('logo_url' in body) {
+    const v = body.logo_url
+    if (v === null || v === '') {
+      updates.logo_url = null
+    } else if (typeof v === 'string') {
+      updates.logo_url = v.trim()
+    }
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: 'no_fields_to_update' }, { status: 400 })
+  }
+
+  updates.updated_at = new Date().toISOString()
+
+  const { data, error: updErr } = await supabase
+    .from('custom_themes')
+    .update(updates)
+    .eq('id', id)
+    .select(SELECT_COLS)
+    .single()
+
+  if (updErr || !data) {
+    console.error('custom_themes update error:', updErr)
+    return NextResponse.json(
+      { error: 'db_error', detail: updErr?.message || 'update failed' },
+      { status: 500 }
+    )
+  }
+
+  return NextResponse.json({ theme: data })
+}
+
+// =============================================================================
+// DELETE — remove a saved theme
+// =============================================================================
+
+export async function DELETE(req: NextRequest) {
+  const { userId } = await auth()
+  if (!userId) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  }
+
+  const { searchParams } = new URL(req.url)
+  const id = searchParams.get('id')
+  if (!id) {
+    return NextResponse.json({ error: 'missing_id' }, { status: 400 })
+  }
+
+  // Verify ownership before delete
+  const { data: existing, error: fetchErr } = await supabase
+    .from('custom_themes')
+    .select('id, user_id')
+    .eq('id', id)
+    .maybeSingle()
+  if (fetchErr) {
+    return NextResponse.json(
+      { error: 'db_error', detail: fetchErr.message },
+      { status: 500 }
+    )
+  }
+  if (!existing) {
+    return NextResponse.json({ error: 'not_found' }, { status: 404 })
+  }
+  if (existing.user_id !== userId) {
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 })
+  }
+
+  const { error: delErr } = await supabase
+    .from('custom_themes')
+    .delete()
+    .eq('id', id)
+
+  if (delErr) {
+    console.error('custom_themes delete error:', delErr)
+    return NextResponse.json(
+      { error: 'db_error', detail: delErr.message },
+      { status: 500 }
+    )
+  }
+
+  return NextResponse.json({ success: true })
 }

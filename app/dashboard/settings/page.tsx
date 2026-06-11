@@ -6,44 +6,29 @@ import Link from 'next/link'
 const FUTURA = 'Futura PT, Futura, "Trebuchet MS", sans-serif'
 
 // =============================================================================
-// SETTINGS PAGE (v29 — dark mode + bottom-bar fix)
+// SETTINGS PAGE (v30 — Push B: ▶ emoji stripped + brand dropdown reordered)
 // =============================================================================
+// v30 changes vs v29:
+//   - ▶ emoji removed from "▶ OPEN WHITELABEL EDITOR" button label and
+//     from the "▶ ADMIN ACCOUNTS CANNOT CANCEL FROM THIS PANEL" admin
+//     notice. Section markers (▸) stay — different character, different
+//     role (small triangle bullet for section headers).
+//   - Brand-view dropdown reordered: WL tenant options listed first,
+//     DialerSeat Pro (standard view) appears LAST when canSeeStandard
+//     is true. Matches JC's Q4 answer: "WL tenant as the active/default,
+//     with DialerSeat as a switchable option below."
+//
 // v29 changes vs v28:
-//   - pageStyle minHeight: 'calc(100vh - 64px)' → '100vh'. The -64px was
-//     meant to compensate for the mobile topbar but on desktop there's no
-//     topbar, so the page was 64px short of the viewport and the flex
-//     parent stretched the wrapper to 100vh leaving 64px showing main's
-//     var(--brand-page-bg) as a horizontal strip at the bottom. Matches
-//     the analytics page (also minHeight 100vh).
+//   - pageStyle minHeight: 'calc(100vh - 64px)' → '100vh'.
 //
 // v28 changes vs v27:
-//   - All chrome reverted from light themed (var(--brand-page-bg) +
-//     var(--brand-card-surface)) back to original v26 hardcoded dark values:
-//       outer page bg     var(--brand-sidebar-bg)   (was --brand-page-bg)
-//       card              #1a1c24                    (was --brand-card-surface)
-//       sections / inputs #0d0e14                    (was --brand-page-bg)
-//       borders           #2a2c34                    (was --brand-card-border)
-//       primary text      #e0e2ea                    (was --brand-on-page-bg)
-//       muted text        #888a92                    (was --brand-muted-text)
-//   - Page outer bg specifically mapped to var(--brand-sidebar-bg) per JC's
-//     "map background to sidebar color" directive: default DialerSeat shows
-//     #111118, tenants get their sidebar color.
-//   - Semantic colors (danger / success / warning) reverted from light-theme
-//     pale-tint backgrounds (#f8e8e8 / #e8f5e8 / #fdf4e8) back to dark-theme
-//     alpha bg + light text pattern: rgba(138,26,26,0.18) bg + #ff8888 text
-//     for danger; matching pattern for success / warning.
-//   - Cancel-seat modal reverted to dark card + semantic dark red border-top.
+//   - All chrome reverted from light themed back to v26 hardcoded dark
+//     values. Page outer bg mapped to var(--brand-sidebar-bg).
 //
 // PRESERVED FROM v27:
-//   - Editor extraction: ▸ WHITELABEL EDITOR section is a single
-//     ▶ OPEN WHITELABEL EDITOR button linking to /onboarding/whitelabel
-//     (no inline editor). Per JC: "remove your whitelabel theme as a editor
-//     in settings, make it always redirect as a button to onboarding page."
-//   - var(--brand-primary) accents (was #4a9eff in v26). The "blue → primary"
-//     swap still applies — tenants see their primary on the settings page.
-//   - All functional logic byte-for-byte: brand-view toggle, personal
-//     subscription, team seats, cancel flow, seat-cancel modal,
-//     resubscribe flow, admin notice.
+//   - Editor extraction: WHITELABEL EDITOR section is a single button
+//     linking to /onboarding/whitelabel (no inline editor).
+//   - var(--brand-primary) accents. All functional logic byte-for-byte.
 // =============================================================================
 
 interface SubStatus {
@@ -304,7 +289,7 @@ export default function SettingsPage() {
           )}
         </div>
 
-        {/* BRAND VIEW TOGGLE */}
+        {/* BRAND VIEW TOGGLE — v30: WL options first, DialerSeat last */}
         {showBrandToggle && brandOptions && (
           <div style={sectionStyle}>
             <div style={sectionHeaderStyle}>▸ WHITE-LABEL VIEW</div>
@@ -319,16 +304,16 @@ export default function SettingsPage() {
               disabled={switchingBrand}
               style={brandSelectStyle(switchingBrand)}
             >
-              {brandOptions.canSeeStandard && (
-                <option value="standard">
-                  DialerSeat Pro (default view)
-                </option>
-              )}
               {brandOptions.available.map(t => (
                 <option key={t.id} value={t.id}>
                   {t.brand_name}{t.role === 'owner' ? ' (your tenant)' : ''}
                 </option>
               ))}
+              {brandOptions.canSeeStandard && (
+                <option value="standard">
+                  DialerSeat Pro (standard view)
+                </option>
+              )}
             </select>
 
             {switchingBrand && (
@@ -349,7 +334,7 @@ export default function SettingsPage() {
               site-wide within 60 seconds.
             </div>
             <Link href="/onboarding/whitelabel" style={editorButtonStyle}>
-              ▶ OPEN WHITELABEL EDITOR
+              OPEN WHITELABEL EDITOR
             </Link>
           </div>
         )}
@@ -484,7 +469,7 @@ export default function SettingsPage() {
 
         {isAdmin && sub?.isActive && !sub.cancelAtPeriodEnd && (
           <div style={adminNoticeStyle}>
-            ▸ ADMIN ACCOUNTS CANNOT CANCEL FROM THIS PANEL
+            ADMIN ACCOUNTS CANNOT CANCEL FROM THIS PANEL
           </div>
         )}
 
@@ -641,7 +626,7 @@ function tierStatusColor(sub: SubStatus | null): string {
   return '#ff8888'
 }
 
-// ─── Styles (v28 dark mode) ──────────────────────────────────────────
+// ─── Styles (v28 dark mode, unchanged in v30) ────────────────────────
 
 const pageStyle: React.CSSProperties = {
   flex: 1, minHeight: '100vh',
@@ -718,8 +703,6 @@ function brandSelectStyle(disabled: boolean): React.CSSProperties {
   }
 }
 
-// ▶ OPEN WHITELABEL EDITOR — primary CTA pattern, sits inside a section
-// whose bg is #0d0e14, so the button bg is #1a1c24 for contrast lift.
 const editorButtonStyle: React.CSSProperties = {
   display: 'block',
   width: '100%',

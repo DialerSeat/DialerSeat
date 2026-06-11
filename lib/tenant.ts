@@ -3,30 +3,31 @@ import { createClient } from '@supabase/supabase-js'
 import { unstable_cache } from 'next/cache'
 
 // =============================================================================
-// TENANT BRANDING LOOKUP — server-side helper (v5 — header/sidebar split)
+// TENANT BRANDING LOOKUP — server-side helper (v6 — strict NULL semantics)
 // =============================================================================
+// v6 (Push B): fetchActiveTenantForUser respects NULL.
+//
+// Before: if active_tenant_id was NULL but the user had ANY accessible
+// tenant (owned WL OR active team membership of a WL-owner team), the
+// function silently picked the first accessible tenant. Result: a user
+// could not see the standard DialerSeat view by setting active_tenant_id
+// to NULL — the resolver always overrode their preference. The settings-
+// page "switch to DialerSeat default" bug lived here.
+//
+// After: NULL means "show standard view". The fallback is gone. If
+// active_tenant_id is a uuid AND the user has access to it → use it.
+// Otherwise → return null and let the caller render the standard view.
+//
+// To preserve existing users' implicit-WL view, migration 010 backfills
+// active_tenant_id from owned WL and most-recent active team membership
+// for users whose value was NULL before this push.
+//
 // v5 (migration 004): adds header_bg_color so the dashboard header strip
-// can be themed independently of the sidebar. Was a single user-picked
-// color (sidebar_color drove both). Now four user-picked Tier-1 colors:
-// sidebar, header_bg, primary, page_bg. Backfilled on existing rows to
-// header_bg_color = sidebar_color so unchanged tenants look identical.
+// can be themed independently of the sidebar.
+// v4 (migration 003): added page_bg_color.
+// v3 (Phase B2): trimmed the interface down.
 //
-// v4 (migration 003): added page_bg_color (2 → 3 user-picked colors).
-//
-// v3 (Phase B2): trimmed the interface down from 5 vestigial Pass-1
-// color fields (secondary/accent/background/text) to the actual
-// user-picked set.
-//
-// SELECTs use an explicit column list so a missing column in the
-// `tenant_branding` view (e.g. migration not yet applied) fails loud
-// instead of silently returning undefined.
-//
-// Function contracts unchanged:
-//   getTenantBranding(slug)              — subdomain → branding
-//   getActiveTenantForUser(clerkId)      — user → selected tenant
-//   getAvailableTenantsForUser(clerkId)  — user → list of brand options
-//
-// Caching unchanged. Tags unchanged.
+// Caching unchanged. Tags unchanged. Other functions byte-for-byte v5.
 // =============================================================================
 
 export interface TenantBranding {
@@ -38,7 +39,7 @@ export interface TenantBranding {
   footer_text: string
   primary_color: string
   sidebar_color: string
-  header_bg_color: string  // ← NEW v5 (migration 004) — header strip color
+  header_bg_color: string
   page_bg_color: string
   custom_landing: Record<string, unknown>
 }
@@ -54,7 +55,6 @@ export interface AvailableTenant {
 export interface UserBrandOptions {
   available: AvailableTenant[]
   canSeeStandard: boolean
-  // The currently-selected tenant id; null means standard view
   currentTenantId: string | null
 }
 
@@ -72,10 +72,6 @@ function getSupabaseAdmin() {
   )
 }
 
-// Explicit branding column list. Used in both subdomain and user-tenant
-// branding fetches. Listing columns explicitly means a missing column
-// (e.g. tenant_branding view not yet updated to include header_bg_color)
-// surfaces as a query error instead of silently returning undefined.
 const TENANT_BRANDING_COLS =
   'id, slug, brand_name, logo_url, favicon_url, footer_text, primary_color, sidebar_color, header_bg_color, page_bg_color, custom_landing'
 
@@ -123,51 +119,64 @@ export const tenantCacheTag = (slug: string) => `tenant:${slug}`
 export const userCacheTag = (clerkId: string) => `user-tenant:${clerkId}`
 
 // =============================================================================
-// USER → TENANT LOOKUP (Phase D — preserved)
+// USER → TENANT LOOKUP — v6 (strict NULL)
 // =============================================================================
 
 /**
  * Returns the tenant to render for this user, based on their selected
  * preference (users.active_tenant_id) AND their actual access rights.
  *
- * Fallback chain if active_tenant_id is missing or no longer accessible:
- *   1. If user owns a WL tenant → that
- *   2. Else: most-recently-joined active team whose owner has an active WL
- *   3. Else: null (standard view)
+ *   active_tenant_id IS NULL  → return null (standard DialerSeat view)
+ *   active_tenant_id is uuid AND user has access → return that tenant
+ *   active_tenant_id is uuid AND user lost access → return null
+ *     (stale value, user can re-pick from settings or join again)
  *
- * Cached with both a user tag AND the tenant tag — switching brands,
- * joining a team, or editing a tenant's branding all bust the cache.
+ * The previous fall-through to uniqueAccessible[0] is GONE — it was the
+ * reason "switch to DialerSeat default" silently did nothing for any
+ * user who also owned or belonged to a WL tenant.
+ *
+ * Cached with a user tag. Switching brands, joining a team, or editing
+ * tenant branding all bust the cache via revalidateTag(userCacheTag).
  */
 async function fetchActiveTenantForUser(clerkId: string): Promise<TenantBranding | null> {
   const supabase = getSupabaseAdmin()
 
-  const [{ data: user }, { data: ownedTenant }, { data: memberRows }] = await Promise.all([
-    supabase
-      .from('users')
-      .select('active_tenant_id')
-      .eq('clerk_id', clerkId)
-      .maybeSingle(),
+  const { data: user } = await supabase
+    .from('users')
+    .select('active_tenant_id')
+    .eq('clerk_id', clerkId)
+    .maybeSingle()
+
+  const selectedTenantId = user?.active_tenant_id || null
+
+  // NULL means "standard view". Short-circuit — no need to load access
+  // lists or branding when the user has explicitly opted out of WL view.
+  if (!selectedTenantId) {
+    return null
+  }
+
+  // Compute the user's accessible tenant set so we can verify their
+  // selection is still valid. If they got removed from a team or the
+  // tenant got deactivated, fall through to null (standard view).
+  const [{ data: ownedTenant }, { data: memberRows }] = await Promise.all([
     supabase
       .from('white_label_tenants')
-      .select('id, slug, status, is_active')
+      .select('id')
       .eq('owner_clerk_id', clerkId)
       .eq('status', 'active')
       .eq('is_active', true)
       .maybeSingle(),
     supabase
       .from('team_members')
-      .select('team_id, created_at, teams!inner(id, owner_id)')
+      .select('teams!inner(owner_id)')
       .eq('user_id', clerkId)
-      .eq('status', 'active')
-      .order('created_at', { ascending: false }),
+      .eq('status', 'active'),
   ])
 
-  const selectedTenantId = user?.active_tenant_id || null
+  const accessibleTenantIds = new Set<string>()
+  if (ownedTenant) accessibleTenantIds.add(ownedTenant.id)
 
-  const accessibleTenantIds: string[] = []
   const ownerClerkIds: string[] = []
-
-  if (ownedTenant) accessibleTenantIds.push(ownedTenant.id)
   for (const row of memberRows || []) {
     const ownerId = (row as any).teams?.owner_id
     if (ownerId) ownerClerkIds.push(ownerId)
@@ -176,31 +185,27 @@ async function fetchActiveTenantForUser(clerkId: string): Promise<TenantBranding
   if (ownerClerkIds.length > 0) {
     const { data: teamOwnerTenants } = await supabase
       .from('white_label_tenants')
-      .select('id, owner_clerk_id')
+      .select('id')
       .in('owner_clerk_id', ownerClerkIds)
       .eq('status', 'active')
       .eq('is_active', true)
 
     for (const t of teamOwnerTenants || []) {
-      accessibleTenantIds.push(t.id)
+      accessibleTenantIds.add(t.id)
     }
   }
 
-  const uniqueAccessible = Array.from(new Set(accessibleTenantIds))
-
-  let pickedId: string | null = null
-  if (selectedTenantId && uniqueAccessible.includes(selectedTenantId)) {
-    pickedId = selectedTenantId
-  } else if (uniqueAccessible.length > 0) {
-    pickedId = uniqueAccessible[0]
+  // Selection no longer accessible → fall back to standard view rather
+  // than silently switching the user to a different tenant. They can
+  // re-pick from settings.
+  if (!accessibleTenantIds.has(selectedTenantId)) {
+    return null
   }
-
-  if (!pickedId) return null
 
   const { data: branding } = await supabase
     .from('tenant_branding')
     .select(TENANT_BRANDING_COLS)
-    .eq('id', pickedId)
+    .eq('id', selectedTenantId)
     .maybeSingle()
 
   if (!branding) return null
@@ -232,16 +237,6 @@ export async function getActiveTenantForUser(
 // AVAILABLE BRAND OPTIONS (settings page toggle) — Phase D, preserved
 // =============================================================================
 
-/**
- * Returns the brand options available in the settings toggle for this user.
- *
- * canSeeStandard is true if the user has their own self-paid subscription
- * (regardless of whether they're also on a seat). Manager+ tenant owners
- * always qualify because their $75 subscription covers personal-sub status.
- *
- * The settings page decides whether to render the toggle (hides it if
- * there's only 1 option). This function just returns the raw access list.
- */
 async function fetchAvailableTenantsForUser(clerkId: string): Promise<UserBrandOptions> {
   const supabase = getSupabaseAdmin()
 
@@ -310,7 +305,7 @@ async function fetchAvailableTenantsForUser(clerkId: string): Promise<UserBrandO
     })
 
     for (const t of sortedTenants) {
-      if (ownedTenant && t.id === ownedTenant.id) continue // de-dupe
+      if (ownedTenant && t.id === ownedTenant.id) continue
       available.push({
         id: t.id,
         slug: t.slug,

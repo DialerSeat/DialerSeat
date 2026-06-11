@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
+import { revalidateTag } from 'next/cache'
 import { supabaseAdmin } from '@/lib/supabase'
+import { userCacheTag } from '@/lib/tenant'
 import { createSeatSubscription, isSeatBillingError } from '@/lib/teamBilling'
 
 /**
@@ -18,9 +20,11 @@ import { createSeatSubscription, isSeatBillingError } from '@/lib/teamBilling'
  *   3. Free code → no pending seat_charge → skip Stripe entirely. Free
  *      mode means no per-seat fee; agent's personal sub still required.
  *
- * On Stripe failure during the owner_pays branch: no rollback of the
- * member row happens because we haven't activated it yet — pending
- * stays pending, no charge created. Owner gets a clear error.
+ * v2 (Push B): after activating the member, set their active_tenant_id
+ * to the team owner's WL tenant (if the owner has one). This makes
+ * joining a WL team automatically default the new member's brand view
+ * to that WL. They see the whitelabel chrome instead of standard
+ * DialerSeat on their next page load.
  *
  * Body:
  *   memberId: uuid (required)
@@ -77,11 +81,8 @@ export async function POST(req: Request) {
     let stripeSubId: string | null = null
 
     if (existingPaid?.stripe_subscription_id) {
-      // Idempotent: already charged, skip Stripe call
       stripeSubId = existingPaid.stripe_subscription_id
     } else {
-      // Find pending charge to wire up — if none exists, this is the
-      // agent_pays or free flow, where no team-level Stripe sub is required.
       const { data: pendingCharge } = await supabaseAdmin
         .from('team_seat_charges')
         .select('id')
@@ -92,7 +93,6 @@ export async function POST(req: Request) {
         .maybeSingle()
 
       if (pendingCharge) {
-        // ── owner_pays branch: create Stripe sub ──
         const { data: agentUser } = await supabaseAdmin
           .from('users')
           .select('email')
@@ -139,8 +139,6 @@ export async function POST(req: Request) {
           )
         }
       }
-      // ── agent_pays / free branch: no pending charge → fall through
-      //    with stripeSubId still null. Member just gets activated below.
     }
 
     // Flip member to active
@@ -165,11 +163,47 @@ export async function POST(req: Request) {
       .is('revoked_at', null)
       .select('id')
 
+    // ── v2: set default view to team owner's WL tenant ────────────────
+    // Look up the team owner's active WL tenant. If they have one, stamp
+    // it onto the accepted user's active_tenant_id so the next page load
+    // renders the whitelabel chrome. Owner without a WL → no change.
+    // If the agent had previously picked a different view (e.g. standard
+    // or another team's WL), this overrides it on accept. They can switch
+    // back via settings if needed.
+    let defaultedToTenantId: string | null = null
+    const { data: ownerTenant } = await supabaseAdmin
+      .from('white_label_tenants')
+      .select('id')
+      .eq('owner_clerk_id', team.owner_id)
+      .eq('status', 'active')
+      .eq('is_active', true)
+      .maybeSingle()
+
+    if (ownerTenant) {
+      const { error: tenantErr } = await supabaseAdmin
+        .from('users')
+        .update({ active_tenant_id: ownerTenant.id })
+        .eq('clerk_id', member.user_id)
+
+      if (tenantErr) {
+        // Non-fatal — the member is still active, they just don't
+        // get the auto-switch to the WL view. Log and continue.
+        console.warn('failed to set active_tenant_id on accept:', tenantErr)
+      } else {
+        defaultedToTenantId = ownerTenant.id
+        // Bust the new member's tenant cache so the next page render
+        // picks up the new active_tenant_id without waiting for the
+        // 60s revalidate window.
+        revalidateTag(userCacheTag(member.user_id), { expire: 0 })
+      }
+    }
+
     return NextResponse.json({
       success: true,
       member: updated,
       stripeSubscriptionId: stripeSubId,
       activatedAccessGrants: activated?.length || 0,
+      defaultedToTenantId,
     })
   } catch (error: any) {
     console.error('Accept member error:', error)

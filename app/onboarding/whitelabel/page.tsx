@@ -6,42 +6,41 @@ import { useRouter } from 'next/navigation'
 import { WhitelabelLivePreview } from '@/components/WhitelabelLivePreview'
 
 // =============================================================================
-// /onboarding/whitelabel — v5 (header/sidebar split + custom themes)
+// /onboarding/whitelabel — v6 (Push A: emoji + saved-themes dropdown + cancel)
 // =============================================================================
-// v5 changes (migration 004 + custom_themes):
-//   - 4-color theme model: header_bg_color now a separate Tier-1 color
-//   - PRESETS rewritten: Preset 1 (new, JC's item 2 values), then
-//     Preset 2 (Forest), Preset 3 (Bloom), Preset 4 (Stone & Lavender).
-//     Default applied to a new tenant is Preset 1.
-//   - Each preset has headerBg, defaulting to its sidebar value so the
-//     visual stays unified unless the user picks divergent header in
-//     Custom mode. Matches migration 004's backfill behavior.
-//   - Custom picker now has 4 ColorRows (Sidebar, Header, Primary,
-//     Page background).
-//   - Saved themes fetched from /api/whitelabel/custom-themes and
-//     rendered in the same grid as presets, with a × delete button.
-//     Click a saved theme to load its values into the picker.
-//   - New "+ SAVE AS NEW THEME (n/15)" button in edit mode opens an
-//     inline name input; submit creates a new custom_theme via the
-//     new endpoint. 15-per-user limit enforced both client- and
-//     server-side. Button shows current count and is disabled at limit.
-//   - Initial preset/theme match on tenant load checks all 4 colors.
-//   - WhitelabelLivePreview call now passes headerBg.
-//   - POST /api/whitelabel/onboarding body includes header_bg_color.
+// v6 changes:
+//   1. ▶ emoji removed from submit button labels ("CONFIRM", "SAVE CHANGES")
+//      and from the inline hint text in the save-as-new panel.
+//   2. Saved themes moved from inline-in-the-preset-grid into a collapsible
+//      "MY SAVED THEMES" dropdown panel below the preset row. The preset
+//      grid now contains only the 4 built-in presets + Custom, period.
+//   3. Cancel button at the bottom of the form. Edit mode → /dashboard,
+//      signup flow → /. The user's wl_onboarding_status is NOT touched
+//      so on next login they'll be routed back here from /dashboard.
+//   4. Per-theme logos. Each saved theme can carry its own logo_url. When
+//      the user picks a saved theme from the dropdown, both the colors AND
+//      the logo swap in. handleSaveAsNew and handleOverwriteTheme upload
+//      any pending logoFile before persisting, so each saved theme is a
+//      fully self-contained snapshot.
+//   5. OVERWRITE THIS THEME button. Appears below SAVE AS NEW when a saved
+//      theme is currently loaded. PUTs to custom-themes?id=<id> with the
+//      current colors + logo. Lets users edit existing themes in place
+//      instead of being forced to save a new copy and delete the old one.
+//   6. Logo size requirements stripped. Hint copy updated to reflect
+//      relaxed testing mode. File input accepts image/*.
+//      ⚠ BACKLOG: restore the 512×148 / 200 KB / PNG-SVG-only copy after
+//      testing.
+//   7. The bogus "Brand name must be 2–60 characters" error on save-as-new
+//      is fixed in this push by the rewritten custom-themes route — no
+//      page change needed for that specifically.
 //
-// Preserved from v4:
+// Preserved from v5:
 //   - 60-second propagation disclaimer
 //   - Brand name input + subdomain 350ms debounced availability check
 //   - 24h slug cooldown for edit mode, redirect grace logic
 //   - Logo upload + sessionStorage handoff for instant dashboard preview
-//   - Edit mode (pre-fills from GET /api/whitelabel/onboarding)
-//   - Onboarding chrome stays DialerSeat default — only the preview
-//     component reflects the user's color picks
-//
-// v5.1 fix:
-//   - useEffect dependency changed from `user` to `user?.id` to prevent
-//     Clerk's unstable object reference from re-running the load effect
-//     and resetting form state on every focus/color-picker interaction.
+//   - Edit mode pre-fill from GET /api/whitelabel/onboarding
+//   - useEffect dependency on user?.id (stable string)
 // =============================================================================
 
 interface Preset {
@@ -61,12 +60,10 @@ interface SavedTheme {
   sidebar_color: string
   header_bg_color: string
   page_bg_color: string
+  logo_url: string | null
   created_at: string
 }
 
-// Preset 1 sidebar==header per JC's item 2 ("keep its header the same as
-// sidebar"). All other presets also default headerBg = sidebar so the
-// unbranded visual stays unified.
 const PRESETS: Preset[] = [
   {
     key: 'preset-1',
@@ -144,21 +141,21 @@ export default function WhitelabelOnboardingPage() {
   const [pageBg, setPageBg] = useState<string>(DEFAULT_PRESET.pageBg)
 
   const [savedThemes, setSavedThemes] = useState<SavedTheme[]>([])
+  const [savedThemesOpen, setSavedThemesOpen] = useState(false)
   const [saveAsNewOpen, setSaveAsNewOpen] = useState(false)
   const [newThemeName, setNewThemeName] = useState('')
   const [savingAsNew, setSavingAsNew] = useState(false)
   const [saveAsNewError, setSaveAsNewError] = useState<string | null>(null)
   const [saveAsNewSuccess, setSaveAsNewSuccess] = useState<string | null>(null)
   const [deletingThemeId, setDeletingThemeId] = useState<string | null>(null)
+  const [overwritingTheme, setOverwritingTheme] = useState(false)
+  const [overwriteSuccess, setOverwriteSuccess] = useState<string | null>(null)
 
   const [slugStatus, setSlugStatus] = useState<SlugStatus>({ kind: 'idle' })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // ─── Load existing tenant data + saved themes ──────────────────────
-  // Depend on user?.id (stable string) instead of user (new object
-  // reference every render) so this effect never re-runs mid-session
-  // and resets the user's in-progress customisation.
+  // ─── Load existing tenant + saved themes ───────────────────────────
   useEffect(() => {
     if (!isLoaded || !user?.id) return
     let cancelled = false
@@ -169,11 +166,9 @@ export default function WhitelabelOnboardingPage() {
     ]).then(([tenantData, themesData]) => {
       if (cancelled) return
 
-      // Saved themes
       const themes: SavedTheme[] = themesData?.themes || []
       setSavedThemes(themes)
 
-      // Existing tenant
       if (tenantData?.tenant) {
         setEditMode(true)
         setBrandName(tenantData.tenant.brand_name || '')
@@ -184,15 +179,13 @@ export default function WhitelabelOnboardingPage() {
         const loadedPrimary = tenantData.tenant.primary_color || DEFAULT_PRESET.primary
         const loadedSidebar = tenantData.tenant.sidebar_color || DEFAULT_PRESET.sidebar
         const loadedHeaderBg =
-          tenantData.tenant.header_bg_color || loadedSidebar // fallback to sidebar
+          tenantData.tenant.header_bg_color || loadedSidebar
         const loadedPageBg = tenantData.tenant.page_bg_color || DEFAULT_PRESET.pageBg
         setPrimary(loadedPrimary)
         setSidebar(loadedSidebar)
         setHeaderBg(loadedHeaderBg)
         setPageBg(loadedPageBg)
 
-        // Try matching against presets first, then saved themes, then fall
-        // back to 'custom'. All 4 colors must match.
         const matchedPreset = PRESETS.find(
           p =>
             p.primary.toLowerCase() === loadedPrimary.toLowerCase() &&
@@ -210,7 +203,12 @@ export default function WhitelabelOnboardingPage() {
               t.header_bg_color.toLowerCase() === loadedHeaderBg.toLowerCase() &&
               t.page_bg_color.toLowerCase() === loadedPageBg.toLowerCase()
           )
-          setPresetKey(matchedTheme ? `theme-${matchedTheme.id}` : 'custom')
+          if (matchedTheme) {
+            setPresetKey(`theme-${matchedTheme.id}`)
+            setSavedThemesOpen(true) // expand so the user can see their pick
+          } else {
+            setPresetKey('custom')
+          }
         }
       }
 
@@ -289,6 +287,12 @@ export default function WhitelabelOnboardingPage() {
     setSidebar(theme.sidebar_color)
     setHeaderBg(theme.header_bg_color)
     setPageBg(theme.page_bg_color)
+    // Swap in the saved theme's logo. Clear any pending file picker so
+    // the live preview reflects the theme's stored logo, not a stale one.
+    if (theme.logo_url) {
+      setExistingLogoUrl(theme.logo_url)
+      setLogoFile(null)
+    }
   }
 
   const updateColor = (
@@ -299,7 +303,12 @@ export default function WhitelabelOnboardingPage() {
     else if (field === 'sidebar') setSidebar(value)
     else if (field === 'headerBg') setHeaderBg(value)
     else setPageBg(value)
-    setPresetKey('custom')
+    // Don't kick out of a saved theme on color tweaks — keep them in
+    // "editing this theme" mode so the OVERWRITE button stays available.
+    // Only revert to 'custom' if they're currently on a built-in preset.
+    if (presetKey.startsWith('preset-')) {
+      setPresetKey('custom')
+    }
   }
 
   const handleDeleteTheme = async (id: string, name: string) => {
@@ -316,7 +325,6 @@ export default function WhitelabelOnboardingPage() {
         setDeletingThemeId(null)
         return
       }
-      // If the deleted theme was selected, fall back to Custom
       if (presetKey === `theme-${id}`) {
         setPresetKey('custom')
       }
@@ -326,6 +334,29 @@ export default function WhitelabelOnboardingPage() {
       alert(err.message || 'Delete failed.')
       setDeletingThemeId(null)
     }
+  }
+
+  // Helper: upload pending logoFile if present, return effective URL.
+  // Returns null if upload failed (and surfaces the error message to caller).
+  const resolveCurrentLogoUrl = async (): Promise<{ url: string | null; error?: string }> => {
+    if (logoFile) {
+      try {
+        const fd = new FormData()
+        fd.append('logo', logoFile)
+        const upRes = await fetch('/api/whitelabel/upload-logo', {
+          method: 'POST',
+          body: fd,
+        })
+        const upData = await upRes.json()
+        if (!upRes.ok) {
+          return { url: null, error: upData.detail || upData.error || 'Logo upload failed.' }
+        }
+        return { url: upData.url }
+      } catch (err: any) {
+        return { url: null, error: err.message || 'Logo upload failed.' }
+      }
+    }
+    return { url: existingLogoUrl }
   }
 
   const handleSaveAsNew = async () => {
@@ -349,6 +380,16 @@ export default function WhitelabelOnboardingPage() {
     }
 
     setSavingAsNew(true)
+
+    // Upload any pending logo first so the theme captures the current
+    // visual state in full.
+    const { url: logoUrl, error: logoErr } = await resolveCurrentLogoUrl()
+    if (logoErr) {
+      setSaveAsNewError(logoErr)
+      setSavingAsNew(false)
+      return
+    }
+
     try {
       const res = await fetch('/api/whitelabel/custom-themes', {
         method: 'POST',
@@ -359,6 +400,7 @@ export default function WhitelabelOnboardingPage() {
           header_bg_color: headerBg,
           primary_color: primary,
           page_bg_color: pageBg,
+          logo_url: logoUrl,
         }),
       })
       const data = await res.json()
@@ -367,9 +409,9 @@ export default function WhitelabelOnboardingPage() {
         setSavingAsNew(false)
         return
       }
-      // Refresh local list + select the new theme
       setSavedThemes(prev => [...prev, data.theme])
       setPresetKey(`theme-${data.theme.id}`)
+      setSavedThemesOpen(true)
       setSaveAsNewSuccess(`Saved "${data.theme.name}".`)
       setNewThemeName('')
       setSaveAsNewOpen(false)
@@ -378,6 +420,51 @@ export default function WhitelabelOnboardingPage() {
     } catch (err: any) {
       setSaveAsNewError(err.message || 'Save failed.')
       setSavingAsNew(false)
+    }
+  }
+
+  const handleOverwriteTheme = async () => {
+    const themeId = presetKey.startsWith('theme-') ? presetKey.slice(6) : null
+    if (!themeId) return
+    const theme = savedThemes.find(t => t.id === themeId)
+    if (!theme) return
+
+    setOverwritingTheme(true)
+    const { url: logoUrl, error: logoErr } = await resolveCurrentLogoUrl()
+    if (logoErr) {
+      alert(logoErr)
+      setOverwritingTheme(false)
+      return
+    }
+
+    try {
+      const res = await fetch(
+        `/api/whitelabel/custom-themes?id=${encodeURIComponent(themeId)}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            primary_color: primary,
+            sidebar_color: sidebar,
+            header_bg_color: headerBg,
+            page_bg_color: pageBg,
+            logo_url: logoUrl,
+          }),
+        }
+      )
+      const data = await res.json()
+      if (!res.ok) {
+        alert(data.detail || data.error || 'Overwrite failed.')
+        setOverwritingTheme(false)
+        return
+      }
+      setSavedThemes(prev => prev.map(t => t.id === data.theme.id ? data.theme : t))
+      setOverwriteSuccess(`Updated "${data.theme.name}".`)
+      setTimeout(() => setOverwriteSuccess(null), 3500)
+      setOverwritingTheme(false)
+    } catch (err: any) {
+      alert(err.message || 'Overwrite failed.')
+      setOverwritingTheme(false)
     }
   }
 
@@ -426,8 +513,8 @@ export default function WhitelabelOnboardingPage() {
       setError('Page background color must be a #RRGGBB hex value.')
       return
     }
-    if (!editMode && !logoFile) {
-      setError('Logo is required. Upload a 512×148 PNG or SVG.')
+    if (!editMode && !logoFile && !existingLogoUrl) {
+      setError('Logo is required.')
       return
     }
     if (editMode && !logoFile && !existingLogoUrl) {
@@ -482,7 +569,6 @@ export default function WhitelabelOnboardingPage() {
         return
       }
 
-      // Instant-preview handoff for the dashboard.
       if (stashDataUrl && logoUrl) {
         try {
           sessionStorage.setItem(
@@ -493,15 +579,24 @@ export default function WhitelabelOnboardingPage() {
               savedAt: Date.now(),
             })
           )
-        } catch {
-          // Storage quota exceeded or disabled — fail silently.
-        }
+        } catch {}
       }
 
       router.push('/dashboard')
     } catch (err: any) {
       setError(err.message || 'Something went wrong.')
       setSubmitting(false)
+    }
+  }
+
+  const handleCancel = () => {
+    if (editMode) {
+      router.push('/dashboard')
+    } else {
+      // Signup flow → bail to landing page. wl_onboarding_status remains
+      // unchanged, so on next login the dashboard redirect logic routes
+      // them back here.
+      router.push('/')
     }
   }
 
@@ -536,7 +631,7 @@ export default function WhitelabelOnboardingPage() {
     pickerDescription =
       'Pick your own sidebar, header, primary, and page background colors below.'
   } else if (activeSavedTheme) {
-    pickerDescription = `Your saved theme "${activeSavedTheme.name}". Edit values below, then save changes to apply, or save as a new theme.`
+    pickerDescription = `Your saved theme "${activeSavedTheme.name}". Edit colors below, then OVERWRITE to update this theme, SAVE AS NEW to save a copy, or SAVE CHANGES to apply to your live tenant.`
   } else {
     pickerDescription = activePreset?.description || ''
   }
@@ -596,13 +691,13 @@ export default function WhitelabelOnboardingPage() {
           <div style={sectionStyle}>
             <label style={sectionLabelStyle}>▸ LOGO</label>
             <div style={hintStyle}>
-              PNG or SVG. <strong>Exactly 512×148 pixels recommended</strong> (max 200 KB).
-              Transparent backgrounds blend best. The preview below shows exactly how
-              it&apos;ll fill the logo box — edge to edge, no padding.
+              PNG, SVG, GIF, JPEG, or WEBP. Size requirements temporarily
+              relaxed for testing — any dimensions accepted. Transparent
+              backgrounds blend best.
             </div>
             <input
               type="file"
-              accept="image/png,image/svg+xml"
+              accept="image/*"
               onChange={e => {
                 const f = e.target.files?.[0] || null
                 setLogoFile(f)
@@ -614,6 +709,9 @@ export default function WhitelabelOnboardingPage() {
           {/* ── THEME ── */}
           <div style={sectionStyle}>
             <div style={sectionLabelStyle}>▸ THEME</div>
+
+            {/* Preset grid — built-in presets + Custom only. Saved themes
+                live in the dropdown below this row. */}
             <div style={presetGridStyle}>
               {PRESETS.map(p => (
                 <button
@@ -630,36 +728,6 @@ export default function WhitelabelOnboardingPage() {
                   </div>
                   <div style={presetNameStyle(presetKey === p.key)}>{p.label}</div>
                 </button>
-              ))}
-              {savedThemes.map(t => (
-                <div key={t.id} style={{ position: 'relative' }}>
-                  <button
-                    type="button"
-                    onClick={() => applyTheme(t)}
-                    style={presetCardStyle(presetKey === `theme-${t.id}`)}
-                  >
-                    <div style={presetSwatchRowStyle}>
-                      <div style={{ ...presetSwatchStyle, background: t.sidebar_color }} title="Sidebar" />
-                      <div style={{ ...presetSwatchStyle, background: t.header_bg_color }} title="Header" />
-                      <div style={{ ...presetSwatchStyle, background: t.primary_color }} title="Primary" />
-                      <div style={{ ...presetSwatchStyle, background: t.page_bg_color }} title="Page background" />
-                    </div>
-                    <div style={presetNameStyle(presetKey === `theme-${t.id}`)}>{t.name}</div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={e => {
-                      e.stopPropagation()
-                      handleDeleteTheme(t.id, t.name)
-                    }}
-                    disabled={deletingThemeId === t.id}
-                    title={`Delete "${t.name}"`}
-                    style={themeDeleteButtonStyle}
-                    aria-label={`Delete ${t.name}`}
-                  >
-                    {deletingThemeId === t.id ? '…' : '×'}
-                  </button>
-                </div>
               ))}
               <button
                 type="button"
@@ -682,9 +750,77 @@ export default function WhitelabelOnboardingPage() {
                 <div style={presetNameStyle(presetKey === 'custom')}>Custom</div>
               </button>
             </div>
+
+            {/* ── SAVED THEMES DROPDOWN ── */}
+            <div style={savedThemesPanelStyle}>
+              <button
+                type="button"
+                onClick={() => setSavedThemesOpen(o => !o)}
+                style={savedThemesToggleStyle}
+              >
+                <span>
+                  {savedThemesOpen ? '▾' : '▸'} MY SAVED THEMES ({savedThemes.length})
+                </span>
+                {savedThemes.length === 0 && (
+                  <span style={savedThemesToggleHintStyle}>
+                    none yet — save your current look below
+                  </span>
+                )}
+              </button>
+              {savedThemesOpen && savedThemes.length > 0 && (
+                <div style={savedThemesGridStyle}>
+                  {savedThemes.map(t => (
+                    <div key={t.id} style={{ position: 'relative' }}>
+                      <button
+                        type="button"
+                        onClick={() => applyTheme(t)}
+                        style={savedThemeCardStyle(presetKey === `theme-${t.id}`)}
+                      >
+                        <div style={presetSwatchRowStyle}>
+                          <div style={{ ...presetSwatchStyle, background: t.sidebar_color }} />
+                          <div style={{ ...presetSwatchStyle, background: t.header_bg_color }} />
+                          <div style={{ ...presetSwatchStyle, background: t.primary_color }} />
+                          <div style={{ ...presetSwatchStyle, background: t.page_bg_color }} />
+                        </div>
+                        {t.logo_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={t.logo_url} alt="" style={savedThemeLogoStyle} />
+                        ) : (
+                          <div style={savedThemeNoLogoStyle}>NO LOGO</div>
+                        )}
+                        <div style={presetNameStyle(presetKey === `theme-${t.id}`)}>
+                          {t.name}
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={e => {
+                          e.stopPropagation()
+                          handleDeleteTheme(t.id, t.name)
+                        }}
+                        disabled={deletingThemeId === t.id}
+                        title={`Delete "${t.name}"`}
+                        style={themeDeleteButtonStyle}
+                        aria-label={`Delete ${t.name}`}
+                      >
+                        {deletingThemeId === t.id ? '…' : '×'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {savedThemesOpen && savedThemes.length === 0 && (
+                <div style={savedThemesEmptyStyle}>
+                  You haven't saved any themes yet. Configure your colors and
+                  logo, then use SAVE AS NEW THEME below to create one. You
+                  can save up to {MAX_SAVED_THEMES} themes per account.
+                </div>
+              )}
+            </div>
+
             <div style={presetHintStyle}>{pickerDescription}</div>
 
-            {presetKey === 'custom' && (
+            {(presetKey === 'custom' || activeSavedTheme) && (
               <div style={colorPickerGridStyle}>
                 <ColorRow
                   label="Sidebar"
@@ -745,7 +881,7 @@ export default function WhitelabelOnboardingPage() {
 
           {error && <div style={errorBoxStyle}>{error}</div>}
 
-          {/* ── SUBMIT BUTTONS ── */}
+          {/* ── SUBMIT ── */}
           <button
             type="submit"
             disabled={submitting}
@@ -760,12 +896,49 @@ export default function WhitelabelOnboardingPage() {
                 ? 'SAVING...'
                 : 'CONFIRMING...'
               : editMode
-                ? '▶ SAVE CHANGES'
-                : '▶ CONFIRM'}
+                ? 'SAVE CHANGES'
+                : 'CONFIRM'}
           </button>
 
+          {/* ── CANCEL ── */}
+          <button
+            type="button"
+            onClick={handleCancel}
+            disabled={submitting}
+            style={{
+              ...cancelButtonStyle,
+              opacity: submitting ? 0.4 : 1,
+              cursor: submitting ? 'not-allowed' : 'pointer',
+            }}
+          >
+            CANCEL
+          </button>
+
+          {/* ── EDIT-MODE THEME PERSISTENCE ACTIONS ── */}
           {editMode && (
             <>
+              {/* OVERWRITE THIS THEME — only when a saved theme is loaded */}
+              {activeSavedTheme && (
+                <button
+                  type="button"
+                  onClick={handleOverwriteTheme}
+                  disabled={overwritingTheme}
+                  style={{
+                    ...overwriteButtonStyle,
+                    opacity: overwritingTheme ? 0.5 : 1,
+                    cursor: overwritingTheme ? 'wait' : 'pointer',
+                  }}
+                >
+                  {overwritingTheme
+                    ? 'OVERWRITING...'
+                    : `↻ OVERWRITE "${activeSavedTheme.name}"`}
+                </button>
+              )}
+
+              {overwriteSuccess && (
+                <div style={saveAsNewSuccessStyle}>✓ {overwriteSuccess}</div>
+              )}
+
               <button
                 type="button"
                 onClick={() => {
@@ -821,9 +994,9 @@ export default function WhitelabelOnboardingPage() {
                     <div style={saveAsNewErrorStyle}>{saveAsNewError}</div>
                   )}
                   <div style={saveAsNewHintStyle}>
-                    Saves the current colors as a named theme. Doesn&apos;t change
-                    what your dashboard currently looks like — use ▶ SAVE CHANGES
-                    above to apply.
+                    Saves the current colors and logo as a named theme.
+                    Doesn&apos;t change what your dashboard currently looks
+                    like — use SAVE CHANGES above to apply.
                   </div>
                 </div>
               )}
@@ -1034,6 +1207,24 @@ function presetCardStyle(selected: boolean): React.CSSProperties {
   }
 }
 
+function savedThemeCardStyle(selected: boolean): React.CSSProperties {
+  return {
+    background: 'var(--surface)',
+    border: selected ? '2px solid var(--brand-primary)' : '1px solid var(--border)',
+    padding: selected ? 9 : 10,
+    borderRadius: 4,
+    cursor: 'pointer',
+    textAlign: 'left',
+    fontFamily: 'var(--font-futura)',
+    transition: 'border-color 0.15s',
+    width: '100%',
+    color: 'var(--text-primary)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 8,
+  }
+}
+
 const presetSwatchRowStyle: React.CSSProperties = {
   display: 'flex',
   gap: 4,
@@ -1145,6 +1336,84 @@ const colorHexInputStyle: React.CSSProperties = {
   boxSizing: 'border-box',
 }
 
+const savedThemesPanelStyle: React.CSSProperties = {
+  marginBottom: 12,
+}
+
+const savedThemesToggleStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '10px 14px',
+  background: 'var(--background)',
+  border: '1px dashed var(--border)',
+  borderRadius: 4,
+  color: 'var(--text-primary)',
+  fontSize: 11,
+  fontWeight: 700,
+  letterSpacing: 2,
+  fontFamily: 'var(--font-futura)',
+  cursor: 'pointer',
+  textAlign: 'left',
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  gap: 12,
+}
+
+const savedThemesToggleHintStyle: React.CSSProperties = {
+  fontSize: 10,
+  fontWeight: 400,
+  letterSpacing: 0.5,
+  color: 'var(--text-muted)',
+  textTransform: 'none',
+}
+
+const savedThemesGridStyle: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+  gap: 10,
+  marginTop: 10,
+  padding: 10,
+  background: 'var(--background)',
+  border: '1px solid var(--border)',
+  borderRadius: 4,
+}
+
+const savedThemesEmptyStyle: React.CSSProperties = {
+  marginTop: 10,
+  padding: 14,
+  background: 'var(--background)',
+  border: '1px solid var(--border)',
+  borderRadius: 4,
+  fontSize: 11,
+  letterSpacing: 0.5,
+  color: 'var(--text-muted)',
+  lineHeight: 1.6,
+}
+
+const savedThemeLogoStyle: React.CSSProperties = {
+  width: '100%',
+  height: 38,
+  objectFit: 'contain',
+  objectPosition: 'center',
+  background: 'rgba(0,0,0,0.04)',
+  borderRadius: 3,
+  display: 'block',
+}
+
+const savedThemeNoLogoStyle: React.CSSProperties = {
+  width: '100%',
+  height: 38,
+  background: 'rgba(0,0,0,0.04)',
+  borderRadius: 3,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontSize: 8,
+  letterSpacing: 2,
+  color: 'var(--text-muted)',
+  fontWeight: 700,
+}
+
 const disclaimerBoxStyle: React.CSSProperties = {
   background: 'rgba(74, 158, 255, 0.06)',
   border: '1px solid rgba(74, 158, 255, 0.3)',
@@ -1192,6 +1461,36 @@ const submitButtonStyle: React.CSSProperties = {
   fontFamily: 'var(--font-futura)',
   cursor: 'pointer',
   marginTop: 8,
+}
+
+const cancelButtonStyle: React.CSSProperties = {
+  width: '100%',
+  padding: 12,
+  background: 'transparent',
+  border: '1px solid var(--border)',
+  borderRadius: 4,
+  color: 'var(--text-secondary)',
+  fontSize: 11,
+  fontWeight: 700,
+  letterSpacing: 3,
+  fontFamily: 'var(--font-futura)',
+  cursor: 'pointer',
+  marginTop: 10,
+}
+
+const overwriteButtonStyle: React.CSSProperties = {
+  width: '100%',
+  padding: 12,
+  background: 'transparent',
+  border: '1px solid var(--brand-primary)',
+  borderRadius: 4,
+  color: 'var(--brand-primary)',
+  fontSize: 11,
+  fontWeight: 700,
+  letterSpacing: 3,
+  fontFamily: 'var(--font-futura)',
+  cursor: 'pointer',
+  marginTop: 16,
 }
 
 const saveAsNewButtonStyle: React.CSSProperties = {
