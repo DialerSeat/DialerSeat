@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { ClerkProvider } from '@clerk/nextjs';
 import { auth } from '@clerk/nextjs/server';
-import { headers } from 'next/headers';
+import { headers, cookies } from 'next/headers';
 import "./globals.css";
 import StructuredData from './components/StructuredData';
 import { ThemeProvider } from '@/components/ThemeProvider';
@@ -156,6 +156,8 @@ const IOS_SPLASH_SCREENS: Array<{ w: number; h: number; orient: 'portrait' | 'la
   { w: 2796, h: 1290, orient: 'landscape' },
 ];
 
+const TENANT_COOKIE_NAME = 'ds_last_tenant';
+
 export default async function RootLayout({
   children,
 }: {
@@ -173,18 +175,29 @@ export default async function RootLayout({
 
   let branding = null;
   if (!isLandingView) {
-    // ── WHITE-LABEL TENANT RESOLUTION (v2 — Phase D) ──────────────────
-    // Two-tier lookup:
-    //   1. If proxy.ts set x-tenant-slug (subdomain visit), use that.
-    //   2. Else, if user is logged in, look up their selected tenant via
-    //      lib/tenant.ts → getActiveTenantForUser. This is what makes the
-    //      brand follow the user across devices/domains.
-    //   3. Else (no subdomain, not logged in) → null → default DialerSeat.
+    // ── WHITE-LABEL TENANT RESOLUTION (Push D — 4-tier) ───────────────
+    // Priority order:
+    //   1. x-tenant-slug header — explicit subdomain visit, strongest signal.
+    //   2. userId from auth → user's selected tenant via getActiveTenantForUser.
+    //      Brands follow the user across devices/domains when signed in.
+    //   3. ds_last_tenant cookie → last tenant this browser signed into.
+    //      Lets the root-domain sign-in page brand for returning users
+    //      BEFORE they're signed in (cookie set by /api/auth/post-signin).
+    //   4. null → default DialerSeat chrome.
     branding = await getTenantBranding(tenantSlug);
     if (!branding) {
       const { userId } = await auth();
       if (userId) {
         branding = await getActiveTenantForUser(userId);
+      } else {
+        // Pre-auth: check the cookie hint dropped by post-signin on this
+        // browser's last successful sign-in. Lets sign-in / landing render
+        // branded for returning users even without a subdomain visit.
+        const cookieStore = await cookies();
+        const lastTenant = cookieStore.get(TENANT_COOKIE_NAME)?.value;
+        if (lastTenant) {
+          branding = await getTenantBranding(lastTenant);
+        }
       }
     }
   }

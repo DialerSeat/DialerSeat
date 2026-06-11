@@ -4,11 +4,17 @@ import { headers } from 'next/headers'
 import { createClient } from '@supabase/supabase-js'
 
 // =============================================================================
-// /api/auth/post-signin — smart cross-subdomain redirect after Clerk sign-in
+// /api/auth/post-signin — smart cross-subdomain redirect + tenant cookie
 // =============================================================================
 // Clerk's <SignIn /> is configured with forceRedirectUrl="/api/auth/post-signin"
 // so every successful sign-in lands here first. This handler decides which
 // {subdomain}.dialerseat.com to land the user on based on tenant affiliation.
+//
+// Push D: also drops a ds_last_tenant cookie at the parent domain so the
+// NEXT visit to dialerseat.com/sign-in from this browser can be branded for
+// the tenant the user belongs to, even before they're signed in. Without
+// this cookie the root-domain sign-in page has no way to know which tenant
+// the user belongs to, and falls back to default DialerSeat chrome.
 //
 // Routing rules (JC item 1, post-signin):
 //   1. Signed in on blank.dialerseat.com AND user is part of blank →
@@ -24,7 +30,7 @@ import { createClient } from '@supabase/supabase-js'
 //   - team_members.user_id = userId AND status='active' AND the team's
 //     teams.tenant_id matches the tenant in question.
 //
-// Tiebreaker for multiple-tenant affiliation (Q3): users.active_tenant_id.
+// Tiebreaker for multiple-tenant affiliation: users.active_tenant_id.
 // Then earliest owned, then any membership tenant.
 //
 // Dev safety: when host is localhost/127.0.0.1, skip cross-subdomain bouncing
@@ -34,6 +40,8 @@ import { createClient } from '@supabase/supabase-js'
 
 const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'dialerseat.com'
 const TARGET_PATH = '/dashboard/analytics'
+const TENANT_COOKIE_NAME = 'ds_last_tenant'
+const TENANT_COOKIE_MAX_AGE = 60 * 60 * 24 * 90 // 90 days
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -54,7 +62,6 @@ function isDevHost(host: string): boolean {
 
 function buildDest(slug: string | null, host: string): string {
   if (isDevHost(host)) {
-    // In dev, can't safely jump subdomains. Just land on current host.
     const protocol = host.startsWith('localhost') || host.startsWith('127.0.0.1') ? 'http' : 'https'
     return `${protocol}://${host}${TARGET_PATH}`
   }
@@ -62,6 +69,63 @@ function buildDest(slug: string | null, host: string): string {
     return `https://${slug}.${ROOT_DOMAIN}${TARGET_PATH}`
   }
   return `https://${ROOT_DOMAIN}${TARGET_PATH}`
+}
+
+// Set the ds_last_tenant cookie (or delete it if no slug) so the root-domain
+// sign-in page can brand for this browser's tenant on next visit. Cookie
+// scoped to the parent domain so subdomains can also see/clear it.
+function setOrClearTenantCookie(
+  response: NextResponse,
+  slug: string | null,
+  host: string
+): void {
+  if (isDevHost(host)) {
+    // Dev: skip the domain attribute (won't work cross-port on localhost),
+    // skip secure flag. Still useful for same-host testing.
+    if (slug) {
+      response.cookies.set(TENANT_COOKIE_NAME, slug, {
+        path: '/',
+        maxAge: TENANT_COOKIE_MAX_AGE,
+        httpOnly: true,
+        sameSite: 'lax',
+      })
+    } else {
+      response.cookies.delete(TENANT_COOKIE_NAME)
+    }
+    return
+  }
+
+  if (slug) {
+    response.cookies.set(TENANT_COOKIE_NAME, slug, {
+      domain: `.${ROOT_DOMAIN}`,
+      path: '/',
+      maxAge: TENANT_COOKIE_MAX_AGE,
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+    })
+  } else {
+    // Delete any stale cookie from a previous tenant affiliation. The
+    // delete needs to match the original domain scope to actually clear.
+    response.cookies.set(TENANT_COOKIE_NAME, '', {
+      domain: `.${ROOT_DOMAIN}`,
+      path: '/',
+      maxAge: 0,
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+    })
+  }
+}
+
+// Build a redirect response with the tenant cookie attached.
+function redirectWithTenantCookie(
+  slug: string | null,
+  host: string
+): NextResponse {
+  const response = NextResponse.redirect(buildDest(slug, host), 302)
+  setOrClearTenantCookie(response, slug, host)
+  return response
 }
 
 async function findActiveTenantBySlug(slug: string): Promise<Tenant | null> {
@@ -85,7 +149,6 @@ async function isUserAffiliatedWithTenant(
 ): Promise<boolean> {
   if (ownerClerkId === userId) return true
 
-  // Get user's active team memberships.
   const { data: members, error: mErr } = await supabase
     .from('team_members')
     .select('team_id')
@@ -100,7 +163,6 @@ async function isUserAffiliatedWithTenant(
   const teamIds = members.map(m => m.team_id).filter(Boolean)
   if (teamIds.length === 0) return false
 
-  // Check if any of those teams belong to the tenant in question.
   const { data: teams, error: tErr } = await supabase
     .from('teams')
     .select('id')
@@ -115,7 +177,7 @@ async function isUserAffiliatedWithTenant(
 }
 
 async function resolvePreferredTenant(userId: string): Promise<Tenant | null> {
-  // 1. users.active_tenant_id (JC's Q3 tiebreaker)
+  // 1. users.active_tenant_id
   const { data: userRow, error: uErr } = await supabase
     .from('users')
     .select('active_tenant_id')
@@ -196,7 +258,6 @@ export async function GET(req: NextRequest) {
   try {
     const { userId } = await auth()
     if (!userId) {
-      // Not actually signed in — send back to sign-in on this host.
       return NextResponse.redirect(new URL('/sign-in', req.url))
     }
 
@@ -213,27 +274,23 @@ export async function GET(req: NextRequest) {
           currentTenant.owner_clerk_id
         )
         if (affiliated) {
-          // Stay on this subdomain.
-          return NextResponse.redirect(buildDest(currentTenant.slug, host), 302)
+          return redirectWithTenantCookie(currentTenant.slug, host)
         }
-        // Else: user landed on a subdomain they aren't part of.
-        // Fall through to preferred-tenant routing.
       }
-      // currentTenant null means the slug doesn't match an active tenant.
-      // Also fall through.
     }
 
     // Step 2: Resolve user's preferred tenant.
     const preferred = await resolvePreferredTenant(userId)
     if (preferred) {
-      return NextResponse.redirect(buildDest(preferred.slug, host), 302)
+      return redirectWithTenantCookie(preferred.slug, host)
     }
 
-    // Step 3: No tenant affiliation — regular DialerSeat user.
-    return NextResponse.redirect(buildDest(null, host), 302)
+    // Step 3: No tenant affiliation — regular DialerSeat user. Clear
+    // any stale cookie so this browser stops branding for a tenant
+    // the user no longer belongs to.
+    return redirectWithTenantCookie(null, host)
   } catch (err) {
     console.error('[post-signin] unexpected error:', err)
-    // Safe fallback: stay on current host dashboard.
     return NextResponse.redirect(new URL(TARGET_PATH, req.url))
   }
 }
