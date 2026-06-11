@@ -4,9 +4,9 @@ import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
 
 // =============================================================================
-// CAMPAIGNS PAGE — Pass 2 v2 (campaigns push)
+// CAMPAIGNS PAGE — Pass 2 v3 (campaigns push, no docs/sheets affordances)
 // =============================================================================
-// Changes vs C4 (all five items shipped together):
+// Changes vs C4 (four items shipped together):
 //
 // 1. CREATE MODAL EXPANDED — mirrors settings modal sections. New fields:
 //      - AMD toggle (defaults from mode but user-overridable)
@@ -27,12 +27,6 @@ import Link from 'next/link'
 // 4. DRAGGABLE SCRIPT TABS: each .script-tab is draggable. On drop, the
 //    local order updates immediately and persists via the new endpoint
 //    /api/campaigns/scripts/reorder. Click-to-switch behavior preserved.
-//
-// 5. SCRIPT BODY URL DETECTION (Level 1 docs support): if a script body is
-//    just a URL (no other text), the tab shows a "DOC LINK" badge and an
-//    "OPEN AS DOC" button appears next to the body editor. This is the
-//    minimum-viable Google Docs affordance — Level 2 (live embed via Docs
-//    API) ships free with the sheets OAuth push.
 //
 // C4 binding preserved: page header strip + editor toolbar on
 // var(--brand-header-bg). Modal heads, ds-btn.primary, popovers stay on
@@ -118,10 +112,6 @@ const AMD_DEFAULT_BY_MODE: Record<DialerMode, boolean> = {
   progressive: true,
   predictive: true,
 }
-
-// Detect whether a script body is just a URL (Level 1 Google Docs support).
-const isScriptDocUrl = (s: string): boolean =>
-  /^https?:\/\/[^\s]+$/.test(s.trim())
 
 function relativeTime(iso: string | null | undefined): string {
   if (!iso) return '—'
@@ -974,9 +964,6 @@ export default function CampaignsPage() {
     ...editorAdds,
   ]
 
-  // Active script being edited — for the doc-URL detection.
-  const activeScriptIsDoc = isScriptDocUrl(editingScriptBody)
-
   return (
     <div className="cmp-root" style={{
       flex: 1,
@@ -1398,15 +1385,6 @@ export default function CampaignsPage() {
           letter-spacing: 1px;
           font-weight: bold;
         }
-        .script-tab .doc-mark {
-          font-size: 8px;
-          padding: 1px 5px;
-          background: ${T.amber};
-          color: white;
-          border-radius: 2px;
-          letter-spacing: 1px;
-          font-weight: bold;
-        }
         .script-add {
           padding: 6px 12px;
           background: transparent;
@@ -1451,42 +1429,6 @@ export default function CampaignsPage() {
         }
         .script-name-input:focus, .script-body-textarea:focus {
           border-color: ${T.blue};
-        }
-        .script-doc-banner {
-          padding: 10px 12px;
-          background: rgba(138,106,26,0.08);
-          border: 1px solid rgba(138,106,26,0.35);
-          border-left: 3px solid ${T.amber};
-          border-radius: 3px;
-          font-size: 10px;
-          letter-spacing: 1px;
-          color: ${T.text};
-          margin-bottom: 10px;
-          line-height: 1.6;
-          font-family: monospace;
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          flex-wrap: wrap;
-          justify-content: space-between;
-        }
-        .script-doc-banner strong { color: ${T.amber}; letter-spacing: 1.5px; font-family: ${FUTURA}; }
-        .script-doc-open-btn {
-          padding: 6px 12px;
-          background: ${T.dark};
-          border: 1px solid ${T.amber};
-          border-top: 3px solid ${T.amber};
-          border-radius: 3px;
-          color: ${T.amber};
-          font-size: 10px;
-          letter-spacing: 2px;
-          font-weight: bold;
-          text-decoration: none;
-          white-space: nowrap;
-          font-family: ${FUTURA};
-        }
-        .script-doc-open-btn:hover {
-          background: color-mix(in srgb, var(--brand-on-sidebar) 6%, var(--brand-sidebar-bg));
         }
 
         .script-tip {
@@ -2095,8 +2037,7 @@ export default function CampaignsPage() {
                 <div className="settings-section-title">▸ FIRST SCRIPT (OPTIONAL)</div>
                 <p className="script-tip">
                   Add a starting call script now, or skip and add scripts later
-                  from settings. You can paste a Google Doc URL as the body —
-                  the dialer will show it as an external link.
+                  from settings.
                 </p>
                 <input
                   className="script-name-input"
@@ -2108,24 +2049,10 @@ export default function CampaignsPage() {
                 <textarea
                   className="script-body-textarea"
                   rows={6}
-                  placeholder="Hi [Name], this is [Agent] calling from… (or paste a Google Doc URL)"
+                  placeholder="Hi [Name], this is [Agent] calling from…"
                   value={createFirstScriptBody}
                   onChange={e => setCreateFirstScriptBody(e.target.value)}
                 />
-                {isScriptDocUrl(createFirstScriptBody) && (
-                  <div className="script-doc-banner">
-                    <span>
-                      <strong>DOC LINK DETECTED</strong> · the dialer will show
-                      this as an "OPEN AS DOC" button instead of inline text.
-                    </span>
-                    <a
-                      href={createFirstScriptBody.trim()}
-                      target="_blank"
-                      rel="noopener"
-                      className="script-doc-open-btn"
-                    >▸ OPEN DOC →</a>
-                  </div>
-                )}
               </div>
 
             </div>
@@ -2293,30 +2220,26 @@ export default function CampaignsPage() {
                     {settingsScripts.length > 0 && (
                       <>
                         <div className="script-tabs">
-                          {settingsScripts.map(s => {
-                            const isDocTab = isScriptDocUrl(s.body)
-                            return (
-                              <div
-                                key={s.id}
-                                className={
-                                  `script-tab ${activeScriptId === s.id ? 'active' : ''} ` +
-                                  `${draggedScriptId === s.id ? 'dragging' : ''} ` +
-                                  `${dragOverScriptId === s.id ? 'drag-over' : ''}`
-                                }
-                                draggable={!isLapsed}
-                                onDragStart={e => onTabDragStart(e, s.id)}
-                                onDragOver={e => onTabDragOver(e, s.id)}
-                                onDragLeave={onTabDragLeave}
-                                onDrop={e => onTabDrop(e, s.id)}
-                                onDragEnd={onTabDragEnd}
-                                onClick={() => switchScript(s.id)}
-                              >
-                                {(s.name || 'UNTITLED').toUpperCase()}
-                                {s.is_default && <span className="def-mark">DEFAULT</span>}
-                                {isDocTab && <span className="doc-mark">DOC</span>}
-                              </div>
-                            )
-                          })}
+                          {settingsScripts.map(s => (
+                            <div
+                              key={s.id}
+                              className={
+                                `script-tab ${activeScriptId === s.id ? 'active' : ''} ` +
+                                `${draggedScriptId === s.id ? 'dragging' : ''} ` +
+                                `${dragOverScriptId === s.id ? 'drag-over' : ''}`
+                              }
+                              draggable={!isLapsed}
+                              onDragStart={e => onTabDragStart(e, s.id)}
+                              onDragOver={e => onTabDragOver(e, s.id)}
+                              onDragLeave={onTabDragLeave}
+                              onDrop={e => onTabDrop(e, s.id)}
+                              onDragEnd={onTabDragEnd}
+                              onClick={() => switchScript(s.id)}
+                            >
+                              {(s.name || 'UNTITLED').toUpperCase()}
+                              {s.is_default && <span className="def-mark">DEFAULT</span>}
+                            </div>
+                          ))}
                           {!isLapsed && (
                             <button className="script-add" onClick={addScript} disabled={savingScript}>
                               + ADD
@@ -2367,25 +2290,10 @@ export default function CampaignsPage() {
                           className="script-body-textarea"
                           value={editingScriptBody}
                           onChange={e => { setEditingScriptBody(e.target.value); setDirtyScript(true) }}
-                          placeholder="Hi [Name], my name is [Agent] and I'm calling from… (or paste a Google Doc URL)"
+                          placeholder="Hi [Name], my name is [Agent] and I'm calling from…"
                           rows={10}
                           disabled={isLapsed}
                         />
-                        {activeScriptIsDoc && (
-                          <div className="script-doc-banner">
-                            <span>
-                              <strong>DOC LINK</strong> · this script is a URL.
-                              The dialer shows an "OPEN AS DOC" button instead
-                              of inline text. Live-embed coming next push.
-                            </span>
-                            <a
-                              href={editingScriptBody.trim()}
-                              target="_blank"
-                              rel="noopener"
-                              className="script-doc-open-btn"
-                            >▸ OPEN DOC →</a>
-                          </div>
-                        )}
                         <div className="script-actions">
                           {!settingsScripts.find(s => s.id === activeScriptId)?.is_default && !isLapsed && (
                             <button className="ds-btn" onClick={async () => {
