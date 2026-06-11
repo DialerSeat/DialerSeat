@@ -6,41 +6,14 @@ import { useRouter } from 'next/navigation'
 import { WhitelabelLivePreview } from '@/components/WhitelabelLivePreview'
 
 // =============================================================================
-// /onboarding/whitelabel — v6 (Push A: emoji + saved-themes dropdown + cancel)
+// /onboarding/whitelabel — v7 (Push C: saved themes panel above preview)
 // =============================================================================
-// v6 changes:
-//   1. ▶ emoji removed from submit button labels ("CONFIRM", "SAVE CHANGES")
-//      and from the inline hint text in the save-as-new panel.
-//   2. Saved themes moved from inline-in-the-preset-grid into a collapsible
-//      "MY SAVED THEMES" dropdown panel below the preset row. The preset
-//      grid now contains only the 4 built-in presets + Custom, period.
-//   3. Cancel button at the bottom of the form. Edit mode → /dashboard,
-//      signup flow → /. The user's wl_onboarding_status is NOT touched
-//      so on next login they'll be routed back here from /dashboard.
-//   4. Per-theme logos. Each saved theme can carry its own logo_url. When
-//      the user picks a saved theme from the dropdown, both the colors AND
-//      the logo swap in. handleSaveAsNew and handleOverwriteTheme upload
-//      any pending logoFile before persisting, so each saved theme is a
-//      fully self-contained snapshot.
-//   5. OVERWRITE THIS THEME button. Appears below SAVE AS NEW when a saved
-//      theme is currently loaded. PUTs to custom-themes?id=<id> with the
-//      current colors + logo. Lets users edit existing themes in place
-//      instead of being forced to save a new copy and delete the old one.
-//   6. Logo size requirements stripped. Hint copy updated to reflect
-//      relaxed testing mode. File input accepts image/*.
-//      ⚠ BACKLOG: restore the 512×148 / 200 KB / PNG-SVG-only copy after
-//      testing.
-//   7. The bogus "Brand name must be 2–60 characters" error on save-as-new
-//      is fixed in this push by the rewritten custom-themes route — no
-//      page change needed for that specifically.
-//
-// Preserved from v5:
-//   - 60-second propagation disclaimer
-//   - Brand name input + subdomain 350ms debounced availability check
-//   - 24h slug cooldown for edit mode, redirect grace logic
-//   - Logo upload + sessionStorage handoff for instant dashboard preview
-//   - Edit mode pre-fill from GET /api/whitelabel/onboarding
-//   - useEffect dependency on user?.id (stable string)
+// v7 changes vs v6:
+//   - Saved themes dropdown moved out of the THEME section and placed as
+//     its own section card immediately above EXACT PREVIEW. Visual flow:
+//     preset grid + Custom + color pickers → saved themes shortcut →
+//     preview. Picking a saved theme still applies its colors+logo to
+//     the editor state, same as before.
 // =============================================================================
 
 interface Preset {
@@ -155,7 +128,6 @@ export default function WhitelabelOnboardingPage() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // ─── Load existing tenant + saved themes ───────────────────────────
   useEffect(() => {
     if (!isLoaded || !user?.id) return
     let cancelled = false
@@ -205,7 +177,7 @@ export default function WhitelabelOnboardingPage() {
           )
           if (matchedTheme) {
             setPresetKey(`theme-${matchedTheme.id}`)
-            setSavedThemesOpen(true) // expand so the user can see their pick
+            setSavedThemesOpen(true)
           } else {
             setPresetKey('custom')
           }
@@ -222,7 +194,6 @@ export default function WhitelabelOnboardingPage() {
     }
   }, [isLoaded, user?.id])
 
-  // ─── Slug availability check (350ms debounce) ──────────────────────
   useEffect(() => {
     if (!slug) {
       setSlugStatus({ kind: 'idle' })
@@ -258,7 +229,6 @@ export default function WhitelabelOnboardingPage() {
     return () => clearTimeout(t)
   }, [slug, editMode, originalSlug])
 
-  // ─── Logo preview blob URL lifecycle ────────────────────────────────
   useEffect(() => {
     if (!logoFile) {
       setLogoPreviewUrl(null)
@@ -287,8 +257,6 @@ export default function WhitelabelOnboardingPage() {
     setSidebar(theme.sidebar_color)
     setHeaderBg(theme.header_bg_color)
     setPageBg(theme.page_bg_color)
-    // Swap in the saved theme's logo. Clear any pending file picker so
-    // the live preview reflects the theme's stored logo, not a stale one.
     if (theme.logo_url) {
       setExistingLogoUrl(theme.logo_url)
       setLogoFile(null)
@@ -303,9 +271,6 @@ export default function WhitelabelOnboardingPage() {
     else if (field === 'sidebar') setSidebar(value)
     else if (field === 'headerBg') setHeaderBg(value)
     else setPageBg(value)
-    // Don't kick out of a saved theme on color tweaks — keep them in
-    // "editing this theme" mode so the OVERWRITE button stays available.
-    // Only revert to 'custom' if they're currently on a built-in preset.
     if (presetKey.startsWith('preset-')) {
       setPresetKey('custom')
     }
@@ -336,8 +301,6 @@ export default function WhitelabelOnboardingPage() {
     }
   }
 
-  // Helper: upload pending logoFile if present, return effective URL.
-  // Returns null if upload failed (and surfaces the error message to caller).
   const resolveCurrentLogoUrl = async (): Promise<{ url: string | null; error?: string }> => {
     if (logoFile) {
       try {
@@ -380,9 +343,6 @@ export default function WhitelabelOnboardingPage() {
     }
 
     setSavingAsNew(true)
-
-    // Upload any pending logo first so the theme captures the current
-    // visual state in full.
     const { url: logoUrl, error: logoErr } = await resolveCurrentLogoUrl()
     if (logoErr) {
       setSaveAsNewError(logoErr)
@@ -593,13 +553,9 @@ export default function WhitelabelOnboardingPage() {
     if (editMode) {
       router.push('/dashboard')
     } else {
-      // Signup flow → bail to landing page. wl_onboarding_status remains
-      // unchanged, so on next login the dashboard redirect logic routes
-      // them back here.
       router.push('/')
     }
   }
-
   if (loading) {
     return (
       <div
@@ -639,7 +595,6 @@ export default function WhitelabelOnboardingPage() {
   return (
     <main style={pageStyle}>
       <div style={cardStyle}>
-        {/* Title + subtitle */}
         <div style={{ marginBottom: 28 }}>
           <div style={titleStyle}>
             {editMode ? 'EDIT YOUR WHITELABEL DIALER' : 'CUSTOMIZE YOUR WHITELABEL DIALER'}
@@ -706,12 +661,10 @@ export default function WhitelabelOnboardingPage() {
             />
           </div>
 
-          {/* ── THEME ── */}
+          {/* ── THEME — presets + Custom + color pickers ── */}
           <div style={sectionStyle}>
             <div style={sectionLabelStyle}>▸ THEME</div>
 
-            {/* Preset grid — built-in presets + Custom only. Saved themes
-                live in the dropdown below this row. */}
             <div style={presetGridStyle}>
               {PRESETS.map(p => (
                 <button
@@ -751,73 +704,6 @@ export default function WhitelabelOnboardingPage() {
               </button>
             </div>
 
-            {/* ── SAVED THEMES DROPDOWN ── */}
-            <div style={savedThemesPanelStyle}>
-              <button
-                type="button"
-                onClick={() => setSavedThemesOpen(o => !o)}
-                style={savedThemesToggleStyle}
-              >
-                <span>
-                  {savedThemesOpen ? '▾' : '▸'} MY SAVED THEMES ({savedThemes.length})
-                </span>
-                {savedThemes.length === 0 && (
-                  <span style={savedThemesToggleHintStyle}>
-                    none yet — save your current look below
-                  </span>
-                )}
-              </button>
-              {savedThemesOpen && savedThemes.length > 0 && (
-                <div style={savedThemesGridStyle}>
-                  {savedThemes.map(t => (
-                    <div key={t.id} style={{ position: 'relative' }}>
-                      <button
-                        type="button"
-                        onClick={() => applyTheme(t)}
-                        style={savedThemeCardStyle(presetKey === `theme-${t.id}`)}
-                      >
-                        <div style={presetSwatchRowStyle}>
-                          <div style={{ ...presetSwatchStyle, background: t.sidebar_color }} />
-                          <div style={{ ...presetSwatchStyle, background: t.header_bg_color }} />
-                          <div style={{ ...presetSwatchStyle, background: t.primary_color }} />
-                          <div style={{ ...presetSwatchStyle, background: t.page_bg_color }} />
-                        </div>
-                        {t.logo_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={t.logo_url} alt="" style={savedThemeLogoStyle} />
-                        ) : (
-                          <div style={savedThemeNoLogoStyle}>NO LOGO</div>
-                        )}
-                        <div style={presetNameStyle(presetKey === `theme-${t.id}`)}>
-                          {t.name}
-                        </div>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={e => {
-                          e.stopPropagation()
-                          handleDeleteTheme(t.id, t.name)
-                        }}
-                        disabled={deletingThemeId === t.id}
-                        title={`Delete "${t.name}"`}
-                        style={themeDeleteButtonStyle}
-                        aria-label={`Delete ${t.name}`}
-                      >
-                        {deletingThemeId === t.id ? '…' : '×'}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {savedThemesOpen && savedThemes.length === 0 && (
-                <div style={savedThemesEmptyStyle}>
-                  You haven't saved any themes yet. Configure your colors and
-                  logo, then use SAVE AS NEW THEME below to create one. You
-                  can save up to {MAX_SAVED_THEMES} themes per account.
-                </div>
-              )}
-            </div>
-
             <div style={presetHintStyle}>{pickerDescription}</div>
 
             {(presetKey === 'custom' || activeSavedTheme) && (
@@ -846,6 +732,74 @@ export default function WhitelabelOnboardingPage() {
                   value={pageBg}
                   onChange={v => updateColor('pageBg', v)}
                 />
+              </div>
+            )}
+          </div>
+
+          {/* ── SAVED THEMES — v7: moved here, right above EXACT PREVIEW ── */}
+          <div style={sectionStyle}>
+            <div style={sectionLabelStyle}>▸ MY SAVED THEMES</div>
+            <button
+              type="button"
+              onClick={() => setSavedThemesOpen(o => !o)}
+              style={savedThemesToggleStyle}
+            >
+              <span>
+                {savedThemesOpen ? '▾' : '▸'} {savedThemes.length} SAVED
+              </span>
+              {savedThemes.length === 0 && (
+                <span style={savedThemesToggleHintStyle}>
+                  none yet — save your current look below
+                </span>
+              )}
+            </button>
+            {savedThemesOpen && savedThemes.length > 0 && (
+              <div style={savedThemesGridStyle}>
+                {savedThemes.map(t => (
+                  <div key={t.id} style={{ position: 'relative' }}>
+                    <button
+                      type="button"
+                      onClick={() => applyTheme(t)}
+                      style={savedThemeCardStyle(presetKey === `theme-${t.id}`)}
+                    >
+                      <div style={presetSwatchRowStyle}>
+                        <div style={{ ...presetSwatchStyle, background: t.sidebar_color }} />
+                        <div style={{ ...presetSwatchStyle, background: t.header_bg_color }} />
+                        <div style={{ ...presetSwatchStyle, background: t.primary_color }} />
+                        <div style={{ ...presetSwatchStyle, background: t.page_bg_color }} />
+                      </div>
+                      {t.logo_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={t.logo_url} alt="" style={savedThemeLogoStyle} />
+                      ) : (
+                        <div style={savedThemeNoLogoStyle}>NO LOGO</div>
+                      )}
+                      <div style={presetNameStyle(presetKey === `theme-${t.id}`)}>
+                        {t.name}
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={e => {
+                        e.stopPropagation()
+                        handleDeleteTheme(t.id, t.name)
+                      }}
+                      disabled={deletingThemeId === t.id}
+                      title={`Delete "${t.name}"`}
+                      style={themeDeleteButtonStyle}
+                      aria-label={`Delete ${t.name}`}
+                    >
+                      {deletingThemeId === t.id ? '…' : '×'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {savedThemesOpen && savedThemes.length === 0 && (
+              <div style={savedThemesEmptyStyle}>
+                You haven't saved any themes yet. Configure your colors and
+                logo, then use SAVE AS NEW THEME below to create one. You
+                can save up to {MAX_SAVED_THEMES} themes per account.
               </div>
             )}
           </div>
@@ -917,7 +871,6 @@ export default function WhitelabelOnboardingPage() {
           {/* ── EDIT-MODE THEME PERSISTENCE ACTIONS ── */}
           {editMode && (
             <>
-              {/* OVERWRITE THIS THEME — only when a saved theme is loaded */}
               {activeSavedTheme && (
                 <button
                   type="button"
@@ -1334,10 +1287,6 @@ const colorHexInputStyle: React.CSSProperties = {
   fontFamily: 'var(--font-mono)',
   outline: 'none',
   boxSizing: 'border-box',
-}
-
-const savedThemesPanelStyle: React.CSSProperties = {
-  marginBottom: 12,
 }
 
 const savedThemesToggleStyle: React.CSSProperties = {

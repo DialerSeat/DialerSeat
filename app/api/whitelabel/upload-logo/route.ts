@@ -1,29 +1,17 @@
 // app/api/whitelabel/upload-logo/route.ts
 // =============================================================================
-// UPLOAD WHITE-LABEL LOGO — relaxed validation (testing mode)
+// UPLOAD WHITE-LABEL LOGO — relaxed validation + protected cleanup
 // =============================================================================
-// POST /api/whitelabel/upload-logo
-// Body: multipart/form-data with `logo` file field
-//
-// CURRENT STATE: validation temporarily relaxed for JC's testing.
-//   - File: any image/* mime accepted (png, svg, gif, jpeg, webp, etc.)
-//   - Size: no max (storage will reject above its own limits)
-//   - Dimensions: NOT checked
-//   - SVG aspect: NOT checked
-//
-// ⚠ BACKLOG REMINDER (restore after testing):
-//   - MAX_BYTES = 200 * 1024
-//   - REQUIRED_W = 512, REQUIRED_H = 148
-//   - SVG aspect tolerance 2%
-//   - PNG/SVG only (image/png, image/svg+xml)
-// All the helpers (parsePngDimensions, parseSvgDimensions) and the
-// validation blocks are commented below for easy restoration.
-//
-// Preserved: auth gate, WL onboarding status check, storage cleanup of
-// old logos, unique-filename cache busting, public URL return shape.
-//
-// Storage path: tenants/{clerk_id}/logo-{timestamp}.{ext}
-// Returns: { url, width, height, format }
+// Push C update: cleanup now PROTECTS logo files referenced by:
+//   1. Any of the user's saved custom_themes (themes.logo_url)
+//   2. The user's current tenant (white_label_tenants.logo_url)
+// 
+// Before this fix, every new upload deleted ALL "logo-*" files in the
+// user's folder. Saved themes pointing at older files got broken —
+// stored URL still valid, file gone. UI showed placeholder image.
+// 
+// Logo size + dimension + MIME validation still relaxed for testing.
+// ⚠ BACKLOG: restore production validation (512×148, ≤200KB, PNG/SVG).
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -37,14 +25,6 @@ const supabase = createClient(
 
 const BUCKET = process.env.NEXT_PUBLIC_TENANT_ASSETS_BUCKET || 'tenant-assets'
 
-// ⚠ RESTORE LATER — production constants:
-// const MAX_BYTES = 200 * 1024
-// const REQUIRED_W = 512
-// const REQUIRED_H = 148
-// const ASPECT_TOLERANCE = 0.02
-
-// Best-effort dimension parsers — kept so the response shape is
-// unchanged for PNG/SVG. Other formats return null and that's fine.
 function parsePngDimensions(buf: Buffer): { width: number; height: number } | null {
   if (buf.length < 24) return null
   if (
@@ -73,8 +53,6 @@ function parseSvgDimensions(text: string): { width: number; height: number } | n
   return null
 }
 
-// Derive a safe extension from the mime + filename. Falls back to 'bin'
-// for unknown formats so the file still gets stored (just unrenderable).
 function deriveExt(mime: string, filename: string): string {
   const m = mime.toLowerCase()
   if (m === 'image/png') return 'png'
@@ -85,7 +63,6 @@ function deriveExt(mime: string, filename: string): string {
   if (m === 'image/avif') return 'avif'
   if (m === 'image/bmp') return 'bmp'
   if (m === 'image/x-icon' || m === 'image/vnd.microsoft.icon') return 'ico'
-  // Fall back to the original filename's extension when possible.
   const fname = (filename || '').toLowerCase()
   const dot = fname.lastIndexOf('.')
   if (dot >= 0 && dot < fname.length - 1) {
@@ -93,6 +70,23 @@ function deriveExt(mime: string, filename: string): string {
     if (ext.length > 0 && ext.length <= 5) return ext
   }
   return 'bin'
+}
+
+// Extract the final path segment (filename) from a Supabase public URL.
+// Returns null for malformed input. Used to compare URLs to storage listings.
+function filenameFromUrl(url: string | null | undefined): string | null {
+  if (!url || typeof url !== 'string') return null
+  try {
+    const u = new URL(url)
+    const parts = u.pathname.split('/')
+    const last = parts[parts.length - 1]
+    return last ? decodeURIComponent(last) : null
+  } catch {
+    // Not a valid URL — try splitting raw string as fallback
+    const parts = url.split('/')
+    const last = parts[parts.length - 1]
+    return last ? last.split('?')[0] : null
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -129,18 +123,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'empty_file' }, { status: 400 })
   }
 
-  // ⚠ RESTORE LATER — size cap:
-  // if (file.size > MAX_BYTES) {
-  //   return NextResponse.json(
-  //     { error: 'too_large', detail: `Max ${MAX_BYTES / 1024} KB. Yours is ${Math.round(file.size / 1024)} KB.` },
-  //     { status: 400 }
-  //   )
-  // }
-
   const mime = (file.type || '').toLowerCase()
 
-  // Relaxed mime gate: accept anything image/*. If the browser didn't
-  // send a mime at all (rare) we accept and let storage decide.
   if (mime && !mime.startsWith('image/')) {
     return NextResponse.json(
       { error: 'bad_format', detail: 'Image files only.' },
@@ -154,7 +138,6 @@ export async function POST(req: NextRequest) {
   const arrayBuf = await file.arrayBuffer()
   const buf = Buffer.from(arrayBuf)
 
-  // Best-effort dimension detection for PNG/SVG. Other formats: null.
   let width: number | null = null
   let height: number | null = null
   if (ext === 'png') {
@@ -165,44 +148,48 @@ export async function POST(req: NextRequest) {
       const text = buf.toString('utf-8')
       const dim = parseSvgDimensions(text)
       if (dim) { width = dim.width; height = dim.height }
-    } catch {
-      // ignore — SVG dimension extraction is best-effort only
-    }
+    } catch {}
   }
-
-  // ⚠ RESTORE LATER — dimension and aspect enforcement:
-  // if (ext === 'png') {
-  //   if (!width || !height || width !== REQUIRED_W || height !== REQUIRED_H) {
-  //     return NextResponse.json({
-  //       error: 'wrong_dimensions',
-  //       detail: `Logo must be exactly ${REQUIRED_W}×${REQUIRED_H} pixels. Yours is ${width}×${height}.`,
-  //       required: { width: REQUIRED_W, height: REQUIRED_H },
-  //       actual: { width, height },
-  //     }, { status: 400 })
-  //   }
-  // } else if (ext === 'svg') {
-  //   if (!width || !height) {
-  //     return NextResponse.json({ error: 'svg_no_dimensions', detail: 'SVG must declare viewBox or width+height.' }, { status: 400 })
-  //   }
-  //   const requiredAspect = REQUIRED_W / REQUIRED_H
-  //   const actualAspect = width / height
-  //   const diff = Math.abs(actualAspect - requiredAspect) / requiredAspect
-  //   if (diff > ASPECT_TOLERANCE) {
-  //     return NextResponse.json({
-  //       error: 'wrong_aspect',
-  //       detail: `SVG aspect ratio must be ${REQUIRED_W}:${REQUIRED_H}. Yours is ${actualAspect.toFixed(2)}:1.`,
-  //     }, { status: 400 })
-  //   }
-  // }
 
   const baseFolder = `tenants/${userId}`
 
-  // ── Cleanup: remove all prior logo files for this user ──────────────
+  // ── Cleanup: remove orphan logo files, but PROTECT files still referenced
+  //    by saved themes or the user's current tenant. This fixes the
+  //    "saved theme logos disappear" bug where every upload nuked old
+  //    files that themes were still pointing at.
   try {
+    // Build the protected-filenames set BEFORE listing storage.
+    const protectedFilenames = new Set<string>()
+
+    const { data: themes } = await supabase
+      .from('custom_themes')
+      .select('logo_url')
+      .eq('user_id', userId)
+      .not('logo_url', 'is', null)
+
+    for (const t of themes || []) {
+      const fname = filenameFromUrl(t.logo_url)
+      if (fname) protectedFilenames.add(fname)
+    }
+
+    const { data: tenant } = await supabase
+      .from('white_label_tenants')
+      .select('logo_url')
+      .eq('owner_clerk_id', userId)
+      .maybeSingle()
+
+    if (tenant?.logo_url) {
+      const fname = filenameFromUrl(tenant.logo_url)
+      if (fname) protectedFilenames.add(fname)
+    }
+
     const { data: existing } = await supabase.storage.from(BUCKET).list(baseFolder)
     if (existing && existing.length > 0) {
       const oldLogoPaths = existing
-        .filter(f => /^logo[-.]/.test(f.name) || f.name === 'logo.png' || f.name === 'logo.svg')
+        .filter(f =>
+          (/^logo[-.]/.test(f.name) || f.name === 'logo.png' || f.name === 'logo.svg')
+          && !protectedFilenames.has(f.name)
+        )
         .map(f => `${baseFolder}/${f.name}`)
       if (oldLogoPaths.length > 0) {
         await supabase.storage.from(BUCKET).remove(oldLogoPaths)
@@ -212,12 +199,9 @@ export async function POST(req: NextRequest) {
     console.warn('logo cleanup failed (non-fatal):', e)
   }
 
-  // ── Upload with unique filename ─────────────────────────────────────
   const filename = `logo-${Date.now()}.${ext}`
   const path = `${baseFolder}/${filename}`
 
-  // Pick a content-type for storage. If the browser sent a usable mime,
-  // honor it; otherwise reverse-engineer from the extension.
   const contentType = mime && mime.startsWith('image/')
     ? mime
     : (ext === 'png' ? 'image/png'
