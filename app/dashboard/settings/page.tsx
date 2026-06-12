@@ -6,30 +6,67 @@ import Link from 'next/link'
 const FUTURA = 'Futura PT, Futura, "Trebuchet MS", sans-serif'
 
 // =============================================================================
-// SETTINGS PAGE (v30 — Push B: ▶ emoji stripped + brand dropdown reordered)
+// SETTINGS PAGE (v32 — Push E: chrome tied to selected white-label tenant)
 // =============================================================================
-// v30 changes vs v29:
-//   - ▶ emoji removed from "▶ OPEN WHITELABEL EDITOR" button label and
-//     from the "▶ ADMIN ACCOUNTS CANNOT CANCEL FROM THIS PANEL" admin
-//     notice. Section markers (▸) stay — different character, different
-//     role (small triangle bullet for section headers).
-//   - Brand-view dropdown reordered: WL tenant options listed first,
-//     DialerSeat Pro (standard view) appears LAST when canSeeStandard
-//     is true. Matches JC's Q4 answer: "WL tenant as the active/default,
-//     with DialerSeat as a switchable option below."
+// v32 changes vs v31:
+//   Every hardcoded dark-mode chrome value is replaced with computed
+//   tokens derived from the active brand. Page bg was already
+//   var(--brand-sidebar-bg) (v28). Card, section, border, primary text,
+//   and muted text are now computed from --brand-sidebar-bg and
+//   --brand-on-sidebar so they shift with the tenant:
 //
-// v29 changes vs v28:
-//   - pageStyle minHeight: 'calc(100vh - 64px)' → '100vh'.
+//     Default DialerSeat (sidebar #111118 / on-sidebar #fff):
+//       card    ≈ #2a2a2f (slight lift toward white)
+//       border  ≈ #494950
+//       section = #111118 (back to sidebar depth)
+//       text    = #ffffff
+//       muted   = #8888aa
 //
-// v28 changes vs v27:
-//   - All chrome reverted from light themed back to v26 hardcoded dark
-//     values. Page outer bg mapped to var(--brand-sidebar-bg).
+//     Preset 1 (brown #3b261b / on-sidebar #fff):
+//       card    ≈ lifted brown
+//       text    = #ffffff
+//       muted   = white at 65% alpha (tenant-tinted)
 //
-// PRESERVED FROM v27:
-//   - Editor extraction: WHITELABEL EDITOR section is a single button
-//     linking to /onboarding/whitelabel (no inline editor).
-//   - var(--brand-primary) accents. All functional logic byte-for-byte.
+//     Preset 4 (light gray #e4e6eb / on-sidebar #1a1c24):
+//       card    ≈ slightly darker gray
+//       text    = #1a1c24
+//       muted   = dark at 65% alpha
+//
+//   Semantic colors stay hardcoded:
+//     - red (#8a1a1a / #ff8888) for cancel/danger flows
+//     - amber (#8a6a1a / #ffaa3e) for warnings and agent-paid badges
+//     - green (#1a6a1a / #32ff7e) for success messages
+//     - var(--brand-primary) for owner-paid badge and primary accents
+//
+//   The brand-view dropdown logic, theme dropdown options, parens removal,
+//   and seat-cancel modal are unchanged from v31. Only the chrome tokens
+//   were swapped.
+//
+// v31 (Push C): saved themes in WL view dropdown, dropdown reads
+//   brandOptions.currentValue, parens stripped from labels, theme picks
+//   call switch-view with theme_id.
+// v30 (Push B): ▶ emojis removed, WL options reordered.
+// v28: chrome reverted to hardcoded dark mode.
 // =============================================================================
+
+// ─── Themed chrome tokens — derived from ThemeProvider's --brand-* vars ───
+// These sit at the top so they're easy to find when iterating on the look.
+
+const CHROME = {
+  // A surface lifted slightly off the sidebar bg toward its contrast text.
+  // Dark sidebar (white on-sidebar) → lighter dark; light sidebar (dark
+  // on-sidebar) → slightly darker light. Works for every tenant palette.
+  surface: 'color-mix(in srgb, var(--brand-sidebar-bg) 88%, var(--brand-on-sidebar) 12%)',
+  // A deeper surface for cards-within-cards (sections inside the main card).
+  // Reverts to the sidebar bg itself so nested sections feel inset.
+  sectionBg: 'var(--brand-sidebar-bg)',
+  // A visible-but-quiet divider.
+  border: 'color-mix(in srgb, var(--brand-sidebar-bg) 75%, var(--brand-on-sidebar) 25%)',
+  // A subtler divider for row-internal dividers (less contrast than border).
+  borderSoft: 'color-mix(in srgb, var(--brand-sidebar-bg) 82%, var(--brand-on-sidebar) 18%)',
+  text: 'var(--brand-on-sidebar)',
+  muted: 'var(--brand-on-sidebar-muted)',
+}
 
 interface SubStatus {
   hasSubscription: boolean
@@ -82,10 +119,17 @@ interface AvailableTenant {
   role: 'owner' | 'member'
 }
 
+interface SavedThemeOption {
+  id: string
+  name: string
+}
+
 interface BrandOptions {
   available: AvailableTenant[]
+  savedThemes: SavedThemeOption[]
   canSeeStandard: boolean
   currentTenantId: string | null
+  currentValue: string
 }
 
 export default function SettingsPage() {
@@ -128,8 +172,10 @@ export default function SettingsPage() {
         const brandData = await brandRes.json()
         setBrandOptions({
           available: brandData.available || [],
+          savedThemes: brandData.savedThemes || [],
           canSeeStandard: !!brandData.canSeeStandard,
           currentTenantId: brandData.currentTenantId ?? null,
+          currentValue: brandData.currentValue || 'standard',
         })
       }
     } catch {
@@ -216,14 +262,22 @@ export default function SettingsPage() {
   }
 
   const handleSwitchBrand = async (value: string) => {
-    const tenant_id = value === 'standard' ? null : value
+    let body: any
+    if (value === 'standard') {
+      body = { tenant_id: null }
+    } else if (value.startsWith('theme:')) {
+      body = { theme_id: value.slice(6) }
+    } else {
+      body = { tenant_id: value }
+    }
+
     setSwitchingBrand(true)
     setError(null); setMessage(null)
     try {
       const res = await fetch('/api/whitelabel/switch-view', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tenant_id }),
+        body: JSON.stringify(body),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -254,16 +308,17 @@ export default function SettingsPage() {
 
   const hasAnySeats = (seats?.counts.totalSeats || 0) > 0
 
-  const optionCount = (brandOptions?.available.length || 0) +
-                      (brandOptions?.canSeeStandard ? 1 : 0)
+  const optionCount =
+    (brandOptions?.available.length || 0) +
+    (brandOptions?.savedThemes.length || 0) +
+    (brandOptions?.canSeeStandard ? 1 : 0)
   const showBrandToggle = optionCount >= 2
 
-  const currentBrandValue = brandOptions?.currentTenantId ?? 'standard'
+  const currentBrandValue = brandOptions?.currentValue || 'standard'
 
   const wlActive = !!sub?.wlActive
   const planLabel = planLabelFor(sub?.plan)
   const weeklyPrice = sub?.weeklyPrice ?? (sub?.hasSubscription ? 35 : 0)
-
   return (
     <div className="settings-root" style={pageStyle}>
       <style>{`
@@ -289,7 +344,7 @@ export default function SettingsPage() {
           )}
         </div>
 
-        {/* BRAND VIEW TOGGLE — v30: WL options first, DialerSeat last */}
+        {/* BRAND VIEW TOGGLE — tenants + saved themes + standard, no parens */}
         {showBrandToggle && brandOptions && (
           <div style={sectionStyle}>
             <div style={sectionHeaderStyle}>▸ WHITE-LABEL VIEW</div>
@@ -306,12 +361,17 @@ export default function SettingsPage() {
             >
               {brandOptions.available.map(t => (
                 <option key={t.id} value={t.id}>
-                  {t.brand_name}{t.role === 'owner' ? ' (your tenant)' : ''}
+                  {t.brand_name}
+                </option>
+              ))}
+              {brandOptions.savedThemes.map(t => (
+                <option key={`theme-${t.id}`} value={`theme:${t.id}`}>
+                  {t.name}
                 </option>
               ))}
               {brandOptions.canSeeStandard && (
                 <option value="standard">
-                  DialerSeat Pro (standard view)
+                  DialerSeat Pro
                 </option>
               )}
             </select>
@@ -399,12 +459,12 @@ export default function SettingsPage() {
                   <span style={seatBadgeStyle('var(--brand-primary)')}>OWNER PAID</span>
                 </div>
                 <div style={seatDetailStyle}>
-                  Paid by <strong style={{ color: '#e0e2ea' }}>{seat.ownerName}</strong> · ${(seat.amountCents / 100).toFixed(2)} / WEEK
+                  Paid by <strong style={{ color: CHROME.text }}>{seat.ownerName}</strong> · ${(seat.amountCents / 100).toFixed(2)} / WEEK
                 </div>
                 <div style={seatDetailStyle}>
                   Period: {formatDate(seat.periodStart)} → {formatDate(seat.periodEnd)}
                 </div>
-                <div style={{ ...seatDetailStyle, color: '#888a92', fontSize: 10, marginTop: 6 }}>
+                <div style={{ ...seatDetailStyle, color: CHROME.muted, fontSize: 10, marginTop: 6 }}>
                   Only the team owner can cancel this seat.
                 </div>
               </div>
@@ -417,7 +477,7 @@ export default function SettingsPage() {
                   <span style={seatBadgeStyle('#ffaa3e')}>AGENT PAID</span>
                 </div>
                 <div style={seatDetailStyle}>
-                  Campaign: <strong style={{ color: '#e0e2ea' }}>{seat.campaignName || '—'}</strong>
+                  Campaign: <strong style={{ color: CHROME.text }}>{seat.campaignName || '—'}</strong>
                 </div>
                 <div style={seatDetailStyle}>
                   Owner: {seat.ownerName} · $35.00 / WEEK
@@ -437,8 +497,8 @@ export default function SettingsPage() {
             ))}
 
             <div style={{
-              fontSize: 10, color: '#888a92', letterSpacing: 1, lineHeight: 1.5,
-              marginTop: 12, paddingTop: 12, borderTop: '1px solid #2a2c34',
+              fontSize: 10, color: CHROME.muted, letterSpacing: 1, lineHeight: 1.5,
+              marginTop: 12, paddingTop: 12, borderTop: `1px solid ${CHROME.borderSoft}`,
             }}>
               Canceling a seat ends campaign access only. You remain on the team and can rejoin a campaign anytime. Refunds for partial periods are only available via dispute through your bank.
             </div>
@@ -541,21 +601,21 @@ export default function SettingsPage() {
           <div
             onClick={e => e.stopPropagation()}
             style={{
-              background: '#1a1c24',
-              border: '1px solid #2a2c34',
+              background: CHROME.surface,
+              border: `1px solid ${CHROME.border}`,
               borderTop: '3px solid #8a1a1a',
               borderRadius: 4, padding: 28,
               maxWidth: 460, width: '100%', fontFamily: FUTURA,
-              color: '#e0e2ea',
+              color: CHROME.text,
             }}
           >
             <div style={{
               fontSize: 12, fontWeight: 700, letterSpacing: 4, color: '#ff8888', marginBottom: 14,
             }}>CANCEL SEAT ACCESS</div>
-            <p style={{ fontSize: 13, lineHeight: 1.6, color: '#e0e2ea', margin: '0 0 14px 0' }}>
+            <p style={{ fontSize: 13, lineHeight: 1.6, color: CHROME.text, margin: '0 0 14px 0' }}>
               Cancel your access to <strong>{seatConfirmTarget.campaignName || 'this campaign'}</strong> on team <strong>{seatConfirmTarget.teamName}</strong>?
             </p>
-            <p style={{ fontSize: 12, lineHeight: 1.6, color: '#888a92', margin: '0 0 16px 0' }}>
+            <p style={{ fontSize: 12, lineHeight: 1.6, color: CHROME.muted, margin: '0 0 16px 0' }}>
               You stay on the team but lose dialing access to this campaign. Your $35/wk for this seat stops at period close. Refunds for partial periods are only available via dispute through your bank.
             </p>
             <div style={typePromptStyle}>
@@ -626,7 +686,7 @@ function tierStatusColor(sub: SubStatus | null): string {
   return '#ff8888'
 }
 
-// ─── Styles (v28 dark mode, unchanged in v30) ────────────────────────
+// ─── Styles (v32 — themed chrome via CHROME tokens) ──────────────────
 
 const pageStyle: React.CSSProperties = {
   flex: 1, minHeight: '100vh',
@@ -637,11 +697,11 @@ const pageStyle: React.CSSProperties = {
 
 const cardStyle: React.CSSProperties = {
   width: '100%', maxWidth: 640,
-  background: '#1a1c24',
-  border: '1px solid #2a2c34',
+  background: CHROME.surface,
+  border: `1px solid ${CHROME.border}`,
   borderTop: '3px solid var(--brand-primary)',
   borderRadius: 4, padding: 32,
-  color: '#e0e2ea',
+  color: CHROME.text,
   fontFamily: FUTURA, boxSizing: 'border-box',
 }
 
@@ -652,13 +712,13 @@ const titleStyle: React.CSSProperties = {
 
 const subtitleStyle: React.CSSProperties = {
   fontSize: 12, letterSpacing: 1,
-  color: '#888a92',
+  color: CHROME.muted,
   marginBottom: 28, wordBreak: 'break-word',
 }
 
 const sectionStyle: React.CSSProperties = {
-  background: '#0d0e14',
-  border: '1px solid #2a2c34',
+  background: CHROME.sectionBg,
+  border: `1px solid ${CHROME.border}`,
   borderLeft: '3px solid var(--brand-primary)',
   borderRadius: 3,
   padding: 16, marginBottom: 20,
@@ -666,36 +726,36 @@ const sectionStyle: React.CSSProperties = {
 
 const sectionHeaderStyle: React.CSSProperties = {
   fontSize: 9, letterSpacing: 3,
-  color: '#888a92',
+  color: CHROME.muted,
   marginBottom: 14, fontWeight: 700,
 }
 
 const rowStyle: React.CSSProperties = {
   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
   padding: '8px 0',
-  borderBottom: '1px solid #2a2c34',
+  borderBottom: `1px solid ${CHROME.borderSoft}`,
   gap: 12, flexWrap: 'wrap',
 }
 
 const labelStyle: React.CSSProperties = {
-  fontSize: 10, letterSpacing: 2, color: '#888a92',
+  fontSize: 10, letterSpacing: 2, color: CHROME.muted,
 }
 const valueStyle: React.CSSProperties = {
   fontSize: 12, letterSpacing: 1,
-  color: '#e0e2ea', fontWeight: 700,
+  color: CHROME.text, fontWeight: 700,
 }
 const mutedStyle: React.CSSProperties = {
-  fontSize: 12, color: '#888a92', letterSpacing: 1,
+  fontSize: 12, color: CHROME.muted, letterSpacing: 1,
 }
 
 function brandSelectStyle(disabled: boolean): React.CSSProperties {
   return {
     width: '100%',
     padding: '10px 12px',
-    background: '#0d0e14',
-    border: '1px solid #2a2c34',
+    background: CHROME.sectionBg,
+    border: `1px solid ${CHROME.border}`,
     borderRadius: 3,
-    color: '#e0e2ea',
+    color: CHROME.text,
     fontSize: 13,
     fontFamily: FUTURA,
     outline: 'none',
@@ -707,7 +767,7 @@ const editorButtonStyle: React.CSSProperties = {
   display: 'block',
   width: '100%',
   padding: 14,
-  background: '#1a1c24',
+  background: CHROME.surface,
   borderTop: '3px solid var(--brand-primary)',
   border: 'none',
   borderRadius: 4,
@@ -724,7 +784,7 @@ const editorButtonStyle: React.CSSProperties = {
 
 const dangerButtonStyle: React.CSSProperties = {
   width: '100%', padding: 14,
-  background: '#1a1c24',
+  background: CHROME.surface,
   border: 'none',
   borderTop: '3px solid #8a1a1a',
   borderRadius: 4, color: '#ff8888',
@@ -741,7 +801,7 @@ const miniDangerButtonStyle: React.CSSProperties = {
 
 const secondaryButtonStyle: React.CSSProperties = {
   flex: 1, padding: 14,
-  background: '#1a1c24',
+  background: CHROME.surface,
   border: 'none',
   borderTop: '3px solid var(--brand-primary)',
   borderRadius: 4, color: 'var(--brand-primary)',
@@ -769,7 +829,7 @@ const typePromptStyle: React.CSSProperties = {
 
 const typeInputStyle: React.CSSProperties = {
   width: '100%', padding: '10px 12px',
-  background: '#0d0e14',
+  background: CHROME.sectionBg,
   border: '1px solid #8a1a1a',
   borderRadius: 3,
   fontFamily: 'monospace', fontSize: 13, color: '#ff8888',
@@ -823,7 +883,7 @@ const resubscribeHeaderStyle: React.CSSProperties = {
 
 const resubscribeTextStyle: React.CSSProperties = {
   fontSize: 12, lineHeight: 1.6,
-  color: '#e0e2ea',
+  color: CHROME.text,
   marginBottom: 14,
 }
 
@@ -839,7 +899,7 @@ const resubscribeButtonStyle: React.CSSProperties = {
 
 function seatRowStyle(borderColor: string): React.CSSProperties {
   return {
-    background: '#1a1c24',
+    background: CHROME.surface,
     border: `1px solid ${borderColor}`,
     borderLeft: `3px solid ${borderColor}`, borderRadius: 3,
     padding: 14, marginBottom: 10,
@@ -853,7 +913,7 @@ const seatHeaderStyle: React.CSSProperties = {
 
 const seatTeamStyle: React.CSSProperties = {
   fontSize: 13, fontWeight: 700, letterSpacing: 1,
-  color: '#e0e2ea',
+  color: CHROME.text,
 }
 
 function seatBadgeStyle(color: string): React.CSSProperties {
@@ -866,6 +926,6 @@ function seatBadgeStyle(color: string): React.CSSProperties {
 
 const seatDetailStyle: React.CSSProperties = {
   fontSize: 11,
-  color: '#888a92',
+  color: CHROME.muted,
   letterSpacing: 0.5, lineHeight: 1.5, marginTop: 4,
 }
