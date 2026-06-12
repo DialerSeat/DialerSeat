@@ -17,6 +17,13 @@ import type { AppDefinition } from './types'
 //   2. Import lazily here
 //   3. Add an APP entry below
 //   That's it — the desktop picks it up automatically.
+//   FOR A DOWNLOADABLE (App Store) APP: also add its id to STORE_APP_IDS in
+//   desktopServices.tsx — it then hides from the desktop until downloaded.
+//
+// v21 CHANGES:
+//   - Added `appstore` — the App Store (Desktop v24). BASE app: removable
+//     from the homescreen, never uninstallable, permanently pinned in the
+//     Start menu.
 //
 // v20 CHANGES:
 //   - Removed `view-landing` — replaced by a system-tray icon in Taskbar
@@ -64,6 +71,11 @@ const BrowserApp = dynamic(() => import('./apps/Browser'), {
   loading: () => <AppLoading />,
   ssr: false,
 })
+const AppStoreApp = dynamic(() => import('./apps/AppStore'), {
+  loading: () => <AppLoading />,
+  ssr: false,
+})
+
 function AppLoading() {
   return (
     <div style={{
@@ -144,35 +156,48 @@ export const APPS: AppDefinition[] = [
     defaultSize: { width: 1000, height: 700 },
   },
   {
-  id: 'gmail',
-  name: 'Gmail',
-  icon: '✉',
-  iconBg: 'linear-gradient(135deg, #ea4335, #b8281a)',
-  description: 'Read, send, and manage your DialerSeat business inbox',
-  Component: GmailApp,
-  defaultSize: { width: 1100, height: 720 },
-},
-{
-  id: 'browser',
-  name: 'Browser',
-  icon: '🌐',
-  iconBg: 'linear-gradient(135deg, #5dd5d5, #2a8a8a)',
-  description: 'Open web pages (embeds where allowed, opens in tab otherwise)',
-  Component: BrowserApp,
-  defaultSize: { width: 1024, height: 720 },
-},
-{
-  // Not shown as a desktop icon by default — opened from the tray/StartMenu.
-  // If you WANT a desktop icon too, leave it here; if not, it's harmless as
-  // the tray/StartMenu open it by id regardless.
-  id: 'clerk-profile',
-  name: 'Account',
-  icon: '👤',
-  iconBg: 'linear-gradient(135deg, #b478ff, #6a30d0)',
-  description: 'Manage your DialerSeat account',
-  Component: ClerkProfileApp,
-  defaultSize: { width: 920, height: 720 },
-},
+    id: 'gmail',
+    name: 'Gmail',
+    icon: '✉',
+    iconBg: 'linear-gradient(135deg, #ea4335, #b8281a)',
+    description: 'Read, send, and manage your DialerSeat business inbox',
+    Component: GmailApp,
+    defaultSize: { width: 1100, height: 720 },
+  },
+  {
+    id: 'browser',
+    name: 'Browser',
+    icon: '🌐',
+    iconBg: 'linear-gradient(135deg, #5dd5d5, #2a8a8a)',
+    description: 'Open web pages (embeds where allowed, opens in tab otherwise)',
+    Component: BrowserApp,
+    defaultSize: { width: 1024, height: 720 },
+  },
+  {
+    // Not shown as a desktop icon by default — opened from the tray/StartMenu.
+    // If you WANT a desktop icon too, leave it here; if not, it's harmless as
+    // the tray/StartMenu open it by id regardless.
+    // TIP (v24): you can now right-click its icon → Remove from desktop to
+    // hide it from the homescreen while keeping it launchable from Start.
+    id: 'clerk-profile',
+    name: 'Account',
+    icon: '👤',
+    iconBg: 'linear-gradient(135deg, #b478ff, #6a30d0)',
+    description: 'Manage your DialerSeat account',
+    Component: ClerkProfileApp,
+    defaultSize: { width: 920, height: 720 },
+  },
+  {
+    // BASE app — removable from the homescreen, never uninstallable. The
+    // Start menu pins it permanently so it can always re-add hidden apps.
+    id: 'appstore',
+    name: 'App Store',
+    icon: '🛍️',
+    iconBg: 'linear-gradient(135deg, #2a4a8a, #4a9eff)',
+    description: 'Browse, download, and manage desktop apps',
+    Component: AppStoreApp,
+    defaultSize: { width: 880, height: 620 },
+  },
 ]
 
 export function getApp(id: string): AppDefinition | undefined {

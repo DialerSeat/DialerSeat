@@ -1,31 +1,51 @@
 'use client'
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { APPS, getApp } from './registry'
 import AppWindow from './AppWindow'
 import Taskbar from './Taskbar'
 import StartMenu from './StartMenu'
 import ContextMenu, { type ContextMenuItem } from './ContextMenu'
+import { DesktopServicesContext, isBaseApp, type DesktopServices } from './desktopServices'
 import type { AppId, WindowState, RecentApp } from './types'
 
 // =============================================================================
 // DESKTOP — root shell component
 // =============================================================================
-// v23 changes vs v22:
-// - DRAGGABLE ICONS (desktop only): icons are now absolutely positioned and
-//   free-drag via pointer events with a 5px threshold so click/double-click
-//   behavior is untouched. Positions persist per-admin to Supabase
-//   (admin_desktop_prefs, migration 012) through /api/admin/desktop-prefs,
-//   debounced 800ms, with a localStorage cache for instant paint before the
-//   server round-trip. Mobile keeps the v22 tap-to-open grid — no dragging.
-// - CHANGEABLE BACKGROUND: right-click desktop → Personalize opens a dialog
-//   with 6 gradient presets, a solid color picker, an image URL field, and a
-//   RESTORE DEFAULT button (null = the original Vista-blue gradient).
-//   Persisted alongside icon positions.
-// - Right-click desktop menu: Personalize is now live (was disabled), and a
-//   new "Reset icon layout" item clears saved positions back to the grid.
-// - All v22 behavior preserved: window persistence in localStorage, analytics
-//   boot window, safe-area handling, show desktop peek, context menus.
+// v24.1 changes vs v24:
+// - OPEN-DESKTOP-APP LISTENER (repair): StartMenu has dispatched an
+//   `open-desktop-app` CustomEvent since v23 for the Account window, and its
+//   comments claimed Desktop listens for it — no Desktop version ever did,
+//   so Manage Account was dead. The listener now exists; any
+//   `window.dispatchEvent(new CustomEvent('open-desktop-app', { detail:
+//   { appId } }))` opens that app.
+// - Wired against the real file set: AppWindow v22.1, registry v21 (with
+//   'appstore'), StartMenu v24 (installedApps + onOpenPersonalize props),
+//   types v2.
+//
+// v24 changes vs v23:
+// - GRID SNAPPING: icons live on an invisible Windows-style grid
+//   (column-major fill, top-to-bottom then left-to-right). Dragging shows a
+//   free-floating ghost; on release the icon snaps to the nearest cell. Cells
+//   are exclusive — dropping on an occupied cell bumps the icon to the
+//   nearest free cell, so icons can never overlap. The first drag freezes the
+//   whole current layout into saved positions so other icons don't reflow.
+// - DRAG-AND-DROP WALLPAPER: drop any image file onto the desktop to set it
+//   as the background. Uploads to tenant-assets via
+//   /api/admin/desktop-prefs/wallpaper, saves the public URL into prefs.
+// - OG WALLPAPER PRESETS: Personalize presets are real wallpaper images
+//   (Windows 7 Harmony, XP Bliss) plus the Aero gradient default. Hotlinked
+//   URLs for now — mirror into /public/wallpapers/ and swap (see BG_PRESETS).
+// - APP STORE SYSTEM: BASE apps (everything not in STORE_APP_IDS, including
+//   the App Store) are always installed, hideable, never uninstallable.
+//   STORE apps are downloadable/uninstallable. installedApps + hiddenApps
+//   persist in prefs (migration 013, route v2). Desktop renders
+//   installed-and-not-hidden apps. Icon right-click gains "Remove from
+//   desktop" and (store apps) "Uninstall". DesktopServicesContext exposes
+//   install/uninstall/hide/show/open to apps in windows (App Store uses it).
+// - All v22/v23 behavior preserved: window persistence, analytics boot,
+//   safe-area handling, show-desktop peek, context menus, prefs LS cache +
+//   debounced Supabase save.
 // =============================================================================
 
 const MOBILE_BREAKPOINT = 768
@@ -33,19 +53,55 @@ const TASKBAR_VISIBLE_HEIGHT = 48
 const LS_KEY = 'ds:admin-desktop:v1'
 const PREFS_LS_KEY = 'ds:admin-desktop:prefs:v1'
 
-// ── ICON LAYOUT ──────────────────────────────────────────────────────────────
-const ICON_W = 96          // icon hitbox width (desktop)
-const ICON_H = 92          // icon hitbox height (desktop)
-const ICON_CELL_W = 110    // default grid cell width
-const ICON_CELL_H = 106    // default grid cell height
-const ICON_PAD = 20        // default grid origin padding
-const ICONS_PER_ROW = 4    // default grid columns (mirrors v22 maxWidth 540 look)
+// ── ICON GRID (the invisible Windows grid) ──────────────────────────────────
+const ICON_W = 96
+const ICON_H = 92
+const CELL_W = 110
+const CELL_H = 106
+const GRID_X = 20   // grid origin
+const GRID_Y = 20
 
-function defaultIconPos(index: number): { x: number; y: number } {
+function gridDims(vw: number, vh: number, taskbarH: number) {
   return {
-    x: ICON_PAD + (index % ICONS_PER_ROW) * ICON_CELL_W,
-    y: ICON_PAD + Math.floor(index / ICONS_PER_ROW) * ICON_CELL_H,
+    cols: Math.max(1, Math.floor((vw - GRID_X) / CELL_W)),
+    rows: Math.max(1, Math.floor((vh - taskbarH - GRID_Y) / CELL_H)),
   }
+}
+
+function cellToXY(c: number, r: number) {
+  return { x: GRID_X + c * CELL_W, y: GRID_Y + r * CELL_H }
+}
+
+function xyToCell(x: number, y: number) {
+  return {
+    c: Math.round((x - GRID_X) / CELL_W),
+    r: Math.round((y - GRID_Y) / CELL_H),
+  }
+}
+
+const cellKey = (c: number, r: number) => `${c},${r}`
+
+// Nearest unoccupied cell to (c0, r0), searching outward ring by ring.
+// Falls back to (c0, r0) if the entire grid is full (overlap as last resort).
+function nearestFreeCell(
+  c0: number, r0: number,
+  cols: number, rows: number,
+  occupied: Set<string>
+): { c: number; r: number } {
+  const maxRadius = Math.max(cols, rows)
+  for (let radius = 0; radius <= maxRadius; radius++) {
+    let best: { c: number; r: number; d: number } | null = null
+    for (let c = Math.max(0, c0 - radius); c <= Math.min(cols - 1, c0 + radius); c++) {
+      for (let r = Math.max(0, r0 - radius); r <= Math.min(rows - 1, r0 + radius); r++) {
+        if (Math.max(Math.abs(c - c0), Math.abs(r - r0)) !== radius) continue
+        if (occupied.has(cellKey(c, r))) continue
+        const d = (c - c0) ** 2 + (r - r0) ** 2
+        if (!best || d < best.d) best = { c, r, d }
+      }
+    }
+    if (best) return { c: best.c, r: best.r }
+  }
+  return { c: c0, r: r0 }
 }
 
 // ── BACKGROUNDS ──────────────────────────────────────────────────────────────
@@ -57,43 +113,25 @@ const DEFAULT_BG_CSS = `
   linear-gradient(180deg, #1a3a6a 0%, #4a7ab0 50%, #82a6cf 100%)
 `
 
+// OG wallpapers. The first two URLs are the ones JC supplied — hotlinks can
+// break or rate-limit, so the durable setup is: download each image, drop it
+// in /public/wallpapers/, and swap the url to '/wallpapers/<file>.jpg'.
+// To add more OGs (Vista Aurora, Win 8, Win 10 Hero...), save the file to
+// /public/wallpapers/ and add an entry here — nothing else needed.
 const BG_PRESETS: { id: string; name: string; css: string }[] = [
-  { id: 'vista-blue', name: 'VISTA BLUE', css: DEFAULT_BG_CSS },
+  { id: 'aero', name: 'AERO (DEFAULT)', css: DEFAULT_BG_CSS },
   {
-    id: 'midnight', name: 'MIDNIGHT', css: `
-      radial-gradient(ellipse at 30% 20%, rgba(126,192,255,0.10) 0%, transparent 50%),
-      radial-gradient(ellipse at 70% 80%, rgba(255,255,255,0.05) 0%, transparent 60%),
-      linear-gradient(180deg, #0d0d16 0%, #1a1a2e 55%, #2a2a44 100%)
-    `,
+    id: 'win7',
+    name: 'WINDOWS 7',
+    css: `#1a3a6a url("https://wallpapers.com/images/hd/windows-7-background-imfecqv6cnsicbx4.jpg") center / cover no-repeat`,
   },
   {
-    id: 'emerald', name: 'EMERALD', css: `
-      radial-gradient(ellipse at 30% 20%, rgba(255,255,255,0.12) 0%, transparent 50%),
-      radial-gradient(ellipse at 70% 80%, rgba(255,255,255,0.06) 0%, transparent 60%),
-      linear-gradient(180deg, #0e2e1a 0%, #1a6a3a 55%, #7ec9a0 100%)
-    `,
+    id: 'bliss',
+    name: 'XP BLISS',
+    css: `#3a7a3a url("https://i.redd.it/3ma6nhepxbb81.jpg") center / cover no-repeat`,
   },
-  {
-    id: 'royal', name: 'ROYAL', css: `
-      radial-gradient(ellipse at 30% 20%, rgba(255,255,255,0.13) 0%, transparent 50%),
-      radial-gradient(ellipse at 70% 80%, rgba(255,255,255,0.07) 0%, transparent 60%),
-      linear-gradient(180deg, #1e1038 0%, #4a2a8a 55%, #9a82cf 100%)
-    `,
-  },
-  {
-    id: 'sunset', name: 'SUNSET', css: `
-      radial-gradient(ellipse at 30% 20%, rgba(255,255,255,0.14) 0%, transparent 50%),
-      radial-gradient(ellipse at 70% 80%, rgba(255,200,120,0.10) 0%, transparent 60%),
-      linear-gradient(180deg, #2a1a3e 0%, #8a3a4a 55%, #e8a05a 100%)
-    `,
-  },
-  {
-    id: 'graphite', name: 'GRAPHITE', css: `
-      radial-gradient(ellipse at 30% 20%, rgba(255,255,255,0.10) 0%, transparent 50%),
-      radial-gradient(ellipse at 70% 80%, rgba(255,255,255,0.05) 0%, transparent 60%),
-      linear-gradient(180deg, #18181c 0%, #3a3a42 55%, #6a6a74 100%)
-    `,
-  },
+  // { id: 'vista', name: 'VISTA AURORA', css: `#0d2a1a url("/wallpapers/vista-aurora.jpg") center / cover no-repeat` },
+  // { id: 'win10', name: 'WIN 10 HERO', css: `#0a2a4a url("/wallpapers/win10-hero.jpg") center / cover no-repeat` },
 ]
 
 function bgCssFor(bg: BgSetting | null): string {
@@ -138,6 +176,8 @@ function savePersistedState(state: PersistedState): void {
 interface CachedPrefs {
   iconPositions: Record<string, { x: number; y: number }>
   background: BgSetting | null
+  installedApps: string[]
+  hiddenApps: string[]
 }
 
 function loadCachedPrefs(): CachedPrefs | null {
@@ -145,11 +185,13 @@ function loadCachedPrefs(): CachedPrefs | null {
   try {
     const raw = localStorage.getItem(PREFS_LS_KEY)
     if (!raw) return null
-    const parsed = JSON.parse(raw) as CachedPrefs
+    const parsed = JSON.parse(raw) as Partial<CachedPrefs>
     return {
       iconPositions: parsed.iconPositions && typeof parsed.iconPositions === 'object'
         ? parsed.iconPositions : {},
       background: parsed.background ?? null,
+      installedApps: Array.isArray(parsed.installedApps) ? parsed.installedApps : [],
+      hiddenApps: Array.isArray(parsed.hiddenApps) ? parsed.hiddenApps : [],
     }
   } catch {
     return null
@@ -183,21 +225,49 @@ export default function Desktop() {
   const [isMobile, setIsMobile] = useState(false)
   const [bootedAnalytics, setBootedAnalytics] = useState((initial?.windows.length ?? 0) > 0)
   const [safeAreaBottom, setSafeAreaBottom] = useState(0)
+  const [viewport, setViewport] = useState({
+    w: typeof window !== 'undefined' ? window.innerWidth : 1280,
+    h: typeof window !== 'undefined' ? window.innerHeight : 800,
+  })
 
-  // ── v23: prefs state (icon positions + background) ───────────────────────
+  // ── prefs state ──────────────────────────────────────────────────────────
   const [iconPositions, setIconPositions] = useState<Record<string, { x: number; y: number }>>(
     initialPrefs?.iconPositions ?? {}
   )
   const [background, setBackground] = useState<BgSetting | null>(initialPrefs?.background ?? null)
+  const [installedApps, setInstalledApps] = useState<string[]>(initialPrefs?.installedApps ?? [])
+  const [hiddenApps, setHiddenApps] = useState<string[]>(initialPrefs?.hiddenApps ?? [])
   const [prefsLoaded, setPrefsLoaded] = useState(false)
   const [personalizeOpen, setPersonalizeOpen] = useState(false)
   const prefsSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // ── drag + wallpaper transient state ─────────────────────────────────────
+  const [dragGhost, setDragGhost] = useState<{ appId: AppId; x: number; y: number } | null>(null)
+  const [wallpaperBusy, setWallpaperBusy] = useState(false)
+  const [wallpaperError, setWallpaperError] = useState<string | null>(null)
+
   const TASKBAR_HEIGHT = TASKBAR_VISIBLE_HEIGHT + safeAreaBottom
 
-  // ── MOBILE DETECTION ─────────────────────────────────────────────────────
+  // ── APP VISIBILITY ───────────────────────────────────────────────────────
+  const isInstalled = useCallback(
+    (id: AppId) => isBaseApp(id) || installedApps.includes(id),
+    [installedApps]
+  )
+  const visibleApps = useMemo(
+    () => APPS.filter(a => isInstalled(a.id) && !hiddenApps.includes(a.id)),
+    [isInstalled, hiddenApps]
+  )
+  const installedAppMetas = useMemo(
+    () => APPS.filter(a => isInstalled(a.id)),
+    [isInstalled]
+  )
+
+  // ── MOBILE DETECTION + VIEWPORT ──────────────────────────────────────────
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
+    const check = () => {
+      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
+      setViewport({ w: window.innerWidth, h: window.innerHeight })
+    }
     check()
     window.addEventListener('resize', check)
     window.addEventListener('orientationchange', check)
@@ -232,7 +302,7 @@ export default function Desktop() {
     savePersistedState({ windows, focusedId, topZ })
   }, [windows, focusedId, topZ])
 
-  // ── v23: LOAD PREFS FROM SUPABASE (LS cache already painted) ─────────────
+  // ── LOAD PREFS FROM SUPABASE (LS cache already painted) ──────────────────
   useEffect(() => {
     let cancelled = false
     fetch('/api/admin/desktop-prefs')
@@ -242,6 +312,8 @@ export default function Desktop() {
         if (d.success && d.prefs) {
           setIconPositions(d.prefs.iconPositions || {})
           setBackground(d.prefs.background ?? null)
+          setInstalledApps(Array.isArray(d.prefs.installedApps) ? d.prefs.installedApps : [])
+          setHiddenApps(Array.isArray(d.prefs.hiddenApps) ? d.prefs.hiddenApps : [])
         }
         setPrefsLoaded(true)
       })
@@ -251,39 +323,152 @@ export default function Desktop() {
     return () => { cancelled = true }
   }, [])
 
-  // ── v23: PERSIST PREFS (LS immediately, Supabase debounced 800ms) ────────
+  // ── PERSIST PREFS (LS immediately, Supabase debounced 800ms) ─────────────
   useEffect(() => {
     if (!prefsLoaded) return
     try {
-      localStorage.setItem(PREFS_LS_KEY, JSON.stringify({ iconPositions, background }))
+      localStorage.setItem(PREFS_LS_KEY, JSON.stringify({
+        iconPositions, background, installedApps, hiddenApps,
+      }))
     } catch {}
     if (prefsSaveTimer.current) clearTimeout(prefsSaveTimer.current)
     prefsSaveTimer.current = setTimeout(() => {
       fetch('/api/admin/desktop-prefs', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ iconPositions, background }),
+        body: JSON.stringify({ iconPositions, background, installedApps, hiddenApps }),
       }).catch(() => {})
     }, 800)
     return () => {
       if (prefsSaveTimer.current) clearTimeout(prefsSaveTimer.current)
     }
-  }, [iconPositions, background, prefsLoaded])
+  }, [iconPositions, background, installedApps, hiddenApps, prefsLoaded])
 
+  // ── GRID LAYOUT ──────────────────────────────────────────────────────────
+  // Pass 1: icons with saved positions snap to their cell (collisions bumped
+  // to nearest free). Pass 2: unsaved icons fill column-major (top-to-bottom,
+  // left-to-right) into remaining free cells — Windows-style.
+  const desktopLayout = useMemo(() => {
+    const { cols, rows } = gridDims(viewport.w, viewport.h, TASKBAR_HEIGHT)
+    const occupied = new Set<string>()
+    const layout: Record<string, { x: number; y: number }> = {}
+
+    for (const app of visibleApps) {
+      const saved = iconPositions[app.id]
+      if (!saved) continue
+      let { c, r } = xyToCell(saved.x, saved.y)
+      c = Math.max(0, Math.min(cols - 1, c))
+      r = Math.max(0, Math.min(rows - 1, r))
+      if (occupied.has(cellKey(c, r))) {
+        const nf = nearestFreeCell(c, r, cols, rows, occupied)
+        c = nf.c; r = nf.r
+      }
+      occupied.add(cellKey(c, r))
+      layout[app.id] = cellToXY(c, r)
+    }
+
+    for (const app of visibleApps) {
+      if (layout[app.id]) continue
+      let placed = false
+      for (let c = 0; c < cols && !placed; c++) {
+        for (let r = 0; r < rows && !placed; r++) {
+          if (occupied.has(cellKey(c, r))) continue
+          occupied.add(cellKey(c, r))
+          layout[app.id] = cellToXY(c, r)
+          placed = true
+        }
+      }
+      if (!placed) layout[app.id] = cellToXY(0, 0) // grid full fallback
+    }
+
+    return layout
+  }, [visibleApps, iconPositions, viewport, TASKBAR_HEIGHT])
+
+  const layoutRef = useRef(desktopLayout)
+  layoutRef.current = desktopLayout
+
+  // During drag: free-floating ghost, pixel-clamped to the desktop area
   const handleIconDrag = useCallback((appId: AppId, x: number, y: number) => {
-    const maxX = Math.max(0, window.innerWidth - ICON_W)
-    const maxY = Math.max(0, window.innerHeight - TASKBAR_HEIGHT - ICON_H)
-    setIconPositions(prev => ({
-      ...prev,
-      [appId]: {
-        x: Math.max(0, Math.min(x, maxX)),
-        y: Math.max(0, Math.min(y, maxY)),
-      },
-    }))
-  }, [TASKBAR_HEIGHT])
+    const maxX = Math.max(0, viewport.w - ICON_W)
+    const maxY = Math.max(0, viewport.h - TASKBAR_HEIGHT - ICON_H)
+    setDragGhost({
+      appId,
+      x: Math.max(0, Math.min(x, maxX)),
+      y: Math.max(0, Math.min(y, maxY)),
+    })
+  }, [viewport, TASKBAR_HEIGHT])
+
+  // On release: snap to nearest free cell, freeze the whole layout so nothing
+  // else reflows, preserve saved spots of hidden icons.
+  const handleIconDragEnd = useCallback((appId: AppId, dropX: number, dropY: number) => {
+    const { cols, rows } = gridDims(viewport.w, viewport.h, TASKBAR_HEIGHT)
+    const frozen: Record<string, { x: number; y: number }> = {}
+    const occupied = new Set<string>()
+
+    for (const [id, pos] of Object.entries(layoutRef.current)) {
+      if (id === appId) continue
+      frozen[id] = pos
+      const { c, r } = xyToCell(pos.x, pos.y)
+      occupied.add(cellKey(c, r))
+    }
+
+    let { c, r } = xyToCell(dropX, dropY)
+    c = Math.max(0, Math.min(cols - 1, c))
+    r = Math.max(0, Math.min(rows - 1, r))
+    if (occupied.has(cellKey(c, r))) {
+      const nf = nearestFreeCell(c, r, cols, rows, occupied)
+      c = nf.c; r = nf.r
+    }
+    frozen[appId] = cellToXY(c, r)
+
+    // Keep saved positions of icons not currently on the desktop (hidden apps)
+    setIconPositions(prev => {
+      const next: Record<string, { x: number; y: number }> = { ...frozen }
+      for (const [id, pos] of Object.entries(prev)) {
+        if (!(id in next) && id !== appId) next[id] = pos
+      }
+      return next
+    })
+    setDragGhost(null)
+  }, [viewport, TASKBAR_HEIGHT])
 
   const resetIconLayout = useCallback(() => {
     setIconPositions({})
+  }, [])
+
+  // ── APP STORE SERVICES ───────────────────────────────────────────────────
+  const installApp = useCallback((id: AppId) => {
+    if (isBaseApp(id)) return // base apps are always installed
+    setInstalledApps(prev => prev.includes(id) ? prev : [...prev, id])
+    setHiddenApps(prev => prev.filter(h => h !== id)) // land on the desktop
+  }, [])
+
+  const uninstallApp = useCallback((id: AppId) => {
+    if (isBaseApp(id)) return // base apps (incl. App Store) cannot be uninstalled
+    setInstalledApps(prev => prev.filter(a => a !== id))
+    setHiddenApps(prev => prev.filter(h => h !== id))
+    setIconPositions(prev => {
+      if (!(id in prev)) return prev
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
+    // Close any open windows of the uninstalled app
+    setWindows(prev => {
+      const next = prev.filter(w => w.appId !== id)
+      if (next.length !== prev.length) {
+        setFocusedId(f => next.some(w => w.id === f) ? f : (next[next.length - 1]?.id ?? null))
+      }
+      return next
+    })
+  }, [])
+
+  const removeFromDesktop = useCallback((id: AppId) => {
+    setHiddenApps(prev => prev.includes(id) ? prev : [...prev, id])
+  }, [])
+
+  const addToDesktop = useCallback((id: AppId) => {
+    setHiddenApps(prev => prev.filter(h => h !== id))
   }, [])
 
   const openApp = useCallback((appId: AppId, hint?: PositionHint) => {
@@ -345,6 +530,31 @@ export default function Desktop() {
       return [...prev, newWindow]
     })
   }, [topZ, TASKBAR_HEIGHT])
+
+  // ── v24.1: OPEN-DESKTOP-APP EVENT LISTENER (repair) ──────────────────────
+  // StartMenu (and potentially other components) dispatch
+  // `open-desktop-app` with { detail: { appId } }. This listener was
+  // documented in StartMenu v23 but never implemented — now it is.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      if (detail?.appId && getApp(detail.appId)) {
+        openApp(detail.appId as AppId)
+      }
+    }
+    window.addEventListener('open-desktop-app', handler)
+    return () => window.removeEventListener('open-desktop-app', handler)
+  }, [openApp])
+
+  const desktopServices: DesktopServices = useMemo(() => ({
+    installedAppIds: installedApps,
+    hiddenAppIds: hiddenApps,
+    installApp,
+    uninstallApp,
+    addToDesktop,
+    removeFromDesktop,
+    openApp,
+  }), [installedApps, hiddenApps, installApp, uninstallApp, addToDesktop, removeFromDesktop, openApp])
 
   useEffect(() => {
     if (bootedAnalytics) return
@@ -468,6 +678,41 @@ export default function Desktop() {
     })
   }, [focusedId, topZ])
 
+  // ── WALLPAPER DRAG-AND-DROP ──────────────────────────────────────────────
+  const onRootDragOver = (e: React.DragEvent) => {
+    if (e.dataTransfer?.types?.includes('Files')) e.preventDefault()
+  }
+
+  const onRootDrop = async (e: React.DragEvent) => {
+    if (!e.dataTransfer?.files?.length) return
+    e.preventDefault()
+    const file = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/'))
+    if (!file) return
+    setWallpaperBusy(true)
+    setWallpaperError(null)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const r = await fetch('/api/admin/desktop-prefs/wallpaper', { method: 'POST', body: fd })
+      const d = await r.json()
+      if (d.success && d.url) {
+        setBackground({ type: 'image', value: d.url })
+      } else {
+        setWallpaperError(d.error || 'Upload failed')
+      }
+    } catch {
+      setWallpaperError('Upload failed')
+    }
+    setWallpaperBusy(false)
+  }
+
+  useEffect(() => {
+    if (!wallpaperError) return
+    const id = setTimeout(() => setWallpaperError(null), 4000)
+    return () => clearTimeout(id)
+  }, [wallpaperError])
+
+  // ── CONTEXT MENUS ────────────────────────────────────────────────────────
   const onDesktopContextMenu = (e: React.MouseEvent) => {
     if (e.target !== e.currentTarget) return
     e.preventDefault()
@@ -497,7 +742,7 @@ export default function Desktop() {
         { label: 'Refresh', icon: '↻', onClick: () => window.location.reload() },
         {},
         { label: 'Personalize', icon: '🎨', onClick: () => setPersonalizeOpen(true) },
-        { label: 'Screen resolution', disabled: true },
+        { label: 'App Store', icon: '🛍️', onClick: () => openApp('appstore') },
         {},
         { label: 'Show desktop', icon: '▭', onClick: showDesktop },
         {},
@@ -507,11 +752,14 @@ export default function Desktop() {
     if (contextMenu.type === 'icon') {
       const appId = contextMenu.payload as AppId
       const alreadyOpen = windows.find(w => w.appId === appId)
+      const base = isBaseApp(appId)
       return [
         { label: 'Open', icon: '▶', onClick: () => openApp(appId) },
-        { label: 'Open in new window', disabled: true },
         {},
-        { label: alreadyOpen ? 'Already running' : 'Properties', disabled: true },
+        { label: 'Remove from desktop', onClick: () => removeFromDesktop(appId) },
+        ...(!base ? [{ label: 'Uninstall', icon: '✕', danger: true, onClick: () => uninstallApp(appId) }] : []),
+        {},
+        { label: alreadyOpen ? 'Running' : (base ? 'Base app' : 'Store app'), disabled: true },
       ]
     }
     if (contextMenu.type === 'taskbar-item' || contextMenu.type === 'titlebar') {
@@ -529,42 +777,64 @@ export default function Desktop() {
   })()
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: bgCssFor(background),
-        overflow: 'hidden',
-        fontFamily: '"Segoe UI", Tahoma, sans-serif',
-        userSelect: 'none',
-      }}
-    >
+    <DesktopServicesContext.Provider value={desktopServices}>
       <div
-        onContextMenu={onDesktopContextMenu}
-        onClick={() => {
-          if (startMenuOpen) setStartMenuOpen(false)
-          if (contextMenu) setContextMenu(null)
-        }}
+        onDragOver={onRootDragOver}
+        onDrop={onRootDrop}
         style={{
-          position: 'absolute',
+          position: 'fixed',
           inset: 0,
-          bottom: TASKBAR_HEIGHT,
-          display: 'flex',
-          flexDirection: 'column',
+          background: bgCssFor(background),
+          overflow: 'hidden',
+          fontFamily: '"Segoe UI", Tahoma, sans-serif',
+          userSelect: 'none',
         }}
       >
-        {isMobile ? (
-          <div style={{
-            padding: 12,
-            paddingTop: `calc(12px + env(safe-area-inset-top, 0px))`,
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))',
-            gap: 8,
-            alignContent: 'start',
-            maxWidth: '100%',
-          }}>
-            {APPS.map(app => {
+        <div
+          onContextMenu={onDesktopContextMenu}
+          onClick={() => {
+            if (startMenuOpen) setStartMenuOpen(false)
+            if (contextMenu) setContextMenu(null)
+          }}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            bottom: TASKBAR_HEIGHT,
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          {isMobile ? (
+            <div style={{
+              padding: 12,
+              paddingTop: `calc(12px + env(safe-area-inset-top, 0px))`,
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))',
+              gap: 8,
+              alignContent: 'start',
+              maxWidth: '100%',
+            }}>
+              {visibleApps.map(app => {
+                const isOpen = !!windows.find(w => w.appId === app.id)
+                return (
+                  <DesktopIcon
+                    key={app.id}
+                    name={app.name}
+                    icon={app.icon}
+                    iconBg={app.iconBg}
+                    isOpen={isOpen}
+                    onDoubleClick={() => openApp(app.id)}
+                    onContextMenu={(e) => onIconContextMenu(e, app.id)}
+                    isMobile={true}
+                  />
+                )
+              })}
+            </div>
+          ) : (
+            visibleApps.map(app => {
               const isOpen = !!windows.find(w => w.appId === app.id)
+              const ghost = dragGhost?.appId === app.id ? dragGhost : null
+              const pos = ghost ?? desktopLayout[app.id] ?? { x: GRID_X, y: GRID_Y }
               return (
                 <DesktopIcon
                   key={app.id}
@@ -572,97 +842,103 @@ export default function Desktop() {
                   icon={app.icon}
                   iconBg={app.iconBg}
                   isOpen={isOpen}
+                  x={pos.x}
+                  y={pos.y}
+                  isGhosting={!!ghost}
+                  onDrag={(x, y) => handleIconDrag(app.id, x, y)}
+                  onDragEnd={(x, y) => handleIconDragEnd(app.id, x, y)}
                   onDoubleClick={() => openApp(app.id)}
                   onContextMenu={(e) => onIconContextMenu(e, app.id)}
-                  isMobile={true}
+                  isMobile={false}
                 />
               )
-            })}
+            })
+          )}
+        </div>
+
+        {windows.map(win => {
+          const app = getApp(win.appId)
+          if (!app) return null
+          return (
+            <AppWindow
+              key={win.id}
+              state={win}
+              appName={app.name}
+              appIcon={app.icon}
+              iconBg={app.iconBg}
+              Component={app.Component}
+              isFocused={focusedId === win.id}
+              isMobile={isMobile}
+              onFocus={() => focusWindow(win.id)}
+              onClose={() => closeWindow(win.id)}
+              onMinimize={() => toggleMinimize(win.id)}
+              onToggleMaximize={() => toggleMaximize(win.id)}
+              onMove={(x, y) => moveWindow(win.id, x, y)}
+              onResize={(w, h) => resizeWindow(win.id, w, h)}
+              onTitleBarContextMenu={(x, y) => onTitleBarContextMenu(win.id, x, y)}
+            />
+          )
+        })}
+
+        <Taskbar
+          windows={windows}
+          focusedWindowId={focusedId}
+          recentApps={recentApps.map(r => getApp(r.appId)).filter((a): a is NonNullable<typeof a> => !!a)}
+          onStartClick={() => setStartMenuOpen(o => !o)}
+          startMenuOpen={startMenuOpen}
+          onTaskbarItemClick={onTaskbarItemClick}
+          onTaskbarItemContextMenu={onTaskbarContextMenu}
+          onShowDesktop={showDesktop}
+          isMobile={isMobile}
+        />
+
+        {startMenuOpen && (
+          <StartMenu
+            onClose={() => setStartMenuOpen(false)}
+            onLaunchApp={openApp}
+            recent={recentApps}
+            installedApps={installedAppMetas}
+            onOpenPersonalize={() => setPersonalizeOpen(true)}
+          />
+        )}
+
+        {contextMenu && (
+          <ContextMenu
+            x={contextMenu.x}
+            y={contextMenu.y}
+            items={contextMenuItems}
+            onClose={() => setContextMenu(null)}
+          />
+        )}
+
+        {personalizeOpen && (
+          <PersonalizePopup
+            background={background}
+            onSetBackground={setBackground}
+            onClose={() => setPersonalizeOpen(false)}
+          />
+        )}
+
+        {(wallpaperBusy || wallpaperError) && (
+          <div style={{
+            position: 'fixed',
+            bottom: `calc(${TASKBAR_VISIBLE_HEIGHT + 16}px + env(safe-area-inset-bottom, 0px))`,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 999995,
+            padding: '8px 16px',
+            borderRadius: 20,
+            background: wallpaperError ? 'rgba(106,26,26,0.95)' : 'rgba(20,22,36,0.95)',
+            border: '1px solid rgba(126,192,255,0.35)',
+            color: 'white',
+            fontSize: 9, letterSpacing: 2, fontWeight: 'bold',
+            boxShadow: '0 6px 20px rgba(0,0,0,0.4)',
+          }}>
+            {wallpaperError ? wallpaperError.toUpperCase() : 'SETTING WALLPAPER...'}
           </div>
-        ) : (
-          APPS.map((app, index) => {
-            const isOpen = !!windows.find(w => w.appId === app.id)
-            const pos = iconPositions[app.id] ?? defaultIconPos(index)
-            return (
-              <DesktopIcon
-                key={app.id}
-                name={app.name}
-                icon={app.icon}
-                iconBg={app.iconBg}
-                isOpen={isOpen}
-                x={pos.x}
-                y={pos.y}
-                onDrag={(x, y) => handleIconDrag(app.id, x, y)}
-                onDoubleClick={() => openApp(app.id)}
-                onContextMenu={(e) => onIconContextMenu(e, app.id)}
-                isMobile={false}
-              />
-            )
-          })
         )}
       </div>
-
-      {windows.map(win => {
-        const app = getApp(win.appId)
-        if (!app) return null
-        return (
-          <AppWindow
-            key={win.id}
-            state={win}
-            appName={app.name}
-            appIcon={app.icon}
-            iconBg={app.iconBg}
-            Component={app.Component}
-            isFocused={focusedId === win.id}
-            isMobile={isMobile}
-            onFocus={() => focusWindow(win.id)}
-            onClose={() => closeWindow(win.id)}
-            onMinimize={() => toggleMinimize(win.id)}
-            onToggleMaximize={() => toggleMaximize(win.id)}
-            onMove={(x, y) => moveWindow(win.id, x, y)}
-            onResize={(w, h) => resizeWindow(win.id, w, h)}
-            onTitleBarContextMenu={(x, y) => onTitleBarContextMenu(win.id, x, y)}
-          />
-        )
-      })}
-
-      <Taskbar
-        windows={windows}
-        focusedWindowId={focusedId}
-        recentApps={recentApps.map(r => getApp(r.appId)).filter((a): a is NonNullable<typeof a> => !!a)}
-        onStartClick={() => setStartMenuOpen(o => !o)}
-        startMenuOpen={startMenuOpen}
-        onTaskbarItemClick={onTaskbarItemClick}
-        onTaskbarItemContextMenu={onTaskbarContextMenu}
-        onShowDesktop={showDesktop}
-        isMobile={isMobile}
-      />
-
-      {startMenuOpen && (
-        <StartMenu
-          onClose={() => setStartMenuOpen(false)}
-          onLaunchApp={openApp}
-          recent={recentApps}
-        />
-      )}
-
-      {contextMenu && (
-        <ContextMenu
-          x={contextMenu.x}
-          y={contextMenu.y}
-          items={contextMenuItems}
-          onClose={() => setContextMenu(null)}
-        />
-      )}
-
-      {personalizeOpen && (
-        <PersonalizePopup
-          background={background}
-          onSetBackground={setBackground}
-          onClose={() => setPersonalizeOpen(false)}
-        />
-      )}
-    </div>
+    </DesktopServicesContext.Provider>
   )
 }
 
@@ -680,7 +956,7 @@ function PersonalizePopup({
 
   const solidValue = background?.type === 'solid' ? background.value : '#1a3a6a'
   const activePresetId = background === null
-    ? 'vista-blue'
+    ? 'aero'
     : (background.type === 'preset' ? background.value : null)
 
   const applyImage = () => {
@@ -708,7 +984,7 @@ function PersonalizePopup({
         top: '50%', left: '50%',
         transform: 'translate(-50%, -50%)',
         zIndex: 999999,
-        width: 'min(440px, calc(100vw - 24px))',
+        width: 'min(460px, calc(100vw - 24px))',
         maxHeight: 'calc(100vh - 80px)',
         overflowY: 'auto',
         background: 'linear-gradient(180deg, rgba(30,34,52,0.98), rgba(20,22,36,0.98))',
@@ -737,7 +1013,7 @@ function PersonalizePopup({
 
         <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 18 }}>
           <div>
-            <div style={labelStyle}>BACKGROUND PRESETS</div>
+            <div style={labelStyle}>WALLPAPERS</div>
             <div style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(3, 1fr)',
@@ -749,14 +1025,16 @@ function PersonalizePopup({
                   <div
                     key={p.id}
                     onClick={() => onSetBackground(
-                      p.id === 'vista-blue' ? null : { type: 'preset', value: p.id }
+                      p.id === 'aero' ? null : { type: 'preset', value: p.id }
                     )}
                     style={{ cursor: 'pointer' }}
                   >
                     <div style={{
-                      height: 52,
+                      height: 58,
                       borderRadius: 4,
                       background: p.css,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
                       border: active
                         ? '2px solid #7ec0ff'
                         : '1px solid rgba(255,255,255,0.2)',
@@ -770,6 +1048,12 @@ function PersonalizePopup({
                   </div>
                 )
               })}
+            </div>
+            <div style={{
+              fontSize: 9, letterSpacing: 1, color: '#8888aa',
+              marginTop: 10, lineHeight: 1.5,
+            }}>
+              TIP — drag and drop any image onto the desktop to set it as your wallpaper.
             </div>
           </div>
 
@@ -870,13 +1154,15 @@ function PersonalizePopup({
 // =============================================================================
 // DESKTOP ICON
 // =============================================================================
-// v23: on desktop, icons are absolutely positioned and draggable via pointer
-// events. A 5px movement threshold separates drags from clicks; a drag
-// suppresses the click that fires on pointer release so icons don't get
-// selected (or double-open) after being moved. Mobile keeps v22 behavior:
-// grid layout, tap to open, no dragging.
+// v24: drag reports both live position (onDrag — drives the free-floating
+// ghost) and the release point (onDragEnd — Desktop snaps it to the nearest
+// free grid cell). 5px threshold separates drags from clicks; a completed
+// drag suppresses the click on release. `isGhosting` disables the snap
+// transition while dragging so only the release animates. Mobile: grid
+// layout, tap to open, no dragging — unchanged.
 function DesktopIcon({
-  name, icon, iconBg, isOpen, onDoubleClick, onContextMenu, isMobile, x, y, onDrag,
+  name, icon, iconBg, isOpen, onDoubleClick, onContextMenu, isMobile,
+  x, y, isGhosting, onDrag, onDragEnd,
 }: {
   name: string
   icon: string
@@ -887,7 +1173,9 @@ function DesktopIcon({
   isMobile: boolean
   x?: number
   y?: number
+  isGhosting?: boolean
   onDrag?: (x: number, y: number) => void
+  onDragEnd?: (x: number, y: number) => void
 }) {
   const [selected, setSelected] = useState(false)
   const [dragging, setDragging] = useState(false)
@@ -898,6 +1186,8 @@ function DesktopIcon({
     startY: number
     origX: number
     origY: number
+    lastX: number
+    lastY: number
     moved: boolean
   } | null>(null)
   const suppressClickRef = useRef(false)
@@ -929,6 +1219,8 @@ function DesktopIcon({
       startY: e.clientY,
       origX: x ?? 0,
       origY: y ?? 0,
+      lastX: x ?? 0,
+      lastY: y ?? 0,
       moved: false,
     }
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
@@ -944,13 +1236,18 @@ function DesktopIcon({
       d.moved = true
       setDragging(true)
     }
-    onDrag(d.origX + dx, d.origY + dy)
+    d.lastX = d.origX + dx
+    d.lastY = d.origY + dy
+    onDrag(d.lastX, d.lastY)
   }
 
   const onPointerUp = (e: React.PointerEvent) => {
     const d = dragRef.current
     if (!d || d.pointerId !== e.pointerId) return
-    if (d.moved) suppressClickRef.current = true
+    if (d.moved) {
+      suppressClickRef.current = true
+      if (onDragEnd) onDragEnd(d.lastX, d.lastY)
+    }
     dragRef.current = null
     setDragging(false)
   }
@@ -978,9 +1275,10 @@ function DesktopIcon({
           position: 'absolute' as const,
           left: x,
           top: y,
-          width: 96,
+          width: ICON_W,
           touchAction: 'none' as const,
           zIndex: dragging ? 50 : 1,
+          transition: (dragging || isGhosting) ? 'none' : 'left 0.12s ease, top 0.12s ease',
         } : {}),
         display: 'flex',
         flexDirection: 'column',

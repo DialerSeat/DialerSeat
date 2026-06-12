@@ -1,39 +1,47 @@
 'use client'
 import { useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
 import { useUser, UserButton, SignOutButton } from '@clerk/nextjs'
-import { APPS, getApp } from './registry'
-import type { AppId, RecentApp } from './types'
+import { getApp } from './registry'
+import { APP_STORE_ID } from './desktopServices'
+import type { AppId, RecentApp, AppDefinition } from './types'
 
 interface StartMenuProps {
   onClose: () => void
   onLaunchApp: (id: AppId) => void
   recent: RecentApp[]
+  installedApps: AppDefinition[]
+  onOpenPersonalize: () => void
 }
 
 // =============================================================================
-// START MENU — v23
+// START MENU — v24
 // =============================================================================
-// Win7 Start menu — left column with pinned apps, right column with profile
-// header + recent items + footer actions. Closes on outside click or Escape.
+// v24 changes vs v23 (App Store push):
+// - INSTALLED-APPS AWARE: the All Apps list now comes from the new
+//   `installedApps` prop (base apps + downloaded store apps, supplied by
+//   Desktop v24) instead of importing APPS directly. Hidden-from-desktop
+//   apps still appear here — Start is the full launcher.
+// - APP STORE PERMANENTLY PINNED: its own strip directly above the footer,
+//   always present even when the App Store icon is removed from the desktop.
+//   This is the guaranteed recovery path: Start → App Store → INSTALLED tab
+//   → ADD TO DESKTOP.
+// - PERSONALIZE footer button (between Account and Log Off) opens the
+//   wallpaper dialog via the new `onOpenPersonalize` prop.
+// - Recently Closed entries are filtered to apps that are still installed,
+//   so an uninstalled store app can't be reopened from recents.
+// - Account window flow simplified: the footer button and avatar now call
+//   onLaunchApp('clerk-profile') directly. The open-desktop-app CustomEvent
+//   dispatch is kept as a fallback for any other dispatchers — and Desktop
+//   v24 finally implements the listener (it never existed before v24, which
+//   is why Manage Account was dead).
 //
-// v23 FIX — Manage Account opens the draggable ClerkProfile desktop window.
-//   Earlier attempts (modal, then path-routing to /dashboard/admin/profile)
-//   were inconsistent. The clean fix: the profile lives as a real desktop
-//   app ('clerk-profile') rendered inside an AppWindow. The StartMenu now
-//   fires a `open-desktop-app` CustomEvent that Desktop.tsx listens for and
-//   opens via its window manager. This matches the desktop's spatial
-//   metaphor and never gets trapped behind overlays.
-//
-//   - The header avatar still uses <UserButton> for the avatar visual, but
-//     its built-in "Manage Account" is bypassed in favor of the explicit
-//     footer button + a dedicated handler.
-//   - A "Manage Account" footer button dispatches the open-desktop-app event.
+// v23 — Manage Account opens the draggable ClerkProfile desktop window.
 // =============================================================================
 
-export default function StartMenu({ onClose, onLaunchApp, recent }: StartMenuProps) {
+export default function StartMenu({
+  onClose, onLaunchApp, recent, installedApps, onOpenPersonalize,
+}: StartMenuProps) {
   const ref = useRef<HTMLDivElement>(null)
-  const router = useRouter()
   const { user, isLoaded } = useUser()
 
   useEffect(() => {
@@ -56,8 +64,10 @@ export default function StartMenu({ onClose, onLaunchApp, recent }: StartMenuPro
     }
   }, [onClose])
 
-  // v23: open the draggable Account window instead of routing/modal.
+  // v24: launch directly through the window manager; keep the CustomEvent as
+  // a secondary path for any external dispatchers.
   const openAccountWindow = () => {
+    onLaunchApp('clerk-profile')
     window.dispatchEvent(
       new CustomEvent('open-desktop-app', { detail: { appId: 'clerk-profile' } })
     )
@@ -68,10 +78,15 @@ export default function StartMenu({ onClose, onLaunchApp, recent }: StartMenuPro
     ? (`${user.firstName || ''} ${user.lastName || ''}`.trim() || user.primaryEmailAddress?.emailAddress?.split('@')[0] || 'User')
     : 'Loading...'
 
+  const installedIds = new Set(installedApps.map(a => a.id))
+
   const recentValid = recent
     .map(r => ({ ...r, app: getApp(r.appId) }))
-    .filter(r => r.app)
+    .filter(r => r.app && installedIds.has(r.appId))
     .slice(0, 6)
+
+  const appStore = getApp(APP_STORE_ID)
+  const mainApps = installedApps.filter(a => a.id !== APP_STORE_ID)
 
   return (
     <div
@@ -108,6 +123,7 @@ export default function StartMenu({ onClose, onLaunchApp, recent }: StartMenuPro
         display: 'flex',
         alignItems: 'center',
         gap: 12,
+        flexShrink: 0,
       }}>
         <div
           onClick={openAccountWindow}
@@ -156,14 +172,16 @@ export default function StartMenu({ onClose, onLaunchApp, recent }: StartMenuPro
         </div>
       </div>
 
-      {/* ── PINNED APPS ────────────────────────────────────────────────── */}
+      {/* ── INSTALLED APPS ─────────────────────────────────────────────── */}
       <div style={{
         padding: '8px 4px',
         borderBottom: '1px solid #d0d6e0',
         overflowY: 'auto',
+        flex: 1,
+        minHeight: 0,
       }}>
         <SectionHeader>All Apps</SectionHeader>
-        {APPS.map(app => (
+        {mainApps.map(app => (
           <StartMenuItem
             key={app.id}
             icon={app.icon}
@@ -176,6 +194,11 @@ export default function StartMenu({ onClose, onLaunchApp, recent }: StartMenuPro
             }}
           />
         ))}
+        {mainApps.length === 0 && (
+          <div style={{ padding: '4px 12px 8px', fontSize: 11, color: '#6a7080' }}>
+            No apps installed — visit the App Store below
+          </div>
+        )}
       </div>
 
       {/* ── RECENT ─────────────────────────────────────────────────────── */}
@@ -183,6 +206,7 @@ export default function StartMenu({ onClose, onLaunchApp, recent }: StartMenuPro
         <div style={{
           padding: '8px 4px',
           borderBottom: '1px solid #d0d6e0',
+          flexShrink: 0,
         }}>
           <SectionHeader>Recently Closed</SectionHeader>
           {recentValid.map((r, idx) => (
@@ -201,6 +225,27 @@ export default function StartMenu({ onClose, onLaunchApp, recent }: StartMenuPro
         </div>
       )}
 
+      {/* ── APP STORE (permanently pinned) ─────────────────────────────── */}
+      {appStore && (
+        <div style={{
+          padding: '6px 4px',
+          borderBottom: '1px solid #b8c4d4',
+          background: 'linear-gradient(to bottom, #eaf1f9, #dbe6f2)',
+          flexShrink: 0,
+        }}>
+          <StartMenuItem
+            icon={appStore.icon}
+            iconBg={appStore.iconBg}
+            label={appStore.name}
+            sublabel="Download, uninstall, and re-add desktop apps"
+            onClick={() => {
+              onLaunchApp(appStore.id)
+              onClose()
+            }}
+          />
+        </div>
+      )}
+
       {/* ── FOOTER ─────────────────────────────────────────────────────── */}
       <div style={{
         padding: 8,
@@ -208,14 +253,24 @@ export default function StartMenu({ onClose, onLaunchApp, recent }: StartMenuPro
         borderTop: '1px solid #5a7ba0',
         display: 'flex',
         gap: 4,
+        flexShrink: 0,
       }}>
-        {/* v23: Manage Account — opens the draggable ClerkProfile window */}
         <button
           style={footerBtnStyle}
           onClick={openAccountWindow}
         >
           <span style={{ marginRight: 6 }}>👤</span>
-          Manage Account
+          Account
+        </button>
+        <button
+          style={footerBtnStyle}
+          onClick={() => {
+            onOpenPersonalize()
+            onClose()
+          }}
+        >
+          <span style={{ marginRight: 6 }}>🎨</span>
+          Personalize
         </button>
         <SignOutButton redirectUrl="/">
           <button style={footerBtnStyle}>
@@ -289,7 +344,7 @@ function StartMenuItem({
 
 const footerBtnStyle: React.CSSProperties = {
   flex: 1,
-  padding: '8px 12px',
+  padding: '8px 10px',
   background: 'linear-gradient(to bottom, #f0f4f8, #d0d8e0)',
   border: '1px solid #8a9aab',
   borderRadius: 3,
@@ -301,4 +356,5 @@ const footerBtnStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
+  whiteSpace: 'nowrap',
 }

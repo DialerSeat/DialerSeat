@@ -7,6 +7,9 @@ import type { ComponentType } from 'react'
 // of which references one app from the registry. Apps are React components
 // that mount inside an AppWindow shell — they don't know about the desktop
 // itself, they just render their content.
+//
+// v2 changes vs v1:
+// - Added 'appstore' to the AppId union (App Store base app, Desktop v24).
 // =============================================================================
 
 export type AppId =
@@ -20,6 +23,8 @@ export type AppId =
   | 'gmail'
   | 'clerk-profile'
   | 'browser'
+  | 'appstore'
+
 export interface AppDefinition {
   id: AppId
   name: string                // shown on the desktop icon + taskbar
