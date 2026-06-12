@@ -7,28 +7,36 @@ import { useState, useEffect, useRef } from 'react'
 import { useBranding } from '@/components/ThemeProvider'
 
 // =============================================================================
-// app/dashboard/layout.tsx — C3 (logo box stays on sidebar)
+// app/dashboard/layout.tsx — C4 (top-left logo centered horizontally)
 // =============================================================================
+// C4 changes vs C3:
+//
+//   - Desktop logo Link: added justifyContent: 'center' so the logo
+//     content sits centered within the 260px sidebar instead of pinned
+//     to the left. Per JC: "make dashboard's top-left white-label
+//     sidebar logo centered." Default brand (gradient D + DIALERSEAT
+//     text) also centers now for consistency — both presentations sit
+//     in the middle of the sidebar's top.
+//
+//   - For tenant logos this is largely a no-op visually (the inner span
+//     is width:100% so objectFit:contain already centered the image
+//     inside its box) but makes the intent explicit so any future logo
+//     box width change stays centered.
+//
+//   - For default brand: gradient D + text were previously left-aligned
+//     with `padding: '0 18px'`. They're now centered. The padding still
+//     applies as horizontal breathing room from the sidebar edges.
+//
 // C3 changes vs C2:
-//
 //   - Desktop tenant logo box BG: var(--brand-header-bg) → transparent.
-//     The entire desktop sidebar is now one solid color from top to bottom —
-//     the tenant logo sits ON the sidebar, not in a separate header-colored
-//     stripe at the top. Per JC's explicit rule: "the entire sidebar should
-//     be a solid color. The tenant logo at the top of the sidebar is
-//     sidebar, not header."
-//
-//   - Mobile topbar binding (var(--brand-header-bg)) PRESERVED — that
-//     genuinely is the header strip on mobile, distinct from the sidebar
-//     drawer underneath.
-//
-// What stays from C2 (untouched):
+// 
+// What stays from C3 (untouched):
 //   - Logo box dimensions: tenantLogoUrl ? 74 : 64 (height), 0 vs '0 18px'
-//     (padding). The edge-to-edge 260×74 fit for tenant logos is unchanged;
-//     only the background color binding is reverted.
+//     (padding). Edge-to-edge 260×74 fit for tenant logos.
 //   - Hamburger button → --brand-header-bg background, --brand-on-header
 //     bar lines.
-//   - Mobile topbar background → --brand-header-bg.
+//   - Mobile topbar background → --brand-header-bg (genuinely the header
+//     strip on mobile, distinct from the sidebar drawer underneath).
 //   - Desktop sidebar background, mobile drawer background → --brand-sidebar-bg
 //   - Nav items, profile row, drawer chrome → sidebar-tinted tokens
 //   - Lapsed RESUBSCRIBE banner → semantic amber #ffaa3e
@@ -65,7 +73,7 @@ interface SubsSummary {
 }
 
 const PENDING_LOGO_KEY = 'wl:pendingLogoPreview'
-const PENDING_LOGO_MAX_AGE_MS = 5 * 60 * 1000  // 5 minutes safety expiry
+const PENDING_LOGO_MAX_AGE_MS = 5 * 60 * 1000
 
 const BARE_LAYOUT_PREFIXES = ['/dashboard/admin/desktop']
 
@@ -93,7 +101,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setDrawerOpen(false)
   }, [pathname])
 
-  // ── Check for pending logo preview on mount ──────────────────────────
   useEffect(() => {
     if (bare) return
     try {
@@ -257,12 +264,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     primaryWeight = 'normal'
   }
 
-  // Tenant logo box — full-width edge-to-edge fit. 260x74 matches the
-  // recommended 512x148 logo aspect ratio (3.459) closely enough that a
-  // properly-sized logo touches both top and bottom of the box with
-  // effectively zero letterbox via objectFit:contain.
-  // C3: bg is transparent — sidebar bg shows through so the logo sits ON
-  // the sidebar rather than in a header-colored stripe.
   const TenantBrandDesktop = () => (
     <span style={{
       position: 'relative',
@@ -352,20 +353,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     </>
   )
 
-  // Logo box. Two presentations:
-  //   - With tenant logo: padding 0, height 74, bg transparent (sidebar
-  //     shows through). The TenantBrandDesktop fills 100% of the 260px
-  //     sidebar width and the 74px height edge-to-edge.
-  //   - Default brand: padding '0 18px', height 64, bg transparent. The
-  //     gradient D + DIALERSEAT text sits with comfortable left padding
-  //     on top of the sidebar bg.
-  // Both presentations have transparent bg in C3 — the entire sidebar is
-  // a single solid block of sidebar-bg from top to bottom.
+  // Logo box. C4: justifyContent center so the logo content sits in the
+  // middle of the 260px sidebar instead of pinned left. Applies to both
+  // tenant logos (already centered via objectFit but now explicitly
+  // declared) and default brand (gradient D + DIALERSEAT text was
+  // previously left-aligned with padding).
   const Sidebar = () => (
     <>
       <Link href={logoHref} style={{
         display: 'flex',
         alignItems: 'center',
+        justifyContent: 'center',
         gap: tenantLogoUrl ? 0 : '12px',
         padding: tenantLogoUrl ? 0 : '0 18px',
         marginBottom: '24px',

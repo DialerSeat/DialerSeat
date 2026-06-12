@@ -1,18 +1,24 @@
 'use client'
 
 // =============================================================================
-// /faq — FAQ index page
+// /faq — FAQ index page (Push E: pricing + teams tiles added)
 // =============================================================================
-// This page lists the practical Q&A items inline as an accordion, and
-// features a prominent card linking to /faq/why-dialerseat (the founder-
-// voice deep dive). Per JC's direction, the long-form "Why DialerSeat?"
-// content lives on its own page; this index page is the directory.
+// Push E changes:
+//   - Added TEAMS tile to quick explainers grid → /faq/dialerseat-teams
+//   - Added PRICING tile to quick explainers grid → /faq/why-we-charge
+//   - "How much does DialerSeat cost?" accordion now links out to
+//     /faq/why-we-charge for the full breakdown.
+//   - "Do you have a team plan?" accordion now links out to
+//     /faq/dialerseat-teams for owner-paid vs agent-paid mechanics.
+//   - New pill colors: .pricing (green, money/value) and .teams (purple,
+//     distinct from the blue/red/green dialer-mode tiles).
 //
-// Structure:
+// Structure unchanged:
 //   1. Hero (slim)
 //   2. Featured "Why DialerSeat?" card → /faq/why-dialerseat
-//   3. Practical Q&A accordion (native <details>/<summary>)
-//   4. Auth-aware bottom CTA
+//   3. Quick explainers grid (now 9 tiles)
+//   4. Common Q&A accordion
+//   5. Auth-aware bottom CTA
 // =============================================================================
 
 import { useUser } from '@clerk/nextjs'
@@ -325,6 +331,8 @@ export default function FaqView() {
           .faq-exp-card.predictive .pill { background: #f8e8e8; color: #8a1a1a; border: 1px solid #8a1a1a; }
           .faq-exp-card.compliance .pill { background: #fdf4e8; color: #8a6a1a; border: 1px solid #8a6a1a; }
           .faq-exp-card.amd .pill { background: #e8eef8; color: #2a4a8a; border: 1px solid #2a4a8a; }
+          .faq-exp-card.pricing .pill { background: #e8f5e8; color: #1a6a1a; border: 1px solid #1a6a1a; }
+          .faq-exp-card.teams .pill { background: #f0eafd; color: #5a2a8a; border: 1px solid #5a2a8a; }
 
           @media (max-width: 768px) {
             .faq-hero { padding: 56px 20px 44px; }
@@ -377,6 +385,14 @@ export default function FaqView() {
               <div className="faq-section-label">▸ QUICK EXPLAINERS</div>
               <h2 className="faq-section-title">Plain-English answers to the big topics.</h2>
               <div className="faq-explainers-grid">
+                <Link href="/faq/why-we-charge" className="faq-exp-card pricing">
+                  <span className="pill">PRICING</span>
+                  <div>Why we charge what we charge.</div>
+                </Link>
+                <Link href="/faq/dialerseat-teams" className="faq-exp-card teams">
+                  <span className="pill">TEAMS</span>
+                  <div>DialerSeat for teams.</div>
+                </Link>
                 <Link href="/faq/what-is-a-preview-dialer" className="faq-exp-card preview">
                   <span className="pill">PREVIEW</span>
                   <div>What is a preview dialer?</div>
@@ -422,6 +438,15 @@ export default function FaqView() {
                     no add-on modules, no annual minimum, no &quot;contact
                     sales for pricing.&quot; Billing is weekly through
                     Stripe.
+                  </p>
+                  <p>
+                    Every seat includes unlimited dial-out numbers,
+                    multiple inbound numbers, all four dialer modes, call
+                    recording, voicemail detection, and analytics — no
+                    metered minutes, no per-number fees. See{' '}
+                    <Link href="/faq/why-we-charge">why we charge what we
+                    charge</Link> for the full breakdown vs. competitors
+                    who stack add-ons.
                   </p>
                 </div>
               </details>
@@ -504,6 +529,12 @@ export default function FaqView() {
                     Team owners can pay for the whole team&apos;s seats,
                     or you can configure it so individual agents pay for
                     their own access. Both flows are supported.
+                  </p>
+                  <p>
+                    See <Link href="/faq/dialerseat-teams">DialerSeat for
+                    teams</Link> for the full breakdown: owner-paid vs.
+                    agent-paid mechanics, shared campaigns, team-mode
+                    predictive routing, and how seat cancellations work.
                   </p>
                 </div>
               </details>
