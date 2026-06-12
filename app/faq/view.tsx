@@ -1,22 +1,20 @@
 'use client'
 
 // =============================================================================
-// /faq — FAQ index page (Push E: pricing + teams tiles added)
+// /faq — FAQ index page (Push E corrected: original order, new tiles at end)
 // =============================================================================
-// Push E changes:
-//   - Added TEAMS tile to quick explainers grid → /faq/dialerseat-teams
-//   - Added PRICING tile to quick explainers grid → /faq/why-we-charge
-//   - "How much does DialerSeat cost?" accordion now links out to
-//     /faq/why-we-charge for the full breakdown.
-//   - "Do you have a team plan?" accordion now links out to
-//     /faq/dialerseat-teams for owner-paid vs agent-paid mechanics.
-//   - New pill colors: .pricing (green, money/value) and .teams (purple,
-//     distinct from the blue/red/green dialer-mode tiles).
+// Push E correction vs the previous Push E build:
+//   - Explainer tiles restored to ORIGINAL order: preview, power,
+//     progressive, predictive, compliance·why, compliance·how, amd.
+//     PRICING and TEAMS appended as the LAST two tiles, not the first two.
+//   - Accordion link-outs from cost and team questions preserved — those
+//     help users find the new deep-dive pages from inside the existing
+//     accordion flow.
 //
-// Structure unchanged:
+// Structure unchanged from original:
 //   1. Hero (slim)
 //   2. Featured "Why DialerSeat?" card → /faq/why-dialerseat
-//   3. Quick explainers grid (now 9 tiles)
+//   3. Quick explainers grid (9 tiles, original order + 2 appended)
 //   4. Common Q&A accordion
 //   5. Auth-aware bottom CTA
 // =============================================================================
@@ -380,19 +378,11 @@ export default function FaqView() {
               </span>
             </Link>
 
-            {/* QUICK EXPLAINERS */}
+            {/* QUICK EXPLAINERS — original order preserved, PRICING and TEAMS appended at end */}
             <div className="faq-explainers">
               <div className="faq-section-label">▸ QUICK EXPLAINERS</div>
               <h2 className="faq-section-title">Plain-English answers to the big topics.</h2>
               <div className="faq-explainers-grid">
-                <Link href="/faq/why-we-charge" className="faq-exp-card pricing">
-                  <span className="pill">PRICING</span>
-                  <div>Why we charge what we charge.</div>
-                </Link>
-                <Link href="/faq/dialerseat-teams" className="faq-exp-card teams">
-                  <span className="pill">TEAMS</span>
-                  <div>DialerSeat for teams.</div>
-                </Link>
                 <Link href="/faq/what-is-a-preview-dialer" className="faq-exp-card preview">
                   <span className="pill">PREVIEW</span>
                   <div>What is a preview dialer?</div>
@@ -420,6 +410,14 @@ export default function FaqView() {
                 <Link href="/faq/how-does-amd-work" className="faq-exp-card amd">
                   <span className="pill">AMD</span>
                   <div>How does AMD work?</div>
+                </Link>
+                <Link href="/faq/why-we-charge" className="faq-exp-card pricing">
+                  <span className="pill">PRICING</span>
+                  <div>Why we charge what we charge.</div>
+                </Link>
+                <Link href="/faq/dialerseat-teams" className="faq-exp-card teams">
+                  <span className="pill">TEAMS</span>
+                  <div>DialerSeat for teams.</div>
                 </Link>
               </div>
             </div>
