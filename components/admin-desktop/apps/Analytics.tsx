@@ -14,10 +14,16 @@ import {
 // =============================================================================
 // ANALYTICS APP — embedded in admin desktop
 // =============================================================================
-// couponSubsCount removed from the interface (Phase D2 — coupon-discounted
-// subs are not subscriptions for analytics purposes). Backend still returns
-// the field for now but we don't display it. If you want it gone from the
-// API response too, remove it from app/api/admin/analytics/route.ts.
+// Phase D3 changes vs Phase D2:
+// - Interface now includes proSubs, wlSubs, unknownPriceSubs, proWrr, wlWrr
+//   (backend has returned these since the D2/D3 route — now displayed)
+// - FILLED SEATS card shows per-plan seat breakdown (N PRO · N MGR+) so a new
+//   Manager+ sub visibly registers the moment it lands
+// - WEEKLY REVENUE card shows per-plan revenue split (PRO $X · MGR+ $Y) —
+//   each paying Pro seat is +$35/wk, each paying Manager+ is +$75/wk
+// - Amber warning banner appears if any active sub carries a Stripe price
+//   that resolves to neither $35 nor $75 (env var drift / wrong price on sub)
+// - couponSubsCount still intentionally not displayed (D2 decision stands)
 // =============================================================================
 
 type Range = '7d' | '30d' | '90d' | '1y' | 'all' | 'custom'
@@ -28,8 +34,13 @@ interface AnalyticsData {
   summary: {
     totalUsers: number
     payingActiveSubs: number
+    proSubs: number
+    wlSubs: number
+    unknownPriceSubs: number
     wrr: number
     mrr: number
+    proWrr: number
+    wlWrr: number
     signupsInRange: number
     paidConversionsInRange: number
     cancellationsInRange: number
@@ -326,6 +337,17 @@ export default function AnalyticsApp() {
 
         {!loading && !error && data && (
           <>
+            {data.summary.unknownPriceSubs > 0 && (
+              <div style={{
+                padding: '10px 16px', fontSize: 11, letterSpacing: 1,
+                color: T.amber, background: '#f5efdc',
+                border: `1px solid ${T.amber}`, borderRadius: 4,
+                fontFamily: 'monospace',
+              }}>
+                {data.summary.unknownPriceSubs} ACTIVE SUB{data.summary.unknownPriceSubs === 1 ? '' : 'S'} ON A PRICE THAT IS NEITHER $35 NOR $75/WK — counted at the Stripe-reported amount. Check STRIPE_PRICE_ID / STRIPE_PRICE_WL_BASE and the server logs.
+              </div>
+            )}
+
             <div className="an-grid-4">
               <div className="an-stat-card hero" style={{
                 borderTopColor: data.summary.wowDelta >= 0 ? T.green : T.red,
@@ -334,8 +356,12 @@ export default function AnalyticsApp() {
                 <div className="an-stat-value" style={{ color: T.green }}>
                   {data.summary.payingActiveSubs.toLocaleString()}
                 </div>
+                <div className="an-stat-sub">
+                  {data.summary.proSubs} PRO · {data.summary.wlSubs} MGR+
+                </div>
                 <div className="an-stat-sub" style={{
                   color: data.summary.wowDelta >= 0 ? T.green : T.red,
+                  marginTop: 3,
                 }}>
                   {data.summary.wowDelta >= 0 ? '↑' : '↓'} {Math.abs(data.summary.wowDelta)} ({data.summary.wowPct >= 0 ? '+' : ''}{data.summary.wowPct}%) WoW
                 </div>
@@ -346,7 +372,12 @@ export default function AnalyticsApp() {
                 <div className="an-stat-value" style={{ color: T.accent }}>
                   {fmtMoney(data.summary.wrr)}
                 </div>
-                <div className="an-stat-sub">{fmtMoney(data.summary.mrr)} / MONTH</div>
+                <div className="an-stat-sub">
+                  PRO {fmtMoney(data.summary.proWrr)} · MGR+ {fmtMoney(data.summary.wlWrr)}
+                </div>
+                <div className="an-stat-sub" style={{ marginTop: 3 }}>
+                  {fmtMoney(data.summary.mrr)} / MONTH
+                </div>
               </div>
 
               <div className="an-stat-card hero" style={{
@@ -382,7 +413,7 @@ export default function AnalyticsApp() {
             <div className="an-section">
               <div className="an-section-title">SIGNUPS & REVENUE OVER TIME</div>
               <div className="an-section-sub">
-                {data.bucketSize === 'week' ? 'Weekly buckets' : 'Daily buckets'} · Revenue is paying subs only (excludes coupons).
+                {data.bucketSize === 'week' ? 'Weekly buckets' : 'Daily buckets'} · Revenue is paying subs only (excludes coupons) · Pro $35/wk · Manager+ $75/wk.
               </div>
               <div style={{ width: '100%', height: 280 }}>
                 <ResponsiveContainer width="100%" height="100%">
