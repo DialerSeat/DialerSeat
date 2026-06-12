@@ -1,13 +1,24 @@
 import Link from 'next/link'
 
-// Bottom-of-page cross-link grid linking the seven explainer pages together.
+// Bottom-of-page cross-link grid linking the explainer pages together.
 // The `current` page is dimmed and non-clickable so visitors aren't sent
 // back to the page they're already on.
 //
 // `compliance-why` → /faq/why-is-compliance-important (the rationale)
 // `compliance-how` → /faq/how-we-keep-compliance     (the mechanisms)
+// `pricing`        → /faq/why-we-charge              (pricing breakdown)
+// `teams`          → /faq/dialerseat-teams           (teams + Manager+)
 
-type Explainer = 'preview' | 'power' | 'progressive' | 'predictive' | 'compliance-why' | 'compliance-how' | 'amd'
+type Explainer =
+  | 'preview'
+  | 'power'
+  | 'progressive'
+  | 'predictive'
+  | 'compliance-why'
+  | 'compliance-how'
+  | 'amd'
+  | 'pricing'
+  | 'teams'
 
 interface Props {
   current: Explainer
@@ -49,6 +60,8 @@ export default function ExplainerCrossLinks({ current }: Props) {
         .exp-xlink.compliance-why .pill { background: #fdf4e8; color: #8a6a1a; border: 1px solid #8a6a1a; }
         .exp-xlink.compliance-how .pill { background: #fdf4e8; color: #8a6a1a; border: 1px solid #8a6a1a; }
         .exp-xlink.amd .pill { background: #e8eef8; color: #2a4a8a; border: 1px solid #2a4a8a; }
+        .exp-xlink.pricing .pill { background: #e8f5e8; color: #1a6a1a; border: 1px solid #1a6a1a; }
+        .exp-xlink.teams .pill { background: #f0eafd; color: #5a2a8a; border: 1px solid #5a2a8a; }
 
         @media (max-width: 768px) {
           .exp-xlinks { padding: 40px 20px; }
@@ -87,6 +100,14 @@ export default function ExplainerCrossLinks({ current }: Props) {
             <Link href="/faq/how-does-amd-work" className={`exp-xlink amd ${current === 'amd' ? 'current' : ''}`}>
               <span className="pill">AMD</span>
               <div>How does AMD work?</div>
+            </Link>
+            <Link href="/faq/why-we-charge" className={`exp-xlink pricing ${current === 'pricing' ? 'current' : ''}`}>
+              <span className="pill">PRICING</span>
+              <div>Why we charge what we charge.</div>
+            </Link>
+            <Link href="/faq/dialerseat-teams" className={`exp-xlink teams ${current === 'teams' ? 'current' : ''}`}>
+              <span className="pill">TEAMS</span>
+              <div>DialerSeat for teams.</div>
             </Link>
           </div>
         </div>

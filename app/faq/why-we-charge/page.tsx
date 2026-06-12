@@ -4,6 +4,7 @@ import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import DialingModeCTA from '@/components/DialingModeCTA'
 import ExplainerStyles from '@/components/ExplainerStyles'
+import ExplainerCrossLinks from '@/components/ExplainerCrossLinks'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -11,7 +12,7 @@ export const runtime = 'nodejs'
 export const metadata: Metadata = {
   title: 'Why We Charge What We Charge | DialerSeat',
   description:
-    '$35 per week per seat, all-in. Unlimited dial-out numbers, multiple inbound numbers, every dialer mode, no per-minute charges. Here\'s why we can price this way — and what most "cheaper" dialers actually cost.',
+    '$35 per week per seat, all-in. Unlimited dial-out numbers, multiple inbound numbers, every dialer mode, no per-minute charges. Manager+ at $75/week adds full white-label. Here\'s the math vs competitors.',
   alternates: { canonical: 'https://dialerseat.com/faq/why-we-charge' },
   openGraph: {
     title: 'Why we charge what we charge.',
@@ -37,9 +38,9 @@ export default function Page() {
             <p className="exp-lead">
               $35 a week, per seat. Unlimited dial-out numbers, multiple
               inbound numbers, every dialer mode, no per-minute charges.
-              Here&apos;s why we can price this way — and what most
-              &ldquo;cheaper&rdquo; dialers actually cost you once you
-              stack the add-ons.
+              Manager+ — our white-label tier — is $75/week and adds
+              teams, shared campaigns, and your own branding. Here&apos;s
+              why we can price this way.
             </p>
           </div>
         </section>
@@ -65,6 +66,13 @@ export default function Page() {
             number, one price — or as many of each as you need, all
             included.
           </p>
+          <p>
+            Two tiers, that&apos;s it. <strong>Pro</strong> at $35/week
+            is the full dialer for one person. <strong>Manager+</strong>
+            at $75/week is the white-label tier — adds team rosters,
+            shared campaigns, owner-paid or agent-paid seat billing, and
+            your own branded subdomain.
+          </p>
         </section>
 
         <section className="exp-section alt">
@@ -74,9 +82,9 @@ export default function Page() {
 
             <div className="exp-qa">
               <details>
-                <summary>What&apos;s included in $35 / week?</summary>
+                <summary>What&apos;s included in $35 / week (Pro)?</summary>
                 <div className="answer">
-                  <p>The full feature set. Same on every account:</p>
+                  <p>The full dialer feature set. Same on every account:</p>
                   <p>
                     <strong>All four dialer modes</strong> — preview,
                     power, progressive, predictive. No mode gated behind
@@ -114,13 +122,47 @@ export default function Page() {
                     best-time-to-call, per-campaign / per-agent / per-number.
                   </p>
                   <p>
-                    <strong>Teams + role-based access</strong> for
-                    Manager+ accounts. Full breakdown on the
+                    <strong>No contract.</strong> Cancel anytime from
+                    settings.
+                  </p>
+                </div>
+              </details>
+
+              <details>
+                <summary>What does Manager+ at $75 / week add?</summary>
+                <div className="answer">
+                  <p>
+                    Manager+ is DialerSeat&apos;s white-label tier. One
+                    price, three things bundled in:
+                  </p>
+                  <p>
+                    <strong>White-label.</strong> Your own subdomain
+                    (e.g. <code>yourbrand.dialerseat.com</code>), your
+                    logo, your colors, your favicon. The dashboard your
+                    team and your customers see is your brand, not ours.
+                    Sign-in page, dialer, analytics — all themed to your
+                    palette.
+                  </p>
+                  <p>
+                    <strong>Teams.</strong> Roster your agents, share
+                    campaigns across the team, route inbound calls.
+                    Team-mode predictive routes humans across the entire
+                    team — when an agent disconnects, the routed human
+                    reroutes to another available agent on the same
+                    campaign rather than dropping. Full breakdown on the
                     <Link href="/faq/dialerseat-teams"> Teams FAQ</Link>.
                   </p>
                   <p>
-                    <strong>No contract.</strong> Cancel anytime from
-                    settings.
+                    <strong>Flexible seat billing.</strong> Pay for your
+                    agents&apos; seats yourself (owner-paid), let them
+                    pay their own (agent-paid), or run a free internal
+                    mode where neither pays per-seat — agents just need
+                    their own personal Pro subscription to dial.
+                  </p>
+                  <p>
+                    The $75/week is what the team owner pays. Individual
+                    seats inside the team still pay the standard
+                    $35/week per dialing seat.
                   </p>
                 </div>
               </details>
@@ -145,10 +187,18 @@ export default function Page() {
                     Total: <strong>~$254/month per agent.</strong>
                   </p>
                   <p>
-                    DialerSeat at $35/week is roughly <strong>$140/month</strong>
-                    — and that includes <em>unlimited</em> numbers,
-                    <em> unlimited</em> minutes, every dialer mode, and
-                    every feature. No tier gates. No per-line surcharges.
+                    DialerSeat Pro at $35/week is roughly
+                    <strong> $140/month</strong> — and that includes
+                    <em> unlimited</em> numbers, <em>unlimited</em>
+                    minutes, every dialer mode, and every feature. No
+                    tier gates. No per-line surcharges.
+                  </p>
+                  <p>
+                    Manager+ at $75/week works out to ~$300/month for
+                    the team owner. Most competitors charge that just
+                    for &ldquo;team admin&rdquo; on top of their per-
+                    agent base — and white-label is usually a separate
+                    enterprise quote on top of that.
                   </p>
                 </div>
               </details>
@@ -225,42 +275,32 @@ export default function Page() {
               </details>
 
               <details>
-                <summary>Will the $35/week price ever change?</summary>
+                <summary>Will the prices ever change?</summary>
                 <div className="answer">
                   <p>
-                    We have no plans to raise it. If we ever needed to,
-                    existing customers would be grandfathered at the rate
-                    they signed up at. The price you&apos;re looking at
-                    today is the price you&apos;ll keep paying.
+                    We have no plans to raise either tier. If we ever
+                    needed to, existing customers would be grandfathered
+                    at the rate they signed up at. The price you&apos;re
+                    looking at today is the price you&apos;ll keep paying.
                   </p>
                 </div>
               </details>
 
               <details>
-                <summary>Is there a team / Manager+ price?</summary>
+                <summary>Can I cancel anytime?</summary>
                 <div className="answer">
                   <p>
-                    Yes. Manager+ is $75/week for the team owner and
-                    unlocks team rosters, shared campaigns, team-mode
-                    predictive routing, and owner-paid or agent-paid seat
-                    billing. Individual seats inside a team still pay the
-                    standard $35/week.
+                    Yes. Cancel from your settings page in two clicks.
+                    Pro cancels at the end of the current weekly cycle —
+                    you keep dialing through what you&apos;ve paid for,
+                    then billing stops. Same for Manager+: cancel the
+                    Manager+ tier and your white-label tenant stays
+                    accessible through the end of the week, then it goes
+                    inactive.
                   </p>
                   <p>
-                    Full breakdown on the <Link href="/faq/dialerseat-teams">Teams
-                    FAQ</Link>.
-                  </p>
-                </div>
-              </details>
-
-              <details>
-                <summary>What about white-label?</summary>
-                <div className="answer">
-                  <p>
-                    $115/week. Custom subdomain, your branding (logo,
-                    colors, favicon), and the ability to onboard your own
-                    users under your brand. The underlying dialer is the
-                    same one we run.
+                    Your leads, recordings, campaigns, and saved themes
+                    all stay in the database if you come back later.
                   </p>
                 </div>
               </details>
@@ -268,11 +308,11 @@ export default function Page() {
           </div>
         </section>
 
-        
+        <ExplainerCrossLinks current="pricing" />
 
         <DialingModeCTA
           headline="One price. Everything included. Cancel any week."
-          description="$35 a week per seat. Unlimited dial-out numbers, unmetered minutes, every dialer mode. The best way to see if it's worth it is to use it for a week."
+          description="$35 a week per seat for Pro. $75/week for Manager+ with white-label and teams. The best way to see if it's worth it is to use it for a week."
         />
       </main>
       <SiteFooter />
