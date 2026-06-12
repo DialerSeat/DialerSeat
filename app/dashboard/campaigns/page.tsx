@@ -1973,7 +1973,7 @@ export default function CampaignsPage() {
 
               {/* LEADS CSV section */}
               <div className="settings-section-card">
-                <div className="settings-section-title">▸ LEADS CSV (OPTIONAL)</div>
+                <div className="settings-section-title">▸ LEADS CSV</div>
                 <div
                   className="cmp-drop-zone"
                   onDragOver={e => { e.preventDefault(); setDragging(true) }}
