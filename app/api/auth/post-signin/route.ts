@@ -12,7 +12,7 @@ import { createClient } from '@supabase/supabase-js'
 //
 // v2 (this push): ADMIN SHORT-CIRCUIT. Before any tenant routing, if the
 // signed-in user is an admin (users.is_admin = true) we send them straight to
-// the admin desktop (/dashboard/admin/analytics) on the current host. The
+// the admin desktop (/dashboard/admin/desktop) on the current host. The
 // admin previously fell through to the plain /dashboard/analytics dead page
 // because they own no tenant. Admins are never auto-bounced to a tenant
 // subdomain; the desktop's Demo View handles viewing tenant sites. We still
@@ -26,7 +26,7 @@ import { createClient } from '@supabase/supabase-js'
 // the user belongs to, and falls back to default DialerSeat chrome.
 //
 // Routing rules (JC item 1, post-signin):
-//   0. Signed in AND user is an admin → /dashboard/admin/analytics on the
+//   0. Signed in AND user is an admin → /dashboard/admin/desktop on the
 //      current host (the desktop). No subdomain bouncing. [v2]
 //   1. Signed in on blank.dialerseat.com AND user is part of blank →
 //      stay on blank.dialerseat.com/dashboard/analytics
@@ -51,7 +51,7 @@ import { createClient } from '@supabase/supabase-js'
 
 const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'dialerseat.com'
 const TARGET_PATH = '/dashboard/analytics'
-const ADMIN_PATH = '/dashboard/admin/analytics' // v2: the admin desktop
+const ADMIN_PATH = '/dashboard/admin/desktop' // v2: the admin desktop
 const TENANT_COOKIE_NAME = 'ds_last_tenant'
 const TENANT_COOKIE_MAX_AGE = 60 * 60 * 24 * 90 // 90 days
 
