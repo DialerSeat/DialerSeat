@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { WindowState, AppDefinition } from './types'
 import { getApp } from './registry'
 
@@ -13,7 +13,24 @@ interface TaskbarProps {
   onTaskbarItemContextMenu: (windowId: string, clientX: number, clientY: number) => void
   onShowDesktop: () => void
   isMobile: boolean
+  // v2: drag-reorder of open-window pills
+  onReorderWindows: (dragWindowId: string, targetWindowId: string) => void
 }
+
+// =============================================================================
+// TASKBAR — v2
+// =============================================================================
+// v2 changes vs v1:
+// - DRAGGABLE PILLS: open-window buttons reorder via HTML5 drag-and-drop,
+//   like real Windows. Drag a pill over another and drop — Desktop reorders
+//   its windows array (pill order = array order; zIndex untouched). The drop
+//   target shows a left accent bar while hovered. Reordering is desktop-only
+//   (mobile pills are tap targets, drag would fight scroll).
+// - iconSrc SUPPORT: pills render the app's image icon when the registry
+//   entry sets iconSrc, falling back to the emoji glyph.
+// All v1 visuals retained: Aero gradient strip, start orb, tray, clock,
+// show-desktop sliver, safe-area fill shell.
+// =============================================================================
 
 export default function Taskbar({
   windows,
@@ -24,8 +41,13 @@ export default function Taskbar({
   onTaskbarItemContextMenu,
   onShowDesktop,
   isMobile,
+  onReorderWindows,
 }: TaskbarProps) {
   const [now, setNow] = useState<Date>(new Date())
+
+  // v2: pill drag state
+  const dragWindowIdRef = useRef<string | null>(null)
+  const [dragOverWindowId, setDragOverWindowId] = useState<string | null>(null)
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 30_000)
@@ -112,7 +134,7 @@ export default function Taskbar({
           <DBrandMark size={isMobile ? 28 : 32} />
         </button>
 
-        {/* ── OPEN-WINDOW PILLS ──────────────────────────────────────────── */}
+        {/* ── OPEN-WINDOW PILLS (v2: draggable to reorder) ───────────────── */}
         <div style={{
           flex: 1,
           display: 'flex',
@@ -127,11 +149,39 @@ export default function Taskbar({
             if (!app) return null
             const isFocused = focusedWindowId === win.id && !win.minimized
             const isMinimized = win.minimized
+            const isDragTarget = dragOverWindowId === win.id
             const label = isMobile ? '' : (app.shortName || app.name)
 
             return (
               <button
                 key={win.id}
+                draggable={!isMobile}
+                onDragStart={(e) => {
+                  dragWindowIdRef.current = win.id
+                  e.dataTransfer.effectAllowed = 'move'
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault()
+                  if (dragWindowIdRef.current && dragWindowIdRef.current !== win.id) {
+                    setDragOverWindowId(win.id)
+                  }
+                }}
+                onDragLeave={() => {
+                  if (dragOverWindowId === win.id) setDragOverWindowId(null)
+                }}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  const dragId = dragWindowIdRef.current
+                  dragWindowIdRef.current = null
+                  setDragOverWindowId(null)
+                  if (dragId && dragId !== win.id) {
+                    onReorderWindows(dragId, win.id)
+                  }
+                }}
+                onDragEnd={() => {
+                  dragWindowIdRef.current = null
+                  setDragOverWindowId(null)
+                }}
                 onClick={() => onTaskbarItemClick(win.id)}
                 onContextMenu={(e) => {
                   e.preventDefault()
@@ -147,6 +197,9 @@ export default function Taskbar({
                   alignItems: 'center',
                   gap: 8,
                   border: '1px solid ' + (isFocused ? '#7ec0ff' : '#3a4a6a'),
+                  borderLeft: isDragTarget
+                    ? '3px solid #ffd96a'
+                    : '1px solid ' + (isFocused ? '#7ec0ff' : '#3a4a6a'),
                   background: isFocused
                     ? 'linear-gradient(to bottom, #4a8ad0 0%, #2a5a9a 100%)'
                     : (isMinimized
@@ -179,7 +232,14 @@ export default function Taskbar({
                   background: app.iconBg,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 12, flexShrink: 0,
-                }}>{app.icon}</span>
+                  overflow: 'hidden',
+                }}>
+                  {app.iconSrc ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={app.iconSrc} alt="" width={13} height={13}
+                      style={{ objectFit: 'contain', pointerEvents: 'none' }} draggable={false} />
+                  ) : app.icon}
+                </span>
                 {!isMobile && (
                   <span style={{
                     overflow: 'hidden',

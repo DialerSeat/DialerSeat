@@ -3,30 +3,24 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import type { CSSProperties, DragEvent } from 'react'
 
 // =============================================================================
-// NOTES APP — v23
+// NOTES APP — v24
 // =============================================================================
-// iCloud-style notes: sidebar list + editor. Supports two note kinds:
-//   - text note  (body is plain text)
-//   - checklist  (body is JSON: {"type":"checklist","items":[{text,done}]})
+// v24 ADDS:
+//   - CHECKLIST ITEM DRAG REORDER: each checklist row gets a ⠿ handle on the
+//     left; drag it onto another row to reorder. Only the handle is draggable
+//     so text selection/editing inside the row inputs still works normally.
+//     Reorder persists through the existing 1s debounced autosave (the items
+//     array is the note body). Uses separate drag refs from the pinned-notes
+//     sidebar reorder — the two drag systems can't interfere.
 //
-// v23 ADDS:
-//   - Star toggle (☆/★) on each sidebar row.
-//   - Starred notes pin to the TOP in a "Pinned" group, draggable to reorder
-//     among themselves (HTML5 drag-and-drop). Reorder persists via
-//     POST /api/admin/notes/reorder { orderedIds }.
-//   - Unstarred notes render below under "Notes", sorted by recency, not
-//     draggable.
-//   - Server returns notes already ordered (starred → pin_order → updated_at),
-//     so we mostly trust server order and only re-sort optimistically on
-//     local star/drag actions.
-//
-// RETAINED FROM v22:
+// RETAINED FROM v23:
+//   - Star toggle (☆/★), pinned group with drag reorder persisted via
+//     POST /api/admin/notes/reorder.
 //   - Checklist note type with comma-paste add, check/uncheck, inline edit,
 //     remove.
 //   - Mobile layout: hamburger drawer sidebar, full-width editor, momentum
 //     scroll fixes (minHeight:0 on flex parents, WebkitOverflowScrolling).
 //   - 1s debounced autosave for title/body.
-//   - Sync button REMOVED in a prior v23 step (per request); not re-added.
 // =============================================================================
 
 interface Note {
@@ -90,9 +84,13 @@ export default function NotesApp() {
 
   const [checklistAddInput, setChecklistAddInput] = useState('')
 
-  // drag state for pinned reorder
+  // drag state for pinned reorder (sidebar)
   const dragIdRef = useRef<string | null>(null)
   const [dragOverId, setDragOverId] = useState<string | null>(null)
+
+  // v24: drag state for checklist item reorder (editor) — independent refs
+  const clDragIdxRef = useRef<number | null>(null)
+  const [clDragOverIdx, setClDragOverIdx] = useState<number | null>(null)
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const editingIdRef = useRef<string | null>(null)
@@ -294,7 +292,7 @@ export default function NotesApp() {
     }
   }
 
-  // ── pinned drag reorder ──────────────────────────────────────────────────
+  // ── pinned drag reorder (sidebar) ────────────────────────────────────────
   const onDragStart = (id: string) => {
     dragIdRef.current = id
   }
@@ -372,6 +370,18 @@ export default function NotesApp() {
   const removeChecklistItem = (idx: number) => {
     if (!selectedChecklist) return
     updateChecklist(selectedChecklist.filter((_, i) => i !== idx))
+  }
+
+  // ── v24: checklist item drag reorder ──────────────────────────────────────
+  const onChecklistItemDrop = (toIdx: number) => {
+    const fromIdx = clDragIdxRef.current
+    clDragIdxRef.current = null
+    setClDragOverIdx(null)
+    if (fromIdx === null || fromIdx === toIdx || !selectedChecklist) return
+    const next = [...selectedChecklist]
+    const [moved] = next.splice(fromIdx, 1)
+    next.splice(toIdx, 0, moved)
+    updateChecklist(next)
   }
 
   // ── derived lists ─────────────────────────────────────────────────────────
@@ -552,7 +562,46 @@ export default function NotesApp() {
                 </div>
               )}
               {selectedChecklist.map((item, idx) => (
-                <div key={idx} style={checklistRowStyle}>
+                <div
+                  key={idx}
+                  onDragOver={(e) => {
+                    e.preventDefault()
+                    if (clDragIdxRef.current !== null && clDragIdxRef.current !== idx) {
+                      setClDragOverIdx(idx)
+                    }
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    onChecklistItemDrop(idx)
+                  }}
+                  style={{
+                    ...checklistRowStyle,
+                    borderTop: clDragOverIdx === idx ? '2px solid #f5b400' : '2px solid transparent',
+                    background: clDragOverIdx === idx ? '#fff7e0' : 'transparent',
+                  }}
+                >
+                  {/* v24: drag handle — only this span is draggable so the
+                      text input keeps normal selection behavior */}
+                  <span
+                    draggable
+                    onDragStart={() => { clDragIdxRef.current = idx }}
+                    onDragEnd={() => {
+                      clDragIdxRef.current = null
+                      setClDragOverIdx(null)
+                    }}
+                    title="Drag to reorder"
+                    style={{
+                      cursor: 'grab',
+                      color: '#ccc',
+                      fontSize: 14,
+                      flexShrink: 0,
+                      userSelect: 'none',
+                      padding: '0 2px',
+                    }}
+                    aria-hidden
+                  >
+                    ⠿
+                  </span>
                   <input
                     type="checkbox"
                     checked={item.done}

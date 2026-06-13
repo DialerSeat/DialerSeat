@@ -6,46 +6,35 @@ import AppWindow from './AppWindow'
 import Taskbar from './Taskbar'
 import StartMenu from './StartMenu'
 import ContextMenu, { type ContextMenuItem } from './ContextMenu'
-import { DesktopServicesContext, isBaseApp, type DesktopServices } from './desktopServices'
+import { DesktopServicesContext, isBaseApp, DEFAULT_HIDDEN_APP_IDS, type DesktopServices } from './desktopServices'
 import type { AppId, WindowState, RecentApp } from './types'
 
 // =============================================================================
 // DESKTOP — root shell component
 // =============================================================================
-// v24.1 changes vs v24:
-// - OPEN-DESKTOP-APP LISTENER (repair): StartMenu has dispatched an
-//   `open-desktop-app` CustomEvent since v23 for the Account window, and its
-//   comments claimed Desktop listens for it — no Desktop version ever did,
-//   so Manage Account was dead. The listener now exists; any
-//   `window.dispatchEvent(new CustomEvent('open-desktop-app', { detail:
-//   { appId } }))` opens that app.
-// - Wired against the real file set: AppWindow v22.1, registry v21 (with
-//   'appstore'), StartMenu v24 (installedApps + onOpenPersonalize props),
-//   types v2.
+// v25 changes vs v24.1:
+// - CLEAN DEFAULT ARRANGEMENT (restore): unsaved icons fill ROW-MAJOR across
+//   4 columns (left-to-right, then next row) — the tidy v22 grid look —
+//   instead of v24's tall first column. Grid snapping, no-overlap cells, and
+//   layout freezing are unchanged; only the DEFAULT placement order differs.
+//   "Reset icon layout" returns to this arrangement.
+// - XP AUTUMN WALLPAPER: preset swapped to the full-res (4200x2800) source
+//   JC supplied, so `cover` no longer upscales a small preview into a
+//   zoomed-in blur. Renamed XP BLISS → XP AUTUMN (it's the autumn wallpaper).
+// - TASKBAR PILL REORDER: new reorderWindows(dragId, targetId) moves a
+//   window within the windows array (pill order = array order, zIndex
+//   untouched); passed to Taskbar v2 as onReorderWindows.
+// - ICON RESTYLE (de-cheese pass): smaller squircle tiles (52px, radius 12),
+//   glossy inset highlight removed, softer shadow, slightly smaller emoji,
+//   subtle desaturation. Plus iconSrc support — registry entries that set
+//   iconSrc render a real image instead of the emoji (types v3).
+// - ACCOUNT HIDDEN BY DEFAULT: initial hiddenApps falls back to
+//   DEFAULT_HIDDEN_APP_IDS (['clerk-profile']) when no localStorage cache
+//   exists; server-side defaults handled by prefs route v3 + migration 014.
+//   ADD TO DESKTOP in the App Store still restores it permanently.
 //
-// v24 changes vs v23:
-// - GRID SNAPPING: icons live on an invisible Windows-style grid
-//   (column-major fill, top-to-bottom then left-to-right). Dragging shows a
-//   free-floating ghost; on release the icon snaps to the nearest cell. Cells
-//   are exclusive — dropping on an occupied cell bumps the icon to the
-//   nearest free cell, so icons can never overlap. The first drag freezes the
-//   whole current layout into saved positions so other icons don't reflow.
-// - DRAG-AND-DROP WALLPAPER: drop any image file onto the desktop to set it
-//   as the background. Uploads to tenant-assets via
-//   /api/admin/desktop-prefs/wallpaper, saves the public URL into prefs.
-// - OG WALLPAPER PRESETS: Personalize presets are real wallpaper images
-//   (Windows 7 Harmony, XP Bliss) plus the Aero gradient default. Hotlinked
-//   URLs for now — mirror into /public/wallpapers/ and swap (see BG_PRESETS).
-// - APP STORE SYSTEM: BASE apps (everything not in STORE_APP_IDS, including
-//   the App Store) are always installed, hideable, never uninstallable.
-//   STORE apps are downloadable/uninstallable. installedApps + hiddenApps
-//   persist in prefs (migration 013, route v2). Desktop renders
-//   installed-and-not-hidden apps. Icon right-click gains "Remove from
-//   desktop" and (store apps) "Uninstall". DesktopServicesContext exposes
-//   install/uninstall/hide/show/open to apps in windows (App Store uses it).
-// - All v22/v23 behavior preserved: window persistence, analytics boot,
-//   safe-area handling, show-desktop peek, context menus, prefs LS cache +
-//   debounced Supabase save.
+// v24.1: open-desktop-app event listener (Account window repair).
+// v24: grid snapping, wallpaper drag-drop, OG presets, App Store system.
 // =============================================================================
 
 const MOBILE_BREAKPOINT = 768
@@ -60,6 +49,7 @@ const CELL_W = 110
 const CELL_H = 106
 const GRID_X = 20   // grid origin
 const GRID_Y = 20
+const DEFAULT_FILL_COLS = 4   // v25: default arrangement = 4-wide rows (v22 look)
 
 function gridDims(vw: number, vh: number, taskbarH: number) {
   return {
@@ -113,11 +103,10 @@ const DEFAULT_BG_CSS = `
   linear-gradient(180deg, #1a3a6a 0%, #4a7ab0 50%, #82a6cf 100%)
 `
 
-// OG wallpapers. The first two URLs are the ones JC supplied — hotlinks can
-// break or rate-limit, so the durable setup is: download each image, drop it
-// in /public/wallpapers/, and swap the url to '/wallpapers/<file>.jpg'.
-// To add more OGs (Vista Aurora, Win 8, Win 10 Hero...), save the file to
-// /public/wallpapers/ and add an entry here — nothing else needed.
+// OG wallpapers. Hotlinks can break or rate-limit — the durable setup is:
+// download each image, drop it in /public/wallpapers/, and swap the url to
+// '/wallpapers/<file>.jpg'. To add more OGs (Bliss, Vista Aurora, Win 10
+// Hero...), save the file and add an entry — nothing else needed.
 const BG_PRESETS: { id: string; name: string; css: string }[] = [
   { id: 'aero', name: 'AERO (DEFAULT)', css: DEFAULT_BG_CSS },
   {
@@ -126,9 +115,11 @@ const BG_PRESETS: { id: string; name: string; css: string }[] = [
     css: `#1a3a6a url("https://wallpapers.com/images/hd/windows-7-background-imfecqv6cnsicbx4.jpg") center / cover no-repeat`,
   },
   {
+    // v25: full-res 4200x2800 source so cover doesn't upscale into a
+    // zoomed-in blur (previous URL served a small preview).
     id: 'bliss',
-    name: 'XP BLISS',
-    css: `#3a7a3a url("https://i.redd.it/3ma6nhepxbb81.jpg") center / cover no-repeat`,
+    name: 'XP AUTUMN',
+    css: `#5a4a2a url("https://preview.redd.it/finally-windows-xps-autumn-wallpaper-in-full-res-4200x2800-v0-3ma6nhepxbb81.jpg?width=1080&crop=smart&auto=webp&s=e3747c3ccf8c439969200d2d67fb06d3f3738138") center / cover no-repeat`,
   },
   // { id: 'vista', name: 'VISTA AURORA', css: `#0d2a1a url("/wallpapers/vista-aurora.jpg") center / cover no-repeat` },
   // { id: 'win10', name: 'WIN 10 HERO', css: `#0a2a4a url("/wallpapers/win10-hero.jpg") center / cover no-repeat` },
@@ -236,7 +227,10 @@ export default function Desktop() {
   )
   const [background, setBackground] = useState<BgSetting | null>(initialPrefs?.background ?? null)
   const [installedApps, setInstalledApps] = useState<string[]>(initialPrefs?.installedApps ?? [])
-  const [hiddenApps, setHiddenApps] = useState<string[]>(initialPrefs?.hiddenApps ?? [])
+  // v25: no cache → default-hidden apps apply (server enforces the same)
+  const [hiddenApps, setHiddenApps] = useState<string[]>(
+    initialPrefs?.hiddenApps ?? [...DEFAULT_HIDDEN_APP_IDS]
+  )
   const [prefsLoaded, setPrefsLoaded] = useState(false)
   const [personalizeOpen, setPersonalizeOpen] = useState(false)
   const prefsSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -346,8 +340,9 @@ export default function Desktop() {
 
   // ── GRID LAYOUT ──────────────────────────────────────────────────────────
   // Pass 1: icons with saved positions snap to their cell (collisions bumped
-  // to nearest free). Pass 2: unsaved icons fill column-major (top-to-bottom,
-  // left-to-right) into remaining free cells — Windows-style.
+  // to nearest free). Pass 2 (v25): unsaved icons fill ROW-MAJOR across 4
+  // columns (left-to-right, then next row) — the clean v22 arrangement —
+  // overflowing into columns 5+ only if the 4-wide block runs out of rows.
   const desktopLayout = useMemo(() => {
     const { cols, rows } = gridDims(viewport.w, viewport.h, TASKBAR_HEIGHT)
     const occupied = new Set<string>()
@@ -367,18 +362,31 @@ export default function Desktop() {
       layout[app.id] = cellToXY(c, r)
     }
 
-    for (const app of visibleApps) {
-      if (layout[app.id]) continue
-      let placed = false
-      for (let c = 0; c < cols && !placed; c++) {
-        for (let r = 0; r < rows && !placed; r++) {
+    const fillCols = Math.min(DEFAULT_FILL_COLS, cols)
+    const placeDefault = (appId: string): void => {
+      // primary block: 4-wide row-major
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < fillCols; c++) {
           if (occupied.has(cellKey(c, r))) continue
           occupied.add(cellKey(c, r))
-          layout[app.id] = cellToXY(c, r)
-          placed = true
+          layout[appId] = cellToXY(c, r)
+          return
         }
       }
-      if (!placed) layout[app.id] = cellToXY(0, 0) // grid full fallback
+      // overflow: remaining columns, column-major
+      for (let c = fillCols; c < cols; c++) {
+        for (let r = 0; r < rows; r++) {
+          if (occupied.has(cellKey(c, r))) continue
+          occupied.add(cellKey(c, r))
+          layout[appId] = cellToXY(c, r)
+          return
+        }
+      }
+      layout[appId] = cellToXY(0, 0) // grid full fallback
+    }
+
+    for (const app of visibleApps) {
+      if (!layout[app.id]) placeDefault(app.id)
     }
 
     return layout
@@ -531,10 +539,7 @@ export default function Desktop() {
     })
   }, [topZ, TASKBAR_HEIGHT])
 
-  // ── v24.1: OPEN-DESKTOP-APP EVENT LISTENER (repair) ──────────────────────
-  // StartMenu (and potentially other components) dispatch
-  // `open-desktop-app` with { detail: { appId } }. This listener was
-  // documented in StartMenu v23 but never implemented — now it is.
+  // ── OPEN-DESKTOP-APP EVENT LISTENER (v24.1 repair) ───────────────────────
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail
@@ -545,6 +550,20 @@ export default function Desktop() {
     window.addEventListener('open-desktop-app', handler)
     return () => window.removeEventListener('open-desktop-app', handler)
   }, [openApp])
+
+  // ── v25: TASKBAR PILL REORDER ────────────────────────────────────────────
+  const reorderWindows = useCallback((dragId: string, targetId: string) => {
+    if (dragId === targetId) return
+    setWindows(prev => {
+      const from = prev.findIndex(w => w.id === dragId)
+      const to = prev.findIndex(w => w.id === targetId)
+      if (from < 0 || to < 0) return prev
+      const next = [...prev]
+      const [moved] = next.splice(from, 1)
+      next.splice(to, 0, moved)
+      return next
+    })
+  }, [])
 
   const desktopServices: DesktopServices = useMemo(() => ({
     installedAppIds: installedApps,
@@ -821,6 +840,7 @@ export default function Desktop() {
                     key={app.id}
                     name={app.name}
                     icon={app.icon}
+                    iconSrc={app.iconSrc}
                     iconBg={app.iconBg}
                     isOpen={isOpen}
                     onDoubleClick={() => openApp(app.id)}
@@ -840,6 +860,7 @@ export default function Desktop() {
                   key={app.id}
                   name={app.name}
                   icon={app.icon}
+                  iconSrc={app.iconSrc}
                   iconBg={app.iconBg}
                   isOpen={isOpen}
                   x={pos.x}
@@ -890,6 +911,7 @@ export default function Desktop() {
           onTaskbarItemContextMenu={onTaskbarContextMenu}
           onShowDesktop={showDesktop}
           isMobile={isMobile}
+          onReorderWindows={reorderWindows}
         />
 
         {startMenuOpen && (
@@ -1154,18 +1176,18 @@ function PersonalizePopup({
 // =============================================================================
 // DESKTOP ICON
 // =============================================================================
-// v24: drag reports both live position (onDrag — drives the free-floating
-// ghost) and the release point (onDragEnd — Desktop snaps it to the nearest
-// free grid cell). 5px threshold separates drags from clicks; a completed
-// drag suppresses the click on release. `isGhosting` disables the snap
-// transition while dragging so only the release animates. Mobile: grid
-// layout, tap to open, no dragging — unchanged.
+// v25 restyle (de-cheese pass): smaller squircle tile, no glossy inset
+// highlight, softer shadow, subtle desaturation, smaller glyph. Renders
+// iconSrc image when the registry provides one. Drag behavior unchanged from
+// v24: onDrag drives the ghost, onDragEnd snaps to the nearest free cell, 5px
+// threshold separates drags from clicks. Mobile: grid layout, tap to open.
 function DesktopIcon({
-  name, icon, iconBg, isOpen, onDoubleClick, onContextMenu, isMobile,
+  name, icon, iconSrc, iconBg, isOpen, onDoubleClick, onContextMenu, isMobile,
   x, y, isGhosting, onDrag, onDragEnd,
 }: {
   name: string
   icon: string
+  iconSrc?: string
   iconBg: string
   isOpen: boolean
   onDoubleClick: () => void
@@ -1260,6 +1282,7 @@ function DesktopIcon({
   }, [selected])
 
   const positioned = !isMobile && x !== undefined && y !== undefined
+  const tile = isMobile ? 46 : 52
 
   return (
     <div
@@ -1283,7 +1306,7 @@ function DesktopIcon({
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: 4,
+        gap: 5,
         padding: 6,
         borderRadius: 4,
         cursor: dragging ? 'grabbing' : 'pointer',
@@ -1293,29 +1316,35 @@ function DesktopIcon({
       }}
     >
       <div style={{
-        width: isMobile ? 48 : 56,
-        height: isMobile ? 48 : 56,
-        borderRadius: 8,
+        width: tile,
+        height: tile,
+        borderRadius: 12,
         background: iconBg,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        fontSize: isMobile ? 26 : 30,
-        boxShadow: '0 3px 8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.4)',
-        border: '1px solid rgba(0,0,0,0.2)',
+        fontSize: isMobile ? 22 : 25,
+        boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
+        border: '1px solid rgba(255,255,255,0.18)',
+        filter: 'saturate(0.88)',
         position: 'relative',
         pointerEvents: 'none',
+        overflow: 'hidden',
       }}>
-        {icon}
+        {iconSrc ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={iconSrc} alt="" width={Math.round(tile * 0.6)} height={Math.round(tile * 0.6)}
+            style={{ objectFit: 'contain' }} draggable={false} />
+        ) : icon}
         {isOpen && (
           <div style={{
             position: 'absolute',
-            bottom: -4, left: '50%',
+            bottom: 3, left: '50%',
             transform: 'translateX(-50%)',
-            width: 6, height: 6,
+            width: 5, height: 5,
             background: '#7ec0ff',
             borderRadius: '50%',
-            boxShadow: '0 0 6px rgba(126,192,255,0.9)',
+            boxShadow: '0 0 5px rgba(126,192,255,0.9)',
           }} />
         )}
       </div>
@@ -1323,7 +1352,7 @@ function DesktopIcon({
         fontSize: 11,
         color: 'white',
         textAlign: 'center',
-        textShadow: '0 1px 2px rgba(0,0,0,0.8)',
+        textShadow: '0 1px 3px rgba(0,0,0,0.85)',
         fontWeight: 500,
         maxWidth: 84,
         wordBreak: 'break-word',

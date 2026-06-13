@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useUser, UserButton, SignOutButton } from '@clerk/nextjs'
 import { getApp } from './registry'
 import { APP_STORE_ID } from './desktopServices'
@@ -14,35 +14,31 @@ interface StartMenuProps {
 }
 
 // =============================================================================
-// START MENU — v24
+// START MENU — v25
 // =============================================================================
-// v24 changes vs v23 (App Store push):
-// - INSTALLED-APPS AWARE: the All Apps list now comes from the new
-//   `installedApps` prop (base apps + downloaded store apps, supplied by
-//   Desktop v24) instead of importing APPS directly. Hidden-from-desktop
-//   apps still appear here — Start is the full launcher.
-// - APP STORE PERMANENTLY PINNED: its own strip directly above the footer,
-//   always present even when the App Store icon is removed from the desktop.
-//   This is the guaranteed recovery path: Start → App Store → INSTALLED tab
-//   → ADD TO DESKTOP.
-// - PERSONALIZE footer button (between Account and Log Off) opens the
-//   wallpaper dialog via the new `onOpenPersonalize` prop.
-// - Recently Closed entries are filtered to apps that are still installed,
-//   so an uninstalled store app can't be reopened from recents.
-// - Account window flow simplified: the footer button and avatar now call
-//   onLaunchApp('clerk-profile') directly. The open-desktop-app CustomEvent
-//   dispatch is kept as a fallback for any other dispatchers — and Desktop
-//   v24 finally implements the listener (it never existed before v24, which
-//   is why Manage Account was dead).
+// v25 changes vs v24 (simplification pass):
+// - NO MORE FULL APP DUMP: the default view shows a short list — recently
+//   used apps first, topped up with installed apps until there are 6 rows.
+//   An "All apps ▸" toggle at the bottom of the list expands the complete
+//   installed list in place (Windows 7's "All Programs" behavior); "◂ Back"
+//   collapses it. Collapsed is the default every time the menu opens.
+// - Removed the separate "Recently Closed" section — recents ARE the main
+//   list now, so the menu is one short list + App Store + footer.
+// - iconSrc support: rows render the registry image icon when set, emoji
+//   fallback otherwise.
 //
-// v23 — Manage Account opens the draggable ClerkProfile desktop window.
+// v24: installed-apps aware, App Store permanently pinned above the footer,
+// Personalize footer button, Account opens the ClerkProfile desktop window.
 // =============================================================================
+
+const SIMPLE_LIST_SIZE = 6
 
 export default function StartMenu({
   onClose, onLaunchApp, recent, installedApps, onOpenPersonalize,
 }: StartMenuProps) {
   const ref = useRef<HTMLDivElement>(null)
   const { user, isLoaded } = useUser()
+  const [allAppsOpen, setAllAppsOpen] = useState(false)
 
   useEffect(() => {
     const onMouseDown = (e: MouseEvent) => {
@@ -64,8 +60,6 @@ export default function StartMenu({
     }
   }, [onClose])
 
-  // v24: launch directly through the window manager; keep the CustomEvent as
-  // a secondary path for any external dispatchers.
   const openAccountWindow = () => {
     onLaunchApp('clerk-profile')
     window.dispatchEvent(
@@ -79,14 +73,25 @@ export default function StartMenu({
     : 'Loading...'
 
   const installedIds = new Set(installedApps.map(a => a.id))
-
-  const recentValid = recent
-    .map(r => ({ ...r, app: getApp(r.appId) }))
-    .filter(r => r.app && installedIds.has(r.appId))
-    .slice(0, 6)
-
   const appStore = getApp(APP_STORE_ID)
-  const mainApps = installedApps.filter(a => a.id !== APP_STORE_ID)
+  const launchable = installedApps.filter(a => a.id !== APP_STORE_ID)
+
+  // ── Simple list: recents first (installed only, deduped), topped up with
+  //    remaining installed apps until SIMPLE_LIST_SIZE rows ─────────────────
+  const recentApps = recent
+    .map(r => launchable.find(a => a.id === r.appId))
+    .filter((a): a is AppDefinition => !!a && installedIds.has(a.id))
+  const seen = new Set<string>()
+  const simpleList: AppDefinition[] = []
+  for (const a of [...recentApps, ...launchable]) {
+    if (seen.has(a.id)) continue
+    seen.add(a.id)
+    simpleList.push(a)
+    if (simpleList.length >= SIMPLE_LIST_SIZE) break
+  }
+
+  const listToShow = allAppsOpen ? launchable : simpleList
+  const hasMore = launchable.length > simpleList.length
 
   return (
     <div
@@ -172,7 +177,7 @@ export default function StartMenu({
         </div>
       </div>
 
-      {/* ── INSTALLED APPS ─────────────────────────────────────────────── */}
+      {/* ── APP LIST (simple ↔ all apps) ───────────────────────────────── */}
       <div style={{
         padding: '8px 4px',
         borderBottom: '1px solid #d0d6e0',
@@ -180,11 +185,11 @@ export default function StartMenu({
         flex: 1,
         minHeight: 0,
       }}>
-        <SectionHeader>All Apps</SectionHeader>
-        {mainApps.map(app => (
+        {listToShow.map(app => (
           <StartMenuItem
             key={app.id}
             icon={app.icon}
+            iconSrc={app.iconSrc}
             iconBg={app.iconBg}
             label={app.name}
             sublabel={app.description}
@@ -194,36 +199,40 @@ export default function StartMenu({
             }}
           />
         ))}
-        {mainApps.length === 0 && (
+        {listToShow.length === 0 && (
           <div style={{ padding: '4px 12px 8px', fontSize: 11, color: '#6a7080' }}>
             No apps installed — visit the App Store below
           </div>
         )}
-      </div>
 
-      {/* ── RECENT ─────────────────────────────────────────────────────── */}
-      {recentValid.length > 0 && (
-        <div style={{
-          padding: '8px 4px',
-          borderBottom: '1px solid #d0d6e0',
-          flexShrink: 0,
-        }}>
-          <SectionHeader>Recently Closed</SectionHeader>
-          {recentValid.map((r, idx) => (
-            <StartMenuItem
-              key={`${r.appId}-${idx}`}
-              icon={r.app!.icon}
-              iconBg={r.app!.iconBg}
-              label={r.app!.name}
-              sublabel={'Reopen'}
-              onClick={() => {
-                onLaunchApp(r.appId)
-                onClose()
-              }}
-            />
-          ))}
-        </div>
-      )}
+        {(hasMore || allAppsOpen) && (
+          <div
+            role="menuitem"
+            onClick={() => setAllAppsOpen(o => !o)}
+            style={{
+              padding: '8px 12px',
+              margin: '4px 4px 0',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              cursor: 'pointer',
+              borderRadius: 3,
+              borderTop: '1px solid #e0e4ea',
+              fontSize: 12,
+              fontWeight: 600,
+              color: '#3a5a8a',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'linear-gradient(to bottom, #c8def8, #92b8e0)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent'
+            }}
+          >
+            {allAppsOpen ? '◂ Back' : `All apps ▸`}
+          </div>
+        )}
+      </div>
 
       {/* ── APP STORE (permanently pinned) ─────────────────────────────── */}
       {appStore && (
@@ -235,6 +244,7 @@ export default function StartMenu({
         }}>
           <StartMenuItem
             icon={appStore.icon}
+            iconSrc={appStore.iconSrc}
             iconBg={appStore.iconBg}
             label={appStore.name}
             sublabel="Download, uninstall, and re-add desktop apps"
@@ -283,23 +293,11 @@ export default function StartMenu({
   )
 }
 
-function SectionHeader({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{
-      fontSize: 10,
-      fontWeight: 700,
-      color: '#5a6a7a',
-      letterSpacing: 1.5,
-      padding: '6px 12px 4px 12px',
-      textTransform: 'uppercase',
-    }}>{children}</div>
-  )
-}
-
 function StartMenuItem({
-  icon, iconBg, label, sublabel, onClick,
+  icon, iconSrc, iconBg, label, sublabel, onClick,
 }: {
   icon: string
+  iconSrc?: string
   iconBg: string
   label: string
   sublabel: string
@@ -326,12 +324,19 @@ function StartMenuItem({
       }}
     >
       <div style={{
-        width: 28, height: 28, borderRadius: 4,
+        width: 28, height: 28, borderRadius: 6,
         background: iconBg,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 16, flexShrink: 0,
+        fontSize: 15, flexShrink: 0,
         boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
-      }}>{icon}</div>
+        overflow: 'hidden',
+      }}>
+        {iconSrc ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={iconSrc} alt="" width={18} height={18}
+            style={{ objectFit: 'contain', pointerEvents: 'none' }} draggable={false} />
+        ) : icon}
+      </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 600 }}>{label}</div>
         <div style={{ fontSize: 10, color: '#6a7080', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>

@@ -1,312 +1,198 @@
 import { NextResponse } from 'next/server'
-import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
-import { requireAdmin } from '@/lib/requireAdmin'
+import { requireAdmin } from '@/lib/admin'
+import { stripe } from '@/lib/stripe'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 // =============================================================================
-// /api/admin/logs
+// ADMIN LOGS API (v1 — the backend the Logs app has been fetching)
 // =============================================================================
-// Unified purchase/renewal/cancel timeline across all customers.
-//
-// SOURCES (merged by date desc):
-//   1. Stripe paid invoices (last 90 days)
-//        - First invoice on a subscription → 'signup'
-//        - Subsequent invoices on a subscription → 'renewal'
-//        - retention_weeks = (invoice.created - subscription.created) / 1 week
-//   2. Stripe canceled subscriptions (last 90 days, by ended_at)
-//        - One 'cancel' event per canceled sub
-//   3. Supabase team_seat_charges (last 90 days, status='paid')
-//        - Deduped against Stripe by stripe_invoice_id when present
-//        - Provides a fallback for invoices that pre-date Stripe access or
-//          where Stripe sync was disabled (defensive — should be rare)
-//
-// STRIPE API NOTE:
-//   In Stripe API 2025+, `invoice.subscription` was removed. The subscription
-//   ID now lives on each line item: `invoice.lines.data[0].subscription`.
-//   We expand `data.lines.data.subscription` so each invoice ships with its
-//   full subscription object inline.
-//
-// NAME LOOKUP:
-//   Stripe customers have email/name. We try Stripe first, then look up
-//   users.full_name by email if Stripe name is missing. Falls back to email
-//   prefix, then '(unknown)'.
-//
-// PERFORMANCE NOTE:
-//   This route hits Stripe ~2 times in parallel. For a v1 admin tool with
-//   <100 customers it's fine; cap at 90 days and 100 results per source.
-//   If this gets slow we can move to a cron that materializes a logs table.
+// The Logs app (v21+) GETs /api/admin/logs expecting:
+//   { entries: LogEntry[], counts: { signups, renewals, cancels }, window_days }
+// This route never existed — that's why the app showed errors. It merges:
+//   SIGNUP  — subscriptions created in the window (never-paid incomplete /
+//             incomplete_expired excluded), amount = the plan's weekly price
+//   CANCEL  — subscriptions with canceled_at in the window, with
+//             retention_weeks = lifetime from created_at to canceled_at
+//   RENEWAL — Stripe paid invoices with billing_reason 'subscription_cycle'
+//             in the window, amount = invoice.amount_paid, mapped to users
+//             via users.stripe_customer_id
+// Exclusions match the analytics route: is_admin and exclude_from_analytics
+// users never appear. Sorted newest-first, capped at 200 entries, 90-day
+// window.
 // =============================================================================
 
-// Let Stripe pick its default API version — matches whatever the rest of the
-// codebase uses (e.g. webhook routes). Pinning `apiVersion` here would force
-// a string-literal type match, and the type changes between SDK versions.
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+const WINDOW_DAYS = 90
+const MAX_ENTRIES = 200
+const NEVER_PAID_STATUSES = ['incomplete', 'incomplete_expired']
 
-const NINETY_DAYS_SECONDS = 90 * 24 * 60 * 60
+const PRO_PRICE_ID = process.env.STRIPE_PRICE_ID || ''
+const WL_PRICE_ID = process.env.STRIPE_PRICE_WL_BASE || ''
+const PRO_WEEKLY_CENTS = 35 * 100
+const WL_WEEKLY_CENTS = 75 * 100
 
 interface LogEntry {
-  id: string                    // stable id for React keys; e.g. `stripe_inv:in_xxx`
+  id: string
   event_type: 'signup' | 'renewal' | 'cancel'
   user_name: string
-  user_email: string | null
-  amount_cents: number          // negative for refunds (not handled yet); 0 for cancels
-  date_iso: string              // ISO timestamp for sort + display
-  retention_weeks: number | null // null for cancels-without-known-start
-  source: 'stripe_invoice' | 'stripe_cancel' | 'team_seat_charge'
-}
-
-export async function GET() {
-  const gate = await requireAdmin()
-  if (!gate.ok) {
-    return NextResponse.json({ error: gate.message }, { status: gate.status })
-  }
-
-  const cutoffUnix = Math.floor(Date.now() / 1000) - NINETY_DAYS_SECONDS
-
-  try {
-    // ── PARALLEL FETCH: Stripe invoices, Stripe canceled subs, Supabase charges
-    const [invoicesResp, canceledSubsResp, supabaseChargesResp] = await Promise.all([
-      stripe.invoices.list({
-        status: 'paid',
-        created: { gte: cutoffUnix },
-        limit: 100,
-        // Stripe API 2025+: subscription lives on the line items, not the
-        // invoice itself. Expand the line items' subscription so we don't
-        // need a second round trip per invoice.
-        expand: ['data.lines.data.subscription', 'data.customer'],
-      }),
-      stripe.subscriptions.list({
-        status: 'canceled',
-        limit: 100,
-        expand: ['data.customer'],
-      }),
-      fetchSupabaseCharges(cutoffUnix),
-    ])
-
-    // ── STRIPE INVOICES → entries
-    const stripeInvoiceEntries: LogEntry[] = []
-    const seenStripeInvoiceIds = new Set<string>()
-
-    for (const inv of invoicesResp.data) {
-      if (!inv.created || inv.created < cutoffUnix) continue
-      if (inv.id) seenStripeInvoiceIds.add(inv.id)
-
-      // Pull subscription from the first line item. `firstLine` is typed
-      // as `any` because the SDK's `InvoiceLineItem.subscription` field
-      // appears as `string | undefined` in some SDK versions and as
-      // `string | Stripe.Subscription | null` in others. Both shapes are
-      // handled by `expandedAsSubscription`.
-      const firstLine: any = inv.lines?.data?.[0]
-      const sub = firstLine ? expandedAsSubscription(firstLine.subscription) : null
-      const customer = expandedAsCustomer(inv.customer)
-
-      // Classify signup vs renewal:
-      //   If the invoice's created timestamp is within ~1 day of the
-      //   subscription.created timestamp, it's the first invoice → signup.
-      //   Otherwise → renewal.
-      // Edge case: one-off invoices (no subscription) are classified as signup.
-      let eventType: 'signup' | 'renewal' = 'signup'
-      let retentionWeeks: number | null = null
-
-      if (sub && sub.created) {
-        const ageSeconds = inv.created - sub.created
-        const ONE_DAY = 24 * 60 * 60
-        eventType = ageSeconds < ONE_DAY ? 'signup' : 'renewal'
-        retentionWeeks = Math.max(0, Math.round(ageSeconds / (7 * ONE_DAY)))
-      }
-
-      const { name, email } = extractCustomerIdentity(customer, sub)
-
-      stripeInvoiceEntries.push({
-        id: `stripe_inv:${inv.id}`,
-        event_type: eventType,
-        user_name: name,
-        user_email: email,
-        amount_cents: inv.amount_paid ?? 0,
-        date_iso: new Date(inv.created * 1000).toISOString(),
-        retention_weeks: retentionWeeks,
-        source: 'stripe_invoice',
-      })
-    }
-
-    // ── STRIPE CANCELED SUBS → entries
-    const cancelEntries: LogEntry[] = []
-    for (const sub of canceledSubsResp.data) {
-      const endedAt = sub.ended_at ?? sub.canceled_at
-      if (!endedAt || endedAt < cutoffUnix) continue
-
-      const customer = expandedAsCustomer(sub.customer)
-      const { name, email } = extractCustomerIdentity(customer, sub)
-
-      // How long did they stick around before canceling?
-      let retentionWeeks: number | null = null
-      if (sub.created && endedAt > sub.created) {
-        retentionWeeks = Math.max(0, Math.round((endedAt - sub.created) / (7 * 24 * 60 * 60)))
-      }
-
-      cancelEntries.push({
-        id: `stripe_cancel:${sub.id}`,
-        event_type: 'cancel',
-        user_name: name,
-        user_email: email,
-        amount_cents: 0,
-        date_iso: new Date(endedAt * 1000).toISOString(),
-        retention_weeks: retentionWeeks,
-        source: 'stripe_cancel',
-      })
-    }
-
-    // ── SUPABASE CHARGES → entries (deduped)
-    const supabaseEntries: LogEntry[] = supabaseChargesResp
-      .filter(c => !c.stripe_invoice_id || !seenStripeInvoiceIds.has(c.stripe_invoice_id))
-      .map(c => ({
-        id: `supabase_chg:${c.id}`,
-        event_type: c.event_type,
-        user_name: c.user_name || c.user_email || '(unknown)',
-        user_email: c.user_email,
-        amount_cents: c.amount_cents,
-        date_iso: c.date_iso,
-        retention_weeks: c.retention_weeks,
-        source: 'team_seat_charge',
-      }))
-
-    // ── MERGE + SORT
-    const merged = [...stripeInvoiceEntries, ...cancelEntries, ...supabaseEntries]
-      .sort((a, b) => b.date_iso.localeCompare(a.date_iso))
-      .slice(0, 200) // cap response size
-
-    return NextResponse.json({
-      entries: merged,
-      counts: {
-        signups: merged.filter(e => e.event_type === 'signup').length,
-        renewals: merged.filter(e => e.event_type === 'renewal').length,
-        cancels: merged.filter(e => e.event_type === 'cancel').length,
-      },
-      window_days: 90,
-    })
-  } catch (err: any) {
-    console.error('[/api/admin/logs] error:', err)
-    return NextResponse.json(
-      { error: 'Failed to load logs', detail: err?.message || String(err) },
-      { status: 500 }
-    )
-  }
-}
-
-// =============================================================================
-// HELPERS
-// =============================================================================
-
-interface SupabaseChargeRow {
-  id: string
-  event_type: 'signup' | 'renewal'
-  user_name: string | null
   user_email: string | null
   amount_cents: number
   date_iso: string
   retention_weeks: number | null
-  stripe_invoice_id: string | null
+  source: string
 }
 
-/**
- * Pulls team_seat_charges rows in window, joining users for name/email.
- * Returns [] on error rather than throwing — Stripe is the primary source.
- */
-async function fetchSupabaseCharges(cutoffUnix: number): Promise<SupabaseChargeRow[]> {
+function weeklyCentsFor(priceId: string | null): number {
+  if (priceId && priceId === WL_PRICE_ID) return WL_WEEKLY_CENTS
+  if (priceId && priceId === PRO_PRICE_ID) return PRO_WEEKLY_CENTS
+  return 0
+}
+
+function nameFor(u: { first_name?: string | null; last_name?: string | null; email?: string | null } | undefined): string {
+  if (!u) return '(unknown)'
+  const full = `${u.first_name || ''} ${u.last_name || ''}`.trim()
+  return full || u.email?.split('@')[0] || '(unknown)'
+}
+
+export async function GET() {
   try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
-    const cutoffIso = new Date(cutoffUnix * 1000).toISOString()
+    await requireAdmin()
+  } catch (res) {
+    return res as Response
+  }
 
-    // team_seat_charges columns we rely on (verify against your schema):
-    //   id, user_id (clerk text), amount_cents, status, stripe_invoice_id,
-    //   stripe_subscription_item_id, created_at
-    //
-    // If your column names differ, adjust the .select() and downstream
-    // mapping. We do NOT try to classify signup-vs-renewal here because
-    // Stripe is the source of truth for that — Supabase rows are only
-    // surfaced when their stripe_invoice_id isn't already represented.
-    const { data: charges, error } = await supabase
-      .from('team_seat_charges')
-      .select('id, user_id, amount_cents, status, stripe_invoice_id, created_at')
-      .eq('status', 'paid')
-      .gte('created_at', cutoffIso)
-      .order('created_at', { ascending: false })
-      .limit(100)
+  const now = Date.now()
+  const day = 86400000
+  const windowStart = now - WINDOW_DAYS * day
 
-    if (error || !charges) {
-      console.warn('[/api/admin/logs] team_seat_charges fetch failed:', error?.message)
-      return []
+  try {
+    // ── Users + exclusions ──────────────────────────────────────────────
+    const { data: users } = await supabase
+      .from('users')
+      .select('clerk_id, email, first_name, last_name, stripe_customer_id, is_admin, exclude_from_analytics')
+
+    const excluded = new Set<string>()
+    const userByClerkId = new Map<string, any>()
+    const userByCustomerId = new Map<string, any>()
+    for (const u of users || []) {
+      if (u.is_admin || u.exclude_from_analytics) {
+        excluded.add(u.clerk_id)
+        continue
+      }
+      userByClerkId.set(u.clerk_id, u)
+      if (u.stripe_customer_id) userByCustomerId.set(u.stripe_customer_id, u)
     }
 
-    // Look up user names by clerk_id
-    const clerkIds = [...new Set(charges.map(c => c.user_id).filter(Boolean))]
-    const userMap = new Map<string, { name: string | null; email: string | null }>()
-    if (clerkIds.length > 0) {
-      const { data: users } = await supabase
-        .from('users')
-        .select('clerk_id, full_name, email')
-        .in('clerk_id', clerkIds)
-      if (users) {
-        for (const u of users) {
-          userMap.set(u.clerk_id, { name: u.full_name, email: u.email })
+    // ── Subscriptions → signups + cancels ───────────────────────────────
+    const { data: subs } = await supabase
+      .from('subscriptions')
+      .select('user_id, status, created_at, canceled_at, stripe_price_id, stripe_subscription_id')
+
+    const entries: LogEntry[] = []
+    let signups = 0
+    let cancels = 0
+
+    for (const s of subs || []) {
+      if (excluded.has(s.user_id)) continue
+      const u = userByClerkId.get(s.user_id)
+
+      // SIGNUP — paid sub created in window
+      if (!NEVER_PAID_STATUSES.includes(s.status)) {
+        const created = new Date(s.created_at).getTime()
+        if (created >= windowStart && created <= now) {
+          signups++
+          entries.push({
+            id: `signup-${s.stripe_subscription_id || s.user_id + '-' + s.created_at}`,
+            event_type: 'signup',
+            user_name: nameFor(u),
+            user_email: u?.email ?? null,
+            amount_cents: weeklyCentsFor(s.stripe_price_id),
+            date_iso: s.created_at,
+            retention_weeks: null,
+            source: 'supabase:subscriptions',
+          })
+        }
+      }
+
+      // CANCEL — canceled in window
+      if (s.status === 'canceled' && s.canceled_at) {
+        const canceled = new Date(s.canceled_at).getTime()
+        if (canceled >= windowStart && canceled <= now) {
+          cancels++
+          const lifetimeMs = canceled - new Date(s.created_at).getTime()
+          entries.push({
+            id: `cancel-${s.stripe_subscription_id || s.user_id + '-' + s.canceled_at}`,
+            event_type: 'cancel',
+            user_name: nameFor(u),
+            user_email: u?.email ?? null,
+            amount_cents: 0,
+            date_iso: s.canceled_at,
+            retention_weeks: Math.max(0, Math.round((lifetimeMs / (7 * day)) * 10) / 10),
+            source: 'supabase:subscriptions',
+          })
         }
       }
     }
 
-    return charges.map((c: any): SupabaseChargeRow => {
-      const u = userMap.get(c.user_id) || { name: null, email: null }
-      return {
-        id: c.id,
-        event_type: 'renewal', // conservative — Stripe-side classification wins via dedup
-        user_name: u.name,
-        user_email: u.email,
-        amount_cents: c.amount_cents ?? 0,
-        date_iso: c.created_at,
-        retention_weeks: null,
-        stripe_invoice_id: c.stripe_invoice_id ?? null,
+    // ── Stripe paid cycle invoices → renewals ────────────────────────────
+    let renewals = 0
+    try {
+      const createdGte = Math.floor(windowStart / 1000)
+      let startingAfter: string | undefined
+      for (let page = 0; page < 3; page++) {
+        const batch = await stripe.invoices.list({
+          status: 'paid',
+          created: { gte: createdGte },
+          limit: 100,
+          ...(startingAfter ? { starting_after: startingAfter } : {}),
+        })
+        for (const inv of batch.data) {
+          if (inv.billing_reason !== 'subscription_cycle') continue
+          const customerId = typeof inv.customer === 'string' ? inv.customer : inv.customer?.id
+          if (!customerId) continue
+          const u = userByCustomerId.get(customerId)
+          // Unknown customer → either an excluded user or stale data; skip
+          // excluded users, keep genuinely unknown ones visible as (unknown)
+          if (!u) {
+            const isExcludedUser = (users || []).some(x =>
+              x.stripe_customer_id === customerId && (x.is_admin || x.exclude_from_analytics)
+            )
+            if (isExcludedUser) continue
+          }
+          renewals++
+          entries.push({
+            id: `renewal-${inv.id}`,
+            event_type: 'renewal',
+            user_name: nameFor(u),
+            user_email: u?.email ?? null,
+            amount_cents: inv.amount_paid ?? 0,
+            date_iso: new Date((inv.created as number) * 1000).toISOString(),
+            retention_weeks: null,
+            source: 'stripe:invoices',
+          })
+        }
+        if (!batch.has_more || batch.data.length === 0) break
+        startingAfter = batch.data[batch.data.length - 1].id
       }
+    } catch (err) {
+      // Renewals are additive — if Stripe is unreachable, still return the
+      // Supabase-derived events rather than failing the whole endpoint.
+      console.warn('[admin/logs] Stripe invoice fetch failed:', err)
+    }
+
+    entries.sort((a, b) => new Date(b.date_iso).getTime() - new Date(a.date_iso).getTime())
+
+    return NextResponse.json({
+      entries: entries.slice(0, MAX_ENTRIES),
+      counts: { signups, renewals, cancels },
+      window_days: WINDOW_DAYS,
     })
   } catch (err) {
-    console.warn('[/api/admin/logs] supabase fetch threw:', err)
-    return []
+    console.error('[admin/logs] failed:', err)
+    return NextResponse.json({ error: 'Failed to build logs' }, { status: 500 })
   }
-}
-
-/**
- * Returns the customer name + email from an expanded Stripe customer object.
- * Some customers may be deleted or anonymous; we handle gracefully.
- */
-function extractCustomerIdentity(
-  customer: Stripe.Customer | null,
-  sub: Stripe.Subscription | null
-): { name: string; email: string | null } {
-  const email = customer?.email ?? null
-
-  let name = ''
-  if (customer?.name) name = customer.name
-  if (!name && customer?.metadata?.full_name) name = customer.metadata.full_name
-  if (!name && sub?.metadata?.full_name) name = sub.metadata.full_name
-  if (!name && email) name = email.split('@')[0]
-  if (!name) name = '(unknown)'
-
-  return { name, email }
-}
-
-function expandedAsSubscription(
-  value: string | Stripe.Subscription | null | undefined
-): Stripe.Subscription | null {
-  if (!value || typeof value === 'string') return null
-  if ('deleted' in value && value.deleted) return null
-  return value as Stripe.Subscription
-}
-
-function expandedAsCustomer(
-  value: string | Stripe.Customer | Stripe.DeletedCustomer | null | undefined
-): Stripe.Customer | null {
-  if (!value || typeof value === 'string') return null
-  if ('deleted' in value && value.deleted) return null
-  return value as Stripe.Customer
 }

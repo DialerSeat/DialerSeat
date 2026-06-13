@@ -8,6 +8,14 @@ import type { ComponentType } from 'react'
 // that mount inside an AppWindow shell — they don't know about the desktop
 // itself, they just render their content.
 //
+// v3 changes vs v2:
+// - Added optional `iconSrc` to AppDefinition. When set (e.g.
+//   '/icons/apps/analytics.svg'), Desktop icons, Start menu rows, and
+//   taskbar pills render the image instead of the emoji glyph. The emoji
+//   `icon` stays required as the fallback. This is the path to non-cheesy
+//   icons: drop real SVG/PNG assets in /public/icons/apps/ and set iconSrc
+//   per registry entry — no other code changes needed.
+//
 // v2 changes vs v1:
 // - Added 'appstore' to the AppId union (App Store base app, Desktop v24).
 // =============================================================================
@@ -29,7 +37,8 @@ export interface AppDefinition {
   id: AppId
   name: string                // shown on the desktop icon + taskbar
   shortName?: string          // optional shorter name for taskbar buttons
-  icon: string                // emoji or SVG-text label (icon glyph)
+  icon: string                // emoji or SVG-text label (icon glyph) — fallback
+  iconSrc?: string            // optional image path (e.g. /icons/apps/x.svg) — preferred when set
   iconBg: string              // background color for the icon tile
   description: string         // tooltip + recent-items subtitle
   // The actual content component. Receives no props — apps are self-contained.

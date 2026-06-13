@@ -2,26 +2,20 @@
 import { useEffect, useState } from 'react'
 
 // =============================================================================
-// LOGS APP — v21
+// LOGS APP — v22
 // =============================================================================
-// Terminal green-on-black aesthetic. Renders the same data the v20 Logs app
-// did (signup/renewal/cancel events merged from Stripe + Supabase via
-// /api/admin/logs), but styled as a monospace terminal log instead of a
-// Win7 list.
+// v22 changes from v21:
+//   1. HOTKEYS NOW WORK: the chips have always rendered as `[1] all`,
+//      `[2] signup`, `[3] renewal`, `[4] cancel`, `[r] refresh` — implying
+//      keyboard bindings that never existed. They do now: 1–4 set the
+//      filter, r refetches. Bindings ignore keystrokes while typing in an
+//      input/textarea and require the Logs window to be mounted.
+//   2. Pairs with the NEW /api/admin/logs route — the endpoint this app has
+//      fetched since v20 but which was never built (the reason for the
+//      persistent error state). Response shape unchanged.
 //
-// v21 changes from v20:
-//   1. Terminal aesthetic: #00ff41 (matrix green) on #0a0a0a (near-black),
-//      monospace font, scanline overlay, blinking cursor on the prompt line.
-//   2. ACTUAL ERROR VISIBILITY: when the API returns non-200 or bad JSON,
-//      the response body is displayed verbatim in the terminal. Previous
-//      version showed "Couldn't load logs" with no debug info.
-//   3. Quick filter chips render as terminal `[1] all  [2] signup ...`
-//      switches with bracket-based selection state.
-//
-// FORMAT:
-//   Each entry shows as:
-//     [TIMESTAMP] EVENT  user_name (email)  $amount  retention_weeks
-//   With color-coded event type in the same row.
+// v21: terminal green-on-black aesthetic, verbatim error bodies, filter
+// chips. All retained.
 // =============================================================================
 
 interface LogEntry {
@@ -58,6 +52,8 @@ const C = {
 } as const
 
 const FONT = '"SF Mono", "Cascadia Mono", "JetBrains Mono", "Fira Code", Menlo, Consolas, "Courier New", monospace'
+
+const FILTER_KEYS: FilterMode[] = ['all', 'signup', 'renewal', 'cancel']
 
 export default function LogsApp() {
   const [data, setData] = useState<LogsResponse | null>(null)
@@ -101,6 +97,25 @@ export default function LogsApp() {
   useEffect(() => {
     const cleanup = refetch()
     return cleanup
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // ── v22: HOTKEYS — 1-4 filter, r refresh ─────────────────────────────
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+      const target = e.target as HTMLElement
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return
+      }
+      if (e.key >= '1' && e.key <= '4') {
+        setFilter(FILTER_KEYS[Number(e.key) - 1])
+      } else if (e.key === 'r' || e.key === 'R') {
+        refetch()
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
