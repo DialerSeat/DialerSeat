@@ -7,42 +7,43 @@ import { useState, useEffect, useRef } from 'react'
 import { useBranding } from '@/components/ThemeProvider'
 
 // =============================================================================
-// app/dashboard/layout.tsx — C4 (top-left logo centered horizontally)
+// app/dashboard/layout.tsx — C5 (Manager+ "Go to Desktop" sidebar button)
 // =============================================================================
-// C4 changes vs C3:
+// C5 changes vs C4:
 //
+//   - GO TO DESKTOP BUTTON. A themed entry to the Manager+ desktop now
+//     renders just above the profile row in the sidebar, gated on
+//     hasManagerPlus (already derived from /api/stripe/status — true for
+//     plan 'manager_plus' or 'both'). It links to /dashboard/manager/desktop
+//     (a server-guarded route that re-checks tenant ownership). Because it
+//     lives inside the shared <Sidebar/>, it appears in BOTH the desktop
+//     sidebar and the mobile drawer automatically. Themed with brandPrimary
+//     so it reads as part of the owner's brand. Shows for nobody else —
+//     admins, Pro-only users, team-seat users, and lapsed users never see it.
+//
+//   - When the REAL Manager+ desktop ships (replacing the Coming Soon page),
+//     add '/dashboard/manager/desktop' to BARE_LAYOUT_PREFIXES so it renders
+//     full-screen without this dashboard chrome, exactly like the admin
+//     desktop does today.
+//
+// C4 changes vs C3:
 //   - Desktop logo Link: added justifyContent: 'center' so the logo
 //     content sits centered within the 260px sidebar instead of pinned
-//     to the left. Per JC: "make dashboard's top-left white-label
-//     sidebar logo centered." Default brand (gradient D + DIALERSEAT
-//     text) also centers now for consistency — both presentations sit
-//     in the middle of the sidebar's top.
-//
-//   - For tenant logos this is largely a no-op visually (the inner span
-//     is width:100% so objectFit:contain already centered the image
-//     inside its box) but makes the intent explicit so any future logo
-//     box width change stays centered.
-//
-//   - For default brand: gradient D + text were previously left-aligned
-//     with `padding: '0 18px'`. They're now centered. The padding still
-//     applies as horizontal breathing room from the sidebar edges.
+//     to the left.
 //
 // C3 changes vs C2:
 //   - Desktop tenant logo box BG: var(--brand-header-bg) → transparent.
-// 
-// What stays from C3 (untouched):
-//   - Logo box dimensions: tenantLogoUrl ? 74 : 64 (height), 0 vs '0 18px'
-//     (padding). Edge-to-edge 260×74 fit for tenant logos.
-//   - Hamburger button → --brand-header-bg background, --brand-on-header
-//     bar lines.
-//   - Mobile topbar background → --brand-header-bg (genuinely the header
-//     strip on mobile, distinct from the sidebar drawer underneath).
-//   - Desktop sidebar background, mobile drawer background → --brand-sidebar-bg
-//   - Nav items, profile row, drawer chrome → sidebar-tinted tokens
-//   - Lapsed RESUBSCRIBE banner → semantic amber #ffaa3e
-//   - ADMIN CONSOLE subtitle blue (#4a9eff) — only renders on default brand
-//   - DefaultBrandDesktop / DefaultBrandMobileTopbar gradient D logo
-//   - brandPrimary JS const for profile-row conditional badge color
+//
+// What stays (untouched):
+//   - Logo box dimensions: tenantLogoUrl ? 74 : 64 (height), 0 vs '0 18px'.
+//   - Hamburger button → --brand-header-bg background, --brand-on-header bars.
+//   - Mobile topbar background → --brand-header-bg.
+//   - Desktop sidebar / mobile drawer background → --brand-sidebar-bg.
+//   - Nav items, profile row, drawer chrome → sidebar-tinted tokens.
+//   - Lapsed RESUBSCRIBE banner → semantic amber #ffaa3e.
+//   - ADMIN CONSOLE subtitle blue (#4a9eff) — only on default brand.
+//   - DefaultBrand* gradient D logos.
+//   - brandPrimary JS const for profile-row conditional badge color.
 // =============================================================================
 
 const userNavItems = [
@@ -435,6 +436,36 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <span style={{
             fontSize: 9, color: 'var(--brand-on-sidebar-muted)', letterSpacing: 1,
           }}>Restore dialing access</span>
+        </Link>
+      )}
+
+      {/* GO TO DESKTOP — Manager+ owners only. Gated on hasManagerPlus
+          (already derived from /api/stripe/status above; true for plan
+          'manager_plus' or 'both'). Themed with brandPrimary so it reads as
+          part of the owner's brand. Links to the server-guarded Manager+
+          desktop route. Renders in both the desktop sidebar and mobile
+          drawer because it lives inside the shared <Sidebar/>. Admins,
+          Pro-only, team-seat, and lapsed users never see it. */}
+      {!isAdmin && hasManagerPlus && (
+        <Link
+          href="/dashboard/manager/desktop"
+          style={{
+            margin: '0 12px 8px',
+            padding: '10px 14px',
+            borderRadius: '10px',
+            background: `linear-gradient(135deg, ${brandPrimary}, ${brandPrimary}cc)`,
+            border: '1px solid rgba(255,255,255,0.15)',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
+            textDecoration: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            flexShrink: 0,
+          }}>
+          <span style={{ fontSize: 16, lineHeight: 1 }}>🖥️</span>
+          <span style={{
+            fontSize: 11, letterSpacing: 2, fontWeight: 'bold', color: '#ffffff',
+          }}>GO TO DESKTOP</span>
         </Link>
       )}
 
