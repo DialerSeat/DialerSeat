@@ -18,9 +18,9 @@ import type { AppId, WindowState, RecentApp } from './types'
 //   instead of v24's tall first column. Grid snapping, no-overlap cells, and
 //   layout freezing are unchanged; only the DEFAULT placement order differs.
 //   "Reset icon layout" returns to this arrangement.
-// - XP AUTUMN WALLPAPER: preset swapped to the full-res (4200x2800) source
-//   JC supplied, so `cover` no longer upscales a small preview into a
-//   zoomed-in blur. Renamed XP BLISS → XP AUTUMN (it's the autumn wallpaper).
+// - XP AUTUMN WALLPAPER: uses the uncropped i.redd.it source with `contain`
+//   framing on a dark mat, so the full autumn scene shows instead of the
+//   hard smart-crop/zoom the preview.redd.it URL produced.
 // - TASKBAR PILL REORDER: new reorderWindows(dragId, targetId) moves a
 //   window within the windows array (pill order = array order, zIndex
 //   untouched); passed to Taskbar v2 as onReorderWindows.
@@ -115,11 +115,13 @@ const BG_PRESETS: { id: string; name: string; css: string }[] = [
     css: `#1a3a6a url("https://wallpapers.com/images/hd/windows-7-background-imfecqv6cnsicbx4.jpg") center / cover no-repeat`,
   },
   {
-    // v25: full-res 4200x2800 source so cover doesn't upscale into a
-    // zoomed-in blur (previous URL served a small preview).
+    // Uncropped i.redd.it source (the preview.redd.it URL applied a
+    // smart-crop + downscale that zoomed/cropped it hard). 'contain' on a
+    // dark mat shows the whole autumn scene at natural framing instead of
+    // filling-and-cropping the way cover does on wide screens.
     id: 'bliss',
     name: 'XP AUTUMN',
-    css: `#5a4a2a url("https://preview.redd.it/finally-windows-xps-autumn-wallpaper-in-full-res-4200x2800-v0-3ma6nhepxbb81.jpg?width=1080&crop=smart&auto=webp&s=e3747c3ccf8c439969200d2d67fb06d3f3738138") center / cover no-repeat`,
+    css: `#3a2e1a url("https://i.redd.it/3ma6nhepxbb81.jpg") center / contain no-repeat`,
   },
   // { id: 'vista', name: 'VISTA AURORA', css: `#0d2a1a url("/wallpapers/vista-aurora.jpg") center / cover no-repeat` },
   // { id: 'win10', name: 'WIN 10 HERO', css: `#0a2a4a url("/wallpapers/win10-hero.jpg") center / cover no-repeat` },
@@ -738,6 +740,54 @@ export default function Desktop() {
     setContextMenu({ type: 'desktop', x: e.clientX, y: e.clientY })
   }
 
+  // ── MOBILE LONG-PRESS → desktop context menu ───────────────────────────
+  // Touch devices don't reliably fire onContextMenu from tap-and-hold, so we
+  // synthesize it: a 500ms timer started on touchstart fires the desktop
+  // menu at the touch point. Canceled if the finger moves >10px (a scroll or
+  // drag) or lifts before the timer elapses. Only binds on the empty desktop
+  // background — touches that start on an icon are ignored here (icons have
+  // their own handling).
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const longPressStart = useRef<{ x: number; y: number } | null>(null)
+
+  const clearLongPress = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
+    longPressStart.current = null
+  }, [])
+
+  const onDesktopTouchStart = (e: React.TouchEvent) => {
+    // Only the empty background, and only single-finger presses.
+    if (e.target !== e.currentTarget || e.touches.length !== 1) return
+    const t = e.touches[0]
+    longPressStart.current = { x: t.clientX, y: t.clientY }
+    clearLongPress()
+    longPressStart.current = { x: t.clientX, y: t.clientY }
+    longPressTimer.current = setTimeout(() => {
+      const p = longPressStart.current
+      if (p) {
+        if (startMenuOpen) setStartMenuOpen(false)
+        setContextMenu({ type: 'desktop', x: p.x, y: p.y })
+        // haptic nudge where supported
+        if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+          try { navigator.vibrate(10) } catch {}
+        }
+      }
+      longPressTimer.current = null
+    }, 500)
+  }
+
+  const onDesktopTouchMove = (e: React.TouchEvent) => {
+    const p = longPressStart.current
+    if (!p || e.touches.length === 0) return
+    const t = e.touches[0]
+    if (Math.hypot(t.clientX - p.x, t.clientY - p.y) > 10) clearLongPress()
+  }
+
+  const onDesktopTouchEnd = () => clearLongPress()
+
   const onIconContextMenu = (e: React.MouseEvent, appId: AppId) => {
     e.preventDefault()
     e.stopPropagation()
@@ -811,6 +861,10 @@ export default function Desktop() {
       >
         <div
           onContextMenu={onDesktopContextMenu}
+          onTouchStart={onDesktopTouchStart}
+          onTouchMove={onDesktopTouchMove}
+          onTouchEnd={onDesktopTouchEnd}
+          onTouchCancel={onDesktopTouchEnd}
           onClick={() => {
             if (startMenuOpen) setStartMenuOpen(false)
             if (contextMenu) setContextMenu(null)
@@ -824,15 +878,24 @@ export default function Desktop() {
           }}
         >
           {isMobile ? (
-            <div style={{
-              padding: 12,
-              paddingTop: `calc(12px + env(safe-area-inset-top, 0px))`,
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))',
-              gap: 8,
-              alignContent: 'start',
-              maxWidth: '100%',
-            }}>
+            <div
+              onTouchStart={onDesktopTouchStart}
+              onTouchMove={onDesktopTouchMove}
+              onTouchEnd={onDesktopTouchEnd}
+              onTouchCancel={onDesktopTouchEnd}
+              onContextMenu={onDesktopContextMenu}
+              style={{
+                padding: 12,
+                paddingTop: `calc(12px + env(safe-area-inset-top, 0px))`,
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))',
+                gap: 8,
+                alignContent: 'start',
+                maxWidth: '100%',
+                flex: 1,
+                minHeight: 0,
+              }}
+            >
               {visibleApps.map(app => {
                 const isOpen = !!windows.find(w => w.appId === app.id)
                 return (

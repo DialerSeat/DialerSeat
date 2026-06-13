@@ -3,10 +3,23 @@ import { redirect } from 'next/navigation'
 import Link from "next/link"
 import SiteFooter from '@/components/site-footer'
 import SiteHeader from '@/components/site-header'
+import LandingAuthSync from '@/components/LandingAuthSync'
 
 // =============================================================================
-// LANDING PAGE — v21.d + Manager+ pricing tier
+// LANDING PAGE — v22 (logout-header fix) + Manager+ pricing tier
 // =============================================================================
+// v22 fix (this revision):
+//   LOGOUT HEADER RACE. The header presence is decided server-side from
+//   await auth(): {isLoggedIn && <SiteHeader />} for logged-in, the fixed
+//   .ds-nav for logged-out. After a CLIENT-side sign-out that soft-navigates
+//   back to dialerseat.com, Next could serve a cached / statically-optimized
+//   render whose auth state was stale, so the correct header didn't appear
+//   until a manual refresh. Adding `export const dynamic = 'force-dynamic'`
+//   forces a per-request render so auth() is always re-evaluated and the
+//   right header renders immediately. (Pairs with sign-out using a HARD
+//   navigation — see SiteHeader / Start menu Log Off — so the server is
+//   actually hit rather than a soft RSC transition.)
+//
 // v21.d fixes (kept):
 //
 // 1. SITEHEADER NOW SHOWS FOR LOGGED-IN USERS
@@ -22,13 +35,10 @@ import SiteHeader from '@/components/site-header'
 //    - .ds-hero-logged-in uses 40/24px padding-top because SiteHeader is
 //      in normal flow above <main>.
 //
-// MANAGER+ ADDITION (this revision):
+// MANAGER+ ADDITION (kept):
 //    - The single Pro pricing card is now wrapped in a flex container.
 //    - A Manager+ tier ($75/wk) sits to the right of Pro on desktop.
 //    - On mobile (≤768px), the two cards stack vertically.
-//    - Nothing else on the landing changes. The section's "ONE PLAN"
-//      subhead is intentionally left alone per the change-nothing-else
-//      instruction; tweak later if desired.
 //    - Manager+ CTA routes to /sign-up?plan=wl (logged-out) or
 //      /billing?plan=wl (logged-in) so the WL intent flows through.
 // =============================================================================
@@ -36,6 +46,13 @@ import SiteHeader from '@/components/site-header'
 interface PageProps {
   searchParams: Promise<{ view?: string }>
 }
+
+// Render per-request — never serve a cached/prerendered copy. Without this,
+// Next can hand back a statically-optimized or stale RSC payload after a
+// client-side sign-out, so the page keeps its previous auth-state render
+// (header showing/hiding wrong) until a hard reload. force-dynamic makes the
+// server re-run auth() on every hit to dialerseat.com.
+export const dynamic = 'force-dynamic'
 
 export default async function Home({ searchParams }: PageProps) {
   const { userId } = await auth()
@@ -59,6 +76,10 @@ export default async function Home({ searchParams }: PageProps) {
 
   return (
     <>
+      {/* Heals the stale-header-after-logout race: if the client's live Clerk
+          state disagrees with what the server rendered, force one refresh. */}
+      <LandingAuthSync serverThoughtLoggedIn={isLoggedIn} />
+
       {/* SiteHeader only renders for logged-in users. Logged-out keeps the
           custom .ds-nav below. */}
       {isLoggedIn && <SiteHeader />}

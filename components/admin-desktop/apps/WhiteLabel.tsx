@@ -1,34 +1,31 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
+import { WhitelabelLivePreview } from '@/components/WhitelabelLivePreview'
 
 // =============================================================================
-// WHITE LABEL APP — admin desktop edition (v2)
+// WHITE LABEL APP — admin desktop edition (v3)
 // =============================================================================
-// v2 changes vs v1:
-// - REAL SCHEMA: Tenant interface now matches white_label_tenants as it
-//   actually exists. The theme system is FOUR tokens — primary_color,
-//   sidebar_color, header_bg_color, page_bg_color. v1 edited
-//   secondary/background/text colors, which are dead legacy columns the
-//   tenant dashboard never reads. accent_color is the legacy alias of
-//   sidebar_color and is mirrored SERVER-SIDE on every write — never edited
-//   directly here.
-// - BRANDING TAB: edits brand_name, logo_url, favicon_url, support_email,
-//   footer_text + the 4 real tokens. Live preview is now shaped like the
-//   actual tenant dashboard (sidebar strip / header bar / page area /
-//   primary-colored action) so what you see is what tenants get.
-// - BACKEND IS LIVE: GET/POST /api/admin/tenants, PATCH/DELETE
-//   /api/admin/tenants/:id, POST /api/admin/impersonate all exist now. All
-//   endpoints return { success, ... } — error banners show the server's
-//   error field instead of "API not available yet".
-// - DELETE: server refuses (409) while teams still reference the tenant; the
-//   detail modal surfaces that message.
-// - DEMO VIEW: honest scope. The button resolves the team's tenant and opens
-//   its site in a new tab. It is NOT sign-in-as-user impersonation (that
-//   needs Clerk actor tokens — separate push), and branded subdomain
-//   rendering depends on the wildcard-subdomain infra still on the backlog.
+// v3 changes vs v2:
+// - BRANDING PREVIEW: replaced the local DashboardPreview mock with the real
+//   shared <WhitelabelLivePreview> component (components/WhitelabelLivePreview)
+//   — the exact same WCAG auto-contrast + ThemeProvider-v7-aligned color-mix
+//   derivations the onboarding flow and the live dashboard use. What admins
+//   see here is now pixel-identical to what tenants get. Kept inside the same
+//   ~300px preview column, so the layout is unchanged.
+// - BILLING TAB (live): portfolio MRR/ARR roll-up across all tenants + a
+//   per-tenant table with live Stripe state (active / past due / canceled),
+//   monthly-normalized MRR, plan, and next charge date. Row click opens a
+//   detail modal with the subscription summary + recent invoices (hosted
+//   links). Backed by the new GET /api/admin/billing route.
+// - SETTINGS TAB (live): per-tenant operational controls — edit slug (with
+//   the same validation the server enforces), edit custom_domain, and
+//   activate/suspend. All via PATCH /api/admin/tenants/:id. Feature flags are
+//   noted as a future addition (needs a column/table) but not stubbed in.
 //
-// Sub-tabs: Tenants (live) / Branding (live) / Billing (soon) /
-//           Demo View (live) / Settings (soon)
+// v2: real white_label_tenants schema, 4 real theme tokens, accent mirror,
+//     live tenants CRUD + impersonate backend.
+//
+// Sub-tabs: Tenants / Branding / Billing / Demo View / Settings — all live.
 // =============================================================================
 
 const C = {
@@ -58,9 +55,9 @@ interface WLSubTab {
 const WL_SUBTABS: WLSubTab[] = [
   { key: 'tenants',   label: 'Tenants',    status: 'live' },
   { key: 'branding',  label: 'Branding',   status: 'live' },
-  { key: 'billing',   label: 'Billing',    status: 'coming-soon' },
+  { key: 'billing',   label: 'Billing',    status: 'live' },
   { key: 'demoview',  label: 'Demo View',  status: 'live' },
-  { key: 'settings',  label: 'Settings',   status: 'coming-soon' },
+  { key: 'settings',  label: 'Settings',   status: 'live' },
 ]
 
 // Matches white_label_tenants as it exists in the DB (real columns only;
@@ -249,18 +246,8 @@ export default function WhiteLabelApp() {
       {activeSub === 'tenants' && <TenantsSubTab />}
       {activeSub === 'branding' && <BrandingSubTab />}
       {activeSub === 'demoview' && <DemoViewSubTab />}
-      {activeSub === 'billing' && (
-        <ComingSoon
-          title="WL BILLING"
-          description="Per-tenant Stripe subscription view, MRR per tenant, payment health, dunning recovery queue."
-        />
-      )}
-      {activeSub === 'settings' && (
-        <ComingSoon
-          title="WL SETTINGS"
-          description="Per-tenant feature flags, rate limits, custom landing templates."
-        />
-      )}
+      {activeSub === 'billing' && <BillingSubTab />}
+      {activeSub === 'settings' && <SettingsSubTab />}
     </div>
   )
 }
@@ -772,78 +759,16 @@ function BrandingSubTab() {
 
       <div style={{ background: C.surface, border: `1px solid ${C.border}`, padding: 10 }}>
         <div style={{ fontSize: 10, fontWeight: 'bold', color: C.muted, marginBottom: 8 }}>LIVE PREVIEW</div>
-        {draft && <DashboardPreview draft={draft} />}
-      </div>
-    </div>
-  )
-}
-
-// Mini mock of the actual tenant dashboard: sidebar / header / page / primary.
-function DashboardPreview({ draft }: { draft: BrandingDraft }) {
-  return (
-    <div style={{
-      borderRadius: 4, border: '1px solid #ccc', overflow: 'hidden',
-      display: 'grid', gridTemplateColumns: '64px 1fr', minHeight: 300,
-    }}>
-      {/* sidebar */}
-      <div style={{ background: draft.sidebar_color, padding: '10px 6px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {draft.logo_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={draft.logo_url} alt="" style={{ width: 26, height: 26, borderRadius: 4, objectFit: 'contain', margin: '0 auto' }} />
-        ) : (
-          <div style={{
-            width: 26, height: 26, borderRadius: 4, margin: '0 auto',
-            background: draft.primary_color,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: 'white', fontSize: 12, fontWeight: 'bold',
-          }}>
-            {draft.brand_name?.[0]?.toUpperCase() ?? 'D'}
-          </div>
+        {draft && (
+          <WhitelabelLivePreview
+            primary={draft.primary_color}
+            sidebar={draft.sidebar_color}
+            headerBg={draft.header_bg_color}
+            pageBg={draft.page_bg_color}
+            brandName={draft.brand_name}
+            logoUrl={draft.logo_url || null}
+          />
         )}
-        {[0, 1, 2, 3].map(i => (
-          <div key={i} style={{
-            height: 6, borderRadius: 3, margin: '0 4px',
-            background: i === 0 ? draft.primary_color : 'rgba(255,255,255,0.22)',
-          }} />
-        ))}
-      </div>
-
-      {/* header + page */}
-      <div style={{ display: 'flex', flexDirection: 'column' }}>
-        <div style={{
-          background: draft.header_bg_color, padding: '8px 10px',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        }}>
-          <span style={{ fontSize: 9, fontWeight: 'bold', letterSpacing: 2, color: 'white' }}>
-            {(draft.brand_name || 'BRAND NAME').toUpperCase()}
-          </span>
-          <span style={{ width: 14, height: 14, borderRadius: '50%', background: 'rgba(255,255,255,0.35)' }} />
-        </div>
-        <div style={{ flex: 1, background: draft.page_bg_color, padding: 10 }}>
-          <div style={{
-            background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
-            borderRadius: 4, padding: 8, marginBottom: 8,
-          }}>
-            <div style={{ height: 5, width: '55%', borderRadius: 3, background: 'rgba(255,255,255,0.4)', marginBottom: 6 }} />
-            <div style={{ height: 5, width: '80%', borderRadius: 3, background: 'rgba(255,255,255,0.18)' }} />
-          </div>
-          <button style={{
-            padding: '5px 12px', background: draft.primary_color, color: 'white',
-            border: 'none', borderRadius: 3,
-            fontSize: 9, fontWeight: 'bold', letterSpacing: 2, cursor: 'default',
-          }}>
-            PRIMARY ACTION
-          </button>
-          <div style={{ marginTop: 10, fontSize: 9, color: draft.primary_color, textDecoration: 'underline' }}>
-            primary link
-          </div>
-          <div style={{
-            marginTop: 14, paddingTop: 6, borderTop: '1px solid rgba(255,255,255,0.15)',
-            fontSize: 8, color: 'rgba(255,255,255,0.55)', letterSpacing: 1,
-          }}>
-            {draft.footer_text || 'Hosted by DialerSeat'}
-          </div>
-        </div>
       </div>
     </div>
   )
@@ -972,23 +897,434 @@ function DemoViewSubTab() {
 }
 
 // =============================================================================
-// SHARED
+// BILLING — portfolio MRR roll-up + per-tenant live Stripe state
 // =============================================================================
-function ComingSoon({ title, description }: { title: string; description: string }) {
+interface BillingState {
+  state: string
+  planNickname: string | null
+  amountCents: number
+  currency: string
+  interval: string
+  intervalCount: number
+  currentPeriodEnd: string | null
+  cancelAtPeriodEnd: boolean
+  mrrCents: number
+}
+
+interface BillingTenantRow {
+  id: string
+  slug: string
+  brand_name: string
+  status: string
+  stripe_customer_id: string | null
+  stripe_subscription_id: string | null
+  billing: BillingState | null
+  billingError: string | null
+}
+
+interface Portfolio {
+  tenantCount: number
+  billedCount: number
+  activeCount: number
+  pastDueCount: number
+  canceledCount: number
+  mrrCents: number
+  arrCents: number
+  currency: string
+}
+
+function money(cents: number, currency = 'USD'): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency', currency, maximumFractionDigits: cents % 100 === 0 ? 0 : 2,
+  }).format(cents / 100)
+}
+
+const BILLING_STATE_COLOR: Record<string, string> = {
+  active: C.green, trialing: C.blue,
+  past_due: C.amber, unpaid: C.amber,
+  canceled: C.red, incomplete_expired: C.red, incomplete: C.muted,
+  paused: C.muted, none: C.muted,
+}
+
+function intervalLabel(b: BillingState): string {
+  const n = b.intervalCount > 1 ? `${b.intervalCount} ` : ''
+  return `${n}${b.interval}${b.intervalCount > 1 ? 's' : ''}`
+}
+
+function BillingSubTab() {
+  const [portfolio, setPortfolio] = useState<Portfolio | null>(null)
+  const [rows, setRows] = useState<BillingTenantRow[] | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [detailId, setDetailId] = useState<string | null>(null)
+
+  const fetchBilling = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/admin/billing')
+      if (!res.ok) throw new Error(await readError(res))
+      const json = await res.json()
+      setPortfolio(json.portfolio)
+      setRows(json.tenants ?? [])
+      setError(null)
+    } catch (e: any) {
+      setError(e?.message ?? 'Failed')
+      setRows([])
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { fetchBilling() }, [fetchBilling])
+
+  if (loading && rows === null) {
+    return <div style={{ padding: 40, textAlign: 'center', color: C.muted, fontSize: 11 }}>Loading billing from Stripe...</div>
+  }
+
   return (
-    <div style={{
-      background: C.surface, border: `1px solid ${C.border}`,
-      padding: 60, textAlign: 'center',
-    }}>
-      <div style={{ fontSize: 36, opacity: 0.4, marginBottom: 12 }}>⏳</div>
-      <div style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 6 }}>{title}</div>
-      <div style={{ fontSize: 11, color: C.muted, maxWidth: 420, margin: '0 auto', lineHeight: 1.5 }}>
-        {description}
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 'bold' }}>Billing</div>
+          <div style={{ fontSize: 11, color: C.muted }}>Live Stripe state across all tenants. MRR normalized to a monthly figure.</div>
+        </div>
+        <button className="wl-btn" onClick={fetchBilling} disabled={loading}>
+          {loading ? '↻ Refreshing...' : '↻ Refresh'}
+        </button>
+      </div>
+
+      {error && (
+        <div style={{ background: '#fff4f4', border: '1px solid #c08080', padding: 12, fontSize: 11, color: C.red, marginBottom: 12 }}>
+          <strong>Error:</strong> {error}
+        </div>
+      )}
+
+      {portfolio && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 16 }}>
+          <PortfolioCard label="MRR" value={money(portfolio.mrrCents, portfolio.currency)} sub={`${money(portfolio.arrCents, portfolio.currency)} ARR`} accent={C.green} />
+          <PortfolioCard label="ACTIVE" value={String(portfolio.activeCount)} sub={`of ${portfolio.billedCount} billed`} accent={C.blue} />
+          <PortfolioCard label="PAST DUE" value={String(portfolio.pastDueCount)} sub="needs attention" accent={portfolio.pastDueCount > 0 ? C.amber : C.muted} />
+          <PortfolioCard label="CANCELED" value={String(portfolio.canceledCount)} sub={`${portfolio.tenantCount} tenants total`} accent={portfolio.canceledCount > 0 ? C.red : C.muted} />
+        </div>
+      )}
+
+      {rows && rows.length > 0 && (
+        <table className="wl-table">
+          <thead>
+            <tr>
+              <th>Tenant</th>
+              <th>State</th>
+              <th>Plan</th>
+              <th>Amount</th>
+              <th>MRR</th>
+              <th>Next Charge</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(t => {
+              const b = t.billing
+              const stateColor = b ? (BILLING_STATE_COLOR[b.state] ?? C.muted) : C.muted
+              return (
+                <tr key={t.id} onClick={() => setDetailId(t.id)} style={{ cursor: 'pointer' }}>
+                  <td>
+                    <strong>{t.brand_name}</strong>
+                    <span style={{ color: C.muted, marginLeft: 6, fontFamily: 'monospace', fontSize: 10 }}>{t.slug}</span>
+                  </td>
+                  <td>
+                    {t.billingError ? (
+                      <span style={{ color: C.red, fontSize: 10 }}>error</span>
+                    ) : b ? (
+                      <span style={{ padding: '1px 6px', fontSize: 9, fontWeight: 'bold', color: stateColor, border: '1px solid currentColor', borderRadius: 2 }}>
+                        {b.state.toUpperCase().replace(/_/g, ' ')}
+                        {b.cancelAtPeriodEnd ? ' · ENDING' : ''}
+                      </span>
+                    ) : (
+                      <span style={{ color: C.muted, fontSize: 10 }}>no subscription</span>
+                    )}
+                  </td>
+                  <td style={{ fontSize: 10 }}>{b?.planNickname ?? (b ? `every ${intervalLabel(b)}` : '—')}</td>
+                  <td style={{ fontFamily: 'monospace' }}>{b ? `${money(b.amountCents, b.currency)}/${intervalLabel(b)}` : '—'}</td>
+                  <td style={{ fontFamily: 'monospace', color: b && b.mrrCents > 0 ? C.green : C.muted }}>{b ? money(b.mrrCents, b.currency) : '—'}</td>
+                  <td style={{ fontSize: 10, color: C.muted }}>{b?.currentPeriodEnd ? new Date(b.currentPeriodEnd).toLocaleDateString() : '—'}</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      )}
+
+      {rows && rows.length === 0 && !error && (
+        <div style={{ padding: 40, textAlign: 'center', background: C.surface, border: `1px solid ${C.border}`, color: C.muted, fontSize: 11 }}>
+          No tenants to bill yet.
+        </div>
+      )}
+
+      {detailId && <BillingDetailModal tenantId={detailId} onClose={() => setDetailId(null)} />}
+    </div>
+  )
+}
+
+function PortfolioCard({ label, value, sub, accent }: { label: string; value: string; sub: string; accent: string }) {
+  return (
+    <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderTop: `3px solid ${accent}`, borderRadius: 4, padding: 12 }}>
+      <div style={{ fontSize: 9, letterSpacing: 2, color: C.muted, fontWeight: 'bold', marginBottom: 6 }}>{label}</div>
+      <div style={{ fontSize: 22, fontWeight: 'bold', fontFamily: 'monospace', color: accent, lineHeight: 1 }}>{value}</div>
+      <div style={{ fontSize: 10, color: C.muted, marginTop: 5 }}>{sub}</div>
+    </div>
+  )
+}
+
+interface BillingDetail extends BillingTenantRow {
+  invoices: Array<{
+    id: string; amountCents: number; currency: string; status: string | null
+    created: string; reason: string | null; hostedUrl: string | null; pdfUrl: string | null
+  }>
+}
+
+function BillingDetailModal({ tenantId, onClose }: { tenantId: string; onClose: () => void }) {
+  const [detail, setDetail] = useState<BillingDetail | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`/api/admin/billing?tenant_id=${tenantId}`)
+        if (!res.ok) throw new Error(await readError(res))
+        const json = await res.json()
+        setDetail(json.tenant)
+      } catch (e: any) {
+        setError(e?.message ?? 'Failed')
+      } finally {
+        setLoading(false)
+      }
+    })()
+  }, [tenantId])
+
+  return (
+    <ModalShell title={detail ? `Billing: ${detail.brand_name}` : 'Billing'} onClose={onClose}>
+      {loading && <div style={{ padding: 20, textAlign: 'center', color: C.muted, fontSize: 11 }}>Loading from Stripe...</div>}
+      {error && <div style={{ background: '#fff4f4', border: '1px solid #c08080', padding: 8, fontSize: 11, color: C.red }}>{error}</div>}
+      {detail && (
+        <div style={{ display: 'grid', gap: 10 }}>
+          {detail.billingError && (
+            <div style={{ background: '#fff4f4', border: '1px solid #c08080', padding: 8, fontSize: 11, color: C.red }}>
+              {detail.billingError}
+            </div>
+          )}
+          {detail.billing && (
+            <>
+              <Field label="State" value={detail.billing.state.replace(/_/g, ' ') + (detail.billing.cancelAtPeriodEnd ? ' (cancels at period end)' : '')} />
+              <Field label="Plan" value={detail.billing.planNickname ?? `every ${intervalLabel(detail.billing)}`} />
+              <Field label="Amount" value={`${money(detail.billing.amountCents, detail.billing.currency)} / ${intervalLabel(detail.billing)}`} />
+              <Field label="Monthly (MRR)" value={money(detail.billing.mrrCents, detail.billing.currency)} />
+              <Field label="Next Charge" value={detail.billing.currentPeriodEnd ? new Date(detail.billing.currentPeriodEnd).toLocaleString() : '—'} />
+            </>
+          )}
+          <Field label="Stripe Customer" value={detail.stripe_customer_id ?? '(none)'} mono />
+          <Field label="Stripe Subscription" value={detail.stripe_subscription_id ?? '(none)'} mono />
+
+          {detail.invoices.length > 0 && (
+            <div>
+              <label className="wl-label">Recent Invoices</label>
+              <table className="wl-table">
+                <thead>
+                  <tr><th>Date</th><th>Amount</th><th>Status</th><th>Reason</th><th></th></tr>
+                </thead>
+                <tbody>
+                  {detail.invoices.map(inv => (
+                    <tr key={inv.id}>
+                      <td style={{ fontSize: 10 }}>{new Date(inv.created).toLocaleDateString()}</td>
+                      <td style={{ fontFamily: 'monospace' }}>{money(inv.amountCents, inv.currency)}</td>
+                      <td style={{ fontSize: 10, color: inv.status === 'paid' ? C.green : inv.status === 'open' ? C.amber : C.muted }}>
+                        {inv.status ?? '—'}
+                      </td>
+                      <td style={{ fontSize: 10, color: C.muted }}>{(inv.reason ?? '').replace(/_/g, ' ')}</td>
+                      <td>
+                        {inv.hostedUrl && (
+                          <a href={inv.hostedUrl} target="_blank" rel="noopener noreferrer" style={{ color: C.blue, fontSize: 10 }}>view →</a>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+    </ModalShell>
+  )
+}
+
+// =============================================================================
+// SETTINGS — per-tenant slug / custom domain / activate-suspend
+// =============================================================================
+function SettingsSubTab() {
+  const [tenants, setTenants] = useState<Tenant[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [selected, setSelected] = useState<Tenant | null>(null)
+  const [slug, setSlug] = useState('')
+  const [customDomain, setCustomDomain] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [rowMsg, setRowMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null)
+
+  const load = useCallback(async (keepId?: string) => {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/admin/tenants')
+      if (!res.ok) throw new Error(await readError(res))
+      const json = await res.json()
+      const list: Tenant[] = json.tenants ?? []
+      setTenants(list)
+      const pick = (keepId && list.find(t => t.id === keepId)) || list[0] || null
+      setSelected(pick)
+      if (pick) { setSlug(pick.slug); setCustomDomain(pick.custom_domain ?? '') }
+      setError(null)
+    } catch (e: any) {
+      setError(e?.message ?? 'Failed')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  const pickTenant = (t: Tenant) => {
+    setSelected(t); setSlug(t.slug); setCustomDomain(t.custom_domain ?? ''); setRowMsg(null)
+  }
+
+  const patch = async (body: Record<string, any>, okText: string) => {
+    if (!selected) return
+    setSaving(true); setRowMsg(null)
+    try {
+      const res = await fetch(`/api/admin/tenants/${selected.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) throw new Error(await readError(res))
+      setRowMsg({ kind: 'ok', text: okText })
+      await load(selected.id)
+    } catch (e: any) {
+      setRowMsg({ kind: 'err', text: e?.message ?? 'Failed' })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading && tenants.length === 0) {
+    return <div style={{ padding: 40, textAlign: 'center', color: C.muted, fontSize: 11 }}>Loading...</div>
+  }
+  if (error && tenants.length === 0) {
+    return <div style={{ padding: 40, textAlign: 'center', color: C.red, fontSize: 11, background: C.surface, border: `1px solid ${C.border}` }}><strong>Error:</strong> {error}</div>
+  }
+  if (tenants.length === 0) {
+    return <div style={{ padding: 40, textAlign: 'center', color: C.muted, fontSize: 11, background: C.surface, border: `1px solid ${C.border}` }}>No tenants. Create one in the Tenants sub-tab first.</div>
+  }
+
+  const slugDirty = selected ? slug !== selected.slug : false
+  const domainDirty = selected ? customDomain !== (selected.custom_domain ?? '') : false
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr', gap: 12, minHeight: 400 }}>
+      <div style={{ background: C.surface, border: `1px solid ${C.border}`, padding: 6, overflowY: 'auto', maxHeight: 600 }}>
+        <div style={{ fontSize: 10, fontWeight: 'bold', color: C.muted, padding: '4px 6px', borderBottom: `1px solid ${C.border}` }}>TENANTS</div>
+        {tenants.map(t => (
+          <div key={t.id} onClick={() => pickTenant(t)} style={{
+            padding: 8, cursor: 'pointer',
+            background: selected?.id === t.id ? C.blue : 'transparent',
+            color: selected?.id === t.id ? 'white' : C.text,
+            fontSize: 11, display: 'flex', alignItems: 'center', gap: 6,
+          }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: t.status === 'active' ? C.green : C.amber }} />
+            {t.brand_name}
+          </div>
+        ))}
+      </div>
+
+      <div style={{ background: C.surface, border: `1px solid ${C.border}`, padding: 16 }}>
+        {selected && (
+          <div style={{ display: 'grid', gap: 16, maxWidth: 460 }}>
+            <div style={{ fontSize: 12, fontWeight: 'bold' }}>
+              {selected.brand_name} — Settings
+            </div>
+
+            {rowMsg && (
+              <div style={{
+                fontSize: 11, padding: 8, borderRadius: 3,
+                background: rowMsg.kind === 'ok' ? 'rgba(26,106,26,0.08)' : '#fff4f4',
+                border: `1px solid ${rowMsg.kind === 'ok' ? C.green : '#c08080'}`,
+                color: rowMsg.kind === 'ok' ? C.green : C.red,
+              }}>{rowMsg.text}</div>
+            )}
+
+            {/* Status */}
+            <div>
+              <label className="wl-label" style={{ fontWeight: 'bold' }}>Status</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{
+                  padding: '2px 8px', fontSize: 10, fontWeight: 'bold', borderRadius: 2,
+                  color: selected.status === 'active' ? C.green : selected.status === 'suspended' ? C.amber : C.red,
+                  border: '1px solid currentColor',
+                }}>{(selected.status || 'active').toUpperCase()}</span>
+                {selected.status === 'active' ? (
+                  <button className="wl-btn" disabled={saving} onClick={() => patch({ status: 'suspended' }, 'Tenant suspended')}>
+                    Suspend
+                  </button>
+                ) : (
+                  <button className="wl-btn primary" disabled={saving} onClick={() => patch({ status: 'active' }, 'Tenant activated')}>
+                    Activate
+                  </button>
+                )}
+                <span style={{ fontSize: 10, color: C.muted }}>
+                  Suspended tenants stop resolving on their subdomain.
+                </span>
+              </div>
+            </div>
+
+            {/* Slug */}
+            <div>
+              <label className="wl-label" style={{ fontWeight: 'bold' }}>Subdomain Slug</label>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <input className="wl-input" value={slug} onChange={e => setSlug(e.target.value.toLowerCase())} style={{ fontFamily: 'monospace' }} />
+                <span style={{ fontSize: 11, color: C.muted, whiteSpace: 'nowrap' }}>.dialerseat.com</span>
+              </div>
+              <div style={{ fontSize: 10, color: C.muted, marginTop: 4 }}>
+                Changing the slug breaks the old subdomain URL immediately. Validated server-side (1–40 chars, a–z 0–9 hyphens, not reserved).
+              </div>
+              <button className="wl-btn primary" style={{ marginTop: 8 }} disabled={saving || !slugDirty || !slug}
+                onClick={() => patch({ slug }, `Slug changed to "${slug}"`)}>
+                {saving ? 'Saving...' : 'Save Slug'}
+              </button>
+            </div>
+
+            {/* Custom domain */}
+            <div>
+              <label className="wl-label" style={{ fontWeight: 'bold' }}>Custom Domain</label>
+              <input className="wl-input" value={customDomain} onChange={e => setCustomDomain(e.target.value.trim())} placeholder="dialer.acme.com" style={{ fontFamily: 'monospace' }} />
+              <div style={{ fontSize: 10, color: C.muted, marginTop: 4 }}>
+                Stored here for reference. DNS/SSL provisioning for custom domains is separate infrastructure and still on the backlog — setting this does not yet make the domain resolve.
+              </div>
+              <button className="wl-btn primary" style={{ marginTop: 8 }} disabled={saving || !domainDirty}
+                onClick={() => patch({ custom_domain: customDomain || null }, customDomain ? `Custom domain set to ${customDomain}` : 'Custom domain cleared')}>
+                {saving ? 'Saving...' : 'Save Domain'}
+              </button>
+            </div>
+
+            <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 12, fontSize: 10, color: C.muted, lineHeight: 1.5 }}>
+              Feature flags and per-tenant rate limits will live here too — they need a new column/table, so they aren&apos;t wired yet. Branding lives in the Branding sub-tab; billing in Billing.
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
 }
 
+// =============================================================================
+// SHARED
+// =============================================================================
 function ModalShell({ title, onClose, children }: {
   title: string
   onClose: () => void

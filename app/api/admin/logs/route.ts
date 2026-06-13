@@ -152,6 +152,9 @@ export async function GET() {
         })
         for (const inv of batch.data) {
           if (inv.billing_reason !== 'subscription_cycle') continue
+          // Skip $0 renewals — fully-discounted/100%-coupon cycles aren't
+          // revenue events and only clutter the stream. (JC, this push.)
+          if ((inv.amount_paid ?? 0) <= 0) continue
           const customerId = typeof inv.customer === 'string' ? inv.customer : inv.customer?.id
           if (!customerId) continue
           const u = userByCustomerId.get(customerId)

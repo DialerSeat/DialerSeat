@@ -68,7 +68,11 @@ export default function Taskbar({
         left: 0,
         right: 0,
         height: 148,
-        background: '#0a0a0f',
+        // Match the BOTTOM stop of the 48px strip's gradient (#0a1020) so the
+        // safe-area zone below the strip reads as a continuation of the
+        // taskbar, not a separate flat-black bar. Was '#0a0a0f', which on
+        // tall mobile safe areas showed as a distinct black strip.
+        background: '#0a1020',
         boxShadow: '0 -1px 0 rgba(255,255,255,0.08) inset, 0 -8px 24px rgba(0,0,0,0.3)',
         zIndex: 10000,
         display: 'flex',

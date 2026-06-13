@@ -10,6 +10,15 @@ import { createClient } from '@supabase/supabase-js'
 // so every successful sign-in lands here first. This handler decides which
 // {subdomain}.dialerseat.com to land the user on based on tenant affiliation.
 //
+// v2 (this push): ADMIN SHORT-CIRCUIT. Before any tenant routing, if the
+// signed-in user is an admin (users.is_admin = true) we send them straight to
+// the admin desktop (/dashboard/admin/analytics) on the current host. The
+// admin previously fell through to the plain /dashboard/analytics dead page
+// because they own no tenant. Admins are never auto-bounced to a tenant
+// subdomain; the desktop's Demo View handles viewing tenant sites. We still
+// drop/refresh the ds_last_tenant cookie the same way (cleared for the admin,
+// since they have no tenant affiliation of their own).
+//
 // Push D: also drops a ds_last_tenant cookie at the parent domain so the
 // NEXT visit to dialerseat.com/sign-in from this browser can be branded for
 // the tenant the user belongs to, even before they're signed in. Without
@@ -17,6 +26,8 @@ import { createClient } from '@supabase/supabase-js'
 // the user belongs to, and falls back to default DialerSeat chrome.
 //
 // Routing rules (JC item 1, post-signin):
+//   0. Signed in AND user is an admin → /dashboard/admin/analytics on the
+//      current host (the desktop). No subdomain bouncing. [v2]
 //   1. Signed in on blank.dialerseat.com AND user is part of blank →
 //      stay on blank.dialerseat.com/dashboard/analytics
 //   2. Signed in on blank.dialerseat.com AND user is NOT part of blank →
@@ -40,6 +51,7 @@ import { createClient } from '@supabase/supabase-js'
 
 const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'dialerseat.com'
 const TARGET_PATH = '/dashboard/analytics'
+const ADMIN_PATH = '/dashboard/admin/analytics' // v2: the admin desktop
 const TENANT_COOKIE_NAME = 'ds_last_tenant'
 const TENANT_COOKIE_MAX_AGE = 60 * 60 * 24 * 90 // 90 days
 
@@ -69,6 +81,13 @@ function buildDest(slug: string | null, host: string): string {
     return `https://${slug}.${ROOT_DOMAIN}${TARGET_PATH}`
   }
   return `https://${ROOT_DOMAIN}${TARGET_PATH}`
+}
+
+// v2: admin always lands on the desktop on the CURRENT host (no subdomain
+// bouncing). Works on dev hosts too.
+function buildAdminDest(host: string): string {
+  const protocol = isDevHost(host) ? 'http' : 'https'
+  return `${protocol}://${host}${ADMIN_PATH}`
 }
 
 // Set the ds_last_tenant cookie (or delete it if no slug) so the root-domain
@@ -126,6 +145,26 @@ function redirectWithTenantCookie(
   const response = NextResponse.redirect(buildDest(slug, host), 302)
   setOrClearTenantCookie(response, slug, host)
   return response
+}
+
+// v2: admin redirect to the desktop, clearing any stale tenant cookie.
+function redirectAdminToDesktop(host: string): NextResponse {
+  const response = NextResponse.redirect(buildAdminDest(host), 302)
+  setOrClearTenantCookie(response, null, host)
+  return response
+}
+
+async function isAdmin(userId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('users')
+    .select('is_admin')
+    .eq('clerk_id', userId)
+    .maybeSingle()
+  if (error) {
+    console.error('[post-signin] isAdmin lookup error:', error)
+    return false
+  }
+  return data?.is_admin === true
 }
 
 async function findActiveTenantBySlug(slug: string): Promise<Tenant | null> {
@@ -259,6 +298,12 @@ export async function GET(req: NextRequest) {
     const { userId } = await auth()
     if (!userId) {
       return NextResponse.redirect(new URL('/sign-in', req.url))
+    }
+
+    // Step 0 (v2): admins go straight to the desktop, regardless of host or
+    // tenant affiliation. Clears any stale tenant cookie on the way.
+    if (await isAdmin(userId)) {
+      return redirectAdminToDesktop(host)
     }
 
     const h = await headers()
