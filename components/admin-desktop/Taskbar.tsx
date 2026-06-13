@@ -64,14 +64,16 @@ export default function Taskbar({
       aria-label="Taskbar"
       style={{
         position: 'fixed',
-        bottom: -100,
+        bottom: 0,
         left: 0,
         right: 0,
-        height: 148,
-        // Match the BOTTOM stop of the 48px strip's gradient (#0a1020) so the
-        // safe-area zone below the strip reads as a continuation of the
-        // taskbar, not a separate flat-black bar. Was '#0a0a0f', which on
-        // tall mobile safe areas showed as a distinct black strip.
+        // Was bottom:-100 / height:148 — that hung 100px OFF-screen and never
+        // painted the on-screen iOS home-indicator zone, so the body's black
+        // showed through below the strip. Now anchored to the screen edge:
+        // the shell is exactly the 48px strip plus the real safe-area inset,
+        // and paddingBottom fills that inset with the strip's bottom color so
+        // there's no black band under the taskbar on mobile.
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
         background: '#0a1020',
         boxShadow: '0 -1px 0 rgba(255,255,255,0.08) inset, 0 -8px 24px rgba(0,0,0,0.3)',
         zIndex: 10000,
