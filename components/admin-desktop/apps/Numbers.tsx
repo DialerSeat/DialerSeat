@@ -1,30 +1,29 @@
 'use client'
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 
 // =============================================================================
-// NUMBERS APP — ported from /dashboard/admin/numbers
+// NUMBERS APP — pool admin + state analytics (v2)
 // =============================================================================
-// Full SignalWire pool admin. Identical logic + visuals to the original page;
-// only difference is the outer container uses height: 100% inside the
-// AppWindow body rather than min-height: calc(100vh - 64px).
+// v2 changes vs v1:
+// - TAB STRIP: POOL | ANALYTICS at the top of the window. POOL is the entire
+//   v1 experience, byte-for-byte (stat grid, growth meter, filters, cards,
+//   buy/seed/config/sync/register, 30s polling). ANALYTICS is new.
+// - ANALYTICS TAB: fetches GET /api/admin/pool/analytics (new route) —
+//   sitewide lead demand vs pool supply by state, across ALL users:
+//     * summary cards: total leads / states with leads / uncovered leads
+//       (leads in states with zero active numbers) / pool size
+//     * per-state table sorted worst-shortage-first by GAP (lead share minus
+//       capacity share, in percentage points)
+//     * verdict pills: NEED / NEED MORE / STRETCHED / BALANCED / SURPLUS
+//     * lead-share bars for at-a-glance popularity
+//     * BUY → button on NEED/NEED MORE/STRETCHED rows opens the existing buy
+//       modal in SPECIFIC STATES mode with that state pre-checked
+//   Lead states are normalized server-side ("FLORIDA" → FL) with phone
+//   area-code fallback, so messy CSV imports still count.
+// - Analytics loads lazily on first open + manual ↻ refresh (no polling —
+//   it scans the whole leads table).
 //
-// Modal z-index bumped to 11000 so modals sit above all open windows.
-//
-// Includes:
-//   - Stat grid (pool size / active / resting / flagged / calls today)
-//   - Growth meter with trigger threshold marker + buys-today counter
-//   - Filter pills (all / active / resting / flagged)
-//   - Per-number card grid with status, daily-call meter, lifetime count,
-//     flag reason, registration toggle, release-with-confirm
-//   - Buy modal with three tabs:
-//       * Single area code
-//       * Random states (samples across all US area codes)
-//       * Specific states (50-state checkbox grid)
-//   - Seed modal (10 numbers across major US metros, idempotent)
-//   - Config modal (max pool size / daily buy cap / trigger % / sustained hrs)
-//   - Sync action (imports SignalWire-owned numbers not yet in our pool)
-//   - Register-all bulk action
-//   - 30s polling
+// Everything below the ANALYTICS additions is unchanged v1 pool logic.
 // =============================================================================
 
 const T = {
@@ -87,6 +86,45 @@ interface PoolData {
     triggerPct: number
     pctUntilTrigger: number
   }
+}
+
+// ── ANALYTICS types (mirror /api/admin/pool/analytics response) ─────────────
+interface StateAnalytics {
+  code: string
+  name: string
+  leads: number
+  leadsPct: number
+  poolNumbers: number
+  activeNumbers: number
+  dailyCapacity: number
+  callsToday: number
+  leadsPerNumber: number | null
+  capacityPct: number
+  gap: number
+  verdict: 'NEED' | 'NEED MORE' | 'STRETCHED' | 'BALANCED' | 'SURPLUS' | string
+}
+
+interface AnalyticsData {
+  generated_at: string
+  summary: {
+    totalLeads: number
+    leadsWithState: number
+    unknownStateLeads: number
+    statesWithLeads: number
+    statesCovered: number
+    uncoveredLeads: number
+    poolTotal: number
+    poolActive: number
+  }
+  states: StateAnalytics[]
+}
+
+const VERDICT_COLORS: Record<string, string> = {
+  'NEED': '#c01a1a',
+  'NEED MORE': T.red,
+  'STRETCHED': T.amber,
+  'BALANCED': T.green,
+  'SURPLUS': T.muted,
 }
 
 // Common US area codes by state — used for the "specific states" batch buy.
@@ -181,6 +219,8 @@ const CONFIG_FIELDS: Array<{ key: keyof PoolConfig, label: string, help: string 
 ]
 
 export default function NumbersApp() {
+  const [view, setView] = useState<'pool' | 'analytics'>('pool')
+
   const [data, setData] = useState<PoolData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -215,6 +255,44 @@ export default function NumbersApp() {
   const [registerAllOpen, setRegisterAllOpen] = useState(false)
   const [registerAllInFlight, setRegisterAllInFlight] = useState(false)
   const [registerAllMessage, setRegisterAllMessage] = useState<string | null>(null)
+
+  // ── ANALYTICS state (v2) ──────────────────────────────────────────────────
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
+  const [analyticsLoading, setAnalyticsLoading] = useState(false)
+  const [analyticsError, setAnalyticsError] = useState<string | null>(null)
+
+  const loadAnalytics = useCallback(async () => {
+    setAnalyticsLoading(true)
+    setAnalyticsError(null)
+    try {
+      const res = await fetch('/api/admin/pool/analytics')
+      if (res.status === 403) throw new Error('Forbidden — admin only')
+      if (res.status === 401) throw new Error('Not signed in')
+      const d = await res.json()
+      if (d.success) setAnalytics(d)
+      else setAnalyticsError(d.error || 'Failed to load analytics')
+    } catch (err: any) {
+      setAnalyticsError(err.message)
+    } finally {
+      setAnalyticsLoading(false)
+    }
+  }, [])
+
+  // Lazy-load analytics the first time the tab opens
+  useEffect(() => {
+    if (view === 'analytics' && !analytics && !analyticsLoading && !analyticsError) {
+      loadAnalytics()
+    }
+  }, [view, analytics, analyticsLoading, analyticsError, loadAnalytics])
+
+  // BUY → from an analytics row: pre-fill the states buy modal
+  const buyForState = useCallback((stateCode: string) => {
+    setBuyMode('states')
+    setBuySelectedStates(new Set([stateCode]))
+    setBuyQty(5)
+    setBuyMessage(null)
+    setBuyOpen(true)
+  }, [])
 
   const load = async (showLoader = true) => {
     if (showLoader) setLoading(true)
@@ -358,6 +436,7 @@ export default function NumbersApp() {
     setBuying(false)
     setBuyProgress(null)
     await load(false)
+    setAnalytics(null) // pool changed — stale analytics refetch on next open
   }
 
   const handleSeed = async () => {
@@ -599,6 +678,30 @@ export default function NumbersApp() {
           gap: 16px;
           flex-wrap: wrap;
         }
+        .pool-view-tabs {
+          display: flex;
+          gap: 0;
+          background: ${T.dark};
+          padding: 0 20px;
+          border-bottom: 1px solid ${T.accent};
+        }
+        .pool-view-tab {
+          padding: 9px 22px;
+          background: transparent;
+          border: none;
+          border-bottom: 2px solid transparent;
+          color: #8888aa;
+          font-size: 10px;
+          letter-spacing: 3px;
+          font-weight: bold;
+          font-family: 'Futura PT', sans-serif;
+          cursor: pointer;
+          margin-bottom: -1px;
+        }
+        .pool-view-tab.active {
+          color: ${T.blue};
+          border-bottom-color: ${T.blue};
+        }
         .pool-content { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
         .pool-stat-grid {
           display: grid;
@@ -824,6 +927,33 @@ export default function NumbersApp() {
           color: ${T.blue};
           font-weight: bold;
         }
+        .an-table {
+          width: 100%;
+          border-collapse: collapse;
+          background: ${T.surface};
+          border: 1px solid ${T.border};
+        }
+        .an-table th {
+          padding: 8px 10px;
+          text-align: left;
+          font-size: 9px;
+          letter-spacing: 2px;
+          color: ${T.muted};
+          font-weight: bold;
+          border-bottom: 1px solid ${T.border};
+          background: ${T.bg};
+          white-space: nowrap;
+        }
+        .an-table td {
+          padding: 7px 10px;
+          font-size: 11px;
+          border-bottom: 1px solid ${T.bg};
+          font-family: monospace;
+          letter-spacing: 0.5px;
+          color: ${T.text};
+          white-space: nowrap;
+        }
+        .an-table tr:hover td { background: rgba(74,158,255,0.06); }
       `}</style>
 
       <div className="pool-header">
@@ -871,6 +1001,18 @@ export default function NumbersApp() {
         </div>
       </div>
 
+      <div className="pool-view-tabs">
+        <button
+          className={`pool-view-tab ${view === 'pool' ? 'active' : ''}`}
+          onClick={() => setView('pool')}
+        >POOL</button>
+        <button
+          className={`pool-view-tab ${view === 'analytics' ? 'active' : ''}`}
+          onClick={() => setView('analytics')}
+        >ANALYTICS</button>
+      </div>
+
+      {view === 'pool' && (
       <div className="pool-content">
         {poolEmpty && (
           <div className="pool-empty-cta">
@@ -1119,6 +1261,186 @@ export default function NumbersApp() {
           </div>
         )}
       </div>
+      )}
+
+      {view === 'analytics' && (
+        <div className="pool-content">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+            <div>
+              <div style={{ fontSize: 11, letterSpacing: 3, fontWeight: 'bold', color: T.text }}>
+                LEAD DEMAND vs POOL SUPPLY — BY STATE
+              </div>
+              <div style={{ fontSize: 10, color: T.muted, letterSpacing: 1, marginTop: 3 }}>
+                All leads sitewide, every user. GAP = lead share − capacity share. Positive gap means buy there.
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {analytics && (
+                <span style={{ fontSize: 9, color: T.muted, fontFamily: 'monospace', letterSpacing: 1 }}>
+                  AS OF {new Date(analytics.generated_at).toLocaleTimeString()}
+                </span>
+              )}
+              <button className="pool-btn" onClick={loadAnalytics} disabled={analyticsLoading}>
+                {analyticsLoading ? '⟳ LOADING...' : '⟳ REFRESH'}
+              </button>
+            </div>
+          </div>
+
+          {analyticsLoading && !analytics && (
+            <div style={{ padding: 60, textAlign: 'center', fontSize: 11, letterSpacing: 3, color: T.muted }}>
+              SCANNING LEADS...
+            </div>
+          )}
+
+          {analyticsError && (
+            <div style={{
+              padding: 16, background: '#f8e8e8', border: `1px solid ${T.red}`,
+              borderRadius: 4, fontSize: 11, color: T.red, letterSpacing: 1,
+            }}>
+              {analyticsError}
+            </div>
+          )}
+
+          {analytics && (
+            <>
+              <div className="pool-stat-grid" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
+                <div className="pool-stat-card">
+                  <div className="pool-stat-label">TOTAL LEADS</div>
+                  <div className="pool-stat-value">{analytics.summary.totalLeads.toLocaleString()}</div>
+                  <div className="pool-stat-sub">
+                    {analytics.summary.unknownStateLeads > 0
+                      ? `${analytics.summary.unknownStateLeads} UNRESOLVED STATE`
+                      : 'ALL STATES RESOLVED'}
+                  </div>
+                </div>
+                <div className="pool-stat-card" style={{ borderTopColor: T.accent }}>
+                  <div className="pool-stat-label">STATES W/ LEADS</div>
+                  <div className="pool-stat-value" style={{ color: T.accent }}>{analytics.summary.statesWithLeads}</div>
+                  <div className="pool-stat-sub">{analytics.summary.statesCovered} HAVE ACTIVE NUMBERS</div>
+                </div>
+                <div className="pool-stat-card" style={{ borderTopColor: '#c01a1a' }}>
+                  <div className="pool-stat-label">UNCOVERED LEADS</div>
+                  <div className="pool-stat-value" style={{ color: '#c01a1a' }}>
+                    {analytics.summary.uncoveredLeads.toLocaleString()}
+                  </div>
+                  <div className="pool-stat-sub">IN STATES W/ ZERO NUMBERS</div>
+                </div>
+                <div className="pool-stat-card" style={{ borderTopColor: T.green }}>
+                  <div className="pool-stat-label">POOL ACTIVE</div>
+                  <div className="pool-stat-value" style={{ color: T.green }}>{analytics.summary.poolActive}</div>
+                  <div className="pool-stat-sub">OF {analytics.summary.poolTotal} TOTAL</div>
+                </div>
+                <div className="pool-stat-card" style={{ borderTopColor: T.red }}>
+                  <div className="pool-stat-label">TOP SHORTAGE</div>
+                  <div className="pool-stat-value" style={{ color: T.red, fontSize: 22 }}>
+                    {analytics.states[0]?.code ?? '—'}
+                  </div>
+                  <div className="pool-stat-sub">
+                    {analytics.states[0]
+                      ? `GAP +${analytics.states[0].gap}PP · ${analytics.states[0].leads} LEADS`
+                      : 'NO DATA'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="pool-section" style={{ padding: 0, overflow: 'hidden' }}>
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="an-table">
+                    <thead>
+                      <tr>
+                        <th>STATE</th>
+                        <th>LEADS</th>
+                        <th style={{ minWidth: 120 }}>LEAD SHARE</th>
+                        <th>POOL #s</th>
+                        <th>ACTIVE</th>
+                        <th>LEADS/NUM</th>
+                        <th>CAP SHARE</th>
+                        <th>GAP</th>
+                        <th>VERDICT</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {analytics.states.map(s => {
+                        const vColor = VERDICT_COLORS[s.verdict] ?? T.muted
+                        const needsBuy = s.verdict === 'NEED' || s.verdict === 'NEED MORE' || s.verdict === 'STRETCHED'
+                        const maxPct = analytics.states.reduce((m, x) => Math.max(m, x.leadsPct), 0) || 1
+                        return (
+                          <tr key={s.code}>
+                            <td>
+                              <strong>{s.code}</strong>
+                              <span style={{ color: T.muted, marginLeft: 6, fontSize: 9 }}>{s.name}</span>
+                            </td>
+                            <td><strong>{s.leads.toLocaleString()}</strong></td>
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <div style={{
+                                  flex: 1, height: 8, background: T.bg,
+                                  borderRadius: 2, overflow: 'hidden', minWidth: 60,
+                                }}>
+                                  <div style={{
+                                    height: '100%',
+                                    width: `${Math.min(100, (s.leadsPct / maxPct) * 100)}%`,
+                                    background: T.blue,
+                                  }} />
+                                </div>
+                                <span style={{ fontSize: 10, color: T.muted, minWidth: 38 }}>{s.leadsPct}%</span>
+                              </div>
+                            </td>
+                            <td>{s.poolNumbers}</td>
+                            <td style={{ color: s.activeNumbers === 0 && s.leads > 0 ? '#c01a1a' : T.text }}>
+                              {s.activeNumbers}
+                            </td>
+                            <td>{s.leadsPerNumber !== null ? s.leadsPerNumber : '—'}</td>
+                            <td style={{ color: T.muted }}>{s.capacityPct}%</td>
+                            <td style={{
+                              color: s.gap > 0 ? T.red : s.gap < 0 ? T.green : T.muted,
+                              fontWeight: 'bold',
+                            }}>
+                              {s.gap > 0 ? '+' : ''}{s.gap}
+                            </td>
+                            <td>
+                              <span className="pool-pill" style={{
+                                background: `${vColor}18`,
+                                color: vColor,
+                                border: `1px solid ${vColor}`,
+                              }}>{s.verdict}</span>
+                            </td>
+                            <td>
+                              {needsBuy && (
+                                <button
+                                  className="pool-btn pool-btn-primary"
+                                  style={{ fontSize: 9, padding: '3px 10px' }}
+                                  onClick={() => buyForState(s.code)}
+                                >BUY →</button>
+                              )}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                {analytics.states.length === 0 && (
+                  <div style={{ padding: 40, textAlign: 'center', fontSize: 11, letterSpacing: 3, color: T.muted }}>
+                    NO LEAD OR POOL DATA YET
+                  </div>
+                )}
+              </div>
+
+              <div style={{
+                fontSize: 9, color: T.muted, letterSpacing: 1, lineHeight: 1.7,
+                fontFamily: 'monospace',
+              }}>
+                VERDICTS — NEED: leads but zero active numbers · NEED MORE: gap ≥ +2pp ·
+                STRETCHED: gap &gt; 0 · BALANCED: within ±2pp · SURPLUS: capacity outweighs demand.
+                Lead states normalized server-side (&quot;FLORIDA&quot;→FL, area-code fallback).
+                BUY → pre-fills the buy modal with that state selected.
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Buy Modal */}
       {buyOpen && (

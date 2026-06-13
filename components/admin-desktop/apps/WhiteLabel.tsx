@@ -2,22 +2,33 @@
 import { useEffect, useState, useCallback } from 'react'
 
 // =============================================================================
-// WHITE LABEL APP — admin desktop edition
+// WHITE LABEL APP — admin desktop edition (v2)
 // =============================================================================
-// Internal sub-tab system:
-//   - Tenants:    CRUD list of all white_label_tenants (live)
-//   - Branding:   pick a tenant, edit name/logo/colors with live preview
-//   - Demo View:  pick any team, open new tab as that team
-//   - Billing:    coming soon
-//   - Settings:   coming soon
+// v2 changes vs v1:
+// - REAL SCHEMA: Tenant interface now matches white_label_tenants as it
+//   actually exists. The theme system is FOUR tokens — primary_color,
+//   sidebar_color, header_bg_color, page_bg_color. v1 edited
+//   secondary/background/text colors, which are dead legacy columns the
+//   tenant dashboard never reads. accent_color is the legacy alias of
+//   sidebar_color and is mirrored SERVER-SIDE on every write — never edited
+//   directly here.
+// - BRANDING TAB: edits brand_name, logo_url, favicon_url, support_email,
+//   footer_text + the 4 real tokens. Live preview is now shaped like the
+//   actual tenant dashboard (sidebar strip / header bar / page area /
+//   primary-colored action) so what you see is what tenants get.
+// - BACKEND IS LIVE: GET/POST /api/admin/tenants, PATCH/DELETE
+//   /api/admin/tenants/:id, POST /api/admin/impersonate all exist now. All
+//   endpoints return { success, ... } — error banners show the server's
+//   error field instead of "API not available yet".
+// - DELETE: server refuses (409) while teams still reference the tenant; the
+//   detail modal surfaces that message.
+// - DEMO VIEW: honest scope. The button resolves the team's tenant and opens
+//   its site in a new tab. It is NOT sign-in-as-user impersonation (that
+//   needs Clerk actor tokens — separate push), and branded subdomain
+//   rendering depends on the wildcard-subdomain infra still on the backlog.
 //
-// Endpoints used (some will return 404 until backend ships in next session):
-//   GET    /api/admin/tenants
-//   POST   /api/admin/tenants
-//   PATCH  /api/admin/tenants/:id
-//   DELETE /api/admin/tenants/:id
-//   GET    /api/admin/teams
-//   POST   /api/admin/impersonate
+// Sub-tabs: Tenants (live) / Branding (live) / Billing (soon) /
+//           Demo View (live) / Settings (soon)
 // =============================================================================
 
 const C = {
@@ -52,24 +63,31 @@ const WL_SUBTABS: WLSubTab[] = [
   { key: 'settings',  label: 'Settings',   status: 'coming-soon' },
 ]
 
+// Matches white_label_tenants as it exists in the DB (real columns only;
+// dead legacy color columns intentionally omitted).
 interface Tenant {
   id: string
   slug: string
-  brand_name: string
-  owner_clerk_id: string
+  custom_domain: string | null
   status: 'active' | 'suspended' | 'cancelled'
-  primary_color: string
-  secondary_color: string
-  accent_color: string
-  background_color: string
-  text_color: string
+  is_active: boolean
+  owner_clerk_id: string
+  brand_name: string
   logo_url: string | null
   favicon_url: string | null
+  primary_color: string
+  sidebar_color: string
+  header_bg_color: string
+  page_bg_color: string
+  accent_color: string // legacy mirror of sidebar_color — read-only here
+  support_email: string | null
   footer_text: string | null
-  support_email: string
+  stripe_customer_id: string | null
   stripe_subscription_id: string | null
   created_at: string
   updated_at: string
+  slug_changed_at: string | null
+  last_applied_theme_id: string | null
 }
 
 interface TeamRow {
@@ -83,6 +101,15 @@ interface TeamRow {
   total_calls_30d: number
   status: 'active' | 'inactive'
   created_at: string
+}
+
+async function readError(res: Response): Promise<string> {
+  try {
+    const j = await res.json()
+    return j?.error || `HTTP ${res.status}`
+  } catch {
+    return `HTTP ${res.status}`
+  }
 }
 
 export default function WhiteLabelApp() {
@@ -252,9 +279,9 @@ function TenantsSubTab() {
     setLoading(true)
     try {
       const res = await fetch('/api/admin/tenants')
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      if (!res.ok) throw new Error(await readError(res))
       const json = await res.json()
-      setTenants(Array.isArray(json) ? json : json.tenants ?? [])
+      setTenants(json.tenants ?? [])
       setError(null)
     } catch (e: any) {
       setError(e?.message || 'Failed to load')
@@ -292,10 +319,7 @@ function TenantsSubTab() {
           background: '#fff4f4', border: '1px solid #c08080', padding: 12,
           fontSize: 11, color: C.red, marginBottom: 12,
         }}>
-          <strong>API not available yet:</strong> {error}<br />
-          <span style={{ color: C.muted }}>
-            Wire up <code>GET /api/admin/tenants</code> to return tenants from <code>white_label_tenants</code>.
-          </span>
+          <strong>Error:</strong> {error}
         </div>
       )}
 
@@ -343,7 +367,7 @@ function TenantsSubTab() {
                     padding: '1px 6px', fontSize: 9, fontWeight: 'bold',
                     color: t.status === 'active' ? C.green : t.status === 'suspended' ? C.amber : C.red,
                     border: `1px solid currentColor`, borderRadius: 2,
-                  }}>{t.status.toUpperCase()}</span>
+                  }}>{(t.status || 'active').toUpperCase()}</span>
                 </td>
                 <td style={{ fontFamily: 'monospace', fontSize: 10, color: C.muted }}>
                   {t.owner_clerk_id.slice(0, 16)}...
@@ -394,10 +418,7 @@ function CreateTenantModal({ onClose, onCreated }: { onClose: () => void; onCrea
           support_email: supportEmail, primary_color: primaryColor,
         }),
       })
-      if (!res.ok) {
-        const body = await res.text()
-        throw new Error(body || `HTTP ${res.status}`)
-      }
+      if (!res.ok) throw new Error(await readError(res))
       onCreated()
     } catch (e: any) {
       setErr(e?.message ?? 'Failed')
@@ -418,15 +439,15 @@ function CreateTenantModal({ onClose, onCreated }: { onClose: () => void; onCrea
           <input className="wl-input" value={brandName} onChange={(e) => setBrandName(e.target.value)} placeholder="Acme Dialer" />
         </div>
         <div>
-          <label className="wl-label">Owner Clerk ID <span style={{ color: C.muted }}>(user_...)</span></label>
+          <label className="wl-label">Owner Clerk ID <span style={{ color: C.muted }}>(user_... — must already exist in users)</span></label>
           <input className="wl-input" value={ownerClerkId} onChange={(e) => setOwnerClerkId(e.target.value)} placeholder="user_..." style={{ fontFamily: 'monospace' }} />
         </div>
         <div>
-          <label className="wl-label">Support Email</label>
+          <label className="wl-label">Support Email <span style={{ color: C.muted }}>(optional)</span></label>
           <input className="wl-input" type="email" value={supportEmail} onChange={(e) => setSupportEmail(e.target.value)} placeholder="support@acme.com" />
         </div>
         <div>
-          <label className="wl-label">Primary Color</label>
+          <label className="wl-label">Primary Color <span style={{ color: C.muted }}>(buttons + accents; the other 3 tokens start at defaults — edit in Branding)</span></label>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
             <input type="color" value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} style={{ width: 40, height: 26, border: `1px solid ${C.borderStrong}`, padding: 0, cursor: 'pointer' }} />
             <input className="wl-input" value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} style={{ flex: 1, fontFamily: 'monospace' }} />
@@ -441,7 +462,7 @@ function CreateTenantModal({ onClose, onCreated }: { onClose: () => void; onCrea
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6, marginTop: 6 }}>
           <button className="wl-btn" onClick={onClose} disabled={submitting}>Cancel</button>
-          <button className="wl-btn primary" onClick={submit} disabled={submitting || !slug || !brandName || !ownerClerkId || !supportEmail}>
+          <button className="wl-btn primary" onClick={submit} disabled={submitting || !slug || !brandName || !ownerClerkId}>
             {submitting ? 'Creating...' : 'Create Tenant'}
           </button>
         </div>
@@ -456,18 +477,21 @@ function TenantDetailModal({ tenant, onClose, onUpdated }: {
   onUpdated: () => void
 }) {
   const [working, setWorking] = useState<string | null>(null)
+  const [err, setErr] = useState<string | null>(null)
 
   const setStatus = async (status: Tenant['status']) => {
     setWorking('status')
+    setErr(null)
     try {
       const res = await fetch(`/api/admin/tenants/${tenant.id}`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
       })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      if (!res.ok) throw new Error(await readError(res))
       onUpdated()
+      onClose()
     } catch (e: any) {
-      alert(`Failed: ${e?.message ?? 'unknown'}`)
+      setErr(e?.message ?? 'Failed')
     } finally {
       setWorking(null)
     }
@@ -476,13 +500,15 @@ function TenantDetailModal({ tenant, onClose, onUpdated }: {
   const remove = async () => {
     if (!confirm(`Delete tenant "${tenant.slug}"? This cannot be undone.`)) return
     setWorking('delete')
+    setErr(null)
     try {
       const res = await fetch(`/api/admin/tenants/${tenant.id}`, { method: 'DELETE' })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      if (!res.ok) throw new Error(await readError(res))
       onUpdated()
       onClose()
     } catch (e: any) {
-      alert(`Failed: ${e?.message ?? 'unknown'}`)
+      // 409 = teams still attached; server message says which/how many
+      setErr(e?.message ?? 'Failed')
     } finally {
       setWorking(null)
     }
@@ -495,12 +521,40 @@ function TenantDetailModal({ tenant, onClose, onUpdated }: {
         <Field label="Slug" value={tenant.slug} mono />
         <Field label="Brand Name" value={tenant.brand_name} />
         <Field label="Owner" value={tenant.owner_clerk_id} mono />
-        <Field label="Support Email" value={tenant.support_email} />
+        <Field label="Support Email" value={tenant.support_email ?? '(none)'} />
+        <Field label="Custom Domain" value={tenant.custom_domain ?? '(none)'} mono />
+        <Field label="Stripe Customer" value={tenant.stripe_customer_id ?? '(none)'} mono />
         <Field label="Stripe Subscription" value={tenant.stripe_subscription_id ?? '(none)'} mono />
-        <Field label="Status" value={tenant.status} />
+        <Field label="Status" value={`${tenant.status || 'active'}${tenant.is_active ? '' : ' (inactive)'}`} />
         <Field label="Subdomain URL" value={`https://${tenant.slug}.dialerseat.com`} link />
 
-        <div style={{ display: 'flex', gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
+        <div>
+          <label className="wl-label">Theme Tokens</label>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {([
+              ['PRIMARY', tenant.primary_color],
+              ['SIDEBAR', tenant.sidebar_color],
+              ['HEADER', tenant.header_bg_color],
+              ['PAGE', tenant.page_bg_color],
+            ] as const).map(([label, color]) => (
+              <div key={label} style={{ textAlign: 'center' }}>
+                <div style={{
+                  width: 38, height: 22, borderRadius: 2,
+                  background: color || '#000', border: '1px solid rgba(0,0,0,0.25)',
+                }} />
+                <div style={{ fontSize: 8, color: C.muted, letterSpacing: 1, marginTop: 2 }}>{label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {err && (
+          <div style={{ background: '#fff4f4', border: '1px solid #c08080', padding: 8, fontSize: 11, color: C.red }}>
+            {err}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
           {tenant.status === 'active' && (
             <button className="wl-btn" onClick={() => setStatus('suspended')} disabled={working !== null}>
               {working === 'status' ? 'Suspending...' : 'Suspend'}
@@ -529,27 +583,55 @@ function TenantDetailModal({ tenant, onClose, onUpdated }: {
 }
 
 // =============================================================================
-// BRANDING — pick tenant, edit colors with live preview
+// BRANDING — edit the REAL 4-token theme + brand assets, dashboard-shaped
+// live preview. accent_color mirroring happens server-side.
 // =============================================================================
+interface BrandingDraft {
+  brand_name: string
+  logo_url: string
+  favicon_url: string
+  support_email: string
+  footer_text: string
+  primary_color: string
+  sidebar_color: string
+  header_bg_color: string
+  page_bg_color: string
+}
+
+function draftFrom(t: Tenant): BrandingDraft {
+  return {
+    brand_name: t.brand_name ?? '',
+    logo_url: t.logo_url ?? '',
+    favicon_url: t.favicon_url ?? '',
+    support_email: t.support_email ?? '',
+    footer_text: t.footer_text ?? '',
+    primary_color: t.primary_color || '#4a9eff',
+    sidebar_color: t.sidebar_color || '#1a1a2e',
+    header_bg_color: t.header_bg_color || '#1a1a2e',
+    page_bg_color: t.page_bg_color || '#0a0a14',
+  }
+}
+
 function BrandingSubTab() {
   const [tenants, setTenants] = useState<Tenant[]>([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<Tenant | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [draft, setDraft] = useState<Partial<Tenant>>({})
+  const [draft, setDraft] = useState<BrandingDraft | null>(null)
   const [saving, setSaving] = useState(false)
+  const [savedFlash, setSavedFlash] = useState(false)
 
   useEffect(() => {
     (async () => {
       try {
         const res = await fetch('/api/admin/tenants')
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        if (!res.ok) throw new Error(await readError(res))
         const json = await res.json()
-        const list = Array.isArray(json) ? json : json.tenants ?? []
+        const list: Tenant[] = json.tenants ?? []
         setTenants(list)
         if (list.length > 0) {
           setSelected(list[0])
-          setDraft(list[0])
+          setDraft(draftFrom(list[0]))
         }
       } catch (e: any) {
         setError(e?.message ?? 'Failed')
@@ -560,18 +642,32 @@ function BrandingSubTab() {
   }, [])
 
   const save = async () => {
-    if (!selected) return
+    if (!selected || !draft) return
     setSaving(true)
     try {
       const res = await fetch(`/api/admin/tenants/${selected.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(draft),
+        body: JSON.stringify({
+          brand_name: draft.brand_name,
+          logo_url: draft.logo_url || null,
+          favicon_url: draft.favicon_url || null,
+          support_email: draft.support_email || null,
+          footer_text: draft.footer_text || null,
+          primary_color: draft.primary_color,
+          sidebar_color: draft.sidebar_color, // server mirrors accent_color
+          header_bg_color: draft.header_bg_color,
+          page_bg_color: draft.page_bg_color,
+        }),
       })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const updated = await res.json()
-      setSelected(updated.tenant ?? updated)
-      setDraft(updated.tenant ?? updated)
+      if (!res.ok) throw new Error(await readError(res))
+      const json = await res.json()
+      const updated: Tenant = json.tenant
+      setSelected(updated)
+      setDraft(draftFrom(updated))
+      setTenants(prev => prev.map(t => t.id === updated.id ? updated : t))
+      setSavedFlash(true)
+      setTimeout(() => setSavedFlash(false), 2500)
     } catch (e: any) {
       alert(`Failed: ${e?.message ?? 'unknown'}`)
     } finally {
@@ -593,7 +689,7 @@ function BrandingSubTab() {
   }
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr 260px', gap: 12, minHeight: 400 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr 300px', gap: 12, minHeight: 400 }}>
       <div style={{ background: C.surface, border: `1px solid ${C.border}`, padding: 6, overflowY: 'auto', maxHeight: 600 }}>
         <div style={{ fontSize: 10, fontWeight: 'bold', color: C.muted, padding: '4px 6px', borderBottom: `1px solid ${C.border}` }}>
           TENANTS
@@ -601,7 +697,7 @@ function BrandingSubTab() {
         {tenants.map(t => (
           <div
             key={t.id}
-            onClick={() => { setSelected(t); setDraft(t) }}
+            onClick={() => { setSelected(t); setDraft(draftFrom(t)) }}
             style={{
               padding: 8, cursor: 'pointer',
               background: selected?.id === t.id ? C.blue : 'transparent',
@@ -618,31 +714,57 @@ function BrandingSubTab() {
 
       <div style={{ background: C.surface, border: `1px solid ${C.border}`, padding: 14 }}>
         <div style={{ fontSize: 12, fontWeight: 'bold', marginBottom: 12 }}>Edit Branding</div>
-        {selected && (
+        {selected && draft && (
           <div style={{ display: 'grid', gap: 10 }}>
             <div>
               <label className="wl-label">Brand Name</label>
-              <input className="wl-input" value={draft.brand_name ?? ''} onChange={(e) => setDraft({ ...draft, brand_name: e.target.value })} />
-            </div>
-            <div>
-              <label className="wl-label">Logo URL</label>
-              <input className="wl-input" value={draft.logo_url ?? ''} onChange={(e) => setDraft({ ...draft, logo_url: e.target.value || null })} placeholder="https://..." />
+              <input className="wl-input" value={draft.brand_name} onChange={(e) => setDraft({ ...draft, brand_name: e.target.value })} />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <ColorField label="Primary"    value={draft.primary_color ?? '#4a9eff'}    onChange={(v) => setDraft({ ...draft, primary_color: v })} />
-              <ColorField label="Secondary"  value={draft.secondary_color ?? '#2a6eff'}  onChange={(v) => setDraft({ ...draft, secondary_color: v })} />
-              <ColorField label="Accent"     value={draft.accent_color ?? '#1a1a2e'}     onChange={(v) => setDraft({ ...draft, accent_color: v })} />
-              <ColorField label="Background" value={draft.background_color ?? '#0a0a14'} onChange={(v) => setDraft({ ...draft, background_color: v })} />
-              <ColorField label="Text"       value={draft.text_color ?? '#ffffff'}       onChange={(v) => setDraft({ ...draft, text_color: v })} />
+              <div>
+                <label className="wl-label">Logo URL</label>
+                <input className="wl-input" value={draft.logo_url} onChange={(e) => setDraft({ ...draft, logo_url: e.target.value })} placeholder="https://..." />
+              </div>
+              <div>
+                <label className="wl-label">Favicon URL</label>
+                <input className="wl-input" value={draft.favicon_url} onChange={(e) => setDraft({ ...draft, favicon_url: e.target.value })} placeholder="https://..." />
+              </div>
             </div>
+
             <div>
-              <label className="wl-label">Footer Text</label>
-              <input className="wl-input" value={draft.footer_text ?? ''} onChange={(e) => setDraft({ ...draft, footer_text: e.target.value })} placeholder="Hosted by DialerSeat" />
+              <label className="wl-label" style={{ fontWeight: 'bold' }}>
+                Theme Tokens
+                <span style={{ color: C.muted, fontWeight: 'normal', marginLeft: 6 }}>
+                  — the 4 colors the tenant dashboard actually renders
+                </span>
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <ColorField label="PRIMARY — buttons, links, accents" value={draft.primary_color}    onChange={(v) => setDraft({ ...draft, primary_color: v })} />
+                <ColorField label="SIDEBAR — left nav background"     value={draft.sidebar_color}    onChange={(v) => setDraft({ ...draft, sidebar_color: v })} />
+                <ColorField label="HEADER — top bar background"       value={draft.header_bg_color}  onChange={(v) => setDraft({ ...draft, header_bg_color: v })} />
+                <ColorField label="PAGE BG — content background"      value={draft.page_bg_color}    onChange={(v) => setDraft({ ...draft, page_bg_color: v })} />
+              </div>
+              <div style={{ fontSize: 10, color: C.muted, marginTop: 6, lineHeight: 1.5 }}>
+                The legacy <code>accent_color</code> is mirrored from SIDEBAR automatically on save.
+              </div>
             </div>
-            <div style={{ marginTop: 8 }}>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div>
+                <label className="wl-label">Support Email</label>
+                <input className="wl-input" value={draft.support_email} onChange={(e) => setDraft({ ...draft, support_email: e.target.value })} placeholder="support@acme.com" />
+              </div>
+              <div>
+                <label className="wl-label">Footer Text</label>
+                <input className="wl-input" value={draft.footer_text} onChange={(e) => setDraft({ ...draft, footer_text: e.target.value })} placeholder="Hosted by DialerSeat" />
+              </div>
+            </div>
+
+            <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
               <button className="wl-btn primary" onClick={save} disabled={saving}>
                 {saving ? 'Saving...' : 'Save Branding'}
               </button>
+              {savedFlash && <span style={{ fontSize: 11, color: C.green, fontWeight: 'bold' }}>✓ Saved</span>}
             </div>
           </div>
         )}
@@ -650,51 +772,78 @@ function BrandingSubTab() {
 
       <div style={{ background: C.surface, border: `1px solid ${C.border}`, padding: 10 }}>
         <div style={{ fontSize: 10, fontWeight: 'bold', color: C.muted, marginBottom: 8 }}>LIVE PREVIEW</div>
-        <BrandingPreview tenant={{ ...selected!, ...draft } as Tenant} />
+        {draft && <DashboardPreview draft={draft} />}
       </div>
     </div>
   )
 }
 
-function BrandingPreview({ tenant }: { tenant: Tenant }) {
+// Mini mock of the actual tenant dashboard: sidebar / header / page / primary.
+function DashboardPreview({ draft }: { draft: BrandingDraft }) {
   return (
     <div style={{
-      background: tenant.background_color, color: tenant.text_color,
-      padding: 16, borderRadius: 4, border: '1px solid #ccc',
-      minHeight: 280,
+      borderRadius: 4, border: '1px solid #ccc', overflow: 'hidden',
+      display: 'grid', gridTemplateColumns: '64px 1fr', minHeight: 300,
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-        {tenant.logo_url ? (
-          <img src={tenant.logo_url} alt={tenant.brand_name} style={{ width: 24, height: 24, borderRadius: 4 }} />
+      {/* sidebar */}
+      <div style={{ background: draft.sidebar_color, padding: '10px 6px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {draft.logo_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={draft.logo_url} alt="" style={{ width: 26, height: 26, borderRadius: 4, objectFit: 'contain', margin: '0 auto' }} />
         ) : (
           <div style={{
-            width: 24, height: 24, borderRadius: 4,
-            background: `linear-gradient(135deg, ${tenant.primary_color}, ${tenant.secondary_color})`,
+            width: 26, height: 26, borderRadius: 4, margin: '0 auto',
+            background: draft.primary_color,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: 'white', fontSize: 11, fontWeight: 'bold',
+            color: 'white', fontSize: 12, fontWeight: 'bold',
           }}>
-            {tenant.brand_name?.[0]?.toUpperCase() ?? 'D'}
+            {draft.brand_name?.[0]?.toUpperCase() ?? 'D'}
           </div>
         )}
-        <span style={{ fontSize: 11, fontWeight: 'bold', letterSpacing: 3, color: tenant.primary_color }}>
-          {tenant.brand_name?.toUpperCase() ?? 'BRAND NAME'}
-        </span>
+        {[0, 1, 2, 3].map(i => (
+          <div key={i} style={{
+            height: 6, borderRadius: 3, margin: '0 4px',
+            background: i === 0 ? draft.primary_color : 'rgba(255,255,255,0.22)',
+          }} />
+        ))}
       </div>
-      <div style={{ fontSize: 11, opacity: 0.9, marginBottom: 12, lineHeight: 1.5 }}>
-        Welcome back. This is roughly how your dashboard will appear to your downstream customers.
-      </div>
-      <button style={{
-        padding: '6px 12px', background: tenant.primary_color, color: 'white',
-        border: 'none', borderRadius: 3,
-        fontSize: 10, fontWeight: 'bold', letterSpacing: 2, cursor: 'default',
-      }}>
-        PRIMARY ACTION
-      </button>
-      <div style={{
-        marginTop: 16, padding: '4px 0', borderTop: `1px solid ${tenant.accent_color}`,
-        fontSize: 9, opacity: 0.6, letterSpacing: 1,
-      }}>
-        {tenant.footer_text || 'Hosted by DialerSeat'}
+
+      {/* header + page */}
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <div style={{
+          background: draft.header_bg_color, padding: '8px 10px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <span style={{ fontSize: 9, fontWeight: 'bold', letterSpacing: 2, color: 'white' }}>
+            {(draft.brand_name || 'BRAND NAME').toUpperCase()}
+          </span>
+          <span style={{ width: 14, height: 14, borderRadius: '50%', background: 'rgba(255,255,255,0.35)' }} />
+        </div>
+        <div style={{ flex: 1, background: draft.page_bg_color, padding: 10 }}>
+          <div style={{
+            background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: 4, padding: 8, marginBottom: 8,
+          }}>
+            <div style={{ height: 5, width: '55%', borderRadius: 3, background: 'rgba(255,255,255,0.4)', marginBottom: 6 }} />
+            <div style={{ height: 5, width: '80%', borderRadius: 3, background: 'rgba(255,255,255,0.18)' }} />
+          </div>
+          <button style={{
+            padding: '5px 12px', background: draft.primary_color, color: 'white',
+            border: 'none', borderRadius: 3,
+            fontSize: 9, fontWeight: 'bold', letterSpacing: 2, cursor: 'default',
+          }}>
+            PRIMARY ACTION
+          </button>
+          <div style={{ marginTop: 10, fontSize: 9, color: draft.primary_color, textDecoration: 'underline' }}>
+            primary link
+          </div>
+          <div style={{
+            marginTop: 14, paddingTop: 6, borderTop: '1px solid rgba(255,255,255,0.15)',
+            fontSize: 8, color: 'rgba(255,255,255,0.55)', letterSpacing: 1,
+          }}>
+            {draft.footer_text || 'Hosted by DialerSeat'}
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -703,7 +852,7 @@ function BrandingPreview({ tenant }: { tenant: Tenant }) {
 function ColorField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
     <div>
-      <label className="wl-label">{label}</label>
+      <label className="wl-label" style={{ fontSize: 10 }}>{label}</label>
       <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
         <input type="color" value={value} onChange={(e) => onChange(e.target.value)} style={{ width: 30, height: 22, border: `1px solid ${C.borderStrong}`, padding: 0, cursor: 'pointer' }} />
         <input className="wl-input" value={value} onChange={(e) => onChange(e.target.value)} style={{ flex: 1, fontFamily: 'monospace', fontSize: 10 }} />
@@ -713,7 +862,7 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
 }
 
 // =============================================================================
-// DEMO VIEW — open new tab as a chosen team
+// DEMO VIEW — resolve a team's tenant and open its site in a new tab
 // =============================================================================
 function DemoViewSubTab() {
   const [teams, setTeams] = useState<TeamRow[] | null>(null)
@@ -725,9 +874,8 @@ function DemoViewSubTab() {
     (async () => {
       try {
         const res = await fetch('/api/admin/teams')
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        if (!res.ok) throw new Error(await readError(res))
         const json = await res.json()
-        // /api/admin/teams returns { success, teams: [...] }
         setTeams(json.teams ?? (Array.isArray(json) ? json : []))
       } catch (e: any) {
         setError(e?.message ?? 'Failed')
@@ -738,22 +886,20 @@ function DemoViewSubTab() {
     })()
   }, [])
 
-  const startImpersonation = async (team: TeamRow) => {
+  const startDemoView = async (team: TeamRow) => {
     setStarting(team.id)
     try {
       const res = await fetch('/api/admin/impersonate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ team_id: team.id }),
       })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      if (!res.ok) throw new Error(await readError(res))
       const data = await res.json()
-      const url = data.redirect_url
-        ?? (team.tenant_slug
-            ? `https://${team.tenant_slug}.dialerseat.com/dashboard/analytics?impersonate=${team.id}`
-            : `/dashboard/analytics?impersonate=${team.id}`)
-      window.open(url, '_blank', 'noopener,noreferrer')
+      if (data.redirect_url) {
+        window.open(data.redirect_url, '_blank', 'noopener,noreferrer')
+      }
     } catch (e: any) {
-      alert(`Failed to impersonate: ${e?.message ?? 'unknown'}`)
+      alert(`Failed: ${e?.message ?? 'unknown'}`)
     } finally {
       setStarting(null)
     }
@@ -764,18 +910,19 @@ function DemoViewSubTab() {
   return (
     <div>
       <div style={{ marginBottom: 12 }}>
-        <div style={{ fontSize: 13, fontWeight: 'bold' }}>Demo View / Team Impersonation</div>
-        <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>
-          Open a new tab as a member of the selected team. The tenant&apos;s branding renders and a banner indicates impersonation.
+        <div style={{ fontSize: 13, fontWeight: 'bold' }}>Demo View</div>
+        <div style={{ fontSize: 11, color: C.muted, marginTop: 2, lineHeight: 1.5 }}>
+          Opens the selected team&apos;s site in a new tab — the tenant subdomain for white-label teams,
+          the main dashboard otherwise. This shows the tenant&apos;s public experience; it does not sign
+          you in as the team&apos;s users (true impersonation needs Clerk actor tokens — separate build).
+          Branded subdomain rendering also depends on the wildcard-subdomain infrastructure, which is
+          still pending.
         </div>
       </div>
 
       {error && (
         <div style={{ background: '#fff4f4', border: '1px solid #c08080', padding: 12, fontSize: 11, color: C.red, marginBottom: 12 }}>
-          <strong>API not available yet:</strong> {error}<br />
-          <span style={{ color: C.muted }}>
-            Wire up <code>GET /api/admin/teams</code> (already exists) and <code>POST /api/admin/impersonate</code>.
-          </span>
+          <strong>Error:</strong> {error}
         </div>
       )}
 
@@ -802,11 +949,11 @@ function DemoViewSubTab() {
                 <td>
                   <button
                     className="wl-btn primary"
-                    onClick={() => startImpersonation(t)}
+                    onClick={() => startDemoView(t)}
                     disabled={starting === t.id}
                     style={{ fontSize: 10, padding: '3px 10px' }}
                   >
-                    {starting === t.id ? 'Opening...' : 'View As →'}
+                    {starting === t.id ? 'Opening...' : 'Open Site →'}
                   </button>
                 </td>
               </tr>
