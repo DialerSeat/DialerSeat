@@ -160,6 +160,12 @@ interface PersistedState {
   topZ: number
 }
 
+// Apps that must NEVER be restored as open windows on boot. The Dashboard app
+// is a "navigate away" launcher — restoring it as an open window (the desktop
+// remembers last-session windows) caused a redirect loop. We drop these from
+// the restored window set; they only ever open by an explicit click.
+const NEVER_RESTORE_APP_IDS: string[] = ['dashboard']
+
 function loadPersistedState(role: AppRole): PersistedState | null {
   if (typeof window === 'undefined') return null
   try {
@@ -167,7 +173,13 @@ function loadPersistedState(role: AppRole): PersistedState | null {
     if (!raw) return null
     const parsed = JSON.parse(raw) as PersistedState
     if (!Array.isArray(parsed.windows)) return null
-    return parsed
+    // Filter out never-restore apps so a leftover Dashboard window from a prior
+    // session can't reopen (and, with old builds, re-trigger the redirect loop).
+    const windows = parsed.windows.filter(w => !NEVER_RESTORE_APP_IDS.includes(w.appId))
+    const dropped = windows.length !== parsed.windows.length
+    const focusedId = (parsed.focusedId && windows.some(w => w.id === parsed.focusedId))
+      ? parsed.focusedId : null
+    return { ...parsed, windows, focusedId: dropped ? focusedId : parsed.focusedId }
   } catch {
     return null
   }
