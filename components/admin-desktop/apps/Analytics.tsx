@@ -17,9 +17,17 @@ import { useDesktopServices } from '../desktopServices'
 // from the admin" while letting each role have a purpose-built UI.
 // =============================================================================
 
+// Palette tied to the tenant white-label brand via --brand-* vars (manager
+// desktop is ThemeProvider-wrapped; admin desktop emits the default DialerSeat
+// values, which equal these fallbacks, so admin is unchanged). HEADER →
+// header-bg / on-header; BODY → page-bg, card surface/border, on-page-bg,
+// muted-text; PRIMARY/ACCENT → --brand-primary. Status colors stay fixed.
 const T = {
-  bg: '#f0f1f4', surface: '#e2e4ea', border: '#c4c8d0', dark: '#1a1a2e',
-  text: '#1a1c24', muted: '#5a5e6a', accent: '#2a4a8a', blue: '#4a9eff',
+  bg: 'var(--brand-page-bg, #f0f1f4)', surface: 'var(--brand-card-surface, #e2e4ea)',
+  border: 'var(--brand-card-border, #c4c8d0)', dark: 'var(--brand-header-bg, #1a1a2e)',
+  text: 'var(--brand-on-page-bg, #1a1c24)', muted: 'var(--brand-muted-text, #5a5e6a)',
+  accent: 'var(--brand-primary, #2a4a8a)', blue: 'var(--brand-primary, #4a9eff)',
+  onHeader: 'var(--brand-on-header, #ffffff)', onHeaderMuted: 'var(--brand-on-header-muted, #8888aa)',
   green: '#1a6a1a', red: '#8a1a1a', amber: '#8a6a1a',
 }
 
@@ -61,7 +69,7 @@ function Shell({
           display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: space-between; }
         .an-range-pills { display: flex; gap: 4px; background: rgba(255,255,255,0.05); border: 1px solid #2a2c34;
           border-radius: 4px; padding: 3px; flex-wrap: wrap; }
-        .an-range-pill { padding: 5px 10px; border: none; background: transparent; color: #8888aa;
+        .an-range-pill { padding: 5px 10px; border: none; background: transparent; color: var(--brand-on-header-muted, #8888aa);
           font-size: 9px; letter-spacing: 2px; font-weight: bold; cursor: pointer; border-radius: 3px;
           font-family: 'Futura PT', Futura, sans-serif; }
         .an-range-pill.active { background: ${T.blue}; color: white; }
@@ -90,7 +98,7 @@ function Shell({
       <div className="an-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 11, fontWeight: 'bold', letterSpacing: 4, color: T.blue }}>{title}</span>
-          <span style={{ fontSize: 10, fontFamily: 'monospace', color: '#8888aa', letterSpacing: 1 }}>
+          <span style={{ fontSize: 10, fontFamily: 'monospace', color: T.onHeaderMuted, letterSpacing: 1 }}>
             {subtitle} · {RANGE_LABELS[range]}
           </span>
         </div>

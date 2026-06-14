@@ -17,15 +17,25 @@ import { useDesktopServices } from '../desktopServices'
 // whether the delete affordances render.
 // =============================================================================
 
+// Palette tied to the tenant's white-label brand. On the manager desktop the
+// page is wrapped in <ThemeProvider> so these --brand-* vars carry the owner's
+// colors; on the admin desktop (no tenant) ThemeProvider emits the default
+// DialerSeat values, which match the fallbacks here — so admin looks identical.
+// HEADER → --brand-header-bg / --brand-on-header(-muted); BODY → page-bg, card
+// surface/border, on-page-bg, muted-text; PRIMARY/ACCENT → --brand-primary.
+// Semantic status colors (green/red/amber) stay fixed — they signal state, not
+// brand. There is no sidebar in these apps, so no sidebar tokens are used.
 const T = {
-  bg: '#f0f1f4',
-  surface: '#e2e4ea',
-  border: '#c4c8d0',
-  dark: '#1a1a2e',
-  text: '#1a1c24',
-  muted: '#5a5e6a',
-  accent: '#2a4a8a',
-  blue: '#4a9eff',
+  bg: 'var(--brand-page-bg, #f0f1f4)',
+  surface: 'var(--brand-card-surface, #e2e4ea)',
+  border: 'var(--brand-card-border, #c4c8d0)',
+  dark: 'var(--brand-header-bg, #1a1a2e)',
+  text: 'var(--brand-on-page-bg, #1a1c24)',
+  muted: 'var(--brand-muted-text, #5a5e6a)',
+  accent: 'var(--brand-primary, #2a4a8a)',
+  blue: 'var(--brand-primary, #4a9eff)',
+  onHeader: 'var(--brand-on-header, #ffffff)',
+  onHeaderMuted: 'var(--brand-on-header-muted, #8888aa)',
   green: '#1a6a1a',
   red: '#8a1a1a',
   amber: '#8a6a1a',
@@ -379,7 +389,7 @@ export default function TeamsApp() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <span style={{ fontSize: 11, fontWeight: 'bold', letterSpacing: 4, color: T.blue }}>TEAMS</span>
           {data && (
-            <span style={{ fontSize: 10, fontFamily: 'monospace', color: '#8888aa', letterSpacing: 1 }}>
+            <span style={{ fontSize: 10, fontFamily: 'monospace', color: T.onHeaderMuted, letterSpacing: 1 }}>
               {data.platformTotals.teams} TEAMS · {data.platformTotals.activeSeats} ACTIVE SEATS · {fmtMoney(data.platformTotals.wrr_cents)}/WK
             </span>
           )}
