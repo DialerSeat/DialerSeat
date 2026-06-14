@@ -7,7 +7,8 @@ import Taskbar from './Taskbar'
 import StartMenu from './StartMenu'
 import ContextMenu, { type ContextMenuItem } from './ContextMenu'
 import { DesktopServicesContext, isBaseApp, DEFAULT_HIDDEN_APP_IDS, type DesktopServices } from './desktopServices'
-import type { AppId, WindowState, RecentApp } from './types'
+import type { AppId, AppRole, WindowState, RecentApp } from './types'
+import { appVisibleToRole } from './types'
 
 // =============================================================================
 // DESKTOP — root shell component
@@ -39,8 +40,21 @@ import type { AppId, WindowState, RecentApp } from './types'
 
 const MOBILE_BREAKPOINT = 768
 const TASKBAR_VISIBLE_HEIGHT = 48
-const LS_KEY = 'ds:admin-desktop:v1'
-const PREFS_LS_KEY = 'ds:admin-desktop:prefs:v1'
+// Persistence is namespaced by role so an admin and a manager on the same
+// browser never collide. Admin keys keep their original v1 strings so existing
+// admin desktops load unchanged; manager gets its own namespace + its own API.
+function lsKeyFor(role: AppRole): string {
+  return role === 'admin' ? 'ds:admin-desktop:v1' : `ds:${role}-desktop:v1`
+}
+function prefsLsKeyFor(role: AppRole): string {
+  return role === 'admin' ? 'ds:admin-desktop:prefs:v1' : `ds:${role}-desktop:prefs:v1`
+}
+// API base for prefs + wallpaper. Admin → /api/admin/desktop-prefs (unchanged).
+// Manager → /api/manager/desktop-prefs (route to be added; until it exists the
+// fetches fail soft and the manager desktop persists via localStorage only).
+function prefsApiBaseFor(role: AppRole): string {
+  return role === 'admin' ? '/api/admin/desktop-prefs' : `/api/${role}/desktop-prefs`
+}
 
 // ── ICON GRID (the invisible Windows grid) ──────────────────────────────────
 const ICON_W = 96
@@ -146,10 +160,10 @@ interface PersistedState {
   topZ: number
 }
 
-function loadPersistedState(): PersistedState | null {
+function loadPersistedState(role: AppRole): PersistedState | null {
   if (typeof window === 'undefined') return null
   try {
-    const raw = localStorage.getItem(LS_KEY)
+    const raw = localStorage.getItem(lsKeyFor(role))
     if (!raw) return null
     const parsed = JSON.parse(raw) as PersistedState
     if (!Array.isArray(parsed.windows)) return null
@@ -159,10 +173,10 @@ function loadPersistedState(): PersistedState | null {
   }
 }
 
-function savePersistedState(state: PersistedState): void {
+function savePersistedState(role: AppRole, state: PersistedState): void {
   if (typeof window === 'undefined') return
   try {
-    localStorage.setItem(LS_KEY, JSON.stringify(state))
+    localStorage.setItem(lsKeyFor(role), JSON.stringify(state))
   } catch {}
 }
 
@@ -173,10 +187,10 @@ interface CachedPrefs {
   hiddenApps: string[]
 }
 
-function loadCachedPrefs(): CachedPrefs | null {
+function loadCachedPrefs(role: AppRole): CachedPrefs | null {
   if (typeof window === 'undefined') return null
   try {
-    const raw = localStorage.getItem(PREFS_LS_KEY)
+    const raw = localStorage.getItem(prefsLsKeyFor(role))
     if (!raw) return null
     const parsed = JSON.parse(raw) as Partial<CachedPrefs>
     return {
@@ -203,11 +217,11 @@ interface PositionHint {
   shiftY?: number
 }
 
-export default function Desktop() {
+export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
   const router = useRouter()
 
-  const initial = (typeof window !== 'undefined') ? loadPersistedState() : null
-  const initialPrefs = (typeof window !== 'undefined') ? loadCachedPrefs() : null
+  const initial = (typeof window !== 'undefined') ? loadPersistedState(role) : null
+  const initialPrefs = (typeof window !== 'undefined') ? loadCachedPrefs(role) : null
 
   const [windows, setWindows] = useState<WindowState[]>(initial?.windows ?? [])
   const [focusedId, setFocusedId] = useState<string | null>(initial?.focusedId ?? null)
@@ -245,17 +259,28 @@ export default function Desktop() {
   const TASKBAR_HEIGHT = TASKBAR_VISIBLE_HEIGHT + safeAreaBottom
 
   // ── APP VISIBILITY ───────────────────────────────────────────────────────
+  // Two independent gates:
+  //   1. ROLE (visibleTo) — does this app exist for this desktop at all?
+  //      Admin sees everything; manager sees only apps opted into 'manager'.
+  //      This is what keeps one registry driving both desktops in lockstep.
+  //   2. INSTALL/HIDE — App Store state, unchanged from before.
+  // Role is checked FIRST so a manager can never install/unhide an admin-only
+  // app (it isn't in their roleApps set to begin with).
+  const roleApps = useMemo(
+    () => APPS.filter(a => appVisibleToRole(a, role)),
+    [role]
+  )
   const isInstalled = useCallback(
     (id: AppId) => isBaseApp(id) || installedApps.includes(id),
     [installedApps]
   )
   const visibleApps = useMemo(
-    () => APPS.filter(a => isInstalled(a.id) && !hiddenApps.includes(a.id)),
-    [isInstalled, hiddenApps]
+    () => roleApps.filter(a => isInstalled(a.id) && !hiddenApps.includes(a.id)),
+    [roleApps, isInstalled, hiddenApps]
   )
   const installedAppMetas = useMemo(
-    () => APPS.filter(a => isInstalled(a.id)),
-    [isInstalled]
+    () => roleApps.filter(a => isInstalled(a.id)),
+    [roleApps, isInstalled]
   )
 
   // ── MOBILE DETECTION + VIEWPORT ──────────────────────────────────────────
@@ -295,13 +320,17 @@ export default function Desktop() {
 
   // ── PERSIST WINDOW STATE ─────────────────────────────────────────────────
   useEffect(() => {
-    savePersistedState({ windows, focusedId, topZ })
-  }, [windows, focusedId, topZ])
+    savePersistedState(role, { windows, focusedId, topZ })
+  }, [windows, focusedId, topZ, role])
 
   // ── LOAD PREFS FROM SUPABASE (LS cache already painted) ──────────────────
+  // Admin → /api/admin/desktop-prefs. Manager → /api/manager/desktop-prefs
+  // (until that route exists the fetch fails soft; the LS cache already
+  // painted the desktop, so the manager still gets a working, locally-
+  // persisted layout). prefsApiBaseFor() picks the right endpoint by role.
   useEffect(() => {
     let cancelled = false
-    fetch('/api/admin/desktop-prefs')
+    fetch(prefsApiBaseFor(role))
       .then(r => r.json())
       .then(d => {
         if (cancelled) return
@@ -317,19 +346,19 @@ export default function Desktop() {
         if (!cancelled) setPrefsLoaded(true)
       })
     return () => { cancelled = true }
-  }, [])
+  }, [role])
 
   // ── PERSIST PREFS (LS immediately, Supabase debounced 800ms) ─────────────
   useEffect(() => {
     if (!prefsLoaded) return
     try {
-      localStorage.setItem(PREFS_LS_KEY, JSON.stringify({
+      localStorage.setItem(prefsLsKeyFor(role), JSON.stringify({
         iconPositions, background, installedApps, hiddenApps,
       }))
     } catch {}
     if (prefsSaveTimer.current) clearTimeout(prefsSaveTimer.current)
     prefsSaveTimer.current = setTimeout(() => {
-      fetch('/api/admin/desktop-prefs', {
+      fetch(prefsApiBaseFor(role), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ iconPositions, background, installedApps, hiddenApps }),
@@ -338,7 +367,7 @@ export default function Desktop() {
     return () => {
       if (prefsSaveTimer.current) clearTimeout(prefsSaveTimer.current)
     }
-  }, [iconPositions, background, installedApps, hiddenApps, prefsLoaded])
+  }, [iconPositions, background, installedApps, hiddenApps, prefsLoaded, role])
 
   // ── GRID LAYOUT ──────────────────────────────────────────────────────────
   // Pass 1: icons with saved positions snap to their cell (collisions bumped
@@ -484,6 +513,9 @@ export default function Desktop() {
   const openApp = useCallback((appId: AppId, hint?: PositionHint) => {
     const app = getApp(appId)
     if (!app) return
+    // Role gate: never open an app this role isn't allowed to see, even if a
+    // stray id reaches openApp (Start menu, context menu, boot, custom event).
+    if (!appVisibleToRole(app, role)) return
 
     if (app.external) {
       window.open(app.external.url, app.external.target ?? '_blank', 'noopener,noreferrer')
@@ -539,7 +571,7 @@ export default function Desktop() {
       setFocusedId(id)
       return [...prev, newWindow]
     })
-  }, [topZ, TASKBAR_HEIGHT])
+  }, [topZ, TASKBAR_HEIGHT, role])
 
   // ── OPEN-DESKTOP-APP EVENT LISTENER (v24.1 repair) ───────────────────────
   useEffect(() => {
@@ -714,7 +746,7 @@ export default function Desktop() {
     try {
       const fd = new FormData()
       fd.append('file', file)
-      const r = await fetch('/api/admin/desktop-prefs/wallpaper', { method: 'POST', body: fd })
+      const r = await fetch(`${prefsApiBaseFor(role)}/wallpaper`, { method: 'POST', body: fd })
       const d = await r.json()
       if (d.success && d.url) {
         setBackground({ type: 'image', value: d.url })

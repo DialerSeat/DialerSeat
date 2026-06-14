@@ -15,10 +15,20 @@ import type { AppDefinition } from './types'
 // ADDING A NEW APP:
 //   1. Create components/admin-desktop/apps/<name>/index.tsx with default export
 //   2. Import lazily here
-//   3. Add an APP entry below
+//   3. Add an APP entry below (set visibleTo if managers should see it)
 //   That's it — the desktop picks it up automatically.
 //   FOR A DOWNLOADABLE (App Store) APP: also add its id to STORE_APP_IDS in
 //   desktopServices.tsx — it then hides from the desktop until downloaded.
+//
+// v22 CHANGES:
+//   - Added `visibleTo` per app. ONE desktop, ONE registry, driven by a role.
+//     visibleTo = which roles SEE the app (omitted = admin-only). This is the
+//     single switch that keeps the admin and manager desktops in lockstep:
+//     change an app here and both roles pick it up the same second.
+//     v1 manager-visible apps: analytics, teams, notes (data scoped per role
+//     in each app's API). Everything else stays admin-only — logs/numbers/
+//     whitelabel/overview/gmail/browser/appstore/clerk-profile. As the
+//     tenant-scoped Branding and Billing apps get built, flip their visibleTo.
 //
 // v21 CHANGES:
 //   - Added `appstore` — the App Store (Desktop v24). BASE app: removable
@@ -97,6 +107,7 @@ export const APPS: AppDefinition[] = [
     icon: '📊',
     iconBg: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
     description: 'Business KPIs, revenue, signups, churn',
+    visibleTo: ['admin', 'manager'],
     Component: AnalyticsApp,
     defaultSize: { width: 1080, height: 720 },
   },
@@ -106,6 +117,7 @@ export const APPS: AppDefinition[] = [
     icon: '👥',
     iconBg: 'linear-gradient(135deg, #5ad17a, #1a6a1a)',
     description: 'All platform users with status and delete',
+    visibleTo: ['admin'],
     Component: OverviewApp,
     defaultSize: { width: 1000, height: 720 },
   },
@@ -115,6 +127,7 @@ export const APPS: AppDefinition[] = [
     icon: '🏢',
     iconBg: 'linear-gradient(135deg, #ffaa3e, #d07020)',
     description: 'Every team on the platform with members and seats',
+    visibleTo: ['admin', 'manager'],
     Component: TeamsApp,
     defaultSize: { width: 1100, height: 720 },
   },
@@ -124,6 +137,7 @@ export const APPS: AppDefinition[] = [
     icon: '☎️',
     iconBg: 'linear-gradient(135deg, #b478ff, #6a30d0)',
     description: 'Outbound number pool, buy, register, release',
+    visibleTo: ['admin'],
     Component: NumbersApp,
     defaultSize: { width: 1180, height: 760 },
   },
@@ -134,6 +148,7 @@ export const APPS: AppDefinition[] = [
     icon: '🏷️',
     iconBg: 'linear-gradient(135deg, #ff6464, #c02020)',
     description: 'Tenant CRUD, branding editor, team impersonation',
+    visibleTo: ['admin'],
     Component: WhiteLabelApp,
     defaultSize: { width: 1200, height: 760 },
   },
@@ -143,6 +158,7 @@ export const APPS: AppDefinition[] = [
     icon: '🧾',
     iconBg: 'linear-gradient(135deg, #ffd96a, #c48a1a)',
     description: 'Purchases, renewals, and cancels across all customers',
+    visibleTo: ['admin'],
     Component: LogsApp,
     defaultSize: { width: 1000, height: 700 },
   },
@@ -151,7 +167,8 @@ export const APPS: AppDefinition[] = [
     name: 'Notes',
     icon: '📝',
     iconBg: 'linear-gradient(135deg, #ffe27a, #d4a020)',
-    description: 'Personal admin scratchpad — auto-saved',
+    description: 'Personal scratchpad — auto-saved',
+    visibleTo: ['admin', 'manager'],
     Component: NotesApp,
     defaultSize: { width: 1000, height: 700 },
   },
@@ -161,6 +178,7 @@ export const APPS: AppDefinition[] = [
     icon: '✉',
     iconBg: 'linear-gradient(135deg, #ea4335, #b8281a)',
     description: 'Read, send, and manage your DialerSeat business inbox',
+    visibleTo: ['admin'],
     Component: GmailApp,
     defaultSize: { width: 1100, height: 720 },
   },
@@ -170,31 +188,32 @@ export const APPS: AppDefinition[] = [
     icon: '🌐',
     iconBg: 'linear-gradient(135deg, #5dd5d5, #2a8a8a)',
     description: 'Open web pages (embeds where allowed, opens in tab otherwise)',
+    visibleTo: ['admin'],
     Component: BrowserApp,
     defaultSize: { width: 1024, height: 720 },
   },
   {
     // Not shown as a desktop icon by default — opened from the tray/StartMenu.
-    // If you WANT a desktop icon too, leave it here; if not, it's harmless as
-    // the tray/StartMenu open it by id regardless.
-    // TIP (v24): you can now right-click its icon → Remove from desktop to
-    // hide it from the homescreen while keeping it launchable from Start.
+    // Account management is identical for both roles, so it's visible to both.
     id: 'clerk-profile',
     name: 'Account',
     icon: '👤',
     iconBg: 'linear-gradient(135deg, #b478ff, #6a30d0)',
     description: 'Manage your DialerSeat account',
+    visibleTo: ['admin', 'manager'],
     Component: ClerkProfileApp,
     defaultSize: { width: 920, height: 720 },
   },
   {
     // BASE app — removable from the homescreen, never uninstallable. The
     // Start menu pins it permanently so it can always re-add hidden apps.
+    // Visible to both roles so managers can manage their own desktop apps.
     id: 'appstore',
     name: 'App Store',
     icon: '🛍️',
     iconBg: 'linear-gradient(135deg, #2a4a8a, #4a9eff)',
     description: 'Browse, download, and manage desktop apps',
+    visibleTo: ['admin', 'manager'],
     Component: AppStoreApp,
     defaultSize: { width: 880, height: 620 },
   },

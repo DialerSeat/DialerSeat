@@ -9,12 +9,12 @@ import type { ComponentType } from 'react'
 // itself, they just render their content.
 //
 // v3 changes vs v2:
-// - Added optional `iconSrc` to AppDefinition. When set (e.g.
-//   '/icons/apps/analytics.svg'), Desktop icons, Start menu rows, and
-//   taskbar pills render the image instead of the emoji glyph. The emoji
-//   `icon` stays required as the fallback. This is the path to non-cheesy
-//   icons: drop real SVG/PNG assets in /public/icons/apps/ and set iconSrc
-//   per registry entry — no other code changes needed.
+// - Added AppRole ('admin' | 'manager') and AppDefinition.visibleTo.
+//   ONE desktop, ONE registry, ONE copy of every app, driven by a role prop.
+//   visibleTo declares WHICH roles see an app at all (e.g. logs = admin-only).
+//   Data scoping (what an app SHOWS per role) is handled in each app's API,
+//   not here. Omitting visibleTo = admin-only by default (safe: a new app
+//   never leaks to managers until explicitly opted in).
 //
 // v2 changes vs v1:
 // - Added 'appstore' to the AppId union (App Store base app, Desktop v24).
@@ -33,14 +33,23 @@ export type AppId =
   | 'browser'
   | 'appstore'
 
+// Which desktop a user is on. The same Desktop component is mounted with a
+// role; the role both filters the registry (visibleTo) and is passed to apps
+// so their APIs return correctly-scoped data.
+export type AppRole = 'admin' | 'manager'
+
 export interface AppDefinition {
   id: AppId
   name: string                // shown on the desktop icon + taskbar
   shortName?: string          // optional shorter name for taskbar buttons
-  icon: string                // emoji or SVG-text label (icon glyph) — fallback
-  iconSrc?: string            // optional image path (e.g. /icons/apps/x.svg) — preferred when set
+  icon: string                // emoji or SVG-text label (icon glyph)
+  iconSrc?: string            // optional real icon image URL (overrides emoji glyph when set)
   iconBg: string              // background color for the icon tile
   description: string         // tooltip + recent-items subtitle
+  // Which roles can SEE this app. Omitted = ['admin'] (admin-only) so a new
+  // app never appears on the manager desktop until explicitly opted in.
+  // This governs VISIBILITY only — data scoping per role lives in the app API.
+  visibleTo?: AppRole[]
   // The actual content component. Receives no props — apps are self-contained.
   // Some apps don't render anything and just trigger a side effect (open new
   // tab); those provide `external` instead. v20 removed view-landing from
@@ -71,4 +80,10 @@ export interface WindowState {
 export interface RecentApp {
   appId: AppId
   closedAt: number
+}
+
+// Helper: does an app show for a given role? Default (no visibleTo) = admin.
+export function appVisibleToRole(app: AppDefinition, role: AppRole): boolean {
+  const roles = app.visibleTo ?? ['admin']
+  return roles.includes(role)
 }
