@@ -439,15 +439,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </Link>
       )}
 
-      {/* GO TO DESKTOP — Manager+ owners only. Styled to match the nav links
-          above exactly (same padding, font, color, no background) so it reads
-          as another dashboard tab rather than a special button. */}
+      {/* GO TO DESKTOP — Manager+ owners only. Same position (just above the
+          profile row) and same nav-tab styling, but CENTERED horizontally
+          rather than left-aligned like the nav links above it. */}
       {!isAdmin && hasManagerPlus && (
         <Link
           href="/dashboard/manager/desktop"
           style={{
             display: 'flex',
             alignItems: 'center',
+            justifyContent: 'center',
             padding: '12px 18px',
             cursor: 'pointer',
             background: 'transparent',
@@ -461,7 +462,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             letterSpacing: '2px',
             fontWeight: 'bold',
             color: 'var(--brand-on-sidebar-muted)',
-            flex: 1,
+            textAlign: 'center',
           }}>GO TO DESKTOP</span>
         </Link>
       )}

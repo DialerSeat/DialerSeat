@@ -1,55 +1,38 @@
 'use client'
+import { useEffect } from 'react'
 
 // =============================================================================
-// DASHBOARD APP — return to the main dashboard
+// DASHBOARD APP — return to the main dashboard (automatic)
 // =============================================================================
-// Manager-only base app. Its job is to take the owner back to /dashboard —
-// but ONLY on an explicit click, never on mount.
+// Manager-only base app. Opening it navigates straight back to /dashboard —
+// no button, no extra click. When the window opens it redirects on mount.
 //
-// WHY NOT navigate-on-mount: an app that redirects in useEffect fires every
-// time it renders. On the manager desktop that creates a loop — the desktop
-// mounts the app (even briefly or off-screen), it redirects to /dashboard, the
-// sidebar's "Go to Desktop" returns here, and round it goes. Gating navigation
-// behind a button press breaks the cycle: nothing happens until the user acts.
+// WHY THIS NO LONGER LOOPS: the desktop used to restore last-session windows on
+// boot, so a restored Dashboard window would auto-redirect on every boot and
+// fight the sidebar's "Go to Desktop" forever. That's fixed in Desktop.tsx via
+// NEVER_RESTORE_APP_IDS = ['dashboard'] — the Dashboard window is dropped from
+// restored state, so this effect only ever runs when the user ACTIVELY opens
+// the app (double-click / Start menu), which is precisely the intent. Auto-
+// redirect is safe again.
 // =============================================================================
 
 export default function DashboardApp() {
-  const goToDashboard = () => {
+  useEffect(() => {
     window.location.href = '/dashboard'
-  }
+  }, [])
 
   return (
     <div style={{
       width: '100%', height: '100%',
       background: '#f0f1f4',
       display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center', gap: 18,
+      alignItems: 'center', justifyContent: 'center', gap: 12,
       fontFamily: 'Futura PT, Futura, sans-serif', padding: 24,
       boxSizing: 'border-box', textAlign: 'center',
     }}>
-      <div style={{ fontSize: 12, letterSpacing: 3, fontWeight: 'bold', color: '#5a5e6a' }}>
-        RETURN TO DASHBOARD
+      <div style={{ fontSize: 11, letterSpacing: 3, fontWeight: 'bold', color: '#5a5e6a' }}>
+        RETURNING TO DASHBOARD…
       </div>
-      <div style={{ fontSize: 12, color: '#5a5e6a', lineHeight: 1.5, maxWidth: 320 }}>
-        Leave the desktop and go back to your main DialerSeat dashboard.
-      </div>
-      <button
-        onClick={goToDashboard}
-        style={{
-          padding: '12px 28px',
-          background: '#2a4a8a',
-          color: 'white',
-          border: 'none',
-          borderRadius: 4,
-          fontSize: 11,
-          letterSpacing: 3,
-          fontWeight: 'bold',
-          cursor: 'pointer',
-          fontFamily: 'Futura PT, Futura, sans-serif',
-        }}
-      >
-        GO TO DASHBOARD →
-      </button>
     </div>
   )
 }
