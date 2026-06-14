@@ -184,7 +184,7 @@ export const APPS: AppDefinition[] = [
     name: 'Notes',
     icon: '📝',
     iconBg: 'linear-gradient(135deg, #ffe27a, #d4a020)',
-    description: 'Private scratchpad — auto-saved, only you can see it',
+    description: 'Private scratchpad — auto-saved. Only you can see its data.',
     visibleTo: ['admin', 'manager'],
     Component: NotesApp,
     defaultSize: { width: 1000, height: 700 },
