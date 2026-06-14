@@ -439,32 +439,29 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </Link>
       )}
 
-      {/* GO TO DESKTOP — Manager+ owners only. Gated on hasManagerPlus
-          (already derived from /api/stripe/status above; true for plan
-          'manager_plus' or 'both'). Themed with brandPrimary so it reads as
-          part of the owner's brand. Links to the server-guarded Manager+
-          desktop route. Renders in both the desktop sidebar and mobile
-          drawer because it lives inside the shared <Sidebar/>. Admins,
-          Pro-only, team-seat, and lapsed users never see it. */}
+      {/* GO TO DESKTOP — Manager+ owners only. Styled to match the nav links
+          above exactly (same padding, font, color, no background) so it reads
+          as another dashboard tab rather than a special button. */}
       {!isAdmin && hasManagerPlus && (
         <Link
           href="/dashboard/manager/desktop"
           style={{
-            margin: '0 12px 8px',
-            padding: '10px 14px',
-            borderRadius: '10px',
-            background: `linear-gradient(135deg, ${brandPrimary}, ${brandPrimary}cc)`,
-            border: '1px solid rgba(255,255,255,0.15)',
-            boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
-            textDecoration: 'none',
             display: 'flex',
             alignItems: 'center',
-            gap: 10,
+            padding: '12px 18px',
+            cursor: 'pointer',
+            background: 'transparent',
+            border: '1px solid transparent',
+            boxSizing: 'border-box',
+            textDecoration: 'none',
             flexShrink: 0,
           }}>
-          <span style={{ fontSize: 16, lineHeight: 1 }}>🖥️</span>
           <span style={{
-            fontSize: 11, letterSpacing: 2, fontWeight: 'bold', color: '#ffffff',
+            fontSize: '11px',
+            letterSpacing: '2px',
+            fontWeight: 'bold',
+            color: 'var(--brand-on-sidebar-muted)',
+            flex: 1,
           }}>GO TO DESKTOP</span>
         </Link>
       )}

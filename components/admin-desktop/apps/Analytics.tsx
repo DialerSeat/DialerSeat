@@ -10,20 +10,22 @@ import {
   CartesianGrid,
   Legend,
 } from 'recharts'
+import { useDesktopServices } from '../desktopServices'
 
 // =============================================================================
-// ANALYTICS APP — embedded in admin desktop
+// ANALYTICS APP — embedded in admin AND manager desktops (role-aware)
 // =============================================================================
-// Phase D3 changes vs Phase D2:
-// - Interface now includes proSubs, wlSubs, unknownPriceSubs, proWrr, wlWrr
-//   (backend has returned these since the D2/D3 route — now displayed)
-// - FILLED SEATS card shows per-plan seat breakdown (N PRO · N MGR+) so a new
-//   Manager+ sub visibly registers the moment it lands
-// - WEEKLY REVENUE card shows per-plan revenue split (PRO $X · MGR+ $Y) —
-//   each paying Pro seat is +$35/wk, each paying Manager+ is +$75/wk
-// - Amber warning banner appears if any active sub carries a Stripe price
-//   that resolves to neither $35 nor $75 (env var drift / wrong price on sub)
-// - couponSubsCount still intentionally not displayed (D2 decision stands)
+// Role change (this revision):
+// - Reads `role` from useDesktopServices(). On the ADMIN desktop it hits
+//   /api/admin/analytics (sitewide, unchanged). On the MANAGER desktop it hits
+//   /api/manager/analytics, which returns the SAME response shape scoped to the
+//   owner's tenant (their team's seats, signups, calls, revenue). The component
+//   below renders identically — only the data source and a couple of labels
+//   change with role. This is why there's ONE Analytics app, not two.
+//
+// Prior (Phase D3) behavior is otherwise preserved verbatim: per-plan seat and
+// revenue breakdown, the unknown-price banner (manager API returns 0 there so
+// it simply never shows), and the signups+revenue chart.
 // =============================================================================
 
 type Range = '7d' | '30d' | '90d' | '1y' | 'all' | 'custom'
@@ -88,6 +90,13 @@ function fmtDateTick(iso: any) {
 }
 
 export default function AnalyticsApp() {
+  const services = useDesktopServices()
+  const role = services?.role ?? 'admin'
+  // Endpoint by role: admin → sitewide, manager → their tenant (same shape).
+  const endpoint = role === 'manager' ? '/api/manager/analytics' : '/api/admin/analytics'
+  const headerTitle = role === 'manager' ? 'TEAM ANALYTICS' : 'BUSINESS ANALYTICS'
+  const headerSub = role === 'manager' ? 'YOUR TEAM PERFORMANCE' : 'DIALERSEAT PERFORMANCE'
+
   const [data, setData] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -103,9 +112,9 @@ export default function AnalyticsApp() {
       params.set('start', customStart)
       params.set('end', customEnd)
     }
-    fetch(`/api/admin/analytics?${params}`)
+    fetch(`${endpoint}?${params}`)
       .then(async r => {
-        if (r.status === 403) throw new Error('Forbidden — admin only')
+        if (r.status === 403) throw new Error(role === 'manager' ? 'Forbidden — Manager+ owners only' : 'Forbidden — admin only')
         if (r.status === 401) throw new Error('Not signed in')
         return r.json()
       })
@@ -118,7 +127,7 @@ export default function AnalyticsApp() {
         setError(err.message)
         setLoading(false)
       })
-  }, [range, customStart, customEnd])
+  }, [range, customStart, customEnd, endpoint, role])
 
   return (
     <div style={{
@@ -268,10 +277,10 @@ export default function AnalyticsApp() {
       <div className="an-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 11, fontWeight: 'bold', letterSpacing: 4, color: T.blue }}>
-            BUSINESS ANALYTICS
+            {headerTitle}
           </span>
           <span style={{ fontSize: 10, fontFamily: 'monospace', color: '#8888aa', letterSpacing: 1 }}>
-            DIALERSEAT PERFORMANCE · {RANGE_LABELS[range]}
+            {headerSub} · {RANGE_LABELS[range]}
           </span>
         </div>
 
@@ -493,7 +502,7 @@ export default function AnalyticsApp() {
               <div className="an-stat-card">
                 <div className="an-stat-label">TOTAL USERS</div>
                 <div className="an-stat-value">{data.summary.totalUsers.toLocaleString()}</div>
-                <div className="an-stat-sub">LIFETIME SIGNUPS</div>
+                <div className="an-stat-sub">{role === 'manager' ? 'YOUR TEAM SIZE' : 'LIFETIME SIGNUPS'}</div>
               </div>
               <div className="an-stat-card" style={{ borderTopColor: T.green }}>
                 <div className="an-stat-label">ESTABLISHED (&gt;30D)</div>

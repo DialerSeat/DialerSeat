@@ -7,24 +7,26 @@ import {
   isBaseApp,
   useDesktopServices,
 } from '../desktopServices'
+import { appVisibleToRole } from '../types'
 import type { AppId } from '../types'
 
 // =============================================================================
-// APP STORE — desktop app
+// APP STORE — desktop app (v1.2 — role-aware)
 // =============================================================================
-// v1.1 changes vs v1:
-// - Lives at components/admin-desktop/apps/AppStore.tsx — imports adjusted
-//   to ../registry, ../desktopServices, ../types
-// - Descriptions read from the registry's AppDefinition.description (the
-//   separate APP_DESCRIPTIONS map is gone)
+// v1.2 changes vs v1.1:
+// - ROLE FILTERING. Both the STORE and INSTALLED tabs now exclude apps the
+//   current desktop role isn't allowed to see (via appVisibleToRole + the
+//   role on DesktopServices). Before, the INSTALLED tab listed every base app
+//   in the registry regardless of role, so a manager saw admin-only apps
+//   (Logs, White Label, etc.) they could never open. Now a manager only ever
+//   sees their own apps here.
 //
 // Two tabs:
-//   STORE     — downloadable apps (registry apps listed in STORE_APP_IDS).
-//               DOWNLOAD installs; installed store apps show OPEN + UNINSTALL.
-//   INSTALLED — every installed app (base + downloaded). Each row offers
-//               OPEN, ADD TO DESKTOP / REMOVE FROM DESKTOP, and UNINSTALL
-//               (store apps only — base apps, including this App Store,
-//               can never be uninstalled).
+//   STORE     — downloadable apps (registry apps in STORE_APP_IDS) visible to
+//               this role. DOWNLOAD installs; installed show OPEN + UNINSTALL.
+//   INSTALLED — every installed app visible to this role (base + downloaded).
+//               Each row offers OPEN, ADD/REMOVE FROM DESKTOP, and UNINSTALL
+//               (store apps only — base apps can never be uninstalled).
 // Talks to the Desktop shell through DesktopServicesContext.
 // =============================================================================
 
@@ -62,6 +64,7 @@ export default function AppStoreApp() {
   }
 
   const {
+    role,
     installedAppIds, hiddenAppIds,
     installApp, uninstallApp, addToDesktop, removeFromDesktop, openApp,
   } = services
@@ -69,8 +72,11 @@ export default function AppStoreApp() {
   const isInstalled = (id: AppId) => isBaseApp(id) || installedAppIds.includes(id)
   const isOnDesktop = (id: AppId) => isInstalled(id) && !hiddenAppIds.includes(id)
 
-  const storeApps = APPS.filter(a => STORE_APP_IDS.includes(a.id))
-  const installedApps = APPS.filter(a => isInstalled(a.id))
+  // Role gate FIRST, then store/install state. A manager never sees admin-only
+  // apps in either tab, even though they exist in the shared registry.
+  const roleApps = APPS.filter(a => appVisibleToRole(a, role))
+  const storeApps = roleApps.filter(a => STORE_APP_IDS.includes(a.id))
+  const installedApps = roleApps.filter(a => isInstalled(a.id))
 
   const handleDownload = (id: AppId) => {
     setDownloading(id)
@@ -136,7 +142,7 @@ export default function AppStoreApp() {
               padding: 48, textAlign: 'center',
               background: T.surface, border: `1px dashed ${T.border}`, borderRadius: 4,
             }}>
-              <div style={{ fontSize: 32, marginBottom: 12 }}>🛍️</div>
+              <div style={{ fontSize: 32, marginBottom: 12 }}>🛍</div>
               <div style={{ fontSize: 11, letterSpacing: 3, fontWeight: 'bold', color: T.muted, marginBottom: 6 }}>
                 NOTHING IN THE STORE YET
               </div>
@@ -165,7 +171,7 @@ export default function AppStoreApp() {
                       {app.name.toUpperCase()}
                     </div>
                     <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>
-                      {app.description}
+                      {app.description || 'Desktop app.'}
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
@@ -228,8 +234,8 @@ export default function AppStoreApp() {
                     </span>
                   </div>
                   <div style={{ fontSize: 11, color: T.muted, marginTop: 3 }}>
-                    {app.description}
-                    {app.id === APP_STORE_ID && ' — cannot be uninstalled.'}
+                    {app.description || 'Desktop app.'}
+                    {app.id === APP_STORE_ID && ' Cannot be uninstalled.'}
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

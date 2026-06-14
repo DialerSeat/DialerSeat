@@ -1,6 +1,6 @@
 'use client'
 import { createContext, useContext } from 'react'
-import type { AppId } from './types'
+import type { AppId, AppRole } from './types'
 
 // =============================================================================
 // DESKTOP SERVICES — catalog + shell context
@@ -49,6 +49,7 @@ export function isBaseApp(id: AppId): boolean {
 // Desktop.tsx provides this; apps rendered inside AppWindow consume it via
 // useDesktopServices(). Null when a component renders outside the desktop.
 export interface DesktopServices {
+  role: AppRole              // which desktop this is — gates app visibility
   installedAppIds: string[]
   hiddenAppIds: string[]
   installApp: (id: AppId) => void

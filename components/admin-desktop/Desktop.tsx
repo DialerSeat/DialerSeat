@@ -600,6 +600,7 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
   }, [])
 
   const desktopServices: DesktopServices = useMemo(() => ({
+    role,
     installedAppIds: installedApps,
     hiddenAppIds: hiddenApps,
     installApp,
@@ -607,7 +608,7 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
     addToDesktop,
     removeFromDesktop,
     openApp,
-  }), [installedApps, hiddenApps, installApp, uninstallApp, addToDesktop, removeFromDesktop, openApp])
+  }), [role, installedApps, hiddenApps, installApp, uninstallApp, addToDesktop, removeFromDesktop, openApp])
 
   useEffect(() => {
     if (bootedAnalytics) return
