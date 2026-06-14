@@ -21,6 +21,7 @@ import type { ComponentType } from 'react'
 // =============================================================================
 
 export type AppId =
+  | 'dashboard'
   | 'analytics'
   | 'overview'
   | 'teams'

@@ -1,13 +1,20 @@
 'use client'
 import { useState, useEffect, useMemo } from 'react'
+import { useDesktopServices } from '../desktopServices'
 
 // =============================================================================
-// TEAMS APP — admin desktop edition
+// TEAMS APP — role-aware (admin = platform-wide, manager = tenant-scoped)
 // =============================================================================
-// Ported from app/dashboard/admin/teams/page.tsx. Platform-wide team list,
-// expandable rows with members + seat charges + join code copy, 2-step delete
-// modal with type-to-confirm. Uses /api/admin/teams (existing) and
-// /api/admin/teams/delete (existing).
+// Reads `role` from useDesktopServices().
+//   - admin   → /api/admin/teams (every team on the platform), DELETE shown.
+//   - manager → /api/manager/teams (only teams linked to the owner's tenant),
+//               DELETE HIDDEN (team deletion is admin-only; the manager route
+//               doesn't expose it). Same response shape, so the table renders
+//               identically; "platform totals" become "your tenant totals".
+//
+// Everything else (expandable rows, member/seat tables, join-code copy) is the
+// admin app verbatim. The only role-driven differences are the fetch URL and
+// whether the delete affordances render.
 // =============================================================================
 
 const T = {
@@ -93,6 +100,12 @@ interface DeleteState {
 }
 
 export default function TeamsApp() {
+  const services = useDesktopServices()
+  const role = services?.role ?? 'admin'
+  const isManager = role === 'manager'
+  const endpoint = isManager ? '/api/manager/teams' : '/api/admin/teams'
+  const totalsLabel = isManager ? 'YOUR TENANT' : 'PLATFORM'
+
   const [data, setData] = useState<Response | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -106,8 +119,8 @@ export default function TeamsApp() {
   const loadTeams = async () => {
     setLoading(true)
     try {
-      const r = await fetch('/api/admin/teams')
-      if (r.status === 403) throw new Error('Forbidden — admin only')
+      const r = await fetch(endpoint)
+      if (r.status === 403) throw new Error(isManager ? 'Forbidden — Manager+ owners only' : 'Forbidden — admin only')
       const d = await r.json()
       if (d.success) setData(d)
       else setError(d.error || 'Failed to load')
@@ -120,9 +133,9 @@ export default function TeamsApp() {
 
   useEffect(() => {
     let cancelled = false
-    fetch('/api/admin/teams')
+    fetch(endpoint)
       .then(async r => {
-        if (r.status === 403) throw new Error('Forbidden — admin only')
+        if (r.status === 403) throw new Error(isManager ? 'Forbidden — Manager+ owners only' : 'Forbidden — admin only')
         return r.json()
       })
       .then(d => {
@@ -137,7 +150,7 @@ export default function TeamsApp() {
         setLoading(false)
       })
     return () => { cancelled = true }
-  }, [])
+  }, [endpoint, isManager])
 
   const teams = useMemo(() => {
     if (!data) return []
@@ -234,7 +247,7 @@ export default function TeamsApp() {
         </div>
       )}
 
-      {deleting && (
+      {!isManager && deleting && (
         <div
           style={{
             position: 'fixed', inset: 0, zIndex: 100000,
@@ -395,7 +408,7 @@ export default function TeamsApp() {
               gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
               gap: 10, marginBottom: 18,
             }}>
-              <PlatformStat label="TOTAL TEAMS" value={data.platformTotals.teams.toString()} accent={T.blue} />
+              <PlatformStat label={`${totalsLabel} TEAMS`} value={data.platformTotals.teams.toString()} accent={T.blue} />
               <PlatformStat label="ACTIVE SEATS" value={data.platformTotals.activeSeats.toString()} accent={T.green} />
               <PlatformStat label="PENDING SEATS" value={data.platformTotals.pendingSeats.toString()} accent={T.amber} />
               <PlatformStat label="WEEKLY RECURRING" value={fmtMoney(data.platformTotals.wrr_cents)} accent={T.accent} subtitle="EXCL. COUPON'D" />
@@ -442,7 +455,7 @@ export default function TeamsApp() {
               }}>
                 <div style={{ fontSize: 32, marginBottom: 8 }}>🏢</div>
                 <div style={{ fontSize: 13, fontWeight: 'bold', letterSpacing: 3, color: T.muted, marginBottom: 6 }}>
-                  {search ? 'NO TEAMS MATCH' : 'NO TEAMS ON PLATFORM YET'}
+                  {search ? 'NO TEAMS MATCH' : (isManager ? 'NO TEAMS LINKED TO YOUR TENANT YET' : 'NO TEAMS ON PLATFORM YET')}
                 </div>
               </div>
             ) : (
@@ -494,18 +507,20 @@ export default function TeamsApp() {
                         <Stat label="MEMBERS" value={team.memberCount.toString()} muted={team.memberCount === 0} />
                         <Stat label="SEATS" value={team.activeSeats.toString()} accent={team.activeSeats > 0 ? T.green : undefined} />
                         <Stat label="WRR" value={fmtMoney(team.wrr_cents)} accent={team.wrr_cents > 0 ? T.accent : undefined} />
-                        <button
-                          onClick={(e) => startDelete(team, e)}
-                          style={{
-                            padding: '6px 12px',
-                            background: 'transparent', color: T.red,
-                            border: `1px solid ${T.red}`, borderRadius: 3,
-                            fontSize: 9, letterSpacing: 2, fontWeight: 'bold',
-                            cursor: 'pointer', fontFamily: 'inherit',
-                            whiteSpace: 'nowrap',
-                          }}
-                          title="Delete this team permanently"
-                        >■ DELETE</button>
+                        {!isManager && (
+                          <button
+                            onClick={(e) => startDelete(team, e)}
+                            style={{
+                              padding: '6px 12px',
+                              background: 'transparent', color: T.red,
+                              border: `1px solid ${T.red}`, borderRadius: 3,
+                              fontSize: 9, letterSpacing: 2, fontWeight: 'bold',
+                              cursor: 'pointer', fontFamily: 'inherit',
+                              whiteSpace: 'nowrap',
+                            }}
+                            title="Delete this team permanently"
+                          >■ DELETE</button>
+                        )}
                       </div>
 
                       {isExpanded && (

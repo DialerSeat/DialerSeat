@@ -8,43 +8,30 @@ const supabase = createClient(
 )
 
 // =============================================================================
-// MANAGER ANALYTICS — /api/manager/analytics  (tenant-scoped)
+// MANAGER ANALYTICS — /api/manager/analytics  (tenant-scoped, performance)
 // =============================================================================
-// The Manager+ desktop's Analytics app calls THIS route instead of
-// /api/admin/analytics. Same response shape (success + range + bucketSize +
-// summary + series) so the shared Analytics component renders unchanged — but
-// every number is scoped to the OWNER'S tenant, aggregated across every seat
-// (the owner plus all active members of all teams linked to the tenant),
-// resolved via getTenantUserIds().
+// REBUILT (this revision): no longer income/revenue. The manager Analytics is
+// now CAMPAIGN PERFORMANCE + TEAMS + USERS + STATUS, scoped to the owner's
+// tenant (owner + all active members of all teams linked to the tenant, via
+// getTenantUserIds()).
 //
-// SECURITY: requireTenantOwner() is the boundary. A non-owner can't reach this
-// at all (403). The route NEVER reads a tenant id from the client — it resolves
-// the caller's own tenant — so there's no param a tenant could tamper with to
-// see sitewide or another tenant's data.
+// Returns four sections the app renders as tabs/blocks:
+//   summary    — headline counts (campaigns, active campaigns, calls in range,
+//                connect rate, team members, active members)
+//   campaigns  — per-campaign: name, status, leads, called, calls-in-range,
+//                connect rate, top dispositions
+//   teams      — per-team: name, member counts, calls-in-range, seats
+//   users      — per-user: name, role, calls-in-range, last activity, status
+//   series     — calls per day/week bucket over the range
 //
-// MEANING DIFFERENCE vs admin: a manager doesn't see platform revenue or
-// churn across all customers. "Their analytics" = their team's footprint:
-//   - FILLED SEATS = active paying subs among their tenant's users
-//   - WEEKLY REVENUE = those seats' weekly $ (Pro $35 / Manager+ $75)
-//   - SIGNUPS = their tenant users created in range
-//   - series = signups + call volume over time for their tenant's users
-// Fields the manager view doesn't compute (unknownPriceSubs, churn cohort
-// internals) are returned as safe zeros so the component's optional branches
-// (e.g. the price-drift banner) simply don't render.
+// SECURITY: requireTenantOwner() is the boundary; the route resolves the
+// caller's own tenant and never takes a tenant id from the client.
 //
-// Pricing here is intentionally simpler than admin: we classify by the two
-// known price IDs (env) and otherwise treat a live sub as a Pro seat for the
-// weekly-revenue estimate. Managers don't need the full Stripe price-retrieve
-// reconciliation the admin dashboard does.
+// "Connect rate" = share of calls whose disposition indicates a live human
+// connect (not voicemail / no-answer / busy / failed / abandoned). Disposition
+// vocab varies, so we classify by a keyword test and treat anything not clearly
+// a non-connect as a connect, which is the conventional sales-floor read.
 // =============================================================================
-
-const PRO_PRICE_ID = process.env.STRIPE_PRICE_ID || ''
-const WL_PRICE_ID = process.env.STRIPE_PRICE_WL_BASE || ''
-const PRO_WEEKLY = 35
-const WL_WEEKLY = 75
-
-const ACTIVE_STATUSES = ['active', 'trialing', 'past_due']
-const NEVER_PAID_STATUSES = ['incomplete', 'incomplete_expired']
 
 type Range = '7d' | '30d' | '90d' | '1y' | 'all' | 'custom'
 
@@ -74,16 +61,17 @@ function dayKey(ms: number) {
   return d.toISOString().slice(0, 10)
 }
 
-function weeklyFor(priceId: string | null): { weekly: number; plan: 'pro' | 'manager_plus' | 'unknown' } {
-  if (priceId && WL_PRICE_ID && priceId === WL_PRICE_ID) return { weekly: WL_WEEKLY, plan: 'manager_plus' }
-  if (priceId && PRO_PRICE_ID && priceId === PRO_PRICE_ID) return { weekly: PRO_WEEKLY, plan: 'pro' }
-  // Unknown price on a live sub — count it as a Pro seat for the estimate
-  // rather than zero, so a manager's revenue isn't silently understated.
-  return { weekly: PRO_WEEKLY, plan: 'pro' }
+// A disposition counts as a NON-connect if it clearly indicates the call never
+// reached a live person. Everything else is treated as a connect.
+const NON_CONNECT_RE = /(voicemail|vm|no.?answer|noanswer|busy|fail|abandon|disconnect|machine|unreachable|dead|drop)/i
+function isConnect(disposition: string | null): boolean {
+  if (!disposition) return false           // null disposition = not a clean connect
+  if (NON_CONNECT_RE.test(disposition)) return false
+  return true
 }
 
 export async function GET(req: NextRequest) {
-  // ── GUARD ────────────────────────────────────────────────────────────────
+  // ── GUARD ──────────────────────────────────────────────────────────────
   let tenant
   try {
     tenant = await requireTenantOwner()
@@ -94,157 +82,179 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: false, error: 'Tenant check failed' }, { status: 500 })
   }
 
-  // ── RESOLVE TENANT USER IDS ────────────────────────────────────────────────
   const userIds = await getTenantUserIds(tenant.id, tenant.owner_clerk_id)
-  // userIds always includes the owner, so it's never empty.
 
   const url = new URL(req.url)
   const range = (url.searchParams.get('range') || '30d') as Range
   const customStart = url.searchParams.get('start')
   const customEnd = url.searchParams.get('end')
   const { start, end } = rangeToBounds(range, customStart, customEnd)
+  const startIso = new Date(start).toISOString()
+  const endIso = new Date(end).toISOString()
 
   const now = Date.now()
   const day = 86400000
 
-  // ── USERS in this tenant ──────────────────────────────────────────────────
+  // ── USERS in tenant ──────────────────────────────────────────────────────
   const { data: tenantUsers } = await supabase
     .from('users')
-    .select('clerk_id, created_at')
+    .select('clerk_id, email, first_name, last_name, last_seen_at, created_at')
     .in('clerk_id', userIds)
-
   const usersList = tenantUsers || []
-  const totalUsers = usersList.length
-  const usersInRange = usersList.filter(u => {
-    const t = new Date(u.created_at).getTime()
-    return t >= start && t <= end
-  })
+  const nameFor = (clerkId: string) => {
+    const u = usersList.find(x => x.clerk_id === clerkId)
+    if (!u) return clerkId.slice(0, 12)
+    return [u.first_name, u.last_name].filter(Boolean).join(' ').trim() || u.email || clerkId.slice(0, 12)
+  }
 
-  // ── SUBSCRIPTIONS among tenant users ───────────────────────────────────────
-  const { data: rawSubs } = await supabase
-    .from('subscriptions')
-    .select('user_id, status, stripe_price_id, created_at, canceled_at, current_period_end, discount_coupon')
+  // ── TEAMS linked to this tenant ──────────────────────────────────────────
+  const { data: teams } = await supabase
+    .from('teams')
+    .select('id, name, owner_id, created_at')
+    .eq('tenant_id', tenant.id)
+  const teamList = teams || []
+  const teamIds = teamList.map(t => t.id)
+
+  // Members of those teams
+  const { data: membersRaw } = teamIds.length
+    ? await supabase
+        .from('team_members')
+        .select('team_id, user_id, status')
+        .in('team_id', teamIds)
+    : { data: [] as any[] }
+  const members = membersRaw || []
+
+  // Active paid seats per team
+  const { data: seatsRaw } = teamIds.length
+    ? await supabase
+        .from('team_seat_charges')
+        .select('team_id, status')
+        .in('team_id', teamIds)
+    : { data: [] as any[] }
+  const seats = seatsRaw || []
+
+  // ── CAMPAIGNS owned by tenant users ──────────────────────────────────────
+  const { data: campaignsRaw } = await supabase
+    .from('campaigns')
+    .select('id, user_id, name, status, total_leads, called_leads, dialer_mode, created_at')
     .in('user_id', userIds)
+  const campaigns = campaignsRaw || []
 
-  const subs = rawSubs || []
-
-  // Liveness: completed checkout, created on/before t, active now or ended after t.
-  const isLiveAt = (s: any, t: number): boolean => {
-    if (NEVER_PAID_STATUSES.includes(s.status)) return false
-    const created = new Date(s.created_at).getTime()
-    if (created > t) return false
-    if (ACTIVE_STATUSES.includes(s.status)) return true
-    if (s.canceled_at) return new Date(s.canceled_at).getTime() > t
-    return false
-  }
-
-  // Current active paying seats (ignore fully-couponed by simple presence check).
-  const activeSubs = subs.filter(s =>
-    ACTIVE_STATUSES.includes(s.status) && !NEVER_PAID_STATUSES.includes(s.status)
-  )
-  // One seat per (user, plan) so an owner with Pro + Manager+ counts both.
-  const seen = new Set<string>()
-  const seats: any[] = []
-  for (const s of activeSubs) {
-    const { plan } = weeklyFor(s.stripe_price_id)
-    const key = `${s.user_id}|${plan}`
-    if (seen.has(key)) continue
-    seen.add(key)
-    seats.push(s)
-  }
-
-  let proSubs = 0, wlSubs = 0, wrr = 0, proWrr = 0, wlWrr = 0
-  for (const s of seats) {
-    const { weekly, plan } = weeklyFor(s.stripe_price_id)
-    wrr += weekly
-    if (plan === 'manager_plus') { wlSubs++; wlWrr += weekly }
-    else { proSubs++; proWrr += weekly }
-  }
-  const payingActiveSubs = seats.length
-  const mrr = wrr * 4
-
-  // ── RANGE METRICS ──────────────────────────────────────────────────────────
-  const signupsInRange = usersInRange.length
-
-  const paidConversionsInRange = subs.filter(s => {
-    if (NEVER_PAID_STATUSES.includes(s.status)) return false
-    const t = new Date(s.created_at).getTime()
-    return t >= start && t <= end
-  }).length
-
-  const cancellationsInRange = subs.filter(s => {
-    if (s.status !== 'canceled' || !s.canceled_at) return false
-    const t = new Date(s.canceled_at).getTime()
-    return t >= start && t <= end
-  }).length
-
-  const netNewPaying = paidConversionsInRange - cancellationsInRange
-  const activeAtStart = payingActiveSubs + cancellationsInRange
-  const churnRate = activeAtStart > 0
-    ? Number(((cancellationsInRange / activeAtStart) * 100).toFixed(1))
-    : 0
-
-  // WoW seats
-  const oneWeekAgo = now - 7 * day
-  const seatsOneWeekAgo = subs.filter(s => isLiveAt(s, oneWeekAgo)).length
-  const wowDelta = payingActiveSubs - seatsOneWeekAgo
-  const wowPct = seatsOneWeekAgo > 0
-    ? Number(((wowDelta / seatsOneWeekAgo) * 100).toFixed(1))
-    : (payingActiveSubs > 0 ? 100 : 0)
-
-  // Tenure cohort
-  const thirtyDayCutoff = now - 30 * day
-  let newPayingUsers = 0, establishedPayingUsers = 0
-  for (const s of seats) {
-    const created = new Date(s.created_at).getTime()
-    if (created >= thirtyDayCutoff) newPayingUsers++
-    else establishedPayingUsers++
-  }
-
-  // ── SERIES: signups + calls + live-seat revenue per bucket ─────────────────
-  const totalDays = Math.max(1, Math.ceil((end - start) / day))
-  const useWeekly = totalDays > 120
-  const bucketSize = useWeekly ? 7 * day : day
-
-  const buckets: { date: string; signups: number; revenue: number; calls: number }[] = []
-  let cursor = start
-  while (cursor <= end) {
-    buckets.push({ date: dayKey(cursor), signups: 0, revenue: 0, calls: 0 })
-    cursor += bucketSize
-  }
-
-  for (const u of usersInRange) {
-    const t = new Date(u.created_at).getTime()
-    const idx = Math.floor((t - start) / bucketSize)
-    if (idx >= 0 && idx < buckets.length) buckets[idx].signups++
-  }
-
-  // Calls for tenant users within range
-  const startIso = new Date(start).toISOString()
-  const endIso = new Date(end).toISOString()
-  const { data: rangeCalls } = await supabase
+  // ── CALLS in range for tenant users ──────────────────────────────────────
+  const { data: callsRaw } = await supabase
     .from('calls')
-    .select('user_id, created_at')
+    .select('user_id, campaign_id, team_id, disposition, created_at')
     .in('user_id', userIds)
     .gte('created_at', startIso)
     .lte('created_at', endIso)
-    .limit(50000)
+    .limit(100000)
+  const calls = callsRaw || []
 
-  for (const c of rangeCalls || []) {
+  // ── AGGREGATE: per-campaign ──────────────────────────────────────────────
+  const callsByCampaign = new Map<string, { total: number; connects: number; disp: Map<string, number> }>()
+  for (const c of calls) {
+    if (!c.campaign_id) continue
+    let agg = callsByCampaign.get(c.campaign_id)
+    if (!agg) { agg = { total: 0, connects: 0, disp: new Map() }; callsByCampaign.set(c.campaign_id, agg) }
+    agg.total++
+    if (isConnect(c.disposition)) agg.connects++
+    const key = (c.disposition || 'none').toLowerCase()
+    agg.disp.set(key, (agg.disp.get(key) || 0) + 1)
+  }
+
+  const campaignRows = campaigns.map(cm => {
+    const agg = callsByCampaign.get(cm.id)
+    const callsInRange = agg?.total || 0
+    const connects = agg?.connects || 0
+    const connectRate = callsInRange > 0 ? Number(((connects / callsInRange) * 100).toFixed(1)) : 0
+    const topDispositions = agg
+      ? Array.from(agg.disp.entries())
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 3)
+          .map(([disposition, count]) => ({ disposition, count }))
+      : []
+    return {
+      id: cm.id,
+      name: cm.name || '(untitled)',
+      status: cm.status || 'unknown',
+      ownerName: nameFor(cm.user_id),
+      totalLeads: cm.total_leads || 0,
+      calledLeads: cm.called_leads || 0,
+      dialerMode: cm.dialer_mode || null,
+      callsInRange,
+      connects,
+      connectRate,
+      topDispositions,
+    }
+  }).sort((a, b) => b.callsInRange - a.callsInRange)
+
+  // ── AGGREGATE: per-team ──────────────────────────────────────────────────
+  const callsByTeam = new Map<string, number>()
+  for (const c of calls) {
+    if (!c.team_id) continue
+    callsByTeam.set(c.team_id, (callsByTeam.get(c.team_id) || 0) + 1)
+  }
+  const teamRows = teamList.map(t => {
+    const tMembers = members.filter(m => m.team_id === t.id)
+    const activeMembers = tMembers.filter(m => m.status === 'active').length
+    const tSeats = seats.filter(s => s.team_id === t.id)
+    const activeSeats = tSeats.filter(s => s.status === 'paid').length
+    return {
+      id: t.id,
+      name: t.name,
+      ownerName: nameFor(t.owner_id),
+      memberCount: tMembers.length,
+      activeMembers,
+      activeSeats,
+      callsInRange: callsByTeam.get(t.id) || 0,
+    }
+  }).sort((a, b) => b.callsInRange - a.callsInRange)
+
+  // ── AGGREGATE: per-user ──────────────────────────────────────────────────
+  const callsByUser = new Map<string, number>()
+  for (const c of calls) {
+    callsByUser.set(c.user_id, (callsByUser.get(c.user_id) || 0) + 1)
+  }
+  const activeCutoff = now - 14 * day
+  const userRows = usersList.map(u => {
+    const lastSeen = u.last_seen_at ? new Date(u.last_seen_at).getTime() : 0
+    const isOwner = u.clerk_id === tenant.owner_clerk_id
+    return {
+      clerkId: u.clerk_id,
+      name: nameFor(u.clerk_id),
+      email: u.email || null,
+      role: isOwner ? 'owner' : 'member',
+      callsInRange: callsByUser.get(u.clerk_id) || 0,
+      lastSeenAt: u.last_seen_at || null,
+      status: lastSeen >= activeCutoff ? 'active' : 'idle',
+    }
+  }).sort((a, b) => b.callsInRange - a.callsInRange)
+
+  // ── SERIES: calls per bucket ─────────────────────────────────────────────
+  const totalDays = Math.max(1, Math.ceil((end - start) / day))
+  const useWeekly = totalDays > 120
+  const bucketSize = useWeekly ? 7 * day : day
+  const buckets: { date: string; calls: number; connects: number }[] = []
+  let cursor = start
+  while (cursor <= end) {
+    buckets.push({ date: dayKey(cursor), calls: 0, connects: 0 })
+    cursor += bucketSize
+  }
+  for (const c of calls) {
     const t = new Date(c.created_at).getTime()
     const idx = Math.floor((t - start) / bucketSize)
-    if (idx >= 0 && idx < buckets.length) buckets[idx].calls++
+    if (idx >= 0 && idx < buckets.length) {
+      buckets[idx].calls++
+      if (isConnect(c.disposition)) buckets[idx].connects++
+    }
   }
 
-  for (let i = 0; i < buckets.length; i++) {
-    const bucketEnd = start + (i + 1) * bucketSize
-    let rev = 0
-    for (const s of subs) {
-      if (!isLiveAt(s, bucketEnd)) continue
-      rev += weeklyFor(s.stripe_price_id).weekly
-    }
-    buckets[i].revenue = rev
-  }
+  // ── SUMMARY ──────────────────────────────────────────────────────────────
+  const totalCalls = calls.length
+  const totalConnects = calls.filter(c => isConnect(c.disposition)).length
+  const overallConnectRate = totalCalls > 0 ? Number(((totalConnects / totalCalls) * 100).toFixed(1)) : 0
+  const activeCampaigns = campaigns.filter(c => (c.status || '').toLowerCase() === 'active').length
+  const activeMemberTotal = members.filter(m => m.status === 'active').length
 
   return NextResponse.json({
     success: true,
@@ -252,27 +262,19 @@ export async function GET(req: NextRequest) {
     bucketSize: useWeekly ? 'week' : 'day',
     tenant: { id: tenant.id, slug: tenant.slug, brand_name: tenant.brand_name },
     summary: {
-      totalUsers,
-      payingActiveSubs,
-      proSubs,
-      wlSubs,
-      unknownPriceSubs: 0,       // manager view doesn't do price reconciliation
-      couponSubsCount: 0,
-      wrr,
-      mrr,
-      proWrr,
-      wlWrr,
-      signupsInRange,
-      paidConversionsInRange,
-      cancellationsInRange,
-      netNewPaying,
-      churnRate,
-      avgLifetimeWeeks: 0,
-      wowDelta,
-      wowPct,
-      newPayingUsers,
-      establishedPayingUsers,
+      totalCampaigns: campaigns.length,
+      activeCampaigns,
+      callsInRange: totalCalls,
+      connectsInRange: totalConnects,
+      connectRate: overallConnectRate,
+      teamCount: teamList.length,
+      memberCount: members.length,
+      activeMembers: activeMemberTotal,
+      userCount: usersList.length,
     },
+    campaigns: campaignRows,
+    teams: teamRows,
+    users: userRows,
     series: buckets,
   })
 }

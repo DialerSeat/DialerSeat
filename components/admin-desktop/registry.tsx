@@ -41,6 +41,10 @@ import type { AppDefinition } from './types'
 //   - Added `notes` — iCloud-style sidebar + editor, Supabase-backed
 // =============================================================================
 
+const DashboardApp = dynamic(() => import('./apps/Dashboard'), {
+  loading: () => <AppLoading />,
+  ssr: false,
+})
 const AnalyticsApp = dynamic(() => import('./apps/Analytics'), {
   loading: () => <AppLoading />,
   ssr: false,
@@ -101,6 +105,19 @@ function AppLoading() {
 }
 
 export const APPS: AppDefinition[] = [
+  {
+    // Manager-only base app — returns to /dashboard. Listed FIRST so it's the
+    // top-left default icon on the manager desktop (movable like any other).
+    // Admin never sees it (visibleTo manager only).
+    id: 'dashboard',
+    name: 'Dashboard',
+    icon: '🏠',
+    iconBg: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+    description: 'Return to your main dashboard',
+    visibleTo: ['manager'],
+    Component: DashboardApp,
+    defaultSize: { width: 480, height: 320 },
+  },
   {
     id: 'analytics',
     name: 'Analytics',
@@ -167,7 +184,7 @@ export const APPS: AppDefinition[] = [
     name: 'Notes',
     icon: '📝',
     iconBg: 'linear-gradient(135deg, #ffe27a, #d4a020)',
-    description: 'Personal scratchpad — auto-saved',
+    description: 'Private scratchpad — auto-saved, only you can see it',
     visibleTo: ['admin', 'manager'],
     Component: NotesApp,
     defaultSize: { width: 1000, height: 700 },

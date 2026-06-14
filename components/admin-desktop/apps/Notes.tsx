@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useRef, useState, useCallback } from 'react'
 import type { CSSProperties, DragEvent } from 'react'
+import { useDesktopServices } from '../desktopServices'
 
 // =============================================================================
 // NOTES APP — v24
@@ -71,6 +72,12 @@ function checklistPreview(items: ChecklistItem[]): string {
 }
 
 export default function NotesApp() {
+  // Endpoint base by role: manager desktop uses the per-user manager notes API
+  // (auth-gated, scoped to the caller's clerk_id — private), admin uses the
+  // admin notes API. Both share the same admin_notes table and response shape.
+  const services = useDesktopServices()
+  const notesBase = (services?.role === 'manager') ? '/api/manager/notes' : '/api/admin/notes'
+
   const [notes, setNotes] = useState<Note[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>('')
@@ -125,12 +132,12 @@ export default function NotesApp() {
     // fire and forget; loadNotes not needed since we update local state
     const titleNow = titleRef.current
     const bodyNow = bodyRef.current
-    fetch(`/api/admin/notes/${id}`, {
+    fetch(`${notesBase}/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title: titleNow, body: bodyNow }),
     }).catch(() => {})
-  }, [])
+  }, [notesBase])
 
   const scheduleSave = useCallback(() => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
@@ -139,7 +146,7 @@ export default function NotesApp() {
       if (!id) return
       const titleNow = titleRef.current
       const bodyNow = bodyRef.current
-      fetch(`/api/admin/notes/${id}`, {
+      fetch(`${notesBase}/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: titleNow, body: bodyNow }),
@@ -154,7 +161,7 @@ export default function NotesApp() {
         })
         .catch(() => {})
     }, 1000)
-  }, [])
+  }, [notesBase])
 
   // ── selection ───────────────────────────────────────────────────────────
   const selectNote = useCallback((n: Note) => {
@@ -173,7 +180,7 @@ export default function NotesApp() {
     setLoading(true)
     setError('')
     try {
-      const r = await fetch('/api/admin/notes', { cache: 'no-store' })
+      const r = await fetch(notesBase, { cache: 'no-store' })
       const data = await r.json()
       if (!r.ok) {
         setError(data.error || `HTTP ${r.status}`)
@@ -218,7 +225,7 @@ export default function NotesApp() {
   // ── create ────────────────────────────────────────────────────────────
   const createNote = async (asChecklist: boolean) => {
     try {
-      const r = await fetch('/api/admin/notes', { method: 'POST' })
+      const r = await fetch(notesBase, { method: 'POST' })
       const data = await r.json()
       if (!r.ok || !data.note) {
         setError(data.error || 'Create failed')
@@ -227,7 +234,7 @@ export default function NotesApp() {
       let note: Note = data.note
       if (asChecklist) {
         const body = serializeChecklist([])
-        const r2 = await fetch(`/api/admin/notes/${note.id}`, {
+        const r2 = await fetch(`${notesBase}/${note.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ title: 'New Checklist', body }),
@@ -246,7 +253,7 @@ export default function NotesApp() {
   const deleteNote = async (id: string) => {
     if (!confirm('Delete this note? This cannot be undone.')) return
     try {
-      const r = await fetch(`/api/admin/notes/${id}`, { method: 'DELETE' })
+      const r = await fetch(`${notesBase}/${id}`, { method: 'DELETE' })
       if (!r.ok) {
         const d = await r.json().catch(() => ({}))
         setError(d.error || 'Delete failed')
@@ -272,7 +279,7 @@ export default function NotesApp() {
       prev.map((x) => (x.id === n.id ? { ...x, starred: nextStarred } : x))
     )
     try {
-      const r = await fetch(`/api/admin/notes/${n.id}`, {
+      const r = await fetch(`${notesBase}/${n.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ starred: nextStarred }),
@@ -328,7 +335,7 @@ export default function NotesApp() {
     })
 
     // persist (option B — one call)
-    fetch('/api/admin/notes/reorder', {
+    fetch(`${notesBase}/reorder`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ orderedIds }),

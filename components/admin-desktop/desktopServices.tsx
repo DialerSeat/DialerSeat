@@ -33,9 +33,18 @@ import type { AppId, AppRole } from './types'
 
 export const APP_STORE_ID = 'appstore' as AppId
 
-// Downloadable (non-default) apps. Empty for now — every current registry app
-// is a base app until ids are added here.
-export const STORE_APP_IDS: AppId[] = []
+// Downloadable (non-default) apps. These are NOT on the desktop by default —
+// the user installs them from the App Store, which auto-adds them to the
+// desktop. Uninstalling removes them from the desktop and (for apps in
+// UNINSTALL_WARN_APP_IDS) warns that data will be deleted.
+//
+// 'notes' — each user's notes are private (keyed to their clerk_id); the app
+// must be installed before it appears.
+export const STORE_APP_IDS: AppId[] = ['notes']
+
+// Store apps whose uninstall destroys user data — the App Store shows a hard
+// confirm ("all data will be deleted") before uninstalling these.
+export const UNINSTALL_WARN_APP_IDS: AppId[] = ['notes']
 
 // Base apps hidden from the desktop by default (still installed, still in the
 // Start menu and App Store INSTALLED tab).
@@ -43,6 +52,10 @@ export const DEFAULT_HIDDEN_APP_IDS: AppId[] = ['clerk-profile']
 
 export function isBaseApp(id: AppId): boolean {
   return !STORE_APP_IDS.includes(id)
+}
+
+export function uninstallWarns(id: AppId): boolean {
+  return UNINSTALL_WARN_APP_IDS.includes(id)
 }
 
 // ── SHELL CONTEXT ────────────────────────────────────────────────────────────

@@ -5,6 +5,7 @@ import {
   STORE_APP_IDS,
   APP_STORE_ID,
   isBaseApp,
+  uninstallWarns,
   useDesktopServices,
 } from '../desktopServices'
 import { appVisibleToRole } from '../types'
@@ -49,6 +50,8 @@ export default function AppStoreApp() {
   const services = useDesktopServices()
   const [tab, setTab] = useState<Tab>('store')
   const [downloading, setDownloading] = useState<string | null>(null)
+  // App pending an uninstall confirm (only for apps in UNINSTALL_WARN_APP_IDS).
+  const [confirmUninstall, setConfirmUninstall] = useState<AppId | null>(null)
 
   if (!services) {
     return (
@@ -86,6 +89,18 @@ export default function AppStoreApp() {
       setDownloading(null)
     }, 700)
   }
+
+  // Uninstall: if the app warns on uninstall (data loss), open the confirm
+  // modal; otherwise uninstall immediately.
+  const handleUninstall = (id: AppId) => {
+    if (uninstallWarns(id)) {
+      setConfirmUninstall(id)
+    } else {
+      uninstallApp(id)
+    }
+  }
+
+  const confirmApp = confirmUninstall ? roleApps.find(a => a.id === confirmUninstall) : null
 
   const btnStyle = (variant: 'primary' | 'ghost' | 'danger'): React.CSSProperties => ({
     padding: '6px 12px',
@@ -178,7 +193,7 @@ export default function AppStoreApp() {
                     {installed ? (
                       <>
                         <button style={btnStyle('ghost')} onClick={() => openApp(app.id)}>OPEN</button>
-                        <button style={btnStyle('danger')} onClick={() => uninstallApp(app.id)}>UNINSTALL</button>
+                        <button style={btnStyle('danger')} onClick={() => handleUninstall(app.id)}>UNINSTALL</button>
                       </>
                     ) : (
                       <button
@@ -250,7 +265,7 @@ export default function AppStoreApp() {
                     </button>
                   )}
                   {!base && (
-                    <button style={btnStyle('danger')} onClick={() => uninstallApp(app.id)}>UNINSTALL</button>
+                    <button style={btnStyle('danger')} onClick={() => handleUninstall(app.id)}>UNINSTALL</button>
                   )}
                 </div>
               </div>
@@ -258,6 +273,63 @@ export default function AppStoreApp() {
           })
         )}
       </div>
+      {confirmApp && (
+        <div
+          onClick={() => setConfirmUninstall(null)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 100000,
+            background: 'rgba(0,0,0,0.6)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 20,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: '100%', maxWidth: 440,
+              background: T.dark, border: `1px solid ${T.red}`,
+              borderTop: `3px solid ${T.red}`, borderRadius: 4,
+              padding: 24, color: '#e0e2ea', boxSizing: 'border-box',
+              fontFamily: 'Futura PT, Futura, sans-serif',
+            }}
+          >
+            <div style={{ fontSize: 11, letterSpacing: 4, color: T.red, fontWeight: 'bold', marginBottom: 14 }}>
+              ⚠ UNINSTALL {confirmApp.name.toUpperCase()}
+            </div>
+            <div style={{ fontSize: 13, lineHeight: 1.6, color: '#c0c2ca', marginBottom: 10 }}>
+              Uninstalling <strong style={{ color: 'white' }}>{confirmApp.name}</strong> removes it from your desktop.
+            </div>
+            <div style={{
+              background: 'rgba(138,26,26,0.2)', border: `1px solid ${T.red}`,
+              borderLeft: `3px solid ${T.red}`, borderRadius: 3,
+              padding: '10px 12px', marginBottom: 20,
+              fontSize: 12, lineHeight: 1.6, color: '#ffaaaa', fontWeight: 'bold',
+            }}>
+              WARNING: all data will be deleted. This cannot be undone.
+            </div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setConfirmUninstall(null)}
+                style={{
+                  padding: '10px 18px', background: 'transparent', color: '#a0a2aa',
+                  border: '1px solid #4a4a5e', borderRadius: 3,
+                  fontSize: 10, letterSpacing: 3, fontWeight: 'bold', cursor: 'pointer',
+                  fontFamily: 'inherit',
+                }}
+              >CANCEL</button>
+              <button
+                onClick={() => { uninstallApp(confirmApp.id); setConfirmUninstall(null) }}
+                style={{
+                  padding: '10px 18px', background: T.red, color: 'white',
+                  border: 'none', borderRadius: 3,
+                  fontSize: 10, letterSpacing: 3, fontWeight: 'bold', cursor: 'pointer',
+                  fontFamily: 'inherit',
+                }}
+              >■ DELETE & UNINSTALL</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
