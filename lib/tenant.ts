@@ -3,31 +3,29 @@ import { createClient } from '@supabase/supabase-js'
 import { unstable_cache } from 'next/cache'
 
 // =============================================================================
-// TENANT BRANDING LOOKUP — server-side helper (v6 — strict NULL semantics)
+// TENANT BRANDING LOOKUP — server-side helper (v7 — currentValue for toggle)
 // =============================================================================
-// v6 (Push B): fetchActiveTenantForUser respects NULL.
+// v7 (Push F): fetchAvailableTenantsForUser now returns `currentValue` and
+// `savedThemes`, matching what the settings-page WL toggle actually reads.
 //
-// Before: if active_tenant_id was NULL but the user had ANY accessible
-// tenant (owned WL OR active team membership of a WL-owner team), the
-// function silently picked the first accessible tenant. Result: a user
-// could not see the standard DialerSeat view by setting active_tenant_id
-// to NULL — the resolver always overrode their preference. The settings-
-// page "switch to DialerSeat default" bug lived here.
+//   THE BUG: the settings page renders a controlled <select> whose value is
+//   brandOptions.currentValue, defaulting to 'standard' when missing. This
+//   helper returned currentTenantId but NEVER currentValue, so the select was
+//   permanently pinned to 'standard' ("DialerSeat Pro") regardless of the
+//   user's real active_tenant_id, and switching to a tenant appeared to do
+//   nothing after the reload (the write worked; the read didn't surface it).
 //
-// After: NULL means "show standard view". The fallback is gone. If
-// active_tenant_id is a uuid AND the user has access to it → use it.
-// Otherwise → return null and let the caller render the standard view.
+//   THE FIX: compute currentValue to match the <option> values the page
+//   renders — a tenant's `id` when active_tenant_id is set, else 'standard'.
+//   Also return savedThemes (empty for now) so that page branch has real data
+//   instead of an undefined fallback. currentTenantId is kept for back-compat.
 //
-// To preserve existing users' implicit-WL view, migration 010 backfills
-// active_tenant_id from owned WL and most-recent active team membership
-// for users whose value was NULL before this push.
-//
-// v5 (migration 004): adds header_bg_color so the dashboard header strip
-// can be themed independently of the sidebar.
+// v6 (Push B): fetchActiveTenantForUser respects NULL (strict NULL semantics).
+// v5 (migration 004): adds header_bg_color.
 // v4 (migration 003): added page_bg_color.
 // v3 (Phase B2): trimmed the interface down.
 //
-// Caching unchanged. Tags unchanged. Other functions byte-for-byte v5.
+// Caching unchanged. Tags unchanged. fetchActiveTenantForUser byte-for-byte v6.
 // =============================================================================
 
 export interface TenantBranding {
@@ -52,10 +50,20 @@ export interface AvailableTenant {
   role: 'owner' | 'member'
 }
 
+export interface SavedThemeOption {
+  id: string
+  name: string
+}
+
 export interface UserBrandOptions {
   available: AvailableTenant[]
+  savedThemes: SavedThemeOption[]
   canSeeStandard: boolean
   currentTenantId: string | null
+  // The value the settings-page <select> should show. Matches the rendered
+  // <option> values: a tenant id, `theme:<id>` for a saved theme, or
+  // 'standard' for the default DialerSeat view.
+  currentValue: string
 }
 
 function getSupabaseAnon() {
@@ -234,7 +242,7 @@ export async function getActiveTenantForUser(
 }
 
 // =============================================================================
-// AVAILABLE BRAND OPTIONS (settings page toggle) — Phase D, preserved
+// AVAILABLE BRAND OPTIONS (settings page toggle) — v7
 // =============================================================================
 
 async function fetchAvailableTenantsForUser(clerkId: string): Promise<UserBrandOptions> {
@@ -329,10 +337,31 @@ async function fetchAvailableTenantsForUser(clerkId: string): Promise<UserBrandO
 
   const canSeeStandard = hasSelfSub || !!ownedTenant
 
+  // Saved custom themes aren't modeled yet — return an empty list so the
+  // settings page's savedThemes branch renders nothing instead of falling
+  // back to an undefined value. Wire this up when themes ship.
+  const savedThemes: SavedThemeOption[] = []
+
+  // ── currentValue — THE FIX ──────────────────────────────────────────────
+  // The settings <select> shows currentValue and its <option>s are valued by
+  // tenant id (or 'standard'). Map the stored active_tenant_id to the value
+  // the select can actually match:
+  //   - active_tenant_id is set AND it's one of the available tenants → its id
+  //   - active_tenant_id is set but NOT accessible (stale) → 'standard'
+  //   - active_tenant_id is null → 'standard'
+  // This is what makes the dropdown reflect the real selection and persist
+  // across reloads instead of snapping back to "DialerSeat Pro".
+  const activeTenantId = user?.active_tenant_id || null
+  const activeIsAvailable =
+    !!activeTenantId && available.some(t => t.id === activeTenantId)
+  const currentValue = activeIsAvailable ? (activeTenantId as string) : 'standard'
+
   return {
     available,
+    savedThemes,
     canSeeStandard,
-    currentTenantId: user?.active_tenant_id || null,
+    currentTenantId: activeTenantId,
+    currentValue,
   }
 }
 
@@ -340,7 +369,13 @@ export async function getAvailableTenantsForUser(
   clerkId: string | null | undefined
 ): Promise<UserBrandOptions> {
   if (!clerkId) {
-    return { available: [], canSeeStandard: false, currentTenantId: null }
+    return {
+      available: [],
+      savedThemes: [],
+      canSeeStandard: false,
+      currentTenantId: null,
+      currentValue: 'standard',
+    }
   }
 
   const cached = unstable_cache(
