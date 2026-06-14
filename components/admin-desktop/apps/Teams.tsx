@@ -1,491 +1,987 @@
 'use client'
-import { useState, useEffect, useMemo } from 'react'
-import { useDesktopServices } from '../desktopServices'
+import { useState, useEffect, useCallback } from 'react'
+import { useUser } from '@clerk/nextjs'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 // =============================================================================
-// TEAMS APP — role-aware (admin = platform-wide, manager = tenant-scoped)
+// TEAMS PAGE — Pass 2 v6 (single-use partner join links)
 // =============================================================================
-// Reads `role` from useDesktopServices().
-//   - admin   → /api/admin/teams (every team on the platform), DELETE shown.
-//   - manager → /api/manager/teams (only teams linked to the owner's tenant),
-//               DELETE HIDDEN (team deletion is admin-only; the manager route
-//               doesn't expose it). Same response shape, so the table renders
-//               identically; "platform totals" become "your tenant totals".
+// v6 changes vs v5:
+//   - NEW CODE modal gains a "LINK TYPE" toggle: REUSABLE vs SINGLE-USE LINK.
+//     Single-use sets max_uses=1 on the code. A single-use seat+owner code is a
+//     partner per-seat link: the agent who opens it auto-joins instantly with
+//     no approval, and the owner's card covers the $35/wk seat.
+//   - submitCreateCode sends singleUse to /api/teams/codes/create.
+//   - codeSingleUse state + reset in openCodeModal.
+//   - TeamCode interface carries max_uses / use_count (returned by
+//     /api/teams/list). Single-use codes render a COPY LINK button that copies
+//     the full demo.dialerseat.com/join/<CODE> URL.
 //
-// Everything else (expandable rows, member/seat tables, join-code copy) is the
-// admin app verbatim. The only role-driven differences are the fetch URL and
-// whether the delete affordances render.
+// All v5 functionality preserved (FAQ link in title row, redirect targets,
+// free access mode, access-grant modals, two-stage delete).
 // =============================================================================
 
-// Palette tied to the tenant's white-label brand. On the manager desktop the
-// page is wrapped in <ThemeProvider> so these --brand-* vars carry the owner's
-// colors; on the admin desktop (no tenant) ThemeProvider emits the default
-// DialerSeat values, which match the fallbacks here — so admin looks identical.
-// HEADER → --brand-header-bg / --brand-on-header(-muted); BODY → page-bg, card
-// surface/border, on-page-bg, muted-text; PRIMARY/ACCENT → --brand-primary.
-// Semantic status colors (green/red/amber) stay fixed — they signal state, not
-// brand. There is no sidebar in these apps, so no sidebar tokens are used.
 const T = {
-  bg: 'var(--brand-page-bg, #f0f1f4)',
-  surface: 'var(--brand-card-surface, #e2e4ea)',
-  border: 'var(--brand-card-border, #c4c8d0)',
-  dark: 'var(--brand-header-bg, #1a1a2e)',
-  text: 'var(--brand-on-page-bg, #1a1c24)',
-  muted: 'var(--brand-muted-text, #5a5e6a)',
-  accent: 'var(--brand-primary, #2a4a8a)',
-  blue: 'var(--brand-primary, #4a9eff)',
-  onHeader: 'var(--brand-on-header, #ffffff)',
-  onHeaderMuted: 'var(--brand-on-header-muted, #8888aa)',
+  bg: 'var(--brand-page-bg)',
+  surface: 'var(--brand-card-surface)',
+  border: 'var(--brand-card-border)',
+  dark: 'var(--brand-sidebar-bg)',
+  text: 'var(--brand-on-page-bg)',
+  muted: 'var(--brand-muted-text)',
+  accent: '#2a4a8a',
+  blue: 'var(--brand-primary)',
   green: '#1a6a1a',
   red: '#8a1a1a',
   amber: '#8a6a1a',
 }
 
-interface Member {
-  id: string
-  userId: string
-  name: string
+const FUTURA = `'Futura PT', Futura, 'Helvetica Neue', Helvetica, Arial, sans-serif`
+
+interface TeamUser {
   email: string | null
-  status: 'active' | 'pending' | 'removed'
-  acceptedAt: string | null
-  removedAt: string | null
+  first_name: string | null
+  last_name: string | null
 }
-
-interface Seat {
+interface MemberCampaignAccess {
   id: string
-  agentId: string
-  agentName: string
-  agentEmail: string | null
-  amountCents: number
-  status: 'paid' | 'pending' | 'failed' | 'voided'
-  periodStart: string
-  periodEnd: string
-  stripeSubscriptionId: string | null
+  campaignId: string
+  payer: 'owner' | 'agent' | 'free'
+  accessSource: string | null
+  createdAt: string
 }
-
-interface AdminTeam {
+interface TeamMember {
+  id: string
+  team_id: string
+  user_id: string
+  status: 'active' | 'pending' | 'removed'
+  accepted_at: string | null
+  removed_at: string | null
+  joined_via_code: string | null
+  created_at: string
+  user: TeamUser
+  campaignAccess: MemberCampaignAccess[]
+}
+interface TeamCode {
+  id: string
+  team_id: string
+  code: string
+  code_type: 'seat' | 'recruit'
+  campaign_id: string | null
+  payer: 'owner' | 'agent'
+  is_active: boolean
+  created_at: string
+  max_uses: number | null
+  use_count: number
+}
+interface TeamCampaignRow {
+  campaignId: string
+  accessMode: 'owner_pays' | 'agent_pays' | 'public' | 'free'
+  createdAt: string
+  campaign: {
+    id: string
+    name: string
+    total_leads: number
+    called_leads: number
+    status: string
+  } | null
+}
+interface OwnedTeam {
   id: string
   name: string
   description: string | null
-  createdAt: string
-  joinCode: string | null
-  ownerHasCoupon: boolean
-  owner: { id: string; name: string; email: string | null }
-  memberCount: number
-  pendingMemberCount: number
-  activeSeats: number
-  pendingSeats: number
-  failedSeats: number
-  voidedSeats: number
-  campaignCount: number
-  wrr_cents: number
-  mrr_cents: number
-  members: Member[]
-  seats: Seat[]
+  owner_id: string
+  created_at: string
+  viewerRole: 'owner'
+  members: TeamMember[]
+  pendingMembers: TeamMember[]
+  codes: TeamCode[]
+  teamCampaigns: TeamCampaignRow[]
+}
+interface MemberTeam {
+  id: string
+  name: string
+  description: string | null
+  owner_id: string
+  created_at: string
+  viewerRole: 'member'
+}
+type Team = OwnedTeam | MemberTeam
+
+interface TeamsResponse {
+  success: boolean
+  teams: { owned: OwnedTeam[]; member: MemberTeam[] }
 }
 
-interface Response {
-  success: boolean
-  teams: AdminTeam[]
-  platformTotals: {
-    teams: number
-    activeSeats: number
-    pendingSeats: number
-    mrr_cents: number
-    wrr_cents: number
+interface Campaign {
+  id: string
+  name: string
+  status: string
+}
+
+type AccessMode = 'owner_pays' | 'agent_pays' | 'public' | 'free'
+
+const SURFACE_LIFT = 'color-mix(in srgb, var(--brand-card-surface) 85%, var(--brand-on-page-bg) 15%)'
+
+function displayName(u: TeamUser, fallback: string): string {
+  const fn = (u.first_name || '').trim()
+  const ln = (u.last_name || '').trim()
+  const full = [fn, ln].filter(Boolean).join(' ')
+  if (full) return full
+  if (u.email) return u.email
+  return fallback
+}
+
+function fmtDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+  } catch {
+    return iso
   }
 }
 
-type SortKey = 'wrr' | 'members' | 'seats' | 'created' | 'name'
+export default function TeamsPage() {
+  const { user } = useUser()
+  const router = useRouter()
 
-const fmtMoney = (cents: number) => `$${(cents / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
-const fmtDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-
-interface DeleteState {
-  team: AdminTeam
-  step: 1 | 2
-  confirmText: string
-  busy: boolean
-  error: string | null
-}
-
-export default function TeamsApp() {
-  const services = useDesktopServices()
-  const role = services?.role ?? 'admin'
-  const isManager = role === 'manager'
-  const endpoint = isManager ? '/api/manager/teams' : '/api/admin/teams'
-  const totalsLabel = isManager ? 'YOUR TENANT' : 'PLATFORM'
-
-  const [data, setData] = useState<Response | null>(null)
+  const [ownedTeams, setOwnedTeams] = useState<OwnedTeam[]>([])
+  const [memberTeams, setMemberTeams] = useState<MemberTeam[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [search, setSearch] = useState('')
-  const [sortKey, setSortKey] = useState<SortKey>('wrr')
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
-  const [deleting, setDeleting] = useState<DeleteState | null>(null)
-  const [toast, setToast] = useState<string | null>(null)
+
+  const [redeemCode, setRedeemCode] = useState('')
+  const [redeeming, setRedeeming] = useState(false)
+  const [redeemMessage, setRedeemMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null)
+
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [creating, setCreating] = useState(false)
+  const [createName, setCreateName] = useState('')
+  const [createDesc, setCreateDesc] = useState('')
+  const [createError, setCreateError] = useState<string | null>(null)
+
+  const [showSubGate, setShowSubGate] = useState(false)
+
+  const [expandedTeams, setExpandedTeams] = useState<Record<string, boolean>>({})
+  const [actioningId, setActioningId] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
 
-  const loadTeams = async () => {
+  const [editTeam, setEditTeam] = useState<OwnedTeam | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editDesc, setEditDesc] = useState('')
+  const [editSubmitting, setEditSubmitting] = useState(false)
+  const [editError, setEditError] = useState<string | null>(null)
+
+  const [deleteTeamStage, setDeleteTeamStage] = useState<{
+    team: OwnedTeam
+    stage: 'confirm' | 'type'
+  } | null>(null)
+  const [deleteTypedConfirm, setDeleteTypedConfirm] = useState('')
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false)
+
+  const [codeModalTeam, setCodeModalTeam] = useState<OwnedTeam | null>(null)
+  const [codeType, setCodeType] = useState<'seat' | 'recruit'>('seat')
+  const [codePayer, setCodePayer] = useState<'owner' | 'agent'>('owner')
+  const [codeCampaignId, setCodeCampaignId] = useState<string>('')
+  const [codeSingleUse, setCodeSingleUse] = useState(false)
+  const [codeCampaigns, setCodeCampaigns] = useState<Campaign[]>([])
+  const [codeCreating, setCodeCreating] = useState(false)
+  const [codeError, setCodeError] = useState<string | null>(null)
+
+  const [attachModalTeam, setAttachModalTeam] = useState<OwnedTeam | null>(null)
+  const [attachCampaignId, setAttachCampaignId] = useState<string>('')
+  const [attachAccessMode, setAttachAccessMode] = useState<AccessMode>('owner_pays')
+  const [attachCampaigns, setAttachCampaigns] = useState<Campaign[]>([])
+  const [attachSubmitting, setAttachSubmitting] = useState(false)
+  const [attachError, setAttachError] = useState<string | null>(null)
+
+  const [grantTarget, setGrantTarget] = useState<{ team: OwnedTeam; member: TeamMember } | null>(null)
+  const [grantCampaignId, setGrantCampaignId] = useState('')
+  const [grantPayer, setGrantPayer] = useState<'owner' | 'agent' | 'free'>('owner')
+  const [grantSubmitting, setGrantSubmitting] = useState(false)
+  const [grantError, setGrantError] = useState<string | null>(null)
+
+  const [confirmState, setConfirmState] = useState<{
+    title: string
+    body: string
+    confirmWord: string
+    danger: boolean
+    onConfirm: () => Promise<void>
+  } | null>(null)
+  const [confirmInput, setConfirmInput] = useState('')
+  const [confirmSubmitting, setConfirmSubmitting] = useState(false)
+
+  const loadTeams = useCallback(async () => {
     setLoading(true)
     try {
-      const r = await fetch(endpoint)
-      if (r.status === 403) throw new Error(isManager ? 'Forbidden — Manager+ owners only' : 'Forbidden — admin only')
-      const d = await r.json()
-      if (d.success) setData(d)
-      else setError(d.error || 'Failed to load')
-    } catch (err: any) {
-      setError(err.message)
+      const res = await fetch('/api/teams/list?detail=owned')
+      const data: TeamsResponse = await res.json()
+      if (data.success) {
+        const owned = data.teams.owned || []
+        setOwnedTeams(owned)
+        setMemberTeams(data.teams.member || [])
+        if (owned.length === 1) {
+          setExpandedTeams({ [owned[0].id]: true })
+        }
+      }
+    } catch (err) {
+      console.error('Load teams error:', err)
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
-    let cancelled = false
-    fetch(endpoint)
-      .then(async r => {
-        if (r.status === 403) throw new Error(isManager ? 'Forbidden — Manager+ owners only' : 'Forbidden — admin only')
-        return r.json()
-      })
-      .then(d => {
-        if (cancelled) return
-        if (d.success) setData(d)
-        else setError(d.error || 'Failed to load')
-        setLoading(false)
-      })
-      .catch(err => {
-        if (cancelled) return
-        setError(err.message)
-        setLoading(false)
-      })
-    return () => { cancelled = true }
-  }, [endpoint, isManager])
+    if (user) loadTeams()
+  }, [user, loadTeams])
 
-  const teams = useMemo(() => {
-    if (!data) return []
-    let list = [...data.teams]
-    const s = search.trim().toLowerCase()
-    if (s) {
-      list = list.filter(t =>
-        t.name.toLowerCase().includes(s) ||
-        t.owner.name.toLowerCase().includes(s) ||
-        (t.owner.email || '').toLowerCase().includes(s) ||
-        (t.joinCode || '').toLowerCase().includes(s)
-      )
-    }
-    switch (sortKey) {
-      case 'wrr': list.sort((a, b) => b.wrr_cents - a.wrr_cents); break
-      case 'members': list.sort((a, b) => b.memberCount - a.memberCount); break
-      case 'seats': list.sort((a, b) => b.activeSeats - a.activeSeats); break
-      case 'created': list.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)); break
-      case 'name': list.sort((a, b) => a.name.localeCompare(b.name)); break
-    }
-    return list
-  }, [data, search, sortKey])
-
-  const toggle = (id: string) => setExpanded(p => ({ ...p, [id]: !p[id] }))
-
-  const startDelete = (team: AdminTeam, e: React.MouseEvent) => {
-    e.stopPropagation()
-    setDeleting({ team, step: 1, confirmText: '', busy: false, error: null })
-  }
-
-  const cancelDelete = () => setDeleting(null)
-
-  const confirmDeleteStep1 = () => {
-    if (!deleting) return
-    setDeleting({ ...deleting, step: 2 })
-  }
-
-  const executeDelete = async () => {
-    if (!deleting) return
-    if (deleting.confirmText.trim().toLowerCase() !== 'remove') {
-      setDeleting({ ...deleting, error: 'Type "remove" exactly to confirm' })
-      return
-    }
-    setDeleting({ ...deleting, busy: true, error: null })
+  const loadCampaigns = useCallback(async (): Promise<Campaign[]> => {
     try {
-      const res = await fetch('/api/admin/teams/delete', {
+      const res = await fetch('/api/campaigns/list')
+      const data = await res.json()
+      if (data.success && Array.isArray(data.campaigns)) {
+        return data.campaigns.map((c: any) => ({ id: c.id, name: c.name, status: c.status }))
+      }
+    } catch (err) {
+      console.error('Load campaigns error:', err)
+    }
+    return []
+  }, [])
+
+  const handleRedeem = async () => {
+    const code = redeemCode.trim()
+    if (!code) return
+    setRedeeming(true)
+    setRedeemMessage(null)
+    try {
+      const res = await fetch('/api/teams/redeem', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ teamId: deleting.team.id, confirm: 'remove' }),
+        body: JSON.stringify({ code }),
       })
-      const d = await res.json()
-      if (!d.success) {
-        setDeleting({ ...deleting, busy: false, error: d.error || 'Delete failed' })
+      const data = await res.json()
+      if (!data.success) {
+        setRedeemMessage({ type: 'error', text: data.error || 'Redemption failed' })
+        setRedeeming(false)
         return
       }
-      const teamName = deleting.team.name
-      setDeleting(null)
-      setToast(`Deleted "${teamName}" — ${d.deleted.membersRemoved} members removed, ${d.deleted.campaignsDetached} campaigns detached`)
-      setTimeout(() => setToast(null), 6000)
-      await loadTeams()
+      if (data.nextStep === 'redirect_to_billing') {
+        setRedeemMessage({ type: 'info', text: `Joined ${data.team.name}. Redirecting to billing to complete your subscription...` })
+        setTimeout(() => router.push('/billing'), 1200)
+      } else if (data.nextStep === 'awaiting_owner_approval') {
+        setRedeemMessage({ type: 'success', text: `Code redeemed for ${data.team.name}. Your request is pending approval from the team owner.` })
+        setRedeemCode('')
+        loadTeams()
+      } else if (data.nextStep === 'redirect_to_team') {
+        setRedeemMessage({ type: 'success', text: `Joined ${data.team.name}. Redirecting...` })
+        setTimeout(() => router.push(`/dashboard/teams/${data.team.id}/analytics`), 1000)
+      } else {
+        setRedeemMessage({ type: 'success', text: 'Code redeemed.' })
+        setRedeemCode('')
+        loadTeams()
+      }
     } catch (err: any) {
-      setDeleting({ ...deleting, busy: false, error: err.message })
+      setRedeemMessage({ type: 'error', text: err.message || 'Redemption failed' })
+    } finally {
+      setRedeeming(false)
     }
   }
 
-  const copyCode = async (code: string, e: React.MouseEvent) => {
-    e.stopPropagation()
+  const handleCreateTeamClick = async () => {
     try {
-      await navigator.clipboard.writeText(code)
-      setCopiedCode(code)
-      setTimeout(() => setCopiedCode(null), 1800)
+      const res = await fetch('/api/stripe/status')
+      const data = await res.json()
+      if (data.tier !== 'active') {
+        setShowSubGate(true)
+        return
+      }
     } catch {
-      // ignore
+      setShowSubGate(true)
+      return
+    }
+    setShowCreateModal(true)
+  }
+
+  const handleCreateSubmit = async () => {
+    const name = createName.trim()
+    if (!name) {
+      setCreateError('Team name required')
+      return
+    }
+    setCreating(true)
+    setCreateError(null)
+    try {
+      const res = await fetch('/api/teams/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, description: createDesc.trim() || undefined }),
+      })
+      const data = await res.json()
+      if (!data.success) {
+        if (data.reason === 'self_sub_required') {
+          setShowCreateModal(false)
+          setShowSubGate(true)
+        } else {
+          setCreateError(data.error || 'Failed to create team')
+        }
+        setCreating(false)
+        return
+      }
+      setShowCreateModal(false)
+      setCreateName('')
+      setCreateDesc('')
+      router.push(`/dashboard/teams/${data.team.id}/analytics`)
+    } catch (err: any) {
+      setCreateError(err.message || 'Failed to create team')
+      setCreating(false)
     }
   }
+
+  const toggleExpanded = (teamId: string) => {
+    setExpandedTeams(prev => ({ ...prev, [teamId]: !prev[teamId] }))
+  }
+
+  const copyText = async (text: string, key: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopiedCode(key)
+      setTimeout(() => setCopiedCode(null), 1500)
+    } catch {}
+  }
+
+  const copyCode = (code: string) => copyText(code, code)
+
+  const acceptMember = async (m: TeamMember) => {
+    setActioningId(m.id)
+    setActionError(null)
+    try {
+      const res = await fetch('/api/teams/members/accept', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memberId: m.id }),
+      })
+      const data = await res.json()
+      if (!data.success) {
+        if (res.status === 402) {
+          setActionError('A payment method is required on file before accepting an owner-paid seat. Add a card in /billing first.')
+        } else {
+          setActionError(data.error || 'Failed to accept')
+        }
+        return
+      }
+      await loadTeams()
+    } catch (err: any) {
+      setActionError(err.message || 'Failed to accept')
+    } finally {
+      setActioningId(null)
+    }
+  }
+
+  const rejectMember = async (m: TeamMember) => {
+    setActioningId(m.id)
+    setActionError(null)
+    try {
+      const res = await fetch('/api/teams/members/reject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memberId: m.id }),
+      })
+      const data = await res.json()
+      if (!data.success) {
+        setActionError(data.error || 'Failed to reject')
+        return
+      }
+      await loadTeams()
+    } catch (err: any) {
+      setActionError(err.message || 'Failed to reject')
+    } finally {
+      setActioningId(null)
+    }
+  }
+
+  const removeMember = (m: TeamMember) => {
+    setConfirmState({
+      title: 'KICK MEMBER',
+      body: `Remove ${displayName(m.user, 'this member')} from the team? They lose all campaign access and any owner-paid subs end at period close. Refunds for partial periods are only available via dispute through the cardholder's bank. Type "remove" to confirm.`,
+      confirmWord: 'remove',
+      danger: true,
+      onConfirm: async () => {
+        const res = await fetch('/api/teams/members/remove', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ memberId: m.id, confirm: 'remove' }),
+        })
+        const data = await res.json()
+        if (!data.success) throw new Error(data.error || 'Failed to remove')
+        await loadTeams()
+      },
+    })
+  }
+
+  const payerForMode = (mode: AccessMode): 'owner' | 'agent' | 'free' => {
+    if (mode === 'owner_pays') return 'owner'
+    if (mode === 'free') return 'free'
+    return 'agent'
+  }
+
+  const openGrantModal = (team: OwnedTeam, member: TeamMember) => {
+    const memberAccessIds = new Set(member.campaignAccess.map(a => a.campaignId))
+    const firstAvailable = team.teamCampaigns.find(tc => !memberAccessIds.has(tc.campaignId))
+    setGrantTarget({ team, member })
+    setGrantCampaignId(firstAvailable?.campaignId || '')
+    if (firstAvailable) {
+      setGrantPayer(payerForMode(firstAvailable.accessMode))
+    } else {
+      setGrantPayer('owner')
+    }
+    setGrantError(null)
+  }
+
+  const submitGrant = async () => {
+    if (!grantTarget || !grantCampaignId) {
+      setGrantError('Select a campaign')
+      return
+    }
+    setGrantSubmitting(true)
+    setGrantError(null)
+    try {
+      const res = await fetch('/api/teams/access/grant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          memberId: grantTarget.member.id,
+          campaignId: grantCampaignId,
+          payer: grantPayer,
+        }),
+      })
+      const data = await res.json()
+      if (!data.success) {
+        if (res.status === 402) {
+          setGrantError('No payment method on file. Add a card in /billing, then try again.')
+        } else if (res.status === 409) {
+          setGrantError('This member already has access to that campaign.')
+        } else {
+          setGrantError(data.error || 'Failed to grant access')
+        }
+        return
+      }
+      setGrantTarget(null)
+      setGrantCampaignId('')
+      await loadTeams()
+    } catch (err: any) {
+      setGrantError(err.message || 'Failed to grant access')
+    } finally {
+      setGrantSubmitting(false)
+    }
+  }
+
+  const reinstateMember = (team: OwnedTeam, member: TeamMember) => {
+    if (team.teamCampaigns.length === 1) {
+      const tc = team.teamCampaigns[0]
+      const payer = payerForMode(tc.accessMode)
+      doInstantGrant(member, tc.campaignId, payer)
+      return
+    }
+    openGrantModal(team, member)
+  }
+
+  const doInstantGrant = async (member: TeamMember, campaignId: string, payer: 'owner' | 'agent' | 'free') => {
+    setActioningId(member.id)
+    setActionError(null)
+    try {
+      const res = await fetch('/api/teams/access/grant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memberId: member.id, campaignId, payer }),
+      })
+      const data = await res.json()
+      if (!data.success) {
+        if (res.status === 402) {
+          setActionError('No payment method on file. Add a card in /billing, then try again.')
+        } else {
+          setActionError(data.error || 'Failed to reinstate')
+        }
+        return
+      }
+      await loadTeams()
+    } catch (err: any) {
+      setActionError(err.message || 'Failed to reinstate')
+    } finally {
+      setActioningId(null)
+    }
+  }
+
+  const revokeAccess = (team: OwnedTeam, member: TeamMember, access: MemberCampaignAccess, campaignName: string) => {
+    setConfirmState({
+      title: 'REVOKE CAMPAIGN ACCESS',
+      body: `Revoke ${displayName(member.user, 'this member')}'s access to "${campaignName}"? Their seat sub for this campaign ends at period close. They stay on the team and can be reinstated anytime. Refunds for partial periods are only available via dispute through the cardholder's bank. Type "remove" to confirm.`,
+      confirmWord: 'remove',
+      danger: true,
+      onConfirm: async () => {
+        const res = await fetch('/api/teams/access/revoke', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            teamId: team.id,
+            memberId: member.id,
+            campaignId: access.campaignId,
+            confirm: 'remove',
+          }),
+        })
+        const data = await res.json()
+        if (!data.success) throw new Error(data.error || 'Failed to revoke')
+        await loadTeams()
+      },
+    })
+  }
+
+  const regenerateCode = async (c: TeamCode) => {
+    setActioningId(c.id)
+    setActionError(null)
+    try {
+      const res = await fetch('/api/teams/codes/regenerate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ codeId: c.id }),
+      })
+      const data = await res.json()
+      if (!data.success) {
+        setActionError(data.error || 'Failed to regenerate')
+        return
+      }
+      await loadTeams()
+    } catch (err: any) {
+      setActionError(err.message || 'Failed to regenerate')
+    } finally {
+      setActioningId(null)
+    }
+  }
+
+  const deleteCode = (c: TeamCode) => {
+    setConfirmState({
+      title: 'DELETE CODE',
+      body: `Delete code ${c.code}? Anyone who hasn't redeemed it yet won't be able to. Existing members keep their access. Type "remove" to confirm.`,
+      confirmWord: 'remove',
+      danger: true,
+      onConfirm: async () => {
+        const res = await fetch('/api/teams/codes/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ codeId: c.id, confirm: 'remove' }),
+        })
+        const data = await res.json()
+        if (!data.success) throw new Error(data.error || 'Failed to delete')
+        await loadTeams()
+      },
+    })
+  }
+
+  const openCodeModal = async (team: OwnedTeam) => {
+    setCodeModalTeam(team)
+    setCodeType('seat')
+    setCodePayer('owner')
+    setCodeCampaignId('')
+    setCodeSingleUse(false)
+    setCodeError(null)
+    const list = await loadCampaigns()
+    setCodeCampaigns(list)
+  }
+
+  const submitCreateCode = async () => {
+    if (!codeModalTeam) return
+    setCodeCreating(true)
+    setCodeError(null)
+    try {
+      const res = await fetch('/api/teams/codes/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          teamId: codeModalTeam.id,
+          codeType,
+          payer: codePayer,
+          campaignId: codeCampaignId || null,
+          singleUse: codeSingleUse,
+        }),
+      })
+      const data = await res.json()
+      if (!data.success) {
+        setCodeError(data.error || 'Failed to create code')
+        return
+      }
+      setCodeModalTeam(null)
+      await loadTeams()
+    } catch (err: any) {
+      setCodeError(err.message || 'Failed to create code')
+    } finally {
+      setCodeCreating(false)
+    }
+  }
+
+  const openAttachModal = async (team: OwnedTeam) => {
+    setAttachModalTeam(team)
+    setAttachCampaignId('')
+    setAttachAccessMode('owner_pays')
+    setAttachError(null)
+    const list = await loadCampaigns()
+    const attachedIds = new Set(team.teamCampaigns.map(tc => tc.campaignId))
+    setAttachCampaigns(list.filter(c => !attachedIds.has(c.id)))
+  }
+
+  const submitAttach = async () => {
+    if (!attachModalTeam || !attachCampaignId) {
+      setAttachError('Select a campaign')
+      return
+    }
+    setAttachSubmitting(true)
+    setAttachError(null)
+    try {
+      const res = await fetch('/api/teams/campaigns/attach', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          teamId: attachModalTeam.id,
+          campaignId: attachCampaignId,
+          accessMode: attachAccessMode,
+        }),
+      })
+      const data = await res.json()
+      if (!data.success) {
+        setAttachError(data.error || 'Failed to attach campaign')
+        return
+      }
+      setAttachModalTeam(null)
+      await loadTeams()
+    } catch (err: any) {
+      setAttachError(err.message || 'Failed to attach campaign')
+    } finally {
+      setAttachSubmitting(false)
+    }
+  }
+
+  const updateCampaignAccess = async (
+    teamId: string,
+    campaignId: string,
+    accessMode: AccessMode
+  ) => {
+    setActioningId(`${teamId}:${campaignId}`)
+    setActionError(null)
+    try {
+      const res = await fetch('/api/teams/campaigns/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teamId, campaignId, accessMode }),
+      })
+      const data = await res.json()
+      if (!data.success) {
+        setActionError(data.error || 'Failed to update access')
+        return
+      }
+      await loadTeams()
+    } catch (err: any) {
+      setActionError(err.message || 'Failed to update access')
+    } finally {
+      setActioningId(null)
+    }
+  }
+
+  const detachCampaign = (teamId: string, campaignId: string, campaignName: string) => {
+    setConfirmState({
+      title: 'DETACH CAMPAIGN',
+      body: `Detach "${campaignName}" from this team? Member access to this campaign will be revoked. Owner-paid seat subs tied to this campaign end at period close. Refunds for partial periods are only available via dispute through the cardholder's bank. Type "remove" to confirm.`,
+      confirmWord: 'remove',
+      danger: true,
+      onConfirm: async () => {
+        const res = await fetch('/api/teams/campaigns/detach', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ teamId, campaignId, confirm: 'remove' }),
+        })
+        const data = await res.json()
+        if (!data.success) throw new Error(data.error || 'Failed to detach')
+        await loadTeams()
+      },
+    })
+  }
+
+  const submitConfirm = async () => {
+    if (!confirmState) return
+    if (confirmInput.trim().toLowerCase() !== confirmState.confirmWord.toLowerCase()) return
+    setConfirmSubmitting(true)
+    setActionError(null)
+    try {
+      await confirmState.onConfirm()
+      setConfirmState(null)
+      setConfirmInput('')
+    } catch (err: any) {
+      setActionError(err.message || 'Action failed')
+    } finally {
+      setConfirmSubmitting(false)
+    }
+  }
+
+  const openEditModal = (team: OwnedTeam) => {
+    setEditTeam(team)
+    setEditName(team.name)
+    setEditDesc(team.description || '')
+    setEditError(null)
+  }
+
+  const submitEdit = async () => {
+    if (!editTeam) return
+    setEditSubmitting(true)
+    setEditError(null)
+    try {
+      const res = await fetch(`/api/teams/${editTeam.id}/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: editName.trim(), description: editDesc.trim() || null }),
+      })
+      const data = await res.json()
+      if (!data.success) {
+        setEditError(data.error || 'Failed to update')
+        return
+      }
+      setEditTeam(null)
+      await loadTeams()
+    } catch (err: any) {
+      setEditError(err.message || 'Failed to update')
+    } finally {
+      setEditSubmitting(false)
+    }
+  }
+
+  const startDeleteTeam = (team: OwnedTeam) => {
+    setDeleteTeamStage({ team, stage: 'confirm' })
+    setDeleteTypedConfirm('')
+  }
+
+  const proceedToDeleteType = () => {
+    if (!deleteTeamStage) return
+    setDeleteTeamStage({ ...deleteTeamStage, stage: 'type' })
+  }
+
+  const submitDeleteTeam = async () => {
+    if (!deleteTeamStage) return
+    if (deleteTypedConfirm.trim().toLowerCase() !== 'delete') return
+    setDeleteSubmitting(true)
+    setActionError(null)
+    try {
+      const res = await fetch(`/api/teams/${deleteTeamStage.team.id}/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: 'remove' }),
+      })
+      const data = await res.json()
+      if (!data.success) throw new Error(data.error || 'Failed to delete')
+      setDeleteTeamStage(null)
+      setDeleteTypedConfirm('')
+      await loadTeams()
+    } catch (err: any) {
+      setActionError(err.message || 'Failed to delete')
+    } finally {
+      setDeleteSubmitting(false)
+    }
+  }
+
+  const allTeams: Team[] = [...ownedTeams, ...memberTeams]
+  const hasAnyTeam = allTeams.length > 0
+  const totalPending = ownedTeams.reduce((sum, t) => sum + t.pendingMembers.length, 0)
 
   return (
     <div style={{
-      width: '100%', minHeight: '100%', background: T.bg,
-      display: 'flex', flexDirection: 'column',
-      fontFamily: '"Segoe UI", Tahoma, sans-serif',
-      position: 'relative',
+      flex: 1,
+      background: T.bg,
+      minHeight: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'auto',
+      fontFamily: FUTURA,
+      color: T.text,
     }}>
-      {toast && (
-        <div style={{
-          position: 'absolute', top: 56, right: 12, zIndex: 200,
-          padding: '12px 18px', background: T.dark, color: '#32ff7e',
-          border: `1px solid ${T.green}`, borderRadius: 4,
-          fontSize: 11, fontWeight: 'bold', letterSpacing: 1,
-          fontFamily: 'monospace', boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
-          maxWidth: 480,
-        }}>
-          ✓ {toast}
-        </div>
-      )}
-
-      {!isManager && deleting && (
-        <div
-          style={{
-            position: 'fixed', inset: 0, zIndex: 100000,
-            background: 'rgba(0,0,0,0.6)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: 20,
-          }}
-          onClick={(e) => { if (e.target === e.currentTarget && !deleting.busy) cancelDelete() }}
-        >
-          <div style={{
-            width: '100%', maxWidth: 480,
-            background: T.dark, border: `1px solid ${T.red}`,
-            borderTop: `3px solid ${T.red}`, borderRadius: 4,
-            padding: 24, color: '#e0e2ea', boxSizing: 'border-box',
-          }}>
-            <div style={{
-              fontSize: 11, letterSpacing: 4, color: T.red,
-              fontWeight: 'bold', marginBottom: 14,
-            }}>
-              {deleting.step === 1 ? '⚠ CONFIRM DELETE' : '⚠ FINAL CONFIRMATION'}
-            </div>
-
-            {deleting.step === 1 ? (
-              <>
-                <div style={{ fontSize: 13, lineHeight: 1.6, color: '#c0c2ca', marginBottom: 18 }}>
-                  Permanently delete team <strong style={{ color: 'white' }}>&quot;{deleting.team.name}&quot;</strong>?
-                </div>
-                <div style={{
-                  background: '#1a1c24', border: `1px solid #2a2c34`,
-                  borderRadius: 3, padding: '10px 14px', marginBottom: 18,
-                  fontSize: 11, lineHeight: 1.7, color: '#a0a2aa',
-                  fontFamily: 'monospace',
-                }}>
-                  <div>OWNER: <span style={{ color: 'white' }}>{deleting.team.owner.name}</span></div>
-                  <div>MEMBERS: <span style={{ color: 'white' }}>{deleting.team.memberCount}</span></div>
-                  <div>CAMPAIGNS ATTACHED: <span style={{ color: 'white' }}>{deleting.team.campaignCount}</span></div>
-                  <div>ACTIVE PAID SEATS: <span style={{
-                    color: deleting.team.activeSeats > 0 ? '#ff6464' : 'white',
-                    fontWeight: deleting.team.activeSeats > 0 ? 'bold' : 'normal',
-                  }}>{deleting.team.activeSeats}</span></div>
-                  <div>WEEKLY REVENUE: <span style={{
-                    color: deleting.team.wrr_cents > 0 ? '#ffaa3e' : 'white',
-                    fontWeight: deleting.team.wrr_cents > 0 ? 'bold' : 'normal',
-                  }}>{fmtMoney(deleting.team.wrr_cents)}</span></div>
-                </div>
-
-                {deleting.team.activeSeats > 0 && (
-                  <div style={{
-                    background: 'rgba(138,26,26,0.2)',
-                    border: `1px solid ${T.red}`,
-                    borderLeft: `3px solid ${T.red}`,
-                    borderRadius: 3, padding: '10px 12px', marginBottom: 18,
-                    fontSize: 11, lineHeight: 1.6, color: '#ffaaaa',
-                  }}>
-                    <strong>⚠ This team has {deleting.team.activeSeats} active paid seat(s).</strong>
-                    {' '}Stripe charges will NOT be auto-cancelled. The owner will keep getting billed unless you cancel their subscriptions in Stripe manually.
-                  </div>
-                )}
-
-                <div style={{
-                  fontSize: 10, color: '#888a92', letterSpacing: 1, lineHeight: 1.5,
-                  marginBottom: 20,
-                }}>
-                  This will permanently remove the team, all member associations, and detach all campaigns. Seat charge history will be preserved for audit. This cannot be undone.
-                </div>
-
-                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-                  <button onClick={cancelDelete} style={modalBtnSecondary}>CANCEL</button>
-                  <button onClick={confirmDeleteStep1} style={modalBtnDanger}>YES, CONTINUE</button>
-                </div>
-              </>
-            ) : (
-              <>
-                <div style={{ fontSize: 13, lineHeight: 1.6, color: '#c0c2ca', marginBottom: 18 }}>
-                  Type <strong style={{ color: T.red, fontFamily: 'monospace' }}>remove</strong> below to permanently destroy <strong style={{ color: 'white' }}>&quot;{deleting.team.name}&quot;</strong>.
-                </div>
-
-                <input
-                  autoFocus
-                  type="text"
-                  placeholder="type: remove"
-                  value={deleting.confirmText}
-                  onChange={e => setDeleting({ ...deleting, confirmText: e.target.value, error: null })}
-                  onKeyDown={e => { if (e.key === 'Enter' && !deleting.busy) executeDelete() }}
-                  disabled={deleting.busy}
-                  style={{
-                    width: '100%', padding: '12px 14px',
-                    background: '#1a1c24', border: `1px solid ${T.red}`,
-                    borderRadius: 3, fontFamily: 'monospace', fontSize: 14,
-                    color: 'white', outline: 'none', letterSpacing: 2,
-                    marginBottom: 12, boxSizing: 'border-box',
-                  }}
-                />
-
-                {deleting.error && (
-                  <div style={{
-                    padding: '8px 12px', background: 'rgba(138,26,26,0.2)',
-                    border: `1px solid ${T.red}`, borderRadius: 3,
-                    fontSize: 11, color: '#ffaaaa', marginBottom: 14,
-                  }}>{deleting.error}</div>
-                )}
-
-                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-                  <button onClick={cancelDelete} disabled={deleting.busy} style={modalBtnSecondary}>CANCEL</button>
-                  <button
-                    onClick={executeDelete}
-                    disabled={deleting.busy || deleting.confirmText.trim().toLowerCase() !== 'remove'}
-                    style={{
-                      ...modalBtnDanger,
-                      opacity: (deleting.busy || deleting.confirmText.trim().toLowerCase() !== 'remove') ? 0.5 : 1,
-                      cursor: (deleting.busy || deleting.confirmText.trim().toLowerCase() !== 'remove') ? 'not-allowed' : 'pointer',
-                    }}
-                  >
-                    {deleting.busy ? 'DELETING...' : '■ DESTROY TEAM'}
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
+      {/* C6: header strip bound to var(--brand-header-bg); stats to var(--brand-on-header-muted) */}
       <div style={{
-        background: T.dark, padding: '12px 20px',
-        borderBottom: `2px solid ${T.accent}`,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        gap: 16, flexWrap: 'wrap',
+        background: 'var(--brand-header-bg)',
+        padding: '12px 20px',
+        borderBottom: '2px solid var(--brand-header-top-accent)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 16,
+        flexWrap: 'wrap',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <span style={{ fontSize: 11, fontWeight: 'bold', letterSpacing: 4, color: T.blue }}>TEAMS</span>
-          {data && (
-            <span style={{ fontSize: 10, fontFamily: 'monospace', color: T.onHeaderMuted, letterSpacing: 1 }}>
-              {data.platformTotals.teams} TEAMS · {data.platformTotals.activeSeats} ACTIVE SEATS · {fmtMoney(data.platformTotals.wrr_cents)}/WK
-            </span>
-          )}
+          <span style={{ fontSize: 11, fontWeight: 'bold', letterSpacing: 4, color: T.blue }}>
+            TEAMS
+          </span>
+          <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--brand-on-header-muted)', letterSpacing: 1 }}>
+            {ownedTeams.length} OWNED · {memberTeams.length} MEMBER
+            {totalPending > 0 && ` · ${totalPending} PENDING`}
+          </span>
         </div>
+        <button
+          onClick={handleCreateTeamClick}
+          style={{
+            padding: '6px 14px',
+            background: 'transparent',
+            border: `1px solid ${T.blue}`,
+            borderRadius: 3,
+            color: T.blue,
+            fontSize: 10,
+            letterSpacing: 2,
+            fontWeight: 'bold',
+            cursor: 'pointer',
+            fontFamily: 'Futura PT, Futura, sans-serif',
+          }}
+        >+ CREATE A TEAM</button>
       </div>
 
-      <div style={{ flex: 1, padding: '16px 20px', maxWidth: 1200, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
+      <div style={{ flex: 1, padding: '16px 20px', maxWidth: 1000, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
 
-        {loading && (
-          <div style={{ padding: 40, textAlign: 'center', fontSize: 11, letterSpacing: 3, color: T.muted }}>
-            LOADING TEAMS...
+        {/* REDEEM CODE */}
+        <div style={{
+          background: T.surface,
+          border: `1px solid ${T.border}`,
+          borderTop: `3px solid ${T.blue}`,
+          borderRadius: 4,
+          padding: '16px 20px',
+          marginBottom: 16,
+        }}>
+          <div style={{ fontSize: 10, letterSpacing: 3, color: T.muted, fontWeight: 'bold', marginBottom: 8 }}>▸ HAVE A CODE?</div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <input
+              type="text"
+              placeholder="Enter team code"
+              value={redeemCode}
+              onChange={e => setRedeemCode(e.target.value.toUpperCase())}
+              onKeyDown={e => { if (e.key === 'Enter') handleRedeem() }}
+              disabled={redeeming}
+              style={{
+                flex: '1 1 200px', minWidth: 0, padding: '14px 16px',
+                background: T.bg, border: `1px solid ${T.border}`, borderRadius: 3,
+                fontFamily: 'monospace', fontSize: 18, color: T.text, outline: 'none',
+                letterSpacing: 2, textTransform: 'uppercase', boxSizing: 'border-box',
+              }}
+            />
+            <button
+              onClick={handleRedeem}
+              disabled={!redeemCode.trim() || redeeming}
+              style={{
+                padding: '14px 24px', background: T.dark, border: 'none', borderRadius: 3,
+                borderTop: `3px solid ${T.blue}`, color: T.blue,
+                fontSize: 13, fontWeight: 'bold', letterSpacing: 3,
+                cursor: !redeemCode.trim() || redeeming ? 'not-allowed' : 'pointer',
+                opacity: !redeemCode.trim() || redeeming ? 0.5 : 1,
+                fontFamily: 'Futura PT, Futura, sans-serif',
+              }}
+            >{redeeming ? '...' : 'REDEEM'}</button>
+          </div>
+          {redeemMessage && (
+            <div style={{
+              marginTop: 10, padding: '8px 12px', borderRadius: 3, fontSize: 11, letterSpacing: 1,
+              background:
+                redeemMessage.type === 'success' ? '#e8f5e8' :
+                redeemMessage.type === 'error' ? '#f8e8e8' : '#e8eef8',
+              border: `1px solid ${
+                redeemMessage.type === 'success' ? T.green :
+                redeemMessage.type === 'error' ? T.red : T.accent
+              }`,
+              color:
+                redeemMessage.type === 'success' ? T.green :
+                redeemMessage.type === 'error' ? T.red : T.accent,
+            }}>{redeemMessage.text}</div>
+          )}
+        </div>
+
+        {actionError && (
+          <div style={{
+            background: '#f8e8e8', border: `1px solid ${T.red}`, color: T.red,
+            padding: '10px 14px', borderRadius: 3, fontSize: 12, letterSpacing: 1,
+            marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12,
+          }}>
+            <span>{actionError}</span>
+            <button onClick={() => setActionError(null)} style={{
+              background: 'transparent', border: 'none', color: T.red,
+              cursor: 'pointer', fontSize: 16, fontFamily: 'inherit',
+            }}>×</button>
           </div>
         )}
 
-        {error && (
-          <div style={{
-            padding: 16, fontSize: 12, color: T.red, background: '#f8e8e8',
-            border: `1px solid ${T.red}`, borderRadius: 4,
-          }}>{error}</div>
+        {memberTeams.length > 0 && (
+          <div style={{ marginBottom: 24 }}>
+            <div style={{
+              fontSize: 10, letterSpacing: 3, color: T.muted, fontWeight: 'bold',
+              marginBottom: 10, paddingLeft: 4,
+            }}>▸ TEAMS YOU&apos;VE JOINED</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {memberTeams.map(team => (
+                <Link key={team.id} href={`/dashboard/teams/${team.id}/analytics`} style={{ textDecoration: 'none' }}>
+                  <div style={{
+                    background: T.surface, border: `1px solid ${T.border}`,
+                    borderLeft: `3px solid ${T.accent}`, borderRadius: 3,
+                    padding: '14px 16px', display: 'flex', alignItems: 'center',
+                    justifyContent: 'space-between', gap: 12, cursor: 'pointer',
+                  }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{
+                        fontSize: 14, fontWeight: 'bold', color: T.text,
+                        letterSpacing: 1, marginBottom: 3,
+                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                      }}>{team.name}</div>
+                      {team.description && (
+                        <div style={{
+                          fontSize: 11, color: T.muted, letterSpacing: 0.5,
+                          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                        }}>{team.description}</div>
+                      )}
+                    </div>
+                    <div style={{
+                      padding: '3px 10px', borderRadius: 3, fontSize: 9, fontWeight: 'bold', letterSpacing: 2,
+                      background: 'rgba(42,74,138,0.12)', color: T.accent, border: `1px solid ${T.accent}`,
+                      whiteSpace: 'nowrap',
+                    }}>MEMBER</div>
+                    <div style={{ fontSize: 16, color: T.muted }}>›</div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
         )}
 
-        {!loading && !error && data && (
-          <>
+        {ownedTeams.length > 0 && (
+          <div style={{ marginBottom: 24 }}>
             <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-              gap: 10, marginBottom: 18,
-            }}>
-              <PlatformStat label={`${totalsLabel} TEAMS`} value={data.platformTotals.teams.toString()} accent={T.blue} />
-              <PlatformStat label="ACTIVE SEATS" value={data.platformTotals.activeSeats.toString()} accent={T.green} />
-              <PlatformStat label="PENDING SEATS" value={data.platformTotals.pendingSeats.toString()} accent={T.amber} />
-              <PlatformStat label="WEEKLY RECURRING" value={fmtMoney(data.platformTotals.wrr_cents)} accent={T.accent} subtitle="EXCL. COUPON'D" />
-              <PlatformStat label="EST. MONTHLY" value={fmtMoney(data.platformTotals.mrr_cents)} accent={T.accent} subtitle="EXCL. COUPON'D" />
-            </div>
+              fontSize: 10, letterSpacing: 3, color: T.muted, fontWeight: 'bold',
+              marginBottom: 10, paddingLeft: 4,
+            }}>▸ TEAMS YOU OWN</div>
 
-            <div style={{
-              display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap',
-            }}>
-              <input
-                type="text"
-                placeholder="Search team, owner, or code..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                style={{
-                  flex: '1 1 200px', minWidth: 0,
-                  padding: '8px 12px',
-                  background: T.surface, border: `1px solid ${T.border}`, borderRadius: 3,
-                  fontFamily: 'monospace', fontSize: 12, color: T.text, outline: 'none',
-                }}
-              />
-              <select
-                value={sortKey}
-                onChange={e => setSortKey(e.target.value as SortKey)}
-                style={{
-                  padding: '8px 12px',
-                  background: T.surface, border: `1px solid ${T.border}`, borderRadius: 3,
-                  fontFamily: 'monospace', fontSize: 11, color: T.text,
-                  letterSpacing: 1, cursor: 'pointer',
-                }}
-              >
-                <option value="wrr">SORT: REVENUE ↓</option>
-                <option value="members">SORT: MEMBERS ↓</option>
-                <option value="seats">SORT: ACTIVE SEATS ↓</option>
-                <option value="created">SORT: NEWEST</option>
-                <option value="name">SORT: NAME A-Z</option>
-              </select>
-            </div>
-
-            {teams.length === 0 ? (
-              <div style={{
-                background: T.surface, border: `1px dashed ${T.border}`, borderRadius: 4,
-                padding: '32px 24px', textAlign: 'center',
-              }}>
-                <div style={{ fontSize: 32, marginBottom: 8 }}>🏢</div>
-                <div style={{ fontSize: 13, fontWeight: 'bold', letterSpacing: 3, color: T.muted, marginBottom: 6 }}>
-                  {search ? 'NO TEAMS MATCH' : (isManager ? 'NO TEAMS LINKED TO YOUR TENANT YET' : 'NO TEAMS ON PLATFORM YET')}
-                </div>
+            {loading ? (
+              <div style={{ padding: 20, textAlign: 'center', fontSize: 11, letterSpacing: 2, color: T.muted }}>
+                LOADING...
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {teams.map(team => {
-                  const isExpanded = !!expanded[team.id]
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {ownedTeams.map(team => {
+                  const isExpanded = !!expandedTeams[team.id]
+                  const pendingCount = team.pendingMembers.length
+                  const memberCount = team.members.length
+                  const codeCount = team.codes.length
+                  const campaignCount = team.teamCampaigns.length
+                  const campaignNameById: Record<string, string> = {}
+                  for (const tc of team.teamCampaigns) {
+                    if (tc.campaign) campaignNameById[tc.campaignId] = tc.campaign.name
+                  }
+
                   return (
                     <div key={team.id} style={{
                       background: T.surface, border: `1px solid ${T.border}`,
-                      borderLeft: `3px solid ${team.activeSeats > 0 ? T.green : T.muted}`,
-                      borderRadius: 3, overflow: 'hidden',
+                      borderLeft: `3px solid ${T.blue}`, borderRadius: 3, overflow: 'hidden',
                     }}>
                       <div
-                        onClick={() => toggle(team.id)}
+                        onClick={() => toggleExpanded(team.id)}
                         style={{
-                          padding: '12px 16px', cursor: 'pointer', userSelect: 'none',
-                          display: 'flex', alignItems: 'center', gap: 12,
-                          background: isExpanded ? '#dde0e8' : T.surface,
+                          padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12,
+                          cursor: 'pointer', userSelect: 'none',
+                          background: isExpanded ? SURFACE_LIFT : T.surface,
                           borderBottom: isExpanded ? `1px solid ${T.border}` : 'none',
-                          flexWrap: 'wrap',
                         }}
                       >
                         <div style={{
@@ -493,196 +989,334 @@ export default function TeamsApp() {
                           transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
                           transition: 'transform 0.15s',
                         }}>›</div>
-                        <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{
-                            fontSize: 13, fontWeight: 'bold', color: T.text, letterSpacing: 0.5,
-                            display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
-                          }}>
-                            <span style={{
-                              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 280,
-                            }}>{team.name}</span>
-                            {team.ownerHasCoupon && (
-                              <span style={{
-                                fontSize: 8, padding: '2px 6px', borderRadius: 2,
-                                background: 'rgba(140,106,26,0.12)',
-                                color: T.amber, border: `1px solid ${T.amber}`,
-                                letterSpacing: 1.5, fontWeight: 'bold', fontFamily: 'monospace',
-                              }}>COUPON</span>
+                            fontSize: 14, fontWeight: 'bold', color: T.text,
+                            letterSpacing: 1, marginBottom: 3,
+                            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                          }}>{team.name}</div>
+                          <div style={{ fontSize: 10, color: T.muted, letterSpacing: 1, fontFamily: 'monospace' }}>
+                            {memberCount} MEMBER{memberCount === 1 ? '' : 'S'} · {codeCount} CODE{codeCount === 1 ? '' : 'S'} · {campaignCount} CAMPAIGN{campaignCount === 1 ? '' : 'S'}
+                            {pendingCount > 0 && (
+                              <span style={{ color: T.amber, fontWeight: 'bold' }}> · {pendingCount} PENDING</span>
                             )}
                           </div>
-                          <div style={{ fontSize: 10, color: T.muted, fontFamily: 'monospace', marginTop: 2 }}>
-                            {team.owner.name}{team.owner.email ? ` · ${team.owner.email}` : ''}
-                          </div>
                         </div>
-                        <Stat label="MEMBERS" value={team.memberCount.toString()} muted={team.memberCount === 0} />
-                        <Stat label="SEATS" value={team.activeSeats.toString()} accent={team.activeSeats > 0 ? T.green : undefined} />
-                        <Stat label="WRR" value={fmtMoney(team.wrr_cents)} accent={team.wrr_cents > 0 ? T.accent : undefined} />
-                        {!isManager && (
-                          <button
-                            onClick={(e) => startDelete(team, e)}
-                            style={{
-                              padding: '6px 12px',
-                              background: 'transparent', color: T.red,
-                              border: `1px solid ${T.red}`, borderRadius: 3,
-                              fontSize: 9, letterSpacing: 2, fontWeight: 'bold',
-                              cursor: 'pointer', fontFamily: 'inherit',
-                              whiteSpace: 'nowrap',
-                            }}
-                            title="Delete this team permanently"
-                          >■ DELETE</button>
-                        )}
+                        <Link
+                          href={`/dashboard/teams/${team.id}/analytics`}
+                          onClick={e => e.stopPropagation()}
+                          style={{
+                            padding: '5px 10px', background: 'transparent', border: `1px solid ${T.border}`,
+                            borderRadius: 3, color: T.muted,
+                            fontSize: 9, fontWeight: 'bold', letterSpacing: 2,
+                            textDecoration: 'none', whiteSpace: 'nowrap',
+                          }}
+                        >OPEN ›</Link>
+                        <div style={{
+                          padding: '3px 10px', borderRadius: 3, fontSize: 9, fontWeight: 'bold', letterSpacing: 2,
+                          background: 'var(--brand-primary-soft)', color: T.blue, border: `1px solid ${T.blue}`,
+                          whiteSpace: 'nowrap',
+                        }}>OWNER</div>
                       </div>
 
                       {isExpanded && (
-                        <div style={{ padding: '14px 18px' }}>
-                          <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-                            gap: 8, marginBottom: 14,
-                          }}>
-                            <DetailCell label="CREATED" value={fmtDate(team.createdAt)} />
-                            <DetailCell label="CAMPAIGNS" value={team.campaignCount.toString()} />
-                            <DetailCell label="PENDING SEATS" value={team.pendingSeats.toString()} accent={team.pendingSeats > 0 ? T.amber : undefined} />
-                            <DetailCell label="FAILED" value={team.failedSeats.toString()} accent={team.failedSeats > 0 ? T.red : undefined} />
-                            <DetailCell label="EST. MRR" value={fmtMoney(team.mrr_cents)} />
-                          </div>
+                        <div style={{ padding: '16px 18px', background: T.surface }}>
 
-                          <div style={{
-                            display: 'flex', alignItems: 'center', gap: 12,
-                            padding: '10px 14px',
-                            background: team.joinCode ? T.bg : '#f8f4e8',
-                            border: `1px solid ${team.joinCode ? T.border : T.amber}`,
-                            borderLeft: `3px solid ${team.joinCode ? T.blue : T.amber}`,
-                            borderRadius: 3, marginBottom: 14, flexWrap: 'wrap',
-                          }}>
-                            <div style={{ fontSize: 9, letterSpacing: 2, color: T.muted, fontWeight: 'bold' }}>
-                              JOIN CODE
-                            </div>
-                            {team.joinCode ? (
-                              <>
-                                <div style={{
-                                  fontFamily: 'monospace', fontSize: 16, fontWeight: 'bold',
-                                  color: T.text, letterSpacing: 3, userSelect: 'all',
-                                  padding: '4px 12px', background: T.surface, borderRadius: 3,
-                                  border: `1px solid ${T.border}`,
-                                }}>{team.joinCode}</div>
-                                <button
-                                  onClick={(e) => copyCode(team.joinCode!, e)}
-                                  style={{
-                                    padding: '5px 10px', border: `1px solid ${T.blue}`,
-                                    background: copiedCode === team.joinCode ? T.blue : 'transparent',
-                                    color: copiedCode === team.joinCode ? 'white' : T.blue,
-                                    fontSize: 9, letterSpacing: 2, fontWeight: 'bold',
-                                    borderRadius: 3, cursor: 'pointer',
-                                    fontFamily: 'inherit',
-                                  }}
-                                >{copiedCode === team.joinCode ? '✓ COPIED' : '⧉ COPY'}</button>
-                              </>
-                            ) : (
-                              <span style={{ fontSize: 11, color: T.amber, fontStyle: 'italic' }}>
-                                No active code (team owner must regenerate)
-                              </span>
-                            )}
-                          </div>
-
-                          {team.description && (
-                            <div style={{
-                              fontSize: 11, color: T.muted, lineHeight: 1.5,
-                              padding: '8px 12px', background: T.bg, borderRadius: 3, marginBottom: 14,
-                            }}>{team.description}</div>
+                          {pendingCount > 0 && (
+                            <Section title="PENDING REQUESTS" accent={T.amber}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                {team.pendingMembers.map(m => {
+                                  const code = team.codes.find(c => c.code === m.joined_via_code)
+                                  const isOwnerPays = code?.payer === 'owner'
+                                  return (
+                                    <div key={m.id} style={{
+                                      background: T.bg, border: `1px solid ${T.border}`,
+                                      borderLeft: `2px solid ${T.amber}`, borderRadius: 3,
+                                      padding: '10px 12px', display: 'flex', alignItems: 'center',
+                                      gap: 10, flexWrap: 'wrap',
+                                    }}>
+                                      <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+                                        <div style={{ fontSize: 13, fontWeight: 'bold', color: T.text, letterSpacing: 0.5 }}>
+                                          {displayName(m.user, m.user_id.slice(0, 12))}
+                                        </div>
+                                        <div style={{ fontSize: 10, color: T.muted, fontFamily: 'monospace', marginTop: 2 }}>
+                                          via {m.joined_via_code || 'unknown'} · {fmtDate(m.created_at)}
+                                          {isOwnerPays && (
+                                            <span style={{ color: T.amber, fontWeight: 'bold' }}>
+                                              {' · '}OWNER PAYS — accepting starts $35/wk charge
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <div style={{ display: 'flex', gap: 6 }}>
+                                        <button onClick={() => acceptMember(m)} disabled={actioningId === m.id} style={btnPrimary(actioningId === m.id)}>
+                                          {actioningId === m.id ? '...' : 'ACCEPT'}
+                                        </button>
+                                        <button onClick={() => rejectMember(m)} disabled={actioningId === m.id} style={btnDanger(actioningId === m.id)}>
+                                          REJECT
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            </Section>
                           )}
 
-                          <div style={{ marginBottom: 14 }}>
-                            <SectionTitle text={`MEMBERS (${team.members.length})`} />
-                            {team.members.length === 0 ? (
-                              <Empty text="No members on this team yet." />
+                          <Section
+                            title={`ATTACHED CAMPAIGNS (${campaignCount})`}
+                            accent={T.accent}
+                            action={(
+                              <button onClick={() => openAttachModal(team)} style={btnPrimary(false)}>+ ATTACH</button>
+                            )}
+                          >
+                            {campaignCount === 0 ? (
+                              <EmptyHint text="No campaigns attached. Attach a campaign to grant team members access to its leads." />
                             ) : (
-                              <div style={{ overflowX: 'auto' }}>
-                                <table style={tableStyle}>
-                                  <thead>
-                                    <tr style={{ borderBottom: `1px solid ${T.border}` }}>
-                                      <th style={thStyle}>NAME</th>
-                                      <th style={thStyle}>STATUS</th>
-                                      <th style={thStyle}>JOINED</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {team.members.map(m => (
-                                      <tr key={m.id} style={{ borderBottom: `1px solid ${T.border}` }}>
-                                        <td style={tdStyle}>
-                                          <div style={{ fontSize: 12, color: T.text }}>{m.name}</div>
-                                          {m.email && m.email !== m.name && (
-                                            <div style={{ fontSize: 10, color: T.muted, fontFamily: 'monospace' }}>{m.email}</div>
-                                          )}
-                                        </td>
-                                        <td style={tdStyle}>
-                                          <Badge color={
-                                            m.status === 'active' ? T.green :
-                                            m.status === 'pending' ? T.amber : T.muted
-                                          }>{m.status.toUpperCase()}</Badge>
-                                        </td>
-                                        <td style={{ ...tdStyle, fontSize: 11, color: T.muted, fontFamily: 'monospace' }}>
-                                          {m.acceptedAt ? fmtDate(m.acceptedAt) : '—'}
-                                        </td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                {team.teamCampaigns.map(tc => {
+                                  const busy = actioningId === `${team.id}:${tc.campaignId}`
+                                  return (
+                                    <div key={tc.campaignId} style={{
+                                      background: T.bg, border: `1px solid ${T.border}`, borderRadius: 3,
+                                      padding: '8px 12px', display: 'flex', alignItems: 'center',
+                                      gap: 10, flexWrap: 'wrap',
+                                    }}>
+                                      <div style={{ flex: '1 1 180px', minWidth: 0 }}>
+                                        <div style={{
+                                          fontSize: 12, fontWeight: 'bold', color: T.text, letterSpacing: 0.5,
+                                          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                        }}>
+                                          {tc.campaign?.name || '(deleted campaign)'}
+                                        </div>
+                                        {tc.campaign && (
+                                          <div style={{ fontSize: 10, color: T.muted, fontFamily: 'monospace', marginTop: 2 }}>
+                                            {tc.campaign.called_leads} / {tc.campaign.total_leads} called
+                                          </div>
+                                        )}
+                                      </div>
+                                      <select
+                                        value={tc.accessMode}
+                                        onChange={e => updateCampaignAccess(team.id, tc.campaignId, e.target.value as AccessMode)}
+                                        disabled={busy}
+                                        style={{
+                                          padding: '5px 8px', background: T.surface,
+                                          border: `1px solid ${T.border}`, borderRadius: 3,
+                                          fontSize: 10, fontFamily: 'monospace', letterSpacing: 1,
+                                          color: T.text, cursor: busy ? 'not-allowed' : 'pointer',
+                                        }}
+                                      >
+                                        <option value="owner_pays">OWNER PAYS</option>
+                                        <option value="agent_pays">AGENT PAYS</option>
+                                        <option value="public">PUBLIC</option>
+                                        <option value="free">FREE</option>
+                                      </select>
+                                      <button
+                                        onClick={() => detachCampaign(team.id, tc.campaignId, tc.campaign?.name || 'this campaign')}
+                                        disabled={busy}
+                                        style={btnSubtle(busy, T.red)}
+                                      >DETACH</button>
+                                    </div>
+                                  )
+                                })}
                               </div>
                             )}
+                          </Section>
+
+                          <Section
+                            title={`CODES (${codeCount})`}
+                            accent={T.accent}
+                            action={(
+                              <button onClick={() => openCodeModal(team)} style={btnPrimary(false)}>+ NEW CODE</button>
+                            )}
+                          >
+                            {codeCount === 0 ? (
+                              <EmptyHint text="No active codes. Create one to invite agents." />
+                            ) : (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                {team.codes.map(c => {
+                                  const camp = c.campaign_id
+                                    ? team.teamCampaigns.find(tc => tc.campaignId === c.campaign_id)?.campaign
+                                    : null
+                                  const isSingleUse = c.max_uses === 1
+                                  const isExhausted = c.max_uses !== null && c.use_count >= c.max_uses
+                                  const joinLink = typeof window !== 'undefined'
+                                    ? `${window.location.origin}/join/${c.code}`
+                                    : `/join/${c.code}`
+                                  return (
+                                    <div key={c.id} style={{
+                                      background: T.bg, border: `1px solid ${T.border}`, borderRadius: 3,
+                                      padding: '8px 12px', display: 'flex', alignItems: 'center',
+                                      gap: 10, flexWrap: 'wrap',
+                                    }}>
+                                      <div
+                                        onClick={() => copyCode(c.code)}
+                                        style={{
+                                          flex: '1 1 180px', minWidth: 0,
+                                          fontFamily: 'monospace', fontSize: 14, fontWeight: 'bold',
+                                          letterSpacing: 2, color: T.text,
+                                          cursor: 'pointer', padding: '4px 8px',
+                                          background: copiedCode === c.code ? '#e8f5e8' : 'transparent',
+                                          borderRadius: 3, transition: 'background 0.15s',
+                                          opacity: isExhausted ? 0.5 : 1,
+                                          textDecoration: isExhausted ? 'line-through' : 'none',
+                                        }}
+                                        title="Click to copy"
+                                      >
+                                        {c.code}
+                                        {copiedCode === c.code && (
+                                          <span style={{ marginLeft: 8, fontSize: 9, color: T.green, letterSpacing: 1 }}>COPIED</span>
+                                        )}
+                                      </div>
+                                      <Badge color={c.code_type === 'seat' ? T.blue : T.accent}>{c.code_type.toUpperCase()}</Badge>
+                                      <Badge color={c.payer === 'owner' ? T.green : T.amber}>{c.payer === 'owner' ? 'OWNER PAYS' : 'AGENT PAYS'}</Badge>
+                                      {isSingleUse && (
+                                        <Badge color={isExhausted ? T.red : T.blue}>
+                                          {isExhausted ? 'USED' : 'SINGLE-USE'}
+                                        </Badge>
+                                      )}
+                                      {camp && <Badge color={T.muted}>{camp.name}</Badge>}
+                                      <div style={{ display: 'flex', gap: 6 }}>
+                                        {isSingleUse && !isExhausted && (
+                                          <button
+                                            onClick={() => copyText(joinLink, `link-${c.id}`)}
+                                            style={btnSubtle(false, T.blue)}
+                                            title="Copy the one-time join link"
+                                          >{copiedCode === `link-${c.id}` ? 'COPIED' : 'COPY LINK'}</button>
+                                        )}
+                                        <button onClick={() => regenerateCode(c)} disabled={actioningId === c.id} style={btnSubtle(actioningId === c.id, T.muted)}>
+                                          REGEN
+                                        </button>
+                                        <button onClick={() => deleteCode(c)} disabled={actioningId === c.id} style={btnSubtle(actioningId === c.id, T.red)}>
+                                          DELETE
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            )}
+                          </Section>
+
+                          <Section title={`ACTIVE MEMBERS (${memberCount})`} accent={T.accent}>
+                            {memberCount === 0 ? (
+                              <EmptyHint text="No active members yet. Generate a code and share it with an agent to get started." />
+                            ) : (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                {team.members.map(m => {
+                                  const accessCount = m.campaignAccess.length
+                                  const hasAccess = accessCount > 0
+                                  const accessibleIds = new Set(m.campaignAccess.map(a => a.campaignId))
+                                  const remainingCampaigns = team.teamCampaigns.filter(tc => !accessibleIds.has(tc.campaignId))
+                                  const canAddMore = remainingCampaigns.length > 0
+                                  const isReinstating = actioningId === m.id
+
+                                  return (
+                                    <div key={m.id} style={{
+                                      background: T.bg,
+                                      border: `1px solid ${T.border}`,
+                                      borderLeft: `3px solid ${hasAccess ? T.green : T.amber}`,
+                                      borderRadius: 3,
+                                      padding: '10px 12px',
+                                      display: 'flex', flexDirection: 'column', gap: 8,
+                                    }}>
+                                      <div style={{
+                                        display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+                                      }}>
+                                        <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+                                          <div style={{
+                                            fontSize: 12, fontWeight: 'bold', color: T.text, letterSpacing: 0.5,
+                                            display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
+                                          }}>
+                                            {displayName(m.user, m.user_id.slice(0, 12))}
+                                            {!hasAccess && (
+                                              <Badge color={T.amber}>NO ACCESS</Badge>
+                                            )}
+                                          </div>
+                                          <div style={{ fontSize: 10, color: T.muted, fontFamily: 'monospace', marginTop: 2 }}>
+                                            joined {m.accepted_at ? fmtDate(m.accepted_at) : fmtDate(m.created_at)}
+                                            {m.joined_via_code && ` · via ${m.joined_via_code}`}
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                                          {!hasAccess && campaignCount > 0 && (
+                                            <button
+                                              onClick={() => reinstateMember(team, m)}
+                                              disabled={isReinstating}
+                                              style={btnPrimary(isReinstating)}
+                                              title={team.teamCampaigns.length === 1 ? 'Click to reinstate access' : 'Choose a campaign to grant access'}
+                                            >
+                                              {isReinstating ? '...' : '↻ REINSTATE'}
+                                            </button>
+                                          )}
+                                          {hasAccess && canAddMore && (
+                                            <button
+                                              onClick={() => openGrantModal(team, m)}
+                                              style={btnSubtle(false, T.blue)}
+                                              title="Add this member to another campaign"
+                                            >
+                                              + ADD CAMPAIGN
+                                            </button>
+                                          )}
+                                          <button onClick={() => removeMember(m)} disabled={actioningId === m.id} style={btnSubtle(actioningId === m.id, T.red)}>
+                                            KICK
+                                          </button>
+                                        </div>
+                                      </div>
+
+                                      {hasAccess && (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                          {m.campaignAccess.map(a => {
+                                            const cName = campaignNameById[a.campaignId] || 'Unknown campaign'
+                                            const payerLabel = a.payer === 'owner' ? 'OWNER PAYS'
+                                              : a.payer === 'agent' ? 'AGENT PAYS'
+                                              : 'FREE'
+                                            const payerColor = a.payer === 'owner' ? T.green
+                                              : a.payer === 'agent' ? T.amber
+                                              : T.accent
+                                            return (
+                                              <div key={a.id} style={{
+                                                background: T.surface,
+                                                border: `1px solid ${T.border}`,
+                                                borderRadius: 2,
+                                                padding: '5px 8px',
+                                                display: 'flex', alignItems: 'center', gap: 8,
+                                                flexWrap: 'wrap',
+                                              }}>
+                                                <span style={{
+                                                  flex: '1 1 120px', minWidth: 0,
+                                                  fontSize: 11, color: T.text, fontWeight: 500,
+                                                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                                }}>{cName}</span>
+                                                <Badge color={payerColor}>{payerLabel}</Badge>
+                                                <button
+                                                  onClick={() => revokeAccess(team, m, a, cName)}
+                                                  style={btnSubtle(false, T.red)}
+                                                >REVOKE</button>
+                                              </div>
+                                            )
+                                          })}
+                                        </div>
+                                      )}
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            )}
+                          </Section>
+
+                          <div style={{
+                            marginTop: 18, paddingTop: 14, borderTop: `1px solid ${T.border}`,
+                            display: 'flex', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap',
+                          }}>
+                            <button onClick={() => openEditModal(team)} style={btnSubtle(false, T.muted)}>
+                              EDIT TEAM
+                            </button>
+                            <button onClick={() => startDeleteTeam(team)} style={btnSubtle(false, T.red)}>
+                              DELETE TEAM
+                            </button>
                           </div>
 
-                          <div>
-                            <SectionTitle text={`SEAT CHARGES (${team.seats.length})`} />
-                            {team.seats.length === 0 ? (
-                              <Empty text="No seat subscriptions yet." />
-                            ) : (
-                              <div style={{ overflowX: 'auto' }}>
-                                <table style={tableStyle}>
-                                  <thead>
-                                    <tr style={{ borderBottom: `1px solid ${T.border}` }}>
-                                      <th style={thStyle}>AGENT</th>
-                                      <th style={thStyle}>STATUS</th>
-                                      <th style={thStyle}>$/WEEK</th>
-                                      <th style={thStyle}>PERIOD</th>
-                                      <th style={thStyle}>STRIPE SUB</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {team.seats.map(s => (
-                                      <tr key={s.id} style={{ borderBottom: `1px solid ${T.border}` }}>
-                                        <td style={tdStyle}>
-                                          <div style={{ fontSize: 12, color: T.text }}>{s.agentName}</div>
-                                          {s.agentEmail && s.agentEmail !== s.agentName && (
-                                            <div style={{ fontSize: 10, color: T.muted, fontFamily: 'monospace' }}>{s.agentEmail}</div>
-                                          )}
-                                        </td>
-                                        <td style={tdStyle}>
-                                          <Badge color={
-                                            s.status === 'paid' ? T.green :
-                                            s.status === 'pending' ? T.amber :
-                                            s.status === 'failed' ? T.red : T.muted
-                                          }>{s.status.toUpperCase()}</Badge>
-                                        </td>
-                                        <td style={{ ...tdStyle, fontFamily: 'monospace', fontSize: 11 }}>
-                                          {fmtMoney(s.amountCents)}
-                                        </td>
-                                        <td style={{ ...tdStyle, fontSize: 10, color: T.muted, fontFamily: 'monospace' }}>
-                                          {fmtDate(s.periodStart)} → {fmtDate(s.periodEnd)}
-                                        </td>
-                                        <td style={{ ...tdStyle, fontFamily: 'monospace', fontSize: 10, color: T.muted }}>
-                                          {s.stripeSubscriptionId
-                                            ? <span title={s.stripeSubscriptionId}>{s.stripeSubscriptionId.slice(0, 14)}…</span>
-                                            : <span style={{ color: T.amber }}>NOT WIRED</span>
-                                          }
-                                        </td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              </div>
-                            )}
-                          </div>
                         </div>
                       )}
                     </div>
@@ -690,82 +1324,548 @@ export default function TeamsApp() {
                 })}
               </div>
             )}
-          </>
+          </div>
         )}
-      </div>
-    </div>
-  )
-}
 
-function PlatformStat({ label, value, accent, subtitle }: { label: string; value: string; accent: string; subtitle?: string }) {
-  return (
-    <div style={{
-      padding: '12px 14px',
-      background: T.surface, border: `1px solid ${T.border}`,
-      borderTop: `3px solid ${accent}`, borderRadius: 3,
-    }}>
-      <div style={{ fontSize: 9, letterSpacing: 2, color: T.muted, fontWeight: 'bold', marginBottom: 6 }}>
-        {label}
+        {!loading && !hasAnyTeam && (
+          <div style={{
+            background: T.surface, border: `1px dashed ${T.border}`,
+            borderRadius: 4, padding: '32px 24px', textAlign: 'center', marginBottom: 16,
+          }}>
+            <div style={{ fontSize: 13, fontWeight: 'bold', letterSpacing: 3, color: T.muted, marginBottom: 6 }}>
+              NO TEAMS YET
+            </div>
+            <div style={{ fontSize: 12, color: T.muted, letterSpacing: 0.5 }}>
+              Redeem a code above to join a team, or create your own.
+            </div>
+          </div>
+        )}
+
+        {/* ── ▸ WHAT IS A DIALERSEAT TEAM? — header row with FAQ link top-right ── */}
+        <div style={{
+          background: T.surface, border: `1px solid ${T.border}`,
+          borderLeft: `3px solid ${T.blue}`, borderRadius: 4,
+          padding: '28px 32px', marginBottom: 16,
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 14,
+            flexWrap: 'wrap',
+            marginBottom: 22,
+          }}>
+            <div style={{
+              fontSize: 13, letterSpacing: 4, color: T.muted, fontWeight: 'bold',
+            }}>▸ WHAT IS A DIALERSEAT TEAM?</div>
+            <Link
+              href="/faq/dialerseat-teams"
+              target="_blank"
+              rel="noopener"
+              style={{
+                padding: '8px 16px',
+                background: T.dark,
+                border: 'none',
+                borderTop: `3px solid ${T.blue}`,
+                borderRadius: 3,
+                color: T.blue,
+                fontSize: 10,
+                letterSpacing: 2.5,
+                fontWeight: 'bold',
+                textDecoration: 'none',
+                whiteSpace: 'nowrap',
+                fontFamily: FUTURA,
+              }}
+            >READ THE FULL FAQ →</Link>
+          </div>
+
+          <p style={{
+            fontSize: 18, lineHeight: 1.7, color: T.text, marginBottom: 24, marginTop: 0,
+          }}>
+            DialerSeat Teams lets lead vendors and agency owners distribute their premium lead campaign access to other agents on the platform. There are two ways teams work:
+          </p>
+
+          <div style={{ marginBottom: 22 }}>
+            <div style={{ fontSize: 15, fontWeight: 'bold', color: T.blue, letterSpacing: 2, marginBottom: 10 }}>
+              ▸ AS AN AGENT
+            </div>
+            <p style={{ fontSize: 16, lineHeight: 1.7, color: T.text, margin: 0 }}>
+              A team owner can give you access to their lead campaigns by sending you a code. Some team owners pay your $35 weekly seat for you. Others require you to subscribe yourself for $35 to access their leads. Either way, you join with a code from the team owner.
+            </p>
+          </div>
+
+          <div style={{ marginBottom: 22 }}>
+            <div style={{ fontSize: 15, fontWeight: 'bold', color: T.blue, letterSpacing: 2, marginBottom: 10 }}>
+              ▸ AS AN OWNER
+            </div>
+            <p style={{ fontSize: 16, lineHeight: 1.7, color: T.text, margin: 0 }}>
+              You generate your own leads and want to give other agents access to them — usually because you charge them above-cost as a lead vendor or agency. Build teams, attach your campaigns, generate codes for your agents. You decide per code: do you pay the $35 weekly seat for them, or do they pay it themselves?
+            </p>
+          </div>
+
+          <div style={{
+            background: T.bg, border: `1px solid ${T.border}`, borderRadius: 3,
+            padding: '14px 18px', marginTop: 22,
+          }}>
+            <div style={{ fontSize: 13, fontWeight: 'bold', color: T.muted, letterSpacing: 2, marginBottom: 8 }}>
+              COST
+            </div>
+            <p style={{ fontSize: 15, lineHeight: 1.6, color: T.text, margin: 0 }}>
+              <strong>$35 per active seat per week</strong>, paid to DialerSeat. Whether you (the owner) pay or your agent pays is up to you per agent and per campaign. Codes you create can be set to either payer.
+            </p>
+          </div>
+        </div>
       </div>
-      <div style={{
-        fontSize: 22, fontWeight: 'bold', color: accent, lineHeight: 1, fontFamily: 'monospace',
-      }}>{value}</div>
-      {subtitle && (
-        <div style={{ fontSize: 8, color: T.muted, letterSpacing: 1.5, marginTop: 4, fontFamily: 'monospace' }}>
-          {subtitle}
+
+      {/* SUB GATE MODAL */}
+      {showSubGate && (
+        <div onClick={() => setShowSubGate(false)} style={overlayStyle}>
+          <div onClick={e => e.stopPropagation()} style={{
+            ...modalShellStyle, background: T.dark, borderTop: `3px solid #ffaa3e`,
+            color: 'var(--brand-on-sidebar)', textAlign: 'center', maxWidth: 440,
+          }}>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>🔒</div>
+            <div style={{ fontSize: 14, fontWeight: 'bold', letterSpacing: 4, color: '#ffaa3e', marginBottom: 12 }}>
+              SUBSCRIPTION REQUIRED
+            </div>
+            <p style={{ fontSize: 12, lineHeight: 1.7, color: 'var(--brand-on-sidebar-muted)', letterSpacing: 1, marginBottom: 24 }}>
+              Creating teams requires an active personal subscription. Subscribe for $35/week to upload your own leads, build teams, and start selling seats to other agents.
+            </p>
+            <Link href="/billing" style={{
+              display: 'block', padding: '14px 24px',
+              background: 'transparent',
+              border: `1px solid #ffaa3e`, borderRadius: 4, color: '#ffaa3e',
+              fontSize: 12, fontWeight: 'bold', letterSpacing: 4, textDecoration: 'none', marginBottom: 10,
+              fontFamily: FUTURA,
+            }}>SUBSCRIBE — $35/WEEK</Link>
+            <button onClick={() => setShowSubGate(false)} style={{
+              background: 'transparent', border: 'none', color: 'var(--brand-on-sidebar-muted)',
+              fontSize: 11, letterSpacing: 2, cursor: 'pointer',
+              fontFamily: 'Futura PT, Futura, sans-serif', padding: 8,
+            }}>CLOSE</button>
+          </div>
+        </div>
+      )}
+
+      {/* CREATE TEAM MODAL */}
+      {showCreateModal && (
+        <div onClick={() => !creating && setShowCreateModal(false)} style={overlayStyle}>
+          <div onClick={e => e.stopPropagation()} style={{ ...modalShellStyle, borderTop: `3px solid ${T.blue}` }}>
+            <div style={{ fontSize: 12, fontWeight: 'bold', letterSpacing: 4, color: T.blue, marginBottom: 16 }}>+ CREATE A TEAM</div>
+            <FieldLabel>TEAM NAME</FieldLabel>
+            <input
+              type="text" value={createName} onChange={e => setCreateName(e.target.value)}
+              placeholder="Premium Leads" disabled={creating} autoFocus style={modalInput}
+            />
+            <div style={{ height: 12 }} />
+            <FieldLabel>DESCRIPTION</FieldLabel>
+            <textarea
+              value={createDesc} onChange={e => setCreateDesc(e.target.value)}
+              placeholder="What's this team for?" disabled={creating} rows={3}
+              style={{ ...modalInput, fontSize: 12, resize: 'vertical' }}
+            />
+            {createError && <ErrorInline text={createError} />}
+            <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+              <button onClick={() => setShowCreateModal(false)} disabled={creating} style={modalCancelBtn(creating)}>CANCEL</button>
+              <button onClick={handleCreateSubmit} disabled={!createName.trim() || creating} style={modalConfirmBtn(!createName.trim() || creating, T.blue)}>
+                {creating ? '...' : '▶ CREATE TEAM'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT TEAM MODAL */}
+      {editTeam && (
+        <div onClick={() => !editSubmitting && setEditTeam(null)} style={overlayStyle}>
+          <div onClick={e => e.stopPropagation()} style={{ ...modalShellStyle, borderTop: `3px solid ${T.blue}` }}>
+            <div style={{ fontSize: 12, fontWeight: 'bold', letterSpacing: 4, color: T.blue, marginBottom: 16 }}>EDIT TEAM</div>
+            <FieldLabel>TEAM NAME</FieldLabel>
+            <input
+              type="text" value={editName} onChange={e => setEditName(e.target.value)}
+              disabled={editSubmitting} autoFocus style={modalInput}
+            />
+            <div style={{ height: 12 }} />
+            <FieldLabel>DESCRIPTION</FieldLabel>
+            <textarea
+              value={editDesc} onChange={e => setEditDesc(e.target.value)}
+              disabled={editSubmitting} rows={3}
+              style={{ ...modalInput, fontSize: 12, resize: 'vertical' }}
+            />
+            {editError && <ErrorInline text={editError} />}
+            <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+              <button onClick={() => setEditTeam(null)} disabled={editSubmitting} style={modalCancelBtn(editSubmitting)}>CANCEL</button>
+              <button onClick={submitEdit} disabled={!editName.trim() || editSubmitting} style={modalConfirmBtn(!editName.trim() || editSubmitting, T.blue)}>
+                {editSubmitting ? '...' : '▶ SAVE'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TWO-STAGE DELETE TEAM MODAL */}
+      {deleteTeamStage && (
+        <div onClick={() => !deleteSubmitting && (setDeleteTeamStage(null), setDeleteTypedConfirm(''))} style={overlayStyle}>
+          <div onClick={e => e.stopPropagation()} style={{ ...modalShellStyle, borderTop: `3px solid ${T.red}` }}>
+            {deleteTeamStage.stage === 'confirm' ? (
+              <>
+                <div style={{ fontSize: 12, fontWeight: 'bold', letterSpacing: 4, color: T.red, marginBottom: 14 }}>
+                  DELETE TEAM
+                </div>
+                <p style={{ fontSize: 14, lineHeight: 1.6, color: T.text, margin: '0 0 8px 0' }}>
+                  Are you sure you want to delete <strong>{deleteTeamStage.team.name}</strong>?
+                </p>
+                <p style={{ fontSize: 12, lineHeight: 1.6, color: T.muted, margin: '0 0 16px 0' }}>
+                  All members lose access. Owner-paid seat subscriptions end at period close. Refunds for partial periods are only available via dispute through the cardholder&apos;s bank. This cannot be undone.
+                </p>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => setDeleteTeamStage(null)} style={modalCancelBtn(false)}>NO, KEEP TEAM</button>
+                  <button onClick={proceedToDeleteType} style={modalConfirmBtn(false, T.red)}>YES, DELETE →</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: 12, fontWeight: 'bold', letterSpacing: 4, color: T.red, marginBottom: 14 }}>
+                  CONFIRM DELETE
+                </div>
+                <p style={{ fontSize: 13, lineHeight: 1.6, color: T.text, margin: '0 0 14px 0' }}>
+                  Type <strong style={{ color: T.red, fontFamily: 'monospace' }}>delete</strong> to permanently remove <strong>{deleteTeamStage.team.name}</strong>.
+                </p>
+                <input
+                  type="text" value={deleteTypedConfirm}
+                  onChange={e => setDeleteTypedConfirm(e.target.value)}
+                  placeholder='type "delete"' autoFocus disabled={deleteSubmitting}
+                  style={modalInput}
+                />
+                {actionError && <ErrorInline text={actionError} />}
+                <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+                  <button onClick={() => { setDeleteTeamStage(null); setDeleteTypedConfirm('') }} disabled={deleteSubmitting} style={modalCancelBtn(deleteSubmitting)}>
+                    CANCEL
+                  </button>
+                  <button
+                    onClick={submitDeleteTeam}
+                    disabled={deleteSubmitting || deleteTypedConfirm.trim().toLowerCase() !== 'delete'}
+                    style={modalConfirmBtn(deleteSubmitting || deleteTypedConfirm.trim().toLowerCase() !== 'delete', T.red)}
+                  >{deleteSubmitting ? '...' : '▶ DELETE FOREVER'}</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* NEW CODE MODAL */}
+      {codeModalTeam && (
+        <div onClick={() => !codeCreating && setCodeModalTeam(null)} style={overlayStyle}>
+          <div onClick={e => e.stopPropagation()} style={{ ...modalShellStyle, borderTop: `3px solid ${T.blue}` }}>
+            <div style={{ fontSize: 12, fontWeight: 'bold', letterSpacing: 4, color: T.blue, marginBottom: 4 }}>+ NEW CODE</div>
+            <div style={{ fontSize: 11, color: T.muted, marginBottom: 18, letterSpacing: 1 }}>
+              for {codeModalTeam.name}
+            </div>
+
+            <FieldLabel>CODE TYPE</FieldLabel>
+            <SegmentedTwo
+              left={{ label: 'SEAT', value: 'seat', desc: 'Direct join — agent gets access immediately' }}
+              right={{ label: 'RECRUIT', value: 'recruit', desc: 'Owner approval required before access' }}
+              value={codeType} onChange={v => setCodeType(v as 'seat' | 'recruit')}
+            />
+
+            <div style={{ height: 14 }} />
+
+            <FieldLabel>WHO PAYS THE $35/WEEK?</FieldLabel>
+            <SegmentedTwo
+              left={{ label: 'OWNER PAYS', value: 'owner', desc: 'You pay the seat. Agent dials your leads.' }}
+              right={{ label: 'AGENT PAYS', value: 'agent', desc: 'Agent subscribes themselves to access.' }}
+              value={codePayer} onChange={v => setCodePayer(v as 'owner' | 'agent')}
+            />
+
+            <div style={{ height: 14 }} />
+
+            <FieldLabel>CAMPAIGN</FieldLabel>
+            <select
+              value={codeCampaignId}
+              onChange={e => setCodeCampaignId(e.target.value)}
+              disabled={codeCreating}
+              style={{ ...modalInput, fontSize: 12, padding: '10px 12px' }}
+            >
+              <option value="">All attached campaigns</option>
+              {codeCampaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+            <div style={{ fontSize: 10, color: T.muted, letterSpacing: 0.5, marginTop: 6, marginBottom: 16 }}>
+              Limit this code to one campaign, or leave blank for all attached.
+            </div>
+
+            <FieldLabel>LINK TYPE</FieldLabel>
+            <SegmentedTwo
+              left={{ label: 'REUSABLE', value: 'reuse', desc: 'Many agents can redeem this code.' }}
+              right={{ label: 'SINGLE-USE LINK', value: 'single', desc: 'One agent, auto-joins instantly. Best for partner per-seat links.' }}
+              value={codeSingleUse ? 'single' : 'reuse'}
+              onChange={v => setCodeSingleUse(v === 'single')}
+            />
+            {codeSingleUse && codeType === 'seat' && codePayer === 'owner' && (
+              <div style={{
+                marginTop: 10, padding: '8px 12px',
+                background: 'rgba(42,74,138,0.08)',
+                border: `1px solid ${T.accent}`, borderRadius: 3,
+                fontSize: 11, color: T.accent, lineHeight: 1.5,
+              }}>
+                ▸ This becomes a one-time join link. The agent who opens it joins
+                instantly with no approval, and your card covers their $35/wk seat.
+                Share it as: demo.dialerseat.com/join/&lt;CODE&gt;
+              </div>
+            )}
+            {codeSingleUse && !(codeType === 'seat' && codePayer === 'owner') && (
+              <div style={{
+                marginTop: 10, padding: '8px 12px',
+                background: 'rgba(138,106,26,0.1)',
+                border: `1px solid ${T.amber}`, borderRadius: 3,
+                fontSize: 11, color: T.amber, lineHeight: 1.5,
+              }}>
+                ▸ Single-use limits this code to one redemption. Instant auto-join
+                only applies to SEAT + OWNER PAYS codes; other combinations still
+                follow their normal flow (agent billing or owner approval).
+              </div>
+            )}
+            <div style={{ height: 14 }} />
+
+            {codeError && <ErrorInline text={codeError} />}
+
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setCodeModalTeam(null)} disabled={codeCreating} style={modalCancelBtn(codeCreating)}>CANCEL</button>
+              <button onClick={submitCreateCode} disabled={codeCreating} style={modalConfirmBtn(codeCreating, T.blue)}>
+                {codeCreating ? '...' : '▶ CREATE CODE'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ATTACH CAMPAIGN MODAL */}
+      {attachModalTeam && (
+        <div onClick={() => !attachSubmitting && setAttachModalTeam(null)} style={overlayStyle}>
+          <div onClick={e => e.stopPropagation()} style={{ ...modalShellStyle, borderTop: `3px solid ${T.blue}` }}>
+            <div style={{ fontSize: 12, fontWeight: 'bold', letterSpacing: 4, color: T.blue, marginBottom: 4 }}>+ ATTACH CAMPAIGN</div>
+            <div style={{ fontSize: 11, color: T.muted, marginBottom: 18, letterSpacing: 1 }}>
+              to {attachModalTeam.name}
+            </div>
+
+            {attachCampaigns.length === 0 ? (
+              <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.6, padding: '16px 0' }}>
+                You have no remaining campaigns to attach. Either all your campaigns are already attached, or you haven&apos;t created any yet.{' '}
+                <Link href="/dashboard/campaigns" style={{ color: T.blue }}>Go to campaigns →</Link>
+              </div>
+            ) : (
+              <>
+                <FieldLabel>CAMPAIGN</FieldLabel>
+                <select
+                  value={attachCampaignId}
+                  onChange={e => setAttachCampaignId(e.target.value)}
+                  disabled={attachSubmitting}
+                  style={{ ...modalInput, fontSize: 12, padding: '10px 12px', marginBottom: 14 }}
+                >
+                  <option value="">Select a campaign…</option>
+                  {attachCampaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+
+                <FieldLabel>ACCESS MODE</FieldLabel>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
+                  {([
+                    { v: 'owner_pays', t: 'OWNER PAYS', d: 'You pay $35/wk per agent who joins. Agents dial without paying.' },
+                    { v: 'agent_pays', t: 'AGENT PAYS', d: 'Agents must have their own $35/wk sub to access.' },
+                    { v: 'public', t: 'PUBLIC', d: 'Any active subscriber can access without a code.' },
+                    { v: 'free', t: 'FREE', d: 'No per-seat fee for owner or agents. Members still need their own $35/wk DialerSeat sub to dial — free here means free campaign access, not free platform access.' },
+                  ] as const).map(opt => (
+                    <label key={opt.v} style={{
+                      display: 'flex', gap: 10, padding: '10px 12px',
+                      background: attachAccessMode === opt.v ? SURFACE_LIFT : T.surface,
+                      border: `1px solid ${attachAccessMode === opt.v ? T.blue : T.border}`,
+                      borderRadius: 3, cursor: 'pointer',
+                    }}>
+                      <input
+                        type="radio" name="access_mode" value={opt.v}
+                        checked={attachAccessMode === opt.v}
+                        onChange={() => setAttachAccessMode(opt.v)}
+                        style={{ marginTop: 2 }}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 11, fontWeight: 'bold', letterSpacing: 2, color: T.text }}>{opt.t}</div>
+                        <div style={{ fontSize: 10, color: T.muted, marginTop: 2 }}>{opt.d}</div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {attachError && <ErrorInline text={attachError} />}
+
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setAttachModalTeam(null)} disabled={attachSubmitting} style={modalCancelBtn(attachSubmitting)}>CANCEL</button>
+              {attachCampaigns.length > 0 && (
+                <button
+                  onClick={submitAttach}
+                  disabled={attachSubmitting || !attachCampaignId}
+                  style={modalConfirmBtn(attachSubmitting || !attachCampaignId, T.blue)}
+                >{attachSubmitting ? '...' : '▶ ATTACH'}</button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* GRANT/ADD-CAMPAIGN MODAL */}
+      {grantTarget && (() => {
+        const accessibleIds = new Set(grantTarget.member.campaignAccess.map(a => a.campaignId))
+        const remaining = grantTarget.team.teamCampaigns.filter(tc => !accessibleIds.has(tc.campaignId))
+        const selectedTC = remaining.find(t => t.campaignId === grantCampaignId)
+        const selectedMode: AccessMode | undefined = selectedTC?.accessMode
+        return (
+          <div onClick={() => !grantSubmitting && setGrantTarget(null)} style={overlayStyle}>
+            <div onClick={e => e.stopPropagation()} style={{ ...modalShellStyle, borderTop: `3px solid ${T.blue}` }}>
+              <div style={{ fontSize: 12, fontWeight: 'bold', letterSpacing: 4, color: T.blue, marginBottom: 4 }}>
+                + ADD CAMPAIGN ACCESS
+              </div>
+              <div style={{ fontSize: 11, color: T.muted, marginBottom: 18, letterSpacing: 1 }}>
+                for {displayName(grantTarget.member.user, grantTarget.member.user_id.slice(0, 12))}
+              </div>
+
+              {remaining.length === 0 ? (
+                <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.6, padding: '12px 0' }}>
+                  This member already has access to all campaigns attached to this team.
+                </div>
+              ) : (
+                <>
+                  <FieldLabel>CAMPAIGN</FieldLabel>
+                  <select
+                    value={grantCampaignId}
+                    onChange={e => {
+                      setGrantCampaignId(e.target.value)
+                      const tc = remaining.find(t => t.campaignId === e.target.value)
+                      if (tc) setGrantPayer(payerForMode(tc.accessMode))
+                    }}
+                    disabled={grantSubmitting}
+                    style={{ ...modalInput, fontSize: 12, padding: '10px 12px', marginBottom: 14 }}
+                  >
+                    <option value="">Select a campaign…</option>
+                    {remaining.map(tc => (
+                      <option key={tc.campaignId} value={tc.campaignId}>
+                        {tc.campaign?.name || tc.campaignId}
+                        {tc.accessMode === 'free' ? ' — FREE' : ''}
+                      </option>
+                    ))}
+                  </select>
+
+                  {selectedMode === 'free' ? (
+                    <div style={{
+                      padding: '10px 12px',
+                      background: 'rgba(42,74,138,0.08)',
+                      border: `1px solid ${T.accent}`, borderRadius: 3,
+                      fontSize: 11, color: T.accent, lineHeight: 1.5,
+                    }}>
+                      ▸ FREE campaign — no per-seat charge to you or the agent. Agent still needs their own $35/wk DialerSeat sub to dial.
+                    </div>
+                  ) : (
+                    <>
+                      <FieldLabel>WHO PAYS THE $35/WEEK?</FieldLabel>
+                      <SegmentedTwo
+                        left={{ label: 'OWNER PAYS', value: 'owner', desc: 'Charged to your card immediately.' }}
+                        right={{ label: 'AGENT PAYS', value: 'agent', desc: 'Uses their existing $35/wk sub.' }}
+                        value={grantPayer === 'free' ? 'owner' : grantPayer}
+                        onChange={v => setGrantPayer(v as 'owner' | 'agent')}
+                      />
+
+                      {grantPayer === 'owner' && (
+                        <div style={{
+                          marginTop: 12, padding: '8px 12px',
+                          background: 'rgba(255,170,62,0.1)',
+                          border: `1px solid ${T.amber}`, borderRadius: 3,
+                          fontSize: 11, color: T.amber, lineHeight: 1.5,
+                        }}>
+                          ⚠ This will start a $35/wk charge on your card on file at the next billing cycle.
+                        </div>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
+
+              {grantError && <ErrorInline text={grantError} />}
+
+              <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+                <button onClick={() => setGrantTarget(null)} disabled={grantSubmitting} style={modalCancelBtn(grantSubmitting)}>
+                  CANCEL
+                </button>
+                {remaining.length > 0 && (
+                  <button
+                    onClick={submitGrant}
+                    disabled={grantSubmitting || !grantCampaignId}
+                    style={modalConfirmBtn(grantSubmitting || !grantCampaignId, T.blue)}
+                  >{grantSubmitting ? '...' : '▶ GRANT ACCESS'}</button>
+                )}
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* GENERIC TYPED CONFIRM MODAL */}
+      {confirmState && (
+        <div onClick={() => !confirmSubmitting && (setConfirmState(null), setConfirmInput(''))} style={overlayStyle}>
+          <div onClick={e => e.stopPropagation()} style={{
+            ...modalShellStyle,
+            borderTop: `3px solid ${confirmState.danger ? T.red : T.blue}`,
+          }}>
+            <div style={{
+              fontSize: 12, fontWeight: 'bold', letterSpacing: 4,
+              color: confirmState.danger ? T.red : T.blue, marginBottom: 14,
+            }}>{confirmState.title}</div>
+            <p style={{ fontSize: 13, lineHeight: 1.6, color: T.text, margin: '0 0 16px 0' }}>{confirmState.body}</p>
+            <input
+              type="text" value={confirmInput} onChange={e => setConfirmInput(e.target.value)}
+              placeholder={`type "${confirmState.confirmWord}"`}
+              autoFocus disabled={confirmSubmitting} style={modalInput}
+            />
+            {actionError && <ErrorInline text={actionError} />}
+            <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+              <button onClick={() => { setConfirmState(null); setConfirmInput('') }} disabled={confirmSubmitting} style={modalCancelBtn(confirmSubmitting)}>
+                CANCEL
+              </button>
+              <button
+                onClick={submitConfirm}
+                disabled={confirmSubmitting || confirmInput.trim().toLowerCase() !== confirmState.confirmWord.toLowerCase()}
+                style={modalConfirmBtn(
+                  confirmSubmitting || confirmInput.trim().toLowerCase() !== confirmState.confirmWord.toLowerCase(),
+                  confirmState.danger ? T.red : T.blue
+                )}
+              >{confirmSubmitting ? '...' : '▶ CONFIRM'}</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
   )
 }
 
-function Stat({ label, value, accent, muted }: { label: string; value: string; accent?: string; muted?: boolean }) {
+function Section({ title, accent, action, children }: {
+  title: string; accent: string; action?: React.ReactNode; children: React.ReactNode
+}) {
   return (
-    <div style={{
-      padding: '4px 12px', background: T.bg,
-      border: `1px solid ${T.border}`, borderRadius: 3,
-      minWidth: 70, textAlign: 'center',
-    }}>
-      <div style={{ fontSize: 8, letterSpacing: 2, color: T.muted, fontWeight: 'bold' }}>{label}</div>
-      <div style={{
-        fontSize: 13, fontWeight: 'bold', fontFamily: 'monospace',
-        color: muted ? T.muted : (accent || T.text),
-      }}>{value}</div>
-    </div>
-  )
-}
-
-function DetailCell({ label, value, accent }: { label: string; value: string; accent?: string }) {
-  return (
-    <div style={{
-      padding: '8px 10px', background: T.bg,
-      border: `1px solid ${T.border}`, borderRadius: 3,
-    }}>
-      <div style={{ fontSize: 8, letterSpacing: 2, color: T.muted, fontWeight: 'bold', marginBottom: 4 }}>
-        {label}
+    <div style={{ marginBottom: 18 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, gap: 10 }}>
+        <div style={{ fontSize: 10, letterSpacing: 3, color: accent, fontWeight: 'bold' }}>▸ {title}</div>
+        {action}
       </div>
-      <div style={{
-        fontSize: 12, fontWeight: 'bold', fontFamily: 'monospace',
-        color: accent || T.text,
-      }}>{value}</div>
+      {children}
     </div>
   )
 }
 
-function SectionTitle({ text }: { text: string }) {
+function EmptyHint({ text }: { text: string }) {
   return (
     <div style={{
-      fontSize: 10, letterSpacing: 3, color: T.muted, fontWeight: 'bold', marginBottom: 8,
-    }}>▸ {text}</div>
-  )
-}
-
-function Empty({ text }: { text: string }) {
-  return (
-    <div style={{
-      fontSize: 11, color: T.muted, lineHeight: 1.5,
-      padding: '10px 12px', background: T.bg,
-      border: `1px dashed ${T.border}`, borderRadius: 3,
+      background: 'var(--brand-page-bg)', border: '1px dashed var(--brand-card-border)', borderRadius: 3,
+      padding: '12px 14px', fontSize: 11, color: 'var(--brand-muted-text)',
+      letterSpacing: 0.5, lineHeight: 1.5,
     }}>{text}</div>
   )
 }
@@ -773,43 +1873,128 @@ function Empty({ text }: { text: string }) {
 function Badge({ color, children }: { color: string; children: React.ReactNode }) {
   return (
     <span style={{
-      padding: '2px 8px', borderRadius: 3,
-      fontSize: 9, fontWeight: 'bold', letterSpacing: 1.5,
+      padding: '2px 8px', borderRadius: 3, fontSize: 9, fontWeight: 'bold', letterSpacing: 1.5,
       color, border: `1px solid ${color}`, background: 'transparent',
       whiteSpace: 'nowrap', fontFamily: 'monospace',
     }}>{children}</span>
   )
 }
 
-const tableStyle: React.CSSProperties = {
-  width: '100%', borderCollapse: 'collapse',
-  fontFamily: 'inherit',
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <label style={{
+      display: 'block', fontSize: 9, letterSpacing: 2, color: 'var(--brand-muted-text)',
+      fontWeight: 'bold', marginBottom: 6,
+    }}>{children}</label>
+  )
 }
 
-const thStyle: React.CSSProperties = {
-  padding: '8px 10px',
-  fontSize: 9, letterSpacing: 2,
-  color: T.muted, fontWeight: 'bold',
-  textAlign: 'left', whiteSpace: 'nowrap',
+function SegmentedTwo({ left, right, value, onChange }: {
+  left: { label: string; value: string; desc: string }
+  right: { label: string; value: string; desc: string }
+  value: string
+  onChange: (v: string) => void
+}) {
+  return (
+    <div style={{ display: 'flex', gap: 6 }}>
+      {[left, right].map(opt => {
+        const selected = value === opt.value
+        return (
+          <button key={opt.value} onClick={() => onChange(opt.value)} style={{
+            flex: 1, padding: '10px 12px', textAlign: 'left',
+            background: selected
+              ? 'color-mix(in srgb, var(--brand-card-surface) 85%, var(--brand-on-page-bg) 15%)'
+              : 'var(--brand-card-surface)',
+            border: `1px solid ${selected ? 'var(--brand-primary)' : 'var(--brand-card-border)'}`,
+            borderRadius: 3, cursor: 'pointer',
+            fontFamily: 'Futura PT, Futura, sans-serif',
+          }}>
+            <div style={{
+              fontSize: 11, fontWeight: 'bold', letterSpacing: 2,
+              color: selected ? 'var(--brand-primary)' : 'var(--brand-on-page-bg)', marginBottom: 4,
+            }}>{opt.label}</div>
+            <div style={{ fontSize: 10, color: 'var(--brand-muted-text)', lineHeight: 1.4 }}>{opt.desc}</div>
+          </button>
+        )
+      })}
+    </div>
+  )
 }
 
-const tdStyle: React.CSSProperties = {
-  padding: '8px 10px',
-  fontSize: 12, color: T.text, textAlign: 'left',
+function ErrorInline({ text }: { text: string }) {
+  return (
+    <div style={{
+      background: '#f8e8e8', border: `1px solid ${T.red}`, color: T.red,
+      padding: '8px 12px', borderRadius: 3, fontSize: 11, letterSpacing: 1, marginTop: 8,
+    }}>{text}</div>
+  )
 }
 
-const modalBtnSecondary: React.CSSProperties = {
-  padding: '10px 18px',
-  background: 'transparent', color: '#a0a2aa',
-  border: '1px solid #4a4a5e', borderRadius: 3,
-  fontSize: 10, letterSpacing: 3, fontWeight: 'bold',
-  cursor: 'pointer', fontFamily: 'inherit',
+const overlayStyle: React.CSSProperties = {
+  position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  zIndex: 100, padding: 20,
 }
 
-const modalBtnDanger: React.CSSProperties = {
-  padding: '10px 18px',
-  background: '#8a1a1a', color: 'white',
-  border: 'none', borderRadius: 3,
-  fontSize: 10, letterSpacing: 3, fontWeight: 'bold',
-  cursor: 'pointer', fontFamily: 'inherit',
+const modalShellStyle: React.CSSProperties = {
+  background: 'var(--brand-page-bg)', border: '1px solid var(--brand-card-border)',
+  borderRadius: 4, padding: 28, maxWidth: 480, width: '100%',
+  fontFamily: 'Futura PT, Futura, sans-serif',
+}
+
+const modalInput: React.CSSProperties = {
+  width: '100%', padding: '10px 12px',
+  background: 'var(--brand-card-surface)', border: '1px solid var(--brand-card-border)', borderRadius: 3,
+  fontFamily: 'monospace', fontSize: 13, color: 'var(--brand-on-page-bg)',
+  outline: 'none', boxSizing: 'border-box',
+}
+
+function btnPrimary(disabled: boolean): React.CSSProperties {
+  return {
+    padding: '6px 12px', background: 'var(--brand-sidebar-bg)', border: 'none', borderRadius: 3,
+    borderTop: '2px solid var(--brand-primary)', color: 'var(--brand-primary)',
+    fontSize: 10, fontWeight: 'bold', letterSpacing: 2,
+    cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1,
+    fontFamily: 'Futura PT, Futura, sans-serif', whiteSpace: 'nowrap',
+  }
+}
+
+function btnDanger(disabled: boolean): React.CSSProperties {
+  return {
+    padding: '6px 12px', background: 'transparent', border: '1px solid #8a1a1a',
+    borderRadius: 3, color: '#8a1a1a',
+    fontSize: 10, fontWeight: 'bold', letterSpacing: 2,
+    cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1,
+    fontFamily: 'Futura PT, Futura, sans-serif', whiteSpace: 'nowrap',
+  }
+}
+
+function btnSubtle(disabled: boolean, color: string): React.CSSProperties {
+  return {
+    padding: '5px 10px', background: 'transparent', border: `1px solid ${color}`,
+    borderRadius: 3, color,
+    fontSize: 9, fontWeight: 'bold', letterSpacing: 2,
+    cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1,
+    fontFamily: 'Futura PT, Futura, sans-serif', whiteSpace: 'nowrap',
+  }
+}
+
+function modalCancelBtn(disabled: boolean): React.CSSProperties {
+  return {
+    flex: 1, padding: '10px', background: 'transparent', border: '1px solid var(--brand-card-border)',
+    borderRadius: 3, color: 'var(--brand-muted-text)',
+    fontSize: 11, fontWeight: 'bold', letterSpacing: 2,
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    fontFamily: 'Futura PT, Futura, sans-serif',
+  }
+}
+
+function modalConfirmBtn(disabled: boolean, accent: string): React.CSSProperties {
+  return {
+    flex: 2, padding: '10px', background: 'var(--brand-sidebar-bg)', border: 'none', borderRadius: 3,
+    borderTop: `3px solid ${accent}`, color: accent,
+    fontSize: 11, fontWeight: 'bold', letterSpacing: 2,
+    cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1,
+    fontFamily: 'Futura PT, Futura, sans-serif',
+  }
 }

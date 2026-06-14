@@ -6,7 +6,7 @@ import AppWindow from './AppWindow'
 import Taskbar from './Taskbar'
 import StartMenu from './StartMenu'
 import ContextMenu, { type ContextMenuItem } from './ContextMenu'
-import { DesktopServicesContext, isBaseApp, DEFAULT_HIDDEN_APP_IDS, type DesktopServices } from './desktopServices'
+import { DesktopServicesContext, isBaseApp, uninstallWarns, DEFAULT_HIDDEN_APP_IDS, type DesktopServices } from './desktopServices'
 import type { AppId, AppRole, WindowState, RecentApp } from './types'
 import { appVisibleToRole } from './types'
 
@@ -239,6 +239,10 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
   const [topZ, setTopZ] = useState(initial?.topZ ?? 100)
   const [startMenuOpen, setStartMenuOpen] = useState(false)
   const [contextMenu, setContextMenu] = useState<RightClickState | null>(null)
+  // App pending an uninstall confirm via the desktop right-click menu. Only set
+  // for apps in UNINSTALL_WARN_APP_IDS (e.g. Notes) so the same "all data will
+  // be deleted" warning the App Store shows also gates the icon's Uninstall.
+  const [confirmUninstallId, setConfirmUninstallId] = useState<AppId | null>(null)
   const [recentApps, setRecentApps] = useState<RecentApp[]>([])
   const [isMobile, setIsMobile] = useState(false)
   const [bootedAnalytics, setBootedAnalytics] = useState((initial?.windows.length ?? 0) > 0)
@@ -512,6 +516,19 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
       return next
     })
   }, [])
+
+  // Right-click "Uninstall" routes through this: if the app warns on uninstall
+  // (data loss, e.g. Notes), open the confirm modal instead of uninstalling
+  // immediately; otherwise uninstall straight away. This mirrors the App
+  // Store's guard so both entry points show the same warning.
+  const requestUninstall = useCallback((id: AppId) => {
+    if (isBaseApp(id)) return
+    if (uninstallWarns(id)) {
+      setConfirmUninstallId(id)
+    } else {
+      uninstallApp(id)
+    }
+  }, [uninstallApp])
 
   const removeFromDesktop = useCallback((id: AppId) => {
     setHiddenApps(prev => prev.includes(id) ? prev : [...prev, id])
@@ -870,7 +887,7 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
         { label: 'Open', icon: '▶', onClick: () => openApp(appId) },
         {},
         { label: 'Remove from desktop', onClick: () => removeFromDesktop(appId) },
-        ...(!base ? [{ label: 'Uninstall', icon: '✕', danger: true, onClick: () => uninstallApp(appId) }] : []),
+        ...(!base ? [{ label: 'Uninstall', icon: '✕', danger: true, onClick: () => requestUninstall(appId) }] : []),
         {},
         { label: alreadyOpen ? 'Running' : (base ? 'Base app' : 'Store app'), disabled: true },
       ]
@@ -1039,6 +1056,68 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
             onClose={() => setContextMenu(null)}
           />
         )}
+
+        {confirmUninstallId && (() => {
+          const app = getApp(confirmUninstallId)
+          const appName = app?.name ?? 'this app'
+          return (
+            <div
+              onClick={() => setConfirmUninstallId(null)}
+              style={{
+                position: 'fixed', inset: 0, zIndex: 100000,
+                background: 'rgba(0,0,0,0.6)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: 20,
+              }}
+            >
+              <div
+                onClick={e => e.stopPropagation()}
+                style={{
+                  width: '100%', maxWidth: 440,
+                  background: '#1a1a2e', border: '1px solid #8a1a1a',
+                  borderTop: '3px solid #8a1a1a', borderRadius: 4,
+                  padding: 24, color: '#e0e2ea', boxSizing: 'border-box',
+                  fontFamily: 'Futura PT, Futura, sans-serif',
+                }}
+              >
+                <div style={{ fontSize: 11, letterSpacing: 4, color: '#8a1a1a', fontWeight: 'bold', marginBottom: 14 }}>
+                  ⚠ UNINSTALL {appName.toUpperCase()}
+                </div>
+                <div style={{ fontSize: 13, lineHeight: 1.6, color: '#c0c2ca', marginBottom: 10 }}>
+                  Uninstalling <strong style={{ color: 'white' }}>{appName}</strong> removes it from your desktop.
+                </div>
+                <div style={{
+                  background: 'rgba(138,26,26,0.2)', border: '1px solid #8a1a1a',
+                  borderLeft: '3px solid #8a1a1a', borderRadius: 3,
+                  padding: '10px 12px', marginBottom: 20,
+                  fontSize: 12, lineHeight: 1.6, color: '#ffaaaa', fontWeight: 'bold',
+                }}>
+                  WARNING: all data will be deleted. This cannot be undone.
+                </div>
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                  <button
+                    onClick={() => setConfirmUninstallId(null)}
+                    style={{
+                      padding: '10px 18px', background: 'transparent', color: '#a0a2aa',
+                      border: '1px solid #4a4a5e', borderRadius: 3,
+                      fontSize: 10, letterSpacing: 3, fontWeight: 'bold', cursor: 'pointer',
+                      fontFamily: 'inherit',
+                    }}
+                  >CANCEL</button>
+                  <button
+                    onClick={() => { uninstallApp(confirmUninstallId); setConfirmUninstallId(null) }}
+                    style={{
+                      padding: '10px 18px', background: '#8a1a1a', color: 'white',
+                      border: 'none', borderRadius: 3,
+                      fontSize: 10, letterSpacing: 3, fontWeight: 'bold', cursor: 'pointer',
+                      fontFamily: 'inherit',
+                    }}
+                  >■ DELETE & UNINSTALL</button>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
 
         {personalizeOpen && (
           <PersonalizePopup
