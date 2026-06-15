@@ -4,40 +4,19 @@ import { useEffect, useState } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { WhitelabelLivePreview } from '@/components/WhitelabelLivePreview'
+import LoginLinkSection from '@/components/LoginLinkSection'
 
 // =============================================================================
-// /onboarding/whitelabel — v8 (Push E: cancel moved to bottom + logo recos)
+// /onboarding/whitelabel — v9 (login-link integration)
 // =============================================================================
-// v8 changes vs v7:
-//   1. CANCEL button relocated to the absolute bottom of the form, below
-//      every other action (submit, overwrite, save-as-new) and below the
-//      "you can change everything later" hint. Per JC: a destructive
-//      escape hatch belongs at the bottom, not nestled into the action
-//      cluster at the top.
-//   2. Logo hint reframed as a recommendation rather than a temporary
-//      relaxation: "Recommended 512×148 px, under 200KB — but any
-//      dimensions work; mobile auto-scales to fit." Per JC: the relaxed
-//      validation is staying permanently; mobile rescales gracefully.
-// 
-// v7 (Push C):
-//   - Saved themes dropdown moved out of THEME section to its own card
-//     immediately above EXACT PREVIEW.
-// 
-// v6 (Push A):
-//   - ▶ emoji removed from submit labels and hint text.
-//   - Saved themes moved into collapsible dropdown.
-//   - Cancel button added (now bottom-positioned in v8).
-//   - Per-theme logos via applyTheme.
-//   - OVERWRITE THIS THEME button when a saved theme is loaded.
-//   - Logo size requirements stripped, file input accepts image/*.
-// 
-// Preserved from v5:
-//   - 60-second propagation disclaimer.
-//   - Brand name input + subdomain 350ms debounced availability check.
-//   - 24h slug cooldown for edit mode, redirect grace logic.
-//   - Logo upload + sessionStorage handoff for instant dashboard preview.
-//   - Edit mode pre-fill from GET /api/whitelabel/onboarding.
-//   - useEffect dependency on user?.id (stable string).
+// v9 adds the optional subdomain-login link (label + clickable text + URL) via
+// the LoginLinkSection component, rendered right after BRAND NAME. State is
+// pre-filled in edit mode from GET, and the three fields are sent in the POST
+// body as login_link_label / login_link_text / login_link_url.
+//
+// v8 (Push E): cancel moved to bottom + logo recos.
+// v7 (Push C): saved themes dropdown its own card above EXACT PREVIEW.
+// v6 (Push A): emoji removed, saved themes collapsible, cancel added, etc.
 // =============================================================================
 
 interface Preset {
@@ -137,6 +116,11 @@ export default function WhitelabelOnboardingPage() {
   const [headerBg, setHeaderBg] = useState<string>(DEFAULT_PRESET.headerBg)
   const [pageBg, setPageBg] = useState<string>(DEFAULT_PRESET.pageBg)
 
+  // v9: optional subdomain-login link
+  const [loginLinkLabel, setLoginLinkLabel] = useState('')
+  const [loginLinkText, setLoginLinkText] = useState('')
+  const [loginLinkUrl, setLoginLinkUrl] = useState('')
+
   const [savedThemes, setSavedThemes] = useState<SavedTheme[]>([])
   const [savedThemesOpen, setSavedThemesOpen] = useState(false)
   const [saveAsNewOpen, setSaveAsNewOpen] = useState(false)
@@ -171,6 +155,11 @@ export default function WhitelabelOnboardingPage() {
         setSlug(tenantData.tenant.slug || '')
         setOriginalSlug(tenantData.tenant.slug || '')
         setExistingLogoUrl(tenantData.tenant.logo_url || null)
+
+        // v9: pre-fill login link
+        setLoginLinkLabel(tenantData.tenant.login_link_label || '')
+        setLoginLinkText(tenantData.tenant.login_link_text || '')
+        setLoginLinkUrl(tenantData.tenant.login_link_url || '')
 
         const loadedPrimary = tenantData.tenant.primary_color || DEFAULT_PRESET.primary
         const loadedSidebar = tenantData.tenant.sidebar_color || DEFAULT_PRESET.sidebar
@@ -506,6 +495,17 @@ export default function WhitelabelOnboardingPage() {
       return
     }
 
+    // v9: light client-side guard for the optional login link — if the user
+    // started one, require both clickable text and URL. Server re-validates.
+    const wantsLink =
+      loginLinkText.trim().length > 0 ||
+      loginLinkUrl.trim().length > 0 ||
+      loginLinkLabel.trim().length > 0
+    if (wantsLink && (!loginLinkText.trim() || !loginLinkUrl.trim())) {
+      setError('Your login link needs both clickable text and a URL — or clear the link fields.')
+      return
+    }
+
     setSubmitting(true)
     try {
       let logoUrl = existingLogoUrl
@@ -544,6 +544,10 @@ export default function WhitelabelOnboardingPage() {
           sidebar_color: sidebar,
           header_bg_color: headerBg,
           page_bg_color: pageBg,
+          // v9: optional login link
+          login_link_label: loginLinkLabel.trim(),
+          login_link_text: loginLinkText.trim(),
+          login_link_url: loginLinkUrl.trim(),
         }),
       })
       const data = await res.json()
@@ -664,6 +668,22 @@ export default function WhitelabelOnboardingPage() {
             <div style={hintStyle}>
               {renderSlugStatus(slugStatus, slug, editMode && slug === originalSlug)}
             </div>
+          </div>
+
+          {/* ── LOGIN PAGE LINK (v9, optional) ── */}
+          <div style={sectionStyle}>
+            <LoginLinkSection
+              brandName={brandName}
+              logoUrl={displayLogo}
+              primaryColor={HEX_RE.test(primary) ? primary : '#4a9eff'}
+              pageBgColor={HEX_RE.test(pageBg) ? pageBg : '#f0f1f4'}
+              label={loginLinkLabel}
+              text={loginLinkText}
+              url={loginLinkUrl}
+              onLabelChange={setLoginLinkLabel}
+              onTextChange={setLoginLinkText}
+              onUrlChange={setLoginLinkUrl}
+            />
           </div>
 
           {/* ── LOGO — v8: hint reframed as a permanent recommendation ── */}

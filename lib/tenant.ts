@@ -3,29 +3,18 @@ import { createClient } from '@supabase/supabase-js'
 import { unstable_cache } from 'next/cache'
 
 // =============================================================================
-// TENANT BRANDING LOOKUP — server-side helper (v7 — currentValue for toggle)
+// TENANT BRANDING LOOKUP — server-side helper (v8 — login link fields)
 // =============================================================================
-// v7 (Push F): fetchAvailableTenantsForUser now returns `currentValue` and
-// `savedThemes`, matching what the settings-page WL toggle actually reads.
+// v8: TenantBranding now carries the optional subdomain-login link
+// (login_link_label / login_link_text / login_link_url), and the shared
+// TENANT_BRANDING_COLS select pulls them from the tenant_branding view (which
+// was extended to expose them). This is what lets the branded sign-in page
+// render the partner's "<Brand> × DialerSeat" link. All three may be null.
 //
-//   THE BUG: the settings page renders a controlled <select> whose value is
-//   brandOptions.currentValue, defaulting to 'standard' when missing. This
-//   helper returned currentTenantId but NEVER currentValue, so the select was
-//   permanently pinned to 'standard' ("DialerSeat Pro") regardless of the
-//   user's real active_tenant_id, and switching to a tenant appeared to do
-//   nothing after the reload (the write worked; the read didn't surface it).
-//
-//   THE FIX: compute currentValue to match the <option> values the page
-//   renders — a tenant's `id` when active_tenant_id is set, else 'standard'.
-//   Also return savedThemes (empty for now) so that page branch has real data
-//   instead of an undefined fallback. currentTenantId is kept for back-compat.
-//
+// v7 (Push F): fetchAvailableTenantsForUser returns currentValue + savedThemes.
 // v6 (Push B): fetchActiveTenantForUser respects NULL (strict NULL semantics).
 // v5 (migration 004): adds header_bg_color.
 // v4 (migration 003): added page_bg_color.
-// v3 (Phase B2): trimmed the interface down.
-//
-// Caching unchanged. Tags unchanged. fetchActiveTenantForUser byte-for-byte v6.
 // =============================================================================
 
 export interface TenantBranding {
@@ -40,6 +29,10 @@ export interface TenantBranding {
   header_bg_color: string
   page_bg_color: string
   custom_landing: Record<string, unknown>
+  // v8: optional partner login link (all null when unset)
+  login_link_label: string | null
+  login_link_text: string | null
+  login_link_url: string | null
 }
 
 export interface AvailableTenant {
@@ -81,7 +74,7 @@ function getSupabaseAdmin() {
 }
 
 const TENANT_BRANDING_COLS =
-  'id, slug, brand_name, logo_url, favicon_url, footer_text, primary_color, sidebar_color, header_bg_color, page_bg_color, custom_landing'
+  'id, slug, brand_name, logo_url, favicon_url, footer_text, primary_color, sidebar_color, header_bg_color, page_bg_color, custom_landing, login_link_label, login_link_text, login_link_url'
 
 // =============================================================================
 // SUBDOMAIN LOOKUP (v1 contract preserved)

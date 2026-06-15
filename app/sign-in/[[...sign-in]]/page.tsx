@@ -6,35 +6,20 @@ import Link from 'next/link'
 import { useBranding } from '@/components/ThemeProvider'
 
 // =============================================================================
-// /sign-in — branded sign-in (v26 — restore dark mode)
+// /sign-in — branded sign-in (v27 — co-branding mark + optional partner link)
 // =============================================================================
-// v26 changes vs v25:
-//   - Page background: var(--background) (Pass-1 vestigial #0a0a0f) →
-//     var(--brand-sidebar-bg). Default DialerSeat resolves to #111118
-//     (the original dark sign-in look); tenants get their sidebar color
-//     automatically — no per-tenant logic needed. JC: "easily customizable
-//     like signup page... map their background to sites sidebar color."
-//   - Wordmark fallback color: var(--text-primary) → var(--brand-on-sidebar)
-//     (white on dark, derived for tenants).
-//   - Tagline color: var(--text-secondary) → var(--brand-on-sidebar-muted)
-//     (#8888aa on default, derived for tenants).
-//   - Clerk <SignIn /> widget themed dark via appearance prop. Card uses a
-//     subtle white-3% overlay so it lifts off the sidebar bg without
-//     introducing a bright surface. Form inputs are the same lifted treatment.
-//     Primary button uses var(--brand-primary) + var(--brand-on-primary).
+// v27 changes vs v26:
+//   - When a tenant brand is active (logoUrl present), the tagline line is
+//     replaced by an on-dark co-branding mark: "<Brand> × DialerSeat",
+//     plus the tenant's optional login link (label + clickable text + url) read
+//     from useBranding(). Default DialerSeat (no tenant) keeps the original
+//     "WELCOME BACK" tagline and DIALERSEAT wordmark — no mark shown there, since
+//     "DialerSeat × DialerSeat" would be silly.
+//   - The mark is fixed-format and non-removable per spec; the link is optional
+//     and only renders when the tenant set both clickable text and a URL.
 //
-// Preserved from v25:
-//   - useBranding() hook for tenant logo + primary color
-//   - Logo wrapper is a Link to "/"
-//   - forceRedirectUrl="/api/auth/post-signin" (post-signin route v2 stays
-//     on current host until subdomains are wired up)
-//
-// "Easily customizable" semantics:
-//   - Default DialerSeat: sidebar=#111118 → sign-in bg #111118, text white,
-//     muted #8888aa, primary #4a9eff. Dark-mode original look.
-//   - Tenant (e.g. demo): sidebar=#3b261b (brown) → sign-in bg brown,
-//     muted text derived (white at 65% alpha over brown — readable),
-//     primary tenant-chosen.
+// v26: page bg → var(--brand-sidebar-bg); wordmark/tagline colors derived;
+//      Clerk widget themed dark via appearance. (unchanged below)
 // =============================================================================
 
 const FUTURA = 'Futura PT, Futura, "Trebuchet MS", sans-serif'
@@ -43,11 +28,15 @@ export default function SignInPage() {
   const branding = useBranding()
   const brandName = branding?.brand_name?.toUpperCase() || 'DIALERSEAT'
   const logoUrl = branding?.logo_url || null
-  // Clerk's appearance.variables.colorBackground needs a concrete hex
-  // (CSS vars aren't supported there). Default to #111118 and let tenant
-  // sidebar override. Clerk uses this for internal contrast derivations.
   const colorBackground = branding?.sidebar_color || '#111118'
   const colorPrimary = branding?.primary_color || '#4a9eff'
+
+  // A tenant brand is "active" when we have a logo (white-label context). Only
+  // then do we show the "<Brand> × DialerSeat" mark + optional partner link.
+  const isTenant = !!logoUrl
+  const loginLinkLabel = branding?.login_link_label || null
+  const loginLinkText = branding?.login_link_text || null
+  const loginLinkUrl = branding?.login_link_url || null
 
   return (
     <main style={{
@@ -77,7 +66,7 @@ export default function SignInPage() {
             alignItems: 'center',
             justifyContent: 'center',
             gap: logoUrl ? 0 : '12px',
-            marginBottom: '12px',
+            marginBottom: '16px',
             textDecoration: 'none',
             cursor: 'pointer',
           }}
@@ -121,13 +110,29 @@ export default function SignInPage() {
             </>
           )}
         </Link>
-        <p style={{
-          fontSize: '12px',
-          letterSpacing: '3px',
-          color: 'var(--brand-on-sidebar-muted)',
-        }}>
-          {logoUrl ? `WELCOME TO ${brandName}` : 'WELCOME BACK'}
-        </p>
+
+        {isTenant ? (
+          // Co-branding mark + optional partner link. Colors come from the
+          // brand vars; on the dark sign-in bg we pass explicit on-dark colors
+          // so the mark reads correctly against the sidebar background.
+          <div style={{ marginTop: 4 }}>
+            <CoBrandOnDark
+              brandName={branding?.brand_name || 'Brand'}
+              linkLabel={loginLinkLabel}
+              linkText={loginLinkText}
+              linkUrl={loginLinkUrl}
+              primary={colorPrimary}
+            />
+          </div>
+        ) : (
+          <p style={{
+            fontSize: '12px',
+            letterSpacing: '3px',
+            color: 'var(--brand-on-sidebar-muted)',
+          }}>
+            WELCOME BACK
+          </p>
+        )}
       </div>
       <SignIn
         forceRedirectUrl="/api/auth/post-signin"
@@ -230,5 +235,69 @@ export default function SignInPage() {
         }}
       />
     </main>
+  )
+}
+
+// Co-branding mark + optional link, styled for the DARK sign-in background.
+// (TenantLoginBrand is tuned for light tenant pages; the sign-in page is dark,
+// so we render an on-dark variant here with the same structure + icon.)
+function CoBrandOnDark({
+  brandName,
+  linkLabel,
+  linkText,
+  linkUrl,
+  primary,
+}: {
+  brandName: string
+  linkLabel: string | null
+  linkText: string | null
+  linkUrl: string | null
+  primary: string
+}) {
+  const showLink = !!(linkText && linkText.trim() && linkUrl && linkUrl.trim())
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10,
+        fontSize: 12, letterSpacing: 2.5, fontWeight: 700, textTransform: 'uppercase',
+        fontFamily: FUTURA,
+      }}>
+        <span style={{ color: 'var(--brand-on-sidebar)' }}>{brandName}</span>
+        <span aria-hidden style={{ color: primary, fontSize: 14, fontWeight: 400, transform: 'translateY(-1px)' }}>×</span>
+        <span style={{ color: 'var(--brand-on-sidebar-muted)' }}>DialerSeat</span>
+      </div>
+
+      {showLink && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+          {linkLabel && linkLabel.trim() ? (
+            <div style={{
+              fontSize: 9, letterSpacing: 2, fontWeight: 700, textTransform: 'uppercase',
+              color: 'var(--brand-on-sidebar-muted)', fontFamily: FUTURA,
+            }}>{linkLabel}</div>
+          ) : null}
+          <a
+            href={linkUrl!}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'inline-flex', alignItems: 'center',
+              fontSize: 12, fontWeight: 700, letterSpacing: 0.4,
+              color: primary, textDecoration: 'none',
+              borderBottom: `1px solid ${primary}66`, paddingBottom: 1,
+              fontFamily: FUTURA,
+            }}
+          >
+            {linkText}
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={primary}
+              strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden
+              style={{ marginLeft: 5, flexShrink: 0, transform: 'translateY(0.5px)' }}>
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+              <polyline points="15 3 21 3 21 9" />
+              <line x1="10" y1="14" x2="21" y2="3" />
+            </svg>
+          </a>
+        </div>
+      )}
+    </div>
   )
 }
