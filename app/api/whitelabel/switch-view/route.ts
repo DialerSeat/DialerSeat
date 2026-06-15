@@ -1,21 +1,31 @@
 // app/api/whitelabel/switch-view/route.ts
 // =============================================================================
-// SWITCH ACTIVE TENANT VIEW
+// SWITCH ACTIVE TENANT VIEW (v2 — normalize 'standard'/empty → null)
 // =============================================================================
 // POST /api/whitelabel/switch-view
 // Body: { tenant_id: string | null }
 //
-//   tenant_id = uuid → switch to that tenant's branded view
-//                      (must be owner OR active team member)
-//   tenant_id = null → switch to standard DialerSeat view
-//                      (only allowed if user has self-sub OR owns a tenant)
+//   tenant_id = uuid        → switch to that tenant's branded view
+//                             (must be owner OR active team member)
+//   tenant_id = null        → switch to standard DialerSeat view
+//   tenant_id = 'standard'  → ALSO treated as standard view (v2)
+//   tenant_id = '' / missing → ALSO treated as standard view (v2)
 //
-// On success, busts the user's cache tag so the next page render reflects
-// the change immediately.
+// v2 FIX: the settings <select> uses the literal value 'standard' for the
+// DialerSeat Pro option. If the client posts { tenant_id: 'standard' } (or an
+// empty string), the old route fell through to the specific-tenant branch,
+// looked up a tenant whose id is 'standard', got tenant_not_found (404), and
+// NEVER wrote anything — so active_tenant_id stayed pinned to the previous
+// tenant and "switch to DialerSeat Pro" silently did nothing. We now normalize
+// 'standard'/''/null/undefined to a single STANDARD sentinel up front, so the
+// standard-view branch always runs regardless of which the client sends.
 //
-// SECURITY: the validation here is the ONLY guard against a user switching
-// to a tenant they don't belong to. The middleware enforces SUBDOMAIN
-// access; this enforces SELECTION access. Both layers needed.
+// On success, busts the user's cache tag so the next page render reflects the
+// change immediately.
+//
+// SECURITY: the validation here is the ONLY guard against a user switching to
+// a tenant they don't belong to. The middleware enforces SUBDOMAIN access;
+// this enforces SELECTION access. Both layers needed.
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -31,6 +41,13 @@ const supabase = createClient(
 
 const ACTIVE_SUB_STATUSES = ['trialing', 'active', 'past_due']
 
+// Values that all mean "standard DialerSeat view" (active_tenant_id = null).
+// The settings <select> uses 'standard' as the option value; older/other
+// callers may send null or omit the field.
+function isStandardSelection(v: unknown): boolean {
+  return v === null || v === undefined || v === '' || v === 'standard'
+}
+
 export async function POST(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) {
@@ -44,10 +61,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'malformed_json' }, { status: 400 })
   }
 
-  const targetId: string | null = body?.tenant_id ?? null
+  const rawTarget = body?.tenant_id
 
   // ── BRANCH: switching to standard view ─────────────────────────────────
-  if (targetId === null) {
+  // v2: normalize 'standard'/''/null/undefined all to this branch.
+  if (isStandardSelection(rawTarget)) {
     // Must have self-sub OR own a tenant
     const [ownedRes, subsRes] = await Promise.all([
       supabase
@@ -92,15 +110,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'db_error', detail: error.message }, { status: 500 })
     }
 
-    // Next.js 16: revalidateTag requires a cacheLife profile (second arg).
-    // We use { expire: 0 } for immediate expiry because the user clicking
-    // "switch view" expects to see the new brand on the NEXT page load,
-    // not after a stale-while-revalidate window.
+    // Next.js 16: revalidateTag(tag, { expire: 0 }) for immediate expiry —
+    // the user clicking "switch view" expects the new brand on the NEXT page
+    // load, not after a stale-while-revalidate window.
     revalidateTag(userCacheTag(userId), { expire: 0 })
     return NextResponse.json({ success: true, tenant_id: null })
   }
 
   // ── BRANCH: switching to a specific tenant ─────────────────────────────
+  // At this point rawTarget is a non-empty, non-'standard' string. Anything
+  // that isn't a string here is invalid.
+  const targetId = rawTarget
   if (typeof targetId !== 'string' || targetId.length === 0) {
     return NextResponse.json({ error: 'invalid_tenant_id' }, { status: 400 })
   }
@@ -120,8 +140,6 @@ export async function POST(req: NextRequest) {
   let hasAccess = tenant.owner_clerk_id === userId
 
   if (!hasAccess) {
-    // Check team membership — user must be an active member of A team
-    // owned by this tenant's owner_clerk_id
     const { data: memberRows } = await supabase
       .from('team_members')
       .select('team_id, teams!inner(owner_id)')

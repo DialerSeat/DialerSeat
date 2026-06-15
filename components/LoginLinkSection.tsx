@@ -3,18 +3,21 @@
 // LoginLinkSection — onboarding form block for the optional subdomain-login
 // link, with a collapsible LIVE PREVIEW of the branded login page.
 // =============================================================================
+// v2: chrome (card, inputs, labels, borders, text) now uses the same CSS theme
+// vars as the rest of onboarding (--surface, --background, --border,
+// --text-primary, --text-muted, --brand-primary) so it no longer renders as a
+// white block. The LIVE PREVIEW area intentionally keeps the partner's literal
+// primaryColor / pageBgColor props, because that box is meant to depict the
+// TENANT's brand, not the dashboard theme.
+//
 // Drop this into the white-label onboarding/edit wizard. It owns three fields:
 //   login_link_label — optional small heading ("New to TPI?")
 //   login_link_text  — the clickable phrase ("Visit our agent portal")
 //   login_link_url   — destination (https://…)
 //
-// The whole thing is collapsed by default (a single "Add a login link" toggle)
-// so it stays out of the way for partners who don't want one — clean and easy
-// on the eyes. Expanding reveals the fields + a live preview card that mirrors
-// the real TenantLoginBrand mark + link as the partner types.
-//
-// Controlled component: pass current values + onChange handlers, plus the
-// brandName/logoUrl/primaryColor so the preview reflects the real theme.
+// Collapsed by default behind a single "▸ Login page link OPTIONAL" toggle.
+// Controlled component: pass current values + onChange handlers, plus
+// brandName/logoUrl/primaryColor/pageBgColor so the preview reflects the theme.
 // =============================================================================
 
 import { useState } from 'react'
@@ -26,8 +29,10 @@ export interface LoginLinkSectionProps {
   logoUrl?: string | null
   primaryColor: string
   pageBgColor: string
-  onPageTextColor?: string // optional; falls back to a dark neutral
-  mutedTextColor?: string
+  /** Text color for the brand name in the PREVIEW (over the tenant page bg). */
+  onPageTextColor?: string
+  /** Muted text color for the PREVIEW's "DialerSeat" half + heading. */
+  previewMutedColor?: string
 
   label: string
   text: string
@@ -57,7 +62,7 @@ export default function LoginLinkSection({
   primaryColor,
   pageBgColor,
   onPageTextColor = '#1a1c24',
-  mutedTextColor = '#5a5e6a',
+  previewMutedColor = '#5a5e6a',
   label,
   text,
   url,
@@ -72,28 +77,28 @@ export default function LoginLinkSection({
   // mirrors the server rule and the real login component.
   const previewShowsLink = !!(text.trim() && url.trim())
   // Light validity hint for the URL field (non-blocking; server is source of truth).
-  const urlLooksValid =
-    !url.trim() || /^https?:\/\/.+/i.test(url.trim())
+  const urlLooksValid = !url.trim() || /^https?:\/\/.+/i.test(url.trim())
 
+  // ── Chrome styles — use theme vars so this matches the rest of onboarding ──
   const labelCss: React.CSSProperties = {
-    display: 'block', fontSize: 9, letterSpacing: 2, color: mutedTextColor,
+    display: 'block', fontSize: 9, letterSpacing: 2, color: 'var(--text-muted)',
     fontWeight: 700, marginBottom: 6, textTransform: 'uppercase',
   }
   const inputCss: React.CSSProperties = {
     width: '100%', padding: '10px 12px',
-    background: '#fff', border: '1px solid #c4c8d0', borderRadius: 6,
-    fontFamily: FUTURA, fontSize: 13, color: '#1a1c24',
+    background: 'var(--background)', border: '1px solid var(--border)', borderRadius: 6,
+    fontFamily: FUTURA, fontSize: 13, color: 'var(--text-primary)',
     outline: 'none', boxSizing: 'border-box',
   }
 
   return (
     <div
       style={{
-        border: '1px solid #d6d9e0',
+        border: '1px solid var(--border)',
         borderRadius: 8,
         overflow: 'hidden',
         fontFamily: FUTURA,
-        background: '#fbfbfd',
+        background: 'var(--surface)',
       }}
     >
       {/* Toggle header */}
@@ -115,20 +120,20 @@ export default function LoginLinkSection({
         }}
       >
         <div>
-          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 1.5, color: '#1a1c24', textTransform: 'uppercase' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 1.5, color: 'var(--text-primary)', textTransform: 'uppercase' }}>
             ▸ Login page link
-            <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, letterSpacing: 1, color: mutedTextColor }}>
+            <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, letterSpacing: 1, color: 'var(--text-muted)' }}>
               OPTIONAL
             </span>
           </div>
-          <div style={{ fontSize: 11, color: mutedTextColor, marginTop: 3, letterSpacing: 0.3 }}>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3, letterSpacing: 0.3 }}>
             Add one link under your sign-in mark — your site, agent portal, or lead packages.
           </div>
         </div>
         <span
           aria-hidden="true"
           style={{
-            fontSize: 16, color: mutedTextColor,
+            fontSize: 16, color: 'var(--text-muted)',
             transform: open ? 'rotate(90deg)' : 'rotate(0deg)',
             transition: 'transform 0.15s', flexShrink: 0,
           }}
@@ -150,7 +155,7 @@ export default function LoginLinkSection({
               onChange={(e) => onTextChange(e.target.value)}
               style={inputCss}
             />
-            <div style={{ fontSize: 10, color: mutedTextColor, marginTop: 4 }}>
+            <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
               The words people click. Required if you add a link.
             </div>
           </div>
@@ -164,18 +169,18 @@ export default function LoginLinkSection({
               onChange={(e) => onUrlChange(e.target.value)}
               style={{
                 ...inputCss,
-                borderColor: urlLooksValid ? '#c4c8d0' : '#c0392b',
+                borderColor: urlLooksValid ? 'var(--border)' : 'var(--color-error, #c0392b)',
               }}
             />
             {!urlLooksValid && (
-              <div style={{ fontSize: 10, color: '#c0392b', marginTop: 4 }}>
+              <div style={{ fontSize: 10, color: 'var(--color-error, #c0392b)', marginTop: 4 }}>
                 Must start with http:// or https://
               </div>
             )}
           </div>
 
           <div>
-            <label style={labelCss}>Heading <span style={{ color: mutedTextColor, fontWeight: 400 }}>(optional)</span></label>
+            <label style={labelCss}>Heading <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional)</span></label>
             <input
               type="text"
               value={label}
@@ -184,20 +189,20 @@ export default function LoginLinkSection({
               onChange={(e) => onLabelChange(e.target.value)}
               style={inputCss}
             />
-            <div style={{ fontSize: 10, color: mutedTextColor, marginTop: 4 }}>
+            <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
               A small line above the link. Leave blank to show just the link.
             </div>
           </div>
 
-          {/* ── LIVE PREVIEW ─────────────────────────────────────────────── */}
+          {/* ── LIVE PREVIEW — keeps the partner's LITERAL brand colors ──────── */}
           <div>
-            <div style={{ fontSize: 9, letterSpacing: 2, color: mutedTextColor, fontWeight: 700, marginBottom: 8, textTransform: 'uppercase' }}>
+            <div style={{ fontSize: 9, letterSpacing: 2, color: 'var(--text-muted)', fontWeight: 700, marginBottom: 8, textTransform: 'uppercase' }}>
               ▸ Live preview
             </div>
             <div
               style={{
                 background: pageBgColor || '#f0f1f4',
-                border: '1px solid #d6d9e0',
+                border: '1px solid var(--border)',
                 borderRadius: 8,
                 padding: '28px 24px',
                 display: 'flex',
@@ -220,17 +225,17 @@ export default function LoginLinkSection({
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, letterSpacing: 2.5, fontWeight: 700, textTransform: 'uppercase' }}>
                   <span style={{ color: onPageTextColor }}>{brandName || 'Your brand'}</span>
                   <span style={{ color: primaryColor || '#4a9eff', fontSize: 14, fontWeight: 400, transform: 'translateY(-1px)' }}>×</span>
-                  <span style={{ color: mutedTextColor }}>DialerSeat</span>
+                  <span style={{ color: previewMutedColor }}>DialerSeat</span>
                 </div>
               </div>
 
               {/* faux sign-in field, so the partner sees the link in context */}
               <div style={{
                 width: '100%', maxWidth: 240, height: 36, borderRadius: 6,
-                background: '#fff', border: '1px solid #d6d9e0',
+                background: '#ffffff', border: '1px solid rgba(0,0,0,0.12)',
                 display: 'flex', alignItems: 'center', paddingLeft: 12,
               }}>
-                <span style={{ fontSize: 11, color: '#b4b8c0' }}>Email address</span>
+                <span style={{ fontSize: 11, color: '#9aa0aa' }}>Email address</span>
               </div>
               <div style={{
                 width: '100%', maxWidth: 240, height: 36, borderRadius: 6,
@@ -244,7 +249,7 @@ export default function LoginLinkSection({
               {previewShowsLink ? (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, marginTop: 2 }}>
                   {label.trim() ? (
-                    <div style={{ fontSize: 10, letterSpacing: 2, fontWeight: 700, textTransform: 'uppercase', color: mutedTextColor }}>
+                    <div style={{ fontSize: 10, letterSpacing: 2, fontWeight: 700, textTransform: 'uppercase', color: previewMutedColor }}>
                       {label}
                     </div>
                   ) : null}
@@ -262,7 +267,7 @@ export default function LoginLinkSection({
                   </span>
                 </div>
               ) : (
-                <div style={{ fontSize: 10, color: '#b4b8c0', fontStyle: 'italic', marginTop: 2 }}>
+                <div style={{ fontSize: 10, color: previewMutedColor, fontStyle: 'italic', marginTop: 2, opacity: 0.8 }}>
                   Your link appears here once it has text and a URL.
                 </div>
               )}
