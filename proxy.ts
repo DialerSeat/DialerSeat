@@ -89,6 +89,19 @@ interface UserBrandAccess {
 // SUBDOMAIN ROUTING (v23 — Phase C)
 // + ACCESS ENFORCEMENT  (v24 — Phase D1)
 // + ONBOARDING HARD-LOCK (v25 — Phase D2)
+// + TENANT ROOT ROUTING  (v26)
+// =============================================================================
+// v26: a live tenant subdomain now hosts its OWN branded auth/landing instead
+// of bouncing the root to the apex.
+//   - The root "/" was removed from MARKETING_ONLY_PATHS so it no longer
+//     308s to dialerseat.com. (The true marketing pages — /vs, /faq,
+//     /dialing-modes, /terms, /privacy, /managers, /white-label — still do.)
+//   - On a live tenant subdomain, the root "/" is handled explicitly:
+//       signed-out → /sign-in ON the subdomain (branded via x-tenant-slug;
+//                    the sign-in page links to /sign-up)
+//       signed-in  → /dashboard ON the subdomain
+//     so visitors land on the tenant's branded experience, and members land
+//     on their dashboard, all without leaving water.dialerseat.com.
 // =============================================================================
 
 const RESERVED_SUBDOMAINS = new Set([
@@ -99,8 +112,10 @@ const RESERVED_SUBDOMAINS = new Set([
 
 const PRIMARY_DOMAINS = ['dialerseat.com', 'localhost']
 
+// NOTE (v26): the root "/" is intentionally NOT in this list. On a tenant
+// subdomain the root hosts the branded auth/landing; only these true
+// marketing pages are forced back to the apex.
 const MARKETING_ONLY_PATHS = [
-  /^\/$/,
   /^\/faq(\/.*)?$/,
   /^\/vs(\/.*)?$/,
   /^\/dialing-modes(\/.*)?$/,
@@ -283,6 +298,9 @@ export default clerkMiddleware(async (auth, request) => {
 
   // ── PHASE C: tenant subdomain validity routing ──────────────────────────
   if (tenantSlug) {
+    // True marketing pages (/vs, /faq, etc.) live only on the apex — bounce
+    // them. The root "/" is intentionally excluded (v26) so the subdomain can
+    // host its own branded auth/landing below.
     if (isMarketingOnlyPath(url.pathname)) {
       const mainUrl = new URL(url.pathname + url.search, 'https://dialerseat.com')
       return NextResponse.redirect(mainUrl, 308)
@@ -299,6 +317,21 @@ export default clerkMiddleware(async (auth, request) => {
         `https://${route.newSlug}.dialerseat.com`
       )
       return NextResponse.redirect(newUrl, 308)
+    }
+
+    // route.status === 'active' from here.
+    // ── ROOT-PATH HANDLING on a live tenant subdomain (v26) ───────────────
+    // Signed-out → branded /sign-in on this subdomain (the sign-in page links
+    //   to /sign-up). Signed-in → /dashboard on this subdomain. Both stay on
+    //   the subdomain so the experience is branded end to end.
+    if (url.pathname === '/') {
+      const { userId } = await auth()
+      if (!userId) {
+        const signInUrl = new URL('/sign-in', request.url)
+        return withTenantHeader(NextResponse.redirect(signInUrl, 307))
+      }
+      const dashUrl = new URL('/dashboard', request.url)
+      return withTenantHeader(NextResponse.redirect(dashUrl, 307))
     }
   }
 
