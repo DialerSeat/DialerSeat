@@ -117,7 +117,8 @@ export async function GET() {
       .from('white_label_tenants')
       .select(`
         id, brand_name, slug, logo_url, slug_changed_at, is_active,
-        primary_color, sidebar_color, header_bg_color, page_bg_color
+        primary_color, sidebar_color, header_bg_color, page_bg_color,
+        login_link_label, login_link_text, login_link_url
       `)
       .eq('owner_clerk_id', userId)
       .maybeSingle()
@@ -141,6 +142,9 @@ export async function GET() {
         sidebar_color: tenant.sidebar_color,
         header_bg_color: tenant.header_bg_color,
         page_bg_color: tenant.page_bg_color,
+        login_link_label: tenant.login_link_label,
+        login_link_text: tenant.login_link_text,
+        login_link_url: tenant.login_link_url,
       },
       canChangeSlugAt,
       isActive: tenant.is_active,
@@ -175,6 +179,11 @@ export async function POST(req: NextRequest) {
   const sidebarColor = String(body.sidebar_color || '').trim()
   const headerBgColor = String(body.header_bg_color || '').trim()
   const pageBgColor = String(body.page_bg_color || '').trim()
+  // Optional partner login link (shown under the "<Brand> × DialerSeat" mark).
+  // Empty/blank → no link stored (both columns set NULL).
+  const loginLinkLabelRaw = String(body.login_link_label || '').trim()
+  const loginLinkTextRaw = String(body.login_link_text || '').trim()
+  const loginLinkUrlRaw = String(body.login_link_url || '').trim()
 
   // ── Validation ────────────────────────────────────────────────────
   if (!brandName || brandName.length < 2 || brandName.length > 60) {
@@ -221,6 +230,60 @@ export async function POST(req: NextRequest) {
       { error: 'missing_logo', detail: 'Upload your logo first.' },
       { status: 400 }
     )
+  }
+
+  // ── Optional login link normalization + validation ─────────────────
+  // The link is fully optional. Pieces:
+  //   login_link_text  — the CLICKABLE phrase (required if a link is wanted)
+  //   login_link_url   — destination (required if a link is wanted; http/https)
+  //   login_link_label — optional small heading above the link
+  // "Wanted" = the user filled in the clickable text OR the url OR the label.
+  // If wanted, BOTH text and url are required (a clickable link needs words and
+  // a destination); the label heading stays optional.
+  let loginLinkLabel: string | null = null
+  let loginLinkText: string | null = null
+  let loginLinkUrl: string | null = null
+  const wantsLink =
+    loginLinkTextRaw.length > 0 ||
+    loginLinkUrlRaw.length > 0 ||
+    loginLinkLabelRaw.length > 0
+  if (wantsLink) {
+    if (!loginLinkTextRaw || !loginLinkUrlRaw) {
+      return NextResponse.json(
+        { error: 'invalid_login_link', detail: 'A login link needs both clickable text and a URL — or leave the link fields blank.' },
+        { status: 400 }
+      )
+    }
+    if (loginLinkTextRaw.length > 48) {
+      return NextResponse.json(
+        { error: 'invalid_login_link', detail: 'Link text must be 48 characters or fewer.' },
+        { status: 400 }
+      )
+    }
+    if (loginLinkLabelRaw.length > 40) {
+      return NextResponse.json(
+        { error: 'invalid_login_link', detail: 'Link heading must be 40 characters or fewer.' },
+        { status: 400 }
+      )
+    }
+    let parsed: URL
+    try {
+      parsed = new URL(loginLinkUrlRaw)
+    } catch {
+      return NextResponse.json(
+        { error: 'invalid_login_link', detail: 'Link URL must be a full URL, e.g. https://yoursite.com.' },
+        { status: 400 }
+      )
+    }
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return NextResponse.json(
+        { error: 'invalid_login_link', detail: 'Link URL must start with http:// or https://.' },
+        { status: 400 }
+      )
+    }
+    loginLinkText = loginLinkTextRaw
+    loginLinkUrl = parsed.toString()
+    loginLinkLabel = loginLinkLabelRaw || null
   }
 
   // ── WL subscription gate ──────────────────────────────────────────
@@ -293,6 +356,9 @@ export async function POST(req: NextRequest) {
         sidebar_color: sidebarColor,
         header_bg_color: headerBgColor,
         page_bg_color: pageBgColor,
+        login_link_label: loginLinkLabel,
+        login_link_text: loginLinkText,
+        login_link_url: loginLinkUrl,
         accent_color: sidebarColor,
         secondary_color: LEGACY_SECONDARY_DEFAULT,
         background_color: LEGACY_BACKGROUND_DEFAULT,
@@ -363,6 +429,9 @@ export async function POST(req: NextRequest) {
     sidebar_color: sidebarColor,
     header_bg_color: headerBgColor,
     page_bg_color: pageBgColor,
+    login_link_label: loginLinkLabel,
+    login_link_text: loginLinkText,
+    login_link_url: loginLinkUrl,
     accent_color: sidebarColor,
   }
 
