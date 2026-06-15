@@ -15,6 +15,11 @@ import Stripe from 'stripe'
  *      description: "Seat: agent@example.com on Premium Team"
  *      metadata: { agent_id, agent_email, team_id, team_name, seat_charge_id }
  *   5. No proration on cancellation (Q2=B): owner pays out the week.
+ *
+ * v2: adds ownerCanBeCharged() — a non-throwing card check used to gate
+ *     single-use partner seat links at mint time (see /api/teams/codes/create).
+ *     It reuses resolveOwnerCustomer so the mint-time gate and the redeem-time
+ *     charge can never disagree about whether the owner is billable.
  */
 
 const SEAT_PRICE_ID = process.env.STRIPE_PRICE_ID!
@@ -159,6 +164,30 @@ export async function cancelSeatSubscription(
       return { canceled: true, reason: 'Already canceled in Stripe' }
     }
     throw err
+  }
+}
+
+/**
+ * Returns whether an owner can currently be charged for a seat — i.e. they
+ * have a Stripe customer with a default payment method on file. Reuses the
+ * exact check createSeatSubscription performs (resolveOwnerCustomer), so a
+ * code minted while this returns true won't later fail on no_card at redeem.
+ *
+ * Never throws: converts the SeatBillingError into a typed result the caller
+ * can branch on without try/catch. Used by /api/teams/codes/create to gate
+ * single-use owner-pays partner links at mint time.
+ */
+export async function ownerCanBeCharged(
+  ownerId: string
+): Promise<{ ok: true } | { ok: false; code: SeatBillingError['code']; message: string }> {
+  try {
+    await resolveOwnerCustomer(ownerId)
+    return { ok: true }
+  } catch (err: any) {
+    if (isSeatBillingError(err)) {
+      return { ok: false, code: err.code, message: err.message }
+    }
+    return { ok: false, code: 'unknown', message: err?.message || 'Billing check failed' }
   }
 }
 

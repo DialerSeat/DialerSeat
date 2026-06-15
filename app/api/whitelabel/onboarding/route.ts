@@ -1,32 +1,33 @@
 // app/api/whitelabel/onboarding/route.ts
 // =============================================================================
 // WHITE-LABEL ONBOARDING / EDIT — header/sidebar split (migration 004)
+// + VERCEL SUBDOMAIN PROVISIONING (v6)
 // =============================================================================
-// v5 (migration 004): 3 colors → 4 colors
-//   - Body now carries 4 colors: primary, sidebar, header_bg, page_bg
-//   - All four validated as #RRGGBB hex
-//   - INSERT/UPDATE write all 4 active columns
-//   - GET selects and returns all 4
+// v6: programmatic Vercel domain lifecycle. Because we DON'T use a wildcard
+// domain on Vercel (it won't verify on external Cloudflare DNS without moving
+// nameservers), each tenant's <slug>.dialerseat.com is added to the Vercel
+// project via the API at creation, swapped on slug change, and removed on
+// deactivate. Cloudflare's wildcard CNAME (* -> cname.vercel-dns.com, grey
+// cloud) makes each added subdomain verify + get SSL instantly.
+//   - CREATE branch  → addProjectDomain(slug) after the row is inserted
+//   - UPDATE + slug change → changeProjectDomain(oldSlug, newSlug)
+//   - DELETE (new)   → deactivate tenant + removeProjectDomain(slug)
+// All Vercel calls are non-fatal: the tenant row is the source of truth; a
+// failed domain op is logged and can be reconciled, never blocks onboarding.
 //
-// v4 (migration 003): added page_bg_color (2 → 3 colors).
-//
-// v3 (Phase B3): trimmed body to active set + pre-002 safety mirroring.
-//
-// Pre-002 safety (preserved): INSERT still writes accent_color (mirrored
-// from sidebar) and sensible defaults for secondary_color, background_color,
-// text_color so NOT NULL constraints don't fire. These four lines become
-// no-ops after Phase D migration 002 drops those columns; at that point
-// we delete them. background_color (vestigial dark body bg) is NOT
-// mirrored from page_bg_color — they're different concepts.
-//
-// Unchanged: slug regex, RESERVED set, 24h cooldown, 30-day redirect
-// grace, subscription gate, support_email default, active_tenant_id
-// auto-set on tenant creation, slug collision handling.
+// v5 (migration 004): 3 colors → 4 colors (primary, sidebar, header_bg, page_bg)
+// v4 (migration 003): added page_bg_color.
+// v3 (Phase B3): trimmed body + pre-002 safety mirroring.
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { createClient } from '@supabase/supabase-js'
+import {
+  addProjectDomain,
+  removeProjectDomain,
+  changeProjectDomain,
+} from '@/lib/vercelDomains'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -55,8 +56,6 @@ const SLUG_COOLDOWN_HOURS = 24
 const SLUG_REDIRECT_DAYS = 30
 
 // Sensible defaults for the vestigial Pass 1 columns we no longer expose.
-// Used on INSERT to satisfy any NOT NULL constraints until migration 002
-// drops these columns entirely.
 const LEGACY_SECONDARY_DEFAULT = '#2a6eff'
 const LEGACY_BACKGROUND_DEFAULT = '#0a0a0f'
 const LEGACY_TEXT_DEFAULT = '#f0f0f5'
@@ -88,7 +87,6 @@ export async function GET() {
   }
 
   if (status === 'complete') {
-    // 4-color SELECT (migration 004).
     const { data: tenant } = await supabase
       .from('white_label_tenants')
       .select(`
@@ -270,23 +268,14 @@ export async function POST(req: NextRequest) {
         slug: subdomain,
         brand_name: brandName,
         logo_url: logoUrl,
-        // Active columns (4-color, migration 004)
         primary_color: primaryColor,
         sidebar_color: sidebarColor,
         header_bg_color: headerBgColor,
         page_bg_color: pageBgColor,
-        // Pre-002 safety: vestigial Pass 1 columns still exist on the
-        // table. Mirror sidebar into accent_color to keep them in sync;
-        // default the other three so any NOT NULL constraints don't
-        // fire. background_color is NOT mirrored from page_bg_color —
-        // they are different concepts (dark Pass 1 body vs Pass 2
-        // themed page). These four lines all become no-ops after
-        // migration 002 drops these columns from the table.
         accent_color: sidebarColor,
         secondary_color: LEGACY_SECONDARY_DEFAULT,
         background_color: LEGACY_BACKGROUND_DEFAULT,
         text_color: LEGACY_TEXT_DEFAULT,
-        // Identity / billing
         support_email: user.email || 'support@dialerseat.com',
         stripe_customer_id: user.stripe_customer_id,
         stripe_subscription_id: user.wl_subscription_id,
@@ -317,7 +306,21 @@ export async function POST(req: NextRequest) {
       })
       .eq('clerk_id', userId)
 
-    return NextResponse.json({ success: true, subdomain: tenant.slug, created: true })
+    // ── VERCEL: provision <slug>.dialerseat.com ──────────────────────
+    // Non-fatal: the tenant exists and is the source of truth. If Vercel is
+    // briefly unreachable the subdomain can be reconciled later; we surface a
+    // hint in the response so the UI can show "provisioning" if it wants.
+    const domain = await addProjectDomain(tenant.slug)
+    if (!domain.ok && !domain.skipped) {
+      console.error(`[onboarding] domain provision failed for ${tenant.slug}:`, domain.error)
+    }
+
+    return NextResponse.json({
+      success: true,
+      subdomain: tenant.slug,
+      created: true,
+      domainProvisioned: domain.ok,
+    })
   }
 
   // ─── UPDATE existing tenant ────────────────────────────────────────
@@ -339,8 +342,6 @@ export async function POST(req: NextRequest) {
     sidebar_color: sidebarColor,
     header_bg_color: headerBgColor,
     page_bg_color: pageBgColor,
-    // Pre-002 safety: keep accent_color mirrored to sidebar_color.
-    // Becomes a no-op after migration 002.
     accent_color: sidebarColor,
   }
 
@@ -390,5 +391,89 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  return NextResponse.json({ success: true, subdomain, updated: true })
+  // ── VERCEL: swap subdomain on slug change ────────────────────────────
+  // Adds the new subdomain BEFORE removing the old so there's never a gap;
+  // the 30-day subdomain_history redirect covers the transition either way.
+  // Non-fatal — the DB row already reflects the new slug.
+  let domainSwapped: boolean | undefined
+  if (slugChanged) {
+    const swap = await changeProjectDomain(existing.slug, subdomain)
+    domainSwapped = swap.added.ok
+    if (!swap.added.ok && !swap.added.skipped) {
+      console.error(`[onboarding] domain swap add failed ${existing.slug}→${subdomain}:`, swap.added.error)
+    }
+  }
+
+  return NextResponse.json({
+    success: true,
+    subdomain,
+    updated: true,
+    ...(slugChanged ? { domainSwapped } : {}),
+  })
+}
+
+// =============================================================================
+// DELETE — deactivate tenant + remove its Vercel subdomain
+// =============================================================================
+// Soft-deactivates the caller's tenant (is_active=false, status='inactive')
+// and removes <slug>.dialerseat.com from the Vercel project. The middleware
+// already treats an inactive tenant as 'missing' and 307s to the apex, so the
+// subdomain stops working immediately at the app layer even before Vercel
+// finishes removing the domain. Vercel removal is non-fatal.
+//
+// Body: { confirm: 'deactivate' }  (guards against accidental calls)
+// =============================================================================
+
+export async function DELETE(req: NextRequest) {
+  const { userId } = await auth()
+  if (!userId) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  }
+
+  let body: any = {}
+  try {
+    body = await req.json()
+  } catch {
+    // empty body is fine; confirm check below will catch it
+  }
+
+  if (body?.confirm !== 'deactivate') {
+    return NextResponse.json(
+      { error: 'confirm_required', detail: 'Pass { confirm: "deactivate" } to deactivate.' },
+      { status: 400 }
+    )
+  }
+
+  const { data: tenant } = await supabase
+    .from('white_label_tenants')
+    .select('id, slug, is_active')
+    .eq('owner_clerk_id', userId)
+    .maybeSingle()
+
+  if (!tenant) {
+    return NextResponse.json({ error: 'tenant_missing' }, { status: 404 })
+  }
+
+  const { error: deErr } = await supabase
+    .from('white_label_tenants')
+    .update({ is_active: false, status: 'inactive' })
+    .eq('id', tenant.id)
+
+  if (deErr) {
+    console.error('tenant deactivate failed:', deErr)
+    return NextResponse.json({ error: 'db_error', detail: deErr.message }, { status: 500 })
+  }
+
+  // ── VERCEL: remove the subdomain (non-fatal) ─────────────────────────
+  const removed = await removeProjectDomain(tenant.slug)
+  if (!removed.ok && !removed.skipped) {
+    console.error(`[onboarding] domain removal failed for ${tenant.slug}:`, removed.error)
+  }
+
+  return NextResponse.json({
+    success: true,
+    deactivated: true,
+    slug: tenant.slug,
+    domainRemoved: removed.ok,
+  })
 }

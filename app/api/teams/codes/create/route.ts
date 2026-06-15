@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { ownerCanBeCharged } from '@/lib/teamBilling'
 
 // =============================================================================
 // /api/teams/codes/create  (v2: single-use links + price override)
@@ -143,6 +144,30 @@ export async function POST(req: Request) {
         return NextResponse.json(
           { success: false, error: 'Campaign is not attached to this team — attach it first' },
           { status: 400 }
+        )
+      }
+    }
+
+    // ── MINT-TIME CARD GATE ──────────────────────────────────────────────────
+    // A single-use (max_uses=1) seat+owner code is a partner per-seat link that
+    // auto-redeems and charges the owner's card UNATTENDED at redeem time. To
+    // guarantee the link can never lead to an uncharged seat, refuse to create
+    // it unless the owner can be charged right now (Stripe customer + default
+    // card on file). Reuses the exact check createSeatSubscription performs, so
+    // mint and charge can't disagree. Other code shapes are unaffected.
+    if (resolvedMaxUses === 1 && codeType === 'seat' && payer === 'owner') {
+      const billable = await ownerCanBeCharged(userId)
+      if (!billable.ok) {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              'Add a payment method before creating a single-use owner-paid link. ' +
+              'These links charge your card automatically when an agent joins, so a ' +
+              'card must be on file first.',
+            code: billable.code,
+          },
+          { status: 402 }
         )
       }
     }

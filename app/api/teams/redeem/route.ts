@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { createSeatSubscription, isSeatBillingError } from '@/lib/teamBilling'
 
 // =============================================================================
 // /api/teams/redeem  — agent submits a code to redeem  (v2: single-use links)
@@ -244,8 +245,12 @@ export async function POST(req: Request) {
 
     // ── SEAT CHARGE ──────────────────────────────────────────────────────────
     // Fire a seat charge when the owner is paying AND access is live now:
-    //   - single-use partner seat → charge immediately (active), no Accept gate
-    //   - multi-use owner-pays    → stage pending; the Accept route fires it
+    //   - single-use partner seat → charge the owner's card IMMEDIATELY via the
+    //     same createSeatSubscription() the Accept route uses (no Accept gate;
+    //     the partner already committed by minting the link). The link could
+    //     only be created if the owner had a card on file (mint-time gate in
+    //     /api/teams/codes/create), so this should not hit no_card.
+    //   - multi-use owner-pays → stage pending; the Accept route fires it
     //     (UNCHANGED original behavior)
     if (codeRow.payer === 'owner') {
       const amount = resolveSeatCents({
@@ -254,18 +259,68 @@ export async function POST(req: Request) {
       })
 
       if (isSingleUsePartnerSeat && memberRow.status === 'active') {
-        // Instant partner charge — status 'pending' for Stripe wiring in Batch 4,
-        // but the SEAT itself is already active and dialing.
-        await supabaseAdmin.from('team_seat_charges').insert({
-          team_id: team.id,
-          owner_id: team.owner_id,
-          agent_id: userId,
-          team_member_id: memberRow.id,
-          amount_cents: amount,
-          status: 'pending',
-          period_start: new Date().toISOString(),
-          period_end: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-        })
+        // 1) Insert the charge row (pending), so we have a seat_charge_id to
+        //    tag the Stripe sub with — same shape the Accept route expects.
+        const { data: chargeRow, error: chargeErr } = await supabaseAdmin
+          .from('team_seat_charges')
+          .insert({
+            team_id: team.id,
+            owner_id: team.owner_id,
+            agent_id: userId,
+            team_member_id: memberRow.id,
+            amount_cents: amount,
+            status: 'pending',
+            period_start: new Date().toISOString(),
+            period_end: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          })
+          .select('id')
+          .single()
+
+        if (chargeErr) throw chargeErr
+
+        // 2) Resolve the agent's email for the Stripe description/metadata.
+        const { data: agentUser } = await supabaseAdmin
+          .from('users')
+          .select('email')
+          .eq('clerk_id', userId)
+          .maybeSingle()
+        const agentEmail = agentUser?.email || userId
+
+        // 3) Create the real Stripe seat subscription on the OWNER's card —
+        //    identical call to the Accept route. On success, mark the charge
+        //    paid with the real sub id + period.
+        try {
+          const result = await createSeatSubscription({
+            ownerId: team.owner_id,
+            agentId: userId,
+            agentEmail,
+            teamId: team.id,
+            teamName: team.name,
+            seatChargeId: chargeRow.id,
+            teamMemberId: memberRow.id,
+          })
+
+          await supabaseAdmin
+            .from('team_seat_charges')
+            .update({
+              stripe_subscription_id: result.stripeSubscriptionId,
+              status: 'paid',
+              period_start: result.currentPeriodStart,
+              period_end: result.currentPeriodEnd,
+            })
+            .eq('id', chargeRow.id)
+        } catch (err: any) {
+          // The agent is already joined and dialing — we do NOT un-join them
+          // for an owner-side billing failure at this point. Mark the charge
+          // failed so the owner can resolve it (add/fix card → re-charge job
+          // or manual accept). Log loudly for ops visibility.
+          const reason = isSeatBillingError(err) ? `${err.code}: ${err.message}` : (err?.message || 'unknown')
+          console.error(`[redeem] single-use seat charge failed for member ${memberRow.id}: ${reason}`)
+          await supabaseAdmin
+            .from('team_seat_charges')
+            .update({ status: 'failed' })
+            .eq('id', chargeRow.id)
+        }
       } else if (memberRow.status === 'pending') {
         // Original multi-use owner-pays path — staged, awaits Accept.
         await supabaseAdmin.from('team_seat_charges').insert({
