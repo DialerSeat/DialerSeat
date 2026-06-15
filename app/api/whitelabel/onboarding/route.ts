@@ -2,18 +2,18 @@
 // =============================================================================
 // WHITE-LABEL ONBOARDING / EDIT — header/sidebar split (migration 004)
 // + VERCEL SUBDOMAIN PROVISIONING (v6)
+// + ROLLING SLUG RATE LIMIT (v7)
 // =============================================================================
-// v6: programmatic Vercel domain lifecycle. Because we DON'T use a wildcard
-// domain on Vercel (it won't verify on external Cloudflare DNS without moving
-// nameservers), each tenant's <slug>.dialerseat.com is added to the Vercel
-// project via the API at creation, swapped on slug change, and removed on
-// deactivate. Cloudflare's wildcard CNAME (* -> cname.vercel-dns.com, grey
-// cloud) makes each added subdomain verify + get SSL instantly.
-//   - CREATE branch  → addProjectDomain(slug) after the row is inserted
-//   - UPDATE + slug change → changeProjectDomain(oldSlug, newSlug)
-//   - DELETE (new)   → deactivate tenant + removeProjectDomain(slug)
-// All Vercel calls are non-fatal: the tenant row is the source of truth; a
-// failed domain op is logged and can be reconciled, never blocks onboarding.
+// v7: slug-change policy changed from "1 change per 24h" to "up to 3 changes
+// per rolling 48h window." Implemented by COUNTING this tenant's rows in
+// subdomain_history within the window (that table already gets one row per
+// change), so no schema change is needed. When 3 changes exist in the window,
+// the next change unlocks 48h after the OLDEST of the three (rolling, not a
+// flat freeze). slug_changed_at is still written but no longer gates.
+//
+// v6: programmatic Vercel domain lifecycle (add on create, swap on slug
+// change, remove on deactivate). Cloudflare's wildcard CNAME makes each
+// added subdomain verify + get SSL instantly. All Vercel calls are non-fatal.
 //
 // v5 (migration 004): 3 colors → 4 colors (primary, sidebar, header_bg, page_bg)
 // v4 (migration 003): added page_bg_color.
@@ -52,13 +52,39 @@ const RESERVED = new Set([
 const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{1,28}[a-z0-9])?$/
 const HEX_RE = /^#[0-9a-fA-F]{6}$/
 
-const SLUG_COOLDOWN_HOURS = 24
+// Rolling-window slug rate limit (v7): up to SLUG_CHANGE_LIMIT changes per
+// SLUG_CHANGE_WINDOW_HOURS, counted from subdomain_history rows.
+const SLUG_CHANGE_LIMIT = 3
+const SLUG_CHANGE_WINDOW_HOURS = 48
 const SLUG_REDIRECT_DAYS = 30
 
 // Sensible defaults for the vestigial Pass 1 columns we no longer expose.
 const LEGACY_SECONDARY_DEFAULT = '#2a6eff'
 const LEGACY_BACKGROUND_DEFAULT = '#0a0a0f'
 const LEGACY_TEXT_DEFAULT = '#f0f0f5'
+
+// Returns the ISO time at which this tenant can change its slug again, or null
+// if it's currently under the limit (can change now). Counts change rows in
+// subdomain_history within the rolling window; if at/over the limit, unlock is
+// SLUG_CHANGE_WINDOW_HOURS after the OLDEST change in the window.
+async function slugChangeAvailableAt(tenantId: string): Promise<string | null> {
+  const windowStart = new Date(
+    Date.now() - SLUG_CHANGE_WINDOW_HOURS * 60 * 60 * 1000
+  ).toISOString()
+
+  const { data: recentChanges } = await supabase
+    .from('subdomain_history')
+    .select('created_at')
+    .eq('tenant_id', tenantId)
+    .gte('created_at', windowStart)
+    .order('created_at', { ascending: true })
+
+  if ((recentChanges?.length || 0) >= SLUG_CHANGE_LIMIT) {
+    const oldest = new Date(recentChanges![0].created_at).getTime()
+    return new Date(oldest + SLUG_CHANGE_WINDOW_HOURS * 60 * 60 * 1000).toISOString()
+  }
+  return null
+}
 
 // =============================================================================
 // GET — fetch current tenant for the edit form
@@ -100,14 +126,9 @@ export async function GET() {
       return NextResponse.json({ status: 'pending' })
     }
 
-    let canChangeSlugAt: string | null = null
-    if (tenant.slug_changed_at) {
-      const lastChange = new Date(tenant.slug_changed_at).getTime()
-      const cooldownEnd = lastChange + SLUG_COOLDOWN_HOURS * 60 * 60 * 1000
-      if (cooldownEnd > Date.now()) {
-        canChangeSlugAt = new Date(cooldownEnd).toISOString()
-      }
-    }
+    // v7: mirror the rolling-window rule used on POST so the edit form's
+    // "you can change again on…" message matches the actual gate.
+    const canChangeSlugAt = await slugChangeAvailableAt(tenant.id)
 
     return NextResponse.json({
       status: 'complete',
@@ -346,19 +367,21 @@ export async function POST(req: NextRequest) {
   }
 
   if (slugChanged) {
-    if (existing.slug_changed_at) {
-      const lastChange = new Date(existing.slug_changed_at).getTime()
-      const cooldownEnd = lastChange + SLUG_COOLDOWN_HOURS * 60 * 60 * 1000
-      if (cooldownEnd > Date.now()) {
-        return NextResponse.json(
-          {
-            error: 'slug_cooldown',
-            detail: `You can change your subdomain again on ${new Date(cooldownEnd).toLocaleString()}.`,
-            availableAt: new Date(cooldownEnd).toISOString(),
-          },
-          { status: 429 }
-        )
-      }
+    // v7: rolling-window rate limit. Allow up to SLUG_CHANGE_LIMIT changes per
+    // SLUG_CHANGE_WINDOW_HOURS, counted from subdomain_history rows for this
+    // tenant. If already at the limit, block until the oldest change ages out.
+    const availableAt = await slugChangeAvailableAt(existing.id)
+    if (availableAt) {
+      return NextResponse.json(
+        {
+          error: 'slug_rate_limited',
+          detail: `You've changed your subdomain ${SLUG_CHANGE_LIMIT} times in the last ${SLUG_CHANGE_WINDOW_HOURS} hours. You can change it again on ${new Date(availableAt).toLocaleString()}.`,
+          availableAt,
+          changeLimit: SLUG_CHANGE_LIMIT,
+          windowHours: SLUG_CHANGE_WINDOW_HOURS,
+        },
+        { status: 429 }
+      )
     }
 
     const redirectsUntil = new Date(now.getTime() + SLUG_REDIRECT_DAYS * 24 * 60 * 60 * 1000)
