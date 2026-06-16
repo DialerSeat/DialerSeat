@@ -175,24 +175,41 @@ export default async function RootLayout({
 
   let branding = null;
   if (!isLandingView) {
-    // ── WHITE-LABEL TENANT RESOLUTION (Push D — 4-tier) ───────────────
+    // ── WHITE-LABEL TENANT RESOLUTION (v2 — signed-in selection wins) ──
+    // "DialerSeat Pro" is itself a tenant choice: when a signed-in user
+    // selects it, active_tenant_id is null and getActiveTenantForUser
+    // returns null → default DialerSeat chrome renders EVERYWHERE the user
+    // goes, including on a tenant subdomain like demo.dialerseat.com and in
+    // the desktop apps. Selecting a real tenant renders that tenant. This is
+    // what makes the brand "follow" the dropdown for the logged-in user.
+    //
     // Priority order:
-    //   1. x-tenant-slug header — explicit subdomain visit, strongest signal.
-    //   2. userId from auth → user's selected tenant via getActiveTenantForUser.
-    //      Brands follow the user across devices/domains when signed in.
-    //   3. ds_last_tenant cookie → last tenant this browser signed into.
-    //      Lets the root-domain sign-in page brand for returning users
-    //      BEFORE they're signed in (cookie set by /api/auth/post-signin).
+    //   1. Signed-in user's selection (getActiveTenantForUser):
+    //        - returns a tenant  → render it (their picked brand)
+    //        - returns null      → user picked DialerSeat Pro / standard.
+    //          On a SUBDOMAIN we still let the hostname brand win for them
+    //          ONLY if they have no explicit standard choice — but
+    //          getActiveTenantForUser already encodes "null = standard",
+    //          so null here means "show default DialerSeat". We therefore
+    //          DO NOT fall back to the hostname for a signed-in user; their
+    //          selection is authoritative.
+    //   2. Signed-out → hostname (x-tenant-slug): a visitor to
+    //      demo.dialerseat.com sees demo's current tenant selection login.
+    //   3. Signed-out + no subdomain → ds_last_tenant cookie hint.
     //   4. null → default DialerSeat chrome.
-    branding = await getTenantBranding(tenantSlug);
-    if (!branding) {
-      const { userId } = await auth();
-      if (userId) {
-        branding = await getActiveTenantForUser(userId);
-      } else {
-        // Pre-auth: check the cookie hint dropped by post-signin on this
-        // browser's last successful sign-in. Lets sign-in / landing render
-        // branded for returning users even without a subdomain visit.
+    const { userId } = await auth();
+
+    if (userId) {
+      // Signed-in: the user's own selection is authoritative and follows
+      // them across every host, subdomain included. null → default DialerSeat.
+      branding = await getActiveTenantForUser(userId);
+    } else {
+      // Signed-out: brand by the subdomain they're visiting, so every
+      // visitor to demo.dialerseat.com sees demo's current tenant login.
+      branding = await getTenantBranding(tenantSlug);
+      if (!branding) {
+        // No subdomain (apex) → use the cookie hint from this browser's last
+        // sign-in so returning users still see a branded sign-in/landing.
         const cookieStore = await cookies();
         const lastTenant = cookieStore.get(TENANT_COOKIE_NAME)?.value;
         if (lastTenant) {

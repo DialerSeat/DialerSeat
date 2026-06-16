@@ -677,6 +677,7 @@ export default function WhitelabelOnboardingPage() {
               logoUrl={displayLogo}
               primaryColor={HEX_RE.test(primary) ? primary : '#4a9eff'}
               pageBgColor={HEX_RE.test(pageBg) ? pageBg : '#f0f1f4'}
+              sidebarColor={HEX_RE.test(sidebar) ? sidebar : '#111118'}
               label={loginLinkLabel}
               text={loginLinkText}
               url={loginLinkUrl}

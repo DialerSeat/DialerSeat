@@ -29,6 +29,9 @@ export interface LoginLinkSectionProps {
   logoUrl?: string | null
   primaryColor: string
   pageBgColor: string
+  /** Sidebar color — the REAL sign-in page uses this as its background, so the
+   *  preview does too (that's why colors must read on-dark, not on-page-bg). */
+  sidebarColor?: string
   /** Text color for the brand name in the PREVIEW (over the tenant page bg). */
   onPageTextColor?: string
   /** Muted text color for the PREVIEW's "DialerSeat" half + heading. */
@@ -61,6 +64,7 @@ export default function LoginLinkSection({
   logoUrl,
   primaryColor,
   pageBgColor,
+  sidebarColor = '#111118',
   onPageTextColor = '#1a1c24',
   previewMutedColor = '#5a5e6a',
   label,
@@ -201,7 +205,7 @@ export default function LoginLinkSection({
             </div>
             <div
               style={{
-                background: pageBgColor || '#f0f1f4',
+                background: sidebarColor || '#111118',
                 border: '1px solid var(--border)',
                 borderRadius: 8,
                 padding: '28px 24px',
@@ -211,52 +215,36 @@ export default function LoginLinkSection({
                 gap: 16,
               }}
             >
-              {/* mark */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
-                {logoUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={logoUrl} alt="" style={{ maxHeight: 40, maxWidth: 160, objectFit: 'contain' }} />
-                ) : (
-                  <div style={{
-                    width: 40, height: 40, borderRadius: 9,
-                    background: primaryColor || '#4a9eff', opacity: 0.25,
-                  }} />
-                )}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, letterSpacing: 2.5, fontWeight: 700, textTransform: 'uppercase' }}>
-                  <span style={{ color: onPageTextColor }}>{brandName || 'Your brand'}</span>
-                  <span style={{ color: primaryColor || '#4a9eff', fontSize: 14, fontWeight: 400, transform: 'translateY(-1px)' }}>×</span>
-                  <span style={{ color: previewMutedColor }}>DialerSeat</span>
-                </div>
+              {/* logo */}
+              {logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={logoUrl} alt="" style={{ maxHeight: 44, maxWidth: 180, objectFit: 'contain' }} />
+              ) : (
+                <div style={{
+                  width: 44, height: 44, borderRadius: 9,
+                  background: primaryColor || '#4a9eff', opacity: 0.3,
+                }} />
+              )}
+
+              {/* mark — on-dark: brand white, DialerSeat muted-on-dark */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 11, letterSpacing: 2.5, fontWeight: 700, textTransform: 'uppercase' }}>
+                <span style={{ color: '#ffffff' }}>{brandName || 'Your brand'}</span>
+                <span style={{ color: primaryColor || '#4a9eff', fontSize: 13, fontWeight: 400, transform: 'translateY(-1px)' }}>×</span>
+                <span style={{ color: 'rgba(255,255,255,0.55)' }}>DialerSeat</span>
               </div>
 
-              {/* faux sign-in field, so the partner sees the link in context */}
-              <div style={{
-                width: '100%', maxWidth: 240, height: 36, borderRadius: 6,
-                background: '#ffffff', border: '1px solid rgba(0,0,0,0.12)',
-                display: 'flex', alignItems: 'center', paddingLeft: 12,
-              }}>
-                <span style={{ fontSize: 11, color: '#9aa0aa' }}>Email address</span>
-              </div>
-              <div style={{
-                width: '100%', maxWidth: 240, height: 36, borderRadius: 6,
-                background: primaryColor || '#4a9eff', opacity: 0.92,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: '#fff', textTransform: 'uppercase' }}>Sign in</span>
-              </div>
-
-              {/* the link itself */}
+              {/* heading + link — ABOVE the login card, matching the real page */}
               {previewShowsLink ? (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
                   {label.trim() ? (
-                    <div style={{ fontSize: 10, letterSpacing: 2, fontWeight: 700, textTransform: 'uppercase', color: previewMutedColor }}>
+                    <div style={{ fontSize: 9, letterSpacing: 2, fontWeight: 700, textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)' }}>
                       {label}
                     </div>
                   ) : null}
                   <span
                     style={{
                       display: 'inline-flex', alignItems: 'center',
-                      fontSize: 13, fontWeight: 700, letterSpacing: 0.4,
+                      fontSize: 12, fontWeight: 700, letterSpacing: 0.4,
                       color: primaryColor || '#4a9eff',
                       borderBottom: `1px solid ${primaryColor || '#4a9eff'}73`,
                       paddingBottom: 1, lineHeight: 1.3,
@@ -267,10 +255,34 @@ export default function LoginLinkSection({
                   </span>
                 </div>
               ) : (
-                <div style={{ fontSize: 10, color: previewMutedColor, fontStyle: 'italic', marginTop: 2, opacity: 0.8 }}>
+                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', fontStyle: 'italic', opacity: 0.9 }}>
                   Your link appears here once it has text and a URL.
                 </div>
               )}
+
+              {/* faux login card — lifted surface on the dark bg, like the real Clerk card */}
+              <div style={{
+                width: '100%', maxWidth: 260,
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid rgba(255,255,255,0.10)',
+                borderRadius: 6, padding: 16,
+                display: 'flex', flexDirection: 'column', gap: 10, marginTop: 2,
+              }}>
+                <div style={{
+                  width: '100%', height: 34, borderRadius: 4,
+                  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)',
+                  display: 'flex', alignItems: 'center', paddingLeft: 10,
+                }}>
+                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>Email address</span>
+                </div>
+                <div style={{
+                  width: '100%', height: 34, borderRadius: 4,
+                  background: primaryColor || '#4a9eff',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: '#fff', textTransform: 'uppercase' }}>Sign in</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>

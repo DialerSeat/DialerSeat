@@ -56,7 +56,7 @@ export default function SignInPage() {
           opacity: 0.75;
         }
       `}</style>
-      <div style={{ marginBottom: '24px', textAlign: 'center' }}>
+      <div style={{ marginBottom: '40px', textAlign: 'center' }}>
         <Link
           href="/"
           aria-label={`${brandName} — return to home`}
