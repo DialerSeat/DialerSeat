@@ -67,6 +67,11 @@ export default function SignInPage() {
             justifyContent: 'center',
             gap: logoUrl ? 0 : '12px',
             marginBottom: '16px',
+            // Differentiated positioning: the tenant logo (a tall 256×74 image)
+            // sat too high, so nudge it down. The default DialerSeat wordmark
+            // (short D-box + text) already sits right, so leave it at 0.
+            position: 'relative',
+            top: logoUrl ? '44px' : '0px',
             textDecoration: 'none',
             cursor: 'pointer',
           }}
