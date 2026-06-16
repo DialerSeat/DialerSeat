@@ -56,7 +56,7 @@ export default function SignInPage() {
           opacity: 0.75;
         }
       `}</style>
-      <div style={{ marginTop: '32px', marginBottom: '40px', textAlign: 'center' }}>
+      <div style={{ marginTop: '72px', marginBottom: '40px', textAlign: 'center' }}>
         <Link
           href="/"
           aria-label={`${brandName} — return to home`}
@@ -115,7 +115,7 @@ export default function SignInPage() {
           // Co-branding mark + optional partner link. Colors come from the
           // brand vars; on the dark sign-in bg we pass explicit on-dark colors
           // so the mark reads correctly against the sidebar background.
-          <div style={{ marginTop: 18 }}>
+          <div style={{ marginTop: 40 }}>
             <CoBrandOnDark
               brandName={branding?.brand_name || 'Brand'}
               linkLabel={loginLinkLabel}
