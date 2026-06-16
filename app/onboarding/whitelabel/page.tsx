@@ -670,23 +670,6 @@ export default function WhitelabelOnboardingPage() {
             </div>
           </div>
 
-          {/* ── LOGIN PAGE LINK (v9, optional) ── */}
-          <div style={sectionStyle}>
-            <LoginLinkSection
-              brandName={brandName}
-              logoUrl={displayLogo}
-              primaryColor={HEX_RE.test(primary) ? primary : '#4a9eff'}
-              pageBgColor={HEX_RE.test(pageBg) ? pageBg : '#f0f1f4'}
-              sidebarColor={HEX_RE.test(sidebar) ? sidebar : '#111118'}
-              label={loginLinkLabel}
-              text={loginLinkText}
-              url={loginLinkUrl}
-              onLabelChange={setLoginLinkLabel}
-              onTextChange={setLoginLinkText}
-              onUrlChange={setLoginLinkUrl}
-            />
-          </div>
-
           {/* ── LOGO — v8: hint reframed as a permanent recommendation ── */}
           <div style={sectionStyle}>
             <label style={sectionLabelStyle}>▸ LOGO</label>
@@ -864,6 +847,24 @@ export default function WhitelabelOnboardingPage() {
               pageBg={pageBg}
               brandName={brandName}
               logoUrl={displayLogo}
+            />
+          </div>
+
+          {/* ── LOGIN PAGE LINK (v9, optional) — closed dropdown, placed under
+               EXACT PREVIEW per JC ── */}
+          <div style={sectionStyle}>
+            <LoginLinkSection
+              brandName={brandName}
+              logoUrl={displayLogo}
+              primaryColor={HEX_RE.test(primary) ? primary : '#4a9eff'}
+              pageBgColor={HEX_RE.test(pageBg) ? pageBg : '#f0f1f4'}
+              sidebarColor={HEX_RE.test(sidebar) ? sidebar : '#111118'}
+              label={loginLinkLabel}
+              text={loginLinkText}
+              url={loginLinkUrl}
+              onLabelChange={setLoginLinkLabel}
+              onTextChange={setLoginLinkText}
+              onUrlChange={setLoginLinkUrl}
             />
           </div>
 

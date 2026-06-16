@@ -158,6 +158,13 @@ const IOS_SPLASH_SCREENS: Array<{ w: number; h: number; orient: 'portrait' | 'la
 
 const TENANT_COOKIE_NAME = 'ds_last_tenant';
 
+// Branding now depends on the signed-in user's active_tenant_id (resolved per
+// request), so the root layout must render dynamically — otherwise a cached RSC
+// payload from a previous (e.g. signed-out, hostname-branded) render could be
+// served to a signed-in user whose selection differs. force-dynamic guarantees
+// branding is re-resolved on every request.
+export const dynamic = 'force-dynamic';
+
 export default async function RootLayout({
   children,
 }: {

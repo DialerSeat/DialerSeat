@@ -74,8 +74,9 @@ export default function LoginLinkSection({
   onTextChange,
   onUrlChange,
 }: LoginLinkSectionProps) {
-  const hasAnyValue = !!(label || text || url)
-  const [open, setOpen] = useState(hasAnyValue)
+  // Closed by default per JC — even when values exist (edit mode). The user
+  // expands it intentionally; a filled-in link still starts collapsed.
+  const [open, setOpen] = useState(false)
 
   // The link only "shows" in preview once it has clickable text + a url, which
   // mirrors the server rule and the real login component.
