@@ -1875,16 +1875,23 @@ function DialerPageInner() {
             width: 280px; max-width: 85vw;
             transform: translateX(100%); transition: transform 0.25s ease;
             background: ${terminalBg}; border-left: 1px solid ${terminalBorder};
-            padding-top: env(safe-area-inset-top, 0px);
-            box-sizing: border-box;
           }
           .dialer-right-sidebar.open { transform: translateX(0); }
+
+          /* C9b: only the METRICS HEADER BAR gets the safe-area inset. The dark
+             header (terminalDark) extends UP under the dynamic island, and its
+             label text sits flush just below the island. This keeps the rest of
+             the sidebar (conversion card, manual dialer, SYSTEM LOG) at their
+             normal positions — they no longer get pushed down. */
+          .dialer-metrics-header {
+            padding-top: max(8px, env(safe-area-inset-top, 0px)) !important;
+          }
 
           .dialer-right-toggle {
             display: flex;
             position: fixed;
             right: 0;
-            top: 80%;
+            top: 73%;
             transform: translateY(-50%);
             z-index: 50;
             width: 22px;
@@ -2561,7 +2568,7 @@ function DialerPageInner() {
         />
 
         <aside className={`dialer-right-sidebar ${rightSidebarOpen ? 'open' : ''}`}>
-          <div style={{ background: terminalDark, padding: '8px 16px', borderBottom: `1px solid ${terminalBorder}`, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div className="dialer-metrics-header" style={{ background: terminalDark, padding: '8px 16px', borderBottom: `1px solid ${terminalBorder}`, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '9px', letterSpacing: '3px', color: 'var(--brand-on-sidebar-muted)', fontWeight: 'bold' }}>TODAY&apos;S METRICS</span>
           </div>
 
