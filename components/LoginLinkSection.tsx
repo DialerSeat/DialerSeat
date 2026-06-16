@@ -206,7 +206,10 @@ export default function LoginLinkSection({
             </div>
             <div
               style={{
-                background: sidebarColor || '#111118',
+                /* Fixed dark preview surface for ALL tenants — the real
+                   sign-in page renders on a dark backdrop regardless of brand,
+                   so this stays site-accurate without tinting per tenant. */
+                background: '#15161c',
                 border: '1px solid var(--border)',
                 borderRadius: 8,
                 padding: '28px 24px',
