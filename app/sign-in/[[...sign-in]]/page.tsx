@@ -67,8 +67,6 @@ export default function SignInPage() {
             justifyContent: 'center',
             gap: logoUrl ? 0 : '12px',
             marginBottom: '16px',
-            position: 'relative',
-            top: '60px',
             textDecoration: 'none',
             cursor: 'pointer',
           }}
