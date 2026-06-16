@@ -45,8 +45,8 @@ export default function SignInPage() {
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      justifyContent: 'center',
-      padding: '40px 20px',
+      justifyContent: 'flex-start',
+      padding: '120px 20px 40px',
     }}>
       <style>{`
         .auth-logo-link {
@@ -56,7 +56,7 @@ export default function SignInPage() {
           opacity: 0.75;
         }
       `}</style>
-      <div style={{ marginBottom: '40px', textAlign: 'center' }}>
+      <div style={{ marginTop: '32px', marginBottom: '40px', textAlign: 'center' }}>
         <Link
           href="/"
           aria-label={`${brandName} — return to home`}
