@@ -19,9 +19,11 @@ import { appVisibleToRole } from './types'
 //   instead of v24's tall first column. Grid snapping, no-overlap cells, and
 //   layout freezing are unchanged; only the DEFAULT placement order differs.
 //   "Reset icon layout" returns to this arrangement.
-// - XP AUTUMN WALLPAPER: uses the smart-cropped preview.redd.it render with
-//   `cover` so it fills the screen edge-to-edge with no side bars (the prior
-//   i.redd.it + `contain` combo showed a dark mat as bars on wide screens).
+// - XP AUTUMN WALLPAPER: uses `contain` so the FULL image is shown uncropped
+//   (JC: "not zoomed in, the full version"). On screens whose aspect ratio
+//   differs from the image's 3:2, this leaves a warm-brown mat (#3a2e1a,
+//   blended to the image edges) on the short sides — the intended tradeoff
+//   for showing the whole picture rather than cropping it as `cover` did.
 // - TASKBAR PILL REORDER: new reorderWindows(dragId, targetId) moves a
 //   window within the windows array (pill order = array order, zIndex
 //   untouched); passed to Taskbar v2 as onReorderWindows.
@@ -134,7 +136,7 @@ const BG_PRESETS: { id: string; name: string; css: string }[] = [
     // i.redd.it + `contain` combo showed a dark mat as bars on wide screens.)
     id: 'bliss',
     name: 'XP AUTUMN',
-    css: `#3a2e1a url("https://preview.redd.it/finally-windows-xps-autumn-wallpaper-in-full-res-4200x2800-v0-3ma6nhepxbb81.jpg?width=1080&crop=smart&auto=webp&s=e3747c3ccf8c439969200d2d67fb06d3f3738138") center / cover no-repeat`,
+    css: `#3a2e1a url("https://preview.redd.it/finally-windows-xps-autumn-wallpaper-in-full-res-4200x2800-v0-3ma6nhepxbb81.jpg?width=1080&crop=smart&auto=webp&s=e3747c3ccf8c439969200d2d67fb06d3f3738138") center / contain no-repeat`,
   },
   // { id: 'vista', name: 'VISTA AURORA', css: `#0d2a1a url("/wallpapers/vista-aurora.jpg") center / cover no-repeat` },
   // { id: 'win10', name: 'WIN 10 HERO', css: `#0a2a4a url("/wallpapers/win10-hero.jpg") center / cover no-repeat` },
