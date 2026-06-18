@@ -65,11 +65,11 @@ const PRESETS: Preset[] = [
     key: 'preset-3',
     label: 'Preset 3',
     description:
-      'Deep brown chrome with slate blue accents on a warm gray dashboard. Quiet and confident.',
-    primary: '#62839d',
-    sidebar: '#3b261b',
-    headerBg: '#3b261b',
-    pageBg: '#5b5759',
+      'Slate teal — deep blue-gray chrome with a bright teal accent, monochrome page wash.',
+    primary: '#1ABC9C',
+    sidebar: '#2C3E50',
+    headerBg: '#2C3E50',
+    pageBg: '#2C3E50',
   },
   {
     key: 'preset-4',
@@ -95,11 +95,11 @@ const PRESETS: Preset[] = [
     key: 'preset-6',
     label: 'Preset 6',
     description:
-      'Slate teal — deep blue-gray chrome with a bright teal accent, monochrome page wash.',
-    primary: '#1ABC9C',
-    sidebar: '#2C3E50',
-    headerBg: '#2C3E50',
-    pageBg: '#2C3E50',
+      'Deep brown chrome with slate blue accents on a warm gray dashboard. Quiet and confident.',
+    primary: '#62839d',
+    sidebar: '#3b261b',
+    headerBg: '#3b261b',
+    pageBg: '#5b5759',
   },
   {
     key: 'preset-7',
