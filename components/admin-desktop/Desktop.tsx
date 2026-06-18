@@ -288,7 +288,7 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
     [role]
   )
   const isInstalled = useCallback(
-    (id: AppId) => isBaseApp(id) || installedApps.includes(id),
+    (id: AppId) => isBaseApp(id, role) || installedApps.includes(id),
     [installedApps]
   )
   const visibleApps = useMemo(
@@ -494,13 +494,13 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
 
   // ── APP STORE SERVICES ───────────────────────────────────────────────────
   const installApp = useCallback((id: AppId) => {
-    if (isBaseApp(id)) return // base apps are always installed
+    if (isBaseApp(id, role)) return // base apps are always installed
     setInstalledApps(prev => prev.includes(id) ? prev : [...prev, id])
     setHiddenApps(prev => prev.filter(h => h !== id)) // land on the desktop
   }, [])
 
   const uninstallApp = useCallback((id: AppId) => {
-    if (isBaseApp(id)) return // base apps (incl. App Store) cannot be uninstalled
+    if (isBaseApp(id, role)) return // base apps (incl. App Store) cannot be uninstalled
     setInstalledApps(prev => prev.filter(a => a !== id))
     setHiddenApps(prev => prev.filter(h => h !== id))
     setIconPositions(prev => {
@@ -524,7 +524,7 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
   // immediately; otherwise uninstall straight away. This mirrors the App
   // Store's guard so both entry points show the same warning.
   const requestUninstall = useCallback((id: AppId) => {
-    if (isBaseApp(id)) return
+    if (isBaseApp(id, role)) return
     if (uninstallWarns(id)) {
       setConfirmUninstallId(id)
     } else {
@@ -884,7 +884,7 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
     if (contextMenu.type === 'icon') {
       const appId = contextMenu.payload as AppId
       const alreadyOpen = windows.find(w => w.appId === appId)
-      const base = isBaseApp(appId)
+      const base = isBaseApp(appId, role)
       return [
         { label: 'Open', icon: '▶', onClick: () => openApp(appId) },
         {},

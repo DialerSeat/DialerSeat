@@ -38,9 +38,22 @@ export const APP_STORE_ID = 'appstore' as AppId
 // desktop. Uninstalling removes them from the desktop and (for apps in
 // UNINSTALL_WARN_APP_IDS) warns that data will be deleted.
 //
-// 'notes' — each user's notes are private (keyed to their clerk_id); the app
-// must be installed before it appears.
+// 'notes' — for MANAGER it's a downloadable store app (each manager user's
+// notes are private, installed on demand). For ADMIN it's a BASE app instead
+// (see BASE_APP_OVERRIDES_BY_ROLE below): always installed, never in the store.
 export const STORE_APP_IDS: AppId[] = ['notes']
+
+// Per-role exceptions to the global STORE_APP_IDS rule: ids here are treated as
+// BASE apps (always installed, not uninstallable, not gated by the store) for
+// the listed role ONLY, even though they appear in STORE_APP_IDS for everyone
+// else. This lets one app be a default fixture on one desktop and an optional
+// download on another.
+//   admin → 'notes' is a base app (not a store download)
+//   manager → 'notes' stays a store app (the STORE_APP_IDS default)
+export const BASE_APP_OVERRIDES_BY_ROLE: Record<AppRole, AppId[]> = {
+  admin: ['notes'],
+  manager: [],
+}
 
 // Store apps whose uninstall destroys user data — the App Store shows a hard
 // confirm ("all data will be deleted") before uninstalling these.
@@ -50,8 +63,13 @@ export const UNINSTALL_WARN_APP_IDS: AppId[] = ['notes']
 // Start menu and App Store INSTALLED tab).
 export const DEFAULT_HIDDEN_APP_IDS: AppId[] = ['clerk-profile']
 
-export function isBaseApp(id: AppId): boolean {
-  return !STORE_APP_IDS.includes(id)
+// Base vs store is role-aware. An app is BASE when it isn't a store app at all,
+// OR when it's listed as a base override for this role. Passing no role keeps
+// the legacy global behavior (store-list only) for any caller without a role.
+export function isBaseApp(id: AppId, role?: AppRole): boolean {
+  if (!STORE_APP_IDS.includes(id)) return true
+  if (role && BASE_APP_OVERRIDES_BY_ROLE[role]?.includes(id)) return true
+  return false
 }
 
 export function uninstallWarns(id: AppId): boolean {

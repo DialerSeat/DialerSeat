@@ -72,7 +72,7 @@ export default function AppStoreApp() {
     installApp, uninstallApp, addToDesktop, removeFromDesktop, openApp,
   } = services
 
-  const isInstalled = (id: AppId) => isBaseApp(id) || installedAppIds.includes(id)
+  const isInstalled = (id: AppId) => isBaseApp(id, role) || installedAppIds.includes(id)
   const isOnDesktop = (id: AppId) => isInstalled(id) && !hiddenAppIds.includes(id)
 
   // Role gate FIRST, then store/install state. A manager never sees admin-only
@@ -212,7 +212,7 @@ export default function AppStoreApp() {
 
         {tab === 'installed' && (
           installedApps.map(app => {
-            const base = isBaseApp(app.id)
+            const base = isBaseApp(app.id, role)
             const onDesktop = isOnDesktop(app.id)
             return (
               <div key={app.id} style={{
