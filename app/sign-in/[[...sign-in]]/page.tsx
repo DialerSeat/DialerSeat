@@ -1,7 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { SignIn, useAuth } from '@clerk/nextjs'
+import { SignIn } from '@clerk/nextjs'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useBranding } from '@/components/ThemeProvider'
@@ -26,45 +25,7 @@ import { useBranding } from '@/components/ThemeProvider'
 const FUTURA = 'Futura PT, Futura, "Trebuchet MS", sans-serif'
 
 export default function SignInPage() {
-  const serverBranding = useBranding()
-  const { isSignedIn } = useAuth()
-
-  // The server renders this page with HOSTNAME branding (correct for a signed-
-  // OUT visitor: demo.dialerseat.com shows demo's login). But after the user
-  // authenticates client-side, the page lingers briefly before the redirect —
-  // and during that "loading the tenant after login" window it would otherwise
-  // keep showing the stale hostname brand, even for an account unrelated to it.
-  //
-  // Once signed in, we fetch the ACCOUNT's own active-tenant branding
-  // (/api/auth/my-branding → getActiveTenantForUser; null = default DialerSeat)
-  // and render THAT instead. So the splash follows the account, not the URL:
-  //   - a default DialerSeat account on demo.dialerseat.com → default logo
-  //   - a demo owner anywhere → demo's logo
-  const [accountBranding, setAccountBranding] = useState<typeof serverBranding | null>(null)
-
-  useEffect(() => {
-    if (!isSignedIn) {
-      // Signed out → use server (hostname) branding; nothing to override.
-      setAccountBranding(null)
-      return
-    }
-    let cancelled = false
-    fetch('/api/auth/my-branding', { cache: 'no-store' })
-      .then(r => r.json())
-      .then(d => {
-        if (cancelled) return
-        setAccountBranding(d?.branding ?? null) // null = default DialerSeat
-      })
-      .catch(() => { /* fall back to default DialerSeat below */ })
-    return () => { cancelled = true }
-  }, [isSignedIn])
-
-  // Effective branding: signed-in uses the account's own brand (once resolved);
-  // signed-out uses the server's hostname brand. When signed in but the account
-  // brand has resolved to null (e.g. a default DialerSeat account), we drop the
-  // hostname brand to default DialerSeat — never the stale subdomain brand.
-  const branding = isSignedIn ? accountBranding : serverBranding
-
+  const branding = useBranding()
   const brandName = branding?.brand_name?.toUpperCase() || 'DIALERSEAT'
   const logoUrl = branding?.logo_url || null
   const colorBackground = branding?.sidebar_color || '#111118'
@@ -73,11 +34,6 @@ export default function SignInPage() {
   // A tenant brand is "active" when we have a logo (white-label context). Only
   // then do we show the "<Brand> × DialerSeat" mark + optional partner link.
   const isTenant = !!logoUrl
-
-  // Partner links come straight from the effective (account) branding. They show
-  // on the real sign-in page (signed-out, hostname brand) and, for a tenant
-  // OWNER signing in, on their own brand — but never on a stale subdomain brand,
-  // since once signed in the brand is the account's own.
   const loginLinkLabel = branding?.login_link_label || null
   const loginLinkText = branding?.login_link_text || null
   const loginLinkUrl = branding?.login_link_url || null
