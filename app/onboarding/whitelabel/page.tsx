@@ -42,6 +42,16 @@ interface SavedTheme {
 
 const PRESETS: Preset[] = [
   {
+    key: 'preset-default',
+    label: 'Default',
+    description:
+      'The standard DialerSeat look — use this to run as the default DialerSeat tenant.',
+    primary: '#4a9eff',
+    sidebar: '#0f1117',
+    headerBg: '#0f1117',
+    pageBg: '#0a0a0f',
+  },
+  {
     key: 'preset-1',
     label: 'Preset 1',
     description:
@@ -55,31 +65,61 @@ const PRESETS: Preset[] = [
     key: 'preset-2',
     label: 'Preset 2',
     description:
-      'Deep forest chrome, bright leaf-green accents, fresh green page wash. Earthy and grounded.',
-    primary: '#5fb87a',
-    sidebar: '#1a3a26',
-    headerBg: '#1a3a26',
-    pageBg: '#ecf5e8',
+      'Slate teal — deep blue-gray chrome with a bright teal accent, monochrome page wash.',
+    primary: '#1ABC9C',
+    sidebar: '#2C3E50',
+    headerBg: '#2C3E50',
+    pageBg: '#2C3E50',
   },
   {
     key: 'preset-3',
     label: 'Preset 3',
     description:
-      'Warm brown chrome, rose pink accents, soft rose page wash. Soft, distinctive, memorable.',
-    primary: '#e8b8c5',
-    sidebar: '#6e5142',
-    headerBg: '#6e5142',
-    pageBg: '#fbeef2',
+      'All black chrome and page with a soft charcoal accent. Stealth and minimal.',
+    primary: '#363636',
+    sidebar: '#000000',
+    headerBg: '#000000',
+    pageBg: '#000000',
   },
   {
     key: 'preset-4',
     label: 'Preset 4',
     description:
-      'Light gray-white chrome, soft lavender accents, faint lavender page wash. Calm and easy on the eyes.',
+      'Warm gray sidebar, forest-green header, near-black accent on a muted green page.',
+    primary: '#101017',
+    sidebar: '#514f4d',
+    headerBg: '#208330',
+    pageBg: '#5f635f',
+  },
+  {
+    key: 'preset-5',
+    label: 'Preset 5',
+    description:
+      'Soft light gray chrome, lavender accent, faint lavender page wash. Calm and easy on the eyes.',
     primary: '#b8a3e0',
     sidebar: '#e4e6eb',
     headerBg: '#e4e6eb',
     pageBg: '#f1ecf7',
+  },
+  {
+    key: 'preset-6',
+    label: 'Preset 6',
+    description:
+      'Clean light gray sidebar, white header, deep corporate blue accent on a white page.',
+    primary: '#00539B',
+    sidebar: '#dbdbdb',
+    headerBg: '#ffffff',
+    pageBg: '#ffffff',
+  },
+  {
+    key: 'preset-7',
+    label: 'Preset 7',
+    description:
+      'Warm stone chrome with a taupe accent on a charcoal page. Understated and editorial.',
+    primary: '#9C8F84',
+    sidebar: '#D8D9D6',
+    headerBg: '#D8D9D6',
+    pageBg: '#3D3D3D',
   },
 ]
 
@@ -115,6 +155,8 @@ export default function WhitelabelOnboardingPage() {
   const [sidebar, setSidebar] = useState<string>(DEFAULT_PRESET.sidebar)
   const [headerBg, setHeaderBg] = useState<string>(DEFAULT_PRESET.headerBg)
   const [pageBg, setPageBg] = useState<string>(DEFAULT_PRESET.pageBg)
+  // Theme presets are shown in a dropdown that's closed by default.
+  const [presetsOpen, setPresetsOpen] = useState(false)
 
   // v9: optional subdomain-login link
   const [loginLinkLabel, setLoginLinkLabel] = useState('')
@@ -689,50 +731,80 @@ export default function WhitelabelOnboardingPage() {
             />
           </div>
 
-          {/* ── THEME — presets + Custom + color pickers ── */}
+          {/* ── THEME — presets (collapsible) + Custom + color pickers ── */}
           <div style={sectionStyle}>
-            <div style={sectionLabelStyle}>▸ THEME</div>
+            <button
+              type="button"
+              onClick={() => setPresetsOpen(o => !o)}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: 'transparent',
+                border: 'none',
+                padding: 0,
+                cursor: 'pointer',
+                font: 'inherit',
+              }}
+            >
+              <span style={sectionLabelStyle}>
+                ▸ THEME{' '}
+                <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>
+                  — {presetKey === 'custom'
+                       ? 'Custom'
+                       : (activePreset?.label || activeSavedTheme?.name || 'choose a preset')}
+                </span>
+              </span>
+              <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>
+                {presetsOpen ? '▲' : '▼'}
+              </span>
+            </button>
 
-            <div style={presetGridStyle}>
-              {PRESETS.map(p => (
-                <button
-                  key={p.key}
-                  type="button"
-                  onClick={() => applyPreset(p.key)}
-                  style={presetCardStyle(presetKey === p.key)}
-                >
-                  <div style={presetSwatchRowStyle}>
-                    <div style={{ ...presetSwatchStyle, background: p.sidebar }} title="Sidebar" />
-                    <div style={{ ...presetSwatchStyle, background: p.headerBg }} title="Header" />
-                    <div style={{ ...presetSwatchStyle, background: p.primary }} title="Primary" />
-                    <div style={{ ...presetSwatchStyle, background: p.pageBg }} title="Page background" />
-                  </div>
-                  <div style={presetNameStyle(presetKey === p.key)}>{p.label}</div>
-                </button>
-              ))}
-              <button
-                type="button"
-                onClick={() => applyPreset('custom')}
-                style={presetCardStyle(presetKey === 'custom')}
-              >
-                <div
-                  style={{
-                    ...presetSwatchRowStyle,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    height: 28,
-                    color: 'var(--text-secondary)',
-                    fontSize: 20,
-                    letterSpacing: 0,
-                  }}
-                >
-                  ✎
+            {presetsOpen && (
+              <div style={{ marginTop: 12 }}>
+                <div style={presetGridStyle}>
+                  {PRESETS.map(p => (
+                    <button
+                      key={p.key}
+                      type="button"
+                      onClick={() => applyPreset(p.key)}
+                      style={presetCardStyle(presetKey === p.key)}
+                    >
+                      <div style={presetSwatchRowStyle}>
+                        <div style={{ ...presetSwatchStyle, background: p.sidebar }} title="Sidebar" />
+                        <div style={{ ...presetSwatchStyle, background: p.headerBg }} title="Header" />
+                        <div style={{ ...presetSwatchStyle, background: p.primary }} title="Primary" />
+                        <div style={{ ...presetSwatchStyle, background: p.pageBg }} title="Page background" />
+                      </div>
+                      <div style={presetNameStyle(presetKey === p.key)}>{p.label}</div>
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => applyPreset('custom')}
+                    style={presetCardStyle(presetKey === 'custom')}
+                  >
+                    <div
+                      style={{
+                        ...presetSwatchRowStyle,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        height: 28,
+                        color: 'var(--text-secondary)',
+                        fontSize: 20,
+                        letterSpacing: 0,
+                      }}
+                    >
+                      ✎
+                    </div>
+                    <div style={presetNameStyle(presetKey === 'custom')}>Custom</div>
+                  </button>
                 </div>
-                <div style={presetNameStyle(presetKey === 'custom')}>Custom</div>
-              </button>
-            </div>
 
-            <div style={presetHintStyle}>{pickerDescription}</div>
+                <div style={presetHintStyle}>{pickerDescription}</div>
+              </div>
+            )}
 
             {(presetKey === 'custom' || activeSavedTheme) && (
               <div style={colorPickerGridStyle}>
@@ -1031,11 +1103,20 @@ function ColorRow({
   value: string
   onChange: (v: string) => void
 }) {
+  // Hex text entry: the leading # is "stuck" — it's always present and can't be
+  // deleted. We strip every # the user types (including an accidental double
+  // ##) and re-prefix exactly one, so the value is always "#" + hex digits.
+  // Non-hex characters are dropped; max 6 digits after the #.
+  const handleHexChange = (raw: string) => {
+    const digits = raw.replace(/#/g, '').replace(/[^0-9a-fA-F]/g, '').slice(0, 6)
+    onChange('#' + digits)
+  }
+
   return (
     <div style={colorRowStyle}>
       <input
         type="color"
-        value={value}
+        value={HEX_RE.test(value) ? value : '#000000'}
         onChange={e => onChange(e.target.value)}
         style={colorSwatchInputStyle}
       />
@@ -1045,9 +1126,12 @@ function ColorRow({
       </div>
       <input
         type="text"
-        value={value}
-        onChange={e => onChange(e.target.value)}
+        value={value.startsWith('#') ? value : '#' + value}
+        onChange={e => handleHexChange(e.target.value)}
         maxLength={7}
+        spellCheck={false}
+        autoCapitalize="off"
+        autoCorrect="off"
         style={colorHexInputStyle}
       />
     </div>
