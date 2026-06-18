@@ -42,6 +42,76 @@ interface SavedTheme {
 
 const PRESETS: Preset[] = [
   {
+    key: 'preset-1',
+    label: 'Preset 1',
+    description:
+      'Warm gray sidebar, forest-green header, near-black accent on a muted green page.',
+    primary: '#101017',
+    sidebar: '#514f4d',
+    headerBg: '#208330',
+    pageBg: '#5f635f',
+  },
+  {
+    key: 'preset-2',
+    label: 'Preset 2',
+    description:
+      'Clean light gray sidebar, white header, deep corporate blue accent on a white page.',
+    primary: '#00539B',
+    sidebar: '#dbdbdb',
+    headerBg: '#ffffff',
+    pageBg: '#ffffff',
+  },
+  {
+    key: 'preset-3',
+    label: 'Preset 3',
+    description:
+      'Deep brown chrome with slate blue accents on a warm gray dashboard. Quiet and confident.',
+    primary: '#62839d',
+    sidebar: '#3b261b',
+    headerBg: '#3b261b',
+    pageBg: '#5b5759',
+  },
+  {
+    key: 'preset-4',
+    label: 'Preset 4',
+    description:
+      'All black chrome and page with a soft charcoal accent. Stealth and minimal.',
+    primary: '#363636',
+    sidebar: '#000000',
+    headerBg: '#000000',
+    pageBg: '#000000',
+  },
+  {
+    key: 'preset-5',
+    label: 'Preset 5',
+    description:
+      'Warm stone chrome with a taupe accent on a charcoal page. Understated and editorial.',
+    primary: '#9C8F84',
+    sidebar: '#D8D9D6',
+    headerBg: '#D8D9D6',
+    pageBg: '#3D3D3D',
+  },
+  {
+    key: 'preset-6',
+    label: 'Preset 6',
+    description:
+      'Slate teal — deep blue-gray chrome with a bright teal accent, monochrome page wash.',
+    primary: '#1ABC9C',
+    sidebar: '#2C3E50',
+    headerBg: '#2C3E50',
+    pageBg: '#2C3E50',
+  },
+  {
+    key: 'preset-7',
+    label: 'Preset 7',
+    description:
+      'Soft light gray chrome, lavender accent, faint lavender page wash. Calm and easy on the eyes.',
+    primary: '#b8a3e0',
+    sidebar: '#e4e6eb',
+    headerBg: '#e4e6eb',
+    pageBg: '#f1ecf7',
+  },
+  {
     key: 'preset-default',
     label: 'Default',
     description:
@@ -51,79 +121,11 @@ const PRESETS: Preset[] = [
     headerBg: '#1a1a2e',
     pageBg: '#f0f1f4',
   },
-  {
-    key: 'preset-1',
-    label: 'Preset 1',
-    description:
-      'Deep brown chrome with slate blue accents on a warm gray dashboard. Quiet and confident.',
-    primary: '#62839d',
-    sidebar: '#3b261b',
-    headerBg: '#3b261b',
-    pageBg: '#5b5759',
-  },
-  {
-    key: 'preset-2',
-    label: 'Preset 2',
-    description:
-      'Slate teal — deep blue-gray chrome with a bright teal accent, monochrome page wash.',
-    primary: '#1ABC9C',
-    sidebar: '#2C3E50',
-    headerBg: '#2C3E50',
-    pageBg: '#2C3E50',
-  },
-  {
-    key: 'preset-3',
-    label: 'Preset 3',
-    description:
-      'All black chrome and page with a soft charcoal accent. Stealth and minimal.',
-    primary: '#363636',
-    sidebar: '#000000',
-    headerBg: '#000000',
-    pageBg: '#000000',
-  },
-  {
-    key: 'preset-4',
-    label: 'Preset 4',
-    description:
-      'Warm gray sidebar, forest-green header, near-black accent on a muted green page.',
-    primary: '#101017',
-    sidebar: '#514f4d',
-    headerBg: '#208330',
-    pageBg: '#5f635f',
-  },
-  {
-    key: 'preset-5',
-    label: 'Preset 5',
-    description:
-      'Soft light gray chrome, lavender accent, faint lavender page wash. Calm and easy on the eyes.',
-    primary: '#b8a3e0',
-    sidebar: '#e4e6eb',
-    headerBg: '#e4e6eb',
-    pageBg: '#f1ecf7',
-  },
-  {
-    key: 'preset-6',
-    label: 'Preset 6',
-    description:
-      'Clean light gray sidebar, white header, deep corporate blue accent on a white page.',
-    primary: '#00539B',
-    sidebar: '#dbdbdb',
-    headerBg: '#ffffff',
-    pageBg: '#ffffff',
-  },
-  {
-    key: 'preset-7',
-    label: 'Preset 7',
-    description:
-      'Warm stone chrome with a taupe accent on a charcoal page. Understated and editorial.',
-    primary: '#9C8F84',
-    sidebar: '#D8D9D6',
-    headerBg: '#D8D9D6',
-    pageBg: '#3D3D3D',
-  },
 ]
 
-const DEFAULT_PRESET = PRESETS[0]
+// The Default (standard DialerSeat) preset is the initial/fallback theme for a
+// new tenant — pinned by key so reordering the visible list never changes it.
+const DEFAULT_PRESET = PRESETS.find(p => p.key === 'preset-default') ?? PRESETS[0]
 const MAX_SAVED_THEMES = 15
 const SLUG_REGEX = /^[a-z0-9][a-z0-9-]{0,28}[a-z0-9]$/
 const HEX_RE = /^#[0-9a-fA-F]{6}$/
