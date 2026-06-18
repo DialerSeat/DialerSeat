@@ -47,9 +47,9 @@ const PRESETS: Preset[] = [
     description:
       'The standard DialerSeat look — use this to run as the default DialerSeat tenant.',
     primary: '#4a9eff',
-    sidebar: '#0f1117',
-    headerBg: '#0f1117',
-    pageBg: '#0a0a0f',
+    sidebar: '#111118',
+    headerBg: '#1a1a2e',
+    pageBg: '#f0f1f4',
   },
   {
     key: 'preset-1',
@@ -155,8 +155,6 @@ export default function WhitelabelOnboardingPage() {
   const [sidebar, setSidebar] = useState<string>(DEFAULT_PRESET.sidebar)
   const [headerBg, setHeaderBg] = useState<string>(DEFAULT_PRESET.headerBg)
   const [pageBg, setPageBg] = useState<string>(DEFAULT_PRESET.pageBg)
-  // Theme presets are shown in a dropdown that's closed by default.
-  const [presetsOpen, setPresetsOpen] = useState(false)
 
   // v9: optional subdomain-login link
   const [loginLinkLabel, setLoginLinkLabel] = useState('')
@@ -731,80 +729,50 @@ export default function WhitelabelOnboardingPage() {
             />
           </div>
 
-          {/* ── THEME — presets (collapsible) + Custom + color pickers ── */}
+          {/* ── THEME — presets + Custom + color pickers ── */}
           <div style={sectionStyle}>
-            <button
-              type="button"
-              onClick={() => setPresetsOpen(o => !o)}
-              style={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                background: 'transparent',
-                border: 'none',
-                padding: 0,
-                cursor: 'pointer',
-                font: 'inherit',
-              }}
-            >
-              <span style={sectionLabelStyle}>
-                ▸ THEME{' '}
-                <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>
-                  — {presetKey === 'custom'
-                       ? 'Custom'
-                       : (activePreset?.label || activeSavedTheme?.name || 'choose a preset')}
-                </span>
-              </span>
-              <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>
-                {presetsOpen ? '▲' : '▼'}
-              </span>
-            </button>
+            <div style={sectionLabelStyle}>▸ THEME</div>
 
-            {presetsOpen && (
-              <div style={{ marginTop: 12 }}>
-                <div style={presetGridStyle}>
-                  {PRESETS.map(p => (
-                    <button
-                      key={p.key}
-                      type="button"
-                      onClick={() => applyPreset(p.key)}
-                      style={presetCardStyle(presetKey === p.key)}
-                    >
-                      <div style={presetSwatchRowStyle}>
-                        <div style={{ ...presetSwatchStyle, background: p.sidebar }} title="Sidebar" />
-                        <div style={{ ...presetSwatchStyle, background: p.headerBg }} title="Header" />
-                        <div style={{ ...presetSwatchStyle, background: p.primary }} title="Primary" />
-                        <div style={{ ...presetSwatchStyle, background: p.pageBg }} title="Page background" />
-                      </div>
-                      <div style={presetNameStyle(presetKey === p.key)}>{p.label}</div>
-                    </button>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => applyPreset('custom')}
-                    style={presetCardStyle(presetKey === 'custom')}
-                  >
-                    <div
-                      style={{
-                        ...presetSwatchRowStyle,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        height: 28,
-                        color: 'var(--text-secondary)',
-                        fontSize: 20,
-                        letterSpacing: 0,
-                      }}
-                    >
-                      ✎
-                    </div>
-                    <div style={presetNameStyle(presetKey === 'custom')}>Custom</div>
-                  </button>
+            <div style={presetGridStyle}>
+              {PRESETS.map(p => (
+                <button
+                  key={p.key}
+                  type="button"
+                  onClick={() => applyPreset(p.key)}
+                  style={presetCardStyle(presetKey === p.key)}
+                >
+                  <div style={presetSwatchRowStyle}>
+                    <div style={{ ...presetSwatchStyle, background: p.sidebar }} title="Sidebar" />
+                    <div style={{ ...presetSwatchStyle, background: p.headerBg }} title="Header" />
+                    <div style={{ ...presetSwatchStyle, background: p.primary }} title="Primary" />
+                    <div style={{ ...presetSwatchStyle, background: p.pageBg }} title="Page background" />
+                  </div>
+                  <div style={presetNameStyle(presetKey === p.key)}>{p.label}</div>
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => applyPreset('custom')}
+                style={presetCardStyle(presetKey === 'custom')}
+              >
+                <div
+                  style={{
+                    ...presetSwatchRowStyle,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: 28,
+                    color: 'var(--text-secondary)',
+                    fontSize: 20,
+                    letterSpacing: 0,
+                  }}
+                >
+                  ✎
                 </div>
+                <div style={presetNameStyle(presetKey === 'custom')}>Custom</div>
+              </button>
+            </div>
 
-                <div style={presetHintStyle}>{pickerDescription}</div>
-              </div>
-            )}
+            <div style={presetHintStyle}>{pickerDescription}</div>
 
             {(presetKey === 'custom' || activeSavedTheme) && (
               <div style={colorPickerGridStyle}>
