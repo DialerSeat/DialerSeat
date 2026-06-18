@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { ClerkProvider } from '@clerk/nextjs';
 import { auth } from '@clerk/nextjs/server';
-import { headers, cookies } from 'next/headers';
+import { headers } from 'next/headers';
 import "./globals.css";
 import StructuredData from './components/StructuredData';
 import { ThemeProvider } from '@/components/ThemeProvider';
@@ -156,8 +156,6 @@ const IOS_SPLASH_SCREENS: Array<{ w: number; h: number; orient: 'portrait' | 'la
   { w: 2796, h: 1290, orient: 'landscape' },
 ];
 
-const TENANT_COOKIE_NAME = 'ds_last_tenant';
-
 // Branding now depends on the signed-in user's active_tenant_id (resolved per
 // request), so the root layout must render dynamically — otherwise a cached RSC
 // payload from a previous (e.g. signed-out, hostname-branded) render could be
@@ -202,7 +200,10 @@ export default async function RootLayout({
     //          selection is authoritative.
     //   2. Signed-out → hostname (x-tenant-slug): a visitor to
     //      demo.dialerseat.com sees demo's current tenant selection login.
-    //   3. Signed-out + no subdomain → ds_last_tenant cookie hint.
+    //   3. Signed-out + no subdomain (apex dialerseat.com) → ALWAYS default
+    //      DialerSeat. We do NOT consult any last-tenant cookie here: the apex
+    //      landing/sign-in must render fresh, unbranded DialerSeat no matter
+    //      which tenant account was most recently used or logged out of.
     //   4. null → default DialerSeat chrome.
     const { userId } = await auth();
 
@@ -212,17 +213,10 @@ export default async function RootLayout({
       branding = await getActiveTenantForUser(userId);
     } else {
       // Signed-out: brand by the subdomain they're visiting, so every
-      // visitor to demo.dialerseat.com sees demo's current tenant login.
+      // visitor to demo.dialerseat.com sees demo's current tenant login. On the
+      // apex domain (no subdomain) getTenantBranding returns null → default
+      // DialerSeat, and we intentionally leave it null (no cookie fallback).
       branding = await getTenantBranding(tenantSlug);
-      if (!branding) {
-        // No subdomain (apex) → use the cookie hint from this browser's last
-        // sign-in so returning users still see a branded sign-in/landing.
-        const cookieStore = await cookies();
-        const lastTenant = cookieStore.get(TENANT_COOKIE_NAME)?.value;
-        if (lastTenant) {
-          branding = await getTenantBranding(lastTenant);
-        }
-      }
     }
   }
 
