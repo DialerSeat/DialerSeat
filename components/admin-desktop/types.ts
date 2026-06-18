@@ -8,6 +8,10 @@ import type { ComponentType } from 'react'
 // that mount inside an AppWindow shell — they don't know about the desktop
 // itself, they just render their content.
 //
+// v4 changes vs v3:
+// - Added 'support' to the AppId union (admin Support app — support/bug/exit
+//   feed). Admin-only base app.
+//
 // v3 changes vs v2:
 // - Added AppRole ('admin' | 'manager') and AppDefinition.visibleTo.
 //   ONE desktop, ONE registry, ONE copy of every app, driven by a role prop.
@@ -28,6 +32,7 @@ export type AppId =
   | 'numbers'
   | 'whitelabel'
   | 'logs'
+  | 'support'
   | 'notes'
   | 'gmail'
   | 'clerk-profile'

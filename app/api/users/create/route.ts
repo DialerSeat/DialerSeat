@@ -6,11 +6,19 @@ export async function POST(req: Request) {
     const body = await req.json()
     console.log('API HIT - body received:', body)
 
-    const { clerk_id, email, first_name, last_name, phone, company } = body
+    // username mirrors the Clerk username (Clerk is the source of truth). The
+    // caller passes it in the body alongside the other Clerk fields. Stored on
+    // public.users for in-app display/sorting/joins; nullable + unique
+    // (case-insensitive) at the DB level.
+    const { clerk_id, email, first_name, last_name, phone, company, username } = body
 
     if (!clerk_id) {
       return NextResponse.json({ success: false, error: 'No clerk_id provided' }, { status: 400 })
     }
+
+    // Normalize username: trim, treat empty as null so the unique index ignores it.
+    const normalizedUsername =
+      typeof username === 'string' && username.trim().length > 0 ? username.trim() : null
 
     // First try to insert
     const { error: insertError } = await supabaseAdmin
@@ -22,11 +30,12 @@ export async function POST(req: Request) {
         last_name,
         phone,
         company,
+        username: normalizedUsername,
       })
 
     if (insertError) {
       console.log('INSERT ERROR:', insertError)
-      
+
       // If duplicate, try update instead
       const { error: updateError } = await supabaseAdmin
         .from('users')
@@ -36,6 +45,7 @@ export async function POST(req: Request) {
           last_name,
           phone,
           company,
+          username: normalizedUsername,
         })
         .eq('clerk_id', clerk_id)
 

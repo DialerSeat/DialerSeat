@@ -20,6 +20,11 @@ import type { AppDefinition } from './types'
 //   FOR A DOWNLOADABLE (App Store) APP: also add its id to STORE_APP_IDS in
 //   desktopServices.tsx — it then hides from the desktop until downloaded.
 //
+// v23 CHANGES:
+//   - Added `support` — the admin Support app (support / bug / exit feed).
+//     Admin-only base app: always installed, shows on the admin desktop. Backs
+//     onto /api/admin/support (read/respond) + /api/support/submit (user posts).
+//
 // v22 CHANGES:
 //   - Added `visibleTo` per app. ONE desktop, ONE registry, driven by a role.
 //     visibleTo = which roles SEE the app (omitted = admin-only). This is the
@@ -66,6 +71,10 @@ const WhiteLabelApp = dynamic(() => import('./apps/WhiteLabel'), {
   ssr: false,
 })
 const LogsApp = dynamic(() => import('./apps/Logs'), {
+  loading: () => <AppLoading />,
+  ssr: false,
+})
+const SupportApp = dynamic(() => import('./apps/Support'), {
   loading: () => <AppLoading />,
   ssr: false,
 })
@@ -178,6 +187,19 @@ export const APPS: AppDefinition[] = [
     visibleTo: ['admin'],
     Component: LogsApp,
     defaultSize: { width: 1000, height: 700 },
+  },
+  {
+    // Admin Support app — support / bug / exit submissions feed. Admin-only
+    // base app (always installed, shows on the admin desktop). Reads/responds
+    // via /api/admin/support; users post via /api/support/submit.
+    id: 'support',
+    name: 'Support',
+    icon: '🎧',
+    iconBg: 'linear-gradient(135deg, #4a9eff, #6a4aff)',
+    description: 'User support queries, bug reports, and exit feedback',
+    visibleTo: ['admin'],
+    Component: SupportApp,
+    defaultSize: { width: 1100, height: 720 },
   },
   {
     id: 'notes',
