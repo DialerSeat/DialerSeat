@@ -1,14 +1,24 @@
 {
-  "name": "DialerSeat",
+  "name": "DialerSeat — Dial Smarter. Close Faster.",
   "short_name": "DialerSeat",
-  "description": "Professional outbound dialer for solo agents up through larger teams. $35/week. Dial smarter. Close faster.",
+  "description": "Professional outbound dialer for solo agents up through larger teams. Four dialer modes, automatic voicemail detection, inbound reception, unlimited numbers. $35/week per seat. No contracts. Cancel anytime.",
+  "id": "/",
   "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
   "orientation": "any",
   "background_color": "#0a0a0f",
   "theme_color": "#4a9eff",
-  "categories": ["business", "productivity"],
+  "lang": "en-US",
+  "dir": "ltr",
+  "categories": [
+    "business",
+    "productivity",
+    "sales",
+    "communication",
+    "utilities"
+  ],
   "icons": [
     {
       "src": "/icons/android-chrome-192x192.png",
@@ -40,5 +50,51 @@
       "type": "image/png",
       "purpose": "maskable"
     }
-  ]
+  ],
+  "shortcuts": [
+    {
+      "name": "Open Dialer",
+      "short_name": "Dialer",
+      "description": "Jump straight into the dialer and start calling.",
+      "url": "/dashboard/dialer",
+      "icons": [
+        { "src": "/icons/android-chrome-192x192.png", "sizes": "192x192", "type": "image/png" }
+      ]
+    },
+    {
+      "name": "Analytics",
+      "short_name": "Stats",
+      "description": "See today's dials, connects, and closes.",
+      "url": "/dashboard/analytics",
+      "icons": [
+        { "src": "/icons/android-chrome-192x192.png", "sizes": "192x192", "type": "image/png" }
+      ]
+    },
+    {
+      "name": "Campaigns",
+      "short_name": "Campaigns",
+      "description": "Manage and toggle your calling campaigns.",
+      "url": "/dashboard/campaigns",
+      "icons": [
+        { "src": "/icons/android-chrome-192x192.png", "sizes": "192x192", "type": "image/png" }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/icons/screenshot-wide.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "DialerSeat dialer with live lead and call scripts"
+    },
+    {
+      "src": "/icons/screenshot-narrow.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "DialerSeat on mobile"
+    }
+  ],
+  "prefer_related_applications": false
 }
