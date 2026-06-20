@@ -146,7 +146,7 @@ export default function ShowcaseWizard() {
       {/* TEMP version badge — confirms the deployed build has the latest code.
           Remove once mobile layout is confirmed. */}
       <div style={{ position: 'fixed', bottom: 6, left: '50%', transform: 'translateX(-50%)', fontSize: 9, letterSpacing: 1, color: 'rgba(255,255,255,0.35)', pointerEvents: 'none', zIndex: 9999 }}>
-        BUILD v13 · mobile-fit
+        BUILD v14 · mobile-stack
       </div>
 
 
@@ -169,16 +169,21 @@ export default function ShowcaseWizard() {
           .sw-explain > div:nth-child(1) { font-size: 10px !important; letter-spacing: 3px !important; margin-bottom: 6px !important; } /* eyebrow */
           .sw-explain > div:nth-child(2) { font-size: 21px !important; margin-bottom: 8px !important; line-height: 1.18 !important; } /* headline */
           .sw-explain > div { font-size: 13px !important; line-height: 1.5 !important; } /* sub + subLead */
-
-          /* centered group: don't push down on mobile, top-align */
           .sw-mid { padding: 8px 0 0 !important; justify-content: flex-start !important; }
 
-          /* lock stage width to desktop, zoom to fit the phone */
-          .sw-stage-inner {
-            width: 760px !important;
-            max-width: 760px !important;
-            zoom: calc((100vw - 8px) / 1050);
-          }
+          /* REFLOW the dialer: stack the call panel and metrics vertically so
+             nothing is fixed-width and nothing runs off the right edge. */
+          .sw-dialer-row { flex-direction: column !important; min-height: 0 !important; }
+          .sw-dialer-call { border-right: none !important; border-bottom: 1px solid rgba(255,255,255,0.08) !important; }
+          .sw-dialer-metrics { width: 100% !important; }
+
+          /* REFLOW analytics: stack chart over the disposition panel. */
+          .sw-an-row { flex-direction: column !important; }
+          .sw-an-right { width: 100% !important; }
+
+          /* The stage no longer needs to be locked/zoomed since it reflows. */
+          .sw-stage-inner { width: 100% !important; max-width: 100% !important; zoom: 1 !important; }
+        }
         }
       `}</style>
     </div>
@@ -271,8 +276,8 @@ function DialerScene() {
 
   return (
     <MacFrame title="DIALER" titleColor="#5a8a5a" bg={C.sidebar}>
-      <div style={{ display: 'flex', minHeight: 300 }}>
-        <div style={{ flex: 1, padding: 14, borderRight: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column' }}>
+      <div className="sw-dialer-row" style={{ display: 'flex', minHeight: 300 }}>
+        <div className="sw-dialer-call" style={{ flex: 1, padding: 14, borderRight: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column' }}>
           <div style={{ flex: 1, background: C.page, border: `1px solid ${C.cardBorder}`, borderRadius: 4, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: '7px 12px', background: C.sidebar, borderBottom: `1px solid ${C.cardBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: 9, letterSpacing: 3, color: C.onSidebarMuted, fontWeight: 700 }}>LEAD PROFILE</span>
@@ -320,7 +325,7 @@ function DialerScene() {
             </div>
           </div>
         </div>
-        <div style={{ width: 196, display: 'flex', flexDirection: 'column' }}>
+        <div className="sw-dialer-metrics" style={{ width: 196, display: 'flex', flexDirection: 'column' }}>
           <div style={{ padding: '8px 14px', background: C.sidebar, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
             <span style={{ fontSize: 9, letterSpacing: 3, color: C.onSidebarMuted, fontWeight: 700 }}>TODAY'S METRICS</span>
           </div>
@@ -416,7 +421,7 @@ function AnalyticsScene() {
             </div>
           ))}
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div className="sw-an-row" style={{ display: 'flex', gap: 10 }}>
           <div style={{ flex: 1, background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 8, padding: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
               <span style={{ fontSize: 8, letterSpacing: 1.5, color: C.muted, fontWeight: 700 }}>CALL VOLUME OVER TIME</span>
@@ -434,7 +439,7 @@ function AnalyticsScene() {
               {days.map((d, i) => <span key={i} style={{ fontSize: 7.5, color: C.muted, fontFamily: MONO }}>{d}</span>)}
             </div>
           </div>
-          <div style={{ width: 188, background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 8, padding: 12 }}>
+          <div className="sw-an-right" style={{ width: 188, background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 8, padding: 12 }}>
             <div style={{ fontSize: 8, letterSpacing: 1.5, color: C.muted, fontWeight: 700, marginBottom: 8 }}>DISPOSITION BREAKDOWN</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, opacity: showCharts ? 1 : 0, transition: 'opacity 0.5s ease 0.15s' }}>
               <svg viewBox="0 0 80 80" style={{ width: 70, height: 70, flexShrink: 0 }}>
