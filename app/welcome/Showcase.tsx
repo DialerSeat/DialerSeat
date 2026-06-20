@@ -114,7 +114,7 @@ export default function ShowcaseWizard() {
           space below the top bar — equal breathing room above and below. */}
       <div className="sw-mid" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '25px 0 8px' }}>
       {/* stage */}
-      <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 24px', minHeight: 0 }}>
+      <div className="sw-stage" style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 24px', minHeight: 0 }}>
         <div className="sw-stage-inner" style={{ width: '100%', maxWidth: 760 }}>
           {scene === 0 && <DialerScene />}
           {scene === 1 && <AnalyticsScene />}
@@ -146,7 +146,7 @@ export default function ShowcaseWizard() {
       {/* TEMP version badge — confirms the deployed build has the latest code.
           Remove once mobile layout is confirmed. */}
       <div style={{ position: 'fixed', bottom: 6, left: '50%', transform: 'translateX(-50%)', fontSize: 9, letterSpacing: 1, color: 'rgba(255,255,255,0.35)', pointerEvents: 'none', zIndex: 9999 }}>
-        BUILD v16 · mobile-small
+        BUILD v17 · scale-fix
       </div>
 
 
@@ -168,8 +168,11 @@ export default function ShowcaseWizard() {
            just the visual) so it scales down proportionally to the phone. */
         /* ── MOBILE: exactly like desktop, shrunk WAY down ─────────────
            Match the target: small side-by-side dialer up top, smaller text. */
+        /* ── MOBILE: desktop layout shrunk via transform: scale ────────
+           (scale reliably applies here; we compensate the layout box so the
+           shrunk mock leaves no empty gap and never overflows the width.) */
         @media (max-width: 820px) {
-          .sw-root { font-size: 13px; }
+          .sw-root { font-size: 13px; overflow-x: hidden; }
           .sw-root > div:first-child { padding: 12px 14px !important; } /* top bar */
           .sw-explain { max-width: 100% !important; padding: 0 18px 8px !important; }
           .sw-explain > div:nth-child(1) { font-size: 10px !important; letter-spacing: 2.5px !important; margin-bottom: 8px !important; } /* eyebrow */
@@ -178,12 +181,23 @@ export default function ShowcaseWizard() {
           .sw-explain > div { font-size: 11px !important; line-height: 1.45 !important; } /* sub */
           .sw-mid { padding: 6px 0 0 !important; justify-content: flex-start !important; }
 
-          /* Shrink the whole two-column dialer WAY down (zoom shrinks the box). */
+          /* The stage wrapper clips the scaled overflow and centers it. */
+          .sw-stage { overflow: hidden !important; padding: 0 !important; }
+
+          /* Lock to desktop width, scale down. transform-origin top center keeps
+             it centered horizontally. The negative margins reclaim the empty box
+             space the transform leaves (scale keeps the original 760-wide,
+             ~380-tall footprint, so we pull it in on all sides). */
           .sw-stage-inner {
             width: 760px !important;
             max-width: 760px !important;
-            zoom: calc(100vw / 960);
+            transform: scale(0.50);
+            transform-origin: top center;
+            margin-left: calc((100vw - 760px) / 2) !important;
+            margin-right: calc((100vw - 760px) / 2) !important;
+            margin-bottom: -190px !important;
           }
+        }
         }
         }
         }
