@@ -167,7 +167,7 @@ export default function ShowcaseWizard() {
            (scale reliably applies here; we compensate the layout box so the
            shrunk mock leaves no empty gap and never overflows the width.) */
         @media (max-width: 820px) {
-          .sw-root { font-size: 13px; overflow-x: hidden; }
+          .sw-root { font-size: 13px; overflow-x: hidden; background: var(--brand-sidebar-bg, #111118) !important; } /* flat bg on mobile — removes the darker bottom gradient */
           .sw-root > div:first-child { padding: calc(env(safe-area-inset-top, 0px) + 18px) 14px 12px !important; } /* top bar — clears the Dynamic Island / status bar */
           .sw-explain { max-width: 100% !important; padding: 0 18px 8px !important; }
           .sw-explain > div:nth-child(1) { font-size: 10px !important; letter-spacing: 2.5px !important; margin-bottom: 8px !important; } /* eyebrow */
