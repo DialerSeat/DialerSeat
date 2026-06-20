@@ -112,7 +112,7 @@ export default function ShowcaseWizard() {
 
       {/* MIDDLE GROUP: stage + text + controls centered as one unit in the
           space below the top bar — equal breathing room above and below. */}
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '130px 0 8px' }}>
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '60px 0 8px' }}>
       {/* stage */}
       <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 24px', minHeight: 0 }}>
         <div className="sw-stage-inner" style={{ width: '100%', maxWidth: 760 }}>
