@@ -70,7 +70,7 @@ const SCENES: Scene[] = [
   },
 ]
 
-export default function Showcase() {
+export default function ShowcaseWizard() {
   const router = useRouter()
   const [scene, setScene] = useState(0)
   const goBilling = useCallback(() => router.push(BILLING_PATH), [router])
@@ -91,7 +91,7 @@ export default function Showcase() {
   const isLast = scene === SCENES.length - 1
 
   return (
-    <div style={{
+    <div className="sw-root" style={{
       position: 'fixed', inset: 0, overflow: 'hidden',
       background: `radial-gradient(120% 120% at 50% 0%, color-mix(in srgb, ${C.sidebar} 80%, #1a2340) 0%, ${C.sidebar} 60%, #07080f 100%)`,
       color: C.onSidebar, fontFamily: FUTURA, display: 'flex', flexDirection: 'column',
@@ -110,9 +110,11 @@ export default function Showcase() {
         <button onClick={goBilling} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.6)', fontFamily: FUTURA, fontSize: 12, letterSpacing: 2, fontWeight: 700, cursor: 'pointer', padding: '6px 4px' }}>SKIP →</button>
       </div>
 
+      <div style={{ flex: 1, minHeight: 0 }} />
+
       {/* stage */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 24px', minHeight: 0 }}>
-        <div style={{ width: '100%', maxWidth: 760 }}>
+      <div style={{ flex: '0 1 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px 24px 0', minHeight: 0 }}>
+        <div className="sw-stage-inner" style={{ width: '100%', maxWidth: 760 }}>
           {scene === 0 && <DialerScene />}
           {scene === 1 && <AnalyticsScene />}
           {scene === 2 && <SuperiorScene />}
@@ -120,8 +122,8 @@ export default function Showcase() {
       </div>
 
       {/* explanation */}
-      <div style={{ padding: '0 24px 12px', display: 'flex', justifyContent: 'center' }}>
-        <div key={current.key} style={{ maxWidth: 620, textAlign: 'center', animation: 'sw-rise 0.45s ease' }}>
+      <div style={{ padding: '14px 24px 8px', display: 'flex', justifyContent: 'center' }}>
+        <div key={current.key} className="sw-explain" style={{ maxWidth: 620, textAlign: 'center', animation: 'sw-rise 0.45s ease' }}>
           <div style={{ fontSize: 11, letterSpacing: 4, color: C.primary, fontWeight: 800, marginBottom: 10 }}>{current.eyebrow}</div>
           <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: 0.3, lineHeight: 1.15, marginBottom: 12, whiteSpace: 'pre-line' }}>{current.headline}</div>
           {current.subLead && <div style={{ fontSize: 15, lineHeight: 1.6, color: C.primary, fontWeight: 700, marginBottom: 6 }}>{current.subLead}</div>}
@@ -130,7 +132,7 @@ export default function Showcase() {
       </div>
 
       {/* controls */}
-      <div style={{ padding: '16px 28px 30px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
+      <div style={{ padding: '10px 28px 22px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
         {scene > 0 && (
           <button onClick={prev} style={{ padding: '12px 20px', borderRadius: 10, cursor: 'pointer', background: 'transparent', border: '1px solid rgba(255,255,255,0.18)', color: 'rgba(255,255,255,0.85)', fontFamily: FUTURA, fontSize: 12, letterSpacing: 2, fontWeight: 700 }}>← BACK</button>
         )}
@@ -139,12 +141,37 @@ export default function Showcase() {
         </button>
       </div>
 
+      <div style={{ flex: 1, minHeight: 0 }} />
+
       <style>{`
         @keyframes sw-rise { from { opacity:0; transform: translateY(10px);} to {opacity:1; transform: translateY(0);} }
         @keyframes sw-pulse { 0%,100%{opacity:1;} 50%{opacity:.4;} }
         @keyframes sw-blink { 0%,100%{opacity:1;} 50%{opacity:.2;} }
         @keyframes sw-grow { from { transform: scaleY(0);} to { transform: scaleY(1);} }
         @keyframes sw-pop { from { opacity:0; transform: translateY(8px) scale(0.98);} to { opacity:1; transform: translateY(0) scale(1);} }
+
+        /* ── MOBILE: shrink to fit, no content changes ───────────────── */
+        @media (max-width: 640px) {
+          .sw-root { font-size: 14px; }
+          /* tighten outer paddings */
+          .sw-root > div:first-child { padding: 12px 14px !important; } /* top bar */
+          .sw-explain { max-width: 100% !important; }
+          /* scale the typography down */
+          .sw-explain > div:nth-child(1) { font-size: 10px !important; letter-spacing: 3px !important; margin-bottom: 6px !important; } /* eyebrow */
+          .sw-explain > div:nth-child(2) { font-size: 20px !important; margin-bottom: 8px !important; line-height: 1.15 !important; } /* headline */
+          .sw-explain > div { font-size: 13px !important; line-height: 1.5 !important; } /* sub + subLead */
+        }
+
+        /* Very narrow phones: shrink the whole Mac-frame body so the dialer's
+           two-column layout fits without horizontal scroll. We scale the stage
+           inner wrapper down and let it reflow within the viewport width. */
+        @media (max-width: 480px) {
+          .sw-stage-inner { transform: scale(0.82); transform-origin: top center; }
+          .sw-explain > div:nth-child(2) { font-size: 18px !important; }
+        }
+        @media (max-width: 380px) {
+          .sw-stage-inner { transform: scale(0.7); transform-origin: top center; }
+        }
       `}</style>
     </div>
   )
@@ -199,17 +226,17 @@ get you a quick free estimate…”` },
 ]
 
 function DialerScene() {
-  const [phase, setPhase] = useState<'dialing' | 'connected'>('dialing')
+  const [phase, setPhase] = useState<'dialing' | 'connected'>('connected')
   const [secs, setSecs] = useState(0)
   const [closed, setClosed] = useState(false)
   const [scriptIdx, setScriptIdx] = useState(0) // independent of the call
 
   // Call animation runs ONCE on mount. Script tab changes do NOT re-trigger it.
   useEffect(() => {
-    const toConn = setTimeout(() => setPhase('connected'), 450)
+    // Starts already connected (no DIALING IN QUEUE screen). Timer runs live.
     const t = setInterval(() => setSecs(s => s + 1), 1000)
     const log = setTimeout(() => setClosed(true), 3200)
-    return () => { clearTimeout(toConn); clearInterval(t); clearTimeout(log) }
+    return () => { clearInterval(t); clearTimeout(log) }
   }, [])
 
   // Auto-cycle the script tabs every 2s (independent of the call timer).
