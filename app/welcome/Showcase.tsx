@@ -168,13 +168,13 @@ export default function ShowcaseWizard() {
            shrunk mock leaves no empty gap and never overflows the width.) */
         @media (max-width: 820px) {
           .sw-root { font-size: 13px; overflow-x: hidden; }
-          .sw-root > div:first-child { padding: 12px 14px !important; } /* top bar */
+          .sw-root > div:first-child { padding: calc(env(safe-area-inset-top, 0px) + 18px) 14px 12px !important; } /* top bar — clears the Dynamic Island / status bar */
           .sw-explain { max-width: 100% !important; padding: 0 18px 8px !important; }
           .sw-explain > div:nth-child(1) { font-size: 10px !important; letter-spacing: 2.5px !important; margin-bottom: 8px !important; } /* eyebrow */
           .sw-explain > div:nth-child(2) { font-size: 19px !important; margin-bottom: 8px !important; line-height: 1.15 !important; } /* headline */
           .sw-explain > div:nth-child(3) { font-size: 12px !important; line-height: 1.45 !important; } /* subLead */
           .sw-explain > div { font-size: 11px !important; line-height: 1.45 !important; } /* sub */
-          .sw-mid { padding: 6px 0 0 !important; justify-content: flex-start !important; }
+          .sw-mid { padding: 0 0 env(safe-area-inset-bottom, 0px) !important; justify-content: center !important; } /* center vertically so body sits lower, bottom gap balanced */
 
           /* The stage wrapper clips the scaled overflow and centers it. */
           .sw-stage { overflow: hidden !important; padding: 0 !important; }
