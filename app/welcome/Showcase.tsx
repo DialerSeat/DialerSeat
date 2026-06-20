@@ -115,7 +115,7 @@ export default function ShowcaseWizard() {
       <div className="sw-mid" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '25px 0 8px' }}>
       {/* stage */}
       <div className="sw-stage" style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 24px', minHeight: 0 }}>
-        <div className="sw-stage-inner" style={{ width: '100%', maxWidth: 880 }}>
+        <div className="sw-stage-inner" style={{ width: '100%', maxWidth: 760, transform: 'scale(1.16)', transformOrigin: 'top center', marginBottom: 58 }}>
           {scene === 0 && <DialerScene />}
           {scene === 1 && <AnalyticsScene />}
           {scene === 2 && <SuperiorScene />}
@@ -188,8 +188,8 @@ export default function ShowcaseWizard() {
                maxWidth above — desktop size and mobile size are independent. */
             width: 760px !important;
             max-width: 760px !important;
-            transform: scale(0.44);
-            transform-origin: top center;
+            transform: scale(0.44) !important;
+            transform-origin: top center !important;
             margin-left: calc((100vw - 760px) / 2) !important;
             margin-right: calc((100vw - 760px) / 2) !important;
             margin-bottom: -210px !important;
