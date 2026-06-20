@@ -8,6 +8,7 @@ const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/welcome(.*)',
+  '/api/auth/(.*)',
   '/terms',
   '/privacy',
   '/faq(.*)',
@@ -92,6 +93,7 @@ interface UserBrandAccess {
 // + ONBOARDING HARD-LOCK (v25 — Phase D2)
 // + TENANT ROOT ROUTING  (v26)
 // + WELCOME SHOWCASE PUBLIC (v27)
+// + POST-SIGNIN ROUTE PUBLIC (v28)
 // =============================================================================
 // v27: added '/welcome(.*)' to isPublicRoute. The post-signup showcase route
 // (app/welcome) is diverted to by /api/auth/post-signin for brand-new users
@@ -99,6 +101,16 @@ interface UserBrandAccess {
 // and bounce a 'new'/'lapsed' user to /billing before the page renders — the
 // page has its own server guard (lib/subscription.shouldSeeWelcome) that sends
 // non-eligible users to /billing, so this is safe.
+//
+// v28: added '/api/auth/(.*)' to isPublicRoute. The matcher runs middleware on
+// all /api/* routes, and /api/auth/post-signin was NOT public — so middleware
+// ran the full tier gate and 307-redirected signed-in non-active users to
+// /billing BEFORE the post-signin route handler ever executed. That's why the
+// route's shouldSeeWelcome diversion never ran (the route was never reached).
+// Making /api/auth/* public lets the request reach the handler, which then does
+// its own auth() check and decides the destination (/welcome, tenant dashboard,
+// or — by falling through — wherever). The handler is the intended owner of
+// post-signin routing; middleware must not pre-empt it.
 //
 // v26: a live tenant subdomain now hosts its OWN branded auth/landing instead
 // of bouncing the root to the apex.
