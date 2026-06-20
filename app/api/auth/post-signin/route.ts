@@ -323,14 +323,22 @@ export async function GET(req: NextRequest) {
     // or only ever reached an 'incomplete' Stripe checkout) see the product
     // showcase before billing. Currently-active users and genuinely-lapsed
     // users (who truly subscribed before) fall through to normal routing.
+    //
+    // TEMP DIAGNOSTIC LOGGING (remove once confirmed working): logs the userId,
+    // the boolean result, and any thrown error so Vercel logs show exactly
+    // which branch was taken.
     try {
-      if (await shouldSeeWelcome(userId)) {
+      const sees = await shouldSeeWelcome(userId)
+      console.log('[post-signin][DIAG] userId=%s shouldSeeWelcome=%s host=%s', userId, sees, host)
+      if (sees) {
+        console.log('[post-signin][DIAG] -> redirecting to /welcome')
         return redirectToWelcome(host)
       }
+      console.log('[post-signin][DIAG] -> NOT diverting, falling through to tenant routing')
     } catch (welcomeErr) {
       // Fail open: if the check errors, don't trap the user on the showcase —
       // fall through to normal routing.
-      console.error('[post-signin] shouldSeeWelcome check failed:', welcomeErr)
+      console.error('[post-signin][DIAG] shouldSeeWelcome THREW:', welcomeErr)
     }
 
     const h = await headers()
