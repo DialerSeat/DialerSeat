@@ -277,3 +277,79 @@ export async function requireNotAdmin(clerkId: string): Promise<NextResponse | n
 
   return null
 }
+
+// =============================================================================
+// shouldSeeWelcome — gate for the post-signup /welcome showcase
+// =============================================================================
+// Answers ONE narrow question: "should this user be shown the /welcome
+// showcase before billing?"
+//
+// WHY a separate helper instead of getAccessTier:
+//   getAccessTier's 'new' means "never had ANY subscription row." But the
+//   signup flow creates an 'incomplete' subscriptions row the moment a user
+//   reaches Stripe checkout — BEFORE they pay. So a brand-new user who merely
+//   reached checkout once is already 'lapsed', never 'new', and would skip the
+//   showcase. The showcase should instead be shown to anyone who has NEVER
+//   actually completed a subscription — i.e. all their subscription rows (if
+//   any) are stuck at 'incomplete' / 'incomplete_expired' (Stripe's "started
+//   but never paid" states), AND they have no paid team seat. A user who was
+//   genuinely active before (has/had 'active'/'trialing'/'past_due', or a
+//   'canceled' row, which only exists post-subscription) is a real lapsed user
+//   → straight to billing.
+//
+// Returns true  → show /welcome
+//         false → skip (active users to dashboard, real-lapsed users to billing)
+// =============================================================================
+
+// Stripe statuses meaning "this subscription was, at some point, a REAL (paid
+// or trialing) subscription" — i.e. the user has truly activated before.
+const TRULY_ACTIVATED_STATUSES = [
+  'active',
+  'trialing',
+  'past_due',
+  'canceled',   // only ever set after a real subscription existed
+  'unpaid',
+  'paused',
+]
+
+export async function shouldSeeWelcome(clerkId: string): Promise<boolean> {
+  // 1. Currently-active users never see the showcase.
+  const self = await checkSelfSubActive(clerkId)
+  if (self.active) return false
+
+  const activeSeats = await getActiveTeamSeats(clerkId)
+  if (activeSeats.length > 0) return false
+
+  // 2. Has the user EVER had a truly-activated subscription? If so, they're a
+  //    genuine lapsed user → billing, not the showcase.
+  const { data: subs, error } = await supabase
+    .from('subscriptions')
+    .select('status')
+    .eq('user_id', clerkId)
+
+  if (error) {
+    console.error('[subscription] shouldSeeWelcome sub lookup failed:', error)
+    // Fail safe: don't trap a paying-capable user on the showcase.
+    return false
+  }
+
+  const everTrulyActivated = (subs || []).some(s =>
+    TRULY_ACTIVATED_STATUSES.includes(s.status)
+  )
+  if (everTrulyActivated) return false
+
+  // 3. Ever been on a paid team seat? Then they've used the product paid before
+  //    → treat as lapsed, not new.
+  const { data: seatHistory } = await supabase
+    .from('team_seat_charges')
+    .select('id')
+    .eq('agent_id', clerkId)
+    .eq('status', 'paid')
+    .limit(1)
+
+  if (seatHistory && seatHistory.length > 0) return false
+
+  // Reached here: not active, never truly activated, never on a paid seat.
+  // Brand-new (or only-ever-incomplete) user → show the showcase.
+  return true
+}

@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { auth } from '@clerk/nextjs/server'
-import { getAccessTier } from '@/lib/subscription'
+import { shouldSeeWelcome } from '@/lib/subscription'
 import Showcase from './Showcase'
 
 // =============================================================================
@@ -31,18 +31,21 @@ export default async function WelcomePage() {
     redirect('/sign-in')
   }
 
-  let tier: 'active' | 'lapsed' | 'new'
+  let show: boolean
   try {
-    tier = await getAccessTier(userId)
+    show = await shouldSeeWelcome(userId)
   } catch {
-    // Fail safe: if the tier check errors, send them to billing rather than
+    // Fail safe: if the check errors, send them to billing rather than
     // trapping them on the showcase.
     redirect('/billing')
   }
 
-  if (tier === 'active') redirect('/dashboard/analytics')
-  if (tier === 'lapsed') redirect('/billing')
+  // Anyone who shouldn't see the showcase goes to billing. (A currently-active
+  // user who lands here manually also gets moved along — billing will in turn
+  // bounce an active user onward, so this stays correct without re-checking
+  // the full tier here.)
+  if (!show) redirect('/billing')
 
-  // tier === 'new' — show the showcase.
+  // Brand-new / never-activated user — show the showcase.
   return <Showcase />
 }

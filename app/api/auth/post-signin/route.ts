@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { headers } from 'next/headers'
 import { createClient } from '@supabase/supabase-js'
-import { getAccessTier } from '@/lib/subscription'
+import { shouldSeeWelcome } from '@/lib/subscription'
 
 // =============================================================================
 // /api/auth/post-signin — smart cross-subdomain redirect + tenant cookie
@@ -12,7 +12,8 @@ import { getAccessTier } from '@/lib/subscription'
 // {subdomain}.dialerseat.com to land the user on based on tenant affiliation.
 //
 // v3 (this push): SHOWCASE DIVERSION FOR BRAND-NEW USERS. Right after the admin
-// short-circuit, we check the user's access tier (lib/subscription.getAccessTier).
+// short-circuit, we check whether the user should see the showcase
+// (lib/subscription.shouldSeeWelcome).
 // A 'new' user — never subscribed AND never on a paid team seat — is sent to
 // /welcome (the post-signup product showcase) BEFORE anything else, so they see
 // the pitch before billing. 'active' and 'lapsed' users fall through to the
@@ -318,18 +319,18 @@ export async function GET(req: NextRequest) {
       return redirectAdminToDesktop(host)
     }
 
-    // Step 0b (v3): brand-new users (never subscribed, never on a paid seat)
-    // see the product showcase before anything else. Active and lapsed users
-    // fall through to the normal tenant routing below, untouched.
+    // Step 0b (v3): users who have never completed a subscription (brand-new,
+    // or only ever reached an 'incomplete' Stripe checkout) see the product
+    // showcase before billing. Currently-active users and genuinely-lapsed
+    // users (who truly subscribed before) fall through to normal routing.
     try {
-      const tier = await getAccessTier(userId)
-      if (tier === 'new') {
+      if (await shouldSeeWelcome(userId)) {
         return redirectToWelcome(host)
       }
-    } catch (tierErr) {
-      // Fail open: if the tier check errors, don't trap the user on the
-      // showcase — fall through to normal routing.
-      console.error('[post-signin] access tier check failed:', tierErr)
+    } catch (welcomeErr) {
+      // Fail open: if the check errors, don't trap the user on the showcase —
+      // fall through to normal routing.
+      console.error('[post-signin] shouldSeeWelcome check failed:', welcomeErr)
     }
 
     const h = await headers()
