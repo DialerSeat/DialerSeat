@@ -146,7 +146,7 @@ export default function ShowcaseWizard() {
       {/* TEMP version badge — confirms the deployed build has the latest code.
           Remove once mobile layout is confirmed. */}
       <div style={{ position: 'fixed', bottom: 6, left: '50%', transform: 'translateX(-50%)', fontSize: 9, letterSpacing: 1, color: 'rgba(255,255,255,0.35)', pointerEvents: 'none', zIndex: 9999 }}>
-        BUILD v15 · mobile-shrink
+        BUILD v16 · mobile-small
       </div>
 
 
@@ -166,23 +166,25 @@ export default function ShowcaseWizard() {
            Keep the two-column dialer SIDE BY SIDE. Lock the whole mock to its
            desktop width and use zoom (which shrinks the real layout box, not
            just the visual) so it scales down proportionally to the phone. */
+        /* ── MOBILE: exactly like desktop, shrunk WAY down ─────────────
+           Match the target: small side-by-side dialer up top, smaller text. */
         @media (max-width: 820px) {
-          .sw-root { font-size: 14px; }
-          .sw-root > div:first-child { padding: 14px 16px !important; } /* top bar */
-          .sw-explain { max-width: 100% !important; }
-          .sw-explain > div:nth-child(1) { font-size: 11px !important; letter-spacing: 3px !important; } /* eyebrow */
-          .sw-explain > div:nth-child(2) { font-size: 22px !important; } /* headline */
-          .sw-explain > div { line-height: 1.5 !important; } /* sub */
-          .sw-mid { padding: 8px 0 0 !important; justify-content: flex-start !important; }
+          .sw-root { font-size: 13px; }
+          .sw-root > div:first-child { padding: 12px 14px !important; } /* top bar */
+          .sw-explain { max-width: 100% !important; padding: 0 18px 8px !important; }
+          .sw-explain > div:nth-child(1) { font-size: 10px !important; letter-spacing: 2.5px !important; margin-bottom: 8px !important; } /* eyebrow */
+          .sw-explain > div:nth-child(2) { font-size: 19px !important; margin-bottom: 8px !important; line-height: 1.15 !important; } /* headline */
+          .sw-explain > div:nth-child(3) { font-size: 12px !important; line-height: 1.45 !important; } /* subLead */
+          .sw-explain > div { font-size: 11px !important; line-height: 1.45 !important; } /* sub */
+          .sw-mid { padding: 6px 0 0 !important; justify-content: flex-start !important; }
 
-          /* Lock the mock to its natural desktop width (760) and zoom to fit.
-             zoom shrinks the layout box too, so the whole two-column dialer
-             scales down together and fits with no horizontal overflow. */
+          /* Shrink the whole two-column dialer WAY down (zoom shrinks the box). */
           .sw-stage-inner {
             width: 760px !important;
             max-width: 760px !important;
-            zoom: calc(100vw / 800);
+            zoom: calc(100vw / 960);
           }
+        }
         }
         }
       `}</style>
