@@ -143,11 +143,6 @@ export default function ShowcaseWizard() {
       </div>
       </div>
 
-      {/* TEMP version badge — confirms the deployed build has the latest code.
-          Remove once mobile layout is confirmed. */}
-      <div style={{ position: 'fixed', bottom: 6, left: '50%', transform: 'translateX(-50%)', fontSize: 9, letterSpacing: 1, color: 'rgba(255,255,255,0.35)', pointerEvents: 'none', zIndex: 9999 }}>
-        BUILD v17 · scale-fix
-      </div>
 
 
       <style>{`
@@ -191,11 +186,11 @@ export default function ShowcaseWizard() {
           .sw-stage-inner {
             width: 760px !important;
             max-width: 760px !important;
-            transform: scale(0.50);
+            transform: scale(0.44);
             transform-origin: top center;
             margin-left: calc((100vw - 760px) / 2) !important;
             margin-right: calc((100vw - 760px) / 2) !important;
-            margin-bottom: -190px !important;
+            margin-bottom: -210px !important;
           }
         }
         }
