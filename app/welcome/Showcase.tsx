@@ -1,0 +1,457 @@
+'use client'
+
+import { useState, useCallback, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+
+// =============================================================================
+// SHOWCASE WIZARD — post-signup, pre-billing product showcase (v3)
+// =============================================================================
+// v3 changes vs v2:
+//   - NO AUTO-ADVANCE. The user drives every step (NEXT / ← BACK / arrow keys /
+//     the segmented progress dots). Nothing moves on its own. The progress dots
+//     are now clickable to jump between the 3 scenes.
+//   - DEVICE COLORS: scenes use the live theme via var(--brand-*) instead of
+//     hardcoded hex, so the showcase inherits the tenant/DialerSeat palette.
+//   - Scene 1 (dialer) now shows the CALL SCRIPT box, like the real dialer.
+//   - Scene 3 is NEW — not analytics again. It's the "why it's a superior
+//     dialer" closing argument: a confident feature grid. Arc = see it work →
+//     see your results → here's why it's better.
+//   - "A SUPERIOR DIALER" messaging throughout; final button says START NOW.
+//   - Still exactly 3 scenes. Mac window chrome retained.
+//
+// PLACEMENT: render at /welcome (or /showcase); post-signin routes new unbilled
+// users here before billing. CTA + Skip → BILLING_PATH.
+// =============================================================================
+
+const FUTURA = 'Futura PT, Futura, "Trebuchet MS", sans-serif'
+const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace'
+const BILLING_PATH = '/billing'
+
+// Device colors — inherit the live theme. Fallbacks match DialerSeat defaults
+// so the page still looks right if rendered outside a ThemeProvider.
+const C = {
+  primary: 'var(--brand-primary, #4a9eff)',
+  onPrimary: 'var(--brand-on-primary, #ffffff)',
+  sidebar: 'var(--brand-sidebar-bg, #111118)',
+  onSidebar: 'var(--brand-on-sidebar, #ffffff)',
+  onSidebarMuted: 'var(--brand-on-sidebar-muted, #8888aa)',
+  page: 'var(--brand-page-bg, #f0f1f4)',
+  onPage: 'var(--brand-on-page-bg, #1a1c24)',
+  card: 'var(--brand-card-surface, #e2e4ea)',
+  cardBorder: 'var(--brand-card-border, #c4c8d0)',
+  muted: 'var(--brand-muted-text, #5a5e6a)',
+  header: 'var(--brand-header-bg, #1a1a2e)',
+}
+const GREEN = '#1a6a1a'
+const GREEN_BRIGHT = '#5ad17a'
+const ACCENT = '#2a4a8a'
+
+interface Scene { key: string; eyebrow: string; headline: string; sub: string; subLead?: string }
+
+const SCENES: Scene[] = [
+  {
+    key: 'dialer',
+    eyebrow: 'A SUPERIOR DIALER',
+    headline: 'If your job is to dial numbers,\nDialerSeat is for you.',
+    subLead: 'And it’s guaranteed better than what you’re using currently.',
+    sub: 'Dial all day on an unlimited number pool, with all of your scripts in one place — with four dialer modes included to fit your approach cleanly.',
+  },
+  {
+    key: 'analytics',
+    eyebrow: 'YOUR NUMBERS, LIVE',
+    headline: 'Every number updates as you dial.',
+    sub: 'Calls, conversions, talk time, and where your closes come from — all tracked on the backend for you, the second each call ends. Nothing to log, nothing to maintain. Upload infinite campaigns and toggle each one on or off for the cleanest possible workflow.',
+  },
+  {
+    key: 'superior',
+    eyebrow: 'WHY IT WINS',
+    headline: 'Built to make you a closing machine.',
+    sub: 'Created by a team of seasoned developers alongside a group of high-ranking producers with real knowledge of the game who are tired of empty promises. DialerSeat is built around your experience — and we’re actively taking suggestions as well, to provide the best dialer on the face of the earth. Thanks for all of your support along this journey.\n~ DialerSeat',
+  },
+]
+
+export default function Showcase() {
+  const router = useRouter()
+  const [scene, setScene] = useState(0)
+  const goBilling = useCallback(() => router.push(BILLING_PATH), [router])
+  const next = useCallback(() => setScene(s => (s >= SCENES.length - 1 ? s : s + 1)), [])
+  const prev = useCallback(() => setScene(s => Math.max(0, s - 1)), [])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') next()
+      else if (e.key === 'ArrowLeft') prev()
+      else if (e.key === 'Escape') goBilling()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [next, prev, goBilling])
+
+  const current = SCENES[scene]
+  const isLast = scene === SCENES.length - 1
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, overflow: 'hidden',
+      background: `radial-gradient(120% 120% at 50% 0%, color-mix(in srgb, ${C.sidebar} 80%, #1a2340) 0%, ${C.sidebar} 60%, #07080f 100%)`,
+      color: C.onSidebar, fontFamily: FUTURA, display: 'flex', flexDirection: 'column',
+    }}>
+      {/* top: clickable progress dots + skip (NO auto-advance) */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '20px 28px' }}>
+        <div style={{ display: 'flex', gap: 8, flex: 1, maxWidth: 280 }}>
+          {SCENES.map((s, i) => (
+            <button key={s.key} onClick={() => setScene(i)} aria-label={`Go to step ${i + 1}`} style={{
+              flex: 1, height: 4, borderRadius: 3, cursor: 'pointer', border: 'none', padding: 0,
+              background: i <= scene ? C.primary : 'rgba(255,255,255,0.16)', transition: 'background 0.25s ease',
+            }} />
+          ))}
+        </div>
+        <div style={{ flex: 1 }} />
+        <button onClick={goBilling} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.6)', fontFamily: FUTURA, fontSize: 12, letterSpacing: 2, fontWeight: 700, cursor: 'pointer', padding: '6px 4px' }}>SKIP →</button>
+      </div>
+
+      {/* stage */}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 24px', minHeight: 0 }}>
+        <div style={{ width: '100%', maxWidth: 760 }}>
+          {scene === 0 && <DialerScene />}
+          {scene === 1 && <AnalyticsScene />}
+          {scene === 2 && <SuperiorScene />}
+        </div>
+      </div>
+
+      {/* explanation */}
+      <div style={{ padding: '0 24px 12px', display: 'flex', justifyContent: 'center' }}>
+        <div key={current.key} style={{ maxWidth: 620, textAlign: 'center', animation: 'sw-rise 0.45s ease' }}>
+          <div style={{ fontSize: 11, letterSpacing: 4, color: C.primary, fontWeight: 800, marginBottom: 10 }}>{current.eyebrow}</div>
+          <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: 0.3, lineHeight: 1.15, marginBottom: 12, whiteSpace: 'pre-line' }}>{current.headline}</div>
+          {current.subLead && <div style={{ fontSize: 15, lineHeight: 1.6, color: C.primary, fontWeight: 700, marginBottom: 6 }}>{current.subLead}</div>}
+          <div style={{ fontSize: 15, lineHeight: 1.6, color: 'rgba(255,255,255,0.72)', whiteSpace: 'pre-line' }}>{current.sub}</div>
+        </div>
+      </div>
+
+      {/* controls */}
+      <div style={{ padding: '16px 28px 30px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
+        {scene > 0 && (
+          <button onClick={prev} style={{ padding: '12px 20px', borderRadius: 10, cursor: 'pointer', background: 'transparent', border: '1px solid rgba(255,255,255,0.18)', color: 'rgba(255,255,255,0.85)', fontFamily: FUTURA, fontSize: 12, letterSpacing: 2, fontWeight: 700 }}>← BACK</button>
+        )}
+        <button onClick={isLast ? goBilling : next} style={{ padding: '13px 28px', borderRadius: 10, border: 'none', cursor: 'pointer', background: C.primary, color: C.onPrimary, fontFamily: FUTURA, fontSize: 13, letterSpacing: 2, fontWeight: 800, boxShadow: `0 8px 28px color-mix(in srgb, ${C.primary} 40%, transparent)` }}>
+          {isLast ? 'GET STARTED →' : 'NEXT →'}
+        </button>
+      </div>
+
+      <style>{`
+        @keyframes sw-rise { from { opacity:0; transform: translateY(10px);} to {opacity:1; transform: translateY(0);} }
+        @keyframes sw-pulse { 0%,100%{opacity:1;} 50%{opacity:.4;} }
+        @keyframes sw-blink { 0%,100%{opacity:1;} 50%{opacity:.2;} }
+        @keyframes sw-grow { from { transform: scaleY(0);} to { transform: scaleY(1);} }
+        @keyframes sw-pop { from { opacity:0; transform: translateY(8px) scale(0.98);} to { opacity:1; transform: translateY(0) scale(1);} }
+      `}</style>
+    </div>
+  )
+}
+
+function MacFrame({ title, titleColor, bg, children }: { title: string; titleColor: string; bg: string; children: React.ReactNode }) {
+  return (
+    <div style={{ width: '100%', borderRadius: 14, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', background: bg, boxShadow: '0 30px 80px rgba(0,0,0,0.5)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 14px', background: 'rgba(0,0,0,0.18)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+        <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#ff5f57' }} />
+        <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#febc2e' }} />
+        <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#28c840' }} />
+        <span style={{ marginLeft: 10, fontSize: 10, letterSpacing: 2, color: titleColor, fontWeight: 700 }}>{title}</span>
+      </div>
+      <div>{children}</div>
+    </div>
+  )
+}
+
+// ── SCENE 1: DIALER — script tabs on the CALL SCRIPT box, call runs once ───
+// The call connects once and the timer runs; switching SCRIPT TABS only swaps
+// the script text in place (like the real dialer's script panel) — it never
+// restarts the call. Call state (phase/secs) is independent of the script tab.
+const SCRIPTS: { key: string; label: string; text: string }[] = [
+  { key: 'life', label: 'Life', text: `“Hi (client), this is (your name goes here) reaching
+out about the life coverage you
+looked into.
+
+It only takes a minute — I can show
+you what you'd actually qualify for,
+no medical exam needed…”` },
+  { key: 'health', label: 'Health', text: `“Hi (client), this is (your name goes here) — you
+requested help finding a health plan,
+is now a good time?
+
+Perfect. Let's see if we can get you
+better coverage for less than you're
+paying today…”` },
+  { key: 'realestate', label: 'Real Estate', text: `“Hi (client), this is (your name goes here) — I saw
+you were curious what your home
+might be worth.
+
+I can get you a real number today,
+and if you ever decide to sell, walk
+you through what's next…”` },
+  { key: 'solar', label: 'Solar', text: `“Hi (client), this is (your name goes here) — did I
+catch you at an okay time?
+
+Great. You asked about cutting your
+power bill with solar, so I wanted to
+get you a quick free estimate…”` },
+]
+
+function DialerScene() {
+  const [phase, setPhase] = useState<'dialing' | 'connected'>('dialing')
+  const [secs, setSecs] = useState(0)
+  const [closed, setClosed] = useState(false)
+  const [scriptIdx, setScriptIdx] = useState(0) // independent of the call
+
+  // Call animation runs ONCE on mount. Script tab changes do NOT re-trigger it.
+  useEffect(() => {
+    const toConn = setTimeout(() => setPhase('connected'), 450)
+    const t = setInterval(() => setSecs(s => s + 1), 1000)
+    const log = setTimeout(() => setClosed(true), 3200)
+    return () => { clearTimeout(toConn); clearInterval(t); clearTimeout(log) }
+  }, [])
+
+  // Auto-cycle the script tabs every 2s (independent of the call timer).
+  useEffect(() => {
+    const id = setInterval(() => setScriptIdx(i => (i + 1) % SCRIPTS.length), 3000)
+    return () => clearInterval(id)
+  }, [])
+
+  const shown = phase === 'connected' ? secs : 0
+  const mm = String(Math.floor(shown / 60)).padStart(2, '0')
+  const ss = String(shown % 60).padStart(2, '0')
+  const script = SCRIPTS[scriptIdx]
+
+  const metrics: [string, string, string][] = [
+    ['DIALS', '131', C.primary],
+    ['CONNECTED', '35', C.primary],
+    ['TALK TIME', '1h 26m', '#4a9eff'],
+    ['CLOSED', '12', GREEN],
+    ['APPOINTMENTS', '8', '#1a4a8a'],
+    ['CALLBACKS', '17', '#8a6a1a'],
+    ['NOT INTERESTED', '21', '#8a6a1a'],
+    ['DO NOT CALL', '4', '#8a1a1a'],
+  ]
+
+  return (
+    <MacFrame title="DIALER" titleColor="#5a8a5a" bg={C.sidebar}>
+      <div style={{ display: 'flex', minHeight: 300 }}>
+        <div style={{ flex: 1, padding: 14, borderRight: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ flex: 1, background: C.page, border: `1px solid ${C.cardBorder}`, borderRadius: 4, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '7px 12px', background: C.sidebar, borderBottom: `1px solid ${C.cardBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 9, letterSpacing: 3, color: C.onSidebarMuted, fontWeight: 700 }}>LEAD PROFILE</span>
+              {phase === 'connected' && <span style={{ fontSize: 9, fontFamily: MONO, color: C.primary }}>ID: 7a3f9c2e</span>}
+            </div>
+            <div style={{ flex: 1, padding: 12, display: 'flex', flexDirection: 'column' }}>
+              {phase === 'dialing' ? (
+                <div style={{ textAlign: 'center', padding: '64px 0' }}>
+                  <p style={{ fontSize: 11, letterSpacing: 3, color: C.muted, fontFamily: MONO }}>DIALING IN QUEUE...</p>
+                </div>
+              ) : (
+                <>
+                  {/* LIVE PROSPECT card — keeps the prospect's name */}
+                  <div style={{ padding: '10px 14px', background: C.page, border: `2px solid ${GREEN}`, borderRadius: 4 }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+                      <div>
+                        <div style={{ fontSize: 19, fontWeight: 800, fontFamily: MONO, color: C.onPage, letterSpacing: 1, marginBottom: 3 }}>MARCUS BELL</div>
+                        <div style={{ fontSize: 15, fontFamily: MONO, color: ACCENT, fontWeight: 800, letterSpacing: 2 }}>+1 (713) 555‑0142</div>
+                        <div style={{ fontSize: 10, fontFamily: MONO, color: C.muted, letterSpacing: 1, marginTop: 4 }}>HOUSTON, TX · {mm}:{ss}</div>
+                      </div>
+                      <div style={{ padding: '4px 10px', borderRadius: 2, background: '#e8f5e8', border: `1px solid ${GREEN}`, fontSize: 9, letterSpacing: 2, fontWeight: 800, color: GREEN }}>● LIVE</div>
+                    </div>
+                  </div>
+
+                  {/* CALL SCRIPT box with SCRIPT TABS on its header (switch in place) */}
+                  <div style={{ flex: 1, marginTop: 10, background: C.page, border: `1px solid ${C.cardBorder}`, borderLeft: `3px solid ${ACCENT}`, borderRadius: 3, display: 'flex', flexDirection: 'column', minHeight: 96, overflow: 'hidden' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 2, padding: '6px 8px 0', borderBottom: `1px solid ${C.cardBorder}`, flexWrap: 'wrap' }}>
+                      {SCRIPTS.map((sc, i) => (
+                        <button key={sc.key} onClick={() => setScriptIdx(i)} style={{
+                          padding: '5px 10px', cursor: 'pointer', border: 'none', borderRadius: '5px 5px 0 0',
+                          background: i === scriptIdx ? ACCENT : 'transparent',
+                          color: i === scriptIdx ? '#fff' : C.muted,
+                          fontFamily: FUTURA, fontSize: 9, letterSpacing: 1, fontWeight: 800,
+                          transition: 'all 0.15s ease',
+                        }}>{sc.label.toUpperCase()}</button>
+                      ))}
+                    </div>
+                    <div style={{ flex: 1, padding: '10px 12px', display: 'flex', flexDirection: 'column' }}>
+                      <div style={{ fontSize: 8, letterSpacing: 2, color: C.muted, marginBottom: 6 }}>CALL SCRIPT</div>
+                      <div key={script.key} style={{ height: 136, fontSize: 11, lineHeight: 1.7, color: C.onPage, fontFamily: MONO, whiteSpace: 'pre-wrap', animation: 'sw-rise 0.25s ease' }}>{script.text}</div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+        <div style={{ width: 196, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ padding: '8px 14px', background: C.sidebar, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+            <span style={{ fontSize: 9, letterSpacing: 3, color: C.onSidebarMuted, fontWeight: 700 }}>TODAY'S METRICS</span>
+          </div>
+          <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+            {metrics.map(([label, value, color]) => {
+              const cl = label === 'CLOSED'
+              return (
+                <div key={label} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '6px 11px', background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.08)', borderLeft: `3px solid ${color}`, borderRadius: 3,
+                }}>
+                  <span style={{ fontSize: 8, letterSpacing: 1.5, color: 'rgba(255,255,255,0.5)' }}>{label}</span>
+                  <span style={{ fontSize: 15, fontWeight: 700, fontFamily: MONO, color: cl ? GREEN_BRIGHT : color === C.primary ? '#7ab8ff' : 'rgba(255,255,255,0.85)' }}>{value}</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+    </MacFrame>
+  )
+}
+
+// ── SCENE 2: ANALYTICS — richer KPIs (trend badges), animated line draw, pie ─
+function AnalyticsScene() {
+  // label, target, color, suffix, trend, comma-format
+  const tiles: [string, number, string, string, string, boolean][] = [
+    ['TOTAL CALLS', 1284, C.primary, '', '↑ 12%', true],
+    ['CONVERSIONS', 159, GREEN, '', '↑ 15%', false],
+    ['TALK TIME', 14, '#4a9eff', 'h', '↑ 6%', false],
+    ['CLOSED', 86, GREEN, '', '↑ 9%', false],
+  ]
+  const [vals, setVals] = useState(tiles.map(() => 0))
+  const [showCharts, setShowCharts] = useState(false)
+  useEffect(() => {
+    setVals(tiles.map(() => 0)); setShowCharts(false)
+    const start = Date.now(), dur = 780
+    const id = setInterval(() => {
+      const p = Math.min(1, (Date.now() - start) / dur), e = 1 - Math.pow(1 - p, 3)
+      setVals(tiles.map(t => Math.round(t[1] * e)))
+      if (p >= 1) clearInterval(id)
+    }, 30)
+    const c = setTimeout(() => setShowCharts(true), 420)
+    return () => { clearInterval(id); clearTimeout(c) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // CALL VOLUME line/area
+  const pts = [10, 26, 18, 34, 28, 44, 36, 52, 46, 60, 54, 70]
+  const W = 280, H = 74, maxV = 76
+  const coords = pts.map((v, i) => [(i / (pts.length - 1)) * W, H - (v / maxV) * H])
+  const linePath = 'M' + coords.map(c => `${c[0].toFixed(1)},${c[1].toFixed(1)}`).join(' L')
+  const areaPath = `${linePath} L${W},${H} L0,${H} Z`
+  const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+
+  // DISPOSITION pie
+  const pie = [
+    { label: 'Closed', val: 42, color: GREEN }, { label: 'Callback', val: 28, color: C.primary },
+    { label: 'Not int.', val: 20, color: '#8a6a1a' }, { label: 'DNC', val: 10, color: '#8a1a1a' },
+  ]
+  let acc = 0; const R = 34, CX = 40, CY = 40
+  const arcs = pie.map(seg => {
+    const a0 = (acc / 100) * Math.PI * 2 - Math.PI / 2; acc += seg.val
+    const a1 = (acc / 100) * Math.PI * 2 - Math.PI / 2
+    const large = a1 - a0 > Math.PI ? 1 : 0
+    const x0 = CX + R * Math.cos(a0), y0 = CY + R * Math.sin(a0)
+    const x1 = CX + R * Math.cos(a1), y1 = CY + R * Math.sin(a1)
+    return { d: `M${CX},${CY} L${x0.toFixed(1)},${y0.toFixed(1)} A${R},${R} 0 ${large} 1 ${x1.toFixed(1)},${y1.toFixed(1)} Z`, color: seg.color }
+  })
+
+  return (
+    <MacFrame title="ANALYTICS" titleColor="#4a9eff" bg={C.page}>
+      <div style={{ background: C.header, padding: '12px 18px', borderBottom: `2px solid ${C.primary}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ width: 7, height: 7, borderRadius: '50%', background: GREEN_BRIGHT, animation: 'sw-pulse 1.2s infinite' }} />
+          <span style={{ fontSize: 12, letterSpacing: 3, color: C.primary, fontWeight: 800 }}>ANALYTICS OVERVIEW</span>
+        </span>
+        <span style={{ fontSize: 8.5, letterSpacing: 1.5, color: 'rgba(255,255,255,0.6)', fontWeight: 700, border: '1px solid rgba(255,255,255,0.18)', borderRadius: 4, padding: '3px 8px' }}>LAST 7 DAYS</span>
+      </div>
+      <div style={{ padding: 16 }}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: C.onPage, marginBottom: 12, letterSpacing: 0.5 }}>WELCOME BACK, (YOUR NAME GOES HERE).</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 9, marginBottom: 12 }}>
+          {tiles.map((t, i) => (
+            <div key={t[0]} style={{ background: C.card, border: `1px solid ${C.cardBorder}`, borderTop: `3px solid ${t[2]}`, borderRadius: 8, padding: 11 }}>
+              <div style={{ fontSize: 8, letterSpacing: 1.5, color: C.muted, fontWeight: 700, marginBottom: 6 }}>{t[0]}</div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 20, fontWeight: 800, fontFamily: MONO, color: t[2] }}>
+                  {t[5] ? vals[i].toLocaleString() : vals[i]}{t[3]}
+                </span>
+                <span style={{ fontSize: 8, fontWeight: 800, color: GREEN_BRIGHT, background: `${GREEN_BRIGHT}24`, padding: '2px 5px', borderRadius: 4, letterSpacing: 0.3 }}>{t[4]}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <div style={{ flex: 1, background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 8, padding: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <span style={{ fontSize: 8, letterSpacing: 1.5, color: C.muted, fontWeight: 700 }}>CALL VOLUME OVER TIME</span>
+              <span style={{ fontSize: 8, fontWeight: 800, color: GREEN_BRIGHT }}>↑ 18% vs last week</span>
+            </div>
+            <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 74, display: 'block' }}>
+              <defs><linearGradient id="cv" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={C.primary} stopOpacity="0.32" /><stop offset="100%" stopColor={C.primary} stopOpacity="0" /></linearGradient></defs>
+              {[0.25, 0.5, 0.75].map(g => <line key={g} x1="0" y1={H * g} x2={W} y2={H * g} stroke={C.cardBorder} strokeWidth="1" strokeDasharray="3 3" />)}
+              <path d={areaPath} fill="url(#cv)" style={{ opacity: showCharts ? 1 : 0, transition: 'opacity 0.5s ease 0.2s' }} />
+              <path d={linePath} fill="none" stroke={C.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                style={{ strokeDasharray: 760, strokeDashoffset: showCharts ? 0 : 760, transition: 'stroke-dashoffset 0.7s ease-out' }} />
+              {coords.map((c, i) => <circle key={i} cx={c[0]} cy={c[1]} r="2.3" fill={C.primary} style={{ opacity: showCharts ? 1 : 0, transition: `opacity 0.3s ease ${0.3 + i * 0.03}s` }} />)}
+            </svg>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+              {days.map((d, i) => <span key={i} style={{ fontSize: 7.5, color: C.muted, fontFamily: MONO }}>{d}</span>)}
+            </div>
+          </div>
+          <div style={{ width: 188, background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 8, padding: 12 }}>
+            <div style={{ fontSize: 8, letterSpacing: 1.5, color: C.muted, fontWeight: 700, marginBottom: 8 }}>DISPOSITION BREAKDOWN</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, opacity: showCharts ? 1 : 0, transition: 'opacity 0.5s ease 0.15s' }}>
+              <svg viewBox="0 0 80 80" style={{ width: 70, height: 70, flexShrink: 0 }}>
+                {arcs.map((a, i) => <path key={i} d={a.d} fill={a.color} />)}
+                <circle cx={CX} cy={CY} r="16" fill={C.card} />
+              </svg>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {pie.map(seg => (
+                  <div key={seg.label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: 2, background: seg.color }} />
+                    <span style={{ fontSize: 9, color: C.onPage, fontWeight: 600 }}>{seg.label}</span>
+                    <span style={{ fontSize: 9, color: C.muted, fontFamily: MONO, marginLeft: 'auto' }}>{seg.val}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </MacFrame>
+  )
+}
+
+// ── SCENE 3: SUPERIOR DIALER — hype-forward benefit close (broad, not niche) ─
+function SuperiorScene() {
+  const features: { icon: string; title: string; body: string }[] = [
+    { icon: '⊘', title: 'No contracts', body: 'Cancel anytime, zero commitment. Stay because it works, not because you’re forced to.' },
+    { icon: '🔒', title: 'Secured & protected', body: 'Your data is encrypted and protected at every layer — your numbers and leads PERMANENTLY remain yours.' },
+    { icon: '💸', title: 'Best price, period', body: 'More dialer for less than the rest — top-of-the-line power without the enterprise price tag.' },
+    { icon: '∞', title: 'Unlimited dialing', body: 'Dial all day on a full number pool — no per-line caps and NEVER any surprise coverage fees.' },
+    { icon: '📮', title: 'Voicemail detection', body: 'Genuine voicemail detection — not the fake stuff. Skip dead drops and spend your time on live people.' },
+    { icon: '🎯', title: 'Always improving', body: 'Shaped by real producers and updated constantly — the dialer that keeps getting better.' },
+  ]
+  return (
+    <MacFrame title="WHY DIALERSEAT" titleColor="#5a8a5a" bg={C.sidebar}>
+      <div style={{ padding: 22 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 15, fontWeight: 800, color: C.onSidebar, letterSpacing: 0.5 }}>A superior dialer, built to make you money.</span>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+          {features.map((f, i) => (
+            <div key={f.title} style={{
+              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: 10, padding: 14, animation: `sw-pop 0.45s ease ${i * 0.06}s both`,
+            }}>
+              <div style={{ width: 30, height: 30, borderRadius: 8, background: `color-mix(in srgb, ${C.primary} 22%, transparent)`, color: C.primary, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 800, marginBottom: 9 }}>{f.icon}</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: C.onSidebar, marginBottom: 5 }}>{f.title}</div>
+              <div style={{ fontSize: 11, lineHeight: 1.5, color: 'rgba(255,255,255,0.6)' }}>{f.body}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </MacFrame>
+  )
+}

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { headers } from 'next/headers'
 import { createClient } from '@supabase/supabase-js'
+import { getAccessTier } from '@/lib/subscription'
 
 // =============================================================================
 // /api/auth/post-signin — smart cross-subdomain redirect + tenant cookie
@@ -10,24 +11,33 @@ import { createClient } from '@supabase/supabase-js'
 // so every successful sign-in lands here first. This handler decides which
 // {subdomain}.dialerseat.com to land the user on based on tenant affiliation.
 //
-// v2 (this push): ADMIN SHORT-CIRCUIT. Before any tenant routing, if the
-// signed-in user is an admin (users.is_admin = true) we send them straight to
-// the admin desktop (/dashboard/admin/desktop) on the current host. The
-// admin previously fell through to the plain /dashboard/analytics dead page
-// because they own no tenant. Admins are never auto-bounced to a tenant
-// subdomain; the desktop's Demo View handles viewing tenant sites. We still
-// drop/refresh the ds_last_tenant cookie the same way (cleared for the admin,
-// since they have no tenant affiliation of their own).
+// v3 (this push): SHOWCASE DIVERSION FOR BRAND-NEW USERS. Right after the admin
+// short-circuit, we check the user's access tier (lib/subscription.getAccessTier).
+// A 'new' user — never subscribed AND never on a paid team seat — is sent to
+// /welcome (the post-signup product showcase) BEFORE anything else, so they see
+// the pitch before billing. 'active' and 'lapsed' users fall through to the
+// existing tenant routing completely untouched: active users reach their
+// dashboard, lapsed users go wherever they went before (and hit the normal
+// billing gate as they do today). Only brand-new users are diverted.
+//
+//   - /welcome is a standalone full-screen route (app/welcome/page.tsx). Its
+//     GET STARTED / SKIP buttons push the user forward to /billing. It is NOT
+//     behind the billing gate, so there is no redirect loop: the user only
+//     reaches it via this diversion and leaves it via its own buttons. A small
+//     server guard on /welcome bounces any non-'new' user who lands there
+//     manually, so an active/lapsed user can't sit on it.
+//
+// v2: ADMIN SHORT-CIRCUIT. Before any tenant routing, if the signed-in user is
+// an admin (users.is_admin = true) we send them straight to the admin desktop
+// (/dashboard/admin/desktop) on the current host.
 //
 // Push D: also drops a ds_last_tenant cookie at the parent domain so the
 // NEXT visit to dialerseat.com/sign-in from this browser can be branded for
-// the tenant the user belongs to, even before they're signed in. Without
-// this cookie the root-domain sign-in page has no way to know which tenant
-// the user belongs to, and falls back to default DialerSeat chrome.
+// the tenant the user belongs to, even before they're signed in.
 //
-// Routing rules (JC item 1, post-signin):
-//   0. Signed in AND user is an admin → /dashboard/admin/desktop on the
-//      current host (the desktop). No subdomain bouncing. [v2]
+// Routing rules:
+//   0a. Signed in AND user is an admin → /dashboard/admin/desktop. [v2]
+//   0b. Signed in AND access tier is 'new' → /welcome (showcase). [v3]
 //   1. Signed in on blank.dialerseat.com AND user is part of blank →
 //      stay on blank.dialerseat.com/dashboard/analytics
 //   2. Signed in on blank.dialerseat.com AND user is NOT part of blank →
@@ -36,22 +46,14 @@ import { createClient } from '@supabase/supabase-js'
 //      auto-redirect to that tenant's subdomain
 //   4. No tenant affiliation anywhere → dialerseat.com/dashboard/analytics
 //
-// "Part of a tenant" means:
-//   - white_label_tenants.owner_clerk_id = userId  (tenant owner), OR
-//   - team_members.user_id = userId AND status='active' AND the team's
-//     teams.tenant_id matches the tenant in question.
-//
-// Tiebreaker for multiple-tenant affiliation: users.active_tenant_id.
-// Then earliest owned, then any membership tenant.
-//
 // Dev safety: when host is localhost/127.0.0.1, skip cross-subdomain bouncing
-// and just land on /dashboard/analytics on the current host. Subdomain
-// resolution in dev needs more setup than this handler can do.
+// and just land on /dashboard/analytics on the current host.
 // =============================================================================
 
 const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'dialerseat.com'
 const TARGET_PATH = '/dashboard/analytics'
 const ADMIN_PATH = '/dashboard/admin/desktop' // v2: the admin desktop
+const WELCOME_PATH = '/welcome'               // v3: the post-signup showcase
 const TENANT_COOKIE_NAME = 'ds_last_tenant'
 const TENANT_COOKIE_MAX_AGE = 60 * 60 * 24 * 90 // 90 days
 
@@ -90,6 +92,14 @@ function buildAdminDest(host: string): string {
   return `${protocol}://${host}${ADMIN_PATH}`
 }
 
+// v3: brand-new user lands on the showcase on the CURRENT host. Same host so
+// the (possibly tenant-subdomain) sign-in context is preserved; the showcase
+// itself is host-agnostic and just leads to /billing.
+function buildWelcomeDest(host: string): string {
+  const protocol = isDevHost(host) ? 'http' : 'https'
+  return `${protocol}://${host}${WELCOME_PATH}`
+}
+
 // Set the ds_last_tenant cookie (or delete it if no slug) so the root-domain
 // sign-in page can brand for this browser's tenant on next visit. Cookie
 // scoped to the parent domain so subdomains can also see/clear it.
@@ -99,8 +109,6 @@ function setOrClearTenantCookie(
   host: string
 ): void {
   if (isDevHost(host)) {
-    // Dev: skip the domain attribute (won't work cross-port on localhost),
-    // skip secure flag. Still useful for same-host testing.
     if (slug) {
       response.cookies.set(TENANT_COOKIE_NAME, slug, {
         path: '/',
@@ -124,8 +132,6 @@ function setOrClearTenantCookie(
       sameSite: 'lax',
     })
   } else {
-    // Delete any stale cookie from a previous tenant affiliation. The
-    // delete needs to match the original domain scope to actually clear.
     response.cookies.set(TENANT_COOKIE_NAME, '', {
       domain: `.${ROOT_DOMAIN}`,
       path: '/',
@@ -152,6 +158,12 @@ function redirectAdminToDesktop(host: string): NextResponse {
   const response = NextResponse.redirect(buildAdminDest(host), 302)
   setOrClearTenantCookie(response, null, host)
   return response
+}
+
+// v3: brand-new user redirect to the showcase. We do NOT touch the tenant
+// cookie here — a brand-new user has no tenant affiliation to record.
+function redirectToWelcome(host: string): NextResponse {
+  return NextResponse.redirect(buildWelcomeDest(host), 302)
 }
 
 async function isAdmin(userId: string): Promise<boolean> {
@@ -300,10 +312,24 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(new URL('/sign-in', req.url))
     }
 
-    // Step 0 (v2): admins go straight to the desktop, regardless of host or
+    // Step 0a (v2): admins go straight to the desktop, regardless of host or
     // tenant affiliation. Clears any stale tenant cookie on the way.
     if (await isAdmin(userId)) {
       return redirectAdminToDesktop(host)
+    }
+
+    // Step 0b (v3): brand-new users (never subscribed, never on a paid seat)
+    // see the product showcase before anything else. Active and lapsed users
+    // fall through to the normal tenant routing below, untouched.
+    try {
+      const tier = await getAccessTier(userId)
+      if (tier === 'new') {
+        return redirectToWelcome(host)
+      }
+    } catch (tierErr) {
+      // Fail open: if the tier check errors, don't trap the user on the
+      // showcase — fall through to normal routing.
+      console.error('[post-signin] access tier check failed:', tierErr)
     }
 
     const h = await headers()
