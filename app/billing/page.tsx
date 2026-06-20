@@ -386,7 +386,7 @@ export default function BillingPage() {
         </Elements>
 
         <div style={footerNoteStyle}>
-          {'\uD83D\uDD12'} Payments processed securely by Stripe. Your card details never touch our servers.
+        Payments processed securely by Stripe. Your card details never touch our servers.
         </div>
       </div>
     </main>
