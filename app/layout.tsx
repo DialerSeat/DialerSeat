@@ -7,8 +7,10 @@ import StructuredData from './components/StructuredData';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { getTenantBranding, getActiveTenantForUser } from '@/lib/tenant';
 
-export const metadata: Metadata = {
-  metadataBase: new URL('https://dialerseat.com'),
+const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'dialerseat.com'
+
+const baseMetadata: Metadata = {
+  metadataBase: new URL(`https://${ROOT_DOMAIN}`),
   title: "DialerSeat — Dial Smarter. Close Faster.",
   description:
     "The professional outbound dialer built for solo agents up through larger teams. $35/week per seat. No contracts. Cancel anytime. Four dialer modes, automatic voicemail detection, inbound reception, unlimited numbers.",
@@ -245,7 +247,7 @@ export default async function RootLayout({
           )}
         </head>
         <body>
-          {!branding && <StructuredData />}
+          <StructuredData branding={branding} />
 
           <ThemeProvider initialBranding={branding}>
             {children}

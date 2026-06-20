@@ -3,7 +3,15 @@
 // WHITE-LABEL ONBOARDING / EDIT — header/sidebar split (migration 004)
 // + VERCEL SUBDOMAIN PROVISIONING (v6)
 // + ROLLING SLUG RATE LIMIT (v7)
+// + INDEXNOW AUTO-SUBMIT ON LIVE (v8)
 // =============================================================================
+// v8: when a subdomain goes live (CREATE) or its slug changes (SWAP), we fire
+// submitOnTenantLive(slug) — a fire-and-forget IndexNow + sitemap ping so Bing/
+// Yandex crawl the new subdomain within minutes and Google's sitemap index is
+// warmed. Non-blocking and never throws (mirrors the Vercel calls' philosophy).
+// On a slug swap we submit BOTH the new slug (now live) and the old slug (so the
+// 30-day redirect is recrawled and the old URL updates in the index).
+//
 // v7: slug-change policy changed from "1 change per 24h" to "up to 3 changes
 // per rolling 48h window." Implemented by COUNTING this tenant's rows in
 // subdomain_history within the window (that table already gets one row per
@@ -28,6 +36,7 @@ import {
   removeProjectDomain,
   changeProjectDomain,
 } from '@/lib/vercelDomains'
+import { submitOnTenantLive } from '@/lib/indexnow'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -402,6 +411,12 @@ export async function POST(req: NextRequest) {
       console.error(`[onboarding] domain provision failed for ${tenant.slug}:`, domain.error)
     }
 
+    // ── INDEXNOW (v8): subdomain is now live → submit it to search ───
+    // Fire-and-forget: instant Bing/Yandex crawl + sitemap-index warm. Never
+    // blocks the response and never throws. Google picks it up from the sitemap
+    // index on its own schedule regardless of this call.
+    void submitOnTenantLive(tenant.slug)
+
     return NextResponse.json({
       success: true,
       subdomain: tenant.slug,
@@ -494,6 +509,13 @@ export async function POST(req: NextRequest) {
     if (!swap.added.ok && !swap.added.skipped) {
       console.error(`[onboarding] domain swap add failed ${existing.slug}→${subdomain}:`, swap.added.error)
     }
+
+    // ── INDEXNOW (v8): new slug is live, old slug now redirects ──────
+    // Submit BOTH: the new slug so it's crawled fresh, and the old slug so the
+    // engines recrawl it and pick up the redirect to the new home. Both
+    // fire-and-forget; neither blocks nor throws.
+    void submitOnTenantLive(subdomain)
+    void submitOnTenantLive(existing.slug)
   }
 
   return NextResponse.json({

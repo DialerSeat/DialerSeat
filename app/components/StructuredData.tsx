@@ -1,17 +1,116 @@
 /**
- * JSON-LD structured data for DialerSeat.
+ * JSON-LD structured data for DialerSeat — HOST-AWARE (v2).
  *
- * Renders a single <script type="application/ld+json"> with a @graph
- * containing Organization, SoftwareApplication, WebSite, and FAQPage
- * schemas. Google, Bing, and most AI crawlers consume this for rich
- * snippets, entity recognition, and citation grounding.
+ * Two modes:
+ *   • APEX / default (no branding prop): the full @graph — Organization,
+ *     SoftwareApplication, WebSite (+sitelinks search), and the big FAQPage.
+ *     This is the canonical entity data Google/Bing/AI ground on. Unchanged
+ *     from v1 except for being gated behind the "no branding" case.
  *
- * To add a new schema: append an object to the `graph` array below.
- * Validate any changes at https://search.google.com/test/rich-results
+ *   • TENANT subdomain (branding prop provided): a LEAN, tenant-specific graph —
+ *     that brand's Organization + a SoftwareApplication scoped to its own
+ *     subdomain URL. We intentionally OMIT the FAQPage here: those FAQs are
+ *     DialerSeat-specific and repeating them on every white-label subdomain
+ *     would be duplicate structured data. Each tenant's schema self-references
+ *     its own host so Google treats it as a distinct brand entity (which also
+ *     reinforces the per-subdomain self-canonical strategy).
+ *
+ * USAGE (in app/layout.tsx):
+ *   Render ALWAYS, passing the resolved branding (null on apex):
+ *       <StructuredData branding={branding} />
+ *   (Previously this was `{!branding && <StructuredData />}` — apex only.
+ *    Switch to always-render so subdomains get their own tenant schema.)
+ *
+ * The branding prop is read defensively (optional chaining) so it tolerates
+ * whatever shape getTenantBranding/getActiveTenantForUser returns, as long as
+ * it carries a brand_name and slug (and optionally logo_url).
+ *
+ * Validate changes at https://search.google.com/test/rich-results
  */
-export default function StructuredData() {
-  const BASE = 'https://dialerseat.com'
 
+type TenantBranding = {
+  brand_name?: string | null
+  slug?: string | null
+  logo_url?: string | null
+  custom_domain?: string | null
+} | null | undefined
+
+const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'dialerseat.com'
+
+function tenantBaseUrl(b: NonNullable<TenantBranding>): string | null {
+  if (b.custom_domain) return `https://${b.custom_domain}`
+  const slug = (b.slug || '').toLowerCase()
+  if (!/^[a-z0-9][a-z0-9-]{0,28}[a-z0-9]$/.test(slug)) return null
+  return `https://${slug}.${ROOT_DOMAIN}`
+}
+
+export default function StructuredData({ branding }: { branding?: TenantBranding } = {}) {
+  const BASE = `https://${ROOT_DOMAIN}`
+
+  // ── TENANT MODE: lean, brand-specific graph on the subdomain ──────────────
+  if (branding && branding.brand_name) {
+    const base = tenantBaseUrl(branding)
+    if (base) {
+      const brand = String(branding.brand_name)
+      const logo = branding.logo_url || `${BASE}/icons/android-chrome-512x512.png`
+
+      const tenantGraph = [
+        {
+          '@type': 'Organization',
+          '@id': `${base}/#organization`,
+          name: brand,
+          url: base,
+          logo: { '@type': 'ImageObject', url: logo },
+          description: `${brand} — outbound calling platform powered by DialerSeat.`,
+        },
+        {
+          '@type': 'SoftwareApplication',
+          '@id': `${base}/#software`,
+          name: brand,
+          applicationCategory: 'BusinessApplication',
+          applicationSubCategory: 'OutboundDialer',
+          operatingSystem: 'Web, iOS, Android',
+          url: base,
+          description: `${brand} is a professional outbound dialer with predictive, progressive, power, and preview modes, automatic voicemail detection, inbound reception, and unlimited numbers.`,
+          offers: {
+            '@type': 'Offer',
+            price: '35.00',
+            priceCurrency: 'USD',
+            priceSpecification: {
+              '@type': 'UnitPriceSpecification',
+              price: '35.00',
+              priceCurrency: 'USD',
+              unitText: 'per seat per week',
+              billingDuration: 'P7D',
+            },
+            availability: 'https://schema.org/InStock',
+            url: `${base}/sign-up`,
+          },
+          publisher: { '@id': `${base}/#organization` },
+          // aggregateRating intentionally omitted (no faked ratings).
+        },
+        {
+          '@type': 'WebSite',
+          '@id': `${base}/#website`,
+          url: base,
+          name: brand,
+          publisher: { '@id': `${base}/#organization` },
+        },
+      ]
+
+      const tenantLd = { '@context': 'https://schema.org', '@graph': tenantGraph }
+
+      return (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(tenantLd) }}
+        />
+      )
+    }
+    // If we couldn't derive a clean base URL, fall through to apex schema.
+  }
+
+  // ── APEX / DEFAULT MODE: the full canonical graph (unchanged) ─────────────
   const graph = [
     // ─── Organization ──────────────────────────────────────────────
     {
