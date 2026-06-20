@@ -7,6 +7,7 @@ const isPublicRoute = createRouteMatcher([
   '/sitemap.xml',
   '/sign-in(.*)',
   '/sign-up(.*)',
+  '/welcome(.*)',
   '/terms',
   '/privacy',
   '/faq(.*)',
@@ -90,7 +91,15 @@ interface UserBrandAccess {
 // + ACCESS ENFORCEMENT  (v24 — Phase D1)
 // + ONBOARDING HARD-LOCK (v25 — Phase D2)
 // + TENANT ROOT ROUTING  (v26)
+// + WELCOME SHOWCASE PUBLIC (v27)
 // =============================================================================
+// v27: added '/welcome(.*)' to isPublicRoute. The post-signup showcase route
+// (app/welcome) is diverted to by /api/auth/post-signin for brand-new users
+// BEFORE billing. It must be public here so middleware doesn't intercept it
+// and bounce a 'new'/'lapsed' user to /billing before the page renders — the
+// page has its own server guard (lib/subscription.shouldSeeWelcome) that sends
+// non-eligible users to /billing, so this is safe.
+//
 // v26: a live tenant subdomain now hosts its OWN branded auth/landing instead
 // of bouncing the root to the apex.
 //   - The root "/" was removed from MARKETING_ONLY_PATHS so it no longer
