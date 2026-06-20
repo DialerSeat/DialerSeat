@@ -4,6 +4,15 @@ import { headers } from 'next/headers'
 import { createClient } from '@supabase/supabase-js'
 import { shouldSeeWelcome } from '@/lib/subscription'
 
+// CRITICAL: this route returns per-user redirects, so it must run dynamically
+// on every request. Without this, Next.js can statically cache the route's
+// response and serve the SAME redirect to everyone — which silently bypasses
+// the shouldSeeWelcome() diversion (the /welcome PAGE already sets this and
+// works; the route was missing it). nodejs runtime so the Supabase client
+// (used transitively by shouldSeeWelcome) runs on Node, not Edge.
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 // =============================================================================
 // /api/auth/post-signin — smart cross-subdomain redirect + tenant cookie
 // =============================================================================
