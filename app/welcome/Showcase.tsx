@@ -110,10 +110,11 @@ export default function ShowcaseWizard() {
         <button onClick={goBilling} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.6)', fontFamily: FUTURA, fontSize: 12, letterSpacing: 2, fontWeight: 700, cursor: 'pointer', padding: '6px 4px' }}>SKIP →</button>
       </div>
 
-      <div style={{ flex: 1, minHeight: 0 }} />
-
+      {/* MIDDLE GROUP: stage + text + controls centered as one unit in the
+          space below the top bar — equal breathing room above and below. */}
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '200px 0 8px' }}>
       {/* stage */}
-      <div style={{ flex: '0 1 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px 24px 0', minHeight: 0 }}>
+      <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 24px', minHeight: 0 }}>
         <div className="sw-stage-inner" style={{ width: '100%', maxWidth: 760 }}>
           {scene === 0 && <DialerScene />}
           {scene === 1 && <AnalyticsScene />}
@@ -122,7 +123,7 @@ export default function ShowcaseWizard() {
       </div>
 
       {/* explanation */}
-      <div style={{ padding: '14px 24px 8px', display: 'flex', justifyContent: 'center' }}>
+      <div style={{ padding: '18px 24px 12px', display: 'flex', justifyContent: 'center' }}>
         <div key={current.key} className="sw-explain" style={{ maxWidth: 620, textAlign: 'center', animation: 'sw-rise 0.45s ease' }}>
           <div style={{ fontSize: 11, letterSpacing: 4, color: C.primary, fontWeight: 800, marginBottom: 10 }}>{current.eyebrow}</div>
           <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: 0.3, lineHeight: 1.15, marginBottom: 12, whiteSpace: 'pre-line' }}>{current.headline}</div>
@@ -132,7 +133,7 @@ export default function ShowcaseWizard() {
       </div>
 
       {/* controls */}
-      <div style={{ padding: '10px 28px 22px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
+      <div style={{ padding: '16px 28px 30px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
         {scene > 0 && (
           <button onClick={prev} style={{ padding: '12px 20px', borderRadius: 10, cursor: 'pointer', background: 'transparent', border: '1px solid rgba(255,255,255,0.18)', color: 'rgba(255,255,255,0.85)', fontFamily: FUTURA, fontSize: 12, letterSpacing: 2, fontWeight: 700 }}>← BACK</button>
         )}
@@ -140,8 +141,8 @@ export default function ShowcaseWizard() {
           {isLast ? 'GET STARTED →' : 'NEXT →'}
         </button>
       </div>
+      </div>
 
-      <div style={{ flex: 1, minHeight: 0 }} />
 
       <style>{`
         @keyframes sw-rise { from { opacity:0; transform: translateY(10px);} to {opacity:1; transform: translateY(0);} }
