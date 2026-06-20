@@ -92,7 +92,7 @@ export default function ShowcaseWizard() {
 
   return (
     <div className="sw-root" style={{
-      position: 'fixed', inset: 0, overflow: 'hidden',
+      position: 'fixed', inset: 0, overflow: 'hidden', overflowX: 'hidden',
       background: `radial-gradient(120% 120% at 50% 0%, color-mix(in srgb, ${C.sidebar} 80%, #1a2340) 0%, ${C.sidebar} 60%, #07080f 100%)`,
       color: C.onSidebar, fontFamily: FUTURA, display: 'flex', flexDirection: 'column',
     }}>
@@ -171,7 +171,7 @@ export default function ShowcaseWizard() {
           .sw-stage-inner {
             width: 760px !important;
             max-width: 760px !important;
-            zoom: calc((100vw - 12px) / 760);
+            zoom: calc((100vw - 8px) / 1050);
           }
         }
       `}</style>
