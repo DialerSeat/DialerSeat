@@ -112,7 +112,7 @@ export default function ShowcaseWizard() {
 
       {/* MIDDLE GROUP: stage + text + controls centered as one unit in the
           space below the top bar — equal breathing room above and below. */}
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '25px 0 8px' }}>
+      <div className="sw-mid" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '25px 0 8px' }}>
       {/* stage */}
       <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 24px', minHeight: 0 }}>
         <div className="sw-stage-inner" style={{ width: '100%', maxWidth: 760 }}>
@@ -152,26 +152,27 @@ export default function ShowcaseWizard() {
         @keyframes sw-pop { from { opacity:0; transform: translateY(8px) scale(0.98);} to { opacity:1; transform: translateY(0) scale(1);} }
 
         /* ── MOBILE: shrink to fit, no content changes ───────────────── */
-        @media (max-width: 640px) {
+        /* ── MOBILE: same desktop layout, scaled to fully fit ───────────
+           The dialer mock is ~760px wide internally. We LOCK the stage to 760px
+           and use zoom (not transform: scale) so the layout BOX shrinks too —
+           that fits the phone with no horizontal overflow and no empty gap. */
+        @media (max-width: 760px) {
           .sw-root { font-size: 14px; }
-          /* tighten outer paddings */
-          .sw-root > div:first-child { padding: 12px 14px !important; } /* top bar */
+          .sw-root > div:first-child { padding: 14px 16px !important; } /* top bar */
           .sw-explain { max-width: 100% !important; }
-          /* scale the typography down */
           .sw-explain > div:nth-child(1) { font-size: 10px !important; letter-spacing: 3px !important; margin-bottom: 6px !important; } /* eyebrow */
-          .sw-explain > div:nth-child(2) { font-size: 20px !important; margin-bottom: 8px !important; line-height: 1.15 !important; } /* headline */
+          .sw-explain > div:nth-child(2) { font-size: 21px !important; margin-bottom: 8px !important; line-height: 1.18 !important; } /* headline */
           .sw-explain > div { font-size: 13px !important; line-height: 1.5 !important; } /* sub + subLead */
-        }
 
-        /* Very narrow phones: shrink the whole Mac-frame body so the dialer's
-           two-column layout fits without horizontal scroll. We scale the stage
-           inner wrapper down and let it reflow within the viewport width. */
-        @media (max-width: 480px) {
-          .sw-stage-inner { transform: scale(0.82); transform-origin: top center; }
-          .sw-explain > div:nth-child(2) { font-size: 18px !important; }
-        }
-        @media (max-width: 380px) {
-          .sw-stage-inner { transform: scale(0.7); transform-origin: top center; }
+          /* centered group: don't push down on mobile, top-align */
+          .sw-mid { padding: 8px 0 0 !important; justify-content: flex-start !important; }
+
+          /* lock stage width to desktop, zoom to fit the phone */
+          .sw-stage-inner {
+            width: 760px !important;
+            max-width: 760px !important;
+            zoom: calc((100vw - 12px) / 760);
+          }
         }
       `}</style>
     </div>
