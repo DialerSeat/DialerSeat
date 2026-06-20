@@ -143,6 +143,12 @@ export default function ShowcaseWizard() {
       </div>
       </div>
 
+      {/* TEMP version badge — confirms the deployed build has the latest code.
+          Remove once mobile layout is confirmed. */}
+      <div style={{ position: 'fixed', bottom: 6, left: '50%', transform: 'translateX(-50%)', fontSize: 9, letterSpacing: 1, color: 'rgba(255,255,255,0.35)', pointerEvents: 'none', zIndex: 9999 }}>
+        BUILD v13 · mobile-fit
+      </div>
+
 
       <style>{`
         @keyframes sw-rise { from { opacity:0; transform: translateY(10px);} to {opacity:1; transform: translateY(0);} }
