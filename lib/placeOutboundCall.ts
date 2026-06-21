@@ -1,113 +1,356 @@
-import { NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+import { pickNumberForLead, recordUsage } from '@/lib/numberPool'
+import { isCallableNow } from '@/lib/callingWindow'
+import { webhookUrl } from '@/lib/verifyWebhook'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 // =============================================================================
-// WEBHOOK AUTHENTICITY — shared-secret check for SignalWire callbacks
+// PLACE OUTBOUND CALL — shared core logic
 // =============================================================================
-// THE PROBLEM (Step 8):
-//   The telephony webhooks (calls/status, calls/amd-result, calls/inbound,
-//   calls/recording-status) accept unauthenticated POSTs and act on a CallSid
-//   from the body. Anyone who guesses or observes a CallSid can forge a
-//   callback — e.g. mark a call abandoned (corrupting the FTC abandon-rate
-//   numbers), redirect a call, or disposition a lead. These routes are
-//   necessarily PUBLIC (SignalWire must reach them with no Clerk session), so
-//   we authenticate them with a shared secret instead.
+// This is the SignalWire call placement extracted from app/api/calls/outbound.
+// Both the user-facing /api/calls/outbound route AND the predictive controller
+// call this function. Single source of truth for:
+//   - TCPA window enforcement (skipped for manual dials)
+//   - SignalWire MachineDetection (AMD) parameters
+//   - Number pool selection
+//   - Two-call architecture (lead leg + agent leg into a shared conference)
+//   - calls table insertion
+//   - call_rooms tracking
 //
-// THE MECHANISM:
-//   Every webhook URL we register with SignalWire gets a `?whk=<secret>` (or
-//   `&whk=<secret>`) query param. SignalWire preserves the query string when it
-//   calls back, so the handler can verify it. We compare in constant time.
+// IMPORTANT: This function preserves the exact behavior of outbound/route.ts.
+// Any change in here changes behavior for the live API as well.
 //
-//   The secret lives in SIGNALWIRE_WEBHOOK_SECRET (server-side env, NOT
-//   NEXT_PUBLIC). It is the same value on the registration side
-//   (placeOutboundCall, signalwireProvision, twiml) and the verification side
-//   (the handlers), so they can never disagree.
-//
-// SAFE ROLLOUT (fail-open until configured):
-//   If SIGNALWIRE_WEBHOOK_SECRET is UNSET, verifyWebhook() ALLOWS the request
-//   and logs a warning. This means you can deploy the handler changes first
-//   without breaking live calls, then add the env var + redeploy the
-//   registration side, and only THEN does enforcement turn on. Once the env var
-//   is set, a missing/wrong secret is REJECTED with 403.
-//
-//   ⚠️ After you've confirmed everything works WITH the secret set, you may
-//   optionally flip FAIL_OPEN_WHEN_UNSET to false to hard-fail if the env var
-//   ever goes missing in future. Leaving it true is fine and safer for now.
+// Two call modes:
+//   - source='user_dial': fired by the dialer page (user clicks dial). Places
+//     BOTH a lead call AND an agent call. Default behavior.
+//   - source='controller_fanout': fired by the predictive controller. Places
+//     ONLY the lead call (no agent leg). When AMD says human, the controller
+//     decides which ready agent to route the call to AT THAT POINT, not
+//     pre-emptively. Extras get the abandon TwiML.
 // =============================================================================
 
-const FAIL_OPEN_WHEN_UNSET = true
+export interface PlaceCallParams {
+  to: string                              // raw phone, will be +1-normalized
+  userId: string                          // Clerk ID — written to calls.user_id
+  leadId?: string | null
+  campaignId?: string | null
+  teamId?: string | null
+  source: 'user_dial' | 'controller_fanout'
+  // For controller_fanout, the controller can pass a session_id so the
+  // calls row links back to which agent_session triggered the dial.
+  agentSessionId?: string | null
+}
 
-/**
- * Constant-time string comparison to avoid timing side-channels.
- */
-function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false
-  let result = 0
-  for (let i = 0; i < a.length; i++) {
-    result |= a.charCodeAt(i) ^ b.charCodeAt(i)
+export interface PlaceCallResult {
+  success: boolean
+  callSid?: string                        // lead-leg SignalWire SID
+  agentCallSid?: string                   // agent-leg SignalWire SID (user_dial only)
+  roomName?: string
+  fromNumber?: string
+  status?: string
+  amdEnabled?: boolean
+  dialerMode?: string
+  ringTimeout?: string
+  // Failure modes
+  error?: string
+  detail?: string                         // TCPA detail for 451 responses
+  leadState?: string | null
+  leadLocalTime?: string | null
+  retryAfter?: string                     // ISO timestamp
+  httpStatus?: number                     // status code the caller should return
+}
+
+interface SignalWireEnv {
+  spaceUrl: string
+  projectId: string
+  apiToken: string
+  sipUsername: string
+  sipDomain: string
+  appUrl: string
+}
+
+function getSignalWireEnv(): SignalWireEnv | null {
+  const spaceUrl = process.env.SIGNALWIRE_SPACE_URL
+  const projectId = process.env.SIGNALWIRE_PROJECT_ID
+  const apiToken = process.env.SIGNALWIRE_API_TOKEN
+  const sipUsername = process.env.SIGNALWIRE_SIP_USERNAME
+  const sipDomain = process.env.SIGNALWIRE_SIP_DOMAIN
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL
+
+  if (!spaceUrl || !projectId || !apiToken || !sipUsername || !sipDomain || !appUrl) {
+    return null
   }
-  return result === 0
+  return { spaceUrl, projectId, apiToken, sipUsername, sipDomain, appUrl }
 }
 
 /**
- * Verifies the `whk` query param on an incoming webhook request against
- * SIGNALWIRE_WEBHOOK_SECRET.
- *
- * Returns null if the request is authentic (or if the secret is unset and
- * FAIL_OPEN_WHEN_UNSET is true). Returns a 403 NextResponse if the secret is
- * configured and the request's whk is missing or wrong — the caller should
- * return that response immediately.
- *
- * Usage at the top of a webhook handler:
- *
- *   const bad = verifyWebhook(req)
- *   if (bad) return bad
+ * Main entry point — places a call, handling all the existing logic
+ * (TCPA pre-flight, AMD config, number pool, two-leg dial).
  */
-export function verifyWebhook(req: Request): NextResponse | null {
-  const secret = process.env.SIGNALWIRE_WEBHOOK_SECRET
+export async function placeOutboundCall(
+  params: PlaceCallParams
+): Promise<PlaceCallResult> {
+  const { to, userId, leadId, campaignId, teamId, source, agentSessionId } = params
 
-  if (!secret) {
-    if (FAIL_OPEN_WHEN_UNSET) {
-      console.warn(
-        '[verifyWebhook] SIGNALWIRE_WEBHOOK_SECRET is not set — allowing webhook ' +
-        'WITHOUT verification. Set the env var to enable enforcement.'
-      )
-      return null
+  if (!to) {
+    return { success: false, error: 'Missing destination', httpStatus: 400 }
+  }
+
+  const env = getSignalWireEnv()
+  if (!env) {
+    return { success: false, error: 'Missing credentials', httpStatus: 500 }
+  }
+
+  const toFormatted = to.startsWith('+') ? to : `+1${to.replace(/\D/g, '')}`
+
+  // ── MANUAL DIAL BYPASS ──────────────────────────────────────────────────
+  // Dials with no leadId AND no campaignId originate from the manual keypad.
+  // The user is dialing a number they typed in directly, so TCPA window
+  // enforcement is skipped. Campaign-driven dials still go through the check.
+  //
+  // The controller's fanout calls always have leadId AND campaignId, so
+  // they always get TCPA-checked. Good — controller dials are TSR-regulated.
+  const isManualDial = !leadId && !campaignId
+
+  if (!isManualDial) {
+    let leadStateForTcpa: string | null = null
+    if (leadId) {
+      const { data: lead } = await supabase
+        .from('leads')
+        .select('phone, state, user_id')
+        .eq('id', leadId)
+        .maybeSingle()
+      // Note: user_id check here is for user_dial source where userId is the
+      // Clerk ID. For controller_fanout, the controller already verified
+      // ownership upstream, so we still TCPA-check but don't reject on owner.
+      if (lead && (source === 'controller_fanout' || lead.user_id === userId)) {
+        leadStateForTcpa = lead.state
+      }
     }
-    // Hardened mode: no secret configured = refuse everything.
-    console.error('[verifyWebhook] SIGNALWIRE_WEBHOOK_SECRET not set and fail-closed mode on. Rejecting.')
-    return NextResponse.json({ error: 'Webhook auth not configured' }, { status: 503 })
+
+    const tcpaCheck = isCallableNow({
+      phone: toFormatted,
+      state: leadStateForTcpa,
+    })
+
+    if (!tcpaCheck.allowed) {
+      return {
+        success: false,
+        error: 'Cannot dial outside calling window',
+        detail: tcpaCheck.reason,
+        leadState: tcpaCheck.leadState,
+        leadLocalTime: tcpaCheck.leadLocalTime,
+        retryAfter: tcpaCheck.retryAfter?.toISOString(),
+        httpStatus: 451,  // RFC 7725 Unavailable For Legal Reasons
+      }
+    }
   }
 
-  let provided: string | null = null
-  try {
-    provided = new URL(req.url).searchParams.get('whk')
-  } catch {
-    provided = null
+  // AMD is ALWAYS on — voicemail filtering is core to the product.
+  const amdEnabled = true
+  let dialerMode = 'power'
+  if (campaignId) {
+    const { data: campaign } = await supabase
+      .from('campaigns')
+      .select('dialer_mode')
+      .eq('id', campaignId)
+      .maybeSingle()
+    if (campaign) {
+      dialerMode = campaign.dialer_mode || 'power'
+    }
   }
 
-  if (!provided || !timingSafeEqual(provided, secret)) {
-    console.warn('[verifyWebhook] rejected webhook with missing/invalid whk param')
-    // 403 with an empty-ish body. SignalWire will log the failure; we don't
-    // want to leak anything about why.
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  // ── NUMBER POOL ──────────────────────────────────────────────────────
+  // Pass dialerMode so the pool can decide how to pick:
+  //   - predictive: ignore area-code matching, round-robin the full pool
+  //     to spread load across many caller IDs (essential for multi-line)
+  //   - everything else: area-code → state → region → any (fallback always
+  //     succeeds if there's any active number at all)
+  const poolNumber = await pickNumberForLead(toFormatted, dialerMode)
+  const fromNumber = poolNumber?.phone_number || process.env.SIGNALWIRE_PHONE_NUMBER
+
+  if (!fromNumber) {
+    return {
+      success: false,
+      error: 'No phone numbers available in pool. Contact admin.',
+      httpStatus: 503,
+    }
   }
 
-  return null
+  if (!poolNumber) {
+    console.warn('[placeOutboundCall] Pool empty, using SIGNALWIRE_PHONE_NUMBER fallback')
+  }
+
+  return await doPlaceCall({
+    toFormatted,
+    fromNumber,
+    poolNumberId: poolNumber?.id || null,
+    userId,
+    leadId: leadId || null,
+    campaignId: campaignId || null,
+    teamId: teamId || null,
+    amdEnabled,
+    dialerMode,
+    source,
+    agentSessionId: agentSessionId || null,
+    env,
+  })
 }
 
-/**
- * Helper for the REGISTRATION side: appends the whk secret to a webhook URL,
- * choosing ? or & automatically. If the secret is unset, returns the URL
- * unchanged (so behavior is identical to today until you configure it).
- *
- *   webhookUrl(`${appUrl}/api/calls/status`)
- *     -> https://.../api/calls/status?whk=SECRET
- *   webhookUrl(`${appUrl}/api/calls/twiml?room=abc`)
- *     -> https://.../api/calls/twiml?room=abc&whk=SECRET
- */
-export function webhookUrl(base: string): string {
-  const secret = process.env.SIGNALWIRE_WEBHOOK_SECRET
-  if (!secret) return base
-  const sep = base.includes('?') ? '&' : '?'
-  return `${base}${sep}whk=${encodeURIComponent(secret)}`
+interface DoPlaceCallParams {
+  toFormatted: string
+  fromNumber: string
+  poolNumberId: string | null
+  userId: string
+  leadId: string | null
+  campaignId: string | null
+  teamId: string | null
+  amdEnabled: boolean
+  dialerMode: string
+  source: 'user_dial' | 'controller_fanout'
+  agentSessionId: string | null
+  env: SignalWireEnv
+}
+
+async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
+  const roomName = `room-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  const authHeader =
+    'Basic ' + Buffer.from(`${p.env.projectId}:${p.env.apiToken}`).toString('base64')
+  const callsUrl = `https://${p.env.spaceUrl}/api/laml/2010-04-01/Accounts/${p.env.projectId}/Calls.json`
+
+  const isTsrRegulated = p.dialerMode === 'progressive' || p.dialerMode === 'predictive'
+  const ringTimeout = isTsrRegulated ? '20' : '60'
+
+  // ── BUILD AMD PARAMS ────────────────────────────────────────────────────
+  const outboundParams: Record<string, string> = {
+    To: p.toFormatted,
+    From: p.fromNumber,
+    Url: webhookUrl(`${p.env.appUrl}/api/calls/twiml?room=${roomName}&record=true&campaignId=${p.campaignId || ''}`),
+    StatusCallback: webhookUrl(`${p.env.appUrl}/api/calls/status`),
+    StatusCallbackMethod: 'POST',
+    Timeout: ringTimeout,
+  }
+
+  if (p.amdEnabled) {
+    // These are the exact values from the original outbound route.
+    // Don't change without testing — they are tuned for human/machine balance.
+    outboundParams.MachineDetection = 'Enable'
+    outboundParams.AsyncAmd = 'true'
+    outboundParams.AsyncAmdStatusCallback = webhookUrl(`${p.env.appUrl}/api/calls/amd-result`)
+    outboundParams.AsyncAmdStatusCallbackMethod = 'POST'
+    outboundParams.MachineDetectionTimeout = '10'
+    outboundParams.MachineDetectionSpeechThreshold = '1800'
+    outboundParams.MachineDetectionSpeechEndThreshold = '800'
+    outboundParams.MachineDetectionSilenceTimeout = '3000'
+  }
+
+  // ── PLACE LEAD CALL ─────────────────────────────────────────────────────
+  const leadCallResponse = await fetch(callsUrl, {
+    method: 'POST',
+    headers: {
+      'Authorization': authHeader,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams(outboundParams).toString(),
+  })
+
+  const leadData = await leadCallResponse.json()
+  console.log(`[placeOutboundCall:${p.source}] Lead call response:`, leadData)
+
+  if (!leadCallResponse.ok) {
+    return {
+      success: false,
+      error: leadData.message || 'Lead call failed',
+      httpStatus: 500,
+    }
+  }
+
+  // ── INSERT calls ROW ────────────────────────────────────────────────────
+  try {
+    await supabase.from('calls').insert({
+      user_id: p.userId,
+      lead_id: p.leadId,
+      campaign_id: p.campaignId,
+      team_id: p.teamId,
+      phone_number: p.toFormatted,
+      signalwire_call_id: leadData.sid,
+      duration: 0,
+      disposition: null,
+      // Controller-originated calls get a marker so we can distinguish them
+      // in analytics and so the abandon-tracker knows to count them.
+      ...(p.source === 'controller_fanout' && p.agentSessionId
+        ? { dial_group_id: p.agentSessionId }
+        : {}),
+    })
+  } catch (insertErr) {
+    console.error(`[placeOutboundCall:${p.source}] Failed to insert calls row:`, insertErr)
+  }
+
+  // ── RECORD NUMBER POOL USAGE ────────────────────────────────────────────
+  if (p.poolNumberId) {
+    try {
+      await recordUsage(p.poolNumberId)
+    } catch (err) {
+      console.error(`[placeOutboundCall:${p.source}] recordUsage failed:`, err)
+    }
+  }
+
+  // ── PLACE AGENT CALL (only for user_dial) ───────────────────────────────
+  // For controller fanout we don't pre-place the agent leg — the controller
+  // decides routing once AMD confirms human (or aborts on machine).
+  let agentCallSid: string | undefined
+  if (p.source === 'user_dial') {
+    const agentSipUri = `sip:${p.env.sipUsername}@${p.env.sipDomain}`
+    const agentCallResponse = await fetch(callsUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': authHeader,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        To: agentSipUri,
+        From: p.fromNumber,
+        Url: webhookUrl(`${p.env.appUrl}/api/calls/twiml-agent?room=${roomName}`),
+      }).toString(),
+    })
+
+    const agentData = await agentCallResponse.json()
+    console.log(`[placeOutboundCall:${p.source}] Agent call response:`, agentData)
+
+    if (!agentCallResponse.ok) {
+      console.warn(`[placeOutboundCall:${p.source}] Agent call failed but lead call succeeded:`, agentData)
+    }
+    agentCallSid = agentData?.sid
+  }
+
+  // ── TRACK call_rooms ─────────────────────────────────────────────────────
+  try {
+    await supabase.from('call_rooms').upsert({
+      room_name: roomName,
+      user_id: p.userId,
+      phone_number: p.toFormatted,
+      lead_call_sid: leadData.sid,
+      agent_call_sid: agentCallSid || null,
+      created_at: new Date().toISOString(),
+      pool_number_id: p.poolNumberId,
+    })
+  } catch (e) {
+    console.warn(`[placeOutboundCall:${p.source}] call_rooms tracking skipped:`, e)
+  }
+
+  return {
+    success: true,
+    callSid: leadData.sid,
+    agentCallSid,
+    roomName,
+    fromNumber: p.fromNumber,
+    status: leadData.status,
+    amdEnabled: p.amdEnabled,
+    dialerMode: p.dialerMode,
+    ringTimeout,
+  }
 }
