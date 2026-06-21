@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { recordAmdResult } from '@/lib/dialerPacing'
+import { verifyWebhook, webhookUrl } from '@/lib/verifyWebhook'
 
 // =============================================================================
 // SignalWire AMD result webhook (modified for predictive controller)
@@ -33,6 +34,8 @@ import { recordAmdResult } from '@/lib/dialerPacing'
 // =============================================================================
 
 export async function POST(req: Request) {
+  const bad = verifyWebhook(req)
+  if (bad) return bad
   try {
     const formData = await req.formData()
     const callSid = formData.get('CallSid') as string | null
@@ -221,7 +224,7 @@ async function abandonCall(callSid: string): Promise<void> {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: new URLSearchParams({
-        Url: `${appUrl}/api/calls/twiml-abandon`,
+        Url: webhookUrl(`${appUrl}/api/calls/twiml-abandon`),
         Method: 'POST',
       }).toString(),
     })
@@ -322,7 +325,7 @@ async function placeAgentLegForFanout(roomName: string, phoneNumber: string): Pr
       body: new URLSearchParams({
         To: agentSipUri,
         From: fromNumber,
-        Url: `${appUrl}/api/calls/twiml-agent?room=${roomName}`,
+        Url: webhookUrl(`${appUrl}/api/calls/twiml-agent?room=${roomName}`),
       }).toString(),
     })
     if (!res.ok) {

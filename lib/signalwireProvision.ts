@@ -7,6 +7,8 @@
 //   POST /IncomingPhoneNumbers/{Sid}.json       — update webhook URLs
 //   DELETE /IncomingPhoneNumbers/{Sid}.json     — release a number
 
+import { webhookUrl } from '@/lib/verifyWebhook'
+
 const PROJECT_ID = process.env.SIGNALWIRE_PROJECT_ID!
 const API_TOKEN = process.env.SIGNALWIRE_API_TOKEN!
 const SPACE_URL = process.env.SIGNALWIRE_SPACE_URL!
@@ -70,9 +72,9 @@ export async function searchAvailableNumbers(
 export async function purchaseNumber(phoneNumber: string): Promise<PurchasedNumber> {
   const params = new URLSearchParams({
     PhoneNumber: phoneNumber,
-    VoiceUrl: `${APP_URL}/api/calls/inbound`,
+    VoiceUrl: webhookUrl(`${APP_URL}/api/calls/inbound`),
     VoiceMethod: 'POST',
-    StatusCallback: `${APP_URL}/api/calls/status`,
+    StatusCallback: webhookUrl(`${APP_URL}/api/calls/status`),
     StatusCallbackMethod: 'POST',
   })
 

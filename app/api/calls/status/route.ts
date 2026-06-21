@@ -1,7 +1,10 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import { NextResponse } from 'next/server'
+import { verifyWebhook } from '@/lib/verifyWebhook'
 
 export async function POST(req: Request) {
+  const bad = verifyWebhook(req)
+  if (bad) return bad
   try {
     const formData = await req.formData()
     const callSid = formData.get('CallSid') as string
