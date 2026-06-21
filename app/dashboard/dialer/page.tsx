@@ -490,31 +490,9 @@ function DialerPageInner() {
     if (!isActive) return
     const initSW = async () => {
       try {
-        // SECURITY (Step 2 / Path A): fetch SIP credentials from an
-        // authenticated server endpoint instead of reading NEXT_PUBLIC_* env
-        // vars, which would be baked into the public client bundle and
-        // harvestable without logging in. The server route is gated by Clerk.
-        let sipUsername: string | undefined
-        let sipPassword: string | undefined
-        let sipDomain: string | undefined
-        try {
-          const credRes = await fetch('/api/calls/sip-credentials')
-          if (!credRes.ok) {
-            console.error('SIP credentials fetch failed:', credRes.status)
-            return
-          }
-          const cred = await credRes.json()
-          if (!cred?.success) {
-            console.error('SIP credentials unavailable:', cred?.error)
-            return
-          }
-          sipUsername = cred.sipUsername
-          sipPassword = cred.sipPassword
-          sipDomain = cred.sipDomain
-        } catch (credErr) {
-          console.error('SIP credentials request error:', credErr)
-          return
-        }
+        const sipUsername = process.env.NEXT_PUBLIC_SIGNALWIRE_SIP_USERNAME
+        const sipPassword = process.env.NEXT_PUBLIC_SIGNALWIRE_SIP_PASSWORD
+        const sipDomain = process.env.NEXT_PUBLIC_SIGNALWIRE_SIP_DOMAIN
 
         if (!sipUsername || !sipPassword || !sipDomain) return
 
