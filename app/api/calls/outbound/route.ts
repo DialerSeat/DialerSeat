@@ -52,8 +52,18 @@ export async function POST(req: Request) {
       )
     }
 
+    // Decide the dial source EXPLICITLY here, where we know the intent:
+    //   - manual keypad dial = a number typed in directly, no lead/campaign
+    //     context → source 'manual' (TCPA window bypass, the user chose this number)
+    //   - campaign dial (lead and/or campaign present) → source 'user_dial'
+    //     (full TCPA enforcement — these are regulated outbound calls)
+    // This replaces the old behavior where the library INFERRED manual-vs-
+    // campaign from absent IDs. Being explicit prevents an accidental bypass.
+    const isManualKeypadDial = !leadId && !campaignId
+    const dialSource = isManualKeypadDial ? 'manual' : 'user_dial'
+
     // Delegate everything else to the shared library.
-    // source='user_dial' triggers the original two-leg behavior:
+    // source='user_dial'/'manual' both trigger the two-leg behavior:
     // place lead call AND agent call, both join conference room.
     const result = await placeOutboundCall({
       to,
@@ -61,7 +71,7 @@ export async function POST(req: Request) {
       leadId,
       campaignId,
       teamId,
-      source: 'user_dial',
+      source: dialSource,
     })
 
     // Library returns either a success or a failure with httpStatus hint.

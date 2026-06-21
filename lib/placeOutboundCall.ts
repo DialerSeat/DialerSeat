@@ -39,7 +39,7 @@ export interface PlaceCallParams {
   leadId?: string | null
   campaignId?: string | null
   teamId?: string | null
-  source: 'user_dial' | 'controller_fanout'
+  source: 'user_dial' | 'controller_fanout' | 'manual'
   // For controller_fanout, the controller can pass a session_id so the
   // calls row links back to which agent_session triggered the dial.
   agentSessionId?: string | null
@@ -108,13 +108,21 @@ export async function placeOutboundCall(
   const toFormatted = to.startsWith('+') ? to : `+1${to.replace(/\D/g, '')}`
 
   // ── MANUAL DIAL BYPASS ──────────────────────────────────────────────────
-  // Dials with no leadId AND no campaignId originate from the manual keypad.
-  // The user is dialing a number they typed in directly, so TCPA window
-  // enforcement is skipped. Campaign-driven dials still go through the check.
+  // TCPA window enforcement is skipped ONLY for explicit manual keypad dials,
+  // signaled by source === 'manual'. The caller (the outbound route) decides
+  // this — it is NOT inferred from absent IDs anymore. This closes a latent
+  // hole: previously ANY caller that omitted leadId+campaignId would silently
+  // skip the calling-window check. Now the bypass requires an explicit, audited
+  // declaration of intent.
   //
-  // The controller's fanout calls always have leadId AND campaignId, so
-  // they always get TCPA-checked. Good — controller dials are TSR-regulated.
-  const isManualDial = !leadId && !campaignId
+  // Controller fanout (source='controller_fanout') and campaign user-dials
+  // (source='user_dial') ALWAYS get TCPA-checked — they are TSR-regulated.
+  //
+  // SAFETY GUARD: if source='manual' arrives WITH a leadId or campaignId, that
+  // is a misuse (a campaign-driven dial mislabeled as manual). We do NOT honor
+  // the bypass in that case — we fall through to the TCPA check. The bypass is
+  // only granted for a true manual dial: source='manual' AND no lead/campaign.
+  const isManualDial = source === 'manual' && !leadId && !campaignId
 
   if (!isManualDial) {
     let leadStateForTcpa: string | null = null
@@ -211,7 +219,7 @@ interface DoPlaceCallParams {
   teamId: string | null
   amdEnabled: boolean
   dialerMode: string
-  source: 'user_dial' | 'controller_fanout'
+  source: 'user_dial' | 'controller_fanout' | 'manual'
   agentSessionId: string | null
   env: SignalWireEnv
 }
@@ -302,8 +310,10 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
   // ── PLACE AGENT CALL (only for user_dial) ───────────────────────────────
   // For controller fanout we don't pre-place the agent leg — the controller
   // decides routing once AMD confirms human (or aborts on machine).
+  // Both 'user_dial' (campaign click-to-dial) and 'manual' (keypad) are
+  // human-initiated two-leg dials: place the agent leg so the rep is bridged in.
   let agentCallSid: string | undefined
-  if (p.source === 'user_dial') {
+  if (p.source === 'user_dial' || p.source === 'manual') {
     const agentSipUri = `sip:${p.env.sipUsername}@${p.env.sipDomain}`
     const agentCallResponse = await fetch(callsUrl, {
       method: 'POST',
