@@ -1053,9 +1053,9 @@ function DialerPageInner() {
   const currentScope = teamScopes.find(s => s.id === selectedScope) || null
 
   const scopeCampaigns: { id: string; name: string; total_leads: number; status: string }[] = isPersonalScope
-    ? campaigns.map(c => ({ id: c.id, name: c.name, total_leads: c.total_leads, status: c.status }))
+    ? (campaigns || []).map(c => ({ id: c.id, name: c.name, total_leads: c.total_leads, status: c.status }))
     : (currentScope?.teamCampaigns
-        .filter(tc => tc.campaign)
+        ?.filter(tc => tc.campaign)
         .map(tc => ({
           id: tc.campaign!.id,
           name: tc.campaign!.name,
