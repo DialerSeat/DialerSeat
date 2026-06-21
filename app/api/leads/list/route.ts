@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { supabaseAdmin } from '@/lib/supabase'
+import { requireUser } from '@/lib/requireUser'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+// SECURITY (was IDOR): scoped only by client-supplied ?user_id with no auth.
+// Identity now comes from the Clerk session.
 
 const PAGE_SIZE = 50
 
@@ -17,17 +16,16 @@ const SUB_DISPOSITIONS: Record<string, string> = {
 }
 
 export async function GET(req: NextRequest) {
+  const gate = await requireUser()
+  if (!gate.ok) return gate.response
+  const userId = gate.userId
+
   const { searchParams } = new URL(req.url)
-  const userId = searchParams.get('user_id')
   const rawCampaignId = searchParams.get('campaign_id') || 'all'
   const disposition = searchParams.get('disposition') || 'all'
   const search = searchParams.get('search')?.trim() || ''
   const sort = searchParams.get('sort') || 'created_desc'
   const cursor = parseInt(searchParams.get('cursor') || '0', 10)
-
-  if (!userId) {
-    return NextResponse.json({ success: false, error: 'user_id required' }, { status: 400 })
-  }
 
   // Parse virtual sub-campaign IDs of the form `${parentId}:${subType}`.
   // When detected, treat it as the parent campaign + an enforced disposition
@@ -52,7 +50,7 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  let query = supabase
+  let query = supabaseAdmin
     .from('leads')
     .select('*', { count: 'exact' })
     .eq('user_id', userId)

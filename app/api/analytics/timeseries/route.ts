@@ -1,26 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { supabaseAdmin } from '@/lib/supabase'
+import { requireUser } from '@/lib/requireUser'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+// SECURITY (was IDOR): scoped only by client-supplied ?user_id with no auth.
+// Identity now comes from the Clerk session.
 
 const CONVERSION_DISPS = ['CLOSED', 'APPOINTMENT']
 
 export async function GET(req: NextRequest) {
+  const gate = await requireUser()
+  if (!gate.ok) return gate.response
+  const userId = gate.userId
+
   const { searchParams } = new URL(req.url)
-  const userId = searchParams.get('user_id')
   const start = searchParams.get('start')
   const end = searchParams.get('end')
   // bucket: 'hour' | 'day'
   const bucket = searchParams.get('bucket') || 'day'
 
-  if (!userId) {
-    return NextResponse.json({ success: false, error: 'user_id required' }, { status: 400 })
-  }
-
-  let query = supabase.from('calls').select('created_at, disposition, duration').eq('user_id', userId)
+  let query = supabaseAdmin.from('calls').select('created_at, disposition, duration').eq('user_id', userId)
   if (start) query = query.gte('created_at', start)
   if (end) query = query.lte('created_at', end)
   query = query.order('created_at', { ascending: true })

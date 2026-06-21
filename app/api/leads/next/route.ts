@@ -1,6 +1,13 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import { NextResponse } from 'next/server'
 import { isCallableNow } from '@/lib/callingWindow'
+import { requireUser } from '@/lib/requireUser'
+
+// SECURITY (was IDOR): this route took ?user_id from the query string and used
+// it for BOTH personal lead scoping AND team-membership verification. That let
+// any signed-in user (a) pull another user's personal leads, and (b) spoof
+// membership by passing a real member's id. Identity now comes from the Clerk
+// session; the query param is ignored.
 
 // How many candidate leads to evaluate before giving up.
 // We over-fetch then filter in JS because Supabase can't run our time-zone
@@ -24,14 +31,13 @@ async function fetchCampaignMode(campaignId: string) {
 
 export async function GET(req: Request) {
   try {
+    const gate = await requireUser()
+    if (!gate.ok) return gate.response
+    const user_id = gate.userId
+
     const { searchParams } = new URL(req.url)
-    const user_id = searchParams.get('user_id')
     const campaign_id = searchParams.get('campaign_id')
     const team_id = searchParams.get('team_id')
-
-    if (!user_id) {
-      return NextResponse.json({ success: false, error: 'No user_id' }, { status: 400 })
-    }
 
     // ── TEAM SCOPE ──
     if (team_id) {

@@ -297,7 +297,7 @@ async function placeAgentLegForFanout(roomName: string, phoneNumber: string): Pr
       .maybeSingle()
     if (room?.pool_number_id) {
       const { data: pool } = await supabaseAdmin
-        .from('phone_number_pool')
+        .from('phone_numbers')
         .select('phone_number')
         .eq('id', room.pool_number_id)
         .maybeSingle()

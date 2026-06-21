@@ -1,10 +1,11 @@
 import { NextRequest } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { supabaseAdmin } from '@/lib/supabase'
+import { requireUser } from '@/lib/requireUser'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+// SECURITY (was IDOR): this route exported up to 50,000 lead rows (PII) scoped
+// ONLY by a client-supplied ?user_id, with no auth check. Any signed-in user
+// could export anyone's leads. We now derive identity from the Clerk session
+// and ignore the query param entirely.
 
 function escapeCSV(value: any): string {
   if (value === null || value === undefined) return ''
@@ -16,17 +17,16 @@ function escapeCSV(value: any): string {
 }
 
 export async function GET(req: NextRequest) {
+  const gate = await requireUser()
+  if (!gate.ok) return gate.response
+  const userId = gate.userId
+
   const { searchParams } = new URL(req.url)
-  const userId = searchParams.get('user_id')
   const campaignId = searchParams.get('campaign_id') || 'all'
   const disposition = searchParams.get('disposition') || 'all'
   const search = searchParams.get('search')?.trim() || ''
 
-  if (!userId) {
-    return new Response('user_id required', { status: 400 })
-  }
-
-  let query = supabase.from('leads').select('*').eq('user_id', userId)
+  let query = supabaseAdmin.from('leads').select('*').eq('user_id', userId)
 
   if (campaignId !== 'all') query = query.eq('campaign_id', campaignId)
   if (disposition !== 'all') {

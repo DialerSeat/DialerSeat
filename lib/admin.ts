@@ -1,46 +1,41 @@
-import { auth } from '@clerk/nextjs/server'
-import { createClient } from '@supabase/supabase-js'
+// =============================================================================
+// lib/admin.ts — COMPATIBILITY SHIM (post-consolidation)
+// =============================================================================
+// The real admin gate now lives in lib/requireAdmin.ts (non-throwing,
+// GateResult contract). This file used to contain a SECOND, divergent
+// requireAdmin() that THREW a Response. To avoid breaking the 14 routes that
+// still `import { requireAdmin } from '@/lib/admin'` and consume it via
+// try/catch, we keep a throwing adapter here under the SAME old behavior.
+//
+// MIGRATION PATH (do this incrementally, no rush):
+//   1. In each route importing from '@/lib/admin', switch the import to
+//      '@/lib/requireAdmin' and change:
+//          try { await requireAdmin() } catch (res) { return res as Response }
+//      to:
+//          const gate = await requireAdmin()
+//          if (!gate.ok) return NextResponse.json({ error: gate.message }, { status: gate.status })
+//   2. Once no route imports from '@/lib/admin', delete this file.
+//
+// Until then, BOTH import paths resolve to the SAME underlying check, so there
+// is exactly one source of truth for "is this user an admin".
+// =============================================================================
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+import { requireAdmin as requireAdminGate, checkIsAdmin } from '@/lib/requireAdmin'
+
+export { checkIsAdmin }
 
 /**
- * Returns { isAdmin, userId } for the current Clerk session.
- * Used by client components that fetch admin status via the API.
- */
-export async function checkIsAdmin(): Promise<{ isAdmin: boolean; userId: string | null }> {
-  const { userId } = await auth()
-  if (!userId) return { isAdmin: false, userId: null }
-
-  const { data, error } = await supabase
-    .from('users')
-    .select('is_admin')
-    .eq('clerk_id', userId)
-    .single()
-
-  if (error || !data) return { isAdmin: false, userId }
-  return { isAdmin: !!data.is_admin, userId }
-}
-
-/**
- * Use at the top of every admin API route.
- * Returns { userId } on success, or throws a Response that the route should return.
+ * Legacy throwing contract. Throws a Response on failure (catch and return it),
+ * returns { userId } on success. Backed by the single consolidated gate so it
+ * can never disagree with the GateResult version.
  */
 export async function requireAdmin(): Promise<{ userId: string }> {
-  const { isAdmin, userId } = await checkIsAdmin()
-  if (!userId) {
-    throw new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
+  const gate = await requireAdminGate()
+  if (!gate.ok) {
+    throw new Response(JSON.stringify({ error: gate.message }), {
+      status: gate.status,
       headers: { 'Content-Type': 'application/json' },
     })
   }
-  if (!isAdmin) {
-    throw new Response(JSON.stringify({ error: 'Forbidden' }), {
-      status: 403,
-      headers: { 'Content-Type': 'application/json' },
-    })
-  }
-  return { userId }
+  return { userId: gate.clerkId }
 }
