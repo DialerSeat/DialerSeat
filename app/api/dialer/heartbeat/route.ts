@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { createClient } from '@supabase/supabase-js'
 import { runPredictiveController } from '@/lib/predictiveController'
+import { STALE_HEARTBEAT_SECONDS, ABANDON_YIELD_PCT } from '@/lib/dialerConstants'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -37,13 +38,11 @@ const supabase = createClient(
 // the controller sees the FRESH state. Order of operations is critical here.
 // =============================================================================
 
-// Stale-claim window — must match the SQL function's interval.
-// 15 seconds for last_heartbeat means agents go "offline" after one missed tick.
-const STALE_HEARTBEAT_SECONDS = 15
-
-// Abandon-rate threshold above which we tell the agent to yield (pause fanout).
-// FTC TSR caps at 3%. We yield at 2.8% to give ourselves margin.
-const YIELD_THRESHOLD_PCT = 2.8
+// Stale-claim window and yield threshold now come from lib/dialerConstants
+// (STALE_HEARTBEAT_SECONDS, ABANDON_YIELD_PCT) so they stay in lockstep with
+// the controller and pacing module.
+// NOTE: STALE_HEARTBEAT_SECONDS must still match the SQL stale-claim function's
+// interval (15s). If you change it in dialerConstants, update the SQL too.
 
 // Heartbeat-derived states that should trigger the controller to refill lines.
 // 'paused' is intentionally absent — paused agents don't get fanout.
@@ -142,7 +141,7 @@ export async function POST(req: NextRequest) {
           .eq('campaign_id', campaignId)
           .maybeSingle()
         if (rate && typeof rate.abandon_rate_pct === 'number') {
-          shouldYield = rate.abandon_rate_pct >= YIELD_THRESHOLD_PCT
+          shouldYield = rate.abandon_rate_pct >= ABANDON_YIELD_PCT
         }
       } catch (rateErr) {
         console.error('[heartbeat] abandon rate lookup failed', rateErr)
