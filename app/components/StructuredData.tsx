@@ -117,6 +117,11 @@ export default function StructuredData({ branding }: { branding?: TenantBranding
       '@type': 'Organization',
       '@id': `${BASE}/#organization`,
       name: 'DialerSeat',
+      // Explicit one-word entity declaration. Listing the brand string as an
+      // alternateName (and keeping it identical to `name`) is a direct signal to
+      // Google that "DialerSeat" is a proper noun / single token — which is what
+      // erodes the "did you mean: dialer seat" spelling correction over time.
+      alternateName: 'DialerSeat',
       url: BASE,
       logo: {
         '@type': 'ImageObject',
@@ -128,10 +133,18 @@ export default function StructuredData({ branding }: { branding?: TenantBranding
         'Professional outbound dialer SaaS for solo agents up through larger teams. $35/week per seat. No contracts. Cancel anytime.',
       foundingDate: '2025',
       sameAs: [
-        // Add social profiles here as you create them:
+        // ENTITY GRAPH: add each real profile URL here as you create it. Every
+        // URL declares "this is the same DialerSeat entity," which strengthens
+        // Knowledge-Graph recognition and further kills the spelling correction.
+        // Fill these in (see footprint-claim-list.md) and redeploy:
+        // 'https://www.linkedin.com/company/dialerseat',
+        // 'https://www.crunchbase.com/organization/dialerseat',
+        // 'https://www.wikidata.org/wiki/QXXXXXXX',
         // 'https://twitter.com/dialerseat',
-        // 'https://linkedin.com/company/dialerseat',
+        // 'https://www.youtube.com/@dialerseat',
         // 'https://www.facebook.com/dialerseat',
+        // 'https://www.g2.com/products/dialerseat',
+        // 'https://www.trustpilot.com/review/dialerseat.com',
       ],
     },
 

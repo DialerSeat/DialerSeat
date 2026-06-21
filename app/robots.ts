@@ -74,6 +74,16 @@ const DISALLOW_PRIVATE = [
   '/welcome', // post-signup showcase — not a public landing page
   '/sign-in/',
   '/sign-up/',
+  // Icon / asset ROUTES that Next generates and Google can mistakenly index as
+  // pages (this is why "dialerseat.com/apple-icon" showed up as a search
+  // result). These are images, not pages — keep them out of the index.
+  '/apple-icon',
+  '/apple-icon/',
+  '/icon',
+  '/icon/',
+  '/opengraph-image',
+  '/twitter-image',
+  '/manifest.webmanifest',
 ]
 
 const RESERVED = new Set([

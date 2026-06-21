@@ -100,6 +100,39 @@ const baseMetadata: Metadata = {
     'format-detection': 'telephone=no',
   },
 };
+// Host-aware metadata: inject a self-referential canonical per host so each
+// subdomain is its own canonical brand site and the apex stays canonical for
+// the marketing pages. Everything else is inherited from baseMetadata.
+export async function generateMetadata(): Promise<Metadata> {
+  const h = await headers()
+  const host = (h.get('host') || ROOT_DOMAIN).split(':')[0].toLowerCase()
+
+  // Reuse the same reserved/slug rules as sitemap/robots.
+  const RESERVED = new Set([
+    'www', 'app', 'api', 'admin', 'dashboard', 'static', 'cdn', 'assets',
+    'mail', 'email', 'smtp', 'imap', 'pop', 'docs', 'blog', 'help',
+    'support', 'status',
+  ])
+  const isApex = host === ROOT_DOMAIN || host === `www.${ROOT_DOMAIN}`
+  let canonicalHost = ROOT_DOMAIN
+  if (!isApex && host.endsWith(`.${ROOT_DOMAIN}`)) {
+    const sub = host.slice(0, -1 - ROOT_DOMAIN.length)
+    const validSub =
+      !sub.includes('.') &&
+      !RESERVED.has(sub) &&
+      /^[a-z0-9][a-z0-9-]{0,28}[a-z0-9]$/.test(sub)
+    if (validSub) canonicalHost = host // subdomain is its own canonical
+  }
+
+  return {
+    ...baseMetadata,
+    metadataBase: new URL(`https://${canonicalHost}`),
+    alternates: {
+      ...(baseMetadata.alternates || {}),
+      canonical: `https://${canonicalHost}/`,
+    },
+  }
+}
 
 export const viewport: Viewport = {
   themeColor: [
