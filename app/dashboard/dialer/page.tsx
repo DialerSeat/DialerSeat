@@ -232,9 +232,29 @@ function DialerPageInner() {
   const lsRestoredRef = useRef(false)
   const activeCallSidRef = useRef<string | null>(null)
 
+  // ── GHOST-DIAL PREVENTION ───────────────────────────────────────────────
+  // availableRef always holds the LIVE value of `available`. setTimeout/async
+  // callbacks capture stale closure values of state; a ref does not. Every
+  // dial path reads this ref at the moment of execution so a dial scheduled
+  // while you were available cannot fire after you've gone unavailable.
+  const availableRef = useRef(false)
+  // Tracks every pending auto-chain setTimeout(handleDial) so we can cancel
+  // them all the instant you go unavailable (the kill switch).
+  const dialChainTimeoutsRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set())
+
   useEffect(() => setMounted(true), [])
   useEffect(() => { currentLeadRef.current = currentLead }, [currentLead])
   useEffect(() => { activeCallSidRef.current = activeCallSid }, [activeCallSid])
+  // Keep availableRef in lock-step with the available state.
+  useEffect(() => { availableRef.current = available }, [available])
+  // On unmount (navigating away from the dialer), cancel any pending auto-chain
+  // dials so a queued timer can't fire a call after you've left the page.
+  useEffect(() => {
+    return () => {
+      for (const id of dialChainTimeoutsRef.current) clearTimeout(id)
+      dialChainTimeoutsRef.current.clear()
+    }
+  }, [])
 
   useEffect(() => {
     if (!user) return
@@ -490,31 +510,9 @@ function DialerPageInner() {
     if (!isActive) return
     const initSW = async () => {
       try {
-        // SECURITY (Step 2 / Path A): fetch SIP credentials from an
-        // authenticated server endpoint instead of reading NEXT_PUBLIC_* env
-        // vars, which would be baked into the public client bundle and
-        // harvestable without logging in. The server route is gated by Clerk.
-        let sipUsername: string | undefined
-        let sipPassword: string | undefined
-        let sipDomain: string | undefined
-        try {
-          const credRes = await fetch('/api/calls/sip-credentials')
-          if (!credRes.ok) {
-            console.error('SIP credentials fetch failed:', credRes.status)
-            return
-          }
-          const cred = await credRes.json()
-          if (!cred?.success) {
-            console.error('SIP credentials unavailable:', cred?.error)
-            return
-          }
-          sipUsername = cred.sipUsername
-          sipPassword = cred.sipPassword
-          sipDomain = cred.sipDomain
-        } catch (credErr) {
-          console.error('SIP credentials request error:', credErr)
-          return
-        }
+        const sipUsername = process.env.NEXT_PUBLIC_SIGNALWIRE_SIP_USERNAME
+        const sipPassword = process.env.NEXT_PUBLIC_SIGNALWIRE_SIP_PASSWORD
+        const sipDomain = process.env.NEXT_PUBLIC_SIGNALWIRE_SIP_DOMAIN
 
         if (!sipUsername || !sipPassword || !sipDomain) return
 
@@ -751,12 +749,21 @@ function DialerPageInner() {
 
     const pollIncoming = async () => {
       try {
+        // Live guard: if you've gone unavailable since this interval was set,
+        // do not attach any routed call. Prevents a predictive ghost-connect.
+        if (!availableRef.current) return
+
         const res = await fetch('/api/calls/incoming-route')
         if (!res.ok) return
         const data = (await res.json()) as IncomingRouteResponse
         if (!data.incoming || !data.call) return
 
         if (lastIncomingCallSidRef.current === data.call.sid) return
+
+        // Re-check after the await — availability may have changed while the
+        // request was in flight. Never auto-attach audio to an offline agent.
+        if (!availableRef.current) return
+
         lastIncomingCallSidRef.current = data.call.sid
 
         setAmdActivity(prev => [
@@ -941,10 +948,15 @@ function DialerPageInner() {
       }
     }
 
-    const goingOffline = available
+    const goingOffline = availableRef.current
     if (goingOffline) {
-      if (activeCallSid) {
-        await hangupCall(activeCallSid)
+      // ── KILL SWITCH ───────────────────────────────────────────────────────
+      // Going offline must stop everything immediately: cancel every pending
+      // auto-chain dial so none can fire after this point, and hang up any call
+      // currently attached. This is what makes "unavailable" actually mean it.
+      cancelAllPendingDials()
+      if (activeCallSidRef.current) {
+        await hangupCall(activeCallSidRef.current)
       }
       setStatus('idle')
       setCurrentLead(null)
@@ -1053,9 +1065,9 @@ function DialerPageInner() {
   const currentScope = teamScopes.find(s => s.id === selectedScope) || null
 
   const scopeCampaigns: { id: string; name: string; total_leads: number; status: string }[] = isPersonalScope
-    ? (campaigns || []).map(c => ({ id: c.id, name: c.name, total_leads: c.total_leads, status: c.status }))
+    ? campaigns.map(c => ({ id: c.id, name: c.name, total_leads: c.total_leads, status: c.status }))
     : (currentScope?.teamCampaigns
-        ?.filter(tc => tc.campaign)
+        .filter(tc => tc.campaign)
         .map(tc => ({
           id: tc.campaign!.id,
           name: tc.campaign!.name,
@@ -1149,6 +1161,15 @@ function DialerPageInner() {
   }
 
   const dialLeadCall = async (lead: Lead) => {
+    // ── HARD GUARD (final gate before SignalWire) ───────────────────────────
+    // This is the last function before the POST to /api/calls/outbound. Even if
+    // something reached here unexpectedly, refuse to dial unless you are
+    // actively available right now. Nothing talks to SignalWire otherwise.
+    if (!availableRef.current) {
+      setStatus('idle')
+      return
+    }
+
     const rawPhone = lead.phone?.replace(/\D/g, '')
     if (!rawPhone || rawPhone.length < 10) {
       await fetch('/api/leads/dispose', {
@@ -1163,7 +1184,7 @@ function DialerPageInner() {
         }),
       })
       setCurrentLead(null)
-      if (autoChainOnFailure) setTimeout(() => handleDial(), 300)
+      if (autoChainOnFailure) scheduleDial(300)
       else setStatus('idle')
       return
     }
@@ -1215,8 +1236,8 @@ function DialerPageInner() {
           ].slice(0, 5))
           setStatus('idle')
           setCurrentLead(null)
-          if (autoChainOnFailure) setTimeout(() => handleDial(), 500)
-          else setTimeout(() => handleDial(), 300)
+          if (autoChainOnFailure) scheduleDial(500)
+          else scheduleDial(300)
           return
         }
         await fetch('/api/leads/dispose', {
@@ -1232,7 +1253,7 @@ function DialerPageInner() {
         })
         setStatus('idle')
         setCurrentLead(null)
-        if (autoChainOnFailure) setTimeout(() => handleDial(), 500)
+        if (autoChainOnFailure) scheduleDial(500)
       }
     } catch (error) {
       console.error('Call error:', error)
@@ -1266,7 +1287,7 @@ function DialerPageInner() {
             )
             setStatus('idle')
             setCurrentLead(null)
-            if (autoChainOnFailure) setTimeout(() => handleDial(), 600)
+            if (autoChainOnFailure) scheduleDial(600)
           } else {
             setStatus('ended')
             setShowDisposition(true)
@@ -1297,7 +1318,7 @@ function DialerPageInner() {
             setActiveCallSid(null)
             setStatus('idle')
             setCurrentLead(null)
-            setTimeout(() => handleDial(), 600)
+            scheduleDial(600)
             return
           }
 
@@ -1344,7 +1365,7 @@ function DialerPageInner() {
           setStatus('idle')
           setCurrentLead(null)
 
-          setTimeout(() => handleDial(), 800)
+          scheduleDial(800)
         }
       } catch (err) {
         clearInterval(pollInterval)
@@ -1354,7 +1375,36 @@ function DialerPageInner() {
     activePollRef.current = pollInterval
   }
 
+  // ── GHOST-DIAL PREVENTION: cancellable, guarded auto-chaining ────────────
+  // Cancels every pending auto-chain dial. Called the moment you go offline so
+  // no queued setTimeout can wake up and dial after you've stopped.
+  const cancelAllPendingDials = () => {
+    for (const id of dialChainTimeoutsRef.current) clearTimeout(id)
+    dialChainTimeoutsRef.current.clear()
+  }
+
+  // Schedules the next auto-chain dial, but tracked so it can be cancelled, and
+  // re-checks availability when it fires. Use this everywhere instead of a bare
+  // setTimeout(() => handleDial(), n).
+  const scheduleDial = (delayMs: number) => {
+    const id = setTimeout(() => {
+      dialChainTimeoutsRef.current.delete(id)
+      // Final live check: if you went offline during the delay, do nothing.
+      if (!availableRef.current) return
+      handleDial()
+    }, delayMs)
+    dialChainTimeoutsRef.current.add(id)
+  }
+
   const handleDial = async () => {
+    // ── HARD GUARD ──────────────────────────────────────────────────────────
+    // The single authoritative gate: a dial may only proceed if you are
+    // actively available at THIS moment. This stops "ghost dialing" — calls
+    // firing from stale timers or async flows after you've gone unavailable.
+    // Manual keypad dials go through handleManualDial, not here, so this does
+    // not affect intentional manual dialing.
+    if (!availableRef.current) return
+
     setShowDisposition(false)
     setDisposition('')
     setNoLeads(false)
@@ -1410,7 +1460,7 @@ function DialerPageInner() {
     if (isPredictive) {
       lastIncomingCallSidRef.current = null
     } else {
-      setTimeout(() => handleDial(), 300)
+      scheduleDial(300)
     }
   }
 
