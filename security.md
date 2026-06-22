@@ -32,7 +32,7 @@ explicitly wired `app.clerk_id` per request (we have not).
 | Gmail routes | `requireAuth()` from `@/lib/gmail` | clerkId or throws |
 | Vercel cron jobs | `Bearer ${CRON_SECRET}` header check | — |
 | Stripe webhooks | `stripe.webhooks.constructEvent` (signature) | — |
-| SignalWire/telephony webhooks | shared-secret check (see Step 8) | — |
+| SignalWire/telephony webhooks | `verifyWebhook(req)` shared-secret check from `@/lib/verifyWebhook` | NextResponse or null |
 
 ## The two non-negotiable patterns
 
@@ -74,9 +74,13 @@ These do not get a user gate, by design — but each has its OWN authenticity
 mechanism that must stay in place:
 
 - `calls/twiml`, `calls/twiml-agent`, `calls/twiml-abandon` — TwiML documents
-  fetched by SignalWire. (Add the Step 8 shared-secret check.)
+  fetched by SignalWire. Protected by the `verifyWebhook` shared secret (the
+  registered URL carries `?whk=<secret>`).
 - `calls/status`, `calls/amd-result`, `calls/inbound`, `calls/recording-status`
-  — SignalWire webhooks. (Add the Step 8 shared-secret check — currently OPEN.)
+  — SignalWire webhooks. Protected by the `verifyWebhook` shared secret. NOTE:
+  the check is fail-open until `SIGNALWIRE_WEBHOOK_SECRET` is set; once set it
+  enforces. Existing pool numbers must be re-provisioned after setting the
+  secret so their registered callback URLs carry it.
 - `calls/token` — mints a short-lived SignalWire JWT. Must remain behind the
   middleware session gate; never expose long-lived credentials here.
 - `gmail/auth`, `gmail/callback` — OAuth handshake (state-protected).
@@ -102,3 +106,50 @@ requesting user B's data. Per-route ownership checks are mandatory on top of it.
    (signature / shared secret / OAuth state). Add it to the list above.
 4. Never trust `user_id`, `id`, `team_id`, `clerk_id`, etc. from query/body as
    identity.
+
+## Data at rest
+
+Most columns are stored plaintext and protected only by access control to the
+database (the service-role key). Two columns are an exception because they are
+live credentials to a third-party account:
+
+- **`gmail_oauth_tokens.access_token` and `.refresh_token`** are encrypted with
+  AES-256-GCM (`lib/tokenCrypto.ts`). They are encrypted on write and decrypted
+  on read inside `lib/gmail.ts`, so callers never handle ciphertext directly.
+  The key is `GMAIL_TOKEN_ENCRYPTION_KEY` (server-side env, 32 bytes). Stored
+  form is `enc:v1:<iv>:<authTag>:<ciphertext>`; legacy plaintext is passed
+  through on read so the system tolerates a mix during migration.
+
+  Operational notes:
+  - Guard `GMAIL_TOKEN_ENCRYPTION_KEY` like the service-role key. Losing it makes
+    every token undecryptable (users must reconnect Gmail); leaking it defeats
+    the encryption.
+  - To encrypt pre-existing rows or after key rotation, run
+    `scripts/encrypt-gmail-tokens.ts` (idempotent — skips already-encrypted rows).
+
+If you add another column that stores a third-party credential, secret, or
+token, encrypt it the same way rather than storing it plaintext.
+
+## Remediation status (baseline)
+
+The following hardening was completed against the original audit. This section
+is a record of the secured state, not a substitute for the rules above — new
+code must still follow every pattern in this document.
+
+- Leaked credentials in committed `.env*` files were rotated (Supabase
+  service-role, Stripe secret + webhook, SignalWire token, Clerk secret).
+- SIP credentials removed from the public client bundle; served from an
+  authenticated endpoint (`calls/sip-credentials`) instead of `NEXT_PUBLIC_*`.
+- The read-side IDOR class (routes trusting `?user_id`) was closed via
+  `requireUser()`; a write-side IDOR on the orphaned `campaigns/script` route
+  was removed.
+- The two conflicting `requireAdmin` implementations were consolidated into one
+  non-throwing source of truth (`lib/requireAdmin.ts`), eliminating a fail-open
+  ambiguity.
+- Telephony webhooks gained shared-secret authentication (`verifyWebhook`).
+- Pacing/compliance constants were centralized (`lib/dialerConstants.ts`) so the
+  predictive controller and pacing module cannot disagree on the FTC
+  abandon-rate inputs.
+- Gmail OAuth tokens are encrypted at rest (see "Data at rest" above).
+- The database schema was captured into version control (`db/schema.sql`); the
+  inert-RLS posture is documented there as well.

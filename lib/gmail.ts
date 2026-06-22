@@ -14,6 +14,7 @@
 
 import { auth } from '@clerk/nextjs/server'
 import { createClient } from '@supabase/supabase-js'
+import { encrypt, decrypt } from '@/lib/tokenCrypto'
 
 const GOOGLE_OAUTH_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 const GMAIL_API_BASE = 'https://gmail.googleapis.com/gmail/v1'
@@ -64,7 +65,18 @@ export async function getStoredTokens(clerkId: string): Promise<GmailTokenRow | 
     .eq('clerk_id', clerkId)
     .maybeSingle()
   if (error) throw error
-  return (data as GmailTokenRow | null) ?? null
+  if (!data) return null
+
+  // Decrypt at the single read chokepoint so every downstream caller
+  // (getValidAccessToken, refreshAccessToken, the disconnect route) transparently
+  // sees plaintext. decrypt() passes legacy plaintext through untouched, so rows
+  // that haven't been migrated yet still work.
+  const row = data as GmailTokenRow
+  return {
+    ...row,
+    access_token: decrypt(row.access_token) as string,
+    refresh_token: decrypt(row.refresh_token) as string,
+  }
 }
 
 export async function deleteStoredTokens(clerkId: string): Promise<void> {
@@ -90,8 +102,9 @@ export async function upsertTokens(input: UpsertTokensInput): Promise<void> {
     {
       clerk_id: input.clerkId,
       email: input.email,
-      access_token: input.accessToken,
-      refresh_token: input.refreshToken,
+      // Encrypt at rest. Both columns are encrypted before they ever hit the DB.
+      access_token: encrypt(input.accessToken),
+      refresh_token: encrypt(input.refreshToken),
       expires_at: expiresAt,
       scopes: input.scopes,
     },
@@ -110,10 +123,12 @@ async function updateAccessToken(
 ): Promise<void> {
   const expiresAt = new Date(Date.now() + expiresInSec * 1000).toISOString()
   const patch: Record<string, string> = {
-    access_token: accessToken,
+    access_token: encrypt(accessToken),
     expires_at: expiresAt,
   }
-  if (refreshToken) patch.refresh_token = refreshToken
+  // encryptNullable returns null for a falsy refresh token; here we only enter
+  // this branch when refreshToken is truthy, so it always encrypts.
+  if (refreshToken) patch.refresh_token = encrypt(refreshToken)
   const { error } = await supabase
     .from('gmail_oauth_tokens')
     .update(patch)
