@@ -1,5 +1,6 @@
 import { getAreaCodeInfo, extractAreaCode } from './areaCode'
 import { STATE_TIMEZONES, getCallingRule, getFederalHolidays } from './timezones'
+import { normalizeState } from './normalizeState'
 
 export interface CallabilityResult {
   allowed: boolean
@@ -36,19 +37,26 @@ interface LeadInput {
  * re-queue them for the next callable window instead of skipping forever.
  */
 export function isCallableNow(lead: LeadInput): CallabilityResult {
-  // Step 1: resolve the lead's state
-  let state = lead.state?.trim().toUpperCase() || null
+  // Step 1: resolve the lead's state.
+  // Accept any reasonable representation from the lead sheet — full names
+  // ("North Carolina"), abbreviations ("nc", "N.C."), mixed case, etc. — not
+  // just exact 2-letter codes. A real, callable lead must not be blocked just
+  // because the sheet spelled the state out.
+  let state = normalizeState(lead.state)
 
-  // If state column missing or unknown, fall back to area code
+  // If the state column was missing or unrecognized, infer from the phone's
+  // area code as a fallback.
   if (!state || !STATE_TIMEZONES[state]) {
     const areaCode = extractAreaCode(lead.phone)
     const info = areaCode ? getAreaCodeInfo(areaCode) : null
-    state = info?.state || null
+    // areaCode table already returns 2-letter codes, but normalize defensively.
+    state = normalizeState(info?.state) || info?.state || null
   }
 
   if (!state || !STATE_TIMEZONES[state]) {
-    // Can't determine lead's time zone — refuse to call rather than guess.
-    // Better to skip 1 lead than risk a TCPA violation on it.
+    // Genuinely can't determine the lead's time zone from either the state
+    // field or the area code. Fail closed (don't call) — but this is now only
+    // reached for truly unresolvable input, not for valid full-name states.
     return {
       allowed: false,
       reason: 'Unknown state — cannot determine calling window',
