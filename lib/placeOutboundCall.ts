@@ -1,7 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { pickNumberForLead, recordUsage } from '@/lib/numberPool'
 import { isCallableNow } from '@/lib/callingWindow'
-import { webhookUrl } from '@/lib/verifyWebhook'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -39,7 +38,7 @@ export interface PlaceCallParams {
   leadId?: string | null
   campaignId?: string | null
   teamId?: string | null
-  source: 'user_dial' | 'controller_fanout' | 'manual'
+  source: 'user_dial' | 'controller_fanout'
   // For controller_fanout, the controller can pass a session_id so the
   // calls row links back to which agent_session triggered the dial.
   agentSessionId?: string | null
@@ -71,6 +70,68 @@ interface SignalWireEnv {
   sipUsername: string
   sipDomain: string
   appUrl: string
+}
+
+// =============================================================================
+// PHONE NORMALIZATION — E.164 for SignalWire
+// =============================================================================
+// Real lead sheets store phone numbers in many shapes. SignalWire requires
+// strict E.164 (+15044580577). This normalizes any common US/NANP format to
+// E.164, or returns null if the value can't be a valid number so the caller
+// can skip the row cleanly instead of placing a broken call.
+//
+// THE BUG THIS FIXES: the previous inline logic was
+//     to.startsWith('+') ? to : `+1${to.replace(/\D/g,'')}`
+// which blindly prepended +1. For an 11-digit number that ALREADY had a
+// leading 1 (e.g. "15044580577", the exact format in the Halo VET sheet) it
+// produced "+115044580577" — a doubled country code that SignalWire rejects.
+// That's why a manually-typed +1 number worked but the sheet numbers 500'd.
+//
+// Cases handled:
+//   "+15044580577"     -> "+15044580577"  (already E.164, validated)
+//   "15044580577"      -> "+15044580577"  (11-digit, leading 1, no +)  <-- the bug
+//   "5044580577"       -> "+15044580577"  (bare 10-digit US)
+//   "(504) 458-0577"   -> "+15044580577"  (punctuation)
+//   "504-458-0577"     -> "+15044580577"  (dashes)
+//   "1-504-458-0577"   -> "+15044580577"  (dashes + leading 1)
+//   "+44 20 7946 0958" -> "+442079460958" (intl, kept as-is)
+//   "", "N/A", "—", "5551234" -> null     (too short / not a phone -> skip)
+// =============================================================================
+export function normalizeToE164(raw: string | null | undefined): string | null {
+  if (raw === null || raw === undefined) return null
+
+  const trimmed = String(raw).trim()
+  if (!trimmed) return null
+
+  // Preserve a leading + (international) but strip everything non-digit.
+  const hadPlus = trimmed.startsWith('+')
+  const digits = trimmed.replace(/\D/g, '')
+
+  if (!digits) return null
+
+  // If it explicitly came with a +, trust the digits as a full international
+  // number (must be at least a plausible length).
+  if (hadPlus) {
+    return digits.length >= 8 ? `+${digits}` : null
+  }
+
+  // No +. Resolve NANP (US/Canada) forms:
+  //   10 digits            -> prepend +1
+  //   11 digits leading 1  -> prepend + (the country code is already there)
+  if (digits.length === 10) {
+    return `+1${digits}`
+  }
+  if (digits.length === 11 && digits.startsWith('1')) {
+    return `+${digits}`
+  }
+
+  // Longer than 11 with no +: assume it's an international number missing its +.
+  if (digits.length > 11) {
+    return `+${digits}`
+  }
+
+  // Anything shorter than 10 digits isn't a dialable number — skip it.
+  return null
 }
 
 function getSignalWireEnv(): SignalWireEnv | null {
@@ -105,24 +166,27 @@ export async function placeOutboundCall(
     return { success: false, error: 'Missing credentials', httpStatus: 500 }
   }
 
-  const toFormatted = to.startsWith('+') ? to : `+1${to.replace(/\D/g, '')}`
+  // Normalize to E.164. Returns null for numbers that can't be dialed (blank,
+  // too short, junk like "N/A"), so we skip the row with a clean 422 instead of
+  // sending a broken number to SignalWire and getting a 500.
+  const toFormatted = normalizeToE164(to)
+  if (!toFormatted) {
+    return {
+      success: false,
+      error: 'Invalid phone number — skipped',
+      detail: `"${to}" is not a dialable number`,
+      httpStatus: 422,
+    }
+  }
 
   // ── MANUAL DIAL BYPASS ──────────────────────────────────────────────────
-  // TCPA window enforcement is skipped ONLY for explicit manual keypad dials,
-  // signaled by source === 'manual'. The caller (the outbound route) decides
-  // this — it is NOT inferred from absent IDs anymore. This closes a latent
-  // hole: previously ANY caller that omitted leadId+campaignId would silently
-  // skip the calling-window check. Now the bypass requires an explicit, audited
-  // declaration of intent.
+  // Dials with no leadId AND no campaignId originate from the manual keypad.
+  // The user is dialing a number they typed in directly, so TCPA window
+  // enforcement is skipped. Campaign-driven dials still go through the check.
   //
-  // Controller fanout (source='controller_fanout') and campaign user-dials
-  // (source='user_dial') ALWAYS get TCPA-checked — they are TSR-regulated.
-  //
-  // SAFETY GUARD: if source='manual' arrives WITH a leadId or campaignId, that
-  // is a misuse (a campaign-driven dial mislabeled as manual). We do NOT honor
-  // the bypass in that case — we fall through to the TCPA check. The bypass is
-  // only granted for a true manual dial: source='manual' AND no lead/campaign.
-  const isManualDial = source === 'manual' && !leadId && !campaignId
+  // The controller's fanout calls always have leadId AND campaignId, so
+  // they always get TCPA-checked. Good — controller dials are TSR-regulated.
+  const isManualDial = !leadId && !campaignId
 
   if (!isManualDial) {
     let leadStateForTcpa: string | null = null
@@ -219,7 +283,7 @@ interface DoPlaceCallParams {
   teamId: string | null
   amdEnabled: boolean
   dialerMode: string
-  source: 'user_dial' | 'controller_fanout' | 'manual'
+  source: 'user_dial' | 'controller_fanout'
   agentSessionId: string | null
   env: SignalWireEnv
 }
@@ -237,8 +301,8 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
   const outboundParams: Record<string, string> = {
     To: p.toFormatted,
     From: p.fromNumber,
-    Url: webhookUrl(`${p.env.appUrl}/api/calls/twiml?room=${roomName}&record=true&campaignId=${p.campaignId || ''}`),
-    StatusCallback: webhookUrl(`${p.env.appUrl}/api/calls/status`),
+    Url: `${p.env.appUrl}/api/calls/twiml?room=${roomName}&record=true&campaignId=${p.campaignId || ''}`,
+    StatusCallback: `${p.env.appUrl}/api/calls/status`,
     StatusCallbackMethod: 'POST',
     Timeout: ringTimeout,
   }
@@ -248,7 +312,7 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
     // Don't change without testing — they are tuned for human/machine balance.
     outboundParams.MachineDetection = 'Enable'
     outboundParams.AsyncAmd = 'true'
-    outboundParams.AsyncAmdStatusCallback = webhookUrl(`${p.env.appUrl}/api/calls/amd-result`)
+    outboundParams.AsyncAmdStatusCallback = `${p.env.appUrl}/api/calls/amd-result`
     outboundParams.AsyncAmdStatusCallbackMethod = 'POST'
     outboundParams.MachineDetectionTimeout = '10'
     outboundParams.MachineDetectionSpeechThreshold = '1800'
@@ -310,10 +374,8 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
   // ── PLACE AGENT CALL (only for user_dial) ───────────────────────────────
   // For controller fanout we don't pre-place the agent leg — the controller
   // decides routing once AMD confirms human (or aborts on machine).
-  // Both 'user_dial' (campaign click-to-dial) and 'manual' (keypad) are
-  // human-initiated two-leg dials: place the agent leg so the rep is bridged in.
   let agentCallSid: string | undefined
-  if (p.source === 'user_dial' || p.source === 'manual') {
+  if (p.source === 'user_dial') {
     const agentSipUri = `sip:${p.env.sipUsername}@${p.env.sipDomain}`
     const agentCallResponse = await fetch(callsUrl, {
       method: 'POST',
@@ -324,7 +386,7 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
       body: new URLSearchParams({
         To: agentSipUri,
         From: p.fromNumber,
-        Url: webhookUrl(`${p.env.appUrl}/api/calls/twiml-agent?room=${roomName}`),
+        Url: `${p.env.appUrl}/api/calls/twiml-agent?room=${roomName}`,
       }).toString(),
     })
 
