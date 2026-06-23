@@ -43,6 +43,7 @@ interface Campaign {
   status: string
   total_leads: number
   script?: string
+  scripts?: { id: string; name: string; body: string }[]
   dialer_mode?: DialerMode
   amd_enabled?: boolean
   predictive_lines_per_agent?: number
@@ -1640,16 +1641,31 @@ function DialerPageInner() {
     { label: 'SKIP', color: '#64748b', bg: '#f1f5f9' },
   ]
 
-  // Build the raw set of script tabs (each with a stable key for drag-ordering).
-  let rawScriptTabs: { key: string; name: string; script: string }[] = []
-  if (isSpecificCampaign) {
-    if (currentCampaign?.script) {
-      rawScriptTabs = [{ key: currentCampaign.id, name: currentCampaign.name, script: currentCampaign.script }]
+  // Build the raw set of script tabs from each campaign's enabled scripts
+  // (new global-library model). Each tab key is the script id; for ALL ACTIVE
+  // we show every enabled script across active campaigns. Falls back to the
+  // legacy single `script` field if a campaign has no linked scripts yet.
+  const campaignScriptTabs = (c: Campaign): { key: string; name: string; script: string }[] => {
+    if (c.scripts && c.scripts.length > 0) {
+      return c.scripts.map(s => ({ key: s.id, name: s.name, script: s.body }))
     }
+    if (c.script) return [{ key: c.id, name: c.name, script: c.script }]
+    return []
+  }
+
+  let rawScriptTabs: { key: string; name: string; script: string }[] = []
+  if (isSpecificCampaign && currentCampaign) {
+    rawScriptTabs = campaignScriptTabs(currentCampaign)
   } else if (isAllActive && isPersonalScope) {
-    rawScriptTabs = campaigns
-      .filter(c => c.script)
-      .map(c => ({ key: c.id, name: c.name, script: c.script as string }))
+    const seen = new Set<string>()
+    for (const c of campaigns) {
+      if (c.status !== 'active') continue
+      for (const t of campaignScriptTabs(c)) {
+        if (seen.has(t.key)) continue
+        seen.add(t.key)
+        rawScriptTabs.push(t)
+      }
+    }
   }
 
   // Apply the user's custom drag order: keys present in scriptOrder come first

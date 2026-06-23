@@ -64,6 +64,27 @@ export async function GET(req: Request) {
 
     if (error) throw error
 
+    // ── Attach enabled scripts (new global-library model) ───────────────────
+    // Each campaign gets a `scripts` array of its enabled library scripts in
+    // per-campaign order. The dialer uses this to render its script tabs.
+    if (campaigns && campaigns.length > 0) {
+      const campaignIds = campaigns.map(c => c.id)
+      const { data: links } = await supabaseAdmin
+        .from('campaign_script_links')
+        .select('campaign_id, script_id, sort_order, scripts(id, name, body)')
+        .in('campaign_id', campaignIds)
+        .order('sort_order', { ascending: true })
+      const byCampaign: Record<string, any[]> = {}
+      for (const l of links || []) {
+        const sc = (l as any).scripts
+        if (!sc) continue
+        ;(byCampaign[l.campaign_id] ||= []).push({ id: sc.id, name: sc.name, body: sc.body })
+      }
+      for (const c of campaigns) {
+        ;(c as any).scripts = byCampaign[c.id] || []
+      }
+    }
+
     // Fast path: no virtual expansion requested or no campaigns to expand.
     if (!includeVirtual || !campaigns || campaigns.length === 0) {
       return NextResponse.json({ success: true, campaigns: campaigns || [] })

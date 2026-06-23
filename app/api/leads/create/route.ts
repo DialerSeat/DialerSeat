@@ -81,7 +81,6 @@ export async function POST(req: NextRequest) {
       dial_attempts: 0,
       last_called_at: null,
       created_at: now,
-      updated_at: now,
     }
 
     const { data: lead, error } = await supabaseAdmin
@@ -95,12 +94,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'db_error', detail: error?.message }, { status: 500 })
     }
 
-    // Bump the campaign's total_leads counter and updated_at
+    // Bump the campaign's total_leads counter
     await supabaseAdmin
       .from('campaigns')
       .update({
         total_leads: (campaign.total_leads || 0) + 1,
-        updated_at: now,
       })
       .eq('id', campaign_id)
 

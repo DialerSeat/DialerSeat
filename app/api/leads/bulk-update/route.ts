@@ -117,7 +117,6 @@ export async function POST(req: NextRequest) {
       if (Object.keys(fields).length === 0) {
         return { lead_id: u.lead_id, skipped: true }
       }
-      fields.updated_at = new Date().toISOString()
       const { error } = await supabaseAdmin
         .from('leads')
         .update(fields)

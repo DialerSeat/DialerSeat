@@ -82,6 +82,29 @@ interface CampaignScript {
   updated_at: string
 }
 
+// Global script library item (per user, optionally team-provided).
+interface GlobalScript {
+  id: string
+  user_id?: string
+  team_id?: string | null
+  name: string
+  body: string
+  sort_order: number
+  is_team?: boolean
+}
+
+// A library script as seen from a single campaign: whether it's enabled here
+// and (if so) its per-campaign order. Used by toggles + lead-editor drag.
+interface CampaignScriptLink {
+  id: string
+  name: string
+  body: string
+  is_team: boolean
+  owned: boolean
+  enabled: boolean
+  link_sort_order: number | null
+}
+
 interface Lead {
   id: string
   campaign_id: string
@@ -330,6 +353,25 @@ export default function CampaignsPage() {
   const [draggedScriptId, setDraggedScriptId] = useState<string | null>(null)
   const [dragOverScriptId, setDragOverScriptId] = useState<string | null>(null)
 
+  // ─── GLOBAL SCRIPTS LIBRARY (manager modal) ───────────────────────────
+  const [scriptsManagerOpen, setScriptsManagerOpen] = useState(false)
+  const [library, setLibrary] = useState<GlobalScript[]>([])
+  const [libraryLoading, setLibraryLoading] = useState(false)
+  const [activeLibId, setActiveLibId] = useState<string | null>(null)
+  const [libName, setLibName] = useState('')
+  const [libBody, setLibBody] = useState('')
+  const [libDirty, setLibDirty] = useState(false)
+  const [libSaving, setLibSaving] = useState(false)
+  const [libDragId, setLibDragId] = useState<string | null>(null)
+  const [libDragOverId, setLibDragOverId] = useState<string | null>(null)
+
+  // ─── PER-CAMPAIGN SCRIPT TOGGLES + ORDER (settings + lead editor) ──────
+  const [campaignScriptLinks, setCampaignScriptLinks] = useState<CampaignScriptLink[]>([])
+  const [linksLoading, setLinksLoading] = useState(false)
+  const [linkDragId, setLinkDragId] = useState<string | null>(null)
+  const [linkDragOverId, setLinkDragOverId] = useState<string | null>(null)
+  const [editorScriptsOpen, setEditorScriptsOpen] = useState(false)
+
   // ─── EDITOR STATE ─────────────────────────────────────────────────────
   const [editorOpen, setEditorOpen] = useState(false)
   const [editorLeads, setEditorLeads] = useState<Lead[]>([])
@@ -397,14 +439,14 @@ export default function CampaignsPage() {
   useEffect(() => {
     const onVisibility = () => {
       if (document.hidden) return
-      if (showCreate || settingsId || editorOpen || deleteConfirm) return
-      if (creating || savingScript || editorSaving) return
+      if (showCreate || settingsId || editorOpen || deleteConfirm || scriptsManagerOpen) return
+      if (creating || savingScript || editorSaving || libSaving) return
       fetchCampaigns()
     }
     document.addEventListener('visibilitychange', onVisibility)
     return () => document.removeEventListener('visibilitychange', onVisibility)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showCreate, settingsId, editorOpen, deleteConfirm, creating, savingScript, editorSaving, user?.id])
+  }, [showCreate, settingsId, editorOpen, deleteConfirm, creating, savingScript, editorSaving, scriptsManagerOpen, libSaving, user?.id])
 
   const parseCSV = (text: string) => {
     const lines = text.trim().split('\n').filter(l => l.trim())
@@ -613,12 +655,218 @@ export default function CampaignsPage() {
     reader.readAsText(file)
   }
 
+  // ─── GLOBAL SCRIPTS LIBRARY HANDLERS ──────────────────────────────────
+  const loadLibrary = async (): Promise<GlobalScript[]> => {
+    setLibraryLoading(true)
+    try {
+      const res = await fetch('/api/scripts/list')
+      const data = await res.json()
+      if (data.success) {
+        const list: GlobalScript[] = data.scripts || []
+        setLibrary(list)
+        return list
+      }
+      return []
+    } finally {
+      setLibraryLoading(false)
+    }
+  }
+
+  const openScriptsManager = async () => {
+    setScriptsManagerOpen(true)
+    setActiveLibId(null)
+    setLibName('')
+    setLibBody('')
+    setLibDirty(false)
+    const list = await loadLibrary()
+    if (list.length > 0) {
+      const first = list.find(s => s.is_team !== true || s.user_id === user?.id) || list[0]
+      setActiveLibId(first.id)
+      setLibName(first.name)
+      setLibBody(first.body)
+    }
+  }
+
+  const closeScriptsManager = () => {
+    if (libDirty && !confirm('Unsaved script changes. Discard?')) return
+    setScriptsManagerOpen(false)
+    setLibDirty(false)
+    // Refresh any open campaign's toggle list so newly created scripts appear.
+    if (settingsCampaign) loadCampaignLinks(settingsCampaign.id)
+  }
+
+  const selectLibScript = (id: string) => {
+    if (libDirty && !confirm('Unsaved changes on this script. Switch anyway?')) return
+    const s = library.find(x => x.id === id)
+    if (!s) return
+    setActiveLibId(id)
+    setLibName(s.name)
+    setLibBody(s.body)
+    setLibDirty(false)
+  }
+
+  const activeLib = library.find(s => s.id === activeLibId) || null
+  const activeLibOwned = activeLib ? (activeLib.is_team !== true || activeLib.user_id === user?.id) : true
+
+  const addLibScript = async () => {
+    setLibSaving(true)
+    try {
+      const res = await fetch('/api/scripts/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Untitled Script', body: '' }),
+      })
+      const data = await res.json()
+      if (data.success && data.script) {
+        setLibrary(prev => [...prev, data.script])
+        setActiveLibId(data.script.id)
+        setLibName(data.script.name)
+        setLibBody(data.script.body)
+        setLibDirty(false)
+      } else {
+        alert(`Couldn't create script: ${data.error || 'unknown error'}`)
+      }
+    } finally {
+      setLibSaving(false)
+    }
+  }
+
+  const saveLibScript = async () => {
+    if (!activeLibId) return
+    setLibSaving(true)
+    try {
+      const res = await fetch('/api/scripts/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: activeLibId, name: libName, body: libBody }),
+      })
+      const data = await res.json()
+      if (data.success && data.script) {
+        setLibrary(prev => prev.map(s => s.id === activeLibId ? data.script : s))
+        setLibDirty(false)
+      } else {
+        alert(`Save failed: ${data.error || 'unknown error'}`)
+      }
+    } finally {
+      setLibSaving(false)
+    }
+  }
+
+  const deleteLibScript = async (id: string) => {
+    const s = library.find(x => x.id === id)
+    const owned = s ? (s.is_team !== true || s.user_id === user?.id) : true
+    const msg = owned
+      ? 'Delete this script everywhere? It will be removed from all campaigns.'
+      : 'Remove this team script from your campaigns?'
+    if (!confirm(msg)) return
+    const res = await fetch('/api/scripts/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    })
+    const data = await res.json()
+    if (data.success) {
+      const next = library.filter(x => x.id !== id)
+      setLibrary(next)
+      if (activeLibId === id) {
+        const first = next[0]
+        setActiveLibId(first?.id || null)
+        setLibName(first?.name || '')
+        setLibBody(first?.body || '')
+        setLibDirty(false)
+      }
+      if (settingsCampaign) loadCampaignLinks(settingsCampaign.id)
+    } else {
+      alert(`Delete failed: ${data.error || 'unknown error'}`)
+    }
+  }
+
+  const onLibDragStart = (id: string) => setLibDragId(id)
+  const onLibDragOver = (e: React.DragEvent, id: string) => { e.preventDefault(); setLibDragOverId(id) }
+  const onLibDragEnd = () => { setLibDragId(null); setLibDragOverId(null) }
+  const onLibDrop = async (e: React.DragEvent, targetId: string) => {
+    e.preventDefault()
+    const dragId = libDragId
+    setLibDragId(null); setLibDragOverId(null)
+    if (!dragId || dragId === targetId) return
+    const ids = library.map(s => s.id)
+    const from = ids.indexOf(dragId), to = ids.indexOf(targetId)
+    if (from === -1 || to === -1) return
+    const next = [...library]
+    const [moved] = next.splice(from, 1)
+    next.splice(to, 0, moved)
+    setLibrary(next)
+    await fetch('/api/scripts/reorder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order: next.map(s => s.id) }),
+    })
+  }
+
+  // ─── PER-CAMPAIGN SCRIPT LINKS (toggles + lead-editor order) ───────────
+  const loadCampaignLinks = async (campaignId: string) => {
+    setLinksLoading(true)
+    try {
+      const res = await fetch(`/api/campaigns/script-links/list?campaign_id=${campaignId}`)
+      const data = await res.json()
+      if (data.success) setCampaignScriptLinks(data.scripts || [])
+    } finally {
+      setLinksLoading(false)
+    }
+  }
+
+  const toggleCampaignScript = async (scriptId: string, enabled: boolean) => {
+    if (!settingsCampaign) return
+    // optimistic
+    setCampaignScriptLinks(prev => prev.map(s => s.id === scriptId ? { ...s, enabled } : s))
+    const res = await fetch('/api/campaigns/script-links/toggle', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ campaign_id: settingsCampaign.id, script_id: scriptId, enabled }),
+    })
+    const data = await res.json()
+    if (!data.success) {
+      alert(`Couldn't ${enabled ? 'enable' : 'disable'} script: ${data.error || 'error'}`)
+      loadCampaignLinks(settingsCampaign.id)
+    } else {
+      loadCampaignLinks(settingsCampaign.id)
+      fetchCampaigns()
+    }
+  }
+
+  const onLinkDragStart = (id: string) => setLinkDragId(id)
+  const onLinkDragOver = (e: React.DragEvent, id: string) => { e.preventDefault(); setLinkDragOverId(id) }
+  const onLinkDragEnd = () => { setLinkDragId(null); setLinkDragOverId(null) }
+  const onLinkDrop = async (e: React.DragEvent, targetId: string) => {
+    e.preventDefault()
+    const dragId = linkDragId
+    setLinkDragId(null); setLinkDragOverId(null)
+    if (!dragId || dragId === targetId || !settingsCampaign) return
+    const enabled = campaignScriptLinks.filter(s => s.enabled)
+    const ids = enabled.map(s => s.id)
+    const from = ids.indexOf(dragId), to = ids.indexOf(targetId)
+    if (from === -1 || to === -1) return
+    const reordered = [...enabled]
+    const [moved] = reordered.splice(from, 1)
+    reordered.splice(to, 0, moved)
+    // Rebuild full list: reordered enabled first, then disabled untouched.
+    const disabled = campaignScriptLinks.filter(s => !s.enabled)
+    setCampaignScriptLinks([...reordered, ...disabled])
+    await fetch('/api/campaigns/script-links/reorder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ campaign_id: settingsCampaign.id, order: reordered.map(s => s.id) }),
+    })
+    fetchCampaigns()
+  }
+
   const openSettings = async (campaign: Campaign) => {
     setSettingsId(campaign.id)
     setScriptsLoading(true)
     setSettingsScripts([])
     setActiveScriptId(null)
     setDirtyScript(false)
+    loadCampaignLinks(campaign.id)
     try {
       const res = await fetch(`/api/campaigns/scripts/list?campaign_id=${campaign.id}`)
       const data = await res.json()
@@ -809,6 +1057,7 @@ export default function CampaignsPage() {
     setEditorAdds([])
     setEditorDeletes(new Set())
     setEditorSelected(new Set())
+    loadCampaignLinks(settingsCampaign.id)
     try {
       const params = new URLSearchParams({
         user_id: user?.id || '',
@@ -831,6 +1080,7 @@ export default function CampaignsPage() {
       editorDeletes.size > 0
     if (hasChanges && !confirm('Unsaved changes will be lost. Close anyway?')) return
     setEditorOpen(false)
+    setEditorScriptsOpen(false)
     setEditorLeads([])
     setEditorEdits({})
     setEditorAdds([])
@@ -902,11 +1152,16 @@ export default function CampaignsPage() {
     setEditorSaving(true)
     try {
       if (editorDeletes.size > 0) {
-        await fetch('/api/leads/delete', {
+        const delRes = await fetch('/api/leads/delete', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ lead_ids: Array.from(editorDeletes) }),
         })
+        if (!delRes.ok) {
+          const e = await delRes.json().catch(() => ({}))
+          alert(`Failed to delete leads: ${e.detail || e.error || delRes.status}`)
+          return
+        }
       }
 
       const updateList = Object.entries(editorEdits).map(([lead_id, fields]) => ({
@@ -914,20 +1169,30 @@ export default function CampaignsPage() {
         fields,
       }))
       if (updateList.length > 0) {
-        await fetch('/api/leads/bulk-update', {
+        const upRes = await fetch('/api/leads/bulk-update', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ updates: updateList }),
         })
+        const upData = await upRes.json().catch(() => ({}))
+        if (!upRes.ok || upData.success === false) {
+          alert(`Failed to save edits: ${upData.detail || upData.error || upRes.status}`)
+          return
+        }
       }
 
       for (const add of editorAdds) {
         const { id, campaign_id, ...fields } = add
-        await fetch('/api/leads/create', {
+        const addRes = await fetch('/api/leads/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ campaign_id: settingsCampaign.id, ...fields }),
         })
+        if (!addRes.ok) {
+          const e = await addRes.json().catch(() => ({}))
+          alert(`Failed to add a lead: ${e.detail || e.error || addRes.status}`)
+          return
+        }
       }
 
       setEditorEdits({})
@@ -948,6 +1213,8 @@ export default function CampaignsPage() {
       const res = await fetch(`/api/leads/list?${params}&limit=500`)
       const data = await res.json()
       if (data.success) setEditorLeads(data.leads)
+    } catch (err: any) {
+      alert(`Save failed: ${err?.message || 'unknown error'}`)
     } finally {
       setEditorSaving(false)
     }
@@ -1029,6 +1296,29 @@ export default function CampaignsPage() {
         }
         .cmp-new-btn.amber:hover {
           background: rgba(255,170,62,0.10);
+        }
+        .cmp-header-actions {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .cmp-scripts-btn {
+          padding: 6px 14px;
+          background: transparent;
+          border: 1px solid ${T.border};
+          border-radius: 3px;
+          color: ${T.text};
+          font-size: 10px;
+          letter-spacing: 2px;
+          font-weight: bold;
+          cursor: pointer;
+          font-family: ${FUTURA};
+          transition: background 0.12s, border-color 0.12s;
+        }
+        .cmp-scripts-btn:hover {
+          background: var(--brand-primary-soft);
+          border-color: ${T.blue};
+          color: ${T.blue};
         }
 
         /* ── BODY ─────────────────────────────────────────────────────── */
@@ -1410,6 +1700,129 @@ export default function CampaignsPage() {
           font-family: monospace;
         }
 
+        /* ── Per-campaign script toggles (settings) ──────────────────── */
+        .script-manage-link {
+          background: transparent;
+          border: 1px solid ${T.border};
+          border-radius: 3px;
+          color: ${T.blue};
+          font-size: 9px;
+          letter-spacing: 1.5px;
+          font-weight: bold;
+          padding: 3px 8px;
+          cursor: pointer;
+          font-family: ${FUTURA};
+          transition: background 0.12s;
+        }
+        .script-manage-link:hover { background: var(--brand-primary-soft); }
+        .script-toggle-hint {
+          font-size: 10px;
+          line-height: 1.5;
+          color: ${T.muted};
+          font-family: monospace;
+          margin: 4px 0 12px;
+        }
+        .script-toggle-group {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+        .script-toggle-row {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 9px 12px;
+          background: ${T.bg};
+          border: 1px solid ${T.border};
+          border-radius: 4px;
+          transition: border-color 0.12s, background 0.12s;
+        }
+        .script-toggle-row.drag-over { border-color: ${T.blue}; background: var(--brand-primary-soft); }
+        .script-toggle-row.dragging { opacity: 0.4; }
+        .script-toggle-row.off { background: transparent; }
+        .script-grip {
+          cursor: grab;
+          color: ${T.muted};
+          font-size: 14px;
+          line-height: 1;
+          user-select: none;
+        }
+        .script-toggle-label {
+          flex: 1;
+          font-size: 11px;
+          letter-spacing: 1.5px;
+          font-weight: bold;
+          color: ${T.text};
+          font-family: ${FUTURA};
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .team-mark {
+          font-size: 7px;
+          letter-spacing: 1px;
+          font-weight: bold;
+          color: ${T.blue};
+          background: var(--brand-primary-soft);
+          border-radius: 2px;
+          padding: 2px 5px;
+        }
+        .def-mark { /* legacy, kept for safety */ }
+
+        /* ── Global scripts manager modal ────────────────────────────── */
+        .lib-hint {
+          font-size: 10px;
+          line-height: 1.5;
+          color: ${T.muted};
+          font-family: monospace;
+          margin: 4px 0 12px;
+        }
+        .lib-layout {
+          display: grid;
+          grid-template-columns: 200px 1fr;
+          gap: 12px;
+        }
+        .lib-rail {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          max-height: 420px;
+          overflow-y: auto;
+          padding-right: 2px;
+        }
+        .lib-rail-item {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 10px;
+          background: ${T.bg};
+          border: 1px solid ${T.border};
+          border-radius: 4px;
+          cursor: pointer;
+          transition: border-color 0.12s, background 0.12s;
+        }
+        .lib-rail-item:hover { border-color: ${T.blue}; }
+        .lib-rail-item.active { border-color: ${T.blue}; background: var(--brand-primary-soft); }
+        .lib-rail-item.drag-over { border-color: ${T.blue}; }
+        .lib-rail-item.dragging { opacity: 0.4; }
+        .lib-rail-name {
+          flex: 1;
+          font-size: 10px;
+          letter-spacing: 1px;
+          font-weight: bold;
+          color: ${T.text};
+          font-family: ${FUTURA};
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .lib-editor { display: flex; flex-direction: column; }
+        @media (max-width: 640px) {
+          .lib-layout { grid-template-columns: 1fr; }
+          .lib-rail { max-height: 160px; flex-direction: row; flex-wrap: wrap; }
+          .lib-rail-item { flex: 0 0 auto; }
+        }
+
         .script-name-input, .script-body-textarea {
           width: 100%;
           padding: 10px 12px;
@@ -1608,6 +2021,79 @@ export default function CampaignsPage() {
           overflow: auto;
           background: ${T.bg};
         }
+        /* ── Lead editor scripts strip ───────────────────────────────── */
+        .editor-scripts-strip {
+          background: ${T.surface};
+          border-bottom: 1px solid ${T.border};
+          padding: 10px 14px;
+          flex-shrink: 0;
+        }
+        .editor-scripts-head {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 10px;
+        }
+        .editor-scripts-title {
+          font-size: 10px;
+          letter-spacing: 2px;
+          font-weight: bold;
+          color: ${T.text};
+          font-family: ${FUTURA};
+        }
+        .editor-scripts-hint {
+          font-size: 10px;
+          color: ${T.muted};
+          font-family: monospace;
+        }
+        .editor-scripts-empty {
+          font-size: 11px;
+          color: ${T.muted};
+          font-family: monospace;
+          padding: 4px 0;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .editor-scripts-chips {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+        .editor-script-chip {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 6px 10px;
+          border-radius: 16px;
+          border: 1px solid ${T.border};
+          background: ${T.bg};
+          font-size: 10px;
+          letter-spacing: 1px;
+          font-weight: bold;
+          font-family: ${FUTURA};
+          color: ${T.text};
+        }
+        .editor-script-chip.on {
+          border-color: ${T.blue};
+          background: var(--brand-primary-soft);
+          cursor: grab;
+        }
+        .editor-script-chip.off { color: ${T.muted}; opacity: 0.8; }
+        .editor-script-chip.drag-over { outline: 2px solid ${T.blue}; }
+        .editor-script-chip.dragging { opacity: 0.4; }
+        .editor-script-chip .chip-name { white-space: nowrap; }
+        .chip-toggle {
+          border: none;
+          background: transparent;
+          color: ${T.blue};
+          font-size: 13px;
+          line-height: 1;
+          cursor: pointer;
+          font-weight: bold;
+          padding: 0 2px;
+        }
+        .chip-toggle.add { color: ${T.muted}; }
         .editor-grid {
           border-collapse: collapse;
           font-size: 12px;
@@ -1776,9 +2262,14 @@ export default function CampaignsPage() {
           </span>
         </div>
         {!isLapsed ? (
-          <button className="cmp-new-btn" onClick={() => setShowCreate(true)}>
-            + NEW CAMPAIGN
-          </button>
+          <div className="cmp-header-actions">
+            <button className="cmp-scripts-btn" onClick={() => openScriptsManager()}>
+              ▤ SCRIPTS
+            </button>
+            <button className="cmp-new-btn" onClick={() => setShowCreate(true)}>
+              + NEW CAMPAIGN
+            </button>
+          </div>
         ) : (
           <Link href="/billing" className="cmp-new-btn amber">
             ↻ RESUBSCRIBE
@@ -2087,6 +2578,126 @@ export default function CampaignsPage() {
       )}
 
       {/* ─── SETTINGS MODAL ───────────────────────────────────────────── */}
+      {/* ─── GLOBAL SCRIPTS MANAGER MODAL ─────────────────────────────── */}
+      {scriptsManagerOpen && (
+        <div className="modal-overlay" onClick={closeScriptsManager}>
+          <div className="settings-modal" onClick={e => e.stopPropagation()}>
+            <div className="settings-head">
+              <div className="settings-name-input" style={{ display: 'flex', alignItems: 'center' }}>
+                SCRIPTS LIBRARY
+              </div>
+              <button className="settings-close" onClick={closeScriptsManager}>×</button>
+            </div>
+
+            <div className="settings-body">
+              <div className="settings-section-card">
+                <div className="settings-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span>▸ YOUR SCRIPTS</span>
+                  <button className="ds-btn primary" onClick={addLibScript} disabled={libSaving}>
+                    + NEW SCRIPT
+                  </button>
+                </div>
+                <div className="lib-hint">
+                  Scripts here are shared across all your campaigns. Toggle them on per campaign in each campaign’s settings. Drag to reorder your library.
+                </div>
+
+                {libraryLoading ? (
+                  <div style={{ fontSize: 10, letterSpacing: 2, fontWeight: 'bold', color: T.muted, padding: 20, textAlign: 'center', fontFamily: FUTURA }}>
+                    LOADING…
+                  </div>
+                ) : library.length === 0 ? (
+                  <div style={{ padding: '28px 20px', textAlign: 'center', background: T.bg, border: `1px dashed ${T.border}`, borderRadius: 3 }}>
+                    <p style={{ fontSize: 11, letterSpacing: 1.5, color: T.muted, margin: '0 0 14px', fontFamily: 'monospace' }}>
+                      No scripts yet. Create your first one.
+                    </p>
+                    <button className="ds-btn primary" onClick={addLibScript} disabled={libSaving}>+ NEW SCRIPT</button>
+                  </div>
+                ) : (
+                  <div className="lib-layout">
+                    <div className="lib-rail">
+                      {library.map(s => {
+                        const owned = s.is_team !== true || s.user_id === user?.id
+                        return (
+                          <div
+                            key={s.id}
+                            className={`lib-rail-item ${activeLibId === s.id ? 'active' : ''} ${libDragOverId === s.id ? 'drag-over' : ''} ${libDragId === s.id ? 'dragging' : ''}`}
+                            draggable={owned}
+                            onDragStart={() => onLibDragStart(s.id)}
+                            onDragOver={e => onLibDragOver(e, s.id)}
+                            onDragLeave={() => setLibDragOverId(null)}
+                            onDrop={e => onLibDrop(e, s.id)}
+                            onDragEnd={onLibDragEnd}
+                            onClick={() => selectLibScript(s.id)}
+                          >
+                            {owned && <span className="script-grip" title="Drag to reorder">⠿</span>}
+                            <span className="lib-rail-name">{(s.name || 'UNTITLED').toUpperCase()}</span>
+                            {s.is_team && <span className="team-mark">TEAM</span>}
+                          </div>
+                        )
+                      })}
+                    </div>
+
+                    <div className="lib-editor">
+                      {activeLib ? (
+                        <>
+                          <input
+                            className="script-name-input"
+                            type="text"
+                            value={libName}
+                            onChange={e => { setLibName(e.target.value); setLibDirty(true) }}
+                            placeholder="Script name"
+                            disabled={!activeLibOwned}
+                          />
+                          <textarea
+                            className="script-body-textarea"
+                            value={libBody}
+                            onChange={e => { setLibBody(e.target.value); setLibDirty(true) }}
+                            placeholder="Hi [Name], my name is [Agent] and I'm calling from…"
+                            rows={12}
+                            disabled={!activeLibOwned}
+                          />
+                          <div className="script-actions">
+                            <button
+                              className="ds-btn danger"
+                              onClick={() => deleteLibScript(activeLib.id)}
+                              disabled={libSaving}
+                            >{activeLibOwned ? 'DELETE SCRIPT' : 'REMOVE FROM MY CAMPAIGNS'}</button>
+                            {activeLibOwned && (
+                              <button
+                                className="ds-btn primary"
+                                onClick={saveLibScript}
+                                disabled={libSaving || !libDirty}
+                                style={{ marginLeft: 'auto' }}
+                              >{libSaving ? 'SAVING…' : libDirty ? 'SAVE SCRIPT' : 'SAVED'}</button>
+                            )}
+                          </div>
+                          {!activeLibOwned && (
+                            <div className="lib-hint" style={{ marginTop: 8 }}>
+                              This is a team script. Only the team owner can edit it.
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <div style={{ fontSize: 11, color: T.muted, fontFamily: 'monospace', padding: 20 }}>
+                          Select a script to edit.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="settings-footer">
+              <div className="settings-footer-left"></div>
+              <div className="settings-footer-right">
+                <button className="ds-btn" onClick={closeScriptsManager}>CLOSE</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {settingsCampaign && !editorOpen && (
         <div className="modal-overlay" onClick={closeSettings}>
           <div className="settings-modal" onClick={e => e.stopPropagation()}>
@@ -2218,136 +2829,92 @@ export default function CampaignsPage() {
                 </div>
               </div>
 
-              {/* CALL SCRIPTS section */}
+              {/* CALL SCRIPTS section — toggle library scripts on/off + reorder */}
               <div className="settings-section-card">
-                <div className="settings-section-title">▸ CALL SCRIPTS</div>
-                {scriptsLoading ? (
+                <div className="settings-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span>▸ CALL SCRIPTS</span>
+                  <button
+                    type="button"
+                    className="script-manage-link"
+                    onClick={() => openScriptsManager()}
+                  >MANAGE SCRIPTS ↗</button>
+                </div>
+
+                {linksLoading ? (
                   <div style={{
                     fontSize: 10, letterSpacing: 2, fontWeight: 'bold',
-                    color: T.muted, padding: 20, textAlign: 'center',
-                    fontFamily: FUTURA,
+                    color: T.muted, padding: 20, textAlign: 'center', fontFamily: FUTURA,
+                  }}>LOADING SCRIPTS…</div>
+                ) : campaignScriptLinks.length === 0 ? (
+                  <div style={{
+                    padding: '28px 20px', textAlign: 'center',
+                    background: T.bg, border: `1px dashed ${T.border}`, borderRadius: 3,
                   }}>
-                    LOADING SCRIPTS…
+                    <p style={{ fontSize: 11, letterSpacing: 1.5, color: T.muted, margin: '0 0 14px', fontFamily: 'monospace' }}>
+                      Your script library is empty.
+                    </p>
+                    {!isLapsed && (
+                      <button className="ds-btn primary" onClick={() => openScriptsManager()}>
+                        + CREATE A SCRIPT
+                      </button>
+                    )}
                   </div>
-                ) : (
-                  <>
-                    {settingsScripts.length > 0 && (
-                      <>
-                        <div className="script-tabs">
-                          {settingsScripts.map(s => (
+                ) : (() => {
+                  const enabled = campaignScriptLinks.filter(s => s.enabled)
+                  const disabled = campaignScriptLinks.filter(s => !s.enabled)
+                  return (
+                    <>
+                      <div className="script-toggle-hint">
+                        Toggle scripts on for this campaign. Drag enabled scripts to set tab order in the dialer.
+                      </div>
+
+                      {enabled.length > 0 && (
+                        <div className="script-toggle-group">
+                          {enabled.map(s => (
                             <div
                               key={s.id}
-                              className={
-                                `script-tab ${activeScriptId === s.id ? 'active' : ''} ` +
-                                `${draggedScriptId === s.id ? 'dragging' : ''} ` +
-                                `${dragOverScriptId === s.id ? 'drag-over' : ''}`
-                              }
+                              className={`script-toggle-row ${linkDragOverId === s.id ? 'drag-over' : ''} ${linkDragId === s.id ? 'dragging' : ''}`}
                               draggable={!isLapsed}
-                              onDragStart={e => onTabDragStart(e, s.id)}
-                              onDragOver={e => onTabDragOver(e, s.id)}
-                              onDragLeave={onTabDragLeave}
-                              onDrop={e => onTabDrop(e, s.id)}
-                              onDragEnd={onTabDragEnd}
-                              onClick={() => switchScript(s.id)}
+                              onDragStart={() => onLinkDragStart(s.id)}
+                              onDragOver={e => onLinkDragOver(e, s.id)}
+                              onDragLeave={() => setLinkDragOverId(null)}
+                              onDrop={e => onLinkDrop(e, s.id)}
+                              onDragEnd={onLinkDragEnd}
                             >
-                              {(s.name || 'UNTITLED').toUpperCase()}
-                              {s.is_default && <span className="def-mark">DEFAULT</span>}
+                              <span className="script-grip" title="Drag to reorder">⠿</span>
+                              <div className="script-toggle-label">
+                                {(s.name || 'UNTITLED').toUpperCase()}
+                                {s.is_team && <span className="team-mark">TEAM</span>}
+                              </div>
+                              <div
+                                className={`settings-toggle on ${isLapsed ? 'disabled' : ''}`}
+                                onClick={() => !isLapsed && toggleCampaignScript(s.id, false)}
+                              ><div className="knob" /></div>
                             </div>
                           ))}
-                          {!isLapsed && (
-                            <button className="script-add" onClick={addScript} disabled={savingScript}>
-                              + ADD
-                            </button>
-                          )}
                         </div>
-                        {settingsScripts.length > 1 && !isLapsed && (
-                          <div className="script-drag-hint">
-                            ↔ DRAG TABS TO REORDER
-                          </div>
-                        )}
-                      </>
-                    )}
+                      )}
 
-                    {settingsScripts.length === 0 ? (
-                      <div style={{
-                        padding: '32px 20px',
-                        textAlign: 'center',
-                        background: T.bg,
-                        border: `1px dashed ${T.border}`,
-                        borderRadius: 3,
-                      }}>
-                        <p style={{
-                          fontSize: 11, letterSpacing: 1.5, color: T.muted,
-                          margin: '0 0 14px', fontFamily: 'monospace',
-                        }}>
-                          No scripts yet. Add one to display during calls.
-                        </p>
-                        {!isLapsed && (
-                          <button
-                            className="ds-btn primary"
-                            onClick={addScript}
-                            disabled={savingScript}
-                          >+ ADD A SCRIPT</button>
-                        )}
-                      </div>
-                    ) : activeScriptId && (
-                      <div style={{ marginTop: 12 }}>
-                        <input
-                          className="script-name-input"
-                          type="text"
-                          value={editingScriptName}
-                          onChange={e => { setEditingScriptName(e.target.value); setDirtyScript(true) }}
-                          placeholder="Script name"
-                          disabled={isLapsed}
-                        />
-                        <textarea
-                          className="script-body-textarea"
-                          value={editingScriptBody}
-                          onChange={e => { setEditingScriptBody(e.target.value); setDirtyScript(true) }}
-                          placeholder="Hi [Name], my name is [Agent] and I'm calling from…"
-                          rows={10}
-                          disabled={isLapsed}
-                        />
-                        <div className="script-actions">
-                          {!settingsScripts.find(s => s.id === activeScriptId)?.is_default && !isLapsed && (
-                            <button className="ds-btn" onClick={async () => {
-                              if (!activeScriptId) return
-                              setSavingScript(true)
-                              try {
-                                const res = await fetch('/api/campaigns/scripts/update', {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ id: activeScriptId, is_default: true }),
-                                })
-                                const data = await res.json()
-                                if (data.success) {
-                                  setSettingsScripts(prev => prev.map(s => ({
-                                    ...s, is_default: s.id === activeScriptId,
-                                  })))
-                                }
-                              } finally {
-                                setSavingScript(false)
-                              }
-                            }}>★ MAKE DEFAULT</button>
-                          )}
-                          {!isLapsed && (
-                            <button className="ds-btn danger" onClick={deleteScript} disabled={savingScript}>
-                              DELETE SCRIPT
-                            </button>
-                          )}
-                          {!isLapsed && (
-                            <button
-                              className="ds-btn primary"
-                              onClick={saveScript}
-                              disabled={savingScript || !dirtyScript}
-                              style={{ marginLeft: 'auto' }}
-                            >{savingScript ? 'SAVING…' : dirtyScript ? 'SAVE SCRIPT' : 'SAVED'}</button>
-                          )}
+                      {disabled.length > 0 && (
+                        <div className="script-toggle-group" style={{ marginTop: enabled.length > 0 ? 10 : 0 }}>
+                          {disabled.map(s => (
+                            <div key={s.id} className="script-toggle-row off">
+                              <span className="script-grip" style={{ opacity: 0.25 }}>⠿</span>
+                              <div className="script-toggle-label" style={{ color: T.muted }}>
+                                {(s.name || 'UNTITLED').toUpperCase()}
+                                {s.is_team && <span className="team-mark">TEAM</span>}
+                              </div>
+                              <div
+                                className={`settings-toggle ${isLapsed ? 'disabled' : ''}`}
+                                onClick={() => !isLapsed && toggleCampaignScript(s.id, true)}
+                              ><div className="knob" /></div>
+                            </div>
+                          ))}
                         </div>
-                      </div>
-                    )}
-                  </>
-                )}
+                      )}
+                    </>
+                  )
+                })()}
               </div>
 
             </div>
@@ -2479,6 +3046,10 @@ export default function CampaignsPage() {
               </span>
             )}
             <button className="editor-tb-btn" onClick={addRow}>+ ADD ROW</button>
+            <button
+              className={`editor-tb-btn ${editorScriptsOpen ? 'primary' : ''}`}
+              onClick={() => setEditorScriptsOpen(o => !o)}
+            >▤ SCRIPTS{campaignScriptLinks.filter(s => s.enabled).length > 0 ? ` (${campaignScriptLinks.filter(s => s.enabled).length})` : ''}</button>
             {editorSelected.size > 0 && (
               <button className="editor-tb-btn danger" onClick={deleteSelected}>
                 DELETE {editorSelected.size} SELECTED
@@ -2491,6 +3062,61 @@ export default function CampaignsPage() {
             >{editorSaving ? 'SAVING…' : 'SAVE CHANGES'}</button>
             <button className="editor-tb-btn" onClick={closeEditor}>CLOSE</button>
           </div>
+
+          {editorScriptsOpen && (
+            <div className="editor-scripts-strip">
+              <div className="editor-scripts-head">
+                <span className="editor-scripts-title">CAMPAIGN SCRIPTS</span>
+                <span className="editor-scripts-hint">Toggle on/off · drag enabled scripts to set dialer tab order</span>
+                <button className="script-manage-link" onClick={() => openScriptsManager()} style={{ marginLeft: 'auto' }}>
+                  MANAGE LIBRARY ↗
+                </button>
+              </div>
+              {linksLoading ? (
+                <div className="editor-scripts-empty">LOADING…</div>
+              ) : campaignScriptLinks.length === 0 ? (
+                <div className="editor-scripts-empty">
+                  No scripts in your library. <button className="script-manage-link" onClick={() => openScriptsManager()}>CREATE ONE ↗</button>
+                </div>
+              ) : (
+                <div className="editor-scripts-chips">
+                  {/* enabled first (draggable), then disabled */}
+                  {campaignScriptLinks.filter(s => s.enabled).map(s => (
+                    <div
+                      key={s.id}
+                      className={`editor-script-chip on ${linkDragOverId === s.id ? 'drag-over' : ''} ${linkDragId === s.id ? 'dragging' : ''}`}
+                      draggable
+                      onDragStart={() => onLinkDragStart(s.id)}
+                      onDragOver={e => onLinkDragOver(e, s.id)}
+                      onDragLeave={() => setLinkDragOverId(null)}
+                      onDrop={e => onLinkDrop(e, s.id)}
+                      onDragEnd={onLinkDragEnd}
+                    >
+                      <span className="script-grip" title="Drag to reorder">⠿</span>
+                      <span className="chip-name">{(s.name || 'UNTITLED').toUpperCase()}</span>
+                      {s.is_team && <span className="team-mark">TEAM</span>}
+                      <button
+                        className="chip-toggle"
+                        title="Disable"
+                        onClick={() => toggleCampaignScript(s.id, false)}
+                      >✕</button>
+                    </div>
+                  ))}
+                  {campaignScriptLinks.filter(s => !s.enabled).map(s => (
+                    <div key={s.id} className="editor-script-chip off">
+                      <span className="chip-name">{(s.name || 'UNTITLED').toUpperCase()}</span>
+                      {s.is_team && <span className="team-mark">TEAM</span>}
+                      <button
+                        className="chip-toggle add"
+                        title="Enable"
+                        onClick={() => toggleCampaignScript(s.id, true)}
+                      >+</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="editor-grid-wrap">
             {editorLoading ? (
