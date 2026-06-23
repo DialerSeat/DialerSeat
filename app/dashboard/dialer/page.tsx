@@ -519,9 +519,31 @@ function DialerPageInner() {
     if (!isActive) return
     const initSW = async () => {
       try {
-        const sipUsername = process.env.NEXT_PUBLIC_SIGNALWIRE_SIP_USERNAME
-        const sipPassword = process.env.NEXT_PUBLIC_SIGNALWIRE_SIP_PASSWORD
-        const sipDomain = process.env.NEXT_PUBLIC_SIGNALWIRE_SIP_DOMAIN
+        // SECURITY: fetch SIP credentials from an authenticated server endpoint
+        // instead of NEXT_PUBLIC_* env vars (which are inlined into the public
+        // bundle and were removed). If this fetch is skipped, SIP never
+        // registers and there is NO call audio in either direction.
+        let sipUsername: string | undefined
+        let sipPassword: string | undefined
+        let sipDomain: string | undefined
+        try {
+          const credRes = await fetch('/api/calls/sip-credentials')
+          if (!credRes.ok) {
+            console.error('SIP credentials fetch failed:', credRes.status)
+            return
+          }
+          const cred = await credRes.json()
+          if (!cred?.success) {
+            console.error('SIP credentials unavailable:', cred?.error)
+            return
+          }
+          sipUsername = cred.sipUsername
+          sipPassword = cred.sipPassword
+          sipDomain = cred.sipDomain
+        } catch (credErr) {
+          console.error('SIP credentials request error:', credErr)
+          return
+        }
 
         if (!sipUsername || !sipPassword || !sipDomain) return
 
@@ -573,6 +595,25 @@ function DialerPageInner() {
   }, [isActive])
 
   const attachSIPAudio = (session: any) => {
+    // Ensure the AudioContext is running (autoplay policies can suspend it).
+    try {
+      if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume()
+      }
+    } catch {}
+
+    const getAudioEl = (): HTMLAudioElement => {
+      let audioEl = document.getElementById('sip-audio') as HTMLAudioElement | null
+      if (!audioEl) {
+        audioEl = document.createElement('audio')
+        audioEl.id = 'sip-audio'
+        audioEl.autoplay = true
+        ;(audioEl as any).playsInline = true
+        document.body.appendChild(audioEl)
+      }
+      return audioEl
+    }
+
     const tryAttach = () => {
       try {
         const sdh = session.sessionDescriptionHandler
@@ -582,13 +623,7 @@ function DialerPageInner() {
 
         pc.ontrack = (event: RTCTrackEvent) => {
           if (event.streams && event.streams[0]) {
-            let audioEl = document.getElementById('sip-audio') as HTMLAudioElement
-            if (!audioEl) {
-              audioEl = document.createElement('audio')
-              audioEl.id = 'sip-audio'
-              audioEl.autoplay = true
-              document.body.appendChild(audioEl)
-            }
+            const audioEl = getAudioEl()
             audioEl.srcObject = event.streams[0]
             audioEl.play().catch(console.error)
           }
@@ -597,13 +632,7 @@ function DialerPageInner() {
         pc.getReceivers().forEach((receiver: RTCRtpReceiver) => {
           if (receiver.track && receiver.track.kind === 'audio') {
             const stream = new MediaStream([receiver.track])
-            let audioEl = document.getElementById('sip-audio') as HTMLAudioElement
-            if (!audioEl) {
-              audioEl = document.createElement('audio')
-              audioEl.id = 'sip-audio'
-              audioEl.autoplay = true
-              document.body.appendChild(audioEl)
-            }
+            const audioEl = getAudioEl()
             audioEl.srcObject = stream
             audioEl.play().catch(console.error)
           }

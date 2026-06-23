@@ -84,9 +84,22 @@ export async function POST(req: NextRequest) {
     }
 
     const state: string = body.state || 'paused'
-    const campaignId: string | null = body.campaign_id ?? null
+    const rawCampaignId: string | null = body.campaign_id ?? null
     const dialerMode: string | null = body.dialer_mode ?? null
-    const currentCallId: string | null = body.current_call_id ?? null
+    const rawCallId: string | null = body.current_call_id ?? null
+    // current_call_id and campaign_id are uuid columns. The client may pass a
+    // provider call SID (non-uuid) or a virtual sub-campaign id ("<uuid>:appt").
+    // Writing those into a uuid column throws and 500s the heartbeat. Normalize:
+    //  - campaign_id: take the real uuid prefix before any ':' suffix
+    //  - current_call_id: only keep if it's a valid uuid, else null
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    const campaignId: string | null = (() => {
+      if (!rawCampaignId) return null
+      const base = rawCampaignId.split(':')[0]
+      return UUID_RE.test(base) ? base : null
+    })()
+    const currentCallId: string | null =
+      rawCallId && UUID_RE.test(rawCallId) ? rawCallId : null
 
     // ── Resolve user + team ────────────────────────────────────────────────
     const { data: userRow } = await supabase
@@ -126,7 +139,18 @@ export async function POST(req: NextRequest) {
 
     if (upsertErr || !upserted) {
       console.error('[heartbeat] upsert failed', upsertErr)
-      return NextResponse.json({ error: 'session upsert failed' }, { status: 500 })
+      // Degrade gracefully rather than 500-spamming the client every 5s. The
+      // dialer only needs should_yield/controller info; presence is best-effort.
+      return NextResponse.json({
+        ok: false,
+        session_id: null,
+        state,
+        should_yield: false,
+        stale_window_seconds: STALE_HEARTBEAT_SECONDS,
+        controller_invoked: false,
+        controller: null,
+        warning: 'session upsert failed',
+      })
     }
 
     const sessionId = upserted.id
