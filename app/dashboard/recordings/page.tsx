@@ -69,36 +69,36 @@ const DISPOSITIONS = [
 
 const dispColor = (disp: string | null): string => {
   switch (disp) {
-    case 'CLOSED': return '#2d7a2d'
-    case 'APPOINTMENT': return '#1a4a8a'
-    case 'NOT INTERESTED': return '#8a6a1a'
-    case 'DO NOT CALL': return '#8a1a1a'
+    case 'CLOSED': return '#16a34a'
+    case 'APPOINTMENT': return '#2563eb'
+    case 'NOT INTERESTED': return '#d97706'
+    case 'DO NOT CALL': return '#dc2626'
     case 'SKIPPED':
     case 'NO_ANSWER':
-    default: return '#5a5e6a'
+    default: return '#64748b'
   }
 }
 
 const dispBg = (disp: string | null): string => {
   switch (disp) {
-    case 'CLOSED': return '#e8f5e8'
-    case 'APPOINTMENT': return '#e8eef8'
-    case 'NOT INTERESTED': return '#f8f4e8'
-    case 'DO NOT CALL': return '#f8e8e8'
+    case 'CLOSED': return '#dcfce7'
+    case 'APPOINTMENT': return '#dbeafe'
+    case 'NOT INTERESTED': return '#fef3c7'
+    case 'DO NOT CALL': return '#fee2e2'
     case 'SKIPPED':
     case 'NO_ANSWER':
-    default: return '#f0f0f4'
+    default: return '#f1f5f9'
   }
 }
 
 const dispositionTint = (disp: string | null): string => {
   switch (disp) {
-    case 'CLOSED': return 'rgba(45, 122, 45, 0.10)'
-    case 'APPOINTMENT': return 'rgba(26, 74, 138, 0.10)'
-    case 'NOT INTERESTED': return 'rgba(138, 106, 26, 0.10)'
-    case 'DO NOT CALL': return 'rgba(138, 26, 26, 0.10)'
-    case 'NO_ANSWER': return 'rgba(90, 94, 106, 0.06)'
-    case 'SKIPPED': return 'rgba(90, 94, 106, 0.04)'
+    case 'CLOSED': return 'rgba(22, 163, 74, 0.12)'
+    case 'APPOINTMENT': return 'rgba(37, 99, 235, 0.12)'
+    case 'NOT INTERESTED': return 'rgba(217, 119, 6, 0.12)'
+    case 'DO NOT CALL': return 'rgba(220, 38, 38, 0.12)'
+    case 'NO_ANSWER': return 'rgba(100, 116, 139, 0.07)'
+    case 'SKIPPED': return 'rgba(100, 116, 139, 0.05)'
     default: return T.surface
   }
 }
@@ -286,13 +286,38 @@ export default function RecordingsPage() {
     if (timeFilter === 'all') return recordings
     const now = Date.now()
     const dayMs = 86400000
-    let cutoff = 0
+    const startOfToday = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d }
+    // [start, end) window in ms. end = Infinity means "up to now".
+    let start = 0
+    let end = Infinity
     if (timeFilter === 'today') {
-      const d = new Date(); d.setHours(0, 0, 0, 0); cutoff = d.getTime()
-    } else if (timeFilter === '7d') cutoff = now - 7 * dayMs
-    else if (timeFilter === '30d') cutoff = now - 30 * dayMs
-    else if (timeFilter === '90d') cutoff = now - 90 * dayMs
-    return recordings.filter(r => new Date(r.created_at).getTime() >= cutoff)
+      start = startOfToday().getTime()
+    } else if (timeFilter === 'yesterday') {
+      const s = startOfToday(); const e = s.getTime()
+      s.setDate(s.getDate() - 1)
+      start = s.getTime(); end = e
+    } else if (timeFilter === '7d') {
+      start = now - 7 * dayMs
+    } else if (timeFilter === 'thisweek') {
+      const d = startOfToday(); const dow = (d.getDay() + 6) % 7 // Monday = 0
+      d.setDate(d.getDate() - dow); start = d.getTime()
+    } else if (timeFilter === '30d') {
+      start = now - 30 * dayMs
+    } else if (timeFilter === 'thismonth') {
+      const d = new Date(); start = new Date(d.getFullYear(), d.getMonth(), 1).getTime()
+    } else if (timeFilter === 'lastmonth') {
+      const d = new Date()
+      start = new Date(d.getFullYear(), d.getMonth() - 1, 1).getTime()
+      end = new Date(d.getFullYear(), d.getMonth(), 1).getTime()
+    } else if (timeFilter === '90d') {
+      start = now - 90 * dayMs
+    } else if (timeFilter === 'thisyear') {
+      const d = new Date(); start = new Date(d.getFullYear(), 0, 1).getTime()
+    }
+    return recordings.filter(r => {
+      const t = new Date(r.created_at).getTime()
+      return t >= start && t < end
+    })
   })()
 
   return (
@@ -362,7 +387,7 @@ export default function RecordingsPage() {
           background: ${T.surface};
           border-bottom: 1px solid ${T.border};
           display: grid;
-          grid-template-columns: 2fr 1fr 1fr;
+          grid-template-columns: 2fr 1fr 1fr 1.2fr;
           gap: 8px;
           align-items: end;
         }
@@ -695,9 +720,14 @@ export default function RecordingsPage() {
           <select value={timeFilter} onChange={e => setTimeFilter(e.target.value)}>
             <option value="all">[ ALL TIME ]</option>
             <option value="today">TODAY</option>
+            <option value="yesterday">YESTERDAY</option>
             <option value="7d">LAST 7 DAYS</option>
+            <option value="thisweek">THIS WEEK</option>
             <option value="30d">LAST 30 DAYS</option>
+            <option value="thismonth">THIS MONTH</option>
+            <option value="lastmonth">LAST MONTH</option>
             <option value="90d">LAST 90 DAYS</option>
+            <option value="thisyear">THIS YEAR</option>
           </select>
         </div>
       </div>

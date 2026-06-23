@@ -76,12 +76,12 @@ interface Campaign {
 }
 
 const DISPOSITIONS = [
-  { label: 'CLOSED', color: '#2d7a2d', bg: '#e8f5e8' },
-  { label: 'APPOINTMENT', color: '#1a4a8a', bg: '#e8eef8' },
-  { label: 'NOT INTERESTED', color: '#8a6a1a', bg: '#f8f4e8' },
-  { label: 'DO NOT CALL', color: '#8a1a1a', bg: '#f8e8e8' },
-  { label: 'SKIPPED', color: '#5a5e6a', bg: '#f0f0f4' },
-  { label: 'NO_ANSWER', color: '#5a5e6a', bg: '#f0f0f4' },
+  { label: 'CLOSED', color: '#16a34a', bg: '#dcfce7' },
+  { label: 'APPOINTMENT', color: '#2563eb', bg: '#dbeafe' },
+  { label: 'NOT INTERESTED', color: '#d97706', bg: '#fef3c7' },
+  { label: 'DO NOT CALL', color: '#dc2626', bg: '#fee2e2' },
+  { label: 'SKIPPED', color: '#64748b', bg: '#f1f5f9' },
+  { label: 'NO_ANSWER', color: '#64748b', bg: '#f1f5f9' },
 ]
 
 const T = {
@@ -103,12 +103,12 @@ const FUTURA = `'Futura PT', Futura, 'Helvetica Neue', Helvetica, Arial, sans-se
 
 const dispositionTint = (disp: string | null): string => {
   switch (disp) {
-    case 'CLOSED': return 'rgba(45, 122, 45, 0.10)'
-    case 'APPOINTMENT': return 'rgba(26, 74, 138, 0.10)'
-    case 'NOT INTERESTED': return 'rgba(138, 106, 26, 0.10)'
-    case 'DO NOT CALL': return 'rgba(138, 26, 26, 0.10)'
-    case 'NO_ANSWER': return 'rgba(90, 94, 106, 0.06)'
-    case 'SKIPPED': return 'rgba(90, 94, 106, 0.04)'
+    case 'CLOSED': return 'rgba(22, 163, 74, 0.12)'
+    case 'APPOINTMENT': return 'rgba(37, 99, 235, 0.12)'
+    case 'NOT INTERESTED': return 'rgba(217, 119, 6, 0.12)'
+    case 'DO NOT CALL': return 'rgba(220, 38, 38, 0.12)'
+    case 'NO_ANSWER': return 'rgba(100, 116, 139, 0.07)'
+    case 'SKIPPED': return 'rgba(100, 116, 139, 0.05)'
     default: return T.surface
   }
 }

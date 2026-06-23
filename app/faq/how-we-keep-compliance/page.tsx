@@ -31,9 +31,7 @@ export default function Page() {
         <ExplainerStyles accent="#8a6a1a" accentBg="#fdf4e8" />
 
         <section className="exp-hero">
-          <div className="exp-hero-inner">
-            <Link href="/faq" className="exp-breadcrumb">← BACK TO FAQ</Link>
-            <div className="exp-eyebrow">COMPLIANCE · HOW IT WORKS</div>
+          <div className="exp-hero-inner">            <div className="exp-eyebrow">COMPLIANCE · HOW IT WORKS</div>
             <h1>How we keep compliance.</h1>
             <p className="exp-lead">
               The exact mechanisms DialerSeat uses to enforce TCPA and FTC

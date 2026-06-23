@@ -367,10 +367,6 @@ export default function WhyDialerSeatView() {
           {/* HERO */}
           <section className="why-hero">
             <div className="why-hero-inner">
-              <Link href="/faq" className="why-breadcrumb">
-                ← BACK TO FAQ
-              </Link>
-              <div style={{ marginTop: 4 }} />
               <div className="why-eyebrow">WHY DIALERSEAT?</div>
               <h1>We built the dialer we wished existed.</h1>
               <p className="why-lead">

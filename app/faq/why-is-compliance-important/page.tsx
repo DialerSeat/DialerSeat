@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import DialingModeCTA from '@/components/DialingModeCTA'
@@ -31,9 +30,7 @@ export default function Page() {
         <ExplainerStyles accent="#8a6a1a" accentBg="#fdf4e8" />
 
         <section className="exp-hero">
-          <div className="exp-hero-inner">
-            <Link href="/faq" className="exp-breadcrumb">← BACK TO FAQ</Link>
-            <div className="exp-eyebrow">EXPLAINER · COMPLIANCE</div>
+          <div className="exp-hero-inner">            <div className="exp-eyebrow">EXPLAINER · COMPLIANCE</div>
             <h1>Why is compliance important?</h1>
             <p className="exp-lead">
               Because the FTC has been writing $20,000-per-violation checks

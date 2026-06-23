@@ -31,9 +31,7 @@ export default function Page() {
         <ExplainerStyles accent="#1a6a1a" accentBg="#e8f5e8" />
 
         <section className="exp-hero">
-          <div className="exp-hero-inner">
-            <Link href="/faq" className="exp-breadcrumb">← BACK TO FAQ</Link>
-            <div className="exp-eyebrow">EXPLAINER · PRICING</div>
+          <div className="exp-hero-inner">            <div className="exp-eyebrow">EXPLAINER · PRICING</div>
             <h1>Why we charge what we charge.</h1>
             <p className="exp-lead">
               $35 a week, per seat. Unlimited dial-out numbers, multiple

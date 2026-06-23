@@ -212,6 +212,14 @@ function DialerPageInner() {
 
   const [allActiveOverrideMode, setAllActiveOverrideMode] = useState<DialerMode>('power')
 
+  const [scriptIdx, setScriptIdx] = useState(0)
+  // Draggable script-tab ordering. Holds a custom order of tab keys (campaign
+  // id, or '__manual__'/'__single__' for the personal-single-script case).
+  // Tabs not present in this list fall back to natural order, so new campaigns
+  // appear at the end until the user drags them.
+  const [scriptOrder, setScriptOrder] = useState<string[]>([])
+  const [scriptDragKey, setScriptDragKey] = useState<string | null>(null)
+
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const audioCtxRef = useRef<AudioContext | null>(null)
   const activePollRef = useRef<NodeJS.Timeout | null>(null)
@@ -232,9 +240,29 @@ function DialerPageInner() {
   const lsRestoredRef = useRef(false)
   const activeCallSidRef = useRef<string | null>(null)
 
+  // ── GHOST-DIAL PREVENTION ───────────────────────────────────────────────
+  // availableRef always holds the LIVE value of `available`. setTimeout/async
+  // callbacks capture stale closure values of state; a ref does not. Every
+  // dial path reads this ref at the moment of execution so a dial scheduled
+  // while you were available cannot fire after you've gone unavailable.
+  const availableRef = useRef(false)
+  // Tracks every pending auto-chain setTimeout(handleDial) so we can cancel
+  // them all the instant you go unavailable (the kill switch).
+  const dialChainTimeoutsRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set())
+
   useEffect(() => setMounted(true), [])
   useEffect(() => { currentLeadRef.current = currentLead }, [currentLead])
   useEffect(() => { activeCallSidRef.current = activeCallSid }, [activeCallSid])
+  // Keep availableRef in lock-step with the available state.
+  useEffect(() => { availableRef.current = available }, [available])
+  // On unmount (navigating away from the dialer), cancel any pending auto-chain
+  // dials so a queued timer can't fire a call after you've left the page.
+  useEffect(() => {
+    return () => {
+      for (const id of dialChainTimeoutsRef.current) clearTimeout(id)
+      dialChainTimeoutsRef.current.clear()
+    }
+  }, [])
 
   useEffect(() => {
     if (!user) return
@@ -490,31 +518,9 @@ function DialerPageInner() {
     if (!isActive) return
     const initSW = async () => {
       try {
-        // SECURITY (Step 2 / Path A): fetch SIP credentials from an
-        // authenticated server endpoint instead of reading NEXT_PUBLIC_* env
-        // vars, which would be baked into the public client bundle and
-        // harvestable without logging in. The server route is gated by Clerk.
-        let sipUsername: string | undefined
-        let sipPassword: string | undefined
-        let sipDomain: string | undefined
-        try {
-          const credRes = await fetch('/api/calls/sip-credentials')
-          if (!credRes.ok) {
-            console.error('SIP credentials fetch failed:', credRes.status)
-            return
-          }
-          const cred = await credRes.json()
-          if (!cred?.success) {
-            console.error('SIP credentials unavailable:', cred?.error)
-            return
-          }
-          sipUsername = cred.sipUsername
-          sipPassword = cred.sipPassword
-          sipDomain = cred.sipDomain
-        } catch (credErr) {
-          console.error('SIP credentials request error:', credErr)
-          return
-        }
+        const sipUsername = process.env.NEXT_PUBLIC_SIGNALWIRE_SIP_USERNAME
+        const sipPassword = process.env.NEXT_PUBLIC_SIGNALWIRE_SIP_PASSWORD
+        const sipDomain = process.env.NEXT_PUBLIC_SIGNALWIRE_SIP_DOMAIN
 
         if (!sipUsername || !sipPassword || !sipDomain) return
 
@@ -751,12 +757,21 @@ function DialerPageInner() {
 
     const pollIncoming = async () => {
       try {
+        // Live guard: if you've gone unavailable since this interval was set,
+        // do not attach any routed call. Prevents a predictive ghost-connect.
+        if (!availableRef.current) return
+
         const res = await fetch('/api/calls/incoming-route')
         if (!res.ok) return
         const data = (await res.json()) as IncomingRouteResponse
         if (!data.incoming || !data.call) return
 
         if (lastIncomingCallSidRef.current === data.call.sid) return
+
+        // Re-check after the await — availability may have changed while the
+        // request was in flight. Never auto-attach audio to an offline agent.
+        if (!availableRef.current) return
+
         lastIncomingCallSidRef.current = data.call.sid
 
         setAmdActivity(prev => [
@@ -941,10 +956,15 @@ function DialerPageInner() {
       }
     }
 
-    const goingOffline = available
+    const goingOffline = availableRef.current
     if (goingOffline) {
-      if (activeCallSid) {
-        await hangupCall(activeCallSid)
+      // ── KILL SWITCH ───────────────────────────────────────────────────────
+      // Going offline must stop everything immediately: cancel every pending
+      // auto-chain dial so none can fire after this point, and hang up any call
+      // currently attached. This is what makes "unavailable" actually mean it.
+      cancelAllPendingDials()
+      if (activeCallSidRef.current) {
+        await hangupCall(activeCallSidRef.current)
       }
       setStatus('idle')
       setCurrentLead(null)
@@ -1053,9 +1073,9 @@ function DialerPageInner() {
   const currentScope = teamScopes.find(s => s.id === selectedScope) || null
 
   const scopeCampaigns: { id: string; name: string; total_leads: number; status: string }[] = isPersonalScope
-    ? (campaigns || []).map(c => ({ id: c.id, name: c.name, total_leads: c.total_leads, status: c.status }))
+    ? campaigns.map(c => ({ id: c.id, name: c.name, total_leads: c.total_leads, status: c.status }))
     : (currentScope?.teamCampaigns
-        ?.filter(tc => tc.campaign)
+        .filter(tc => tc.campaign)
         .map(tc => ({
           id: tc.campaign!.id,
           name: tc.campaign!.name,
@@ -1149,6 +1169,15 @@ function DialerPageInner() {
   }
 
   const dialLeadCall = async (lead: Lead) => {
+    // ── HARD GUARD (final gate before SignalWire) ───────────────────────────
+    // This is the last function before the POST to /api/calls/outbound. Even if
+    // something reached here unexpectedly, refuse to dial unless you are
+    // actively available right now. Nothing talks to SignalWire otherwise.
+    if (!availableRef.current) {
+      setStatus('idle')
+      return
+    }
+
     const rawPhone = lead.phone?.replace(/\D/g, '')
     if (!rawPhone || rawPhone.length < 10) {
       await fetch('/api/leads/dispose', {
@@ -1163,7 +1192,7 @@ function DialerPageInner() {
         }),
       })
       setCurrentLead(null)
-      if (autoChainOnFailure) setTimeout(() => handleDial(), 300)
+      if (autoChainOnFailure) scheduleDial(300)
       else setStatus('idle')
       return
     }
@@ -1215,8 +1244,8 @@ function DialerPageInner() {
           ].slice(0, 5))
           setStatus('idle')
           setCurrentLead(null)
-          if (autoChainOnFailure) setTimeout(() => handleDial(), 500)
-          else setTimeout(() => handleDial(), 300)
+          if (autoChainOnFailure) scheduleDial(500)
+          else scheduleDial(300)
           return
         }
         await fetch('/api/leads/dispose', {
@@ -1232,7 +1261,7 @@ function DialerPageInner() {
         })
         setStatus('idle')
         setCurrentLead(null)
-        if (autoChainOnFailure) setTimeout(() => handleDial(), 500)
+        if (autoChainOnFailure) scheduleDial(500)
       }
     } catch (error) {
       console.error('Call error:', error)
@@ -1266,7 +1295,7 @@ function DialerPageInner() {
             )
             setStatus('idle')
             setCurrentLead(null)
-            if (autoChainOnFailure) setTimeout(() => handleDial(), 600)
+            if (autoChainOnFailure) scheduleDial(600)
           } else {
             setStatus('ended')
             setShowDisposition(true)
@@ -1297,7 +1326,7 @@ function DialerPageInner() {
             setActiveCallSid(null)
             setStatus('idle')
             setCurrentLead(null)
-            setTimeout(() => handleDial(), 600)
+            scheduleDial(600)
             return
           }
 
@@ -1344,7 +1373,7 @@ function DialerPageInner() {
           setStatus('idle')
           setCurrentLead(null)
 
-          setTimeout(() => handleDial(), 800)
+          scheduleDial(800)
         }
       } catch (err) {
         clearInterval(pollInterval)
@@ -1354,7 +1383,36 @@ function DialerPageInner() {
     activePollRef.current = pollInterval
   }
 
+  // ── GHOST-DIAL PREVENTION: cancellable, guarded auto-chaining ────────────
+  // Cancels every pending auto-chain dial. Called the moment you go offline so
+  // no queued setTimeout can wake up and dial after you've stopped.
+  const cancelAllPendingDials = () => {
+    for (const id of dialChainTimeoutsRef.current) clearTimeout(id)
+    dialChainTimeoutsRef.current.clear()
+  }
+
+  // Schedules the next auto-chain dial, but tracked so it can be cancelled, and
+  // re-checks availability when it fires. Use this everywhere instead of a bare
+  // setTimeout(() => handleDial(), n).
+  const scheduleDial = (delayMs: number) => {
+    const id = setTimeout(() => {
+      dialChainTimeoutsRef.current.delete(id)
+      // Final live check: if you went offline during the delay, do nothing.
+      if (!availableRef.current) return
+      handleDial()
+    }, delayMs)
+    dialChainTimeoutsRef.current.add(id)
+  }
+
   const handleDial = async () => {
+    // ── HARD GUARD ──────────────────────────────────────────────────────────
+    // The single authoritative gate: a dial may only proceed if you are
+    // actively available at THIS moment. This stops "ghost dialing" — calls
+    // firing from stale timers or async flows after you've gone unavailable.
+    // Manual keypad dials go through handleManualDial, not here, so this does
+    // not affect intentional manual dialing.
+    if (!availableRef.current) return
+
     setShowDisposition(false)
     setDisposition('')
     setNoLeads(false)
@@ -1410,7 +1468,7 @@ function DialerPageInner() {
     if (isPredictive) {
       lastIncomingCallSidRef.current = null
     } else {
-      setTimeout(() => handleDial(), 300)
+      scheduleDial(300)
     }
   }
 
@@ -1575,18 +1633,61 @@ function DialerPageInner() {
   }
 
   const dispositions = [
-    { label: 'CLOSED', color: '#2d7a2d', bg: '#e8f5e8' },
-    { label: 'APPOINTMENT', color: '#1a4a8a', bg: '#e8eef8' },
-    { label: 'NOT INTERESTED', color: '#8a6a1a', bg: '#f8f4e8' },
-    { label: 'DO NOT CALL', color: '#8a1a1a', bg: '#f8e8e8' },
-    { label: 'SKIP', color: '#5a5e6a', bg: '#f0f0f4' },
+    { label: 'CLOSED', color: '#16a34a', bg: '#dcfce7' },
+    { label: 'APPOINTMENT', color: '#2563eb', bg: '#dbeafe' },
+    { label: 'NOT INTERESTED', color: '#d97706', bg: '#fef3c7' },
+    { label: 'DO NOT CALL', color: '#dc2626', bg: '#fee2e2' },
+    { label: 'SKIP', color: '#64748b', bg: '#f1f5f9' },
   ]
 
-  let activeScript: string | null = null
+  // Build the raw set of script tabs (each with a stable key for drag-ordering).
+  let rawScriptTabs: { key: string; name: string; script: string }[] = []
   if (isSpecificCampaign) {
-    activeScript = currentCampaign?.script || null
+    if (currentCampaign?.script) {
+      rawScriptTabs = [{ key: currentCampaign.id, name: currentCampaign.name, script: currentCampaign.script }]
+    }
   } else if (isAllActive && isPersonalScope) {
-    activeScript = campaigns.find(c => c.script)?.script || null
+    rawScriptTabs = campaigns
+      .filter(c => c.script)
+      .map(c => ({ key: c.id, name: c.name, script: c.script as string }))
+  }
+
+  // Apply the user's custom drag order: keys present in scriptOrder come first
+  // (in that order), any new/unordered tabs keep their natural order at the end.
+  const scriptTabs = (() => {
+    if (scriptOrder.length === 0) return rawScriptTabs
+    const byKey = new Map(rawScriptTabs.map(t => [t.key, t]))
+    const ordered: typeof rawScriptTabs = []
+    for (const k of scriptOrder) {
+      const t = byKey.get(k)
+      if (t) { ordered.push(t); byKey.delete(k) }
+    }
+    for (const t of rawScriptTabs) {
+      if (byKey.has(t.key)) ordered.push(t)
+    }
+    return ordered
+  })()
+
+  const activeScriptIdx = scriptIdx < scriptTabs.length ? scriptIdx : 0
+  const activeScript = scriptTabs[activeScriptIdx]?.script || null
+
+  // Reorder helper: move the dragged tab key to the position of the target key.
+  const reorderScriptTabs = (dragKey: string, targetKey: string) => {
+    if (dragKey === targetKey) return
+    const base = scriptTabs.map(t => t.key)
+    const from = base.indexOf(dragKey)
+    const to = base.indexOf(targetKey)
+    if (from === -1 || to === -1) return
+    const next = [...base]
+    next.splice(from, 1)
+    next.splice(to, 0, dragKey)
+    setScriptOrder(next)
+    // Keep the active tab pointing at the same script after a reorder.
+    const activeKey = scriptTabs[activeScriptIdx]?.key
+    if (activeKey) {
+      const newIdx = next.indexOf(activeKey)
+      if (newIdx !== -1) setScriptIdx(newIdx)
+    }
   }
 
   const terminalBg = 'var(--brand-page-bg)'
@@ -1799,8 +1900,7 @@ function DialerPageInner() {
           fontSize: 11, letterSpacing: 2, color: terminalMuted,
           textAlign: 'center', lineHeight: 1.7, maxWidth: 360, marginBottom: 22,
         }}>
-          System is dialing in the background.<br/>
-          A live human will be routed to you automatically.
+          System is dialing in the background.
         </div>
         <div style={{
           display: 'flex', gap: 14, flexWrap: 'wrap', justifyContent: 'center',
@@ -2290,7 +2390,7 @@ function DialerPageInner() {
                         letterSpacing: '2px',
                       }}>
                         {tcpaBlockedAll
-                          ? '⏰ ALL LEADS OUTSIDE 8AM-9PM WINDOW — TRY LATER'
+                          ? 'ALL LEADS OUTSIDE 8AM-9PM WINDOW — TRY LATER'
                           : isPersonalScope
                             ? 'UPLOAD MORE LEADS TO CONTINUE'
                             : 'NO MORE TEAM LEADS — TRY ANOTHER CAMPAIGN OR SCOPE'}
@@ -2338,16 +2438,46 @@ function DialerPageInner() {
                     </div>
                     {activeScript && (
                       <div style={{
-                        flex: 1, margin: '0 12px 12px', padding: '10px 12px',
+                        flex: 1, margin: '0 12px 12px',
                         background: terminalBg, border: `1px solid ${terminalBorder}`,
                         borderLeft: `3px solid ${terminalAccent}`, borderRadius: '3px',
-                        display: 'flex', flexDirection: 'column', minHeight: 80,
+                        display: 'flex', flexDirection: 'column', minHeight: 80, overflow: 'hidden',
                       }}>
-                        <div style={{ fontSize: '8px', letterSpacing: '2px', color: terminalMuted, marginBottom: '6px', flexShrink: 0 }}>CALL SCRIPT</div>
-                        <div style={{
-                          fontSize: '11px', lineHeight: '1.7', color: terminalText,
-                          fontFamily: 'monospace', whiteSpace: 'pre-wrap', overflowY: 'auto', flex: 1,
-                        }}>{activeScript}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '2px', padding: '6px 8px 0', borderBottom: `1px solid ${terminalBorder}`, flexWrap: 'wrap', flexShrink: 0 }}>
+                          {scriptTabs.map((sc, i) => (
+                            <button
+                              key={sc.key}
+                              onClick={() => setScriptIdx(i)}
+                              draggable
+                              onDragStart={() => setScriptDragKey(sc.key)}
+                              onDragOver={(e) => { e.preventDefault() }}
+                              onDrop={(e) => {
+                                e.preventDefault()
+                                if (scriptDragKey) reorderScriptTabs(scriptDragKey, sc.key)
+                                setScriptDragKey(null)
+                              }}
+                              onDragEnd={() => setScriptDragKey(null)}
+                              title="Drag to reorder"
+                              style={{
+                                padding: '5px 10px',
+                                cursor: scriptDragKey ? 'grabbing' : 'grab',
+                                border: 'none', borderRadius: '5px 5px 0 0',
+                                background: i === activeScriptIdx ? terminalAccent : 'transparent',
+                                color: i === activeScriptIdx ? '#fff' : terminalMuted,
+                                fontFamily: FUTURA, fontSize: '9px', letterSpacing: '1px', fontWeight: 800,
+                                opacity: scriptDragKey === sc.key ? 0.4 : 1,
+                                transition: 'all 0.15s ease',
+                              }}
+                            >{sc.name.toUpperCase()}</button>
+                          ))}
+                        </div>
+                        <div style={{ flex: 1, padding: '10px 12px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                          <div style={{ fontSize: '8px', letterSpacing: '2px', color: terminalMuted, marginBottom: '6px', flexShrink: 0 }}>CALL SCRIPT</div>
+                          <div style={{
+                            fontSize: '11px', lineHeight: '1.7', color: terminalText,
+                            fontFamily: 'monospace', whiteSpace: 'pre-wrap', overflowY: 'auto', flex: 1,
+                          }}>{activeScript}</div>
+                        </div>
                       </div>
                     )}
                   </>
@@ -2597,10 +2727,10 @@ function DialerPageInner() {
           <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '5px', flexShrink: 0 }}>
             {[
               { label: 'CONNECTED', value: sessionStats.connected, color: 'var(--brand-primary)' },
-              { label: 'CLOSED', value: sessionStats.closed, color: terminalGreen },
-              { label: 'APPOINTMENTS', value: sessionStats.appointments, color: '#1a4a8a' },
-              { label: 'NOT INTERESTED', value: sessionStats.notInterested, color: '#8a6a1a' },
-              { label: 'DO NOT CALL', value: sessionStats.dnc, color: terminalRed },
+              { label: 'CLOSED', value: sessionStats.closed, color: '#16a34a' },
+              { label: 'APPOINTMENTS', value: sessionStats.appointments, color: '#2563eb' },
+              { label: 'NOT INTERESTED', value: sessionStats.notInterested, color: '#d97706' },
+              { label: 'DO NOT CALL', value: sessionStats.dnc, color: '#dc2626' },
             ].map((stat) => (
               <div key={stat.label} style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',

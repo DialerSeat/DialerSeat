@@ -31,9 +31,7 @@ export default function Page() {
         <ExplainerStyles accent="#2a4a8a" accentBg="#e8eef8" />
 
         <section className="exp-hero">
-          <div className="exp-hero-inner">
-            <Link href="/faq" className="exp-breadcrumb">← BACK TO FAQ</Link>
-            <div className="exp-eyebrow">EXPLAINER · AMD</div>
+          <div className="exp-hero-inner">            <div className="exp-eyebrow">EXPLAINER · AMD</div>
             <h1>How does AMD work?</h1>
             <p className="exp-lead">
               Answering Machine Detection listens to a phone pickup and
