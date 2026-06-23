@@ -69,13 +69,13 @@ const DISPOSITIONS = [
 
 const dispColor = (disp: string | null): string => {
   switch (disp) {
-    case 'CLOSED': return T.green
+    case 'CLOSED': return '#2d7a2d'
     case 'APPOINTMENT': return '#1a4a8a'
-    case 'NOT INTERESTED': return T.amber
-    case 'DO NOT CALL': return T.red
+    case 'NOT INTERESTED': return '#8a6a1a'
+    case 'DO NOT CALL': return '#8a1a1a'
     case 'SKIPPED':
     case 'NO_ANSWER':
-    default: return T.muted
+    default: return '#5a5e6a'
   }
 }
 
@@ -93,7 +93,7 @@ const dispBg = (disp: string | null): string => {
 
 const dispositionTint = (disp: string | null): string => {
   switch (disp) {
-    case 'CLOSED': return 'rgba(26, 106, 26, 0.10)'
+    case 'CLOSED': return 'rgba(45, 122, 45, 0.10)'
     case 'APPOINTMENT': return 'rgba(26, 74, 138, 0.10)'
     case 'NOT INTERESTED': return 'rgba(138, 106, 26, 0.10)'
     case 'DO NOT CALL': return 'rgba(138, 26, 26, 0.10)'
@@ -154,6 +154,7 @@ export default function RecordingsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [campaignFilter, setCampaignFilter] = useState('all')
   const [dispositionFilter, setDispositionFilter] = useState('all')
+  const [timeFilter, setTimeFilter] = useState('all')
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [cursor, setCursor] = useState<number | null>(0)
@@ -203,7 +204,10 @@ export default function RecordingsPage() {
       const res = await fetch(`/api/recordings/list?${params}`)
       const data = await res.json()
       if (data.success) {
-        setRecordings(prev => cursor === 0 ? data.recordings : [...prev, ...data.recordings])
+        const incoming = (data.recordings as Recording[]).filter(
+          r => r.disposition !== 'NO_ANSWER_AMD'
+        )
+        setRecordings(prev => cursor === 0 ? incoming : [...prev, ...incoming])
         setTotal(data.total)
         setCursor(data.nextCursor)
       }
@@ -277,6 +281,19 @@ export default function RecordingsPage() {
   const handleDownload = (id: string) => {
     window.location.href = `/api/recordings/play?call_id=${id}&download=1`
   }
+
+  const visibleRecordings = (() => {
+    if (timeFilter === 'all') return recordings
+    const now = Date.now()
+    const dayMs = 86400000
+    let cutoff = 0
+    if (timeFilter === 'today') {
+      const d = new Date(); d.setHours(0, 0, 0, 0); cutoff = d.getTime()
+    } else if (timeFilter === '7d') cutoff = now - 7 * dayMs
+    else if (timeFilter === '30d') cutoff = now - 30 * dayMs
+    else if (timeFilter === '90d') cutoff = now - 90 * dayMs
+    return recordings.filter(r => new Date(r.created_at).getTime() >= cutoff)
+  })()
 
   return (
     <div className="rec-root" style={{
@@ -673,22 +690,36 @@ export default function RecordingsPage() {
             {DISPOSITIONS.map(d => <option key={d} value={d}>{d}</option>)}
           </select>
         </div>
+        <div className="field">
+          <label>TIME</label>
+          <select value={timeFilter} onChange={e => setTimeFilter(e.target.value)}>
+            <option value="all">[ ALL TIME ]</option>
+            <option value="today">TODAY</option>
+            <option value="7d">LAST 7 DAYS</option>
+            <option value="30d">LAST 30 DAYS</option>
+            <option value="90d">LAST 90 DAYS</option>
+          </select>
+        </div>
       </div>
 
       <div className="rec-list">
-        {recordings.length === 0 && !loading && (
+        {visibleRecordings.length === 0 && !loading && (
           <div style={{
             textAlign: 'center', padding: 60,
             fontSize: 11, letterSpacing: 3, color: T.muted,
           }}>
-            NO RECORDINGS YET<br />
-            <span style={{ fontSize: 10, marginTop: 8, display: 'inline-block' }}>
-              MAKE A CALL — THEN HIT SYNC IF IT DOESN'T APPEAR.
-            </span>
+            {recordings.length > 0 && timeFilter !== 'all' ? (
+              <>NO RECORDINGS IN THIS TIME RANGE</>
+            ) : (
+              <>NO RECORDINGS YET<br />
+              <span style={{ fontSize: 10, marginTop: 8, display: 'inline-block' }}>
+                MAKE A CALL — THEN HIT SYNC IF IT DOESN'T APPEAR.
+              </span></>
+            )}
           </div>
         )}
 
-        {recordings.map(r => {
+        {visibleRecordings.map(r => {
           const expDays = daysUntilExpire(r.recording_expires_at)
           const isPlaying = playingId === r.id
           const isExpanded = expandedId === r.id

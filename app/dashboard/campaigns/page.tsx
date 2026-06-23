@@ -299,6 +299,8 @@ export default function CampaignsPage() {
   const [createAmd, setCreateAmd] = useState<boolean>(false) // tracks mode default + user override
   const [createApptSub, setCreateApptSub] = useState(false)
   const [createNotIntSub, setCreateNotIntSub] = useState(false)
+  const [createSubOpen, setCreateSubOpen] = useState(false)
+  const [settingsSubOpen, setSettingsSubOpen] = useState(false)
   const [createFirstScriptName, setCreateFirstScriptName] = useState('')
   const [createFirstScriptBody, setCreateFirstScriptBody] = useState('')
   const [csvData, setCsvData] = useState<any[]>([])
@@ -1939,8 +1941,13 @@ export default function CampaignsPage() {
 
               {/* SUB-CAMPAIGNS section */}
               <div className="settings-section-card">
-                <div className="settings-section-title">▸ AUTO SUB-CAMPAIGNS</div>
+                <div
+                  className="settings-section-title"
+                  style={{ marginBottom: createSubOpen ? 10 : 0, cursor: 'pointer', userSelect: 'none' }}
+                  onClick={() => setCreateSubOpen(v => !v)}
+                >{createSubOpen ? '▾' : '▸'} AUTO SUB-CAMPAIGNS</div>
 
+                {createSubOpen && (<>
                 <div className="settings-row">
                   <div className="settings-row-label">
                     APPOINTMENTS SUB
@@ -1969,6 +1976,7 @@ export default function CampaignsPage() {
                     onClick={() => setCreateNotIntSub(v => !v)}
                   ><div className="knob" /></div>
                 </div>
+                </>)}
               </div>
 
               {/* LEADS CSV section */}
@@ -2141,8 +2149,13 @@ export default function CampaignsPage() {
 
               {/* AUTO SUB-CAMPAIGNS section */}
               <div className="settings-section-card">
-                <div className="settings-section-title">▸ AUTO SUB-CAMPAIGNS</div>
+                <div
+                  className="settings-section-title"
+                  style={{ marginBottom: settingsSubOpen ? 10 : 0, cursor: 'pointer', userSelect: 'none' }}
+                  onClick={() => setSettingsSubOpen(v => !v)}
+                >{settingsSubOpen ? '▾' : '▸'} AUTO SUB-CAMPAIGNS</div>
 
+                {settingsSubOpen && (<>
                 <div className="settings-row">
                   <div className="settings-row-label">
                     APPOINTMENTS SUB
@@ -2180,6 +2193,7 @@ export default function CampaignsPage() {
                     )}
                   ><div className="knob" /></div>
                 </div>
+                </>)}
               </div>
 
               {/* LEADS section */}

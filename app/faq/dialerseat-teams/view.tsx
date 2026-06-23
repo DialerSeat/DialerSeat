@@ -459,8 +459,6 @@ export default function DialerSeatTeamsFaqView() {
           {/* HERO */}
           <section className="tfaq-hero">
             <div className="tfaq-hero-inner">
-              <Link href="/faq" className="tfaq-breadcrumb">← BACK TO FAQ</Link>
-              <div style={{ marginTop: 4 }} />
               <div className="tfaq-eyebrow">DIALERSEAT TEAMS</div>
               <h1>Premium leads, agency floors, shared pools.</h1>
               <p className="tfaq-lead">

@@ -76,7 +76,7 @@ interface Campaign {
 }
 
 const DISPOSITIONS = [
-  { label: 'CLOSED', color: '#1a6a1a', bg: '#e8f5e8' },
+  { label: 'CLOSED', color: '#2d7a2d', bg: '#e8f5e8' },
   { label: 'APPOINTMENT', color: '#1a4a8a', bg: '#e8eef8' },
   { label: 'NOT INTERESTED', color: '#8a6a1a', bg: '#f8f4e8' },
   { label: 'DO NOT CALL', color: '#8a1a1a', bg: '#f8e8e8' },
@@ -103,7 +103,7 @@ const FUTURA = `'Futura PT', Futura, 'Helvetica Neue', Helvetica, Arial, sans-se
 
 const dispositionTint = (disp: string | null): string => {
   switch (disp) {
-    case 'CLOSED': return 'rgba(26, 106, 26, 0.10)'
+    case 'CLOSED': return 'rgba(45, 122, 45, 0.10)'
     case 'APPOINTMENT': return 'rgba(26, 74, 138, 0.10)'
     case 'NOT INTERESTED': return 'rgba(138, 106, 26, 0.10)'
     case 'DO NOT CALL': return 'rgba(138, 26, 26, 0.10)'

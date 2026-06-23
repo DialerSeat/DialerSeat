@@ -139,6 +139,31 @@ const DEFAULT_BG_CSS = `
 const BG_PRESETS: { id: string; name: string; css: string }[] = [
   { id: 'aero', name: 'AERO (DEFAULT)', css: DEFAULT_BG_CSS },
   {
+    id: 'preset1',
+    name: 'PRESET 1',
+    css: `#1a3a6a url("https://i.imgur.com/394nH.jpeg") center / cover no-repeat`,
+  },
+  {
+    id: 'preset2',
+    name: 'PRESET 2',
+    css: `#1a3a6a url("https://i.imgur.com/W8tQ3.jpeg") center / cover no-repeat`,
+  },
+  {
+    id: 'preset3',
+    name: 'PRESET 3',
+    css: `#1a3a6a url("https://i.imgur.com/Zslk8.jpeg") center / cover no-repeat`,
+  },
+  {
+    id: 'preset4',
+    name: 'PRESET 4',
+    css: `#1a3a6a url("https://i.imgur.com/eBgJB.jpeg") center / cover no-repeat`,
+  },
+  {
+    id: 'preset5',
+    name: 'PRESET 5',
+    css: `#000000 url("https://i.redd.it/82smngfjfs251.jpg") center / cover no-repeat`,
+  },
+  {
     id: 'win7',
     name: 'WINDOWS 7',
     css: `#1a3a6a url("https://wallpapers.com/images/hd/windows-7-background-imfecqv6cnsicbx4.jpg") center / cover no-repeat`,

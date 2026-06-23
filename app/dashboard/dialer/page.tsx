@@ -212,6 +212,8 @@ function DialerPageInner() {
 
   const [allActiveOverrideMode, setAllActiveOverrideMode] = useState<DialerMode>('power')
 
+  const [scriptIdx, setScriptIdx] = useState(0)
+
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const audioCtxRef = useRef<AudioContext | null>(null)
   const activePollRef = useRef<NodeJS.Timeout | null>(null)
@@ -1632,12 +1634,16 @@ function DialerPageInner() {
     { label: 'SKIP', color: '#5a5e6a', bg: '#f0f0f4' },
   ]
 
-  let activeScript: string | null = null
+  let scriptTabs: { name: string; script: string }[] = []
   if (isSpecificCampaign) {
-    activeScript = currentCampaign?.script || null
+    if (currentCampaign?.script) scriptTabs = [{ name: currentCampaign.name, script: currentCampaign.script }]
   } else if (isAllActive && isPersonalScope) {
-    activeScript = campaigns.find(c => c.script)?.script || null
+    scriptTabs = campaigns
+      .filter(c => c.script)
+      .map(c => ({ name: c.name, script: c.script as string }))
   }
+  const activeScriptIdx = scriptIdx < scriptTabs.length ? scriptIdx : 0
+  const activeScript = scriptTabs[activeScriptIdx]?.script || null
 
   const terminalBg = 'var(--brand-page-bg)'
   const terminalSurface = 'var(--brand-card-surface)'
@@ -2340,7 +2346,7 @@ function DialerPageInner() {
                         letterSpacing: '2px',
                       }}>
                         {tcpaBlockedAll
-                          ? '⏰ ALL LEADS OUTSIDE 8AM-9PM WINDOW — TRY LATER'
+                          ? 'ALL LEADS OUTSIDE 8AM-9PM WINDOW — TRY LATER'
                           : isPersonalScope
                             ? 'UPLOAD MORE LEADS TO CONTINUE'
                             : 'NO MORE TEAM LEADS — TRY ANOTHER CAMPAIGN OR SCOPE'}
@@ -2388,16 +2394,31 @@ function DialerPageInner() {
                     </div>
                     {activeScript && (
                       <div style={{
-                        flex: 1, margin: '0 12px 12px', padding: '10px 12px',
+                        flex: 1, margin: '0 12px 12px',
                         background: terminalBg, border: `1px solid ${terminalBorder}`,
                         borderLeft: `3px solid ${terminalAccent}`, borderRadius: '3px',
-                        display: 'flex', flexDirection: 'column', minHeight: 80,
+                        display: 'flex', flexDirection: 'column', minHeight: 80, overflow: 'hidden',
                       }}>
-                        <div style={{ fontSize: '8px', letterSpacing: '2px', color: terminalMuted, marginBottom: '6px', flexShrink: 0 }}>CALL SCRIPT</div>
-                        <div style={{
-                          fontSize: '11px', lineHeight: '1.7', color: terminalText,
-                          fontFamily: 'monospace', whiteSpace: 'pre-wrap', overflowY: 'auto', flex: 1,
-                        }}>{activeScript}</div>
+                        {scriptTabs.length > 1 && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '2px', padding: '6px 8px 0', borderBottom: `1px solid ${terminalBorder}`, flexWrap: 'wrap', flexShrink: 0 }}>
+                            {scriptTabs.map((sc, i) => (
+                              <button key={i} onClick={() => setScriptIdx(i)} style={{
+                                padding: '5px 10px', cursor: 'pointer', border: 'none', borderRadius: '5px 5px 0 0',
+                                background: i === activeScriptIdx ? terminalAccent : 'transparent',
+                                color: i === activeScriptIdx ? '#fff' : terminalMuted,
+                                fontFamily: FUTURA, fontSize: '9px', letterSpacing: '1px', fontWeight: 800,
+                                transition: 'all 0.15s ease',
+                              }}>{sc.name.toUpperCase()}</button>
+                            ))}
+                          </div>
+                        )}
+                        <div style={{ flex: 1, padding: '10px 12px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                          <div style={{ fontSize: '8px', letterSpacing: '2px', color: terminalMuted, marginBottom: '6px', flexShrink: 0 }}>CALL SCRIPT</div>
+                          <div style={{
+                            fontSize: '11px', lineHeight: '1.7', color: terminalText,
+                            fontFamily: 'monospace', whiteSpace: 'pre-wrap', overflowY: 'auto', flex: 1,
+                          }}>{activeScript}</div>
+                        </div>
                       </div>
                     )}
                   </>
