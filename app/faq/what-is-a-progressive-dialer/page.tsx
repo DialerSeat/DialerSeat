@@ -70,33 +70,6 @@ export default function ProgressiveDialerPage() {
             line-height: 1.05;
             margin: 0 0 20px 0;
           }
-          .dm-tldr {
-            margin: 28px auto 0;
-            max-width: 620px;
-            text-align: left;
-            background: rgba(255,255,255,0.06);
-            border: 1px solid ${MODE_COLOR}66;
-            border-left: 3px solid ${MODE_COLOR};
-            border-radius: 6px;
-            padding: 16px 20px;
-          }
-          .dm-tldr-label {
-            display: inline-block;
-            font-size: 11px;
-            letter-spacing: 2px;
-            font-weight: 700;
-            color: #fff;
-            background: ${MODE_COLOR};
-            border-radius: 3px;
-            padding: 3px 9px;
-            margin-bottom: 10px;
-          }
-          .dm-tldr p {
-            margin: 0;
-            font-size: 15px;
-            line-height: 1.6;
-            color: #d6dae8;
-          }
           .dm-lead {
             font-size: 18px;
             line-height: 1.55;
@@ -333,10 +306,6 @@ export default function ProgressiveDialerPage() {
               it became the default in any vertical where one mistake could
               cost more than ten thousand connects.
             </p>
-            <div className="dm-tldr">
-              <span className="dm-tldr-label">TL;DR</span>
-              <p>Like power, but it screens each call with answering-machine detection and automatically skips voicemails and dead air, advancing you only to live pickups. AMD is on by default. Best when you want power-style volume but don't want to waste time on voicemails.</p>
-            </div>
           </div>
         </section>
 

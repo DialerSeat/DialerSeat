@@ -129,15 +129,6 @@ const MODE_LABELS: Record<DialerMode, string> = {
   predictive: 'PREDICTIVE',
 }
 
-// Color (matches the dialer's mode colors) + one-line description for the
-// mode-picker cards in the campaign add/edit tabs.
-const MODE_META: Record<DialerMode, { color: string; desc: string }> = {
-  preview: { color: '#5a5e6a', desc: 'See each lead first, then dial when you’re ready. One at a time.' },
-  power:   { color: '#2a4a8a', desc: 'Auto-dials the next lead the moment you finish. Steady, hands-free pace.' },
-  progressive: { color: '#1a6a1a', desc: 'Like power, but skips dead numbers automatically. AMD on by default.' },
-  predictive: { color: '#8a1a1a', desc: 'Dials several lines per agent and routes live humans to you. Highest volume.' },
-}
-
 const AMD_DEFAULT_BY_MODE: Record<DialerMode, boolean> = {
   preview: false,
   power: false,
@@ -1311,24 +1302,6 @@ export default function CampaignsPage() {
           align-items: center;
           gap: 8px;
         }
-        .cmp-scripts-btn {
-          padding: 6px 14px;
-          background: transparent;
-          border: 1px solid ${T.border};
-          border-radius: 3px;
-          color: ${T.text};
-          font-size: 10px;
-          letter-spacing: 2px;
-          font-weight: bold;
-          cursor: pointer;
-          font-family: ${FUTURA};
-          transition: background 0.12s, border-color 0.12s;
-        }
-        .cmp-scripts-btn:hover {
-          background: var(--brand-primary-soft);
-          border-color: ${T.blue};
-          color: ${T.blue};
-        }
 
         /* ── BODY ─────────────────────────────────────────────────────── */
         .cmp-body { padding: 28px 32px 56px; }
@@ -1609,49 +1582,22 @@ export default function CampaignsPage() {
         .settings-mode-select:hover { border-color: ${T.muted}; }
         .settings-mode-select:focus { border-color: ${T.blue}; }
 
-        /* ── DIALER MODE CARDS (add/edit) ────────────────────────────── */
-        .mode-card-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 8px;
-          width: 100%;
-        }
-        .mode-card {
+        /* ── DIALER MODE select + FAQ link (edit sheet) ──────────────── */
+        .mode-select-wrap {
           display: flex;
-          flex-direction: column;
-          gap: 4px;
-          text-align: left;
-          padding: 10px 12px;
-          background: ${T.bg};
-          border: 1px solid ${T.border};
-          border-left: 3px solid ${T.border};
-          border-radius: 4px;
-          cursor: pointer;
-          font-family: ${FUTURA};
-          transition: border-color 0.12s, background 0.12s;
+          align-items: center;
+          gap: 10px;
         }
-        .mode-card:hover { border-color: var(--mode-color); }
-        .mode-card.active {
-          border-color: var(--mode-color);
-          border-left-color: var(--mode-color);
-          background: color-mix(in srgb, var(--mode-color) 8%, transparent);
-        }
-        .mode-card.disabled { opacity: 0.5; cursor: not-allowed; }
-        .mode-card-name {
-          font-size: 11px;
-          letter-spacing: 2px;
+        .mode-faq-link {
+          font-size: 9px;
+          letter-spacing: 1.5px;
           font-weight: bold;
-          color: var(--mode-color);
+          color: ${T.blue};
+          text-decoration: none;
+          white-space: nowrap;
+          font-family: ${FUTURA};
         }
-        .mode-card-desc {
-          font-size: 10px;
-          line-height: 1.4;
-          color: ${T.muted};
-          font-family: monospace;
-        }
-        @media (max-width: 560px) {
-          .mode-card-grid { grid-template-columns: 1fr; }
-        }
+        .mode-faq-link:hover { text-decoration: underline; }
 
         /* ── LEAD PREVIEW WRAP ────────────────────────────────────────── */
         .lead-preview-wrap {
@@ -2316,7 +2262,7 @@ export default function CampaignsPage() {
         </div>
         {!isLapsed ? (
           <div className="cmp-header-actions">
-            <button className="cmp-scripts-btn" onClick={() => openScriptsManager()}>
+            <button className="cmp-new-btn" onClick={() => openScriptsManager()}>
               ▤ SCRIPTS
             </button>
             <button className="cmp-new-btn" onClick={() => setShowCreate(true)}>
@@ -2445,25 +2391,20 @@ export default function CampaignsPage() {
               <div className="settings-section-card">
                 <div className="settings-section-title">▸ CAMPAIGN</div>
 
-                <div className="settings-row" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-                  <div className="settings-row-label" style={{ marginBottom: 8 }}>
+                <div className="settings-row">
+                  <div className="settings-row-label">
                     DIALER MODE
                     <small>How this campaign dials. Change it anytime later.</small>
                   </div>
-                  <div className="mode-card-grid">
+                  <select
+                    className="settings-mode-select"
+                    value={createMode}
+                    onChange={e => setCreateMode(e.target.value as DialerMode)}
+                  >
                     {(Object.keys(MODE_LABELS) as DialerMode[]).map(m => (
-                      <button
-                        key={m}
-                        type="button"
-                        className={`mode-card ${createMode === m ? 'active' : ''}`}
-                        style={{ ['--mode-color' as any]: MODE_META[m].color }}
-                        onClick={() => setCreateMode(m)}
-                      >
-                        <span className="mode-card-name">{MODE_LABELS[m]}</span>
-                        <span className="mode-card-desc">{MODE_META[m].desc}</span>
-                      </button>
+                      <option key={m} value={m}>{MODE_LABELS[m]}</option>
                     ))}
-                  </div>
+                  </select>
                 </div>
 
                 <div className="settings-row">
@@ -2787,28 +2728,29 @@ export default function CampaignsPage() {
                   ><div className="knob" /></div>
                 </div>
 
-                <div className="settings-row" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-                  <div className="settings-row-label" style={{ marginBottom: 8 }}>
+                <div className="settings-row">
+                  <div className="settings-row-label">
                     DIALER MODE
                     <small>How this campaign dials. Affects future calls only.</small>
                   </div>
-                  <div className="mode-card-grid">
-                    {(Object.keys(MODE_LABELS) as DialerMode[]).map(m => {
-                      const active = (settingsCampaign.dialer_mode || 'power') === m
-                      return (
-                        <button
-                          key={m}
-                          type="button"
-                          className={`mode-card ${active ? 'active' : ''} ${isLapsed ? 'disabled' : ''}`}
-                          style={{ ['--mode-color' as any]: MODE_META[m].color }}
-                          onClick={() => !isLapsed && updateMode(settingsCampaign.id, m)}
-                          disabled={isLapsed}
-                        >
-                          <span className="mode-card-name">{MODE_LABELS[m]}</span>
-                          <span className="mode-card-desc">{MODE_META[m].desc}</span>
-                        </button>
-                      )
-                    })}
+                  <div className="mode-select-wrap">
+                    <select
+                      className="settings-mode-select"
+                      value={settingsCampaign.dialer_mode || 'power'}
+                      onChange={e => updateMode(settingsCampaign.id, e.target.value as DialerMode)}
+                      disabled={isLapsed}
+                    >
+                      {(Object.keys(MODE_LABELS) as DialerMode[]).map(m => (
+                        <option key={m} value={m}>{MODE_LABELS[m]}</option>
+                      ))}
+                    </select>
+                    <a
+                      href="/faq/dialer-modes"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mode-faq-link"
+                      title="What do these modes mean?"
+                    >WHAT&apos;S THIS? ↗</a>
                   </div>
                 </div>
 

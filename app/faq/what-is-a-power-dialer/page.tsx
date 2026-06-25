@@ -70,33 +70,6 @@ export default function PowerDialerPage() {
             line-height: 1.05;
             margin: 0 0 20px 0;
           }
-          .dm-tldr {
-            margin: 28px auto 0;
-            max-width: 620px;
-            text-align: left;
-            background: rgba(255,255,255,0.06);
-            border: 1px solid ${MODE_COLOR}66;
-            border-left: 3px solid ${MODE_COLOR};
-            border-radius: 6px;
-            padding: 16px 20px;
-          }
-          .dm-tldr-label {
-            display: inline-block;
-            font-size: 11px;
-            letter-spacing: 2px;
-            font-weight: 700;
-            color: #fff;
-            background: ${MODE_COLOR};
-            border-radius: 3px;
-            padding: 3px 9px;
-            margin-bottom: 10px;
-          }
-          .dm-tldr p {
-            margin: 0;
-            font-size: 15px;
-            line-height: 1.6;
-            color: #d6dae8;
-          }
           .dm-lead {
             font-size: 18px;
             line-height: 1.55;
@@ -332,10 +305,6 @@ export default function PowerDialerPage() {
               that defined outbound from 1995 onward and still does the
               majority of the work in B2B and SDR shops.
             </p>
-            <div className="dm-tldr">
-              <span className="dm-tldr-label">TL;DR</span>
-              <p>Auto-dials the next lead the instant you hang up — one line per agent, no waiting, no clicking between calls. You stay in control of pace by going available/unavailable. Best when your list is clean and you want steady, hands-free volume without the abandon-rate risk of predictive.</p>
-            </div>
           </div>
         </section>
 

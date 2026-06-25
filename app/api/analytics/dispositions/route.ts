@@ -23,16 +23,19 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 })
   }
 
+  // Only these dispositions appear in analytics — the ones the dialer actually
+  // accepts after a call, plus NO ANSWER. Everything else the system generates
+  // (completed, failed, TCPA_BLOCKED, NO_ANSWER_AMD, ABANDONED, etc.) is excluded.
+  const ALLOWED = new Set([
+    'CLOSED', 'APPOINTMENT', 'NOT INTERESTED', 'DO NOT CALL', 'SKIPPED', 'NO ANSWER',
+  ])
+
   const counts: Record<string, number> = {}
   for (const c of data || []) {
     let d = c.disposition || 'NO ANSWER'
-    // Analytics cleanup:
-    //  - NO_ANSWER_AMD is the background AMD voicemail-filter outcome, not a
-    //    meaningful sales disposition — drop it from analytics entirely.
-    //  - NO_ANSWER (raw) is folded into the single clean "NO ANSWER" bucket so
-    //    there's one no-answer slice, not separate raw/clean variants.
-    if (d === 'NO_ANSWER_AMD') continue
-    if (d === 'NO_ANSWER') d = 'NO ANSWER'
+    // Fold the raw/system no-answer variants into the single clean bucket.
+    if (d === 'NO_ANSWER' || d === 'NO_ANSWER_AMD') d = 'NO ANSWER'
+    if (!ALLOWED.has(d)) continue
     counts[d] = (counts[d] || 0) + 1
   }
 

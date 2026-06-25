@@ -70,33 +70,6 @@ export default function PreviewDialerPage() {
             line-height: 1.05;
             margin: 0 0 20px 0;
           }
-          .dm-tldr {
-            margin: 28px auto 0;
-            max-width: 620px;
-            text-align: left;
-            background: rgba(255,255,255,0.06);
-            border: 1px solid ${MODE_COLOR}66;
-            border-left: 3px solid ${MODE_COLOR};
-            border-radius: 6px;
-            padding: 16px 20px;
-          }
-          .dm-tldr-label {
-            display: inline-block;
-            font-size: 11px;
-            letter-spacing: 2px;
-            font-weight: 700;
-            color: #fff;
-            background: ${MODE_COLOR};
-            border-radius: 3px;
-            padding: 3px 9px;
-            margin-bottom: 10px;
-          }
-          .dm-tldr p {
-            margin: 0;
-            font-size: 15px;
-            line-height: 1.6;
-            color: #d6dae8;
-          }
           .dm-lead {
             font-size: 18px;
             line-height: 1.55;
@@ -341,10 +314,6 @@ export default function PreviewDialerPage() {
               the mode that built modern outbound sales, and it&apos;s still
               the right answer for a surprising number of campaigns.
             </p>
-            <div className="dm-tldr">
-              <span className="dm-tldr-label">TL;DR</span>
-              <p>Shows you each lead before it dials so you can read the notes and prep, then you trigger the call yourself. One at a time, fully manual pacing. Best for high-value or complex calls where a tailored opening matters more than raw dial volume.</p>
-            </div>
           </div>
         </section>
 

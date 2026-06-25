@@ -206,8 +206,14 @@ export default function RecordingsPage() {
       const res = await fetch(`/api/recordings/list?${params}`)
       const data = await res.json()
       if (data.success) {
+        // Only show recordings whose disposition is one the dialer accepts,
+        // plus no-answer. Everything else (completed/failed/TCPA_BLOCKED/
+        // NO_ANSWER_AMD/ABANDONED) is hidden. Raw NO_ANSWER counts as no-answer.
+        const ALLOWED = new Set([
+          'CLOSED', 'APPOINTMENT', 'NOT INTERESTED', 'DO NOT CALL', 'SKIPPED', 'NO_ANSWER',
+        ])
         const incoming = (data.recordings as Recording[]).filter(
-          r => r.disposition !== 'NO_ANSWER_AMD'
+          r => ALLOWED.has((r.disposition || 'NO_ANSWER') as string)
         )
         setRecordings(prev => cursor === 0 ? incoming : [...prev, ...incoming])
         setTotal(data.total)
