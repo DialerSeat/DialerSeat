@@ -507,6 +507,11 @@ function DialerPageInner() {
 
   useEffect(() => {
     setPredictiveEngineStarted(false)
+    // Reset script tab state when switching campaigns — a previous campaign's
+    // custom order keys don't apply here and could otherwise hide tabs.
+    setScriptOrder([])
+    setScriptIdx(0)
+    setScriptDragKey(null)
   }, [selectedCampaign])
 
   useEffect(() => {
@@ -1479,6 +1484,10 @@ function DialerPageInner() {
             setLastCallDuration(
               callStart ? Math.max(0, Math.floor((Date.now() - callStart) / 1000)) : seconds
             )
+            // Cancel any pending auto-chain dial so a new call can NEVER start
+            // while you're filling out the disposition sheet. The next call only
+            // begins when you submit a disposition.
+            cancelAllPendingDials()
             setStatus('ended')
             setShowDisposition(true)
           }
@@ -1855,7 +1864,12 @@ function DialerPageInner() {
 
   // Apply the user's custom drag order: keys present in scriptOrder come first
   // (in that order), any new/unordered tabs keep their natural order at the end.
+  // HARDENING: a stale scriptOrder (keys that no longer exist after a campaign
+  // refresh) must never cause tabs to disappear. We always append every raw tab
+  // that wasn't placed by the order, and if the result is somehow empty we fall
+  // back to the raw tabs. This fixes tabs vanishing on drag/click until refresh.
   const scriptTabs = (() => {
+    if (rawScriptTabs.length === 0) return rawScriptTabs
     if (scriptOrder.length === 0) return rawScriptTabs
     const byKey = new Map(rawScriptTabs.map(t => [t.key, t]))
     const ordered: typeof rawScriptTabs = []
@@ -1866,7 +1880,7 @@ function DialerPageInner() {
     for (const t of rawScriptTabs) {
       if (byKey.has(t.key)) ordered.push(t)
     }
-    return ordered
+    return ordered.length > 0 ? ordered : rawScriptTabs
   })()
 
   const activeScriptIdx = scriptIdx < scriptTabs.length ? scriptIdx : 0

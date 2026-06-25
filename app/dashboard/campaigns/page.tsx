@@ -352,6 +352,26 @@ export default function CampaignsPage() {
   const [dirtyScript, setDirtyScript] = useState(false)
   const [savingScript, setSavingScript] = useState(false)
 
+  // ─── EDIT-MODAL DEFERRED SAVE (draft) ─────────────────────────────────────
+  // The edit/settings modal does NOT write anything in the background. Opening
+  // the modal snapshots the campaign into `editDraft`; every control mutates the
+  // draft only; "SAVE CHANGES" flushes the whole draft to the server. This makes
+  // editing predictable — nothing changes server-side until the user commits.
+  interface EditDraft {
+    name: string
+    status: string
+    dialer_mode: DialerMode
+    amd_enabled: boolean
+    enable_appointments_sub: boolean
+    enable_not_interested_sub: boolean
+    enabledScriptIds: Set<string>   // which library scripts are on for this campaign
+    scriptOrder: string[]           // ordered enabled script ids (drag order)
+  }
+  const [editDraft, setEditDraft] = useState<EditDraft | null>(null)
+  const [editSaving, setEditSaving] = useState(false)
+  // Baseline snapshot to diff against, so we know what actually changed + dirty.
+  const [editBaseline, setEditBaseline] = useState<EditDraft | null>(null)
+
   // ─── DRAGGABLE SCRIPT TABS STATE ──────────────────────────────────────
   const [draggedScriptId, setDraggedScriptId] = useState<string | null>(null)
   const [dragOverScriptId, setDragOverScriptId] = useState<string | null>(null)
@@ -891,12 +911,27 @@ export default function CampaignsPage() {
   }
 
   // ─── PER-CAMPAIGN SCRIPT LINKS (toggles + lead-editor order) ───────────
-  const loadCampaignLinks = async (campaignId: string) => {
+  const loadCampaignLinks = async (campaignId: string, seedDraft = false) => {
     setLinksLoading(true)
     try {
       const res = await fetch(`/api/campaigns/script-links/list?campaign_id=${campaignId}`)
       const data = await res.json()
-      if (data.success) setCampaignScriptLinks(data.scripts || [])
+      if (data.success) {
+        const links: CampaignScriptLink[] = data.scripts || []
+        setCampaignScriptLinks(links)
+        if (seedDraft) {
+          // Seed the edit draft's script enable/order from the server state so
+          // the draft starts matching reality. The baseline is set too, so we
+          // can diff on save and only write actual changes.
+          const enabledIds = links.filter(s => s.enabled).map(s => s.id)
+          const order = links
+            .filter(s => s.enabled)
+            .sort((a, b) => (a.link_sort_order ?? 0) - (b.link_sort_order ?? 0))
+            .map(s => s.id)
+          setEditDraft(d => d ? { ...d, enabledScriptIds: new Set(enabledIds), scriptOrder: order } : d)
+          setEditBaseline(d => d ? { ...d, enabledScriptIds: new Set(enabledIds), scriptOrder: order } : d)
+        }
+      }
     } finally {
       setLinksLoading(false)
     }
@@ -947,13 +982,142 @@ export default function CampaignsPage() {
     fetchCampaigns()
   }
 
+  // ─── EDIT DRAFT MUTATORS (no server writes — draft only) ──────────────────
+  const patchDraft = (patch: Partial<EditDraft>) =>
+    setEditDraft(d => d ? { ...d, ...patch } : d)
+
+  // Toggle a script on/off in the draft (and maintain its order list).
+  const draftToggleScript = (scriptId: string) => {
+    setEditDraft(d => {
+      if (!d) return d
+      const enabled = new Set(d.enabledScriptIds)
+      let order = [...d.scriptOrder]
+      if (enabled.has(scriptId)) {
+        enabled.delete(scriptId)
+        order = order.filter(id => id !== scriptId)
+      } else {
+        enabled.add(scriptId)
+        if (!order.includes(scriptId)) order.push(scriptId)
+      }
+      return { ...d, enabledScriptIds: enabled, scriptOrder: order }
+    })
+  }
+
+  // Reorder enabled scripts in the draft (drag within the settings list).
+  const draftReorderScript = (dragId: string, targetId: string) => {
+    setEditDraft(d => {
+      if (!d) return d
+      const order = [...d.scriptOrder]
+      const from = order.indexOf(dragId), to = order.indexOf(targetId)
+      if (from === -1 || to === -1) return d
+      const [moved] = order.splice(from, 1)
+      order.splice(to, 0, moved)
+      return { ...d, scriptOrder: order }
+    })
+  }
+
+  // Dirty = draft differs from baseline in any field.
+  const editDirty = (() => {
+    if (!editDraft || !editBaseline) return false
+    const a = editDraft, b = editBaseline
+    if (a.name !== b.name) return true
+    if (a.status !== b.status) return true
+    if (a.dialer_mode !== b.dialer_mode) return true
+    if (a.amd_enabled !== b.amd_enabled) return true
+    if (a.enable_appointments_sub !== b.enable_appointments_sub) return true
+    if (a.enable_not_interested_sub !== b.enable_not_interested_sub) return true
+    if (a.enabledScriptIds.size !== b.enabledScriptIds.size) return true
+    for (const id of a.enabledScriptIds) if (!b.enabledScriptIds.has(id)) return true
+    if (a.scriptOrder.join(',') !== b.scriptOrder.join(',')) return true
+    return false
+  })()
+
+  // Flush the whole draft to the server. Nothing was written until this runs.
+  const saveEditDraft = async () => {
+    if (!settingsCampaign || !editDraft || !editBaseline) return
+    setEditSaving(true)
+    const id = settingsCampaign.id
+    try {
+      // 1) Core campaign fields — single update call with only changed fields.
+      const corePatch: Record<string, any> = {}
+      if (editDraft.name !== editBaseline.name) corePatch.name = editDraft.name.trim() || editBaseline.name
+      if (editDraft.status !== editBaseline.status) corePatch.status = editDraft.status
+      if (editDraft.dialer_mode !== editBaseline.dialer_mode) corePatch.dialer_mode = editDraft.dialer_mode
+      if (editDraft.amd_enabled !== editBaseline.amd_enabled) corePatch.amd_enabled = editDraft.amd_enabled
+      if (editDraft.enable_appointments_sub !== editBaseline.enable_appointments_sub)
+        corePatch.enable_appointments_sub = editDraft.enable_appointments_sub
+      if (editDraft.enable_not_interested_sub !== editBaseline.enable_not_interested_sub)
+        corePatch.enable_not_interested_sub = editDraft.enable_not_interested_sub
+      if (Object.keys(corePatch).length > 0) {
+        const res = await fetch('/api/campaigns/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, ...corePatch }),
+        })
+        const data = await res.json()
+        if (!data.success) throw new Error(data.error || 'Failed to save campaign settings')
+      }
+
+      // 2) Script enable/disable diffs.
+      const toEnable = [...editDraft.enabledScriptIds].filter(sid => !editBaseline.enabledScriptIds.has(sid))
+      const toDisable = [...editBaseline.enabledScriptIds].filter(sid => !editDraft.enabledScriptIds.has(sid))
+      for (const sid of toEnable) {
+        await fetch('/api/campaigns/script-links/toggle', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ campaign_id: id, script_id: sid, enabled: true }),
+        })
+      }
+      for (const sid of toDisable) {
+        await fetch('/api/campaigns/script-links/toggle', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ campaign_id: id, script_id: sid, enabled: false }),
+        })
+      }
+
+      // 3) Script order (only if it changed).
+      if (editDraft.scriptOrder.join(',') !== editBaseline.scriptOrder.join(',')) {
+        await fetch('/api/campaigns/script-links/reorder', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ campaign_id: id, order: editDraft.scriptOrder }),
+        })
+      }
+
+      // Commit: baseline becomes the saved draft; refresh the list once.
+      setEditBaseline({
+        ...editDraft,
+        enabledScriptIds: new Set(editDraft.enabledScriptIds),
+        scriptOrder: [...editDraft.scriptOrder],
+      })
+      await fetchCampaigns()
+      await loadCampaignLinks(id, true)
+    } catch (err: any) {
+      alert(`Couldn't save changes: ${err.message || 'unknown error'}`)
+    } finally {
+      setEditSaving(false)
+    }
+  }
+
   const openSettings = async (campaign: Campaign) => {
     setSettingsId(campaign.id)
     setScriptsLoading(true)
     setSettingsScripts([])
     setActiveScriptId(null)
     setDirtyScript(false)
-    loadCampaignLinks(campaign.id)
+    // Snapshot the campaign into the edit draft. Script enable/order get filled
+    // in once loadCampaignLinks resolves (it seeds the draft's script fields).
+    const baseDraft: EditDraft = {
+      name: campaign.name || '',
+      status: campaign.status || 'active',
+      dialer_mode: (campaign.dialer_mode || 'power') as DialerMode,
+      amd_enabled: !!campaign.amd_enabled,
+      enable_appointments_sub: !!campaign.enable_appointments_sub,
+      enable_not_interested_sub: !!campaign.enable_not_interested_sub,
+      enabledScriptIds: new Set<string>(),
+      scriptOrder: [],
+    }
+    setEditDraft(baseDraft)
+    setEditBaseline(baseDraft)
+    loadCampaignLinks(campaign.id, true /* seedDraft */)
     try {
       const res = await fetch(`/api/campaigns/scripts/list?campaign_id=${campaign.id}`)
       const data = await res.json()
@@ -973,11 +1137,13 @@ export default function CampaignsPage() {
   }
 
   const closeSettings = () => {
-    if (dirtyScript && !confirm('Unsaved script changes. Discard?')) return
+    if ((dirtyScript || editDirty) && !confirm('You have unsaved changes. Discard them?')) return
     setSettingsId(null)
     setSettingsScripts([])
     setActiveScriptId(null)
     setDirtyScript(false)
+    setEditDraft(null)
+    setEditBaseline(null)
   }
 
   const switchScript = (id: string) => {
@@ -1705,7 +1871,7 @@ export default function CampaignsPage() {
           font-size: 10px;
           letter-spacing: 2.5px;
           font-weight: bold;
-          opacity: 0;
+          opacity: 0.85;
           transition: opacity 0.15s;
           pointer-events: none;
           z-index: 5;
@@ -2869,8 +3035,8 @@ export default function CampaignsPage() {
               <input
                 className="settings-name-input"
                 type="text"
-                value={settingsCampaign.name}
-                onChange={e => updateName(settingsCampaign.id, e.target.value)}
+                value={editDraft?.name ?? settingsCampaign.name}
+                onChange={e => patchDraft({ name: e.target.value })}
                 disabled={isLapsed}
               />
               <button className="settings-close" onClick={closeSettings}>×</button>
@@ -2888,8 +3054,8 @@ export default function CampaignsPage() {
                     <small>Inactive campaigns won't appear in the dialer's campaign list.</small>
                   </div>
                   <div
-                    className={`settings-toggle ${settingsCampaign.status === 'active' ? 'on' : ''} ${isLapsed ? 'disabled' : ''}`}
-                    onClick={() => !isLapsed && toggleStatus(settingsCampaign.id, settingsCampaign.status)}
+                    className={`settings-toggle ${editDraft?.status === 'active' ? 'on' : ''} ${isLapsed ? 'disabled' : ''}`}
+                    onClick={() => !isLapsed && patchDraft({ status: editDraft?.status === 'active' ? 'inactive' : 'active' })}
                   ><div className="knob" /></div>
                 </div>
 
@@ -2901,8 +3067,11 @@ export default function CampaignsPage() {
                   <div className="mode-select-wrap">
                     <select
                       className="settings-mode-select"
-                      value={settingsCampaign.dialer_mode || 'power'}
-                      onChange={e => updateMode(settingsCampaign.id, e.target.value as DialerMode)}
+                      value={editDraft?.dialer_mode || 'power'}
+                      onChange={e => {
+                        const m = e.target.value as DialerMode
+                        patchDraft({ dialer_mode: m, amd_enabled: AMD_DEFAULT_BY_MODE[m] })
+                      }}
                       disabled={isLapsed}
                     >
                       {(Object.keys(MODE_LABELS) as DialerMode[]).map(m => (
@@ -2925,8 +3094,8 @@ export default function CampaignsPage() {
                     <small>Auto-end calls that hit voicemail. Recommended ON for progressive/predictive.</small>
                   </div>
                   <div
-                    className={`settings-toggle ${settingsCampaign.amd_enabled ? 'on' : ''} ${isLapsed ? 'disabled' : ''}`}
-                    onClick={() => !isLapsed && updateAmd(settingsCampaign.id, !settingsCampaign.amd_enabled)}
+                    className={`settings-toggle ${editDraft?.amd_enabled ? 'on' : ''} ${isLapsed ? 'disabled' : ''}`}
+                    onClick={() => !isLapsed && patchDraft({ amd_enabled: !editDraft?.amd_enabled })}
                   ><div className="knob" /></div>
                 </div>
               </div>
@@ -2951,12 +3120,8 @@ export default function CampaignsPage() {
                     </small>
                   </div>
                   <div
-                    className={`settings-toggle ${settingsCampaign.enable_appointments_sub ? 'on' : ''} ${isLapsed ? 'disabled' : ''}`}
-                    onClick={() => !isLapsed && updateSubToggle(
-                      settingsCampaign.id,
-                      'enable_appointments_sub',
-                      !settingsCampaign.enable_appointments_sub
-                    )}
+                    className={`settings-toggle ${editDraft?.enable_appointments_sub ? 'on' : ''} ${isLapsed ? 'disabled' : ''}`}
+                    onClick={() => !isLapsed && patchDraft({ enable_appointments_sub: !editDraft?.enable_appointments_sub })}
                   ><div className="knob" /></div>
                 </div>
 
@@ -2969,12 +3134,8 @@ export default function CampaignsPage() {
                     </small>
                   </div>
                   <div
-                    className={`settings-toggle ${settingsCampaign.enable_not_interested_sub ? 'on' : ''} ${isLapsed ? 'disabled' : ''}`}
-                    onClick={() => !isLapsed && updateSubToggle(
-                      settingsCampaign.id,
-                      'enable_not_interested_sub',
-                      !settingsCampaign.enable_not_interested_sub
-                    )}
+                    className={`settings-toggle ${editDraft?.enable_not_interested_sub ? 'on' : ''} ${isLapsed ? 'disabled' : ''}`}
+                    onClick={() => !isLapsed && patchDraft({ enable_not_interested_sub: !editDraft?.enable_not_interested_sub })}
                   ><div className="knob" /></div>
                 </div>
                 </>)}
@@ -3033,12 +3194,18 @@ export default function CampaignsPage() {
                     )}
                   </div>
                 ) : (() => {
-                  const enabled = campaignScriptLinks.filter(s => s.enabled)
-                  const disabled = campaignScriptLinks.filter(s => !s.enabled)
+                  // Render from the DRAFT, not the live links. campaignScriptLinks
+                  // is only the catalog of available scripts (names/metadata).
+                  const draftEnabled = editDraft?.enabledScriptIds || new Set<string>()
+                  const order = editDraft?.scriptOrder || []
+                  const byId = new Map(campaignScriptLinks.map(s => [s.id, s]))
+                  // Enabled scripts in draft order; disabled = the rest.
+                  const enabled = order.map(id => byId.get(id)).filter(Boolean) as CampaignScriptLink[]
+                  const disabled = campaignScriptLinks.filter(s => !draftEnabled.has(s.id))
                   return (
                     <>
                       <div className="script-toggle-hint">
-                        Toggle scripts on for this campaign. Drag enabled scripts to set tab order in the dialer.
+                        Toggle scripts on for this campaign. Drag enabled scripts to set tab order in the dialer. Nothing saves until you click SAVE CHANGES.
                       </div>
 
                       {enabled.length > 0 && (
@@ -3051,7 +3218,11 @@ export default function CampaignsPage() {
                               onDragStart={() => onLinkDragStart(s.id)}
                               onDragOver={e => onLinkDragOver(e, s.id)}
                               onDragLeave={() => setLinkDragOverId(null)}
-                              onDrop={e => onLinkDrop(e, s.id)}
+                              onDrop={e => {
+                                e.preventDefault()
+                                if (linkDragId && linkDragId !== s.id) draftReorderScript(linkDragId, s.id)
+                                setLinkDragId(null); setLinkDragOverId(null)
+                              }}
                               onDragEnd={onLinkDragEnd}
                             >
                               <span className="script-grip" title="Drag to reorder">⠿</span>
@@ -3061,7 +3232,7 @@ export default function CampaignsPage() {
                               </div>
                               <div
                                 className={`settings-toggle on ${isLapsed ? 'disabled' : ''}`}
-                                onClick={() => !isLapsed && toggleCampaignScript(s.id, false)}
+                                onClick={() => !isLapsed && draftToggleScript(s.id)}
                               ><div className="knob" /></div>
                             </div>
                           ))}
@@ -3079,7 +3250,7 @@ export default function CampaignsPage() {
                               </div>
                               <div
                                 className={`settings-toggle ${isLapsed ? 'disabled' : ''}`}
-                                onClick={() => !isLapsed && toggleCampaignScript(s.id, true)}
+                                onClick={() => !isLapsed && draftToggleScript(s.id)}
                               ><div className="knob" /></div>
                             </div>
                           ))}
@@ -3119,8 +3290,9 @@ export default function CampaignsPage() {
                 {!isLapsed && (
                   <button
                     className="ds-btn primary"
-                    onClick={() => openInDialer(settingsCampaign)}
-                  >OPEN IN DIALER →</button>
+                    onClick={saveEditDraft}
+                    disabled={editSaving || !editDirty}
+                  >{editSaving ? 'SAVING…' : editDirty ? 'SAVE CHANGES' : 'SAVED'}</button>
                 )}
               </div>
             </div>
