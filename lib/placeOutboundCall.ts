@@ -308,28 +308,33 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
   }
 
   if (p.amdEnabled) {
-    // ── AMD TUNING (instant-connect / background janitor, 1s) ────────────
-    // The agent is bridged to the lead the INSTANT they pick up (no gating, no
-    // dead air, no "hello… hello… hello" clipping). AMD runs in the BACKGROUND
-    // purely to drop machines: when amd-result hears 'machine_*' it hangs the
-    // call up, auto-disposes, deletes the voicemail recording, and (power mode)
-    // auto-advances. So AMD never delays a human — it only cleans up voicemails.
+    // ── AMD TUNING (instant-connect / background janitor) ────────────────
+    // The agent is bridged the INSTANT the lead picks up (no gating, no dead
+    // air). AMD runs in the BACKGROUND only: amd-result hangs up machines,
+    // auto-disposes, deletes the voicemail recording, and (power) auto-advances.
     //
-    // Timeout is set to 1s per request — the fastest practical machine drop so a
-    // voicemail is cut off almost immediately. Because we instant-connect, a fast
-    // timeout is safe: only 'machine_*'/'fax' trigger a hangup, never a human.
-    // ('unknown' from a too-fast decision does NOT hang up a live, already-bridged
-    // human in the user_dial path — see amd-result, which only acts on machine_*.)
-    //   - 'Enable' = fast human/machine classifier (doesn't wait for the beep).
-    //   - Thresholds tightened so the classifier commits inside the 1s window.
+    // VALID RANGES (SignalWire/Twilio compatibility API — out-of-range values
+    // make Calls.create return 400, which previously surfaced as a 500 on
+    // /api/calls/outbound and broke ALL dialing):
+    //   MachineDetectionTimeout         : seconds, default 30
+    //   MachineDetectionSpeechThreshold : 1000–6000 ms, default 2400
+    //   MachineDetectionSpeechEndThreshold: 500–5000 ms, default 1200
+    //   MachineDetectionSilenceTimeout  : 2000–10000 ms, default 5000
+    //
+    // SPEED NOTE: with MachineDetection=Enable, MachineDetectionTimeout does NOT
+    // speed up detection (per SignalWire/Twilio docs) — it only matters for
+    // DetectMessageEnd. The real "drop machines fast" levers in Enable mode are
+    // a low MachineDetectionSilenceTimeout (initial-silence→result) and a
+    // tighter SpeechThreshold. So we keep Timeout at a safe value and pull the
+    // others toward (but not below) their valid floors.
     outboundParams.MachineDetection = 'Enable'
     outboundParams.AsyncAmd = 'true'
     outboundParams.AsyncAmdStatusCallback = `${p.env.appUrl}/api/calls/amd-result`
     outboundParams.AsyncAmdStatusCallbackMethod = 'POST'
-    outboundParams.MachineDetectionTimeout = '1'
-    outboundParams.MachineDetectionSpeechThreshold = '1200'
-    outboundParams.MachineDetectionSpeechEndThreshold = '600'
-    outboundParams.MachineDetectionSilenceTimeout = '1500'
+    outboundParams.MachineDetectionTimeout = '5'
+    outboundParams.MachineDetectionSpeechThreshold = '1500'
+    outboundParams.MachineDetectionSpeechEndThreshold = '800'
+    outboundParams.MachineDetectionSilenceTimeout = '2000'
   }
 
   // ── PLACE LEAD CALL ─────────────────────────────────────────────────────
@@ -346,9 +351,17 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
   console.log(`[placeOutboundCall:${p.source}] Lead call response:`, leadData)
 
   if (!leadCallResponse.ok) {
+    // Surface the real provider error so a bad param (e.g. an out-of-range AMD
+    // value) is diagnosable instead of an opaque 500. SignalWire returns
+    // { code, message, more_info } on validation errors.
+    console.error(
+      `[placeOutboundCall:${p.source}] SignalWire rejected lead call`,
+      { status: leadCallResponse.status, code: leadData?.code, message: leadData?.message }
+    )
     return {
       success: false,
-      error: leadData.message || 'Lead call failed',
+      error: leadData?.message || 'Lead call failed',
+      detail: leadData?.code ? `SignalWire ${leadData.code}` : undefined,
       httpStatus: 500,
     }
   }
