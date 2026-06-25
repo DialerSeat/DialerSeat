@@ -155,6 +155,8 @@ export default function RecordingsPage() {
   const [campaignFilter, setCampaignFilter] = useState('all')
   const [dispositionFilter, setDispositionFilter] = useState('all')
   const [timeFilter, setTimeFilter] = useState('all')
+  const [customStart, setCustomStart] = useState('') // yyyy-mm-dd
+  const [customEnd, setCustomEnd] = useState('')     // yyyy-mm-dd
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [cursor, setCursor] = useState<number | null>(0)
@@ -292,27 +294,24 @@ export default function RecordingsPage() {
     let end = Infinity
     if (timeFilter === 'today') {
       start = startOfToday().getTime()
-    } else if (timeFilter === 'yesterday') {
-      const s = startOfToday(); const e = s.getTime()
-      s.setDate(s.getDate() - 1)
-      start = s.getTime(); end = e
     } else if (timeFilter === '7d') {
       start = now - 7 * dayMs
-    } else if (timeFilter === 'thisweek') {
-      const d = startOfToday(); const dow = (d.getDay() + 6) % 7 // Monday = 0
-      d.setDate(d.getDate() - dow); start = d.getTime()
     } else if (timeFilter === '30d') {
       start = now - 30 * dayMs
-    } else if (timeFilter === 'thismonth') {
-      const d = new Date(); start = new Date(d.getFullYear(), d.getMonth(), 1).getTime()
-    } else if (timeFilter === 'lastmonth') {
-      const d = new Date()
-      start = new Date(d.getFullYear(), d.getMonth() - 1, 1).getTime()
-      end = new Date(d.getFullYear(), d.getMonth(), 1).getTime()
     } else if (timeFilter === '90d') {
       start = now - 90 * dayMs
-    } else if (timeFilter === 'thisyear') {
-      const d = new Date(); start = new Date(d.getFullYear(), 0, 1).getTime()
+    } else if (timeFilter === 'year') {
+      start = now - 365 * dayMs
+    } else if (timeFilter === 'custom') {
+      // Inclusive day range from the two date pickers. A missing bound is open.
+      if (customStart) {
+        const d = new Date(customStart + 'T00:00:00')
+        if (!isNaN(d.getTime())) start = d.getTime()
+      }
+      if (customEnd) {
+        const d = new Date(customEnd + 'T00:00:00')
+        if (!isNaN(d.getTime())) end = d.getTime() + dayMs // include the end day
+      }
     }
     return recordings.filter(r => {
       const t = new Date(r.created_at).getTime()
@@ -408,6 +407,10 @@ export default function RecordingsPage() {
           min-width: 0;
         }
         .rec-mobile-toggle { display: none; }
+        .rec-custom-range { grid-column: 1 / -1; }
+        .rec-custom-inputs { display: flex; align-items: center; gap: 8px; }
+        .rec-custom-inputs input { width: auto; flex: 1; }
+        .rec-range-sep { color: ${T.muted}; font-size: 12px; flex-shrink: 0; }
         .rec-list { flex: 1; overflow-y: auto; padding: 12px 16px; }
         .rec-card {
           border: 1px solid ${T.border};
@@ -718,18 +721,37 @@ export default function RecordingsPage() {
         <div className="field">
           <label>TIME</label>
           <select value={timeFilter} onChange={e => setTimeFilter(e.target.value)}>
-            <option value="all">[ ALL TIME ]</option>
+            <option value="all">ALL TIME</option>
             <option value="today">TODAY</option>
-            <option value="yesterday">YESTERDAY</option>
             <option value="7d">LAST 7 DAYS</option>
-            <option value="thisweek">THIS WEEK</option>
             <option value="30d">LAST 30 DAYS</option>
-            <option value="thismonth">THIS MONTH</option>
-            <option value="lastmonth">LAST MONTH</option>
             <option value="90d">LAST 90 DAYS</option>
-            <option value="thisyear">THIS YEAR</option>
+            <option value="year">LAST YEAR</option>
+            <option value="custom">CUSTOM RANGE</option>
           </select>
         </div>
+        {timeFilter === 'custom' && (
+          <div className="field rec-custom-range">
+            <label>CUSTOM RANGE</label>
+            <div className="rec-custom-inputs">
+              <input
+                type="date"
+                value={customStart}
+                max={customEnd || undefined}
+                onChange={e => setCustomStart(e.target.value)}
+                aria-label="Start date"
+              />
+              <span className="rec-range-sep">→</span>
+              <input
+                type="date"
+                value={customEnd}
+                min={customStart || undefined}
+                onChange={e => setCustomEnd(e.target.value)}
+                aria-label="End date"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="rec-list">
@@ -983,12 +1005,6 @@ export default function RecordingsPage() {
           }}>
             {loading ? 'LOADING MORE...' : 'SCROLL TO LOAD MORE'}
           </div>
-        )}
-        {cursor === null && recordings.length > 0 && (
-          <div style={{
-            padding: 20, textAlign: 'center',
-            fontSize: 10, letterSpacing: 2, color: T.muted,
-          }}>END OF LIST · {recordings.length} OF {total.toLocaleString()}</div>
         )}
       </div>
     </div>

@@ -308,31 +308,28 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
   }
 
   if (p.amdEnabled) {
-    // ── AMD TUNING (instant-connect / background janitor) ────────────────
+    // ── AMD TUNING (instant-connect / background janitor, 1s) ────────────
     // The agent is bridged to the lead the INSTANT they pick up (no gating, no
     // dead air, no "hello… hello… hello" clipping). AMD runs in the BACKGROUND
     // purely to drop machines: when amd-result hears 'machine_*' it hangs the
     // call up, auto-disposes, deletes the voicemail recording, and (power mode)
     // auto-advances. So AMD never delays a human — it only cleans up voicemails.
     //
-    // Tuning priorities, in order:
-    //   1. NEVER false-positive a live human as a machine (that hangs up on a
-    //      real person mid-"hello" — the worst outcome). So thresholds are kept
-    //      conservative rather than trigger-happy.
-    //   2. Drop genuine machines quickly so a voicemail is cut off a beat in,
-    //      not after the whole greeting. Hence a short Timeout.
-    //   - 'Enable' = fast human/machine classifier (doesn't wait for the beep
-    //     like DetectMessageEnd, which is slower and costs more per voicemail).
-    //   - Timeout 4s: machines are classified and dropped quickly; still gives a
-    //     slow-to-answer human enough room not to be cut off.
+    // Timeout is set to 1s per request — the fastest practical machine drop so a
+    // voicemail is cut off almost immediately. Because we instant-connect, a fast
+    // timeout is safe: only 'machine_*'/'fax' trigger a hangup, never a human.
+    // ('unknown' from a too-fast decision does NOT hang up a live, already-bridged
+    // human in the user_dial path — see amd-result, which only acts on machine_*.)
+    //   - 'Enable' = fast human/machine classifier (doesn't wait for the beep).
+    //   - Thresholds tightened so the classifier commits inside the 1s window.
     outboundParams.MachineDetection = 'Enable'
     outboundParams.AsyncAmd = 'true'
     outboundParams.AsyncAmdStatusCallback = `${p.env.appUrl}/api/calls/amd-result`
     outboundParams.AsyncAmdStatusCallbackMethod = 'POST'
-    outboundParams.MachineDetectionTimeout = '4'
-    outboundParams.MachineDetectionSpeechThreshold = '2200'
-    outboundParams.MachineDetectionSpeechEndThreshold = '900'
-    outboundParams.MachineDetectionSilenceTimeout = '3000'
+    outboundParams.MachineDetectionTimeout = '1'
+    outboundParams.MachineDetectionSpeechThreshold = '1200'
+    outboundParams.MachineDetectionSpeechEndThreshold = '600'
+    outboundParams.MachineDetectionSilenceTimeout = '1500'
   }
 
   // ── PLACE LEAD CALL ─────────────────────────────────────────────────────

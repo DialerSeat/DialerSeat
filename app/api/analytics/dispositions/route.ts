@@ -25,7 +25,14 @@ export async function GET(req: NextRequest) {
 
   const counts: Record<string, number> = {}
   for (const c of data || []) {
-    const d = c.disposition || 'NO ANSWER'
+    let d = c.disposition || 'NO ANSWER'
+    // Analytics cleanup:
+    //  - NO_ANSWER_AMD is the background AMD voicemail-filter outcome, not a
+    //    meaningful sales disposition — drop it from analytics entirely.
+    //  - NO_ANSWER (raw) is folded into the single clean "NO ANSWER" bucket so
+    //    there's one no-answer slice, not separate raw/clean variants.
+    if (d === 'NO_ANSWER_AMD') continue
+    if (d === 'NO_ANSWER') d = 'NO ANSWER'
     counts[d] = (counts[d] || 0) + 1
   }
 

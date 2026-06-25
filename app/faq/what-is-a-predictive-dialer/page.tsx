@@ -70,6 +70,33 @@ export default function PredictiveDialerPage() {
             line-height: 1.05;
             margin: 0 0 20px 0;
           }
+          .dm-tldr {
+            margin: 28px auto 0;
+            max-width: 620px;
+            text-align: left;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid ${MODE_COLOR}66;
+            border-left: 3px solid ${MODE_COLOR};
+            border-radius: 6px;
+            padding: 16px 20px;
+          }
+          .dm-tldr-label {
+            display: inline-block;
+            font-size: 11px;
+            letter-spacing: 2px;
+            font-weight: 700;
+            color: #fff;
+            background: ${MODE_COLOR};
+            border-radius: 3px;
+            padding: 3px 9px;
+            margin-bottom: 10px;
+          }
+          .dm-tldr p {
+            margin: 0;
+            font-size: 15px;
+            line-height: 1.6;
+            color: #d6dae8;
+          }
           .dm-lead {
             font-size: 18px;
             line-height: 1.55;
@@ -321,6 +348,10 @@ export default function PredictiveDialerPage() {
               Invented in the early 1980s, regulated since 2003, and still
               the highest-throughput outbound mode in existence.
             </p>
+            <div className="dm-tldr">
+              <span className="dm-tldr-label">TL;DR</span>
+              <p>Dials several lines per agent at once and uses pacing math to connect you only when a real human answers — the highest-volume mode. Governed by an abandon-rate cap (FTC 3%) to stay compliant. Best for big, well-staffed campaigns where maximizing live conversations per hour is the goal.</p>
+            </div>
           </div>
         </section>
 
