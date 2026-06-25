@@ -2189,6 +2189,17 @@ function DialerPageInner() {
         @media (max-width: 768px) {
           .dialer-root { height: calc(100vh - 64px); height: calc(100dvh - 64px); }
           .dialer-status-bar { padding: 6px 12px !important; }
+          /* Mobile script box: give it a real, bounded height so it never
+             collapses, and let the body scroll inside it. The tab row wraps. */
+          .dialer-script-box {
+            min-height: 220px !important;
+            max-height: 45vh;
+          }
+          .dialer-script-body {
+            -webkit-overflow-scrolling: touch;
+            font-size: 13px !important;
+            line-height: 1.75 !important;
+          }
           .dialer-status-bar-left { gap: 10px; }
           .dialer-status-bar-right { gap: 10px; }
           .dialer-status-bar-right .dialer-time-block { display: none !important; }
@@ -2614,6 +2625,16 @@ function DialerPageInner() {
                             <div style={{ fontSize: '15px', fontFamily: 'monospace', color: terminalAccent, fontWeight: 'bold', letterSpacing: '2px' }}>
                               {displayLead.phone}
                             </div>
+                            {/* Location · live timer — matches /welcome page 1 layout */}
+                            <div style={{ fontSize: '10px', fontFamily: 'monospace', color: terminalMuted, letterSpacing: '1px', marginTop: '4px' }}>
+                              {[displayLead.city, displayLead.state].filter(Boolean).join(', ')}
+                              {status === 'connected' && (
+                                <>
+                                  {(displayLead.city || displayLead.state) ? ' · ' : ''}
+                                  {formatTime(seconds)}
+                                </>
+                              )}
+                            </div>
                           </div>
                           <div style={{
                             padding: '4px 10px', borderRadius: '2px',
@@ -2638,7 +2659,7 @@ function DialerPageInner() {
                       )}
                     </div>
                     {activeScript && (
-                      <div style={{
+                      <div className="dialer-script-box" style={{
                         flex: 1, margin: '0 12px 12px',
                         background: terminalBg, border: `1px solid ${terminalBorder}`,
                         borderLeft: `3px solid ${terminalAccent}`, borderRadius: '3px',
@@ -2674,7 +2695,7 @@ function DialerPageInner() {
                         </div>
                         <div style={{ flex: 1, padding: '10px 12px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                           <div style={{ fontSize: '8px', letterSpacing: '2px', color: terminalMuted, marginBottom: '6px', flexShrink: 0 }}>CALL SCRIPT</div>
-                          <div style={{
+                          <div className="dialer-script-body" style={{
                             fontSize: '11px', lineHeight: '1.7', color: terminalText,
                             fontFamily: 'monospace', whiteSpace: 'pre-wrap', overflowY: 'auto', flex: 1,
                           }}>{activeScript}</div>

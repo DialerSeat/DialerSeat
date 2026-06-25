@@ -326,6 +326,9 @@ export default function CampaignsPage() {
   const [settingsSubOpen, setSettingsSubOpen] = useState(false)
   const [createFirstScriptName, setCreateFirstScriptName] = useState('')
   const [createFirstScriptBody, setCreateFirstScriptBody] = useState('')
+  // NEW CAMPAIGN now uses the same toggle-script model as edit: pick which
+  // existing library scripts are enabled on the new campaign (no inline editor).
+  const [createEnabledScriptIds, setCreateEnabledScriptIds] = useState<Set<string>>(new Set())
   const [csvData, setCsvData] = useState<any[]>([])
   const [csvName, setCsvName] = useState('')
   const [dragging, setDragging] = useState(false)
@@ -491,6 +494,69 @@ export default function CampaignsPage() {
     setCreateFirstScriptBody('')
     setCsvData([])
     setCsvName('')
+    setCreateSubOpen(false)
+    setCreateEnabledScriptIds(new Set())
+  }
+
+  // Always open the create modal on a clean slate — never carry over the last
+  // session's CSV, name, or script selections.
+  const openCreate = () => {
+    resetCreateForm()
+    setShowCreate(true)
+    loadLibrary() // for the toggle-script picker (same model as edit)
+  }
+
+  // "Start a blank lead sheet": create the campaign with whatever's filled in
+  // (name/mode/AMD/subs/scripts), then immediately open its blank lead editor so
+  // the user can type leads in like a fresh spreadsheet — no CSV needed.
+  const createBlankSheet = async () => {
+    if (!campaignName.trim() || !user) return
+    setCreating(true)
+    try {
+      const res = await fetch('/api/campaigns/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: campaignName, dialer_mode: createMode, amd_enabled: createAmd }),
+      })
+      const data = await res.json()
+      if (!data.success) {
+        if (res.status === 403) setTier('lapsed')
+        throw new Error(data.error)
+      }
+      const newId = data.campaign.id
+
+      const parallel: Promise<any>[] = []
+      if (createApptSub || createNotIntSub) {
+        parallel.push(fetch('/api/campaigns/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: newId,
+            enable_appointments_sub: createApptSub,
+            enable_not_interested_sub: createNotIntSub,
+          }),
+        }))
+      }
+      for (const scriptId of createEnabledScriptIds) {
+        parallel.push(fetch('/api/campaigns/script-links/toggle', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ campaign_id: newId, script_id: scriptId, enabled: true }),
+        }))
+      }
+      if (parallel.length > 0) await Promise.all(parallel)
+
+      resetCreateForm()
+      setShowCreate(false)
+      await fetchCampaigns()
+      // Open the blank lead editor for the new campaign (pass it directly so we
+      // don't depend on the derived settingsCampaign resolving this tick).
+      openEditor(data.campaign as Campaign)
+    } catch (err: any) {
+      alert(`Couldn't create the sheet: ${err.message || 'unknown error'}`)
+    } finally {
+      setCreating(false)
+    }
   }
 
   const handleCreate = async () => {
@@ -527,7 +593,7 @@ export default function CampaignsPage() {
         })
       }
 
-      // 3. Parallel: optional CSV upload + optional first script
+      // 3. Parallel: optional CSV upload + enable selected library scripts
       const parallel: Promise<any>[] = []
       if (csvData.length > 0) {
         parallel.push(
@@ -538,16 +604,12 @@ export default function CampaignsPage() {
           })
         )
       }
-      if (createFirstScriptBody.trim()) {
+      for (const scriptId of createEnabledScriptIds) {
         parallel.push(
-          fetch('/api/campaigns/scripts/create', {
+          fetch('/api/campaigns/script-links/toggle', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              campaign_id: newId,
-              name: createFirstScriptName.trim() || 'Main Script',
-              body: createFirstScriptBody,
-            }),
+            body: JSON.stringify({ campaign_id: newId, script_id: scriptId, enabled: true }),
           })
         )
       }
@@ -672,6 +734,20 @@ export default function CampaignsPage() {
     }
   }
 
+  // Overlay close that does NOT fire when a text-selection drag starts inside
+  // the modal and the mouse is released over the overlay. We only close when
+  // BOTH the mousedown and the click originate on the overlay element itself.
+  const overlayMouseDownRef = useRef(false)
+  const makeOverlayHandlers = (onClose: () => void) => ({
+    onMouseDown: (e: React.MouseEvent) => {
+      overlayMouseDownRef.current = e.target === e.currentTarget
+    },
+    onClick: (e: React.MouseEvent) => {
+      if (e.target === e.currentTarget && overlayMouseDownRef.current) onClose()
+      overlayMouseDownRef.current = false
+    },
+  })
+
   const openScriptsManager = async () => {
     setScriptsManagerOpen(true)
     setActiveLibId(null)
@@ -685,6 +761,17 @@ export default function CampaignsPage() {
       setLibName(first.name)
       setLibBody(first.body)
     }
+  }
+
+  // Manage Scripts from inside a campaign modal: CLOSE the campaign modal first
+  // so the manager doesn't open hidden behind it, then open the manager. We
+  // remember which campaign settings were open so the flow can feel continuous,
+  // but we do NOT reopen automatically — the user returns via the campaign list.
+  const openScriptsManagerFromCampaign = () => {
+    setShowCreate(false)
+    setSettingsId(null)
+    setEditorOpen(false)
+    openScriptsManager()
   }
 
   const closeScriptsManager = () => {
@@ -1049,19 +1136,21 @@ export default function CampaignsPage() {
   }
 
   // ─── EDITOR HANDLERS ──────────────────────────────────────────────────
-  const openEditor = async () => {
-    if (!settingsCampaign) return
+  const openEditor = async (campaignOverride?: Campaign) => {
+    const target = campaignOverride || settingsCampaign
+    if (!target) return
+    if (campaignOverride) setSettingsId(campaignOverride.id)
     setEditorOpen(true)
     setEditorLoading(true)
     setEditorEdits({})
     setEditorAdds([])
     setEditorDeletes(new Set())
     setEditorSelected(new Set())
-    loadCampaignLinks(settingsCampaign.id)
+    loadCampaignLinks(target.id)
     try {
       const params = new URLSearchParams({
         user_id: user?.id || '',
-        campaign_id: settingsCampaign.id,
+        campaign_id: target.id,
         cursor: '0',
         sort: 'created_asc',
       })
@@ -2223,6 +2312,42 @@ export default function CampaignsPage() {
           transition: all 0.12s;
           font-family: ${FUTURA};
         }
+        .cmp-blank-sheet-row {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 6px;
+          margin-top: 12px;
+        }
+        .cmp-blank-sheet-or {
+          font-size: 9px;
+          letter-spacing: 2px;
+          color: ${T.muted};
+          font-family: monospace;
+        }
+        .cmp-blank-sheet-btn {
+          padding: 9px 16px;
+          background: transparent;
+          border: 1px dashed ${T.blue};
+          border-radius: 4px;
+          color: ${T.blue};
+          font-size: 11px;
+          letter-spacing: 1.5px;
+          font-weight: bold;
+          cursor: pointer;
+          font-family: ${FUTURA};
+          transition: background 0.12s;
+        }
+        .cmp-blank-sheet-btn:hover:not(:disabled) { background: var(--brand-primary-soft); }
+        .cmp-blank-sheet-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+        .cmp-blank-sheet-tip {
+          font-size: 9px;
+          letter-spacing: 1px;
+          color: ${T.muted};
+          opacity: 0.8;
+          font-family: monospace;
+          text-align: center;
+        }
 
         /* ── HELPER TEXT ──────────────────────────────────────────────── */
         .cmp-helper {
@@ -2262,10 +2387,10 @@ export default function CampaignsPage() {
         </div>
         {!isLapsed ? (
           <div className="cmp-header-actions">
-            <button className="cmp-new-btn" onClick={() => openScriptsManager()}>
+            <button className="cmp-new-btn" onClick={() => openScriptsManagerFromCampaign()}>
               ▤ SCRIPTS
             </button>
-            <button className="cmp-new-btn" onClick={() => setShowCreate(true)}>
+            <button className="cmp-new-btn" onClick={openCreate}>
               + NEW CAMPAIGN
             </button>
           </div>
@@ -2303,7 +2428,7 @@ export default function CampaignsPage() {
                 : 'CREATE YOUR FIRST CAMPAIGN, UPLOAD A LEADS CSV, AND START DIALING.'}
             </div>
             {!isLapsed ? (
-              <button className="cmp-new-btn" onClick={() => setShowCreate(true)}>
+              <button className="cmp-new-btn" onClick={openCreate}>
                 + NEW CAMPAIGN
               </button>
             ) : (
@@ -2371,7 +2496,7 @@ export default function CampaignsPage() {
 
       {/* ─── CREATE MODAL (revamped — mirrors settings sections) ────────── */}
       {!isLapsed && showCreate && (
-        <div className="modal-overlay" onClick={() => !creating && setShowCreate(false)}>
+        <div className="modal-overlay" {...makeOverlayHandlers(() => { if (!creating) setShowCreate(false) })}>
           <div className="settings-modal" onClick={e => e.stopPropagation()}>
             <div className="settings-head">
               <input
@@ -2528,29 +2653,69 @@ export default function CampaignsPage() {
                     </>
                   )}
                 </div>
+                <div className="cmp-blank-sheet-row">
+                  <span className="cmp-blank-sheet-or">— or —</span>
+                  <button
+                    type="button"
+                    className="cmp-blank-sheet-btn"
+                    onClick={createBlankSheet}
+                    disabled={creating || !campaignName.trim()}
+                    title={!campaignName.trim() ? 'Name the campaign first' : 'Open a blank lead sheet'}
+                  >▤ START A BLANK LEAD SHEET</button>
+                  <span className="cmp-blank-sheet-tip">
+                    Skip the CSV and build leads by hand, like a blank spreadsheet.
+                  </span>
+                </div>
               </div>
-
-              {/* FIRST SCRIPT section */}
               <div className="settings-section-card">
-                <div className="settings-section-title">▸ FIRST SCRIPT (OPTIONAL)</div>
-                <p className="script-tip">
-                  Add a starting call script now, or skip and add scripts later
-                  from settings.
-                </p>
-                <input
-                  className="script-name-input"
-                  type="text"
-                  placeholder="Script name (e.g. Cold open)"
-                  value={createFirstScriptName}
-                  onChange={e => setCreateFirstScriptName(e.target.value)}
-                />
-                <textarea
-                  className="script-body-textarea"
-                  rows={6}
-                  placeholder="Hi [Name], this is [Agent] calling from…"
-                  value={createFirstScriptBody}
-                  onChange={e => setCreateFirstScriptBody(e.target.value)}
-                />
+                <div className="settings-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span>▸ CALL SCRIPTS</span>
+                  <button
+                    type="button"
+                    className="script-manage-link"
+                    onClick={() => openScriptsManagerFromCampaign()}
+                  >MANAGE SCRIPTS ↗</button>
+                </div>
+                {library.length === 0 ? (
+                  <div style={{
+                    padding: '20px', textAlign: 'center',
+                    background: T.bg, border: `1px dashed ${T.border}`, borderRadius: 3,
+                  }}>
+                    <p style={{ fontSize: 11, letterSpacing: 1, color: T.muted, margin: '0 0 12px', fontFamily: 'monospace' }}>
+                      Your script library is empty.
+                    </p>
+                    <button className="ds-btn primary" onClick={() => openScriptsManagerFromCampaign()}>
+                      + CREATE A SCRIPT
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="script-toggle-hint">
+                      Turn scripts on for this campaign. You can reorder them later in settings.
+                    </div>
+                    <div className="script-toggle-group">
+                      {library.map(s => {
+                        const on = createEnabledScriptIds.has(s.id)
+                        return (
+                          <div key={s.id} className={`script-toggle-row ${on ? '' : 'off'}`}>
+                            <div className="script-toggle-label" style={!on ? { color: T.muted } : undefined}>
+                              {(s.name || 'UNTITLED').toUpperCase()}
+                              {s.is_team && <span className="team-mark">TEAM</span>}
+                            </div>
+                            <div
+                              className={`settings-toggle ${on ? 'on' : ''}`}
+                              onClick={() => setCreateEnabledScriptIds(prev => {
+                                const next = new Set(prev)
+                                if (next.has(s.id)) next.delete(s.id); else next.add(s.id)
+                                return next
+                              })}
+                            ><div className="knob" /></div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </>
+                )}
               </div>
 
             </div>
@@ -2579,7 +2744,7 @@ export default function CampaignsPage() {
       {/* ─── SETTINGS MODAL ───────────────────────────────────────────── */}
       {/* ─── GLOBAL SCRIPTS MANAGER MODAL ─────────────────────────────── */}
       {scriptsManagerOpen && (
-        <div className="modal-overlay" onClick={closeScriptsManager}>
+        <div className="modal-overlay" {...makeOverlayHandlers(closeScriptsManager)}>
           <div className="settings-modal" onClick={e => e.stopPropagation()}>
             <div className="settings-head">
               <div className="settings-name-input" style={{ display: 'flex', alignItems: 'center' }}>
@@ -2698,7 +2863,7 @@ export default function CampaignsPage() {
       )}
 
       {settingsCampaign && !editorOpen && (
-        <div className="modal-overlay" onClick={closeSettings}>
+        <div className="modal-overlay" {...makeOverlayHandlers(closeSettings)}>
           <div className="settings-modal" onClick={e => e.stopPropagation()}>
             <div className="settings-head">
               <input
@@ -2844,7 +3009,7 @@ export default function CampaignsPage() {
                   <button
                     type="button"
                     className="script-manage-link"
-                    onClick={() => openScriptsManager()}
+                    onClick={() => openScriptsManagerFromCampaign()}
                   >MANAGE SCRIPTS ↗</button>
                 </div>
 
@@ -2862,7 +3027,7 @@ export default function CampaignsPage() {
                       Your script library is empty.
                     </p>
                     {!isLapsed && (
-                      <button className="ds-btn primary" onClick={() => openScriptsManager()}>
+                      <button className="ds-btn primary" onClick={() => openScriptsManagerFromCampaign()}>
                         + CREATE A SCRIPT
                       </button>
                     )}
@@ -3076,7 +3241,7 @@ export default function CampaignsPage() {
               <div className="editor-scripts-head">
                 <span className="editor-scripts-title">CAMPAIGN SCRIPTS</span>
                 <span className="editor-scripts-hint">Toggle on/off · drag enabled scripts to set dialer tab order</span>
-                <button className="script-manage-link" onClick={() => openScriptsManager()} style={{ marginLeft: 'auto' }}>
+                <button className="script-manage-link" onClick={() => openScriptsManagerFromCampaign()} style={{ marginLeft: 'auto' }}>
                   MANAGE LIBRARY ↗
                 </button>
               </div>
@@ -3084,7 +3249,7 @@ export default function CampaignsPage() {
                 <div className="editor-scripts-empty">LOADING…</div>
               ) : campaignScriptLinks.length === 0 ? (
                 <div className="editor-scripts-empty">
-                  No scripts in your library. <button className="script-manage-link" onClick={() => openScriptsManager()}>CREATE ONE ↗</button>
+                  No scripts in your library. <button className="script-manage-link" onClick={() => openScriptsManagerFromCampaign()}>CREATE ONE ↗</button>
                 </div>
               ) : (
                 <div className="editor-scripts-chips">
