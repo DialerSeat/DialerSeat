@@ -87,6 +87,11 @@ export async function POST(req: NextRequest) {
     const rawCampaignId: string | null = body.campaign_id ?? null
     const dialerMode: string | null = body.dialer_mode ?? null
     const rawCallId: string | null = body.current_call_id ?? null
+    // GHOST-DIALING SERVER GUARD: the predictive controller (which fans out lead
+    // calls) must only run when the client has EXPLICITLY armed the engine via
+    // the INITIATE button — never merely because the agent toggled Available.
+    // The client sends predictive_armed=true only while the engine is started.
+    const predictiveArmed: boolean = body.predictive_armed === true
     // current_call_id and campaign_id are uuid columns. The client may pass a
     // provider call SID (non-uuid) or a virtual sub-campaign id ("<uuid>:appt").
     // Writing those into a uuid column throws and 500s the heartbeat. Normalize:
@@ -185,9 +190,15 @@ export async function POST(req: NextRequest) {
     //
     // Controller only fires when ALL of these are true:
     //   - dialer_mode = 'predictive'
+    //   - predictive_armed = true  ← the agent pressed INITIATE (not just online)
     //   - state is in CONTROLLER_TRIGGER_STATES
     //   - campaign_id is set
     //   - shouldYield is false (FTC margin)
+    //
+    // The predictive_armed gate is the server-side half of the ghost-dialing
+    // lockdown: without it, merely toggling Available on a predictive campaign
+    // would start fanning out lead calls. Now nothing dials until the agent
+    // explicitly starts the engine.
     //
     // We don't await the result for the response — the heartbeat returns
     // immediately. But we DO await within the request so failures get
@@ -198,6 +209,7 @@ export async function POST(req: NextRequest) {
 
     if (
       dialerMode === 'predictive' &&
+      predictiveArmed &&
       campaignId &&
       !shouldYield &&
       CONTROLLER_TRIGGER_STATES.has(state)

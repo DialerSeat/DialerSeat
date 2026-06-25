@@ -308,15 +308,30 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
   }
 
   if (p.amdEnabled) {
-    // These are the exact values from the original outbound route.
-    // Don't change without testing — they are tuned for human/machine balance.
+    // ── AMD TUNING (instant-connect / background janitor) ────────────────
+    // The agent is bridged to the lead the INSTANT they pick up (no gating, no
+    // dead air, no "hello… hello… hello" clipping). AMD runs in the BACKGROUND
+    // purely to drop machines: when amd-result hears 'machine_*' it hangs the
+    // call up, auto-disposes, deletes the voicemail recording, and (power mode)
+    // auto-advances. So AMD never delays a human — it only cleans up voicemails.
+    //
+    // Tuning priorities, in order:
+    //   1. NEVER false-positive a live human as a machine (that hangs up on a
+    //      real person mid-"hello" — the worst outcome). So thresholds are kept
+    //      conservative rather than trigger-happy.
+    //   2. Drop genuine machines quickly so a voicemail is cut off a beat in,
+    //      not after the whole greeting. Hence a short Timeout.
+    //   - 'Enable' = fast human/machine classifier (doesn't wait for the beep
+    //     like DetectMessageEnd, which is slower and costs more per voicemail).
+    //   - Timeout 4s: machines are classified and dropped quickly; still gives a
+    //     slow-to-answer human enough room not to be cut off.
     outboundParams.MachineDetection = 'Enable'
     outboundParams.AsyncAmd = 'true'
     outboundParams.AsyncAmdStatusCallback = `${p.env.appUrl}/api/calls/amd-result`
     outboundParams.AsyncAmdStatusCallbackMethod = 'POST'
-    outboundParams.MachineDetectionTimeout = '10'
-    outboundParams.MachineDetectionSpeechThreshold = '1800'
-    outboundParams.MachineDetectionSpeechEndThreshold = '800'
+    outboundParams.MachineDetectionTimeout = '4'
+    outboundParams.MachineDetectionSpeechThreshold = '2200'
+    outboundParams.MachineDetectionSpeechEndThreshold = '900'
     outboundParams.MachineDetectionSilenceTimeout = '3000'
   }
 
@@ -352,6 +367,7 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
       signalwire_call_id: leadData.sid,
       duration: 0,
       disposition: null,
+      dial_source: p.source,
       // Controller-originated calls get a marker so we can distinguish them
       // in analytics and so the abandon-tracker knows to count them.
       ...(p.source === 'controller_fanout' && p.agentSessionId
@@ -372,8 +388,15 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
   }
 
   // ── PLACE AGENT CALL (only for user_dial) ───────────────────────────────
-  // For controller fanout we don't pre-place the agent leg — the controller
-  // decides routing once AMD confirms human (or aborts on machine).
+  // INSTANT CONNECT (no AMD bridge-gating): we place the agent leg immediately
+  // for user_dial so the agent is connected the moment the lead picks up — zero
+  // dead air, no "hello… hello… hello" clipping that gating causes. AMD runs in
+  // the BACKGROUND (see amd-result): if it later confirms a machine it hangs the
+  // call up fast, auto-disposes, and deletes the voicemail recording. So a human
+  // is never delayed; a voicemail is just dropped a beat in.
+  //
+  // For controller fanout we still don't pre-place the agent leg — the
+  // controller decides routing once AMD confirms human (or aborts on machine).
   let agentCallSid: string | undefined
   if (p.source === 'user_dial') {
     const agentSipUri = `sip:${p.env.sipUsername}@${p.env.sipDomain}`
