@@ -49,9 +49,38 @@ export async function GET() {
     )
   }
 
+  // ── ICE SERVERS (the audio-path fix) ──────────────────────────────────────
+  // Without STUN/TURN the browser only offers host candidates (its private LAN
+  // IP). Across NAT that gives SignalWire no reachable media path, so after the
+  // lead picks up there is multi-second dead air (or silence the whole call)
+  // while ICE flails. STUN lets the browser discover its public IP for a direct
+  // path (fixes the common case). TURN relays media when a direct path is
+  // impossible (symmetric NAT / corporate firewalls) — required for a true
+  // "pickup = hear, no exceptions" guarantee.
+  //
+  // TURN is added ONLY if its env vars are present, so this endpoint stays valid
+  // before TURN is provisioned. To enable TURN later, set:
+  //   SIGNALWIRE_TURN_URLS      (comma-separated, e.g. "turn:turn.signalwire.com:3478?transport=udp")
+  //   SIGNALWIRE_TURN_USERNAME
+  //   SIGNALWIRE_TURN_CREDENTIAL
+  const iceServers: { urls: string | string[]; username?: string; credential?: string }[] = [
+    { urls: ['stun:stun.signalwire.com:3478', 'stun:stun.l.google.com:19302'] },
+  ]
+
+  const turnUrls = process.env.SIGNALWIRE_TURN_URLS
+  const turnUsername = process.env.SIGNALWIRE_TURN_USERNAME
+  const turnCredential = process.env.SIGNALWIRE_TURN_CREDENTIAL
+  if (turnUrls && turnUsername && turnCredential) {
+    iceServers.push({
+      urls: turnUrls.split(',').map(u => u.trim()).filter(Boolean),
+      username: turnUsername,
+      credential: turnCredential,
+    })
+  }
+
   // no-store so the credentials are never cached by the browser or any proxy.
   return NextResponse.json(
-    { success: true, sipUsername, sipPassword, sipDomain },
+    { success: true, sipUsername, sipPassword, sipDomain, iceServers },
     { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate', 'Pragma': 'no-cache' } }
   )
 }

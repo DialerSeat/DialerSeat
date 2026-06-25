@@ -179,6 +179,9 @@ function DialerPageInner() {
   const [campaignsLoaded, setCampaignsLoaded] = useState(false)
   const [showSelectCampaignMsg, setShowSelectCampaignMsg] = useState(false)
   const [callStart, setCallStart] = useState(0)
+  // Final whole-second duration of the call that just ended, shown on the
+  // lead profile / disposition sheet after hangup.
+  const [lastCallDuration, setLastCallDuration] = useState<number | null>(null)
   const [noLeads, setNoLeads] = useState(false)
   const [activeCallSid, setActiveCallSid] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
@@ -545,6 +548,7 @@ function DialerPageInner() {
         let sipUsername: string | undefined
         let sipPassword: string | undefined
         let sipDomain: string | undefined
+        let iceServers: RTCIceServer[] | undefined
         try {
           const credRes = await fetch('/api/calls/sip-credentials')
           if (!credRes.ok) {
@@ -559,6 +563,7 @@ function DialerPageInner() {
           sipUsername = cred.sipUsername
           sipPassword = cred.sipPassword
           sipDomain = cred.sipDomain
+          iceServers = cred.iceServers
         } catch (credErr) {
           console.error('SIP credentials request error:', credErr)
           return
@@ -566,7 +571,7 @@ function DialerPageInner() {
 
         if (!sipUsername || !sipPassword || !sipDomain) return
 
-        const { UserAgent, Registerer } = await import('sip.js')
+        const { UserAgent, Registerer, SessionState } = await import('sip.js')
         const uri = UserAgent.makeURI(`sip:${sipUsername}@${sipDomain}`)
         if (!uri) return
 
@@ -576,6 +581,20 @@ function DialerPageInner() {
           authorizationPassword: sipPassword,
           transportOptions: { server: `wss://${sipDomain}` },
           sessionDescriptionHandlerFactoryOptions: {
+            // peerConnectionConfiguration.iceServers is THE audio-path fix.
+            // Without STUN/TURN the browser can't find a reachable media path
+            // across NAT and you get dead air after the lead picks up. Fall back
+            // to public STUN if the server didn't return any (so audio still
+            // works even if the endpoint shape changes).
+            peerConnectionConfiguration: {
+              iceServers:
+                iceServers && iceServers.length > 0
+                  ? iceServers
+                  : [{ urls: ['stun:stun.signalwire.com:3478', 'stun:stun.l.google.com:19302'] }],
+              // Pool a candidate ahead of time so gathering doesn't add latency
+              // at answer. Small but helps the "pickup = hear" goal.
+              iceCandidatePoolSize: 1,
+            },
             constraints: { audio: true, video: false },
           },
         })
@@ -597,18 +616,22 @@ function DialerPageInner() {
               return
             }
             try {
-              const { SessionState: SS } = await import('sip.js')
               invitation.stateChange.addListener((state: any) => {
-                if (state === SS.Established) {
+                if (state === SessionState.Established) {
                   swCallRef.current = invitation
                   attachSIPAudio(invitation)
-                } else if (state === SS.Terminated) {
+                } else if (state === SessionState.Terminated) {
                   if (swCallRef.current === invitation) swCallRef.current = null
                 }
               })
               await invitation.accept({
                 sessionDescriptionHandlerOptions: { constraints: { audio: true, video: false } },
               })
+              // Attach immediately as well — don't wait only on the Established
+              // event. The SDH/peer connection exists right after accept(), so
+              // wiring audio now shaves the gap to first sound.
+              swCallRef.current = invitation
+              attachSIPAudio(invitation)
             } catch (err) {
               console.error('Error accepting SIP invite:', err)
             }
@@ -1232,10 +1255,30 @@ function DialerPageInner() {
     }
   }
 
+  // Live timer display: H:MM:SS once the call passes an hour, else MM:SS.
   const formatTime = (s: number) => {
-    const m = Math.floor(s / 60)
-    const sec = s % 60
+    const safe = Math.max(0, Math.floor(s))
+    const h = Math.floor(safe / 3600)
+    const m = Math.floor((safe % 3600) / 60)
+    const sec = safe % 60
+    if (h > 0) {
+      return `${h}:${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`
+    }
     return `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`
+  }
+
+  // Human-readable duration for the after-call summary, e.g. "1h 4m 12s",
+  // "3m 8s", "47s". Whole seconds only — never milliseconds.
+  const formatDurationLong = (totalSeconds: number) => {
+    const safe = Math.max(0, Math.floor(totalSeconds))
+    const h = Math.floor(safe / 3600)
+    const m = Math.floor((safe % 3600) / 60)
+    const sec = safe % 60
+    const parts: string[] = []
+    if (h > 0) parts.push(`${h}h`)
+    if (m > 0) parts.push(`${m}m`)
+    parts.push(`${sec}s`) // always show seconds so a sub-minute call still reads
+    return parts.join(' ')
   }
 
   const now = new Date()
@@ -1330,6 +1373,7 @@ function DialerPageInner() {
     setSessionStats(s => ({ ...s, calls: s.calls + 1 }))
     playInitiateBlip()
     armDialing() // user-initiated dial — allow SignalWire to bridge to us
+    setLastCallDuration(null) // clear the previous call's duration readout
 
     setAmdActivity(prev => [`AMD ENABLED — analyzing pickup`, ...prev].slice(0, 5))
 
@@ -1430,6 +1474,11 @@ function DialerPageInner() {
             setCurrentLead(null)
             if (autoChainOnFailure) scheduleDial(600)
           } else {
+            // Snapshot the final duration before the timer effect resets it,
+            // so the disposition sheet can show how long the call lasted.
+            setLastCallDuration(
+              callStart ? Math.max(0, Math.floor((Date.now() - callStart) / 1000)) : seconds
+            )
             setStatus('ended')
             setShowDisposition(true)
           }
@@ -2643,6 +2692,20 @@ function DialerPageInner() {
               padding: '10px 14px', background: terminalSurface,
               border: `2px solid ${terminalAccent}`, borderRadius: '4px', flexShrink: 0,
             }}>
+              {lastCallDuration !== null && (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: '8px',
+                  marginBottom: '10px', paddingBottom: '8px',
+                  borderBottom: `1px solid ${terminalBorder}`,
+                  fontSize: '10px', letterSpacing: '2px', color: terminalMuted,
+                }}>
+                  <span>⏱</span>
+                  <span>CALL LASTED</span>
+                  <span style={{ color: terminalAccent, fontWeight: 'bold', letterSpacing: '1px' }}>
+                    {formatDurationLong(lastCallDuration)}
+                  </span>
+                </div>
+              )}
               <div style={{ fontSize: '9px', letterSpacing: '3px', color: terminalMuted, marginBottom: '6px' }}>▸ NOTES <span style={{ opacity: 0.6 }}>(OPTIONAL)</span></div>
               <textarea
                 value={notes}
