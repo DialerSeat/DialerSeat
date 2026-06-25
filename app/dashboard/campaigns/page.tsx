@@ -530,7 +530,7 @@ export default function CampaignsPage() {
   // (name/mode/AMD/subs/scripts), then immediately open its blank lead editor so
   // the user can type leads in like a fresh spreadsheet — no CSV needed.
   const createBlankSheet = async () => {
-    if (!campaignName.trim() || !user) return
+    if (!user) return
     setCreating(true)
     try {
       const res = await fetch('/api/campaigns/create', {
@@ -569,9 +569,15 @@ export default function CampaignsPage() {
       resetCreateForm()
       setShowCreate(false)
       await fetchCampaigns()
+      // Initialize the settings draft for the new campaign BEFORE opening the
+      // lead editor. Without this, the settings form's draft-bound controls read
+      // from a null draft and appear locked until you exit and re-enter. Building
+      // the draft here means closing the editor lands on a fully-editable form.
+      const newCampaign = (data.campaign as Campaign)
+      await openSettings(newCampaign)
       // Open the blank lead editor for the new campaign (pass it directly so we
       // don't depend on the derived settingsCampaign resolving this tick).
-      openEditor(data.campaign as Campaign)
+      openEditor(newCampaign)
     } catch (err: any) {
       alert(`Couldn't create the sheet: ${err.message || 'unknown error'}`)
     } finally {
@@ -580,7 +586,7 @@ export default function CampaignsPage() {
   }
 
   const handleCreate = async () => {
-    if (!campaignName || !user) return
+    if (!user) return
     setCreating(true)
     try {
       // 1. Core create call (name, mode, AMD)
@@ -1082,14 +1088,15 @@ export default function CampaignsPage() {
         })
       }
 
-      // Commit: baseline becomes the saved draft; refresh the list once.
-      setEditBaseline({
-        ...editDraft,
-        enabledScriptIds: new Set(editDraft.enabledScriptIds),
-        scriptOrder: [...editDraft.scriptOrder],
-      })
+      // Commit: refresh the list, then close the settings modal and return to
+      // the campaigns page (the user asked SAVE CHANGES to take them back).
       await fetchCampaigns()
-      await loadCampaignLinks(id, true)
+      setEditDraft(null)
+      setEditBaseline(null)
+      setSettingsId(null)
+      setSettingsScripts([])
+      setActiveScriptId(null)
+      setDirtyScript(false)
     } catch (err: any) {
       alert(`Couldn't save changes: ${err.message || 'unknown error'}`)
     } finally {
@@ -1459,15 +1466,15 @@ export default function CampaignsPage() {
       })
       loadPreview(settingsCampaign.id)
       fetchCampaigns()
-      const params = new URLSearchParams({
-        user_id: user?.id || '',
-        campaign_id: settingsCampaign.id,
-        cursor: '0',
-        sort: 'created_asc',
-      })
-      const res = await fetch(`/api/leads/list?${params}&limit=500`)
-      const data = await res.json()
-      if (data.success) setEditorLeads(data.leads)
+      // Saving the sheet returns you to the campaigns page (close editor +
+      // settings). The editor's job is done; the user asked to land back on the
+      // campaign list after a save.
+      setEditorOpen(false)
+      setEditorScriptsOpen(false)
+      setEditorLeads([])
+      setEditDraft(null)
+      setEditBaseline(null)
+      setSettingsId(null)
     } catch (err: any) {
       alert(`Save failed: ${err?.message || 'unknown error'}`)
     } finally {
@@ -2825,8 +2832,8 @@ export default function CampaignsPage() {
                     type="button"
                     className="cmp-blank-sheet-btn"
                     onClick={createBlankSheet}
-                    disabled={creating || !campaignName.trim()}
-                    title={!campaignName.trim() ? 'Name the campaign first' : 'Open a blank lead sheet'}
+                    disabled={creating}
+                    title={'Open a blank lead sheet'}
                   >▤ START A BLANK LEAD SHEET</button>
                   <span className="cmp-blank-sheet-tip">
                     Skip the CSV and build leads by hand, like a blank spreadsheet.
@@ -2899,7 +2906,7 @@ export default function CampaignsPage() {
                 <button
                   className="ds-btn primary"
                   onClick={handleCreate}
-                  disabled={!campaignName || creating}
+                  disabled={creating}
                 >{creating ? 'CREATING…' : 'CREATE CAMPAIGN'}</button>
               </div>
             </div>

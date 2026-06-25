@@ -19,8 +19,24 @@ export async function POST(req: Request) {
     const body = await req.json()
     const { name, dialer_mode, amd_enabled, predictive_lines_per_agent, voicemail_drop_url } = body
 
-    if (!name || typeof name !== 'string' || !name.trim()) {
-      return NextResponse.json({ success: false, error: 'Campaign name required' }, { status: 400 })
+    // Name is optional now. If blank, auto-name "Untitled", and if that's taken
+    // use "Untitled (1)", "Untitled (2)", … so every creation method can save
+    // without the user typing a name.
+    let finalName = (typeof name === 'string' ? name.trim() : '')
+    if (!finalName) {
+      const { data: existing } = await supabaseAdmin
+        .from('campaigns')
+        .select('name')
+        .eq('user_id', userId)
+        .ilike('name', 'Untitled%')
+      const taken = new Set((existing || []).map(c => (c.name || '').trim()))
+      if (!taken.has('Untitled')) {
+        finalName = 'Untitled'
+      } else {
+        let n = 1
+        while (taken.has(`Untitled (${n})`)) n++
+        finalName = `Untitled (${n})`
+      }
     }
 
     // Validate dialer mode (default to 'power' for backward compat)
@@ -44,7 +60,8 @@ export async function POST(req: Request) {
       .from('campaigns')
       .insert({
         user_id: userId,
-        name: name.trim(),
+        name: finalName,
+        status: 'active', // new campaigns are active by default
         dialer_mode: mode,
         amd_enabled: amdEnabled,
         predictive_lines_per_agent: lines,

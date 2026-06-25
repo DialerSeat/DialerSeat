@@ -223,6 +223,9 @@ function DialerPageInner() {
   // appear at the end until the user drags them.
   const [scriptOrder, setScriptOrder] = useState<string[]>([])
   const [scriptDragKey, setScriptDragKey] = useState<string | null>(null)
+  // Full-screen lead profile (mobile): expands the profile/script card to fill
+  // the screen under the header so long scripts are fully visible.
+  const [profileFullscreen, setProfileFullscreen] = useState(false)
 
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const audioCtxRef = useRef<AudioContext | null>(null)
@@ -1354,7 +1357,11 @@ function DialerPageInner() {
       setStatus('idle')
       return
     }
-
+    // Abort latch (TERMINATE pressed) — refuse to place the call.
+    if (abortDialingRef.current) {
+      setStatus('idle')
+      return
+    }
     const rawPhone = lead.phone?.replace(/\D/g, '')
     if (!rawPhone || rawPhone.length < 10) {
       await fetch('/api/leads/dispose', {
@@ -1396,6 +1403,20 @@ function DialerPageInner() {
       const data = await res.json()
 
       if (data.success) {
+        // If TERMINATE was pressed while this POST was in flight, the call was
+        // created server-side but the user wants OUT. Hang it up immediately and
+        // do not bridge/poll — prevents a ghost ring after abort.
+        if (abortDialingRef.current || !availableRef.current) {
+          try {
+            await fetch('/api/calls/hangup', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ sid: data.callSid }),
+            })
+          } catch {}
+          disarmDialing({ force: true })
+          setStatus('idle')
+          return
+        }
         setActiveCallSid(data.callSid)
         startCallPolling(data.callSid)
       } else {
@@ -1488,6 +1509,7 @@ function DialerPageInner() {
             // while you're filling out the disposition sheet. The next call only
             // begins when you submit a disposition.
             cancelAllPendingDials()
+            setProfileFullscreen(false) // ensure the disposition sheet is reachable
             setStatus('ended')
             setShowDisposition(true)
           }
@@ -1584,13 +1606,42 @@ function DialerPageInner() {
     dialChainTimeoutsRef.current.clear()
   }
 
+  // ── AUTHORITATIVE KILL SWITCH ─────────────────────────────────────────────
+  // TERMINATE must halt EVERYTHING immediately and in the right order. The order
+  // matters: disarm FIRST (synchronously) so any in-flight or follow-on SIP
+  // INVITE is rejected the instant it arrives, THEN cancel pending auto-chain
+  // dials, stop polling, and hang up the active call. We also flip an abort flag
+  // that scheduleDial/handleDial check, so a dial that already fired its timer
+  // (but hasn't placed the call yet) aborts before hitting SignalWire.
+  const abortDialingRef = useRef(false)
+  const abortAllDialing = async () => {
+    abortDialingRef.current = true            // block any dial currently resolving
+    disarmDialing({ force: true })            // reject INVITEs immediately
+    cancelAllPendingDials()                   // kill queued auto-chain timers
+    setPredictiveEngineStarted(false)
+    predictiveEngineStartedRef.current = false
+    if (activePollRef.current) { clearInterval(activePollRef.current); activePollRef.current = null }
+    const sid = activeCallSidRef.current || activeCallSid
+    if (sid) { try { await hangupCall(sid) } catch {} }
+    setStatus('idle')
+    setCurrentLead(null)
+    setShowDisposition(false)
+    setDisposition('')
+    setSeconds(0)
+    lastIncomingCallSidRef.current = null
+    // Release the abort latch on the next tick so future user-initiated dials
+    // work again (the latch only needs to outlive the in-flight dial).
+    setTimeout(() => { abortDialingRef.current = false }, 50)
+  }
+
   // Schedules the next auto-chain dial, but tracked so it can be cancelled, and
   // re-checks availability when it fires. Use this everywhere instead of a bare
   // setTimeout(() => handleDial(), n).
   const scheduleDial = (delayMs: number) => {
     const id = setTimeout(() => {
       dialChainTimeoutsRef.current.delete(id)
-      // Final live check: if you went offline during the delay, do nothing.
+      // Final live checks: abort latch (TERMINATE pressed) or went offline.
+      if (abortDialingRef.current) return
       if (!availableRef.current) return
       handleDial()
     }, delayMs)
@@ -1605,6 +1656,9 @@ function DialerPageInner() {
     // Manual keypad dials go through handleManualDial, not here, so this does
     // not affect intentional manual dialing.
     if (!availableRef.current) return
+    // Abort latch: if TERMINATE was just pressed, do not start a new call even
+    // if this dial was already in flight when the latch was set.
+    if (abortDialingRef.current) return
 
     setShowDisposition(false)
     setDisposition('')
@@ -2203,6 +2257,33 @@ function DialerPageInner() {
         @media (max-width: 768px) {
           .dialer-root { height: calc(100vh - 64px); height: calc(100dvh - 64px); }
           .dialer-status-bar { padding: 6px 12px !important; }
+
+          /* Full-screen lead profile: fill the viewport under the app header so
+             long scripts are fully readable. Tap ✕ to exit. */
+          .dialer-profile-card.fullscreen {
+            position: fixed !important;
+            left: 0; right: 0;
+            top: 64px; bottom: 0;
+            z-index: 80;
+            border-radius: 0 !important;
+            min-height: 0 !important;
+            margin: 0 !important;
+          }
+
+          /* When the disposition sheet is up, cap the lead profile so the
+             disposition buttons are always on screen without scrolling. The
+             script box shrinks; the disposition square stays fully visible. */
+          .dialer-profile-card.with-disposition:not(.fullscreen) {
+            flex: 0 0 auto !important;
+            max-height: 30vh !important;
+            min-height: 0 !important;
+          }
+          .dialer-profile-card.with-disposition:not(.fullscreen) .dialer-script-box {
+            display: none !important;
+          }
+          .dialer-disposition-sheet {
+            max-height: none !important;
+          }
           /* Mobile script box: give it a real, bounded height so it never
              collapses, and let the body scroll inside it. The tab row wraps. */
           .dialer-script-box {
@@ -2586,7 +2667,7 @@ function DialerPageInner() {
               </p>
             </div>
           ) : (
-            <div style={{
+            <div className={`dialer-profile-card ${profileFullscreen ? 'fullscreen' : ''} ${showDisposition ? 'with-disposition' : ''}`} style={{
               flex: 1, background: terminalSurface, border: `1px solid ${terminalBorder}`,
               borderRadius: '4px', overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 200,
             }}>
@@ -2597,9 +2678,22 @@ function DialerPageInner() {
                 <span style={{ fontSize: '10px', letterSpacing: '3px', color: 'var(--brand-on-sidebar-muted)', fontWeight: 'bold' }}>
                   {previewLead ? 'LEAD PREVIEW — REVIEW BEFORE DIALING' : 'LEAD PROFILE'}
                 </span>
-                {displayLead && (status === 'connected' || status === 'preview_ready') && (
-                  <span style={{ fontSize: '10px', fontFamily: 'monospace', color: 'var(--brand-primary)' }}>ID: {displayLead.id.substring(0, 8)}</span>
-                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  {displayLead && (status === 'connected' || status === 'preview_ready') && (
+                    <span style={{ fontSize: '10px', fontFamily: 'monospace', color: 'var(--brand-primary)' }}>ID: {displayLead.id.substring(0, 8)}</span>
+                  )}
+                  <button
+                    className="dialer-profile-fs-btn"
+                    onClick={() => setProfileFullscreen(v => !v)}
+                    title={profileFullscreen ? 'Exit full screen' : 'Full screen lead profile'}
+                    aria-label="Toggle full screen lead profile"
+                    style={{
+                      background: 'transparent', border: '1px solid var(--brand-on-sidebar-muted)',
+                      borderRadius: 3, color: 'var(--brand-on-sidebar-muted)', cursor: 'pointer',
+                      fontSize: 11, lineHeight: 1, padding: '3px 6px', fontFamily: FUTURA,
+                    }}
+                  >{profileFullscreen ? '✕' : '⛶'}</button>
+                </div>
               </div>
 
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
@@ -2723,7 +2817,7 @@ function DialerPageInner() {
           )}
 
           {showDisposition && (
-            <div style={{
+            <div className="dialer-disposition-sheet" style={{
               padding: '10px 14px', background: terminalSurface,
               border: `2px solid ${terminalAccent}`, borderRadius: '4px', flexShrink: 0,
             }}>
@@ -2849,18 +2943,7 @@ function DialerPageInner() {
                     fontSize: '11px', fontWeight: 'bold', letterSpacing: '3px',
                     cursor: 'pointer', fontFamily: FUTURA,
                   }}>SKIP / NEXT LEAD</button>
-                  <button onClick={async () => {
-                    setPredictiveEngineStarted(false)
-                    predictiveEngineStartedRef.current = false
-                    await hangupCall(activeCallSid)
-                    disarmDialing({ force: true })
-                    setStatus('idle')
-                    setCurrentLead(null)
-                    setShowDisposition(false)
-                    setDisposition('')
-                    setSeconds(0)
-                    lastIncomingCallSidRef.current = null
-                  }} style={{
+                  <button onClick={() => { abortAllDialing() }} style={{
                     padding: '14px', borderRadius: '4px', border: 'none',
                     background: '#f8e8e8', borderTop: `3px solid ${terminalRed}`,
                     color: terminalRed, fontSize: '11px', fontWeight: 'bold',
@@ -2918,11 +3001,7 @@ function DialerPageInner() {
                 </>
               )}
               {status === 'calling' && (
-                <button onClick={async () => {
-                  await hangupCall(activeCallSid)
-                  setStatus('idle')
-                  setCurrentLead(null)
-                }} style={{
+                <button onClick={() => { abortAllDialing() }} style={{
                   padding: '14px', borderRadius: '4px', border: 'none',
                   background: '#f8e8e8', color: terminalRed,
                   fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
@@ -2939,14 +3018,7 @@ function DialerPageInner() {
                     fontSize: '11px', fontWeight: 'bold', letterSpacing: '3px',
                     cursor: 'pointer', fontFamily: FUTURA,
                   }}>SKIP / NEXT LEAD</button>
-                  <button onClick={async () => {
-                    await hangupCall(activeCallSid)
-                    setStatus('idle')
-                    setCurrentLead(null)
-                    setShowDisposition(false)
-                    setDisposition('')
-                    setSeconds(0)
-                  }} style={{
+                  <button onClick={() => { abortAllDialing() }} style={{
                     padding: '14px', borderRadius: '4px', border: 'none',
                     background: '#f8e8e8', borderTop: `3px solid ${terminalRed}`,
                     color: terminalRed, fontSize: '11px', fontWeight: 'bold',
