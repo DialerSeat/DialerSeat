@@ -2254,20 +2254,33 @@ function DialerPageInner() {
           color: ${terminalText}; cursor: pointer; padding: 2px 4px;
         }
 
+        /* Full-screen lead-profile toggle is mobile-only — hidden on desktop,
+           shown inside the mobile media query below. */
+        .dialer-profile-fs-btn { display: none; }
+
         @media (max-width: 768px) {
           .dialer-root { height: calc(100vh - 64px); height: calc(100dvh - 64px); }
           .dialer-status-bar { padding: 6px 12px !important; }
 
-          /* Full-screen lead profile: fill the viewport under the app header so
-             long scripts are fully readable. Tap ✕ to exit. */
+          /* Show the full-screen toggle on mobile only. */
+          .dialer-profile-fs-btn { display: inline-flex; align-items: center; }
+
+          /* Full-screen lead profile: NOT an overlay. It's an in-flow page
+             region — the profile/script card grows to fill the available space
+             under the header, pushing everything else (status tiles, campaign
+             select) out of the way, while the action button below it (SET
+             AVAILABLE / dial / SKIP+TERMINATE) stays in normal flow right
+             beneath it. The page itself scrolls if needed; nothing is fixed or
+             overlapping. */
           .dialer-profile-card.fullscreen {
-            position: fixed !important;
-            left: 0; right: 0;
-            top: 64px; bottom: 0;
-            z-index: 80;
-            border-radius: 0 !important;
+            flex: 1 1 auto !important;
             min-height: 0 !important;
-            margin: 0 !important;
+            border-radius: 4px;
+          }
+          /* When fullscreen is on, collapse the stuff above the card so the
+             profile gets the room and the dial button sits just under it. */
+          .dialer-main-col.has-fullscreen .dialer-collapse-on-fs {
+            display: none !important;
           }
 
           /* When the disposition sheet is up, cap the lead profile so the
@@ -2429,9 +2442,9 @@ function DialerPageInner() {
       )}
 
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
-        <div style={{ flex: 1, padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px', overflow: 'auto', minHeight: 0 }}>
+        <div className={`dialer-main-col ${profileFullscreen ? 'has-fullscreen' : ''}`} style={{ flex: 1, padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px', overflow: 'auto', minHeight: 0 }}>
 
-          <div className="dialer-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', flexShrink: 0 }}>
+          <div className="dialer-stat-grid dialer-collapse-on-fs" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', flexShrink: 0 }}>
             <div style={{
               padding: '8px 12px', background: terminalSurface,
               border: `1px solid ${terminalBorder}`, borderRadius: '4px',
@@ -2604,7 +2617,7 @@ function DialerPageInner() {
             </div>
           )}
 
-          <div style={{ padding: '10px 14px', background: terminalSurface, border: `1px solid ${terminalBorder}`, borderRadius: '4px', flexShrink: 0 }}>
+          <div className="dialer-collapse-on-fs" style={{ padding: '10px 14px', background: terminalSurface, border: `1px solid ${terminalBorder}`, borderRadius: '4px', flexShrink: 0 }}>
             <div style={{ fontSize: '9px', letterSpacing: '3px', color: terminalMuted, marginBottom: '6px' }}>▸ SELECT CAMPAIGN</div>
             <select value={selectedCampaign} onChange={(e) => setSelectedCampaign(e.target.value)} style={{
               width: '100%', padding: '6px 10px', borderRadius: '4px',
