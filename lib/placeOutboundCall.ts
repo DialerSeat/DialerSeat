@@ -308,33 +308,46 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
   }
 
   if (p.amdEnabled) {
-    // ── AMD TUNING (instant-connect / background janitor) ────────────────
+    // ── AMD TUNING (DetectMessageEnd — catches human-voiced voicemail) ────
     // The agent is bridged the INSTANT the lead picks up (no gating, no dead
     // air). AMD runs in the BACKGROUND only: amd-result hangs up machines,
     // auto-disposes, deletes the voicemail recording, and (power) auto-advances.
     //
-    // VALID RANGES (SignalWire/Twilio compatibility API — out-of-range values
-    // make Calls.create return 400, which previously surfaced as a 500 on
-    // /api/calls/outbound and broke ALL dialing):
-    //   MachineDetectionTimeout         : seconds, default 30
-    //   MachineDetectionSpeechThreshold : 1000–6000 ms, default 2400
-    //   MachineDetectionSpeechEndThreshold: 500–5000 ms, default 1200
-    //   MachineDetectionSilenceTimeout  : 2000–10000 ms, default 5000
+    // WHY DetectMessageEnd (not Enable): the hardest voicemail to catch is the
+    // one recorded in a real human voice ("Hey, you've reached Jordan, leave a
+    // message"). 'Enable' commits to a human/machine call on the FIRST moment of
+    // audio and gets fooled by these — it labels them 'human' and the voicemail
+    // gets saved. 'DetectMessageEnd' instead waits to hear the END of the
+    // greeting (the beep/silence after a long greeting) before calling it a
+    // machine. A live person who says "hello?" and stops is STILL returned as
+    // human IMMEDIATELY — so instant-connect to real people is unaffected. Only
+    // machines incur the wait, and our flow already tolerates that (we drop them
+    // in the background). Net: human-voiced voicemail finally gets caught.
     //
-    // SPEED NOTE: with MachineDetection=Enable, MachineDetectionTimeout does NOT
-    // speed up detection (per SignalWire/Twilio docs) — it only matters for
-    // DetectMessageEnd. The real "drop machines fast" levers in Enable mode are
-    // a low MachineDetectionSilenceTimeout (initial-silence→result) and a
-    // tighter SpeechThreshold. So we keep Timeout at a safe value and pull the
-    // others toward (but not below) their valid floors.
-    outboundParams.MachineDetection = 'Enable'
+    // RESULT VALUES (DetectMessageEnd): human, machine_end_beep,
+    // machine_end_silence, machine_end_other, fax, unknown. The amd-result
+    // handler keys off `startsWith('machine_')`, so all three machine_end_*
+    // values are handled.
+    //
+    // VALID RANGES / TUNING (per Twilio/SignalWire AMD docs):
+    //   MachineDetectionTimeout          : seconds. MUST be generous in
+    //       DetectMessageEnd mode — a low value returns 'unknown' before the
+    //       greeting ends. Greetings can exceed 30s; we use 30 (the default).
+    //   MachineDetectionSpeechThreshold  : 1000–6000 ms. Higher = fewer false
+    //       'machine' on long human greetings. We use the 2400 default.
+    //   MachineDetectionSpeechEndThreshold: 500–5000 ms. ~2500 ms is the
+    //       documented sweet spot — treats mid-greeting pauses as gaps, not the
+    //       end, so short voicemails still classify as machine.
+    //   MachineDetectionSilenceTimeout   : 2000–10000 ms. Initial-silence →
+    //       'unknown'. 5000 (default) avoids premature unknowns.
+    outboundParams.MachineDetection = 'DetectMessageEnd'
     outboundParams.AsyncAmd = 'true'
     outboundParams.AsyncAmdStatusCallback = `${p.env.appUrl}/api/calls/amd-result`
     outboundParams.AsyncAmdStatusCallbackMethod = 'POST'
-    outboundParams.MachineDetectionTimeout = '5'
-    outboundParams.MachineDetectionSpeechThreshold = '1500'
-    outboundParams.MachineDetectionSpeechEndThreshold = '800'
-    outboundParams.MachineDetectionSilenceTimeout = '2000'
+    outboundParams.MachineDetectionTimeout = '30'
+    outboundParams.MachineDetectionSpeechThreshold = '2400'
+    outboundParams.MachineDetectionSpeechEndThreshold = '2500'
+    outboundParams.MachineDetectionSilenceTimeout = '5000'
   }
 
   // ── PLACE LEAD CALL ─────────────────────────────────────────────────────

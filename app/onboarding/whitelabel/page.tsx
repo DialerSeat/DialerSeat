@@ -729,6 +729,35 @@ export default function WhitelabelOnboardingPage() {
               }}
               style={{ ...inputStyle, padding: 8, marginTop: 8 }}
             />
+            {displayLogo && (
+              <div style={{
+                marginTop: 10, padding: 12, borderRadius: 8,
+                border: '1px solid var(--border, rgba(0,0,0,0.12))',
+                background: 'var(--surface-muted, rgba(0,0,0,0.03))',
+                display: 'flex', flexDirection: 'column', gap: 8,
+              }}>
+                <div style={{ fontSize: 10, letterSpacing: 2, color: 'var(--text-secondary, #888)', fontWeight: 700 }}>
+                  PREVIEW
+                </div>
+                <img
+                  src={displayLogo}
+                  alt="Logo preview"
+                  style={{ maxWidth: '100%', maxHeight: 120, objectFit: 'contain', alignSelf: 'flex-start' }}
+                />
+                {logoFile && (
+                  <button
+                    type="button"
+                    onClick={() => setLogoFile(null)}
+                    style={{
+                      alignSelf: 'flex-start', fontSize: 10, letterSpacing: 1,
+                      color: 'var(--text-secondary, #888)', background: 'transparent',
+                      border: '1px solid var(--border, rgba(0,0,0,0.15))', borderRadius: 4,
+                      padding: '4px 8px', cursor: 'pointer', fontWeight: 700,
+                    }}
+                  >REMOVE</button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* ── THEME — presets + Custom + color pickers ── */}

@@ -27,6 +27,11 @@ export async function GET(req: NextRequest) {
     .select('*, leads(first_name, last_name, phone, notes), campaigns(name)', { count: 'exact' })
     .eq('user_id', userId)
     .not('recording_url', 'is', null)
+    // AMD-detected voicemail/machine calls have no place in recordings — they're
+    // not conversations. Exclude any call whose amd_result indicates a machine
+    // (machine_start, machine_end_beep, unknown, fax, etc.). We KEEP amd_result
+    // null (AMD off / not run) and 'human' (a real answered conversation).
+    .or('amd_result.is.null,amd_result.eq.human')
 
   if (campaignId !== 'all') {
     query = query.eq('campaign_id', campaignId)
