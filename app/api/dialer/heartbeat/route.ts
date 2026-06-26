@@ -48,6 +48,54 @@ const supabase = createClient(
 // 'paused' is intentionally absent — paused agents don't get fanout.
 const CONTROLLER_TRIGGER_STATES = new Set(['ready', 'on_call', 'wrapping', 'dialing'])
 
+// ── USER + TEAM RESOLUTION CACHE ──────────────────────────────────────────
+// The heartbeat fires every 5s per agent. The agent's internal user id and
+// their team (owned or member) are stable for the life of a session, yet the
+// original code re-queried users + teams + team_members on EVERY beat. At 100
+// concurrent agents that's ~60 wasted queries/second. We cache the resolved
+// { userId, teamId } per clerk id with a short TTL so steady-state heartbeats
+// do a single write (the agent_sessions upsert) instead of 3-4 reads + write.
+//
+// Staleness tradeoff: if a user changes teams, the heartbeat keeps using the
+// old team for up to TTL. That only affects presence/pacing grouping, never
+// correctness of calls, so a few minutes is perfectly safe. The cache is
+// per-warm-instance memory (serverless), which is exactly where the repeated
+// beats land.
+const RESOLVE_TTL_MS = 5 * 60 * 1000 // 5 minutes
+type ResolvedIdentity = { userId: string; teamId: string | null }
+const identityCache = new Map<string, { value: ResolvedIdentity; expires: number }>()
+
+async function resolveIdentity(clerkId: string): Promise<ResolvedIdentity | null> {
+  const cached = identityCache.get(clerkId)
+  if (cached && cached.expires > Date.now()) return cached.value
+
+  // user id
+  const { data: userRow } = await supabase
+    .from('users')
+    .select('id')
+    .eq('clerk_id', clerkId)
+    .maybeSingle()
+  if (!userRow) return null
+
+  // team id (owned first, then active membership)
+  const teamId = await resolveTeamId(clerkId)
+
+  const value: ResolvedIdentity = { userId: userRow.id, teamId }
+  // Bound the cache so a long-lived warm instance serving many distinct users
+  // can't grow memory without limit. When it gets large, drop the oldest-ish
+  // entries (Map preserves insertion order, so deleting from the front is cheap
+  // and good enough — TTL handles correctness regardless).
+  if (identityCache.size > 5000) {
+    let toDrop = 1000
+    for (const key of identityCache.keys()) {
+      identityCache.delete(key)
+      if (--toDrop <= 0) break
+    }
+  }
+  identityCache.set(clerkId, { value, expires: Date.now() + RESOLVE_TTL_MS })
+  return value
+}
+
 async function resolveTeamId(clerkId: string): Promise<string | null> {
   const { data: ownedTeam } = await supabase
     .from('teams')
@@ -106,18 +154,13 @@ export async function POST(req: NextRequest) {
     const currentCallId: string | null =
       rawCallId && UUID_RE.test(rawCallId) ? rawCallId : null
 
-    // ── Resolve user + team ────────────────────────────────────────────────
-    const { data: userRow } = await supabase
-      .from('users')
-      .select('id')
-      .eq('clerk_id', clerkId)
-      .maybeSingle()
-
-    if (!userRow) {
+    // ── Resolve user + team (cached; see resolveIdentity) ──────────────────
+    const identity = await resolveIdentity(clerkId)
+    if (!identity) {
       return NextResponse.json({ error: 'user not found' }, { status: 404 })
     }
-
-    const teamId = await resolveTeamId(clerkId)
+    const userInternalId = identity.userId
+    const teamId = identity.teamId
 
     // ── Upsert agent_sessions row ──────────────────────────────────────────
     // Uses (user_id) as conflict target so each user has exactly one session
@@ -128,7 +171,7 @@ export async function POST(req: NextRequest) {
       .from('agent_sessions')
       .upsert(
         {
-          user_id: userRow.id,
+          user_id: userInternalId,
           team_id: teamId,
           campaign_id: campaignId,
           dialer_mode: dialerMode,
@@ -220,7 +263,7 @@ export async function POST(req: NextRequest) {
           sessionId,
           campaignId,
           clerkId,
-          internalUserId: userRow.id,
+          internalUserId: userInternalId,
           teamId,
         })
       } catch (controllerErr) {
