@@ -1665,27 +1665,26 @@ function DialerPageInner() {
     cancelAllPendingDials()
     if (activePollRef.current) { clearInterval(activePollRef.current); activePollRef.current = null }
 
-    // 6) Tell the SERVER to stop and tear down this agent's in-flight calls.
-    //    This is what silences the "numbers answered in the background" — the
-    //    client can't always hang them up by SID (it may not know them), so the
-    //    server releases lead claims and hangs up calls tied to this session.
-    try {
-      await fetch('/api/dialer/abort', {
+    // 6) INSTANT local + server kill, in PARALLEL (don't make the known active
+    //    call wait on the server round-trip):
+    //    - hang up the SID we already know about immediately, and
+    //    - tell the SERVER to sweep & hang up every other in-flight call for
+    //      this agent across ALL modes (calls it placed server-side that the
+    //      client has no SID for). The server sweeps both call_rooms AND the
+    //      calls table, so progressive/predictive fanout calls are covered.
+    const knownSid = activeCallSidRef.current || activeCallSid
+    await Promise.all([
+      knownSid ? hangupCall(knownSid).catch(() => {}) : Promise.resolve(),
+      fetch('/api/dialer/abort', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          campaign_id: isSpecificCampaign ? selectedCampaign : null,
-        }),
-      })
-    } catch (e) {
-      console.error('[abort] server abort failed (continuing local teardown):', e)
-    }
+        body: JSON.stringify({ campaign_id: isSpecificCampaign ? selectedCampaign : null }),
+      }).catch((e) => {
+        console.error('[abort] server abort failed (local teardown already done):', e)
+      }),
+    ])
 
-    // 7) Hang up the active call we DO know about.
-    const sid = activeCallSidRef.current || activeCallSid
-    if (sid) { try { await hangupCall(sid) } catch {} }
-
-    // 8) Reset UI to a clean idle/offline state.
+    // 7) Reset UI to a clean idle/offline state.
     setStatus('idle')
     setCurrentLead(null)
     setShowDisposition(false)
@@ -3094,14 +3093,12 @@ function DialerPageInner() {
               {predictiveView === 'available' && predictiveEngineStarted && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', flexShrink: 0 }}>
                   <button onClick={() => {
-                    setPredictiveEngineStarted(false)
-                    predictiveEngineStartedRef.current = false
-                    disarmDialing({ force: true }) // engine stopped — no more incoming routes accepted
-                    lastIncomingCallSidRef.current = null
-                    setAmdActivity(prev => [
-                      `PREDICTIVE ENGINE STOPPED`,
-                      ...prev,
-                    ].slice(0, 5))
+                    // STOP must also INSTANTLY terminate any calls already in
+                    // process (ringing/connecting fanout), not just prevent new
+                    // ones. Route through the full kill switch so in-flight calls
+                    // are swept and hung up server-side across the board.
+                    setAmdActivity(prev => [`PREDICTIVE ENGINE STOPPED`, ...prev].slice(0, 5))
+                    abortAllDialing()
                   }} style={{
                     padding: '14px', borderRadius: '4px', border: 'none',
                     background: '#f8e8e8', color: terminalRed,

@@ -254,15 +254,24 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* Weekday header */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6, marginBottom: 6 }}>
-        {DOW.map(d => (
-          <div key={d} style={{ textAlign: 'center', fontSize: 10, letterSpacing: 2, fontWeight: 700, color: 'var(--brand-on-sidebar-muted, #888)' }}>{d.toUpperCase()}</div>
-        ))}
-      </div>
+      {/* Calendar card — same fitted surface as the analytics boxes
+          (--brand-card-surface / --brand-card-border), tenant-overridable, so
+          the calendar reads as a solid panel rather than floating cells. */}
+      <div style={{
+        background: 'var(--brand-card-surface, #e2e4ea)',
+        border: '1px solid var(--brand-card-border, #c4c8d0)',
+        borderRadius: 12,
+        padding: 14,
+      }}>
+        {/* Weekday header */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6, marginBottom: 6 }}>
+          {DOW.map(d => (
+            <div key={d} style={{ textAlign: 'center', fontSize: 10, letterSpacing: 2, fontWeight: 700, color: 'var(--brand-on-sidebar-muted, #888)' }}>{d.toUpperCase()}</div>
+          ))}
+        </div>
 
-      {/* Month grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridAutoRows: 'minmax(96px, 1fr)', gap: 6, opacity: loading ? 0.6 : 1, transition: 'opacity .15s' }}>
+        {/* Month grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridAutoRows: 'minmax(96px, 1fr)', gap: 6, opacity: loading ? 0.6 : 1, transition: 'opacity .15s' }}>
         {grid.map(({ date, inMonth }, i) => {
           const key = ymd(date)
           const events = byDay[key] || []
@@ -308,7 +317,71 @@ export default function CalendarPage() {
             </div>
           )
         })}
+        </div>
       </div>
+
+      {/* Day detail — full list of the selected day's events */}
+      {selectedDay && (() => {
+        const dayEvents = byDay[selectedDay] || []
+        const d = new Date(selectedDay + 'T12:00:00')
+        return (
+          <div style={{
+            marginTop: 16, padding: 16, borderRadius: 10,
+            background: 'var(--brand-page-bg, #fff)',
+            border: '1px solid var(--brand-sidebar-active-bg, #e2e4ea)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <div style={{ fontSize: 14, fontWeight: 800, letterSpacing: 1, color: 'var(--brand-on-header, #1a1a2e)' }}>
+                {DOW[d.getDay()].toUpperCase()}, {MONTHS[d.getMonth()].toUpperCase()} {d.getDate()}
+              </div>
+              <button onClick={() => openCreate(d)} style={{ ...primaryBtn, padding: '6px 12px' }}>+ ADD</button>
+            </div>
+
+            {dayEvents.length === 0 ? (
+              <div style={{ fontSize: 12, color: 'var(--brand-on-sidebar-muted, #888)', padding: '8px 0' }}>
+                No events. Click “+ ADD” to create one.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {dayEvents.map((o, i) => (
+                  <div key={o.id + i}
+                    style={{
+                      display: 'flex', alignItems: 'flex-start', gap: 12, padding: 10, borderRadius: 8,
+                      border: '1px solid var(--brand-sidebar-active-bg, #e2e4ea)',
+                      borderLeft: `4px solid ${o.color || TYPE_COLORS[o.event_type] || 'var(--brand-primary, #4a9eff)'}`,
+                    }}>
+                    <div style={{ minWidth: 84, fontSize: 11, fontWeight: 700, color: 'var(--brand-on-header, #1a1a2e)' }}>
+                      {o.all_day ? 'ALL DAY' : new Date(o.occurrence_start).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--brand-on-header, #1a1a2e)' }}>{o.title}</span>
+                        <span style={{
+                          fontSize: 8, letterSpacing: 1, fontWeight: 700, padding: '2px 6px', borderRadius: 3,
+                          color: '#fff', background: TYPE_COLORS[o.event_type] || 'var(--brand-primary, #4a9eff)',
+                        }}>{o.event_type.toUpperCase()}</span>
+                        {o.is_recurring_instance && (
+                          <span style={{ fontSize: 8, letterSpacing: 1, color: 'var(--brand-on-sidebar-muted, #888)' }}>↻ REPEATS</span>
+                        )}
+                      </div>
+                      {o.description && (
+                        <div style={{ fontSize: 11, color: 'var(--brand-on-sidebar-muted, #888)', marginTop: 3 }}>{o.description}</div>
+                      )}
+                      {o.lead_id && (
+                        <a href={`/dashboard/leads`}
+                          style={{ fontSize: 10, color: 'var(--brand-primary, #4a9eff)', fontWeight: 700, textDecoration: 'none', marginTop: 3, display: 'inline-block' }}>
+                          FROM A LEAD · OPEN LEADS →
+                        </a>
+                      )}
+                    </div>
+                    <button onClick={() => openEdit(o)} style={{ ...ghostBtn, padding: '6px 10px', fontSize: 10 }}>EDIT</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      })()}
 
       {/* Editor modal */}
       {editorOpen && (
