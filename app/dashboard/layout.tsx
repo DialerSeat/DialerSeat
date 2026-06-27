@@ -465,6 +465,29 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </Link>
       )}
 
+      {/* CALENDAR — all users. Sits below GO TO DESKTOP (manager+) and above
+          the profile row, same nav-tab styling, left-aligned. */}
+      <Link
+        href="/dashboard/calendar"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          padding: '12px 18px',
+          cursor: 'pointer',
+          background: 'transparent',
+          border: '1px solid transparent',
+          boxSizing: 'border-box',
+          textDecoration: 'none',
+          flexShrink: 0,
+        }}>
+        <span style={{
+          fontSize: '11px',
+          letterSpacing: '2px',
+          fontWeight: 'bold',
+          color: 'var(--brand-on-sidebar-muted)',
+        }}>CALENDAR</span>
+      </Link>
+
       <div
         ref={profileRowRef}
         onClick={handleProfileRowClick}

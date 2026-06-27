@@ -171,6 +171,13 @@ function DialerPageInner() {
   const [predictiveEngineStarted, setPredictiveEngineStarted] = useState(false)
 
   const [disposition, setDisposition] = useState('')
+  // Inline appointment scheduling: when the agent dispositions APPOINTMENT, a
+  // clean inline date/time field appears in the disposition sheet. Submitting it
+  // creates a calendar event (event_type='appointment') linked to the lead. No
+  // popups — the event simply shows up on the agent's calendar.
+  const [apptWhen, setApptWhen] = useState('')
+  const [apptSaving, setApptSaving] = useState(false)
+  const [apptSaved, setApptSaved] = useState(false)
   const [showDisposition, setShowDisposition] = useState(false)
   const [currentLead, setCurrentLead] = useState<Lead | null>(null)
   const [previewLead, setPreviewLead] = useState<Lead | null>(null)
@@ -1775,6 +1782,58 @@ function DialerPageInner() {
     }
   }
 
+  const createAppointmentEvent = async () => {
+    if (!currentLead || !apptWhen) return
+    setApptSaving(true)
+    try {
+      const start = new Date(apptWhen)
+      const end = new Date(start.getTime() + 30 * 60 * 1000) // default 30 min
+      const leadName = [currentLead.first_name, currentLead.last_name].filter(Boolean).join(' ').trim()
+      const res = await fetch('/api/calendar/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: leadName ? `Appointment — ${leadName}` : 'Appointment',
+          description: currentLead.phone ? `Lead: ${currentLead.phone}` : null,
+          starts_at: start.toISOString(),
+          ends_at: end.toISOString(),
+          event_type: 'appointment',
+          lead_id: currentLead.id,
+        }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setApptSaved(true)
+        // Advance to the next call after a brief confirmation beat.
+        setTimeout(() => advanceAfterDisposition(), 700)
+      } else {
+        alert(data.error || 'Could not add the appointment to your calendar.')
+      }
+    } catch {
+      alert('Could not add the appointment to your calendar.')
+    } finally {
+      setApptSaving(false)
+    }
+  }
+
+  // Shared post-disposition advance (extracted so the appointment flow can defer
+  // it until the agent has scheduled or skipped the appointment).
+  const advanceAfterDisposition = async () => {
+    setStatus('idle')
+    setShowDisposition(false)
+    setDisposition('')
+    setNotes('')
+    setApptWhen('')
+    setApptSaved(false)
+    setSeconds(0)
+    setCurrentLead(null)
+    if (isPredictive) {
+      lastIncomingCallSidRef.current = null
+      return
+    }
+    await handleDial()
+  }
+
   const handleDisposition = async (disp: string) => {
     if (disp === 'SKIP') { handleSkip(); return }
     setDisposition(disp)
@@ -1800,20 +1859,18 @@ function DialerPageInner() {
       })
     }
 
-    setTimeout(async () => {
-      setStatus('idle')
-      setShowDisposition(false)
-      setDisposition('')
-      setNotes('')
-      setSeconds(0)
-      setCurrentLead(null)
+    // APPOINTMENT pauses the auto-advance so the agent can pick a date/time for
+    // their calendar inline. They either schedule it (createAppointmentEvent →
+    // advances) or tap "SKIP SCHEDULING" to advance without an event.
+    if (disp === 'APPOINTMENT') {
+      // Pre-fill a sensible default: tomorrow at the same time.
+      const d = new Date(Date.now() + 24 * 60 * 60 * 1000)
+      const pad = (n: number) => String(n).padStart(2, '0')
+      setApptWhen(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`)
+      return
+    }
 
-      if (isPredictive) {
-        lastIncomingCallSidRef.current = null
-        return
-      }
-      await handleDial()
-    }, autoChainOnFailure ? 800 : 600)
+    setTimeout(advanceAfterDisposition, autoChainOnFailure ? 800 : 600)
   }
 
   const handleManualDial = async () => {
@@ -2940,6 +2997,59 @@ function DialerPageInner() {
                   }}>{d.label}</button>
                 ))}
               </div>
+
+              {/* Inline appointment scheduler — appears when APPOINTMENT is
+                  chosen. No popups: pick a time and it lands on your calendar,
+                  or skip scheduling to move on. */}
+              {disposition === 'APPOINTMENT' && (
+                <div style={{
+                  marginTop: '10px', padding: '10px', borderRadius: '4px',
+                  background: terminalSurface, border: `1px solid #2563eb`,
+                }}>
+                  {apptSaved ? (
+                    <div style={{ fontSize: '11px', color: '#2563eb', fontWeight: 'bold', letterSpacing: '1px', textAlign: 'center', padding: '6px' }}>
+                      ✓ ADDED TO YOUR CALENDAR
+                    </div>
+                  ) : (
+                    <>
+                      <div style={{ fontSize: '9px', letterSpacing: '2px', color: terminalMuted, marginBottom: '6px' }}>
+                        ▸ SCHEDULE APPOINTMENT
+                      </div>
+                      <input
+                        type="datetime-local"
+                        value={apptWhen}
+                        onChange={(e) => setApptWhen(e.target.value)}
+                        style={{
+                          width: '100%', boxSizing: 'border-box', padding: '8px',
+                          borderRadius: '3px', border: `1px solid ${terminalBorder}`,
+                          background: terminalBg, color: terminalText,
+                          fontSize: '12px', fontFamily: FUTURA, marginBottom: '8px',
+                        }}
+                      />
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                        <button
+                          onClick={() => advanceAfterDisposition()}
+                          disabled={apptSaving}
+                          style={{
+                            padding: '9px', borderRadius: '3px', border: `1px solid ${terminalBorder}`,
+                            background: 'transparent', color: terminalMuted,
+                            fontSize: '9px', fontWeight: 'bold', letterSpacing: '1px',
+                            cursor: 'pointer', fontFamily: FUTURA,
+                          }}>SKIP SCHEDULING</button>
+                        <button
+                          onClick={() => createAppointmentEvent()}
+                          disabled={apptSaving || !apptWhen}
+                          style={{
+                            padding: '9px', borderRadius: '3px', border: 'none',
+                            background: '#2563eb', color: 'white',
+                            fontSize: '9px', fontWeight: 'bold', letterSpacing: '1px',
+                            cursor: 'pointer', fontFamily: FUTURA,
+                          }}>{apptSaving ? 'SAVING…' : 'ADD TO CALENDAR'}</button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

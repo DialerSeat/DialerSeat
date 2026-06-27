@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { requireActive } from '@/lib/subscription'
 import { auth } from '@clerk/nextjs/server'
 import { placeOutboundCall } from '@/lib/placeOutboundCall'
+import { apiError } from '@/lib/apiError'
 
 // =============================================================================
 // OUTBOUND CALL — user-initiated dial
@@ -102,10 +103,6 @@ export async function POST(req: Request) {
       ringTimeout: result.ringTimeout,
     })
   } catch (error: any) {
-    console.error('Call error:', error)
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    )
+    return apiError(error, { route: 'calls/outbound' })
   }
 }

@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getServiceClient } from '@/lib/supabase'
+import { apiError } from '@/lib/apiError'
 import { requireAdmin } from '@/lib/admin'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const supabase = getServiceClient('admin/users')
 
 export async function GET(req: NextRequest) {
   try {
@@ -21,7 +19,7 @@ export async function GET(req: NextRequest) {
     .order('created_at', { ascending: false })
 
   if (error) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    return apiError(error, { route: 'admin/users' })
   }
 
   if (!users || users.length === 0) {

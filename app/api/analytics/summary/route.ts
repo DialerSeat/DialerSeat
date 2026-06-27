@@ -18,9 +18,11 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url)
-  // We accept user_id in query for backwards compat, but always enforce auth match
-  const requestedUserId = searchParams.get('user_id')
-  const userId = (requestedUserId && requestedUserId === authUserId) ? authUserId : authUserId
+  // Always scope to the authenticated user. (A user_id query param is ignored —
+  // it was a backwards-compat shortcut whose only safe resolution is the auth'd
+  // user anyway. Using authUserId directly removes the temptation to "simplify"
+  // it into a real client-controlled filter.)
+  const userId = authUserId
 
   const start = searchParams.get('start')
   const end = searchParams.get('end')
