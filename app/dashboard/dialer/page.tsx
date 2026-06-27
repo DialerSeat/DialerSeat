@@ -179,6 +179,11 @@ function DialerPageInner() {
   const [campaignsLoaded, setCampaignsLoaded] = useState(false)
   const [showSelectCampaignMsg, setShowSelectCampaignMsg] = useState(false)
   const [callStart, setCallStart] = useState(0)
+  // Live ref mirror of callStart. The poll callbacks that fire the disposition
+  // sheet are closures created BEFORE the call connected, so they capture a
+  // stale callStart (0) — which made "CALL LASTED" always read 0s. Reading the
+  // ref instead gives the real start time.
+  const callStartRef = useRef(0)
   // Final whole-second duration of the call that just ended, shown on the
   // lead profile / disposition sheet after hangup.
   const [lastCallDuration, setLastCallDuration] = useState<number | null>(null)
@@ -1072,6 +1077,13 @@ function DialerPageInner() {
     }
 
     const goingOffline = availableRef.current
+    if (!goingOffline) {
+      // Going AVAILABLE (online): this is the explicit, deliberate action that
+      // re-enables dialing after an abort. Clear the abort latch here — and only
+      // here — so a prior ABORT/TERMINATE stays in full effect until the user
+      // themselves chooses to start dialing again.
+      abortDialingRef.current = false
+    }
     if (goingOffline) {
       // ── KILL SWITCH ───────────────────────────────────────────────────────
       // Going offline must stop everything immediately: disarm dialing so no
@@ -1296,7 +1308,9 @@ function DialerPageInner() {
 
   useEffect(() => {
     if (status === 'connected') {
-      setCallStart(Date.now())
+      const startedAt = Date.now()
+      setCallStart(startedAt)
+      callStartRef.current = startedAt
       timerRef.current = setInterval(() => setSeconds(s => s + 1), 1000)
     } else {
       if (timerRef.current) clearInterval(timerRef.current)
@@ -1501,9 +1515,13 @@ function DialerPageInner() {
             if (autoChainOnFailure) scheduleDial(600)
           } else {
             // Snapshot the final duration before the timer effect resets it,
-            // so the disposition sheet can show how long the call lasted.
+            // so the disposition sheet can show how long the call lasted. Use
+            // the REF (not the state) — this callback's closure captured the
+            // pre-connect callStart (0), which is why it always showed 0s.
             setLastCallDuration(
-              callStart ? Math.max(0, Math.floor((Date.now() - callStart) / 1000)) : seconds
+              callStartRef.current
+                ? Math.max(0, Math.floor((Date.now() - callStartRef.current) / 1000))
+                : 0
             )
             // Cancel any pending auto-chain dial so a new call can NEVER start
             // while you're filling out the disposition sheet. The next call only
@@ -1606,32 +1624,69 @@ function DialerPageInner() {
     dialChainTimeoutsRef.current.clear()
   }
 
-  // ── AUTHORITATIVE KILL SWITCH ─────────────────────────────────────────────
-  // TERMINATE must halt EVERYTHING immediately and in the right order. The order
-  // matters: disarm FIRST (synchronously) so any in-flight or follow-on SIP
-  // INVITE is rejected the instant it arrives, THEN cancel pending auto-chain
-  // dials, stop polling, and hang up the active call. We also flip an abort flag
-  // that scheduleDial/handleDial check, so a dial that already fired its timer
-  // (but hasn't placed the call yet) aborts before hitting SignalWire.
+  // ── AUTHORITATIVE KILL SWITCH (hard shutdown) ─────────────────────────────
+  // ABORT/TERMINATE must stop EVERYTHING — the active call, any queued client
+  // auto-chain dial, AND the SERVER-SIDE predictive controller that places calls
+  // off the heartbeat. The previous version only flipped a 50ms client latch,
+  // which did nothing about the real source of background calls: the heartbeat
+  // loop kept reporting the agent as AVAILABLE, so the server kept filling lines
+  // and the client auto-chain kept firing. The fix is to go UNAVAILABLE — that
+  // is the one signal every dial path (client auto-chain via availableRef, and
+  // the server controller via the heartbeat 'paused' state) actually respects.
   const abortDialingRef = useRef(false)
   const abortAllDialing = async () => {
-    abortDialingRef.current = true            // block any dial currently resolving
-    disarmDialing({ force: true })            // reject INVITEs immediately
-    cancelAllPendingDials()                   // kill queued auto-chain timers
+    // 1) Latch on — stays on; it is cleared only when the user explicitly goes
+    //    available again (see toggleAvailable). No self-releasing timer.
+    abortDialingRef.current = true
+
+    // 2) Go UNAVAILABLE. This is the master switch: availableRef flips false
+    //    immediately (the ref effect is synchronous enough for in-flight async
+    //    guards, and we also set the ref directly here to be certain), the
+    //    heartbeat starts reporting 'paused', and the server controller stops
+    //    fanning out lines on the next beat.
+    availableRef.current = false
+    setAvailable(false)
+
+    // 3) Tear down predictive engine state so predictive_armed goes false now.
     setPredictiveEngineStarted(false)
     predictiveEngineStartedRef.current = false
+
+    // 4) Reject any in-flight / follow-on SIP INVITE instantly.
+    disarmDialing({ force: true })
+
+    // 5) Kill queued client auto-chain timers and stop polling.
+    cancelAllPendingDials()
     if (activePollRef.current) { clearInterval(activePollRef.current); activePollRef.current = null }
+
+    // 6) Tell the SERVER to stop and tear down this agent's in-flight calls.
+    //    This is what silences the "numbers answered in the background" — the
+    //    client can't always hang them up by SID (it may not know them), so the
+    //    server releases lead claims and hangs up calls tied to this session.
+    try {
+      await fetch('/api/dialer/abort', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          campaign_id: isSpecificCampaign ? selectedCampaign : null,
+        }),
+      })
+    } catch (e) {
+      console.error('[abort] server abort failed (continuing local teardown):', e)
+    }
+
+    // 7) Hang up the active call we DO know about.
     const sid = activeCallSidRef.current || activeCallSid
     if (sid) { try { await hangupCall(sid) } catch {} }
+
+    // 8) Reset UI to a clean idle/offline state.
     setStatus('idle')
     setCurrentLead(null)
     setShowDisposition(false)
     setDisposition('')
     setSeconds(0)
     lastIncomingCallSidRef.current = null
-    // Release the abort latch on the next tick so future user-initiated dials
-    // work again (the latch only needs to outlive the in-flight dial).
-    setTimeout(() => { abortDialingRef.current = false }, 50)
+    setActiveCallSid('')
+    activeCallSidRef.current = null
   }
 
   // Schedules the next auto-chain dial, but tracked so it can be cancelled, and
@@ -1703,7 +1758,7 @@ function DialerPageInner() {
           lead_id: currentLead.id,
           campaign_id: currentLead.campaign_id,
           disposition: 'SKIPPED',
-          duration: Math.floor((Date.now() - callStart) / 1000),
+          duration: Math.floor((Date.now() - (callStartRef.current || callStart)) / 1000),
           notes: notes.trim() || undefined,
           source: 'skip',
         }),
@@ -1738,7 +1793,7 @@ function DialerPageInner() {
           lead_id: currentLead.id,
           campaign_id: currentLead.campaign_id,
           disposition: disp,
-          duration: Math.floor((Date.now() - callStart) / 1000),
+          duration: Math.floor((Date.now() - (callStartRef.current || callStart)) / 1000),
           notes: notes.trim() || undefined,
           source: 'dialer',
         }),

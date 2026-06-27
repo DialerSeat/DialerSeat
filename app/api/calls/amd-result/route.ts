@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { recordAmdResult } from '@/lib/dialerPacing'
 import { verifyWebhook, webhookUrl } from '@/lib/verifyWebhook'
+import {
+  claimTelephonyEvent,
+  markTelephonyEventProcessed,
+  markTelephonyEventFailed,
+} from '@/lib/telephony-idempotency'
 
 // =============================================================================
 // SignalWire AMD result webhook (modified for predictive controller)
@@ -48,131 +53,149 @@ export async function POST(req: Request) {
 
     console.log(`[amd-result] ${callSid} answered by ${answeredBy}`)
 
-    await recordAmdResult(callSid, answeredBy)
-
-    const isNotHuman =
-      answeredBy.startsWith('machine_') ||
-      answeredBy === 'fax' ||
-      answeredBy === 'unknown'
-
-    if (isNotHuman) {
-      await hangupCall(callSid)
-      await autoDisposeAsNoAnswer(callSid)
-      cleanupRecordingsForCall(callSid).catch(err => {
-        console.error('[amd-result] recording cleanup failed:', err)
-      })
+    // ── Idempotency: AMD side effects (hangup / agent-leg routing / abandon)
+    // must fire exactly once. A duplicate AMD callback for the same CallSid +
+    // AnsweredBy is acknowledged and skipped before any side effect runs.
+    const claim = await claimTelephonyEvent({
+      callSid,
+      webhook: 'amd',
+      status: answeredBy,
+      sequenceNo: null, // AMD callbacks carry no SequenceNumber
+    })
+    if (!claim.shouldProcess) {
       return new NextResponse('', { status: 200 })
     }
 
-    // ── HUMAN ANSWERED ──────────────────────────────────────────────────
-    // Look up the call row to determine if this is a user-dial or
-    // controller-fanout call.
-    const { data: callRow } = await supabaseAdmin
-      .from('calls')
-      .select('id, campaign_id, dial_group_id, signalwire_call_id, phone_number')
-      .eq('signalwire_call_id', callSid)
-      .maybeSingle()
+    try {
+      await recordAmdResult(callSid, answeredBy)
 
-    if (!callRow) {
-      // No matching call row — can't tell user_dial vs fanout.
-      // Default to leaving alone (existing behavior for user dials).
-      console.warn(`[amd-result] No calls row for ${callSid}, treating as user_dial`)
-      return new NextResponse('', { status: 200 })
-    }
+      const isNotHuman =
+        answeredBy.startsWith('machine_') ||
+        answeredBy === 'fax' ||
+        answeredBy === 'unknown'
 
-    if (!callRow.dial_group_id) {
-      // No dial_group_id = user_dial call. Agent leg already placed and
-      // joined conference at lead pickup. Nothing to do — agent already
-      // has the call.
-      return new NextResponse('', { status: 200 })
-    }
+      if (isNotHuman) {
+        await hangupCall(callSid)
+        await autoDisposeAsNoAnswer(callSid)
+        cleanupRecordingsForCall(callSid).catch(err => {
+          console.error('[amd-result] recording cleanup failed:', err)
+        })
+        await markTelephonyEventProcessed(claim.eventKey)
+        return new NextResponse('', { status: 200 })
+      }
 
-    // ── CONTROLLER FANOUT — route or abandon ────────────────────────────
-    // dial_group_id is the agent_sessions.id that fired this call.
-    // Check if that session is still ready (no other call routed to them).
-    const sessionId = callRow.dial_group_id
+      // ── HUMAN ANSWERED ──────────────────────────────────────────────────
+      // Look up the call row to determine if this is a user-dial or
+      // controller-fanout call.
+      const { data: callRow } = await supabaseAdmin
+        .from('calls')
+        .select('id, campaign_id, dial_group_id, signalwire_call_id, phone_number')
+        .eq('signalwire_call_id', callSid)
+        .maybeSingle()
 
-    const { data: session } = await supabaseAdmin
-      .from('agent_sessions')
-      .select('id, state, current_call_id, last_heartbeat, user_id')
-      .eq('id', sessionId)
-      .maybeSingle()
+      if (!callRow) {
+        // No matching call row — can't tell user_dial vs fanout.
+        // Default to leaving alone (existing behavior for user dials).
+        console.warn(`[amd-result] No calls row for ${callSid}, treating as user_dial`)
+        await markTelephonyEventProcessed(claim.eventKey)
+        return new NextResponse('', { status: 200 })
+      }
 
-    if (!session) {
-      // Session disappeared — agent closed browser before AMD fired.
-      // Abandon the call.
-      console.log(`[amd-result] session ${sessionId} gone, abandoning ${callSid}`)
-      await abandonCall(callSid)
-      return new NextResponse('', { status: 200 })
-    }
+      if (!callRow.dial_group_id) {
+        // No dial_group_id = user_dial call. Agent leg already placed and
+        // joined conference at lead pickup. Nothing to do — agent already
+        // has the call.
+        await markTelephonyEventProcessed(claim.eventKey)
+        return new NextResponse('', { status: 200 })
+      }
 
-    // Heartbeat freshness — if agent's tab is closed, abandon
-    const heartbeatAge = Date.now() - new Date(session.last_heartbeat).getTime()
-    if (heartbeatAge > 15_000) {
-      console.log(`[amd-result] session ${sessionId} stale (${Math.round(heartbeatAge/1000)}s), abandoning ${callSid}`)
-      await abandonCall(callSid)
-      return new NextResponse('', { status: 200 })
-    }
+      // ── CONTROLLER FANOUT — route or abandon ────────────────────────────
+      // dial_group_id is the agent_sessions.id that fired this call.
+      // Check if that session is still ready (no other call routed to them).
+      const sessionId = callRow.dial_group_id
 
-    // If agent already has a call routed to them (current_call_id set,
-    // AND it's not this call), this is the excess pickup → abandon.
-    if (session.current_call_id && session.current_call_id !== callRow.id) {
-      console.log(`[amd-result] session ${sessionId} already on call ${session.current_call_id}, abandoning ${callSid}`)
-      await abandonCall(callSid)
-      return new NextResponse('', { status: 200 })
-    }
-
-    // Agent is ready or already claimed this call. Claim it for them
-    // and place the agent leg into the same conference room.
-    // (The lead is already in a conference room created by the lead-call's
-    // initial TwiML URL `/api/calls/twiml?room=room-...`.)
-    //
-    // We mark the session as current_call_id=THIS call atomically so a
-    // simultaneous AMD result for another fanout call can't double-claim.
-    const claimRes = await supabaseAdmin
-      .from('agent_sessions')
-      .update({
-        current_call_id: callRow.id,
-        state: 'on_call',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', sessionId)
-      .or(`current_call_id.is.null,current_call_id.eq.${callRow.id}`)
-      .select('id')
-      .maybeSingle()
-
-    if (!claimRes.data) {
-      // Update touched 0 rows — someone else claimed in the meantime.
-      console.log(`[amd-result] session ${sessionId} claim race lost, abandoning ${callSid}`)
-      await abandonCall(callSid)
-      return new NextResponse('', { status: 200 })
-    }
-
-    // Successfully claimed — now place the agent leg.
-    // Use the SAME conference room name pattern from the lead leg's TwiML.
-    // We need to find that room name — the lead's initial call URL has
-    // it as ?room=room-XXX. The cleanest source of truth is the call_rooms
-    // table that placeOutboundCall populated.
-    const { data: roomRow } = await supabaseAdmin
-      .from('call_rooms')
-      .select('room_name')
-      .eq('lead_call_sid', callSid)
-      .maybeSingle()
-
-    if (!roomRow) {
-      console.error(`[amd-result] no call_rooms row for lead ${callSid}, can't place agent leg`)
-      await abandonCall(callSid)
-      // Release session claim
-      await supabaseAdmin
+      const { data: session } = await supabaseAdmin
         .from('agent_sessions')
-        .update({ current_call_id: null, state: 'ready' })
+        .select('id, state, current_call_id, last_heartbeat, user_id')
         .eq('id', sessionId)
+        .maybeSingle()
+
+      if (!session) {
+        // Session disappeared — agent closed browser before AMD fired.
+        // Abandon the call.
+        console.log(`[amd-result] session ${sessionId} gone, abandoning ${callSid}`)
+        await abandonCall(callSid)
+        await markTelephonyEventProcessed(claim.eventKey)
+        return new NextResponse('', { status: 200 })
+      }
+
+      // Heartbeat freshness — if agent's tab is closed, abandon
+      const heartbeatAge = Date.now() - new Date(session.last_heartbeat).getTime()
+      if (heartbeatAge > 15_000) {
+        console.log(`[amd-result] session ${sessionId} stale (${Math.round(heartbeatAge/1000)}s), abandoning ${callSid}`)
+        await abandonCall(callSid)
+        await markTelephonyEventProcessed(claim.eventKey)
+        return new NextResponse('', { status: 200 })
+      }
+
+      // If agent already has a call routed to them (current_call_id set,
+      // AND it's not this call), this is the excess pickup → abandon.
+      if (session.current_call_id && session.current_call_id !== callRow.id) {
+        console.log(`[amd-result] session ${sessionId} already on call ${session.current_call_id}, abandoning ${callSid}`)
+        await abandonCall(callSid)
+        await markTelephonyEventProcessed(claim.eventKey)
+        return new NextResponse('', { status: 200 })
+      }
+
+      // Agent is ready or already claimed this call. Claim it for them
+      // and place the agent leg into the same conference room.
+      const claimRes = await supabaseAdmin
+        .from('agent_sessions')
+        .update({
+          current_call_id: callRow.id,
+          state: 'on_call',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', sessionId)
+        .or(`current_call_id.is.null,current_call_id.eq.${callRow.id}`)
+        .select('id')
+        .maybeSingle()
+
+      if (!claimRes.data) {
+        // Update touched 0 rows — someone else claimed in the meantime.
+        console.log(`[amd-result] session ${sessionId} claim race lost, abandoning ${callSid}`)
+        await abandonCall(callSid)
+        await markTelephonyEventProcessed(claim.eventKey)
+        return new NextResponse('', { status: 200 })
+      }
+
+      // Successfully claimed — now place the agent leg.
+      const { data: roomRow } = await supabaseAdmin
+        .from('call_rooms')
+        .select('room_name')
+        .eq('lead_call_sid', callSid)
+        .maybeSingle()
+
+      if (!roomRow) {
+        console.error(`[amd-result] no call_rooms row for lead ${callSid}, can't place agent leg`)
+        await abandonCall(callSid)
+        // Release session claim
+        await supabaseAdmin
+          .from('agent_sessions')
+          .update({ current_call_id: null, state: 'ready' })
+          .eq('id', sessionId)
+        await markTelephonyEventProcessed(claim.eventKey)
+        return new NextResponse('', { status: 200 })
+      }
+
+      await placeAgentLegForFanout(roomRow.room_name, callRow.phone_number)
+
+      await markTelephonyEventProcessed(claim.eventKey)
       return new NextResponse('', { status: 200 })
+    } catch (workErr) {
+      await markTelephonyEventFailed(claim.eventKey, workErr)
+      throw workErr
     }
-
-    await placeAgentLegForFanout(roomRow.room_name, callRow.phone_number)
-
-    return new NextResponse('', { status: 200 })
   } catch (error: any) {
     console.error('[amd-result] error:', error)
     return new NextResponse('', { status: 200 })

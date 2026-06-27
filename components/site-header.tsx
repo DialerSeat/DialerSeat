@@ -4,7 +4,6 @@ import Image from 'next/image'
 import { useUser, UserButton } from '@clerk/nextjs'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
-import { createClient } from '@supabase/supabase-js'
 
 const T = {
   bg: '#f0f1f4',
@@ -82,15 +81,12 @@ export default function SiteHeader() {
     let cancelled = false
     const lookup = async () => {
       try {
-        const supabase = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-        )
-        const { data } = await supabase
-          .from('users')
-          .select('is_admin')
-          .eq('clerk_id', user.id)
-          .maybeSingle()
+        // Admin status is resolved SERVER-SIDE (/api/users/me) using the
+        // service-role key. The browser no longer queries the `users` table
+        // directly with the anon key, so the table's RLS can stay locked down.
+        const res = await fetch('/api/users/me')
+        if (!res.ok) return
+        const data = await res.json()
         if (!cancelled && data?.is_admin) setIsAdmin(true)
       } catch {
         // Silently default to non-admin on lookup failure
