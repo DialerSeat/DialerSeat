@@ -5,7 +5,6 @@ import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
 import { useBranding } from '@/components/ThemeProvider'
-import SystemTray from '@/components/SystemTray'
 
 // =============================================================================
 // app/dashboard/layout.tsx — C5 (Manager+ "Go to Desktop" sidebar button)
@@ -466,30 +465,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </Link>
       )}
 
-      {/* CALENDAR — sidebar entry so regular agents can always reach their
-          calendar (e.g. appointments created from dialer dispositions). Admin /
-          manager+ ALSO get a desktop-native entry via the system-tray clock. */}
-      <Link
-        href="/dashboard/calendar"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          padding: '12px 18px',
-          cursor: 'pointer',
-          background: 'transparent',
-          border: '1px solid transparent',
-          boxSizing: 'border-box',
-          textDecoration: 'none',
-          flexShrink: 0,
-        }}>
-        <span style={{
-          fontSize: '11px',
-          letterSpacing: '2px',
-          fontWeight: 'bold',
-          color: 'var(--brand-on-sidebar-muted)',
-        }}>CALENDAR</span>
-      </Link>
-
       <div
         ref={profileRowRef}
         onClick={handleProfileRowClick}
@@ -545,7 +520,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         @media (max-width: 768px) {
           .ds-sidebar-desktop { display: none; }
-          .ds-system-tray { display: none !important; }
           .ds-mobile-topbar {
             display: flex; position: sticky; top: 0; left: 0; right: 0; z-index: 40;
             align-items: center; justify-content: space-between;
@@ -626,10 +600,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {children}
       </div>
-
-      {/* Windows-style system tray: live clock opens the calendar; view-desktop
-          to its right. Admin / manager+ only (the component self-gates). */}
-      <SystemTray isAdmin={!!isAdmin} hasManagerPlus={hasManagerPlus} />
     </main>
   )
 }
