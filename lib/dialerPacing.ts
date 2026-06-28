@@ -89,12 +89,12 @@ async function countInFlightCalls(campaignId: string): Promise<number> {
 /**
  * Counts active dialer sessions for a campaign in the last 60s.
  *
- * Migration note (v23 bugfix): this used to read from `dialer_sessions`
- * (which no longer exists) and filtered on `ended_at IS NULL` +
- * `last_heartbeat_at`. The replacement table is `agent_sessions`, which
- * has no `ended_at` column — session lifecycle is tracked via the `state`
- * text column (one of: ready, dialing, on_call, wrapping, paused). The
- * heartbeat column was also renamed `last_heartbeat_at` → `last_heartbeat`.
+ * Pacing reads ONLY agent_sessions. (Historical note: an earlier design also
+ * maintained a parallel dialer_sessions table; it was write-only — nothing read
+ * it — so its writes were removed and pacing was consolidated onto
+ * agent_sessions. agent_sessions has no `ended_at`; session lifecycle is the
+ * `state` text column: ready, dialing, on_call, wrapping, paused. Heartbeat
+ * column is `last_heartbeat`.)
  *
  * "Active" here = any non-paused agent with a recent heartbeat. This
  * preserves the original semantics (everyone currently engaged with the

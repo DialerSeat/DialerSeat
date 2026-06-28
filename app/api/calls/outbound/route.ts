@@ -3,6 +3,7 @@ import { requireActive } from '@/lib/subscription'
 import { auth } from '@clerk/nextjs/server'
 import { placeOutboundCall } from '@/lib/placeOutboundCall'
 import { apiError } from '@/lib/apiError'
+import { logCallEvent } from '@/lib/callEvents'
 
 // =============================================================================
 // OUTBOUND CALL — user-initiated dial
@@ -91,6 +92,17 @@ export async function POST(req: Request) {
     }
 
     // Success — same shape the dialer page already expects
+    void logCallEvent({
+      event_type: 'initiated',
+      signalwire_call_id: result.callSid ?? null,
+      user_id: userId,
+      lead_id: leadId ?? null,
+      campaign_id: campaignId ?? null,
+      status: result.status ?? null,
+      source: 'dialer',
+      detail: { amdEnabled: result.amdEnabled, dialerMode: result.dialerMode },
+    })
+
     return NextResponse.json({
       success: true,
       callSid: result.callSid,

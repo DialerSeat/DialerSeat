@@ -1277,3 +1277,45 @@ CREATE POLICY "Service role full access tenants" ON public.white_label_tenants
 -- =============================================================================
 -- END OF SCHEMA
 -- =============================================================================
+-- ============================================================================
+-- RELIABILITY / IDEMPOTENCY TABLES (appended — reflect live DB as of 2026-06-28)
+-- ============================================================================
+
+-- Append-only forensic trail of call lifecycle transitions. Enforced append-only
+-- at the privilege level: service_role has INSERT+SELECT only (no UPDATE/DELETE/
+-- TRUNCATE); anon/authenticated SELECT only; postgres retains full for retention.
+CREATE TABLE IF NOT EXISTS public.call_events (
+  id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  call_id            uuid,
+  signalwire_call_id text,
+  user_id            text,
+  campaign_id        uuid,
+  lead_id            uuid,
+  event_type         text NOT NULL,
+  status             text,
+  source             text NOT NULL DEFAULT 'system',
+  detail             jsonb,
+  created_at         timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_call_events_call_id ON public.call_events (call_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_call_events_sid     ON public.call_events (signalwire_call_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_call_events_created ON public.call_events (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_call_events_user    ON public.call_events (user_id, created_at DESC);
+ALTER TABLE public.call_events ENABLE ROW LEVEL SECURITY;
+
+-- Webhook idempotency ledger for SignalWire callbacks (dedup + ordering).
+-- PK (event_key) dedupes; sequence_no enforces ordering; processing_status
+-- tracks received/processed/failed with attempt counting.
+CREATE TABLE IF NOT EXISTS public.telephony_events (
+  event_key         text PRIMARY KEY,
+  call_sid          text NOT NULL,
+  webhook           text NOT NULL,
+  status            text,
+  sequence_no       integer,
+  processing_status text NOT NULL DEFAULT 'received',
+  received_at       timestamptz NOT NULL DEFAULT now(),
+  processed_at      timestamptz,
+  error_message     text,
+  attempts          integer NOT NULL DEFAULT 1
+);
+ALTER TABLE public.telephony_events ENABLE ROW LEVEL SECURITY;

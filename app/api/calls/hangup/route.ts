@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { getServiceClient } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
+import { logCallEvent } from '@/lib/callEvents'
 
 const supabase = getServiceClient('calls/hangup')
 
@@ -48,6 +49,13 @@ export async function POST(req: Request) {
 
     const data = await response.json()
     console.log('Hangup response:', data)
+
+    void logCallEvent({
+      event_type: 'hangup_requested',
+      signalwire_call_id: sid,
+      user_id: userId,
+      source: 'dialer',
+    })
 
     return NextResponse.json({ success: true })
   } catch (error: any) {

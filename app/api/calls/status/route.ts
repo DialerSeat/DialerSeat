@@ -55,6 +55,21 @@ export async function POST(req: Request) {
       })
     }
 
+    // On a TERMINAL status, promptly remove the call_rooms bridge row for this
+    // call so dead rooms don't accumulate (the stale-call reaper then only ever
+    // mops up rooms whose terminal webhook never arrived — a pure backstop).
+    // Fire-and-forget: a cleanup failure must never affect the webhook response
+    // or its retry semantics.
+    if (disposition) {
+      void supabaseAdmin
+        .from('call_rooms')
+        .delete()
+        .or(`lead_call_sid.eq.${callSid},agent_call_sid.eq.${callSid}`)
+        .then(({ error }) => {
+          if (error) console.error('[calls/status] room cleanup failed (non-fatal):', error.message)
+        })
+    }
+
     return NextResponse.json({ success: true })
   } catch (error: any) {
     console.error('Status webhook error:', error)
