@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/requireAdmin'
 import { getServiceClient } from '@/lib/supabase'
 import { getAreaCodeInfo, extractAreaCode } from '@/lib/areaCode'
+import { apiError } from '@/lib/apiError'
 
 const supabase = getServiceClient('admin/pool/import-existing')
 
@@ -112,6 +113,6 @@ export async function POST() {
     })
   } catch (err: any) {
     console.error('[pool/import-existing] error:', err)
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    return apiError(err, { route: 'admin/pool/import-existing' })
   }
 }

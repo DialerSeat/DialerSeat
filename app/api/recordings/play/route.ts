@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getServiceClient } from '@/lib/supabase'
 import { auth } from '@clerk/nextjs/server'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const supabase = getServiceClient('recordings/play')
 
 // Streams the recording from SignalWire, but only if the requesting user owns it.
 // SignalWire recording URLs require Basic Auth, so we proxy + add the auth header here.

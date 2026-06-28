@@ -4,6 +4,7 @@ import { revalidateTag } from 'next/cache'
 import { supabaseAdmin } from '@/lib/supabase'
 import { userCacheTag } from '@/lib/tenant'
 import { createSeatSubscription, isSeatBillingError } from '@/lib/teamBilling'
+import { apiError } from '@/lib/apiError'
 
 /**
  * Owner accepts a pending team member.
@@ -207,6 +208,6 @@ export async function POST(req: Request) {
     })
   } catch (error: any) {
     console.error('Accept member error:', error)
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    return apiError(error, { route: 'teams/members/accept' })
   }
 }

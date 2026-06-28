@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { createClient } from '@supabase/supabase-js'
+import { getServiceClient } from '@/lib/supabase'
 import { getManagerTenant } from '@/lib/manager'
 
 // =============================================================================
@@ -31,10 +31,7 @@ import { getManagerTenant } from '@/lib/manager'
 
 export const dynamic = 'force-dynamic'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const supabase = getServiceClient('manager/desktop-prefs')
 
 type BgSetting = { type: 'preset' | 'solid' | 'image'; value: string }
 

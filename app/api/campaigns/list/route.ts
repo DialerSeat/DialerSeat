@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import { NextResponse } from 'next/server'
 import { requireUser } from '@/lib/requireUser'
+import { apiError } from '@/lib/apiError'
 
 // =============================================================================
 // CAMPAIGNS LIST — with optional virtual sub-campaign expansion
@@ -153,6 +154,6 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ success: true, campaigns: expanded })
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    return apiError(error, { route: 'campaigns/list' })
   }
 }

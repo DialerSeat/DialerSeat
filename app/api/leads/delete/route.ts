@@ -23,6 +23,7 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
+import { apiError } from '@/lib/apiError'
 
 export async function POST(req: Request) {
   try {
@@ -44,7 +45,7 @@ export async function POST(req: Request) {
         .eq('user_id', userId)
 
       if (ownErr) {
-        return NextResponse.json({ success: false, error: ownErr.message }, { status: 500 })
+        return apiError(ownErr, { route: 'leads/delete' })
       }
 
       if (!ownedLeads || ownedLeads.length !== lead_ids.length) {
@@ -67,7 +68,7 @@ export async function POST(req: Request) {
         .eq('user_id', userId) // belt-and-suspenders
 
       if (delErr) {
-        return NextResponse.json({ success: false, error: delErr.message }, { status: 500 })
+        return apiError(delErr, { route: 'leads/delete' })
       }
 
       // Recount every affected campaign.
@@ -113,7 +114,7 @@ export async function POST(req: Request) {
       { status: 400 }
     )
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    return apiError(error, { route: 'leads/delete' })
   }
 }
 

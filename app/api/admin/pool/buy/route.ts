@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { addNumberByAreaCode, getPoolConfig, recordBuy } from '@/lib/numberPool'
 import { requireAdmin } from '@/lib/requireAdmin'
+import { apiError } from '@/lib/apiError'
 
 const supabase = getServiceClient('admin/pool/buy')
 
@@ -51,6 +52,6 @@ export async function POST(req: Request) {
     await recordBuy()
     return NextResponse.json({ success: true, number: result })
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    return apiError(err, { route: 'admin/pool/buy' })
   }
 }

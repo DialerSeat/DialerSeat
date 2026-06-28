@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { apiError } from '@/lib/apiError'
 
 export async function GET(req: Request) {
   try {
@@ -77,6 +78,6 @@ export async function GET(req: Request) {
     return NextResponse.json({ success: true, scripts: scripts || [] })
   } catch (error: any) {
     console.error('Scripts list error:', error)
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    return apiError(error, { route: 'campaigns/scripts/list' })
   }
 }

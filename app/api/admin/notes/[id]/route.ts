@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getServiceClient } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/requireAdmin'
 
 // =============================================================================
@@ -22,10 +22,7 @@ import { requireAdmin } from '@/lib/requireAdmin'
 // =============================================================================
 
 const supabaseAdmin = () =>
-  createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+  getServiceClient('admin/notes/[id]')
 
 const NOTE_COLS = 'id, title, body, starred, pin_order, created_at, updated_at'
 

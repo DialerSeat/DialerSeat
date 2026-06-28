@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getServiceClient } from '@/lib/supabase'
+import { apiError } from '@/lib/apiError'
 import {
   getPoolConfig,
   recordBuy,
@@ -8,10 +9,7 @@ import {
   releasePoolNumber,
 } from '@/lib/numberPool'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const supabase = getServiceClient('cron/pool-maintenance')
 
 /**
  * Hourly maintenance cron.
@@ -169,7 +167,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ success: true, summary })
   } catch (err: any) {
     console.error('[cron/pool-maintenance] error:', err)
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 })
+    return apiError(err, { route: 'cron/pool-maintenance' })
   }
 }
 

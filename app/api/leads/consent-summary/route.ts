@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
+import { apiError } from '@/lib/apiError'
 
 export async function GET() {
   try {
@@ -28,6 +29,6 @@ export async function GET() {
       withConsent: withConsent ?? 0,
     })
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    return apiError(error, { route: 'leads/consent-summary' })
   }
 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { addNumberByAreaCode } from '@/lib/numberPool'
 import { requireAdmin } from '@/lib/requireAdmin'
+import { apiError } from '@/lib/apiError'
 
 const supabase = getServiceClient('admin/pool/seed')
 
@@ -107,9 +108,6 @@ export async function POST(req: Request) {
     })
   } catch (err: any) {
     console.error('[admin/pool/seed] error:', err)
-    return NextResponse.json(
-      { success: false, error: err.message },
-      { status: 500 }
-    )
+    return apiError(err, { route: 'admin/pool/seed' })
   }
 }

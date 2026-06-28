@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { apiError } from '@/lib/apiError'
 
 /**
  * Lists teams visible to the authenticated user.
@@ -164,6 +165,6 @@ export async function GET(req: NextRequest) {
     })
   } catch (error: any) {
     console.error('Team list error:', error)
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    return apiError(error, { route: 'teams/list' })
   }
 }

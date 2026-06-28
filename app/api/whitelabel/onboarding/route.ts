@@ -30,7 +30,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { createClient } from '@supabase/supabase-js'
+import { getServiceClient } from '@/lib/supabase'
 import {
   addProjectDomain,
   removeProjectDomain,
@@ -38,10 +38,7 @@ import {
 } from '@/lib/vercelDomains'
 import { submitOnTenantLive } from '@/lib/indexnow'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const supabase = getServiceClient('whitelabel/onboarding')
 
 const RESERVED = new Set([
   'www', 'api', 'app', 'admin', 'mail', 'email', 'support',

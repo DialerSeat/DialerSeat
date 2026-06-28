@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { releasePoolNumber } from '@/lib/numberPool'
 import { requireAdmin } from '@/lib/requireAdmin'
+import { apiError } from '@/lib/apiError'
 
 const supabase = getServiceClient('admin/pool/release')
 
@@ -29,6 +30,6 @@ export async function POST(req: Request) {
     await releasePoolNumber(numberId)
     return NextResponse.json({ success: true, numberId })
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    return apiError(err, { route: 'admin/pool/release' })
   }
 }

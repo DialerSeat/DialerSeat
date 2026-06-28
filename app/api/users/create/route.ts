@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import { NextResponse } from 'next/server'
+import { apiError } from '@/lib/apiError'
 
 export async function POST(req: Request) {
   try {
@@ -51,7 +52,7 @@ export async function POST(req: Request) {
 
       if (updateError) {
         console.log('UPDATE ERROR:', updateError)
-        return NextResponse.json({ success: false, error: updateError.message }, { status: 500 })
+        return apiError(updateError, { route: 'users/create' })
       }
     }
 
@@ -59,6 +60,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true })
   } catch (error: any) {
     console.log('CATCH ERROR:', error)
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    return apiError(error, { route: 'users/create' })
   }
 }

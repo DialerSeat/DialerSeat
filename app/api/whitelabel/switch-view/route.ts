@@ -30,14 +30,11 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { createClient } from '@supabase/supabase-js'
+import { getServiceClient } from '@/lib/supabase'
 import { revalidateTag } from 'next/cache'
 import { userCacheTag } from '@/lib/tenant'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const supabase = getServiceClient('whitelabel/switch-view')
 
 const ACTIVE_SUB_STATUSES = ['trialing', 'active', 'past_due']
 

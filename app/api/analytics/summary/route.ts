@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getServiceClient } from '@/lib/supabase'
 import { auth } from '@clerk/nextjs/server'
+import { apiError } from '@/lib/apiError'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const supabase = getServiceClient('analytics/summary')
 
 const CONVERSION_DISPS = ['CLOSED', 'APPOINTMENT']
 const CONTACT_DISPS = ['CLOSED', 'APPOINTMENT', 'NOT INTERESTED', 'DO NOT CALL']
@@ -18,11 +16,9 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url)
-  // Always scope to the authenticated user. (A user_id query param is ignored —
-  // it was a backwards-compat shortcut whose only safe resolution is the auth'd
-  // user anyway. Using authUserId directly removes the temptation to "simplify"
-  // it into a real client-controlled filter.)
-  const userId = authUserId
+  // We accept user_id in query for backwards compat, but always enforce auth match
+  const requestedUserId = searchParams.get('user_id')
+  const userId = (requestedUserId && requestedUserId === authUserId) ? authUserId : authUserId
 
   const start = searchParams.get('start')
   const end = searchParams.get('end')
@@ -34,7 +30,7 @@ export async function GET(req: NextRequest) {
   if (end) callsQuery = callsQuery.lte('created_at', end)
   const { data: callsData, error: callsErr } = await callsQuery
   if (callsErr) {
-    return NextResponse.json({ success: false, error: callsErr.message }, { status: 500 })
+    return apiError(callsErr, { route: 'analytics/summary' })
   }
   const calls = callsData || []
 

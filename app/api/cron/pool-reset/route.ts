@@ -1,10 +1,8 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getServiceClient } from '@/lib/supabase'
+import { apiError } from '@/lib/apiError'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const supabase = getServiceClient('cron/pool-reset')
 
 // Daily cron — runs at 00:00 UTC.
 // Resets daily_call_count to 0 for all numbers, and revives any numbers
@@ -50,10 +48,7 @@ export async function GET(req: Request) {
     return NextResponse.json(result)
   } catch (err: any) {
     console.error('[cron/pool-reset] error:', err)
-    return NextResponse.json(
-      { success: false, error: err.message },
-      { status: 500 }
-    )
+    return apiError(err, { route: 'cron/pool-reset' })
   }
 }
 

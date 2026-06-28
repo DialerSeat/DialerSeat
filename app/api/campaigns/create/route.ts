@@ -2,6 +2,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { NextResponse } from 'next/server'
 import { requireActive } from '@/lib/subscription'
 import { auth } from '@clerk/nextjs/server'
+import { apiError } from '@/lib/apiError'
 
 const VALID_MODES = ['preview', 'power', 'progressive', 'predictive'] as const
 type DialerMode = typeof VALID_MODES[number]
@@ -74,6 +75,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, campaign: data })
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    return apiError(error, { route: 'campaigns/create' })
   }
 }

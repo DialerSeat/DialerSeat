@@ -14,6 +14,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { apiError } from '@/lib/apiError'
 
 export async function POST(req: Request) {
   try {
@@ -74,6 +75,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, error: 'Owner only' }, { status: 403 })
   } catch (error: any) {
     console.error('scripts/delete error:', error)
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    return apiError(error, { route: 'scripts/delete' })
   }
 }

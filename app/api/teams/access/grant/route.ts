@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { createSeatSubscription, isSeatBillingError } from '@/lib/teamBilling'
+import { apiError } from '@/lib/apiError'
 
 /**
  * Owner manually grants a specific agent access to a specific campaign.
@@ -223,6 +224,6 @@ export async function POST(req: Request) {
     }
   } catch (error: any) {
     console.error('Grant access error:', error)
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    return apiError(error, { route: 'teams/access/grant' })
   }
 }

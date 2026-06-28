@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { apiError } from '@/lib/apiError'
 
 /**
  * Owner updates team metadata (name, description).
@@ -69,6 +70,6 @@ export async function POST(
     return NextResponse.json({ success: true, team: data })
   } catch (error: any) {
     console.error('Team update error:', error)
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    return apiError(error, { route: 'teams/[id]/update' })
   }
 }

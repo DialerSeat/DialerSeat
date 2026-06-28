@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/requireAdmin'
+import { apiError } from '@/lib/apiError'
 
 /**
  * Admin-only: aggregated overview of every team on DialerSeat.
@@ -188,6 +189,6 @@ export async function GET() {
     })
   } catch (error: any) {
     console.error('Admin teams error:', error)
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    return apiError(error, { route: 'admin/teams' })
   }
 }

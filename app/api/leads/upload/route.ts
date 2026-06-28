@@ -2,6 +2,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { NextResponse } from 'next/server'
 import { requireActive } from '@/lib/subscription'
 import { auth } from '@clerk/nextjs/server'
+import { apiError } from '@/lib/apiError'
 
 /**
  * Parses optional consent fields from a lead row. Returns the four columns
@@ -180,6 +181,6 @@ export async function POST(req: Request) {
       withConsent: consentCount,
     })
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    return apiError(error, { route: 'leads/upload' })
   }
 }

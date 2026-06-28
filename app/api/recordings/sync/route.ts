@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getServiceClient } from '@/lib/supabase'
 import { auth } from '@clerk/nextjs/server'
+import { apiError } from '@/lib/apiError'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const supabase = getServiceClient('recordings/sync')
 
 // Manually polls SignalWire for the user's recordings and back-fills the calls table.
 // Triggered when the user opens the recordings page or hits a "sync" button.
@@ -149,6 +147,6 @@ export async function POST(req: NextRequest) {
     })
   } catch (err: any) {
     console.error('Sync error:', err)
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 })
+    return apiError(err, { route: 'recordings/sync' })
   }
 }

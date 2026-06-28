@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireUser } from '@/lib/requireUser'
+import { apiError } from '@/lib/apiError'
 
 // SECURITY (was IDOR): scoped only by client-supplied ?user_id with no auth.
 // Identity now comes from the Clerk session.
@@ -23,7 +24,7 @@ export async function GET(req: NextRequest) {
 
   const { data: calls, error: callsErr } = await query
   if (callsErr) {
-    return NextResponse.json({ success: false, error: callsErr.message }, { status: 500 })
+    return apiError(callsErr, { route: 'analytics/campaigns' })
   }
 
   // Group by campaign

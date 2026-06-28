@@ -10,6 +10,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { apiError } from '@/lib/apiError'
 
 export async function POST(req: Request) {
   try {
@@ -72,6 +73,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, script: { ...updated, is_team: !!updated.team_id } })
   } catch (error: any) {
     console.error('scripts/update error:', error)
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    return apiError(error, { route: 'scripts/update' })
   }
 }

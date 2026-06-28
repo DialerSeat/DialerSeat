@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { cancelSeatSubscription } from '@/lib/teamBilling'
+import { apiError } from '@/lib/apiError'
 
 /**
  * Owner revokes a specific agent's access to a specific campaign.
@@ -125,6 +126,6 @@ export async function POST(req: Request) {
     })
   } catch (error: any) {
     console.error('Revoke access error:', error)
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    return apiError(error, { route: 'teams/access/revoke' })
   }
 }

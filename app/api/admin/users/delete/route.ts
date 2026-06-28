@@ -3,6 +3,7 @@ import { getServiceClient } from '@/lib/supabase'
 import { clerkClient } from '@clerk/nextjs/server'
 import { requireAdmin } from '@/lib/admin'
 import { stripe } from '@/lib/stripe'
+import { apiError } from '@/lib/apiError'
 
 const supabase = getServiceClient('admin/users/delete')
 
@@ -76,7 +77,7 @@ export async function POST(req: NextRequest) {
     .maybeSingle()
 
   if (userErr) {
-    return NextResponse.json({ success: false, error: userErr.message }, { status: 500 })
+    return apiError(userErr, { route: 'admin/users/delete' })
   }
 
   // Block deleting admin accounts via this endpoint

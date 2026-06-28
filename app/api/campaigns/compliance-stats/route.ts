@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { computeAbandonRate30d } from '@/lib/dialerPacing'
+import { apiError } from '@/lib/apiError'
 
 /**
  * Returns compliance stats for a campaign — current abandon rate, totals,
@@ -91,6 +92,6 @@ export async function GET(req: Request) {
     })
   } catch (error: any) {
     console.error('[compliance-stats] error:', error)
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    return apiError(error, { route: 'campaigns/compliance-stats' })
   }
 }

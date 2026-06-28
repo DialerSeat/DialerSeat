@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/admin'
+import { apiError } from '@/lib/apiError'
 
 /**
  * Admin force-delete a team.
@@ -77,6 +78,6 @@ export async function POST(req: Request) {
     // requireAdmin() throws Response objects — re-return them
     if (error instanceof Response) return error
     console.error('Admin team delete error:', error)
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    return apiError(error, { route: 'admin/teams/delete' })
   }
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { apiError } from '@/lib/apiError'
 
 /**
  * Tracks active dialer sessions for predictive pacing math.
@@ -85,7 +86,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, sessionId: created.id, action: 'started' })
   } catch (error: any) {
     console.error('Dialer session POST error:', error)
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    return apiError(error, { route: 'dialer/session' })
   }
 }
 
@@ -114,6 +115,6 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ success: true })
   } catch (error: any) {
     console.error('Dialer session DELETE error:', error)
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    return apiError(error, { route: 'dialer/session' })
   }
 }

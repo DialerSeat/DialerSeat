@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { apiError } from '@/lib/apiError'
 
 /**
  * Unified subscriptions summary for the authenticated user.
@@ -150,6 +151,6 @@ export async function GET() {
     })
   } catch (error: any) {
     console.error('Subscriptions summary error:', error)
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    return apiError(error, { route: 'subscriptions/summary' })
   }
 }

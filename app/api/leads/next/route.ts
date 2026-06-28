@@ -2,6 +2,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { NextResponse } from 'next/server'
 import { isCallableNow } from '@/lib/callingWindow'
 import { requireUser } from '@/lib/requireUser'
+import { apiError } from '@/lib/apiError'
 
 // SECURITY (was IDOR): this route took ?user_id from the query string and used
 // it for BOTH personal lead scoping AND team-membership verification. That let
@@ -105,7 +106,7 @@ export async function GET(req: Request) {
         .limit(CANDIDATE_LIMIT)
 
       if (error) {
-        return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+        return apiError(error, { route: 'leads/next' })
       }
 
       const callable = (candidates || []).find(c => isCallableNow({
@@ -166,7 +167,7 @@ export async function GET(req: Request) {
     const { data: candidates, error } = await query
 
     if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+      return apiError(error, { route: 'leads/next' })
     }
 
     // Filter to only leads currently inside their local TCPA window
@@ -189,6 +190,6 @@ export async function GET(req: Request) {
     const campaign = await fetchCampaignMode(callable.campaign_id)
     return NextResponse.json({ success: true, lead: callable, campaign })
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    return apiError(error, { route: 'leads/next' })
   }
 }
