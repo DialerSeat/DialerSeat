@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { requireAdmin } from '@/lib/requireAdmin'
 
 /**
  * Admin-only: aggregated overview of every team on DialerSeat.
@@ -11,20 +11,8 @@ import { supabaseAdmin } from '@/lib/supabase'
  */
 export async function GET() {
   try {
-    const { userId } = await auth()
-    if (!userId) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const { data: u } = await supabaseAdmin
-      .from('users')
-      .select('is_admin')
-      .eq('clerk_id', userId)
-      .maybeSingle()
-
-    if (!u?.is_admin) {
-      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
-    }
+    const gate = await requireAdmin()
+    if (!gate.ok) return NextResponse.json({ success: false, error: gate.message }, { status: gate.status })
 
     const [
       { data: teams },

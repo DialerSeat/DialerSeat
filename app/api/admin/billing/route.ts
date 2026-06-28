@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getServiceClient } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/admin'
 import Stripe from 'stripe'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const supabase = getServiceClient('admin/billing')
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 

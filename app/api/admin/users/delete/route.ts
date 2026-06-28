@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getServiceClient } from '@/lib/supabase'
 import { clerkClient } from '@clerk/nextjs/server'
 import { requireAdmin } from '@/lib/admin'
 import { stripe } from '@/lib/stripe'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const supabase = getServiceClient('admin/users/delete')
 
 interface DeleteSummary {
   clerkId: string

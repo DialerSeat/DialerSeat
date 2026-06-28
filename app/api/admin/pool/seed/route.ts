@@ -1,12 +1,9 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
-import { createClient } from '@supabase/supabase-js'
+import { getServiceClient } from '@/lib/supabase'
 import { addNumberByAreaCode } from '@/lib/numberPool'
+import { requireAdmin } from '@/lib/requireAdmin'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const supabase = getServiceClient('admin/pool/seed')
 
 // Default seed list: 10 major metros across the US, intentionally diverse
 // area codes so local-presence works for most callers out of the gate.
@@ -28,21 +25,8 @@ const DEFAULT_SEED = [
 // re-run if some purchases failed mid-batch.
 export async function POST(req: Request) {
   try {
-    const { userId } = await auth()
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Verify caller is admin
-    const { data: user } = await supabase
-      .from('users')
-      .select('is_admin')
-      .eq('clerk_id', userId)
-      .single()
-
-    if (!user?.is_admin) {
-      return NextResponse.json({ error: 'Admin only' }, { status: 403 })
-    }
+    const gate = await requireAdmin()
+    if (!gate.ok) return NextResponse.json({ error: gate.message }, { status: gate.status })
 
     // Optional body: { areaCodes: ['212', '213'] } to override the default list.
     // No body = use the default 10-metro list.

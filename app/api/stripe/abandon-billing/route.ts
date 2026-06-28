@@ -1,12 +1,9 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { createClient } from '@supabase/supabase-js'
+import { getServiceClient } from '@/lib/supabase'
 import { stripe } from '@/lib/stripe'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const supabase = getServiceClient('stripe/abandon-billing')
 
 // Statuses we will NEVER touch. If the user has a sub in any of these
 // states, abandon-billing is a no-op. We protect paying customers from

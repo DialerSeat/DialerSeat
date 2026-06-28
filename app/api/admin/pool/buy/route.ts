@@ -1,12 +1,9 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
-import { createClient } from '@supabase/supabase-js'
+import { getServiceClient } from '@/lib/supabase'
 import { addNumberByAreaCode, getPoolConfig, recordBuy } from '@/lib/numberPool'
+import { requireAdmin } from '@/lib/requireAdmin'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const supabase = getServiceClient('admin/pool/buy')
 
 /**
  * Admin manual buy. Body: { areaCode: string }
@@ -14,12 +11,8 @@ const supabase = createClient(
  * pool max size, so an over-eager admin can't blow past the safety net.
  */
 export async function POST(req: Request) {
-  const { userId } = await auth()
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const { data: u } = await supabase
-    .from('users').select('is_admin').eq('clerk_id', userId).single()
-  if (!u?.is_admin) return NextResponse.json({ error: 'Admin only' }, { status: 403 })
+  const gate = await requireAdmin()
+  if (!gate.ok) return NextResponse.json({ error: gate.message }, { status: gate.status })
 
   const body = await req.json().catch(() => ({}))
   const areaCode = String(body?.areaCode ?? '').trim()

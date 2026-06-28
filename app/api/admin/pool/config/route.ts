@@ -1,12 +1,10 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
-import { createClient } from '@supabase/supabase-js'
+import { getServiceClient } from '@/lib/supabase'
 import { getPoolConfig } from '@/lib/numberPool'
+import { requireAdmin } from '@/lib/requireAdmin'
+import { apiError } from '@/lib/apiError'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const supabase = getServiceClient('admin/pool/config')
 
 /**
  * Admin pool config — read (GET) or update (POST).
@@ -16,12 +14,8 @@ const supabase = createClient(
  * server-side so nothing too crazy goes through.
  */
 export async function GET() {
-  const { userId } = await auth()
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const { data: u } = await supabase
-    .from('users').select('is_admin').eq('clerk_id', userId).single()
-  if (!u?.is_admin) return NextResponse.json({ error: 'Admin only' }, { status: 403 })
+  const gate = await requireAdmin()
+  if (!gate.ok) return NextResponse.json({ error: gate.message }, { status: gate.status })
 
   const config = await getPoolConfig()
   return NextResponse.json({ success: true, config })
@@ -35,12 +29,13 @@ const HARD_BOUNDS = {
 }
 
 export async function POST(req: Request) {
-  const { userId } = await auth()
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const gate = await requireAdmin()
+  if (!gate.ok) return NextResponse.json({ error: gate.message }, { status: gate.status })
+  const userId = gate.clerkId
 
+  // Email is used only for the audit 'updated_by' field below.
   const { data: u } = await supabase
-    .from('users').select('is_admin, email').eq('clerk_id', userId).single()
-  if (!u?.is_admin) return NextResponse.json({ error: 'Admin only' }, { status: 403 })
+    .from('users').select('email').eq('clerk_id', userId).maybeSingle()
 
   const body = await req.json().catch(() => ({}))
   const updates: Record<string, any> = {}
@@ -63,7 +58,7 @@ export async function POST(req: Request) {
   }
 
   updates.updated_at = new Date().toISOString()
-  updates.updated_by = u.email ?? userId
+  updates.updated_by = u?.email ?? userId
 
   const { data, error } = await supabase
     .from('pool_config')
@@ -72,7 +67,7 @@ export async function POST(req: Request) {
     .select()
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return apiError(error, { route: 'admin/pool/config' })
 
   return NextResponse.json({ success: true, config: data })
 }
