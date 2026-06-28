@@ -2,6 +2,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { NextResponse } from 'next/server'
 import { verifyWebhook } from '@/lib/verifyWebhook'
 import { apiError } from '@/lib/apiError'
+import { logCallEvent } from '@/lib/callEvents'
 
 export async function POST(req: Request) {
   const bad = verifyWebhook(req)
@@ -36,6 +37,23 @@ export async function POST(req: Request) {
       .from('calls')
       .update(updates)
       .eq('signalwire_call_id', callSid)
+
+    // Forensic trail (fire-and-forget). Terminal statuses map to lifecycle
+    // events; non-terminal ones (ringing/in-progress) are logged as status.
+    const evType =
+      callStatus === 'completed' ? 'completed' :
+      (callStatus === 'failed' || callStatus === 'busy' || callStatus === 'no-answer' || callStatus === 'canceled') ? 'failed' :
+      callStatus === 'ringing' ? 'ringing' :
+      callStatus === 'in-progress' ? 'answered' : null
+    if (evType) {
+      void logCallEvent({
+        event_type: evType as any,
+        signalwire_call_id: callSid,
+        status: callStatus,
+        source: 'webhook',
+        detail: { duration: parseInt(duration || '0'), disposition },
+      })
+    }
 
     return NextResponse.json({ success: true })
   } catch (error: any) {

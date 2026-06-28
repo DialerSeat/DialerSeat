@@ -9,7 +9,7 @@ const supabase = createClient(
 
 export type AccessTier = 'active' | 'lapsed' | 'new'
 
-const ACTIVE_STATUSES = ['trialing', 'active', 'past_due']
+const ACTIVE_STATUSES = ['active']  // strict: only a paid, active sub grants access (no trials; past_due is locked)
 
 /**
  * Detailed access info — used by UI to show what's keeping the user active.

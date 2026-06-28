@@ -2,6 +2,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { apiError } from '@/lib/apiError'
+import { logCallEvent } from '@/lib/callEvents'
 
 export async function POST(req: Request) {
   try {
@@ -97,7 +98,9 @@ export async function POST(req: Request) {
       .limit(1)
       .maybeSingle()
 
+    let resolvedCallId: string | null = null
     if (openCall?.id) {
+      resolvedCallId = openCall.id
       await supabaseAdmin
         .from('calls')
         .update({
@@ -109,14 +112,27 @@ export async function POST(req: Request) {
     } else {
       // Fallback insert — lead has no open call row (rare, e.g., disposition
       // came through without a prior outbound dial attempt)
-      await supabaseAdmin.from('calls').insert({
+      const { data: inserted } = await supabaseAdmin.from('calls').insert({
         user_id,
         lead_id,
         campaign_id,
         disposition,
         duration: duration || 0,
-      })
+      }).select('id').maybeSingle()
+      resolvedCallId = inserted?.id ?? null
     }
+
+    // Forensic trail (fire-and-forget; never blocks the response).
+    void logCallEvent({
+      event_type: 'disposition_set',
+      call_id: resolvedCallId,
+      user_id,
+      campaign_id: campaign_id ?? null,
+      lead_id: lead_id ?? null,
+      status: disposition ?? null,
+      source: 'dialer',
+      detail: { duration: duration || 0 },
+    })
 
     return NextResponse.json({ success: true })
   } catch (error: any) {

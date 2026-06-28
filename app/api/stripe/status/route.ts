@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { getServiceClient } from '@/lib/supabase'
 import { getAccessTier } from '@/lib/subscription'
+import { apiError } from '@/lib/apiError'
 
 const supabase = getServiceClient('stripe/status')
 
@@ -58,7 +59,7 @@ export async function GET() {
     // Pro requires both an active status AND that the sub's price is
     // the Pro price (not the WL price). A WL-price sub does not count as
     // Pro even though it's technically "an active subscription."
-    const subStatusActive = !!sub && ['trialing', 'active', 'past_due'].includes(sub.status)
+    const subStatusActive = !!sub && sub.status === 'active'  // strict: only active
     const subIsProPrice = !!PRO_PRICE_ID && sub?.stripe_price_id === PRO_PRICE_ID
     const proActive = subStatusActive && subIsProPrice
 
@@ -109,6 +110,6 @@ export async function GET() {
     })
   } catch (err: any) {
     console.error('status error:', err)
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    return apiError(err, { route: 'stripe/status' })
   }
 }

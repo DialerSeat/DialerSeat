@@ -25,7 +25,7 @@ export async function POST() {
       .from('subscriptions')
       .select('stripe_subscription_id, status, cancel_at_period_end')
       .eq('user_id', userId)
-      .in('status', ['trialing', 'active', 'past_due'])
+      .in('status', ['active', 'past_due'])  // cancelable: an active or still-retrying sub
       .order('created_at', { ascending: false })
       .limit(1)
 

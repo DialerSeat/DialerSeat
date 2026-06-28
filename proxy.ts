@@ -69,7 +69,7 @@ const isOnboardingAllowedRoute = createRouteMatcher([
   '/api/stripe/(.*)',
 ])
 
-const ACTIVE_STATUSES = ['trialing', 'active', 'past_due']
+const ACTIVE_STATUSES = ['active']  // strict: only a paid, active sub grants access (no trials; past_due is locked)
 
 type AccessTier = 'active' | 'lapsed' | 'new'
 
@@ -420,27 +420,53 @@ export default clerkMiddleware(async (auth, request) => {
   }
 
   // ── NORMAL TIER GATES ──────────────────────────────────────────────────
+  // Strict rule: only an 'active' (paid) sub grants full access. Anyone else is
+  // either READ-ONLY (they have preserved data — can view + export it) or has no
+  // data and is sent to /welcome.
   if (tier === 'active') {
     const res = NextResponse.next()
     res.headers.set('x-access-tier', 'active')
     return withTenantHeader(res)
   }
 
+  // Not active. If they have data on the account, they get READ-ONLY access:
+  // they can view their data and export it, but cannot mutate anything.
   if (isPreserved) {
-    if (isActiveOnlyRoute(request)) {
+    const method = request.method.toUpperCase()
+    const isMutating = method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE'
+    const isApi = request.nextUrl.pathname.startsWith('/api/')
+
+    // Allowlist of write-ish endpoints a read-only user must still reach:
+    // data export/download, billing actions (to resubscribe), auth, and Stripe.
+    const readOnlyAllowed =
+      request.nextUrl.pathname.startsWith('/api/leads/export') ||
+      request.nextUrl.pathname.startsWith('/api/campaigns/compliance-export') ||
+      request.nextUrl.pathname.startsWith('/api/stripe/') ||
+      request.nextUrl.pathname.startsWith('/api/auth/') ||
+      request.nextUrl.pathname.startsWith('/api/users/me')
+
+    // Block every mutating API call that isn't on the allowlist — this is the
+    // single enforcement point for read-only mode (no per-page wiring needed).
+    if (isApi && isMutating && !readOnlyAllowed) {
       return NextResponse.json(
-        { error: 'Active subscription required', tier, redirectTo: '/billing' },
+        { error: 'Read-only mode: an active subscription is required to make changes.', tier, readOnly: true },
         { status: 403 }
       )
     }
+
+    // Reads and allowlisted writes pass through, flagged read-only so the UI can
+    // hide/disable write controls.
     const res = NextResponse.next()
     res.headers.set('x-access-tier', tier)
     res.headers.set('x-data-preserved', '1')
+    res.headers.set('x-read-only', '1')
     return withTenantHeader(res)
   }
 
-  const billingUrl = new URL('/billing', request.url)
-  return NextResponse.redirect(billingUrl)
+  // No active sub AND no data on the account → /welcome every time (never
+  // straight to billing). The welcome page is where they decide to subscribe.
+  const welcomeUrl = new URL('/welcome', request.url)
+  return NextResponse.redirect(welcomeUrl)
 })
 
 function pickRedirectDestination(

@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import Stripe from 'stripe'
-import { createClient } from '@supabase/supabase-js'
+import { getServiceClient } from '@/lib/supabase'
+import { apiError } from '@/lib/apiError'
 import { stripe } from '@/lib/stripe'
 import {
   claimStripeEvent,
@@ -10,10 +11,7 @@ import {
   markStripeEventSkipped,
 } from '@/lib/stripe-idempotency'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const supabase = getServiceClient('stripe/webhook')
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
 
@@ -125,9 +123,11 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ received: true })
   } catch (err: any) {
-    console.error('Webhook handler error:', err)
     await markStripeEventFailed(event.id, err)
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    // apiError keeps the 500 so Stripe RETRIES this event, and adds Sentry
+    // capture. The signature-failure 400 above is intentionally left verbose
+    // (Stripe-facing webhook diagnostic, no user PII).
+    return apiError(err, { route: 'stripe/webhook', context: { event_id: event.id, event_type: event.type } })
   }
 }
 
@@ -231,9 +231,8 @@ async function routeWhitelabel(subscription: Stripe.Subscription) {
   //      decide whether to show the form or redirect to dashboard.
   //    - wl_subscription_id: tracks which sub is the WL one so we can
   //      later add seat quantity changes to it as the team grows.
-  if (subscription.status === 'active' || subscription.status === 'trialing') {
-    // Only set 'pending' if not already 'complete' — don't reset an
-    // already-onboarded tenant if the sub renews.
+  if (subscription.status === 'active') {
+    // Only on a genuinely active (paid) sub. No trials.
     const { data: u } = await supabase
       .from('users')
       .select('wl_onboarding_status')
@@ -316,7 +315,7 @@ async function syncSeatCharge(subscription: Stripe.Subscription) {
   let chargeStatus: 'paid' | 'failed' | 'voided' | 'pending'
   switch (subscription.status) {
     case 'active':
-    case 'trialing':
+      // Only a genuinely active (paid) sub marks the seat paid. No trials.
       chargeStatus = 'paid'
       break
     case 'past_due':

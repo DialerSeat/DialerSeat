@@ -319,7 +319,7 @@ async function fetchAvailableTenantsForUser(clerkId: string): Promise<UserBrandO
 
   const now = Date.now()
   const hasSelfSub = (selfSubs || []).some(s => {
-    if (['trialing', 'active', 'past_due'].includes(s.status)) return true
+    if (s.status === 'active') return true  // strict: only active grants access
     if (
       s.status === 'canceled' &&
       s.current_period_end &&

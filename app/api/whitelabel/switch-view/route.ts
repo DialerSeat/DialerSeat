@@ -36,7 +36,7 @@ import { userCacheTag } from '@/lib/tenant'
 
 const supabase = getServiceClient('whitelabel/switch-view')
 
-const ACTIVE_SUB_STATUSES = ['trialing', 'active', 'past_due']
+const ACTIVE_SUB_STATUSES = ['active']
 
 // Values that all mean "standard DialerSeat view" (active_tenant_id = null).
 // The settings <select> uses 'standard' as the option value; older/other

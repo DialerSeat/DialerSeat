@@ -35,7 +35,7 @@ export async function GET() {
     if (u && u.subscription_status) {
       // Status mapping mirrors lib/subscription.ts tier logic
       const status = u.subscription_status
-      const isActive = ['active', 'trialing'].includes(status)
+      const isActive = status === 'active'
       const isLapsed = ['past_due', 'unpaid', 'canceled', 'incomplete_expired'].includes(status)
       personalSub = {
         status,

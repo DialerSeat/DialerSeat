@@ -48,7 +48,7 @@ const WL_PRICE_ID = process.env.STRIPE_PRICE_WL_BASE || ''
 const PRO_WEEKLY = 35
 const WL_WEEKLY = 75
 
-const ACTIVE_STATUSES = ['active', 'trialing', 'past_due']
+const ACTIVE_STATUSES = ['active']
 // Checkout never completed — these subs never paid and never count anywhere.
 const NEVER_PAID_STATUSES = ['incomplete', 'incomplete_expired']
 const AT_RISK_DAYS = 14
