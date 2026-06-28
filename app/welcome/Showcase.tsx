@@ -146,6 +146,10 @@ export default function ShowcaseWizard() {
 
 
       <style>{`
+        /* Welcome route paints the document background its own dark so the iOS
+           PWA status-bar inset and any rubber-band overscroll gutter never flash
+           black. Pairs with the .sw-root::before inset painter below. */
+        html, body { background: var(--brand-sidebar-bg, #111118) !important; }
         @keyframes sw-rise { from { opacity:0; transform: translateY(10px);} to {opacity:1; transform: translateY(0);} }
         @keyframes sw-pulse { 0%,100%{opacity:1;} 50%{opacity:.4;} }
         @keyframes sw-blink { 0%,100%{opacity:1;} 50%{opacity:.2;} }
@@ -168,6 +172,20 @@ export default function ShowcaseWizard() {
            shrunk mock leaves no empty gap and never overflows the width.) */
         @media (max-width: 820px) {
           .sw-root { font-size: 13px; overflow-x: hidden; background: var(--brand-sidebar-bg, #111118) !important; } /* flat bg on mobile — removes the darker bottom gradient */
+          /* iOS PWA (black-translucent status bar + viewport-fit=cover): the
+             top safe-area inset isn't painted by a fixed inset:0 element, so the
+             status-bar region shows through black and "disappears" only while
+             rubber-band scrolling. Paint the inset explicitly with a fixed bar
+             in the same color so there's no black gap to reveal. */
+          .sw-root::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: env(safe-area-inset-top, 0px);
+            background: var(--brand-sidebar-bg, #111118);
+            z-index: 10;
+            pointer-events: none;
+          }
           .sw-root > div:first-child { padding: calc(env(safe-area-inset-top, 0px) + 18px) 14px 12px !important; } /* top bar — clears the Dynamic Island / status bar */
           .sw-explain { max-width: 100% !important; padding: 0 18px 8px !important; }
           .sw-explain > div:nth-child(1) { font-size: 10px !important; letter-spacing: 2.5px !important; margin-bottom: 8px !important; } /* eyebrow */
