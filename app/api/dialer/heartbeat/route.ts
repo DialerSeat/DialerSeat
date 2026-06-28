@@ -159,6 +159,30 @@ export async function POST(req: NextRequest) {
     const userInternalId = identity.userId
     const teamId = identity.teamId
 
+    // ── OPPORTUNISTIC STALE-CALL RECOVERY ──────────────────────────────────
+    // A session can get "wedged" pinned to a call that's actually over (browser
+    // crashed mid-call, then the agent returns; or the client lost track of a
+    // call that already ended). Rather than wait for a cron, we self-heal on the
+    // agent's own heartbeat: if the call this session would be pinned to is
+    // already finished (has a disposition) or no longer exists, clear it so the
+    // agent isn't stuck. A genuinely live call (no disposition yet) is untouched.
+    let effectiveCallId = currentCallId
+    if (effectiveCallId) {
+      const { data: callRow } = await supabase
+        .from('calls')
+        .select('id, disposition, created_at')
+        .eq('id', effectiveCallId)
+        .maybeSingle()
+      // Clear the pin if the call: doesn't exist, is already dispositioned
+      // (finished), or is older than 30 min (no real call runs that long — this
+      // catches a call that dropped without ever being dispositioned). A genuine
+      // in-progress call (recent + no disposition) is preserved untouched.
+      const ageMs = callRow?.created_at ? Date.now() - new Date(callRow.created_at).getTime() : 0
+      if (!callRow || callRow.disposition || ageMs > 30 * 60 * 1000) {
+        effectiveCallId = null
+      }
+    }
+
     // ── Upsert agent_sessions row ──────────────────────────────────────────
     // Uses (user_id) as conflict target so each user has exactly one session
     // row. Updates state/campaign/mode/heartbeat on every tick.
@@ -173,7 +197,7 @@ export async function POST(req: NextRequest) {
           campaign_id: campaignId,
           dialer_mode: dialerMode,
           state,
-          current_call_id: currentCallId,
+          current_call_id: effectiveCallId,
           last_heartbeat: now,
           updated_at: now,
         },

@@ -10,7 +10,7 @@
     },
     {
       "path": "/api/cron/stale-call-reaper",
-      "schedule": "*/15 * * * *"
+      "schedule": "0 4 * * *"
     }
   ]
 }
