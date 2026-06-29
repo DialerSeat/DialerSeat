@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useUser } from '@clerk/nextjs'
+import { useUser, useClerk } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { WhitelabelLivePreview } from '@/components/WhitelabelLivePreview'
 import LoginLinkSection from '@/components/LoginLinkSection'
@@ -142,6 +142,8 @@ type SlugStatus =
 
 export default function WhitelabelOnboardingPage() {
   const { user, isLoaded } = useUser()
+  // ── CHANGE 1: pull signOut from useClerk (mirrors billing page) ──────────
+  const { signOut } = useClerk()
   const router = useRouter()
 
   const [loading, setLoading] = useState(true)
@@ -177,6 +179,8 @@ export default function WhitelabelOnboardingPage() {
   const [slugStatus, setSlugStatus] = useState<SlugStatus>({ kind: 'idle' })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // ── CHANGE 2: abandoning state for the new-user cancel path ─────────────
+  const [abandoning, setAbandoning] = useState(false)
 
   useEffect(() => {
     if (!isLoaded || !user?.id) return
@@ -619,13 +623,25 @@ export default function WhitelabelOnboardingPage() {
     }
   }
 
-  const handleCancel = () => {
+  // ── CHANGE 3: handleCancel — edit mode unchanged (→ /dashboard);
+  //   new-user mode now signs out exactly like the billing page cancel does.
+  const handleCancel = async () => {
     if (editMode) {
       router.push('/dashboard')
-    } else {
+      return
+    }
+    if (abandoning) return
+    setAbandoning(true)
+    try {
+      await fetch('/api/stripe/abandon-billing', { method: 'POST' })
+    } catch {}
+    try {
+      await signOut({ redirectUrl: '/' })
+    } catch {
       router.push('/')
     }
   }
+
   if (loading) {
     return (
       <div
@@ -1073,15 +1089,15 @@ export default function WhitelabelOnboardingPage() {
           <button
             type="button"
             onClick={handleCancel}
-            disabled={submitting}
+            disabled={submitting || abandoning}
             style={{
               ...cancelButtonStyle,
-              opacity: submitting ? 0.4 : 1,
-              cursor: submitting ? 'not-allowed' : 'pointer',
+              opacity: submitting || abandoning ? 0.5 : 1,
+              cursor: submitting || abandoning ? 'not-allowed' : 'pointer',
               marginTop: 20,
             }}
           >
-            CANCEL
+            {abandoning ? 'CANCELING...' : 'Cancel'}
           </button>
         </form>
       </div>
@@ -1102,10 +1118,6 @@ function ColorRow({
   value: string
   onChange: (v: string) => void
 }) {
-  // Hex text entry: the leading # is "stuck" — it's always present and can't be
-  // deleted. We strip every # the user types (including an accidental double
-  // ##) and re-prefix exactly one, so the value is always "#" + hex digits.
-  // Non-hex characters are dropped; max 6 digits after the #.
   const handleHexChange = (raw: string) => {
     const digits = raw.replace(/#/g, '').replace(/[^0-9a-fA-F]/g, '').slice(0, 6)
     onChange('#' + digits)
@@ -1544,17 +1556,14 @@ const submitButtonStyle: React.CSSProperties = {
 
 const cancelButtonStyle: React.CSSProperties = {
   width: '100%',
-  padding: 12,
+  padding: 10,
   background: 'transparent',
-  border: '1px solid var(--border)',
-  borderRadius: 4,
-  color: 'var(--text-secondary)',
+  border: 'none',
+  color: '#666870',
   fontSize: 11,
-  fontWeight: 700,
-  letterSpacing: 3,
-  fontFamily: 'var(--font-futura)',
+  letterSpacing: 2,
   cursor: 'pointer',
-  marginTop: 10,
+  fontFamily: 'var(--font-futura)',
 }
 
 const overwriteButtonStyle: React.CSSProperties = {
