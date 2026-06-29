@@ -51,15 +51,6 @@ const isProtectedAppRoute = createRouteMatcher([
 ])
 
 // ── HARD-LOCK ALLOWLIST (Phase D2) ────────────────────────────────────
-// Manager+ users with wl_onboarding_status != 'complete' are locked OUT
-// of every route EXCEPT these. The allowlist covers:
-//   1. The onboarding page itself (so they can complete it)
-//   2. Onboarding APIs (so the page can save)
-//   3. Billing + cancel APIs (so they can get a refund if regret)
-//   4. Sign-out (so they can leave)
-//   5. Stripe webhooks (always allowed, public route)
-//
-// Everything else → 307 redirect to /onboarding/whitelabel.
 const isOnboardingAllowedRoute = createRouteMatcher([
   '/onboarding/whitelabel(.*)',
   '/api/whitelabel/onboarding(.*)',
@@ -69,7 +60,14 @@ const isOnboardingAllowedRoute = createRouteMatcher([
   '/api/stripe/(.*)',
 ])
 
-const ACTIVE_STATUSES = ['active']  // strict: only a paid, active sub grants access (no trials; past_due is locked)
+// ── WL ONBOARDING ROUTE — requires an active WL subscription ──────────
+// This matcher targets the whitelabel onboarding page specifically so we
+// can gate it: a user with no active WL sub must be bounced to /billing.
+const isWhitelabelOnboardingRoute = createRouteMatcher([
+  '/onboarding/whitelabel(.*)',
+])
+
+const ACTIVE_STATUSES = ['active']
 
 type AccessTier = 'active' | 'lapsed' | 'new'
 
@@ -77,8 +75,10 @@ interface AccessState {
   tier: AccessTier
   isAdmin: boolean
   isPreserved: boolean
-  /** True if this user has paid for WL but not completed onboarding. */
+  /** True if this user has a currently active WL sub but hasn't finished onboarding. */
   wlOnboardingPending: boolean
+  /** True if this user has an active WL subscription (regardless of onboarding status). */
+  hasActiveWlSub: boolean
 }
 
 interface UserBrandAccess {
@@ -94,35 +94,15 @@ interface UserBrandAccess {
 // + TENANT ROOT ROUTING  (v26)
 // + WELCOME SHOWCASE PUBLIC (v27)
 // + POST-SIGNIN ROUTE PUBLIC (v28)
+// + WL SUBSCRIPTION GATE on /onboarding/whitelabel (v29)
 // =============================================================================
-// v27: added '/welcome(.*)' to isPublicRoute. The post-signup showcase route
-// (app/welcome) is diverted to by /api/auth/post-signin for brand-new users
-// BEFORE billing. It must be public here so middleware doesn't intercept it
-// and bounce a 'new'/'lapsed' user to /billing before the page renders — the
-// page has its own server guard (lib/subscription.shouldSeeWelcome) that sends
-// non-eligible users to /billing, so this is safe.
-//
-// v28: added '/api/auth/(.*)' to isPublicRoute. The matcher runs middleware on
-// all /api/* routes, and /api/auth/post-signin was NOT public — so middleware
-// ran the full tier gate and 307-redirected signed-in non-active users to
-// /billing BEFORE the post-signin route handler ever executed. That's why the
-// route's shouldSeeWelcome diversion never ran (the route was never reached).
-// Making /api/auth/* public lets the request reach the handler, which then does
-// its own auth() check and decides the destination (/welcome, tenant dashboard,
-// or — by falling through — wherever). The handler is the intended owner of
-// post-signin routing; middleware must not pre-empt it.
-//
-// v26: a live tenant subdomain now hosts its OWN branded auth/landing instead
-// of bouncing the root to the apex.
-//   - The root "/" was removed from MARKETING_ONLY_PATHS so it no longer
-//     308s to dialerseat.com. (The true marketing pages — /vs, /faq,
-//     /dialing-modes, /terms, /privacy, /managers, /white-label — still do.)
-//   - On a live tenant subdomain, the root "/" is handled explicitly:
-//       signed-out → /sign-in ON the subdomain (branded via x-tenant-slug;
-//                    the sign-in page links to /sign-up)
-//       signed-in  → /dashboard ON the subdomain
-//     so visitors land on the tenant's branded experience, and members land
-//     on their dashboard, all without leaving water.dialerseat.com.
+// v29: /onboarding/whitelabel is now gated by an ACTIVE WL subscription,
+//   not just by wl_onboarding_status. Previously, force-canceling the Stripe
+//   sub (which clears wl_subscription_id via webhook) would leave the route
+//   wide open because wlOnboardingPending only fires when wl_subscription_id
+//   is set. Now we check hasActiveWlSub (a live active sub row at the WL
+//   price) directly, and any user without one is bounced to /billing?plan=wl.
+//   Admins bypass. The existing wlOnboardingPending hard-lock is unchanged.
 // =============================================================================
 
 const RESERVED_SUBDOMAINS = new Set([
@@ -133,9 +113,6 @@ const RESERVED_SUBDOMAINS = new Set([
 
 const PRIMARY_DOMAINS = ['dialerseat.com', 'localhost']
 
-// NOTE (v26): the root "/" is intentionally NOT in this list. On a tenant
-// subdomain the root hosts the branded auth/landing; only these true
-// marketing pages are forced back to the apex.
 const MARKETING_ONLY_PATHS = [
   /^\/faq(\/.*)?$/,
   /^\/vs(\/.*)?$/,
@@ -319,9 +296,6 @@ export default clerkMiddleware(async (auth, request) => {
 
   // ── PHASE C: tenant subdomain validity routing ──────────────────────────
   if (tenantSlug) {
-    // True marketing pages (/vs, /faq, etc.) live only on the apex — bounce
-    // them. The root "/" is intentionally excluded (v26) so the subdomain can
-    // host its own branded auth/landing below.
     if (isMarketingOnlyPath(url.pathname)) {
       const mainUrl = new URL(url.pathname + url.search, 'https://dialerseat.com')
       return NextResponse.redirect(mainUrl, 308)
@@ -340,11 +314,6 @@ export default clerkMiddleware(async (auth, request) => {
       return NextResponse.redirect(newUrl, 308)
     }
 
-    // route.status === 'active' from here.
-    // ── ROOT-PATH HANDLING on a live tenant subdomain (v26) ───────────────
-    // Signed-out → branded /sign-in on this subdomain (the sign-in page links
-    //   to /sign-up). Signed-in → /dashboard on this subdomain. Both stay on
-    //   the subdomain so the experience is branded end to end.
     if (url.pathname === '/') {
       const { userId } = await auth()
       if (!userId) {
@@ -359,8 +328,6 @@ export default clerkMiddleware(async (auth, request) => {
   // ── PUBLIC ROUTES ──────────────────────────────────────────────────────
   if (isPublicRoute(request)) {
     const res = NextResponse.next()
-    // Signal layout.tsx to skip whitelabel branding on the landing view
-    // so logged-in WL users see default DialerSeat styles on /?view=landing.
     if (url.searchParams.get('view') === 'landing') {
       res.headers.set('x-landing-view', '1')
     }
@@ -373,19 +340,26 @@ export default clerkMiddleware(async (auth, request) => {
     return withTenantHeader(NextResponse.next())
   }
 
-  const { tier, isAdmin, isPreserved, wlOnboardingPending } = await getAccessState(userId)
+  const { tier, isAdmin, isPreserved, wlOnboardingPending, hasActiveWlSub } = await getAccessState(userId)
 
   // ── PHASE D2: ONBOARDING HARD-LOCK ─────────────────────────────────────
-  // Manager+ user paid for WL but hasn't finished onboarding → lock them
-  // to the allowlist. Admins bypass.
   if (wlOnboardingPending && !isAdmin) {
     if (!isOnboardingAllowedRoute(request)) {
       const lockUrl = new URL('/onboarding/whitelabel', request.url)
       return NextResponse.redirect(lockUrl, 307)
     }
-    // They're on an allowed route — let it through. We still set the
-    // tenant header if applicable.
     return withTenantHeader(NextResponse.next())
+  }
+
+  // ── v29: WL SUBSCRIPTION GATE ───────────────────────────────────────────
+  // /onboarding/whitelabel requires an active WL subscription. If the sub was
+  // force-cancelled (wl_subscription_id cleared by webhook, or sub row not
+  // active), bounce to /billing?plan=wl. Admins bypass.
+  if (isWhitelabelOnboardingRoute(request) && !isAdmin) {
+    if (!hasActiveWlSub) {
+      const billingUrl = new URL('/billing?plan=wl', request.url)
+      return NextResponse.redirect(billingUrl, 307)
+    }
   }
 
   // Existing billing/onboarding bypass for non-locked users
@@ -420,24 +394,17 @@ export default clerkMiddleware(async (auth, request) => {
   }
 
   // ── NORMAL TIER GATES ──────────────────────────────────────────────────
-  // Strict rule: only an 'active' (paid) sub grants full access. Anyone else is
-  // either READ-ONLY (they have preserved data — can view + export it) or has no
-  // data and is sent to /welcome.
   if (tier === 'active') {
     const res = NextResponse.next()
     res.headers.set('x-access-tier', 'active')
     return withTenantHeader(res)
   }
 
-  // Not active. If they have data on the account, they get READ-ONLY access:
-  // they can view their data and export it, but cannot mutate anything.
   if (isPreserved) {
     const method = request.method.toUpperCase()
     const isMutating = method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE'
     const isApi = request.nextUrl.pathname.startsWith('/api/')
 
-    // Allowlist of write-ish endpoints a read-only user must still reach:
-    // data export/download, billing actions (to resubscribe), auth, and Stripe.
     const readOnlyAllowed =
       request.nextUrl.pathname.startsWith('/api/leads/export') ||
       request.nextUrl.pathname.startsWith('/api/campaigns/compliance-export') ||
@@ -447,8 +414,6 @@ export default clerkMiddleware(async (auth, request) => {
       request.nextUrl.pathname.startsWith('/api/auth/') ||
       request.nextUrl.pathname.startsWith('/api/users/me')
 
-    // Block every mutating API call that isn't on the allowlist — this is the
-    // single enforcement point for read-only mode (no per-page wiring needed).
     if (isApi && isMutating && !readOnlyAllowed) {
       return NextResponse.json(
         { error: 'Read-only mode: an active subscription is required to make changes.', tier, readOnly: true },
@@ -456,8 +421,6 @@ export default clerkMiddleware(async (auth, request) => {
       )
     }
 
-    // Reads and allowlisted writes pass through, flagged read-only so the UI can
-    // hide/disable write controls.
     const res = NextResponse.next()
     res.headers.set('x-access-tier', tier)
     res.headers.set('x-data-preserved', '1')
@@ -465,8 +428,6 @@ export default clerkMiddleware(async (auth, request) => {
     return withTenantHeader(res)
   }
 
-  // No active sub AND no data on the account → /welcome every time (never
-  // straight to billing). The welcome page is where they decide to subscribe.
   const welcomeUrl = new URL('/welcome', request.url)
   return NextResponse.redirect(welcomeUrl)
 })
@@ -492,6 +453,8 @@ async function getAccessState(clerkId: string): Promise<AccessState> {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
+    const WL_PRICE_ID = process.env.STRIPE_PRICE_WL_BASE || ''
+
     const [
       { data: subs },
       { data: userRow },
@@ -499,7 +462,7 @@ async function getAccessState(clerkId: string): Promise<AccessState> {
     ] = await Promise.all([
       supabase
         .from('subscriptions')
-        .select('status, current_period_end, stripe_subscription_id')
+        .select('status, current_period_end, stripe_subscription_id, stripe_price_id')
         .eq('user_id', clerkId)
         .order('created_at', { ascending: false }),
       supabase
@@ -517,18 +480,34 @@ async function getAccessState(clerkId: string): Promise<AccessState> {
     const isAdmin = !!userRow?.is_admin
     const isPreserved = !!preservedRow
 
+    // ── ACTIVE WL SUB CHECK (v29) ────────────────────────────────────────
+    // A user has an active WL subscription when they have a sub row at the WL
+    // price ID with status 'active'. This is the source of truth — independent
+    // of wl_subscription_id on the users row, which a webhook might clear when
+    // the sub is force-cancelled. If STRIPE_PRICE_WL_BASE isn't set we fall
+    // back to the legacy wl_subscription_id field so nothing breaks in dev.
+    const now = Date.now()
+    let hasActiveWlSub = false
+    if (WL_PRICE_ID) {
+      hasActiveWlSub = (subs || []).some(
+        s => s.stripe_price_id === WL_PRICE_ID && s.status === 'active'
+      )
+    } else {
+      // fallback: trust the users row (dev environments without price IDs set)
+      hasActiveWlSub = !!userRow?.wl_subscription_id
+    }
+
     // ── WL ONBOARDING PENDING CHECK ──────────────────────────────────────
-    // User has paid for WL (wl_subscription_id set) but hasn't completed
-    // setup yet (wl_onboarding_status != 'complete'). They must finish
-    // the wizard before they can use anything else.
+    // User has an active WL sub but hasn't completed setup yet.
+    // Uses hasActiveWlSub (not wl_subscription_id) so force-cancels don't
+    // leave a phantom pending state.
     const wlOnboardingPending =
-      !!userRow?.wl_subscription_id &&
+      hasActiveWlSub &&
       userRow?.wl_onboarding_status !== 'complete'
 
     // Determine tier from subscriptions
     let tier: AccessTier = 'new'
     if (subs && subs.length > 0) {
-      const now = Date.now()
       tier = 'lapsed'
       for (const sub of subs) {
         if (ACTIVE_STATUSES.includes(sub.status)) {
@@ -546,10 +525,10 @@ async function getAccessState(clerkId: string): Promise<AccessState> {
       }
     }
 
-    return { tier, isAdmin, isPreserved, wlOnboardingPending }
+    return { tier, isAdmin, isPreserved, wlOnboardingPending, hasActiveWlSub }
   } catch (err) {
     console.error('[proxy] access state lookup failed:', err)
-    return { tier: 'active', isAdmin: false, isPreserved: true, wlOnboardingPending: false }
+    return { tier: 'active', isAdmin: false, isPreserved: true, wlOnboardingPending: false, hasActiveWlSub: false }
   }
 }
 
