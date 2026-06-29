@@ -11,14 +11,24 @@ import Showcase from './Showcase'
 // who shouldn't see it:
 //
 //   - not signed in        → /sign-in
-//   - access tier 'active' → /dashboard/analytics (already paying; skip pitch)
-//   - access tier 'lapsed' → /billing (already saw the pitch; go pay)
-//   - access tier 'new'    → render the showcase (the only case that stays)
+//   - shouldSeeWelcome()   → false (active, lapsed, or previously paid seat)
+//                          → /billing  (they've used the product; skip pitch)
+//   - shouldSeeWelcome()   → true  (brand-new, never activated)
+//                          → render the showcase
 //
-// The showcase itself (./Showcase, a client component) drives its own
-// navigation: GET STARTED / SKIP push the user forward to /billing. Because
-// this route is NOT behind the billing gate and the user leaves via those
-// buttons, there is no redirect loop.
+// REDIRECT CHAIN SAFETY:
+// When this page redirects to /billing, the Showcase has NOT set ?from=welcome
+// because the user didn't click GET STARTED — they arrived at /welcome directly
+// but don't qualify. The billing layout will then run shouldSeeWelcome() again.
+// For a truly lapsed user shouldSeeWelcome() returns false both times, so they
+// pass straight through billing. For a brand-new user who somehow bypassed the
+// layout's guard, shouldSeeWelcome() returns true in the layout and they are
+// sent back here — that IS the correct behavior (they must see the showcase).
+// There is no loop because the two guards agree on who belongs where.
+//
+// The Showcase client component (./Showcase) drives forward navigation:
+// GET STARTED and SKIP both call router.push('/billing?from=welcome'), which
+// signals the billing layout to skip its new-user check and let them through.
 //
 // force-dynamic: per-user gate, never cached.
 // =============================================================================
@@ -42,9 +52,9 @@ export default async function WelcomePage() {
 
   // Anyone who shouldn't see the showcase goes to billing. (A currently-active
   // user who lands here manually also gets moved along — billing will in turn
-  // bounce an active user onward, so this stays correct without re-checking
-  // the full tier here.)
-  if (!show) redirect('/billing')
+  // bounce an active user onward to /dashboard, so this stays correct without
+  // re-checking the full tier here.)
+  if (!show!) redirect('/billing')
 
   // Brand-new / never-activated user — show the showcase.
   return <Showcase />
