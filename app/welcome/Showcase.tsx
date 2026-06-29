@@ -10,10 +10,10 @@ import { useRouter } from 'next/navigation'
 //   - BILLING_PATH changed from '/billing' to '/billing?from=welcome'.
 //     This single param is the loop-breaker: app/billing/layout.tsx checks
 //     for ?from=welcome (and the Referer header as a fallback) and skips its
-//     new-user→/welcome redirect when either signal is present. Without it,
-//     clicking GET STARTED or SKIP sent a new user to /billing, the layout saw
+//     new-user redirect when either signal is present. Without it, clicking
+//     GET STARTED or SKIP sent a new user to /billing, the layout saw
 //     shouldSeeWelcome()===true, and immediately bounced them back here —
-//     an inescapable /welcome ↔ /billing loop.
+//     an inescapable /welcome <-> /billing loop.
 //   - No other logic or UI changes. All scene content, animations, mobile
 //     scaling, and keyboard navigation are identical to v3.
 // =============================================================================
@@ -25,8 +25,6 @@ const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace'
 // Every navigation from this component to /billing MUST include this param.
 const BILLING_PATH = '/billing?from=welcome'
 
-// Device colors — inherit the live theme. Fallbacks match DialerSeat defaults
-// so the page still looks right if rendered outside a ThemeProvider.
 const C = {
   primary: 'var(--brand-primary, #4a9eff)',
   onPrimary: 'var(--brand-on-primary, #ffffff)',
@@ -50,21 +48,21 @@ const SCENES: Scene[] = [
   {
     key: 'dialer',
     eyebrow: 'A SUPERIOR DIALER',
-    headline: 'If your job is to dial numbers,\nDialerSeat is for you.',
-    subLead: 'And it\u2019s guaranteed better than what you\u2019re using currently.',
-    sub: 'Dial all day on an unlimited number pool, with all of your scripts in one place \u2014 with four dialer modes included to fit your approach cleanly.',
+    headline: "If your job is to dial numbers,\nDialerSeat is for you.",
+    subLead: "And it's guaranteed better than what you're using currently.",
+    sub: "Dial all day on an unlimited number pool, with all of your scripts in one place — with four dialer modes included to fit your approach cleanly.",
   },
   {
     key: 'analytics',
     eyebrow: 'YOUR NUMBERS, LIVE',
     headline: 'Every number updates as you dial.',
-    sub: 'Calls, conversions, talk time, and where your closes come from \u2014 all tracked on the backend for you, the second each call ends. Nothing to log, nothing to maintain. Upload infinite campaigns and toggle each one on or off for the cleanest possible workflow.',
+    sub: "Calls, conversions, talk time, and where your closes come from — all tracked on the backend for you, the second each call ends. Nothing to log, nothing to maintain. Upload infinite campaigns and toggle each one on or off for the cleanest possible workflow.",
   },
   {
     key: 'superior',
     eyebrow: 'WHY IT WINS',
     headline: 'Built to make you a closing machine.',
-    sub: 'Created by a team of seasoned developers alongside a group of high-ranking producers with real knowledge of the game who are tired of empty promises. DialerSeat is built around your experience \u2014 and we\u2019re actively taking suggestions as well, to provide the best dialer on the face of the earth. Thanks for all of your support along this journey.\n~ DialerSeat',
+    sub: "Created by a team of seasoned developers alongside a group of high-ranking producers with real knowledge of the game who are tired of empty promises. DialerSeat is built around your experience — and we're actively taking suggestions as well, to provide the best dialer on the face of the earth. Thanks for all of your support along this journey.\n~ DialerSeat",
   },
 ]
 
@@ -72,9 +70,6 @@ export default function ShowcaseWizard() {
   const router = useRouter()
   const [scene, setScene] = useState(0)
 
-  // Every navigation to /billing from this component uses BILLING_PATH, which
-  // includes ?from=welcome. This is the single source of truth — do not use a
-  // bare '/billing' push anywhere in this file.
   const goBilling = useCallback(() => router.push(BILLING_PATH), [router])
   const next = useCallback(() => setScene(s => (s >= SCENES.length - 1 ? s : s + 1)), [])
   const prev = useCallback(() => setScene(s => Math.max(0, s - 1)), [])
@@ -109,11 +104,10 @@ export default function ShowcaseWizard() {
           ))}
         </div>
         <div style={{ flex: 1 }} />
-        {/* SKIP also uses goBilling() — same ?from=welcome param, no loop */}
-        <button onClick={goBilling} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.6)', fontFamily: FUTURA, fontSize: 12, letterSpacing: 2, fontWeight: 700, cursor: 'pointer', padding: '6px 4px' }}>SKIP \u2192</button>
+        <button onClick={goBilling} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.6)', fontFamily: FUTURA, fontSize: 12, letterSpacing: 2, fontWeight: 700, cursor: 'pointer', padding: '6px 4px' }}>SKIP →</button>
       </div>
 
-      {/* MIDDLE GROUP: stage + text + controls */}
+      {/* MIDDLE GROUP */}
       <div className="sw-mid" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '25px 0 8px' }}>
         {/* stage */}
         <div className="sw-stage" style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 24px', minHeight: 0 }}>
@@ -137,12 +131,10 @@ export default function ShowcaseWizard() {
         {/* controls */}
         <div style={{ padding: '16px 28px 30px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
           {scene > 0 && (
-            <button onClick={prev} style={{ padding: '12px 20px', borderRadius: 10, cursor: 'pointer', background: 'transparent', border: '1px solid rgba(255,255,255,0.18)', color: 'rgba(255,255,255,0.85)', fontFamily: FUTURA, fontSize: 12, letterSpacing: 2, fontWeight: 700 }}>\u2190 BACK</button>
+            <button onClick={prev} style={{ padding: '12px 20px', borderRadius: 10, cursor: 'pointer', background: 'transparent', border: '1px solid rgba(255,255,255,0.18)', color: 'rgba(255,255,255,0.85)', fontFamily: FUTURA, fontSize: 12, letterSpacing: 2, fontWeight: 700 }}>← BACK</button>
           )}
-          {/* On the last scene, GET STARTED fires goBilling() which includes
-              ?from=welcome — the billing layout will not bounce them back. */}
           <button onClick={isLast ? goBilling : next} style={{ padding: '13px 28px', borderRadius: 10, border: 'none', cursor: 'pointer', background: C.primary, color: C.onPrimary, fontFamily: FUTURA, fontSize: 13, letterSpacing: 2, fontWeight: 800, boxShadow: `0 8px 28px color-mix(in srgb, ${C.primary} 40%, transparent)` }}>
-            {isLast ? 'GET STARTED \u2192' : 'NEXT \u2192'}
+            {isLast ? 'GET STARTED →' : 'NEXT →'}
           </button>
         </div>
       </div>
@@ -209,29 +201,29 @@ const SCRIPTS: { key: string; label: string; text: string }[] = [
 out about the life coverage you
 looked into.
 
-It only takes a minute \u2014 I can show
+It only takes a minute — I can show
 you what you'd actually qualify for,
-no medical exam needed\u2026"` },
-  { key: 'health', label: 'Health', text: `"Hi (client), this is (your name goes here) \u2014 you
+no medical exam needed…"` },
+  { key: 'health', label: 'Health', text: `"Hi (client), this is (your name goes here) — you
 requested help finding a health plan,
 is now a good time?
 
-Perfect. Let\u2019s see if we can get you
-better coverage for less than you\u2019re
-paying today\u2026"` },
-  { key: 'realestate', label: 'Real Estate', text: `"Hi (client), this is (your name goes here) \u2014 I saw
+Perfect. Let's see if we can get you
+better coverage for less than you're
+paying today…"` },
+  { key: 'realestate', label: 'Real Estate', text: `"Hi (client), this is (your name goes here) — I saw
 you were curious what your home
 might be worth.
 
 I can get you a real number today,
 and if you ever decide to sell, walk
-you through what\u2019s next\u2026"` },
-  { key: 'solar', label: 'Solar', text: `"Hi (client), this is (your name goes here) \u2014 did I
+you through what's next…"` },
+  { key: 'solar', label: 'Solar', text: `"Hi (client), this is (your name goes here) — did I
 catch you at an okay time?
 
 Great. You asked about cutting your
 power bill with solar, so I wanted to
-get you a quick free estimate\u2026"` },
+get you a quick free estimate…"` },
 ]
 
 function DialerScene() {
@@ -279,10 +271,10 @@ function DialerScene() {
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
                   <div>
                     <div style={{ fontSize: 19, fontWeight: 800, fontFamily: MONO, color: C.onPage, letterSpacing: 1, marginBottom: 3 }}>MARCUS BELL</div>
-                    <div style={{ fontSize: 15, fontFamily: MONO, color: ACCENT, fontWeight: 800, letterSpacing: 2 }}>+1 (713) 555\u20110142</div>
-                    <div style={{ fontSize: 10, fontFamily: MONO, color: C.muted, letterSpacing: 1, marginTop: 4 }}>HOUSTON, TX \u00b7 {mm}:{ss}</div>
+                    <div style={{ fontSize: 15, fontFamily: MONO, color: ACCENT, fontWeight: 800, letterSpacing: 2 }}>+1 (713) 555-0142</div>
+                    <div style={{ fontSize: 10, fontFamily: MONO, color: C.muted, letterSpacing: 1, marginTop: 4 }}>HOUSTON, TX · {mm}:{ss}</div>
                   </div>
-                  <div style={{ padding: '4px 10px', borderRadius: 2, background: '#e8f5e8', border: `1px solid ${GREEN}`, fontSize: 9, letterSpacing: 2, fontWeight: 800, color: GREEN }}>\u25cf LIVE</div>
+                  <div style={{ padding: '4px 10px', borderRadius: 2, background: '#e8f5e8', border: `1px solid ${GREEN}`, fontSize: 9, letterSpacing: 2, fontWeight: 800, color: GREEN }}>● LIVE</div>
                 </div>
               </div>
 
@@ -334,10 +326,10 @@ function DialerScene() {
 // ── SCENE 2: ANALYTICS ───────────────────────────────────────────────────────
 function AnalyticsScene() {
   const tiles: [string, number, string, string, string, boolean][] = [
-    ['TOTAL CALLS', 1284, C.primary, '', '\u2191 12%', true],
-    ['CONVERSIONS', 159, GREEN, '', '\u2191 15%', false],
-    ['TALK TIME', 14, '#4a9eff', 'h', '\u2191 6%', false],
-    ['CLOSED', 86, GREEN, '', '\u2191 9%', false],
+    ['TOTAL CALLS', 1284, C.primary, '', '↑ 12%', true],
+    ['CONVERSIONS', 159, GREEN, '', '↑ 15%', false],
+    ['TALK TIME', 14, '#4a9eff', 'h', '↑ 6%', false],
+    ['CLOSED', 86, GREEN, '', '↑ 9%', false],
   ]
   const [vals, setVals] = useState(tiles.map(() => 0))
   const [showCharts, setShowCharts] = useState(false)
@@ -362,8 +354,10 @@ function AnalyticsScene() {
   const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 
   const pie = [
-    { label: 'Closed', val: 42, color: GREEN }, { label: 'Callback', val: 28, color: C.primary },
-    { label: 'Not int.', val: 20, color: '#8a6a1a' }, { label: 'DNC', val: 10, color: '#8a1a1a' },
+    { label: 'Closed', val: 42, color: GREEN },
+    { label: 'Callback', val: 28, color: C.primary },
+    { label: 'Not int.', val: 20, color: '#8a6a1a' },
+    { label: 'DNC', val: 10, color: '#8a1a1a' },
   ]
   let acc = 0; const R = 34, CX = 40, CY = 40
   const arcs = pie.map(seg => {
@@ -403,7 +397,7 @@ function AnalyticsScene() {
           <div style={{ flex: 1, background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 8, padding: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
               <span style={{ fontSize: 8, letterSpacing: 1.5, color: C.muted, fontWeight: 700 }}>CALL VOLUME OVER TIME</span>
-              <span style={{ fontSize: 8, fontWeight: 800, color: GREEN_BRIGHT }}>\u2191 18% vs last week</span>
+              <span style={{ fontSize: 8, fontWeight: 800, color: GREEN_BRIGHT }}>↑ 18% vs last week</span>
             </div>
             <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 74, display: 'block' }}>
               <defs><linearGradient id="cv" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={C.primary} stopOpacity="0.32" /><stop offset="100%" stopColor={C.primary} stopOpacity="0" /></linearGradient></defs>
@@ -444,12 +438,12 @@ function AnalyticsScene() {
 // ── SCENE 3: WHY DIALERSEAT ──────────────────────────────────────────────────
 function SuperiorScene() {
   const features: { icon: string; title: string; body: string }[] = [
-    { icon: '\u2298', title: 'No contracts', body: 'Cancel anytime, zero commitment. Stay because it works, not because you\u2019re forced to.' },
-    { icon: '\uD83D\uDD12', title: 'Secured & protected', body: 'Your data is encrypted and protected at every layer \u2014 your numbers and leads PERMANENTLY remain yours.' },
-    { icon: '\uD83D\uDCB8', title: 'Best price, period', body: 'More dialer for less than the rest \u2014 top-of-the-line power without the enterprise price tag.' },
-    { icon: '\u221E', title: 'Unlimited dialing', body: 'Dial all day on a full number pool \u2014 no per-line caps and NEVER any surprise coverage fees.' },
-    { icon: '\uD83D\uDCEE', title: 'Voicemail detection', body: 'Genuine voicemail detection \u2014 not the fake stuff. Skip dead drops and spend your time on live people.' },
-    { icon: '\uD83C\uDFAF', title: 'Always improving', body: 'Shaped by real producers and updated constantly \u2014 the dialer that keeps getting better.' },
+    { icon: '⊘', title: 'No contracts', body: "Cancel anytime, zero commitment. Stay because it works, not because you're forced to." },
+    { icon: '🔒', title: 'Secured & protected', body: 'Your data is encrypted and protected at every layer — your numbers and leads PERMANENTLY remain yours.' },
+    { icon: '💸', title: 'Best price, period', body: 'More dialer for less than the rest — top-of-the-line power without the enterprise price tag.' },
+    { icon: '∞', title: 'Unlimited dialing', body: 'Dial all day on a full number pool — no per-line caps and NEVER any surprise coverage fees.' },
+    { icon: '📮', title: 'Voicemail detection', body: "Genuine voicemail detection — not the fake stuff. Skip dead drops and spend your time on live people." },
+    { icon: '🎯', title: 'Always improving', body: 'Shaped by real producers and updated constantly — the dialer that keeps getting better.' },
   ]
   return (
     <MacFrame title="WHY DIALERSEAT" titleColor="#5a8a5a" bg={C.sidebar}>
