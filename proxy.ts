@@ -441,6 +441,8 @@ export default clerkMiddleware(async (auth, request) => {
     const readOnlyAllowed =
       request.nextUrl.pathname.startsWith('/api/leads/export') ||
       request.nextUrl.pathname.startsWith('/api/campaigns/compliance-export') ||
+      request.nextUrl.pathname.startsWith('/api/account/export') ||
+      request.nextUrl.pathname.startsWith('/api/account/delete') ||
       request.nextUrl.pathname.startsWith('/api/stripe/') ||
       request.nextUrl.pathname.startsWith('/api/auth/') ||
       request.nextUrl.pathname.startsWith('/api/users/me')
