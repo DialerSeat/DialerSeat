@@ -284,72 +284,57 @@ export async function requireNotAdmin(clerkId: string): Promise<NextResponse | n
 // Answers ONE narrow question: "should this user be shown the /welcome
 // showcase before billing?"
 //
-// WHY a separate helper instead of getAccessTier:
-//   getAccessTier's 'new' means "never had ANY subscription row." But the
-//   signup flow creates an 'incomplete' subscriptions row the moment a user
-//   reaches Stripe checkout — BEFORE they pay. So a brand-new user who merely
-//   reached checkout once is already 'lapsed', never 'new', and would skip the
-//   showcase. The showcase should instead be shown to anyone who has NEVER
-//   actually completed a subscription — i.e. all their subscription rows (if
-//   any) are stuck at 'incomplete' / 'incomplete_expired' (Stripe's "started
-//   but never paid" states), AND they have no paid team seat. A user who was
-//   genuinely active before (has/had 'active'/'trialing'/'past_due', or a
-//   'canceled' row, which only exists post-subscription) is a real lapsed user
-//   → straight to billing.
+// RULE (v2): based purely on DATA PRESENCE, not subscription history.
 //
-// Returns true  → show /welcome
-//         false → skip (active users to dashboard, real-lapsed users to billing)
+//   Active user          → false (already paying, go to dashboard)
+//   Active seat user     → false (already paying via team, go to dashboard)
+//   Has preserved data   → false (lapsed but has data, middleware sends them
+//                                  to read-only dashboard — not our job here)
+//   No data at all       → true  (brand new or lapsed with no data, show pitch)
+//
+// WHY we dropped subscription-history as the signal:
+//   The old logic used TRULY_ACTIVATED_STATUSES (canceled, active, etc.) to
+//   decide if a user had "really" subscribed before. But a user who subscribed
+//   via a free coupon, then unsubscribed, ends up with a 'canceled' row and
+//   zero data — the old code sent them straight to /billing, skipping the
+//   showcase. That's wrong: if they have no data they haven't used the product
+//   meaningfully and should see the pitch again.
+//
+//   Data presence is the correct signal because it's what the middleware already
+//   uses to decide between read-only dashboard (isPreserved=true) and the
+//   no-data redirect path. shouldSeeWelcome now agrees with that same check,
+//   so the two gates never disagree.
+//
+// Returns true  → show /welcome showcase
+//         false → skip (middleware routes them to dashboard or billing)
 // =============================================================================
-
-// Stripe statuses meaning "this subscription was, at some point, a REAL (paid
-// or trialing) subscription" — i.e. the user has truly activated before.
-const TRULY_ACTIVATED_STATUSES = [
-  'active',
-  'trialing',
-  'past_due',
-  'canceled',   // only ever set after a real subscription existed
-  'unpaid',
-  'paused',
-]
-
 export async function shouldSeeWelcome(clerkId: string): Promise<boolean> {
-  // 1. Currently-active users never see the showcase.
+  // 1. Active users never see the showcase — they belong in the dashboard.
   const self = await checkSelfSubActive(clerkId)
   if (self.active) return false
 
   const activeSeats = await getActiveTeamSeats(clerkId)
   if (activeSeats.length > 0) return false
 
-  // 2. Has the user EVER had a truly-activated subscription? If so, they're a
-  //    genuine lapsed user → billing, not the showcase.
-  const { data: subs, error } = await supabase
-    .from('subscriptions')
-    .select('status')
-    .eq('user_id', clerkId)
+  // 2. Does this user have preserved data?
+  //    If yes: they're a lapsed user with real history — middleware will send
+  //    them to the read-only dashboard. Don't intercept with the showcase.
+  //    If no: they have nothing to look at in the dashboard — show the pitch.
+  const { data: preservedRow, error } = await supabase
+    .from('data_preserved_users')
+    .select('clerk_id')
+    .eq('clerk_id', clerkId)
+    .maybeSingle()
 
   if (error) {
-    console.error('[subscription] shouldSeeWelcome sub lookup failed:', error)
-    // Fail safe: don't trap a paying-capable user on the showcase.
+    console.error('[subscription] shouldSeeWelcome preserved check failed:', error)
+    // Fail safe: don't trap a user on the showcase if the DB errors.
     return false
   }
 
-  const everTrulyActivated = (subs || []).some(s =>
-    TRULY_ACTIVATED_STATUSES.includes(s.status)
-  )
-  if (everTrulyActivated) return false
+  // Has preserved data → skip welcome, let middleware handle dashboard routing.
+  if (preservedRow) return false
 
-  // 3. Ever been on a paid team seat? Then they've used the product paid before
-  //    → treat as lapsed, not new.
-  const { data: seatHistory } = await supabase
-    .from('team_seat_charges')
-    .select('id')
-    .eq('agent_id', clerkId)
-    .eq('status', 'paid')
-    .limit(1)
-
-  if (seatHistory && seatHistory.length > 0) return false
-
-  // Reached here: not active, never truly activated, never on a paid seat.
-  // Brand-new (or only-ever-incomplete) user → show the showcase.
+  // No active sub, no preserved data → show the welcome showcase.
   return true
 }
