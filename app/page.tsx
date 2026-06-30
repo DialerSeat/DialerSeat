@@ -6,52 +6,31 @@ import SiteHeader from '@/components/site-header'
 import LandingAuthSync from '@/components/LandingAuthSync'
 
 // =============================================================================
-// LANDING PAGE — v22 (logout-header fix) + Manager+ pricing tier
+// LANDING PAGE — v23 (no-glow buttons)
 // =============================================================================
-// v22 fix (this revision):
-//   LOGOUT HEADER RACE. The header presence is decided server-side from
-//   await auth(): {isLoggedIn && <SiteHeader />} for logged-in, the fixed
-//   .ds-nav for logged-out. After a CLIENT-side sign-out that soft-navigates
-//   back to dialerseat.com, Next could serve a cached / statically-optimized
-//   render whose auth state was stale, so the correct header didn't appear
-//   until a manual refresh. Adding `export const dynamic = 'force-dynamic'`
-//   forces a per-request render so auth() is always re-evaluated and the
-//   right header renders immediately. (Pairs with sign-out using a HARD
-//   navigation — see SiteHeader / Start menu Log Off — so the server is
-//   actually hit rather than a soft RSC transition.)
+// v23 change (this revision):
+//   Removed box-shadow glow from all buttons site-wide on this page.
+//   Every CTA that previously had `boxShadow: '0 0 Npx rgba(74,158,255,0.N)'`
+//   now has no box-shadow. Button backgrounds and colors are unchanged.
+//   All other v22 fixes are preserved as-is.
+//
+// v22 fix (kept):
+//   LOGOUT HEADER RACE. export const dynamic = 'force-dynamic' forces a
+//   per-request render so auth() is always re-evaluated and the right
+//   header renders immediately.
 //
 // v21.d fixes (kept):
-//
 // 1. SITEHEADER NOW SHOWS FOR LOGGED-IN USERS
-//    SiteHeader is rendered only by pages that explicitly import it
-//    (/faq, /vs, /terms, etc). The landing page didn't, so logged-in
-//    users saw nothing at the top of /?view=landing.
-//    Fix: import SiteHeader and render it for the logged-IN case only.
-//    The logged-OUT path keeps its fixed `.ds-nav` exactly as before.
-//
 // 2. HERO PADDING SPLIT INTO TWO CLASSES
-//    - .ds-hero-logged-out keeps original 120/100px padding-top to clear
-//      the fixed .ds-nav.
-//    - .ds-hero-logged-in uses 40/24px padding-top because SiteHeader is
-//      in normal flow above <main>.
 //
 // MANAGER+ ADDITION (kept):
-//    - The single Pro pricing card is now wrapped in a flex container.
-//    - A Manager+ tier ($75/wk) sits to the right of Pro on desktop.
-//    - On mobile (≤768px), the two cards stack vertically.
-//    - Manager+ CTA routes to /sign-up?plan=wl (logged-out) or
-//      /billing?plan=wl (logged-in) so the WL intent flows through.
+//    - Manager+ tier ($75/wk, white-label) sits beside Pro.
 // =============================================================================
 
 interface PageProps {
   searchParams: Promise<{ view?: string }>
 }
 
-// Render per-request — never serve a cached/prerendered copy. Without this,
-// Next can hand back a statically-optimized or stale RSC payload after a
-// client-side sign-out, so the page keeps its previous auth-state render
-// (header showing/hiding wrong) until a hard reload. force-dynamic makes the
-// server re-run auth() on every hit to dialerseat.com.
 export const dynamic = 'force-dynamic'
 
 export default async function Home({ searchParams }: PageProps) {
@@ -68,20 +47,13 @@ export default async function Home({ searchParams }: PageProps) {
   const ctaHref = isLoggedIn ? '/dashboard' : '/sign-up'
   const ctaLabel = isLoggedIn ? 'GO TO DASHBOARD' : 'GET STARTED'
 
-  // Manager+ CTA — logged-in users upgrading go to billing with WL plan
-  // pre-selected; logged-out users sign up with WL intent in the query
-  // string so the post-signup billing step knows which plan to default to.
   const wlCtaHref = isLoggedIn ? '/billing?plan=wl' : '/sign-up?plan=wl'
   const wlCtaLabel = 'GET MANAGER+'
 
   return (
     <>
-      {/* Heals the stale-header-after-logout race: if the client's live Clerk
-          state disagrees with what the server rendered, force one refresh. */}
       <LandingAuthSync serverThoughtLoggedIn={isLoggedIn} />
 
-      {/* SiteHeader only renders for logged-in users. Logged-out keeps the
-          custom .ds-nav below. */}
       {isLoggedIn && <SiteHeader />}
 
       <main style={{
@@ -96,7 +68,6 @@ export default async function Home({ searchParams }: PageProps) {
           --cta-fs: 52px;
         }
 
-        /* LOGGED-OUT nav — unchanged from earlier deploys */
         .ds-nav {
           padding-top: max(20px, calc(env(safe-area-inset-top, 0px) + 12px));
           padding-bottom: 20px;
@@ -106,7 +77,6 @@ export default async function Home({ searchParams }: PageProps) {
         .ds-nav-links { display: flex; align-items: center; gap: 40px; }
         .ds-nav-link { display: inline-block; }
 
-        /* TWO hero variants depending on whether SiteHeader is in flow */
         .ds-hero-logged-out {
           padding-top: max(120px, calc(env(safe-area-inset-top, 0px) + 100px));
           padding-bottom: 80px;
@@ -127,7 +97,6 @@ export default async function Home({ searchParams }: PageProps) {
         .ds-pricing-card { padding: 60px; }
         .ds-cta-buttons { flex-direction: row; }
 
-        /* Manager+ pricing — two-card layout */
         .ds-pricing-grid {
           display: flex;
           flex-wrap: wrap;
@@ -330,7 +299,6 @@ export default async function Home({ searchParams }: PageProps) {
             color: 'white',
             textDecoration: 'none',
             background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
-            boxShadow: '0 0 40px rgba(74,158,255,0.3)',
           }}>
             {ctaLabel}
           </Link>
@@ -586,16 +554,13 @@ export default async function Home({ searchParams }: PageProps) {
           </p>
         </div>
 
-        {/* ── PRICING GRID — Pro + Manager+ ──────────────────────────── */}
         <div className="ds-pricing-grid">
 
-          {/* PRO TIER — unchanged content, only structural margin moved
-              to the grid container above. */}
+          {/* PRO TIER */}
           <div className="ds-pricing-card" style={{
             borderRadius: '24px',
             background: 'var(--surface)',
             border: '1px solid var(--accent-blue)',
-            boxShadow: '0 0 80px rgba(74,158,255,0.08)',
             textAlign: 'center',
           }}>
             <div style={{
@@ -678,7 +643,6 @@ export default async function Home({ searchParams }: PageProps) {
               color: 'white',
               textDecoration: 'none',
               background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
-              boxShadow: '0 0 30px rgba(74,158,255,0.3)',
               marginBottom: '16px',
             }}>
               {ctaLabel}
@@ -688,12 +652,11 @@ export default async function Home({ searchParams }: PageProps) {
             </p>
           </div>
 
-          {/* MANAGER+ TIER — new ($75/wk, white-label) */}
+          {/* MANAGER+ TIER */}
           <div className="ds-pricing-card" style={{
             borderRadius: '24px',
             background: 'var(--surface)',
             border: '1px solid var(--accent-blue)',
-            boxShadow: '0 0 80px rgba(74,158,255,0.08)',
             textAlign: 'center',
           }}>
             <div style={{
@@ -779,7 +742,6 @@ export default async function Home({ searchParams }: PageProps) {
               color: 'white',
               textDecoration: 'none',
               background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
-              boxShadow: '0 0 30px rgba(74,158,255,0.3)',
               marginBottom: '16px',
             }}>
               {wlCtaLabel}
@@ -791,9 +753,6 @@ export default async function Home({ searchParams }: PageProps) {
 
         </div>
       </section>
-
-      {/* v22.d: WLCallout removed. We'll reintroduce WL marketing once
-          the full WL flow is built. */}
 
       <section className="ds-section" style={{
         textAlign: 'center',
@@ -834,7 +793,6 @@ export default async function Home({ searchParams }: PageProps) {
           color: 'white',
           textDecoration: 'none',
           background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
-          boxShadow: '0 0 60px rgba(74,158,255,0.4)',
         }}>
           {ctaLabel}
         </Link>
