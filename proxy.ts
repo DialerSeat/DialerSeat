@@ -340,6 +340,30 @@ export default clerkMiddleware(async (auth, request) => {
     }
   }
 
+  // ── ROOT-PATH TENANT REDIRECT (v30) ─────────────────────────────────────
+  // A user logged in on the main domain (tenantSlug is null here) who owns
+  // or belongs to a white-label tenant should land on their branded
+  // subdomain by default when visiting the bare root path — not the
+  // generic dashboard/landing on dialerseat.com. This runs BEFORE the
+  // public-route passthrough below, since '/' is public and would
+  // otherwise short-circuit without ever checking tenant membership.
+  // The ?view=landing escape hatch is excluded so it keeps working.
+  if (
+    url.pathname === '/' &&
+    !tenantSlug &&
+    url.searchParams.get('view') !== 'landing'
+  ) {
+    const { userId: rootUserId } = await auth()
+    if (rootUserId) {
+      const brandAccess = await lookupUserBrandAccess(rootUserId)
+      const targetSlug = brandAccess.selectedSlug || Array.from(brandAccess.accessibleSlugs)[0] || null
+      if (targetSlug) {
+        const dashUrl = new URL('/dashboard', `https://${targetSlug}.dialerseat.com`)
+        return NextResponse.redirect(dashUrl, 307)
+      }
+    }
+  }
+
   // ── PUBLIC ROUTES ──────────────────────────────────────────────────────
   if (isPublicRoute(request)) {
     const res = NextResponse.next()
