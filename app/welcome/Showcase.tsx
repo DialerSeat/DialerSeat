@@ -4,8 +4,14 @@ import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
 // =============================================================================
-// SHOWCASE WIZARD — post-signup, pre-billing product showcase (v4)
+// SHOWCASE WIZARD — post-signup, pre-billing product showcase (v5)
 // =============================================================================
+// v5 changes vs v4:
+//   - Removed the glow (boxShadow) on the primary NEXT / GET STARTED button.
+//   - Updated copy on all three scenes per latest request.
+//   - Scene 2 (analytics) now renders two stacked header lines instead of
+//     a single headline. Added optional `headline2` to the Scene type and
+//     rendering branch for it; unaffected scenes render exactly as before.
 // v4 changes vs v3:
 //   - BILLING_PATH changed from '/billing' to '/billing?from=welcome'.
 //     This single param is the loop-breaker: app/billing/layout.tsx checks
@@ -42,26 +48,36 @@ const GREEN = '#1a6a1a'
 const GREEN_BRIGHT = '#5ad17a'
 const ACCENT = '#2a4a8a'
 
-interface Scene { key: string; eyebrow: string; headline: string; sub: string; subLead?: string }
+interface Scene {
+  key: string
+  eyebrow: string
+  headline: string
+  sub: string
+  subLead?: string
+  /** If set, renders as a second stacked header line below `headline`
+   *  (both styled as headers) instead of the normal single-headline layout. */
+  headline2?: string
+}
 
 const SCENES: Scene[] = [
   {
     key: 'dialer',
     eyebrow: 'A SUPERIOR DIALER',
-    headline: "If your job is to dial numbers,\nDialerSeat is for you.",
+    headline: "If your career is dialing numbers,\nthat's what we're all about.",
     subLead: "And it's guaranteed better than what you're using currently.",
     sub: "Dial all day on an unlimited number pool, with all of your scripts in one place — with four dialer modes included to fit your approach cleanly.",
   },
   {
     key: 'analytics',
     eyebrow: 'YOUR NUMBERS, LIVE',
-    headline: 'Every number updates as you dial.',
+    headline: 'DialerSeat Analytics',
+    headline2: 'Statistics updated as you dial.',
     sub: "Calls, conversions, talk time, and where your closes come from — all tracked on the backend for you, the second each call ends. Nothing to log, nothing to maintain. Upload infinite campaigns and toggle each one on or off for the cleanest possible workflow.",
   },
   {
     key: 'superior',
     eyebrow: 'WHY IT WINS',
-    headline: 'Built to make you a closing machine.',
+    headline: 'Designed to make you a closing machine.',
     sub: "Created by a team of seasoned developers alongside a group of high-ranking producers with real knowledge of the game who are tired of empty promises. DialerSeat is built around your experience — and we're actively taking suggestions as well, to provide the best dialer on the face of the earth. Thanks for all of your support along this journey.\n~ DialerSeat",
   },
 ]
@@ -122,7 +138,14 @@ export default function ShowcaseWizard() {
         <div style={{ padding: '18px 24px 12px', display: 'flex', justifyContent: 'center' }}>
           <div key={current.key} className="sw-explain" style={{ maxWidth: 620, textAlign: 'center', animation: 'sw-rise 0.45s ease' }}>
             <div style={{ fontSize: 11, letterSpacing: 4, color: C.primary, fontWeight: 800, marginBottom: 10 }}>{current.eyebrow}</div>
-            <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: 0.3, lineHeight: 1.15, marginBottom: 12, whiteSpace: 'pre-line' }}>{current.headline}</div>
+            {current.headline2 ? (
+              <>
+                <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: 0.3, lineHeight: 1.15, marginBottom: 6, whiteSpace: 'pre-line' }}>{current.headline}</div>
+                <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: 0.3, lineHeight: 1.15, marginBottom: 12, whiteSpace: 'pre-line' }}>{current.headline2}</div>
+              </>
+            ) : (
+              <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: 0.3, lineHeight: 1.15, marginBottom: 12, whiteSpace: 'pre-line' }}>{current.headline}</div>
+            )}
             {current.subLead && <div style={{ fontSize: 15, lineHeight: 1.6, color: C.primary, fontWeight: 700, marginBottom: 6 }}>{current.subLead}</div>}
             <div style={{ fontSize: 15, lineHeight: 1.6, color: 'rgba(255,255,255,0.72)', whiteSpace: 'pre-line' }}>{current.sub}</div>
           </div>
@@ -133,7 +156,7 @@ export default function ShowcaseWizard() {
           {scene > 0 && (
             <button onClick={prev} style={{ padding: '12px 20px', borderRadius: 10, cursor: 'pointer', background: 'transparent', border: '1px solid rgba(255,255,255,0.18)', color: 'rgba(255,255,255,0.85)', fontFamily: FUTURA, fontSize: 12, letterSpacing: 2, fontWeight: 700 }}>← BACK</button>
           )}
-          <button onClick={isLast ? goBilling : next} style={{ padding: '13px 28px', borderRadius: 10, border: 'none', cursor: 'pointer', background: C.primary, color: C.onPrimary, fontFamily: FUTURA, fontSize: 13, letterSpacing: 2, fontWeight: 800, boxShadow: `0 8px 28px color-mix(in srgb, ${C.primary} 40%, transparent)` }}>
+          <button onClick={isLast ? goBilling : next} style={{ padding: '13px 28px', borderRadius: 10, border: 'none', cursor: 'pointer', background: C.primary, color: C.onPrimary, fontFamily: FUTURA, fontSize: 13, letterSpacing: 2, fontWeight: 800 }}>
             {isLast ? 'GET STARTED →' : 'NEXT →'}
           </button>
         </div>
