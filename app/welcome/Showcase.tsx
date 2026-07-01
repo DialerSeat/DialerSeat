@@ -63,8 +63,7 @@ const SCENES: Scene[] = [
   {
     key: 'dialer',
     eyebrow: 'A SUPERIOR DIALER',
-    headline: "If your career is dialing numbers,\nthat's what we're all about.",
-    subLead: "(And it's guaranteed better than what you're using currently...)",
+    headline: "If your career is dialing numbers,\nYou're at the right place.",
     sub: "Dial all day on an unlimited number pool, with all of your scripts in one place — with four dialer modes included to fit your approach cleanly.",
   },
   {
@@ -77,7 +76,7 @@ const SCENES: Scene[] = [
   {
     key: 'superior',
     eyebrow: 'WHY IT WINS',
-    headline: 'Designed to make you a closing machine.',
+    headline: 'Designed to make you a closing machine',
     sub: "Created by a team of seasoned developers alongside a group of high-ranking producers with real knowledge of the game who are tired of empty promises. DialerSeat is built around your experience — and we're actively taking suggestions as well, to provide the best dialer on the face of the earth. Thanks for all of your support along this journey.\n~ DialerSeat",
   },
 ]
@@ -293,7 +292,7 @@ function DialerScene() {
               <div style={{ padding: '10px 14px', background: C.page, border: `2px solid ${GREEN}`, borderRadius: 4 }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
                   <div>
-                    <div style={{ fontSize: 19, fontWeight: 800, fontFamily: MONO, color: C.onPage, letterSpacing: 1, marginBottom: 3 }}>MARCUS BELL</div>
+                    <div style={{ fontSize: 19, fontWeight: 800, fontFamily: MONO, color: C.onPage, letterSpacing: 1, marginBottom: 3 }}>JOHN DOE</div>
                     <div style={{ fontSize: 15, fontFamily: MONO, color: ACCENT, fontWeight: 800, letterSpacing: 2 }}>+1 (713) 555-0142</div>
                     <div style={{ fontSize: 10, fontFamily: MONO, color: C.muted, letterSpacing: 1, marginTop: 4 }}>HOUSTON, TX · {mm}:{ss}</div>
                   </div>
