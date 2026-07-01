@@ -1409,11 +1409,11 @@ export default function CampaignsPage() {
       editorDeletes.size > 0
     if (hasChanges && !confirm('Unsaved changes will be lost. Close anyway?')) return
 
-    // Closing the editor always drops back to the campaign settings modal,
-    // which is still open underneath it — it should NOT jump all the way out
-    // to the campaigns list. That includes campaigns pending from "blank lead
-    // sheet": if no leads were saved yet, the campaign stays pending and is
-    // only discarded when the user backs all the way out via closeSettings().
+    // If this campaign was created via "blank lead sheet" and never got any
+    // real lead data saved to it, discard it instead of leaving an empty
+    // campaign behind.
+    const wasPendingBlank = pendingBlankCampaignId && settingsCampaign?.id === pendingBlankCampaignId
+
     setEditorOpen(false)
     setEditorScriptsOpen(false)
     setEditorLeads([])
@@ -1421,6 +1421,13 @@ export default function CampaignsPage() {
     setEditorAdds([])
     setEditorDeletes(new Set())
     setEditorSelected(new Set())
+
+    if (wasPendingBlank) {
+      setSettingsId(null)
+      setEditDraft(null)
+      setEditBaseline(null)
+      discardPendingBlankCampaign(pendingBlankCampaignId!)
+    }
   }
 
   const editCell = (leadId: string, field: string, value: any) => {
@@ -2688,30 +2695,7 @@ export default function CampaignsPage() {
             padding-top: calc(16px + env(safe-area-inset-top, 0px));
             gap: 8px;
           }
-          /* Title gets its OWN full-width row (flex-basis: 100% forces every
-             later sibling to wrap onto the next line). Before this, title's
-             flex:1 + min-width:0 let the button row squeeze it down to just a
-             couple of characters — unreadable. Now it truncates gracefully
-             instead of disappearing. */
-          .editor-toolbar-title {
-            flex: 1 1 100%;
-            font-size: 12px;
-            letter-spacing: 1.5px;
-          }
-          /* The "N EDITS · UNSAVED" badge also gets its own row so it doesn't
-             compete with buttons for space. */
-          .editor-tb-changes {
-            flex: 1 1 100%;
-            text-align: center;
-          }
-          /* Buttons: flex-grow so each wrapped row fills the width evenly
-             (2-3 per row depending on label length) instead of the lopsided
-             "3 on one line, 1 alone on the next" layout. */
-          .editor-toolbar .editor-tb-btn {
-            flex: 1 1 100px;
-            min-width: 0;
-            justify-content: center;
-          }
+          .editor-toolbar-title { font-size: 10px; letter-spacing: 2px; }
         }
       `}</style>
 
