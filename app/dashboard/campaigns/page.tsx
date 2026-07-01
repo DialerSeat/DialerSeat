@@ -424,21 +424,24 @@ export default function CampaignsPage() {
   // the fixed overlay, which reads as "the modal won't scroll" (you're actually
   // dragging the page underneath). Locking body scroll while a modal is open
   // keeps all touch scrolling inside the modal's own scroll container.
-  useEffect(() => {
+ useEffect(() => {
     const anyModalOpen = showCreate || !!settingsId || scriptsManagerOpen || !!deleteConfirm || editorOpen
     if (anyModalOpen) {
       const prevOverflow = document.body.style.overflow
       const prevPosition = document.body.style.position
       const prevWidth = document.body.style.width
+      const prevHeight = document.body.style.height
       const scrollY = window.scrollY
       document.body.style.overflow = 'hidden'
       document.body.style.position = 'fixed'
       document.body.style.top = `-${scrollY}px`
       document.body.style.width = '100%'
+      document.body.style.height = '100%'
       return () => {
         document.body.style.overflow = prevOverflow
         document.body.style.position = prevPosition
         document.body.style.width = prevWidth
+        document.body.style.height = prevHeight
         document.body.style.top = ''
         window.scrollTo(0, scrollY)
       }
