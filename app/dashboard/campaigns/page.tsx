@@ -333,6 +333,11 @@ export default function CampaignsPage() {
   const [csvName, setCsvName] = useState('')
   const [dragging, setDragging] = useState(false)
   const [creating, setCreating] = useState(false)
+  // Tracks a campaign created via "START A BLANK LEAD SHEET" that has not yet
+  // had any real lead data saved to it. If the user backs out of the editor /
+  // settings modal without saving leads, this campaign is silently discarded
+  // so no empty campaign is left behind.
+  const [pendingBlankCampaignId, setPendingBlankCampaignId] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   // When the user changes dialer mode in the create modal, reset AMD to
@@ -555,6 +560,27 @@ export default function CampaignsPage() {
     loadLibrary() // for the toggle-script picker (same model as edit)
   }
 
+  // Silently discard a campaign that was created via "START A BLANK LEAD
+  // SHEET" but never received any real lead data before the user backed out.
+  const discardPendingBlankCampaign = async (id: string) => {
+    try {
+      await fetch('/api/campaigns/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
+    } catch (err) {
+      console.error('Failed to discard empty blank campaign:', err)
+    } finally {
+      setCampaigns(cs => cs.filter(c => c.id !== id))
+      setPreviews(prev => {
+        const { [id]: _, ...rest } = prev
+        return rest
+      })
+      setPendingBlankCampaignId(null)
+    }
+  }
+
   // "Start a blank lead sheet": create the campaign with whatever's filled in
   // (name/mode/AMD/subs/scripts), then immediately open its blank lead editor so
   // the user can type leads in like a fresh spreadsheet — no CSV needed.
@@ -573,6 +599,10 @@ export default function CampaignsPage() {
         throw new Error(data.error)
       }
       const newId = data.campaign.id
+      // Mark this campaign as "pending" — it isn't real until leads are saved.
+      // If the user leaves the editor/settings modal without saving any lead
+      // data, we quietly delete it so no empty campaign is left behind.
+      setPendingBlankCampaignId(newId)
 
       const parallel: Promise<any>[] = []
       if (createApptSub || createNotIntSub) {
@@ -1174,12 +1204,20 @@ export default function CampaignsPage() {
 
   const closeSettings = () => {
     if ((dirtyScript || editDirty) && !confirm('You have unsaved changes. Discard them?')) return
+
+    // If this campaign was created via "blank lead sheet" and never got any
+    // real lead data saved to it, discard it instead of leaving an empty
+    // campaign behind.
+    const wasPendingBlank = pendingBlankCampaignId && settingsId === pendingBlankCampaignId
+
     setSettingsId(null)
     setSettingsScripts([])
     setActiveScriptId(null)
     setDirtyScript(false)
     setEditDraft(null)
     setEditBaseline(null)
+
+    if (wasPendingBlank) discardPendingBlankCampaign(pendingBlankCampaignId!)
   }
 
   const switchScript = (id: string) => {
@@ -1370,6 +1408,12 @@ export default function CampaignsPage() {
       editorAdds.length > 0 ||
       editorDeletes.size > 0
     if (hasChanges && !confirm('Unsaved changes will be lost. Close anyway?')) return
+
+    // If this campaign was created via "blank lead sheet" and never got any
+    // real lead data saved to it, discard it instead of leaving an empty
+    // campaign behind.
+    const wasPendingBlank = pendingBlankCampaignId && settingsCampaign?.id === pendingBlankCampaignId
+
     setEditorOpen(false)
     setEditorScriptsOpen(false)
     setEditorLeads([])
@@ -1377,6 +1421,13 @@ export default function CampaignsPage() {
     setEditorAdds([])
     setEditorDeletes(new Set())
     setEditorSelected(new Set())
+
+    if (wasPendingBlank) {
+      setSettingsId(null)
+      setEditDraft(null)
+      setEditBaseline(null)
+      discardPendingBlankCampaign(pendingBlankCampaignId!)
+    }
   }
 
   const editCell = (leadId: string, field: string, value: any) => {
@@ -1484,6 +1535,13 @@ export default function CampaignsPage() {
           alert(`Failed to add a lead: ${e.detail || e.error || addRes.status}`)
           return
         }
+      }
+
+      // Once real lead data has been committed for a "blank lead sheet"
+      // campaign, it's no longer pending — it should persist normally from
+      // here on, even if the user later closes without adding more leads.
+      if (pendingBlankCampaignId === settingsCampaign.id && editorAdds.length > 0) {
+        setPendingBlankCampaignId(null)
       }
 
       setEditorEdits({})
@@ -1715,7 +1773,8 @@ export default function CampaignsPage() {
           position: fixed; inset: 0;
           background: rgba(0,0,0,0.6);
           display: flex; align-items: center; justify-content: center;
-          z-index: 100; padding: 16px;
+          z-index: 1000;
+          padding: 16px;
           backdrop-filter: blur(6px);
           overscroll-behavior: contain;
         }
@@ -2235,7 +2294,7 @@ export default function CampaignsPage() {
         .editor-fullscreen {
           position: fixed; inset: 0;
           background: ${T.bg};
-          z-index: 200;
+          z-index: 9999;
           display: flex;
           flex-direction: column;
         }
@@ -2633,7 +2692,7 @@ export default function CampaignsPage() {
           .settings-modal { max-height: 100vh; max-height: 100dvh; border-radius: 0; }
           .editor-toolbar {
             padding: 10px 12px;
-            padding-top: calc(10px + env(safe-area-inset-top, 0px));
+            padding-top: calc(16px + env(safe-area-inset-top, 0px));
             gap: 8px;
           }
           .editor-toolbar-title { font-size: 10px; letter-spacing: 2px; }
