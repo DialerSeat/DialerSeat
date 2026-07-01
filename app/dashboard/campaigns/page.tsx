@@ -2586,7 +2586,7 @@ export default function CampaignsPage() {
              vh fallback) keeps it correct as the browser chrome/keyboard resizes
              the viewport, and we give it a real height (not just max-height) so
              the flex children below have a bounded box to scroll within. */
-          .modal-overlay { padding: 0; align-items: stretch; }
+          .modal-overlay { padding: 0; align-items: stretch; min-height: 100vh; min-height: 100dvh; }
           .settings-modal {
             max-width: 100%;
             width: 100%;
@@ -2595,6 +2595,7 @@ export default function CampaignsPage() {
             max-height: 100vh;
             max-height: 100dvh;
             border-radius: 0;
+            padding-bottom: env(safe-area-inset-bottom, 20px);
           }
 
           /* Push the header down below the notch / dynamic island / status bar
@@ -2609,7 +2610,7 @@ export default function CampaignsPage() {
 
           /* Keep the footer buttons clear of the home-indicator area. */
           .settings-footer {
-            padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+            padding-bottom: calc(34px + env(safe-area-inset-bottom, 20px));
           }
 
           /* Stack footer button groups full-width so CANCEL/CREATE etc. don't
