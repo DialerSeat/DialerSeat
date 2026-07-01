@@ -8,10 +8,40 @@ import { useBranding } from '@/components/ThemeProvider'
 import ResubBanner from '@/components/ResubBanner'
 
 // =============================================================================
-// app/dashboard/layout.tsx — C6 (fix iOS PWA black bar on scroll bounce)
+// app/dashboard/layout.tsx — C7 (fix iOS PWA white bar — extend black-bar fix to <html>)
 // =============================================================================
-// C6 changes vs C5:
+// C7 changes vs C6:
 //
+//   - WHITE BAR FIX. C6 fixed the black-bar flash by setting
+//     `document.body.style.backgroundColor` to `var(--brand-page-bg)` for
+//     the lifetime of this layout. But globals.css only ever styled `body`
+//     — `html` had no background of its own. On iOS Safari/PWA standalone,
+//     dynamic-viewport shifts (address bar collapse, rubber-band bounce,
+//     home-indicator safe area) can reveal `html` peeking out from under
+//     `body` for an instant. Before C6 this didn't read as a problem (body's
+//     static near-black default vs html's white default didn't create an
+//     obviously "wrong" flash against a dark landing page); after C6,
+//     `body` became light gray at runtime while `html` was still
+//     unstyled-white-by-default, so on every dashboard route the seam now
+//     shows as a white bar instead of a black one.
+//
+//     Fix, in two parts:
+//       1. globals.css now sets `html, body { background-color: var(--background) }`
+//          as a static default, so there's never an unstyled layer under
+//          `body` on ANY route (landing included — unaffected, since that's
+//          already `--background`'s value there).
+//       2. This layout's existing black-bar effect now also sets (and
+//          restores on unmount) `document.documentElement.style.backgroundColor`
+//          alongside `document.body.style.backgroundColor`, using the same
+//          `var(--brand-page-bg)` value, so `html` and `body` always agree
+//          for as long as a dashboard route is mounted. Scoped exactly like
+//          the original C6 fix: only runs while DashboardLayout is mounted,
+//          restores prior inline values on unmount, so landing page and any
+//          other non-dashboard route are completely unaffected.
+//
+//   - No other logic or UI changes vs C6.
+//
+// C6 changes vs C5:
 //   - BLACK BAR FIX. globals.css sets `body { background-color: var(--background) }`
 //     which resolves to near-black (--brand-bg, #0a0a0f) — correct for the dark
 //     landing page, but never overridden for the dashboard. On iOS Safari/PWA,
@@ -125,22 +155,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setDrawerOpen(false)
   }, [pathname])
 
-  // ─── BLACK BAR FIX (part 1/2) ──────────────────────────────────────────
-  // globals.css hardcodes `body { background-color: var(--background) }`,
-  // which is near-black — correct for the dark landing page, but the
-  // dashboard never overrides it. On iOS, rubber-band scroll bounce reveals
-  // `body` for an instant, so that dark color flashes as a "black bar" at
-  // the top/bottom edge. Match body's background to the dashboard's own
-  // page bg for as long as this layout is mounted, and restore whatever was
-  // there before on unmount so the landing page is unaffected.
+  // ─── WHITE/BLACK BAR FIX (part 1/2) ────────────────────────────────────
+  // globals.css hardcodes `html, body { background-color: var(--background) }`
+  // as a static default (near-black) — correct for the dark landing page,
+  // but the dashboard never overrides it. On iOS, rubber-band scroll bounce
+  // and dynamic-viewport chrome changes can reveal whatever's directly
+  // underneath the scrolling content — `body`, and in some cases `html`
+  // peeking out from under `body` — for an instant. Match BOTH `body` and
+  // `html`'s background to the dashboard's own page bg for as long as this
+  // layout is mounted, and restore whatever was there before on unmount so
+  // the landing page (and any other non-dashboard route) is unaffected.
   useEffect(() => {
     if (bare) return
-    const prevBg = document.body.style.backgroundColor
+    const prevBodyBg = document.body.style.backgroundColor
+    const prevHtmlBg = document.documentElement.style.backgroundColor
     const prevOverscroll = document.body.style.overscrollBehavior
     document.body.style.backgroundColor = 'var(--brand-page-bg)'
+    document.documentElement.style.backgroundColor = 'var(--brand-page-bg)'
     document.body.style.overscrollBehavior = 'none'
     return () => {
-      document.body.style.backgroundColor = prevBg
+      document.body.style.backgroundColor = prevBodyBg
+      document.documentElement.style.backgroundColor = prevHtmlBg
       document.body.style.overscrollBehavior = prevOverscroll
     }
   }, [bare])
