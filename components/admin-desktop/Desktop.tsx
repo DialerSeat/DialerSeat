@@ -38,6 +38,15 @@ import { appVisibleToRole } from './types'
 //
 // v24.1: open-desktop-app event listener (Account window repair).
 // v24: grid snapping, wallpaper drag-drop, OG presets, App Store system.
+//
+// v25.1: RUBBER-BAND / OVERSCROLL FIX — iOS bounce could reveal the
+//   hardcoded-dark `body` background behind this component (which is
+//   `position: fixed`, so it never scrolls itself, but nothing enforced
+//   containment on the actually-scrollable regions beneath it). Added a
+//   mount-time effect that pins body/html background + overscroll-behavior
+//   while Desktop is mounted, and `overscrollBehavior: contain` +
+//   `WebkitOverflowScrolling: touch` on the mobile icon grid, the one
+//   genuinely scrollable region owned by this file.
 // =============================================================================
 
 const MOBILE_BREAKPOINT = 768
@@ -370,6 +379,35 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
       window.removeEventListener('resize', measure)
       window.removeEventListener('orientationchange', measure)
       probe.remove()
+    }
+  }, [])
+
+  // ── BODY BACKGROUND / OVERSCROLL GUARD (rubber-band fix) ─────────────────
+  // iOS rubber-band bounce briefly reveals whatever sits behind the scrolling
+  // content. This component is `position: fixed; inset: 0`, so it never
+  // scrolls itself — but nothing here previously constrained the actually
+  // scrollable regions beneath it (the mobile icon grid, and whatever
+  // AppWindow bodies do), so an overscroll could still propagate up to
+  // `body`, which is hardcoded dark in globals.css for the landing page.
+  // While Desktop is mounted: pin body/html background to match the desktop
+  // bg and disable document-level overscroll, so nothing can bounce past
+  // this component's own boundary. Restored on unmount so other routes are
+  // untouched.
+  useEffect(() => {
+    const bodyEl = document.body
+    const htmlEl = document.documentElement
+    const prevBodyBg = bodyEl.style.backgroundColor
+    const prevBodyOverscroll = bodyEl.style.overscrollBehavior
+    const prevHtmlOverscroll = htmlEl.style.overscrollBehavior
+
+    bodyEl.style.backgroundColor = '#1a3a6a' // matches DEFAULT_BG_CSS base tone
+    bodyEl.style.overscrollBehavior = 'none'
+    htmlEl.style.overscrollBehavior = 'none'
+
+    return () => {
+      bodyEl.style.backgroundColor = prevBodyBg
+      bodyEl.style.overscrollBehavior = prevBodyOverscroll
+      htmlEl.style.overscrollBehavior = prevHtmlOverscroll
     }
   }, [])
 
@@ -1010,6 +1048,9 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
                 maxWidth: '100%',
                 flex: 1,
                 minHeight: 0,
+                overflowY: 'auto',
+                WebkitOverflowScrolling: 'touch',
+                overscrollBehavior: 'contain',
               }}
             >
               {visibleApps.map(app => {
