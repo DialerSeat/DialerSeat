@@ -300,6 +300,21 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
     w: typeof window !== 'undefined' ? window.innerWidth : 1280,
     h: typeof window !== 'undefined' ? window.innerHeight : 800,
   })
+  // Real, live-tracked visible viewport size — used to size the root fixed
+  // container explicitly in px. `position: fixed; inset: 0` alone is NOT
+  // enough on mobile Safari: it sizes against the layout viewport at the
+  // point of paint, which doesn't reliably resize when the address bar /
+  // toolbar auto-hides on scroll. That leaves a permanent gap (usually at
+  // the bottom) where the fixed container stops short of the real visible
+  // area, exposing `body` underneath. `window.visualViewport` fires resize
+  // events precisely when the toolbar shows/hides, so we track it
+  // separately from `viewport` (which drives icon-grid math and only needs
+  // to be "close enough", not live-perfect) and apply it directly as the
+  // root div's width/height instead of trusting `inset: 0`.
+  const [vv, setVv] = useState({
+    w: typeof window !== 'undefined' ? window.innerWidth : 1280,
+    h: typeof window !== 'undefined' ? window.innerHeight : 800,
+  })
 
   // ── prefs state ──────────────────────────────────────────────────────────
   const [iconPositions, setIconPositions] = useState<Record<string, { x: number; y: number }>>(
@@ -362,6 +377,38 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
     }
   }, [])
 
+  // ── LIVE VISUAL VIEWPORT TRACKING (bottom-gap fix) ────────────────────────
+  // window.visualViewport reflects the actually-visible area and fires its
+  // own resize event when the mobile toolbar hides/shows — window's resize
+  // event does not reliably fire for that. Falls back to window dimensions
+  // on browsers without visualViewport support (older Safari, most desktop
+  // browsers don't need this at all since they have no collapsing toolbar).
+  useEffect(() => {
+    const vvObj = window.visualViewport
+    const update = () => {
+      if (vvObj) {
+        setVv({ w: Math.round(vvObj.width), h: Math.round(vvObj.height) })
+      } else {
+        setVv({ w: window.innerWidth, h: window.innerHeight })
+      }
+    }
+    update()
+    if (vvObj) {
+      vvObj.addEventListener('resize', update)
+      vvObj.addEventListener('scroll', update)
+    } else {
+      window.addEventListener('resize', update)
+    }
+    return () => {
+      if (vvObj) {
+        vvObj.removeEventListener('resize', update)
+        vvObj.removeEventListener('scroll', update)
+      } else {
+        window.removeEventListener('resize', update)
+      }
+    }
+  }, [])
+
   // ── SAFE-AREA-BOTTOM PROBE (for window math only) ────────────────────────
   useEffect(() => {
     const probe = document.createElement('div')
@@ -396,20 +443,29 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
   useEffect(() => {
     const bodyEl = document.body
     const htmlEl = document.documentElement
-    const prevBodyBg = bodyEl.style.backgroundColor
+    const prevBodyBg = bodyEl.style.background
     const prevBodyOverscroll = bodyEl.style.overscrollBehavior
     const prevHtmlOverscroll = htmlEl.style.overscrollBehavior
 
-    bodyEl.style.backgroundColor = '#1a3a6a' // matches DEFAULT_BG_CSS base tone
     bodyEl.style.overscrollBehavior = 'none'
     htmlEl.style.overscrollBehavior = 'none'
 
     return () => {
-      bodyEl.style.backgroundColor = prevBodyBg
+      bodyEl.style.background = prevBodyBg
       bodyEl.style.overscrollBehavior = prevBodyOverscroll
       htmlEl.style.overscrollBehavior = prevHtmlOverscroll
     }
   }, [])
+
+  // Keep body's background mirroring the actual active wallpaper (not a
+  // fixed placeholder color) so that IF any sliver of body is ever exposed
+  // — e.g. a browser without visualViewport support — it matches what's
+  // already on screen instead of showing as a mismatched flat color. Runs
+  // whenever the wallpaper changes, independent of the mount/unmount effect
+  // above so switching wallpapers updates it live.
+  useEffect(() => {
+    document.body.style.background = bgCssFor(background)
+  }, [background])
 
   // ── PERSIST WINDOW STATE ─────────────────────────────────────────────────
   useEffect(() => {
@@ -1006,7 +1062,10 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
         onDrop={onRootDrop}
         style={{
           position: 'fixed',
-          inset: 0,
+          top: 0,
+          left: 0,
+          width: vv.w,
+          height: vv.h,
           background: bgCssFor(background),
           overflow: 'hidden',
           fontFamily: '"Segoe UI", Tahoma, sans-serif',
