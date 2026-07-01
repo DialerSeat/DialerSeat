@@ -8,10 +8,32 @@ import { useBranding } from '@/components/ThemeProvider'
 import ResubBanner from '@/components/ResubBanner'
 
 // =============================================================================
-// app/dashboard/layout.tsx — C5 (Manager+ "Go to Desktop" sidebar button)
+// app/dashboard/layout.tsx — C6 (fix iOS PWA black bar on scroll bounce)
 // =============================================================================
-// C5 changes vs C4:
+// C6 changes vs C5:
 //
+//   - BLACK BAR FIX. globals.css sets `body { background-color: var(--background) }`
+//     which resolves to near-black (--brand-bg, #0a0a0f) — correct for the dark
+//     landing page, but never overridden for the dashboard. On iOS Safari/PWA,
+//     rubber-band scroll bounce (past the top/bottom edge) briefly reveals
+//     whatever's behind the scrolling content, i.e. `body` — so any bounce on
+//     a /dashboard/* route flashed near-black. Two-part fix, both scoped to
+//     stay mounted only while DashboardLayout is mounted (so landing page and
+//     other routes are completely unaffected):
+//       1. useEffect sets `document.body.style.background` to
+//          `var(--brand-page-bg)` for the duration of the mount, restoring the
+//          original inline value on unmount.
+//       2. `.ds-mobile-content` (the scrollable pane holding the topbar +
+//          page children on mobile) gets `height: 100dvh` + its own
+//          `overflow-y: auto` + `overscroll-behavior: contain`, so it owns
+//          its own scroll/bounce and never lets the bounce propagate up to
+//          `body`. Desktop sidebar gets `overscroll-behavior: contain` too
+//          for the same reason on its independent scroll.
+//     `main` itself switches from `100vh` to `100dvh` so it doesn't
+//     under/overshoot the real visible viewport when iOS shows/hides its
+//     chrome (address bar, home indicator area) — dvh tracks that live.
+//
+// C5 changes vs C4:
 //   - GO TO DESKTOP BUTTON. A themed entry to the Manager+ desktop now
 //     renders just above the profile row in the sidebar, gated on
 //     hasManagerPlus (already derived from /api/stripe/status — true for
@@ -102,6 +124,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     setDrawerOpen(false)
   }, [pathname])
+
+  // ─── BLACK BAR FIX (part 1/2) ──────────────────────────────────────────
+  // globals.css hardcodes `body { background-color: var(--background) }`,
+  // which is near-black — correct for the dark landing page, but the
+  // dashboard never overrides it. On iOS, rubber-band scroll bounce reveals
+  // `body` for an instant, so that dark color flashes as a "black bar" at
+  // the top/bottom edge. Match body's background to the dashboard's own
+  // page bg for as long as this layout is mounted, and restore whatever was
+  // there before on unmount so the landing page is unaffected.
+  useEffect(() => {
+    if (bare) return
+    const prevBg = document.body.style.backgroundColor
+    const prevOverscroll = document.body.style.overscrollBehavior
+    document.body.style.backgroundColor = 'var(--brand-page-bg)'
+    document.body.style.overscrollBehavior = 'none'
+    return () => {
+      document.body.style.backgroundColor = prevBg
+      document.body.style.overscrollBehavior = prevOverscroll
+    }
+  }, [bare])
 
   useEffect(() => {
     if (bare) return
@@ -506,18 +548,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   )
 
   return (
-    <main style={{ minHeight: '100vh', background: 'var(--brand-page-bg)', display: 'flex' }}>
+    <main style={{ minHeight: '100dvh', height: '100dvh', background: 'var(--brand-page-bg)', display: 'flex', overflow: 'hidden' }}>
       <style>{`
         .ds-sidebar-desktop {
-          width: 260px; height: 100vh; position: sticky; top: 0;
+          width: 260px; height: 100dvh; position: sticky; top: 0;
           background: var(--brand-sidebar-bg); border-right: 1px solid var(--brand-sidebar-active-bg);
           display: flex; flex-direction: column; padding: 20px 0;
-          flex-shrink: 0; overflow: hidden;
+          flex-shrink: 0; overflow-y: auto; overscroll-behavior: contain;
         }
         .ds-mobile-topbar { display: none; }
         .ds-sidebar-mobile { display: none; }
         .ds-mobile-overlay { display: none; }
         .ds-profile-row:hover { background: color-mix(in srgb, var(--brand-primary) 6%, transparent); }
+
+        /* Desktop: the content pane (right of the fixed sidebar) owns its
+           own scroll, contained so bounce never reaches body underneath. */
+        .ds-mobile-content {
+          height: 100dvh;
+          overflow-y: auto;
+          -webkit-overflow-scrolling: touch;
+          overscroll-behavior: contain;
+        }
 
         @media (max-width: 768px) {
           .ds-sidebar-desktop { display: none; }
@@ -529,6 +580,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             padding-left: max(16px, env(safe-area-inset-left, 16px));
             padding-right: max(16px, env(safe-area-inset-right, 16px));
             background: var(--brand-header-bg); border-bottom: 1px solid var(--brand-sidebar-active-bg);
+            flex-shrink: 0;
           }
           .ds-sidebar-mobile {
             display: flex; position: fixed; top: 0; left: 0; bottom: 0;
@@ -539,6 +591,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             padding-bottom: 0;
             z-index: 60;
             transform: translateX(-100%); transition: transform 0.25s ease;
+            overflow-y: auto; overscroll-behavior: contain;
           }
           .ds-sidebar-mobile.open { transform: translateX(0); }
           .ds-mobile-overlay {

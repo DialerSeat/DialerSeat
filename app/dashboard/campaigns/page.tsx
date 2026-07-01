@@ -2609,7 +2609,7 @@ export default function CampaignsPage() {
 
           /* Keep the footer buttons clear of the home-indicator area. */
           .settings-footer {
-            padding-bottom: calc(34px + env(safe-area-inset-bottom, 34px));
+            padding-bottom: env(safe-area-inset-bottom, 34px);
           }
 
           /* Stack footer button groups full-width so CANCEL/CREATE etc. don't
