@@ -19,9 +19,11 @@ import { appVisibleToRole } from './types'
 //   instead of v24's tall first column. Grid snapping, no-overlap cells, and
 //   layout freezing are unchanged; only the DEFAULT placement order differs.
 //   "Reset icon layout" returns to this arrangement.
-// - XP AUTUMN WALLPAPER: uses the smart-cropped preview.redd.it render with
-//   `cover` so it fills the screen edge-to-edge with no side bars (the prior
-//   i.redd.it + `contain` combo showed a dark mat as bars on wide screens).
+// - XP AUTUMN WALLPAPER: uses `contain` so the FULL image is shown uncropped
+//   (JC: "not zoomed in, the full version"). On screens whose aspect ratio
+//   differs from the image's 3:2, this leaves a BLACK mat (#000000) on the
+//   short sides — the intended tradeoff for showing the whole picture rather
+//   than cropping it as `cover` did.
 // - TASKBAR PILL REORDER: new reorderWindows(dragId, targetId) moves a
 //   window within the windows array (pill order = array order, zIndex
 //   untouched); passed to Taskbar v2 as onReorderWindows.
@@ -64,6 +66,19 @@ const CELL_H = 106
 const GRID_X = 20   // grid origin
 const GRID_Y = 20
 const DEFAULT_FILL_COLS = 4   // v25: default arrangement = 4-wide rows (v22 look)
+
+// Per-role default arrangement. Admin keeps the 4-wide row-major grid. Manager+
+// defaults to a single column down the left (Dashboard, Analytics, Teams, App
+// Store, top→bottom). Once a user drags an icon, their saved positions win and
+// this no longer applies.
+function defaultFillColsFor(role: AppRole): number {
+  return role === 'manager' ? 1 : DEFAULT_FILL_COLS
+}
+
+// Explicit default placement order for the manager desktop, top→bottom. Apps
+// not listed fall back to registry order after these. Ids the manager can't see
+// (or that aren't installed/visible) are simply skipped.
+const MANAGER_DEFAULT_ORDER: string[] = ['dashboard', 'analytics', 'teams', 'appstore']
 
 function gridDims(vw: number, vh: number, taskbarH: number) {
   return {
@@ -124,6 +139,31 @@ const DEFAULT_BG_CSS = `
 const BG_PRESETS: { id: string; name: string; css: string }[] = [
   { id: 'aero', name: 'AERO (DEFAULT)', css: DEFAULT_BG_CSS },
   {
+    id: 'preset1',
+    name: 'PRESET 1',
+    css: `#1a3a6a url("https://i.imgur.com/394nH.jpeg") center / cover no-repeat`,
+  },
+  {
+    id: 'preset2',
+    name: 'PRESET 2',
+    css: `#1a3a6a url("https://i.imgur.com/W8tQ3.jpeg") center / cover no-repeat`,
+  },
+  {
+    id: 'preset3',
+    name: 'PRESET 3',
+    css: `#1a3a6a url("https://i.imgur.com/Zslk8.jpeg") center / cover no-repeat`,
+  },
+  {
+    id: 'preset4',
+    name: 'PRESET 4',
+    css: `#1a3a6a url("https://i.imgur.com/eBgJB.jpeg") center / cover no-repeat`,
+  },
+  {
+    id: 'preset5',
+    name: 'PRESET 5',
+    css: `#000000 url("https://i.redd.it/82smngfjfs251.jpg") center / cover no-repeat`,
+  },
+  {
     id: 'win7',
     name: 'WINDOWS 7',
     css: `#1a3a6a url("https://wallpapers.com/images/hd/windows-7-background-imfecqv6cnsicbx4.jpg") center / cover no-repeat`,
@@ -134,7 +174,7 @@ const BG_PRESETS: { id: string; name: string; css: string }[] = [
     // i.redd.it + `contain` combo showed a dark mat as bars on wide screens.)
     id: 'bliss',
     name: 'XP AUTUMN',
-    css: `#3a2e1a url("https://preview.redd.it/finally-windows-xps-autumn-wallpaper-in-full-res-4200x2800-v0-3ma6nhepxbb81.jpg?width=1080&crop=smart&auto=webp&s=e3747c3ccf8c439969200d2d67fb06d3f3738138") center / cover no-repeat`,
+    css: `#000000 url("https://preview.redd.it/finally-windows-xps-autumn-wallpaper-in-full-res-4200x2800-v0-3ma6nhepxbb81.jpg?width=1080&crop=smart&auto=webp&s=e3747c3ccf8c439969200d2d67fb06d3f3738138") center / contain no-repeat`,
   },
   // { id: 'vista', name: 'VISTA AURORA', css: `#0d2a1a url("/wallpapers/vista-aurora.jpg") center / cover no-repeat` },
   // { id: 'win10', name: 'WIN 10 HERO', css: `#0a2a4a url("/wallpapers/win10-hero.jpg") center / cover no-repeat` },
@@ -286,7 +326,7 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
     [role]
   )
   const isInstalled = useCallback(
-    (id: AppId) => isBaseApp(id) || installedApps.includes(id),
+    (id: AppId) => isBaseApp(id, role) || installedApps.includes(id),
     [installedApps]
   )
   const visibleApps = useMemo(
@@ -408,9 +448,10 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
       layout[app.id] = cellToXY(c, r)
     }
 
-    const fillCols = Math.min(DEFAULT_FILL_COLS, cols)
+    const fillCols = Math.min(defaultFillColsFor(role), cols)
     const placeDefault = (appId: string): void => {
-      // primary block: 4-wide row-major
+      // primary block: fillCols-wide row-major (admin: 4-wide; manager: 1-wide
+      // = a single left column, top→bottom)
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < fillCols; c++) {
           if (occupied.has(cellKey(c, r))) continue
@@ -431,12 +472,26 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
       layout[appId] = cellToXY(0, 0) // grid full fallback
     }
 
-    for (const app of visibleApps) {
-      if (!layout[app.id]) placeDefault(app.id)
+    // Order unsaved icons. Manager: explicit MANAGER_DEFAULT_ORDER first (so the
+    // left column reads Dashboard, Analytics, Teams, App Store), then any other
+    // visible apps in registry order. Admin: plain registry order.
+    const unplaced = visibleApps.filter(app => !layout[app.id])
+    const orderedUnplaced =
+      role === 'manager'
+        ? [
+            ...MANAGER_DEFAULT_ORDER
+              .map(id => unplaced.find(a => a.id === id))
+              .filter((a): a is NonNullable<typeof a> => !!a),
+            ...unplaced.filter(a => !MANAGER_DEFAULT_ORDER.includes(a.id)),
+          ]
+        : unplaced
+
+    for (const app of orderedUnplaced) {
+      placeDefault(app.id)
     }
 
     return layout
-  }, [visibleApps, iconPositions, viewport, TASKBAR_HEIGHT])
+  }, [visibleApps, iconPositions, viewport, TASKBAR_HEIGHT, role])
 
   const layoutRef = useRef(desktopLayout)
   layoutRef.current = desktopLayout
@@ -492,13 +547,13 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
 
   // ── APP STORE SERVICES ───────────────────────────────────────────────────
   const installApp = useCallback((id: AppId) => {
-    if (isBaseApp(id)) return // base apps are always installed
+    if (isBaseApp(id, role)) return // base apps are always installed
     setInstalledApps(prev => prev.includes(id) ? prev : [...prev, id])
     setHiddenApps(prev => prev.filter(h => h !== id)) // land on the desktop
   }, [])
 
   const uninstallApp = useCallback((id: AppId) => {
-    if (isBaseApp(id)) return // base apps (incl. App Store) cannot be uninstalled
+    if (isBaseApp(id, role)) return // base apps (incl. App Store) cannot be uninstalled
     setInstalledApps(prev => prev.filter(a => a !== id))
     setHiddenApps(prev => prev.filter(h => h !== id))
     setIconPositions(prev => {
@@ -522,7 +577,7 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
   // immediately; otherwise uninstall straight away. This mirrors the App
   // Store's guard so both entry points show the same warning.
   const requestUninstall = useCallback((id: AppId) => {
-    if (isBaseApp(id)) return
+    if (isBaseApp(id, role)) return
     if (uninstallWarns(id)) {
       setConfirmUninstallId(id)
     } else {
@@ -882,7 +937,7 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
     if (contextMenu.type === 'icon') {
       const appId = contextMenu.payload as AppId
       const alreadyOpen = windows.find(w => w.appId === appId)
-      const base = isBaseApp(appId)
+      const base = isBaseApp(appId, role)
       return [
         { label: 'Open', icon: '▶', onClick: () => openApp(appId) },
         {},
