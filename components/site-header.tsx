@@ -23,6 +23,14 @@ const T = {
 // Global header rendered (probably) by the root layout. Shows brand + auth
 // state + DASHBOARD button on every page that doesn't suppress it.
 //
+// v25 FIX — left-aligned logo for logged-out users on secondary pages:
+//   On /faq, /vs, /terms, /privacy (LEFT_LOGO_PREFIXES), logged-out users
+//   now see the brand mark in the left grid slot instead of centered.
+//   The landing page ('/') and all logged-in views are unaffected — the
+//   brand still renders in the center column there. Since the DASHBOARD
+//   button in the left column only ever renders for signed-in users,
+//   there's no collision between the two.
+//
 // v24 FIX — white-label branding removed:
 //   Header is now always the default DialerSeat brand regardless of tenant.
 //   useBranding() removed entirely. brandName, brandLogoUrl, brandPrimary
@@ -55,9 +63,87 @@ const SUPPRESS_HEADER_PREFIXES = [
   '/dashboard/admin/desktop',
 ]
 
+// Pages where a LOGGED-OUT user should see the logo on the LEFT instead of
+// centered (faq, terms, comparisons, etc — not the landing page). Add more
+// prefixes here as new "etc" pages are added.
+const LEFT_LOGO_PREFIXES = [
+  '/faq',
+  '/vs',
+  '/terms',
+  '/privacy',
+]
+
 function shouldSuppressHeader(pathname: string | null): boolean {
   if (!pathname) return false
   return SUPPRESS_HEADER_PREFIXES.some((p) => pathname.startsWith(p))
+}
+
+function shouldUseLeftLogo(pathname: string | null): boolean {
+  if (!pathname) return false
+  return LEFT_LOGO_PREFIXES.some((p) => pathname.startsWith(p))
+}
+
+// Brand mark — pulled into its own component so it can render in either the
+// left grid slot (logged-out, secondary pages) or the center grid slot
+// (everywhere else) without duplicating the JSX.
+function BrandMark({
+  brandName,
+  brandPrimary,
+  pathname,
+  isLoaded,
+  isSignedIn,
+}: {
+  brandName: string
+  brandPrimary: string
+  pathname: string | null
+  isLoaded: boolean
+  isSignedIn: boolean | undefined
+}) {
+  return (
+    <Link
+      href={
+        !isLoaded || !isSignedIn
+          ? '/'
+          : (pathname?.startsWith('/dashboard') ? '/dashboard' : '/?view=landing')
+      }
+      className="site-header-brand"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        textDecoration: 'none',
+      }}
+    >
+      <div
+        className="site-header-brand-mark"
+        style={{
+          width: 28,
+          height: 28,
+          borderRadius: 6,
+          background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+        }}
+      >
+        <span style={{ color: 'white', fontWeight: 'bold', fontSize: 13 }}>
+          D
+        </span>
+      </div>
+      <span
+        className="site-header-brand-text"
+        style={{
+          fontSize: 13,
+          fontWeight: 'bold',
+          letterSpacing: 4,
+          color: brandPrimary,
+        }}
+      >
+        {brandName}
+      </span>
+    </Link>
+  )
 }
 
 export default function SiteHeader() {
@@ -71,6 +157,10 @@ export default function SiteHeader() {
   const brandName = 'DIALERSEAT'
   const brandLogoUrl = null
   const brandPrimary = T.blue
+
+  // Logged-out users on secondary ("etc") pages get the logo on the left.
+  // Landing page and any logged-in view keep the centered logo.
+  const useLeftLogo = isLoaded && !isSignedIn && shouldUseLeftLogo(pathname)
 
   const userButtonRef = useRef<HTMLDivElement | null>(null)
 
@@ -144,7 +234,7 @@ export default function SiteHeader() {
           gap: 16,
         }}
       >
-        <div className="site-header-left" style={{ display: 'flex', alignItems: 'center' }}>
+        <div className="site-header-left" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {isLoaded && isSignedIn && (
             <Link
               href={dashboardHref}
@@ -173,51 +263,28 @@ export default function SiteHeader() {
               <span className="site-header-dashboard-btn-short" aria-hidden>←</span>
             </Link>
           )}
+
+          {useLeftLogo && (
+            <BrandMark
+              brandName={brandName}
+              brandPrimary={brandPrimary}
+              pathname={pathname}
+              isLoaded={isLoaded}
+              isSignedIn={isSignedIn}
+            />
+          )}
         </div>
 
-        <Link
-          href={
-            !isLoaded || !isSignedIn
-              ? '/'
-              : (pathname?.startsWith('/dashboard') ? '/dashboard' : '/?view=landing')
-          }
-          className="site-header-brand"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            textDecoration: 'none',
-          }}
-        >
-          <div
-            className="site-header-brand-mark"
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: 6,
-              background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <span style={{ color: 'white', fontWeight: 'bold', fontSize: 13 }}>
-              D
-            </span>
-          </div>
-          <span
-            className="site-header-brand-text"
-            style={{
-              fontSize: 13,
-              fontWeight: 'bold',
-              letterSpacing: 4,
-              color: brandPrimary,
-            }}
-          >
-            {brandName}
-          </span>
-        </Link>
+        {!useLeftLogo && (
+          <BrandMark
+            brandName={brandName}
+            brandPrimary={brandPrimary}
+            pathname={pathname}
+            isLoaded={isLoaded}
+            isSignedIn={isSignedIn}
+          />
+        )}
+        {useLeftLogo && <div aria-hidden />}
 
         <div
           className="site-header-right"
