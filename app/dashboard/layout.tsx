@@ -8,8 +8,36 @@ import { useBranding } from '@/components/ThemeProvider'
 import ResubBanner from '@/components/ResubBanner'
 
 // =============================================================================
-// app/dashboard/layout.tsx — C7 (fix iOS PWA white bar — extend black-bar fix to <html>)
+// app/dashboard/layout.tsx — C8 (fix TALL iOS PWA white bar — dvh cold-load bug)
 // =============================================================================
+// C8 changes vs C7:
+//
+//   - The C7 html/body background-color fix did NOT resolve the white bar.
+//     Turned out the symptom (tall, present immediately on load, no
+//     interaction needed) doesn't match a background-color mismatch at
+//     all — it matches iOS standalone PWA's `100dvh` cold-load bug: on
+//     first paint in standalone mode, the dynamic viewport unit can
+//     resolve to a shorter-than-actual value before Safari finishes
+//     settling the chromeless viewport. `main` and `.ds-mobile-content`
+//     then paint shorter than the real screen, and the leftover gap below
+//     them is the native WKWebView's own backing view — outside document
+//     flow entirely, defaulting to white, and completely untouched by any
+//     html/body/main CSS background.
+//
+//     Fix: measure the real viewport with `window.visualViewport` (correct
+//     even on cold launch, unlike dvh) and publish it as `--app-height` on
+//     `document.documentElement`. `main`, `.ds-sidebar-desktop`, and
+//     `.ds-mobile-content` all consume `var(--app-height, 100dvh)` instead
+//     of a bare `100dvh`, with 100dvh kept as the fallback for the instant
+//     before the effect runs. Recalculates on resize / orientationchange /
+//     visualViewport resize so it stays correct through rotation. Scoped
+//     and cleaned up exactly like every other effect here (bare-route
+//     early return, CSS var removed on unmount).
+//
+//   - The C7 html/body background-color change stays in place alongside
+//     this — it's still correct as a safety net for the original
+//     scroll-bounce reveal, it just wasn't the cause of THIS symptom.
+//
 // C7 changes vs C6:
 //
 //   - WHITE BAR FIX. C6 fixed the black-bar flash by setting
@@ -154,6 +182,42 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     setDrawerOpen(false)
   }, [pathname])
+
+  // ─── TALL WHITE BAR FIX — iOS standalone dvh cold-load bug ────────────
+  // On iOS PWA (standalone/home-screen) cold launch, `100dvh` can resolve
+  // to the wrong value before Safari finishes settling the "chromeless"
+  // viewport — main/.ds-mobile-content then paint shorter than the actual
+  // screen. The gap left below is NOT a CSS background at all: it's the
+  // native WKWebView's own backing view, which defaults to white and is
+  // completely outside document flow, so no html/body/main CSS can reach
+  // it. `env(safe-area-inset-bottom)` and the background-color fixes above
+  // don't touch this — it's a sizing bug, not a coloring bug.
+  //
+  // Fix: measure the real viewport with `window.visualViewport` (which
+  // reports correctly even on cold launch, unlike dvh) and publish it as a
+  // CSS var. `main` and `.ds-mobile-content` use `var(--app-height, 100dvh)`
+  // so they always match the true screen height, with 100dvh as a fallback
+  // for browsers/moments where visualViewport isn't available yet. Updates
+  // on resize/orientationchange/visualViewport resize so it stays correct
+  // through rotation and Safari UI changes. Scoped to unmount cleanly like
+  // every other effect in this layout.
+  useEffect(() => {
+    if (bare) return
+    const setAppHeight = () => {
+      const h = window.visualViewport?.height ?? window.innerHeight
+      document.documentElement.style.setProperty('--app-height', `${h}px`)
+    }
+    setAppHeight()
+    window.addEventListener('resize', setAppHeight)
+    window.addEventListener('orientationchange', setAppHeight)
+    window.visualViewport?.addEventListener('resize', setAppHeight)
+    return () => {
+      window.removeEventListener('resize', setAppHeight)
+      window.removeEventListener('orientationchange', setAppHeight)
+      window.visualViewport?.removeEventListener('resize', setAppHeight)
+      document.documentElement.style.removeProperty('--app-height')
+    }
+  }, [bare])
 
   // ─── WHITE/BLACK BAR FIX (part 1/2) ────────────────────────────────────
   // globals.css hardcodes `html, body { background-color: var(--background) }`
@@ -583,10 +647,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   )
 
   return (
-    <main style={{ minHeight: '100dvh', height: '100dvh', background: 'var(--brand-page-bg)', display: 'flex', overflow: 'hidden' }}>
+    <main style={{ minHeight: 'var(--app-height, 100dvh)', height: 'var(--app-height, 100dvh)', background: 'var(--brand-page-bg)', display: 'flex', overflow: 'hidden' }}>
       <style>{`
         .ds-sidebar-desktop {
-          width: 260px; height: 100dvh; position: sticky; top: 0;
+          width: 260px; height: var(--app-height, 100dvh); position: sticky; top: 0;
           background: var(--brand-sidebar-bg); border-right: 1px solid var(--brand-sidebar-active-bg);
           display: flex; flex-direction: column; padding: 20px 0;
           flex-shrink: 0; overflow-y: auto; overscroll-behavior: contain;
@@ -599,7 +663,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         /* Desktop: the content pane (right of the fixed sidebar) owns its
            own scroll, contained so bounce never reaches body underneath. */
         .ds-mobile-content {
-          height: 100dvh;
+          height: var(--app-height, 100dvh);
           overflow-y: auto;
           -webkit-overflow-scrolling: touch;
           overscroll-behavior: contain;
