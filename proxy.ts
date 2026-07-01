@@ -423,11 +423,16 @@ export default clerkMiddleware(async (auth, request) => {
         return NextResponse.redirect(dest, 307)
       }
     } else {
-      if (!brandAccess.canSeeStandard) {
-        const dest = pickRedirectDestination(brandAccess, url.pathname + url.search)
-        if (dest.host !== url.host) {
-          return NextResponse.redirect(dest, 307)
-        }
+      // v30: previously this only redirected when `!brandAccess.canSeeStandard`,
+      // which let tenant owners linger on the main domain's /dashboard* since
+      // canSeeStandard is true for anyone who owns a tenant. Now we always
+      // compute the preferred destination and redirect whenever it points to
+      // a different host — i.e. whenever the user actually has tenant access.
+      // Users with no tenant access get back the main domain (same host), so
+      // plain Pro subscribers are unaffected.
+      const dest = pickRedirectDestination(brandAccess, url.pathname + url.search)
+      if (dest.host !== url.host) {
+        return NextResponse.redirect(dest, 307)
       }
     }
   }
