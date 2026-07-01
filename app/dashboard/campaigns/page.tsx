@@ -419,6 +419,32 @@ export default function CampaignsPage() {
       .catch(() => setTier(null))
   }, [user])
 
+  // ─── LOCK BACKGROUND SCROLL WHILE ANY MODAL / EDITOR IS OPEN ──────────
+  // Without this, iOS Safari lets touch events fall through to the page behind
+  // the fixed overlay, which reads as "the modal won't scroll" (you're actually
+  // dragging the page underneath). Locking body scroll while a modal is open
+  // keeps all touch scrolling inside the modal's own scroll container.
+  useEffect(() => {
+    const anyModalOpen = showCreate || !!settingsId || scriptsManagerOpen || !!deleteConfirm || editorOpen
+    if (anyModalOpen) {
+      const prevOverflow = document.body.style.overflow
+      const prevPosition = document.body.style.position
+      const prevWidth = document.body.style.width
+      const scrollY = window.scrollY
+      document.body.style.overflow = 'hidden'
+      document.body.style.position = 'fixed'
+      document.body.style.top = `-${scrollY}px`
+      document.body.style.width = '100%'
+      return () => {
+        document.body.style.overflow = prevOverflow
+        document.body.style.position = prevPosition
+        document.body.style.width = prevWidth
+        document.body.style.top = ''
+        window.scrollTo(0, scrollY)
+      }
+    }
+  }, [showCreate, settingsId, scriptsManagerOpen, deleteConfirm, editorOpen])
+
   const fetchCampaigns = async () => {
     setFetching(true)
     try {
@@ -1688,6 +1714,7 @@ export default function CampaignsPage() {
           display: flex; align-items: center; justify-content: center;
           z-index: 100; padding: 16px;
           backdrop-filter: blur(6px);
+          overscroll-behavior: contain;
         }
         .settings-modal {
           width: 100%; max-width: 720px;
@@ -1707,6 +1734,7 @@ export default function CampaignsPage() {
           display: flex;
           align-items: center;
           gap: 12px;
+          flex-shrink: 0;
         }
         .settings-name-input {
           flex: 1;
@@ -1744,6 +1772,7 @@ export default function CampaignsPage() {
           font-family: ${FUTURA};
           padding: 0;
           line-height: 1;
+          flex-shrink: 0;
         }
         .settings-close:hover {
           background: color-mix(in srgb, var(--brand-on-sidebar) 5%, transparent);
@@ -1752,7 +1781,10 @@ export default function CampaignsPage() {
 
         .settings-body {
           flex: 1;
+          min-height: 0;
           overflow-y: auto;
+          -webkit-overflow-scrolling: touch;
+          overscroll-behavior: contain;
           padding: 22px 24px;
           display: flex;
           flex-direction: column;
@@ -2190,6 +2222,7 @@ export default function CampaignsPage() {
           gap: 8px;
           justify-content: space-between;
           flex-wrap: wrap;
+          flex-shrink: 0;
         }
         .settings-footer-left, .settings-footer-right {
           display: flex; gap: 8px; flex-wrap: wrap;
@@ -2211,6 +2244,7 @@ export default function CampaignsPage() {
           align-items: center;
           gap: 10px;
           flex-wrap: wrap;
+          flex-shrink: 0;
         }
         .editor-toolbar-title {
           font-size: 11px;
@@ -2279,7 +2313,10 @@ export default function CampaignsPage() {
 
         .editor-grid-wrap {
           flex: 1;
+          min-height: 0;
           overflow: auto;
+          -webkit-overflow-scrolling: touch;
+          overscroll-behavior: contain;
           background: ${T.bg};
         }
         /* ── Lead editor scripts strip ───────────────────────────────── */
@@ -2541,9 +2578,61 @@ export default function CampaignsPage() {
           .cmp-header-sub { font-size: 9px; }
           .cmp-body { padding: 20px 12px 48px; }
           .cmp-grid { grid-template-columns: 1fr; gap: 12px; }
+
+          /* Modal goes edge-to-edge and full height on mobile. Using dvh (with
+             vh fallback) keeps it correct as the browser chrome/keyboard resizes
+             the viewport, and we give it a real height (not just max-height) so
+             the flex children below have a bounded box to scroll within. */
+          .modal-overlay { padding: 0; align-items: stretch; }
+          .settings-modal {
+            max-width: 100%;
+            width: 100%;
+            height: 100vh;
+            height: 100dvh;
+            max-height: 100vh;
+            max-height: 100dvh;
+            border-radius: 0;
+          }
+
+          /* Push the header down below the notch / dynamic island / status bar
+             (time, battery). env(safe-area-inset-top) is 0 unless the page's
+             <meta name="viewport"> includes viewport-fit=cover — see note below. */
+          .settings-head {
+            padding-top: calc(12px + env(safe-area-inset-top, 0px));
+          }
+          .settings-name-input {
+            font-size: 14px; /* prevents iOS auto-zoom on focus */
+          }
+
+          /* Keep the footer buttons clear of the home-indicator area. */
+          .settings-footer {
+            padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+          }
+
+          /* Stack footer button groups full-width so CANCEL/CREATE etc. don't
+             get cramped or clipped on narrow screens. */
+          .settings-footer {
+            flex-direction: column;
+          }
+          .settings-footer-left, .settings-footer-right {
+            width: 100%;
+          }
+          .settings-footer-right { flex-direction: column-reverse; }
+          .settings-footer-left .ds-btn,
+          .settings-footer-right .ds-btn {
+            flex: 1;
+          }
+
+          .lib-layout { grid-template-columns: 1fr; }
+          .lib-rail { max-height: 160px; flex-direction: row; flex-wrap: wrap; }
+          .lib-rail-item { flex: 0 0 auto; }
+
           .settings-modal { max-height: 100vh; max-height: 100dvh; border-radius: 0; }
-          .modal-overlay { padding: 0; }
-          .editor-toolbar { padding: 10px 12px; gap: 8px; }
+          .editor-toolbar {
+            padding: 10px 12px;
+            padding-top: calc(10px + env(safe-area-inset-top, 0px));
+            gap: 8px;
+          }
           .editor-toolbar-title { font-size: 10px; letter-spacing: 2px; }
         }
       `}</style>
