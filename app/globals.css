@@ -5,7 +5,7 @@
 @tailwind utilities;
 
 /* =============================================================================
- * DIALERSEAT GLOBALS — v28 (fix iOS PWA white bar on dashboard routes)
+ * DIALERSEAT GLOBALS — v27 (restore original default sidebar value)
  * =============================================================================
  * Four-tier CSS variable system for white-label theming.
  *
@@ -56,25 +56,6 @@
  * tokens below are kept for the landing page and any other pre-Pass-2
  * code that still references them. Phase C bound the dashboard surfaces
  * to the new --brand-page-bg / --brand-card-surface tokens.
- *
- * v28 NOTE — iOS PWA white bar fix:
- *   `body` has always carried `background-color: var(--background)` (near-
- *   black, --brand-bg #0a0a0f), which is correct for the dark landing page.
- *   `html` was never given a background at all. On iOS Safari/PWA standalone
- *   mode, dynamic-viewport shifts (address bar collapse, rubber-band bounce,
- *   home-indicator safe area) can reveal `html` peeking out from under
- *   `body` for an instant. With no background set, `html` fell back to the
- *   browser default (white). This was invisible on the dark landing page
- *   (dark body dark html-ish default doesn't clash visibly against a
- *   uniformly dark UI) but became an obvious white flash once
- *   app/dashboard/layout.tsx's C6 fix started swapping `body`'s background
- *   to the light `--brand-page-bg` at runtime — `html` still had no
- *   background of its own, so the seam showed up as white instead of black.
- *   Fix: give `html` the same static default as `body` so there is never an
- *   unstyled fallback layer, on ANY route. The dashboard layout's JS effect
- *   still overrides both `body` AND `html` backgrounds at runtime for the
- *   duration it's mounted (see app/dashboard/layout.tsx), and restores both
- *   on unmount — this CSS default is just the safety net underneath that.
  * =============================================================================
  */
 
@@ -153,17 +134,8 @@
   padding: 0;
 }
 
-/* v28: html now carries the same static background default as body, so
-   there's never an unstyled (browser-default-white) layer underneath body
-   for iOS rubber-band bounce / dynamic-viewport shifts to reveal. The
-   dashboard layout's runtime effect overrides both on top of this. */
-html,
 body {
   background-color: var(--background);
-  height: 100%;
-}
-
-body {
   color: var(--text-primary);
   font-family: 'Futura PT', 'Futura', sans-serif;
   -webkit-font-smoothing: antialiased;

@@ -1,16 +1,14 @@
 import type { Metadata, Viewport } from "next";
 import { ClerkProvider } from '@clerk/nextjs';
 import { auth } from '@clerk/nextjs/server';
-import { headers } from 'next/headers';
+import { headers, cookies } from 'next/headers';
 import "./globals.css";
 import StructuredData from './components/StructuredData';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { getTenantBranding, getActiveTenantForUser } from '@/lib/tenant';
 
-const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'dialerseat.com'
-
-const baseMetadata: Metadata = {
-  metadataBase: new URL(`https://${ROOT_DOMAIN}`),
+export const metadata: Metadata = {
+  metadataBase: new URL('https://dialerseat.com'),
   title: "DialerSeat — Dial Smarter. Close Faster.",
   description:
     "The professional outbound dialer built for solo agents up through larger teams. $35/week per seat. No contracts. Cancel anytime. Four dialer modes, automatic voicemail detection, inbound reception, unlimited numbers.",
@@ -100,39 +98,6 @@ const baseMetadata: Metadata = {
     'format-detection': 'telephone=no',
   },
 };
-// Host-aware metadata: inject a self-referential canonical per host so each
-// subdomain is its own canonical brand site and the apex stays canonical for
-// the marketing pages. Everything else is inherited from baseMetadata.
-export async function generateMetadata(): Promise<Metadata> {
-  const h = await headers()
-  const host = (h.get('host') || ROOT_DOMAIN).split(':')[0].toLowerCase()
-
-  // Reuse the same reserved/slug rules as sitemap/robots.
-  const RESERVED = new Set([
-    'www', 'app', 'api', 'admin', 'dashboard', 'static', 'cdn', 'assets',
-    'mail', 'email', 'smtp', 'imap', 'pop', 'docs', 'blog', 'help',
-    'support', 'status',
-  ])
-  const isApex = host === ROOT_DOMAIN || host === `www.${ROOT_DOMAIN}`
-  let canonicalHost = ROOT_DOMAIN
-  if (!isApex && host.endsWith(`.${ROOT_DOMAIN}`)) {
-    const sub = host.slice(0, -1 - ROOT_DOMAIN.length)
-    const validSub =
-      !sub.includes('.') &&
-      !RESERVED.has(sub) &&
-      /^[a-z0-9][a-z0-9-]{0,28}[a-z0-9]$/.test(sub)
-    if (validSub) canonicalHost = host // subdomain is its own canonical
-  }
-
-  return {
-    ...baseMetadata,
-    metadataBase: new URL(`https://${canonicalHost}`),
-    alternates: {
-      ...(baseMetadata.alternates || {}),
-      canonical: `https://${canonicalHost}/`,
-    },
-  }
-}
 
 export const viewport: Viewport = {
   themeColor: [
@@ -191,6 +156,8 @@ const IOS_SPLASH_SCREENS: Array<{ w: number; h: number; orient: 'portrait' | 'la
   { w: 2796, h: 1290, orient: 'landscape' },
 ];
 
+const TENANT_COOKIE_NAME = 'ds_last_tenant';
+
 // Branding now depends on the signed-in user's active_tenant_id (resolved per
 // request), so the root layout must render dynamically — otherwise a cached RSC
 // payload from a previous (e.g. signed-out, hostname-branded) render could be
@@ -235,10 +202,7 @@ export default async function RootLayout({
     //          selection is authoritative.
     //   2. Signed-out → hostname (x-tenant-slug): a visitor to
     //      demo.dialerseat.com sees demo's current tenant selection login.
-    //   3. Signed-out + no subdomain (apex dialerseat.com) → ALWAYS default
-    //      DialerSeat. We do NOT consult any last-tenant cookie here: the apex
-    //      landing/sign-in must render fresh, unbranded DialerSeat no matter
-    //      which tenant account was most recently used or logged out of.
+    //   3. Signed-out + no subdomain → ds_last_tenant cookie hint.
     //   4. null → default DialerSeat chrome.
     const { userId } = await auth();
 
@@ -248,10 +212,17 @@ export default async function RootLayout({
       branding = await getActiveTenantForUser(userId);
     } else {
       // Signed-out: brand by the subdomain they're visiting, so every
-      // visitor to demo.dialerseat.com sees demo's current tenant login. On the
-      // apex domain (no subdomain) getTenantBranding returns null → default
-      // DialerSeat, and we intentionally leave it null (no cookie fallback).
+      // visitor to demo.dialerseat.com sees demo's current tenant login.
       branding = await getTenantBranding(tenantSlug);
+      if (!branding) {
+        // No subdomain (apex) → use the cookie hint from this browser's last
+        // sign-in so returning users still see a branded sign-in/landing.
+        const cookieStore = await cookies();
+        const lastTenant = cookieStore.get(TENANT_COOKIE_NAME)?.value;
+        if (lastTenant) {
+          branding = await getTenantBranding(lastTenant);
+        }
+      }
     }
   }
 
@@ -280,7 +251,7 @@ export default async function RootLayout({
           )}
         </head>
         <body>
-          <StructuredData branding={branding} />
+          {!branding && <StructuredData />}
 
           <ThemeProvider initialBranding={branding}>
             {children}

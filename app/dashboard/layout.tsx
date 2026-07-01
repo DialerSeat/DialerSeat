@@ -8,108 +8,10 @@ import { useBranding } from '@/components/ThemeProvider'
 import ResubBanner from '@/components/ResubBanner'
 
 // =============================================================================
-// app/dashboard/layout.tsx — C9 (revert JS viewport hack — fix with 100svh instead)
+// app/dashboard/layout.tsx — C5 (Manager+ "Go to Desktop" sidebar button)
 // =============================================================================
-// C9 changes vs C8:
-//
-//   - C8's `window.visualViewport`-driven `--app-height` was WRONG and made
-//     things worse. Root cause, now confirmed by reproduction: on iOS
-//     standalone-PWA cold launch, `100dvh` (and `visualViewport.height`
-//     read synchronously on mount) can report a taller-than-actual value
-//     before Safari finishes settling the chromeless viewport. C8 baked
-//     that inflated read into `--app-height` immediately on mount, so
-//     `main`/`.ds-sidebar-desktop`/`.ds-mobile-content` were sized taller
-//     than the true screen — the blank strip below real content was the
-//     native WKWebView backing view (outside document flow, defaults to
-//     white). The bar "followed scroll" and "disappeared sitewide after
-//     scrolling once on Dialer" because C8's resize/visualViewport-resize
-//     listener only fires (and corrects `--app-height`, a var on
-//     `document.documentElement` shared across every route) once iOS
-//     actually recalculates on a scroll gesture — and it broke plain mobile
-//     Safari's ability to scroll to the bottom of page content for the
-//     same reason: the inflated height desynced the internal scroll panes
-//     from the browser's real scrollable area.
-//
-//     Fix: removed the `--app-height` effect entirely — no more JS
-//     measuring the viewport, no more timing race. Replaced `100dvh` with
-//     `100svh` (small viewport height) on `main`, `.ds-sidebar-desktop`,
-//     and `.ds-mobile-content`. `svh` is defined as the SMALLEST possible
-//     viewport size (as if browser/PWA chrome is fully expanded) — so a
-//     `100svh` container can never be taller than the true visible screen,
-//     on cold load or otherwise. The tradeoff is a few px of unused space
-//     at the very bottom in the (rare, brief) moments iOS chrome is fully
-//     collapsed — vastly preferable to an overflow bug, and normal
-//     scrolling behavior for the internal panes and plain Safari is
-//     completely restored since nothing is ever sized past the real
-//     viewport in the first place.
-//
-//   - The C7 html/body background-color fix (`html, body { background-
-//     color: var(--background) }` in globals.css, plus setting both
-//     `document.body.style.backgroundColor` and
-//     `document.documentElement.style.backgroundColor` at runtime here)
-//     stays in place — that's still correct for the original
-//     scroll-bounce-reveals-body-underneath case, it just wasn't the cause
-//     of the tall-white-bar symptom.
-//
-// C8 changes vs C7 (superseded by C9 above — kept for history):
-//   - Introduced (and then had to remove) a `window.visualViewport`-driven
-//     `--app-height` CSS var intended to fix the tall white bar. Diagnosis
-//     of the symptom was right; the JS-based fix was wrong. See C9.
-//
-// C7 changes vs C6:
-//
-//   - WHITE BAR FIX. C6 fixed the black-bar flash by setting
-//     `document.body.style.backgroundColor` to `var(--brand-page-bg)` for
-//     the lifetime of this layout. But globals.css only ever styled `body`
-//     — `html` had no background of its own. On iOS Safari/PWA standalone,
-//     dynamic-viewport shifts (address bar collapse, rubber-band bounce,
-//     home-indicator safe area) can reveal `html` peeking out from under
-//     `body` for an instant. Before C6 this didn't read as a problem (body's
-//     static near-black default vs html's white default didn't create an
-//     obviously "wrong" flash against a dark landing page); after C6,
-//     `body` became light gray at runtime while `html` was still
-//     unstyled-white-by-default, so on every dashboard route the seam now
-//     shows as a white bar instead of a black one.
-//
-//     Fix, in two parts:
-//       1. globals.css now sets `html, body { background-color: var(--background) }`
-//          as a static default, so there's never an unstyled layer under
-//          `body` on ANY route (landing included — unaffected, since that's
-//          already `--background`'s value there).
-//       2. This layout's existing black-bar effect now also sets (and
-//          restores on unmount) `document.documentElement.style.backgroundColor`
-//          alongside `document.body.style.backgroundColor`, using the same
-//          `var(--brand-page-bg)` value, so `html` and `body` always agree
-//          for as long as a dashboard route is mounted. Scoped exactly like
-//          the original C6 fix: only runs while DashboardLayout is mounted,
-//          restores prior inline values on unmount, so landing page and any
-//          other non-dashboard route are completely unaffected.
-//
-//   - No other logic or UI changes vs C6.
-//
-// C6 changes vs C5:
-//   - BLACK BAR FIX. globals.css sets `body { background-color: var(--background) }`
-//     which resolves to near-black (--brand-bg, #0a0a0f) — correct for the dark
-//     landing page, but never overridden for the dashboard. On iOS Safari/PWA,
-//     rubber-band scroll bounce (past the top/bottom edge) briefly reveals
-//     whatever's behind the scrolling content, i.e. `body` — so any bounce on
-//     a /dashboard/* route flashed near-black. Two-part fix, both scoped to
-//     stay mounted only while DashboardLayout is mounted (so landing page and
-//     other routes are completely unaffected):
-//       1. useEffect sets `document.body.style.background` to
-//          `var(--brand-page-bg)` for the duration of the mount, restoring the
-//          original inline value on unmount.
-//       2. `.ds-mobile-content` (the scrollable pane holding the topbar +
-//          page children on mobile) gets `height: 100dvh` + its own
-//          `overflow-y: auto` + `overscroll-behavior: contain`, so it owns
-//          its own scroll/bounce and never lets the bounce propagate up to
-//          `body`. Desktop sidebar gets `overscroll-behavior: contain` too
-//          for the same reason on its independent scroll.
-//     `main` itself switches from `100vh` to `100dvh` so it doesn't
-//     under/overshoot the real visible viewport when iOS shows/hides its
-//     chrome (address bar, home indicator area) — dvh tracks that live.
-//
 // C5 changes vs C4:
+//
 //   - GO TO DESKTOP BUTTON. A themed entry to the Manager+ desktop now
 //     renders just above the profile row in the sidebar, gated on
 //     hasManagerPlus (already derived from /api/stripe/status — true for
@@ -200,31 +102,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     setDrawerOpen(false)
   }, [pathname])
-
-  // ─── WHITE/BLACK BAR FIX (part 1/2) ────────────────────────────────────
-  // globals.css hardcodes `html, body { background-color: var(--background) }`
-  // as a static default (near-black) — correct for the dark landing page,
-  // but the dashboard never overrides it. On iOS, rubber-band scroll bounce
-  // and dynamic-viewport chrome changes can reveal whatever's directly
-  // underneath the scrolling content — `body`, and in some cases `html`
-  // peeking out from under `body` — for an instant. Match BOTH `body` and
-  // `html`'s background to the dashboard's own page bg for as long as this
-  // layout is mounted, and restore whatever was there before on unmount so
-  // the landing page (and any other non-dashboard route) is unaffected.
-  useEffect(() => {
-    if (bare) return
-    const prevBodyBg = document.body.style.backgroundColor
-    const prevHtmlBg = document.documentElement.style.backgroundColor
-    const prevOverscroll = document.body.style.overscrollBehavior
-    document.body.style.backgroundColor = 'var(--brand-page-bg)'
-    document.documentElement.style.backgroundColor = 'var(--brand-page-bg)'
-    document.body.style.overscrollBehavior = 'none'
-    return () => {
-      document.body.style.backgroundColor = prevBodyBg
-      document.documentElement.style.backgroundColor = prevHtmlBg
-      document.body.style.overscrollBehavior = prevOverscroll
-    }
-  }, [bare])
 
   useEffect(() => {
     if (bare) return
@@ -629,27 +506,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   )
 
   return (
-    <main style={{ minHeight: '100svh', height: '100svh', background: 'var(--brand-page-bg)', display: 'flex', overflow: 'hidden' }}>
+    <main style={{ minHeight: '100vh', background: 'var(--brand-page-bg)', display: 'flex' }}>
       <style>{`
         .ds-sidebar-desktop {
-          width: 260px; height: 100svh; position: sticky; top: 0;
+          width: 260px; height: 100vh; position: sticky; top: 0;
           background: var(--brand-sidebar-bg); border-right: 1px solid var(--brand-sidebar-active-bg);
           display: flex; flex-direction: column; padding: 20px 0;
-          flex-shrink: 0; overflow-y: auto; overscroll-behavior: contain;
+          flex-shrink: 0; overflow: hidden;
         }
         .ds-mobile-topbar { display: none; }
         .ds-sidebar-mobile { display: none; }
         .ds-mobile-overlay { display: none; }
         .ds-profile-row:hover { background: color-mix(in srgb, var(--brand-primary) 6%, transparent); }
-
-        /* Desktop: the content pane (right of the fixed sidebar) owns its
-           own scroll, contained so bounce never reaches body underneath. */
-        .ds-mobile-content {
-          height: 100svh;
-          overflow-y: auto;
-          -webkit-overflow-scrolling: touch;
-          overscroll-behavior: contain;
-        }
 
         @media (max-width: 768px) {
           .ds-sidebar-desktop { display: none; }
@@ -661,7 +529,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             padding-left: max(16px, env(safe-area-inset-left, 16px));
             padding-right: max(16px, env(safe-area-inset-right, 16px));
             background: var(--brand-header-bg); border-bottom: 1px solid var(--brand-sidebar-active-bg);
-            flex-shrink: 0;
           }
           .ds-sidebar-mobile {
             display: flex; position: fixed; top: 0; left: 0; bottom: 0;
@@ -672,7 +539,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             padding-bottom: 0;
             z-index: 60;
             transform: translateX(-100%); transition: transform 0.25s ease;
-            overflow-y: auto; overscroll-behavior: contain;
           }
           .ds-sidebar-mobile.open { transform: translateX(0); }
           .ds-mobile-overlay {
