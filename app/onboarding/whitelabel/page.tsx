@@ -7,21 +7,13 @@ import { WhitelabelLivePreview } from '@/components/WhitelabelLivePreview'
 import LoginLinkSection from '@/components/LoginLinkSection'
 
 // =============================================================================
-// /onboarding/whitelabel — v10 (UI refresh, tenant-independent chrome)
+// /onboarding/whitelabel — v9 (login-link integration)
 // =============================================================================
-// v10 is a visual-only pass. No state, handlers, effects, endpoints, or
-// request/response shapes changed from v9 — every fetch call, field name,
-// and validation rule below is byte-for-byte the same logic as before.
+// v9 adds the optional subdomain-login link (label + clickable text + URL) via
+// the LoginLinkSection component, rendered right after BRAND NAME. State is
+// pre-filled in edit mode from GET, and the three fields are sent in the POST
+// body as login_link_label / login_link_text / login_link_url.
 //
-// What changed: the page's own chrome (card, labels, buttons, inputs) is now
-// pinned to the fixed Pass 1 canonical palette instead of `var(--brand-*)` /
-// `var(--text-*)` / `var(--surface)` etc. This is deliberate — this is the
-// page where a tenant sets their brand colors, so it should never itself be
-// reskinned by whatever brand color happens to be live (or mid-edit). The
-// only place actual tenant colors appear is inside <WhitelabelLivePreview>
-// and <LoginLinkSection>, which are supposed to render the real thing.
-//
-// v9 added the optional subdomain-login link via LoginLinkSection.
 // v8 (Push E): cancel moved to bottom + logo recos.
 // v7 (Push C): saved themes dropdown its own card above EXACT PREVIEW.
 // v6 (Push A): emoji removed, saved themes collapsible, cancel added, etc.
@@ -140,38 +132,6 @@ const HEX_RE = /^#[0-9a-fA-F]{6}$/
 
 const PENDING_LOGO_KEY = 'wl:pendingLogoPreview'
 
-// ─── Design tokens — Pass 1 canonical palette, hardcoded on purpose ───────
-// This page must look identical no matter what a tenant has set (or is
-// mid-editing) for `--brand-primary` and friends, so nothing below reads
-// from a CSS custom property — everything is a literal value from the
-// locked Pass 1 spec. ACCENT is the Pass 1 fallback for --brand-primary,
-// used here as this page's own fixed signature color.
-const FUTURA = `'Futura PT', Futura, 'Helvetica Neue', Helvetica, Arial, sans-serif`
-const MONO = `'SF Mono', 'Roboto Mono', ui-monospace, 'Courier New', monospace`
-
-const T = {
-  bg: '#f0f1f4',
-  surface: '#e2e4ea',
-  border: '#c4c8d0',
-  dark: '#1a1a2e',
-  text: '#1a1c24',
-  muted: '#5a5e6a',
-  accent: '#2a4a8a',
-  green: '#1a6a1a',
-  red: '#8a1a1a',
-  amber: '#8a6a1a',
-}
-
-const ACCENT = '#4a9eff'
-
-const STATUS = {
-  success: { bg: '#e8f5e8', fg: T.green },
-  info: { bg: '#e8eef8', fg: T.accent },
-  warn: { bg: '#f8f4e8', fg: T.amber },
-  danger: { bg: '#f8e8e8', fg: T.red },
-  neutral: { bg: '#f0f0f4', fg: T.muted },
-}
-
 type SlugStatus =
   | { kind: 'idle' }
   | { kind: 'checking' }
@@ -182,6 +142,7 @@ type SlugStatus =
 
 export default function WhitelabelOnboardingPage() {
   const { user, isLoaded } = useUser()
+  // ── CHANGE 1: pull signOut from useClerk (mirrors billing page) ──────────
   const { signOut } = useClerk()
   const router = useRouter()
 
@@ -218,6 +179,7 @@ export default function WhitelabelOnboardingPage() {
   const [slugStatus, setSlugStatus] = useState<SlugStatus>({ kind: 'idle' })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // ── CHANGE 2: abandoning state for the new-user cancel path ─────────────
   const [abandoning, setAbandoning] = useState(false)
 
   useEffect(() => {
@@ -661,8 +623,8 @@ export default function WhitelabelOnboardingPage() {
     }
   }
 
-  // Edit mode unchanged (→ /dashboard); new-user mode signs out exactly like
-  // the billing page cancel does.
+  // ── CHANGE 3: handleCancel — edit mode unchanged (→ /dashboard);
+  //   new-user mode now signs out exactly like the billing page cancel does.
   const handleCancel = async () => {
     if (editMode) {
       router.push('/dashboard')
@@ -688,11 +650,8 @@ export default function WhitelabelOnboardingPage() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          background: T.bg,
-          color: T.muted,
-          fontFamily: FUTURA,
-          fontSize: 11,
-          fontWeight: 700,
+          color: 'var(--text-secondary)',
+          fontSize: 12,
           letterSpacing: 3,
         }}
       >
@@ -720,43 +679,10 @@ export default function WhitelabelOnboardingPage() {
   }
 
   return (
-    <main className="wl-onboard" style={pageStyle}>
-      <style>{`
-        .wl-onboard * { box-sizing: border-box; }
-        .wl-onboard input:focus-visible,
-        .wl-onboard button:focus-visible {
-          outline: 2px solid ${ACCENT};
-          outline-offset: 2px;
-        }
-        .wl-onboard input[type="text"]:focus,
-        .wl-onboard input[type="file"]:focus {
-          border-color: ${ACCENT} !important;
-        }
-        .wl-btn-primary { transition: background-color 0.15s ease, border-color 0.15s ease; }
-        .wl-btn-primary:hover:not(:disabled) { background: #e8eaf0; }
-        .wl-btn-outline:hover:not(:disabled) { background: rgba(74,158,255,0.06); }
-        .wl-btn-ghost:hover:not(:disabled) { color: ${T.text}; border-color: ${T.muted}; }
-        .wl-preset-card:hover { border-color: ${ACCENT}; }
-        .wl-theme-card:hover { border-color: ${ACCENT}; }
-        @media (max-width: 640px) {
-          .wl-card { padding: 22px 16px !important; }
-          .wl-title { font-size: 17px !important; letter-spacing: 2px !important; }
-          .wl-subdomain-row { flex-wrap: wrap !important; }
-          .wl-subdomain-input { border-radius: 4px !important; }
-          .wl-subdomain-suffix {
-            width: 100% !important;
-            border-radius: 4px !important;
-            border-left: 1px solid ${T.border} !important;
-            justify-content: flex-start !important;
-          }
-          .wl-preset-grid { grid-template-columns: repeat(2, 1fr) !important; }
-          .wl-saved-grid { grid-template-columns: repeat(2, 1fr) !important; }
-        }
-      `}</style>
-
-      <div className="wl-card" style={cardStyle}>
+    <main style={pageStyle}>
+      <div style={cardStyle}>
         <div style={{ marginBottom: 28 }}>
-          <div className="wl-title" style={titleStyle}>
+          <div style={titleStyle}>
             {editMode ? 'EDIT YOUR WHITELABEL DIALER' : 'CUSTOMIZE YOUR WHITELABEL DIALER'}
           </div>
           <div style={subtitleStyle}>
@@ -786,9 +712,8 @@ export default function WhitelabelOnboardingPage() {
           {/* ── SUBDOMAIN ── */}
           <div style={sectionStyle}>
             <label style={sectionLabelStyle}>▸ SUBDOMAIN</label>
-            <div className="wl-subdomain-row" style={subdomainRowStyle}>
+            <div style={subdomainRowStyle}>
               <input
-                className="wl-subdomain-input"
                 type="text"
                 value={slug}
                 onChange={e => setSlug(e.target.value.toLowerCase())}
@@ -796,14 +721,14 @@ export default function WhitelabelOnboardingPage() {
                 maxLength={30}
                 style={{ ...inputStyle, flex: 1, marginBottom: 0 }}
               />
-              <div className="wl-subdomain-suffix" style={subdomainSuffixStyle}>.dialerseat.com</div>
+              <div style={subdomainSuffixStyle}>.dialerseat.com</div>
             </div>
             <div style={hintStyle}>
               {renderSlugStatus(slugStatus, slug, editMode && slug === originalSlug)}
             </div>
           </div>
 
-          {/* ── LOGO ── */}
+          {/* ── LOGO — v8: hint reframed as a permanent recommendation ── */}
           <div style={sectionStyle}>
             <label style={sectionLabelStyle}>▸ LOGO</label>
             <div style={hintStyle}>
@@ -821,8 +746,15 @@ export default function WhitelabelOnboardingPage() {
               style={{ ...inputStyle, padding: 8, marginTop: 8 }}
             />
             {displayLogo && (
-              <div style={logoPreviewBoxStyle}>
-                <div style={logoPreviewLabelStyle}>PREVIEW</div>
+              <div style={{
+                marginTop: 10, padding: 12, borderRadius: 8,
+                border: '1px solid var(--border, rgba(0,0,0,0.12))',
+                background: 'var(--surface-muted, rgba(0,0,0,0.03))',
+                display: 'flex', flexDirection: 'column', gap: 8,
+              }}>
+                <div style={{ fontSize: 10, letterSpacing: 2, color: 'var(--text-secondary, #888)', fontWeight: 700 }}>
+                  PREVIEW
+                </div>
                 <img
                   src={displayLogo}
                   alt="Logo preview"
@@ -832,7 +764,12 @@ export default function WhitelabelOnboardingPage() {
                   <button
                     type="button"
                     onClick={() => setLogoFile(null)}
-                    style={logoRemoveButtonStyle}
+                    style={{
+                      alignSelf: 'flex-start', fontSize: 10, letterSpacing: 1,
+                      color: 'var(--text-secondary, #888)', background: 'transparent',
+                      border: '1px solid var(--border, rgba(0,0,0,0.15))', borderRadius: 4,
+                      padding: '4px 8px', cursor: 'pointer', fontWeight: 700,
+                    }}
                   >REMOVE</button>
                 )}
               </div>
@@ -843,13 +780,12 @@ export default function WhitelabelOnboardingPage() {
           <div style={sectionStyle}>
             <div style={sectionLabelStyle}>▸ THEME</div>
 
-            <div className="wl-preset-grid" style={presetGridStyle}>
+            <div style={presetGridStyle}>
               {PRESETS.map(p => (
                 <button
                   key={p.key}
                   type="button"
                   onClick={() => applyPreset(p.key)}
-                  className="wl-preset-card"
                   style={presetCardStyle(presetKey === p.key)}
                 >
                   <div style={presetSwatchRowStyle}>
@@ -864,7 +800,6 @@ export default function WhitelabelOnboardingPage() {
               <button
                 type="button"
                 onClick={() => applyPreset('custom')}
-                className="wl-preset-card"
                 style={presetCardStyle(presetKey === 'custom')}
               >
                 <div
@@ -873,8 +808,8 @@ export default function WhitelabelOnboardingPage() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     height: 28,
-                    color: T.muted,
-                    fontSize: 18,
+                    color: 'var(--text-secondary)',
+                    fontSize: 20,
                     letterSpacing: 0,
                   }}
                 >
@@ -916,7 +851,7 @@ export default function WhitelabelOnboardingPage() {
             )}
           </div>
 
-          {/* ── SAVED THEMES ── */}
+          {/* ── SAVED THEMES — its own section right above EXACT PREVIEW ── */}
           <div style={sectionStyle}>
             <div style={sectionLabelStyle}>▸ MY SAVED THEMES</div>
             <button
@@ -934,13 +869,12 @@ export default function WhitelabelOnboardingPage() {
               )}
             </button>
             {savedThemesOpen && savedThemes.length > 0 && (
-              <div className="wl-saved-grid" style={savedThemesGridStyle}>
+              <div style={savedThemesGridStyle}>
                 {savedThemes.map(t => (
                   <div key={t.id} style={{ position: 'relative' }}>
                     <button
                       type="button"
                       onClick={() => applyTheme(t)}
-                      className="wl-theme-card"
                       style={savedThemeCardStyle(presetKey === `theme-${t.id}`)}
                     >
                       <div style={presetSwatchRowStyle}>
@@ -1003,7 +937,8 @@ export default function WhitelabelOnboardingPage() {
             />
           </div>
 
-          {/* ── LOGIN PAGE LINK (optional) ── */}
+          {/* ── LOGIN PAGE LINK (v9, optional) — closed dropdown, placed under
+               EXACT PREVIEW per JC ── */}
           <div style={sectionStyle}>
             <LoginLinkSection
               brandName={brandName}
@@ -1037,7 +972,6 @@ export default function WhitelabelOnboardingPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="wl-btn-primary"
             style={{
               ...submitButtonStyle,
               opacity: submitting ? 0.6 : 1,
@@ -1061,7 +995,6 @@ export default function WhitelabelOnboardingPage() {
                   type="button"
                   onClick={handleOverwriteTheme}
                   disabled={overwritingTheme}
-                  className="wl-btn-outline"
                   style={{
                     ...overwriteButtonStyle,
                     opacity: overwritingTheme ? 0.5 : 1,
@@ -1085,7 +1018,6 @@ export default function WhitelabelOnboardingPage() {
                   setSaveAsNewError(null)
                 }}
                 disabled={atSavedThemeLimit && !saveAsNewOpen}
-                className="wl-btn-ghost"
                 style={{
                   ...saveAsNewButtonStyle,
                   opacity: atSavedThemeLimit && !saveAsNewOpen ? 0.5 : 1,
@@ -1153,12 +1085,11 @@ export default function WhitelabelOnboardingPage() {
             </div>
           )}
 
-          {/* ── CANCEL ── */}
+          {/* ── CANCEL — v8: moved to absolute bottom of form ── */}
           <button
             type="button"
             onClick={handleCancel}
             disabled={submitting || abandoning}
-            className="wl-btn-ghost"
             style={{
               ...cancelButtonStyle,
               opacity: submitting || abandoning ? 0.5 : 1,
@@ -1223,66 +1154,67 @@ function renderSlugStatus(
   slug: string,
   isUnchangedEdit: boolean,
 ): React.ReactNode {
-  const pill = (fg: string, label: React.ReactNode) => (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: fg, fontWeight: 700, letterSpacing: 0.3 }}>
-      <span style={{ width: 6, height: 6, borderRadius: '50%', background: fg, flexShrink: 0 }} />
-      {label}
-    </span>
-  )
-
   if (status.kind === 'idle') {
     return <>Pick something memorable. 2-30 chars, lowercase, dashes ok.</>
   }
   if (status.kind === 'checking') {
-    return <span style={{ color: T.muted }}>Checking availability...</span>
+    return <span style={{ color: 'var(--text-muted)' }}>Checking availability...</span>
   }
   if (status.kind === 'available') {
-    return pill(STATUS.success.fg, `${slug}.dialerseat.com ${isUnchangedEdit ? '(your current subdomain)' : 'is available'}`)
+    return (
+      <span style={{ color: 'var(--color-success)' }}>
+        ✓ {slug}.dialerseat.com {isUnchangedEdit ? '(your current subdomain)' : 'is available'}
+      </span>
+    )
   }
   if (status.kind === 'taken') {
-    return pill(STATUS.danger.fg, `${slug}.dialerseat.com is taken`)
+    return (
+      <span style={{ color: 'var(--color-error)' }}>
+        ✗ {slug}.dialerseat.com is taken
+      </span>
+    )
   }
   if (status.kind === 'reserved') {
-    return pill(STATUS.danger.fg, `${slug} is reserved by DialerSeat`)
+    return (
+      <span style={{ color: 'var(--color-error)' }}>
+        ✗ {slug} is reserved by DialerSeat
+      </span>
+    )
   }
   if (status.kind === 'invalid') {
-    return <span style={{ color: STATUS.warn.fg }}>{status.reason}</span>
+    return <span style={{ color: 'var(--color-warning)' }}>{status.reason}</span>
   }
   return null
 }
 
 // ─── Styles ──────────────────────────────────────────────────────────
-// Every value below is a literal from the fixed Pass 1 palette / ACCENT
-// constant defined above this page's own chrome never reads a tenant
-// `--brand-*` custom property, so it renders the same regardless of what
-// any tenant has configured (or is mid-editing) for their live theme.
 
 const pageStyle: React.CSSProperties = {
   minHeight: '100vh',
-  background: T.bg,
+  background: 'var(--background)',
   display: 'flex',
   alignItems: 'flex-start',
   justifyContent: 'center',
   padding: '40px 20px',
-  fontFamily: FUTURA,
+  fontFamily: 'var(--font-futura)',
 }
 
 const cardStyle: React.CSSProperties = {
   width: '100%',
   maxWidth: 720,
-  background: T.surface,
-  border: `1px solid ${T.border}`,
-  borderTop: `3px solid ${ACCENT}`,
+  background: 'var(--surface)',
+  border: '1px solid var(--border)',
+  borderTop: '3px solid var(--brand-primary)',
   borderRadius: 6,
   padding: 36,
-  color: T.text,
+  color: 'var(--text-primary)',
 }
 
 const titleStyle: React.CSSProperties = {
   fontSize: 20,
   fontWeight: 700,
   letterSpacing: 4,
-  color: ACCENT,
+  color: 'var(--brand-primary)',
   marginBottom: 8,
 }
 
@@ -1290,7 +1222,7 @@ const subtitleStyle: React.CSSProperties = {
   fontSize: 13,
   letterSpacing: 0.5,
   lineHeight: 1.6,
-  color: T.muted,
+  color: 'var(--text-secondary)',
 }
 
 const sectionStyle: React.CSSProperties = {
@@ -1301,7 +1233,7 @@ const sectionLabelStyle: React.CSSProperties = {
   display: 'block',
   fontSize: 10,
   letterSpacing: 3,
-  color: T.muted,
+  color: 'var(--text-muted)',
   marginBottom: 10,
   fontWeight: 700,
 }
@@ -1309,13 +1241,13 @@ const sectionLabelStyle: React.CSSProperties = {
 const inputStyle: React.CSSProperties = {
   width: '100%',
   padding: '12px 14px',
-  background: T.bg,
-  border: `1px solid ${T.border}`,
+  background: 'var(--background)',
+  border: '1px solid var(--border)',
   borderRadius: 4,
-  color: T.text,
+  color: 'var(--text-primary)',
   fontSize: 14,
   letterSpacing: 0.5,
-  fontFamily: FUTURA,
+  fontFamily: 'var(--font-futura)',
   outline: 'none',
   marginBottom: 8,
   boxSizing: 'border-box',
@@ -1324,7 +1256,7 @@ const inputStyle: React.CSSProperties = {
 const hintStyle: React.CSSProperties = {
   fontSize: 11,
   letterSpacing: 0.5,
-  color: T.muted,
+  color: 'var(--text-muted)',
   lineHeight: 1.6,
   marginTop: 4,
 }
@@ -1339,46 +1271,13 @@ const subdomainSuffixStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   padding: '0 14px',
-  background: T.bg,
-  border: `1px solid ${T.border}`,
+  background: 'var(--background)',
+  border: '1px solid var(--border)',
   borderLeft: 'none',
   borderRadius: '0 4px 4px 0',
-  color: T.muted,
+  color: 'var(--text-muted)',
   fontSize: 13,
-  fontFamily: MONO,
   whiteSpace: 'nowrap',
-}
-
-const logoPreviewBoxStyle: React.CSSProperties = {
-  marginTop: 10,
-  padding: 12,
-  borderRadius: 4,
-  border: `1px solid ${T.border}`,
-  background: T.bg,
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 8,
-}
-
-const logoPreviewLabelStyle: React.CSSProperties = {
-  fontSize: 10,
-  letterSpacing: 2,
-  color: T.muted,
-  fontWeight: 700,
-}
-
-const logoRemoveButtonStyle: React.CSSProperties = {
-  alignSelf: 'flex-start',
-  fontSize: 10,
-  letterSpacing: 1,
-  color: T.muted,
-  background: 'transparent',
-  border: `1px solid ${T.border}`,
-  borderRadius: 4,
-  padding: '4px 8px',
-  cursor: 'pointer',
-  fontWeight: 700,
-  fontFamily: FUTURA,
 }
 
 const presetGridStyle: React.CSSProperties = {
@@ -1390,31 +1289,31 @@ const presetGridStyle: React.CSSProperties = {
 
 function presetCardStyle(selected: boolean): React.CSSProperties {
   return {
-    background: T.bg,
-    border: selected ? `2px solid ${ACCENT}` : `1px solid ${T.border}`,
+    background: 'var(--background)',
+    border: selected ? '2px solid var(--brand-primary)' : '1px solid var(--border)',
     padding: selected ? 11 : 12,
     borderRadius: 4,
     cursor: 'pointer',
     textAlign: 'left',
-    fontFamily: FUTURA,
+    fontFamily: 'var(--font-futura)',
     transition: 'border-color 0.15s',
     width: '100%',
-    color: T.text,
+    color: 'var(--text-primary)',
   }
 }
 
 function savedThemeCardStyle(selected: boolean): React.CSSProperties {
   return {
-    background: T.surface,
-    border: selected ? `2px solid ${ACCENT}` : `1px solid ${T.border}`,
+    background: 'var(--surface)',
+    border: selected ? '2px solid var(--brand-primary)' : '1px solid var(--border)',
     padding: selected ? 9 : 10,
     borderRadius: 4,
     cursor: 'pointer',
     textAlign: 'left',
-    fontFamily: FUTURA,
+    fontFamily: 'var(--font-futura)',
     transition: 'border-color 0.15s',
     width: '100%',
-    color: T.text,
+    color: 'var(--text-primary)',
     display: 'flex',
     flexDirection: 'column',
     gap: 8,
@@ -1431,7 +1330,7 @@ const presetSwatchStyle: React.CSSProperties = {
   width: 22,
   height: 28,
   borderRadius: 3,
-  border: '1px solid rgba(0,0,0,0.08)',
+  border: '1px solid rgba(255,255,255,0.08)',
   flex: 1,
 }
 
@@ -1440,7 +1339,7 @@ function presetNameStyle(selected: boolean): React.CSSProperties {
     fontSize: 11,
     letterSpacing: 1,
     fontWeight: 700,
-    color: selected ? ACCENT : T.text,
+    color: selected ? 'var(--brand-primary)' : 'var(--text-primary)',
     whiteSpace: 'nowrap',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
@@ -1454,14 +1353,14 @@ const themeDeleteButtonStyle: React.CSSProperties = {
   width: 22,
   height: 22,
   padding: 0,
-  background: 'rgba(26,26,46,0.55)',
+  background: 'rgba(0,0,0,0.4)',
   color: '#fff',
-  border: '1px solid rgba(255,255,255,0.2)',
+  border: '1px solid rgba(255,255,255,0.15)',
   borderRadius: 3,
   fontSize: 14,
   lineHeight: 1,
   cursor: 'pointer',
-  fontFamily: FUTURA,
+  fontFamily: 'var(--font-futura)',
   fontWeight: 700,
   display: 'flex',
   alignItems: 'center',
@@ -1471,7 +1370,7 @@ const themeDeleteButtonStyle: React.CSSProperties = {
 const presetHintStyle: React.CSSProperties = {
   fontSize: 11,
   letterSpacing: 0.5,
-  color: T.muted,
+  color: 'var(--text-muted)',
   lineHeight: 1.6,
   marginBottom: 12,
 }
@@ -1488,8 +1387,8 @@ const colorRowStyle: React.CSSProperties = {
   alignItems: 'center',
   gap: 12,
   padding: 10,
-  background: T.bg,
-  border: `1px solid ${T.border}`,
+  background: 'var(--background)',
+  border: '1px solid var(--border)',
   borderRadius: 4,
 }
 
@@ -1497,24 +1396,23 @@ const colorSwatchInputStyle: React.CSSProperties = {
   width: 44,
   height: 44,
   padding: 0,
-  border: `1px solid ${T.border}`,
+  border: '1px solid var(--border)',
   borderRadius: 4,
   background: 'transparent',
   cursor: 'pointer',
-  flexShrink: 0,
 }
 
 const colorRowLabelStyle: React.CSSProperties = {
   fontSize: 12,
   letterSpacing: 1,
   fontWeight: 700,
-  color: T.text,
+  color: 'var(--text-primary)',
 }
 
 const colorRowDescStyle: React.CSSProperties = {
   fontSize: 10,
   letterSpacing: 0.5,
-  color: T.muted,
+  color: 'var(--text-muted)',
   marginTop: 2,
   lineHeight: 1.5,
 }
@@ -1522,29 +1420,28 @@ const colorRowDescStyle: React.CSSProperties = {
 const colorHexInputStyle: React.CSSProperties = {
   width: 90,
   padding: '8px 10px',
-  background: T.surface,
-  border: `1px solid ${T.border}`,
+  background: 'var(--surface)',
+  border: '1px solid var(--border)',
   borderRadius: 3,
-  color: T.text,
+  color: 'var(--text-primary)',
   fontSize: 12,
   letterSpacing: 0.5,
-  fontFamily: MONO,
+  fontFamily: 'var(--font-mono)',
   outline: 'none',
   boxSizing: 'border-box',
-  flexShrink: 0,
 }
 
 const savedThemesToggleStyle: React.CSSProperties = {
   width: '100%',
   padding: '10px 14px',
-  background: T.bg,
-  border: `1px dashed ${T.border}`,
+  background: 'var(--background)',
+  border: '1px dashed var(--border)',
   borderRadius: 4,
-  color: T.text,
+  color: 'var(--text-primary)',
   fontSize: 11,
   fontWeight: 700,
   letterSpacing: 2,
-  fontFamily: FUTURA,
+  fontFamily: 'var(--font-futura)',
   cursor: 'pointer',
   textAlign: 'left',
   display: 'flex',
@@ -1557,7 +1454,7 @@ const savedThemesToggleHintStyle: React.CSSProperties = {
   fontSize: 10,
   fontWeight: 400,
   letterSpacing: 0.5,
-  color: T.muted,
+  color: 'var(--text-muted)',
   textTransform: 'none',
 }
 
@@ -1567,20 +1464,20 @@ const savedThemesGridStyle: React.CSSProperties = {
   gap: 10,
   marginTop: 10,
   padding: 10,
-  background: T.bg,
-  border: `1px solid ${T.border}`,
+  background: 'var(--background)',
+  border: '1px solid var(--border)',
   borderRadius: 4,
 }
 
 const savedThemesEmptyStyle: React.CSSProperties = {
   marginTop: 10,
   padding: 14,
-  background: T.bg,
-  border: `1px solid ${T.border}`,
+  background: 'var(--background)',
+  border: '1px solid var(--border)',
   borderRadius: 4,
   fontSize: 11,
   letterSpacing: 0.5,
-  color: T.muted,
+  color: 'var(--text-muted)',
   lineHeight: 1.6,
 }
 
@@ -1604,35 +1501,35 @@ const savedThemeNoLogoStyle: React.CSSProperties = {
   justifyContent: 'center',
   fontSize: 8,
   letterSpacing: 2,
-  color: T.muted,
+  color: 'var(--text-muted)',
   fontWeight: 700,
 }
 
 const disclaimerBoxStyle: React.CSSProperties = {
   background: 'rgba(74, 158, 255, 0.06)',
   border: '1px solid rgba(74, 158, 255, 0.3)',
-  borderLeft: `3px solid ${ACCENT}`,
+  borderLeft: '3px solid var(--brand-primary)',
   borderRadius: 4,
   padding: '14px 16px',
   marginBottom: 20,
   fontSize: 12,
   lineHeight: 1.6,
-  color: T.text,
+  color: 'var(--text-primary)',
   letterSpacing: 0.3,
 }
 
 const disclaimerHeadingStyle: React.CSSProperties = {
   fontSize: 11,
   letterSpacing: 3,
-  color: ACCENT,
+  color: 'var(--brand-primary)',
   fontWeight: 700,
 }
 
 const errorBoxStyle: React.CSSProperties = {
-  background: STATUS.danger.bg,
-  border: '1px solid rgba(138,26,26,0.25)',
-  borderLeft: `3px solid ${STATUS.danger.fg}`,
-  color: STATUS.danger.fg,
+  background: 'var(--color-error-bg)',
+  border: '1px solid var(--color-error-border)',
+  borderLeft: '3px solid var(--color-error)',
+  color: 'var(--color-error)',
   padding: '12px 14px',
   borderRadius: 4,
   fontSize: 12,
@@ -1644,15 +1541,15 @@ const errorBoxStyle: React.CSSProperties = {
 const submitButtonStyle: React.CSSProperties = {
   width: '100%',
   padding: 16,
-  background: T.bg,
-  borderTop: `3px solid ${ACCENT}`,
+  background: 'var(--surface)',
+  borderTop: '3px solid var(--brand-primary)',
   border: 'none',
   borderRadius: 4,
-  color: ACCENT,
+  color: 'var(--brand-primary)',
   fontSize: 13,
   fontWeight: 700,
   letterSpacing: 4,
-  fontFamily: FUTURA,
+  fontFamily: 'var(--font-futura)',
   cursor: 'pointer',
   marginTop: 8,
 }
@@ -1662,24 +1559,24 @@ const cancelButtonStyle: React.CSSProperties = {
   padding: 10,
   background: 'transparent',
   border: 'none',
-  color: T.muted,
+  color: '#666870',
   fontSize: 11,
   letterSpacing: 2,
   cursor: 'pointer',
-  fontFamily: FUTURA,
+  fontFamily: 'var(--font-futura)',
 }
 
 const overwriteButtonStyle: React.CSSProperties = {
   width: '100%',
   padding: 12,
   background: 'transparent',
-  border: `1px solid ${ACCENT}`,
+  border: '1px solid var(--brand-primary)',
   borderRadius: 4,
-  color: ACCENT,
+  color: 'var(--brand-primary)',
   fontSize: 11,
   fontWeight: 700,
   letterSpacing: 3,
-  fontFamily: FUTURA,
+  fontFamily: 'var(--font-futura)',
   cursor: 'pointer',
   marginTop: 16,
 }
@@ -1688,13 +1585,13 @@ const saveAsNewButtonStyle: React.CSSProperties = {
   width: '100%',
   padding: 12,
   background: 'transparent',
-  border: `1px dashed ${T.border}`,
+  border: '1px dashed var(--border)',
   borderRadius: 4,
-  color: T.muted,
+  color: 'var(--text-secondary)',
   fontSize: 11,
   fontWeight: 700,
   letterSpacing: 3,
-  fontFamily: FUTURA,
+  fontFamily: 'var(--font-futura)',
   cursor: 'pointer',
   marginTop: 10,
 }
@@ -1702,16 +1599,16 @@ const saveAsNewButtonStyle: React.CSSProperties = {
 const saveAsNewPanelStyle: React.CSSProperties = {
   marginTop: 10,
   padding: 14,
-  background: T.bg,
-  border: `1px solid ${T.border}`,
-  borderLeft: `3px solid ${ACCENT}`,
+  background: 'var(--background)',
+  border: '1px solid var(--border)',
+  borderLeft: '3px solid var(--brand-primary)',
   borderRadius: 4,
 }
 
 const saveAsNewLabelStyle: React.CSSProperties = {
   fontSize: 10,
   letterSpacing: 3,
-  color: T.muted,
+  color: 'var(--text-muted)',
   marginBottom: 8,
   fontWeight: 700,
 }
@@ -1724,24 +1621,24 @@ const saveAsNewInputRowStyle: React.CSSProperties = {
 
 const saveAsNewConfirmStyle: React.CSSProperties = {
   padding: '0 18px',
-  background: ACCENT,
+  background: 'var(--brand-primary)',
   border: 'none',
   borderRadius: 4,
-  color: '#fff',
+  color: 'var(--brand-on-primary, #fff)',
   fontSize: 11,
   fontWeight: 700,
   letterSpacing: 2,
-  fontFamily: FUTURA,
+  fontFamily: 'var(--font-futura)',
   whiteSpace: 'nowrap',
 }
 
 const saveAsNewErrorStyle: React.CSSProperties = {
   marginTop: 10,
   padding: '8px 10px',
-  background: STATUS.danger.bg,
-  border: '1px solid rgba(138,26,26,0.25)',
-  borderLeft: `3px solid ${STATUS.danger.fg}`,
-  color: STATUS.danger.fg,
+  background: 'var(--color-error-bg)',
+  border: '1px solid var(--color-error-border)',
+  borderLeft: '3px solid var(--color-error)',
+  color: 'var(--color-error)',
   borderRadius: 3,
   fontSize: 11,
   letterSpacing: 0.5,
@@ -1751,17 +1648,17 @@ const saveAsNewHintStyle: React.CSSProperties = {
   marginTop: 8,
   fontSize: 10,
   letterSpacing: 0.5,
-  color: T.muted,
+  color: 'var(--text-muted)',
   lineHeight: 1.5,
 }
 
 const saveAsNewSuccessStyle: React.CSSProperties = {
   marginTop: 10,
   padding: '8px 10px',
-  background: STATUS.success.bg,
-  border: '1px solid rgba(26,106,26,0.25)',
-  borderLeft: `3px solid ${STATUS.success.fg}`,
-  color: STATUS.success.fg,
+  background: 'var(--color-success-bg)',
+  border: '1px solid var(--color-success-border)',
+  borderLeft: '3px solid var(--color-success)',
+  color: 'var(--color-success)',
   borderRadius: 3,
   fontSize: 11,
   letterSpacing: 0.5,
