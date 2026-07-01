@@ -63,15 +63,15 @@ const SCENES: Scene[] = [
   {
     key: 'dialer',
     eyebrow: 'A SUPERIOR DIALER',
-    headline: "If your career is dialing numbers,\nYou're at the right place.",
-    sub: "Dial all day on an unlimited number pool, with all of your scripts in one place — with four dialer modes included to fit your approach cleanly.",
+    headline: "If your career is dialing numbers,\nYou're in the right place.",
+    sub: "Dial all day on an unlimited number pool, with all of your scripts in one place — with four dialer modes included to suit your style seamlessly.",
   },
   {
     key: 'analytics',
     eyebrow: 'YOUR NUMBERS, LIVE',
     headline: 'DialerSeat Analytics',
-    headline2: 'Statistics updated as you dial.',
-    sub: "Calls, conversions, talk time, and where your closes come from — all tracked on the backend for you, the second each call ends. Nothing to log, nothing to maintain. Upload infinite campaigns and toggle each one on or off for the cleanest possible workflow.",
+    headline2: 'Statistics as you dial.',
+    sub: "Calls, conversions, talk time, and where your closes come from — all tracked on the backend for you, the second each call ends. Nothing to log, and nothing to maintain. Upload infinite campaigns and toggle each one on or off for the smoothest possible workflow.",
   },
   {
     key: 'superior',
@@ -460,18 +460,18 @@ function AnalyticsScene() {
 // ── SCENE 3: WHY DIALERSEAT ──────────────────────────────────────────────────
 function SuperiorScene() {
   const features: { icon: string; title: string; body: string }[] = [
-    { icon: '⊘', title: 'No contracts', body: "Cancel anytime, zero commitment. Stay because it works, not because you're forced to." },
-    { icon: '🔒', title: 'Secured & protected', body: 'Your data is encrypted and protected at every layer — your numbers and leads PERMANENTLY remain yours.' },
-    { icon: '💸', title: 'Best price, period', body: 'More dialer for less than the rest — top-of-the-line power without the enterprise price tag.' },
-    { icon: '∞', title: 'Unlimited dialing', body: 'Dial all day on a full number pool — no per-line caps and NEVER any surprise coverage fees.' },
-    { icon: '📮', title: 'Voicemail detection', body: "Genuine voicemail detection — not the fake stuff. Skip dead drops and spend your time on live people." },
+    { icon: '⊘', title: 'No contracts', body: "Cancel anytime, absolutely no strings attached. Stay for the right reasons, not because you have to." },
+    { icon: '🔒', title: 'Secured & protected', body: 'Your data is protected and secured at every level — your numbers and leads PERMANENTLY yours.' },
+    { icon: '💸', title: 'The best price, guaranteed', body: 'More dialer for less money than the competition — enterprise-grade quality without the enterprise-level pricing.' },
+    { icon: '∞', title: 'Unlimited dialing', body: 'Dial all day on an unlimited number pool — no line limits, never any surprise coverage fees.' },
+    { icon: '📮', title: 'Voicemail Detection', body: "Real voicemail detection — not the fake stuff. Skip dead drops and spend your time on live people." },
     { icon: '🎯', title: 'Always improving', body: 'Shaped by real producers and updated constantly — the dialer that keeps getting better.' },
   ]
   return (
     <MacFrame title="WHY DIALERSEAT" titleColor="#5a8a5a" bg={C.sidebar}>
       <div style={{ padding: 22 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 15, fontWeight: 800, color: C.onSidebar, letterSpacing: 0.5 }}>A superior dialer, built for success.</span>
+          <span style={{ fontSize: 15, fontWeight: 800, color: C.onSidebar, letterSpacing: 0.5 }}>A superior dialer, designed for success.</span>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
           {features.map((f, i) => (
