@@ -30,18 +30,6 @@ interface TaskbarProps {
 //   entry sets iconSrc, falling back to the emoji glyph.
 // All v1 visuals retained: Aero gradient strip, start orb, tray, clock,
 // show-desktop sliver, safe-area fill shell.
-//
-// v2.1: SAFE-AREA FIX. Shell was `bottom: -100, height: 148` — a leftover
-// debug offset that shifted the whole shell 100px below the viewport, so
-// only the top 48px (the interactive strip) was ever actually on-screen.
-// The remaining ~100px that was meant to fill the safe-area-inset-bottom
-// zone (home indicator strip) was rendering entirely off-screen and doing
-// nothing, which is why that zone showed whatever was behind the taskbar
-// instead of the taskbar's own background. Fixed: `bottom: 0`, and height
-// is now `48px + env(safe-area-inset-bottom)` (real device value) instead
-// of a guessed 148px constant, so the shell is flush with the true bottom
-// edge on any device and exactly covers the strip with no gap and no
-// wasted off-screen space.
 // =============================================================================
 
 export default function Taskbar({
@@ -76,14 +64,10 @@ export default function Taskbar({
       aria-label="Taskbar"
       style={{
         position: 'fixed',
-        bottom: 0,
+        bottom: -100,
         left: 0,
         right: 0,
-        // 48px interactive strip + whatever the device's real safe-area
-        // bottom inset is (0 on devices without a home indicator). Replaces
-        // the old hardcoded `height: 148` guess, which was wrong on most
-        // devices even before the -100 offset bug.
-        height: 'calc(48px + env(safe-area-inset-bottom, 0px))',
+        height: 148,
         // Match the BOTTOM stop of the 48px strip's gradient (#0a1020) so the
         // safe-area zone below the strip reads as a continuation of the
         // taskbar, not a separate flat-black bar. Was '#0a0a0f', which on
