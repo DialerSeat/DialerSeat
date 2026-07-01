@@ -315,6 +315,17 @@ export default clerkMiddleware(async (auth, request) => {
     }
 
     if (url.pathname === '/') {
+      // Respect the ?view=landing escape hatch the same way marketing-only
+      // paths do above: send it to the main domain's landing page instead
+      // of auto-redirecting to /dashboard. Without this, Manager+ users
+      // (who land on their own tenant subdomain) could never reach the
+      // landing page — they always got bounced to /dashboard first,
+      // regardless of the view param.
+      if (url.searchParams.get('view') === 'landing') {
+        const mainUrl = new URL(url.pathname + url.search, 'https://dialerseat.com')
+        return withTenantHeader(NextResponse.redirect(mainUrl, 307))
+      }
+
       const { userId } = await auth()
       if (!userId) {
         const signInUrl = new URL('/sign-in', request.url)
