@@ -323,6 +323,10 @@ export default clerkMiddleware(async (auth, request) => {
       // regardless of the view param.
       if (url.searchParams.get('view') === 'landing') {
         const mainUrl = new URL(url.pathname + url.search, 'https://dialerseat.com')
+        // Carry the tenant slug along so the landing page's "back to
+        // dashboard" links (header + hero CTA) know to return the user to
+        // their own subdomain instead of dialerseat.com/dashboard.
+        mainUrl.searchParams.set('tenant', tenantSlug)
         return withTenantHeader(NextResponse.redirect(mainUrl, 307))
       }
 

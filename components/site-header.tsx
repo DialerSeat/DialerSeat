@@ -146,7 +146,7 @@ function BrandMark({
   )
 }
 
-export default function SiteHeader() {
+export default function SiteHeader({ tenantSlug = null }: { tenantSlug?: string | null } = {}) {
   const pathname = usePathname()
   const suppressed = shouldSuppressHeader(pathname)
 
@@ -190,7 +190,11 @@ export default function SiteHeader() {
 
   if (suppressed) return null
 
-  const dashboardHref = isAdmin ? '/dashboard/admin/desktop' : '/dashboard/analytics'
+  const dashboardPath = isAdmin ? '/dashboard/admin/desktop' : '/dashboard/analytics'
+  // When rendered on the main-domain landing page after a white-label user
+  // clicked "view landing" from their own subdomain, tenantSlug carries that
+  // subdomain so this link returns them there instead of dialerseat.com.
+  const dashboardHref = tenantSlug ? `https://${tenantSlug}.dialerseat.com${dashboardPath}` : dashboardPath
 
   const displayName = (() => {
     if (!user) return ''

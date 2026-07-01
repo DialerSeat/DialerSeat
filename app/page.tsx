@@ -6,9 +6,18 @@ import SiteHeader from '@/components/site-header'
 import LandingAuthSync from '@/components/LandingAuthSync'
 
 // =============================================================================
-// LANDING PAGE — v23 (no-glow buttons)
+// LANDING PAGE — v24 (tenant-aware return-to-dashboard)
 // =============================================================================
-// v23 change (this revision):
+// v24 change (this revision):
+//   When a white-label (Manager+) user views the landing page, middleware
+//   now redirects them from their tenant subdomain to dialerseat.com with a
+//   `?tenant=<slug>` param attached (see middleware.ts). This page reads
+//   that param and, if present, points "GO TO DASHBOARD" / the header's
+//   "← DASHBOARD" link back to `https://<slug>.dialerseat.com/dashboard`
+//   instead of the relative `/dashboard`, which would otherwise resolve on
+//   dialerseat.com and strand the user off their own subdomain.
+//
+// v23 change (kept):
 //   Removed box-shadow glow from all buttons site-wide on this page.
 //   Every CTA that previously had `boxShadow: '0 0 Npx rgba(74,158,255,0.N)'`
 //   now has no box-shadow. Button backgrounds and colors are unchanged.
@@ -28,7 +37,7 @@ import LandingAuthSync from '@/components/LandingAuthSync'
 // =============================================================================
 
 interface PageProps {
-  searchParams: Promise<{ view?: string }>
+  searchParams: Promise<{ view?: string; tenant?: string }>
 }
 
 export const dynamic = 'force-dynamic'
@@ -44,7 +53,14 @@ export default async function Home({ searchParams }: PageProps) {
 
   const isLoggedIn = !!userId
 
-  const ctaHref = isLoggedIn ? '/dashboard' : '/sign-up'
+  // Tenant slug the user was redirected FROM (set by middleware when a
+  // white-label user views the landing page from their own subdomain).
+  // Used to send "back to dashboard" links to the right host instead of
+  // dialerseat.com/dashboard.
+  const returnTenantSlug = params.tenant || null
+  const dashboardBase = returnTenantSlug ? `https://${returnTenantSlug}.dialerseat.com` : ''
+
+  const ctaHref = isLoggedIn ? `${dashboardBase}/dashboard` : '/sign-up'
   const ctaLabel = isLoggedIn ? 'GO TO DASHBOARD' : 'GET STARTED'
 
   const wlCtaHref = isLoggedIn ? '/billing?plan=wl' : '/sign-up?plan=wl'
@@ -54,7 +70,7 @@ export default async function Home({ searchParams }: PageProps) {
     <>
       <LandingAuthSync serverThoughtLoggedIn={isLoggedIn} />
 
-      {isLoggedIn && <SiteHeader />}
+      {isLoggedIn && <SiteHeader tenantSlug={returnTenantSlug} />}
 
       <main style={{
         background: 'var(--background)',
