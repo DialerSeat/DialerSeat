@@ -64,7 +64,7 @@ const SCENES: Scene[] = [
     key: 'dialer',
     eyebrow: 'A SUPERIOR DIALER',
     headline: "If your career is dialing numbers,\nthat's what we're all about.",
-    subLead: "And it's guaranteed better than what you're using currently.",
+    subLead: "(And it's guaranteed better than what you're using currently...)",
     sub: "Dial all day on an unlimited number pool, with all of your scripts in one place — with four dialer modes included to fit your approach cleanly.",
   },
   {
@@ -472,7 +472,7 @@ function SuperiorScene() {
     <MacFrame title="WHY DIALERSEAT" titleColor="#5a8a5a" bg={C.sidebar}>
       <div style={{ padding: 22 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 15, fontWeight: 800, color: C.onSidebar, letterSpacing: 0.5 }}>A superior dialer, built to make you money.</span>
+          <span style={{ fontSize: 15, fontWeight: 800, color: C.onSidebar, letterSpacing: 0.5 }}>A superior dialer, built for success.</span>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
           {features.map((f, i) => (
