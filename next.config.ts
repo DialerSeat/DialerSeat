@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
           { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
-          // Report-only CSP first — see notes before enforcing
+          // Report-only CSP — see prior notes before switching this to enforcing
           {
             key: 'Content-Security-Policy-Report-Only',
             value: [
@@ -26,6 +26,19 @@ const nextConfig: NextConfig = {
             ].join('; '),
           },
         ],
+      },
+    ]
+  },
+
+  async redirects() {
+    return [
+      {
+        // Older scanners still check the deprecated root location instead
+        // of /.well-known/security.txt (RFC 9116 moved it, not everyone's
+        // caught up).
+        source: '/security.txt',
+        destination: '/.well-known/security.txt',
+        permanent: true,
       },
     ]
   },

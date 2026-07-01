@@ -9,7 +9,6 @@ Contact: mailto:security@dialerseat.com
 Expires: 2027-05-13T23:59:59.000Z
 Preferred-Languages: en
 Canonical: https://dialerseat.com/.well-known/security.txt
-Policy: https://dialerseat.com/terms
 
 # Scope:
 #   - https://dialerseat.com and all subdomains
