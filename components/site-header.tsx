@@ -17,60 +17,61 @@ const T = {
   blue: '#4a9eff',
 }
 
-// =============================================================================
-// SITE HEADER
-// =============================================================================
-// Global header rendered (probably) by the root layout. Shows brand + auth
-// state + DASHBOARD button on every page that doesn't suppress it.
-//
-// v25 FIX — left-aligned logo for logged-out users on secondary pages:
-//   On /faq, /vs, /terms, /privacy (LEFT_LOGO_PREFIXES), logged-out users
-//   now see the brand mark in the left grid slot instead of centered.
-//   The landing page ('/') and all logged-in views are unaffected — the
-//   brand still renders in the center column there. Since the DASHBOARD
-//   button in the left column only ever renders for signed-in users,
-//   there's no collision between the two.
-//
-// v24 FIX — white-label branding removed:
-//   Header is now always the default DialerSeat brand regardless of tenant.
-//   useBranding() removed entirely. brandName, brandLogoUrl, brandPrimary
-//   are hardcoded to defaults so tenant logo/color changes never affect
-//   this component.
-//
-// v23 FIX — removed borderBottom:
-//   The `borderBottom: 1px solid ${T.border}` rendered as a stray light
-//   line under the header on /faq, /vs, /terms, /privacy, and the
-//   logged-in /?view=landing. Removed entirely — the sticky header now
-//   sits flush against the page background with no divider.
-//
-// v22 FIX — iPhone status bar overlap:
-//   With `apple-mobile-web-app-status-bar-style: 'black-translucent'` set in
-//   app/layout.tsx, iOS lays web content UNDER the status bar / Dynamic
-//   Island. The header's previous `padding: 12px 24px` wasn't enough — the
-//   signup button on iPhone sat behind the battery/Wi-Fi icons.
-//
-//   Fix: use `env(safe-area-inset-top)` (enabled by `viewport-fit=cover`)
-//   to add additional top padding equal to the status-bar height on
-//   notched devices. On non-notched / desktop, env() resolves to 0 and
-//   the header looks identical.
-//
-// v21 FIX — admin desktop suppression:
-//   The Win7 admin shell at /dashboard/admin/desktop owns the entire
-//   viewport. The header is suppressed on that route via early-return.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 const SUPPRESS_HEADER_PREFIXES = [
   '/dashboard/admin/desktop',
 ]
 
-// Pages where a LOGGED-OUT user should see the logo on the LEFT instead of
-// centered (faq, terms, comparisons, etc — not the landing page). Add more
-// prefixes here as new "etc" pages are added.
+
+
+
 const LEFT_LOGO_PREFIXES = [
   '/faq',
   '/vs',
   '/terms',
   '/privacy',
+  '/dialing-modes',
 ]
 
 function shouldSuppressHeader(pathname: string | null): boolean {
@@ -83,9 +84,9 @@ function shouldUseLeftLogo(pathname: string | null): boolean {
   return LEFT_LOGO_PREFIXES.some((p) => pathname.startsWith(p))
 }
 
-// Brand mark — pulled into its own component so it can render in either the
-// left grid slot (logged-out, secondary pages) or the center grid slot
-// (everywhere else) without duplicating the JSX.
+
+
+
 function BrandMark({
   brandName,
   brandPrimary,
@@ -153,13 +154,13 @@ export default function SiteHeader({ tenantSlug = null }: { tenantSlug?: string 
   const { isSignedIn, isLoaded, user } = useUser()
   const [isAdmin, setIsAdmin] = useState(false)
 
-  // ── ALWAYS DEFAULT BRAND — not white-label aware ──────────────────────
+  
   const brandName = 'DIALERSEAT'
   const brandLogoUrl = null
   const brandPrimary = T.blue
 
-  // Logged-out users on secondary ("etc") pages get the logo on the left.
-  // Landing page and any logged-in view keep the centered logo.
+  
+  
   const useLeftLogo = isLoaded && !isSignedIn && shouldUseLeftLogo(pathname)
 
   const userButtonRef = useRef<HTMLDivElement | null>(null)
@@ -171,15 +172,15 @@ export default function SiteHeader({ tenantSlug = null }: { tenantSlug?: string 
     let cancelled = false
     const lookup = async () => {
       try {
-        // Admin status is resolved SERVER-SIDE (/api/users/me) using the
-        // service-role key. The browser no longer queries the `users` table
-        // directly with the anon key, so the table's RLS can stay locked down.
+        
+        
+        
         const res = await fetch('/api/users/me')
         if (!res.ok) return
         const data = await res.json()
         if (!cancelled && data?.is_admin) setIsAdmin(true)
       } catch {
-        // Silently default to non-admin on lookup failure
+        
       }
     }
     lookup()
@@ -191,9 +192,9 @@ export default function SiteHeader({ tenantSlug = null }: { tenantSlug?: string 
   if (suppressed) return null
 
   const dashboardPath = isAdmin ? '/dashboard/admin/desktop' : '/dashboard/analytics'
-  // When rendered on the main-domain landing page after a white-label user
-  // clicked "view landing" from their own subdomain, tenantSlug carries that
-  // subdomain so this link returns them there instead of dialerseat.com.
+  
+  
+  
   const dashboardHref = tenantSlug ? `https://${tenantSlug}.dialerseat.com${dashboardPath}` : dashboardPath
 
   const displayName = (() => {
