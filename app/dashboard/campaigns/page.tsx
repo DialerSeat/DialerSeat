@@ -57,6 +57,19 @@ import Link from 'next/link'
 // This is also why it worked for subdomain-based tenant installs already:
 // their manifest scope likely doesn't cover this route the way the main
 // domain's does.
+//
+// Pass 5: Fixed two "return to previous view" bugs:
+//   1. closeEditor no longer discards a pending-blank campaign itself — that
+//      already happens in closeSettings, which is the correct place since
+//      that's when the user actually leaves the campaign. closeEditor now
+//      just hides the editor and lets the settings modal underneath show
+//      again, so leaving the lead editor on a fresh campaign no longer wipes
+//      out the whole create flow.
+//   2. openScriptsManagerFromCampaign now remembers which view it was opened
+//      from (create modal / settings modal / lead editor, plus which
+//      campaign) via preScriptsManagerView / preScriptsManagerCampaignId, and
+//      closeScriptsManager restores that view instead of always dropping the
+//      user back on the bare campaign list.
 // =============================================================================
 
 const T = {
@@ -420,6 +433,12 @@ export default function CampaignsPage() {
   const [libSaving, setLibSaving] = useState(false)
   const [libDragId, setLibDragId] = useState<string | null>(null)
   const [libDragOverId, setLibDragOverId] = useState<string | null>(null)
+  // Remembers which view (create modal / settings modal / lead editor) the
+  // scripts manager was opened from, plus which campaign was open (if any),
+  // so closing the manager can return the user to exactly where they were
+  // instead of always dropping them back on the bare campaign list.
+  const [preScriptsManagerView, setPreScriptsManagerView] = useState<'create' | 'settings' | 'editor' | null>(null)
+  const [preScriptsManagerCampaignId, setPreScriptsManagerCampaignId] = useState<string | null>(null)
 
   // ─── PER-CAMPAIGN SCRIPT TOGGLES + ORDER (settings + lead editor) ──────
   const [campaignScriptLinks, setCampaignScriptLinks] = useState<CampaignScriptLink[]>([])
@@ -878,9 +897,25 @@ export default function CampaignsPage() {
 
   // Manage Scripts from inside a campaign modal: CLOSE the campaign modal first
   // so the manager doesn't open hidden behind it, then open the manager. We
-  // remember which campaign settings were open so the flow can feel continuous,
-  // but we do NOT reopen automatically — the user returns via the campaign list.
+  // remember which view (create modal / settings modal / lead editor) — and
+  // which campaign, if any — was open, via preScriptsManagerView /
+  // preScriptsManagerCampaignId, so closeScriptsManager can return the user to
+  // exactly where they were instead of always landing on the campaign list.
   const openScriptsManagerFromCampaign = () => {
+    if (editorOpen && settingsId) {
+      setPreScriptsManagerView('editor')
+      setPreScriptsManagerCampaignId(settingsId)
+    } else if (showCreate) {
+      setPreScriptsManagerView('create')
+      setPreScriptsManagerCampaignId(null)
+    } else if (settingsId) {
+      setPreScriptsManagerView('settings')
+      setPreScriptsManagerCampaignId(settingsId)
+    } else {
+      setPreScriptsManagerView(null)
+      setPreScriptsManagerCampaignId(null)
+    }
+
     setShowCreate(false)
     setSettingsId(null)
     setEditorOpen(false)
@@ -891,8 +926,25 @@ export default function CampaignsPage() {
     if (libDirty && !confirm('Unsaved script changes. Discard?')) return
     setScriptsManagerOpen(false)
     setLibDirty(false)
-    // Refresh any open campaign's toggle list so newly created scripts appear.
-    if (settingsCampaign) loadCampaignLinks(settingsCampaign.id)
+
+    const returnTo = preScriptsManagerView
+    const returnCampaignId = preScriptsManagerCampaignId
+    setPreScriptsManagerView(null)
+    setPreScriptsManagerCampaignId(null)
+
+    // Restore whichever view the manager was opened from. Refresh that
+    // campaign's script links too, so any scripts created/edited/deleted in
+    // the manager show up immediately in the toggle list.
+    if (returnTo === 'create') {
+      setShowCreate(true)
+    } else if (returnTo === 'settings' && returnCampaignId) {
+      setSettingsId(returnCampaignId)
+      loadCampaignLinks(returnCampaignId)
+    } else if (returnTo === 'editor' && returnCampaignId) {
+      setSettingsId(returnCampaignId)
+      setEditorOpen(true)
+      loadCampaignLinks(returnCampaignId)
+    }
   }
 
   const selectLibScript = (id: string) => {
@@ -1437,11 +1489,11 @@ export default function CampaignsPage() {
       editorDeletes.size > 0
     if (hasChanges && !confirm('Unsaved changes will be lost. Close anyway?')) return
 
-    // If this campaign was created via "blank lead sheet" and never got any
-    // real lead data saved to it, discard it instead of leaving an empty
-    // campaign behind.
-    const wasPendingBlank = pendingBlankCampaignId && settingsCampaign?.id === pendingBlankCampaignId
-
+    // Just hide the editor and fall back to the settings modal underneath —
+    // it's still mounted with its draft intact. Do NOT discard a pending
+    // "blank lead sheet" campaign here: that decision belongs to closeSettings,
+    // which runs when the user actually leaves the campaign, not merely when
+    // they step out of the lead editor back into settings.
     setEditorOpen(false)
     setEditorScriptsOpen(false)
     setEditorLeads([])
@@ -1449,13 +1501,6 @@ export default function CampaignsPage() {
     setEditorAdds([])
     setEditorDeletes(new Set())
     setEditorSelected(new Set())
-
-    if (wasPendingBlank) {
-      setSettingsId(null)
-      setEditDraft(null)
-      setEditBaseline(null)
-      discardPendingBlankCampaign(pendingBlankCampaignId!)
-    }
   }
 
   const editCell = (leadId: string, field: string, value: any) => {
