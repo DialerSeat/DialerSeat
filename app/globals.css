@@ -106,3 +106,12 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--accent-blue);
 }
+a,
+button,
+label,
+input,
+select,
+textarea,
+[role='button'] {
+  touch-action: manipulation;
+}
