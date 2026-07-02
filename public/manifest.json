@@ -4,7 +4,7 @@
   "description": "Professional outbound dialer for solo agents up through larger teams. Four dialer modes, automatic voicemail detection, inbound reception, unlimited numbers. $35/week per seat. No contracts. Cancel anytime.",
   "id": "/",
   "start_url": "/dashboard",
-  "scope": "/",
+  "scope": "/dashboard",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui", "browser"],
   "orientation": "any",
