@@ -2791,14 +2791,15 @@ export default function CampaignsPage() {
           }
           .settings-footer-left, .settings-footer-right {
             width: 100%;
-            flex-direction: row;
+            flex-direction: column;
             gap: 6px;
-            flex-wrap: nowrap;
           }
+          .settings-footer-right { flex-direction: column-reverse; }
           .settings-footer-left:empty { display: none; }
           .settings-footer-left .ds-btn,
           .settings-footer-right .ds-btn {
             flex: 1;
+            width: 100%;
             padding: 12px 10px;
           }
 
