@@ -2702,18 +2702,13 @@ export default function CampaignsPage() {
           .cmp-body { padding: 20px 12px 48px; }
           .cmp-grid { grid-template-columns: 1fr; gap: 12px; }
 
-          /* Modal goes edge-to-edge and full height on mobile. Using dvh (with
-             vh fallback) keeps it correct as the browser chrome/keyboard resizes
-             the viewport, and we give it a real height (not just max-height) so
-             the flex children below have a bounded box to scroll within. */
-          .modal-overlay { padding: 0; align-items: stretch; min-height: 100vh; min-height: 100dvh; background: var(--brand-page-bg); }
+          html, body { background: var(--brand-page-bg) !important; }
+          .modal-overlay { padding: 0; align-items: stretch; background: var(--brand-page-bg); }
           .settings-modal {
             max-width: 100%;
             width: 100%;
-            height: 100vh;
-            height: 100dvh;
-            max-height: 100vh;
-            max-height: 100dvh;
+            height: 100%;
+            max-height: 100%;
             border-radius: 0;
           }
 
@@ -2729,7 +2724,7 @@ export default function CampaignsPage() {
 
           /* Keep the footer buttons clear of the home-indicator area. */
           .settings-footer {
-            padding-bottom: env(safe-area-inset-bottom, 34px);
+            padding-bottom: calc(14px + env(safe-area-inset-bottom, 20px));
           }
 
           /* Stack footer button groups full-width so CANCEL/CREATE etc. don't
@@ -2750,13 +2745,34 @@ export default function CampaignsPage() {
           .lib-rail { max-height: 160px; flex-direction: row; flex-wrap: wrap; }
           .lib-rail-item { flex: 0 0 auto; }
 
-          .settings-modal { max-height: 100vh; max-height: 100dvh; border-radius: 0; }
+          .settings-modal { max-height: 100%; border-radius: 0; }
+          .editor-fullscreen {
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+          }
           .editor-toolbar {
             padding: 10px 12px;
-            padding-top: calc(16px + env(safe-area-inset-top, 0px));
+            padding-top: calc(12px + env(safe-area-inset-top, 0px));
             gap: 8px;
           }
-          .editor-toolbar-title { font-size: 10px; letter-spacing: 2px; }
+          .editor-toolbar-title {
+            flex: 1 1 100%;
+            font-size: 11px;
+            letter-spacing: 2px;
+            white-space: normal;
+            overflow: visible;
+            text-overflow: clip;
+            line-height: 1.4;
+          }
+          .editor-tb-btn {
+            font-size: 10px;
+            letter-spacing: 1.5px;
+            padding: 10px 12px;
+            flex: 1 1 auto;
+          }
+          .editor-tb-changes {
+            flex: 1 1 100%;
+            text-align: center;
+          }
         }
       `}</style>
 
