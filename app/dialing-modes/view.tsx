@@ -54,7 +54,7 @@ export default function DialingModesView() {
             margin: '0 0 20px 0',
             color: T.text,
           }}>
-            How DialerSeat dials — and how we stay compliant doing it
+            How DialerSeat dials, and how we stay compliant doing it
           </h1>
           <p style={{
             fontSize: 17,
