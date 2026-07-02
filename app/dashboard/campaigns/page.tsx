@@ -2783,23 +2783,23 @@ export default function CampaignsPage() {
             font-size: 14px; /* prevents iOS auto-zoom on focus */
           }
 
-          /* Keep the footer buttons clear of the home-indicator area. */
-          .settings-footer {
-            padding-bottom: calc(14px + env(safe-area-inset-bottom, 20px));
-          }
-
-          /* Stack footer button groups full-width so CANCEL/CREATE etc. don't
-             get cramped or clipped on narrow screens. */
           .settings-footer {
             flex-direction: column;
+            gap: 6px;
+            padding: 8px 12px;
+            padding-bottom: calc(6px + env(safe-area-inset-bottom, 10px));
           }
           .settings-footer-left, .settings-footer-right {
             width: 100%;
+            flex-direction: row;
+            gap: 6px;
+            flex-wrap: nowrap;
           }
-          .settings-footer-right { flex-direction: column-reverse; }
+          .settings-footer-left:empty { display: none; }
           .settings-footer-left .ds-btn,
           .settings-footer-right .ds-btn {
             flex: 1;
+            padding: 12px 10px;
           }
 
           .lib-layout { grid-template-columns: 1fr; }
