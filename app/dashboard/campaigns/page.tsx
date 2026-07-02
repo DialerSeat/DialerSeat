@@ -2703,7 +2703,8 @@ export default function CampaignsPage() {
           .cmp-grid { grid-template-columns: 1fr; gap: 12px; }
 
           html, body { background: var(--brand-page-bg) !important; }
-          .modal-overlay { padding: 0; align-items: stretch; background: var(--brand-page-bg); }
+          html, body { overflow-x: hidden; overflow-x: clip; }
+          .modal-overlay { padding: 0; align-items: stretch; background: var(--brand-page-bg); overflow: hidden; }
           .settings-modal {
             max-width: 100%;
             width: 100%;
@@ -2748,6 +2749,7 @@ export default function CampaignsPage() {
           .settings-modal { max-height: 100%; border-radius: 0; }
           .editor-fullscreen {
             padding-bottom: env(safe-area-inset-bottom, 0px);
+            overflow: hidden;
           }
           .editor-toolbar {
             padding: 10px 12px;
