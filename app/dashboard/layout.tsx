@@ -63,6 +63,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [pathname])
 
   useEffect(() => {
+    const d = document.getElementById('ds-menu-drawer')
+    if (d && d.classList.contains('open')) setDrawerOpen(true)
+  }, [])
+
+  useEffect(() => {
     if (bare) return
     try {
       const raw = sessionStorage.getItem(PENDING_LOGO_KEY)
@@ -511,18 +516,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </div>
 
       <div
+        id="ds-menu-overlay"
         className={`ds-mobile-overlay ${drawerOpen ? 'open' : ''}`}
         onClick={() => setDrawerOpen(false)}
         aria-hidden="true"
       />
 
-      <aside className={`ds-sidebar-mobile ${drawerOpen ? 'open' : ''}`}>
+      <aside id="ds-menu-drawer" className={`ds-sidebar-mobile ${drawerOpen ? 'open' : ''}`}>
         <Sidebar />
       </aside>
 
       <div className="ds-mobile-content" style={{ flex: 1, minWidth: 0 }}>
         <div className="ds-mobile-topbar">
           <button
+            id="ds-menu-btn"
             onClick={() => setDrawerOpen(true)}
             aria-label="Open menu"
             style={{
@@ -555,6 +562,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {children}
       </div>
+
+      <script
+        dangerouslySetInnerHTML={{
+          __html:
+            "(function(){if(window.__dsMenuBridge)return;window.__dsMenuBridge=1;document.addEventListener('click',function(e){var t=e.target;if(!(t&&t.closest))return;var d=document.getElementById('ds-menu-drawer');var o=document.getElementById('ds-menu-overlay');if(!d||!o)return;if(t.closest('#ds-menu-btn')){d.classList.add('open');o.classList.add('open');}else if(t.closest('#ds-menu-overlay')){d.classList.remove('open');o.classList.remove('open');}},true);})();",
+        }}
+      />
     </main>
   )
 }
