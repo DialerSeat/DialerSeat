@@ -380,6 +380,53 @@ export default function CampaignsPage() {
   
   
   const [pendingBlankCampaignId, setPendingBlankCampaignId] = useState<string | null>(null)
+  const [vpDebug, setVpDebug] = useState(false)
+  const [vpInfo, setVpInfo] = useState('')
+  const vpTapRef = useRef({ count: 0, last: 0 })
+
+  const handleVpDebugTap = () => {
+    const now = Date.now()
+    const t = vpTapRef.current
+    t.count = now - t.last < 600 ? t.count + 1 : 1
+    t.last = now
+    if (t.count >= 5) {
+      t.count = 0
+      setVpDebug(v => !v)
+    }
+  }
+
+  useEffect(() => {
+    if (!vpDebug) return
+    const measure = () => {
+      const de = document.documentElement
+      const vv = window.visualViewport
+      const cw = de.clientWidth
+      const offenders: { label: string; over: number }[] = []
+      document.querySelectorAll('body *').forEach(el => {
+        const r = el.getBoundingClientRect()
+        if (r.width === 0 && r.height === 0) return
+        const over = Math.max(r.right - cw, -r.left)
+        if (over > 1) {
+          const cls = (el as HTMLElement).className
+          const clsStr = typeof cls === 'string' && cls ? '.' + cls.trim().split(/\s+/)[0] : ''
+          offenders.push({ label: `${el.tagName.toLowerCase()}${clsStr}`, over })
+        }
+      })
+      offenders.sort((a, b) => b.over - a.over)
+      const top = offenders.slice(0, 4).map(o => `${o.label} +${Math.round(o.over)}px`).join('\n')
+      setVpInfo(
+        `scale ${vv ? vv.scale.toFixed(3) : 'n/a'}\n` +
+        `vv ${vv ? Math.round(vv.width) + 'x' + Math.round(vv.height) : 'n/a'} off ${vv ? Math.round(vv.offsetLeft) + ',' + Math.round(vv.offsetTop) : ''}\n` +
+        `inner ${window.innerWidth}x${window.innerHeight}\n` +
+        `docEl client ${cw} scroll ${de.scrollWidth}\n` +
+        `body scroll ${document.body.scrollWidth}\n` +
+        `overflows: ${offenders.length}\n${top}`
+      )
+    }
+    measure()
+    const id = setInterval(measure, 700)
+    return () => clearInterval(id)
+  }, [vpDebug])
   const fileRef = useRef<HTMLInputElement>(null)
   const settingsFileRef = useRef<HTMLInputElement>(null)
 
@@ -2711,6 +2758,8 @@ export default function CampaignsPage() {
             height: 100%;
             max-height: 100%;
             border-radius: 0;
+            border: none;
+            box-shadow: none;
           }
 
           /* Push the header down below the notch / dynamic island / status bar
@@ -2781,7 +2830,7 @@ export default function CampaignsPage() {
       {/* ─── HEADER ─────────────────────────────────────────────────── */}
       <div className="cmp-header">
         <div className="cmp-header-title-block">
-          <span className="cmp-header-title">CAMPAIGNS</span>
+          <span className="cmp-header-title" onClick={handleVpDebugTap}>CAMPAIGNS</span>
           <span className="cmp-header-sub">
             {isLapsed
               ? 'READ-ONLY · RESUBSCRIBE TO RESUME'
@@ -3838,6 +3887,26 @@ export default function CampaignsPage() {
             )}
           </div>
         </div>
+      )}
+
+      {vpDebug && (
+        <div style={{
+          position: 'fixed',
+          top: 'calc(env(safe-area-inset-top, 0px) + 4px)',
+          left: 4,
+          zIndex: 2147483647,
+          background: 'rgba(0,0,0,0.8)',
+          color: '#4aff7e',
+          fontFamily: 'monospace',
+          fontSize: 10,
+          lineHeight: 1.5,
+          padding: '6px 8px',
+          borderRadius: 4,
+          whiteSpace: 'pre',
+          pointerEvents: 'none',
+          maxWidth: '92vw',
+          overflow: 'hidden',
+        }}>{vpInfo}</div>
       )}
 
     </div>
