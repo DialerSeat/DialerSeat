@@ -3,13 +3,6 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/requireAdmin'
 import { apiError } from '@/lib/apiError'
 
-/**
- * Admin-only: aggregated overview of every team on DialerSeat.
- * Returns one row per team with owner, member count, active seats, MRR, churn, join code.
- *
- * Platform totals exclude coupon-discounted subscriptions so admin/comp accounts
- * don't inflate displayed revenue.
- */
 export async function GET() {
   try {
     const gate = await requireAdmin()
@@ -31,7 +24,6 @@ export async function GET() {
       supabaseAdmin.from('subscriptions').select('user_id, discount_coupon'),
     ])
 
-    // Build a set of user IDs who have any coupon applied (exclude from $ totals)
     const couponedUsers = new Set<string>(
       (allSubs || [])
         .filter((s: any) => s.discount_coupon)
@@ -75,7 +67,6 @@ export async function GET() {
       campMap[tc.team_id].push(tc)
     }
 
-    // Build team_id → join code map (use most recent if multiple)
     const codeMap: Record<string, string> = {}
     for (const c of allCodes || []) {
       if (!codeMap[c.team_id]) codeMap[c.team_id] = c.code
@@ -106,12 +97,8 @@ export async function GET() {
       const wrr_cents = activeSeats * 3500
       const mrr_cents = Math.round(wrr_cents * 4.33)
 
-      // Per-team revenue still shown for visibility — coupon flag indicates
-      // which teams have free-riding owners. But platform-wide totals exclude them.
       const ownerHasCoupon = couponedUsers.has(t.owner_id)
 
-      // Platform totals: count seats regardless of coupon, but exclude $$
-      // from coupon'd owners since they're not actually paying.
       platformTotals.activeSeats += activeSeats
       platformTotals.pendingSeats += pendingSeatsCount
       if (!ownerHasCoupon) {

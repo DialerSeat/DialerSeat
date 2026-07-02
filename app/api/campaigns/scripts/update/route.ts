@@ -17,7 +17,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'id required' }, { status: 400 })
     }
 
-    // Lookup script + verify ownership through campaign
     const { data: script } = await supabaseAdmin
       .from('campaign_scripts')
       .select('id, campaign_id, campaigns!inner(user_id)')
@@ -34,7 +33,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Owner only' }, { status: 403 })
     }
 
-    // If promoting to default, demote others first
     if (is_default === true) {
       await supabaseAdmin
         .from('campaign_scripts')
@@ -57,7 +55,6 @@ export async function POST(req: Request) {
 
     if (error) throw error
 
-    // Mirror the default script body back to campaigns.script for legacy callers
     if (updated.is_default) {
       await supabaseAdmin
         .from('campaigns')

@@ -93,8 +93,8 @@ export default function CompliancePage() {
     }
   }, [])
 
-  // Load platform-wide consent percentage. Falls back gracefully if endpoint
-  // doesn't exist yet — UI just hides the stat.
+  
+  
   const loadConsentSummary = useCallback(async () => {
     if (!user) return
     try {

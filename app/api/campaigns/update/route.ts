@@ -31,7 +31,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Campaign id required' }, { status: 400 })
     }
 
-    // Reject any virtual sub-campaign ID — those are read-only views.
     if (id.includes(':')) {
       return NextResponse.json(
         { success: false, error: 'Cannot update a virtual sub-campaign. Update the parent instead.' },
@@ -39,7 +38,6 @@ export async function POST(req: Request) {
       )
     }
 
-    // Verify ownership BEFORE writing — never trust the body's user_id
     const { data: existing, error: fetchErr } = await supabaseAdmin
       .from('campaigns')
       .select('id, user_id')
@@ -54,7 +52,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
     }
 
-    // Whitelist + validate each field
     const updates: Record<string, any> = {}
 
     for (const field of ALLOWED_FIELDS) {

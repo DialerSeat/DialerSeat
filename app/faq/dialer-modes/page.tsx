@@ -21,7 +21,6 @@ export const metadata: Metadata = {
   },
 }
 
-// Each mode's accent color matches the dialer + campaign UI.
 const MODES = [
   {
     key: 'preview',

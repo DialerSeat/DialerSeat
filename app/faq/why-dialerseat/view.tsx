@@ -1,24 +1,24 @@
 'use client'
 
-// =============================================================================
-// /faq/why-dialerseat — founder-voice deep dive
-// =============================================================================
-// Linked from the FAQ index. Stands on its own as a thesis/story page —
-// could be discovered via direct search or share. Threads in the
-// comparisons content (links out to /vs/*) since "why us" and "vs them"
-// are the same conversation.
-//
-// Structure:
-//   1. Back-link breadcrumb → /faq
-//   2. Hero
-//   3. Why we exist (thesis)
-//   4. Who builds it
-//   5. How we work
-//   6. Setting the record straight (comparisons + /vs links)
-//   7. Our promise
-//   8. Where we're going (gratitude + future)
-//   9. Auth-aware bottom CTA
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'

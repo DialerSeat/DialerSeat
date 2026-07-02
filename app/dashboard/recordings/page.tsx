@@ -2,50 +2,50 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useUser } from '@clerk/nextjs'
 
-// =============================================================================
-// RECORDINGS PAGE — Pass 2 Phase C5 (page header strip → header-bg)
-// =============================================================================
-// C5 changes vs C4 — surgical rebind so the page header strip reads as page
-// chrome, not sidebar chrome:
-//
-//   .rec-header background       T.dark → var(--brand-header-bg)
-//   .rec-header sub text         on-sidebar-muted → on-header-muted
-//
-// What stays the same (intentional — button chrome, not page header):
-//   .rec-btn-active background = T.dark (active state of PLAY/CLOSE button)
-//
-// T constant unchanged. All structural code byte-for-byte from C4.
-//
-// =============================================================================
-// Original C4 binding sweep (preserved):
-// Themable T tokens rebound at the source — all downstream consumers
-// (template strings in <style>, inline style props, dispColor/dispBg/
-// dispositionTint return values used as inline styles) auto-pick up the
-// themed value.
-//
-// What's themed:
-//   T.bg      → var(--brand-page-bg)
-//   T.surface → var(--brand-card-surface)
-//   T.border  → var(--brand-card-border)
-//   T.dark    → var(--brand-sidebar-bg)  (.rec-btn-active button chrome)
-//   T.text    → var(--brand-on-page-bg)
-//   T.muted   → var(--brand-muted-text)
-//   T.blue    → var(--brand-primary)
-//
-// What stays semantic (NEVER themed):
-//   T.accent  (#2a4a8a) — phone number color in .rec-phone
-//   T.green   (#1a6a1a) — CLOSED disposition, sync success message
-//   T.red     (#8a1a1a) — DO NOT CALL, delete buttons, <7 day expires warning
-//   T.amber   (#8a6a1a) — NOT INTERESTED disposition, disclosure banner
-//   '#1a4a8a' — APPOINTMENT disposition (distinct semantic dark blue)
-//   dispBg() pale tint pills — #e8f5e8 / #e8eef8 / #f8f4e8 / #f8e8e8 / #f0f0f4
-//   dispositionTint() — semantic rgba card-bg tints per-row
-//   Disclosure banner amber palette (#fff8e8 / #d4b86a / #fdf2d6)
-//   Sync message green palette (#e8f5e8 / #6abf6a)
-//   NO DISPOSITION fallback badge (#e8e8ec gray)
-//   Confirm-delete solid-red button "white text on T.red bg"
-//   Header bottom accent rebinds to var(--brand-header-top-accent) directly.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 const T = {
   bg: 'var(--brand-page-bg)',
@@ -206,9 +206,9 @@ export default function RecordingsPage() {
       const res = await fetch(`/api/recordings/list?${params}`)
       const data = await res.json()
       if (data.success) {
-        // Only show recordings whose disposition is one the dialer accepts,
-        // plus no-answer. Everything else (completed/failed/TCPA_BLOCKED/
-        // NO_ANSWER_AMD/ABANDONED) is hidden. Raw NO_ANSWER counts as no-answer.
+        
+        
+        
         const ALLOWED = new Set([
           'CLOSED', 'APPOINTMENT', 'NOT INTERESTED', 'DO NOT CALL', 'SKIPPED', 'NO_ANSWER',
         ])
@@ -295,7 +295,7 @@ export default function RecordingsPage() {
     const now = Date.now()
     const dayMs = 86400000
     const startOfToday = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d }
-    // [start, end) window in ms. end = Infinity means "up to now".
+    
     let start = 0
     let end = Infinity
     if (timeFilter === 'today') {
@@ -309,7 +309,7 @@ export default function RecordingsPage() {
     } else if (timeFilter === 'year') {
       start = now - 365 * dayMs
     } else if (timeFilter === 'custom') {
-      // Inclusive day range from the two date pickers. A missing bound is open.
+      
       if (customStart) {
         const d = new Date(customStart + 'T00:00:00')
         if (!isNaN(d.getTime())) start = d.getTime()

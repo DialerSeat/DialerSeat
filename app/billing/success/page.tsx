@@ -6,20 +6,20 @@ import { useBranding } from '@/components/ThemeProvider'
 
 const FUTURA = 'Futura PT, Futura, "Trebuchet MS", sans-serif'
 
-// =============================================================================
-// /billing/success — v23 (Phase D1)
-// =============================================================================
-// FIXED from v22:
-//   - Removed "TRIAL ACTIVATED" + "7-day free trial" + "starting day 8"
-//     copy. There IS NO TRIAL — the create-subscription route charges
-//     immediately. That text was wrong on every previous deploy.
-//   - Reads ?plan=wl from URL to redirect WL signups to onboarding instead
-//     of dashboard (matches what BillingPage.return_url passes through).
-//   - Tier-aware price text: $35 for standard, $75 for WL.
-//   - Reads useBranding() so the page is themed on tenant subdomains.
-//     (Though most users hit this on dialerseat.com after a fresh signup —
-//     subdomain branding kicks in only if they signed up via subdomain.)
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 export default function BillingSuccessPage() {
   const router = useRouter()

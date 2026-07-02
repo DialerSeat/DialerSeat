@@ -1,45 +1,45 @@
 'use client'
-// =============================================================================
-// TenantLoginBrand — co-branding mark + optional partner link for the
-// branded subdomain sign-in page.
-// =============================================================================
-// Renders:
-//   ┌──────────────────────────────────────┐
-//   │            [tenant logo]              │
-//   │         TPI  ×  DialerSeat            │   ← fixed mark, × non-removable
-//   │                                       │
-//   │   New to TPI?                         │   ← optional heading (label)
-//   │   Visit our agent portal  ↗           │   ← clickable text, brand color
-//   └──────────────────────────────────────┘
-//
-// The "× DialerSeat" half is ALWAYS shown and cannot be removed by the partner
-// — it signals the platform underneath (the "powered by" move) and keeps the
-// agent able to find DialerSeat directly.
-//
-// The link block is fully optional. It only renders when both linkText and
-// linkUrl are present. The clickable text uses the brand primary color and
-// carries an external-link icon on the right so it reads unmistakably as an
-// outbound link. Opens in a new tab with rel="noopener noreferrer".
-//
-// All colors come from the --brand-* CSS vars the layout already sets from the
-// tenant's theme, so this matches the rest of the white-label chrome.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 const FUTURA = `'Futura PT', Futura, 'Helvetica Neue', Helvetica, Arial, sans-serif`
 
 export interface TenantLoginBrandProps {
   brandName: string
   logoUrl?: string | null
-  /** Optional small heading above the link, e.g. "New to TPI?" */
+  
   linkLabel?: string | null
-  /** The clickable phrase, e.g. "Visit our agent portal". Required for the link to show. */
+  
   linkText?: string | null
-  /** Destination URL (http/https). Required for the link to show. */
+  
   linkUrl?: string | null
 }
 
 function ExternalLinkIcon() {
-  // Small outbound-link glyph. Inherits color via currentColor.
+  
   return (
     <svg
       width="13"

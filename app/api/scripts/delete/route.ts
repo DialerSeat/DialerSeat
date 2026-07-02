@@ -1,16 +1,3 @@
-// app/api/scripts/delete/route.ts
-// =============================================================================
-// GLOBAL SCRIPTS LIBRARY — DELETE
-// =============================================================================
-// Owner deletes the script entirely (cascade removes its campaign links).
-//
-// A team member who sees a team-owned script in their library and wants it gone
-// can "delete" it from their own view: that does NOT delete the owner's script;
-// it only removes any links between that script and the member's OWN campaigns.
-// (Per product decision: team scripts stay in a member's library unless they
-// delete them.) We detect this case by ownership.
-// =============================================================================
-
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
@@ -39,14 +26,12 @@ export async function POST(req: Request) {
     }
 
     if (script.user_id === userId) {
-      // Owner — hard delete (links cascade via FK).
+
       const { error } = await supabaseAdmin.from('scripts').delete().eq('id', id)
       if (error) throw error
       return NextResponse.json({ success: true, removed: 'global' })
     }
 
-    // Not the owner. Only allowed if it's a team script and the caller is on
-    // that team. In that case, unlink it from the caller's own campaigns only.
     if (script.team_id) {
       const { data: membership } = await supabaseAdmin
         .from('team_members')

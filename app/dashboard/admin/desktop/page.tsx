@@ -3,20 +3,20 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 import Desktop from '@/components/admin-desktop/Desktop'
 
-// =============================================================================
-// ADMIN DESKTOP PAGE
-// =============================================================================
-// Server-gated entry to the Win7 desktop admin shell. Verifies admin status
-// via Clerk + Supabase users.is_admin before rendering the client component.
-//
-// On non-admin or signed-out requests we redirect to /dashboard/analytics
-// (the standard agent dashboard) rather than 404'ing — that matches existing
-// behavior elsewhere in the app.
-//
-// We intentionally don't render the site-header on this route. The desktop
-// itself owns the full viewport — header on top would break the illusion.
-// To do that we use a route-scoped layout (sibling layout.tsx).
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 export const metadata = {
   title: 'DialerSeat Admin',

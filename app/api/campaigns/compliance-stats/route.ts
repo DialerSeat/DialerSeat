@@ -4,13 +4,6 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { computeAbandonRate30d } from '@/lib/dialerPacing'
 import { apiError } from '@/lib/apiError'
 
-/**
- * Returns compliance stats for a campaign — current abandon rate, totals,
- * and the relevant safe-harbor thresholds. Used by the campaign owner's
- * dashboard to monitor predictive-mode compliance.
- *
- * Restricted to campaign owner.
- */
 export async function GET(req: Request) {
   try {
     const { userId } = await auth()
@@ -40,7 +33,6 @@ export async function GET(req: Request) {
 
     const stats = await computeAbandonRate30d(campaignId)
 
-    // Pull AMD breakdown over the same 30-day window for visibility
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
 
     const { data: amdRows } = await supabaseAdmin
@@ -56,7 +48,6 @@ export async function GET(req: Request) {
       amdBreakdown[key] = (amdBreakdown[key] || 0) + 1
     }
 
-    // Status assessment
     let status: 'safe' | 'caution' | 'degraded'
     let statusMessage: string
     if (stats.rate >= 0.025) {

@@ -1,10 +1,5 @@
 import { getServiceClient } from '@/lib/supabase'
 
-// Append-only call event logger. This is a forensic trail, NOT a control path —
-// it must NEVER throw or block the caller. Every call into the dialer/webhook
-// path can emit events freely; a logging failure is swallowed (and console'd)
-// so it can never break a live call.
-
 export type CallEventType =
   | 'initiated'
   | 'ringing'
@@ -49,7 +44,7 @@ export async function logCallEvent(input: CallEventInput): Promise<void> {
       console.error('[call-events] insert failed (non-fatal):', error.message)
     }
   } catch (err) {
-    // Never let logging break the call path.
+
     console.error('[call-events] unexpected error (non-fatal):', err)
   }
 }

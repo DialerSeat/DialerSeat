@@ -1,27 +1,27 @@
-// lib/vercelDomains.ts
-// =============================================================================
-// VERCEL DOMAIN PROVISIONING — programmatic subdomain management
-// =============================================================================
-// Adds/removes <slug>.dialerseat.com on the Vercel project via the Vercel API,
-// so each white-label tenant gets its own subdomain WITHOUT a wildcard domain
-// on Vercel. Because Cloudflare already has a wildcard CNAME
-//   *  ->  cname.vercel-dns.com   (DNS only / grey cloud)
-// every subdomain we add here verifies and gets SSL issued INSTANTLY off that
-// CNAME — no nameserver change, no per-domain DNS record needed.
-//
-// ENV (set in Vercel project settings — never hardcode):
-//   VERCEL_API_TOKEN   — token from vercel.com/account/tokens
-//   VERCEL_PROJECT_ID  — the project's id (prj_...)
-//   VERCEL_TEAM_ID     — team id (team_...), only if the project is under a team
-//   NEXT_PUBLIC_ROOT_DOMAIN — optional; defaults to 'dialerseat.com'
-//
-// Design:
-//   - Never throws into the caller's critical path. Each function returns a
-//     typed result; onboarding decides whether a failure is fatal (it isn't —
-//     the tenant row is the source of truth; a domain can be reconciled later).
-//   - Idempotent: adding an existing domain is treated as success; removing a
-//     missing one is treated as success.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'dialerseat.com'
 const API = 'https://api.vercel.com'
@@ -51,10 +51,7 @@ function config(): { token: string; projectId: string } | null {
   return { token, projectId }
 }
 
-/**
- * Adds <slug>.dialerseat.com to the Vercel project.
- * Idempotent: an already-present domain returns { ok:true, alreadyExisted:true }.
- */
+
 export async function addProjectDomain(slug: string): Promise<DomainOpResult> {
   const cfg = config()
   if (!cfg) {
@@ -80,7 +77,7 @@ export async function addProjectDomain(slug: string): Promise<DomainOpResult> {
       return { ok: true, status: res.status }
     }
 
-    // Parse error to detect the idempotent "already exists" case.
+    
     const data = await res.json().catch(() => ({} as any))
     const code = data?.error?.code || ''
     if (
@@ -99,10 +96,7 @@ export async function addProjectDomain(slug: string): Promise<DomainOpResult> {
   }
 }
 
-/**
- * Removes <slug>.dialerseat.com from the Vercel project.
- * Idempotent: a missing domain returns { ok:true, notFound:true }.
- */
+
 export async function removeProjectDomain(slug: string): Promise<DomainOpResult> {
   const cfg = config()
   if (!cfg) {
@@ -137,18 +131,13 @@ export async function removeProjectDomain(slug: string): Promise<DomainOpResult>
   }
 }
 
-/**
- * Handles a slug change: add the new subdomain, then remove the old one.
- * Order matters — we add new BEFORE removing old so there's never a window
- * where neither resolves. Old-slug removal failure is non-fatal (the
- * subdomain_history redirect covers the transition regardless).
- */
+
 export async function changeProjectDomain(
   oldSlug: string,
   newSlug: string
 ): Promise<{ added: DomainOpResult; removedOld: DomainOpResult }> {
   const added = await addProjectDomain(newSlug)
-  // Only remove the old one if the new one is safely in place.
+  
   let removedOld: DomainOpResult = { ok: false, skipped: true }
   if (added.ok) {
     removedOld = await removeProjectDomain(oldSlug)

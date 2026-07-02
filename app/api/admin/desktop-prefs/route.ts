@@ -5,26 +5,8 @@ import { requireAdmin } from '@/lib/admin'
 
 const supabase = getServiceClient('admin/desktop-prefs')
 
-// =============================================================================
-// ADMIN DESKTOP PREFS (v3)
-// =============================================================================
-// v3 changes vs v2:
-// - GET returns DEFAULT_HIDDEN_APPS (currently ['clerk-profile']) as the
-//   hiddenApps default when the user has no prefs row yet, so the Account
-//   app stays off the desktop by default for brand-new users. Existing rows
-//   were backfilled by migration 014. Once a row exists, whatever the client
-//   PUTs is the truth — ADD TO DESKTOP un-hides it permanently.
-//
-// Row shape per clerk_id:
-//   icon_positions — { "<appId>": { x, y } } grid-snapped pixel positions
-//   background     — { type: 'preset'|'solid'|'image', value: string } | null
-//   installed_apps — string[] of downloaded store-app ids
-//   hidden_apps    — string[] of app ids removed from the desktop
-// =============================================================================
-
 type BgSetting = { type: 'preset' | 'solid' | 'image'; value: string }
 
-// Keep in sync with DEFAULT_HIDDEN_APP_IDS in components/admin-desktop/desktopServices.tsx
 const DEFAULT_HIDDEN_APPS = ['clerk-profile']
 
 function sanitizeIdArray(input: any): string[] {
@@ -68,7 +50,7 @@ export async function GET() {
       iconPositions: data?.icon_positions ?? {},
       background: (data?.background as BgSetting | null) ?? null,
       installedApps: Array.isArray(data?.installed_apps) ? data.installed_apps : [],
-      // v3: no row yet → default-hidden apps apply
+
       hiddenApps: data
         ? (Array.isArray(data.hidden_apps) ? data.hidden_apps : [])
         : DEFAULT_HIDDEN_APPS,
@@ -95,7 +77,6 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ success: false, error: 'Invalid JSON' }, { status: 400 })
   }
 
-  // ── Validate icon positions: only { string: { x: number, y: number } } ──
   const iconPositions: Record<string, { x: number; y: number }> = {}
   if (body.iconPositions && typeof body.iconPositions === 'object' && !Array.isArray(body.iconPositions)) {
     for (const [key, val] of Object.entries(body.iconPositions)) {
@@ -111,14 +92,13 @@ export async function PUT(req: NextRequest) {
     }
   }
 
-  // ── Validate background: known type + bounded string value, or null ─────
   let background: BgSetting | null = null
   const b = body.background
   if (b && typeof b === 'object' &&
       (b.type === 'preset' || b.type === 'solid' || b.type === 'image') &&
       typeof b.value === 'string' && b.value.length > 0 && b.value.length <= 2000) {
     if (b.type === 'image') {
-      // Image backgrounds must be plain http(s) URLs — no data: or javascript:
+
       const v = b.value.trim()
       if (/^https?:\/\//i.test(v)) {
         background = { type: 'image', value: v.replace(/["\\]/g, '') }
@@ -128,7 +108,6 @@ export async function PUT(req: NextRequest) {
     }
   }
 
-  // ── App lists ────────────────────────────────────────────────────────────
   const installedApps = sanitizeIdArray(body.installedApps)
   const hiddenApps = sanitizeIdArray(body.hiddenApps)
 

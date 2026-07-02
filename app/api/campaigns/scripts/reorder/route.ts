@@ -3,18 +3,6 @@ import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 
-// =============================================================================
-// POST /api/campaigns/scripts/reorder
-// Body: { campaign_id: string, ordered_ids: string[] }
-//
-// Updates the sort_order column on each script based on its position in
-// ordered_ids. First id gets sort_order=0, second gets 1, etc.
-// Verifies campaign ownership before writing.
-//
-// Used by the campaigns settings modal when the user drags script tabs
-// left or right to reorder them.
-// =============================================================================
-
 export async function POST(req: Request) {
   try {
     const { userId } = await auth()
@@ -35,7 +23,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'ordered_ids must contain valid script ids' }, { status: 400 })
     }
 
-    // Verify the user owns the campaign these scripts belong to.
     const { data: campaign, error: fetchErr } = await supabaseAdmin
       .from('campaigns')
       .select('id, user_id')
@@ -50,8 +37,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Owner only' }, { status: 403 })
     }
 
-    // Verify all the script ids belong to this campaign — prevents writing
-    // sort_order on someone else's scripts via a forged ordered_ids array.
     const { data: existingScripts, error: scriptsErr } = await supabaseAdmin
       .from('campaign_scripts')
       .select('id, campaign_id')
@@ -74,8 +59,6 @@ export async function POST(req: Request) {
       )
     }
 
-    // Run all updates in parallel. Last-write-wins on collision but in practice
-    // there's no collision because each id gets a distinct sort_order.
     const results = await Promise.all(
       ordered_ids.map((id, idx) =>
         supabaseAdmin

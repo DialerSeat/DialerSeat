@@ -1,12 +1,12 @@
-// app/api/gmail/send/route.ts
-// =============================================================================
-// POST /api/gmail/send
-// Body: { to: string, cc?: string, bcc?: string, subject: string,
-//         body: string, isHtml?: boolean,
-//         replyToMessageId?: string, threadId?: string }
-//
-// Builds a minimal RFC 2822 message and submits it to /users/me/messages/send.
-// =============================================================================
+
+
+
+
+
+
+
+
+
 
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth, gmailFetch, getStoredTokens, GmailAuthError } from '@/lib/gmail'
@@ -32,9 +32,9 @@ function encodeBase64Url(s: string): string {
     .replace(/=+$/, '')
 }
 
-// Build a minimal RFC 2822 message. For HTML we use a multipart/alternative
-// with both a plain-text fallback (stripped tags) and HTML body so recipients
-// without HTML support still see something readable.
+
+
+
 function buildRawMessage(args: {
   from: string
   to: string
@@ -64,7 +64,7 @@ function buildRawMessage(args: {
     return `${headers.join('\r\n')}\r\n\r\n${args.body}`
   }
 
-  // multipart/alternative
+  
   headers.push(`Content-Type: multipart/alternative; boundary="${boundary}"`)
   const plainFallback = stripHtmlToPlain(args.body)
   const parts = [
@@ -83,8 +83,8 @@ function buildRawMessage(args: {
   return `${headers.join('\r\n')}\r\n\r\n${parts.join('\r\n')}`
 }
 
-// If the subject contains non-ASCII chars, encode it. Simple RFC 2047
-// encoding — works for any unicode subject without picking a charset war.
+
+
 function encodeHeaderValue(value: string): string {
   // eslint-disable-next-line no-control-regex
   if (/^[\x20-\x7E]*$/.test(value)) return value

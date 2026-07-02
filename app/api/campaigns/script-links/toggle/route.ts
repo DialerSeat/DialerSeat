@@ -1,13 +1,3 @@
-// app/api/campaigns/script-links/toggle/route.ts
-// =============================================================================
-// CAMPAIGN ↔ SCRIPT LINKS — TOGGLE
-// =============================================================================
-// Enables or disables a library script on a campaign. Body:
-//   { campaign_id, script_id, enabled }
-// Owner of the campaign only. When enabling, the link gets the next sort_order.
-// Keeps campaigns.script mirrored to the top (lowest sort_order) enabled script.
-// =============================================================================
-
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
@@ -45,7 +35,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'campaign_id, script_id, enabled required' }, { status: 400 })
     }
 
-    // Campaign must be owned by the caller.
     const { data: campaign } = await supabaseAdmin
       .from('campaigns')
       .select('id, user_id')
@@ -58,7 +47,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Owner only' }, { status: 403 })
     }
 
-    // Script must be in the caller's library (own or team they belong to).
     const { data: script } = await supabaseAdmin
       .from('scripts')
       .select('id, user_id, team_id')

@@ -2,25 +2,25 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { createClient } from '@supabase/supabase-js'
 
-// =============================================================================
-// /api/desktop/background — per-user desktop background (follows across devices)
-// =============================================================================
-// The manager/admin desktop background was previously persisted to
-// localStorage, so it was device-local and didn't follow the signed-in user
-// to other devices. This route stores the choice on users.desktop_background
-// (added in migration user_desktop_background), keyed by the Clerk user id, so
-// it's authoritative per-user everywhere.
-//
-//   GET  → { background: string | null }   the current user's saved value
-//   POST { background: string | null } → { success, background }
-//
-// "background" is an opaque string the desktop interprets: a color hex
-// (e.g. "#101018"), a preset id (e.g. "preset:aurora"), or an image key.
-// We don't validate its shape here beyond a length cap, so the desktop can
-// evolve its background catalog without server changes.
-//
-// force-dynamic: per-user, must never be cached.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 export const dynamic = 'force-dynamic'
 

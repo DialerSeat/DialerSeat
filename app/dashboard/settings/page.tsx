@@ -5,64 +5,64 @@ import Link from 'next/link'
 
 const FUTURA = 'Futura PT, Futura, "Trebuchet MS", sans-serif'
 
-// =============================================================================
-// SETTINGS PAGE (v32 — Push E: chrome tied to selected white-label tenant)
-// =============================================================================
-// v32 changes vs v31:
-//   Every hardcoded dark-mode chrome value is replaced with computed
-//   tokens derived from the active brand. Page bg was already
-//   var(--brand-sidebar-bg) (v28). Card, section, border, primary text,
-//   and muted text are now computed from --brand-sidebar-bg and
-//   --brand-on-sidebar so they shift with the tenant:
-//
-//     Default DialerSeat (sidebar #111118 / on-sidebar #fff):
-//       card    ≈ #2a2a2f (slight lift toward white)
-//       border  ≈ #494950
-//       section = #111118 (back to sidebar depth)
-//       text    = #ffffff
-//       muted   = #8888aa
-//
-//     Preset 1 (brown #3b261b / on-sidebar #fff):
-//       card    ≈ lifted brown
-//       text    = #ffffff
-//       muted   = white at 65% alpha (tenant-tinted)
-//
-//     Preset 4 (light gray #e4e6eb / on-sidebar #1a1c24):
-//       card    ≈ slightly darker gray
-//       text    = #1a1c24
-//       muted   = dark at 65% alpha
-//
-//   Semantic colors stay hardcoded:
-//     - red (#8a1a1a / #ff8888) for cancel/danger flows
-//     - amber (#8a6a1a / #ffaa3e) for warnings and agent-paid badges
-//     - green (#1a6a1a / #32ff7e) for success messages
-//     - var(--brand-primary) for owner-paid badge and primary accents
-//
-//   The brand-view dropdown logic, theme dropdown options, parens removal,
-//   and seat-cancel modal are unchanged from v31. Only the chrome tokens
-//   were swapped.
-//
-// v31 (Push C): saved themes in WL view dropdown, dropdown reads
-//   brandOptions.currentValue, parens stripped from labels, theme picks
-//   call switch-view with theme_id.
-// v30 (Push B): ▶ emojis removed, WL options reordered.
-// v28: chrome reverted to hardcoded dark mode.
-// =============================================================================
 
-// ─── Themed chrome tokens — derived from ThemeProvider's --brand-* vars ───
-// These sit at the top so they're easy to find when iterating on the look.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 const CHROME = {
-  // A surface lifted slightly off the sidebar bg toward its contrast text.
-  // Dark sidebar (white on-sidebar) → lighter dark; light sidebar (dark
-  // on-sidebar) → slightly darker light. Works for every tenant palette.
+  
+  
+  
   surface: 'color-mix(in srgb, var(--brand-sidebar-bg) 88%, var(--brand-on-sidebar) 12%)',
-  // A deeper surface for cards-within-cards (sections inside the main card).
-  // Reverts to the sidebar bg itself so nested sections feel inset.
+  
+  
   sectionBg: 'var(--brand-sidebar-bg)',
-  // A visible-but-quiet divider.
+  
   border: 'color-mix(in srgb, var(--brand-sidebar-bg) 75%, var(--brand-on-sidebar) 25%)',
-  // A subtler divider for row-internal dividers (less contrast than border).
+  
   borderSoft: 'color-mix(in srgb, var(--brand-sidebar-bg) 82%, var(--brand-on-sidebar) 18%)',
   text: 'var(--brand-on-sidebar)',
   muted: 'var(--brand-on-sidebar-muted)',
@@ -686,7 +686,7 @@ function tierStatusColor(sub: SubStatus | null): string {
   return '#ff8888'
 }
 
-// ─── Styles (v32 — themed chrome via CHROME tokens) ──────────────────
+
 
 const pageStyle: React.CSSProperties = {
   flex: 1, minHeight: '100vh',

@@ -1,7 +1,7 @@
-// instrumentation.ts
-// Next.js auto-runs this file once per runtime initialization.
-// It loads the correct Sentry config based on the runtime (Node vs Edge).
-// Lives at repo root, NOT inside /app.
+
+
+
+
 
 export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
@@ -13,7 +13,7 @@ export async function register() {
   }
 }
 
-// Capture errors that bubble up from request handlers
+
 export const onRequestError = async (
   err: unknown,
   request: {

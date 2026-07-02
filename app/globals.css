@@ -4,100 +4,36 @@
 @tailwind components;
 @tailwind utilities;
 
-/* =============================================================================
- * DIALERSEAT GLOBALS — v27 (restore original default sidebar value)
- * =============================================================================
- * Four-tier CSS variable system for white-label theming.
- *
- *   Tier 1: --brand-primary, --brand-sidebar-bg, --brand-header-bg,
- *           --brand-page-bg
- *     The 4 user-picked colors. Defaults below for non-tenant rendering
- *     (landing page, signed-out users, admins). ThemeProvider overrides
- *     them when a tenant is active.
- *
- *     Original DialerSeat default palette:
- *       --brand-sidebar-bg  #111118  (darker)
- *       --brand-header-bg   #1a1a2e  (slightly less dark; intentionally
- *                                     different from sidebar)
- *       --brand-primary     #4a9eff  (DialerSeat blue)
- *       --brand-page-bg     #f0f1f4  (light gray dashboard body)
- *
- *     v26 had sidebar=#1a1a2e/header=#1a1a2e (collapsed). v27 restores
- *     the intentional two-shade distinction. Migration 004 backfilled
- *     existing tenant rows with header_bg_color = sidebar_color so
- *     existing branded renders still look identical until a tenant picks
- *     a different header value.
- *
- *   Tier 2: Derived from Tier 1.
- *     Primary family:
- *       --brand-on-primary, --brand-primary-hover, --brand-primary-soft
- *     Sidebar family:
- *       --brand-on-sidebar, --brand-on-sidebar-muted,
- *       --brand-sidebar-active-bg, --brand-sidebar-hover-bg
- *     Header family:
- *       --brand-on-header, --brand-on-header-muted,
- *       --brand-header-top-accent (= primary)
- *     Page-bg family:
- *       --brand-on-page-bg, --brand-card-surface,
- *       --brand-card-border, --brand-muted-text
- *
- *   Tier 3 — vestigial Pass 1 brand tokens (preserved for landing):
- *     --brand-secondary, --brand-surface, --brand-bg, --brand-text
- *     ThemeProvider v3+ NO LONGER OVERRIDES these. They keep their defaults
- *     below so the landing page renders identically regardless of tenant.
- *
- *   Status / semantic tokens — NEVER themed:
- *     --color-error, --color-success, --color-warning + bg/border pairs.
- *     Errors red, success green, warnings amber, period.
- *
- * IMPORTANT: Pass 2 dashboard pages (analytics, campaigns, etc.) use
- * the Pass 1 LIGHT palette via hardcoded values (T.bg #f0f1f4, T.surface
- * #e2e4ea, etc.). The dark --background / --surface / --text-primary
- * tokens below are kept for the landing page and any other pre-Pass-2
- * code that still references them. Phase C bound the dashboard surfaces
- * to the new --brand-page-bg / --brand-card-surface tokens.
- * =============================================================================
- */
-
 :root {
-  /* ── Tier 1: User-picked (overridable by ThemeProvider when tenant active) */
-  --brand-primary: #4a9eff;       /* DialerSeat Classic blue */
-  --brand-sidebar-bg: #111118;    /* Original DialerSeat sidebar — darker */
-  --brand-header-bg: #1a1a2e;     /* Original DialerSeat header strip — slightly lighter */
-  --brand-page-bg: #f0f1f4;       /* Pass 2 dashboard page bg */
 
-  /* ── Tier 2: Derived — primary family ───────────────────────────────── */
+  --brand-primary: #4a9eff;
+  --brand-sidebar-bg: #111118;
+  --brand-header-bg: #1a1a2e;
+  --brand-page-bg: #f0f1f4;
+
   --brand-on-primary: #ffffff;
   --brand-primary-hover: color-mix(in srgb, var(--brand-primary) 88%, black);
   --brand-primary-soft: color-mix(in srgb, var(--brand-primary) 12%, transparent);
 
-  /* ── Tier 2: Derived — sidebar family ───────────────────────────────── */
   --brand-on-sidebar: #ffffff;
   --brand-on-sidebar-muted: rgba(255, 255, 255, 0.55);
   --brand-sidebar-active-bg: rgba(255, 255, 255, 0.08);
   --brand-sidebar-hover-bg: rgba(255, 255, 255, 0.04);
 
-  /* ── Tier 2: Derived — header family ────────────────────────────────── */
   --brand-on-header: #ffffff;
   --brand-on-header-muted: rgba(255, 255, 255, 0.55);
   --brand-header-top-accent: var(--brand-primary);
 
-  /* ── Tier 2: Derived — page-bg family ───────────────────────────────── */
-  --brand-on-page-bg: #1a1c24;       /* body text on page bg */
-  --brand-card-surface: #e2e4ea;     /* card / panel bg (original DialerSeat) */
-  --brand-card-border: #c4c8d0;      /* card / divider border */
-  --brand-muted-text: #5a5e6a;       /* low-emphasis text */
+  --brand-on-page-bg: #1a1c24;
+  --brand-card-surface: #e2e4ea;
+  --brand-card-border: #c4c8d0;
+  --brand-muted-text: #5a5e6a;
 
-  /* ── Tier 3: Vestigial Pass 1 brand primitives ──────────────────────── */
-  /* These are NO LONGER overridden by ThemeProvider in Pass 2.
-     They stay at these defaults forever, so any landing-page code that
-     references them renders identically regardless of tenant. */
   --brand-secondary: #2a6eff;
   --brand-surface: #111118;
   --brand-bg: #0a0a0f;
   --brand-text: #f0f0f5;
 
-  /* ── Semantic tokens (Pass 1 dark theme, used by landing) ──────────── */
   --background: var(--brand-bg);
   --surface: var(--brand-surface);
   --surface-2: color-mix(in srgb, var(--brand-surface) 92%, var(--brand-text));
@@ -110,7 +46,6 @@
   --chrome: linear-gradient(135deg, #2a2a3a 0%, #1a1a24 50%, #2a2a3a 100%);
   --divider: color-mix(in srgb, var(--brand-text) 10%, transparent);
 
-  /* ── Status / semantic colors (NEVER themed) ────────────────────────── */
   --color-error: #ff6464;
   --color-error-bg: rgba(138, 26, 26, 0.18);
   --color-error-border: #8a1a1a;
@@ -123,7 +58,6 @@
   --color-warning-bg: rgba(138, 106, 26, 0.18);
   --color-warning-border: #8a6a1a;
 
-  /* ── Typography ────────────────────────────────────────────────────── */
   --font-futura: 'Futura PT', 'Futura', sans-serif;
   --font-mono: 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace;
 }
@@ -141,12 +75,6 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* ──────────────────────────────────────────────────────────────────────
-   iOS Safari zooms the viewport whenever a focused input/select/textarea
-   has a font-size below 16px. Force ≥16px on mobile only, app-wide.
-   Desktop styles are untouched. Uses font-size with !important to win
-   over inline styles set via React's style={} prop.
-   ────────────────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   input,
   select,

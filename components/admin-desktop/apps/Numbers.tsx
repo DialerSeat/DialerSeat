@@ -1,30 +1,30 @@
 'use client'
 import { useEffect, useState, useMemo, useCallback } from 'react'
 
-// =============================================================================
-// NUMBERS APP — pool admin + state analytics (v2)
-// =============================================================================
-// v2 changes vs v1:
-// - TAB STRIP: POOL | ANALYTICS at the top of the window. POOL is the entire
-//   v1 experience, byte-for-byte (stat grid, growth meter, filters, cards,
-//   buy/seed/config/sync/register, 30s polling). ANALYTICS is new.
-// - ANALYTICS TAB: fetches GET /api/admin/pool/analytics (new route) —
-//   sitewide lead demand vs pool supply by state, across ALL users:
-//     * summary cards: total leads / states with leads / uncovered leads
-//       (leads in states with zero active numbers) / pool size
-//     * per-state table sorted worst-shortage-first by GAP (lead share minus
-//       capacity share, in percentage points)
-//     * verdict pills: NEED / NEED MORE / STRETCHED / BALANCED / SURPLUS
-//     * lead-share bars for at-a-glance popularity
-//     * BUY → button on NEED/NEED MORE/STRETCHED rows opens the existing buy
-//       modal in SPECIFIC STATES mode with that state pre-checked
-//   Lead states are normalized server-side ("FLORIDA" → FL) with phone
-//   area-code fallback, so messy CSV imports still count.
-// - Analytics loads lazily on first open + manual ↻ refresh (no polling —
-//   it scans the whole leads table).
-//
-// Everything below the ANALYTICS additions is unchanged v1 pool logic.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 const T = {
   bg: '#f0f1f4',
@@ -88,7 +88,7 @@ interface PoolData {
   }
 }
 
-// ── ANALYTICS types (mirror /api/admin/pool/analytics response) ─────────────
+
 interface StateAnalytics {
   code: string
   name: string
@@ -127,8 +127,8 @@ const VERDICT_COLORS: Record<string, string> = {
   'SURPLUS': T.muted,
 }
 
-// Common US area codes by state — used for the "specific states" batch buy.
-// Pick a representative metro code per state so the buy actually targets the right area.
+
+
 const STATE_AREA_CODES: Array<{ state: string; name: string; areaCodes: string[] }> = [
   { state: 'AL', name: 'Alabama', areaCodes: ['205', '251', '256', '334', '938'] },
   { state: 'AK', name: 'Alaska', areaCodes: ['907'] },
@@ -226,7 +226,7 @@ export default function NumbersApp() {
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<'all' | 'active' | 'resting' | 'flagged'>('all')
 
-  // Buy modal
+  
   const [buyOpen, setBuyOpen] = useState(false)
   const [buyMode, setBuyMode] = useState<'single' | 'random' | 'states'>('single')
   const [buyAreaCode, setBuyAreaCode] = useState('')
@@ -250,13 +250,13 @@ export default function NumbersApp() {
 
   const [syncing, setSyncing] = useState(false)
 
-  // Registration toggle state
+  
   const [registeringIds, setRegisteringIds] = useState<Set<string>>(new Set())
   const [registerAllOpen, setRegisterAllOpen] = useState(false)
   const [registerAllInFlight, setRegisterAllInFlight] = useState(false)
   const [registerAllMessage, setRegisterAllMessage] = useState<string | null>(null)
 
-  // ── ANALYTICS state (v2) ──────────────────────────────────────────────────
+  
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
   const [analyticsLoading, setAnalyticsLoading] = useState(false)
   const [analyticsError, setAnalyticsError] = useState<string | null>(null)
@@ -278,14 +278,14 @@ export default function NumbersApp() {
     }
   }, [])
 
-  // Lazy-load analytics the first time the tab opens
+  
   useEffect(() => {
     if (view === 'analytics' && !analytics && !analyticsLoading && !analyticsError) {
       loadAnalytics()
     }
   }, [view, analytics, analyticsLoading, analyticsError, loadAnalytics])
 
-  // BUY → from an analytics row: pre-fill the states buy modal
+  
   const buyForState = useCallback((stateCode: string) => {
     setBuyMode('states')
     setBuySelectedStates(new Set([stateCode]))
@@ -338,7 +338,7 @@ export default function NumbersApp() {
     setBuyProgress(null)
   }
 
-  // Single-area-code buy
+  
   const handleBuySingle = async () => {
     if (!/^\d{3}$/.test(buyAreaCode)) {
       setBuyMessage('Area code must be exactly 3 digits')
@@ -367,7 +367,7 @@ export default function NumbersApp() {
     }
   }
 
-  // Pick `qty` area codes from a flat list, no duplicates
+  
   const sampleAreaCodes = (sourceCodes: string[], qty: number): string[] => {
     const picks: string[] = []
     const pool = [...sourceCodes]
@@ -379,7 +379,7 @@ export default function NumbersApp() {
     return picks
   }
 
-  // Random states or specific states batch buy
+  
   const handleBuyBatch = async () => {
     const qty = Math.max(1, Math.min(buyQty, 100))
     let pickFrom: string[] = []

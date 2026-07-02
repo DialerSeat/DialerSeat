@@ -2,31 +2,31 @@
 import { useEffect, useState, useCallback } from 'react'
 import { WhitelabelLivePreview } from '@/components/WhitelabelLivePreview'
 
-// =============================================================================
-// WHITE LABEL APP — admin desktop edition (v3)
-// =============================================================================
-// v3 changes vs v2:
-// - BRANDING PREVIEW: replaced the local DashboardPreview mock with the real
-//   shared <WhitelabelLivePreview> component (components/WhitelabelLivePreview)
-//   — the exact same WCAG auto-contrast + ThemeProvider-v7-aligned color-mix
-//   derivations the onboarding flow and the live dashboard use. What admins
-//   see here is now pixel-identical to what tenants get. Kept inside the same
-//   ~300px preview column, so the layout is unchanged.
-// - BILLING TAB (live): portfolio MRR/ARR roll-up across all tenants + a
-//   per-tenant table with live Stripe state (active / past due / canceled),
-//   monthly-normalized MRR, plan, and next charge date. Row click opens a
-//   detail modal with the subscription summary + recent invoices (hosted
-//   links). Backed by the new GET /api/admin/billing route.
-// - SETTINGS TAB (live): per-tenant operational controls — edit slug (with
-//   the same validation the server enforces), edit custom_domain, and
-//   activate/suspend. All via PATCH /api/admin/tenants/:id. Feature flags are
-//   noted as a future addition (needs a column/table) but not stubbed in.
-//
-// v2: real white_label_tenants schema, 4 real theme tokens, accent mirror,
-//     live tenants CRUD + impersonate backend.
-//
-// Sub-tabs: Tenants / Branding / Billing / Demo View / Settings — all live.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 const C = {
   bg: '#f5f9fd',
@@ -60,8 +60,8 @@ const WL_SUBTABS: WLSubTab[] = [
   { key: 'settings',  label: 'Settings',   status: 'live' },
 ]
 
-// Matches white_label_tenants as it exists in the DB (real columns only;
-// dead legacy color columns intentionally omitted).
+
+
 interface Tenant {
   id: string
   slug: string
@@ -252,9 +252,9 @@ export default function WhiteLabelApp() {
   )
 }
 
-// =============================================================================
-// TENANTS — CRUD list
-// =============================================================================
+
+
+
 function TenantsSubTab() {
   const [tenants, setTenants] = useState<Tenant[] | null>(null)
   const [loading, setLoading] = useState(true)
@@ -494,7 +494,7 @@ function TenantDetailModal({ tenant, onClose, onUpdated }: {
       onUpdated()
       onClose()
     } catch (e: any) {
-      // 409 = teams still attached; server message says which/how many
+      
       setErr(e?.message ?? 'Failed')
     } finally {
       setWorking(null)
@@ -569,10 +569,10 @@ function TenantDetailModal({ tenant, onClose, onUpdated }: {
   )
 }
 
-// =============================================================================
-// BRANDING — edit the REAL 4-token theme + brand assets, dashboard-shaped
-// live preview. accent_color mirroring happens server-side.
-// =============================================================================
+
+
+
+
 interface BrandingDraft {
   brand_name: string
   logo_url: string
@@ -786,9 +786,9 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
   )
 }
 
-// =============================================================================
-// DEMO VIEW — resolve a team's tenant and open its site in a new tab
-// =============================================================================
+
+
+
 function DemoViewSubTab() {
   const [teams, setTeams] = useState<TeamRow[] | null>(null)
   const [loading, setLoading] = useState(true)
@@ -896,9 +896,9 @@ function DemoViewSubTab() {
   )
 }
 
-// =============================================================================
-// BILLING — portfolio MRR roll-up + per-tenant live Stripe state
-// =============================================================================
+
+
+
 interface BillingState {
   state: string
   planNickname: string | null
@@ -1157,9 +1157,9 @@ function BillingDetailModal({ tenantId, onClose }: { tenantId: string; onClose: 
   )
 }
 
-// =============================================================================
-// SETTINGS — per-tenant slug / custom domain / activate-suspend
-// =============================================================================
+
+
+
 function SettingsSubTab() {
   const [tenants, setTenants] = useState<Tenant[]>([])
   const [loading, setLoading] = useState(true)
@@ -1322,9 +1322,9 @@ function SettingsSubTab() {
   )
 }
 
-// =============================================================================
-// SHARED
-// =============================================================================
+
+
+
 function ModalShell({ title, onClose, children }: {
   title: string
   onClose: () => void

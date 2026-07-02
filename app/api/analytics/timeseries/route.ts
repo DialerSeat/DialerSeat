@@ -3,9 +3,6 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { requireUser } from '@/lib/requireUser'
 import { apiError } from '@/lib/apiError'
 
-// SECURITY (was IDOR): scoped only by client-supplied ?user_id with no auth.
-// Identity now comes from the Clerk session.
-
 const CONVERSION_DISPS = ['CLOSED', 'APPOINTMENT']
 
 export async function GET(req: NextRequest) {
@@ -16,7 +13,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const start = searchParams.get('start')
   const end = searchParams.get('end')
-  // bucket: 'hour' | 'day'
+
   const bucket = searchParams.get('bucket') || 'day'
 
   let query = supabaseAdmin.from('calls').select('created_at, disposition, duration').eq('user_id', userId)

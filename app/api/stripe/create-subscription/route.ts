@@ -14,28 +14,6 @@ const STALE_STATUSES = [
   'trialing',
 ]
 
-// =============================================================================
-// /api/stripe/create-subscription
-// =============================================================================
-// Creates a new Stripe subscription for the calling user. Supports two plans:
-//
-//   plan: 'standard' (default) → $35/wk via STRIPE_PRICE_ID
-//   plan: 'wl'                 → $115/wk via STRIPE_PRICE_WL_BASE
-//
-// WL subscriptions get `metadata.sub_kind = 'whitelabel'` so the webhook
-// branches into the tenant provisioning flow on payment success.
-//
-// REQUEST BODY (all optional):
-//   { plan: 'standard' | 'wl', code?: string }
-//
-// If neither STRIPE_PRICE_ID nor STRIPE_PRICE_WL_BASE env var is set, we
-// return a clear error instead of letting Stripe yell about a missing price.
-//
-// CONSTRAINT: a user can only have ONE active subscription. If they're trying
-// to create a WL sub while having an active standard sub, they get blocked
-// and told to manage from Settings. Same the other way around.
-// =============================================================================
-
 function isResourceMissing(err: any): boolean {
   return err?.code === 'resource_missing' || err?.raw?.code === 'resource_missing'
 }
@@ -111,7 +89,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No email on user' }, { status: 400 })
     }
 
-    // ── PARSE BODY: plan + promo code ─────────────────────────────────
     let plan: 'standard' | 'wl' = 'standard'
     let promoCode: string | null = null
     try {
@@ -119,10 +96,9 @@ export async function POST(req: Request) {
       if (body?.plan === 'wl') plan = 'wl'
       promoCode = (body?.code as string)?.trim() || null
     } catch {
-      // body optional
+
     }
 
-    // ── PICK THE PRICE ID ────────────────────────────────────────────
     const priceId =
       plan === 'wl'
         ? process.env.STRIPE_PRICE_WL_BASE
@@ -142,7 +118,6 @@ export async function POST(req: Request) {
       )
     }
 
-    // ── ENSURE USER ROW ──────────────────────────────────────────────
     const { error: upsertErr } = await supabase
       .from('users')
       .upsert(
@@ -163,7 +138,6 @@ export async function POST(req: Request) {
       )
     }
 
-    // ── GET-OR-CREATE STRIPE CUSTOMER ────────────────────────────────
     const customerId = await getOrCreateCustomer(
       userId,
       email,
@@ -171,7 +145,6 @@ export async function POST(req: Request) {
       user.lastName
     )
 
-    // ── CHECK FOR BLOCKING ACTIVE SUBS ───────────────────────────────
     let stripeSubs: Stripe.ApiList<Stripe.Subscription>
     try {
       stripeSubs = await stripe.subscriptions.list({
@@ -207,9 +180,6 @@ export async function POST(req: Request) {
       )
     }
 
-    // ── CANCEL INCOMPLETE SUBS ───────────────────────────────────────
-    // Includes incompletes from PLAN-SWITCHING: if the user just abandoned
-    // a $35 incomplete to switch to $115, cancel the old $35 here.
     const incompleteSubs = stripeSubs.data.filter((s) => s.status === 'incomplete')
     for (const sub of incompleteSubs) {
       try {
@@ -219,7 +189,6 @@ export async function POST(req: Request) {
       }
     }
 
-    // ── CLEAN STALE LOCAL ROWS ──────────────────────────────────────
     await supabase
       .from('subscriptions')
       .delete()
@@ -232,10 +201,6 @@ export async function POST(req: Request) {
       .eq('user_id', userId)
       .eq('status', 'incomplete')
 
-    // ── BUILD SUB PARAMS ────────────────────────────────────────────
-    // metadata.sub_kind drives webhook routing:
-    //   'whitelabel' → routeWhitelabel (creates tenant row + team)
-    //   absent / 'standard' → routePersonal (existing $35 flow)
     const subParams: Stripe.SubscriptionCreateParams = {
       customer: customerId,
       items: [{ price: priceId }],
@@ -250,7 +215,6 @@ export async function POST(req: Request) {
       },
     }
 
-    // ── PROMO CODE LOOKUP ────────────────────────────────────────────
     if (promoCode) {
       try {
         const promos = await stripe.promotionCodes.list({
@@ -296,7 +260,6 @@ export async function POST(req: Request) {
       }
     }
 
-    // ── CREATE SUB ───────────────────────────────────────────────────
     const subscription = await stripe.subscriptions.create({
       ...subParams,
       expand: ['latest_invoice.confirmation_secret'],

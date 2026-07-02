@@ -16,7 +16,6 @@ export async function GET(req: Request) {
       return NextResponse.json({ success: false, error: 'campaign_id required' }, { status: 400 })
     }
 
-    // Verify campaign access — either owner OR team member
     const { data: campaign } = await supabaseAdmin
       .from('campaigns')
       .select('id, user_id, script')
@@ -27,7 +26,6 @@ export async function GET(req: Request) {
       return NextResponse.json({ success: false, error: 'Campaign not found' }, { status: 404 })
     }
 
-    // Quick check: is the user the owner OR on a team that has this campaign?
     const isOwner = campaign.user_id === userId
     if (!isOwner) {
       const { data: teamAccess } = await supabaseAdmin
@@ -39,7 +37,7 @@ export async function GET(req: Request) {
       if (!teamAccess) {
         return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
       }
-      // Verify they're on that team
+
       const { data: membership } = await supabaseAdmin
         .from('team_members')
         .select('id')
@@ -59,7 +57,6 @@ export async function GET(req: Request) {
       .order('sort_order', { ascending: true })
       .order('created_at', { ascending: true })
 
-    // Lazy backfill: if no scripts exist yet but campaigns.script has text, create one
     if ((!scripts || scripts.length === 0) && campaign.script && campaign.script.trim()) {
       const { data: created } = await supabaseAdmin
         .from('campaign_scripts')

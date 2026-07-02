@@ -2,25 +2,7 @@ import { stripe } from '@/lib/stripe'
 import { supabaseAdmin } from '@/lib/supabase'
 import Stripe from 'stripe'
 
-/**
- * Shared Stripe billing helpers for team seats.
- *
- * Design decisions (locked in spec):
- *   1. ONE Stripe subscription per seat (per agent per team).
- *      - 1:1 mapping with team_seat_charges rows.
- *      - Per-seat cancellation, per-seat refund, isolated failures.
- *   2. Reuse owner's existing stripe_customer_id (same card on file).
- *   3. If owner has no card → fail loud, do not create the sub.
- *   4. Subscription description AND metadata are populated for clean audit:
- *      description: "Seat: agent@example.com on Premium Team"
- *      metadata: { agent_id, agent_email, team_id, team_name, seat_charge_id }
- *   5. No proration on cancellation (Q2=B): owner pays out the week.
- *
- * v2: adds ownerCanBeCharged() — a non-throwing card check used to gate
- *     single-use partner seat links at mint time (see /api/teams/codes/create).
- *     It reuses resolveOwnerCustomer so the mint-time gate and the redeem-time
- *     charge can never disagree about whether the owner is billable.
- */
+
 
 const SEAT_PRICE_ID = process.env.STRIPE_PRICE_ID!
 
@@ -45,10 +27,7 @@ export interface SeatBillingSuccess {
   currentPeriodEnd: string
 }
 
-/**
- * Resolves an owner's stripe_customer_id and verifies they have a default
- * payment method on file. Returns the customer or throws.
- */
+
 async function resolveOwnerCustomer(ownerId: string): Promise<Stripe.Customer> {
   const { data: user } = await supabaseAdmin
     .from('users')
@@ -74,7 +53,7 @@ async function resolveOwnerCustomer(ownerId: string): Promise<Stripe.Customer> {
     throw err
   }
 
-  // Verify default payment method exists
+  
   const defaultPm = (customer as Stripe.Customer).invoice_settings?.default_payment_method
   if (!defaultPm) {
     const err: SeatBillingError = {
@@ -87,13 +66,7 @@ async function resolveOwnerCustomer(ownerId: string): Promise<Stripe.Customer> {
   return customer as Stripe.Customer
 }
 
-/**
- * Creates a Stripe subscription for a seat charge.
- * Tags the sub with rich metadata + a human-readable description so the
- * owner's Stripe Dashboard reads like a team roster.
- *
- * Throws SeatBillingError if owner has no card / customer.
- */
+
 export async function createSeatSubscription(
   params: CreateSeatParams
 ): Promise<SeatBillingSuccess> {
@@ -118,9 +91,9 @@ export async function createSeatSubscription(
     proration_behavior: 'none',
   })
 
-  // Stripe types: current_period_start/end live on the subscription items in
-  // newer API versions (Dahlia included). Fall back to subscription-level if
-  // present for compatibility.
+  
+  
+  
   const periodStart =
     (subscription as any).current_period_start ??
     subscription.items.data[0]?.current_period_start ??
@@ -137,13 +110,7 @@ export async function createSeatSubscription(
   }
 }
 
-/**
- * Cancels a seat subscription immediately.
- * Per Q2=B: no proration / no refund. Owner pays out the current period.
- *
- * If the seat's stripe_subscription_id is null (e.g. legacy pending row from
- * Batch 3 that never got Stripe-wired), this is a no-op.
- */
+
 export async function cancelSeatSubscription(
   stripeSubscriptionId: string | null
 ): Promise<{ canceled: boolean; reason?: string }> {
@@ -153,13 +120,13 @@ export async function cancelSeatSubscription(
 
   try {
     await stripe.subscriptions.cancel(stripeSubscriptionId, {
-      // No prorate — owner already paid this period
+      
       prorate: false,
       invoice_now: false,
     } as any)
     return { canceled: true }
   } catch (err: any) {
-    // If sub was already canceled or doesn't exist, treat as success
+    
     if (err?.code === 'resource_missing' || err?.message?.includes('already canceled')) {
       return { canceled: true, reason: 'Already canceled in Stripe' }
     }
@@ -167,16 +134,7 @@ export async function cancelSeatSubscription(
   }
 }
 
-/**
- * Returns whether an owner can currently be charged for a seat — i.e. they
- * have a Stripe customer with a default payment method on file. Reuses the
- * exact check createSeatSubscription performs (resolveOwnerCustomer), so a
- * code minted while this returns true won't later fail on no_card at redeem.
- *
- * Never throws: converts the SeatBillingError into a typed result the caller
- * can branch on without try/catch. Used by /api/teams/codes/create to gate
- * single-use owner-pays partner links at mint time.
- */
+
 export async function ownerCanBeCharged(
   ownerId: string
 ): Promise<{ ok: true } | { ok: false; code: SeatBillingError['code']; message: string }> {
@@ -191,9 +149,7 @@ export async function ownerCanBeCharged(
   }
 }
 
-/**
- * Type guard for SeatBillingError thrown from helpers above.
- */
+
 export function isSeatBillingError(err: any): err is SeatBillingError {
   return err && typeof err === 'object' && 'code' in err && 'message' in err
 }

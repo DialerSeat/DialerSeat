@@ -10,17 +10,6 @@ const PROJECT_ID = process.env.SIGNALWIRE_PROJECT_ID!
 const API_TOKEN = process.env.SIGNALWIRE_API_TOKEN!
 const SPACE_URL = process.env.SIGNALWIRE_SPACE_URL!
 
-/**
- * One-shot admin endpoint: imports the legacy SIGNALWIRE_PHONE_NUMBER (the
- * single number that existed before the pool was built) into the phone_numbers
- * table so it shows up on the dashboard and gets full pool tracking.
- *
- * Idempotent — re-running just confirms it's already imported, doesn't error.
- *
- * Usage (one time, from DevTools console while logged in as admin):
- *   fetch('/api/admin/pool/import-existing', { method: 'POST' })
- *     .then(r => r.json()).then(console.log)
- */
 export async function POST() {
   try {
     const gate = await requireAdmin()
@@ -33,7 +22,6 @@ export async function POST() {
       }, { status: 400 })
     }
 
-    // Idempotency: if we already imported it, just return the existing row
     const { data: existing } = await supabase
       .from('phone_numbers')
       .select('*')
@@ -48,7 +36,6 @@ export async function POST() {
       })
     }
 
-    // Look up the number in SignalWire to get the SID and metadata
     const authHeader = 'Basic ' + Buffer.from(`${PROJECT_ID}:${API_TOKEN}`).toString('base64')
     const lookupUrl = `https://${SPACE_URL}/api/laml/2010-04-01/Accounts/${PROJECT_ID}/IncomingPhoneNumbers.json?PhoneNumber=${encodeURIComponent(legacyNumber)}`
 
@@ -76,7 +63,6 @@ export async function POST() {
     const areaCode = extractAreaCode(legacyNumber)
     const info = areaCode ? getAreaCodeInfo(areaCode) : null
 
-    // Insert the pool row with all metadata derived from area code lookup
     const { data: inserted, error: insertErr } = await supabase
       .from('phone_numbers')
       .insert({
@@ -90,7 +76,7 @@ export async function POST() {
         daily_cap: 50,
         lifetime_call_count: 0,
         monthly_cost_cents: 100,
-        // We don't know the real acquired_at, use SignalWire's date_created if available
+
         acquired_at: swNumber.date_created
           ? new Date(swNumber.date_created).toISOString()
           : new Date().toISOString(),

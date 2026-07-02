@@ -3,25 +3,25 @@ import { auth } from '@clerk/nextjs/server'
 import { requireAdmin } from '@/lib/admin'
 import { createClient } from '@supabase/supabase-js'
 
-// =============================================================================
-// /api/admin/support — admin support feed (read + update)
-// =============================================================================
-// Backs the admin support desktop app. Admin-only (requireAdmin, same guard as
-// the other admin routes — it throws a Response on failure).
-//
-// GET  ?type=support|bug|exit  ?status=new|open|responded|resolved|closed
-//      ?limit=  → { success, submissions: [...] }
-//      Both filters optional; omitting them returns the whole feed (most recent
-//      first). The app uses ?type to drive its three tabs.
-//
-// PATCH { id, status?, disposition?, response_body?, response_channel? }
-//      → { success, submission }
-//      Updates workflow fields. When response_body is provided we stamp
-//      responded_at / responded_by (the admin's clerk_id) and, unless an
-//      explicit status is passed, move the row to 'responded'.
-//
-// force-dynamic: admin data, never cached.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 export const dynamic = 'force-dynamic'
 
@@ -105,7 +105,7 @@ export async function PATCH(req: NextRequest) {
   if (typeof body.status === 'string' && VALID_STATUS.includes(body.status)) {
     patch.status = body.status
   } else if (patch.response_body) {
-    // Responded but no explicit status → mark as responded.
+    
     patch.status = 'responded'
   }
 

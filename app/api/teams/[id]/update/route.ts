@@ -3,11 +3,6 @@ import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 
-/**
- * Owner updates team metadata (name, description).
- * Only the team owner can update; this is enforced by .eq('owner_id', userId)
- * on the update query — non-owners get 0 rows updated and a 404.
- */
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }

@@ -3,9 +3,9 @@ import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 
-// =============================================================================
-// BUILD FIX — force-dynamic to bypass static-generation hang
-// =============================================================================
+
+
+
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 

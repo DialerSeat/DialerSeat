@@ -3,16 +3,6 @@ import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 
-/**
- * Owner rejects a pending member.
- *
- * Sets status to 'removed', clears any pre-staged access rows, voids the
- * pending seat_charges row. No money has moved yet (member was pending),
- * so no refund logic needed.
- *
- * Body:
- *   memberId: uuid (required)
- */
 export async function POST(req: Request) {
   try {
     const { userId } = await auth()
@@ -51,7 +41,6 @@ export async function POST(req: Request) {
       )
     }
 
-    // Mark removed
     await supabaseAdmin
       .from('team_members')
       .update({
@@ -60,14 +49,12 @@ export async function POST(req: Request) {
       })
       .eq('id', memberId)
 
-    // Hard-delete pre-staged access rows (they were never active)
     await supabaseAdmin
       .from('team_campaign_access')
       .delete()
       .eq('team_member_id', memberId)
       .eq('is_active', false)
 
-    // Void any pending seat charge
     await supabaseAdmin
       .from('team_seat_charges')
       .update({ status: 'voided' })

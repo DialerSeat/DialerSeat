@@ -1,19 +1,19 @@
 import type { MetadataRoute } from 'next'
 import { headers } from 'next/headers'
 
-// =============================================================================
-// app/robots.ts — HOST-AWARE robots (v2)
-// =============================================================================
-// Same careful bot allow/deny policy as before, but now host-aware so each
-// hostname advertises ITS OWN sitemap + the master sitemap index:
-//   - dialerseat.com/robots.txt        → sitemap: dialerseat.com/sitemap.xml
-//                                         sitemap: dialerseat.com/sitemap-index.xml
-//   - water.dialerseat.com/robots.txt   → sitemap: water.dialerseat.com/sitemap.xml
-//
-// The OLD version hardcoded https://dialerseat.com as host + sitemap, so every
-// subdomain's robots pointed crawlers back at the apex and never advertised the
-// subdomain's own sitemap. Now each host self-references.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -24,8 +24,8 @@ const IS_PRODUCTION =
   process.env.VERCEL_ENV === 'production' ||
   (process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV)
 
-// Bots we explicitly invite. Each gets its own rule block so we read as a
-// positive signal (some bots only honor explicit naming).
+
+
 const SEARCH_BOTS = [
   'Googlebot',
   'Googlebot-Image',
@@ -37,24 +37,24 @@ const SEARCH_BOTS = [
 ]
 
 const AI_BOTS = [
-  // OpenAI
+  
   'GPTBot',
   'ChatGPT-User',
   'OAI-SearchBot',
-  // Anthropic
+  
   'ClaudeBot',
   'Claude-Web',
   'anthropic-ai',
-  // Perplexity
+  
   'PerplexityBot',
   'Perplexity-User',
-  // Google AI (Gemini training + retrieval)
+  
   'Google-Extended',
   'GoogleOther',
-  // Apple Intelligence
+  
   'Applebot',
   'Applebot-Extended',
-  // Other major
+  
   'Bytespider', // ByteDance / TikTok
   'Meta-ExternalAgent',
   'FacebookBot',
@@ -65,7 +65,7 @@ const AI_BOTS = [
   'MistralAI-User',
 ]
 
-// Authed routes — never indexed.
+
 const DISALLOW_PRIVATE = [
   '/api/',
   '/dashboard/',
@@ -74,9 +74,9 @@ const DISALLOW_PRIVATE = [
   '/welcome', // post-signup showcase — not a public landing page
   '/sign-in/',
   '/sign-up/',
-  // Icon / asset ROUTES that Next generates and Google can mistakenly index as
-  // pages (this is why "dialerseat.com/apple-icon" showed up as a search
-  // result). These are images, not pages — keep them out of the index.
+  
+  
+  
   '/apple-icon',
   '/apple-icon/',
   '/icon',
@@ -110,7 +110,7 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
   const base = `https://${host}`
   const apex = `https://${ROOT_DOMAIN}`
 
-  // Non-production (Vercel previews, local dev): block everything.
+  
   if (!IS_PRODUCTION) {
     return {
       rules: [{ userAgent: '*', disallow: '/' }],
@@ -118,22 +118,22 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
     }
   }
 
-  // Each host advertises its OWN sitemap. The apex additionally advertises the
-  // master sitemap index so crawlers discover every subdomain from one file.
+  
+  
   const sitemap = slug
     ? [`${base}/sitemap.xml`]
     : [`${apex}/sitemap.xml`, `${apex}/sitemap-index.xml`]
 
   return {
     rules: [
-      // Explicit allow for every named search engine + AI crawler.
+      
       ...SEARCH_BOTS.map((userAgent) => ({ userAgent, allow: '/' })),
       ...AI_BOTS.map((userAgent) => ({ userAgent, allow: '/' })),
-      // Block Common Crawl — the dataset most rogue training scrapers pull
-      // from. Blocking CCBot is the biggest opt-out signal you can send without
-      // blocking the AI assistants themselves.
+      
+      
+      
       { userAgent: 'CCBot', disallow: '/' },
-      // Default catch-all.
+      
       { userAgent: '*', allow: '/', disallow: DISALLOW_PRIVATE },
     ],
     sitemap,

@@ -3,9 +3,6 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { requireUser } from '@/lib/requireUser'
 import { apiError } from '@/lib/apiError'
 
-// SECURITY (was IDOR): scoped only by client-supplied ?user_id with no auth.
-// Identity now comes from the Clerk session.
-
 export async function GET(req: NextRequest) {
   const gate = await requireUser()
   if (!gate.ok) return gate.response
@@ -24,9 +21,6 @@ export async function GET(req: NextRequest) {
     return apiError(error, { route: 'analytics/dispositions' })
   }
 
-  // Only these dispositions appear in analytics — the ones the dialer actually
-  // accepts after a call, plus NO ANSWER. Everything else the system generates
-  // (completed, failed, TCPA_BLOCKED, NO_ANSWER_AMD, ABANDONED, etc.) is excluded.
   const ALLOWED = new Set([
     'CLOSED', 'APPOINTMENT', 'NOT INTERESTED', 'DO NOT CALL', 'SKIPPED', 'NO ANSWER',
   ])
@@ -34,7 +28,7 @@ export async function GET(req: NextRequest) {
   const counts: Record<string, number> = {}
   for (const c of data || []) {
     let d = c.disposition || 'NO ANSWER'
-    // Fold the raw/system no-answer variants into the single clean bucket.
+
     if (d === 'NO_ANSWER' || d === 'NO_ANSWER_AMD') d = 'NO ANSWER'
     if (!ALLOWED.has(d)) continue
     counts[d] = (counts[d] || 0) + 1

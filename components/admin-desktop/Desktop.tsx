@@ -10,55 +10,55 @@ import { DesktopServicesContext, isBaseApp, uninstallWarns, DEFAULT_HIDDEN_APP_I
 import type { AppId, AppRole, WindowState, RecentApp } from './types'
 import { appVisibleToRole } from './types'
 
-// =============================================================================
-// DESKTOP — root shell component
-// =============================================================================
-// v25 changes vs v24.1:
-// - CLEAN DEFAULT ARRANGEMENT (restore): unsaved icons fill ROW-MAJOR across
-//   4 columns (left-to-right, then next row) — the tidy v22 grid look —
-//   instead of v24's tall first column. Grid snapping, no-overlap cells, and
-//   layout freezing are unchanged; only the DEFAULT placement order differs.
-//   "Reset icon layout" returns to this arrangement.
-// - XP AUTUMN WALLPAPER: uses `contain` so the FULL image is shown uncropped
-//   (JC: "not zoomed in, the full version"). On screens whose aspect ratio
-//   differs from the image's 3:2, this leaves a BLACK mat (#000000) on the
-//   short sides — the intended tradeoff for showing the whole picture rather
-//   than cropping it as `cover` did.
-// - TASKBAR PILL REORDER: new reorderWindows(dragId, targetId) moves a
-//   window within the windows array (pill order = array order, zIndex
-//   untouched); passed to Taskbar v2 as onReorderWindows.
-// - ICON RESTYLE (de-cheese pass): smaller squircle tiles (52px, radius 12),
-//   glossy inset highlight removed, softer shadow, slightly smaller emoji,
-//   subtle desaturation. Plus iconSrc support — registry entries that set
-//   iconSrc render a real image instead of the emoji (types v3).
-// - ACCOUNT HIDDEN BY DEFAULT: initial hiddenApps falls back to
-//   DEFAULT_HIDDEN_APP_IDS (['clerk-profile']) when no localStorage cache
-//   exists; server-side defaults handled by prefs route v3 + migration 014.
-//   ADD TO DESKTOP in the App Store still restores it permanently.
-//
-// v24.1: open-desktop-app event listener (Account window repair).
-// v24: grid snapping, wallpaper drag-drop, OG presets, App Store system.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 const MOBILE_BREAKPOINT = 768
 const TASKBAR_VISIBLE_HEIGHT = 48
-// Persistence is namespaced by role so an admin and a manager on the same
-// browser never collide. Admin keys keep their original v1 strings so existing
-// admin desktops load unchanged; manager gets its own namespace + its own API.
+
+
+
 function lsKeyFor(role: AppRole): string {
   return role === 'admin' ? 'ds:admin-desktop:v1' : `ds:${role}-desktop:v1`
 }
 function prefsLsKeyFor(role: AppRole): string {
   return role === 'admin' ? 'ds:admin-desktop:prefs:v1' : `ds:${role}-desktop:prefs:v1`
 }
-// API base for prefs + wallpaper. Admin → /api/admin/desktop-prefs (unchanged).
-// Manager → /api/manager/desktop-prefs (route to be added; until it exists the
-// fetches fail soft and the manager desktop persists via localStorage only).
+
+
+
 function prefsApiBaseFor(role: AppRole): string {
   return role === 'admin' ? '/api/admin/desktop-prefs' : `/api/${role}/desktop-prefs`
 }
 
-// ── ICON GRID (the invisible Windows grid) ──────────────────────────────────
+
 const ICON_W = 96
 const ICON_H = 92
 const CELL_W = 110
@@ -67,17 +67,17 @@ const GRID_X = 20   // grid origin
 const GRID_Y = 20
 const DEFAULT_FILL_COLS = 4   // v25: default arrangement = 4-wide rows (v22 look)
 
-// Per-role default arrangement. Admin keeps the 4-wide row-major grid. Manager+
-// defaults to a single column down the left (Dashboard, Analytics, Teams, App
-// Store, top→bottom). Once a user drags an icon, their saved positions win and
-// this no longer applies.
+
+
+
+
 function defaultFillColsFor(role: AppRole): number {
   return role === 'manager' ? 1 : DEFAULT_FILL_COLS
 }
 
-// Explicit default placement order for the manager desktop, top→bottom. Apps
-// not listed fall back to registry order after these. Ids the manager can't see
-// (or that aren't installed/visible) are simply skipped.
+
+
+
 const MANAGER_DEFAULT_ORDER: string[] = ['dashboard', 'analytics', 'teams', 'appstore']
 
 function gridDims(vw: number, vh: number, taskbarH: number) {
@@ -100,8 +100,8 @@ function xyToCell(x: number, y: number) {
 
 const cellKey = (c: number, r: number) => `${c},${r}`
 
-// Nearest unoccupied cell to (c0, r0), searching outward ring by ring.
-// Falls back to (c0, r0) if the entire grid is full (overlap as last resort).
+
+
 function nearestFreeCell(
   c0: number, r0: number,
   cols: number, rows: number,
@@ -123,7 +123,7 @@ function nearestFreeCell(
   return { c: c0, r: r0 }
 }
 
-// ── BACKGROUNDS ──────────────────────────────────────────────────────────────
+
 type BgSetting = { type: 'preset' | 'solid' | 'image'; value: string }
 
 const DEFAULT_BG_CSS = `
@@ -132,10 +132,10 @@ const DEFAULT_BG_CSS = `
   linear-gradient(180deg, #1a3a6a 0%, #4a7ab0 50%, #82a6cf 100%)
 `
 
-// OG wallpapers. Hotlinks can break or rate-limit — the durable setup is:
-// download each image, drop it in /public/wallpapers/, and swap the url to
-// '/wallpapers/<file>.jpg'. To add more OGs (Bliss, Vista Aurora, Win 10
-// Hero...), save the file and add an entry — nothing else needed.
+
+
+
+
 const BG_PRESETS: { id: string; name: string; css: string }[] = [
   { id: 'aero', name: 'AERO (DEFAULT)', css: DEFAULT_BG_CSS },
   {
@@ -169,15 +169,15 @@ const BG_PRESETS: { id: string; name: string; css: string }[] = [
     css: `#1a3a6a url("https://wallpapers.com/images/hd/windows-7-background-imfecqv6cnsicbx4.jpg") center / cover no-repeat`,
   },
   {
-    // XP Autumn. Uses the smart-cropped preview.redd.it render with `cover`
-    // so it fills the screen edge-to-edge — no side bars. (The earlier
-    // i.redd.it + `contain` combo showed a dark mat as bars on wide screens.)
+    
+    
+    
     id: 'bliss',
     name: 'XP AUTUMN',
     css: `#000000 url("https://preview.redd.it/finally-windows-xps-autumn-wallpaper-in-full-res-4200x2800-v0-3ma6nhepxbb81.jpg?width=1080&crop=smart&auto=webp&s=e3747c3ccf8c439969200d2d67fb06d3f3738138") center / contain no-repeat`,
   },
-  // { id: 'vista', name: 'VISTA AURORA', css: `#0d2a1a url("/wallpapers/vista-aurora.jpg") center / cover no-repeat` },
-  // { id: 'win10', name: 'WIN 10 HERO', css: `#0a2a4a url("/wallpapers/win10-hero.jpg") center / cover no-repeat` },
+  
+  
 ]
 
 function bgCssFor(bg: BgSetting | null): string {
@@ -199,10 +199,10 @@ interface PersistedState {
   topZ: number
 }
 
-// Apps that must NEVER be restored as open windows on boot. The Dashboard app
-// is a "navigate away" launcher — restoring it as an open window (the desktop
-// remembers last-session windows) caused a redirect loop. We drop these from
-// the restored window set; they only ever open by an explicit click.
+
+
+
+
 const NEVER_RESTORE_APP_IDS: string[] = ['dashboard']
 
 function loadPersistedState(role: AppRole): PersistedState | null {
@@ -212,8 +212,8 @@ function loadPersistedState(role: AppRole): PersistedState | null {
     if (!raw) return null
     const parsed = JSON.parse(raw) as PersistedState
     if (!Array.isArray(parsed.windows)) return null
-    // Filter out never-restore apps so a leftover Dashboard window from a prior
-    // session can't reopen (and, with old builds, re-trigger the redirect loop).
+    
+    
     const windows = parsed.windows.filter(w => !NEVER_RESTORE_APP_IDS.includes(w.appId))
     const dropped = windows.length !== parsed.windows.length
     const focusedId = (parsed.focusedId && windows.some(w => w.id === parsed.focusedId))
@@ -279,9 +279,9 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
   const [topZ, setTopZ] = useState(initial?.topZ ?? 100)
   const [startMenuOpen, setStartMenuOpen] = useState(false)
   const [contextMenu, setContextMenu] = useState<RightClickState | null>(null)
-  // App pending an uninstall confirm via the desktop right-click menu. Only set
-  // for apps in UNINSTALL_WARN_APP_IDS (e.g. Notes) so the same "all data will
-  // be deleted" warning the App Store shows also gates the icon's Uninstall.
+  
+  
+  
   const [confirmUninstallId, setConfirmUninstallId] = useState<AppId | null>(null)
   const [recentApps, setRecentApps] = useState<RecentApp[]>([])
   const [isMobile, setIsMobile] = useState(false)
@@ -292,13 +292,13 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
     h: typeof window !== 'undefined' ? window.innerHeight : 800,
   })
 
-  // ── prefs state ──────────────────────────────────────────────────────────
+  
   const [iconPositions, setIconPositions] = useState<Record<string, { x: number; y: number }>>(
     initialPrefs?.iconPositions ?? {}
   )
   const [background, setBackground] = useState<BgSetting | null>(initialPrefs?.background ?? null)
   const [installedApps, setInstalledApps] = useState<string[]>(initialPrefs?.installedApps ?? [])
-  // v25: no cache → default-hidden apps apply (server enforces the same)
+  
   const [hiddenApps, setHiddenApps] = useState<string[]>(
     initialPrefs?.hiddenApps ?? [...DEFAULT_HIDDEN_APP_IDS]
   )
@@ -306,21 +306,21 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
   const [personalizeOpen, setPersonalizeOpen] = useState(false)
   const prefsSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // ── drag + wallpaper transient state ─────────────────────────────────────
+  
   const [dragGhost, setDragGhost] = useState<{ appId: AppId; x: number; y: number } | null>(null)
   const [wallpaperBusy, setWallpaperBusy] = useState(false)
   const [wallpaperError, setWallpaperError] = useState<string | null>(null)
 
   const TASKBAR_HEIGHT = TASKBAR_VISIBLE_HEIGHT + safeAreaBottom
 
-  // ── APP VISIBILITY ───────────────────────────────────────────────────────
-  // Two independent gates:
-  //   1. ROLE (visibleTo) — does this app exist for this desktop at all?
-  //      Admin sees everything; manager sees only apps opted into 'manager'.
-  //      This is what keeps one registry driving both desktops in lockstep.
-  //   2. INSTALL/HIDE — App Store state, unchanged from before.
-  // Role is checked FIRST so a manager can never install/unhide an admin-only
-  // app (it isn't in their roleApps set to begin with).
+  
+  
+  
+  
+  
+  
+  
+  
   const roleApps = useMemo(
     () => APPS.filter(a => appVisibleToRole(a, role)),
     [role]
@@ -338,7 +338,7 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
     [roleApps, isInstalled]
   )
 
-  // ── MOBILE DETECTION + VIEWPORT ──────────────────────────────────────────
+  
   useEffect(() => {
     const check = () => {
       setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
@@ -353,7 +353,7 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
     }
   }, [])
 
-  // ── SAFE-AREA-BOTTOM PROBE (for window math only) ────────────────────────
+  
   useEffect(() => {
     const probe = document.createElement('div')
     probe.style.cssText =
@@ -373,16 +373,16 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
     }
   }, [])
 
-  // ── PERSIST WINDOW STATE ─────────────────────────────────────────────────
+  
   useEffect(() => {
     savePersistedState(role, { windows, focusedId, topZ })
   }, [windows, focusedId, topZ, role])
 
-  // ── LOAD PREFS FROM SUPABASE (LS cache already painted) ──────────────────
-  // Admin → /api/admin/desktop-prefs. Manager → /api/manager/desktop-prefs
-  // (until that route exists the fetch fails soft; the LS cache already
-  // painted the desktop, so the manager still gets a working, locally-
-  // persisted layout). prefsApiBaseFor() picks the right endpoint by role.
+  
+  
+  
+  
+  
   useEffect(() => {
     let cancelled = false
     fetch(prefsApiBaseFor(role))
@@ -403,7 +403,7 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
     return () => { cancelled = true }
   }, [role])
 
-  // ── PERSIST PREFS (LS immediately, Supabase debounced 800ms) ─────────────
+  
   useEffect(() => {
     if (!prefsLoaded) return
     try {
@@ -424,11 +424,11 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
     }
   }, [iconPositions, background, installedApps, hiddenApps, prefsLoaded, role])
 
-  // ── GRID LAYOUT ──────────────────────────────────────────────────────────
-  // Pass 1: icons with saved positions snap to their cell (collisions bumped
-  // to nearest free). Pass 2 (v25): unsaved icons fill ROW-MAJOR across 4
-  // columns (left-to-right, then next row) — the clean v22 arrangement —
-  // overflowing into columns 5+ only if the 4-wide block runs out of rows.
+  
+  
+  
+  
+  
   const desktopLayout = useMemo(() => {
     const { cols, rows } = gridDims(viewport.w, viewport.h, TASKBAR_HEIGHT)
     const occupied = new Set<string>()
@@ -450,8 +450,8 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
 
     const fillCols = Math.min(defaultFillColsFor(role), cols)
     const placeDefault = (appId: string): void => {
-      // primary block: fillCols-wide row-major (admin: 4-wide; manager: 1-wide
-      // = a single left column, top→bottom)
+      
+      
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < fillCols; c++) {
           if (occupied.has(cellKey(c, r))) continue
@@ -460,7 +460,7 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
           return
         }
       }
-      // overflow: remaining columns, column-major
+      
       for (let c = fillCols; c < cols; c++) {
         for (let r = 0; r < rows; r++) {
           if (occupied.has(cellKey(c, r))) continue
@@ -472,9 +472,9 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
       layout[appId] = cellToXY(0, 0) // grid full fallback
     }
 
-    // Order unsaved icons. Manager: explicit MANAGER_DEFAULT_ORDER first (so the
-    // left column reads Dashboard, Analytics, Teams, App Store), then any other
-    // visible apps in registry order. Admin: plain registry order.
+    
+    
+    
     const unplaced = visibleApps.filter(app => !layout[app.id])
     const orderedUnplaced =
       role === 'manager'
@@ -496,7 +496,7 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
   const layoutRef = useRef(desktopLayout)
   layoutRef.current = desktopLayout
 
-  // During drag: free-floating ghost, pixel-clamped to the desktop area
+  
   const handleIconDrag = useCallback((appId: AppId, x: number, y: number) => {
     const maxX = Math.max(0, viewport.w - ICON_W)
     const maxY = Math.max(0, viewport.h - TASKBAR_HEIGHT - ICON_H)
@@ -507,8 +507,8 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
     })
   }, [viewport, TASKBAR_HEIGHT])
 
-  // On release: snap to nearest free cell, freeze the whole layout so nothing
-  // else reflows, preserve saved spots of hidden icons.
+  
+  
   const handleIconDragEnd = useCallback((appId: AppId, dropX: number, dropY: number) => {
     const { cols, rows } = gridDims(viewport.w, viewport.h, TASKBAR_HEIGHT)
     const frozen: Record<string, { x: number; y: number }> = {}
@@ -530,7 +530,7 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
     }
     frozen[appId] = cellToXY(c, r)
 
-    // Keep saved positions of icons not currently on the desktop (hidden apps)
+    
     setIconPositions(prev => {
       const next: Record<string, { x: number; y: number }> = { ...frozen }
       for (const [id, pos] of Object.entries(prev)) {
@@ -545,7 +545,7 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
     setIconPositions({})
   }, [])
 
-  // ── APP STORE SERVICES ───────────────────────────────────────────────────
+  
   const installApp = useCallback((id: AppId) => {
     if (isBaseApp(id, role)) return // base apps are always installed
     setInstalledApps(prev => prev.includes(id) ? prev : [...prev, id])
@@ -562,7 +562,7 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
       delete next[id]
       return next
     })
-    // Close any open windows of the uninstalled app
+    
     setWindows(prev => {
       const next = prev.filter(w => w.appId !== id)
       if (next.length !== prev.length) {
@@ -572,10 +572,10 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
     })
   }, [])
 
-  // Right-click "Uninstall" routes through this: if the app warns on uninstall
-  // (data loss, e.g. Notes), open the confirm modal instead of uninstalling
-  // immediately; otherwise uninstall straight away. This mirrors the App
-  // Store's guard so both entry points show the same warning.
+  
+  
+  
+  
   const requestUninstall = useCallback((id: AppId) => {
     if (isBaseApp(id, role)) return
     if (uninstallWarns(id)) {
@@ -596,8 +596,8 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
   const openApp = useCallback((appId: AppId, hint?: PositionHint) => {
     const app = getApp(appId)
     if (!app) return
-    // Role gate: never open an app this role isn't allowed to see, even if a
-    // stray id reaches openApp (Start menu, context menu, boot, custom event).
+    
+    
     if (!appVisibleToRole(app, role)) return
 
     if (app.external) {
@@ -656,7 +656,7 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
     })
   }, [topZ, TASKBAR_HEIGHT, role])
 
-  // ── OPEN-DESKTOP-APP EVENT LISTENER (v24.1 repair) ───────────────────────
+  
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail
@@ -668,7 +668,7 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
     return () => window.removeEventListener('open-desktop-app', handler)
   }, [openApp])
 
-  // ── v25: TASKBAR PILL REORDER ────────────────────────────────────────────
+  
   const reorderWindows = useCallback((dragId: string, targetId: string) => {
     if (dragId === targetId) return
     setWindows(prev => {
@@ -815,7 +815,7 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
     })
   }, [focusedId, topZ])
 
-  // ── WALLPAPER DRAG-AND-DROP ──────────────────────────────────────────────
+  
   const onRootDragOver = (e: React.DragEvent) => {
     if (e.dataTransfer?.types?.includes('Files')) e.preventDefault()
   }
@@ -849,20 +849,20 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
     return () => clearTimeout(id)
   }, [wallpaperError])
 
-  // ── CONTEXT MENUS ────────────────────────────────────────────────────────
+  
   const onDesktopContextMenu = (e: React.MouseEvent) => {
     if (e.target !== e.currentTarget) return
     e.preventDefault()
     setContextMenu({ type: 'desktop', x: e.clientX, y: e.clientY })
   }
 
-  // ── MOBILE LONG-PRESS → desktop context menu ───────────────────────────
-  // Touch devices don't reliably fire onContextMenu from tap-and-hold, so we
-  // synthesize it: a 500ms timer started on touchstart fires the desktop
-  // menu at the touch point. Canceled if the finger moves >10px (a scroll or
-  // drag) or lifts before the timer elapses. Only binds on the empty desktop
-  // background — touches that start on an icon are ignored here (icons have
-  // their own handling).
+  
+  
+  
+  
+  
+  
+  
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const longPressStart = useRef<{ x: number; y: number } | null>(null)
 
@@ -875,7 +875,7 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
   }, [])
 
   const onDesktopTouchStart = (e: React.TouchEvent) => {
-    // Only the empty background, and only single-finger presses.
+    
     if (e.target !== e.currentTarget || e.touches.length !== 1) return
     const t = e.touches[0]
     longPressStart.current = { x: t.clientX, y: t.clientY }
@@ -886,7 +886,7 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
       if (p) {
         if (startMenuOpen) setStartMenuOpen(false)
         setContextMenu({ type: 'desktop', x: p.x, y: p.y })
-        // haptic nudge where supported
+        
         if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
           try { navigator.vibrate(10) } catch {}
         }
@@ -1205,9 +1205,9 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
   )
 }
 
-// =============================================================================
-// PERSONALIZE POPUP — background picker dialog
-// =============================================================================
+
+
+
 function PersonalizePopup({
   background, onSetBackground, onClose,
 }: {
@@ -1414,14 +1414,14 @@ function PersonalizePopup({
   )
 }
 
-// =============================================================================
-// DESKTOP ICON
-// =============================================================================
-// v25 restyle (de-cheese pass): smaller squircle tile, no glossy inset
-// highlight, softer shadow, subtle desaturation, smaller glyph. Renders
-// iconSrc image when the registry provides one. Drag behavior unchanged from
-// v24: onDrag drives the ghost, onDragEnd snaps to the nearest free cell, 5px
-// threshold separates drags from clicks. Mobile: grid layout, tap to open.
+
+
+
+
+
+
+
+
 function DesktopIcon({
   name, icon, iconSrc, iconBg, isOpen, onDoubleClick, onContextMenu, isMobile,
   x, y, isGhosting, onDrag, onDragEnd,

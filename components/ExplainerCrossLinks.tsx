@@ -1,13 +1,13 @@
 import Link from 'next/link'
 
-// Bottom-of-page cross-link grid linking the explainer pages together.
-// The `current` page is dimmed and non-clickable so visitors aren't sent
-// back to the page they're already on.
-//
-// `compliance-why` → /faq/why-is-compliance-important (the rationale)
-// `compliance-how` → /faq/how-we-keep-compliance     (the mechanisms)
-// `pricing`        → /faq/why-we-charge              (pricing breakdown)
-// `teams`          → /faq/dialerseat-teams           (teams + Manager+)
+
+
+
+
+
+
+
+
 
 type Explainer =
   | 'preview'

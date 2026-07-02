@@ -5,22 +5,22 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useBranding } from '@/components/ThemeProvider'
 
-// =============================================================================
-// /sign-in — branded sign-in (v27 — co-branding mark + optional partner link)
-// =============================================================================
-// v27 changes vs v26:
-//   - When a tenant brand is active (logoUrl present), the tagline line is
-//     replaced by an on-dark co-branding mark: "<Brand> × DialerSeat",
-//     plus the tenant's optional login link (label + clickable text + url) read
-//     from useBranding(). Default DialerSeat (no tenant) keeps the original
-//     "WELCOME BACK" tagline and DIALERSEAT wordmark — no mark shown there, since
-//     "DialerSeat × DialerSeat" would be silly.
-//   - The mark is fixed-format and non-removable per spec; the link is optional
-//     and only renders when the tenant set both clickable text and a URL.
-//
-// v26: page bg → var(--brand-sidebar-bg); wordmark/tagline colors derived;
-//      Clerk widget themed dark via appearance. (unchanged below)
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 const FUTURA = 'Futura PT, Futura, "Trebuchet MS", sans-serif'
 
@@ -31,8 +31,8 @@ export default function SignInPage() {
   const colorBackground = branding?.sidebar_color || '#111118'
   const colorPrimary = branding?.primary_color || '#4a9eff'
 
-  // A tenant brand is "active" when we have a logo (white-label context). Only
-  // then do we show the "<Brand> × DialerSeat" mark + optional partner link.
+  
+  
   const isTenant = !!logoUrl
   const loginLinkLabel = branding?.login_link_label || null
   const loginLinkText = branding?.login_link_text || null
@@ -46,8 +46,8 @@ export default function SignInPage() {
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      // Lift the whole block up a touch: with center justification, a larger
-      // bottom pad than top pad shifts the contents noticeably upward.
+      
+      
       padding: '40px 20px 96px',
     }}>
       <style>{`
@@ -69,9 +69,9 @@ export default function SignInPage() {
             justifyContent: 'center',
             gap: logoUrl ? 0 : '12px',
             marginBottom: '16px',
-            // Differentiated positioning: the tenant logo (a tall 256×74 image)
-            // sat too high, so nudge it down. The default DialerSeat wordmark
-            // (short D-box + text) already sits right, so leave it at 0.
+            
+            
+            
             position: 'relative',
             top: logoUrl ? '44px' : '0px',
             textDecoration: 'none',
@@ -119,9 +119,9 @@ export default function SignInPage() {
         </Link>
 
         {isTenant ? (
-          // Co-branding mark + optional partner link. Colors come from the
-          // brand vars; on the dark sign-in bg we pass explicit on-dark colors
-          // so the mark reads correctly against the sidebar background.
+          
+          
+          
           <div style={{ marginTop: 40 }}>
             <CoBrandOnDark
               brandName={branding?.brand_name || 'Brand'}
@@ -245,9 +245,9 @@ export default function SignInPage() {
   )
 }
 
-// Co-branding mark + optional link, styled for the DARK sign-in background.
-// (TenantLoginBrand is tuned for light tenant pages; the sign-in page is dark,
-// so we render an on-dark variant here with the same structure + icon.)
+
+
+
 function CoBrandOnDark({
   brandName,
   linkLabel,

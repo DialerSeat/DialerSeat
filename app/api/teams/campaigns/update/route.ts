@@ -3,18 +3,6 @@ import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 
-/**
- * Owner changes the access_mode of a team-campaign link.
- *
- * Per Q1=A: when changing TO 'agent_pays', existing non-paying agents
- * lose access immediately (their team_campaign_access rows get is_active=false).
- * Future grants under the new mode require explicit code redemption or grant.
- *
- * Body:
- *   teamId:     uuid (required)
- *   campaignId: uuid (required)
- *   accessMode: 'owner_pays' | 'agent_pays' | 'public' (required)
- */
 export async function POST(req: Request) {
   try {
     const { userId } = await auth()
@@ -39,7 +27,6 @@ export async function POST(req: Request) {
       )
     }
 
-    // Verify ownership
     const { data: team } = await supabaseAdmin
       .from('teams')
       .select('id, owner_id')
@@ -53,7 +40,6 @@ export async function POST(req: Request) {
       )
     }
 
-    // Update the access_mode
     const { data, error } = await supabaseAdmin
       .from('team_campaigns')
       .update({ access_mode: accessMode })
@@ -70,9 +56,6 @@ export async function POST(req: Request) {
       )
     }
 
-    // If switched to agent_pays, revoke all owner-paid access for this campaign
-    // on this team. Agents who want continued access must subscribe themselves
-    // (or owner can grant manually with new payer='agent').
     let revokedCount = 0
     if (accessMode === 'agent_pays') {
       const { data: revoked } = await supabaseAdmin

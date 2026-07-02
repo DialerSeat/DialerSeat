@@ -6,11 +6,6 @@ import { apiError } from '@/lib/apiError'
 
 const supabase = getServiceClient('admin/pool/release')
 
-/**
- * Admin manual release. Body: { numberId: string, confirm: 'release' }
- * Requires explicit 'release' confirmation string to prevent fat-finger mistakes.
- * Releases the number from SignalWire (stops billing) and marks as 'released' in DB.
- */
 export async function POST(req: Request) {
   const gate = await requireAdmin()
   if (!gate.ok) return NextResponse.json({ error: gate.message }, { status: gate.status })

@@ -1,7 +1,7 @@
 const SITE_URL = 'https://dialerseat.com'
 
-// Site-wide Organization schema. Tells Google + AIs who runs the site.
-// Include on every marketing page.
+
+
 export function organizationSchema() {
   return {
     '@context': 'https://schema.org',
@@ -22,9 +22,9 @@ export function organizationSchema() {
   }
 }
 
-// SoftwareApplication schema for DialerSeat the product.
-// Powers Google product knowledge panels and AI recommendations.
-// Include on landing, pricing, and /vs comparison pages.
+
+
+
 export function softwareApplicationSchema() {
   return {
     '@context': 'https://schema.org',
@@ -75,8 +75,8 @@ export function softwareApplicationSchema() {
   }
 }
 
-// FAQPage schema — produces rich snippets in Google search results.
-// Pass an array of question/answer pairs.
+
+
 export function faqPageSchema(faqs: Array<{ question: string; answer: string }>) {
   return {
     '@context': 'https://schema.org',
@@ -92,8 +92,8 @@ export function faqPageSchema(faqs: Array<{ question: string; answer: string }>)
   }
 }
 
-// BreadcrumbList schema — tells Google the navigation hierarchy.
-// Renders as breadcrumb trail in search results.
+
+
 export function breadcrumbSchema(items: Array<{ name: string; url: string }>) {
   return {
     '@context': 'https://schema.org',
@@ -107,8 +107,8 @@ export function breadcrumbSchema(items: Array<{ name: string; url: string }>) {
   }
 }
 
-// Pre-built FAQ set for the /dialing-modes page.
-// Each Q targets a real Google search ("what is predictive dialing", etc.)
+
+
 export const DIALING_MODES_FAQS = [
   {
     question: 'What is preview dialing?',

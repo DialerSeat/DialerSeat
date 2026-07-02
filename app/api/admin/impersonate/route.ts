@@ -4,29 +4,6 @@ import { requireAdmin } from '@/lib/admin'
 
 const supabase = getServiceClient('admin/impersonate')
 
-// =============================================================================
-// ADMIN IMPERSONATE — demo-view resolver (v1, NEW)
-// =============================================================================
-// POST /api/admin/impersonate  { team_id }
-//   → { success, redirect_url, tenant_slug, scope }
-//
-// HONEST SCOPE — this is a DEMO VIEW resolver, not auth impersonation:
-//   - Validates the team exists, resolves its tenant, and returns the URL
-//     where that team's experience lives (tenant subdomain, or the main
-//     dashboard for tenant-less teams).
-//   - It does NOT sign you in as the team's owner. True sign-in-as-user
-//     requires Clerk actor tokens + a session-banner + audit trail — a
-//     separate dedicated push if wanted.
-//   - Branded rendering on the subdomain also depends on the wildcard
-//     subdomain infrastructure (Vercel domains + DNS + Clerk cookie domain),
-//     which is still on the backlog. Until that ships, the subdomain URL is
-//     returned but may not resolve in production.
-//
-// scope field values:
-//   'tenant-site' — team belongs to a tenant; redirect_url is its subdomain
-//   'main-site'   — tenant-less team; redirect_url is the standard dashboard
-// =============================================================================
-
 const ROOT_DOMAIN = 'dialerseat.com'
 
 export async function POST(req: NextRequest) {

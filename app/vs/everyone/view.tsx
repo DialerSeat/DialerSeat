@@ -21,7 +21,7 @@ const T = {
   amber: '#8a6a1a',
 }
 
-// Wide feature matrix: DialerSeat vs 5 named competitors + composite "others"
+
 type Cell = true | false | string
 
 interface FeatureRow {
@@ -128,7 +128,7 @@ const SWITCHING_FROM = [
 function Cell({ value }: { value: Cell }) {
   if (value === true) return <span style={{ color: T.green, fontSize: 18, fontWeight: 'bold' }}>✓</span>
   if (value === false) return <span style={{ color: T.red, fontSize: 18, fontWeight: 'bold' }}>✕</span>
-  // String values
+  
   const lower = value.toLowerCase()
   let color: string = T.text
   if (lower.includes('add-on') || lower.includes('partial') || lower.includes('variable') || lower.includes('inconsistent') || lower.includes('limited') || lower.includes('only') || lower.includes('tier') || lower.includes('premium') || lower.includes('misses') || lower.includes('custom')) {

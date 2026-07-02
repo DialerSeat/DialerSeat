@@ -6,13 +6,6 @@ import { apiError } from '@/lib/apiError'
 
 const supabase = getServiceClient('admin/pool/config')
 
-/**
- * Admin pool config — read (GET) or update (POST).
- *
- * Allows raising/lowering caps without redeploying. The "200 max" is just a
- * default; admin can change it from the pool dashboard. Sane bounds enforced
- * server-side so nothing too crazy goes through.
- */
 export async function GET() {
   const gate = await requireAdmin()
   if (!gate.ok) return NextResponse.json({ error: gate.message }, { status: gate.status })
@@ -33,7 +26,6 @@ export async function POST(req: Request) {
   if (!gate.ok) return NextResponse.json({ error: gate.message }, { status: gate.status })
   const userId = gate.clerkId
 
-  // Email is used only for the audit 'updated_by' field below.
   const { data: u } = await supabase
     .from('users').select('email').eq('clerk_id', userId).maybeSingle()
 

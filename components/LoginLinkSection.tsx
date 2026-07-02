@@ -1,24 +1,24 @@
 'use client'
-// =============================================================================
-// LoginLinkSection — onboarding form block for the optional subdomain-login
-// link, with a collapsible LIVE PREVIEW of the branded login page.
-// =============================================================================
-// v2: chrome (card, inputs, labels, borders, text) now uses the same CSS theme
-// vars as the rest of onboarding (--surface, --background, --border,
-// --text-primary, --text-muted, --brand-primary) so it no longer renders as a
-// white block. The LIVE PREVIEW area intentionally keeps the partner's literal
-// primaryColor / pageBgColor props, because that box is meant to depict the
-// TENANT's brand, not the dashboard theme.
-//
-// Drop this into the white-label onboarding/edit wizard. It owns three fields:
-//   login_link_label — optional small heading ("New to TPI?")
-//   login_link_text  — the clickable phrase ("Visit our agent portal")
-//   login_link_url   — destination (https://…)
-//
-// Collapsed by default behind a single "▸ Login page link OPTIONAL" toggle.
-// Controlled component: pass current values + onChange handlers, plus
-// brandName/logoUrl/primaryColor/pageBgColor so the preview reflects the theme.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 import { useState } from 'react'
 
@@ -29,12 +29,11 @@ export interface LoginLinkSectionProps {
   logoUrl?: string | null
   primaryColor: string
   pageBgColor: string
-  /** Sidebar color — the REAL sign-in page uses this as its background, so the
-   *  preview does too (that's why colors must read on-dark, not on-page-bg). */
+  
   sidebarColor?: string
-  /** Text color for the brand name in the PREVIEW (over the tenant page bg). */
+  
   onPageTextColor?: string
-  /** Muted text color for the PREVIEW's "DialerSeat" half + heading. */
+  
   previewMutedColor?: string
 
   label: string
@@ -74,17 +73,17 @@ export default function LoginLinkSection({
   onTextChange,
   onUrlChange,
 }: LoginLinkSectionProps) {
-  // Closed by default per JC — even when values exist (edit mode). The user
-  // expands it intentionally; a filled-in link still starts collapsed.
+  
+  
   const [open, setOpen] = useState(false)
 
-  // The link only "shows" in preview once it has clickable text + a url, which
-  // mirrors the server rule and the real login component.
+  
+  
   const previewShowsLink = !!(text.trim() && url.trim())
-  // Light validity hint for the URL field (non-blocking; server is source of truth).
+  
   const urlLooksValid = !url.trim() || /^https?:\/\/.+/i.test(url.trim())
 
-  // ── Chrome styles — use theme vars so this matches the rest of onboarding ──
+  
   const labelCss: React.CSSProperties = {
     display: 'block', fontSize: 9, letterSpacing: 2, color: 'var(--text-muted)',
     fontWeight: 700, marginBottom: 6, textTransform: 'uppercase',
@@ -206,9 +205,7 @@ export default function LoginLinkSection({
             </div>
             <div
               style={{
-                /* Fixed dark preview surface for ALL tenants — the real
-                   sign-in page renders on a dark backdrop regardless of brand,
-                   so this stays site-accurate without tinting per tenant. */
+                
                 background: '#15161c',
                 border: '1px solid var(--border)',
                 borderRadius: 8,

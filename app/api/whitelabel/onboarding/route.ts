@@ -1,33 +1,3 @@
-// app/api/whitelabel/onboarding/route.ts
-// =============================================================================
-// WHITE-LABEL ONBOARDING / EDIT — header/sidebar split (migration 004)
-// + VERCEL SUBDOMAIN PROVISIONING (v6)
-// + ROLLING SLUG RATE LIMIT (v7)
-// + INDEXNOW AUTO-SUBMIT ON LIVE (v8)
-// =============================================================================
-// v8: when a subdomain goes live (CREATE) or its slug changes (SWAP), we fire
-// submitOnTenantLive(slug) — a fire-and-forget IndexNow + sitemap ping so Bing/
-// Yandex crawl the new subdomain within minutes and Google's sitemap index is
-// warmed. Non-blocking and never throws (mirrors the Vercel calls' philosophy).
-// On a slug swap we submit BOTH the new slug (now live) and the old slug (so the
-// 30-day redirect is recrawled and the old URL updates in the index).
-//
-// v7: slug-change policy changed from "1 change per 24h" to "up to 3 changes
-// per rolling 48h window." Implemented by COUNTING this tenant's rows in
-// subdomain_history within the window (that table already gets one row per
-// change), so no schema change is needed. When 3 changes exist in the window,
-// the next change unlocks 48h after the OLDEST of the three (rolling, not a
-// flat freeze). slug_changed_at is still written but no longer gates.
-//
-// v6: programmatic Vercel domain lifecycle (add on create, swap on slug
-// change, remove on deactivate). Cloudflare's wildcard CNAME makes each
-// added subdomain verify + get SSL instantly. All Vercel calls are non-fatal.
-//
-// v5 (migration 004): 3 colors → 4 colors (primary, sidebar, header_bg, page_bg)
-// v4 (migration 003): added page_bg_color.
-// v3 (Phase B3): trimmed body + pre-002 safety mirroring.
-// =============================================================================
-
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { getServiceClient } from '@/lib/supabase'
@@ -58,21 +28,14 @@ const RESERVED = new Set([
 const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{1,28}[a-z0-9])?$/
 const HEX_RE = /^#[0-9a-fA-F]{6}$/
 
-// Rolling-window slug rate limit (v7): up to SLUG_CHANGE_LIMIT changes per
-// SLUG_CHANGE_WINDOW_HOURS, counted from subdomain_history rows.
 const SLUG_CHANGE_LIMIT = 3
 const SLUG_CHANGE_WINDOW_HOURS = 48
 const SLUG_REDIRECT_DAYS = 30
 
-// Sensible defaults for the vestigial Pass 1 columns we no longer expose.
 const LEGACY_SECONDARY_DEFAULT = '#2a6eff'
 const LEGACY_BACKGROUND_DEFAULT = '#0a0a0f'
 const LEGACY_TEXT_DEFAULT = '#f0f0f5'
 
-// Returns the ISO time at which this tenant can change its slug again, or null
-// if it's currently under the limit (can change now). Counts change rows in
-// subdomain_history within the rolling window; if at/over the limit, unlock is
-// SLUG_CHANGE_WINDOW_HOURS after the OLDEST change in the window.
 async function slugChangeAvailableAt(tenantId: string): Promise<string | null> {
   const windowStart = new Date(
     Date.now() - SLUG_CHANGE_WINDOW_HOURS * 60 * 60 * 1000
@@ -91,10 +54,6 @@ async function slugChangeAvailableAt(tenantId: string): Promise<string | null> {
   }
   return null
 }
-
-// =============================================================================
-// GET — fetch current tenant for the edit form
-// =============================================================================
 
 export async function GET() {
   const { userId } = await auth()
@@ -133,8 +92,6 @@ export async function GET() {
       return NextResponse.json({ status: 'pending' })
     }
 
-    // v7: mirror the rolling-window rule used on POST so the edit form's
-    // "you can change again on…" message matches the actual gate.
     const canChangeSlugAt = await slugChangeAvailableAt(tenant.id)
 
     return NextResponse.json({
@@ -160,10 +117,6 @@ export async function GET() {
   return NextResponse.json({ status })
 }
 
-// =============================================================================
-// POST — create or update tenant
-// =============================================================================
-
 export async function POST(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) {
@@ -177,7 +130,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'malformed_json' }, { status: 400 })
   }
 
-  // ── Field extraction ──────────────────────────────────────────────
   const brandName = String(body.brand_name || '').trim()
   const subdomain = String(body.subdomain || '').toLowerCase().trim()
   const logoUrl = String(body.logo_url || '').trim()
@@ -185,13 +137,11 @@ export async function POST(req: NextRequest) {
   const sidebarColor = String(body.sidebar_color || '').trim()
   const headerBgColor = String(body.header_bg_color || '').trim()
   const pageBgColor = String(body.page_bg_color || '').trim()
-  // Optional partner login link (shown under the "<Brand> × DialerSeat" mark).
-  // Empty/blank → no link stored (both columns set NULL).
+
   const loginLinkLabelRaw = String(body.login_link_label || '').trim()
   const loginLinkTextRaw = String(body.login_link_text || '').trim()
   const loginLinkUrlRaw = String(body.login_link_url || '').trim()
 
-  // ── Validation ────────────────────────────────────────────────────
   if (!brandName || brandName.length < 2 || brandName.length > 60) {
     return NextResponse.json(
       { error: 'invalid_brand_name', detail: 'Brand name must be 2–60 characters.' },
@@ -238,14 +188,6 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  // ── Optional login link normalization + validation ─────────────────
-  // The link is fully optional. Pieces:
-  //   login_link_text  — the CLICKABLE phrase (required if a link is wanted)
-  //   login_link_url   — destination (required if a link is wanted; http/https)
-  //   login_link_label — optional small heading above the link
-  // "Wanted" = the user filled in the clickable text OR the url OR the label.
-  // If wanted, BOTH text and url are required (a clickable link needs words and
-  // a destination); the label heading stays optional.
   let loginLinkLabel: string | null = null
   let loginLinkText: string | null = null
   let loginLinkUrl: string | null = null
@@ -292,7 +234,6 @@ export async function POST(req: NextRequest) {
     loginLinkLabel = loginLinkLabelRaw || null
   }
 
-  // ── WL subscription gate ──────────────────────────────────────────
   const { data: user } = await supabase
     .from('users')
     .select('email, wl_onboarding_status, wl_subscription_id, stripe_customer_id')
@@ -314,7 +255,6 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  // ── Subdomain uniqueness (excluding own) ──────────────────────────
   const { data: collision } = await supabase
     .from('white_label_tenants')
     .select('id, owner_clerk_id')
@@ -349,7 +289,6 @@ export async function POST(req: NextRequest) {
 
   const now = new Date()
 
-  // ── BRANCH: CREATE vs UPDATE ──────────────────────────────────────
   if (status === 'pending') {
     const { data: tenant, error: insErr } = await supabase
       .from('white_label_tenants')
@@ -390,7 +329,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Mark onboarding complete AND auto-select this tenant.
     await supabase
       .from('users')
       .update({
@@ -399,19 +337,11 @@ export async function POST(req: NextRequest) {
       })
       .eq('clerk_id', userId)
 
-    // ── VERCEL: provision <slug>.dialerseat.com ──────────────────────
-    // Non-fatal: the tenant exists and is the source of truth. If Vercel is
-    // briefly unreachable the subdomain can be reconciled later; we surface a
-    // hint in the response so the UI can show "provisioning" if it wants.
     const domain = await addProjectDomain(tenant.slug)
     if (!domain.ok && !domain.skipped) {
       console.error(`[onboarding] domain provision failed for ${tenant.slug}:`, domain.error)
     }
 
-    // ── INDEXNOW (v8): subdomain is now live → submit it to search ───
-    // Fire-and-forget: instant Bing/Yandex crawl + sitemap-index warm. Never
-    // blocks the response and never throws. Google picks it up from the sitemap
-    // index on its own schedule regardless of this call.
     void submitOnTenantLive(tenant.slug)
 
     return NextResponse.json({
@@ -422,7 +352,6 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  // ─── UPDATE existing tenant ────────────────────────────────────────
   const { data: existing } = await supabase
     .from('white_label_tenants')
     .select('id, slug, slug_changed_at')
@@ -448,9 +377,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (slugChanged) {
-    // v7: rolling-window rate limit. Allow up to SLUG_CHANGE_LIMIT changes per
-    // SLUG_CHANGE_WINDOW_HOURS, counted from subdomain_history rows for this
-    // tenant. If already at the limit, block until the oldest change ages out.
+
     const availableAt = await slugChangeAvailableAt(existing.id)
     if (availableAt) {
       return NextResponse.json(
@@ -495,10 +422,6 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  // ── VERCEL: swap subdomain on slug change ────────────────────────────
-  // Adds the new subdomain BEFORE removing the old so there's never a gap;
-  // the 30-day subdomain_history redirect covers the transition either way.
-  // Non-fatal — the DB row already reflects the new slug.
   let domainSwapped: boolean | undefined
   if (slugChanged) {
     const swap = await changeProjectDomain(existing.slug, subdomain)
@@ -507,10 +430,6 @@ export async function POST(req: NextRequest) {
       console.error(`[onboarding] domain swap add failed ${existing.slug}→${subdomain}:`, swap.added.error)
     }
 
-    // ── INDEXNOW (v8): new slug is live, old slug now redirects ──────
-    // Submit BOTH: the new slug so it's crawled fresh, and the old slug so the
-    // engines recrawl it and pick up the redirect to the new home. Both
-    // fire-and-forget; neither blocks nor throws.
     void submitOnTenantLive(subdomain)
     void submitOnTenantLive(existing.slug)
   }
@@ -523,18 +442,6 @@ export async function POST(req: NextRequest) {
   })
 }
 
-// =============================================================================
-// DELETE — deactivate tenant + remove its Vercel subdomain
-// =============================================================================
-// Soft-deactivates the caller's tenant (is_active=false, status='inactive')
-// and removes <slug>.dialerseat.com from the Vercel project. The middleware
-// already treats an inactive tenant as 'missing' and 307s to the apex, so the
-// subdomain stops working immediately at the app layer even before Vercel
-// finishes removing the domain. Vercel removal is non-fatal.
-//
-// Body: { confirm: 'deactivate' }  (guards against accidental calls)
-// =============================================================================
-
 export async function DELETE(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) {
@@ -545,7 +452,7 @@ export async function DELETE(req: NextRequest) {
   try {
     body = await req.json()
   } catch {
-    // empty body is fine; confirm check below will catch it
+
   }
 
   if (body?.confirm !== 'deactivate') {
@@ -575,7 +482,6 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: 'db_error', detail: deErr.message }, { status: 500 })
   }
 
-  // ── VERCEL: remove the subdomain (non-fatal) ─────────────────────────
   const removed = await removeProjectDomain(tenant.slug)
   if (!removed.ok && !removed.skipped) {
     console.error(`[onboarding] domain removal failed for ${tenant.slug}:`, removed.error)

@@ -4,27 +4,6 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { ownerCanBeCharged } from '@/lib/teamBilling'
 import { apiError } from '@/lib/apiError'
 
-// =============================================================================
-// /api/teams/codes/create  (v2: single-use links + price override)
-// =============================================================================
-// v2 ADDS two optional inputs, both backward-compatible (omit them → exactly
-// the prior behavior, an unlimited reusable code):
-//
-//   singleUse: boolean        → when true, sets max_uses = 1. A single-use
-//                               seat+owner code is a PARTNER per-seat link that
-//                               auto-redeems once with no owner approval.
-//   maxUses: number | null    → explicit cap (overrides singleUse if both sent).
-//                               null/omitted = unlimited.
-//   seatPriceOverrideCents:   → optional negotiated per-seat price carried by
-//     number | null             the code (e.g. a whale deal). Member-level
-//                               override still wins at redeem time.
-//
-// Original body (teamId, codeType, payer, campaignId, code) unchanged.
-//
-// Code rules: 4-32 chars, alphanumeric + dash + underscore, stored uppercase,
-// matched case-insensitively, unique platform-wide.
-// =============================================================================
-
 const CODE_PATTERN = /^[A-Z0-9_-]{4,32}$/
 
 function generateRandomCode(length = 8): string {
@@ -80,7 +59,6 @@ export async function POST(req: Request) {
       )
     }
 
-    // Resolve max_uses: explicit maxUses wins; else singleUse→1; else null.
     let resolvedMaxUses: number | null = null
     if (typeof maxUses === 'number' && maxUses > 0) {
       resolvedMaxUses = Math.floor(maxUses)
@@ -88,7 +66,6 @@ export async function POST(req: Request) {
       resolvedMaxUses = 1
     }
 
-    // Resolve optional price override (cents). Reject nonsense values.
     let resolvedPriceOverride: number | null = null
     if (seatPriceOverrideCents !== undefined && seatPriceOverrideCents !== null) {
       const n = Number(seatPriceOverrideCents)
@@ -101,7 +78,6 @@ export async function POST(req: Request) {
       resolvedPriceOverride = Math.round(n)
     }
 
-    // Verify the user owns this team
     const { data: team } = await supabaseAdmin
       .from('teams')
       .select('id, owner_id')
@@ -119,7 +95,6 @@ export async function POST(req: Request) {
       )
     }
 
-    // Seat code WITH a specific campaign: verify ownership + attachment
     if (codeType === 'seat' && campaignId) {
       const { data: campaign } = await supabaseAdmin
         .from('campaigns')
@@ -149,13 +124,6 @@ export async function POST(req: Request) {
       }
     }
 
-    // ── MINT-TIME CARD GATE ──────────────────────────────────────────────────
-    // A single-use (max_uses=1) seat+owner code is a partner per-seat link that
-    // auto-redeems and charges the owner's card UNATTENDED at redeem time. To
-    // guarantee the link can never lead to an uncharged seat, refuse to create
-    // it unless the owner can be charged right now (Stripe customer + default
-    // card on file). Reuses the exact check createSeatSubscription performs, so
-    // mint and charge can't disagree. Other code shapes are unaffected.
     if (resolvedMaxUses === 1 && codeType === 'seat' && payer === 'owner') {
       const billable = await ownerCanBeCharged(userId)
       if (!billable.ok) {
@@ -173,7 +141,6 @@ export async function POST(req: Request) {
       }
     }
 
-    // Determine final code value
     let code: string
     if (rawCode && typeof rawCode === 'string' && rawCode.trim()) {
       code = rawCode.trim().toUpperCase().replace(/\s+/g, '')

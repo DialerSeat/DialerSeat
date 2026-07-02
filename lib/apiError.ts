@@ -1,11 +1,6 @@
 import { NextResponse } from 'next/server'
 import * as Sentry from '@sentry/nextjs'
 
-// Shared API error responder. Logs the FULL error server-side (console + Sentry)
-// and returns a GENERIC, safe message to the client — so internal detail
-// (table/column/constraint text, query fragments) never leaks over the wire.
-// Keeps the same { success:false, error:<string> } shape routes already return.
-
 interface ApiErrorOptions {
   route?: string
   status?: number
@@ -26,7 +21,7 @@ export function apiError(err: unknown, opts: ApiErrorOptions = {}): NextResponse
   try {
     Sentry.captureException(err, { tags: { route }, extra: opts.context })
   } catch {
-    // Sentry not initialized — console.error above already captured it.
+
   }
 
   return NextResponse.json({ success: false, error: clientMessage }, { status })

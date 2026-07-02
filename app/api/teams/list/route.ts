@@ -3,18 +3,6 @@ import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 
-/**
- * Lists teams visible to the authenticated user.
- * Returns teams where user is either:
- *   - The owner (full team object)
- *   - An active member (limited fields, omits owner-only data)
- *
- * Each team is tagged with `viewerRole: 'owner' | 'member'` so UI can branch.
- *
- * Optional ?detail=owned — embeds members/pendingMembers/codes/teamCampaigns
- * on each owned team. Each member also gets a campaignAccess[] array showing
- * which campaigns they have active access to and the underlying payer.
- */
 export async function GET(req: NextRequest) {
   try {
     const { userId } = await auth()
@@ -89,7 +77,6 @@ export async function GET(req: NextRequest) {
           .eq('is_active', true),
       ])
 
-      // Resolve member identities
       const memberClerkIds = Array.from(new Set((allMembers || []).map((m: any) => m.user_id)))
       let userById: Record<string, { email: string; first_name: string | null; last_name: string | null }> = {}
       if (memberClerkIds.length > 0) {
@@ -106,14 +93,12 @@ export async function GET(req: NextRequest) {
         }
       }
 
-      // Group access by team_member_id
       const accessByMember: Record<string, any[]> = {}
       for (const a of allAccess || []) {
         if (!accessByMember[a.team_member_id]) accessByMember[a.team_member_id] = []
         accessByMember[a.team_member_id].push(a)
       }
 
-      // Group members by team_id, attaching access + identity
       const membersByTeam: Record<string, any[]> = {}
       const pendingByTeam: Record<string, any[]> = {}
       for (const m of allMembers || []) {

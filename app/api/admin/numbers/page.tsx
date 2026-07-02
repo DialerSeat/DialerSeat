@@ -97,17 +97,17 @@ export default function AdminNumbersPage() {
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<'all' | 'active' | 'resting' | 'flagged'>('all')
 
-  // Buy modal
+  
   const [buyOpen, setBuyOpen] = useState(false)
   const [buyAreaCode, setBuyAreaCode] = useState('')
   const [buying, setBuying] = useState(false)
   const [buyMessage, setBuyMessage] = useState<string | null>(null)
 
-  // Release confirm
+  
   const [releaseConfirmId, setReleaseConfirmId] = useState<string | null>(null)
   const [releasing, setReleasing] = useState<string | null>(null)
 
-  // Config edit
+  
   const [configOpen, setConfigOpen] = useState(false)
   const [configEdits, setConfigEdits] = useState<Partial<PoolConfig>>({})
   const [savingConfig, setSavingConfig] = useState(false)

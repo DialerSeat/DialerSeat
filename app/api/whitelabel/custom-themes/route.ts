@@ -1,38 +1,3 @@
-// app/api/whitelabel/custom-themes/route.ts
-// =============================================================================
-// CUSTOM THEMES — saved per-user color/logo presets for the WL onboarding page
-// =============================================================================
-// REWRITTEN. The previous file in this folder was an accidental copy of
-// /api/whitelabel/onboarding/route.ts. The save-as-new button was POSTing
-// here with { name, colors, logo_url } but the onboarding code validated
-// `brand_name`, which doesn't exist on theme requests — hence the
-// permanent "Brand name must be 2–60 characters" error.
-//
-// Endpoints:
-//   GET    /api/whitelabel/custom-themes
-//     → { themes: SavedTheme[] }
-//
-//   POST   /api/whitelabel/custom-themes
-//     Body: { name, sidebar_color, header_bg_color, primary_color,
-//             page_bg_color, logo_url? }
-//     → { theme: SavedTheme }
-//     Enforces 15-theme/user limit.
-//
-//   PUT    /api/whitelabel/custom-themes?id=xxx
-//     Body: any subset of { name, sidebar_color, header_bg_color,
-//             primary_color, page_bg_color, logo_url }
-//     → { theme: SavedTheme }
-//     Used by the "Overwrite this theme" flow when the user has a saved
-//     theme loaded and modifies it.
-//
-//   DELETE /api/whitelabel/custom-themes?id=xxx
-//     → { success: true }
-//
-// All write paths verify the theme's user_id matches the caller's clerk_id.
-// The user_id column on custom_themes is the Clerk ID, matching how
-// other tables (users.clerk_id, white_label_tenants.owner_clerk_id) key off it.
-// =============================================================================
-
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { getServiceClient } from '@/lib/supabase'
@@ -46,10 +11,6 @@ const NAME_MAX = 40
 
 const SELECT_COLS =
   'id, name, primary_color, sidebar_color, header_bg_color, page_bg_color, logo_url, created_at'
-
-// =============================================================================
-// GET — list saved themes for the current user
-// =============================================================================
 
 export async function GET() {
   const { userId } = await auth()
@@ -74,10 +35,6 @@ export async function GET() {
   return NextResponse.json({ themes: data || [] })
 }
 
-// =============================================================================
-// POST — create a new saved theme
-// =============================================================================
-
 export async function POST(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) {
@@ -91,7 +48,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'malformed_json' }, { status: 400 })
   }
 
-  // ── Field extraction (theme schema — name NOT brand_name) ─────────
   const name = String(body.name || '').trim()
   const primaryColor = String(body.primary_color || '').trim()
   const sidebarColor = String(body.sidebar_color || '').trim()
@@ -101,7 +57,6 @@ export async function POST(req: NextRequest) {
   const logoUrl =
     typeof rawLogoUrl === 'string' && rawLogoUrl.trim() ? rawLogoUrl.trim() : null
 
-  // ── Validation ────────────────────────────────────────────────────
   if (!name || name.length < NAME_MIN || name.length > NAME_MAX) {
     return NextResponse.json(
       { error: 'invalid_name', detail: `Theme name must be ${NAME_MIN}–${NAME_MAX} characters.` },
@@ -133,7 +88,6 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  // ── 15-theme per-user limit ───────────────────────────────────────
   const { count: existingCount, error: countErr } = await supabase
     .from('custom_themes')
     .select('id', { count: 'exact', head: true })
@@ -156,7 +110,6 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  // ── Insert ─────────────────────────────────────────────────────────
   const { data, error: insErr } = await supabase
     .from('custom_themes')
     .insert({
@@ -182,10 +135,6 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ theme: data })
 }
 
-// =============================================================================
-// PUT — overwrite an existing saved theme
-// =============================================================================
-
 export async function PUT(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) {
@@ -205,7 +154,6 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: 'malformed_json' }, { status: 400 })
   }
 
-  // Verify ownership
   const { data: existing, error: fetchErr } = await supabase
     .from('custom_themes')
     .select('id, user_id')
@@ -224,7 +172,6 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 })
   }
 
-  // Build updates from whitelisted fields only
   const updates: Record<string, any> = {}
 
   if ('name' in body) {
@@ -310,10 +257,6 @@ export async function PUT(req: NextRequest) {
   return NextResponse.json({ theme: data })
 }
 
-// =============================================================================
-// DELETE — remove a saved theme
-// =============================================================================
-
 export async function DELETE(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) {
@@ -326,7 +269,6 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: 'missing_id' }, { status: 400 })
   }
 
-  // Verify ownership before delete
   const { data: existing, error: fetchErr } = await supabase
     .from('custom_themes')
     .select('id, user_id')

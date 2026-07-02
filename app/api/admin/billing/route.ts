@@ -7,40 +7,11 @@ const supabase = getServiceClient('admin/billing')
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
-// =============================================================================
-// WL BILLING (v1, NEW)
-// =============================================================================
-//   GET /api/admin/billing
-//     → { success, portfolio, tenants } — list mode, all tenants
-//   GET /api/admin/billing?tenant_id=<uuid>
-//     → { success, tenant } — detail mode, one tenant with live Stripe state
-//       + recent invoices
-//
-// LIST MODE (analytical roll-up):
-//   portfolio: {
-//     tenantCount, billedCount, activeCount, pastDueCount, canceledCount,
-//     mrrCents, arrCents, currency
-//   }
-//   tenants: [{ id, slug, brand_name, status (tenant row status),
-//     stripe_customer_id, stripe_subscription_id,
-//     billing: { state, planNickname, amountCents, interval,
-//       currentPeriodEnd, cancelAtPeriodEnd, mrrCents } | null,
-//     billingError? }]
-//
-// MRR normalization: any Stripe interval (day/week/month/year) is converted to
-// a monthly-equivalent cents figure so the portfolio total is apples-to-apples.
-// DialerSeat bills weekly, so weekly × 52 / 12 dominates here.
-//
-// Per-tenant Stripe calls are made in parallel with Promise.allSettled so one
-// bad/canceled subscription can't blank the whole table — failures surface as
-// billingError on that row and the rest still render.
-// =============================================================================
-
 const MONTHS_PER = { day: 365 / 12, week: 52 / 12, month: 1, year: 1 / 12 } as const
 
 function monthlyCents(amountCents: number, interval: string, intervalCount: number): number {
   const per = (MONTHS_PER as Record<string, number>)[interval] ?? 1
-  // amount is charged every `intervalCount` intervals
+
   return Math.round((amountCents * per) / Math.max(1, intervalCount))
 }
 
@@ -67,9 +38,6 @@ async function fetchSubscriptionState(subId: string): Promise<BillingState> {
   const lineCents = amount * qty
   const live = sub.status === 'active' || sub.status === 'trialing'
 
-  // current_period_end moved from the top-level Subscription onto the
-  // subscription item in recent Stripe API versions. Read the item first,
-  // fall back to the legacy top-level field for older API versions.
   const periodEndUnix =
     (item as any)?.current_period_end ??
     (sub as any).current_period_end ??
@@ -96,7 +64,6 @@ export async function GET(req: NextRequest) {
 
     const tenantId = req.nextUrl.searchParams.get('tenant_id')
 
-    // ── DETAIL MODE ───────────────────────────────────────────────────────
     if (tenantId) {
       const { data: tenant, error } = await supabase
         .from('white_label_tenants')
@@ -157,7 +124,6 @@ export async function GET(req: NextRequest) {
       })
     }
 
-    // ── LIST MODE ─────────────────────────────────────────────────────────
     const { data: tenants, error } = await supabase
       .from('white_label_tenants')
       .select('id, slug, brand_name, status, is_active, stripe_customer_id, stripe_subscription_id, created_at')

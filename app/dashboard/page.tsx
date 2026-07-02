@@ -7,13 +7,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-/**
- * /dashboard is an admin-aware redirect.
- *   - Admins → /dashboard/admin/desktop   (Win7 admin shell, v20)
- *   - Everyone else → /dashboard/analytics
- *
- * Server-side check avoids the flash of agent UI before client redirect kicks in.
- */
+
 export default async function DashboardIndex() {
   const { userId } = await auth()
 

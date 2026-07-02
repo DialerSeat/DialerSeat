@@ -111,9 +111,7 @@ export const viewport: Viewport = {
 };
 
 const dialerseatLocalization = {
-  // Root-level key: the delete-page input PLACEHOLDER, which is also the exact
-  // string Clerk requires the user to type. Without this, the page said
-  // "Type 'delete account'" but Clerk still demanded capital-D "Delete account".
+
   formFieldInputPlaceholder__confirmDeletionUserAccount: 'delete account',
   userProfile: {
     start: {
@@ -162,11 +160,6 @@ const IOS_SPLASH_SCREENS: Array<{ w: number; h: number; orient: 'portrait' | 'la
 
 const TENANT_COOKIE_NAME = 'ds_last_tenant';
 
-// Branding now depends on the signed-in user's active_tenant_id (resolved per
-// request), so the root layout must render dynamically — otherwise a cached RSC
-// payload from a previous (e.g. signed-out, hostname-branded) render could be
-// served to a signed-in user whose selection differs. force-dynamic guarantees
-// branding is re-resolved on every request.
 export const dynamic = 'force-dynamic';
 
 export default async function RootLayout({
@@ -177,50 +170,21 @@ export default async function RootLayout({
   const h = await headers();
   const tenantSlug = h.get('x-tenant-slug');
 
-  // ── LANDING VIEW BYPASS ───────────────────────────────────────────────
-  // When proxy.ts detects ?view=landing it sets x-landing-view: 1.
-  // In that case skip all tenant/user branding lookups entirely so the
-  // landing page always renders with default DialerSeat styling regardless
-  // of who is logged in.
   const isLandingView = h.get('x-landing-view') === '1';
 
   let branding = null;
   if (!isLandingView) {
-    // ── WHITE-LABEL TENANT RESOLUTION (v2 — signed-in selection wins) ──
-    // "DialerSeat Pro" is itself a tenant choice: when a signed-in user
-    // selects it, active_tenant_id is null and getActiveTenantForUser
-    // returns null → default DialerSeat chrome renders EVERYWHERE the user
-    // goes, including on a tenant subdomain like demo.dialerseat.com and in
-    // the desktop apps. Selecting a real tenant renders that tenant. This is
-    // what makes the brand "follow" the dropdown for the logged-in user.
-    //
-    // Priority order:
-    //   1. Signed-in user's selection (getActiveTenantForUser):
-    //        - returns a tenant  → render it (their picked brand)
-    //        - returns null      → user picked DialerSeat Pro / standard.
-    //          On a SUBDOMAIN we still let the hostname brand win for them
-    //          ONLY if they have no explicit standard choice — but
-    //          getActiveTenantForUser already encodes "null = standard",
-    //          so null here means "show default DialerSeat". We therefore
-    //          DO NOT fall back to the hostname for a signed-in user; their
-    //          selection is authoritative.
-    //   2. Signed-out → hostname (x-tenant-slug): a visitor to
-    //      demo.dialerseat.com sees demo's current tenant selection login.
-    //   3. Signed-out + no subdomain → ds_last_tenant cookie hint.
-    //   4. null → default DialerSeat chrome.
+
     const { userId } = await auth();
 
     if (userId) {
-      // Signed-in: the user's own selection is authoritative and follows
-      // them across every host, subdomain included. null → default DialerSeat.
+
       branding = await getActiveTenantForUser(userId);
     } else {
-      // Signed-out: brand by the subdomain they're visiting, so every
-      // visitor to demo.dialerseat.com sees demo's current tenant login.
+
       branding = await getTenantBranding(tenantSlug);
       if (!branding) {
-        // No subdomain (apex) → use the cookie hint from this browser's last
-        // sign-in so returning users still see a branded sign-in/landing.
+
         const cookieStore = await cookies();
         const lastTenant = cookieStore.get(TENANT_COOKIE_NAME)?.value;
         if (lastTenant) {

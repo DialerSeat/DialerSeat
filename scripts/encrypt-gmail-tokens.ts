@@ -1,29 +1,29 @@
-// =============================================================================
-// scripts/encrypt-gmail-tokens.ts — one-time (and rotation) migration
-// =============================================================================
-// Encrypts any plaintext access_token / refresh_token rows in
-// gmail_oauth_tokens, in place. Safe to run multiple times: rows already in
-// "enc:v1:" form are skipped, so re-running is a no-op for them.
-//
-// WHEN TO RUN:
-//   1. Once, right after deploying the Step 9 code + setting
-//      GMAIL_TOKEN_ENCRYPTION_KEY, to encrypt rows that predate encryption.
-//   2. As the template for KEY ROTATION: to rotate keys you'd decrypt with the
-//      old key and re-encrypt with the new one (see the rotation note at bottom).
-//
-// HOW TO RUN (from the repo root, with env vars available):
-//   npx tsx scripts/encrypt-gmail-tokens.ts
-//   (or: npx ts-node scripts/encrypt-gmail-tokens.ts)
-//
-// REQUIRED ENV (same values the app uses):
-//   NEXT_PUBLIC_SUPABASE_URL
-//   SUPABASE_SERVICE_ROLE_KEY
-//   GMAIL_TOKEN_ENCRYPTION_KEY
-//
-// This script reads the RAW columns directly (it does NOT go through
-// lib/gmail.ts's getStoredTokens, which would decrypt) so it can see the true
-// stored form and decide whether each row needs encrypting.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 import { createClient } from '@supabase/supabase-js'
 import { encrypt, isEncrypted } from '../lib/tokenCrypto'
@@ -104,13 +104,12 @@ main().catch((e) => {
   process.exit(1)
 })
 
-// =============================================================================
-// KEY ROTATION (future reference — not needed for the initial migration)
-// =============================================================================
-// To rotate GMAIL_TOKEN_ENCRYPTION_KEY:
-//   1. Make a variant of this script that takes BOTH old and new keys.
-//   2. For each row: decrypt(value, OLD_KEY) then encrypt(value, NEW_KEY).
-//   3. Swap the env var to the new key only AFTER all rows are re-encrypted.
-// Because tokenCrypto caches the key per-process, a rotation script should
-// instantiate the cipher with explicit keys rather than relying on the env-based
-// getKey(). Left as a note since rotation isn't part of Step 9's initial rollout.
+
+
+
+
+
+
+
+
+

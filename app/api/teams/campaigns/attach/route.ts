@@ -3,21 +3,6 @@ import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 
-/**
- * Owner changes the access_mode of a team-campaign link.
- *
- * Per Q1=A: when changing TO 'agent_pays' OR 'free', existing owner-paid
- * agents lose access immediately (their team_campaign_access rows get
- * is_active=false). Owner-paid Stripe subs tied to those rows are NOT
- * canceled here — that's pre-existing behavior (the original handler only
- * revoked the access rows on agent_pays switch and left Stripe alone).
- * The free mode reuses the exact same revocation path for consistency.
- *
- * Body:
- *   teamId:     uuid (required)
- *   campaignId: uuid (required)
- *   accessMode: 'owner_pays' | 'agent_pays' | 'public' | 'free' (required)
- */
 export async function POST(req: Request) {
   try {
     const { userId } = await auth()
@@ -42,7 +27,6 @@ export async function POST(req: Request) {
       )
     }
 
-    // Verify ownership
     const { data: team } = await supabaseAdmin
       .from('teams')
       .select('id, owner_id')
@@ -56,7 +40,6 @@ export async function POST(req: Request) {
       )
     }
 
-    // Update the access_mode
     const { data, error } = await supabaseAdmin
       .from('team_campaigns')
       .update({ access_mode: accessMode })
@@ -73,12 +56,6 @@ export async function POST(req: Request) {
       )
     }
 
-    // If switched to agent_pays OR free, revoke all owner-paid access for
-    // this campaign on this team. In both modes the owner stops paying,
-    // so leaving owner-paid access rows live would either keep billing
-    // (in the case of unhandled Stripe subs) or grant access the new mode
-    // doesn't authorize. Agents who want continued access must subscribe
-    // themselves (agent_pays) or be re-granted under free.
     let revokedCount = 0
     if (accessMode === 'agent_pays' || accessMode === 'free') {
       const { data: revoked } = await supabaseAdmin

@@ -20,9 +20,6 @@ export async function POST(req: Request) {
     const body = await req.json()
     const { name, dialer_mode, amd_enabled, predictive_lines_per_agent, voicemail_drop_url } = body
 
-    // Name is optional now. If blank, auto-name "Untitled", and if that's taken
-    // use "Untitled (1)", "Untitled (2)", … so every creation method can save
-    // without the user typing a name.
     let finalName = (typeof name === 'string' ? name.trim() : '')
     if (!finalName) {
       const { data: existing } = await supabaseAdmin
@@ -40,18 +37,13 @@ export async function POST(req: Request) {
       }
     }
 
-    // Validate dialer mode (default to 'power' for backward compat)
     const mode: DialerMode = dialer_mode && VALID_MODES.includes(dialer_mode)
       ? dialer_mode
       : 'power'
 
-    // AMD: defaults to true for progressive/predictive, false for power/preview.
-    // Power and preview agents listen for voicemail themselves. Progressive and
-    // predictive cannot tolerate voicemails reaching the agent.
     const amdDefault = mode === 'progressive' || mode === 'predictive'
     const amdEnabled = typeof amd_enabled === 'boolean' ? amd_enabled : amdDefault
 
-    // Predictive lines per agent: clamp 1.0 - 3.0, default 1.5
     let lines = 1.5
     if (typeof predictive_lines_per_agent === 'number') {
       lines = Math.max(1.0, Math.min(3.0, predictive_lines_per_agent))

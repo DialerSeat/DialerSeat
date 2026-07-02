@@ -16,20 +16,20 @@ const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
 )
 
-// =============================================================================
-// BILLING PAGE — v23b (Phase D1 wording polish)
-// =============================================================================
-// Diff vs v22:
-//   - PLAN_INFO.wl.label: 'WHITE LABEL' → 'MANAGER+'
-//   - PLAN_INFO.wl.title: 'START YOUR WHITE LABEL TENANT' → 'CUSTOMIZE YOUR WHITELABEL DIALER'
-//   - PLAN_INFO.wl.subtitle: tightened to match
-//   - Plan switch button: restyled to be visible — solid blue-tinted
-//     background, accent-blue text, bright border. Was a faint dashed
-//     border on transparent (easy to miss).
-//   - Switch button labels reference 'MANAGER+' not 'WHITE LABEL'
-//
-// No logic changes. Same Stripe price IDs, same env vars, same flow.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 type Plan = 'standard' | 'wl'
 
@@ -548,10 +548,10 @@ const planBadgePriceStyle: React.CSSProperties = {
   marginLeft: 'auto',
 }
 
-// ── plan switch button — restyled v23b ─────────────────────────────────
-// Was: faint dashed border, transparent bg, gray text — easy to miss.
-// Now: solid tinted background, accent-blue text + border, looks
-// clickable. Hover handlers in JSX brighten it further on hover.
+
+
+
+
 const planSwitchStyle: React.CSSProperties = {
   width: '100%',
   padding: '12px 14px',

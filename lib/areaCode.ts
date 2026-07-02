@@ -1,7 +1,7 @@
-// Maps US area codes to state and broad region.
-// Source: NANPA assignments. Doesn't cover every NPA but covers the common ones.
-// Numbers we don't recognize default to region 'unknown' which still works
-// (just falls all the way through to random pool selection).
+
+
+
+
 
 export interface AreaCodeInfo {
   state: string  // 2-letter state code, e.g. 'NY'
@@ -17,10 +17,10 @@ export type Region =
   | 'pacific'
   | 'unknown'
 
-// Compact lookup table. Keys are area codes (string), values are { state, region }.
-// Maintained manually — when a new area code is in heavy use, add it here.
+
+
 const AREA_CODES: Record<string, AreaCodeInfo> = {
-  // Northeast
+  
   '201': { state: 'NJ', region: 'northeast' },
   '203': { state: 'CT', region: 'northeast' },
   '207': { state: 'ME', region: 'northeast' },
@@ -70,7 +70,7 @@ const AREA_CODES: Record<string, AreaCodeInfo> = {
   '973': { state: 'NJ', region: 'northeast' },
   '978': { state: 'MA', region: 'northeast' },
 
-  // Southeast
+  
   '202': { state: 'DC', region: 'southeast' },
   '205': { state: 'AL', region: 'southeast' },
   '229': { state: 'GA', region: 'southeast' },
@@ -131,7 +131,7 @@ const AREA_CODES: Record<string, AreaCodeInfo> = {
   '980': { state: 'NC', region: 'southeast' },
   '984': { state: 'NC', region: 'southeast' },
 
-  // Midwest
+  
   '216': { state: 'OH', region: 'midwest' },
   '218': { state: 'MN', region: 'midwest' },
   '219': { state: 'IN', region: 'midwest' },
@@ -203,7 +203,7 @@ const AREA_CODES: Record<string, AreaCodeInfo> = {
   '952': { state: 'MN', region: 'midwest' },
   '989': { state: 'MI', region: 'midwest' },
 
-  // South Central
+  
   '210': { state: 'TX', region: 'south_central' },
   '214': { state: 'TX', region: 'south_central' },
   '225': { state: 'LA', region: 'south_central' },
@@ -238,7 +238,7 @@ const AREA_CODES: Record<string, AreaCodeInfo> = {
   '972': { state: 'TX', region: 'south_central' },
   '979': { state: 'TX', region: 'south_central' },
 
-  // Mountain
+  
   '208': { state: 'ID', region: 'mountain' },
   '303': { state: 'CO', region: 'mountain' },
   '307': { state: 'WY', region: 'mountain' },
@@ -258,7 +258,7 @@ const AREA_CODES: Record<string, AreaCodeInfo> = {
   '928': { state: 'AZ', region: 'mountain' },
   '970': { state: 'CO', region: 'mountain' },
 
-  // Pacific
+  
   '206': { state: 'WA', region: 'pacific' },
   '209': { state: 'CA', region: 'pacific' },
   '213': { state: 'CA', region: 'pacific' },
@@ -302,27 +302,18 @@ const AREA_CODES: Record<string, AreaCodeInfo> = {
   '951': { state: 'CA', region: 'pacific' },
   '971': { state: 'OR', region: 'pacific' },
 
-  // Alaska / Hawaii
+  
   '907': { state: 'AK', region: 'pacific' },
   '808': { state: 'HI', region: 'pacific' },
 }
 
-/**
- * Look up area code metadata.
- * Returns null for unknown area codes (toll-free, mobile, foreign, or not in our table).
- */
+
 export function getAreaCodeInfo(areaCode: string | null | undefined): AreaCodeInfo | null {
   if (!areaCode) return null
   return AREA_CODES[areaCode] ?? null
 }
 
-/**
- * Extract area code from a phone number in any common format:
- *   '+12125551234'  → '212'
- *   '12125551234'   → '212'
- *   '2125551234'    → '212'
- *   '(212) 555-1234' → '212'
- */
+
 export function extractAreaCode(phone: string | null | undefined): string | null {
   if (!phone) return null
   const digits = phone.replace(/\D/g, '')
@@ -335,17 +326,13 @@ export function extractAreaCode(phone: string | null | undefined): string | null
   return null
 }
 
-/**
- * Convenience: phone number → state code (or null if unknown)
- */
+
 export function phoneToState(phone: string | null | undefined): string | null {
   const ac = extractAreaCode(phone)
   return getAreaCodeInfo(ac)?.state ?? null
 }
 
-/**
- * Convenience: phone number → region (or 'unknown' if not recognized)
- */
+
 export function phoneToRegion(phone: string | null | undefined): Region {
   const ac = extractAreaCode(phone)
   return getAreaCodeInfo(ac)?.region ?? 'unknown'

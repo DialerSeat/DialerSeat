@@ -3,25 +3,25 @@ import { redirect } from 'next/navigation'
 import { UserProfile } from '@clerk/nextjs'
 import Link from 'next/link'
 
-// =============================================================================
-// /dashboard/admin/profile — Clerk profile management
-// =============================================================================
-// Before v22.d, the admin desktop's StartMenu used <UserButton> with the
-// default modal mode. Clicking "Manage Account" inside the popover would
-// open a second-level modal that didn't render (the popover's parent
-// container had `overflow: hidden`, which clipped the modal layer
-// rendered through Clerk's portal).
-//
-// Fix: switch the UserButton to navigation mode pointing at this route.
-// "Manage Account" routes here and shows the full UserProfile UI inline
-// on a real page, which is more reliable than nested portals and also
-// fits the desktop metaphor better — the user navigates to a "profile
-// page" instead of a popup that may be clipped by the windowing layer.
-//
-// Auth gate: must be signed in. Admin-tier check isn't strictly needed
-// (any signed-in user can manage their own profile) but we keep this
-// under /dashboard/admin/ so it inherits any admin layout treatment.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 export default async function AdminProfilePage() {
   const { userId } = await auth()

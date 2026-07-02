@@ -2,18 +2,18 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-// =============================================================================
-// JoinRedeemClient — auto-redeems a partner link for a signed-in agent
-// =============================================================================
-// Calls the EXISTING /api/teams/redeem with the code, once, on mount, then
-// routes by nextStep:
-//   redirect_to_team        → /dashboard/teams/<id>/analytics  (instant seat)
-//   redirect_to_billing     → /billing  (agent-pays — must subscribe to dial)
-//   awaiting_owner_approval → show "pending approval" (multi-use owner-pays)
-//
-// Shows a minimal branded-neutral status screen while it works. Errors (used
-// code, invalid code, own-team) render inline with a link back to the dashboard.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
 
 type Phase = 'redeeming' | 'pending' | 'error'
 
@@ -52,7 +52,7 @@ export default function JoinRedeemClient({ code }: { code: string }) {
           setPhase('pending')
           setMessage(`You've requested to join ${data.team?.name || 'the team'}. The owner needs to approve your seat before you can dial.`)
         } else {
-          // redirect_to_team (instant partner seat, or active access)
+          
           setMessage(`You're in. Loading ${data.team?.name || 'your team'}…`)
           setTimeout(() => router.push(`/dashboard/teams/${data.team.id}/analytics`), 1000)
         }

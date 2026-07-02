@@ -69,7 +69,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: 'clerkId required' }, { status: 400 })
   }
 
-  // Fetch user record to get stripe_customer_id + email + admin flag
   const { data: userRow, error: userErr } = await supabase
     .from('users')
     .select('clerk_id, email, is_admin, stripe_customer_id')
@@ -80,7 +79,6 @@ export async function POST(req: NextRequest) {
     return apiError(userErr, { route: 'admin/users/delete' })
   }
 
-  // Block deleting admin accounts via this endpoint
   if (userRow?.is_admin) {
     return NextResponse.json(
       { success: false, error: 'Cannot delete admin user. Remove admin flag first.' },
@@ -107,7 +105,6 @@ export async function POST(req: NextRequest) {
     },
   }
 
-  // 1) Stripe — cancel all subscriptions, then delete customer
   if (userRow?.stripe_customer_id) {
     try {
       const subs = await stripe.subscriptions.list({
@@ -121,7 +118,7 @@ export async function POST(req: NextRequest) {
           await stripe.subscriptions.cancel(s.id)
           summary.stripe.subscriptionsCanceled++
         } catch (err: any) {
-          // Continue even if a single sub cancel fails
+
           console.warn(`[admin/users/delete] cancel sub ${s.id} failed:`, err?.message)
         }
       }
@@ -131,7 +128,7 @@ export async function POST(req: NextRequest) {
         summary.stripe.customerDeleted = true
       } catch (err: any) {
         if (err?.code === 'resource_missing') {
-          // Already gone — fine
+
           summary.stripe.customerDeleted = true
         } else {
           summary.stripe.error = err?.message || 'customer delete failed'
@@ -142,13 +139,12 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // 2) Clerk — delete user
   try {
     const client = await clerkClient()
     await client.users.deleteUser(clerkId)
     summary.clerk.deleted = true
   } catch (err: any) {
-    // 404 = already gone, treat as success
+
     const status = err?.status || err?.statusCode
     if (status === 404) {
       summary.clerk.deleted = true
@@ -157,23 +153,16 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // 3) Supabase — delete in dependency order. FK CASCADE should handle most,
-  // but we delete explicitly so the summary counts are accurate and a missing
-  // cascade doesn't leave orphaned rows.
   const errs = summary.supabase.errors
 
-  // team_members where this user is the member
   summary.supabase.team_members += await safeCount(
     'team_members',
     { user_id: clerkId },
     errs
   )
 
-  // teams owned by this user (cascade should remove team_members + team_codes)
   summary.supabase.teams = await safeCount('teams', { owner_id: clerkId }, errs)
 
-  // campaign_scripts under this user's campaigns — best-effort manual delete
-  // in case CASCADE isn't set. We fetch campaign ids first.
   {
     const { data: camps, error: campErr } = await supabase
       .from('campaigns')

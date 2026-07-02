@@ -1,13 +1,3 @@
-// app/api/campaigns/script-links/list/route.ts
-// =============================================================================
-// CAMPAIGN ↔ SCRIPT LINKS — LIST
-// =============================================================================
-// For a given campaign, returns every script in the caller's library (own +
-// team) annotated with whether it's enabled on this campaign and, if so, its
-// per-campaign sort_order. Powers the campaign settings toggles and the lead
-// editor's draggable enabled-script order.
-// =============================================================================
-
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
@@ -26,7 +16,6 @@ export async function GET(req: Request) {
       return NextResponse.json({ success: false, error: 'campaign_id required' }, { status: 400 })
     }
 
-    // Verify access (owner or active team member of a team that has this campaign).
     const { data: campaign } = await supabaseAdmin
       .from('campaigns')
       .select('id, user_id')
@@ -56,7 +45,6 @@ export async function GET(req: Request) {
       if (!ok) return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
     }
 
-    // The caller's library (own + team).
     const { data: memberships } = await supabaseAdmin
       .from('team_members')
       .select('team_id')
@@ -81,7 +69,6 @@ export async function GET(req: Request) {
 
     const library = [...(own || []), ...teamScripts]
 
-    // Enabled links for this campaign.
     const { data: links } = await supabaseAdmin
       .from('campaign_script_links')
       .select('script_id, sort_order')
@@ -98,7 +85,6 @@ export async function GET(req: Request) {
       link_sort_order: linkMap.has(s.id) ? linkMap.get(s.id) : null,
     }))
 
-    // Sort: enabled first (by link order), then the rest by library order/name.
     scripts.sort((a, b) => {
       if (a.enabled && b.enabled) return (a.link_sort_order! - b.link_sort_order!)
       if (a.enabled) return -1

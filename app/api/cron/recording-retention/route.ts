@@ -5,26 +5,6 @@ import { apiError } from '@/lib/apiError'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-// =============================================================================
-// /api/cron/recording-retention — enforce the 30-day recording promise
-// =============================================================================
-// The recordings UI tells users "kept for 30 days, then deleted." recordings/
-// sync SETS recording_expires_at, but nothing ever ACTED on it — recordings
-// accumulated forever. This daily cron honors the promise: it finds recordings
-// past their expiry and deletes them, mirroring the manual recordings/delete
-// flow EXACTLY (delete the audio from SignalWire best-effort, then clear the
-// recording fields on the calls row but KEEP the row so analytics stay
-// accurate; recording_status becomes 'deleted').
-//
-// Safety:
-//   - Only touches rows where recording_expires_at < now() AND a recording_url
-//     still exists AND status isn't already 'deleted'. It can NEVER delete a
-//     non-expired recording.
-//   - Processes a bounded batch per run (cron is daily; backlog drains over a
-//     few days rather than risking one massive operation).
-//   - Authenticated via CRON_SECRET, same as the pool crons.
-// =============================================================================
-
 const BATCH_LIMIT = 200
 
 export async function GET(req: Request) {
@@ -36,7 +16,6 @@ export async function GET(req: Request) {
   try {
     const supabase = getServiceClient('cron/recording-retention')
 
-    // Find expired recordings that still have audio to remove.
     const { data: expired, error } = await supabase
       .from('calls')
       .select('id, recording_url')
@@ -63,7 +42,7 @@ export async function GET(req: Request) {
     let swErrors = 0
 
     for (const row of expired) {
-      // Best-effort delete from SignalWire (mirror recordings/delete).
+
       if (row.recording_url && authH && spaceUrl && projectId) {
         try {
           const match = row.recording_url.match(/Recordings\/([A-Za-z0-9-]+)/)
@@ -82,7 +61,6 @@ export async function GET(req: Request) {
         }
       }
 
-      // Clear recording fields but KEEP the row (analytics integrity).
       const { error: updErr } = await supabase
         .from('calls')
         .update({

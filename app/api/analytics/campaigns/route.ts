@@ -3,9 +3,6 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { requireUser } from '@/lib/requireUser'
 import { apiError } from '@/lib/apiError'
 
-// SECURITY (was IDOR): scoped only by client-supplied ?user_id with no auth.
-// Identity now comes from the Clerk session.
-
 const CONVERSION_DISPS = ['CLOSED', 'APPOINTMENT']
 const CONTACT_DISPS = ['CLOSED', 'APPOINTMENT', 'NOT INTERESTED', 'DO NOT CALL']
 
@@ -27,7 +24,6 @@ export async function GET(req: NextRequest) {
     return apiError(callsErr, { route: 'analytics/campaigns' })
   }
 
-  // Group by campaign
   const grouped: Record<string, { total: number; converted: number; contacted: number }> = {}
   for (const c of calls || []) {
     const cid = c.campaign_id || 'unknown'

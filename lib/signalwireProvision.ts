@@ -1,11 +1,11 @@
-// Wraps SignalWire's number-management REST API.
-// Used by the pool to programmatically buy/configure/release DIDs without manual dashboard work.
-//
-// SignalWire's LaML API mirrors Twilio's. Endpoints:
-//   GET  /AvailablePhoneNumbers/US/Local.json   — search by area code
-//   POST /IncomingPhoneNumbers.json             — purchase a number
-//   POST /IncomingPhoneNumbers/{Sid}.json       — update webhook URLs
-//   DELETE /IncomingPhoneNumbers/{Sid}.json     — release a number
+
+
+
+
+
+
+
+
 
 import { webhookUrl } from '@/lib/verifyWebhook'
 
@@ -34,10 +34,7 @@ export interface PurchasedNumber {
   status_callback: string
 }
 
-/**
- * Search SignalWire's available number inventory by area code.
- * Returns up to 30 candidates; we'll usually buy the first one that's clean.
- */
+
 export async function searchAvailableNumbers(
   areaCode: string,
   limit = 30
@@ -61,14 +58,7 @@ export async function searchAvailableNumbers(
   return data.available_phone_numbers ?? []
 }
 
-/**
- * Purchase a specific phone number and configure its inbound webhook.
- * Inbound calls aren't a feature of DialerSeat right now (we're outbound-only)
- * but SignalWire requires every owned number to have a voice_url set, otherwise
- * inbound calls fail audibly. We point everything at /api/calls/inbound which
- * returns minimal TwiML "we don't accept inbound calls" — define that route later
- * if we ever want to surface inbound differently.
- */
+
 export async function purchaseNumber(phoneNumber: string): Promise<PurchasedNumber> {
   const params = new URLSearchParams({
     PhoneNumber: phoneNumber,
@@ -102,10 +92,7 @@ export async function purchaseNumber(phoneNumber: string): Promise<PurchasedNumb
   }
 }
 
-/**
- * Release a number back to SignalWire (stops billing for it).
- * Used when retiring flagged numbers or manually pruning the pool.
- */
+
 export async function releaseNumber(signalwireSid: string): Promise<void> {
   const res = await fetch(`${baseUrl}/IncomingPhoneNumbers/${signalwireSid}.json`, {
     method: 'DELETE',
@@ -113,25 +100,21 @@ export async function releaseNumber(signalwireSid: string): Promise<void> {
   })
 
   if (!res.ok && res.status !== 404) {
-    // 404 means SignalWire already lost track of it, which is fine for our cleanup intent
+    
     const text = await res.text()
     throw new Error(`SignalWire release failed (${res.status}): ${text}`)
   }
 }
 
-/**
- * Convenience: search + buy in one call.
- * Searches the area code, picks the first available, purchases it.
- * Returns null if no numbers are available in that area code.
- */
+
 export async function acquireNumberByAreaCode(
   areaCode: string
 ): Promise<PurchasedNumber | null> {
   const available = await searchAvailableNumbers(areaCode, 5)
   if (available.length === 0) return null
 
-  // Try each candidate in order — SignalWire occasionally has stale inventory
-  // where a "available" number is actually already taken.
+  
+  
   for (const candidate of available) {
     try {
       return await purchaseNumber(candidate.phone_number)

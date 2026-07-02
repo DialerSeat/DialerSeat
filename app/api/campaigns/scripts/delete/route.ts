@@ -39,7 +39,6 @@ export async function POST(req: Request) {
 
     if (error) throw error
 
-    // If we deleted the default, promote the first remaining script
     if (script.is_default) {
       const { data: next } = await supabaseAdmin
         .from('campaign_scripts')
@@ -54,13 +53,13 @@ export async function POST(req: Request) {
           .from('campaign_scripts')
           .update({ is_default: true })
           .eq('id', next.id)
-        // Mirror to campaigns.script
+
         await supabaseAdmin
           .from('campaigns')
           .update({ script: next.body })
           .eq('id', script.campaign_id)
       } else {
-        // No scripts left — clear campaigns.script
+
         await supabaseAdmin
           .from('campaigns')
           .update({ script: null })

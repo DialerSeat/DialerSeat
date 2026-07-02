@@ -1,32 +1,4 @@
-/**
- * JSON-LD structured data for DialerSeat — HOST-AWARE (v2).
- *
- * Two modes:
- *   • APEX / default (no branding prop): the full @graph — Organization,
- *     SoftwareApplication, WebSite (+sitelinks search), and the big FAQPage.
- *     This is the canonical entity data Google/Bing/AI ground on. Unchanged
- *     from v1 except for being gated behind the "no branding" case.
- *
- *   • TENANT subdomain (branding prop provided): a LEAN, tenant-specific graph —
- *     that brand's Organization + a SoftwareApplication scoped to its own
- *     subdomain URL. We intentionally OMIT the FAQPage here: those FAQs are
- *     DialerSeat-specific and repeating them on every white-label subdomain
- *     would be duplicate structured data. Each tenant's schema self-references
- *     its own host so Google treats it as a distinct brand entity (which also
- *     reinforces the per-subdomain self-canonical strategy).
- *
- * USAGE (in app/layout.tsx):
- *   Render ALWAYS, passing the resolved branding (null on apex):
- *       <StructuredData branding={branding} />
- *   (Previously this was `{!branding && <StructuredData />}` — apex only.
- *    Switch to always-render so subdomains get their own tenant schema.)
- *
- * The branding prop is read defensively (optional chaining) so it tolerates
- * whatever shape getTenantBranding/getActiveTenantForUser returns, as long as
- * it carries a brand_name and slug (and optionally logo_url).
- *
- * Validate changes at https://search.google.com/test/rich-results
- */
+
 
 type TenantBranding = {
   brand_name?: string | null
@@ -47,7 +19,7 @@ function tenantBaseUrl(b: NonNullable<TenantBranding>): string | null {
 export default function StructuredData({ branding }: { branding?: TenantBranding } = {}) {
   const BASE = `https://${ROOT_DOMAIN}`
 
-  // ── TENANT MODE: lean, brand-specific graph on the subdomain ──────────────
+  
   if (branding && branding.brand_name) {
     const base = tenantBaseUrl(branding)
     if (base) {
@@ -87,7 +59,7 @@ export default function StructuredData({ branding }: { branding?: TenantBranding
             url: `${base}/sign-up`,
           },
           publisher: { '@id': `${base}/#organization` },
-          // aggregateRating intentionally omitted (no faked ratings).
+          
         },
         {
           '@type': 'WebSite',
@@ -107,20 +79,20 @@ export default function StructuredData({ branding }: { branding?: TenantBranding
         />
       )
     }
-    // If we couldn't derive a clean base URL, fall through to apex schema.
+    
   }
 
-  // ── APEX / DEFAULT MODE: the full canonical graph (unchanged) ─────────────
+  
   const graph = [
-    // ─── Organization ──────────────────────────────────────────────
+    
     {
       '@type': 'Organization',
       '@id': `${BASE}/#organization`,
       name: 'DialerSeat',
-      // Explicit one-word entity declaration. Listing the brand string as an
-      // alternateName (and keeping it identical to `name`) is a direct signal to
-      // Google that "DialerSeat" is a proper noun / single token — which is what
-      // erodes the "did you mean: dialer seat" spelling correction over time.
+      
+      
+      
+      
       alternateName: 'DialerSeat',
       url: BASE,
       logo: {
@@ -133,24 +105,24 @@ export default function StructuredData({ branding }: { branding?: TenantBranding
         'Professional outbound dialer SaaS for solo agents up through larger teams. $35/week per seat. No contracts. Cancel anytime.',
       foundingDate: '2025',
       sameAs: [
-        // ENTITY GRAPH: add each real profile URL here as you create it. Every
-        // URL declares "this is the same DialerSeat entity," which strengthens
-        // Knowledge-Graph recognition and further kills the spelling correction.
-        // Fill these in (see footprint-claim-list.md) and redeploy:
-        // 'https://www.linkedin.com/company/dialerseat',
-        // 'https://www.crunchbase.com/organization/dialerseat',
-        // 'https://www.wikidata.org/wiki/QXXXXXXX',
-        // 'https://twitter.com/dialerseat',
-        // 'https://www.youtube.com/@dialerseat',
-        // 'https://www.facebook.com/dialerseat',
-        // 'https://www.g2.com/products/dialerseat',
-        // 'https://www.trustpilot.com/review/dialerseat.com',
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
       ],
     },
 
-    // ─── SoftwareApplication ───────────────────────────────────────
-    // This is what makes you eligible for the price badge and the
-    // "App" rich result in Google SERPs.
+    
+    
+    
     {
       '@type': 'SoftwareApplication',
       '@id': `${BASE}/#software`,
@@ -200,13 +172,13 @@ export default function StructuredData({ branding }: { branding?: TenantBranding
       publisher: {
         '@id': `${BASE}/#organization`,
       },
-      // aggregateRating intentionally omitted until you have real
-      // reviews from a verified source. Faked ratings are a manual-
-      // action risk in Google Search Console.
+      
+      
+      
     },
 
-    // ─── WebSite + SiteLinks Search ────────────────────────────────
-    // Lets Google show a search box directly under your SERP listing.
+    
+    
     {
       '@type': 'WebSite',
       '@id': `${BASE}/#website`,
@@ -226,9 +198,9 @@ export default function StructuredData({ branding }: { branding?: TenantBranding
       },
     },
 
-    // ─── FAQPage ────────────────────────────────────────────────────
-    // Google may render these as expand-collapse accordions directly
-    // in the SERP. High-CTR feature when granted.
+    
+    
+    
     {
       '@type': 'FAQPage',
       '@id': `${BASE}/#faq`,
@@ -333,7 +305,7 @@ export default function StructuredData({ branding }: { branding?: TenantBranding
   return (
     <script
       type="application/ld+json"
-      // Server-rendered, deterministic. Safe.
+      
       dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }}
     />
   )

@@ -3,18 +3,6 @@ import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 
-/**
- * Owner regenerates a code: replaces the existing code value with a new one.
- * Old code is HARD DELETED — anyone who hasn't redeemed it loses the chance.
- *
- * Preserved fields: code_type, campaign_id, payer, team_id.
- * Only the `code` string changes.
- *
- * Body:
- *   codeId:  uuid (required)
- *   newCode: string (optional vanity; if omitted, random)
- */
-
 const CODE_PATTERN = /^[A-Z0-9_-]{4,32}$/
 
 function generateRandomCode(length = 8): string {

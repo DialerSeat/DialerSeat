@@ -4,21 +4,21 @@ import { useUser } from '@clerk/nextjs'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
-// =============================================================================
-// DIALER PAGE — Pass 2 Phase C9 (mobile fixes on top of C8)
-// =============================================================================
-// C9 changes vs C8 (mobile-only, inside the @media (max-width:768px) block):
-//   1. .dialer-right-toggle  top: 66% -> 80%  (right-edge arrow sits lower,
-//      between vertical center and the bottom of the screen).
-//   2. .dialer-right-sidebar gains  padding-top: env(safe-area-inset-top, 0px)
-//      and  box-sizing: border-box  so "TODAY'S METRICS" clears the iOS
-//      status bar / notch instead of hiding behind it. The inset MUST be on
-//      the position:fixed; top:0 element itself (this sidebar), not a child —
-//      a child's padding can't move the fixed parent out from under the notch.
-//      On non-notch devices the inset resolves to 0, so nothing changes there.
-//
-// Everything else is byte-for-byte C8.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 type CallStatus = 'idle' | 'calling' | 'connected' | 'ended' | 'preview_ready'
 type AccessTier = 'active' | 'lapsed' | 'new' | null
@@ -167,7 +167,7 @@ function DialerPageInner() {
   const [seconds, setSeconds] = useState(0)
   const [available, setAvailable] = useState(false)
 
-  // ─── PREDICTIVE ENGINE — explicit "started" flag ──────────────────────────
+  
   const [predictiveEngineStarted, setPredictiveEngineStarted] = useState(false)
 
   const [disposition, setDisposition] = useState('')
@@ -179,13 +179,9 @@ function DialerPageInner() {
   const [campaignsLoaded, setCampaignsLoaded] = useState(false)
   const [showSelectCampaignMsg, setShowSelectCampaignMsg] = useState(false)
   const [callStart, setCallStart] = useState(0)
-  // Live ref mirror of callStart. The poll callbacks that fire the disposition
-  // sheet are closures created BEFORE the call connected, so they capture a
-  // stale callStart (0) — which made "CALL LASTED" always read 0s. Reading the
-  // ref instead gives the real start time.
+
   const callStartRef = useRef(0)
-  // Final whole-second duration of the call that just ended, shown on the
-  // lead profile / disposition sheet after hangup.
+
   const [lastCallDuration, setLastCallDuration] = useState<number | null>(null)
   const [noLeads, setNoLeads] = useState(false)
   const [activeCallSid, setActiveCallSid] = useState<string | null>(null)
@@ -222,14 +218,10 @@ function DialerPageInner() {
   const [allActiveOverrideMode, setAllActiveOverrideMode] = useState<DialerMode>('power')
 
   const [scriptIdx, setScriptIdx] = useState(0)
-  // Draggable script-tab ordering. Holds a custom order of tab keys (campaign
-  // id, or '__manual__'/'__single__' for the personal-single-script case).
-  // Tabs not present in this list fall back to natural order, so new campaigns
-  // appear at the end until the user drags them.
+
   const [scriptOrder, setScriptOrder] = useState<string[]>([])
   const [scriptDragKey, setScriptDragKey] = useState<string | null>(null)
-  // Full-screen lead profile (mobile): expands the profile/script card to fill
-  // the screen under the header so long scripts are fully visible.
+
   const [profileFullscreen, setProfileFullscreen] = useState(false)
 
   const timerRef = useRef<NodeJS.Timeout | null>(null)
@@ -237,15 +229,15 @@ function DialerPageInner() {
   const activePollRef = useRef<NodeJS.Timeout | null>(null)
   const swClientRef = useRef<any>(null)
   const swCallRef = useRef<any>(null)
-  // ── GHOST-DIALING LOCKDOWN ────────────────────────────────────────────────
-  // The browser is a SIP endpoint. To guarantee it can NEVER be bridged to a
-  // call the user didn't initiate, we keep two things:
-  //   1. callIntentRef — true ONLY while the user has actively armed dialing
-  //      (pressed dial / started predictive / dialing a preview lead / manual
-  //      dial). onInvite REJECTS any INVITE when this is false.
-  //   2. registererRef — the SIP registration handle, so we can unregister when
-  //      idle and re-register when armed. While unregistered, SignalWire has no
-  //      route to this browser at all.
+  
+  
+  
+  
+  
+  
+  
+  
+  
   const callIntentRef = useRef<boolean>(false)
   const registererRef = useRef<any>(null)
 
@@ -263,25 +255,25 @@ function DialerPageInner() {
   const lsRestoredRef = useRef(false)
   const activeCallSidRef = useRef<string | null>(null)
 
-  // ── GHOST-DIAL PREVENTION ───────────────────────────────────────────────
-  // availableRef always holds the LIVE value of `available`. setTimeout/async
-  // callbacks capture stale closure values of state; a ref does not. Every
-  // dial path reads this ref at the moment of execution so a dial scheduled
-  // while you were available cannot fire after you've gone unavailable.
+  
+  
+  
+  
+  
   const availableRef = useRef(false)
-  // Tracks every pending auto-chain setTimeout(handleDial) so we can cancel
-  // them all the instant you go unavailable (the kill switch).
+  
+  
   const dialChainTimeoutsRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set())
 
   useEffect(() => setMounted(true), [])
   useEffect(() => { currentLeadRef.current = currentLead }, [currentLead])
   useEffect(() => { activeCallSidRef.current = activeCallSid }, [activeCallSid])
-  // Keep availableRef in lock-step with the available state.
+  
   useEffect(() => { availableRef.current = available }, [available])
   const predictiveEngineStartedRef = useRef(false)
   useEffect(() => { predictiveEngineStartedRef.current = predictiveEngineStarted }, [predictiveEngineStarted])
-  // On unmount (navigating away from the dialer), cancel any pending auto-chain
-  // dials so a queued timer can't fire a call after you've left the page.
+  
+  
   useEffect(() => {
     return () => {
       for (const id of dialChainTimeoutsRef.current) clearTimeout(id)
@@ -325,11 +317,11 @@ function DialerPageInner() {
   const isPreview = dialerMode === 'preview'
   const isPower = dialerMode === 'power'
 
-  // Continuous-dialing modes auto-advance to the next lead when a call ends
-  // WITHOUT a human (machine drop, no-answer, busy, failed). Power and
-  // progressive both keep the agent moving; preview is one-at-a-time by design
-  // and predictive is server-driven, so neither auto-chains here.
-  // (A HUMAN answer never auto-skips — that always shows the disposition sheet.)
+  
+  
+  
+  
+  
   const autoChainOnFailure = isProgressive || isPower
 
   const modeRequiresSpecific = false
@@ -352,7 +344,7 @@ function DialerPageInner() {
     return 'available'
   })()
 
-  // ── SESSION METRICS PERSISTENCE ─────────────────────────────────────────
+  
   useEffect(() => {
     if (!user) return
     try {
@@ -515,8 +507,8 @@ function DialerPageInner() {
 
   useEffect(() => {
     setPredictiveEngineStarted(false)
-    // Reset script tab state when switching campaigns — a previous campaign's
-    // custom order keys don't apply here and could otherwise hide tabs.
+    
+    
     setScriptOrder([])
     setScriptIdx(0)
     setScriptDragKey(null)
@@ -554,10 +546,10 @@ function DialerPageInner() {
     if (!isActive) return
     const initSW = async () => {
       try {
-        // SECURITY: fetch SIP credentials from an authenticated server endpoint
-        // instead of NEXT_PUBLIC_* env vars (which are inlined into the public
-        // bundle and were removed). If this fetch is skipped, SIP never
-        // registers and there is NO call audio in either direction.
+        
+        
+        
+        
         let sipUsername: string | undefined
         let sipPassword: string | undefined
         let sipDomain: string | undefined
@@ -594,18 +586,18 @@ function DialerPageInner() {
           authorizationPassword: sipPassword,
           transportOptions: { server: `wss://${sipDomain}` },
           sessionDescriptionHandlerFactoryOptions: {
-            // peerConnectionConfiguration.iceServers is THE audio-path fix.
-            // Without STUN/TURN the browser can't find a reachable media path
-            // across NAT and you get dead air after the lead picks up. Fall back
-            // to public STUN if the server didn't return any (so audio still
-            // works even if the endpoint shape changes).
+            
+            
+            
+            
+            
             peerConnectionConfiguration: {
               iceServers:
                 iceServers && iceServers.length > 0
                   ? iceServers
                   : [{ urls: ['stun:stun.signalwire.com:3478', 'stun:stun.l.google.com:19302'] }],
-              // Pool a candidate ahead of time so gathering doesn't add latency
-              // at answer. Small but helps the "pickup = hear" goal.
+              
+              
               iceCandidatePoolSize: 1,
             },
             constraints: { audio: true, video: false },
@@ -614,11 +606,11 @@ function DialerPageInner() {
 
         userAgent.delegate = {
           onInvite: async (invitation: any) => {
-            // GHOST-DIALING GUARD: only accept an inbound INVITE if the user has
-            // actively armed dialing. Any call the user did not initiate (stale
-            // fanout, late AMD redirect, leftover agent leg, another tab) is
-            // hard-rejected so the user can never be bridged to audio they didn't
-            // ask for. This is the strict, multi-user-safe lock.
+            
+            
+            
+            
+            
             if (!callIntentRef.current) {
               try {
                 await invitation.reject({ statusCode: 486 }) // Busy Here
@@ -640,9 +632,9 @@ function DialerPageInner() {
               await invitation.accept({
                 sessionDescriptionHandlerOptions: { constraints: { audio: true, video: false } },
               })
-              // Attach immediately as well — don't wait only on the Established
-              // event. The SDH/peer connection exists right after accept(), so
-              // wiring audio now shaves the gap to first sound.
+              
+              
+              
               swCallRef.current = invitation
               attachSIPAudio(invitation)
             } catch (err) {
@@ -652,10 +644,10 @@ function DialerPageInner() {
         }
 
         await userAgent.start()
-        // Keep the registerer handle so we can register/unregister with the
-        // user's dialing intent (see armDialing/disarmDialing). We register now
-        // so the endpoint is reachable the instant the user arms a call, but the
-        // onInvite guard above still blocks anything they didn't initiate.
+        
+        
+        
+        
         const registerer = new Registerer(userAgent)
         registererRef.current = registerer
         await registerer.register()
@@ -669,7 +661,7 @@ function DialerPageInner() {
   }, [isActive])
 
   const attachSIPAudio = (session: any) => {
-    // Ensure the AudioContext is running (autoplay policies can suspend it).
+    
     try {
       if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
         audioCtxRef.current.resume()
@@ -800,8 +792,8 @@ function DialerPageInner() {
             campaign_id: isSpecificCampaign ? selectedCampaign : null,
             dialer_mode: dialerMode,
             current_call_id: activeCallSid || null,
-            // Server-side ghost guard: the controller only fans out lines when
-            // the agent has explicitly started the predictive engine.
+            
+            
             predictive_armed: isPredictive && predictiveEngineStarted,
           }),
         })
@@ -826,7 +818,7 @@ function DialerPageInner() {
           }
         }
       } catch {
-        // Network blip — next heartbeat will retry
+        
       }
     }
 
@@ -864,15 +856,15 @@ function DialerPageInner() {
       return
     }
 
-    // The predictive engine is running and we're available — stay armed for the
-    // whole duration so incoming-route humans can be bridged. The effect's deps
-    // ensure this only holds while predictiveEngineStarted && available.
+    
+    
+    
     armDialing()
 
     const pollIncoming = async () => {
       try {
-        // Live guard: if you've gone unavailable since this interval was set,
-        // do not attach any routed call. Prevents a predictive ghost-connect.
+        
+        
         if (!availableRef.current) return
 
         const res = await fetch('/api/calls/incoming-route')
@@ -882,8 +874,8 @@ function DialerPageInner() {
 
         if (lastIncomingCallSidRef.current === data.call.sid) return
 
-        // Re-check after the await — availability may have changed while the
-        // request was in flight. Never auto-attach audio to an offline agent.
+        
+        
         if (!availableRef.current) return
 
         lastIncomingCallSidRef.current = data.call.sid
@@ -904,7 +896,7 @@ function DialerPageInner() {
 
         startHangupPolling(data.call.sid)
       } catch {
-        // Network blip — next poll will retry
+        
       }
     }
 
@@ -971,8 +963,8 @@ function DialerPageInner() {
 
   useEffect(() => {
     const handleUnload = () => {
-      // Disarm immediately and tear down SIP so a refresh/close can't leave a
-      // registered endpoint that auto-answers a ghost call after reload.
+      
+      
       disarmDialing({ force: true })
       try { registererRef.current?.unregister?.() } catch {}
       try { swClientRef.current?.stop?.() } catch {}
@@ -1078,17 +1070,17 @@ function DialerPageInner() {
 
     const goingOffline = availableRef.current
     if (!goingOffline) {
-      // Going AVAILABLE (online): this is the explicit, deliberate action that
-      // re-enables dialing after an abort. Clear the abort latch here — and only
-      // here — so a prior ABORT/TERMINATE stays in full effect until the user
-      // themselves chooses to start dialing again.
+      
+      
+      
+      
       abortDialingRef.current = false
     }
     if (goingOffline) {
-      // ── KILL SWITCH ───────────────────────────────────────────────────────
-      // Going offline must stop everything immediately: disarm dialing so no
-      // INVITE can ever connect, cancel every pending auto-chain dial, and hang
-      // up any call currently attached. This is what makes "unavailable" mean it.
+      
+      
+      
+      
       disarmDialing({ force: true })
       cancelAllPendingDials()
       if (activeCallSidRef.current) {
@@ -1169,25 +1161,25 @@ function DialerPageInner() {
     })
   }
 
-  // ── GHOST-DIALING ARM / DISARM ────────────────────────────────────────────
-  // armDialing() must be called RIGHT BEFORE any action that legitimately causes
-  // SignalWire to bridge a call to this browser (placing an outbound dial,
-  // starting the predictive engine, dialing a preview lead, manual dial).
-  // disarmDialing() is called whenever the user is no longer expecting audio
-  // (call ended, terminated, skipped to no call, went offline). While disarmed,
-  // onInvite rejects everything, so no ghost call can connect.
+  
+  
+  
+  
+  
+  
+  
   const armDialing = () => { callIntentRef.current = true }
-  // disarmDialing({ force }): normally we keep the browser armed while the
-  // predictive engine is running, because humans route in continuously and a
-  // brief disarm between calls could reject an in-flight human. The explicit
-  // kill paths (Stop engine, go offline, page unload) pass force:true after
-  // they've already turned the engine off.
+  
+  
+  
+  
+  
   const disarmDialing = (opts?: { force?: boolean }) => {
     const keepForPredictive =
       !opts?.force && isPredictive && predictiveEngineStartedRef.current
     if (keepForPredictive) {
-      // Engine still running — tear down the just-ended leg but stay armed so
-      // the next routed human can connect.
+      
+      
       if (swCallRef.current) {
         try {
           if (swCallRef.current.bye) swCallRef.current.bye()
@@ -1198,8 +1190,8 @@ function DialerPageInner() {
       return
     }
     callIntentRef.current = false
-    // Proactively tear down any SIP session that may still be up so a lingering
-    // leg can't keep audio flowing after the user expects silence.
+    
+    
     if (swCallRef.current) {
       try {
         if (swCallRef.current.bye) swCallRef.current.bye()
@@ -1211,8 +1203,8 @@ function DialerPageInner() {
   }
 
   const hangupCall = async (sid: string | null) => {
-    // Any hangup means the user is no longer on a call they initiated — disarm
-    // so a follow-on INVITE can't reconnect audio behind their back.
+    
+    
     disarmDialing()
     if (!sid) return
     if (activePollRef.current) clearInterval(activePollRef.current)
@@ -1275,7 +1267,7 @@ function DialerPageInner() {
     }
   }
 
-  // Live timer display: H:MM:SS once the call passes an hour, else MM:SS.
+  
   const formatTime = (s: number) => {
     const safe = Math.max(0, Math.floor(s))
     const h = Math.floor(safe / 3600)
@@ -1287,8 +1279,8 @@ function DialerPageInner() {
     return `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`
   }
 
-  // Human-readable duration for the after-call summary, e.g. "1h 4m 12s",
-  // "3m 8s", "47s". Whole seconds only — never milliseconds.
+  
+  
   const formatDurationLong = (totalSeconds: number) => {
     const safe = Math.max(0, Math.floor(totalSeconds))
     const h = Math.floor(safe / 3600)
@@ -1363,15 +1355,15 @@ function DialerPageInner() {
   }
 
   const dialLeadCall = async (lead: Lead) => {
-    // ── HARD GUARD (final gate before SignalWire) ───────────────────────────
-    // This is the last function before the POST to /api/calls/outbound. Even if
-    // something reached here unexpectedly, refuse to dial unless you are
-    // actively available right now. Nothing talks to SignalWire otherwise.
+    
+    
+    
+    
     if (!availableRef.current) {
       setStatus('idle')
       return
     }
-    // Abort latch (TERMINATE pressed) — refuse to place the call.
+    
     if (abortDialingRef.current) {
       setStatus('idle')
       return
@@ -1417,9 +1409,9 @@ function DialerPageInner() {
       const data = await res.json()
 
       if (data.success) {
-        // If TERMINATE was pressed while this POST was in flight, the call was
-        // created server-side but the user wants OUT. Hang it up immediately and
-        // do not bridge/poll — prevents a ghost ring after abort.
+        
+        
+        
         if (abortDialingRef.current || !availableRef.current) {
           try {
             await fetch('/api/calls/hangup', {
@@ -1502,8 +1494,8 @@ function DialerPageInner() {
             try { await swCallRef.current.bye() } catch {}
             swCallRef.current = null
           }
-          // Call is over. Disarm so nothing can bridge audio to us during wrap-up
-          // / the disposition sheet. An auto-chained next dial re-arms itself.
+          
+          
           disarmDialing()
 
           if (isNotHuman(d.amd_result)) {
@@ -1514,18 +1506,18 @@ function DialerPageInner() {
             setCurrentLead(null)
             if (autoChainOnFailure) scheduleDial(600)
           } else {
-            // Snapshot the final duration before the timer effect resets it,
-            // so the disposition sheet can show how long the call lasted. Use
-            // the REF (not the state) — this callback's closure captured the
-            // pre-connect callStart (0), which is why it always showed 0s.
+            
+            
+            
+            
             setLastCallDuration(
               callStartRef.current
                 ? Math.max(0, Math.floor((Date.now() - callStartRef.current) / 1000))
                 : 0
             )
-            // Cancel any pending auto-chain dial so a new call can NEVER start
-            // while you're filling out the disposition sheet. The next call only
-            // begins when you submit a disposition.
+            
+            
+            
             cancelAllPendingDials()
             setProfileFullscreen(false) // ensure the disposition sheet is reachable
             setStatus('ended')
@@ -1616,55 +1608,55 @@ function DialerPageInner() {
     activePollRef.current = pollInterval
   }
 
-  // ── GHOST-DIAL PREVENTION: cancellable, guarded auto-chaining ────────────
-  // Cancels every pending auto-chain dial. Called the moment you go offline so
-  // no queued setTimeout can wake up and dial after you've stopped.
+  
+  
+  
   const cancelAllPendingDials = () => {
     for (const id of dialChainTimeoutsRef.current) clearTimeout(id)
     dialChainTimeoutsRef.current.clear()
   }
 
-  // ── AUTHORITATIVE KILL SWITCH (hard shutdown) ─────────────────────────────
-  // ABORT/TERMINATE must stop EVERYTHING — the active call, any queued client
-  // auto-chain dial, AND the SERVER-SIDE predictive controller that places calls
-  // off the heartbeat. The previous version only flipped a 50ms client latch,
-  // which did nothing about the real source of background calls: the heartbeat
-  // loop kept reporting the agent as AVAILABLE, so the server kept filling lines
-  // and the client auto-chain kept firing. The fix is to go UNAVAILABLE — that
-  // is the one signal every dial path (client auto-chain via availableRef, and
-  // the server controller via the heartbeat 'paused' state) actually respects.
+  
+  
+  
+  
+  
+  
+  
+  
+  
   const abortDialingRef = useRef(false)
   const abortAllDialing = async () => {
-    // 1) Latch on — stays on; it is cleared only when the user explicitly goes
-    //    available again (see toggleAvailable). No self-releasing timer.
+    
+    
     abortDialingRef.current = true
 
-    // 2) Go UNAVAILABLE. This is the master switch: availableRef flips false
-    //    immediately (the ref effect is synchronous enough for in-flight async
-    //    guards, and we also set the ref directly here to be certain), the
-    //    heartbeat starts reporting 'paused', and the server controller stops
-    //    fanning out lines on the next beat.
+    
+    
+    
+    
+    
     availableRef.current = false
     setAvailable(false)
 
-    // 3) Tear down predictive engine state so predictive_armed goes false now.
+    
     setPredictiveEngineStarted(false)
     predictiveEngineStartedRef.current = false
 
-    // 4) Reject any in-flight / follow-on SIP INVITE instantly.
+    
     disarmDialing({ force: true })
 
-    // 5) Kill queued client auto-chain timers and stop polling.
+    
     cancelAllPendingDials()
     if (activePollRef.current) { clearInterval(activePollRef.current); activePollRef.current = null }
 
-    // 6) INSTANT local + server kill, in PARALLEL (don't make the known active
-    //    call wait on the server round-trip):
-    //    - hang up the SID we already know about immediately, and
-    //    - tell the SERVER to sweep & hang up every other in-flight call for
-    //      this agent across ALL modes (calls it placed server-side that the
-    //      client has no SID for). The server sweeps both call_rooms AND the
-    //      calls table, so progressive/predictive fanout calls are covered.
+    
+    
+    
+    
+    
+    
+    
     const knownSid = activeCallSidRef.current || activeCallSid
     await Promise.all([
       knownSid ? hangupCall(knownSid).catch(() => {}) : Promise.resolve(),
@@ -1677,7 +1669,7 @@ function DialerPageInner() {
       }),
     ])
 
-    // 7) Reset UI to a clean idle/offline state.
+    
     setStatus('idle')
     setCurrentLead(null)
     setShowDisposition(false)
@@ -1688,13 +1680,13 @@ function DialerPageInner() {
     activeCallSidRef.current = null
   }
 
-  // Schedules the next auto-chain dial, but tracked so it can be cancelled, and
-  // re-checks availability when it fires. Use this everywhere instead of a bare
-  // setTimeout(() => handleDial(), n).
+  
+  
+  
   const scheduleDial = (delayMs: number) => {
     const id = setTimeout(() => {
       dialChainTimeoutsRef.current.delete(id)
-      // Final live checks: abort latch (TERMINATE pressed) or went offline.
+      
       if (abortDialingRef.current) return
       if (!availableRef.current) return
       handleDial()
@@ -1703,15 +1695,15 @@ function DialerPageInner() {
   }
 
   const handleDial = async () => {
-    // ── HARD GUARD ──────────────────────────────────────────────────────────
-    // The single authoritative gate: a dial may only proceed if you are
-    // actively available at THIS moment. This stops "ghost dialing" — calls
-    // firing from stale timers or async flows after you've gone unavailable.
-    // Manual keypad dials go through handleManualDial, not here, so this does
-    // not affect intentional manual dialing.
+    
+    
+    
+    
+    
+    
     if (!availableRef.current) return
-    // Abort latch: if TERMINATE was just pressed, do not start a new call even
-    // if this dial was already in flight when the latch was set.
+    
+    
     if (abortDialingRef.current) return
 
     setShowDisposition(false)
@@ -1943,10 +1935,10 @@ function DialerPageInner() {
     { label: 'SKIP', color: '#64748b', bg: '#f1f5f9' },
   ]
 
-  // Build the raw set of script tabs from each campaign's enabled scripts
-  // (new global-library model). Each tab key is the script id; for ALL ACTIVE
-  // we show every enabled script across active campaigns. Falls back to the
-  // legacy single `script` field if a campaign has no linked scripts yet.
+  
+  
+  
+  
   const campaignScriptTabs = (c: Campaign): { key: string; name: string; script: string }[] => {
     if (c.scripts && c.scripts.length > 0) {
       return c.scripts.map(s => ({ key: s.id, name: s.name, script: s.body }))
@@ -1970,12 +1962,12 @@ function DialerPageInner() {
     }
   }
 
-  // Apply the user's custom drag order: keys present in scriptOrder come first
-  // (in that order), any new/unordered tabs keep their natural order at the end.
-  // HARDENING: a stale scriptOrder (keys that no longer exist after a campaign
-  // refresh) must never cause tabs to disappear. We always append every raw tab
-  // that wasn't placed by the order, and if the result is somehow empty we fall
-  // back to the raw tabs. This fixes tabs vanishing on drag/click until refresh.
+  
+  
+  
+  
+  
+  
   const scriptTabs = (() => {
     if (rawScriptTabs.length === 0) return rawScriptTabs
     if (scriptOrder.length === 0) return rawScriptTabs
@@ -1994,7 +1986,7 @@ function DialerPageInner() {
   const activeScriptIdx = scriptIdx < scriptTabs.length ? scriptIdx : 0
   const activeScript = scriptTabs[activeScriptIdx]?.script || null
 
-  // Reorder helper: move the dragged tab key to the position of the target key.
+  
   const reorderScriptTabs = (dragKey: string, targetKey: string) => {
     if (dragKey === targetKey) return
     const base = scriptTabs.map(t => t.key)
@@ -2005,7 +1997,7 @@ function DialerPageInner() {
     next.splice(from, 1)
     next.splice(to, 0, dragKey)
     setScriptOrder(next)
-    // Keep the active tab pointing at the same script after a reorder.
+    
     const activeKey = scriptTabs[activeScriptIdx]?.key
     if (activeKey) {
       const newIdx = next.indexOf(activeKey)
@@ -2983,10 +2975,10 @@ function DialerPageInner() {
               {predictiveView === 'available' && predictiveEngineStarted && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', flexShrink: 0 }}>
                   <button onClick={() => {
-                    // STOP must also INSTANTLY terminate any calls already in
-                    // process (ringing/connecting fanout), not just prevent new
-                    // ones. Route through the full kill switch so in-flight calls
-                    // are swept and hung up server-side across the board.
+                    
+                    
+                    
+                    
                     setAmdActivity(prev => [`PREDICTIVE ENGINE STOPPED`, ...prev].slice(0, 5))
                     abortAllDialing()
                   }} style={{

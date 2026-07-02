@@ -2,49 +2,49 @@
 import dynamic from 'next/dynamic'
 import type { AppDefinition } from './types'
 
-// =============================================================================
-// APP REGISTRY
-// =============================================================================
-// Single source of truth for what apps exist on the desktop. The Desktop
-// component reads this to render icons; the WindowManager reads it to mount
-// the right component when a window opens.
-//
-// Components are lazy-loaded via next/dynamic so the desktop shell itself
-// stays small. Each app file lives in its own folder under apps/.
-//
-// ADDING A NEW APP:
-//   1. Create components/admin-desktop/apps/<name>/index.tsx with default export
-//   2. Import lazily here
-//   3. Add an APP entry below (set visibleTo if managers should see it)
-//   That's it — the desktop picks it up automatically.
-//   FOR A DOWNLOADABLE (App Store) APP: also add its id to STORE_APP_IDS in
-//   desktopServices.tsx — it then hides from the desktop until downloaded.
-//
-// v23 CHANGES:
-//   - Added `support` — the admin Support app (support / bug / exit feed).
-//     Admin-only base app: always installed, shows on the admin desktop. Backs
-//     onto /api/admin/support (read/respond) + /api/support/submit (user posts).
-//
-// v22 CHANGES:
-//   - Added `visibleTo` per app. ONE desktop, ONE registry, driven by a role.
-//     visibleTo = which roles SEE the app (omitted = admin-only). This is the
-//     single switch that keeps the admin and manager desktops in lockstep:
-//     change an app here and both roles pick it up the same second.
-//     v1 manager-visible apps: analytics, teams, notes (data scoped per role
-//     in each app's API). Everything else stays admin-only — logs/numbers/
-//     whitelabel/overview/gmail/browser/appstore/clerk-profile. As the
-//     tenant-scoped Branding and Billing apps get built, flip their visibleTo.
-//
-// v21 CHANGES:
-//   - Added `appstore` — the App Store (Desktop v24). BASE app: removable
-//     from the homescreen, never uninstallable, permanently pinned in the
-//     Start menu.
-//
-// v20 CHANGES:
-//   - Removed `view-landing` — replaced by a system-tray icon in Taskbar
-//   - Added `logs` — purchases + renewals + cancels timeline
-//   - Added `notes` — iCloud-style sidebar + editor, Supabase-backed
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 const DashboardApp = dynamic(() => import('./apps/Dashboard'), {
   loading: () => <AppLoading />,
@@ -115,9 +115,9 @@ function AppLoading() {
 
 export const APPS: AppDefinition[] = [
   {
-    // Manager-only base app — returns to /dashboard. Listed FIRST so it's the
-    // top-left default icon on the manager desktop (movable like any other).
-    // Admin never sees it (visibleTo manager only).
+    
+    
+    
     id: 'dashboard',
     name: 'Dashboard',
     icon: '🏠',
@@ -189,9 +189,9 @@ export const APPS: AppDefinition[] = [
     defaultSize: { width: 1000, height: 700 },
   },
   {
-    // Admin Support app — support / bug / exit submissions feed. Admin-only
-    // base app (always installed, shows on the admin desktop). Reads/responds
-    // via /api/admin/support; users post via /api/support/submit.
+    
+    
+    
     id: 'support',
     name: 'Support',
     icon: '🎧',
@@ -232,8 +232,8 @@ export const APPS: AppDefinition[] = [
     defaultSize: { width: 1024, height: 720 },
   },
   {
-    // Not shown as a desktop icon by default — opened from the tray/StartMenu.
-    // Account management is identical for both roles, so it's visible to both.
+    
+    
     id: 'clerk-profile',
     name: 'Account',
     icon: '👤',
@@ -244,9 +244,9 @@ export const APPS: AppDefinition[] = [
     defaultSize: { width: 920, height: 720 },
   },
   {
-    // BASE app — removable from the homescreen, never uninstallable. The
-    // Start menu pins it permanently so it can always re-add hidden apps.
-    // Visible to both roles so managers can manage their own desktop apps.
+    
+    
+    
     id: 'appstore',
     name: 'App Store',
     icon: '🛍️',

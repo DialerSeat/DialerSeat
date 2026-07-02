@@ -13,23 +13,23 @@ interface StartMenuProps {
   onOpenPersonalize: () => void
 }
 
-// =============================================================================
-// START MENU — v25
-// =============================================================================
-// v25 changes vs v24 (simplification pass):
-// - NO MORE FULL APP DUMP: the default view shows a short list — recently
-//   used apps first, topped up with installed apps until there are 6 rows.
-//   An "All apps ▸" toggle at the bottom of the list expands the complete
-//   installed list in place (Windows 7's "All Programs" behavior); "◂ Back"
-//   collapses it. Collapsed is the default every time the menu opens.
-// - Removed the separate "Recently Closed" section — recents ARE the main
-//   list now, so the menu is one short list + App Store + footer.
-// - iconSrc support: rows render the registry image icon when set, emoji
-//   fallback otherwise.
-//
-// v24: installed-apps aware, App Store permanently pinned above the footer,
-// Personalize footer button, Account opens the ClerkProfile desktop window.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 const SIMPLE_LIST_SIZE = 6
 
@@ -43,7 +43,7 @@ export default function StartMenu({
   useEffect(() => {
     const onMouseDown = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) {
-        // Don't close if clicking on the Start button (its own handler will toggle)
+        
         const target = e.target as HTMLElement
         if (target.closest('[aria-label="Start"]')) return
         onClose()
@@ -76,8 +76,8 @@ export default function StartMenu({
   const appStore = getApp(APP_STORE_ID)
   const launchable = installedApps.filter(a => a.id !== APP_STORE_ID)
 
-  // ── Simple list: recents first (installed only, deduped), topped up with
-  //    remaining installed apps until SIMPLE_LIST_SIZE rows ─────────────────
+  
+  
   const recentApps = recent
     .map(r => launchable.find(a => a.id === r.appId))
     .filter((a): a is AppDefinition => !!a && installedIds.has(a.id))

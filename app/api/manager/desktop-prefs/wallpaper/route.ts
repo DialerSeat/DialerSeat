@@ -3,30 +3,30 @@ import { auth } from '@clerk/nextjs/server'
 import { createClient } from '@supabase/supabase-js'
 import { getManagerTenant } from '@/lib/manager'
 
-// =============================================================================
-// MANAGER DESKTOP WALLPAPER UPLOAD — /api/manager/desktop-prefs/wallpaper
-// =============================================================================
-// Drag-and-drop file wallpapers on the manager desktop POST here (see
-// Desktop.tsx onRootDrop → `${prefsApiBaseFor(role)}/wallpaper`). The route
-// accepts a multipart FormData "file", stores it in the public tenant-assets
-// bucket under a per-user wallpaper path, and returns the public URL. The
-// desktop then sets background = { type:'image', value:url } and the existing
-// /api/manager/desktop-prefs PUT persists that choice — so the uploaded
-// wallpaper follows the user across devices like every other pref.
-//
-// Contract (matches Desktop.tsx): POST FormData{ file } → { success, url }.
-//
-// AUTH: signed-in Manager+ tenant owner (getManagerTenant) — same guard as the
-// prefs route and the desktop page.
-//
-// Storage: bucket "tenant-assets" (public), path
-//   desktop-wallpapers/manager/<clerkId>/<timestamp>.<ext>
-// upsert:true so re-uploads don't 409. A stable-ish per-user folder keeps the
-// user's wallpapers grouped; we timestamp the filename so the public URL
-// changes on each upload (avoids CDN caching the old image).
-//
-// Limits: images only, 8MB cap. Rejects anything that isn't image/*.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 export const dynamic = 'force-dynamic'
 

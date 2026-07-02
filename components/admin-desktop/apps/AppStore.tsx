@@ -11,25 +11,25 @@ import {
 import { appVisibleToRole } from '../types'
 import type { AppId } from '../types'
 
-// =============================================================================
-// APP STORE — desktop app (v1.2 — role-aware)
-// =============================================================================
-// v1.2 changes vs v1.1:
-// - ROLE FILTERING. Both the STORE and INSTALLED tabs now exclude apps the
-//   current desktop role isn't allowed to see (via appVisibleToRole + the
-//   role on DesktopServices). Before, the INSTALLED tab listed every base app
-//   in the registry regardless of role, so a manager saw admin-only apps
-//   (Logs, White Label, etc.) they could never open. Now a manager only ever
-//   sees their own apps here.
-//
-// Two tabs:
-//   STORE     — downloadable apps (registry apps in STORE_APP_IDS) visible to
-//               this role. DOWNLOAD installs; installed show OPEN + UNINSTALL.
-//   INSTALLED — every installed app visible to this role (base + downloaded).
-//               Each row offers OPEN, ADD/REMOVE FROM DESKTOP, and UNINSTALL
-//               (store apps only — base apps can never be uninstalled).
-// Talks to the Desktop shell through DesktopServicesContext.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 const T = {
   bg: '#f0f1f4',
@@ -50,7 +50,7 @@ export default function AppStoreApp() {
   const services = useDesktopServices()
   const [tab, setTab] = useState<Tab>('store')
   const [downloading, setDownloading] = useState<string | null>(null)
-  // App pending an uninstall confirm (only for apps in UNINSTALL_WARN_APP_IDS).
+  
   const [confirmUninstall, setConfirmUninstall] = useState<AppId | null>(null)
 
   if (!services) {
@@ -75,23 +75,23 @@ export default function AppStoreApp() {
   const isInstalled = (id: AppId) => isBaseApp(id, role) || installedAppIds.includes(id)
   const isOnDesktop = (id: AppId) => isInstalled(id) && !hiddenAppIds.includes(id)
 
-  // Role gate FIRST, then store/install state. A manager never sees admin-only
-  // apps in either tab, even though they exist in the shared registry.
+  
+  
   const roleApps = APPS.filter(a => appVisibleToRole(a, role))
   const storeApps = roleApps.filter(a => STORE_APP_IDS.includes(a.id))
   const installedApps = roleApps.filter(a => isInstalled(a.id))
 
   const handleDownload = (id: AppId) => {
     setDownloading(id)
-    // Brief delay purely for download feel — install is instant
+    
     setTimeout(() => {
       installApp(id)
       setDownloading(null)
     }, 700)
   }
 
-  // Uninstall: if the app warns on uninstall (data loss), open the confirm
-  // modal; otherwise uninstall immediately.
+  
+  
   const handleUninstall = (id: AppId) => {
     if (uninstallWarns(id)) {
       setConfirmUninstall(id)

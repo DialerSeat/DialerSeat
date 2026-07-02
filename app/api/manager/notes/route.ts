@@ -2,20 +2,6 @@ import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { getServiceClient } from '@/lib/supabase'
 
-// =============================================================================
-// /api/manager/notes  — per-user private notes for the Manager+ desktop
-// =============================================================================
-// Same admin_notes table, but gated on AUTH (any signed-in user) instead of
-// admin. Every row is keyed by owner_clerk_id = the caller, so each user only
-// ever sees and edits THEIR OWN notes — no sharing, no cross-tenant leakage.
-// This is the same privacy model the admin notes route uses; it's just not
-// admin-restricted, so a Manager+ owner isn't 403'd.
-//
-// GET  → caller's notes, starred first (pin_order asc nulls last), then recent
-// POST → create an empty note owned by the caller
-// Single-note ops live in [id]/route.ts, reorder in reorder/route.ts.
-// =============================================================================
-
 const supabaseAdmin = () =>
   getServiceClient('manager/notes')
 

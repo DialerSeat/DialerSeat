@@ -1,23 +1,23 @@
 'use client'
 
-// =============================================================================
-// /faq — FAQ index page (Push E corrected: original order, new tiles at end)
-// =============================================================================
-// Push E correction vs the previous Push E build:
-//   - Explainer tiles restored to ORIGINAL order: preview, power,
-//     progressive, predictive, compliance·why, compliance·how, amd.
-//     PRICING and TEAMS appended as the LAST two tiles, not the first two.
-//   - Accordion link-outs from cost and team questions preserved — those
-//     help users find the new deep-dive pages from inside the existing
-//     accordion flow.
-//
-// Structure unchanged from original:
-//   1. Hero (slim)
-//   2. Featured "Why DialerSeat?" card → /faq/why-dialerseat
-//   3. Quick explainers grid (9 tiles, original order + 2 appended)
-//   4. Common Q&A accordion
-//   5. Auth-aware bottom CTA
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'

@@ -6,18 +6,18 @@ import { useRouter } from 'next/navigation'
 import { WhitelabelLivePreview } from '@/components/WhitelabelLivePreview'
 import LoginLinkSection from '@/components/LoginLinkSection'
 
-// =============================================================================
-// /onboarding/whitelabel — v9 (login-link integration)
-// =============================================================================
-// v9 adds the optional subdomain-login link (label + clickable text + URL) via
-// the LoginLinkSection component, rendered right after BRAND NAME. State is
-// pre-filled in edit mode from GET, and the three fields are sent in the POST
-// body as login_link_label / login_link_text / login_link_url.
-//
-// v8 (Push E): cancel moved to bottom + logo recos.
-// v7 (Push C): saved themes dropdown its own card above EXACT PREVIEW.
-// v6 (Push A): emoji removed, saved themes collapsible, cancel added, etc.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
 
 interface Preset {
   key: string
@@ -123,8 +123,8 @@ const PRESETS: Preset[] = [
   },
 ]
 
-// The Default (standard DialerSeat) preset is the initial/fallback theme for a
-// new tenant — pinned by key so reordering the visible list never changes it.
+
+
 const DEFAULT_PRESET = PRESETS.find(p => p.key === 'preset-default') ?? PRESETS[0]
 const MAX_SAVED_THEMES = 15
 const SLUG_REGEX = /^[a-z0-9][a-z0-9-]{0,28}[a-z0-9]$/
@@ -142,7 +142,7 @@ type SlugStatus =
 
 export default function WhitelabelOnboardingPage() {
   const { user, isLoaded } = useUser()
-  // ── CHANGE 1: pull signOut from useClerk (mirrors billing page) ──────────
+  
   const { signOut } = useClerk()
   const router = useRouter()
 
@@ -160,7 +160,7 @@ export default function WhitelabelOnboardingPage() {
   const [headerBg, setHeaderBg] = useState<string>(DEFAULT_PRESET.headerBg)
   const [pageBg, setPageBg] = useState<string>(DEFAULT_PRESET.pageBg)
 
-  // v9: optional subdomain-login link
+  
   const [loginLinkLabel, setLoginLinkLabel] = useState('')
   const [loginLinkText, setLoginLinkText] = useState('')
   const [loginLinkUrl, setLoginLinkUrl] = useState('')
@@ -179,7 +179,7 @@ export default function WhitelabelOnboardingPage() {
   const [slugStatus, setSlugStatus] = useState<SlugStatus>({ kind: 'idle' })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  // ── CHANGE 2: abandoning state for the new-user cancel path ─────────────
+  
   const [abandoning, setAbandoning] = useState(false)
 
   useEffect(() => {
@@ -202,7 +202,7 @@ export default function WhitelabelOnboardingPage() {
         setOriginalSlug(tenantData.tenant.slug || '')
         setExistingLogoUrl(tenantData.tenant.logo_url || null)
 
-        // v9: pre-fill login link
+        
         setLoginLinkLabel(tenantData.tenant.login_link_label || '')
         setLoginLinkText(tenantData.tenant.login_link_text || '')
         setLoginLinkUrl(tenantData.tenant.login_link_url || '')
@@ -541,8 +541,8 @@ export default function WhitelabelOnboardingPage() {
       return
     }
 
-    // v9: light client-side guard for the optional login link — if the user
-    // started one, require both clickable text and URL. Server re-validates.
+    
+    
     const wantsLink =
       loginLinkText.trim().length > 0 ||
       loginLinkUrl.trim().length > 0 ||
@@ -590,7 +590,7 @@ export default function WhitelabelOnboardingPage() {
           sidebar_color: sidebar,
           header_bg_color: headerBg,
           page_bg_color: pageBg,
-          // v9: optional login link
+          
           login_link_label: loginLinkLabel.trim(),
           login_link_text: loginLinkText.trim(),
           login_link_url: loginLinkUrl.trim(),
@@ -623,8 +623,8 @@ export default function WhitelabelOnboardingPage() {
     }
   }
 
-  // ── CHANGE 3: handleCancel — edit mode unchanged (→ /dashboard);
-  //   new-user mode now signs out exactly like the billing page cancel does.
+  
+  
   const handleCancel = async () => {
     if (editMode) {
       router.push('/dashboard')
@@ -1105,7 +1105,7 @@ export default function WhitelabelOnboardingPage() {
   )
 }
 
-// ─── Inline helper component ─────────────────────────────────────────
+
 
 function ColorRow({
   label,
@@ -1187,7 +1187,7 @@ function renderSlugStatus(
   return null
 }
 
-// ─── Styles ──────────────────────────────────────────────────────────
+
 
 const pageStyle: React.CSSProperties = {
   minHeight: '100vh',

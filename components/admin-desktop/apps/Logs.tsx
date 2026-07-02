@@ -1,22 +1,22 @@
 'use client'
 import { useEffect, useState } from 'react'
 
-// =============================================================================
-// LOGS APP — v22
-// =============================================================================
-// v22 changes from v21:
-//   1. HOTKEYS NOW WORK: the chips have always rendered as `[1] all`,
-//      `[2] signup`, `[3] renewal`, `[4] cancel`, `[r] refresh` — implying
-//      keyboard bindings that never existed. They do now: 1–4 set the
-//      filter, r refetches. Bindings ignore keystrokes while typing in an
-//      input/textarea and require the Logs window to be mounted.
-//   2. Pairs with the NEW /api/admin/logs route — the endpoint this app has
-//      fetched since v20 but which was never built (the reason for the
-//      persistent error state). Response shape unchanged.
-//
-// v21: terminal green-on-black aesthetic, verbatim error bodies, filter
-// chips. All retained.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 interface LogEntry {
   id: string
@@ -37,7 +37,7 @@ interface LogsResponse {
 
 type FilterMode = 'all' | 'signup' | 'renewal' | 'cancel'
 
-// Terminal palette
+
 const C = {
   bg: '#0a0a0a',
   bgDim: '#0f0f0f',
@@ -61,7 +61,7 @@ export default function LogsApp() {
   const [error, setError] = useState<{ message: string; body?: string } | null>(null)
   const [filter, setFilter] = useState<FilterMode>('all')
 
-  // ── FETCH ────────────────────────────────────────────────────────────
+  
   const refetch = () => {
     let cancelled = false
     setLoading(true)
@@ -100,7 +100,7 @@ export default function LogsApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // ── v22: HOTKEYS — 1-4 filter, r refresh ─────────────────────────────
+  
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return
@@ -250,7 +250,7 @@ export default function LogsApp() {
   )
 }
 
-// ─── LOG LINE ────────────────────────────────────────────────────────────
+
 function LogLine({ entry }: { entry: LogEntry }) {
   const date = new Date(entry.date_iso)
   const ts = formatTimestamp(date)
@@ -289,9 +289,9 @@ function LogLine({ entry }: { entry: LogEntry }) {
   )
 }
 
-// ─── FORMATTERS ──────────────────────────────────────────────────────────
+
 function formatTimestamp(d: Date): string {
-  // Format: 2026-05-25 14:32:08
+  
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
@@ -301,7 +301,7 @@ function formatTimestamp(d: Date): string {
   return `${y}-${m}-${day} ${h}:${min}:${s}`
 }
 
-// ─── STYLES ──────────────────────────────────────────────────────────────
+
 const S: Record<string, React.CSSProperties> = {
   root: {
     display: 'flex',
@@ -314,7 +314,7 @@ const S: Record<string, React.CSSProperties> = {
     fontSize: 13,
     lineHeight: 1.5,
     overflow: 'hidden',
-    // Subtle scanline texture
+    
     backgroundImage:
       'repeating-linear-gradient(0deg, rgba(0,255,65,0.02) 0px, rgba(0,255,65,0.02) 1px, transparent 1px, transparent 3px)',
   },

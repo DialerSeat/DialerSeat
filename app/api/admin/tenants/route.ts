@@ -4,26 +4,6 @@ import { requireAdmin } from '@/lib/admin'
 
 const supabase = getServiceClient('admin/tenants')
 
-// =============================================================================
-// ADMIN TENANTS — collection route (v1, NEW)
-// =============================================================================
-// Backend for the WhiteLabel desktop app's Tenants + Branding sub-tabs.
-//
-//   GET  /api/admin/tenants   → { success, tenants: [...] } all tenants,
-//                               newest first, full real-schema rows
-//   POST /api/admin/tenants   → { success, tenant } creates a tenant
-//
-// Schema notes (the columns that actually exist on white_label_tenants):
-//   Real theme tokens: primary_color, sidebar_color, header_bg_color,
-//   page_bg_color. accent_color is the LEGACY alias for sidebar_color and is
-//   MIRRORED on every write (pre-migration-002 code reads accent_color).
-//   secondary_color / background_color / text_color are dead legacy columns —
-//   never written here, never edited in the app.
-//
-// status text column + is_active boolean are kept in sync:
-//   status 'active' ⇄ is_active true; 'suspended'/'cancelled' ⇄ false.
-// =============================================================================
-
 const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])?$/
 const RESERVED_SLUGS = new Set([
   'www', 'app', 'api', 'admin', 'dashboard', 'mail', 'smtp', 'ftp', 'blog',
@@ -75,7 +55,6 @@ export async function POST(req: NextRequest) {
       ? body.primary_color
       : COLOR_DEFAULTS.primary_color
 
-    // ── validation ───────────────────────────────────────────────────────
     if (!SLUG_RE.test(slug)) {
       return NextResponse.json(
         { success: false, error: 'Slug must be 1-40 chars, lowercase letters/numbers/hyphens, no leading or trailing hyphen' },
@@ -95,7 +74,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Owner must be a Clerk user id (user_...)' }, { status: 400 })
     }
 
-    // Owner must exist in users table
     const { data: owner } = await supabase
       .from('users')
       .select('clerk_id')
@@ -108,7 +86,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Slug uniqueness
     const { data: existing } = await supabase
       .from('white_label_tenants')
       .select('id')
@@ -118,7 +95,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: `Slug "${slug}" is already taken` }, { status: 409 })
     }
 
-    // ── insert (accent_color MIRRORS sidebar_color) ──────────────────────
     const { data: tenant, error } = await supabase
       .from('white_label_tenants')
       .insert({

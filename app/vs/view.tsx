@@ -3,22 +3,22 @@ import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 
-// =============================================================================
-// VS HUB VIEW
-// =============================================================================
-// The /vs page — index/hub showing every comparison page as a card.
-// Used by app/vs/page.tsx as the default export.
-//
-// Comparison pages currently live:
-//   - /vs/everyone   — DialerSeat vs every legacy dialer (industry-wide)
-//   - /vs/readymode
-//   - /vs/mojo
-//   - /vs/phoneburner
-//   - /vs/five9
-//
-// As we add more competitor comparisons (Convoso, CallTools, Kixie, JustCall,
-// etc.) just append them to COMPARISONS below.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 const T = {
   bg: '#f0f1f4',
@@ -36,7 +36,7 @@ interface Comparison {
   slug: string
   name: string
   tagline: string
-  // Short pitch: 1-2 sentences max
+  
   pitch: string
   badge?: string
 }

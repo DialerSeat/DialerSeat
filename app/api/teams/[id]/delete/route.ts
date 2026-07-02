@@ -3,22 +3,6 @@ import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 
-/**
- * Owner deletes a team entirely.
- * Requires typed "remove" confirmation in body to match destructive-action pattern.
- *
- * Cascades to delete:
- *   - team_codes (FK CASCADE)
- *   - team_members (FK CASCADE)
- *   - team_campaigns (FK CASCADE)
- * Preserves (sets to null):
- *   - team_seat_charges (FK SET NULL — billing audit trail must survive)
- *   - team_agent_payments.team_id (FK CASCADE on team_id, but the row itself
- *     stays alive only for active billing references — handled in E2 batch 4)
- *
- * In E2 batch 4 we'll add Stripe cleanup here (cancel any open seat charges,
- * issue prorated refunds). For now, deletion just removes the team rows.
- */
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -40,7 +24,6 @@ export async function POST(
       )
     }
 
-    // Verify ownership before delete
     const { data: team } = await supabaseAdmin
       .from('teams')
       .select('id, owner_id')

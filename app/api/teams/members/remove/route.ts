@@ -4,21 +4,6 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { cancelSeatSubscription } from '@/lib/teamBilling'
 import { apiError } from '@/lib/apiError'
 
-/**
- * Owner removes an active member from a team.
- * Requires typed "remove" confirmation.
- *
- * Now Stripe-wired:
- *   - Cancels any active seat subscriptions for this member's seats on this team
- *   - Per Q2=B: no proration, no refund — owner pays out the period
- *
- * Member is hard-flagged 'removed' regardless of Stripe outcome to prevent
- * the case where a Stripe error leaves the member dangling.
- *
- * Body:
- *   memberId: uuid (required)
- *   confirm:  'remove' (required)
- */
 export async function POST(req: Request) {
   try {
     const { userId } = await auth()
@@ -66,7 +51,6 @@ export async function POST(req: Request) {
 
     const now = new Date().toISOString()
 
-    // Get all active paid seat charges for this member to cancel in Stripe
     const { data: activeCharges } = await supabaseAdmin
       .from('team_seat_charges')
       .select('id, stripe_subscription_id')
@@ -80,8 +64,6 @@ export async function POST(req: Request) {
         const result = await cancelSeatSubscription(charge.stripe_subscription_id)
         stripeCancelResults.push({ chargeId: charge.id, ...result })
 
-        // Mark the charge as canceled in our DB regardless of Stripe outcome
-        // (Stripe errors will be in stripeCancelResults for owner visibility)
         await supabaseAdmin
           .from('team_seat_charges')
           .update({ status: 'voided' })
@@ -96,13 +78,11 @@ export async function POST(req: Request) {
       }
     }
 
-    // Set member to removed
     await supabaseAdmin
       .from('team_members')
       .update({ status: 'removed', removed_at: now })
       .eq('id', memberId)
 
-    // Revoke all active campaign access for this member
     await supabaseAdmin
       .from('team_campaign_access')
       .update({ is_active: false, revoked_at: now })

@@ -4,26 +4,6 @@ import { requireTenantOwner, TenantOwnerError } from '@/lib/tenant-scope'
 
 const supabase = getServiceClient('manager/teams')
 
-// =============================================================================
-// MANAGER TEAMS — /api/manager/teams  (tenant-scoped)
-// =============================================================================
-// The Manager+ desktop Teams app calls this instead of /api/admin/teams. SAME
-// response shape (success + teams[] + platformTotals) so the shared Teams
-// component renders unchanged — but it returns ONLY the teams linked to the
-// caller's tenant (teams.tenant_id = their tenant), with members + seat charges
-// + join codes for each.
-//
-// SECURITY: requireTenantOwner() is the boundary. We only ever select teams
-// WHERE tenant_id = the caller's own tenant, so a manager can never see another
-// tenant's teams or platform-wide data. No tenant id is taken from the client.
-//
-// NOTE: "platformTotals" keeps its name for component compatibility but here it
-// means "this tenant's totals". Delete is intentionally NOT exposed to managers
-// in this route — the Teams app's delete button calls /api/admin/teams/delete,
-// which is admin-only; on the manager desktop that button should be hidden
-// (handled in the app via role).
-// =============================================================================
-
 export async function GET() {
   let tenant
   try {
@@ -35,7 +15,6 @@ export async function GET() {
     return NextResponse.json({ success: false, error: 'Tenant check failed' }, { status: 500 })
   }
 
-  // Teams linked to this tenant only.
   const { data: teams } = await supabase
     .from('teams')
     .select('id, name, description, owner_id, created_at')

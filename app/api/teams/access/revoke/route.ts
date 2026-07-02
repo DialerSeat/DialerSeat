@@ -4,22 +4,6 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { cancelSeatSubscription } from '@/lib/teamBilling'
 import { apiError } from '@/lib/apiError'
 
-/**
- * Owner revokes a specific agent's access to a specific campaign.
- * Soft-delete: sets is_active=false, revoked_at timestamp.
- *
- * Now Stripe-wired:
- *   - If revoked access was 'owner' payer AND this was the LAST owner-paid
- *     access for this member on this team → cancel the seat sub.
- *   - If member still has other owner-paid access on the team → leave sub alone
- *     (one sub covers all the member's owner-paid access on a team).
- *   - If revoked access was 'agent' payer → no Stripe action; agent's own sub
- *     is independent.
- *
- * Body:
- *   accessId: uuid (required)
- *   confirm:  'remove' (required)
- */
 export async function POST(req: Request) {
   try {
     const { userId } = await auth()
@@ -67,7 +51,6 @@ export async function POST(req: Request) {
 
     const now = new Date().toISOString()
 
-    // Revoke the access row
     const { error: revErr } = await supabaseAdmin
       .from('team_campaign_access')
       .update({ is_active: false, revoked_at: now })
@@ -75,12 +58,11 @@ export async function POST(req: Request) {
 
     if (revErr) throw revErr
 
-    // Stripe handling: only act if this was an owner-paid access
     let stripeCanceled = false
     let stripeReason: string | undefined
 
     if (access.payer === 'owner') {
-      // Check if member has any other ACTIVE owner-paid access on this team
+
       const { data: remainingOwnerPaid } = await supabaseAdmin
         .from('team_campaign_access')
         .select('id')
@@ -91,7 +73,7 @@ export async function POST(req: Request) {
         .limit(1)
 
       if (!remainingOwnerPaid || remainingOwnerPaid.length === 0) {
-        // Last owner-paid access — cancel the seat sub
+
         const { data: charge } = await supabaseAdmin
           .from('team_seat_charges')
           .select('id, stripe_subscription_id')

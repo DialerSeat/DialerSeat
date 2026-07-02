@@ -1,12 +1,3 @@
-// app/api/scripts/update/route.ts
-// =============================================================================
-// GLOBAL SCRIPTS LIBRARY — UPDATE (name / body)
-// =============================================================================
-// Only the script's owner can edit it. Members who merely see a team script in
-// their library cannot edit it (they don't own it). Editing a script updates it
-// everywhere it's enabled (it's one global record).
-// =============================================================================
-
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
@@ -50,9 +41,6 @@ export async function POST(req: Request) {
 
     if (error) throw error
 
-    // Mirror the body to campaigns.script for any campaign where this is the
-    // first (lowest sort_order) enabled script, so legacy single-script readers
-    // (e.g. older dialer code paths) stay in sync.
     const { data: links } = await supabaseAdmin
       .from('campaign_script_links')
       .select('campaign_id, sort_order')

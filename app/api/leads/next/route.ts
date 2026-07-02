@@ -4,20 +4,8 @@ import { isCallableNow } from '@/lib/callingWindow'
 import { requireUser } from '@/lib/requireUser'
 import { apiError } from '@/lib/apiError'
 
-// SECURITY (was IDOR): this route took ?user_id from the query string and used
-// it for BOTH personal lead scoping AND team-membership verification. That let
-// any signed-in user (a) pull another user's personal leads, and (b) spoof
-// membership by passing a real member's id. Identity now comes from the Clerk
-// session; the query param is ignored.
-
-// How many candidate leads to evaluate before giving up.
-// We over-fetch then filter in JS because Supabase can't run our time-zone
-// logic. Most pools at 50-200 leads, this is plenty.
 const CANDIDATE_LIMIT = 50
 
-// Fetch the campaign's dialer mode + AMD setting so the client can drive
-// per-call behavior (especially for ALL_ACTIVE which dials across many
-// campaigns each with its own mode). Falls back to power+AMD-on if not set.
 async function fetchCampaignMode(campaignId: string) {
   const { data } = await supabaseAdmin
     .from('campaigns')
@@ -40,7 +28,6 @@ export async function GET(req: Request) {
     const campaign_id = searchParams.get('campaign_id')
     const team_id = searchParams.get('team_id')
 
-    // ── TEAM SCOPE ──
     if (team_id) {
       const { data: team } = await supabaseAdmin
         .from('teams')
@@ -89,7 +76,6 @@ export async function GET(req: Request) {
         scopedCampaignIds = teamCampaignIds
       }
 
-      // Fetch a batch of candidates, then filter by calling window in JS
       const { data: candidates, error } = await supabaseAdmin
         .from('leads')
         .select('*, extra_data')
@@ -115,7 +101,7 @@ export async function GET(req: Request) {
       }).allowed)
 
       if (!callable) {
-        // Distinguish between "no leads" and "all leads outside callable window"
+
         const hasAnyCandidates = (candidates?.length || 0) > 0
         return NextResponse.json({
           success: false,
@@ -130,7 +116,6 @@ export async function GET(req: Request) {
       return NextResponse.json({ success: true, lead: callable, campaign })
     }
 
-    // ── PERSONAL SCOPE ──
     const { data: activeCampaigns } = await supabaseAdmin
       .from('campaigns')
       .select('id')
@@ -170,7 +155,6 @@ export async function GET(req: Request) {
       return apiError(error, { route: 'leads/next' })
     }
 
-    // Filter to only leads currently inside their local TCPA window
     const callable = (candidates || []).find(c => isCallableNow({
       phone: c.phone,
       state: c.state,

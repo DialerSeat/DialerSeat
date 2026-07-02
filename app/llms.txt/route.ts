@@ -1,19 +1,19 @@
-// =============================================================================
-// app/llms.txt/route.ts — AI crawler guide (llms.txt standard)
-// =============================================================================
-// Served at https://dialerseat.com/llms.txt
-//
-// llms.txt (https://llmstxt.org) is an emerging convention: a markdown file at
-// your root that gives LLMs a concise, authoritative summary of what your site
-// is, who it's for, and links to the pages worth citing. Tools like Perplexity
-// and various AI search crawlers look for it. It's the cleanest lever for
-// "I want AI to be on my side" — you're handing the model the exact framing and
-// facts you want it to repeat, instead of letting it guess from scraped copy.
-//
-// Keep this FACTUAL and current. AI models will quote it; anything inaccurate
-// here becomes a confidently-wrong answer about your product. Update pricing,
-// claims, and the page list whenever they change.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 3600

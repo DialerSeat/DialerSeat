@@ -4,18 +4,6 @@ import { requireActive } from '@/lib/subscription'
 import { auth } from '@clerk/nextjs/server'
 import { apiError } from '@/lib/apiError'
 
-/**
- * Parses optional consent fields from a lead row. Returns the four columns
- * if they're present and parseable, all null otherwise.
- *
- * Accepted CSV header names (case-insensitive, punctuation-stripped):
- *   consent_date, consent date, consentdate
- *   consent_source, consent source
- *   consent_description, consent text, consent_text
- *   consent_proof_url, consent_proof, proof_url
- *
- * This is per the FCC's January 2025 one-to-one consent rule under TCPA.
- */
 function parseConsent(row: Record<string, any>) {
   const lower: Record<string, string> = {}
   for (const [k, v] of Object.entries(row)) {
@@ -135,8 +123,7 @@ export async function POST(req: Request) {
           phone: String(phone).replace(/\D/g, ''),
           status: 'uncalled',
           extra_data: { raw: lead },
-          // Array-format leads can't carry consent metadata cleanly,
-          // so consent fields default to null
+
           consent_date: null,
           consent_source: null,
           consent_description: null,
@@ -170,8 +157,6 @@ export async function POST(req: Request) {
       .update({ total_leads: actualCount ?? 0 })
       .eq('id', campaign_id)
 
-    // Count how many leads in this batch actually carried consent metadata.
-    // Useful for showing "uploaded 1,000 leads (823 with consent)" in the UI.
     const consentCount = leadsToInsert.filter((l: any) => l && l.consent_date).length
 
     return NextResponse.json({

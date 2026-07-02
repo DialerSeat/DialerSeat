@@ -1,27 +1,27 @@
 'use client'
 
-// =============================================================================
-// BROWSER APP — v23
-// =============================================================================
-// A desktop "browser" window. Because most major sites send X-Frame-Options
-// / CSP frame-ancestors that forbid being iframed (Gmail, Slack, GitHub,
-// banks, social, etc.), this can't be a real universal browser. It does the
-// honest thing:
-//
-//   1. URL bar + Go button + bookmark quick-launch row.
-//   2. Attempts to render the URL in an <iframe>.
-//   3. Detects when embedding is blocked (load timeout + onLoad heuristics)
-//      and shows a clear "this site can't be embedded — open in new tab"
-//      fallback rather than a silent blank frame.
-//
-// Bookmarks are seeded with iframe-FRIENDLY sites (Wikipedia, your own
-// dashboard, etc.) so the happy path actually works. Sites known to block
-// embedding show the fallback immediately.
-//
-// Persistence: bookmarks + last URL stored in the artifact's own state only
-// (in-memory). We intentionally don't touch localStorage here — the desktop
-// shell persists open windows, and the browser re-seeds defaults on open.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
@@ -29,12 +29,12 @@ import type { CSSProperties } from 'react'
 interface Bookmark {
   label: string
   url: string
-  /** Known to block iframing — show fallback immediately, skip the attempt. */
+  
   blocksEmbedding?: boolean
 }
 
-// Seeded bookmarks. The blocksEmbedding flag is a best-effort hint; the
-// runtime detection is the real gate.
+
+
 const DEFAULT_BOOKMARKS: Bookmark[] = [
   { label: 'DialerSeat', url: 'https://dialerseat.com/?view=landing' },
   { label: 'Wikipedia', url: 'https://www.wikipedia.org' },
@@ -47,7 +47,7 @@ function normalizeUrl(input: string): string {
   let u = input.trim()
   if (!u) return ''
   if (!/^https?:\/\//i.test(u)) {
-    // If it looks like a search rather than a domain, send to a search engine.
+    
     if (!/\.[a-z]{2,}/i.test(u) || /\s/.test(u)) {
       return `https://duckduckgo.com/?q=${encodeURIComponent(u)}`
     }
@@ -73,7 +73,7 @@ export default function BrowserApp() {
     setUrlInput(url)
     setCurrentUrl(url)
 
-    // Check seeded hint.
+    
     const bm = bookmarks.find((b) => b.url === url)
     const blocked = !!bm?.blocksEmbedding
     setKnownBlocked(blocked)
@@ -86,11 +86,11 @@ export default function BrowserApp() {
     setLoadState('loading')
     loadedRef.current = false
 
-    // Embedding-blocked detection: if onLoad never fires within 3.5s, assume
-    // the browser refused to render it (X-Frame-Options / CSP). Some blocked
-    // sites DO fire onLoad with an error page, so we also re-check after load
-    // whether we can read anything — but cross-origin reads throw, so the
-    // timeout is the primary signal.
+    
+    
+    
+    
+    
     if (loadTimerRef.current) clearTimeout(loadTimerRef.current)
     loadTimerRef.current = setTimeout(() => {
       if (!loadedRef.current) {
@@ -102,8 +102,8 @@ export default function BrowserApp() {
   const onIframeLoad = () => {
     loadedRef.current = true
     if (loadTimerRef.current) clearTimeout(loadTimerRef.current)
-    // If it loaded but the URL was flagged blocked, the fallback already
-    // shows. Otherwise mark loaded.
+    
+    
     setLoadState((prev) => (prev === 'blocked' ? prev : 'loaded'))
   }
 

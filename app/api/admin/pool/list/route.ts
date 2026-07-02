@@ -21,7 +21,7 @@ export async function GET() {
   const config = await getPoolConfig()
   const stats = await getPoolStats()
 
-  // Compute the live utilization metric for the dashboard's growth meter
+  
   const totalDailyCalls = (numbers ?? []).reduce((s, n) => s + n.daily_call_count, 0)
   const totalDailyCapacity = (numbers ?? []).reduce((s, n) => s + n.daily_cap, 0)
   const liveUtilizationPct = totalDailyCapacity > 0

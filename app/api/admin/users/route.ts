@@ -12,7 +12,6 @@ export async function GET(req: NextRequest) {
     return res as Response
   }
 
-  // 1) Pull all users
   const { data: users, error } = await supabase
     .from('users')
     .select('clerk_id, email, first_name, last_name, stripe_customer_id, created_at, is_admin')
@@ -28,7 +27,6 @@ export async function GET(req: NextRequest) {
 
   const userIds = users.map(u => u.clerk_id)
 
-  // 2) Subscriptions per user
   const { data: subs } = await supabase
     .from('subscriptions')
     .select('user_id, status, current_period_end, cancel_at_period_end, discount_coupon')
@@ -41,7 +39,6 @@ export async function GET(req: NextRequest) {
     if (!existing || isLive) subByUser.set(s.user_id, s)
   }
 
-  // 3) Lead counts per user — use exact count to bypass 1000-row limit
   const leadCounts = new Map<string, number>()
   await Promise.all(
     userIds.map(async (uid) => {
@@ -53,7 +50,6 @@ export async function GET(req: NextRequest) {
     })
   )
 
-  // 4) Last activity per user — most recent of (last call, last lead added, last campaign update)
   const lastActivity = new Map<string, string>()
   await Promise.all(
     userIds.map(async (uid) => {
@@ -79,7 +75,6 @@ export async function GET(req: NextRequest) {
     })
   )
 
-  // 5) Team member counts — placeholder until team feature ships
   const teamMemberCounts = new Map<string, number>()
 
   const rows = users.map(u => {

@@ -16,19 +16,19 @@ interface ContextMenuProps {
   onClose: () => void
 }
 
-// =============================================================================
-// CONTEXT MENU
-// =============================================================================
-// Authentic Win7 style: white background, thin gray border, 1px hover
-// highlight in blue. Auto-clamps to viewport so right-clicking near the edge
-// doesn't render off-screen. Closes on outside click, Escape, or any item
-// click.
-// =============================================================================
+
+
+
+
+
+
+
+
 
 export default function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
   const ref = useRef<HTMLDivElement>(null)
 
-  // Position: clamp to viewport. We measure after mount so we know our size.
+  
   useEffect(() => {
     if (!ref.current) return
     const el = ref.current
@@ -45,7 +45,7 @@ export default function ContextMenu({ x, y, items, onClose }: ContextMenuProps) 
     el.style.top = `${top}px`
   }, [x, y])
 
-  // Outside click + Escape to close
+  
   useEffect(() => {
     const onMouseDown = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) {

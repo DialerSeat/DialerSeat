@@ -20,37 +20,37 @@ interface AppWindowProps {
   onTitleBarContextMenu: (clientX: number, clientY: number) => void
 }
 
-// =============================================================================
-// APP WINDOW — v22.1
-// =============================================================================
-// Authentic Win7 Aero window. v22.1 fixes two long-standing bugs on iPhone PWA:
-//
-//   1. SCROLL CONTAINER CONFLICT — Before v22.1 the AppWindow body wrapper
-//      had `overflow: auto`, which meant apps inside (Notes, Logs, etc) had
-//      a scroll container OUTSIDE their root. Apps that ALSO declared their
-//      own scroll regions (Notes' textarea, Logs' message list) ended up
-//      with two competing scroll boundaries: iOS would grow the inner
-//      content past the outer container's visible area instead of clipping
-//      it. Result: Notes body textarea on iPhone would never scroll to the
-//      bottom — the textarea was effectively taller than the AppWindow.
-//
-//      Fix: body wrapper now uses `overflow: hidden`. Apps that need to
-//      scroll declare their OWN scroll containers internally with proper
-//      `min-height: 0` constraints. This is the standard pattern — let the
-//      app own its scroll behavior, the window just clips.
-//
-//   2. MOBILE FULL-SCREEN IGNORES SAFE AREAS — Before v22.1 mobile maximize
-//      used `width: 100vw; height: calc(100vh - 48px)`. iPhone PWA with
-//      `apple-mobile-web-app-status-bar-style: black-translucent` lays
-//      content UNDER the status bar / Dynamic Island AND under the home
-//      indicator. So the title bar was hidden by the notch, and the bottom
-//      of the app got grazed by the home indicator. Same fix as elsewhere
-//      in v22: use `env(safe-area-inset-*)` for the four edges.
-//
-//      The Desktop component still probes safe-area-bottom and adjusts
-//      TASKBAR_HEIGHT — that's how the bottom of the window finds the
-//      right stopping point. This component handles the TOP safe area.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 export default function AppWindow({
   state,
@@ -74,7 +74,7 @@ export default function AppWindow({
   const [resizing, setResizing] = useState<'br' | null>(null)
   const resizeStartRef = useRef({ x: 0, y: 0, w: 0, h: 0 })
 
-  // ── DRAG TO MOVE (desktop only) ──────────────────────────────────────────
+  
   const onTitleMouseDown = useCallback((e: React.MouseEvent) => {
     if (isMobile || state.maximized) return
     if (e.button !== 0) return
@@ -113,7 +113,7 @@ export default function AppWindow({
     }
   }, [dragging, state.width, onMove])
 
-  // ── RESIZE FROM BOTTOM-RIGHT CORNER ──────────────────────────────────────
+  
   const onResizeMouseDown = useCallback((e: React.MouseEvent) => {
     if (isMobile || state.maximized) return
     if (e.button !== 0) return
@@ -146,7 +146,7 @@ export default function AppWindow({
     }
   }, [resizing, state.x, state.y, onResize])
 
-  // ── KEYBOARD: Alt+F4 to close ────────────────────────────────────────────
+  
   useEffect(() => {
     if (!isFocused) return
     const onKey = (e: KeyboardEvent) => {
@@ -163,27 +163,27 @@ export default function AppWindow({
     return () => document.removeEventListener('keydown', onKey)
   }, [isFocused, onClose])
 
-  // ── COMPUTED GEOMETRY ────────────────────────────────────────────────────
-  // Mobile or maximized: full screen ABOVE the taskbar.
-  //
-  // v22.1 — safe-area awareness:
-  //   On iPhone PWA the top inset (status bar / notch / Dynamic Island) can
-  //   be 20–60+ px depending on device. Without accommodation the title bar
-  //   sits behind the battery icon. We pin top:0 and add padding-top on the
-  //   title bar so its CONTENT (icon + name + controls) sits below the
-  //   notch. We DON'T just push top: by safe-area because then there'd be
-  //   a transparent gap above the title bar showing the wallpaper.
-  //
-  //   Bottom safe area is handled by Desktop.tsx which subtracts it from
-  //   the viewport height when computing window geometry — Desktop's
-  //   TASKBAR_HEIGHT already includes safe-area-inset-bottom. So we just
-  //   honor the geometry the parent passes us.
-  // ────────────────────────────────────────────────────────────────────────
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   const geom: React.CSSProperties = (isMobile || state.maximized) ? {
     left: 0,
     top: 0,
     width: '100vw',
-    // Height comes from Desktop which already accounts for safe-area-bottom
+    
     height: 'calc(100vh - 48px - env(safe-area-inset-bottom, 0px))',
   } : {
     left: state.x, top: state.y,
@@ -194,15 +194,15 @@ export default function AppWindow({
     return null
   }
 
-  // Title bar gets extra padding-top in mobile/maximized so it clears the
-  // notch. In windowed (non-maximized) desktop mode, padding-top is the
-  // standard 4px because the user controls placement.
+  
+  
+  
   const titleBarPaddingTop =
     (isMobile || state.maximized)
       ? 'max(4px, calc(env(safe-area-inset-top, 0px) + 4px))'
       : '4px'
 
-  // Title bar height needs to grow to match the larger padding-top
+  
   const titleBarHeight =
     (isMobile || state.maximized)
       ? 'calc(30px + env(safe-area-inset-top, 0px))'
@@ -345,9 +345,9 @@ export default function AppWindow({
   )
 }
 
-// =============================================================================
-// WINDOW CONTROL — Win7-style min / max / close buttons
-// =============================================================================
+
+
+
 function WindowControl({
   kind, onClick, title, maximized,
 }: {

@@ -4,23 +4,23 @@ import { useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
-// =============================================================================
-// TEAMS PAGE — Pass 2 v6 (single-use partner join links)
-// =============================================================================
-// v6 changes vs v5:
-//   - NEW CODE modal gains a "LINK TYPE" toggle: REUSABLE vs SINGLE-USE LINK.
-//     Single-use sets max_uses=1 on the code. A single-use seat+owner code is a
-//     partner per-seat link: the agent who opens it auto-joins instantly with
-//     no approval, and the owner's card covers the $35/wk seat.
-//   - submitCreateCode sends singleUse to /api/teams/codes/create.
-//   - codeSingleUse state + reset in openCodeModal.
-//   - TeamCode interface carries max_uses / use_count (returned by
-//     /api/teams/list). Single-use codes render a COPY LINK button that copies
-//     the full demo.dialerseat.com/join/<CODE> URL.
-//
-// All v5 functionality preserved (FAQ link in title row, redirect targets,
-// free access mode, access-grant modals, two-stage delete).
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 const T = {
   bg: 'var(--brand-page-bg)',

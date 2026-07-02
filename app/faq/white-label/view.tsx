@@ -2,29 +2,29 @@
 import Link from 'next/link'
 import { useUser } from '@clerk/nextjs'
 
-// =============================================================================
-// /white-label — White-Label Your Dialer
-// =============================================================================
-// Founder voice. Audience: managers (agency owners, lead vendors) who have
-// already wrapped their heads around what manager mode does, and now want
-// to know if they should pay double for white-label.
-//
-// The pitch:
-//   1. White-label = $75/wk replaces the $35/wk Pro sub. Everything in Pro,
-//      plus full re-branding (logo, colors, custom domain).
-//   2. The agents never see DialerSeat anywhere. They sign up at YOUR domain,
-//      see YOUR logo at the top, dial inside what looks like YOUR product.
-//   3. The math: $75/wk × 52 weeks = ~$3,900/yr. Compare to building a custom
-//      dialer ($300k+ engineering) or licensing someone else's white-label
-//      ($500–$2000/mo plus per-seat fees on top).
-//   4. What's included vs not — domain, logo, primary/accent colors, login
-//      screen, dashboard chrome, emails. NOT included (yet): custom Stripe
-//      Connect routing, custom Twilio/SignalWire trunks. Honest about scope.
-//   5. Same subtle promo paragraph at the end.
-//
-// Note on framing: $75/wk REPLACES the $35/wk Pro sub. It does NOT stack.
-// White-label users don't pay both — the $75 includes their dialing seat.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 const T = {
   bg: '#f0f1f4',

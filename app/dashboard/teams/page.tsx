@@ -4,21 +4,21 @@ import { useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
-// =============================================================================
-// TEAMS PAGE — Pass 2 v5 (FAQ link relocation)
-// =============================================================================
-// v5 change: the FAQ link moves from the bottom of the "WHAT IS A DIALERSEAT
-// TEAM?" copy block (where v4 placed it) up to the top-right of the card's
-// title row. The bottom FAQ block from v4 is removed entirely so we don't
-// duplicate the CTA.
-//
-// All other v4 functionality preserved:
-//   1. URL redirects to /dashboard/teams/${id}/analytics
-//   2. 'free' on TeamCampaignRow.accessMode, attachAccessMode, updateCampaignAccess
-//   3. FREE option in attach modal radio + per-campaign select
-//   4. C6 header binding
-//   5. Item-1 copy-block primary swap intact
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 const T = {
   bg: 'var(--brand-page-bg)',

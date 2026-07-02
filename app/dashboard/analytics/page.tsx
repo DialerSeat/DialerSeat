@@ -8,26 +8,26 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts'
 
-// =============================================================================
-// app/dashboard/analytics/page.tsx — Pass 2 Phase C2 + header-strip rebind
-// =============================================================================
-// Changes vs prior C2:
-//   - .analytics-header background: --brand-sidebar-bg → --brand-header-bg
-//     (the strip is the page header, not the sidebar — was a bug from C2
-//     that made every page's header strip follow the sidebar color)
-//   - .range-tab color: --brand-on-sidebar-muted → --brand-on-header-muted
-//   - .custom-range input bg + arrow color: sidebar tokens → header tokens
-//     (input bg still uses --brand-sidebar-active-bg because that token's
-//     value — primary at 18% alpha — is theme-independent and reads
-//     correctly over header-bg too)
-//   - AWAITING DATA pill: var(--brand-primary) bg + var(--brand-on-primary)
-//     text → hardcoded #363647 bg + #ffffff text (semantic dark accent,
-//     never themed)
-//
-// Everything else preserved byte-for-byte: structural code, recharts SVG
-// attrs (T.muted, T.border, T.green etc.), stat card stripes, welcome
-// row, semantic colors, range-tab inactive border, landing-page button.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 const T = {
   bg: '#f0f1f4',
@@ -65,17 +65,17 @@ function getRangeBounds(range: Range, customStart?: string, customEnd?: string):
     return { start: start.toISOString(), end: end.toISOString() }
   }
   if (range === 'week') {
-    // Current CALENDAR week — Sunday 00:00 of this week → now.
-    // Resets every Sunday at midnight local time.
-    // getDay(): 0=Sun, 1=Mon, ..., 6=Sat.
+    
+    
+    
     const start = new Date(now)
     start.setDate(start.getDate() - start.getDay())
     start.setHours(0, 0, 0, 0)
     return { start: start.toISOString(), end: now.toISOString() }
   }
   if (range === 'month') {
-    // Current CALENDAR month — 1st 00:00 of this month → now.
-    // Resets on the 1st of every month at midnight local time.
+    
+    
     const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0)
     return { start: start.toISOString(), end: now.toISOString() }
   }
@@ -95,9 +95,9 @@ function todayBounds() {
   return { start: start.toISOString(), end: end.toISOString() }
 }
 
-// Used as the secondary fetch when range='today'. Returns the same calendar
-// week as getRangeBounds('week') so the "This week" sub-stats stay aligned
-// with whatever the WEEK tab would show.
+
+
+
 function weekBounds() {
   const now = new Date()
   const start = new Date(now)
@@ -162,7 +162,7 @@ export default function AnalyticsPage() {
   const [campaigns, setCampaigns] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Admin redirect
+  
   useEffect(() => {
     if (!user) return
     fetch('/api/admin/check')
@@ -179,8 +179,8 @@ export default function AnalyticsPage() {
 
   const bounds = useMemo(() => getRangeBounds(range, customStart, customEnd), [range, customStart, customEnd])
 
-  // Secondary fetch: when range is 'today', secondary = current calendar WEEK;
-  // otherwise, secondary = TODAY.
+  
+  
   const secondaryBounds = useMemo(() => {
     return range === 'today' ? weekBounds() : todayBounds()
   }, [range])

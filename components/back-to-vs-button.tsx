@@ -1,22 +1,7 @@
 'use client'
 import Link from 'next/link'
 
-/**
- * Floating button placed at top-left of each individual /vs/<slug> page.
- * Returns the user to /vs — the hub showing all comparison pages as cards.
- *
- * Positioned `fixed` so it stays visible while scrolling.
- * Sits below the SiteHeader (~64px tall) so it doesn't overlap.
- *
- * Usage in any /vs view:
- *   import BackToVsButton from '@/components/back-to-vs-button'
- *   <BackToVsButton />
- *
- * Do NOT include this on /vs itself — that page IS the hub.
- *
- * HISTORY: Earlier version pointed to /vs/everyone (a comparison page,
- * not the hub). Updated to /vs once the proper VsHubView component shipped.
- */
+
 export default function BackToVsButton() {
   return (
     <Link

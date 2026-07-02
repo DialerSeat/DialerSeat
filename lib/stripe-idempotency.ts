@@ -1,16 +1,16 @@
-// lib/stripe-idempotency.ts
-// Idempotency layer for Stripe webhook processing.
-//
-// Usage in webhook route:
-//   const claim = await claimStripeEvent(event)
-//   if (!claim.shouldProcess) return NextResponse.json({ received: true })
-//   try {
-//     await doTheActualWork(event)
-//     await markStripeEventProcessed(event.id)
-//   } catch (err) {
-//     await markStripeEventFailed(event.id, err)
-//     throw  // let Stripe retry
-//   }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 import { createClient } from '@supabase/supabase-js'
 import type Stripe from 'stripe'
@@ -28,21 +28,12 @@ interface ClaimResult {
   reason: 'new' | 'already_processed' | 'in_progress' | 'previously_failed_retry'
 }
 
-/**
- * Attempt to claim a Stripe event for processing.
- *
- * Returns shouldProcess=true ONLY if this is a brand-new event or a retry
- * of a previously-failed event. Returns false for already-processed events
- * (Stripe retried after we already succeeded — common).
- *
- * Race-safe: the insert relies on the event_id primary key, so two concurrent
- * webhook invocations can't both claim the same event.
- */
+
 export async function claimStripeEvent(event: Stripe.Event): Promise<ClaimResult> {
   const supabase = db()
 
-  // Try to insert a new row. If it conflicts (event already seen), we'll
-  // check status to decide whether to reprocess.
+  
+  
   const { error: insertErr } = await supabase
     .from('stripe_events')
     .insert({
@@ -57,7 +48,7 @@ export async function claimStripeEvent(event: Stripe.Event): Promise<ClaimResult
     return { shouldProcess: true, reason: 'new' }
   }
 
-  // Insert failed — likely duplicate (PK conflict). Check existing row.
+  
   const { data: existing } = await supabase
     .from('stripe_events')
     .select('processing_status, attempts')
@@ -65,7 +56,7 @@ export async function claimStripeEvent(event: Stripe.Event): Promise<ClaimResult
     .maybeSingle()
 
   if (!existing) {
-    // Insert failed for a non-duplicate reason. Don't process; surface to logs.
+    
     console.error('[stripe-idempotency] insert failed but no existing row', {
       event_id: event.id,
       error: insertErr.message,
@@ -78,7 +69,7 @@ export async function claimStripeEvent(event: Stripe.Event): Promise<ClaimResult
   }
 
   if (existing.processing_status === 'failed') {
-    // Stripe retried a previously-failed event. Bump attempts and try again.
+    
     await supabase
       .from('stripe_events')
       .update({
@@ -90,7 +81,7 @@ export async function claimStripeEvent(event: Stripe.Event): Promise<ClaimResult
     return { shouldProcess: true, reason: 'previously_failed_retry' }
   }
 
-  // status === 'received' or 'skipped' — another invocation is processing it
+  
   return { shouldProcess: false, reason: 'in_progress' }
 }
 
@@ -134,10 +125,7 @@ export async function markStripeEventFailed(
   }
 }
 
-/**
- * Mark an event as deliberately skipped (event type we don't handle).
- * Different from 'processed' so dashboards can distinguish noise from real work.
- */
+
 export async function markStripeEventSkipped(eventId: string): Promise<void> {
   const supabase = db()
   await supabase

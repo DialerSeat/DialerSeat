@@ -1,12 +1,12 @@
-// app/api/gmail/callback/route.ts
-// =============================================================================
-// Google redirects here after the user accepts/declines consent.
-// Query params:
-//   ?code=...&state=...        on success
-//   ?error=access_denied&...   on user decline
-// We exchange the code for tokens, store them, then bounce back to
-// /dashboard/admin/desktop?gmail=connected (or =error/=denied).
-// =============================================================================
+
+
+
+
+
+
+
+
+
 
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth, exchangeCodeForTokens, upsertTokens, GmailAuthError } from '@/lib/gmail'
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
   const state = url.searchParams.get('state')
   const error = url.searchParams.get('error')
 
-  // User clicked "Cancel" on Google consent page.
+  
   if (error) {
     return bounceBack('denied', error)
   }
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
     return bounceBack('error', 'missing_code_or_state')
   }
 
-  // Verify state matches what we set in the auth route.
+  
   const cookieState = req.cookies.get('gmail_oauth_state')?.value
   if (!cookieState || cookieState !== state) {
     return bounceBack('error', 'state_mismatch')
@@ -44,8 +44,8 @@ export async function GET(req: NextRequest) {
   try {
     const clerkId = await requireAuth()
 
-    // Defensive check: state prefix should also match the user (in case
-    // someone hijacked an auth URL from another logged-in user).
+    
+    
     const expectedPrefix = `${clerkId}.`
     if (!state.startsWith(expectedPrefix)) {
       return bounceBack('error', 'state_user_mismatch')
@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
     })
 
     const res = bounceBack('connected')
-    // Clean up the state cookie.
+    
     res.cookies.delete('gmail_oauth_state')
     return res
   } catch (err) {

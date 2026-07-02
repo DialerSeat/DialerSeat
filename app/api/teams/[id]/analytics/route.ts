@@ -3,24 +3,6 @@ import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 
-/**
- * Per-team analytics for /dashboard/teams/[id]/analytics.
- *
- * Query params:
- *   range:       'today' | 'week' | 'month' | 'custom' | 'all' (default 'week')
- *   start:       ISO date string (required when range='custom')
- *   end:         ISO date string (required when range='custom')
- *   campaign_id: filter calls to one campaign (must be attached to this team)
- *   user_id:     filter calls to one member (owner-only)
- *
- * v2 fix: when no campaigns are attached (or the filtered campaign list
- * is empty), the original code passed `['__none__']` to .in('campaign_id', ...)
- * which Postgres rejected as an invalid UUID. This rev skips the calls
- * fetch entirely in that case — the rest of the aggregation flows through
- * with an empty array, returning a fully-zeroed payload the page can
- * render as an AWAITING DATA template.
- */
-
 type Range = 'today' | 'week' | 'month' | 'custom' | 'all'
 
 function rangeBounds(
@@ -71,7 +53,6 @@ export async function GET(
     const filterCampaignId = searchParams.get('campaign_id')
     const filterUserId = searchParams.get('user_id')
 
-    // Team + viewer role
     const { data: team, error: teamErr } = await supabaseAdmin
       .from('teams')
       .select('id, name, owner_id')
@@ -94,7 +75,6 @@ export async function GET(
       if (!m) return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
     }
 
-    // Roster — owner always included
     const { data: memberRows } = await supabaseAdmin
       .from('team_members')
       .select('user_id')
@@ -106,7 +86,6 @@ export async function GET(
       ...(memberRows || []).map((m: any) => m.user_id),
     ]))
 
-    // Validate filterUserId up front so it fires even in the empty-campaigns path
     if (filterUserId && !memberClerkIds.includes(filterUserId)) {
       return NextResponse.json(
         { success: false, error: 'User not in this team' },
@@ -114,7 +93,6 @@ export async function GET(
       )
     }
 
-    // Identity resolution
     const { data: userRows } = await supabaseAdmin
       .from('users')
       .select('clerk_id, email, first_name, last_name, last_seen_at')
@@ -123,7 +101,6 @@ export async function GET(
     const userById: Record<string, any> = {}
     for (const u of userRows || []) userById[u.clerk_id] = u
 
-    // Attached campaigns
     const { data: tcRows } = await supabaseAdmin
       .from('team_campaigns')
       .select('campaign_id, access_mode, campaigns(id, name)')
@@ -136,7 +113,6 @@ export async function GET(
     }))
     const campaignIds = teamCampaigns.map(tc => tc.campaignId)
 
-    // Validate campaign filter (must be attached to this team)
     let scopedCampaignIds = campaignIds
     if (filterCampaignId) {
       if (!campaignIds.includes(filterCampaignId)) {
@@ -148,9 +124,6 @@ export async function GET(
       scopedCampaignIds = [filterCampaignId]
     }
 
-    // Calls fetch — only runs if there ARE campaigns to scope to.
-    // No campaigns attached (or filter yields zero) ⇒ skip query entirely,
-    // calls stays []. Downstream aggregation handles empty cleanly.
     let calls: any[] = []
     if (scopedCampaignIds.length > 0) {
       let callsQuery = supabaseAdmin
@@ -177,7 +150,6 @@ export async function GET(
       calls = data || []
     }
 
-    // Roll up per-member stats
     type MemberStat = {
       userId: string
       name: string
@@ -209,7 +181,6 @@ export async function GET(
       }
     }
 
-    // Seed by relevant member set so zero-activity members still appear
     const seedSet = filterUserId ? [filterUserId] : memberClerkIds
     for (const uid of seedSet) statsByUser[uid] = seedFor(uid)
 
@@ -239,7 +210,6 @@ export async function GET(
 
     const viewerStats = statsByUser[userId] || seedFor(userId)
 
-    // Recent calls feed — owner only
     let recentCalls: any[] = []
     if (isOwner) {
       recentCalls = calls.slice(0, 50).map((c: any) => {

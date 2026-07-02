@@ -4,24 +4,6 @@ import { requireAdmin } from '@/lib/admin'
 
 const supabase = getServiceClient('admin/tenants/[id]')
 
-// =============================================================================
-// ADMIN TENANTS — item route (v1, NEW)
-// =============================================================================
-//   PATCH  /api/admin/tenants/:id  → partial update, whitelisted fields only
-//   DELETE /api/admin/tenants/:id  → hard delete, REFUSED (409) while any
-//                                    team still references the tenant
-//
-// Write invariants enforced here:
-//   - accent_color is ALWAYS mirrored from sidebar_color (legacy pre-002
-//     readers). If a PATCH includes sidebar_color, accent_color is set to the
-//     same value. Direct accent_color writes are ignored — sidebar_color is
-//     the source of truth.
-//   - status text ⇄ is_active boolean kept in sync.
-//   - slug changes are validated (format, reserved, uniqueness) and stamp
-//     slug_changed_at.
-//   - Color fields must be #rrggbb.
-// =============================================================================
-
 const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])?$/
 const RESERVED_SLUGS = new Set([
   'www', 'app', 'api', 'admin', 'dashboard', 'mail', 'smtp', 'ftp', 'blog',
@@ -56,7 +38,6 @@ export async function PATCH(
     const body = await req.json().catch(() => ({}))
     const update: Record<string, any> = {}
 
-    // ── text fields (empty string clears to null for nullable ones) ──────
     for (const f of TEXT_FIELDS) {
       if (f in body) {
         const v = body[f] === null ? null : String(body[f]).trim()
@@ -68,7 +49,6 @@ export async function PATCH(
       }
     }
 
-    // ── url-ish fields ───────────────────────────────────────────────────
     for (const f of URL_FIELDS) {
       if (f in body) {
         const v = body[f] === null ? null : String(body[f]).trim()
@@ -82,7 +62,6 @@ export async function PATCH(
       }
     }
 
-    // ── color tokens ─────────────────────────────────────────────────────
     for (const f of COLOR_FIELDS) {
       if (f in body) {
         const v = String(body[f] ?? '').trim()
@@ -92,12 +71,11 @@ export async function PATCH(
         update[f] = v
       }
     }
-    // Legacy mirror: sidebar_color is the source of truth for accent_color
+
     if ('sidebar_color' in update) {
       update.accent_color = update.sidebar_color
     }
 
-    // ── status / is_active sync ──────────────────────────────────────────
     if ('status' in body) {
       const s = String(body.status ?? '').trim()
       if (!STATUSES.has(s)) {
@@ -110,7 +88,6 @@ export async function PATCH(
       update.is_active = s === 'active'
     }
 
-    // ── slug change ──────────────────────────────────────────────────────
     if ('slug' in body) {
       const newSlug = String(body.slug ?? '').trim().toLowerCase()
       if (newSlug !== current.slug) {
@@ -178,7 +155,6 @@ export async function DELETE(
       return NextResponse.json({ success: false, error: 'Tenant not found' }, { status: 404 })
     }
 
-    // Refuse delete while teams still point at this tenant — detach first.
     const { count, error: countErr } = await supabase
       .from('teams')
       .select('id', { count: 'exact', head: true })

@@ -5,23 +5,23 @@ import {
 } from 'recharts'
 import { useDesktopServices } from '../desktopServices'
 
-// =============================================================================
-// ANALYTICS APP — role-aware (admin = revenue, manager = performance)
-// =============================================================================
-// ONE app, TWO views, chosen by role from useDesktopServices():
-//   - admin   → AdminRevenueView, hits /api/admin/analytics (unchanged income
-//               dashboard: seats, revenue, churn).
-//   - manager → ManagerPerformanceView, hits /api/manager/analytics (campaign
-//               performance + teams + users + status — NO income).
-// Keeping both in one file preserves "one Analytics app the manager picks up
-// from the admin" while letting each role have a purpose-built UI.
-// =============================================================================
 
-// Palette tied to the tenant white-label brand via --brand-* vars (manager
-// desktop is ThemeProvider-wrapped; admin desktop emits the default DialerSeat
-// values, which equal these fallbacks, so admin is unchanged). HEADER →
-// header-bg / on-header; BODY → page-bg, card surface/border, on-page-bg,
-// muted-text; PRIMARY/ACCENT → --brand-primary. Status colors stay fixed.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 const T = {
   bg: 'var(--brand-page-bg, #f0f1f4)', surface: 'var(--brand-card-surface, #e2e4ea)',
   border: 'var(--brand-card-border, #c4c8d0)', dark: 'var(--brand-header-bg, #1a1a2e)',
@@ -47,9 +47,9 @@ export default function AnalyticsApp() {
   return role === 'manager' ? <ManagerPerformanceView /> : <AdminRevenueView />
 }
 
-// =============================================================================
-// SHARED CHROME — header with range pills + custom date inputs
-// =============================================================================
+
+
+
 function Shell({
   title, subtitle, range, setRange, customStart, setCustomStart, customEnd, setCustomEnd, children,
 }: {
@@ -137,9 +137,9 @@ function useRangeState() {
   return { range, setRange, customStart, setCustomStart, customEnd, setCustomEnd }
 }
 
-// =============================================================================
-// MANAGER VIEW — campaign performance + teams + users + status
-// =============================================================================
+
+
+
 interface CampaignRow {
   id: string; name: string; status: string; ownerName: string
   totalLeads: number; calledLeads: number; dialerMode: string | null
@@ -361,9 +361,9 @@ function Badge({ color, children }: { color: string; children: React.ReactNode }
   return <span style={{ padding: '2px 8px', borderRadius: 3, fontSize: 9, fontWeight: 'bold', letterSpacing: 1.5, color, border: `1px solid ${color}`, background: 'transparent', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>{children}</span>
 }
 
-// =============================================================================
-// ADMIN VIEW — original revenue dashboard (unchanged behavior)
-// =============================================================================
+
+
+
 interface AdminData {
   range: Range; bucketSize: 'day' | 'week'
   summary: {

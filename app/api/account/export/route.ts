@@ -2,28 +2,6 @@ import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireUser } from '@/lib/requireUser'
 
-// =============================================================================
-// FULL-ACCOUNT DATA EXPORT (data portability)
-// =============================================================================
-// Returns EVERYTHING the authenticated user owns as a single JSON document.
-// This is the machine-readable "give me all my data" export for legal data-
-// portability (CCPA/GDPR-style) and user self-service.
-//
-// SECURITY: identity is resolved ONLY from the Clerk session via requireUser().
-// No client-supplied id is ever trusted (see lib/requireUser — this is the same
-// pattern that fixed the prior export IDOR). Every query is scoped to the
-// caller's own Clerk id.
-//
-// READ-ONLY: this route performs SELECTs only. It cannot modify or delete
-// anything. Safe to call any time.
-//
-// Tables are keyed by Clerk id (text user_id / clerk_id / owner_id). Internal-
-// uuid-keyed operational tables (agent_sessions, agent_predictive_prefs) are
-// transient runtime state, not user content, and are intentionally excluded.
-// =============================================================================
-
-// Each entry: [resultKey, tableName, userColumn]. userColumn is how that table
-// references the Clerk user id.
 const USER_TABLES: Array<[string, string, string]> = [
   ['profile', 'users', 'clerk_id'],
   ['subscriptions', 'subscriptions', 'user_id'],
@@ -59,8 +37,7 @@ export async function GET() {
       .select('*')
       .eq(col, userId)
     if (error) {
-      // Never fail the whole export because one table errored — record it and
-      // continue, so the user still gets everything else.
+
       warnings.push(`${table}: ${error.message}`)
       exportData[key] = []
       continue

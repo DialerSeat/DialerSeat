@@ -4,25 +4,6 @@ import { getServiceClient } from '@/lib/supabase'
 
 const supabase = getServiceClient('predictive/prefs')
 
-// =============================================================================
-// PREDICTIVE PREFERENCES — per-agent line count
-// =============================================================================
-// GET /api/predictive/prefs?campaign_id=<uuid>
-//   Returns the agent's preferred lines for the campaign (or campaign default
-//   if no pref set). Always returns the effective value, the campaign max,
-//   and the default so the UI can show a properly bounded picker.
-//
-// POST /api/predictive/prefs
-//   Body: { campaign_id: uuid, preferred_lines: 1-5, target_user_id?: uuid }
-//   Sets the agent's preference. If target_user_id is provided, the caller
-//   must be the campaign owner (team-manager-on-behalf-of-agent write).
-//
-// HARD CEILING: 5 lines per agent. Enforced in 3 places:
-//   1. UI dropdown only offers 1-5
-//   2. Server clamps before write
-//   3. DB CHECK constraint rejects anything outside [1, 5]
-// =============================================================================
-
 const HARD_LINE_CAP = 5
 
 interface CampaignConfig {
@@ -51,9 +32,6 @@ async function resolveInternalUserId(clerkId: string): Promise<string | null> {
   return data?.id ?? null
 }
 
-// -----------------------------------------------------------------------------
-// GET — read effective preference for the calling agent
-// -----------------------------------------------------------------------------
 export async function GET(req: NextRequest) {
   try {
     const { userId: clerkId } = await auth()
@@ -91,7 +69,6 @@ export async function GET(req: NextRequest) {
     const campaignMin = Math.max(campaign.predictive_lines_min || 1, 1)
     const campaignDefault = campaign.predictive_lines_per_agent || 3
 
-    // Effective lines = pref if set, else campaign default. Always clamped.
     let effective = pref?.preferred_lines ?? campaignDefault
     effective = Math.max(campaignMin, Math.min(effective, campaignMax))
 
@@ -112,15 +89,6 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// -----------------------------------------------------------------------------
-// POST — write preference
-// -----------------------------------------------------------------------------
-// Body shape:
-//   { campaign_id: string, preferred_lines: number, target_user_id?: string }
-//
-// target_user_id is OPTIONAL. If omitted, the write applies to the calling
-// agent. If provided, the caller must own the campaign (team-owner-on-behalf).
-// -----------------------------------------------------------------------------
 export async function POST(req: NextRequest) {
   try {
     const { userId: clerkId } = await auth()
@@ -151,12 +119,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'campaign not found' }, { status: 404 })
     }
 
-    // ── Clamp the requested value ──────────────────────────────────────
     const campaignMax = Math.min(campaign.predictive_lines_max || 5, HARD_LINE_CAP)
     const campaignMin = Math.max(campaign.predictive_lines_min || 1, 1)
     const clamped = Math.max(campaignMin, Math.min(requestedLines, campaignMax))
 
-    // ── Resolve target user ────────────────────────────────────────────
     const callerInternalId = await resolveInternalUserId(clerkId)
     if (!callerInternalId) {
       return NextResponse.json({ error: 'user not found' }, { status: 404 })
@@ -166,8 +132,7 @@ export async function POST(req: NextRequest) {
     let setByOwner = false
 
     if (targetUserId && targetUserId !== callerInternalId) {
-      // Owner-on-behalf write — caller must own the campaign.
-      // campaign.user_id stores the Clerk ID of the campaign owner.
+
       if (campaign.user_id !== clerkId) {
         return NextResponse.json(
           { error: 'only the campaign owner can set preferences for other agents' },
@@ -178,7 +143,6 @@ export async function POST(req: NextRequest) {
       setByOwner = true
     }
 
-    // ── Upsert ──────────────────────────────────────────────────────────
     const now = new Date().toISOString()
     const { data: written, error: upsertErr } = await supabase
       .from('agent_predictive_prefs')

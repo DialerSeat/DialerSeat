@@ -1,17 +1,17 @@
 'use client'
 
-// =============================================================================
-// /faq/dialerseat-teams — public deep dive on DialerSeat Teams
-// =============================================================================
-// v2 content rewrite. Premium leads is now the centerpiece; aged leads
-// is demoted to a tracked secondary callout inside the lead-vendor deep
-// dive. Title and hero no longer lead with aged leads.
-//
-// Pitch: rent seat-based dialer access to your premium lead campaigns,
-// with full attribution. As a bonus, the platform automatically tracks
-// which leads went un-worked so you can build secondary campaigns from
-// the aged remainder without manual list management.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
 
 import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'

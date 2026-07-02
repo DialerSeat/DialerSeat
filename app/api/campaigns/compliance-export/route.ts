@@ -3,20 +3,6 @@ import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 
-/**
- * Generates a TSR-compliant audit log CSV for a campaign.
- * Restricted to the campaign owner.
- *
- * Query params:
- *   campaignId (required)
- *   startDate (ISO 8601, optional, default: 30 days ago)
- *   endDate (ISO 8601, optional, default: now)
- *   redactPhone (true/false, default: true — masks last 6 digits for safer export)
- *
- * Output: CSV with columns:
- *   call_id, timestamp, agent, lead_phone, amd_result, was_abandoned,
- *   disposition, duration_seconds, recording_url
- */
 export async function GET(req: Request) {
   try {
     const { userId } = await auth()
@@ -34,7 +20,6 @@ export async function GET(req: Request) {
       return NextResponse.json({ success: false, error: 'campaignId required' }, { status: 400 })
     }
 
-    // Verify ownership
     const { data: campaign } = await supabaseAdmin
       .from('campaigns')
       .select('id, user_id, name')
@@ -55,7 +40,6 @@ export async function GET(req: Request) {
       ? new Date(endDateParam).toISOString()
       : new Date().toISOString()
 
-    // Pull calls + recording URLs (recordings link via signalwire_call_id)
     const { data: calls, error } = await supabaseAdmin
       .from('calls')
       .select('id, signalwire_call_id, user_id, phone_number, amd_result, was_abandoned, disposition, duration, created_at')
@@ -68,7 +52,6 @@ export async function GET(req: Request) {
 
     const callIds = (calls || []).map(c => c.signalwire_call_id).filter(Boolean) as string[]
 
-    // Pull recordings for these calls (one to one relationship via signalwire_call_id)
     let recordingMap: Record<string, string> = {}
     if (callIds.length > 0) {
       const { data: recs } = await supabaseAdmin
@@ -82,7 +65,6 @@ export async function GET(req: Request) {
       }
     }
 
-    // Resolve agent identities
     const userIds = Array.from(new Set((calls || []).map(c => c.user_id).filter(Boolean)))
     const userMap: Record<string, string> = {}
     if (userIds.length > 0) {
@@ -96,7 +78,6 @@ export async function GET(req: Request) {
       }
     }
 
-    // Generate CSV
     const header = [
       'call_id',
       'timestamp_utc',
@@ -155,7 +136,7 @@ function csvEscape(s: string): string {
 }
 
 function maskPhone(phone: string): string {
-  // Keep area code + first 1 digit, mask rest. e.g. +18005551234 → +1800XXXXXXX
+
   const digits = phone.replace(/\D/g, '')
   if (digits.length < 4) return phone
   if (digits.length === 11 && digits[0] === '1') {

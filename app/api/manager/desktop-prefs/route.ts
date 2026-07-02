@@ -3,39 +3,12 @@ import { auth } from '@clerk/nextjs/server'
 import { getServiceClient } from '@/lib/supabase'
 import { getManagerTenant } from '@/lib/manager'
 
-// =============================================================================
-// MANAGER DESKTOP PREFS — mirror of /api/admin/desktop-prefs (v3)
-// =============================================================================
-// Backed by manager_desktop_prefs (same shape as admin_desktop_prefs). This is
-// the route the Desktop component already calls for role "manager"
-// (prefsApiBaseFor → /api/manager/desktop-prefs). Before it existed, those
-// fetches failed soft and the manager desktop persisted to localStorage only —
-// so the wallpaper/background was DEVICE-LOCAL and did not follow the user
-// across devices (the reported bug). With this route the full prefs blob
-// persists per-user (clerk_id) and follows them everywhere, like admin's does.
-//
-// AUTH: signed-in AND a Manager+ tenant owner (getManagerTenant) — the same
-// guard the /dashboard/manager/desktop page uses. A non-owner can't read or
-// write a manager desktop.
-//
-// Validation mirrors the admin route exactly: typed/bounded background
-// (image must be http(s), no data:/javascript:), bounded icon positions,
-// sanitized id arrays, and DEFAULT_HIDDEN_APPS for brand-new rows.
-//
-// Row shape per clerk_id:
-//   icon_positions — { "<appId>": { x, y } } grid-snapped pixel positions
-//   background     — { type: 'preset'|'solid'|'image', value: string } | null
-//   installed_apps — string[] of downloaded store-app ids
-//   hidden_apps    — string[] of app ids removed from the desktop
-// =============================================================================
-
 export const dynamic = 'force-dynamic'
 
 const supabase = getServiceClient('manager/desktop-prefs')
 
 type BgSetting = { type: 'preset' | 'solid' | 'image'; value: string }
 
-// Keep in sync with DEFAULT_HIDDEN_APP_IDS in components/admin-desktop/desktopServices.tsx
 const DEFAULT_HIDDEN_APPS = ['clerk-profile']
 
 function sanitizeIdArray(input: any): string[] {
@@ -50,7 +23,6 @@ function sanitizeIdArray(input: any): string[] {
   return out
 }
 
-// Auth gate: signed-in Manager+ tenant owner. Returns the clerk userId or null.
 async function requireManagerUserId(): Promise<string | null> {
   const { userId } = await auth()
   if (!userId) return null
@@ -82,7 +54,7 @@ export async function GET() {
       iconPositions: data?.icon_positions ?? {},
       background: (data?.background as BgSetting | null) ?? null,
       installedApps: Array.isArray(data?.installed_apps) ? data.installed_apps : [],
-      // no row yet → default-hidden apps apply
+
       hiddenApps: data
         ? (Array.isArray(data.hidden_apps) ? data.hidden_apps : [])
         : DEFAULT_HIDDEN_APPS,
@@ -103,7 +75,6 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ success: false, error: 'Invalid JSON' }, { status: 400 })
   }
 
-  // ── Validate icon positions: only { string: { x: number, y: number } } ──
   const iconPositions: Record<string, { x: number; y: number }> = {}
   if (body.iconPositions && typeof body.iconPositions === 'object' && !Array.isArray(body.iconPositions)) {
     for (const [key, val] of Object.entries(body.iconPositions)) {
@@ -119,14 +90,13 @@ export async function PUT(req: NextRequest) {
     }
   }
 
-  // ── Validate background: known type + bounded string value, or null ─────
   let background: BgSetting | null = null
   const b = body.background
   if (b && typeof b === 'object' &&
       (b.type === 'preset' || b.type === 'solid' || b.type === 'image') &&
       typeof b.value === 'string' && b.value.length > 0 && b.value.length <= 2000) {
     if (b.type === 'image') {
-      // Image backgrounds must be plain http(s) URLs — no data: or javascript:
+
       const v = b.value.trim()
       if (/^https?:\/\//i.test(v)) {
         background = { type: 'image', value: v.replace(/["\\]/g, '') }
@@ -136,7 +106,6 @@ export async function PUT(req: NextRequest) {
     }
   }
 
-  // ── App lists ────────────────────────────────────────────────────────────
   const installedApps = sanitizeIdArray(body.installedApps)
   const hiddenApps = sanitizeIdArray(body.hiddenApps)
 

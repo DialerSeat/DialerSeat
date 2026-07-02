@@ -5,35 +5,6 @@ import { isCallableNow } from '@/lib/callingWindow'
 
 const supabase = getServiceClient('leads/next-batch')
 
-// =============================================================================
-// LEADS NEXT-BATCH — atomic multi-lead claim
-// =============================================================================
-// HTTP wrapper around the SQL function claim_next_leads_for_campaign().
-//
-// The controller calls the SQL function directly (faster). This endpoint
-// exists for two reasons:
-//   1. Debugging — you can curl it to see if claim logic is working
-//   2. Future features — anything that needs "give me N leads, no double-dial"
-//      can hit this instead of duplicating the controller's logic
-//
-// Request:
-//   POST /api/leads/next-batch
-//   Body: { campaign_id: uuid, count: 1-5, session_id?: uuid }
-//
-// Response:
-//   { leads: [...], claimed_count, skipped_tcpa: number }
-//
-// Behavior:
-//   - Atomically claims up to `count` leads via the SQL function
-//   - Filters out leads outside TCPA window (releases their claim)
-//   - Returns the callable leads
-//
-// SECURITY:
-//   - Caller must own the campaign (campaigns.user_id = clerk_id)
-//     OR be a member of a team that has access to it
-//   - For solo testing, owning the campaign is enough
-// =============================================================================
-
 interface ClaimedLead {
   id: string
   campaign_id: string
@@ -76,10 +47,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'count must be 1-5' }, { status: 400 })
     }
 
-    // Verify caller has access to this campaign.
-    // Solo agent case: they own it (campaigns.user_id = clerk_id).
-    // Team case: they're a member of a team that owns it. (For Part B we
-    // only support solo + owner. Team-member access can come later.)
     const { data: campaign } = await supabase
       .from('campaigns')
       .select('id, user_id, dialer_mode')
@@ -91,14 +58,13 @@ export async function POST(req: NextRequest) {
     }
 
     if (campaign.user_id !== clerkId) {
-      // TODO: extend with team-member check when we ship multi-agent teams
+
       return NextResponse.json(
         { error: 'not authorized for this campaign' },
         { status: 403 }
       )
     }
 
-    // ── Claim leads atomically via the SQL function ────────────────────
     const { data: claimed, error: claimErr } = await supabase.rpc(
       'claim_next_leads_for_campaign',
       {
@@ -118,10 +84,6 @@ export async function POST(req: NextRequest) {
 
     const claimedLeads = (claimed || []) as ClaimedLead[]
 
-    // ── Filter by TCPA window ──────────────────────────────────────────
-    // The SQL function doesn't run JS callingWindow logic, so we filter
-    // here. Leads outside their local 8am-9pm window get their claim
-    // released so they're available for next-window callers.
     const callable: ClaimedLead[] = []
     const blocked: string[] = []
 
@@ -137,7 +99,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Release blocked leads in parallel
     if (blocked.length > 0) {
       await Promise.allSettled(
         blocked.map(leadId =>

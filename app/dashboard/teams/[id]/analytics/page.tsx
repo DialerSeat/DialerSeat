@@ -2,19 +2,19 @@
 import { use, useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 
-// =============================================================================
-// /dashboard/teams/[id]/analytics — TEAM ANALYTICS DASHBOARD
-// =============================================================================
-// v2: empty-template rebuild. Page ALWAYS renders the full structure
-// regardless of data presence. Cells that would otherwise show 0 or
-// be empty get a small AWAITING DATA pill. Leaderboard seeds one row
-// per active member; recent calls shows 4 placeholder pill-rows when
-// empty so owners see the layout they'll get once data flows in.
-//
-// AWAITING DATA pill: #363647 bg / #ffffff text. Semantic — does NOT
-// theme. Same pattern used on agent analytics and other empty-state
-// templates across the app.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 const T = {
   bg: 'var(--brand-page-bg)',
@@ -115,7 +115,7 @@ function dispColor(disp: string | null): string {
   }
 }
 
-// AWAITING DATA pill — semantic, does NOT theme. Same pattern across app.
+
 function Awaiting() {
   return (
     <span style={{
@@ -186,8 +186,8 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
     ? `${Math.round((data.totals.connected / data.totals.calls) * 100)}%`
     : null
 
-  // Owner sees the full leaderboard (always includes every active member,
-  // seeded with zeros server-side). Member view doesn't get peer data.
+  
+  
   const leaderboardRows = isOwner ? (data?.leaderboard || []) : []
 
   return (
@@ -654,7 +654,7 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
                         </tr>
                       ))
                     ) : (
-                      // 4 placeholder rows so owners see the column structure
+                      
                       [0, 1, 2, 3].map(i => (
                         <tr key={`placeholder-${i}`}>
                           <td><Awaiting /></td>

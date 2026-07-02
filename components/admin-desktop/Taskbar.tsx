@@ -13,24 +13,24 @@ interface TaskbarProps {
   onTaskbarItemContextMenu: (windowId: string, clientX: number, clientY: number) => void
   onShowDesktop: () => void
   isMobile: boolean
-  // v2: drag-reorder of open-window pills
+  
   onReorderWindows: (dragWindowId: string, targetWindowId: string) => void
 }
 
-// =============================================================================
-// TASKBAR — v2
-// =============================================================================
-// v2 changes vs v1:
-// - DRAGGABLE PILLS: open-window buttons reorder via HTML5 drag-and-drop,
-//   like real Windows. Drag a pill over another and drop — Desktop reorders
-//   its windows array (pill order = array order; zIndex untouched). The drop
-//   target shows a left accent bar while hovered. Reordering is desktop-only
-//   (mobile pills are tap targets, drag would fight scroll).
-// - iconSrc SUPPORT: pills render the app's image icon when the registry
-//   entry sets iconSrc, falling back to the emoji glyph.
-// All v1 visuals retained: Aero gradient strip, start orb, tray, clock,
-// show-desktop sliver, safe-area fill shell.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 export default function Taskbar({
   windows,
@@ -45,7 +45,7 @@ export default function Taskbar({
 }: TaskbarProps) {
   const [now, setNow] = useState<Date>(new Date())
 
-  // v2: pill drag state
+  
   const dragWindowIdRef = useRef<string | null>(null)
   const [dragOverWindowId, setDragOverWindowId] = useState<string | null>(null)
 
@@ -68,10 +68,10 @@ export default function Taskbar({
         left: 0,
         right: 0,
         height: 148,
-        // Match the BOTTOM stop of the 48px strip's gradient (#0a1020) so the
-        // safe-area zone below the strip reads as a continuation of the
-        // taskbar, not a separate flat-black bar. Was '#0a0a0f', which on
-        // tall mobile safe areas showed as a distinct black strip.
+        
+        
+        
+        
         background: '#0a1020',
         boxShadow: '0 -1px 0 rgba(255,255,255,0.08) inset, 0 -8px 24px rgba(0,0,0,0.3)',
         zIndex: 10000,

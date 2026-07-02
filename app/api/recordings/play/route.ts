@@ -4,8 +4,6 @@ import { auth } from '@clerk/nextjs/server'
 
 const supabase = getServiceClient('recordings/play')
 
-// Streams the recording from SignalWire, but only if the requesting user owns it.
-// SignalWire recording URLs require Basic Auth, so we proxy + add the auth header here.
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const callId = searchParams.get('call_id')
@@ -33,7 +31,6 @@ export async function GET(req: NextRequest) {
     return new Response('No recording for this call', { status: 404 })
   }
 
-  // Fetch the recording from SignalWire with project auth
   const projectId = process.env.SIGNALWIRE_PROJECT_ID
   const apiToken = process.env.SIGNALWIRE_API_TOKEN
   if (!projectId || !apiToken) {
@@ -42,7 +39,6 @@ export async function GET(req: NextRequest) {
 
   const authHeader = 'Basic ' + Buffer.from(`${projectId}:${apiToken}`).toString('base64')
 
-  // SignalWire offers .mp3 by appending .mp3 to the recording URL
   const url = call.recording_url.endsWith('.mp3')
     ? call.recording_url
     : `${call.recording_url}.mp3`

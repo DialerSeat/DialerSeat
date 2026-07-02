@@ -2,21 +2,6 @@ import 'server-only'
 import { createClient } from '@supabase/supabase-js'
 import { unstable_cache } from 'next/cache'
 
-// =============================================================================
-// TENANT BRANDING LOOKUP — server-side helper (v8 — login link fields)
-// =============================================================================
-// v8: TenantBranding now carries the optional subdomain-login link
-// (login_link_label / login_link_text / login_link_url), and the shared
-// TENANT_BRANDING_COLS select pulls them from the tenant_branding view (which
-// was extended to expose them). This is what lets the branded sign-in page
-// render the partner's "<Brand> × DialerSeat" link. All three may be null.
-//
-// v7 (Push F): fetchAvailableTenantsForUser returns currentValue + savedThemes.
-// v6 (Push B): fetchActiveTenantForUser respects NULL (strict NULL semantics).
-// v5 (migration 004): adds header_bg_color.
-// v4 (migration 003): added page_bg_color.
-// =============================================================================
-
 export interface TenantBranding {
   id: string
   slug: string
@@ -29,7 +14,7 @@ export interface TenantBranding {
   header_bg_color: string
   page_bg_color: string
   custom_landing: Record<string, unknown>
-  // v8: optional partner login link (all null when unset)
+
   login_link_label: string | null
   login_link_text: string | null
   login_link_url: string | null
@@ -53,9 +38,7 @@ export interface UserBrandOptions {
   savedThemes: SavedThemeOption[]
   canSeeStandard: boolean
   currentTenantId: string | null
-  // The value the settings-page <select> should show. Matches the rendered
-  // <option> values: a tenant id, `theme:<id>` for a saved theme, or
-  // 'standard' for the default DialerSeat view.
+
   currentValue: string
 }
 
@@ -75,10 +58,6 @@ function getSupabaseAdmin() {
 
 const TENANT_BRANDING_COLS =
   'id, slug, brand_name, logo_url, favicon_url, footer_text, primary_color, sidebar_color, header_bg_color, page_bg_color, custom_landing, login_link_label, login_link_text, login_link_url'
-
-// =============================================================================
-// SUBDOMAIN LOOKUP (v1 contract preserved)
-// =============================================================================
 
 async function fetchTenantBranding(slug: string): Promise<TenantBranding | null> {
   const supabase = getSupabaseAnon()
@@ -119,26 +98,6 @@ export async function getTenantBranding(
 export const tenantCacheTag = (slug: string) => `tenant:${slug}`
 export const userCacheTag = (clerkId: string) => `user-tenant:${clerkId}`
 
-// =============================================================================
-// USER → TENANT LOOKUP — v6 (strict NULL)
-// =============================================================================
-
-/**
- * Returns the tenant to render for this user, based on their selected
- * preference (users.active_tenant_id) AND their actual access rights.
- *
- *   active_tenant_id IS NULL  → return null (standard DialerSeat view)
- *   active_tenant_id is uuid AND user has access → return that tenant
- *   active_tenant_id is uuid AND user lost access → return null
- *     (stale value, user can re-pick from settings or join again)
- *
- * The previous fall-through to uniqueAccessible[0] is GONE — it was the
- * reason "switch to DialerSeat default" silently did nothing for any
- * user who also owned or belonged to a WL tenant.
- *
- * Cached with a user tag. Switching brands, joining a team, or editing
- * tenant branding all bust the cache via revalidateTag(userCacheTag).
- */
 async function fetchActiveTenantForUser(clerkId: string): Promise<TenantBranding | null> {
   const supabase = getSupabaseAdmin()
 
@@ -150,15 +109,10 @@ async function fetchActiveTenantForUser(clerkId: string): Promise<TenantBranding
 
   const selectedTenantId = user?.active_tenant_id || null
 
-  // NULL means "standard view". Short-circuit — no need to load access
-  // lists or branding when the user has explicitly opted out of WL view.
   if (!selectedTenantId) {
     return null
   }
 
-  // Compute the user's accessible tenant set so we can verify their
-  // selection is still valid. If they got removed from a team or the
-  // tenant got deactivated, fall through to null (standard view).
   const [{ data: ownedTenant }, { data: memberRows }] = await Promise.all([
     supabase
       .from('white_label_tenants')
@@ -196,9 +150,6 @@ async function fetchActiveTenantForUser(clerkId: string): Promise<TenantBranding
     }
   }
 
-  // Selection no longer accessible → fall back to standard view rather
-  // than silently switching the user to a different tenant. They can
-  // re-pick from settings.
   if (!accessibleTenantIds.has(selectedTenantId)) {
     return null
   }
@@ -233,10 +184,6 @@ export async function getActiveTenantForUser(
 
   return cached()
 }
-
-// =============================================================================
-// AVAILABLE BRAND OPTIONS (settings page toggle) — v7
-// =============================================================================
 
 async function fetchAvailableTenantsForUser(clerkId: string): Promise<UserBrandOptions> {
   const supabase = getSupabaseAdmin()
@@ -330,20 +277,8 @@ async function fetchAvailableTenantsForUser(clerkId: string): Promise<UserBrandO
 
   const canSeeStandard = hasSelfSub || !!ownedTenant
 
-  // Saved custom themes aren't modeled yet — return an empty list so the
-  // settings page's savedThemes branch renders nothing instead of falling
-  // back to an undefined value. Wire this up when themes ship.
   const savedThemes: SavedThemeOption[] = []
 
-  // ── currentValue — THE FIX ──────────────────────────────────────────────
-  // The settings <select> shows currentValue and its <option>s are valued by
-  // tenant id (or 'standard'). Map the stored active_tenant_id to the value
-  // the select can actually match:
-  //   - active_tenant_id is set AND it's one of the available tenants → its id
-  //   - active_tenant_id is set but NOT accessible (stale) → 'standard'
-  //   - active_tenant_id is null → 'standard'
-  // This is what makes the dropdown reflect the real selection and persist
-  // across reloads instead of snapping back to "DialerSeat Pro".
   const activeTenantId = user?.active_tenant_id || null
   const activeIsAvailable =
     !!activeTenantId && available.some(t => t.id === activeTenantId)

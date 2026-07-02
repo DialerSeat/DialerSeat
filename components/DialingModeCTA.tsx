@@ -1,23 +1,23 @@
 'use client'
 
-// =============================================================================
-// DialingModeCTA — auth-aware bottom CTA for /dialing-modes/* deep-dive pages
-// =============================================================================
-// The 4 deep-dive pages (preview/power/progressive/predictive) are server
-// components with metadata exports, but their bottom CTA needs to differ
-// for signed-in vs signed-out visitors. Importing this client component
-// keeps the rest of each page server-rendered.
-//
-// Behavior:
-//   • Mode-specific `headline` and `description` are passed in by the page,
-//     so each mode keeps its own marketing copy.
-//   • Signed-out: "START DIALING →" → /sign-up (Clerk handles onboarding)
-//   • Signed-in:  "OPEN DIALER  →" → /dashboard/dialer (jump straight in)
-//   • Secondary "ALL MODES" link → /dialing-modes for both states.
-//
-// Before Clerk loads, render the signed-out variant to avoid a flicker
-// where a signed-in user briefly sees the wrong button.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'

@@ -2,14 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { getServiceClient } from '@/lib/supabase'
 
-// =============================================================================
-// /api/manager/notes/reorder  — persist pinned-note drag order
-// =============================================================================
-// Auth-gated. Body: { orderedIds: string[] } — the caller's starred notes in
-// their new top-to-bottom order. Writes pin_order = index for each, filtered
-// by owner_clerk_id so a user can only reorder their own notes.
-// =============================================================================
-
 const supabaseAdmin = () =>
   getServiceClient('manager/notes/reorder')
 
@@ -32,7 +24,7 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = supabaseAdmin()
-  // One update per id, each filtered by owner so a user can't touch others'.
+
   await Promise.all(
     orderedIds.map((id, idx) =>
       supabase

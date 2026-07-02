@@ -3,9 +3,9 @@ import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 
-// =============================================================================
-// BUILD FIX — force-dynamic to bypass static-generation hang
-// =============================================================================
+
+
+
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
@@ -21,13 +21,13 @@ export const metadata: Metadata = {
   },
 }
 
-// IMPORTANT: This is a static date reflecting when the policy was actually
-// last revised. Do NOT make this auto-update. Users need to know what version
-// of the policy they agreed to.
-//
-// When you make material changes to this policy, update this constant manually
-// and email registered users at least 30 days before changes take effect (as
-// stated in section 12 of the policy itself).
+
+
+
+
+
+
+
 const LAST_UPDATED = 'May 20, 2026'
 
 export default function PrivacyPolicyPage() {

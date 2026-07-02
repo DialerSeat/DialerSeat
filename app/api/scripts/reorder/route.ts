@@ -1,11 +1,3 @@
-// app/api/scripts/reorder/route.ts
-// =============================================================================
-// GLOBAL SCRIPTS LIBRARY — REORDER
-// =============================================================================
-// Reorders the caller's personal library. Accepts { order: [scriptId, ...] }.
-// Only the caller's own scripts are reordered; ids not owned are ignored.
-// =============================================================================
-
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'

@@ -1,6 +1,6 @@
-// Shared <style> block for /faq/* explainer pages.
-// Server-renderable. Pass per-page accent color + accent-bg for the
-// eyebrow chip, cards, and pullquote borders.
+
+
+
 
 interface Props {
   accent: string

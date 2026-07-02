@@ -2,28 +2,28 @@
 import Link from 'next/link'
 import { useUser } from '@clerk/nextjs'
 
-// =============================================================================
-// /managers — For Agency Owners & Lead Vendors
-// =============================================================================
-// Founder voice. This page exists because the agency-owner and lead-vendor
-// audiences are buying for very different reasons than a solo agent, and
-// the homepage isn't going to convince either of them by itself.
-//
-// Two audiences, one page:
-//   1. Agency owners — already running a sales floor on someone else's dialer
-//      paying $99–$199/seat/month, looking to consolidate
-//   2. Lead vendors — selling leads to independent agents, looking to bundle
-//      a dialer with their leads so the agent has nowhere else to dial them
-//
-// The simplification under the new product framing:
-//   - Manager features are NOT a separate tier. They're included in the
-//     standard $35/wk Pro subscription. Anyone can flip to "manager mode"
-//     by creating a team.
-//   - White-label is its own thing, $75/wk, gets its own /white-label page
-//   - DialerSeat doesn't process resell payments. Agent-to-Manager money
-//     happens off-platform.
-//   - Promo / referral arrangements exist for proven operators, by email.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 const T = {
   bg: '#f0f1f4',

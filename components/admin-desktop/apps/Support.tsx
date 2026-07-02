@@ -1,26 +1,26 @@
 'use client'
 import { useEffect, useState, useCallback, useMemo } from 'react'
 
-// =============================================================================
-// SUPPORT APP — admin support / bug / exit feed (shell v1)
-// =============================================================================
-// One live feed (support_submissions) split into three tabs:
-//   SUPPORT — active user help queries
-//   BUGS    — submitted bug reports
-//   EXIT    — "how was your experience, and why?" left when a user moves to
-//             leave / unsubscribe / delete
-//
-// Master/detail layout: left = tab rail + submission list (name, @username,
-// email, disposition, preview, status); right = full detail + response box that
-// records the reply AND opens a prefilled mail draft from support@dialerseat.com.
-//
-// Backs onto:
-//   GET   /api/admin/support?type=&status=   → { success, submissions }
-//   PATCH /api/admin/support  { id, status?, disposition?, response_body? }
-//
-// This is the SHELL: structure, data flow, and a deliberately elevated visual
-// pass. Polish hooks (filters, search, realtime) are noted inline for later.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 type SubType = 'support' | 'bug' | 'exit'
 type Status = 'new' | 'open' | 'responded' | 'resolved' | 'closed'
@@ -109,7 +109,7 @@ export default function SupportApp() {
   }, [])
 
   useEffect(() => { load(tab) }, [tab, load])
-  // Lightweight polling so the feed feels live. Swap for Supabase realtime later.
+  
   useEffect(() => {
     const t = setInterval(() => load(tab), 20000)
     return () => clearInterval(t)
@@ -121,7 +121,7 @@ export default function SupportApp() {
   )
 
   useEffect(() => {
-    // Keep a selection when possible; default to the first item.
+    
     if (!items.length) { setSelectedId(null); return }
     if (!items.some(i => i.id === selectedId)) setSelectedId(items[0].id)
   }, [items, selectedId])
@@ -150,7 +150,7 @@ export default function SupportApp() {
 
   const sendResponse = useCallback(() => {
     if (!selected || !draft.trim()) return
-    // Record the response, then open a prefilled draft from support@dialerseat.com.
+    
     patch(selected.id, { response_body: draft.trim(), status: 'responded' })
     const to = selected.snap_email || ''
     const subject = encodeURIComponent(

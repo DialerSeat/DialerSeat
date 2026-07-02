@@ -5,38 +5,38 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useBranding } from '@/components/ThemeProvider'
 
-// =============================================================================
-// /sign-up — branded sign-up (v24 — restore dark mode, mirror of sign-in)
-// =============================================================================
-// v24 changes vs v23:
-//   - Page background: var(--background) → var(--brand-sidebar-bg)
-//   - Wordmark color: var(--text-primary) → var(--brand-on-sidebar)
-//   - Tagline color: var(--text-secondary) → var(--brand-on-sidebar-muted)
-//   - Clerk <SignUp /> widget themed dark via appearance prop, identical
-//     pattern to sign-in v26 (subtle card overlay, lifted form inputs,
-//     primary button uses brand tokens).
-//   - Adds forceRedirectUrl="/api/auth/post-signin" so post-signup routes
-//     through the same handler as post-signin. Currently the route is
-//     same-host (hotfix) so this is safe regardless of subdomain status.
-//
-// KNOWN ISSUE (NOT FIXED HERE):
-//   JC reports the agency logo doesn't appear on the first render of
-//   /sign-up — the default "DIALERSEAT WELCOME" header shows, and the
-//   tenant logo only appears after clicking the browser back button.
-//   This is likely a branding-load timing mismatch between Clerk's
-//   internal sign-up widget routing and the SSR/CSR auth state needed by
-//   getActiveTenantForUser() in the root layout. Possible causes worth
-//   investigating:
-//     1. Initial render of /sign-up sees no auth (cookies haven't synced)
-//        → branding=null → default DialerSeat. Then Clerk completes some
-//        client-side routing and the page re-renders with branding.
-//     2. Clerk's sign-up widget intercepts the route and renders an
-//        intermediate state before our wrapper applies.
-//     3. The /sign-up route bypasses the standard root-layout branding
-//        fetch entirely.
-//   The wrapper code below (useBranding + conditional logo) is correct.
-//   Whichever fix lands, this file shouldn't need changing.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 const FUTURA = 'Futura PT, Futura, "Trebuchet MS", sans-serif'
 

@@ -1,10 +1,10 @@
-// app/api/gmail/status/route.ts
-// =============================================================================
-// Lightweight check the Gmail app uses on mount: am I connected?
-// Returns { connected: false } for either "not signed in" or "no tokens"
-// (the UI shows a Connect button in both cases — the redirect flow handles
-// the signed-in state implicitly).
-// =============================================================================
+
+
+
+
+
+
+
 
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'

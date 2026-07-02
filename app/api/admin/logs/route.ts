@@ -5,24 +5,6 @@ import { stripe } from '@/lib/stripe'
 
 const supabase = getServiceClient('admin/logs')
 
-// =============================================================================
-// ADMIN LOGS API (v1 — the backend the Logs app has been fetching)
-// =============================================================================
-// The Logs app (v21+) GETs /api/admin/logs expecting:
-//   { entries: LogEntry[], counts: { signups, renewals, cancels }, window_days }
-// This route never existed — that's why the app showed errors. It merges:
-//   SIGNUP  — subscriptions created in the window (never-paid incomplete /
-//             incomplete_expired excluded), amount = the plan's weekly price
-//   CANCEL  — subscriptions with canceled_at in the window, with
-//             retention_weeks = lifetime from created_at to canceled_at
-//   RENEWAL — Stripe paid invoices with billing_reason 'subscription_cycle'
-//             in the window, amount = invoice.amount_paid, mapped to users
-//             via users.stripe_customer_id
-// Exclusions match the analytics route: is_admin and exclude_from_analytics
-// users never appear. Sorted newest-first, capped at 200 entries, 90-day
-// window.
-// =============================================================================
-
 const WINDOW_DAYS = 90
 const MAX_ENTRIES = 200
 const NEVER_PAID_STATUSES = ['incomplete', 'incomplete_expired']
@@ -67,7 +49,7 @@ export async function GET() {
   const windowStart = now - WINDOW_DAYS * day
 
   try {
-    // ── Users + exclusions ──────────────────────────────────────────────
+
     const { data: users } = await supabase
       .from('users')
       .select('clerk_id, email, first_name, last_name, stripe_customer_id, is_admin, exclude_from_analytics')
@@ -84,7 +66,6 @@ export async function GET() {
       if (u.stripe_customer_id) userByCustomerId.set(u.stripe_customer_id, u)
     }
 
-    // ── Subscriptions → signups + cancels ───────────────────────────────
     const { data: subs } = await supabase
       .from('subscriptions')
       .select('user_id, status, created_at, canceled_at, stripe_price_id, stripe_subscription_id')
@@ -97,7 +78,6 @@ export async function GET() {
       if (excluded.has(s.user_id)) continue
       const u = userByClerkId.get(s.user_id)
 
-      // SIGNUP — paid sub created in window
       if (!NEVER_PAID_STATUSES.includes(s.status)) {
         const created = new Date(s.created_at).getTime()
         if (created >= windowStart && created <= now) {
@@ -115,7 +95,6 @@ export async function GET() {
         }
       }
 
-      // CANCEL — canceled in window
       if (s.status === 'canceled' && s.canceled_at) {
         const canceled = new Date(s.canceled_at).getTime()
         if (canceled >= windowStart && canceled <= now) {
@@ -135,7 +114,6 @@ export async function GET() {
       }
     }
 
-    // ── Stripe paid cycle invoices → renewals ────────────────────────────
     let renewals = 0
     try {
       const createdGte = Math.floor(windowStart / 1000)
@@ -149,14 +127,12 @@ export async function GET() {
         })
         for (const inv of batch.data) {
           if (inv.billing_reason !== 'subscription_cycle') continue
-          // Skip $0 renewals — fully-discounted/100%-coupon cycles aren't
-          // revenue events and only clutter the stream. (JC, this push.)
+
           if ((inv.amount_paid ?? 0) <= 0) continue
           const customerId = typeof inv.customer === 'string' ? inv.customer : inv.customer?.id
           if (!customerId) continue
           const u = userByCustomerId.get(customerId)
-          // Unknown customer → either an excluded user or stale data; skip
-          // excluded users, keep genuinely unknown ones visible as (unknown)
+
           if (!u) {
             const isExcludedUser = (users || []).some(x =>
               x.stripe_customer_id === customerId && (x.is_admin || x.exclude_from_analytics)
@@ -179,8 +155,7 @@ export async function GET() {
         startingAfter = batch.data[batch.data.length - 1].id
       }
     } catch (err) {
-      // Renewals are additive — if Stripe is unreachable, still return the
-      // Supabase-derived events rather than failing the whole endpoint.
+
       console.warn('[admin/logs] Stripe invoice fetch failed:', err)
     }
 

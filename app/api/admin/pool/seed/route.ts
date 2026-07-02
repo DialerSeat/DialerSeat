@@ -6,8 +6,6 @@ import { apiError } from '@/lib/apiError'
 
 const supabase = getServiceClient('admin/pool/seed')
 
-// Default seed list: 10 major metros across the US, intentionally diverse
-// area codes so local-presence works for most callers out of the gate.
 const DEFAULT_SEED = [
   { areaCode: '212', metro: 'New York' },
   { areaCode: '213', metro: 'Los Angeles' },
@@ -21,16 +19,11 @@ const DEFAULT_SEED = [
   { areaCode: '408', metro: 'San Jose' },
 ]
 
-// Admin-only one-shot endpoint. Buys 10 numbers and inserts them into the pool.
-// Skips area codes that already have a number in the pool, so it's safe to
-// re-run if some purchases failed mid-batch.
 export async function POST(req: Request) {
   try {
     const gate = await requireAdmin()
     if (!gate.ok) return NextResponse.json({ error: gate.message }, { status: gate.status })
 
-    // Optional body: { areaCodes: ['212', '213'] } to override the default list.
-    // No body = use the default 10-metro list.
     let seedList = DEFAULT_SEED
     try {
       const body = await req.json().catch(() => ({}))
@@ -41,10 +34,9 @@ export async function POST(req: Request) {
         }))
       }
     } catch {
-      // No body, use default
+
     }
 
-    // Find which area codes already have a number in the pool — skip those
     const { data: existing } = await supabase
       .from('phone_numbers')
       .select('area_code')
@@ -93,7 +85,6 @@ export async function POST(req: Request) {
         })
       }
 
-      // Tiny delay between purchases so we don't hammer SignalWire's API
       await new Promise((r) => setTimeout(r, 250))
     }
 

@@ -1,9 +1,9 @@
-// app/api/gmail/labels/route.ts
-// =============================================================================
-// GET /api/gmail/labels
-// Returns the user's labels (system labels like INBOX/SENT/DRAFT/TRASH
-// plus their custom labels). Used by the sidebar.
-// =============================================================================
+
+
+
+
+
+
 
 import { NextResponse } from 'next/server'
 import { requireAuth, gmailFetch, GmailAuthError } from '@/lib/gmail'
@@ -34,8 +34,8 @@ export async function GET() {
     const data = (await r.json()) as LabelsResponse
     const labels = data.labels ?? []
 
-    // Sort: pinned system labels first in our preferred order, then other
-    // system labels alphabetically, then user labels alphabetically.
+    
+    
     const PINNED = ['INBOX', 'STARRED', 'SENT', 'DRAFT', 'IMPORTANT', 'SPAM', 'TRASH']
     const pinned = PINNED.map((id) => labels.find((l) => l.id === id)).filter(
       (l): l is Label => !!l

@@ -1,30 +1,30 @@
 'use client'
 
-// =============================================================================
-// GMAIL APP — three-pane mail client embedded in the admin desktop
-// =============================================================================
-// Layout:
-//   Left:   labels/folders (INBOX, custom labels, SENT, then "More" expander)
-//   Middle: message list for selected label, with search box
-//   Right:  message detail (sender, subject, body), with reply/star/trash/archive
-//
-// State flows:
-//   On mount → GET /api/gmail/status. If not connected, show big Connect button.
-//   If connected → fetch labels + messages.
-//   Click message → fetch full body, mark as read.
-//   Compose → modal with to/subject/body inputs → POST /api/gmail/send.
-//
-// The app is wrapped by AppWindow (the Win7 frame), so we render only the
-// inside. We own our own scroll containers — AppWindow's body wrapper is
-// overflow:hidden per the v22.d contract.
-//
-// v23 LABELS CHANGE:
-//   The left pane previously dumped every label flat. Now labels are bucketed:
-//   ALWAYS VISIBLE (in order): Inbox → custom (user) labels alphabetical → Sent.
-//   Everything else (Starred, Important, Drafts, Spam, Trash, Chat, all
-//   Categories, other system labels) is hidden under a "More ▾" expander.
-//   No API change — we bucket client-side.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 import { useEffect, useState, useCallback } from 'react'
 import type { CSSProperties } from 'react'
@@ -64,7 +64,7 @@ interface MessageFull {
   starred: boolean
 }
 
-// Friendly display names for system labels.
+
 const LABEL_DISPLAY: Record<string, string> = {
   INBOX: 'Inbox',
   STARRED: 'Starred',
@@ -85,8 +85,8 @@ function displayLabelName(l: Label): string {
   return LABEL_DISPLAY[l.id] ?? l.name
 }
 
-// v23: split labels into the always-visible set (Inbox, custom alpha, Sent)
-// and the "More" set (everything else). Pure function of the labels array.
+
+
 function bucketLabels(labels: Label[]): { primary: Label[]; more: Label[] } {
   const byId = (id: string) => labels.find((l) => l.id === id)
 
@@ -127,7 +127,7 @@ function formatDate(iso: string): string {
   })
 }
 
-// Parses "Name <email@example.com>" into { name, email } for cleaner display.
+
 function parseAddress(raw: string): { name: string; email: string } {
   if (!raw) return { name: '', email: '' }
   const m = raw.match(/^\s*"?([^"<]*?)"?\s*<([^>]+)>\s*$/)
@@ -163,13 +163,13 @@ export default function GmailApp() {
   const [composeError, setComposeError] = useState<string>('')
 
   const [isMobile, setIsMobile] = useState(false)
-  // On mobile we use 2 visible panes max: list or detail (toggle).
+  
   const [mobileView, setMobileView] = useState<'labels' | 'list' | 'detail'>('list')
   const [showMoreLabels, setShowMoreLabels] = useState(false)
 
-  // ----- effects -----
+  
 
-  // Detect mobile.
+  
   useEffect(() => {
     if (typeof window === 'undefined') return
     const probe = () => setIsMobile(window.innerWidth < 760)
@@ -178,7 +178,7 @@ export default function GmailApp() {
     return () => window.removeEventListener('resize', probe)
   }, [])
 
-  // On mount + after connect: status check.
+  
   const refreshStatus = useCallback(async () => {
     setStatus('loading')
     try {
@@ -200,7 +200,7 @@ export default function GmailApp() {
     refreshStatus()
   }, [refreshStatus])
 
-  // Handle ?gmail=connected/error/denied returns from OAuth callback.
+  
   useEffect(() => {
     if (typeof window === 'undefined') return
     const params = new URLSearchParams(window.location.search)
@@ -209,7 +209,7 @@ export default function GmailApp() {
     if (flag === 'connected') {
       refreshStatus()
     }
-    // Clear the query so it doesn't trigger again on refresh.
+    
     params.delete('gmail')
     params.delete('detail')
     const newSearch = params.toString()
@@ -218,7 +218,7 @@ export default function GmailApp() {
     window.history.replaceState({}, '', newUrl)
   }, [refreshStatus])
 
-  // Fetch labels once connected.
+  
   useEffect(() => {
     if (status !== 'connected') return
     ;(async () => {
@@ -233,7 +233,7 @@ export default function GmailApp() {
     })()
   }, [status])
 
-  // Fetch messages when label or query changes.
+  
   const loadMessages = useCallback(
     async (label: string, q: string, pageToken: string | null) => {
       setMessagesLoading(true)
@@ -271,7 +271,7 @@ export default function GmailApp() {
     loadMessages(selectedLabelId, query, null)
   }, [status, selectedLabelId, query, loadMessages])
 
-  // Fetch full message when one is selected.
+  
   useEffect(() => {
     if (!selectedMessageId) {
       setSelectedMessage(null)
@@ -291,7 +291,7 @@ export default function GmailApp() {
           return
         }
         setSelectedMessage(data)
-        // Auto-mark-as-read if it was unread.
+        
         if (data.unread) {
           fetch(`/api/gmail/messages/${selectedMessageId}`, {
             method: 'PATCH',
@@ -314,7 +314,7 @@ export default function GmailApp() {
     }
   }, [selectedMessageId])
 
-  // ----- actions -----
+  
 
   const connect = () => {
     window.location.href = '/api/gmail/auth'
@@ -389,7 +389,7 @@ export default function GmailApp() {
       setComposeSubject('')
       setComposeBody('')
       setComposeReplyTo(null)
-      // Refresh current list to show sent message if we're in SENT.
+      
       loadMessages(selectedLabelId, query, null)
     } catch (e) {
       setComposeError(e instanceof Error ? e.message : String(e))
@@ -410,7 +410,7 @@ export default function GmailApp() {
         body: JSON.stringify(patch),
       })
       if (!r.ok) return
-      // Optimistic local updates.
+      
       if (patch.star) {
         setSelectedMessage((p) => (p ? { ...p, starred: true } : p))
         setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, starred: true } : m)))
@@ -424,7 +424,7 @@ export default function GmailApp() {
         setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, unread: true } : m)))
       }
       if (patch.trash || patch.archive) {
-        // Remove from current list.
+        
         setMessages((prev) => prev.filter((m) => m.id !== id))
         setSelectedMessage(null)
         setSelectedMessageId(null)
@@ -435,7 +435,7 @@ export default function GmailApp() {
     }
   }
 
-  // ----- render -----
+  
 
   if (status === 'loading') {
     return (
@@ -482,7 +482,7 @@ export default function GmailApp() {
     )
   }
 
-  // ----- connected: render three-pane layout -----
+  
 
   const labelsPane = (
     <div style={labelsPaneStyle}>
@@ -738,7 +738,7 @@ export default function GmailApp() {
     </div>
   )
 
-  // ----- compose modal -----
+  
   const composeModal = composeOpen && (
     <div style={composeBackdropStyle} onClick={() => !composeSending && setComposeOpen(false)}>
       <div style={composeModalStyle} onClick={(e) => e.stopPropagation()}>
@@ -812,9 +812,9 @@ export default function GmailApp() {
   )
 }
 
-// =============================================================================
-// STYLES
-// =============================================================================
+
+
+
 
 const shellStyle: CSSProperties = {
   position: 'absolute',

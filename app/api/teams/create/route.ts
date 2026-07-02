@@ -4,11 +4,6 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { requireSelfSub } from '@/lib/subscription'
 import { apiError } from '@/lib/apiError'
 
-/**
- * Owner creates a new team.
- * Requires: own active $35 sub (NOT a team seat — see requireSelfSub).
- * This enforces the "only paying users can create teams" rule.
- */
 export async function POST(req: Request) {
   try {
     const gate = await requireSelfSub()

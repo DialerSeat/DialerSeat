@@ -2,31 +2,31 @@
 
 import type { CSSProperties } from 'react'
 
-// =============================================================================
-// WHITELABEL LIVE EXACT PREVIEW v6 — AWAITING DATA pill is fixed sitewide color
-// =============================================================================
-// v6 changes vs v5:
-//   - AWAITING DATA pill: background changed from `primary` (tenant-tinted) to
-//     the FIXED sitewide empty-state color used on the real analytics
-//     dashboard, so the preview is accurate regardless of the tenant's colors.
-//     The real "AWAITING DATA" badge is the same dark slate for every tenant;
-//     the preview now matches. Pill text is fixed white to read on that slate.
-//     This is the ONLY change from v5.
-//
-// v5 changes vs v4:
-//   1. Logo box background: resolvedHeaderBg → sidebar.
-//   2. Logo box borderBottom removed.
-//   3. Brand-name fallback text color: onHeaderMuted → sidebarTextMuted.
-//   4. Tier-2 alpha derivations aligned with ThemeProvider v7's branded math.
-// (full v5 notes retained in git history)
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 const FUTURA = `'Futura PT', Futura, 'Helvetica Neue', Helvetica, Arial, sans-serif`
 const DEFAULT_PAGE_BG = '#f0f1f4'
 
-// Fixed sitewide empty-state color — the "AWAITING DATA" badge on the real
-// analytics dashboard is this dark slate for EVERY tenant, never brand-tinted.
-// Keep in sync with the analytics page's AWAITING DATA badge.
+
+
+
 const AWAITING_DATA_BG = '#2f2e44'
 const AWAITING_DATA_FG = '#ffffff'
 

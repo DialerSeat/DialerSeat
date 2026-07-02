@@ -6,30 +6,6 @@ import { userCacheTag } from '@/lib/tenant'
 import { createSeatSubscription, isSeatBillingError } from '@/lib/teamBilling'
 import { apiError } from '@/lib/apiError'
 
-/**
- * Owner accepts a pending team member.
- *
- * Flow branches on whether a pending team_seat_charge exists:
- *
- *   1. Owner_pays code → pending seat_charge row exists →
- *      verify owner has card, create Stripe seat sub, mark charge paid.
- *
- *   2. Agent_pays code → no pending seat_charge → skip Stripe entirely,
- *      just activate. Agent's own personal $35/wk DialerSeat sub gates
- *      access platform-side.
- *
- *   3. Free code → no pending seat_charge → skip Stripe entirely. Free
- *      mode means no per-seat fee; agent's personal sub still required.
- *
- * v2 (Push B): after activating the member, set their active_tenant_id
- * to the team owner's WL tenant (if the owner has one). This makes
- * joining a WL team automatically default the new member's brand view
- * to that WL. They see the whitelabel chrome instead of standard
- * DialerSeat on their next page load.
- *
- * Body:
- *   memberId: uuid (required)
- */
 export async function POST(req: Request) {
   try {
     const { userId } = await auth()
@@ -44,7 +20,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'memberId required' }, { status: 400 })
     }
 
-    // Fetch member + team
     const { data: member } = await supabaseAdmin
       .from('team_members')
       .select('id, team_id, user_id, status, teams!inner(id, owner_id, name)')
@@ -70,8 +45,6 @@ export async function POST(req: Request) {
       )
     }
 
-    // Idempotency guard: if there's already a paid charge for this member,
-    // don't double-charge — just activate them.
     const { data: existingPaid } = await supabaseAdmin
       .from('team_seat_charges')
       .select('id, stripe_subscription_id')
@@ -142,7 +115,6 @@ export async function POST(req: Request) {
       }
     }
 
-    // Flip member to active
     const { data: updated, error: updateErr } = await supabaseAdmin
       .from('team_members')
       .update({
@@ -155,7 +127,6 @@ export async function POST(req: Request) {
 
     if (updateErr) throw updateErr
 
-    // Activate pre-staged access rows
     const { data: activated } = await supabaseAdmin
       .from('team_campaign_access')
       .update({ is_active: true })
@@ -164,13 +135,6 @@ export async function POST(req: Request) {
       .is('revoked_at', null)
       .select('id')
 
-    // ── v2: set default view to team owner's WL tenant ────────────────
-    // Look up the team owner's active WL tenant. If they have one, stamp
-    // it onto the accepted user's active_tenant_id so the next page load
-    // renders the whitelabel chrome. Owner without a WL → no change.
-    // If the agent had previously picked a different view (e.g. standard
-    // or another team's WL), this overrides it on accept. They can switch
-    // back via settings if needed.
     let defaultedToTenantId: string | null = null
     const { data: ownerTenant } = await supabaseAdmin
       .from('white_label_tenants')
@@ -187,14 +151,11 @@ export async function POST(req: Request) {
         .eq('clerk_id', member.user_id)
 
       if (tenantErr) {
-        // Non-fatal — the member is still active, they just don't
-        // get the auto-switch to the WL view. Log and continue.
+
         console.warn('failed to set active_tenant_id on accept:', tenantErr)
       } else {
         defaultedToTenantId = ownerTenant.id
-        // Bust the new member's tenant cache so the next page render
-        // picks up the new active_tenant_id without waiting for the
-        // 60s revalidate window.
+
         revalidateTag(userCacheTag(member.user_id), { expire: 0 })
       }
     }

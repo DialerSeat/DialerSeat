@@ -1,29 +1,9 @@
-// app/api/whitelabel/check-subdomain/route.ts
-// =============================================================================
-// CHECK SUBDOMAIN AVAILABILITY
-// =============================================================================
-// GET /api/whitelabel/check-subdomain?slug=acme
-//
-// Returns:
-//   { available: true }
-//   { available: false, reason: 'reserved' | 'taken' | 'invalid' | 'too_short'
-//                                | 'too_long' | 'redirecting' }
-//
-// Used by the onboarding page's live availability checker. Debounced
-// client-side at 300ms. Cheap query — two indexed lookups.
-//
-// Special case: if the slug matches the CALLER's existing slug, we return
-// { available: true, current: true } — they "own" it already.
-// =============================================================================
-
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { getServiceClient } from '@/lib/supabase'
 
 const supabase = getServiceClient('whitelabel/check-subdomain')
 
-// Keep this list in sync with the one on the onboarding page. The page has
-// its own check for instant feedback; this server check is the authority.
 const RESERVED = new Set([
   'www', 'api', 'app', 'admin', 'mail', 'email', 'support',
   'dashboard', 'billing', 'auth', 'docs', 'help', 'status',
@@ -65,7 +45,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ available: false, reason: 'reserved' })
   }
 
-  // Is this slug currently owned by ANY active tenant?
   const { data: existing } = await supabase
     .from('white_label_tenants')
     .select('id, owner_clerk_id')
@@ -74,15 +53,13 @@ export async function GET(req: NextRequest) {
     .maybeSingle()
 
   if (existing) {
-    // If the caller is the owner of this slug, they "have" it — treat as available
-    // (this matters in edit mode when user keeps their own subdomain unchanged)
+
     if (existing.owner_clerk_id === userId) {
       return NextResponse.json({ available: true, current: true })
     }
     return NextResponse.json({ available: false, reason: 'taken' })
   }
 
-  // Is this slug currently redirecting somewhere from a recent edit?
   const { data: redirecting } = await supabase
     .from('subdomain_history')
     .select('id, tenant_id')

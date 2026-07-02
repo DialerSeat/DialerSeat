@@ -3,21 +3,6 @@ import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 
-/**
- * Owner detaches a campaign from a team.
- *
- * Cascades:
- *   - team_codes pointing at this campaign get hard-deleted (FK CASCADE on
- *     campaigns.id since team_codes.campaign_id references campaigns)
- *     Note: codes pointing at OTHER campaigns on the same team survive.
- *   - team_campaign_access rows for this campaign on this team get
- *     soft-revoked (is_active: false, revoked_at set).
- *
- * Body:
- *   teamId:     uuid (required)
- *   campaignId: uuid (required)
- *   confirm:    'remove' (required)
- */
 export async function POST(req: Request) {
   try {
     const { userId } = await auth()
@@ -55,7 +40,6 @@ export async function POST(req: Request) {
       )
     }
 
-    // Soft-revoke active access rows
     await supabaseAdmin
       .from('team_campaign_access')
       .update({ is_active: false, revoked_at: new Date().toISOString() })
@@ -63,14 +47,12 @@ export async function POST(req: Request) {
       .eq('campaign_id', campaignId)
       .eq('is_active', true)
 
-    // Delete team-specific codes pointing at this campaign
     await supabaseAdmin
       .from('team_codes')
       .delete()
       .eq('team_id', teamId)
       .eq('campaign_id', campaignId)
 
-    // Detach the campaign from the team
     const { error } = await supabaseAdmin
       .from('team_campaigns')
       .delete()

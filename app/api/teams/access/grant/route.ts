@@ -4,22 +4,6 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { createSeatSubscription, isSeatBillingError } from '@/lib/teamBilling'
 import { apiError } from '@/lib/apiError'
 
-/**
- * Owner manually grants a specific agent access to a specific campaign.
- *
- * Payer semantics:
- *   payer='owner' — creates a real Stripe subscription for the seat.
- *                   Requires the campaign's access_mode to be 'owner_pays'
- *                   (or other paid mode); fails 402 if owner has no card.
- *   payer='agent' — no charge. Agent's own personal $35/wk DialerSeat sub
- *                   gates access. No team-level Stripe.
- *   payer='free'  — no charge. Campaign's access_mode MUST be 'free'.
- *                   Both team owner and agents skip the per-seat fee, but
- *                   agents still need their own personal DialerSeat sub
- *                   to actually dial.
- *
- * Body: { memberId, campaignId, payer: 'owner' | 'agent' | 'free' }
- */
 export async function POST(req: Request) {
   try {
     const { userId } = await auth()
@@ -44,7 +28,6 @@ export async function POST(req: Request) {
       )
     }
 
-    // Verify member + ownership
     const { data: member } = await supabaseAdmin
       .from('team_members')
       .select('id, team_id, user_id, status, teams!inner(id, owner_id, name)')
@@ -70,7 +53,6 @@ export async function POST(req: Request) {
       )
     }
 
-    // Verify campaign attached + pull access_mode for defensive validation
     const { data: tc } = await supabaseAdmin
       .from('team_campaigns')
       .select('team_id, access_mode')
@@ -85,7 +67,6 @@ export async function POST(req: Request) {
       )
     }
 
-    // Defensive: payer='free' is only valid on a free-mode campaign
     if (payer === 'free' && tc.access_mode !== 'free') {
       return NextResponse.json(
         { success: false, error: 'Free payer is only valid on campaigns in free mode' },
@@ -93,7 +74,6 @@ export async function POST(req: Request) {
       )
     }
 
-    // Check duplicate active access
     const { data: existing } = await supabaseAdmin
       .from('team_campaign_access')
       .select('id')
@@ -109,7 +89,6 @@ export async function POST(req: Request) {
       )
     }
 
-    // Resolve agent email for the Stripe description
     const { data: agentUser } = await supabaseAdmin
       .from('users')
       .select('email')
@@ -118,7 +97,6 @@ export async function POST(req: Request) {
 
     const agentEmail = agentUser?.email || 'unknown'
 
-    // Insert access row first (so we have an audit trail even if Stripe fails)
     const { data: granted, error: grantErr } = await supabaseAdmin
       .from('team_campaign_access')
       .insert({
@@ -135,9 +113,6 @@ export async function POST(req: Request) {
 
     if (grantErr) throw grantErr
 
-    // ── If payer='agent' or payer='free', no Stripe needed. ──
-    //   agent: agent's personal sub gates
-    //   free : nobody pays per-seat; agent's personal sub still gates platform-side
     if (payer === 'agent' || payer === 'free') {
       return NextResponse.json({
         success: true,
@@ -146,7 +121,6 @@ export async function POST(req: Request) {
       })
     }
 
-    // ── payer='owner': stage seat_charge, create Stripe sub, update row ──
     const { data: seatCharge, error: seatErr } = await supabaseAdmin
       .from('team_seat_charges')
       .insert({
@@ -164,7 +138,7 @@ export async function POST(req: Request) {
       .single()
 
     if (seatErr) {
-      // Roll back access row — don't grant access without billing tracking
+
       await supabaseAdmin.from('team_campaign_access').delete().eq('id', granted.id)
       throw seatErr
     }
@@ -180,7 +154,6 @@ export async function POST(req: Request) {
         teamMemberId: memberId,
       })
 
-      // Update seat_charges with real Stripe IDs + period dates
       await supabaseAdmin
         .from('team_seat_charges')
         .update({
@@ -198,7 +171,7 @@ export async function POST(req: Request) {
         stripeSubscriptionId: sub.stripeSubscriptionId,
       })
     } catch (stripeErr: any) {
-      // Stripe creation failed — roll back BOTH the seat_charge row AND the access row
+
       await supabaseAdmin.from('team_seat_charges').delete().eq('id', seatCharge.id)
       await supabaseAdmin.from('team_campaign_access').delete().eq('id', granted.id)
 

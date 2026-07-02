@@ -3,32 +3,32 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
-// =============================================================================
-// SHOWCASE WIZARD — post-signup, pre-billing product showcase (v5)
-// =============================================================================
-// v5 changes vs v4:
-//   - Removed the glow (boxShadow) on the primary NEXT / GET STARTED button.
-//   - Updated copy on all three scenes per latest request.
-//   - Scene 2 (analytics) now renders two stacked header lines instead of
-//     a single headline. Added optional `headline2` to the Scene type and
-//     rendering branch for it; unaffected scenes render exactly as before.
-// v4 changes vs v3:
-//   - BILLING_PATH changed from '/billing' to '/billing?from=welcome'.
-//     This single param is the loop-breaker: app/billing/layout.tsx checks
-//     for ?from=welcome (and the Referer header as a fallback) and skips its
-//     new-user redirect when either signal is present. Without it, clicking
-//     GET STARTED or SKIP sent a new user to /billing, the layout saw
-//     shouldSeeWelcome()===true, and immediately bounced them back here —
-//     an inescapable /welcome <-> /billing loop.
-//   - No other logic or UI changes. All scene content, animations, mobile
-//     scaling, and keyboard navigation are identical to v3.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 const FUTURA = 'Futura PT, Futura, "Trebuchet MS", sans-serif'
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace'
 
-// ?from=welcome tells app/billing/layout.tsx to skip the new-user redirect.
-// Every navigation from this component to /billing MUST include this param.
+
+
 const BILLING_PATH = '/billing?from=welcome'
 
 const C = {
@@ -54,8 +54,7 @@ interface Scene {
   headline: string
   sub: string
   subLead?: string
-  /** If set, renders as a second stacked header line below `headline`
-   *  (both styled as headers) instead of the normal single-headline layout. */
+  
   headline2?: string
 }
 
@@ -217,7 +216,7 @@ function MacFrame({ title, titleColor, bg, children }: { title: string; titleCol
   )
 }
 
-// ── SCENE 1: DIALER ──────────────────────────────────────────────────────────
+
 const SCRIPTS: { key: string; label: string; text: string }[] = [
   { key: 'life', label: 'Life', text: `"Hi (client), this is (your name goes here) reaching
 out about the life coverage you
@@ -345,7 +344,7 @@ function DialerScene() {
   )
 }
 
-// ── SCENE 2: ANALYTICS ───────────────────────────────────────────────────────
+
 function AnalyticsScene() {
   const tiles: [string, number, string, string, string, boolean][] = [
     ['TOTAL CALLS', 1284, C.primary, '', '↑ 12%', true],
@@ -457,7 +456,7 @@ function AnalyticsScene() {
   )
 }
 
-// ── SCENE 3: WHY DIALERSEAT ──────────────────────────────────────────────────
+
 function SuperiorScene() {
   const features: { icon: string; title: string; body: string }[] = [
     { icon: '⊘', title: 'No contracts', body: "Cancel anytime, absolutely no strings attached. Stay for the right reasons, not because you have to." },

@@ -1,19 +1,3 @@
-// app/api/whitelabel/upload-logo/route.ts
-// =============================================================================
-// UPLOAD WHITE-LABEL LOGO — relaxed validation + protected cleanup
-// =============================================================================
-// Push C update: cleanup now PROTECTS logo files referenced by:
-//   1. Any of the user's saved custom_themes (themes.logo_url)
-//   2. The user's current tenant (white_label_tenants.logo_url)
-// 
-// Before this fix, every new upload deleted ALL "logo-*" files in the
-// user's folder. Saved themes pointing at older files got broken —
-// stored URL still valid, file gone. UI showed placeholder image.
-// 
-// Logo size + dimension + MIME validation still relaxed for testing.
-// ⚠ BACKLOG: restore production validation (512×148, ≤200KB, PNG/SVG).
-// =============================================================================
-
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { getServiceClient } from '@/lib/supabase'
@@ -69,8 +53,6 @@ function deriveExt(mime: string, filename: string): string {
   return 'bin'
 }
 
-// Extract the final path segment (filename) from a Supabase public URL.
-// Returns null for malformed input. Used to compare URLs to storage listings.
 function filenameFromUrl(url: string | null | undefined): string | null {
   if (!url || typeof url !== 'string') return null
   try {
@@ -79,7 +61,7 @@ function filenameFromUrl(url: string | null | undefined): string | null {
     const last = parts[parts.length - 1]
     return last ? decodeURIComponent(last) : null
   } catch {
-    // Not a valid URL — try splitting raw string as fallback
+
     const parts = url.split('/')
     const last = parts[parts.length - 1]
     return last ? last.split('?')[0] : null
@@ -150,12 +132,8 @@ export async function POST(req: NextRequest) {
 
   const baseFolder = `tenants/${userId}`
 
-  // ── Cleanup: remove orphan logo files, but PROTECT files still referenced
-  //    by saved themes or the user's current tenant. This fixes the
-  //    "saved theme logos disappear" bug where every upload nuked old
-  //    files that themes were still pointing at.
   try {
-    // Build the protected-filenames set BEFORE listing storage.
+
     const protectedFilenames = new Set<string>()
 
     const { data: themes } = await supabase

@@ -11,25 +11,6 @@ import {
 
 const supabase = getServiceClient('cron/pool-maintenance')
 
-/**
- * Hourly maintenance cron.
- *
- * Tasks:
- *   1. Compute current pool utilization across active numbers
- *   2. If utilization > trigger AND sustained for required hours → auto-buy
- *   3. Auto-retire flagged numbers older than 24h, replace same area code
- *
- * Caps enforced:
- *   - max_pool_size (hard ceiling, currently 200)
- *   - daily_buy_cap (50/day default)
- *
- * This runs every hour. The "sustained_hours_required" check uses
- * pool_config.sustained_hours_required (default 2) — that means utilization
- * has to be elevated for 2 consecutive hourly checks before the cron buys,
- * which prevents momentary spikes from triggering panic buys.
- *
- * Auth: Bearer token (CRON_SECRET) — same as pool-reset cron.
- */
 export async function GET(req: Request) {
   const authHeader = req.headers.get('authorization')
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -44,9 +25,6 @@ export async function GET(req: Request) {
       actions: [] as string[],
     }
 
-    // ============================================================
-    // STEP 1: Compute current utilization
-    // ============================================================
     const { data: activeNums } = await supabase
       .from('phone_numbers')
       .select('id, daily_call_count, daily_cap')
@@ -66,9 +44,6 @@ export async function GET(req: Request) {
       dailyCapacity: totalDailyCapacity,
     }
 
-    // ============================================================
-    // STEP 2: Auto-retire flagged numbers older than 24h
-    // ============================================================
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
     const { data: stale } = await supabase
       .from('phone_numbers')
@@ -83,7 +58,7 @@ export async function GET(req: Request) {
         await releasePoolNumber(num.id)
         retired++
         summary.actions.push(`Retired flagged ${num.id} (area ${num.area_code})`)
-        // Replace with same area code if room in pool
+
         const totalActive = (await supabase
           .from('phone_numbers')
           .select('id', { count: 'exact', head: true })
@@ -106,16 +81,10 @@ export async function GET(req: Request) {
     summary.retired = retired
     summary.replaced = replaced
 
-    // ============================================================
-    // STEP 3: Auto-buy if utilization sustained over trigger
-    // ============================================================
-    // Track sustained-utilization in pool_config: we use buys_today_date as a
-    // crude marker, but for sustained tracking we look at last_called_at on
-    // active numbers — if most numbers were called recently (last hour), pool is hot.
     if (utilizationPct >= config.utilization_trigger_pct) {
-      // Don't exceed daily buy cap
+
       if (config.buys_today < config.daily_buy_cap) {
-        // Don't exceed pool size cap
+
         const { count: poolCount } = await supabase
           .from('phone_numbers')
           .select('id', { count: 'exact', head: true })
@@ -123,14 +92,13 @@ export async function GET(req: Request) {
 
         const headroom = config.max_pool_size - (poolCount ?? 0)
         if (headroom > 0) {
-          // Buy up to 5 numbers per maintenance run (smooth growth, not spike)
+
           const remainingDailyBudget = config.daily_buy_cap - config.buys_today
           const buyLimit = Math.min(5, headroom, remainingDailyBudget)
 
-          // Recommend area codes based on recent traffic; fall back to default metros
           let toBuy = await recommendAreaCodesToBuy(buyLimit)
           if (toBuy.length === 0) {
-            // No recent calls / no recommendations — buy from default rotating list
+
             const fallbackMetros = ['212', '213', '312', '281', '602', '215', '210', '619', '214', '408']
             toBuy = fallbackMetros.slice(0, buyLimit)
           }
@@ -146,7 +114,7 @@ export async function GET(req: Request) {
               } else {
                 summary.actions.push(`Auto-buy failed for ${ac} — no inventory`)
               }
-              // Gentle delay between buys
+
               await new Promise((r) => setTimeout(r, 250))
             } catch (err: any) {
               summary.actions.push(`Auto-buy error for ${ac}: ${err.message}`)

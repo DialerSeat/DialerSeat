@@ -16,10 +16,8 @@ export async function POST(req: Request) {
     const recordingDuration = formData.get('RecordingDuration') as string | null
     const accountSid = formData.get('AccountSid') as string | null
 
-    // Log the entire payload so we can see what SignalWire actually sends
     console.log('Recording webhook payload:', Object.fromEntries(formData.entries()))
 
-    // Only act on completed recordings; ignore in-progress / absent
     if (recordingStatus && recordingStatus !== 'completed') {
       console.log(`Ignoring recording status: ${recordingStatus}`)
       return NextResponse.json({ success: true, skipped: true })
@@ -33,7 +31,6 @@ export async function POST(req: Request) {
 
     let matched = false
 
-    // Path 1: direct CallSid match (works for non-conference recordings)
     if (callSid) {
       const { data, error } = await supabaseAdmin
         .from('calls')
@@ -47,9 +44,6 @@ export async function POST(req: Request) {
       }
     }
 
-    // Path 2: conference recording — match through call_rooms table
-    // ConferenceSid alone doesn't tell us which call, but the conference name
-    // we set was the room name. SignalWire echoes FriendlyName for the conference.
     if (!matched) {
       const friendlyName = formData.get('FriendlyName') as string | null
       const conferenceName = friendlyName || conferenceSid

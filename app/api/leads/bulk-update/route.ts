@@ -1,32 +1,3 @@
-// app/api/leads/bulk-update/route.ts
-// =============================================================================
-// BULK UPDATE LEADS
-// =============================================================================
-// Used by the Sheets-style editor in /dashboard/campaigns to commit multiple
-// cell edits at once. Accepts an array of updates and applies them in a
-// single batch. Returns counts on success.
-//
-// Body:
-//   {
-//     updates: [
-//       { lead_id: 'uuid', fields: { first_name?: string, last_name?: string,
-//                                    phone?: string, email?: string,
-//                                    state?: string, city?: string,
-//                                    extra_data?: {...} } },
-//       ...
-//     ]
-//   }
-//
-// Editable fields are intentionally restricted to user-data fields. Server-
-// managed fields (id, campaign_id, user_id, created_at, dial_attempts,
-// last_called_at, disposition, etc.) are NOT updatable via this endpoint.
-// To change a disposition use /api/leads/update; to change a campaign you
-// can't (move leads is a separate operation).
-//
-// Auth: requires active subscription. Lapsed users get 403.
-// Ownership: every lead_id in `updates` is verified to belong to the caller.
-// =============================================================================
-
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { getServiceClient } from '@/lib/supabase'
@@ -45,7 +16,6 @@ export async function POST(req: NextRequest) {
     const { userId } = await auth()
     if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
-    // ─── Active subscription gate ──────────────────────────────────────────
     const { data: sub } = await supabaseAdmin
       .from('users')
       .select('subscription_status')
@@ -71,7 +41,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // ─── Verify ownership of every lead in one query ──────────────────────
     const leadIds = updates.map((u: any) => u.lead_id).filter(Boolean)
     if (leadIds.length !== updates.length) {
       return NextResponse.json({ error: 'malformed_updates' }, { status: 400 })
@@ -91,8 +60,6 @@ export async function POST(req: NextRequest) {
       (ownedLeads || []).filter(l => l.user_id === userId).map(l => l.id)
     )
 
-    // Reject the whole batch if ANY lead isn't owned by the caller. This is
-    // intentional — partial success on a batch operation is confusing UX.
     for (const u of updates) {
       if (!ownedSet.has(u.lead_id)) {
         return NextResponse.json(
@@ -102,10 +69,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ─── Apply updates one at a time ──────────────────────────────────────
-    // Supabase doesn't have a true bulk-update with different fields per row,
-    // so we run them in parallel. For 500 rows this is fine; if it ever
-    // becomes a bottleneck we can switch to a SQL CASE-WHEN update or RPC.
     const results = await Promise.all(updates.map(async (u: any) => {
       const fields: Record<string, any> = {}
       for (const [k, v] of Object.entries(u.fields || {})) {

@@ -3,15 +3,6 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/admin'
 import { apiError } from '@/lib/apiError'
 
-/**
- * Admin force-delete a team.
- * Requires typed "remove" confirmation in body (matches owner endpoint pattern).
- *
- * Admin can delete teams with active paid seat charges. The UI warns but the
- * endpoint doesn't block — admin has final authority. Stripe seat-charge rows
- * are preserved via FK SET NULL for billing audit trail. CASCADE handles
- * team_codes, team_members, team_campaigns.
- */
 export async function POST(req: Request) {
   try {
     await requireAdmin()
@@ -33,7 +24,6 @@ export async function POST(req: Request) {
       )
     }
 
-    // Verify team exists + collect a summary before we wipe
     const { data: team } = await supabaseAdmin
       .from('teams')
       .select('id, name, owner_id')
@@ -47,15 +37,12 @@ export async function POST(req: Request) {
       )
     }
 
-    // Count what we're about to delete for the response summary
     const [{ count: memberCount }, { count: campaignCount }, { count: activeSeatCount }] = await Promise.all([
       supabaseAdmin.from('team_members').select('id', { count: 'exact', head: true }).eq('team_id', teamId),
       supabaseAdmin.from('team_campaigns').select('id', { count: 'exact', head: true }).eq('team_id', teamId),
       supabaseAdmin.from('team_seat_charges').select('id', { count: 'exact', head: true }).eq('team_id', teamId).eq('status', 'paid'),
     ])
 
-    // Wipe team — CASCADE handles team_codes, team_members, team_campaigns
-    // team_seat_charges.team_id is SET NULL (audit trail preserved)
     const { error } = await supabaseAdmin
       .from('teams')
       .delete()
@@ -75,7 +62,7 @@ export async function POST(req: Request) {
       },
     })
   } catch (error: any) {
-    // requireAdmin() throws Response objects — re-return them
+
     if (error instanceof Response) return error
     console.error('Admin team delete error:', error)
     return apiError(error, { route: 'admin/teams/delete' })

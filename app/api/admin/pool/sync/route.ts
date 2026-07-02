@@ -10,20 +10,6 @@ const PROJECT_ID = process.env.SIGNALWIRE_PROJECT_ID!
 const API_TOKEN = process.env.SIGNALWIRE_API_TOKEN!
 const SPACE_URL = process.env.SIGNALWIRE_SPACE_URL!
 
-/**
- * Admin endpoint: scans the entire SignalWire account for owned numbers,
- * compares against the phone_numbers table, and imports any missing ones.
- *
- * Use cases:
- *   - Import the legacy SIGNALWIRE_PHONE_NUMBER on first run
- *   - Sync numbers bought directly in the SignalWire dashboard (not via BUY NOW)
- *   - Repair drift if the pool table got out of sync somehow
- *
- * Idempotent — re-running just confirms everything is in sync.
- *
- * Usage from DevTools console while logged in as admin:
- *   fetch('/api/admin/pool/sync', { method: 'POST' }).then(r => r.json()).then(console.log)
- */
 export async function POST() {
   try {
     const gate = await requireAdmin()
@@ -31,9 +17,6 @@ export async function POST() {
 
     const authHeader = 'Basic ' + Buffer.from(`${PROJECT_ID}:${API_TOKEN}`).toString('base64')
 
-    // -------------------------------------------------------------
-    // Step 1: Fetch ALL numbers owned in SignalWire (paginated)
-    // -------------------------------------------------------------
     const swNumbers: any[] = []
     let nextPageUrl: string | null =
       `https://${SPACE_URL}/api/laml/2010-04-01/Accounts/${PROJECT_ID}/IncomingPhoneNumbers.json?PageSize=100`
@@ -50,26 +33,19 @@ export async function POST() {
       }
       const data = await res.json()
       swNumbers.push(...(data.incoming_phone_numbers || []))
-      // SignalWire's LaML API returns next_page_uri as a relative path
+
       nextPageUrl = data.next_page_uri
         ? `https://${SPACE_URL}${data.next_page_uri}`
         : null
     }
 
-    // -------------------------------------------------------------
-    // Step 2: Fetch all numbers we already have in the pool
-    // -------------------------------------------------------------
     const { data: existingPool } = await supabase
       .from('phone_numbers')
       .select('phone_number, signalwire_sid, status')
 
-    // Build lookup sets — match by SID first (canonical), fall back to phone number
     const existingSids = new Set((existingPool ?? []).map((n) => n.signalwire_sid))
     const existingPhones = new Set((existingPool ?? []).map((n) => n.phone_number))
 
-    // -------------------------------------------------------------
-    // Step 3: Identify missing numbers and insert them
-    // -------------------------------------------------------------
     const results: Array<{
       phone_number: string
       sid: string
@@ -133,11 +109,6 @@ export async function POST() {
       }
     }
 
-    // -------------------------------------------------------------
-    // Step 4: Detect orphans (in pool but not in SignalWire)
-    // These shouldn't normally exist but flag them so admin can investigate.
-    // We don't auto-delete — that'd be destructive.
-    // -------------------------------------------------------------
     const swSids = new Set(swNumbers.map((n) => n.sid))
     const orphans = (existingPool ?? [])
       .filter((p) => p.status !== 'released' && !swSids.has(p.signalwire_sid))

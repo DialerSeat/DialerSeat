@@ -2,24 +2,24 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { createClient } from '@supabase/supabase-js'
 
-// =============================================================================
-// /api/support/submit — create a support / bug / exit submission
-// =============================================================================
-// Any signed-in user can submit. The submission feeds the admin support desktop
-// app's unified feed (support_submissions). Identity is SNAPSHOTTED server-side
-// from the users table — we never trust client-supplied name/email — so the row
-// still shows who submitted it after the account is deleted.
-//
-// Body: { type, disposition?, subject?, body }
-//   type        — 'support' | 'bug' | 'exit'
-//   disposition — free-form category chosen in the app (e.g. exit reason,
-//                 bug severity). Validated only as a bounded string here so the
-//                 app can evolve its categories without a server change.
-//   subject     — optional short title
-//   body        — the message (required, non-empty)
-//
-// force-dynamic: per-user, never cached.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 export const dynamic = 'force-dynamic'
 
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
         ? payload.disposition.trim().slice(0, MAX_DISPOSITION)
         : null
 
-    // Snapshot identity server-side from the users table (never trust the client).
+    
     const { data: u } = await supabase
       .from('users')
       .select('first_name, last_name, username, email, active_tenant_id')

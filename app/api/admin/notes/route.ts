@@ -2,27 +2,6 @@ import { NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/requireAdmin'
 
-// =============================================================================
-// /api/admin/notes
-// =============================================================================
-// Admin-only personal scratchpad. Notes are owned by the calling admin's
-// clerk_id — no sharing, no team notes (v1).
-//
-// GET   → list of {id, title, body, starred, pin_order, created_at, updated_at}
-//          ordered: starred first (pin_order asc, nulls last), then the rest
-//          by updated_at desc.
-// POST  → create empty note, returns the new row
-//
-// Single-note ops (PATCH, DELETE) live in [id]/route.ts.
-// Bulk reorder of pinned notes lives in reorder/route.ts.
-//
-// v23 CHANGES:
-//   - SELECT now includes starred + pin_order.
-//   - Ordering: starred DESC, pin_order ASC NULLS LAST, updated_at DESC so
-//     starred notes float to the top in their manual drag order, and
-//     unstarred notes follow by recency.
-// =============================================================================
-
 const supabaseAdmin = () =>
   getServiceClient('admin/notes')
 

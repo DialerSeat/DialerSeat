@@ -2,16 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { getServiceClient } from '@/lib/supabase'
 
-// =============================================================================
-// /api/manager/notes/[id]  — update / delete one of the caller's notes
-// =============================================================================
-// Auth-gated (not admin). Every query is filtered by owner_clerk_id = caller,
-// so a user can only ever touch their own notes even if they guess an id.
-//
-// PATCH  body: { title?, body?, starred? } → partial update, returns the row
-// DELETE                                    → removes the note
-// =============================================================================
-
 const supabaseAdmin = () =>
   getServiceClient('manager/notes/[id]')
 

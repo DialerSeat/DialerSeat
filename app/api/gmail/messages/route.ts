@@ -1,16 +1,16 @@
-// app/api/gmail/messages/route.ts
-// =============================================================================
-// GET /api/gmail/messages?label=INBOX&q=<search>&pageToken=<next>
-// Returns:
-//   {
-//     messages: [{ id, threadId, from, subject, snippet, date, unread, labels }],
-//     nextPageToken: string | null
-//   }
-//
-// Gmail's list endpoint returns just id/threadId. We then batch-fetch metadata
-// (headers only, no body) for each result. We use the format=metadata mode
-// with header allow-list to keep payloads tiny.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth, gmailFetch, GmailAuthError } from '@/lib/gmail'
@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
     const q = url.searchParams.get('q') ?? ''
     const pageToken = url.searchParams.get('pageToken') ?? ''
 
-    // Build the list query.
+    
     const listParams = new URLSearchParams({
       maxResults: String(PAGE_SIZE),
       labelIds: label,
@@ -67,15 +67,15 @@ export async function GET(req: NextRequest) {
     const listData = (await listRes.json()) as ListResponse
     const ids = listData.messages?.map((m) => m.id) ?? []
 
-    // Fetch metadata in parallel. For 25 messages this is fine; if we ever
-    // crank PAGE_SIZE up significantly we'd want to use a real Gmail batch
-    // endpoint, but the parallel-fetch pattern works well for now.
+    
+    
+    
     const metas = await Promise.all(
       ids.map(async (id) => {
         const params = new URLSearchParams({
           format: 'metadata',
         })
-        // metadataHeaders is repeatable — append each.
+        
         ;['From', 'Subject', 'Date', 'To'].forEach((h) =>
           params.append('metadataHeaders', h)
         )

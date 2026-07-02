@@ -1,28 +1,28 @@
 import Link from 'next/link'
 
-// =============================================================================
-// SITE FOOTER
-// =============================================================================
-// Shared footer used across every public marketing page:
-//   - Landing (/)
-//   - /vs hub and all /vs/<competitor> sub-pages
-//   - /faq
-//   - /privacy
-//   - /terms
-//
-// Keeps the link set consistent (Privacy · Terms · FAQ · Comparisons) so a
-// visitor on any page can reach legal docs and comparisons without hunting.
-//
-// Design choices:
-//   - Uses CSS vars where available (--border, --text-secondary) so it adapts
-//     to both the dark landing and the light marketing pages.
-//   - Falls back to hardcoded values for pages that don't load the design
-//     tokens.
-//   - Single line of links on desktop, wraps on mobile.
-//   - © year auto-updates (this is the only auto-updating "last updated" we
-//     allow in the marketing footer — copyright year is informational, not
-//     contractual like the "Last Updated" date on Privacy/Terms).
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 export default function SiteFooter() {
   return (

@@ -6,46 +6,6 @@ import { usePathname } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
 import { useBranding } from '@/components/ThemeProvider'
 
-// =============================================================================
-// app/dashboard/layout.tsx — C5 (Manager+ "Go to Desktop" sidebar button)
-// =============================================================================
-// C5 changes vs C4:
-//
-//   - GO TO DESKTOP BUTTON. A themed entry to the Manager+ desktop now
-//     renders just above the profile row in the sidebar, gated on
-//     hasManagerPlus (already derived from /api/stripe/status — true for
-//     plan 'manager_plus' or 'both'). It links to /dashboard/manager/desktop
-//     (a server-guarded route that re-checks tenant ownership). Because it
-//     lives inside the shared <Sidebar/>, it appears in BOTH the desktop
-//     sidebar and the mobile drawer automatically. Themed with brandPrimary
-//     so it reads as part of the owner's brand. Shows for nobody else —
-//     admins, Pro-only users, team-seat users, and lapsed users never see it.
-//
-//   - When the REAL Manager+ desktop ships (replacing the Coming Soon page),
-//     add '/dashboard/manager/desktop' to BARE_LAYOUT_PREFIXES so it renders
-//     full-screen without this dashboard chrome, exactly like the admin
-//     desktop does today.
-//
-// C4 changes vs C3:
-//   - Desktop logo Link: added justifyContent: 'center' so the logo
-//     content sits centered within the 260px sidebar instead of pinned
-//     to the left.
-//
-// C3 changes vs C2:
-//   - Desktop tenant logo box BG: var(--brand-header-bg) → transparent.
-//
-// What stays (untouched):
-//   - Logo box dimensions: tenantLogoUrl ? 74 : 64 (height), 0 vs '0 18px'.
-//   - Hamburger button → --brand-header-bg background, --brand-on-header bars.
-//   - Mobile topbar background → --brand-header-bg.
-//   - Desktop sidebar / mobile drawer background → --brand-sidebar-bg.
-//   - Nav items, profile row, drawer chrome → sidebar-tinted tokens.
-//   - Lapsed RESUBSCRIBE banner → semantic amber #ffaa3e.
-//   - ADMIN CONSOLE subtitle blue (#4a9eff) — only on default brand.
-//   - DefaultBrand* gradient D logos.
-//   - brandPrimary JS const for profile-row conditional badge color.
-// =============================================================================
-
 const userNavItems = [
   { label: 'ANALYTICS', href: '/dashboard/analytics' },
   { label: 'DIALER', href: '/dashboard/dialer' },
@@ -354,11 +314,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     </>
   )
 
-  // Logo box. C4: justifyContent center so the logo content sits in the
-  // middle of the 260px sidebar instead of pinned left. Applies to both
-  // tenant logos (already centered via objectFit but now explicitly
-  // declared) and default brand (gradient D + DIALERSEAT text was
-  // previously left-aligned with padding).
   const Sidebar = () => (
     <>
       <Link href={logoHref} style={{

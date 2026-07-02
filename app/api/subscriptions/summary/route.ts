@@ -3,20 +3,6 @@ import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 
-/**
- * Unified subscriptions summary for the authenticated user.
- *
- * Returns:
- *   - personalSub: their own $35/wk DialerSeat subscription, if any
- *   - ownerPaidSeats: team seats where someone else (the team owner) is paying for them
- *   - agentPaidSeats: team seats where the user is paying themselves
- *
- * Used by:
- *   - Sidebar (tier-with-seat label)
- *   - Settings page (stacked subscriptions display)
- *
- * No tier gate — lapsed users still need to see their own subs to act on them.
- */
 export async function GET() {
   try {
     const { userId } = await auth()
@@ -24,7 +10,6 @@ export async function GET() {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Personal subscription — read from /api/stripe/status's source of truth (users table)
     const { data: u } = await supabaseAdmin
       .from('users')
       .select('subscription_status, stripe_customer_id, is_admin')
@@ -33,7 +18,7 @@ export async function GET() {
 
     let personalSub: any = null
     if (u && u.subscription_status) {
-      // Status mapping mirrors lib/subscription.ts tier logic
+
       const status = u.subscription_status
       const isActive = status === 'active'
       const isLapsed = ['past_due', 'unpaid', 'canceled', 'incomplete_expired'].includes(status)
@@ -45,8 +30,6 @@ export async function GET() {
       }
     }
 
-    // Owner-paid seats — others paying for THIS user
-    // team_seat_charges rows where agent_id = current user, status = active
     const { data: ownerPaidRows } = await supabaseAdmin
       .from('team_seat_charges')
       .select(`
@@ -70,7 +53,6 @@ export async function GET() {
         .filter(Boolean)
     ))
 
-    // Agent-paid seats — THIS user is paying for their own seat on someone's team
     const { data: agentPaidRows } = await supabaseAdmin
       .from('team_agent_payments')
       .select(`
@@ -91,7 +73,6 @@ export async function GET() {
 
     const allOwnerIds = Array.from(new Set([...ownerIdsForLookup, ...moreOwnerIds]))
 
-    // Resolve owner identities
     const ownerById: Record<string, { name: string; email: string | null }> = {}
     if (allOwnerIds.length > 0) {
       const { data: owners } = await supabaseAdmin

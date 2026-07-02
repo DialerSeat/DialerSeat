@@ -4,32 +4,6 @@ import { getServiceClient } from '@/lib/supabase'
 
 const supabase = getServiceClient('dialer/active-agents')
 
-// =============================================================================
-// ACTIVE AGENTS — real data
-// =============================================================================
-// Returns the real agent_sessions for the team and campaign context.
-//
-// Used by:
-//   - Dialer page pacing panel (shows "X agents on this campaign")
-//   - Predictive controller (decides whether to use multi-agent reroute)
-//   - Admin/team dashboards
-//
-// Query params:
-//   ?campaign_id=<uuid>  — filter to agents currently on this campaign
-//   ?team_id=<uuid>      — filter to all agents on this team (any campaign)
-//
-// Default behavior: returns agents on the same team as the authenticated user.
-//
-// SCHEMA NOTES (these match the heartbeat route's resolveTeamId helper):
-//   - users table has NO `team_id` column. Solo agents have no team.
-//   - Team membership is determined via TWO places:
-//       1. teams.owner_id (stores Clerk ID, not users.id UUID)
-//       2. team_members.user_id (stores Clerk ID, with status = 'active')
-//   - An earlier version of this file selected users.team_id which silently
-//     returned undefined and caused the pacing panel to filter by user_id
-//     instead of campaign_id. Fixed.
-// =============================================================================
-
 interface AgentSummary {
   user_id: string
   state: string
@@ -50,12 +24,6 @@ interface CampaignPacingInfo {
   is_predictive_team: boolean
 }
 
-// -----------------------------------------------------------------------------
-// resolveTeamId — same logic as the heartbeat route.
-// Given a Clerk ID, return the team_id the agent acts under, or null.
-//
-// Owner check first, then active membership check, then null (solo agent).
-// -----------------------------------------------------------------------------
 async function resolveTeamId(clerkId: string): Promise<string | null> {
   const { data: ownedTeam } = await supabase
     .from('teams')
@@ -86,10 +54,6 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
     }
 
-    // Resolve Clerk user → internal user row.
-    // IMPORTANT: select only columns that actually exist on users.
-    // (Earlier version selected `team_id` which doesn't exist and caused
-    // the request to fall through to the solo-user branch every time.)
     const { data: userRow } = await supabase
       .from('users')
       .select('id')
@@ -102,15 +66,10 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url)
     const campaignId = searchParams.get('campaign_id')
-    // Team scope: URL param wins, then fall back to resolved team affiliation
-    // for the caller. Solo agents resolve to null and get the user-only branch.
+
     const teamId =
       searchParams.get('team_id') ?? (await resolveTeamId(clerkId))
 
-    // ----- Build the query -----
-    // Always exclude offline + stale sessions. Heartbeat sweep marks them
-    // offline asynchronously; we double-filter here so a request that beats
-    // the sweep still gets clean data.
     let query = supabase
       .from('agent_sessions')
       .select(`
@@ -127,13 +86,13 @@ export async function GET(req: NextRequest) {
       .gte('last_heartbeat', new Date(Date.now() - 15_000).toISOString())
 
     if (campaignId) {
-      // Most common branch — dialer page asking for predictive pacing
+
       query = query.eq('campaign_id', campaignId)
     } else if (teamId) {
-      // No campaign filter, but caller belongs to a team — show whole team
+
       query = query.eq('team_id', teamId)
     } else {
-      // Solo user, no team — return only this user's session
+
       query = query.eq('user_id', userRow.id)
     }
 
@@ -144,7 +103,6 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'query failed' }, { status: 500 })
     }
 
-    // ----- Shape the agents response -----
     const now = Date.now()
     const agents: AgentSummary[] = (sessions ?? []).map(s => ({
       user_id: s.user_id,
@@ -158,7 +116,6 @@ export async function GET(req: NextRequest) {
       ),
     }))
 
-    // ----- Build campaign pacing info if requested -----
     let campaignPacing: CampaignPacingInfo | null = null
     if (campaignId) {
       const ready = agents.filter(a => a.state === 'ready').length
@@ -166,9 +123,6 @@ export async function GET(req: NextRequest) {
       const onCall = agents.filter(a => a.state === 'on_call').length
       const totalActive = agents.length
 
-      // Lookup current abandon rate from the rolling 30d view.
-      // Use maybeSingle so a brand-new campaign with no calls yet (no row in
-      // the view) doesn't 500 — returns null cleanly.
       let abandonRatePct: number | null = null
       try {
         const { data: rateRow } = await supabase
@@ -181,7 +135,7 @@ export async function GET(req: NextRequest) {
           abandonRatePct = rateRow.abandon_rate_pct
         }
       } catch (rateErr) {
-        // Non-fatal — abandonRatePct stays null
+
         console.error('[active-agents] abandon rate fetch failed', rateErr)
       }
 
@@ -192,8 +146,7 @@ export async function GET(req: NextRequest) {
         dialing_agents: dialing,
         on_call_agents: onCall,
         abandon_rate_pct: abandonRatePct,
-        // 2+ agents on the same campaign → team predictive routing applies
-        // (used by disconnect_behavior='auto' to decide hangup vs reroute)
+
         is_predictive_team: totalActive >= 2,
       }
     }

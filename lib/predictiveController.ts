@@ -6,30 +6,30 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-// =============================================================================
-// PREDICTIVE CONTROLLER
-// =============================================================================
-// Pure server-side function. Invoked by /api/dialer/heartbeat every 5s
-// (was: /api/calls/predictive-tick by the client — now deprecated).
-//
-// FIRES WHEN: agent's heartbeat reports state in (ready/on_call/wrapping)
-//             AND dialer_mode='predictive' AND has campaign AND not yielding
-//
-// CORE LOGIC:
-//   1. Look up agent's preferred_lines (or campaign default)
-//   2. Clamp to [1, 5] AND apply abandon-rate auto-degrade (if >=2.5%, force 1)
-//   3. Count in-flight calls scoped to this session
-//   4. desired = effectiveLines, shouldDial = max(0, desired - inFlight)
-//   5. Atomically claim shouldDial leads via claim_next_leads_for_campaign()
-//   6. DEDUPE by phone number (new — fixes the all-same-number test case)
-//   7. For each unique phone, place an outbound call with source='controller_fanout'
-//   8. Release any failed-to-dial OR deduped claims back to the pool
-//
-// REFILLS DURING ON_CALL / WRAPPING:
-//   This is the key speed feature. When agent is talking, controller still
-//   refills lines so that by the time they disposition, the next human is
-//   already queued. ReadyMode's "set it and forget it" philosophy.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 const HARD_LINE_CAP = 5
 const ABANDON_AUTO_DEGRADE_PCT = 2.5
@@ -55,8 +55,8 @@ interface RunControllerInput {
   teamId: string | null
 }
 
-// Normalize a phone number for dedup comparison.
-// '+13365925053', '13365925053', '3365925053', '336-592-5053' all → '13365925053'
+
+
 function normalizePhone(raw: string): string {
   const digits = (raw || '').replace(/\D/g, '')
   if (digits.length === 11 && digits.startsWith('1')) return digits
@@ -69,7 +69,7 @@ export async function runPredictiveController(
 ): Promise<ControllerResult> {
   const { sessionId, campaignId, clerkId, internalUserId, teamId } = input
 
-  // ── Stale-claim sweep (cheap, idempotent) ──────────────────────────────
+  
   let released = 0
   try {
     const { data } = await supabase.rpc('release_stale_lead_claims')
@@ -78,7 +78,7 @@ export async function runPredictiveController(
     console.error('[controller] stale claim sweep failed', sweepErr)
   }
 
-  // ── Campaign config ────────────────────────────────────────────────────
+  
   const { data: campaign } = await supabase
     .from('campaigns')
     .select('id, dialer_mode, predictive_lines_per_agent, predictive_lines_max')
@@ -92,7 +92,7 @@ export async function runPredictiveController(
     return zeroResult(`campaign mode is ${campaign.dialer_mode}, not predictive`, released)
   }
 
-  // ── Determine N (lines for this agent) ─────────────────────────────────
+  
   const campaignDefault = campaign.predictive_lines_per_agent || 3
   const campaignMax = Math.min(campaign.predictive_lines_max || 5, HARD_LINE_CAP)
 
@@ -114,7 +114,7 @@ export async function runPredictiveController(
   let effectiveLines = agentPref ?? campaignDefault
   effectiveLines = Math.max(1, Math.min(effectiveLines, campaignMax))
 
-  // ── Abandon-rate auto-degrade ──────────────────────────────────────────
+  
   let degraded = false
   try {
     const { data: rateRow } = await supabase
@@ -131,13 +131,13 @@ export async function runPredictiveController(
     console.error('[controller] abandon rate lookup failed', rateErr)
   }
 
-  // ── Count in-flight calls for THIS session ─────────────────────────────
-  // Scoped to dial_group_id=sessionId so two agents on the same campaign
-  // don't pollute each other's line counts.
-  //
-  // "In-flight" = no disposition yet AND placed within last 90s.
-  // Previously used duration=0 which incorrectly excluded calls that had
-  // just ended but hadn't been dispositioned yet.
+  
+  
+  
+  
+  
+  
+  
   const ninetySecondsAgo = new Date(Date.now() - 90_000).toISOString()
   const { count: inFlightCount } = await supabase
     .from('calls')
@@ -159,7 +159,7 @@ export async function runPredictiveController(
     }
   }
 
-  // ── Atomically claim leads ─────────────────────────────────────────────
+  
   const { data: claimedLeads, error: claimErr } = await supabase.rpc(
     'claim_next_leads_for_campaign',
     {
@@ -192,11 +192,11 @@ export async function runPredictiveController(
     }
   }
 
-  // ── PHONE DEDUPLICATION (new) ──────────────────────────────────────────
-  // If the batch contains multiple leads with the same phone number (your
-  // test case had 4 leads all pointing to 336-592-5053), only dial each
-  // unique phone once. Release the duplicates so they can be tried later
-  // (likely a data quality issue but we don't want to FAIL the batch).
+  
+  
+  
+  
+  
   const phoneSeen = new Set<string>()
   const leadsToCall: typeof leads = []
   const dupeLeadIds: string[] = []
@@ -204,12 +204,12 @@ export async function runPredictiveController(
   for (const lead of leads) {
     const phone = normalizePhone(lead.phone)
     if (!phone) {
-      // Invalid phone — release claim, skip
+      
       dupeLeadIds.push(lead.id)
       continue
     }
     if (phoneSeen.has(phone)) {
-      // Duplicate within this batch — release claim, skip
+      
       dupeLeadIds.push(lead.id)
       continue
     }
@@ -217,7 +217,7 @@ export async function runPredictiveController(
     leadsToCall.push(lead)
   }
 
-  // Release dupes / invalid in parallel
+  
   if (dupeLeadIds.length > 0) {
     await Promise.allSettled(
       dupeLeadIds.map(leadId =>
@@ -235,7 +235,7 @@ export async function runPredictiveController(
     }
   }
 
-  // ── Fire calls in parallel ─────────────────────────────────────────────
+  
   const callSids: string[] = []
   let skipped = 0
 

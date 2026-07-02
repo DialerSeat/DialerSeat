@@ -1,20 +1,20 @@
 'use client'
 
-// =============================================================================
-// CLERK PROFILE APP — v23
-// =============================================================================
-// Renders Clerk's <UserProfile /> inside a desktop AppWindow so "Manage
-// Account" opens a draggable window instead of a modal that gets trapped
-// behind the desktop overlay (the old broken behavior).
-//
-// Opened three ways:
-//   1. Tray icon in the Taskbar (👤, left of View Landing)
-//   2. StartMenu "Manage Account" item
-//   3. Desktop icon (registered in registry.tsx)
-//
-// The component is self-contained — AppWindow gives it the frame, this
-// just fills the body with Clerk's profile UI, scrollable.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 import { UserProfile } from '@clerk/nextjs'
 

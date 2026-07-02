@@ -17,7 +17,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'campaign_id and order array required' }, { status: 400 })
     }
 
-    // Verify ownership
     const { data: campaign } = await supabaseAdmin
       .from('campaigns')
       .select('user_id')
@@ -28,7 +27,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Owner only' }, { status: 403 })
     }
 
-    // Update each script's sort_order
     await Promise.all(
       order.map((scriptId: string, idx: number) =>
         supabaseAdmin

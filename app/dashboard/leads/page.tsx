@@ -3,52 +3,52 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
 
-// =============================================================================
-// LEADS PAGE — Pass 2 Phase C6 (page header strip → header-bg)
-// =============================================================================
-// C6 changes vs C5 — surgical rebind so the page header strip reads as page
-// chrome, not sidebar chrome:
-//
-//   .leads-header background     T.dark → var(--brand-header-bg)
-//   .leads-header-stats color    on-sidebar-muted → on-header-muted
-//
-// What stays the same (intentional — button chrome, not page header):
-//   T.dark stays as var(--brand-sidebar-bg). All card-internal CTAs keep
-//   their dark-button-with-primary-top-accent pattern:
-//     - ▶ SAVE button in lead-edit
-//     - ▶ ADD LEAD modal submit button
-//     - ▶ DELETE FOREVER modal danger button
-//     - Resubscribe link in lapsed lead-edit notice
-//
-// T constant unchanged. All structural code byte-for-byte from C5.
-//
-// =============================================================================
-// Original C5 binding sweep (preserved):
-// Themable T tokens rebound at source.
-//
-// What's themed:
-//   T.bg      → var(--brand-page-bg)
-//   T.surface → var(--brand-card-surface)
-//   T.border  → var(--brand-card-border)
-//   T.dark    → var(--brand-sidebar-bg)  (CTA button chrome)
-//   T.text    → var(--brand-on-page-bg)
-//   T.muted   → var(--brand-muted-text)
-//   T.blue    → var(--brand-primary)
-//
-// What stays semantic (NEVER themed):
-//   T.accent  (#2a4a8a) — phone number color AND attempted-call indicator
-//                         color (dial_attempts > 0). Same role as recordings.
-//   T.green / T.red / T.amber — disposition palette (CLOSED/DO NOT CALL/
-//                               NOT INTERESTED) + delete buttons + danger
-//                               modal accents.
-//   T.warn    (#ffaa3e) — lapsed banner accent, lapsed editing-locked notice.
-//   DISPOSITIONS array hex palette (label/color/bg) — semantic, untouched.
-//   dispositionTint() rgba per-row card-bg tints — semantic, untouched.
-//   '#e8e8ec' NEW badge bg, '#f8e8e8' modal-error bg — semantic.
-//   'white' disp-btn UI affordances — semantic active/inactive contrast.
-//   'rgba(0,0,0,0.55)' modal overlay — semantic.
-//   Header bottom accent rebinds to var(--brand-header-top-accent) directly.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 type AccessTier = 'active' | 'lapsed' | 'new' | null
 
@@ -235,13 +235,13 @@ export default function LeadsPage() {
     return () => observer.disconnect()
   }, [fetchMore, loading, cursor, leads.length])
 
-  // ── Silent refetch on tab visibility ──────────────────────────────────
-  // When the user comes back to this tab after editing leads elsewhere
-  // (e.g. campaigns editor), silently refresh the first page and merge
-  // into the existing list. New leads appear at top, removed leads drop
-  // out. The user's pagination state past page 1 and scroll position are
-  // preserved. Skipped if any modal is open or any operation is in flight
-  // so unsaved edits aren't lost.
+  
+  
+  
+  
+  
+  
+  
   const silentRefetch = useCallback(async () => {
     if (!user) return
     try {
@@ -264,16 +264,16 @@ export default function LeadsPage() {
         setTotal(data.total)
       }
     } catch {
-      // silent — focus refetches must never disrupt the user
+      
     }
   }, [user, campaignFilter, dispositionFilter, debouncedSearch, sort])
 
   useEffect(() => {
     const onVisibility = () => {
       if (document.hidden) return
-      // Skip refetch if anything's in-flight or any modal is open.
-      // Don't want to nuke the user's draft new lead, delete confirm,
-      // or unsaved disposition edits.
+      
+      
+      
       if (showAddModal || deleteConfirmLead || adding || deleting || saving) return
       silentRefetch()
     }

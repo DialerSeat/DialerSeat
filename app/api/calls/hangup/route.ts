@@ -20,7 +20,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'No SID' }, { status: 400 })
     }
 
-    // Verify the caller owns this call SID before hanging it up
+    
     const { data: room } = await supabase
       .from('call_rooms')
       .select('user_id')

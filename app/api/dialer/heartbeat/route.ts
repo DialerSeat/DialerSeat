@@ -6,58 +6,58 @@ import { STALE_HEARTBEAT_SECONDS, ABANDON_YIELD_PCT } from '@/lib/dialerConstant
 
 const supabase = getServiceClient('dialer/heartbeat')
 
-// =============================================================================
-// AGENT HEARTBEAT — also drives the predictive controller
-// =============================================================================
-// POST /api/dialer/heartbeat
-// Body: { state, campaign_id, dialer_mode, current_call_id }
-//
-// This endpoint serves THREE purposes:
-//   1. Upsert the agent_sessions row (presence tracking)
-//   2. Return `should_yield` based on 30-day abandon rate (FTC throttle)
-//   3. **NEW**: If agent is in predictive mode + LIVE on a campaign, invoke
-//      the controller server-side to refill lines.
-//
-// The controller invocation is what makes ReadyMode-style "set it and forget
-// it" predictive work. The agent never clicks DIAL. They toggle LIVE. The
-// heartbeat fires every 5s. Every time the heartbeat fires and the agent is
-// in a fillable state (ready/on_call/wrapping), we top up their lines.
-//
-// State definitions:
-//   - paused: agent is offline / toggle is off → controller does NOT fire
-//   - ready: agent is LIVE, no call routed yet → controller refills lines
-//   - on_call: agent is talking → controller still refills lines in background
-//                 (this is predictive's main speed advantage)
-//   - wrapping: agent is dispositioning → controller still refills lines
-//   - dialing: legacy transition state, treat like ready
-//
-// IMPORTANT: We invoke the controller AFTER the heartbeat is processed, so
-// the controller sees the FRESH state. Order of operations is critical here.
-// =============================================================================
 
-// Stale-claim window and yield threshold now come from lib/dialerConstants
-// (STALE_HEARTBEAT_SECONDS, ABANDON_YIELD_PCT) so they stay in lockstep with
-// the controller and pacing module.
-// NOTE: STALE_HEARTBEAT_SECONDS must still match the SQL stale-claim function's
-// interval (15s). If you change it in dialerConstants, update the SQL too.
 
-// Heartbeat-derived states that should trigger the controller to refill lines.
-// 'paused' is intentionally absent — paused agents don't get fanout.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 const CONTROLLER_TRIGGER_STATES = new Set(['ready', 'on_call', 'wrapping', 'dialing'])
 
-// ── USER + TEAM RESOLUTION CACHE ──────────────────────────────────────────
-// The heartbeat fires every 5s per agent. The agent's internal user id and
-// their team (owned or member) are stable for the life of a session, yet the
-// original code re-queried users + teams + team_members on EVERY beat. At 100
-// concurrent agents that's ~60 wasted queries/second. We cache the resolved
-// { userId, teamId } per clerk id with a short TTL so steady-state heartbeats
-// do a single write (the agent_sessions upsert) instead of 3-4 reads + write.
-//
-// Staleness tradeoff: if a user changes teams, the heartbeat keeps using the
-// old team for up to TTL. That only affects presence/pacing grouping, never
-// correctness of calls, so a few minutes is perfectly safe. The cache is
-// per-warm-instance memory (serverless), which is exactly where the repeated
-// beats land.
+
+
+
+
+
+
+
+
+
+
+
+
+
 const RESOLVE_TTL_MS = 5 * 60 * 1000 // 5 minutes
 type ResolvedIdentity = { userId: string; teamId: string | null }
 const identityCache = new Map<string, { value: ResolvedIdentity; expires: number }>()
@@ -66,7 +66,7 @@ async function resolveIdentity(clerkId: string): Promise<ResolvedIdentity | null
   const cached = identityCache.get(clerkId)
   if (cached && cached.expires > Date.now()) return cached.value
 
-  // user id
+  
   const { data: userRow } = await supabase
     .from('users')
     .select('id')
@@ -74,14 +74,14 @@ async function resolveIdentity(clerkId: string): Promise<ResolvedIdentity | null
     .maybeSingle()
   if (!userRow) return null
 
-  // team id (owned first, then active membership)
+  
   const teamId = await resolveTeamId(clerkId)
 
   const value: ResolvedIdentity = { userId: userRow.id, teamId }
-  // Bound the cache so a long-lived warm instance serving many distinct users
-  // can't grow memory without limit. When it gets large, drop the oldest-ish
-  // entries (Map preserves insertion order, so deleting from the front is cheap
-  // and good enough — TTL handles correctness regardless).
+  
+  
+  
+  
   if (identityCache.size > 5000) {
     let toDrop = 1000
     for (const key of identityCache.keys()) {
@@ -132,16 +132,16 @@ export async function POST(req: NextRequest) {
     const rawCampaignId: string | null = body.campaign_id ?? null
     const dialerMode: string | null = body.dialer_mode ?? null
     const rawCallId: string | null = body.current_call_id ?? null
-    // GHOST-DIALING SERVER GUARD: the predictive controller (which fans out lead
-    // calls) must only run when the client has EXPLICITLY armed the engine via
-    // the INITIATE button — never merely because the agent toggled Available.
-    // The client sends predictive_armed=true only while the engine is started.
+    
+    
+    
+    
     const predictiveArmed: boolean = body.predictive_armed === true
-    // current_call_id and campaign_id are uuid columns. The client may pass a
-    // provider call SID (non-uuid) or a virtual sub-campaign id ("<uuid>:appt").
-    // Writing those into a uuid column throws and 500s the heartbeat. Normalize:
-    //  - campaign_id: take the real uuid prefix before any ':' suffix
-    //  - current_call_id: only keep if it's a valid uuid, else null
+    
+    
+    
+    
+    
     const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
     const campaignId: string | null = (() => {
       if (!rawCampaignId) return null
@@ -151,7 +151,7 @@ export async function POST(req: NextRequest) {
     const currentCallId: string | null =
       rawCallId && UUID_RE.test(rawCallId) ? rawCallId : null
 
-    // ── Resolve user + team (cached; see resolveIdentity) ──────────────────
+    
     const identity = await resolveIdentity(clerkId)
     if (!identity) {
       return NextResponse.json({ error: 'user not found' }, { status: 404 })
@@ -159,13 +159,13 @@ export async function POST(req: NextRequest) {
     const userInternalId = identity.userId
     const teamId = identity.teamId
 
-    // ── OPPORTUNISTIC STALE-CALL RECOVERY ──────────────────────────────────
-    // A session can get "wedged" pinned to a call that's actually over (browser
-    // crashed mid-call, then the agent returns; or the client lost track of a
-    // call that already ended). Rather than wait for a cron, we self-heal on the
-    // agent's own heartbeat: if the call this session would be pinned to is
-    // already finished (has a disposition) or no longer exists, clear it so the
-    // agent isn't stuck. A genuinely live call (no disposition yet) is untouched.
+    
+    
+    
+    
+    
+    
+    
     let effectiveCallId = currentCallId
     if (effectiveCallId) {
       const { data: callRow } = await supabase
@@ -173,19 +173,19 @@ export async function POST(req: NextRequest) {
         .select('id, disposition, created_at')
         .eq('id', effectiveCallId)
         .maybeSingle()
-      // Clear the pin if the call: doesn't exist, is already dispositioned
-      // (finished), or is older than 30 min (no real call runs that long — this
-      // catches a call that dropped without ever being dispositioned). A genuine
-      // in-progress call (recent + no disposition) is preserved untouched.
+      
+      
+      
+      
       const ageMs = callRow?.created_at ? Date.now() - new Date(callRow.created_at).getTime() : 0
       if (!callRow || callRow.disposition || ageMs > 30 * 60 * 1000) {
         effectiveCallId = null
       }
     }
 
-    // ── Upsert agent_sessions row ──────────────────────────────────────────
-    // Uses (user_id) as conflict target so each user has exactly one session
-    // row. Updates state/campaign/mode/heartbeat on every tick.
+    
+    
+    
     const now = new Date().toISOString()
 
     const { data: upserted, error: upsertErr } = await supabase
@@ -208,8 +208,8 @@ export async function POST(req: NextRequest) {
 
     if (upsertErr || !upserted) {
       console.error('[heartbeat] upsert failed', upsertErr)
-      // Degrade gracefully rather than 500-spamming the client every 5s. The
-      // dialer only needs should_yield/controller info; presence is best-effort.
+      
+      
       return NextResponse.json({
         ok: false,
         session_id: null,
@@ -224,7 +224,7 @@ export async function POST(req: NextRequest) {
 
     const sessionId = upserted.id
 
-    // ── Compute should_yield (FTC throttle) ────────────────────────────────
+    
     let shouldYield = false
     if (campaignId) {
       try {
@@ -241,33 +241,33 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ── NEW: Invoke predictive controller (server-side) ────────────────────
-    // This is the architectural shift. Previously the client called
-    // /api/calls/predictive-tick on ready transitions. Now the heartbeat
-    // itself triggers fanout, which means:
-    //
-    //   1. No race conditions with client state — server uses what was
-    //      just upserted, fresh
-    //   2. Refills happen during on_call/wrapping (background dialing)
-    //   3. No client debouncing needed
-    //   4. Lines stay topped up even if the page is sluggish
-    //
-    // Controller only fires when ALL of these are true:
-    //   - dialer_mode = 'predictive'
-    //   - predictive_armed = true  ← the agent pressed INITIATE (not just online)
-    //   - state is in CONTROLLER_TRIGGER_STATES
-    //   - campaign_id is set
-    //   - shouldYield is false (FTC margin)
-    //
-    // The predictive_armed gate is the server-side half of the ghost-dialing
-    // lockdown: without it, merely toggling Available on a predictive campaign
-    // would start fanning out lead calls. Now nothing dials until the agent
-    // explicitly starts the engine.
-    //
-    // We don't await the result for the response — the heartbeat returns
-    // immediately. But we DO await within the request so failures get
-    // logged. The controller itself is idempotent: if lines are full, it
-    // returns fired=0 cheaply.
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     let controllerInvoked = false
     let controllerSummary: any = null
 

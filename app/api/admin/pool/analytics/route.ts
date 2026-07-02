@@ -4,40 +4,6 @@ import { requireAdmin } from '@/lib/admin'
 
 const supabase = getServiceClient('admin/pool/analytics')
 
-// =============================================================================
-// POOL ANALYTICS — lead demand vs number supply by state (v1, NEW)
-// =============================================================================
-// GET /api/admin/pool/analytics →
-// {
-//   success, generated_at,
-//   summary: { totalLeads, leadsWithState, unknownStateLeads, statesWithLeads,
-//              statesCovered, uncoveredLeads, poolTotal, poolActive },
-//   states: [{ code, name, leads, leadsPct, poolNumbers, activeNumbers,
-//              dailyCapacity, callsToday, leadsPerNumber, capacityPct,
-//              gap, verdict }],   // sorted by gap desc (worst shortage first)
-// }
-//
-// HOW STATES ARE RESOLVED (leads.state is messy — "FL" and "FLORIDA" coexist):
-//   1. Normalize leads.state: trim/upper; accept 2-letter codes; map full
-//      state names ("FLORIDA" → FL).
-//   2. If still unresolved, derive from the lead's phone area code via the
-//      NANP area-code → state map (area codes never cross state lines).
-//   3. Anything left lands in unknownStateLeads.
-// Pool numbers resolve the same way: state column first, area_code fallback.
-//
-// GAP SCORE: leadsShare − capacityShare, in percentage points.
-//   leadsShare    = state's % of all resolvable leads
-//   capacityShare = state's % of total pool daily capacity (active numbers)
-//   Positive gap  = demand outweighs supply there → buy numbers.
-// VERDICTS:
-//   NEED      — leads exist, ZERO active numbers
-//   NEED MORE — gap ≥ +2.0pp
-//   STRETCHED — gap > 0
-//   BALANCED  — −2.0pp < gap ≤ 0
-//   SURPLUS   — gap ≤ −2.0pp, or numbers exist with zero leads
-// =============================================================================
-
-// Keep in sync with STATE_AREA_CODES in components/admin-desktop/apps/Numbers.tsx
 const STATE_AREA_CODES: Array<{ state: string; name: string; areaCodes: string[] }> = [
   { state: 'AL', name: 'Alabama', areaCodes: ['205', '251', '256', '334', '938'] },
   { state: 'AK', name: 'Alaska', areaCodes: ['907'] },
@@ -124,7 +90,6 @@ export async function GET() {
   try {
     await requireAdmin()
 
-    // ── leads (paginated — Supabase caps at 1000/req) ────────────────────
     const leadCounts = new Map<string, number>()
     let totalLeads = 0
     let leadsWithState = 0
@@ -148,7 +113,6 @@ export async function GET() {
       if (rows.length < PAGE) break
     }
 
-    // ── pool numbers (everything not released) ───────────────────────────
     const { data: numbers, error: poolErr } = await supabase
       .from('phone_numbers')
       .select('state, area_code, status, daily_cap, daily_call_count')
@@ -176,7 +140,6 @@ export async function GET() {
       poolByState.set(code, agg)
     }
 
-    // ── merge + score ────────────────────────────────────────────────────
     const resolvableLeads = totalLeads - unknownStateLeads
     const totalCapacity = Array.from(poolByState.values()).reduce((s, a) => s + a.capacity, 0)
 

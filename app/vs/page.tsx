@@ -7,14 +7,14 @@ import {
   breadcrumbSchema,
 } from '@/lib/schema'
 
-// =============================================================================
-// BUILD FIX — force-dynamic to bypass static-generation hang
-// =============================================================================
-// Next.js 16.2.4 + Turbopack was hanging at "Generating static pages" for this
-// route during build. Marking dynamic skips the static prerender step entirely;
-// the page is rendered per-request instead. Vercel's edge layer still caches
-// the response, so user-facing performance is unaffected.
-// =============================================================================
+
+
+
+
+
+
+
+
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 

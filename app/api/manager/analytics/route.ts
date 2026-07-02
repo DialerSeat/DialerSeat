@@ -4,32 +4,6 @@ import { requireTenantOwner, getTenantUserIds, TenantOwnerError } from '@/lib/te
 
 const supabase = getServiceClient('manager/analytics')
 
-// =============================================================================
-// MANAGER ANALYTICS — /api/manager/analytics  (tenant-scoped, performance)
-// =============================================================================
-// REBUILT (this revision): no longer income/revenue. The manager Analytics is
-// now CAMPAIGN PERFORMANCE + TEAMS + USERS + STATUS, scoped to the owner's
-// tenant (owner + all active members of all teams linked to the tenant, via
-// getTenantUserIds()).
-//
-// Returns four sections the app renders as tabs/blocks:
-//   summary    — headline counts (campaigns, active campaigns, calls in range,
-//                connect rate, team members, active members)
-//   campaigns  — per-campaign: name, status, leads, called, calls-in-range,
-//                connect rate, top dispositions
-//   teams      — per-team: name, member counts, calls-in-range, seats
-//   users      — per-user: name, role, calls-in-range, last activity, status
-//   series     — calls per day/week bucket over the range
-//
-// SECURITY: requireTenantOwner() is the boundary; the route resolves the
-// caller's own tenant and never takes a tenant id from the client.
-//
-// "Connect rate" = share of calls whose disposition indicates a live human
-// connect (not voicemail / no-answer / busy / failed / abandoned). Disposition
-// vocab varies, so we classify by a keyword test and treat anything not clearly
-// a non-connect as a connect, which is the conventional sales-floor read.
-// =============================================================================
-
 type Range = '7d' | '30d' | '90d' | '1y' | 'all' | 'custom'
 
 function rangeToBounds(range: Range, customStart: string | null, customEnd: string | null) {
@@ -58,8 +32,6 @@ function dayKey(ms: number) {
   return d.toISOString().slice(0, 10)
 }
 
-// A disposition counts as a NON-connect if it clearly indicates the call never
-// reached a live person. Everything else is treated as a connect.
 const NON_CONNECT_RE = /(voicemail|vm|no.?answer|noanswer|busy|fail|abandon|disconnect|machine|unreachable|dead|drop)/i
 function isConnect(disposition: string | null): boolean {
   if (!disposition) return false           // null disposition = not a clean connect
@@ -68,7 +40,7 @@ function isConnect(disposition: string | null): boolean {
 }
 
 export async function GET(req: NextRequest) {
-  // ── GUARD ──────────────────────────────────────────────────────────────
+
   let tenant
   try {
     tenant = await requireTenantOwner()
@@ -92,7 +64,6 @@ export async function GET(req: NextRequest) {
   const now = Date.now()
   const day = 86400000
 
-  // ── USERS in tenant ──────────────────────────────────────────────────────
   const { data: tenantUsers } = await supabase
     .from('users')
     .select('clerk_id, email, first_name, last_name, last_seen_at, created_at')
@@ -104,7 +75,6 @@ export async function GET(req: NextRequest) {
     return [u.first_name, u.last_name].filter(Boolean).join(' ').trim() || u.email || clerkId.slice(0, 12)
   }
 
-  // ── TEAMS linked to this tenant ──────────────────────────────────────────
   const { data: teams } = await supabase
     .from('teams')
     .select('id, name, owner_id, created_at')
@@ -112,7 +82,6 @@ export async function GET(req: NextRequest) {
   const teamList = teams || []
   const teamIds = teamList.map(t => t.id)
 
-  // Members of those teams
   const { data: membersRaw } = teamIds.length
     ? await supabase
         .from('team_members')
@@ -121,7 +90,6 @@ export async function GET(req: NextRequest) {
     : { data: [] as any[] }
   const members = membersRaw || []
 
-  // Active paid seats per team
   const { data: seatsRaw } = teamIds.length
     ? await supabase
         .from('team_seat_charges')
@@ -130,14 +98,12 @@ export async function GET(req: NextRequest) {
     : { data: [] as any[] }
   const seats = seatsRaw || []
 
-  // ── CAMPAIGNS owned by tenant users ──────────────────────────────────────
   const { data: campaignsRaw } = await supabase
     .from('campaigns')
     .select('id, user_id, name, status, total_leads, called_leads, dialer_mode, created_at')
     .in('user_id', userIds)
   const campaigns = campaignsRaw || []
 
-  // ── CALLS in range for tenant users ──────────────────────────────────────
   const { data: callsRaw } = await supabase
     .from('calls')
     .select('user_id, campaign_id, team_id, disposition, created_at')
@@ -147,7 +113,6 @@ export async function GET(req: NextRequest) {
     .limit(100000)
   const calls = callsRaw || []
 
-  // ── AGGREGATE: per-campaign ──────────────────────────────────────────────
   const callsByCampaign = new Map<string, { total: number; connects: number; disp: Map<string, number> }>()
   for (const c of calls) {
     if (!c.campaign_id) continue
@@ -185,7 +150,6 @@ export async function GET(req: NextRequest) {
     }
   }).sort((a, b) => b.callsInRange - a.callsInRange)
 
-  // ── AGGREGATE: per-team ──────────────────────────────────────────────────
   const callsByTeam = new Map<string, number>()
   for (const c of calls) {
     if (!c.team_id) continue
@@ -207,7 +171,6 @@ export async function GET(req: NextRequest) {
     }
   }).sort((a, b) => b.callsInRange - a.callsInRange)
 
-  // ── AGGREGATE: per-user ──────────────────────────────────────────────────
   const callsByUser = new Map<string, number>()
   for (const c of calls) {
     callsByUser.set(c.user_id, (callsByUser.get(c.user_id) || 0) + 1)
@@ -227,7 +190,6 @@ export async function GET(req: NextRequest) {
     }
   }).sort((a, b) => b.callsInRange - a.callsInRange)
 
-  // ── SERIES: calls per bucket ─────────────────────────────────────────────
   const totalDays = Math.max(1, Math.ceil((end - start) / day))
   const useWeekly = totalDays > 120
   const bucketSize = useWeekly ? 7 * day : day
@@ -246,7 +208,6 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // ── SUMMARY ──────────────────────────────────────────────────────────────
   const totalCalls = calls.length
   const totalConnects = calls.filter(c => isConnect(c.disposition)).length
   const overallConnectRate = totalCalls > 0 ? Number(((totalConnects / totalCalls) * 100).toFixed(1)) : 0

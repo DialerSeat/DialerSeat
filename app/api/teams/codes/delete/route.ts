@@ -3,18 +3,6 @@ import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 
-/**
- * Owner deletes a code permanently.
- * Requires typed "remove" confirmation per destructive-action pattern.
- *
- * Once deleted, the code can never be redeemed. Existing members who joined
- * via this code stay on the team — their `team_members.joined_via_code` is
- * a denormalized text field for audit, not a foreign key.
- *
- * Body:
- *   codeId: uuid (required)
- *   confirm: 'remove' (required)
- */
 export async function POST(req: Request) {
   try {
     const { userId } = await auth()
@@ -36,7 +24,6 @@ export async function POST(req: Request) {
       )
     }
 
-    // Verify ownership through the team
     const { data: existing } = await supabaseAdmin
       .from('team_codes')
       .select('id, teams!inner(owner_id)')

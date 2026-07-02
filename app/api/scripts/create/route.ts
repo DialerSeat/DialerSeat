@@ -1,12 +1,3 @@
-// app/api/scripts/create/route.ts
-// =============================================================================
-// GLOBAL SCRIPTS LIBRARY — CREATE
-// =============================================================================
-// Creates a new script in the caller's personal library. Optionally tagged to
-// a team (team_id) so it surfaces for all members of that team — only allowed
-// if the caller owns the team.
-// =============================================================================
-
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
@@ -21,7 +12,6 @@ export async function POST(req: Request) {
 
     const { name, body, team_id } = await req.json()
 
-    // If team_id is supplied, the caller must own that team.
     if (team_id) {
       const { data: team } = await supabaseAdmin
         .from('teams')
@@ -33,7 +23,6 @@ export async function POST(req: Request) {
       }
     }
 
-    // Next sort_order within the caller's personal library.
     const { data: existing } = await supabaseAdmin
       .from('scripts')
       .select('sort_order')

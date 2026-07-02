@@ -11,11 +11,6 @@ export type AccessTier = 'active' | 'lapsed' | 'new'
 
 const ACTIVE_STATUSES = ['active']  // strict: only a paid, active sub grants access (no trials; past_due is locked)
 
-/**
- * Detailed access info — used by UI to show what's keeping the user active.
- * Existing gates (proxy.ts, requireActive) use the simpler getAccessTier()
- * which collapses this to 'active' | 'lapsed' | 'new'.
- */
 export interface DetailedAccess {
   tier: AccessTier
   via: 'self' | 'seat' | null      // why active (or null if not active)
@@ -23,10 +18,6 @@ export interface DetailedAccess {
   activeSeatTeamIds: string[]      // team IDs where user has an owner-paid seat
 }
 
-/**
- * Returns true if the user has an own subscription that grants active access.
- * Pulled out so seat-checking and self-checking can share the same logic.
- */
 async function checkSelfSubActive(clerkId: string): Promise<{ active: boolean; hasHistory: boolean }> {
   const { data: subs, error } = await supabase
     .from('subscriptions')
@@ -36,7 +27,7 @@ async function checkSelfSubActive(clerkId: string): Promise<{ active: boolean; h
 
   if (error) {
     console.error('[subscription] self-sub lookup failed:', error)
-    // Fail open: treat as active so a Supabase outage doesn't lock everyone out.
+
     return { active: true, hasHistory: true }
   }
 
@@ -62,21 +53,9 @@ async function checkSelfSubActive(clerkId: string): Promise<{ active: boolean; h
   return { active: false, hasHistory: true }
 }
 
-/**
- * Returns team IDs where this user has an active member row AND the seat is
- * currently being paid for by the owner (recent paid charge for current period).
- *
- * For 'recruit' codes there's no owner payment — those don't grant access via
- * this path; recruit-code users still need their own $35 sub.
- *
- * For 'public' team campaigns, no charge exists at all — those bypass tier
- * checks entirely at the campaign level (handled later, not here).
- */
 async function getActiveTeamSeats(clerkId: string): Promise<string[]> {
   const now = new Date().toISOString()
 
-  // Find active memberships joined via seat (not recruit) codes that have a
-  // current paid charge covering today.
   const { data, error } = await supabase
     .from('team_members')
     .select(`
@@ -101,20 +80,9 @@ async function getActiveTeamSeats(clerkId: string): Promise<string[]> {
 
   if (!data || data.length === 0) return []
 
-  // Dedupe team_ids in case multiple charges overlap
   return Array.from(new Set(data.map((r: any) => r.team_id)))
 }
 
-/**
- * Determines a user's access tier (collapsed to 3 states for backward compat).
- *
- *   active  - own sub active OR has at least one paid team seat
- *   lapsed  - has subscription history OR was previously on a paid seat,
- *             but nothing currently grants access
- *   new     - never had a sub AND never been on a paid seat
- *
- * Used by proxy.ts and requireActive(). Existing call sites keep working.
- */
 export async function getAccessTier(clerkId: string): Promise<AccessTier> {
   const self = await checkSelfSubActive(clerkId)
   if (self.active) return 'active'
@@ -122,10 +90,8 @@ export async function getAccessTier(clerkId: string): Promise<AccessTier> {
   const activeSeats = await getActiveTeamSeats(clerkId)
   if (activeSeats.length > 0) return 'active'
 
-  // Not currently active — figure out 'lapsed' vs 'new'.
   if (self.hasHistory) return 'lapsed'
 
-  // Check if they were ever on a paid seat (for lapsed-via-seat detection).
   const { data: seatHistory } = await supabase
     .from('team_seat_charges')
     .select('id')
@@ -138,10 +104,6 @@ export async function getAccessTier(clerkId: string): Promise<AccessTier> {
   return 'new'
 }
 
-/**
- * Detailed access — for UI use only. Tells the dashboard whether to show
- * "PRO PLAN" (own sub), "SEAT (Team X)" badge, or "UNSUBSCRIBED".
- */
 export async function getDetailedAccess(clerkId: string): Promise<DetailedAccess> {
   const self = await checkSelfSubActive(clerkId)
   const activeSeats = await getActiveTeamSeats(clerkId)
@@ -158,7 +120,7 @@ export async function getDetailedAccess(clerkId: string): Promise<DetailedAccess
   } else if (self.hasHistory) {
     tier = 'lapsed'
   } else {
-    // Check seat history for lapsed-via-seat
+
     const { data: seatHistory } = await supabase
       .from('team_seat_charges')
       .select('id')
@@ -177,11 +139,6 @@ export async function getDetailedAccess(clerkId: string): Promise<DetailedAccess
   }
 }
 
-/**
- * Server-side guard for API routes that mutate state and require active subscription.
- * Returns NextResponse 401/403 if user is unauthenticated or not active.
- * Returns null if check passes — call site continues normally.
- */
 export async function requireActive(): Promise<NextResponse | null> {
   const { userId } = await auth()
   if (!userId) {
@@ -203,12 +160,6 @@ export async function requireActive(): Promise<NextResponse | null> {
   return null
 }
 
-/**
- * Stricter guard: requires the user's OWN $35 sub, not a team seat.
- * Used for actions only available to self-paying users:
- *   - Creating a team
- *   - Uploading own leads / running own campaigns
- */
 export async function requireSelfSub(): Promise<NextResponse | null> {
   const { userId } = await auth()
   if (!userId) {
@@ -236,10 +187,6 @@ export interface AuthTierResult {
   tier: AccessTier | null
 }
 
-/**
- * Server-side guard that returns the authenticated userId and tier together.
- * Use when the route needs the userId regardless of tier.
- */
 export async function getAuthAndTier(): Promise<AuthTierResult> {
   const { userId } = await auth()
   if (!userId) {
@@ -253,9 +200,6 @@ export async function getAuthAndTier(): Promise<AuthTierResult> {
   return { error: null, userId, tier }
 }
 
-/**
- * Server-side guard that blocks admin users from performing the action.
- */
 export async function requireNotAdmin(clerkId: string): Promise<NextResponse | null> {
   const { data, error } = await supabase
     .from('users')
@@ -278,48 +222,14 @@ export async function requireNotAdmin(clerkId: string): Promise<NextResponse | n
   return null
 }
 
-// =============================================================================
-// shouldSeeWelcome — gate for the post-signup /welcome showcase
-// =============================================================================
-// Answers ONE narrow question: "should this user be shown the /welcome
-// showcase before billing?"
-//
-// RULE (v2): based purely on DATA PRESENCE, not subscription history.
-//
-//   Active user          → false (already paying, go to dashboard)
-//   Active seat user     → false (already paying via team, go to dashboard)
-//   Has preserved data   → false (lapsed but has data, middleware sends them
-//                                  to read-only dashboard — not our job here)
-//   No data at all       → true  (brand new or lapsed with no data, show pitch)
-//
-// WHY we dropped subscription-history as the signal:
-//   The old logic used TRULY_ACTIVATED_STATUSES (canceled, active, etc.) to
-//   decide if a user had "really" subscribed before. But a user who subscribed
-//   via a free coupon, then unsubscribed, ends up with a 'canceled' row and
-//   zero data — the old code sent them straight to /billing, skipping the
-//   showcase. That's wrong: if they have no data they haven't used the product
-//   meaningfully and should see the pitch again.
-//
-//   Data presence is the correct signal because it's what the middleware already
-//   uses to decide between read-only dashboard (isPreserved=true) and the
-//   no-data redirect path. shouldSeeWelcome now agrees with that same check,
-//   so the two gates never disagree.
-//
-// Returns true  → show /welcome showcase
-//         false → skip (middleware routes them to dashboard or billing)
-// =============================================================================
 export async function shouldSeeWelcome(clerkId: string): Promise<boolean> {
-  // 1. Active users never see the showcase — they belong in the dashboard.
+
   const self = await checkSelfSubActive(clerkId)
   if (self.active) return false
 
   const activeSeats = await getActiveTeamSeats(clerkId)
   if (activeSeats.length > 0) return false
 
-  // 2. Does this user have preserved data?
-  //    If yes: they're a lapsed user with real history — middleware will send
-  //    them to the read-only dashboard. Don't intercept with the showcase.
-  //    If no: they have nothing to look at in the dashboard — show the pitch.
   const { data: preservedRow, error } = await supabase
     .from('data_preserved_users')
     .select('clerk_id')
@@ -328,13 +238,11 @@ export async function shouldSeeWelcome(clerkId: string): Promise<boolean> {
 
   if (error) {
     console.error('[subscription] shouldSeeWelcome preserved check failed:', error)
-    // Fail safe: don't trap a user on the showcase if the DB errors.
+
     return false
   }
 
-  // Has preserved data → skip welcome, let middleware handle dashboard routing.
   if (preservedRow) return false
 
-  // No active sub, no preserved data → show the welcome showcase.
   return true
 }

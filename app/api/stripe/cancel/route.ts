@@ -13,14 +13,9 @@ export async function POST() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Hard-block admins server-side. The settings page hides the cancel UI for
-    // admins, but a determined admin could POST here directly. This closes that.
     const adminBlock = await requireNotAdmin(userId)
     if (adminBlock) return adminBlock
 
-    // Find the user's most recent active subscription.
-    // Use limit(1) instead of maybeSingle() in case duplicate rows exist
-    // from prior cancel→resubscribe edge cases.
     const { data: subs, error } = await supabase
       .from('subscriptions')
       .select('stripe_subscription_id, status, cancel_at_period_end')

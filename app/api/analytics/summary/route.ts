@@ -9,22 +9,20 @@ const CONVERSION_DISPS = ['CLOSED', 'APPOINTMENT']
 const CONTACT_DISPS = ['CLOSED', 'APPOINTMENT', 'NOT INTERESTED', 'DO NOT CALL']
 
 export async function GET(req: NextRequest) {
-  // Auth — scope to authenticated user
+
   const { userId: authUserId } = await auth()
   if (!authUserId) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
   }
 
   const { searchParams } = new URL(req.url)
-  // We accept user_id in query for backwards compat, but always enforce auth match
+
   const requestedUserId = searchParams.get('user_id')
   const userId = (requestedUserId && requestedUserId === authUserId) ? authUserId : authUserId
 
   const start = searchParams.get('start')
   const end = searchParams.get('end')
 
-  // -------- CALLS-BASED METRICS --------
-  // Total dial activity (every call attempt, including no-answers and skips)
   let callsQuery = supabase.from('calls').select('*').eq('user_id', userId)
   if (start) callsQuery = callsQuery.gte('created_at', start)
   if (end) callsQuery = callsQuery.lte('created_at', end)
@@ -37,14 +35,6 @@ export async function GET(req: NextRequest) {
   const totalCalls = calls.length
   const totalDuration = calls.reduce((sum, c) => sum + (c.duration || 0), 0)
 
-  // -------- LEADS-BASED METRICS (the bug fix) --------
-  // Contacts reached + conversions count UNIQUE LEADS dispositioned in range,
-  // not call rows. This way:
-  //   - Lead called 3x then CLOSED → counts as 1 contact, 1 conversion
-  //   - Lead called 1x as NO_ANSWER → counts as 0 contacts
-  //   - Lead dispositioned via leads-tab edit (no call row) → still counts
-  //
-  // We use last_called_at as the "when this disposition was set" proxy.
   let leadsQuery = supabase
     .from('leads')
     .select('disposition, last_called_at')
@@ -62,8 +52,6 @@ export async function GET(req: NextRequest) {
   const dnc = leads.filter(l => l.disposition === 'DO NOT CALL').length
   const notInterested = leads.filter(l => l.disposition === 'NOT INTERESTED').length
 
-  // Best campaign by conversion rate (still calls-based since we want
-  // to know which campaign's calls converted best)
   const campaignTotals: Record<string, { total: number; converted: number }> = {}
   for (const c of calls) {
     const cid = c.campaign_id || 'unknown'
@@ -93,7 +81,6 @@ export async function GET(req: NextRequest) {
   const conversionRate = totalCalls > 0 ? (conversions / totalCalls) * 100 : 0
   const contactRate = totalCalls > 0 ? (contactsReached / totalCalls) * 100 : 0
 
-  // Average call length: avg duration of CONNECTED calls (those that hit a contact disposition)
   const connectedCalls = calls.filter(c => CONTACT_DISPS.includes(c.disposition))
   const avgCallLength = connectedCalls.length > 0
     ? Math.round(connectedCalls.reduce((s, c) => s + (c.duration || 0), 0) / connectedCalls.length)

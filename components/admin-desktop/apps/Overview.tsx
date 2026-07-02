@@ -1,26 +1,26 @@
 'use client'
 import { useEffect, useState, useMemo } from 'react'
 
-// =============================================================================
-// OVERVIEW APP — ported from /dashboard/admin/overview
-// =============================================================================
-// Full user-management page inside the desktop window. Identical to the
-// original /dashboard/admin/overview except for the container sizing change
-// (height: 100% inside the AppWindow body instead of min-height: calc).
-//
-// Includes:
-//   - Live polling every 30s for user list, every 15s for "online" tick
-//   - All / Active / Inactive filter pills + search
-//   - Expand-to-detail row with subscription state, team membership, lead count
-//   - Danger zone: full Stripe + Clerk + Supabase delete flow with confirm modal
-//   - Inline online indicator (90s heartbeat window)
-//
-// Internal links that used Next's <Link href="/dashboard/admin/teams?owner=...">
-// are replaced with text labels because we're inside the desktop now; clicking
-// them in a window context would navigate the whole browser away from the
-// desktop. Future: implement an "open Teams app with this owner pre-filtered"
-// IPC pattern through the registry. Not in v1.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 interface AdminUser {
   clerk_id: string
@@ -104,7 +104,7 @@ export default function OverviewApp() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [tick, setTick] = useState(0)
 
-  // Delete modal state
+  
   const [deletingUser, setDeletingUser] = useState<AdminUser | null>(null)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const [deleteInFlight, setDeleteInFlight] = useState(false)

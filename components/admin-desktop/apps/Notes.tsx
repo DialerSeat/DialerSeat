@@ -3,26 +3,26 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import type { CSSProperties, DragEvent } from 'react'
 import { useDesktopServices } from '../desktopServices'
 
-// =============================================================================
-// NOTES APP — v24
-// =============================================================================
-// v24 ADDS:
-//   - CHECKLIST ITEM DRAG REORDER: each checklist row gets a ⠿ handle on the
-//     left; drag it onto another row to reorder. Only the handle is draggable
-//     so text selection/editing inside the row inputs still works normally.
-//     Reorder persists through the existing 1s debounced autosave (the items
-//     array is the note body). Uses separate drag refs from the pinned-notes
-//     sidebar reorder — the two drag systems can't interfere.
-//
-// RETAINED FROM v23:
-//   - Star toggle (☆/★), pinned group with drag reorder persisted via
-//     POST /api/admin/notes/reorder.
-//   - Checklist note type with comma-paste add, check/uncheck, inline edit,
-//     remove.
-//   - Mobile layout: hamburger drawer sidebar, full-width editor, momentum
-//     scroll fixes (minHeight:0 on flex parents, WebkitOverflowScrolling).
-//   - 1s debounced autosave for title/body.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 interface Note {
   id: string
@@ -52,7 +52,7 @@ function parseChecklist(body: string): ChecklistItem[] | null {
       }))
     }
   } catch {
-    // not JSON → plain text note
+    
   }
   return null
 }
@@ -72,9 +72,9 @@ function checklistPreview(items: ChecklistItem[]): string {
 }
 
 export default function NotesApp() {
-  // Endpoint base by role: manager desktop uses the per-user manager notes API
-  // (auth-gated, scoped to the caller's clerk_id — private), admin uses the
-  // admin notes API. Both share the same admin_notes table and response shape.
+  
+  
+  
   const services = useDesktopServices()
   const notesBase = (services?.role === 'manager') ? '/api/manager/notes' : '/api/admin/notes'
 
@@ -91,24 +91,24 @@ export default function NotesApp() {
 
   const [checklistAddInput, setChecklistAddInput] = useState('')
 
-  // drag state for pinned reorder (sidebar)
+  
   const dragIdRef = useRef<string | null>(null)
   const [dragOverId, setDragOverId] = useState<string | null>(null)
 
-  // v24: drag state for checklist item reorder (editor) — independent refs
+  
   const clDragIdxRef = useRef<number | null>(null)
   const [clDragOverIdx, setClDragOverIdx] = useState<number | null>(null)
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const editingIdRef = useRef<string | null>(null)
 
-  // keep latest edit values in refs so flush uses fresh data
+  
   const titleRef = useRef(editTitle)
   const bodyRef = useRef(editBody)
   useEffect(() => { titleRef.current = editTitle }, [editTitle])
   useEffect(() => { bodyRef.current = editBody }, [editBody])
 
-  // ── mobile detection ────────────────────────────────────────────────────
+  
   useEffect(() => {
     if (typeof window === 'undefined') return
     const probe = () => {
@@ -121,7 +121,7 @@ export default function NotesApp() {
     return () => window.removeEventListener('resize', probe)
   }, [])
 
-  // ── autosave (debounced) ─────────────────────────────────────────────────
+  
   const flushPendingSave = useCallback(() => {
     if (saveTimerRef.current) {
       clearTimeout(saveTimerRef.current)
@@ -129,7 +129,7 @@ export default function NotesApp() {
     }
     const id = editingIdRef.current
     if (!id) return
-    // fire and forget; loadNotes not needed since we update local state
+    
     const titleNow = titleRef.current
     const bodyNow = bodyRef.current
     fetch(`${notesBase}/${id}`, {
@@ -163,9 +163,9 @@ export default function NotesApp() {
     }, 1000)
   }, [notesBase])
 
-  // ── selection ───────────────────────────────────────────────────────────
+  
   const selectNote = useCallback((n: Note) => {
-    // flush any pending save for the previously-edited note before switching
+    
     flushPendingSave()
     setSelectedId(n.id)
     editingIdRef.current = n.id
@@ -175,7 +175,7 @@ export default function NotesApp() {
     if (isMobile) setSidebarOpen(false)
   }, [flushPendingSave, isMobile])
 
-  // ── load notes ────────────────────────────────────────────────────────
+  
   const loadNotes = useCallback(async (selectFirst = false) => {
     setLoading(true)
     setError('')
@@ -217,12 +217,12 @@ export default function NotesApp() {
     scheduleSave()
   }
 
-  // flush on unmount
+  
   useEffect(() => {
     return () => { flushPendingSave() }
   }, [flushPendingSave])
 
-  // ── create ────────────────────────────────────────────────────────────
+  
   const createNote = async (asChecklist: boolean) => {
     try {
       const r = await fetch(notesBase, { method: 'POST' })
@@ -249,7 +249,7 @@ export default function NotesApp() {
     }
   }
 
-  // ── delete ──────────────────────────────────────────────────────────────
+  
   const deleteNote = async (id: string) => {
     if (!confirm('Delete this note? This cannot be undone.')) return
     try {
@@ -271,10 +271,10 @@ export default function NotesApp() {
     }
   }
 
-  // ── star toggle ──────────────────────────────────────────────────────────
+  
   const toggleStar = async (n: Note) => {
     const nextStarred = !n.starred
-    // optimistic
+    
     setNotes((prev) =>
       prev.map((x) => (x.id === n.id ? { ...x, starred: nextStarred } : x))
     )
@@ -291,7 +291,7 @@ export default function NotesApp() {
           return sortNotes(updated)
         })
       } else {
-        // re-sync from server if shape unexpected
+        
         loadNotes()
       }
     } catch {
@@ -299,7 +299,7 @@ export default function NotesApp() {
     }
   }
 
-  // ── pinned drag reorder (sidebar) ────────────────────────────────────────
+  
   const onDragStart = (id: string) => {
     dragIdRef.current = id
   }
@@ -324,7 +324,7 @@ export default function NotesApp() {
     const [moved] = reordered.splice(fromIdx, 1)
     reordered.splice(toIdx, 0, moved)
 
-    // optimistic local pin_order assignment
+    
     const orderedIds = reordered.map((n) => n.id)
     setNotes((prev) => {
       const orderMap = new Map(orderedIds.map((id, i) => [id, i]))
@@ -334,7 +334,7 @@ export default function NotesApp() {
       return sortNotes(next)
     })
 
-    // persist (option B — one call)
+    
     fetch(`${notesBase}/reorder`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -342,7 +342,7 @@ export default function NotesApp() {
     }).catch(() => loadNotes())
   }
 
-  // ── checklist ops ─────────────────────────────────────────────────────────
+  
   const updateChecklist = (items: ChecklistItem[]) => {
     const body = serializeChecklist(items)
     setEditBody(body)
@@ -379,7 +379,7 @@ export default function NotesApp() {
     updateChecklist(selectedChecklist.filter((_, i) => i !== idx))
   }
 
-  // ── v24: checklist item drag reorder ──────────────────────────────────────
+  
   const onChecklistItemDrop = (toIdx: number) => {
     const fromIdx = clDragIdxRef.current
     clDragIdxRef.current = null
@@ -391,12 +391,12 @@ export default function NotesApp() {
     updateChecklist(next)
   }
 
-  // ── derived lists ─────────────────────────────────────────────────────────
+  
   const sorted = sortNotes(notes)
   const pinned = sorted.filter((n) => n.starred)
   const unpinned = sorted.filter((n) => !n.starred)
 
-  // ── render row ─────────────────────────────────────────────────────────────
+  
   const renderRow = (n: Note, draggable: boolean) => {
     const checklist = parseChecklist(n.body)
     const preview = checklist
@@ -484,7 +484,7 @@ export default function NotesApp() {
     )
   }
 
-  // ── sidebar ─────────────────────────────────────────────────────────────
+  
   const sidebar = (
     <div style={sidebarStyle(isMobile, sidebarOpen)}>
       <div style={sidebarHeaderStyle}>
@@ -512,7 +512,7 @@ export default function NotesApp() {
     </div>
   )
 
-  // ── editor ───────────────────────────────────────────────────────────────
+  
   const editor = (
     <div style={editorStyle}>
       {isMobile && (
@@ -680,7 +680,7 @@ export default function NotesApp() {
   )
 }
 
-// ── server returns sorted, but we re-sort locally after optimistic edits ──
+
 function sortNotes(list: Note[]): Note[] {
   return [...list].sort((a, b) => {
     if (a.starred !== b.starred) return a.starred ? -1 : 1
@@ -693,9 +693,9 @@ function sortNotes(list: Note[]): Note[] {
   })
 }
 
-// =============================================================================
-// STYLES
-// =============================================================================
+
+
+
 const shellStyle: CSSProperties = {
   position: 'absolute',
   inset: 0,

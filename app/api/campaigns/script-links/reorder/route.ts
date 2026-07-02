@@ -1,13 +1,3 @@
-// app/api/campaigns/script-links/reorder/route.ts
-// =============================================================================
-// CAMPAIGN ↔ SCRIPT LINKS — REORDER
-// =============================================================================
-// Reorders the enabled scripts on a campaign. Body:
-//   { campaign_id, order: [scriptId, ...] }
-// Owner only. Only ids actually linked to the campaign are reordered; the rest
-// are left as-is. Mirrors campaigns.script to the new top script.
-// =============================================================================
-
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
@@ -54,7 +44,6 @@ export async function POST(req: Request) {
       i++
     }
 
-    // Mirror the new top script to campaigns.script.
     const { data: top } = await supabaseAdmin
       .from('campaign_script_links')
       .select('script_id')

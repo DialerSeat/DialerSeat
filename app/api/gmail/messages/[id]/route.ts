@@ -1,17 +1,17 @@
-// app/api/gmail/messages/[id]/route.ts
-// =============================================================================
-// GET   /api/gmail/messages/:id  → full message with body
-// PATCH /api/gmail/messages/:id  → modify labels (mark read, trash, archive, star)
-//
-// The PATCH body accepts:
-//   { addLabelIds?: string[], removeLabelIds?: string[] }
-// or convenience flags the UI can use:
-//   { markRead?: boolean, markUnread?: boolean,
-//     star?: boolean, unstar?: boolean,
-//     trash?: boolean, untrash?: boolean,
-//     archive?: boolean }
-// These get translated to the appropriate label add/remove arrays.
-// =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth, gmailFetch, GmailAuthError } from '@/lib/gmail'
@@ -43,9 +43,9 @@ function getHeader(headers: { name: string; value: string }[] | undefined, name:
   return h?.value ?? ''
 }
 
-// Walks the MIME tree picking the best body to display.
-// Preference: text/html > text/plain. Returns { html, text } so the UI
-// can decide which to render.
+
+
+
 function extractBody(payload?: MessagePart): { html: string; text: string } {
   const out = { html: '', text: '' }
   if (!payload) return out
@@ -55,7 +55,7 @@ function extractBody(payload?: MessagePart): { html: string; text: string } {
     if (mime === 'text/html' && node.body?.data) {
       out.html = decodeBase64Url(node.body.data)
     } else if (mime === 'text/plain' && node.body?.data) {
-      // Don't overwrite html if we have one; just hold onto text.
+      
       out.text = decodeBase64Url(node.body.data)
     }
     if (node.parts) {
@@ -67,7 +67,7 @@ function extractBody(payload?: MessagePart): { html: string; text: string } {
 }
 
 function decodeBase64Url(data: string): string {
-  // Gmail uses URL-safe base64 with possible missing padding.
+  
   const padded = data.replace(/-/g, '+').replace(/_/g, '/')
   const pad = padded.length % 4 === 0 ? '' : '='.repeat(4 - (padded.length % 4))
   try {
@@ -149,7 +149,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     if (body.unstar) remove.add('STARRED')
     if (body.archive) remove.add('INBOX')
 
-    // Trash/untrash use dedicated endpoints, not label modify.
+    
     if (body.trash) {
       const r = await gmailFetch(clerkId, `/users/me/messages/${id}/trash`, { method: 'POST' })
       if (!r.ok) {

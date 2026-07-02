@@ -21,7 +21,6 @@ export async function POST(req: NextRequest) {
 
   const registered = body.registered !== false // default true if omitted
 
-  // Bulk: flip all currently-unregistered (or all if marking unregistered)
   if (body.registerAll) {
     const { data, error } = await supabase
       .from('phone_numbers')
@@ -39,7 +38,6 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  // Single: flip one specific number
   const id = body.numberId?.trim()
   if (!id) {
     return NextResponse.json(

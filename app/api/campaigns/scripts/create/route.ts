@@ -17,7 +17,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'campaign_id and name required' }, { status: 400 })
     }
 
-    // Owner-only — agents can't create scripts on campaigns they don't own
     const { data: campaign } = await supabaseAdmin
       .from('campaigns')
       .select('id, user_id')
@@ -31,7 +30,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Owner only' }, { status: 403 })
     }
 
-    // Compute next sort_order
     const { data: existing } = await supabaseAdmin
       .from('campaign_scripts')
       .select('sort_order')
@@ -42,7 +40,6 @@ export async function POST(req: Request) {
     const nextOrder = existing && existing.length > 0 ? (existing[0].sort_order + 1) : 0
     const shouldBeDefault = !!is_default || nextOrder === 0  // first script auto-becomes default
 
-    // If making this default, unset any other defaults first
     if (shouldBeDefault) {
       await supabaseAdmin
         .from('campaign_scripts')

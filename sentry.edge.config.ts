@@ -1,6 +1,6 @@
-// sentry.edge.config.ts
-// Runs in Edge Runtime — your proxy.ts (middleware) executes here.
-// Lighter than the Node config because the Edge runtime has fewer APIs.
+
+
+
 
 import * as Sentry from '@sentry/nextjs'
 

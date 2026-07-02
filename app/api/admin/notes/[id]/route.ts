@@ -2,25 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/requireAdmin'
 
-// =============================================================================
-// /api/admin/notes/[id]
-// =============================================================================
-// PATCH  → update title, body, starred, and/or pin_order
-// DELETE → hard delete
-//
-// All ops verify ownership: the note's owner_clerk_id must match the caller's
-// clerk_id. Service-role key bypasses RLS, so the .eq('owner_clerk_id') in
-// every query IS the authorization check. Do not relax it.
-//
-// v23 CHANGES:
-//   - PATCH whitelist now includes `starred` (boolean) and `pin_order`
-//     (number | null).
-//   - When a note is starred (starred: true) and no pin_order is supplied,
-//     we assign it pin_order = (max existing pin_order for this owner) + 1
-//     so newly-pinned notes land at the BOTTOM of the pinned group (then the
-//     user can drag to reorder). When unstarred, pin_order is reset to null.
-// =============================================================================
-
 const supabaseAdmin = () =>
   getServiceClient('admin/notes/[id]')
 
@@ -52,22 +33,16 @@ export async function PATCH(
 
   const supabase = supabaseAdmin()
 
-  // Whitelist updatable fields. updated_at is set server-side.
   const updates: Record<string, any> = { updated_at: new Date().toISOString() }
   if (typeof body.title === 'string') updates.title = body.title.slice(0, 500)
   if (typeof body.body === 'string') updates.body = body.body.slice(0, 100_000) // 100kb cap
 
-  // ── Starring ──────────────────────────────────────────────────────────
-  // - star=true  → set starred true; if no explicit pin_order given, place
-  //   at the bottom of the pinned group (max+1) so it doesn't jump above
-  //   existing pins.
-  // - star=false → clear starred AND pin_order (it leaves the pinned group).
   if (typeof body.starred === 'boolean') {
     updates.starred = body.starred
     if (body.starred === false) {
       updates.pin_order = null
     } else if (body.starred === true && typeof body.pin_order !== 'number') {
-      // Compute max pin_order for this owner to append at the end.
+
       const { data: maxRow } = await supabase
         .from('admin_notes')
         .select('pin_order')
@@ -81,12 +56,10 @@ export async function PATCH(
     }
   }
 
-  // Explicit pin_order override (e.g. single-note nudge). Allow number|null.
   if (typeof body.pin_order === 'number' || body.pin_order === null) {
     updates.pin_order = body.pin_order
   }
 
-  // If only updated_at would change, no-op.
   if (Object.keys(updates).length === 1) {
     return NextResponse.json({ note: null, noop: true })
   }

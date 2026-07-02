@@ -5,37 +5,6 @@ import SiteFooter from '@/components/site-footer'
 import SiteHeader from '@/components/site-header'
 import LandingAuthSync from '@/components/LandingAuthSync'
 
-// =============================================================================
-// LANDING PAGE — v24 (tenant-aware return-to-dashboard)
-// =============================================================================
-// v24 change (this revision):
-//   When a white-label (Manager+) user views the landing page, middleware
-//   now redirects them from their tenant subdomain to dialerseat.com with a
-//   `?tenant=<slug>` param attached (see middleware.ts). This page reads
-//   that param and, if present, points "GO TO DASHBOARD" / the header's
-//   "← DASHBOARD" link back to `https://<slug>.dialerseat.com/dashboard`
-//   instead of the relative `/dashboard`, which would otherwise resolve on
-//   dialerseat.com and strand the user off their own subdomain.
-//
-// v23 change (kept):
-//   Removed box-shadow glow from all buttons site-wide on this page.
-//   Every CTA that previously had `boxShadow: '0 0 Npx rgba(74,158,255,0.N)'`
-//   now has no box-shadow. Button backgrounds and colors are unchanged.
-//   All other v22 fixes are preserved as-is.
-//
-// v22 fix (kept):
-//   LOGOUT HEADER RACE. export const dynamic = 'force-dynamic' forces a
-//   per-request render so auth() is always re-evaluated and the right
-//   header renders immediately.
-//
-// v21.d fixes (kept):
-// 1. SITEHEADER NOW SHOWS FOR LOGGED-IN USERS
-// 2. HERO PADDING SPLIT INTO TWO CLASSES
-//
-// MANAGER+ ADDITION (kept):
-//    - Manager+ tier ($75/wk, white-label) sits beside Pro.
-// =============================================================================
-
 interface PageProps {
   searchParams: Promise<{ view?: string; tenant?: string }>
 }
@@ -53,10 +22,6 @@ export default async function Home({ searchParams }: PageProps) {
 
   const isLoggedIn = !!userId
 
-  // Tenant slug the user was redirected FROM (set by middleware when a
-  // white-label user views the landing page from their own subdomain).
-  // Used to send "back to dashboard" links to the right host instead of
-  // dialerseat.com/dashboard.
   const returnTenantSlug = params.tenant || null
   const dashboardBase = returnTenantSlug ? `https://${returnTenantSlug}.dialerseat.com` : ''
 

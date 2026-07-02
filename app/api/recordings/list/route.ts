@@ -19,16 +19,12 @@ export async function GET(req: NextRequest) {
   const search = searchParams.get('search')?.trim() || ''
   const cursor = parseInt(searchParams.get('cursor') || '0', 10)
 
-  // Always scope to authenticated user — never trust user_id from query string
   let query = supabase
     .from('calls')
     .select('*, leads(first_name, last_name, phone, notes), campaigns(name)', { count: 'exact' })
     .eq('user_id', userId)
     .not('recording_url', 'is', null)
-    // AMD-detected voicemail/machine calls have no place in recordings — they're
-    // not conversations. Exclude any call whose amd_result indicates a machine
-    // (machine_start, machine_end_beep, unknown, fax, etc.). We KEEP amd_result
-    // null (AMD off / not run) and 'human' (a real answered conversation).
+
     .or('amd_result.is.null,amd_result.eq.human')
 
   if (campaignId !== 'all') {

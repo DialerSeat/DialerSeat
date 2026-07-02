@@ -3,13 +3,6 @@ import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 
-/**
- * Returns full detail for one team.
- * Owners see everything (members list + per-member campaign access + codes
- * + campaigns + pending requests).
- * Members see limited info (team meta, accessible campaigns, their own
- * membership row only).
- */
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -79,7 +72,6 @@ export async function GET(
           .eq('is_active', true),
       ])
 
-      // Resolve identities
       const memberClerkIds = Array.from(new Set((mAll || []).map((m: any) => m.user_id)))
       let userById: Record<string, any> = {}
       if (memberClerkIds.length > 0) {
