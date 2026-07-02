@@ -2752,12 +2752,21 @@ export default function CampaignsPage() {
           html, body { background: var(--brand-page-bg) !important; }
           body:has(.settings-modal) { background: var(--brand-card-surface) !important; }
           html, body { overflow-x: hidden; overflow-x: clip; }
-          .modal-overlay { padding: 0; align-items: stretch; background: var(--brand-card-surface); overflow: hidden; }
+          .modal-overlay {
+            padding: 0;
+            align-items: stretch;
+            background: var(--brand-card-surface);
+            overflow: hidden;
+            height: 100vh;
+            height: 100lvh;
+          }
           .settings-modal {
             max-width: 100%;
             width: 100%;
-            height: 100%;
-            max-height: 100%;
+            height: 100vh;
+            height: 100dvh;
+            max-height: 100vh;
+            max-height: 100dvh;
             border-radius: 0;
             border: none;
             box-shadow: none;
@@ -2801,6 +2810,8 @@ export default function CampaignsPage() {
           .editor-fullscreen {
             padding-bottom: env(safe-area-inset-bottom, 0px);
             overflow: hidden;
+            height: 100vh;
+            height: 100lvh;
           }
           .editor-toolbar {
             padding: 10px 12px;
