@@ -43,13 +43,20 @@ import Link from 'next/link'
 // unchanged — just restyled to match, per instruction to match UI only.
 //
 // Pass 4: COMPARE MODES link — always renders in the fixed dialerseat blue
-// (T.accent, a hardcoded hex) instead of var(--brand-primary), so it reads
-// the same across every tenant regardless of that tenant's brand color. It
-// also now opens via an explicit window.open() new-context navigation (see
-// openCompareModes below) instead of next/link + target="_blank", so that on
-// every installed PWA — not just tenants on their own subdomain — iOS shows
-// the in-app Safari overlay with a "Done" button top-left rather than
-// navigating the PWA itself away from an in-progress campaign creation.
+// (T.accent, a hardcoded hex, #4a9eff) instead of var(--brand-primary), so it
+// reads the same across every tenant regardless of that tenant's brand color.
+//
+// It's a plain <a href="/dialing-modes" target="_blank" rel="noopener
+// noreferrer"> — deliberately NOT intercepted with onClick/preventDefault.
+// iOS only shows the in-app "Done" overlay (instead of navigating the PWA
+// itself away and losing in-progress campaign creation) for a genuine,
+// unmodified click on a target="_blank" anchor whose destination falls
+// OUTSIDE the installed web app manifest's `scope`. That scope check happens
+// at the OS level, before any JS on this page runs, so it can't be fixed from
+// here — see the manifest.json `scope` (and `start_url`) for the app shell.
+// This is also why it worked for subdomain-based tenant installs already:
+// their manifest scope likely doesn't cover this route the way the main
+// domain's does.
 // =============================================================================
 
 const T = {
@@ -60,7 +67,7 @@ const T = {
   dark: 'var(--brand-sidebar-bg)',
   text: 'var(--brand-on-page-bg)',
   muted: 'var(--brand-muted-text)',
-  accent: '#2a4a8a', // fixed "dialerseat blue" — intentionally NOT a brand
+  accent: '#4a9eff', // fixed "dialerseat blue" — intentionally NOT a brand
                       // CSS var, so anything bound to it (e.g. COMPARE MODES)
                       // looks identical on every tenant.
   blue: 'var(--brand-primary)',
@@ -155,21 +162,6 @@ const AMD_DEFAULT_BY_MODE: Record<DialerMode, boolean> = {
   power: false,
   progressive: true,
   predictive: true,
-}
-
-// Opens /dialing-modes in a brand-new top-level browsing context via
-// window.open(), rather than relying on next/link's target="_blank" anchor.
-// Why: in an installed PWA (standalone display-mode) on iOS, a genuine
-// window.open('_blank') call is what reliably triggers the in-app Safari
-// overlay (the sheet with "Done" top-left) — the PWA itself stays exactly as
-// it was underneath, so in-progress campaign-creation state isn't lost. Using
-// window.location.origin means this works the same way for every tenant,
-// whether they're on their own subdomain or the main app domain — not just
-// the subdomain case.
-const openCompareModes = (e: React.MouseEvent) => {
-  e.preventDefault()
-  const url = new URL('/dialing-modes', window.location.origin).toString()
-  window.open(url, '_blank', 'noopener,noreferrer')
 }
 
 function relativeTime(iso: string | null | undefined): string {
@@ -2895,7 +2887,6 @@ export default function CampaignsPage() {
                     href="/dialing-modes"
                     target="_blank"
                     rel="noopener noreferrer"
-                    onClick={openCompareModes}
                     style={{ color: T.accent, fontWeight: 'bold' }}
                   >
                     COMPARE MODES
@@ -3279,7 +3270,6 @@ export default function CampaignsPage() {
                     href="/dialing-modes"
                     target="_blank"
                     rel="noopener noreferrer"
-                    onClick={openCompareModes}
                     style={{ color: T.accent, fontWeight: 'bold' }}
                   >
                     COMPARE MODES
