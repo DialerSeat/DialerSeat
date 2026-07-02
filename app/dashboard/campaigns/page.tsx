@@ -31,6 +31,16 @@ import Link from 'next/link'
 // C4 binding preserved: page header strip + editor toolbar on
 // var(--brand-header-bg). Modal heads, ds-btn.primary, popovers stay on
 // var(--brand-sidebar-bg) — that's intentional, they're chrome not page.
+//
+// Pass 3: UI parity pass — the Edit (settings) modal's CAMPAIGN and CALL
+// SCRIPTS sections were restyled to look exactly like the Create modal's
+// (flat, non-draggable script toggle list; "COMPARE MODES" helper link
+// below the card instead of an inline "WHAT'S THIS?" link). Only the LEADS
+// section is intentionally different between the two modals — Create shows
+// a CSV dropzone / blank-sheet button (no leads exist yet), Edit shows the
+// live lead preview + editor entry point (leads already exist). All other
+// functional pieces unique to Edit (ACTIVE toggle, delete, upload-more) are
+// unchanged — just restyled to match, per instruction to match UI only.
 // =============================================================================
 
 const T = {
@@ -1938,23 +1948,6 @@ export default function CampaignsPage() {
         .settings-mode-select:hover { border-color: ${T.muted}; }
         .settings-mode-select:focus { border-color: ${T.blue}; }
 
-        /* ── DIALER MODE select + FAQ link (edit sheet) ──────────────── */
-        .mode-select-wrap {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
-        .mode-faq-link {
-          font-size: 9px;
-          letter-spacing: 1.5px;
-          font-weight: bold;
-          color: ${T.blue};
-          text-decoration: none;
-          white-space: nowrap;
-          font-family: ${FUTURA};
-        }
-        .mode-faq-link:hover { text-decoration: underline; }
-
         /* ── LEAD PREVIEW WRAP ────────────────────────────────────────── */
         .lead-preview-wrap {
           height: 200px;
@@ -3222,28 +3215,19 @@ export default function CampaignsPage() {
                     DIALER MODE
                     <small>How this campaign dials. Affects future calls only.</small>
                   </div>
-                  <div className="mode-select-wrap">
-                    <select
-                      className="settings-mode-select"
-                      value={editDraft?.dialer_mode || 'power'}
-                      onChange={e => {
-                        const m = e.target.value as DialerMode
-                        patchDraft({ dialer_mode: m, amd_enabled: AMD_DEFAULT_BY_MODE[m] })
-                      }}
-                      disabled={isLapsed}
-                    >
-                      {(Object.keys(MODE_LABELS) as DialerMode[]).map(m => (
-                        <option key={m} value={m}>{MODE_LABELS[m]}</option>
-                      ))}
-                    </select>
-                    <a
-                      href="/faq/dialer-modes"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mode-faq-link"
-                      title="What do these modes mean?"
-                    >WHAT&apos;S THIS? ↗</a>
-                  </div>
+                  <select
+                    className="settings-mode-select"
+                    value={editDraft?.dialer_mode || 'power'}
+                    onChange={e => {
+                      const m = e.target.value as DialerMode
+                      patchDraft({ dialer_mode: m, amd_enabled: AMD_DEFAULT_BY_MODE[m] })
+                    }}
+                    disabled={isLapsed}
+                  >
+                    {(Object.keys(MODE_LABELS) as DialerMode[]).map(m => (
+                      <option key={m} value={m}>{MODE_LABELS[m]}</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="settings-row">
@@ -3256,6 +3240,13 @@ export default function CampaignsPage() {
                     onClick={() => !isLapsed && patchDraft({ amd_enabled: !editDraft?.amd_enabled })}
                   ><div className="knob" /></div>
                 </div>
+
+                <p className="cmp-helper" style={{ marginTop: 10 }}>
+                  Not sure on the mode? Start with POWER.{' '}
+                  <Link href="/dialing-modes" target="_blank" rel="noopener">
+                    COMPARE MODES
+                  </Link>
+                </p>
               </div>
 
               {/* AUTO SUB-CAMPAIGNS section */}
@@ -3321,7 +3312,7 @@ export default function CampaignsPage() {
                 </div>
               </div>
 
-              {/* CALL SCRIPTS section — toggle library scripts on/off + reorder */}
+              {/* CALL SCRIPTS section — same simple toggle-list style as Create */}
               <div className="settings-section-card">
                 <div className="settings-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span>▸ CALL SCRIPTS</span>
@@ -3339,10 +3330,10 @@ export default function CampaignsPage() {
                   }}>LOADING SCRIPTS…</div>
                 ) : campaignScriptLinks.length === 0 ? (
                   <div style={{
-                    padding: '28px 20px', textAlign: 'center',
+                    padding: '20px', textAlign: 'center',
                     background: T.bg, border: `1px dashed ${T.border}`, borderRadius: 3,
                   }}>
-                    <p style={{ fontSize: 11, letterSpacing: 1.5, color: T.muted, margin: '0 0 14px', fontFamily: 'monospace' }}>
+                    <p style={{ fontSize: 11, letterSpacing: 1, color: T.muted, margin: '0 0 12px', fontFamily: 'monospace' }}>
                       Your script library is empty.
                     </p>
                     {!isLapsed && (
@@ -3351,72 +3342,30 @@ export default function CampaignsPage() {
                       </button>
                     )}
                   </div>
-                ) : (() => {
-                  // Render from the DRAFT, not the live links. campaignScriptLinks
-                  // is only the catalog of available scripts (names/metadata).
-                  const draftEnabled = editDraft?.enabledScriptIds || new Set<string>()
-                  const order = editDraft?.scriptOrder || []
-                  const byId = new Map(campaignScriptLinks.map(s => [s.id, s]))
-                  // Enabled scripts in draft order; disabled = the rest.
-                  const enabled = order.map(id => byId.get(id)).filter(Boolean) as CampaignScriptLink[]
-                  const disabled = campaignScriptLinks.filter(s => !draftEnabled.has(s.id))
-                  return (
-                    <>
-                      <div className="script-toggle-hint">
-                        Toggle scripts on for this campaign. Drag enabled scripts to set tab order in the dialer. Nothing saves until you click SAVE CHANGES.
-                      </div>
-
-                      {enabled.length > 0 && (
-                        <div className="script-toggle-group">
-                          {enabled.map(s => (
+                ) : (
+                  <>
+                    <div className="script-toggle-hint">
+                      Turn scripts on for this campaign. You can reorder them later in settings.
+                    </div>
+                    <div className="script-toggle-group">
+                      {campaignScriptLinks.map(s => {
+                        const on = (editDraft?.enabledScriptIds || new Set<string>()).has(s.id)
+                        return (
+                          <div key={s.id} className={`script-toggle-row ${on ? '' : 'off'}`}>
+                            <div className="script-toggle-label" style={!on ? { color: T.muted } : undefined}>
+                              {(s.name || 'UNTITLED').toUpperCase()}
+                              {s.is_team && <span className="team-mark">TEAM</span>}
+                            </div>
                             <div
-                              key={s.id}
-                              className={`script-toggle-row ${linkDragOverId === s.id ? 'drag-over' : ''} ${linkDragId === s.id ? 'dragging' : ''}`}
-                              draggable={!isLapsed}
-                              onDragStart={() => onLinkDragStart(s.id)}
-                              onDragOver={e => onLinkDragOver(e, s.id)}
-                              onDragLeave={() => setLinkDragOverId(null)}
-                              onDrop={e => {
-                                e.preventDefault()
-                                if (linkDragId && linkDragId !== s.id) draftReorderScript(linkDragId, s.id)
-                                setLinkDragId(null); setLinkDragOverId(null)
-                              }}
-                              onDragEnd={onLinkDragEnd}
-                            >
-                              <span className="script-grip" title="Drag to reorder">⠿</span>
-                              <div className="script-toggle-label">
-                                {(s.name || 'UNTITLED').toUpperCase()}
-                                {s.is_team && <span className="team-mark">TEAM</span>}
-                              </div>
-                              <div
-                                className={`settings-toggle on ${isLapsed ? 'disabled' : ''}`}
-                                onClick={() => !isLapsed && draftToggleScript(s.id)}
-                              ><div className="knob" /></div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {disabled.length > 0 && (
-                        <div className="script-toggle-group" style={{ marginTop: enabled.length > 0 ? 10 : 0 }}>
-                          {disabled.map(s => (
-                            <div key={s.id} className="script-toggle-row off">
-                              <span className="script-grip" style={{ opacity: 0.25 }}>⠿</span>
-                              <div className="script-toggle-label" style={{ color: T.muted }}>
-                                {(s.name || 'UNTITLED').toUpperCase()}
-                                {s.is_team && <span className="team-mark">TEAM</span>}
-                              </div>
-                              <div
-                                className={`settings-toggle ${isLapsed ? 'disabled' : ''}`}
-                                onClick={() => !isLapsed && draftToggleScript(s.id)}
-                              ><div className="knob" /></div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  )
-                })()}
+                              className={`settings-toggle ${on ? 'on' : ''} ${isLapsed ? 'disabled' : ''}`}
+                              onClick={() => !isLapsed && draftToggleScript(s.id)}
+                            ><div className="knob" /></div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </>
+                )}
               </div>
 
             </div>
