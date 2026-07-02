@@ -373,6 +373,7 @@ export default function CampaignsPage() {
   const [csvData, setCsvData] = useState<any[]>([])
   const [csvName, setCsvName] = useState('')
   const [dragging, setDragging] = useState(false)
+  const [settingsDragging, setSettingsDragging] = useState(false)
   const [creating, setCreating] = useState(false)
   
   
@@ -380,6 +381,7 @@ export default function CampaignsPage() {
   
   const [pendingBlankCampaignId, setPendingBlankCampaignId] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const settingsFileRef = useRef<HTMLInputElement>(null)
 
   
   
@@ -839,6 +841,9 @@ export default function CampaignsPage() {
         body: JSON.stringify({ campaign_id: campaignId, leads: parsed }),
       })
       if (res.status === 403) setTier('lapsed')
+      if (res.ok) {
+        setPendingBlankCampaignId(prev => (prev === campaignId ? null : prev))
+      }
       setPreviews(prev => {
         const { [campaignId]: _, ...rest } = prev
         return rest
@@ -3369,20 +3374,78 @@ export default function CampaignsPage() {
                   ▸ LEADS · {settingsCampaign.total_leads.toLocaleString()} TOTAL
                   · {settingsCampaign.called_leads.toLocaleString()} CALLED
                 </div>
-                <div
-                  className="lead-preview-wrap"
-                  onClick={() => !isLapsed && openEditor()}
-                >
-                  <div className="open-editor-hint">
-                    {isLapsed ? 'SUBSCRIBE TO EDIT' : 'CLICK TO OPEN EDITOR'}
+                {!isLapsed && settingsCampaign.total_leads === 0 ? (
+                  <>
+                    <div
+                      className="cmp-drop-zone"
+                      onDragOver={e => { e.preventDefault(); setSettingsDragging(true) }}
+                      onDragLeave={() => setSettingsDragging(false)}
+                      onDrop={e => {
+                        e.preventDefault()
+                        setSettingsDragging(false)
+                        const f = e.dataTransfer.files[0]
+                        if (f && f.name.endsWith('.csv')) handleUploadMore(settingsCampaign.id, f)
+                      }}
+                      onClick={() => settingsFileRef.current?.click()}
+                      style={{
+                        border: `2px dashed ${settingsDragging ? T.blue : T.border}`,
+                        background: settingsDragging ? 'color-mix(in srgb, var(--brand-primary) 6%, transparent)' : T.bg,
+                      }}
+                    >
+                      <input
+                        ref={settingsFileRef}
+                        type="file"
+                        accept=".csv"
+                        style={{ display: 'none' }}
+                        onChange={e => {
+                          const f = e.target.files?.[0]
+                          if (f) handleUploadMore(settingsCampaign.id, f)
+                          e.target.value = ''
+                        }}
+                      />
+                      <p style={{
+                        fontSize: 11, color: T.muted, margin: '0 0 4px',
+                        letterSpacing: 2, fontWeight: 'bold', fontFamily: FUTURA,
+                      }}>
+                        DROP YOUR CSV HERE
+                      </p>
+                      <p style={{
+                        fontSize: 9, color: T.muted, opacity: 0.7, margin: 0,
+                        letterSpacing: 1.5, fontFamily: FUTURA,
+                      }}>
+                        OR CLICK TO BROWSE
+                      </p>
+                    </div>
+                    <div className="cmp-blank-sheet-row">
+                      <span className="cmp-blank-sheet-or">— or —</span>
+                      <button
+                        type="button"
+                        className="cmp-blank-sheet-btn"
+                        onClick={() => openEditor()}
+                        disabled={editorLoading}
+                        title={'Open a blank lead sheet'}
+                      >▤ START A BLANK LEAD SHEET</button>
+                      <span className="cmp-blank-sheet-tip">
+                        Skip the CSV and build leads by hand, like a blank spreadsheet.
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <div
+                    className="lead-preview-wrap"
+                    onClick={() => !isLapsed && openEditor()}
+                  >
+                    <div className="open-editor-hint">
+                      {isLapsed ? 'SUBSCRIBE TO EDIT' : 'CLICK TO OPEN EDITOR'}
+                    </div>
+                    <LeadPreviewThumb
+                      leads={previews[settingsCampaign.id] || []}
+                      totalLeads={settingsCampaign.total_leads}
+                      interactive={!isLapsed}
+                      height="100%"
+                    />
                   </div>
-                  <LeadPreviewThumb
-                    leads={previews[settingsCampaign.id] || []}
-                    totalLeads={settingsCampaign.total_leads}
-                    interactive={!isLapsed}
-                    height="100%"
-                  />
-                </div>
+                )}
               </div>
 
               {/* CALL SCRIPTS section — same simple toggle-list style as Create */}
