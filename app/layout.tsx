@@ -111,6 +111,10 @@ export const viewport: Viewport = {
 };
 
 const dialerseatLocalization = {
+  // Root-level key: the delete-page input PLACEHOLDER, which is also the exact
+  // string Clerk requires the user to type. Without this, the page said
+  // "Type 'delete account'" but Clerk still demanded capital-D "Delete account".
+  formFieldInputPlaceholder__confirmDeletionUserAccount: 'delete account',
   userProfile: {
     start: {
       dangerSection: {

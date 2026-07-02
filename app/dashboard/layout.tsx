@@ -5,7 +5,6 @@ import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
 import { useBranding } from '@/components/ThemeProvider'
-import ResubBanner from '@/components/ResubBanner'
 
 // =============================================================================
 // app/dashboard/layout.tsx — C5 (Manager+ "Go to Desktop" sidebar button)
@@ -599,7 +598,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <UserButton />
         </div>
 
-        <ResubBanner />
         {children}
       </div>
     </main>

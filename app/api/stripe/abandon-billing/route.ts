@@ -8,6 +8,10 @@ const supabase = getServiceClient('stripe/abandon-billing')
 // Statuses we will NEVER touch. If the user has a sub in any of these
 // states, abandon-billing is a no-op. We protect paying customers from
 // any accidental disruption no matter how the endpoint is invoked.
+// 'trialing' is kept here on purpose even though we no longer offer trials:
+// this is a PROTECTIVE guard (statuses that make abandon-billing a no-op), so
+// listing an extra status only ever protects more, never less. Do not confuse
+// this with the ACCESS gates, where 'trialing' was correctly removed.
 const PROTECTED_STATUSES = ['active', 'past_due', 'trialing']
 
 // Statuses safe to clean up. These represent the abandoned billing

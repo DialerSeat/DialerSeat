@@ -360,6 +360,25 @@ async function syncSeatCharge(subscription: Stripe.Subscription) {
         .eq('is_active', true)
     }
   }
+
+  // Symmetric recovery: when an owner-paid seat returns to 'paid' (the owner
+  // fixed a failed card), restore the access that the failure revoked. Without
+  // this, a recovered payment left the agent locked out until the manager
+  // manually re-added them. Only re-grants owner-paid rows that were previously
+  // revoked (is_active false + revoked_at set), so a manual owner revocation for
+  // other reasons isn't silently undone unless it was billing-driven.
+  if (chargeStatus === 'paid') {
+    const teamMemberId = subscription.metadata?.team_member_id
+    if (teamMemberId) {
+      await supabase
+        .from('team_campaign_access')
+        .update({ is_active: true, revoked_at: null })
+        .eq('team_member_id', teamMemberId)
+        .eq('payer', 'owner')
+        .eq('is_active', false)
+        .not('revoked_at', 'is', null)
+    }
+  }
 }
 
 // =============================================================================
