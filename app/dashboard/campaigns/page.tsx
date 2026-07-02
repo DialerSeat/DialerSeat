@@ -2750,8 +2750,9 @@ export default function CampaignsPage() {
           .cmp-grid { grid-template-columns: 1fr; gap: 12px; }
 
           html, body { background: var(--brand-page-bg) !important; }
+          body:has(.settings-modal) { background: var(--brand-card-surface) !important; }
           html, body { overflow-x: hidden; overflow-x: clip; }
-          .modal-overlay { padding: 0; align-items: stretch; background: var(--brand-page-bg); overflow: hidden; }
+          .modal-overlay { padding: 0; align-items: stretch; background: var(--brand-card-surface); overflow: hidden; }
           .settings-modal {
             max-width: 100%;
             width: 100%;
@@ -2760,6 +2761,7 @@ export default function CampaignsPage() {
             border-radius: 0;
             border: none;
             box-shadow: none;
+            background: var(--brand-card-surface);
           }
 
           /* Push the header down below the notch / dynamic island / status bar
