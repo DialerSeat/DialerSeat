@@ -2764,9 +2764,9 @@ export default function CampaignsPage() {
             max-width: 100%;
             width: 100%;
             height: 100vh;
-            height: 100dvh;
+            height: 100lvh;
             max-height: 100vh;
-            max-height: 100dvh;
+            max-height: 100lvh;
             border-radius: 0;
             border: none;
             box-shadow: none;
