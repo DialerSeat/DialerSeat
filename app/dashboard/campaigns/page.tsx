@@ -395,6 +395,21 @@ export default function CampaignsPage() {
     }
   }
 
+  const openExternalBrowser = (e: React.MouseEvent, path: string) => {
+    const standalone =
+      typeof navigator !== 'undefined' &&
+      (navigator as Navigator & { standalone?: boolean }).standalone === true
+    if (!standalone) return
+    e.preventDefault()
+    const target = `${window.location.host}${path}`
+    window.location.href = `x-safari-https://${target}`
+    setTimeout(() => {
+      if (document.visibilityState === 'visible') {
+        window.open(`https://${target}`, '_blank', 'noopener')
+      }
+    }, 900)
+  }
+
   useEffect(() => {
     if (!vpDebug) return
     const measure = () => {
@@ -3018,6 +3033,7 @@ export default function CampaignsPage() {
                     href="/dialing-modes"
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={e => openExternalBrowser(e, '/dialing-modes')}
                     style={{ color: T.accent, fontWeight: 'bold' }}
                   >
                     COMPARE MODES
@@ -3401,6 +3417,7 @@ export default function CampaignsPage() {
                     href="/dialing-modes"
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={e => openExternalBrowser(e, '/dialing-modes')}
                     style={{ color: T.accent, fontWeight: 'bold' }}
                   >
                     COMPARE MODES
