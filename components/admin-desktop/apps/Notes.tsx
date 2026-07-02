@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useRef, useState, useCallback } from 'react'
+import useTouchReorder from '@/lib/useTouchReorder'
 import type { CSSProperties, DragEvent } from 'react'
 import { useDesktopServices } from '../desktopServices'
 
@@ -391,6 +392,39 @@ export default function NotesApp() {
     updateChecklist(next)
   }
 
+  const noteTouch = useTouchReorder({
+    attr: 'data-note-drag',
+    onStart: id => { dragIdRef.current = id },
+    onOver: id => {
+      if (dragIdRef.current && dragIdRef.current !== id) setDragOverId(id)
+    },
+    onDrop: (dragId, overId) => {
+      dragIdRef.current = dragId
+      onDrop(overId)
+    },
+    onEnd: () => {
+      dragIdRef.current = null
+      setDragOverId(null)
+    },
+  })
+
+  const clTouch = useTouchReorder({
+    attr: 'data-cl-drag',
+    onStart: idx => { clDragIdxRef.current = Number(idx) },
+    onOver: idx => {
+      const i = Number(idx)
+      if (clDragIdxRef.current !== null && clDragIdxRef.current !== i) setClDragOverIdx(i)
+    },
+    onDrop: (dragIdx, overIdx) => {
+      clDragIdxRef.current = Number(dragIdx)
+      onChecklistItemDrop(Number(overIdx))
+    },
+    onEnd: () => {
+      clDragIdxRef.current = null
+      setClDragOverIdx(null)
+    },
+  })
+
   
   const sorted = sortNotes(notes)
   const pinned = sorted.filter((n) => n.starred)
@@ -411,6 +445,7 @@ export default function NotesApp() {
         onDragStart={() => draggable && onDragStart(n.id)}
         onDragOver={(e) => draggable && onDragOver(e, n.id)}
         onDrop={() => draggable && onDrop(n.id)}
+        {...(draggable ? noteTouch(n.id) : {})}
         onClick={() => selectNote(n)}
         style={{
           padding: '10px 12px',
@@ -421,6 +456,9 @@ export default function NotesApp() {
           display: 'flex',
           gap: 8,
           alignItems: 'flex-start',
+          ...(draggable
+            ? { WebkitUserSelect: 'none' as const, userSelect: 'none' as const, WebkitTouchCallout: 'none' as const }
+            : {}),
         }}
       >
         <button
@@ -581,6 +619,7 @@ export default function NotesApp() {
                     e.preventDefault()
                     onChecklistItemDrop(idx)
                   }}
+                  data-cl-drag={String(idx)}
                   style={{
                     ...checklistRowStyle,
                     borderTop: clDragOverIdx === idx ? '2px solid #f5b400' : '2px solid transparent',
@@ -591,6 +630,7 @@ export default function NotesApp() {
                       text input keeps normal selection behavior */}
                   <span
                     draggable
+                    {...clTouch(String(idx))}
                     onDragStart={() => { clDragIdxRef.current = idx }}
                     onDragEnd={() => {
                       clDragIdxRef.current = null

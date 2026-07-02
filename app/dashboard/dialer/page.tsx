@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
+import useTouchReorder from '@/lib/useTouchReorder'
 import { useUser } from '@clerk/nextjs'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -2005,6 +2006,13 @@ function DialerPageInner() {
     }
   }
 
+  const tabTouch = useTouchReorder({
+    attr: 'data-tab-drag',
+    onStart: key => setScriptDragKey(key),
+    onDrop: (dragKey, targetKey) => reorderScriptTabs(dragKey, targetKey),
+    onEnd: () => setScriptDragKey(null),
+  })
+
   const terminalBg = 'var(--brand-page-bg)'
   const terminalSurface = 'var(--brand-card-surface)'
   const terminalBorder = 'var(--brand-card-border)'
@@ -2840,6 +2848,7 @@ function DialerPageInner() {
                               draggable
                               onDragStart={() => setScriptDragKey(sc.key)}
                               onDragOver={(e) => { e.preventDefault() }}
+                              {...tabTouch(sc.key)}
                               onDrop={(e) => {
                                 e.preventDefault()
                                 if (scriptDragKey) reorderScriptTabs(scriptDragKey, sc.key)
@@ -2856,6 +2865,9 @@ function DialerPageInner() {
                                 fontFamily: FUTURA, fontSize: '9px', letterSpacing: '1px', fontWeight: 800,
                                 opacity: scriptDragKey === sc.key ? 0.4 : 1,
                                 transition: 'all 0.15s ease',
+                                WebkitUserSelect: 'none',
+                                userSelect: 'none',
+                                WebkitTouchCallout: 'none',
                               }}
                             >{sc.name.toUpperCase()}</button>
                           ))}

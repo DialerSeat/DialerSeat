@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
+import useTouchReorder from '@/lib/useTouchReorder'
 import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
 
@@ -1103,10 +1104,7 @@ export default function CampaignsPage() {
   const onLibDragStart = (id: string) => setLibDragId(id)
   const onLibDragOver = (e: React.DragEvent, id: string) => { e.preventDefault(); setLibDragOverId(id) }
   const onLibDragEnd = () => { setLibDragId(null); setLibDragOverId(null) }
-  const onLibDrop = async (e: React.DragEvent, targetId: string) => {
-    e.preventDefault()
-    const dragId = libDragId
-    setLibDragId(null); setLibDragOverId(null)
+  const commitLibReorder = async (dragId: string, targetId: string) => {
     if (!dragId || dragId === targetId) return
     const ids = library.map(s => s.id)
     const from = ids.indexOf(dragId), to = ids.indexOf(targetId)
@@ -1121,6 +1119,19 @@ export default function CampaignsPage() {
       body: JSON.stringify({ order: next.map(s => s.id) }),
     })
   }
+  const onLibDrop = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault()
+    const dragId = libDragId
+    setLibDragId(null); setLibDragOverId(null)
+    if (dragId) commitLibReorder(dragId, targetId)
+  }
+  const libTouch = useTouchReorder({
+    attr: 'data-lib-drag',
+    onStart: id => setLibDragId(id),
+    onOver: id => setLibDragOverId(id),
+    onDrop: (dragId, targetId) => commitLibReorder(dragId, targetId),
+    onEnd: () => { setLibDragId(null); setLibDragOverId(null) },
+  })
 
   
   const loadCampaignLinks = async (campaignId: string, seedDraft = false) => {
@@ -1171,10 +1182,7 @@ export default function CampaignsPage() {
   const onLinkDragStart = (id: string) => setLinkDragId(id)
   const onLinkDragOver = (e: React.DragEvent, id: string) => { e.preventDefault(); setLinkDragOverId(id) }
   const onLinkDragEnd = () => { setLinkDragId(null); setLinkDragOverId(null) }
-  const onLinkDrop = async (e: React.DragEvent, targetId: string) => {
-    e.preventDefault()
-    const dragId = linkDragId
-    setLinkDragId(null); setLinkDragOverId(null)
+  const commitLinkReorder = async (dragId: string, targetId: string) => {
     if (!dragId || dragId === targetId || !settingsCampaign) return
     const enabled = campaignScriptLinks.filter(s => s.enabled)
     const ids = enabled.map(s => s.id)
@@ -1183,7 +1191,7 @@ export default function CampaignsPage() {
     const reordered = [...enabled]
     const [moved] = reordered.splice(from, 1)
     reordered.splice(to, 0, moved)
-    
+
     const disabled = campaignScriptLinks.filter(s => !s.enabled)
     setCampaignScriptLinks([...reordered, ...disabled])
     await fetch('/api/campaigns/script-links/reorder', {
@@ -1193,6 +1201,19 @@ export default function CampaignsPage() {
     })
     fetchCampaigns()
   }
+  const onLinkDrop = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault()
+    const dragId = linkDragId
+    setLinkDragId(null); setLinkDragOverId(null)
+    if (dragId) commitLinkReorder(dragId, targetId)
+  }
+  const linkTouch = useTouchReorder({
+    attr: 'data-link-drag',
+    onStart: id => setLinkDragId(id),
+    onOver: id => setLinkDragOverId(id),
+    onDrop: (dragId, targetId) => commitLinkReorder(dragId, targetId),
+    onEnd: () => { setLinkDragId(null); setLinkDragOverId(null) },
+  })
 
   
   const patchDraft = (patch: Partial<EditDraft>) =>
@@ -2269,6 +2290,9 @@ export default function CampaignsPage() {
           padding-right: 2px;
         }
         .lib-rail-item {
+          -webkit-user-select: none;
+          user-select: none;
+          -webkit-touch-callout: none;
           display: flex;
           align-items: center;
           gap: 8px;
@@ -2544,6 +2568,9 @@ export default function CampaignsPage() {
           gap: 8px;
         }
         .editor-script-chip {
+          -webkit-user-select: none;
+          user-select: none;
+          -webkit-touch-callout: none;
           display: flex;
           align-items: center;
           gap: 8px;
@@ -3275,6 +3302,7 @@ export default function CampaignsPage() {
                             draggable={owned}
                             onDragStart={() => onLibDragStart(s.id)}
                             onDragOver={e => onLibDragOver(e, s.id)}
+                            {...libTouch(s.id)}
                             onDragLeave={() => setLibDragOverId(null)}
                             onDrop={e => onLibDrop(e, s.id)}
                             onDragEnd={onLibDragEnd}
@@ -3774,6 +3802,7 @@ export default function CampaignsPage() {
                       draggable
                       onDragStart={() => onLinkDragStart(s.id)}
                       onDragOver={e => onLinkDragOver(e, s.id)}
+                      {...linkTouch(s.id)}
                       onDragLeave={() => setLinkDragOverId(null)}
                       onDrop={e => onLinkDrop(e, s.id)}
                       onDragEnd={onLinkDragEnd}
