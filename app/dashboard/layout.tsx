@@ -568,7 +568,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <script
         dangerouslySetInnerHTML={{
           __html:
-            "(function(){if(window.__dsMenuBridge)return;window.__dsMenuBridge=1;document.addEventListener('click',function(e){var t=e.target;if(!(t&&t.closest))return;var d=document.getElementById('ds-menu-drawer');var o=document.getElementById('ds-menu-overlay');if(!d||!o)return;if(t.closest('#ds-menu-btn')){d.classList.add('open');o.classList.add('open');document.body.style.overflow='hidden';}else if(t.closest('#ds-menu-overlay')){d.classList.remove('open');o.classList.remove('open');document.body.style.overflow='';}},true);})();",
+            "(function(){if(window.__dsMenuBridge)return;window.__dsMenuBridge=1;document.addEventListener('click',function(e){var t=e.target;if(!(t&&t.closest))return;var d=document.getElementById('ds-menu-drawer');var o=document.getElementById('ds-menu-overlay');if(!d||!o)return;var close=function(){d.classList.remove('open');o.classList.remove('open');document.body.style.overflow='';};if(t.closest('#ds-menu-btn')){d.classList.add('open');o.classList.add('open');document.body.style.overflow='hidden';}else if(t.closest('#ds-menu-overlay')){close();}else{var a=t.closest('a');if(a&&d.contains(a))close();}},true);})();",
         }}
       />
     </main>
