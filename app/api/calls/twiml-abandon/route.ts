@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server'
 import { verifyWebhook } from '@/lib/verifyWebhook'
+import { escapeXml } from '@/lib/xml'
 
 function buildTwiML(room: string) {
+  const safeRoom = escapeXml(room)
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Dial>
     <Conference waitUrl="" startConferenceOnEnter="true" endConferenceOnExit="true" beep="false">
-      ${room}
+      ${safeRoom}
     </Conference>
   </Dial>
 </Response>`

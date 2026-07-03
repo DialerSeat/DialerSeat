@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { pickNumberForLead, recordUsage } from '@/lib/numberPool'
 import { isCallableNow } from '@/lib/callingWindow'
+import { webhookUrl } from '@/lib/verifyWebhook'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -298,8 +299,8 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
   const outboundParams: Record<string, string> = {
     To: p.toFormatted,
     From: p.fromNumber,
-    Url: `${p.env.appUrl}/api/calls/twiml?room=${roomName}&record=true&campaignId=${p.campaignId || ''}`,
-    StatusCallback: `${p.env.appUrl}/api/calls/status`,
+    Url: webhookUrl(`${p.env.appUrl}/api/calls/twiml?room=${roomName}&record=true&campaignId=${p.campaignId || ''}`),
+    StatusCallback: webhookUrl(`${p.env.appUrl}/api/calls/status`),
     StatusCallbackMethod: 'POST',
     Timeout: ringTimeout,
   }
@@ -339,7 +340,7 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
     
     outboundParams.MachineDetection = 'DetectMessageEnd'
     outboundParams.AsyncAmd = 'true'
-    outboundParams.AsyncAmdStatusCallback = `${p.env.appUrl}/api/calls/amd-result`
+    outboundParams.AsyncAmdStatusCallback = webhookUrl(`${p.env.appUrl}/api/calls/amd-result`)
     outboundParams.AsyncAmdStatusCallbackMethod = 'POST'
     outboundParams.MachineDetectionTimeout = '30'
     outboundParams.MachineDetectionSpeechThreshold = '2400'
@@ -429,7 +430,7 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
       body: new URLSearchParams({
         To: agentSipUri,
         From: p.fromNumber,
-        Url: `${p.env.appUrl}/api/calls/twiml-agent?room=${roomName}`,
+        Url: webhookUrl(`${p.env.appUrl}/api/calls/twiml-agent?room=${roomName}`),
       }).toString(),
     })
 

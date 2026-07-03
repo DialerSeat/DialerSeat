@@ -34,7 +34,7 @@ import { NextResponse } from 'next/server'
 
 
 
-const FAIL_OPEN_WHEN_UNSET = true
+const FAIL_OPEN_WHEN_UNSET = false
 
 
 function timingSafeEqual(a: string, b: string): boolean {
