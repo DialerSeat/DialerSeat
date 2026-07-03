@@ -3,7 +3,7 @@
 ## Applied and verified (tsc clean)
 
 **#1 — deleted `app/api/users/create/`.** Dead, unauthenticated route. Zero
-callers confirmed. Just delete it in your repo.
+callers confirmed. Just delete it in your repo (nothing to add — it's gone).
 
 **#2 — `lib/verifyWebhook.ts`: `FAIL_OPEN_WHEN_UNSET` → `false`.** You
 confirmed `SIGNALWIRE_WEBHOOK_SECRET` is set in Vercel prod.
@@ -18,67 +18,60 @@ confirmed `SIGNALWIRE_WEBHOOK_SECRET` is set in Vercel prod.
   though `status`/`amd-result` already enforced it), independent of anything
   the original audit flagged.
 
-## Staged tonight, needs `npm install` + build + click-through tomorrow
+## Staged, needs `npm install` + build + click-through on your machine
 
-**#4 — dependency bumps, `package.json` only (included in this zip).**
-Nothing below takes effect until you run `npm install` — these are just
-version-string edits, so there's nothing to break tonight.
+**#4 — dependency bumps, `package.json` (included).** Nothing below takes
+effect until you run `npm install`.
+- `next`: `16.2.4` → `16.2.10` (latest 16.2.x LTS, includes the May 2026
+  security release patching middleware/proxy authorization-bypass CVEs
+  (CVE-2026-44574, CVE-2026-44575) that specifically target apps like this
+  one — App Router + `proxy.ts`/Clerk middleware gating pages, admin routes,
+  and subscription tier). Verified `16.2.10` is within `@clerk/nextjs@7.2.9`'s
+  declared peer range for `next` (checked the literal peerDependencies field
+  and tested with the real `semver` library — no conflict).
+- `eslint-config-next`: bumped to match (`16.2.10`).
+- Added `overrides`: `ws: ^8.20.1` (fixes uninitialized-memory disclosure,
+  pulled in by `@signalwire/realtime-api` and `@supabase/realtime-js`, both
+  satisfied by this version) and `js-cookie: ^3.0.7` (fixes prototype-hijack
+  cookie-attribute injection, pulled in by `@clerk/shared`; your own code
+  never calls js-cookie directly — confirmed — so this is hardening Clerk's
+  internal usage, not something your code path triggers today).
 
-- `next`: `16.2.4` → `16.2.10` (latest 16.2.x LTS as of July 1, 2026). This
-  is the one that actually matters: 16.2.4 predates Next's May 7, 2026
-  security release, which patched several **middleware/proxy
-  authorization-bypass** CVEs (CVE-2026-44574 dynamic-route-param injection,
-  CVE-2026-44575 segment-prefetch bypass) — your `proxy.ts` is exactly the
-  pattern these target (App Router + Clerk middleware gating pages, admin
-  routes, and subscription tier). Good news from checking your code: 83/139
-  API routes call Clerk's `auth()` directly, so a middleware skip alone
-  wouldn't let a fully anonymous request through your API — but pages/routes
-  that rely *only* on `proxy.ts` for tier/admin gating (not re-checked
-  downstream) are the real exposure. 16.2.10 stays in the same minor line as
-  16.2.4, so no breaking API changes expected — it's patch releases only.
-- `eslint-config-next`: bumped to match (`16.2.10`), standard practice to
-  keep in lockstep with `next`.
-- Added an `overrides` block:
-  - `ws: ^8.20.1` — fixes CVE-2026-45736 (uninitialized memory disclosure in
-    `websocket.close()`). Pulled in transitively by `@signalwire/realtime-api`
-    (`^8.17.1`) and `@supabase/realtime-js` (`^8.18.2`) — 8.20.1 satisfies
-    both ranges, so this isn't fighting either package's own requirements.
-  - `js-cookie: ^3.0.7` — fixes CVE-2026-46625 (prototype-hijack enabling
-    cookie-attribute injection). Pulled in by `@clerk/shared`, which pins it
-    exactly at `3.0.5`; the override forces the patched version anyway. Your
-    own app code never calls `js-cookie` directly (checked — zero references
-    outside `node_modules`), so this is purely hardening Clerk's internal
-    usage, not something your code path triggers today.
+Couldn't run `npm install`/`next build` in this sandbox — no network access.
+`tsc --noEmit` stayed clean throughout, but that's not a build guarantee for
+a framework bump; needs your real toolchain.
 
-### Why these are staged, not applied live
-None of this can be verified from this sandbox — no network access to
-actually pull the new packages, resolve the lockfile, or run a real
-`next build`. `tsc --noEmit` (which doesn't touch installed package versions)
-stayed clean through all the other changes, but that's not a build guarantee
-for a framework version bump. This one needs your real toolchain.
+## Not changed — deliberate, your call
 
-## Not changed — deliberate, needs your call, not mine
+**#5 — RLS-enabled-no-policy on 40 tables.** Audit's own conclusion: fine as
+designed given your service-role-client + Clerk-authed-route architecture.
 
-**#5 — RLS-enabled-no-policy on 40 tables.** Audit's own conclusion: "fine as
-designed" given your service-role-client + Clerk-authed-route architecture.
-No code change proposed.
+**#6 — fail-open error handling in `proxy.ts getAccessState`.** Genuine
+security-vs-availability tradeoff (flip it and a transient Supabase error
+locks out every paying customer instantly). Left alone — say the word if you
+want it changed.
 
-**#6 — fail-open error handling in `proxy.ts getAccessState`.** On a
-transient Supabase error it currently grants `tier: 'active'` rather than
-denying. This is a genuine security-vs-availability tradeoff (flip it and a
-DB blip locks out every paying customer instantly), not a bug with one
-correct answer — I didn't touch it. Say the word if you want it flipped to
-fail-closed, or want something in between (e.g. fail open only for a short
-grace window, alert on it, etc.).
+## Morning bug fix — mic-permission block (unrelated to any of the above)
 
-## Tomorrow's plan
-1. `npm install` (pulls next 16.2.10, ws 8.20.1, js-cookie 3.0.7).
-2. `npm run build` — confirm clean build.
-3. `npm run lint` (or your CI's tsc) — confirm clean.
-4. Deploy to a preview environment first if you have one, not straight to
-   prod.
-5. Click-through checklist (see chat) focused on the `proxy.ts` middleware
-   changes, since that's the one with real behavioral risk.
-6. Place one real test call once you're back at your desk, to confirm the
-   webhook/`whk` changes from tonight didn't regress status/AMD/recording
-   callbacks.
+`next.config.ts` had a site-wide `Permissions-Policy` header with
+`microphone=()` — an empty allowlist, blocking mic access for every origin
+including the app's own. Since this is a browser-based SIP dialer, that
+silently killed `getUserMedia()` before the browser could even show a
+permission prompt: `NotAllowedError`, no visible feedback, "SET AVAILABLE TO
+DIAL" appeared to do nothing.
+
+This line was untouched by anything from last night — pre-existing, unrelated
+to the audit. Fixed by changing it to `microphone=(self)` (camera and
+geolocation left blocked at `()` — confirmed nothing in the app uses either).
+
+This one's a plain header change with no dependency/lockfile involved — you
+can ship this independently of the `next`/`ws`/`js-cookie` bump if you want
+the dialer working again before touching anything else.
+
+## Verification
+`tsc --noEmit` clean (0 errors) after every change above, matching the
+original baseline before any edits.
+
+## How to apply
+Folder mirrors your repo's structure. Delete `app/api/users/create/`, copy
+the rest of these files in, `npm install`, `npm run build`, test, deploy.
