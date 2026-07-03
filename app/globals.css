@@ -115,3 +115,17 @@ textarea,
 [role='button'] {
   touch-action: manipulation;
 }
+
+a,
+button,
+label,
+[role='button'] {
+  -webkit-touch-callout: none;
+}
+
+button,
+label,
+[role='button'] {
+  -webkit-user-select: none;
+  user-select: none;
+}

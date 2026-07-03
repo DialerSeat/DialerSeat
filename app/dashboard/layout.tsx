@@ -540,8 +540,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
               gap: 4, cursor: 'pointer', padding: 0,
               flexShrink: 0,
+              position: 'relative',
             }}
           >
+            <span
+              aria-hidden
+              style={{
+                position: 'absolute',
+                top: 'calc(-1 * max(12px, env(safe-area-inset-top, 12px)))',
+                left: 'calc(-1 * max(16px, env(safe-area-inset-left, 16px)))',
+                bottom: -12,
+                right: -20,
+              }}
+            />
             <span style={{ width: 18, height: 2, background: 'var(--brand-on-header)', borderRadius: 1 }} />
             <span style={{ width: 18, height: 2, background: 'var(--brand-on-header)', borderRadius: 1 }} />
             <span style={{ width: 18, height: 2, background: 'var(--brand-on-header)', borderRadius: 1 }} />
