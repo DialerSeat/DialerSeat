@@ -50,7 +50,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const bare = shouldRenderBare(pathname)
 
-  const [drawerOpen, setDrawerOpen] = useState(false)
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
   const [tier, setTier] = useState<AccessTier>(null)
   const [plan, setPlan] = useState<Plan>(null)
@@ -58,14 +57,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [pendingLogo, setPendingLogo] = useState<{ publicUrl: string; dataUrl: string } | null>(null)
   const profileRowRef = useRef<HTMLDivElement | null>(null)
 
+  const setDrawer = (open: boolean) => {
+    const d = document.getElementById('ds-menu-drawer')
+    const o = document.getElementById('ds-menu-overlay')
+    if (d) d.classList.toggle('open', open)
+    if (o) o.classList.toggle('open', open)
+    document.body.style.overflow = open ? 'hidden' : ''
+  }
+
+  const lastPathRef = useRef(pathname)
   useEffect(() => {
-    setDrawerOpen(false)
+    if (lastPathRef.current !== pathname) {
+      lastPathRef.current = pathname
+      setDrawer(false)
+    }
   }, [pathname])
 
-  useEffect(() => {
-    const d = document.getElementById('ds-menu-drawer')
-    if (d && d.classList.contains('open')) setDrawerOpen(true)
-  }, [])
+  useEffect(() => () => { document.body.style.overflow = '' }, [])
 
   useEffect(() => {
     if (bare) return
@@ -88,12 +96,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [bare])
 
-  useEffect(() => {
-    if (bare) return
-    if (drawerOpen) document.body.style.overflow = 'hidden'
-    else document.body.style.overflow = ''
-    return () => { document.body.style.overflow = '' }
-  }, [drawerOpen, bare])
 
   useEffect(() => {
     if (!user || bare) return
@@ -517,12 +519,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       <div
         id="ds-menu-overlay"
-        className={`ds-mobile-overlay ${drawerOpen ? 'open' : ''}`}
-        onClick={() => setDrawerOpen(false)}
+        className="ds-mobile-overlay"
+        onClick={() => setDrawer(false)}
         aria-hidden="true"
       />
 
-      <aside id="ds-menu-drawer" className={`ds-sidebar-mobile ${drawerOpen ? 'open' : ''}`}>
+      <aside id="ds-menu-drawer" className="ds-sidebar-mobile">
         <Sidebar />
       </aside>
 
@@ -530,7 +532,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="ds-mobile-topbar">
           <button
             id="ds-menu-btn"
-            onClick={() => setDrawerOpen(true)}
+            onClick={() => setDrawer(true)}
             aria-label="Open menu"
             style={{
               width: 40, height: 40, border: '1px solid var(--brand-sidebar-active-bg)',
@@ -566,7 +568,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <script
         dangerouslySetInnerHTML={{
           __html:
-            "(function(){if(window.__dsMenuBridge)return;window.__dsMenuBridge=1;document.addEventListener('click',function(e){var t=e.target;if(!(t&&t.closest))return;var d=document.getElementById('ds-menu-drawer');var o=document.getElementById('ds-menu-overlay');if(!d||!o)return;if(t.closest('#ds-menu-btn')){d.classList.add('open');o.classList.add('open');}else if(t.closest('#ds-menu-overlay')){d.classList.remove('open');o.classList.remove('open');}},true);})();",
+            "(function(){if(window.__dsMenuBridge)return;window.__dsMenuBridge=1;document.addEventListener('click',function(e){var t=e.target;if(!(t&&t.closest))return;var d=document.getElementById('ds-menu-drawer');var o=document.getElementById('ds-menu-overlay');if(!d||!o)return;if(t.closest('#ds-menu-btn')){d.classList.add('open');o.classList.add('open');document.body.style.overflow='hidden';}else if(t.closest('#ds-menu-overlay')){d.classList.remove('open');o.classList.remove('open');document.body.style.overflow='';}},true);})();",
         }}
       />
     </main>
