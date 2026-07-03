@@ -10,6 +10,7 @@ import {
   markStripeEventFailed,
   markStripeEventSkipped,
 } from '@/lib/stripe-idempotency'
+import { reconcilePoolToRatio } from '@/lib/poolCycling'
 
 const supabase = getServiceClient('stripe/webhook')
 
@@ -119,6 +120,19 @@ export async function POST(req: Request) {
       await markStripeEventProcessed(event.id)
     } else {
       await markStripeEventSkipped(event.id)
+    }
+
+    const CYCLING_EVENTS = new Set([
+      'customer.subscription.created',
+      'customer.subscription.deleted',
+      'customer.subscription.updated',
+      'invoice.payment_succeeded',
+      'invoice.payment_failed',
+    ])
+    if (handled && CYCLING_EVENTS.has(event.type)) {
+      reconcilePoolToRatio(`stripe:${event.type}`).catch((err) =>
+        console.error('[stripe/webhook] pool reconcile failed (non-blocking):', err)
+      )
     }
 
     return NextResponse.json({ received: true })

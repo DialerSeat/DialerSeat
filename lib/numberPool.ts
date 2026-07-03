@@ -267,6 +267,12 @@ export interface PoolConfig {
   sustained_hours_required: number
   buys_today: number
   buys_today_date: string
+  numbers_per_user?: number
+  pool_floor?: number
+  release_cooldown_days?: number
+  ratio_cycling_enabled?: boolean
+  last_ratio_reconcile_at?: string | null
+  last_target_pool_size?: number | null
 }
 
 export async function getPoolConfig(): Promise<PoolConfig> {
@@ -285,6 +291,10 @@ export async function getPoolConfig(): Promise<PoolConfig> {
       sustained_hours_required: 2,
       buys_today: 0,
       buys_today_date: new Date().toISOString().split('T')[0],
+      numbers_per_user: 3,
+      pool_floor: 5,
+      release_cooldown_days: 30,
+      ratio_cycling_enabled: true,
     }
   }
 

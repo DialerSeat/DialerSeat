@@ -132,6 +132,15 @@ export async function GET(req: Request) {
     }
 
     console.log('[cron/pool-maintenance]', JSON.stringify(summary, null, 2))
+
+    try {
+      const { reconcilePoolToRatio } = await import('@/lib/poolCycling')
+      const ratio = await reconcilePoolToRatio('cron:pool-maintenance')
+      summary.ratioCycling = ratio
+    } catch (err: any) {
+      summary.actions.push(`Ratio reconcile failed: ${err?.message ?? 'unknown'}`)
+    }
+
     return NextResponse.json({ success: true, summary })
   } catch (err: any) {
     console.error('[cron/pool-maintenance] error:', err)

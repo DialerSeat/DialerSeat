@@ -19,6 +19,9 @@ const HARD_BOUNDS = {
   daily_buy_cap: { min: 1, max: 500 },
   utilization_trigger_pct: { min: 30, max: 99 },
   sustained_hours_required: { min: 1, max: 24 },
+  numbers_per_user: { min: 0, max: 20 },
+  pool_floor: { min: 0, max: 1000 },
+  release_cooldown_days: { min: 0, max: 365 },
 }
 
 export async function POST(req: Request) {
@@ -45,8 +48,12 @@ export async function POST(req: Request) {
     }
   }
 
-  if (Object.keys(updates).length === 0) {
+  if (Object.keys(updates).length === 0 && body.ratio_cycling_enabled === undefined) {
     return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
+  }
+
+  if (body.ratio_cycling_enabled !== undefined) {
+    updates.ratio_cycling_enabled = body.ratio_cycling_enabled === true || body.ratio_cycling_enabled === 'true'
   }
 
   updates.updated_at = new Date().toISOString()
