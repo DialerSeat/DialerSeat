@@ -134,9 +134,14 @@ export async function GET(req: Request) {
     console.log('[cron/pool-maintenance]', JSON.stringify(summary, null, 2))
 
     try {
-      const { reconcilePoolToRatio } = await import('@/lib/poolCycling')
-      const ratio = await reconcilePoolToRatio('cron:pool-maintenance')
-      summary.ratioCycling = ratio
+      const isFirstOfMonth = new Date().getUTCDate() === 1
+      if (isFirstOfMonth) {
+        const { reconcilePoolMonthly } = await import('@/lib/poolCycling')
+        const ratio = await reconcilePoolMonthly('cron:first-of-month')
+        summary.ratioCycling = ratio
+      } else {
+        summary.ratioCycling = { ran: false, reason: 'not_first_of_month' }
+      }
     } catch (err: any) {
       summary.actions.push(`Ratio reconcile failed: ${err?.message ?? 'unknown'}`)
     }

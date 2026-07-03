@@ -75,13 +75,28 @@ export async function reconcilePoolToRatio(trigger: string): Promise<ReconcileRe
   if (reconcileInFlight) {
     return reconcileInFlight
   }
-  reconcileInFlight = doReconcile(trigger).finally(() => {
+  reconcileInFlight = doReconcile(trigger, false).finally(() => {
     reconcileInFlight = null
   })
   return reconcileInFlight
 }
 
-async function doReconcile(trigger: string): Promise<ReconcileResult> {
+export async function reconcilePoolMonthly(trigger: string): Promise<ReconcileResult> {
+  if (reconcileInFlight) {
+    return reconcileInFlight
+  }
+  reconcileInFlight = doReconcile(trigger, true).finally(() => {
+    reconcileInFlight = null
+  })
+  return reconcileInFlight
+}
+
+function currentMonthKey(): string {
+  const now = new Date()
+  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`
+}
+
+async function doReconcile(trigger: string, monthlyOnly: boolean): Promise<ReconcileResult> {
   const actions: string[] = []
   const config = await getRatioConfig()
 
@@ -105,6 +120,18 @@ async function doReconcile(trigger: string): Promise<ReconcileResult> {
   }
   if (!config.ratio_cycling_enabled) {
     return { ...base, reason: 'disabled' }
+  }
+
+  if (monthlyOnly) {
+    const monthKey = currentMonthKey()
+    const { data: last } = await supabase
+      .from('pool_config')
+      .select('last_reconcile_month')
+      .eq('id', 1)
+      .maybeSingle()
+    if (last?.last_reconcile_month === monthKey) {
+      return { ...base, reason: 'already_ran_this_month' }
+    }
   }
 
   const activeSubs = await countActiveSubs()
@@ -237,6 +264,7 @@ async function doReconcile(trigger: string): Promise<ReconcileResult> {
       .update({
         last_ratio_reconcile_at: new Date().toISOString(),
         last_target_pool_size: cappedTarget,
+        last_reconcile_month: currentMonthKey(),
       })
       .eq('id', 1)
   } catch (err) {

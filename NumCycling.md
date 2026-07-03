@@ -27,10 +27,12 @@ Cost logic: at $35/week per subscriber and ~$1/number/month, 3 numbers per user 
 
 ## How it triggers
 
-Reconciliation runs on two paths, both calling the same idempotent function `reconcilePoolToRatio(trigger)`:
+Reconciliation runs **once per calendar month**, on the 1st. Mid-month subscription changes do **not** touch the pool — this prevents random +3/−3 charges every time someone signs up or cancels. The pool holds steady all month and trues up to the current subscriber count once.
 
-1. **Stripe webhook (primary).** After any handled `customer.subscription.created / updated / deleted` or `invoice.payment_succeeded / failed`, a fire-and-forget reconcile runs. It never blocks or fails the webhook — errors are logged only. This is what makes "new signup → add numbers" and "sub leaves → release numbers" happen in near-real-time.
-2. **Daily cron backstop.** `cron/pool-maintenance` (runs 06:00 daily on Hobby) calls reconcile at the end, catching any webhook that was missed.
+- The daily `cron/pool-maintenance` (06:00 UTC) checks the date; only when it's the **1st of the month** does it call `reconcilePoolMonthly`.
+- `reconcilePoolMonthly` is guarded by `pool_config.last_reconcile_month` (YYYY-MM): if it already ran this month it no-ops with reason `already_ran_this_month`. So even if the cron fires more than once on the 1st, at most one reconcile happens per month.
+- `reconcilePoolToRatio` (the ungated version) still exists for manual/admin-triggered runs but is not wired to any automatic path.
+- Stripe webhooks do **not** trigger cycling. (Removed by request.)
 
 An in-process lock (`reconcileInFlight`) collapses concurrent triggers into one run.
 

@@ -219,7 +219,11 @@ const CONFIG_FIELDS: Array<{ key: keyof PoolConfig, label: string, help: string 
 ]
 
 export default function NumbersApp() {
-  const [view, setView] = useState<'pool' | 'analytics'>('pool')
+  const [view, setView] = useState<'pool' | 'analytics' | 'cycling'>('pool')
+
+  const [cycleData, setCycleData] = useState<any | null>(null)
+  const [cycleLoading, setCycleLoading] = useState(false)
+  const [cycleError, setCycleError] = useState<string | null>(null)
 
   const [data, setData] = useState<PoolData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -284,6 +288,29 @@ export default function NumbersApp() {
       loadAnalytics()
     }
   }, [view, analytics, analyticsLoading, analyticsError, loadAnalytics])
+
+  const loadCycleLog = useCallback(async () => {
+    setCycleLoading(true)
+    setCycleError(null)
+    try {
+      const res = await fetch('/api/admin/pool/cycle-log', { cache: 'no-store' })
+      if (res.status === 403) throw new Error('Forbidden — admin only')
+      if (res.status === 401) throw new Error('Not signed in')
+      const d = await res.json()
+      if (d.success) setCycleData(d)
+      else setCycleError(d.error || 'Failed to load cycling log')
+    } catch (err: any) {
+      setCycleError(err.message)
+    } finally {
+      setCycleLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (view === 'cycling' && !cycleData && !cycleLoading && !cycleError) {
+      loadCycleLog()
+    }
+  }, [view, cycleData, cycleLoading, cycleError, loadCycleLog])
 
   
   const buyForState = useCallback((stateCode: string) => {
@@ -1010,6 +1037,10 @@ export default function NumbersApp() {
           className={`pool-view-tab ${view === 'analytics' ? 'active' : ''}`}
           onClick={() => setView('analytics')}
         >ANALYTICS</button>
+        <button
+          className={`pool-view-tab ${view === 'cycling' ? 'active' : ''}`}
+          onClick={() => setView('cycling')}
+        >CYCLING</button>
       </div>
 
       {view === 'pool' && (
@@ -1436,6 +1467,124 @@ export default function NumbersApp() {
                 STRETCHED: gap &gt; 0 · BALANCED: within ±2pp · SURPLUS: capacity outweighs demand.
                 Lead states normalized server-side (&quot;FLORIDA&quot;→FL, area-code fallback).
                 BUY → pre-fills the buy modal with that state selected.
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {view === 'cycling' && (
+        <div className="pool-content">
+          {cycleLoading && (
+            <div style={{ padding: 40, textAlign: 'center', fontSize: 11, letterSpacing: 3, color: T.muted }}>
+              LOADING CYCLING LOG...
+            </div>
+          )}
+          {cycleError && (
+            <div style={{ padding: 40, textAlign: 'center', fontSize: 11, letterSpacing: 2, color: '#c0392b' }}>
+              {cycleError}
+            </div>
+          )}
+          {!cycleLoading && !cycleError && cycleData && (
+            <>
+              <div style={{ marginBottom: 18 }}>
+                <div style={{ fontSize: 12, letterSpacing: 3, color: T.text, fontWeight: 'bold', marginBottom: 4 }}>
+                  MONTHLY RATIO CYCLING
+                </div>
+                <div style={{ fontSize: 10, color: T.muted, letterSpacing: 1, lineHeight: 1.6 }}>
+                  Pool trues up to active-subscriber count once per month, on the 1st.
+                  {cycleData.config?.ratio_cycling_enabled === false && (
+                    <span style={{ color: '#c0392b', fontWeight: 'bold' }}> — CURRENTLY DISABLED</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="pool-stat-grid" style={{ marginBottom: 20 }}>
+                <div className="pool-stat-card">
+                  <div className="pool-stat-value">{cycleData.activeSubs}</div>
+                  <div className="pool-stat-label">ACTIVE SUBS</div>
+                </div>
+                <div className="pool-stat-card">
+                  <div className="pool-stat-value">{cycleData.poolActive}</div>
+                  <div className="pool-stat-label">POOL ACTIVE</div>
+                </div>
+                <div className="pool-stat-card">
+                  <div className="pool-stat-value">{cycleData.config?.numbers_per_user ?? '—'}</div>
+                  <div className="pool-stat-label">PER USER</div>
+                </div>
+                <div className="pool-stat-card">
+                  <div className="pool-stat-value">
+                    {cycleData.config ? Math.min(Math.max(cycleData.activeSubs * (cycleData.config.numbers_per_user ?? 0), cycleData.config.pool_floor ?? 0), 999999) : '—'}
+                  </div>
+                  <div className="pool-stat-label">NEXT TARGET</div>
+                </div>
+              </div>
+
+              <div style={{
+                fontSize: 10, color: T.muted, letterSpacing: 1, marginBottom: 12,
+                fontFamily: 'monospace', lineHeight: 1.7,
+              }}>
+                FLOOR: {cycleData.config?.pool_floor ?? '—'} · COOLDOWN: {cycleData.config?.release_cooldown_days ?? '—'}d ·
+                LAST RUN: {cycleData.config?.last_reconcile_month ?? 'never'}
+                {cycleData.config?.last_ratio_reconcile_at ? ` (${new Date(cycleData.config.last_ratio_reconcile_at).toLocaleString()})` : ''}
+              </div>
+
+              {(!cycleData.entries || cycleData.entries.length === 0) ? (
+                <div style={{ padding: 40, textAlign: 'center', fontSize: 11, letterSpacing: 3, color: T.muted }}>
+                  NO CYCLING EVENTS YET — FIRST RECEIPT POSTS ON THE 1ST
+                </div>
+              ) : (
+                <div className="pool-section" style={{ padding: 0, overflow: 'hidden' }}>
+                  <div style={{ overflowX: 'auto' }}>
+                  <table className="an-table">
+                    <thead>
+                      <tr>
+                        <th>WHEN</th>
+                        <th>SUBS</th>
+                        <th>TARGET</th>
+                        <th>BEFORE</th>
+                        <th>AFTER</th>
+                        <th>ADDED</th>
+                        <th>RELEASED</th>
+                        <th>NOTES</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {cycleData.entries.map((e: any) => {
+                        const net = (e.added ?? 0) - (e.released ?? 0)
+                        return (
+                          <tr key={e.id}>
+                            <td style={{ whiteSpace: 'nowrap', fontFamily: 'monospace', fontSize: 10 }}>
+                              {new Date(e.created_at).toLocaleDateString(undefined, { year: '2-digit', month: 'short', day: 'numeric' })}
+                              <div style={{ fontSize: 8, color: T.muted }}>{e.trigger}</div>
+                            </td>
+                            <td>{e.active_subs}</td>
+                            <td>{e.target_pool_size}</td>
+                            <td>{e.pool_before}</td>
+                            <td style={{ fontWeight: 'bold', color: T.text }}>{e.pool_after}</td>
+                            <td style={{ color: e.added > 0 ? '#1a7a3a' : T.muted }}>{e.added > 0 ? `+${e.added}` : '0'}</td>
+                            <td style={{ color: e.released > 0 ? '#c0392b' : T.muted }}>{e.released > 0 ? `−${e.released}` : '0'}</td>
+                            <td style={{ fontSize: 9, color: T.muted, maxWidth: 220 }}>
+                              {e.floor_applied ? 'floor · ' : ''}
+                              {e.cooldown_blocked > 0 ? `${e.cooldown_blocked} held (cooldown) · ` : ''}
+                              {net === 0 && e.added === 0 && e.released === 0 ? 'no change' : `net ${net > 0 ? '+' : ''}${net}`}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                  </div>
+                </div>
+              )}
+
+              <div style={{
+                fontSize: 9, color: T.muted, letterSpacing: 1, lineHeight: 1.7,
+                fontFamily: 'monospace', marginTop: 14,
+              }}>
+                Each row is a receipt of one monthly reconcile: how many subs were active, the target it computed,
+                the pool before and after, and exactly how many numbers it bought or released. &quot;held (cooldown)&quot;
+                = surplus numbers kept because they were bought within the cooldown window.
               </div>
             </>
           )}
