@@ -53,7 +53,15 @@ interface Campaign {
 interface TeamScopeCampaign {
   campaignId: string
   accessMode: 'owner_pays' | 'agent_pays' | 'public'
-  campaign: { id: string; name: string; total_leads: number; called_leads: number; status: string } | null
+  campaign: {
+    id: string
+    name: string
+    total_leads: number
+    called_leads: number
+    status: string
+    dialer_mode?: DialerMode
+    scripts?: { id: string; name: string; body: string }[]
+  } | null
 }
 
 interface TeamScope {
@@ -647,7 +655,14 @@ function DialerPageInner() {
               
               
               swCallRef.current = invitation
-              attachSIPAudio(invitation)
+              // NOTE: attachSIPAudio(invitation) intentionally not called again
+              // here. The stateChange listener above is registered before
+              // accept() runs, so it already catches the Established
+              // transition — calling attachSIPAudio a second time here raced
+              // against that first call: each one's srcObject/play() on the
+              // same <audio> element interrupted the other's, throwing
+              // "AbortError: play() request was interrupted by a new load
+              // request" and sometimes leaving audio never actually starting.
             } catch (err) {
               console.error('Error accepting SIP invite:', err)
             }
@@ -691,6 +706,24 @@ function DialerPageInner() {
       return audioEl
     }
 
+    // This function runs multiple times for the same call — the retry
+    // timers below, plus both the ontrack handler and the getReceivers scan
+    // can each see the same track. Re-assigning srcObject (even to a new
+    // MediaStream wrapping the identical track) forces the <audio> element
+    // to reload and cancels any in-flight play() with an AbortError, so
+    // without tracking what's already attached, those calls kept
+    // interrupting each other and audio could end up never actually
+    // starting. Scoped to this attachSIPAudio call so it's shared by every
+    // tryAttach() invocation below, including the retry timers.
+    let attachedTrackId: string | null = null
+    const attachTrack = (track: MediaStreamTrack) => {
+      if (attachedTrackId === track.id) return
+      attachedTrackId = track.id
+      const audioEl = getAudioEl()
+      audioEl.srcObject = new MediaStream([track])
+      audioEl.play().catch(console.error)
+    }
+
     const tryAttach = () => {
       try {
         const sdh = session.sessionDescriptionHandler
@@ -699,20 +732,11 @@ function DialerPageInner() {
         if (!pc) return false
 
         pc.ontrack = (event: RTCTrackEvent) => {
-          if (event.streams && event.streams[0]) {
-            const audioEl = getAudioEl()
-            audioEl.srcObject = event.streams[0]
-            audioEl.play().catch(console.error)
-          }
+          if (event.track && event.track.kind === 'audio') attachTrack(event.track)
         }
 
         pc.getReceivers().forEach((receiver: RTCRtpReceiver) => {
-          if (receiver.track && receiver.track.kind === 'audio') {
-            const stream = new MediaStream([receiver.track])
-            const audioEl = getAudioEl()
-            audioEl.srcObject = stream
-            audioEl.play().catch(console.error)
-          }
+          if (receiver.track && receiver.track.kind === 'audio') attachTrack(receiver.track)
         })
         return true
       } catch (err) {
