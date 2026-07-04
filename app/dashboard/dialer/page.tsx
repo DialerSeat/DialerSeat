@@ -1546,7 +1546,9 @@ function DialerPageInner() {
 
   const isNotHuman = (amd?: string): boolean => {
     if (!amd) return false
-    return amd.startsWith('machine_') || amd === 'fax' || amd === 'unknown'
+    // 'unknown' = AMD couldn't tell, not a confirmed machine/fax — treat as
+    // human rather than auto-ending the call. See amd-result/route.ts.
+    return amd.startsWith('machine_') || amd === 'fax'
   }
 
   const startHangupPolling = (callSid: string) => {
@@ -2092,6 +2094,25 @@ function DialerPageInner() {
 
   const activeScriptIdx = scriptIdx < scriptTabs.length ? scriptIdx : 0
   const activeScript = scriptTabs[activeScriptIdx]?.script || null
+
+  // TEMP DIAGNOSTIC — remove once the script-box issue is confirmed fixed.
+  // Plain console.log (not useEffect) so it can't trip rules-of-hooks
+  // against the tier-based early returns further down. Shows exactly where
+  // the chain stands: is a campaign even resolved, does it carry any
+  // scripts, did that survive reordering, would the box actually render.
+  console.log('[script-box]', {
+    selectedScope,
+    selectedCampaign,
+    isSpecificCampaign,
+    isAllActive,
+    currentCampaignId: currentCampaign?.id,
+    currentCampaignScriptsCount: currentCampaign?.scripts?.length ?? null,
+    rawScriptTabsCount: rawScriptTabs.length,
+    scriptTabsCount: scriptTabs.length,
+    activeScriptPresent: !!activeScript,
+    displayLeadPresent: !!(previewLead || currentLead),
+    status,
+  })
 
   
   const reorderScriptTabs = (dragKey: string, targetKey: string) => {

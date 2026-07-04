@@ -59,10 +59,16 @@ export async function POST(req: Request) {
       detail: { answeredBy },
     })
 
+    // 'unknown' means AMD couldn't confidently tell human from machine within
+    // MachineDetectionSilenceTimeout (5s) — it is NOT a positive machine/fax
+    // detection. Treating it as "not human" auto-hung-up on real answers
+    // whenever the callee took a moment to speak (extremely common), which
+    // is exactly what produced calls that connected, played no audio, and
+    // hung up ~5-6s in. Fail open: only hang up on a confident machine/fax
+    // result.
     const isNotHuman =
       answeredBy.startsWith('machine_') ||
-      answeredBy === 'fax' ||
-      answeredBy === 'unknown'
+      answeredBy === 'fax'
 
     if (isNotHuman) {
       await hangupCall(callSid)

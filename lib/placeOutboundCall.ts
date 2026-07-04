@@ -220,16 +220,20 @@ export async function placeOutboundCall(
   }
 
   
-  const amdEnabled = true
+  let amdEnabled = true
   let dialerMode = 'power'
   if (campaignId) {
     const { data: campaign } = await supabase
       .from('campaigns')
-      .select('dialer_mode')
+      .select('dialer_mode, amd_enabled')
       .eq('id', campaignId)
       .maybeSingle()
     if (campaign) {
       dialerMode = campaign.dialer_mode || 'power'
+      // amd_enabled has a full create/update UI and DB column, but this
+      // hardcoded `true` never read it — turning AMD off for a campaign had
+      // no actual effect on outbound calls.
+      amdEnabled = campaign.amd_enabled !== false
     }
   }
 
