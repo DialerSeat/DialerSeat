@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
+import { loadScriptsByCampaign } from '@/lib/campaignScriptLinks'
 
 export async function GET(
   req: Request,
@@ -113,14 +114,20 @@ export async function GET(
 
     const { data: tcRows } = await supabaseAdmin
       .from('team_campaigns')
-      .select('campaign_id, access_mode, created_at, campaigns(id, name, total_leads, called_leads, status)')
+      .select('campaign_id, access_mode, created_at, campaigns(id, name, total_leads, called_leads, status, dialer_mode)')
       .eq('team_id', teamId)
+
+    const campaignScripts = await loadScriptsByCampaign(
+      Array.from(new Set((tcRows || []).map((row: any) => row.campaign_id)))
+    )
 
     const teamCampaigns = (tcRows || []).map((row: any) => ({
       campaignId: row.campaign_id,
       accessMode: row.access_mode,
       createdAt: row.created_at,
-      campaign: row.campaigns,
+      campaign: row.campaigns
+        ? { ...row.campaigns, scripts: campaignScripts[row.campaign_id] || [] }
+        : null,
     }))
 
     return NextResponse.json({

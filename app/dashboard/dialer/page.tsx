@@ -314,9 +314,30 @@ function DialerPageInner() {
   const isAllActive = selectedCampaign === ALL_ACTIVE
   const isSpecificCampaign = !!selectedCampaign && !isAllActive
 
+  // Team-scope campaigns live in teamScopes[].teamCampaigns, not in the
+  // personal `campaigns` list — looking only in `campaigns` meant
+  // currentCampaign (and therefore dialer_mode and scripts) never resolved
+  // at all whenever selectedScope wasn't the personal scope, so the script
+  // box silently never had anything to show while dialing a team campaign.
   const currentCampaign: Campaign | undefined =
     isSpecificCampaign
-      ? campaigns.find(c => c.id === selectedCampaign)
+      ? (selectedScope === PERSONAL_SCOPE
+          ? campaigns.find(c => c.id === selectedCampaign)
+          : (() => {
+              const tc = teamScopes
+                .find(s => s.id === selectedScope)
+                ?.teamCampaigns.find(t => t.campaignId === selectedCampaign)
+              return tc?.campaign
+                ? {
+                    id: tc.campaign.id,
+                    name: tc.campaign.name,
+                    status: tc.campaign.status,
+                    total_leads: tc.campaign.total_leads,
+                    dialer_mode: tc.campaign.dialer_mode,
+                    scripts: tc.campaign.scripts,
+                  }
+                : undefined
+            })())
       : undefined
 
   const dialerMode: DialerMode =
@@ -2003,6 +2024,26 @@ function DialerPageInner() {
     const seen = new Set<string>()
     for (const c of campaigns) {
       if (c.status !== 'active') continue
+      for (const t of campaignScriptTabs(c)) {
+        if (seen.has(t.key)) continue
+        seen.add(t.key)
+        rawScriptTabs.push(t)
+      }
+    }
+  } else if (isAllActive && !isPersonalScope) {
+    // Same aggregation as above, for a team's ALL ACTIVE CAMPAIGNS — this
+    // previously only ever ran for the personal scope.
+    const seen = new Set<string>()
+    for (const tc of currentScope?.teamCampaigns || []) {
+      if (!tc.campaign || tc.campaign.status !== 'active') continue
+      const c: Campaign = {
+        id: tc.campaign.id,
+        name: tc.campaign.name,
+        status: tc.campaign.status,
+        total_leads: tc.campaign.total_leads,
+        dialer_mode: tc.campaign.dialer_mode,
+        scripts: tc.campaign.scripts,
+      }
       for (const t of campaignScriptTabs(c)) {
         if (seen.has(t.key)) continue
         seen.add(t.key)

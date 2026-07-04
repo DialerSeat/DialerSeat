@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
+import { loadScriptsByCampaign } from '@/lib/campaignScriptLinks'
 
 export async function GET(req: NextRequest) {
   try {
@@ -68,7 +69,7 @@ export async function GET(req: NextRequest) {
           .order('created_at', { ascending: false }),
         supabaseAdmin
           .from('team_campaigns')
-          .select('team_id, campaign_id, access_mode, created_at, campaigns(id, name, total_leads, called_leads, status)')
+          .select('team_id, campaign_id, access_mode, created_at, campaigns(id, name, total_leads, called_leads, status, dialer_mode)')
           .in('team_id', ownedIds),
         supabaseAdmin
           .from('team_campaign_access')
@@ -124,6 +125,10 @@ export async function GET(req: NextRequest) {
         codesByTeam[c.team_id].push(c)
       }
 
+      const campaignScripts = await loadScriptsByCampaign(
+        Array.from(new Set((allCampaigns || []).map((tc: any) => tc.campaign_id)))
+      )
+
       const campaignsByTeam: Record<string, any[]> = {}
       for (const tc of allCampaigns || []) {
         if (!campaignsByTeam[tc.team_id]) campaignsByTeam[tc.team_id] = []
@@ -131,7 +136,9 @@ export async function GET(req: NextRequest) {
           campaignId: tc.campaign_id,
           accessMode: tc.access_mode,
           createdAt: tc.created_at,
-          campaign: tc.campaigns,
+          campaign: tc.campaigns
+            ? { ...tc.campaigns, scripts: campaignScripts[tc.campaign_id] || [] }
+            : null,
         })
       }
 
