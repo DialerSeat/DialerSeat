@@ -1,7 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { pickNumberForLead, recordUsage } from '@/lib/numberPool'
 import { isCallableNow } from '@/lib/callingWindow'
-import { webhookUrl } from '@/lib/verifyWebhook'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -299,8 +298,8 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
   const outboundParams: Record<string, string> = {
     To: p.toFormatted,
     From: p.fromNumber,
-    Url: webhookUrl(`${p.env.appUrl}/api/calls/twiml?room=${roomName}&record=true&campaignId=${p.campaignId || ''}`),
-    StatusCallback: webhookUrl(`${p.env.appUrl}/api/calls/status`),
+    Url: `${p.env.appUrl}/api/calls/twiml?room=${roomName}&record=true&campaignId=${p.campaignId || ''}`,
+    StatusCallback: `${p.env.appUrl}/api/calls/status`,
     StatusCallbackMethod: 'POST',
     Timeout: ringTimeout,
   }
@@ -340,7 +339,7 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
     
     outboundParams.MachineDetection = 'DetectMessageEnd'
     outboundParams.AsyncAmd = 'true'
-    outboundParams.AsyncAmdStatusCallback = webhookUrl(`${p.env.appUrl}/api/calls/amd-result`)
+    outboundParams.AsyncAmdStatusCallback = `${p.env.appUrl}/api/calls/amd-result`
     outboundParams.AsyncAmdStatusCallbackMethod = 'POST'
     outboundParams.MachineDetectionTimeout = '30'
     outboundParams.MachineDetectionSpeechThreshold = '2400'
@@ -376,6 +375,29 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
       httpStatus: 500,
     }
   }
+
+  // Fire the agent's SIP leg the instant the lead call is confirmed, rather
+  // than after the DB bookkeeping below. That bookkeeping doesn't depend on
+  // the agent leg at all, so making it wait behind two extra network round
+  // trips before the agent's WebRTC/SIP negotiation even starts was pure
+  // added latency — and that negotiation is usually the slower side of this
+  // bridge, so every ms it loses here tends to show up as dead air once the
+  // lead answers.
+  const agentCallPromise =
+    p.source === 'user_dial'
+      ? fetch(callsUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': authHeader,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            To: `sip:${p.env.sipUsername}@${p.env.sipDomain}`,
+            From: p.fromNumber,
+            Url: `${p.env.appUrl}/api/calls/twiml-agent?room=${roomName}`,
+          }).toString(),
+        })
+      : null
 
   
   try {
@@ -419,21 +441,8 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
   
   
   let agentCallSid: string | undefined
-  if (p.source === 'user_dial') {
-    const agentSipUri = `sip:${p.env.sipUsername}@${p.env.sipDomain}`
-    const agentCallResponse = await fetch(callsUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': authHeader,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        To: agentSipUri,
-        From: p.fromNumber,
-        Url: webhookUrl(`${p.env.appUrl}/api/calls/twiml-agent?room=${roomName}`),
-      }).toString(),
-    })
-
+  if (agentCallPromise) {
+    const agentCallResponse = await agentCallPromise
     const agentData = await agentCallResponse.json()
     console.log(`[placeOutboundCall:${p.source}] Agent call response:`, agentData)
 

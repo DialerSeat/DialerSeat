@@ -230,6 +230,11 @@ function DialerPageInner() {
   const activePollRef = useRef<NodeJS.Timeout | null>(null)
   const swClientRef = useRef<any>(null)
   const swCallRef = useRef<any>(null)
+  // Lets the SIP session's own Terminated event (near-instant — it's the live
+  // call's audio leg tearing down) trigger the same "call ended" check that
+  // startHangupPolling normally only runs every 2s. Set by startHangupPolling
+  // while a call is connected; null otherwise.
+  const sipHangupCheckRef = useRef<(() => void) | null>(null)
   
   
   
@@ -628,6 +633,11 @@ function DialerPageInner() {
                   attachSIPAudio(invitation)
                 } else if (state === SessionState.Terminated) {
                   if (swCallRef.current === invitation) swCallRef.current = null
+                  // The far end hanging up tears down this SIP leg right away —
+                  // don't wait on the next /api/calls/check poll tick to find
+                  // out. No-ops safely if we're not mid-call (see checkNow's
+                  // own guards inside startHangupPolling).
+                  sipHangupCheckRef.current?.()
                 }
               })
               await invitation.accept({
@@ -1483,13 +1493,24 @@ function DialerPageInner() {
   }
 
   const startHangupPolling = (callSid: string) => {
-    const hangupPoll = setInterval(async () => {
+    // Shared by the 2s interval below AND by the SIP session's Terminated
+    // event (wired in onInvite) so a real hangup is caught the instant the
+    // call's audio leg tears down. Guarded so it's safe no matter which
+    // trigger fires first, or if both fire close together:
+    //  - activePollRef acts as a "not yet resolved" flag; once either caller
+    //    resolves the call it's cleared, making every later call a no-op.
+    //  - the callSid check protects against a stale reference left over from
+    //    a previous call still firing after a new one has started.
+    const checkNow = async () => {
+      if (!activePollRef.current) return
+      if (activeCallSidRef.current !== callSid) return
       try {
         const res = await fetch(`/api/calls/check?sid=${callSid}`)
         const d = await res.json()
         if (d.status === 'completed' || d.status === 'canceled' || d.status === 'failed') {
-          clearInterval(hangupPoll)
+          if (activePollRef.current) clearInterval(activePollRef.current)
           activePollRef.current = null
+          sipHangupCheckRef.current = null
           setActiveCallSid(null)
           if (swCallRef.current) {
             try { await swCallRef.current.bye() } catch {}
@@ -1526,11 +1547,14 @@ function DialerPageInner() {
           }
         }
       } catch {
-        clearInterval(hangupPoll)
+        if (activePollRef.current) clearInterval(activePollRef.current)
         activePollRef.current = null
+        sipHangupCheckRef.current = null
       }
-    }, 2000)
+    }
+    const hangupPoll = setInterval(checkNow, 2000)
     activePollRef.current = hangupPoll
+    sipHangupCheckRef.current = checkNow
   }
 
   const startCallPolling = (callSid: string) => {

@@ -34,14 +34,37 @@ export async function GET(req: Request) {
 
     if (campaigns && campaigns.length > 0) {
       const campaignIds = campaigns.map(c => c.id)
-      const { data: links } = await supabaseAdmin
+      const { data: links, error: linksError } = await supabaseAdmin
         .from('campaign_script_links')
-        .select('campaign_id, script_id, sort_order, scripts(id, name, body)')
+        .select('campaign_id, script_id, sort_order')
         .in('campaign_id', campaignIds)
         .order('sort_order', { ascending: true })
+
+      if (linksError) {
+        // Previously this was a nested/embedded select (`scripts(id, name, body)`)
+        // whose result — and any error — was discarded, so a failure here just
+        // silently left every campaign's `scripts` empty with no trace in the
+        // logs. Split into two flat queries (matching script-links/list) so it
+        // doesn't depend on PostgREST's relationship embedding, and surfaced.
+        console.error('campaigns/list: failed to load campaign_script_links', linksError)
+      }
+
+      const scriptIds = Array.from(new Set((links || []).map(l => l.script_id)))
+      let scriptById = new Map<string, { id: string; name: string; body: string }>()
+      if (scriptIds.length > 0) {
+        const { data: scripts, error: scriptsError } = await supabaseAdmin
+          .from('scripts')
+          .select('id, name, body')
+          .in('id', scriptIds)
+        if (scriptsError) {
+          console.error('campaigns/list: failed to load scripts', scriptsError)
+        }
+        scriptById = new Map((scripts || []).map(s => [s.id, s]))
+      }
+
       const byCampaign: Record<string, any[]> = {}
       for (const l of links || []) {
-        const sc = (l as any).scripts
+        const sc = scriptById.get(l.script_id)
         if (!sc) continue
         ;(byCampaign[l.campaign_id] ||= []).push({ id: sc.id, name: sc.name, body: sc.body })
       }
