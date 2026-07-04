@@ -1,5 +1,5 @@
 import { getAreaCodeInfo, extractAreaCode } from './areaCode'
-import { STATE_TIMEZONES, getCallingRule, getFederalHolidays } from './timezones'
+import { STATE_TIMEZONES, getCallingRule } from './timezones'
 import { normalizeState } from './normalizeState'
 
 export interface CallabilityResult {
@@ -71,18 +71,9 @@ export function isCallableNow(lead: LeadInput): CallabilityResult {
 
   const leadLocalTime = `${partMap.hour}:${partMap.minute} ${leadWeekday} ${leadDateStr} (${tz})`
 
-  
-  const holidays = getFederalHolidays(parseInt(partMap.year, 10))
-  if (holidays.has(leadDateStr)) {
-    return {
-      allowed: false,
-      reason: `Federal holiday in ${state}`,
-      retryAfter: tomorrowAtHour(now, tz, rule.startHour),
-      leadState: state,
-      leadTimezone: tz,
-      leadLocalTime,
-    }
-  }
+  // Holiday blocking removed by request — calls are no longer refused for
+  // Independence Day, Thanksgiving, etc. The 8am-9pm (or state-specific)
+  // hour window and Sunday rules below still apply.
 
   
   if (isSunday && rule.noSundayCalls) {
