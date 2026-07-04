@@ -57,6 +57,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [pendingLogo, setPendingLogo] = useState<{ publicUrl: string; dataUrl: string } | null>(null)
   const profileRowRef = useRef<HTMLDivElement | null>(null)
 
+  // Optimistic nav highlight: the instant a nav item is tapped, it should
+  // look selected — regardless of how long the destination route takes to
+  // fetch/render. `pathname` only flips once the new route has actually
+  // resolved, so relying on it alone means the tap looks like it did
+  // nothing until content finishes loading. `pendingHref` is set
+  // synchronously in the click handler and wins over `pathname` until the
+  // real navigation catches up.
+  const [pendingHref, setPendingHref] = useState<string | null>(null)
+
   const setDrawer = (open: boolean) => {
     const d = document.getElementById('ds-menu-drawer')
     const o = document.getElementById('ds-menu-overlay')
@@ -70,6 +79,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (lastPathRef.current !== pathname) {
       lastPathRef.current = pathname
       setDrawer(false)
+      setPendingHref(null)
     }
   }, [pathname])
 
@@ -156,7 +166,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const navItems = isAdmin ? adminNavItems : userNavItems
 
   const isActive = (href: string) => {
+    if (pendingHref !== null) return pendingHref === href
     return pathname === href || pathname.startsWith(href + '/')
+  }
+
+  const handleNavClick = (href: string) => {
+    // Fires synchronously on tap — before Next.js has fetched anything for
+    // the destination. Highlight moves and the mobile drawer closes right
+    // now, not whenever the new route's data happens to arrive.
+    setPendingHref(href)
+    setDrawer(false)
+    window.setTimeout(() => {
+      setPendingHref(prev => (prev === href ? null : prev))
+    }, 6000)
   }
 
   const handleProfileRowClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -349,6 +371,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <Link
               key={item.label}
               href={item.href}
+              prefetch={true}
+              onClick={() => handleNavClick(item.href)}
               style={{
                 display: 'flex',
                 alignItems: 'center',

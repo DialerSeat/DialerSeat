@@ -75,6 +75,7 @@ interface AccessState {
   wlOnboardingPending: boolean
 
   hasActiveWlSub: boolean
+  hasActiveTeamAccess: boolean
 }
 
 interface UserBrandAccess {
@@ -431,7 +432,12 @@ function pickRedirectDestination(
   return new URL(pathAndQuery, 'https://dialerseat.com')
 }
 
+const ACCESS_STATE_CACHE = new Map<string, { state: AccessState; expires: number }>()
+
 async function getAccessState(clerkId: string): Promise<AccessState> {
+  const cached = ACCESS_STATE_CACHE.get(clerkId)
+  if (cached && cached.expires > Date.now()) return cached.state
+
   try {
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -444,6 +450,7 @@ async function getAccessState(clerkId: string): Promise<AccessState> {
       { data: subs },
       { data: userRow },
       { data: preservedRow },
+      { data: activeMembership },
     ] = await Promise.all([
       supabase
         .from('subscriptions')
@@ -460,10 +467,25 @@ async function getAccessState(clerkId: string): Promise<AccessState> {
         .select('clerk_id')
         .eq('clerk_id', clerkId)
         .maybeSingle(),
+      // Team members don't carry their own subscription row — billing for
+      // a seat is either absorbed by the team owner or handled entirely
+      // outside the `subscriptions` table (free/public campaign access).
+      // Without this, any active team member with no personal Stripe
+      // subscription reads as tier "new" below and gets bounced to
+      // /welcome on every single page — a real active member, locked out
+      // of the app entirely.
+      supabase
+        .from('team_members')
+        .select('id')
+        .eq('user_id', clerkId)
+        .eq('status', 'active')
+        .limit(1)
+        .maybeSingle(),
     ])
 
     const isAdmin = !!userRow?.is_admin
     const isPreserved = !!preservedRow
+    const hasActiveTeamAccess = !!activeMembership
 
     const now = Date.now()
     let hasActiveWlSub = false
@@ -499,10 +521,18 @@ async function getAccessState(clerkId: string): Promise<AccessState> {
       }
     }
 
-    return { tier, isAdmin, isPreserved, wlOnboardingPending, hasActiveWlSub }
+    // An active team member's access comes from the team, not a personal
+    // subscription — never let the personal-billing tier lock them out.
+    if (tier !== 'active' && hasActiveTeamAccess) {
+      tier = 'active'
+    }
+
+    const state: AccessState = { tier, isAdmin, isPreserved, wlOnboardingPending, hasActiveWlSub, hasActiveTeamAccess }
+    ACCESS_STATE_CACHE.set(clerkId, { state, expires: Date.now() + CACHE_TTL_MS })
+    return state
   } catch (err) {
     console.error('[proxy] access state lookup failed:', err)
-    return { tier: 'active', isAdmin: false, isPreserved: true, wlOnboardingPending: false, hasActiveWlSub: false }
+    return { tier: 'active', isAdmin: false, isPreserved: true, wlOnboardingPending: false, hasActiveWlSub: false, hasActiveTeamAccess: false }
   }
 }
 

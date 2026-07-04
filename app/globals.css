@@ -151,16 +151,20 @@ input[type='button'] {
   [role='button'],
   input[type='submit'],
   input[type='button'] {
-    transition: transform 0.06s ease-out, opacity 0.06s ease-out !important;
+    transition: opacity 0.05s ease-out !important;
   }
 
+  /* Opacity-only — never transform/scale. Scale on a wide, left-aligned
+     row (e.g. a full-width sidebar link) shifts around the element's
+     center, which visibly drags the text sideways on tap. Opacity has
+     zero geometry impact, so it's always safe regardless of element
+     shape, and still reads as an instant, confident press. */
   a:active,
   button:active:not(:disabled),
   [role='button']:active,
   input[type='submit']:active,
   input[type='button']:active {
-    transform: scale(0.96);
-    opacity: 0.75;
+    opacity: 0.6;
   }
 }
 

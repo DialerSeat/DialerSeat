@@ -92,6 +92,11 @@ export default function SupportApp() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
   const [saving, setSaving] = useState(false)
+  // Narrow viewports collapse to a single pane: list first, tap an item to
+  // view it, back to return. Independent of `selectedId` — desktop still
+  // keeps a submission open by default, mobile should always land on the
+  // list, not whatever was auto-selected.
+  const [mobileShowDetail, setMobileShowDetail] = useState(false)
 
   const load = useCallback(async (which: SubType) => {
     setLoading(true)
@@ -129,6 +134,16 @@ export default function SupportApp() {
 
   useEffect(() => { setDraft(selected?.response_body ?? '') }, [selectedId]) // eslint-disable-line
 
+  const selectItem = useCallback((id: string) => {
+    setSelectedId(id)
+    setMobileShowDetail(true)
+  }, [])
+
+  const changeTab = useCallback((t: SubType) => {
+    setTab(t)
+    setMobileShowDetail(false)
+  }, [])
+
   const activeTab = TABS.find(t => t.key === tab)!
   const newCount = (t: SubType) => items.filter(i => i.status === 'new').length
 
@@ -162,9 +177,18 @@ export default function SupportApp() {
   }, [selected, draft, patch])
 
   return (
-    <div style={{ display: 'flex', height: '100%', background: INK, color: TXT, fontFamily: FONT }}>
+    <div className={`sup-root${mobileShowDetail ? ' sup-detail-open' : ''}`} style={{ display: 'flex', height: '100%', background: INK, color: TXT, fontFamily: FONT, overflow: 'hidden', position: 'relative' }}>
+      <style>{`
+        @media (max-width: 720px) {
+          .sup-list-pane { width: 100% !important; border-right: none !important; }
+          .sup-back-btn { display: flex !important; }
+          .sup-root.sup-detail-open .sup-list-pane { display: none !important; }
+          .sup-root:not(.sup-detail-open) .sup-detail-pane { display: none !important; }
+          .sup-detail-pane { width: 100% !important; }
+        }
+      `}</style>
       {/* ── LEFT: tab rail + list ── */}
-      <div style={{ width: 340, borderRight: `1px solid ${LINE}`, display: 'flex', flexDirection: 'column', background: PANEL }}>
+      <div className="sup-list-pane" style={{ width: 340, borderRight: `1px solid ${LINE}`, display: 'flex', flexDirection: 'column', background: PANEL }}>
         {/* tab rail */}
         <div style={{ display: 'flex', padding: 10, gap: 6, borderBottom: `1px solid ${LINE}` }}>
           {TABS.map(t => {
@@ -172,7 +196,7 @@ export default function SupportApp() {
             return (
               <button
                 key={t.key}
-                onClick={() => setTab(t.key)}
+                onClick={() => changeTab(t.key)}
                 style={{
                   flex: 1, padding: '10px 8px', borderRadius: 8, cursor: 'pointer',
                   border: `1px solid ${active ? t.accent : 'transparent'}`,
@@ -205,7 +229,7 @@ export default function SupportApp() {
             return (
               <button
                 key={it.id}
-                onClick={() => setSelectedId(it.id)}
+                onClick={() => selectItem(it.id)}
                 style={{
                   width: '100%', textAlign: 'left', cursor: 'pointer',
                   padding: '12px 14px', borderBottom: `1px solid ${LINE}`,
@@ -248,7 +272,7 @@ export default function SupportApp() {
       </div>
 
       {/* ── RIGHT: detail ── */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <div className="sup-detail-pane" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         {!selected ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: TXT_FAINT, fontSize: 13 }}>
             Select a submission to view it.
@@ -258,6 +282,18 @@ export default function SupportApp() {
             {/* header */}
             <div style={{ padding: '18px 22px', borderBottom: `1px solid ${LINE}`, background: PANEL }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
+                <button
+                  className="sup-back-btn"
+                  onClick={() => setMobileShowDetail(false)}
+                  aria-label="Back to list"
+                  style={{
+                    display: 'none', flexShrink: 0, width: 34, height: 34, borderRadius: 9,
+                    border: `1px solid ${LINE}`, background: 'transparent', color: TXT_DIM,
+                    cursor: 'pointer', alignItems: 'center', justifyContent: 'center', fontSize: 16,
+                  }}
+                >
+                  ←
+                </button>
                 <div style={{
                   width: 44, height: 44, borderRadius: 11, flexShrink: 0,
                   background: `${activeTab.accent}26`, color: activeTab.accent,
@@ -338,7 +374,7 @@ export default function SupportApp() {
                     color: TXT, fontFamily: FONT, fontSize: 13, lineHeight: 1.6, padding: 14, outline: 'none',
                   }}
                 />
-                <div style={{ display: 'flex', gap: 10, marginTop: 10, alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: 10, marginTop: 10, alignItems: 'center', flexWrap: 'wrap' }}>
                   <button
                     onClick={sendResponse}
                     disabled={!draft.trim() || saving}
