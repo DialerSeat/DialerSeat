@@ -95,18 +95,25 @@ export async function GET(req: Request) {
         return apiError(error, { route: 'leads/next' })
       }
 
-      const callable = (candidates || []).find(c => isCallableNow({
-        phone: c.phone,
-        state: c.state,
-      }).allowed)
+      let callable: any = null
+      let blockReason: string | null = null
+      for (const c of candidates || []) {
+        const result = isCallableNow({ phone: c.phone, state: c.state })
+        if (result.allowed) { callable = c; break }
+        if (!blockReason) blockReason = result.reason || null
+      }
 
       if (!callable) {
 
         const hasAnyCandidates = (candidates?.length || 0) > 0
         return NextResponse.json({
           success: false,
+          // Previously hardcoded to an "outside 8am-9pm window" message no
+          // matter which of isCallableNow's checks actually failed (e.g. a
+          // federal holiday), which read as a clock bug when the real reason
+          // was the calendar date.
           error: hasAnyCandidates
-            ? 'All available leads are outside their local 8am-9pm calling window. Try again in a few hours.'
+            ? (blockReason || 'All available leads are outside their local calling window. Try again later.')
             : 'No more team leads',
           tcpaBlocked: hasAnyCandidates,
         }, { status: 404 })
@@ -155,17 +162,20 @@ export async function GET(req: Request) {
       return apiError(error, { route: 'leads/next' })
     }
 
-    const callable = (candidates || []).find(c => isCallableNow({
-      phone: c.phone,
-      state: c.state,
-    }).allowed)
+    let callable: any = null
+    let blockReason: string | null = null
+    for (const c of candidates || []) {
+      const result = isCallableNow({ phone: c.phone, state: c.state })
+      if (result.allowed) { callable = c; break }
+      if (!blockReason) blockReason = result.reason || null
+    }
 
     if (!callable) {
       const hasAnyCandidates = (candidates?.length || 0) > 0
       return NextResponse.json({
         success: false,
         error: hasAnyCandidates
-          ? 'All available leads are outside their local 8am-9pm calling window. Try again in a few hours.'
+          ? (blockReason || 'All available leads are outside their local calling window. Try again later.')
           : 'No more leads',
         tcpaBlocked: hasAnyCandidates,
       }, { status: 404 })

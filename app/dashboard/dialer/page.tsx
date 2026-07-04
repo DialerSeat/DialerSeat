@@ -220,6 +220,10 @@ function DialerPageInner() {
 
   const [shouldYield, setShouldYield] = useState(false)
   const [tcpaBlockedAll, setTcpaBlockedAll] = useState(false)
+  // The real reason /api/leads/next gave for why no lead is callable right
+  // now (e.g. "Federal holiday in NC") — shown instead of assuming it's
+  // always the 8am-9pm clock window, which isn't the only thing this can be.
+  const [noLeadsReason, setNoLeadsReason] = useState<string | null>(null)
 
   const [modeDropdownOpen, setModeDropdownOpen] = useState(false)
   const [modeSaving, setModeSaving] = useState(false)
@@ -1224,7 +1228,10 @@ function DialerPageInner() {
   
   
   
-  const armDialing = () => { callIntentRef.current = true }
+  const armDialing = () => {
+    callIntentRef.current = true
+    console.log('[sip] armed — expecting an agent-leg INVITE')
+  }
   
   
   
@@ -1244,6 +1251,9 @@ function DialerPageInner() {
         swCallRef.current = null
       }
       return
+    }
+    if (callIntentRef.current) {
+      console.log('[sip] disarmed — no longer expecting an agent-leg INVITE', { force: !!opts?.force })
     }
     callIntentRef.current = false
     
@@ -1315,10 +1325,12 @@ function DialerPageInner() {
     if (data.success) {
       setNoLeads(false)
       setTcpaBlockedAll(false)
+      setNoLeadsReason(null)
       return data.lead
     } else {
       setNoLeads(true)
       setTcpaBlockedAll(!!data.tcpaBlocked)
+      setNoLeadsReason(data.tcpaBlocked ? (data.error || null) : null)
       return null
     }
   }
@@ -1879,6 +1891,11 @@ function DialerPageInner() {
 
   const handleManualDial = async () => {
     if (!manualNumber) return
+    // Neither the dial button nor the Enter-key handler previously checked
+    // this, so pressing either again while already calling/connected placed
+    // a second outbound call (and a second agent SIP leg) on top of the
+    // first instead of being a no-op.
+    if (status !== 'idle') return
     setDialZoomed(false)
     setStatus('calling')
     setSessionStats(s => ({ ...s, calls: s.calls + 1 }))
@@ -2258,7 +2275,7 @@ function DialerPageInner() {
             borderBottom: `3px solid ${terminalBorder}`, color: terminalMuted,
             fontSize: inOverlay ? '24px' : '16px', cursor: 'pointer',
           }}>⌫</button>
-          <button onClick={handleManualDial} disabled={!manualNumber} style={{
+          <button onClick={handleManualDial} disabled={!manualNumber || status !== 'idle'} style={{
             padding: inOverlay ? '20px' : '12px', borderRadius: '3px', border: 'none',
             background: manualNumber ? terminalDark : terminalSurface,
             borderBottom: `3px solid ${manualNumber ? 'var(--brand-primary)' : terminalBorder}`,
@@ -2866,7 +2883,7 @@ function DialerPageInner() {
                         letterSpacing: '2px',
                       }}>
                         {tcpaBlockedAll
-                          ? 'ALL LEADS OUTSIDE 8AM-9PM WINDOW — TRY LATER'
+                          ? (noLeadsReason || 'ALL LEADS OUTSIDE CALLING WINDOW — TRY LATER')
                           : isPersonalScope
                             ? 'UPLOAD MORE LEADS TO CONTINUE'
                             : 'NO MORE TEAM LEADS — TRY ANOTHER CAMPAIGN OR SCOPE'}
