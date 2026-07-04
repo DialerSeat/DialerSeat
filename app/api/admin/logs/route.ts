@@ -16,7 +16,7 @@ const WL_WEEKLY_CENTS = 75 * 100
 
 interface LogEntry {
   id: string
-  event_type: 'signup' | 'renewal' | 'cancel'
+  event_type: 'account_created' | 'initial_sub' | 'resub' | 'renewal' | 'cancel'
   user_name: string
   user_email: string | null
   amount_cents: number
@@ -52,7 +52,7 @@ export async function GET() {
 
     const { data: users } = await supabase
       .from('users')
-      .select('clerk_id, email, first_name, last_name, stripe_customer_id, is_admin, exclude_from_analytics')
+      .select('clerk_id, email, first_name, last_name, created_at, stripe_customer_id, is_admin, exclude_from_analytics')
 
     const excluded = new Set<string>()
     const userByClerkId = new Map<string, any>()
@@ -66,25 +66,66 @@ export async function GET() {
       if (u.stripe_customer_id) userByCustomerId.set(u.stripe_customer_id, u)
     }
 
+    const entries: LogEntry[] = []
+    let accountsCreated = 0
+    let initialSubs = 0
+    let resubs = 0
+    let cancels = 0
+
+    // account creation — sourced from the users table directly, independent
+    // of whether they ever subscribed to anything
+    for (const u of userByClerkId.values()) {
+      if (!u.created_at) continue
+      const created = new Date(u.created_at).getTime()
+      if (created >= windowStart && created <= now) {
+        accountsCreated++
+        entries.push({
+          id: `account-${u.clerk_id}`,
+          event_type: 'account_created',
+          user_name: nameFor(u),
+          user_email: u.email ?? null,
+          amount_cents: 0,
+          date_iso: u.created_at,
+          retention_weeks: null,
+          source: 'supabase:users',
+        })
+      }
+    }
+
     const { data: subs } = await supabase
       .from('subscriptions')
       .select('user_id, status, created_at, canceled_at, stripe_price_id, stripe_subscription_id')
 
-    const entries: LogEntry[] = []
-    let signups = 0
-    let cancels = 0
-
+    // Determine, per user, which subscription row was their *first* ever
+    // (across all time, not just this window) so later ones can be labeled
+    // as resubscriptions rather than lumped in as generic "signups".
+    const subsByUser = new Map<string, typeof subs>()
     for (const s of subs || []) {
+      if (excluded.has(s.user_id)) continue
+      if (!subsByUser.has(s.user_id)) subsByUser.set(s.user_id, [] as any)
+      ;(subsByUser.get(s.user_id) as any[]).push(s)
+    }
+    const firstSubId = new Map<string, string>() // user_id -> stripe_subscription_id | fallback key
+    for (const [userId, list] of subsByUser.entries()) {
+      const sorted = [...(list as any[])].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+      const first = sorted[0]
+      if (first) firstSubId.set(userId, first.stripe_subscription_id || `${userId}-${first.created_at}`)
+    }
+
+    for (const s of (subs || [])) {
       if (excluded.has(s.user_id)) continue
       const u = userByClerkId.get(s.user_id)
 
       if (!NEVER_PAID_STATUSES.includes(s.status)) {
         const created = new Date(s.created_at).getTime()
         if (created >= windowStart && created <= now) {
-          signups++
+          const key = s.stripe_subscription_id || `${s.user_id}-${s.created_at}`
+          const isInitial = firstSubId.get(s.user_id) === key
+          if (isInitial) initialSubs++
+          else resubs++
           entries.push({
-            id: `signup-${s.stripe_subscription_id || s.user_id + '-' + s.created_at}`,
-            event_type: 'signup',
+            id: `sub-${key}`,
+            event_type: isInitial ? 'initial_sub' : 'resub',
             user_name: nameFor(u),
             user_email: u?.email ?? null,
             amount_cents: weeklyCentsFor(s.stripe_price_id),
@@ -163,7 +204,7 @@ export async function GET() {
 
     return NextResponse.json({
       entries: entries.slice(0, MAX_ENTRIES),
-      counts: { signups, renewals, cancels },
+      counts: { accountsCreated, initialSubs, resubs, renewals, cancels },
       window_days: WINDOW_DAYS,
     })
   } catch (err) {

@@ -29,7 +29,7 @@ const supabase = createClient(
   { auth: { persistSession: false } }
 )
 
-const VALID_TYPES = ['support', 'bug', 'exit'] as const
+const VALID_TYPES = ['support', 'bug', 'exit', 'suggestion'] as const
 type SubmissionType = (typeof VALID_TYPES)[number]
 
 const MAX_BODY = 8000

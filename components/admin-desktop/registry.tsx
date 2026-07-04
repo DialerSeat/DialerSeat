@@ -58,6 +58,10 @@ const OverviewApp = dynamic(() => import('./apps/Overview'), {
   loading: () => <AppLoading />,
   ssr: false,
 })
+const UserTrackerApp = dynamic(() => import('./apps/UserTracker'), {
+  loading: () => <AppLoading />,
+  ssr: false,
+})
 const TeamsApp = dynamic(() => import('./apps/Teams'), {
   loading: () => <AppLoading />,
   ssr: false,
@@ -146,6 +150,17 @@ export const APPS: AppDefinition[] = [
     visibleTo: ['admin'],
     Component: OverviewApp,
     defaultSize: { width: 1000, height: 720 },
+  },
+  {
+    id: 'user-tracker',
+    name: 'User Tracker',
+    shortName: 'Tracker',
+    icon: '📈',
+    iconBg: 'linear-gradient(135deg, #8a7bff, #6d5bf7)',
+    description: 'Per-user usage analytics — ranked, filterable, with platform-wide overview',
+    visibleTo: ['admin'],
+    Component: UserTrackerApp,
+    defaultSize: { width: 1120, height: 760 },
   },
   {
     id: 'teams',

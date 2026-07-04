@@ -31,7 +31,7 @@ const supabase = createClient(
   { auth: { persistSession: false } }
 )
 
-const VALID_TYPES = ['support', 'bug', 'exit']
+const VALID_TYPES = ['support', 'bug', 'exit', 'suggestion']
 const VALID_STATUS = ['new', 'open', 'responded', 'resolved', 'closed']
 const MAX_RESPONSE = 8000
 

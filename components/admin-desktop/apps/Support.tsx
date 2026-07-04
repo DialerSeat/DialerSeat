@@ -22,7 +22,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 
 
 
-type SubType = 'support' | 'bug' | 'exit'
+type SubType = 'support' | 'bug' | 'suggestion' | 'exit'
 type Status = 'new' | 'open' | 'responded' | 'resolved' | 'closed'
 
 interface Submission {
@@ -46,6 +46,7 @@ interface Submission {
 const TABS: { key: SubType; label: string; icon: string; accent: string }[] = [
   { key: 'support', label: 'Support', icon: '✦', accent: '#4a9eff' },
   { key: 'bug', label: 'Bugs', icon: '⚑', accent: '#ff6b5e' },
+  { key: 'suggestion', label: 'Suggestions', icon: '💡', accent: '#f7c948' },
   { key: 'exit', label: 'Exit', icon: '⤬', accent: '#c9a24a' },
 ]
 

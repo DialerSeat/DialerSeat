@@ -228,6 +228,12 @@ export default async function RootLayout({
           <script
             dangerouslySetInnerHTML={{
               __html:
+                "(function(){document.addEventListener('touchstart',function(){},{passive:true});})();",
+            }}
+          />
+          <script
+            dangerouslySetInnerHTML={{
+              __html:
                 "(function(){if(!('standalone' in navigator)||navigator.standalone!==true)return;document.addEventListener('touchstart',function(e){if(e.touches.length!==1)return;var x=e.touches[0].clientX;var w=window.innerWidth;if(x>24&&x<w-24)return;var t=e.target;if(t&&t.closest&&t.closest('a,button,input,select,textarea,label,[role=\"button\"]'))return;if(e.cancelable)e.preventDefault();},{passive:false});})();",
             }}
           />

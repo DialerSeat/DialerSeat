@@ -28,6 +28,7 @@ export type AppId =
   | 'dashboard'
   | 'analytics'
   | 'overview'
+  | 'user-tracker'
   | 'teams'
   | 'numbers'
   | 'whitelabel'

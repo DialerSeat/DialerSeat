@@ -20,7 +20,7 @@ import { useEffect, useState } from 'react'
 
 interface LogEntry {
   id: string
-  event_type: 'signup' | 'renewal' | 'cancel'
+  event_type: 'account_created' | 'initial_sub' | 'resub' | 'renewal' | 'cancel'
   user_name: string
   user_email: string | null
   amount_cents: number
@@ -31,11 +31,11 @@ interface LogEntry {
 
 interface LogsResponse {
   entries: LogEntry[]
-  counts: { signups: number; renewals: number; cancels: number }
+  counts: { accountsCreated: number; initialSubs: number; resubs: number; renewals: number; cancels: number }
   window_days: number
 }
 
-type FilterMode = 'all' | 'signup' | 'renewal' | 'cancel'
+type FilterMode = 'all' | 'account_created' | 'initial_sub' | 'resub' | 'renewal' | 'cancel'
 
 
 const C = {
@@ -44,8 +44,10 @@ const C = {
   text: '#00ff41',         // Matrix green — primary
   textDim: '#00a02a',      // Dimmer green for secondary
   textMute: '#0a5a18',     // Even dimmer for labels
-  signup: '#00ff41',       // Green
-  renewal: '#5cb6ff',      // Cyan-blue
+  account_created: '#c084fc', // Violet — new account
+  initial_sub: '#00ff41',     // Green — first-ever subscription
+  resub: '#5ce6b8',           // Teal — came back after lapsing
+  renewal: '#5cb6ff',       // Cyan-blue
   cancel: '#ff4444',       // Red
   error: '#ff8844',        // Amber for errors
   amount: '#ffe048',       // Yellow for money
@@ -53,7 +55,7 @@ const C = {
 
 const FONT = '"SF Mono", "Cascadia Mono", "JetBrains Mono", "Fira Code", Menlo, Consolas, "Courier New", monospace'
 
-const FILTER_KEYS: FilterMode[] = ['all', 'signup', 'renewal', 'cancel']
+const FILTER_KEYS: FilterMode[] = ['all', 'account_created', 'initial_sub', 'resub', 'renewal', 'cancel']
 
 export default function LogsApp() {
   const [data, setData] = useState<LogsResponse | null>(null)
@@ -108,7 +110,7 @@ export default function LogsApp() {
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
         return
       }
-      if (e.key >= '1' && e.key <= '4') {
+      if (e.key >= '1' && e.key <= '6') {
         setFilter(FILTER_KEYS[Number(e.key) - 1])
       } else if (e.key === 'r' || e.key === 'R') {
         refetch()
@@ -159,7 +161,9 @@ export default function LogsApp() {
         <span style={{ color: C.textMute, marginRight: 8 }}>$ filter</span>
         {([
           { key: 'all', label: 'all', count: entries.length },
-          { key: 'signup', label: 'signup', count: data?.counts.signups ?? 0 },
+          { key: 'account_created', label: 'account created', count: data?.counts.accountsCreated ?? 0 },
+          { key: 'initial_sub', label: 'initial sub', count: data?.counts.initialSubs ?? 0 },
+          { key: 'resub', label: 'resub', count: data?.counts.resubs ?? 0 },
           { key: 'renewal', label: 'renewal', count: data?.counts.renewals ?? 0 },
           { key: 'cancel', label: 'cancel', count: data?.counts.cancels ?? 0 },
         ] as const).map((f, i) => (
@@ -212,7 +216,7 @@ export default function LogsApp() {
             <span style={{ color: C.textDim }}>
               {filter === 'all'
                 ? 'No customer events in the last 90 days.'
-                : `No ${filter} events in the last 90 days.`}
+                : `No ${filter.replace('_', ' ')} events in the last 90 days.`}
             </span>
           </div>
         )}
@@ -241,7 +245,9 @@ export default function LogsApp() {
         <div style={S.footer}>
           <span>window: last {data.window_days}d</span>
           <span>events: {entries.length}{entries.length === 200 ? ' (capped)' : ''}</span>
-          <span>signups: {data.counts.signups}</span>
+          <span>accounts created: {data.counts.accountsCreated}</span>
+          <span>initial subs: {data.counts.initialSubs}</span>
+          <span>resubs: {data.counts.resubs}</span>
           <span>renewals: {data.counts.renewals}</span>
           <span>cancels: {data.counts.cancels}</span>
         </div>
@@ -254,11 +260,8 @@ export default function LogsApp() {
 function LogLine({ entry }: { entry: LogEntry }) {
   const date = new Date(entry.date_iso)
   const ts = formatTimestamp(date)
-  const eventColor =
-    entry.event_type === 'signup' ? C.signup
-    : entry.event_type === 'renewal' ? C.renewal
-    : C.cancel
-  const eventLabel = entry.event_type.toUpperCase().padEnd(7, ' ')
+  const eventColor = C[entry.event_type] ?? C.text
+  const eventLabel = entry.event_type.toUpperCase().replace('_', ' ').padEnd(15, ' ')
 
   return (
     <div className="logs-row" style={S.line}>
@@ -271,7 +274,7 @@ function LogLine({ entry }: { entry: LogEntry }) {
           <span style={{ color: C.textMute }}>&lt;{entry.user_email}&gt;</span>
         </>
       )}
-      {entry.event_type !== 'cancel' && (
+      {(entry.event_type === 'initial_sub' || entry.event_type === 'resub' || entry.event_type === 'renewal') && (
         <>
           {' '}
           <span style={{ color: C.amount }}>${(entry.amount_cents / 100).toFixed(2)}</span>

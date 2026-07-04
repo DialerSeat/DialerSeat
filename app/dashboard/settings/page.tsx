@@ -151,6 +151,25 @@ export default function SettingsPage() {
   const [brandOptions, setBrandOptions] = useState<BrandOptions | null>(null)
   const [switchingBrand, setSwitchingBrand] = useState(false)
 
+  // ── support form (settings → subscription details) ──
+  const [showSupport, setShowSupport] = useState(false)
+  const [supportType, setSupportType] = useState<'support' | 'bug' | 'suggestion'>('support')
+  const [supportSubject, setSupportSubject] = useState('')
+  const [supportBody, setSupportBody] = useState('')
+  const [supportSubmitting, setSupportSubmitting] = useState(false)
+  const [supportSubmitted, setSupportSubmitted] = useState(false)
+  const [supportError, setSupportError] = useState<string | null>(null)
+
+  // ── delete account (feedback first, then confirm) ──
+  const [showDelete, setShowDelete] = useState(false)
+  const [deleteStep, setDeleteStep] = useState<'feedback' | 'confirm' | 'done'>('feedback')
+  const [exitRating, setExitRating] = useState<number>(0)
+  const [exitFeedback, setExitFeedback] = useState('')
+  const [exitSubmitting, setExitSubmitting] = useState(false)
+  const [deleteTypedConfirm, setDeleteTypedConfirm] = useState('')
+  const [deleteAccError, setDeleteAccError] = useState<string | null>(null)
+  const [deleteAccSubmitting, setDeleteAccSubmitting] = useState(false)
+
   const loadStatus = async () => {
     try {
       const [statusRes, summaryRes, brandRes] = await Promise.all([
@@ -289,6 +308,111 @@ export default function SettingsPage() {
     } catch (err: any) {
       setError(err.message || 'Failed to switch view')
       setSwitchingBrand(false)
+    }
+  }
+
+  function openSupport() {
+    setShowSupport(true)
+    setSupportType('support')
+    setSupportSubject('')
+    setSupportBody('')
+    setSupportError(null)
+    setSupportSubmitted(false)
+  }
+  function closeSupport() {
+    if (supportSubmitting) return
+    setShowSupport(false)
+  }
+  async function submitSupport() {
+    if (!supportBody.trim()) { setSupportError('Please describe what\'s going on.'); return }
+    setSupportSubmitting(true)
+    setSupportError(null)
+    try {
+      const res = await fetch('/api/admin/support/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: supportType,
+          subject: supportSubject.trim() || null,
+          body: supportBody.trim(),
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) {
+        setSupportError(data.error || 'Failed to send. Please try again.')
+        return
+      }
+      setSupportSubmitted(true)
+      setSupportSubject('')
+      setSupportBody('')
+    } catch (err: any) {
+      setSupportError(err?.message || 'Failed to send. Please try again.')
+    } finally {
+      setSupportSubmitting(false)
+    }
+  }
+
+  function openDeleteAccount() {
+    setShowDelete(true)
+    setDeleteStep('feedback')
+    setExitRating(0)
+    setExitFeedback('')
+    setDeleteTypedConfirm('')
+    setDeleteAccError(null)
+  }
+  function closeDeleteAccount() {
+    if (exitSubmitting || deleteAccSubmitting) return
+    setShowDelete(false)
+  }
+  async function submitExitFeedback(skip: boolean) {
+    setExitSubmitting(true)
+    try {
+      if (!skip && (exitFeedback.trim() || exitRating > 0)) {
+        await fetch('/api/admin/support/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'exit',
+            subject: exitRating > 0 ? `Exit rating: ${exitRating}/5` : 'Account deletion feedback',
+            body: exitFeedback.trim() || '(no written feedback — rating only)',
+            disposition: exitRating > 0 ? `${exitRating}/5` : null,
+          }),
+        })
+      }
+    } catch {
+      // never block account deletion on a feedback submission failure
+    } finally {
+      setExitSubmitting(false)
+      setDeleteStep('confirm')
+    }
+  }
+  async function executeDeleteAccount() {
+    if (deleteTypedConfirm.trim().toUpperCase() !== 'DELETE') return
+    setDeleteAccSubmitting(true)
+    setDeleteAccError(null)
+    try {
+      const res = await fetch('/api/account/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: 'DELETE' }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) {
+        setDeleteAccError(data.error || 'Failed to delete account.')
+        setDeleteAccSubmitting(false)
+        return
+      }
+      try {
+        await user?.delete()
+      } catch {
+        // app data is already wiped; identity cleanup failing shouldn't block the user
+      }
+      setDeleteStep('done')
+      setDeleteAccSubmitting(false)
+      setTimeout(() => { window.location.href = '/' }, 2200)
+    } catch (err: any) {
+      setDeleteAccError(err?.message || 'Network error — please try again.')
+      setDeleteAccSubmitting(false)
     }
   }
 
@@ -445,6 +569,18 @@ export default function SettingsPage() {
           )}
         </div>
 
+        {/* SUPPORT — reaches the same inbox as the admin Support desktop app */}
+        <div style={sectionStyle}>
+          <div style={sectionHeaderStyle}>▸ SUPPORT</div>
+          <div style={{ ...mutedStyle, marginBottom: 12, lineHeight: 1.6 }}>
+            Found a bug, need help, or have an idea to make DialerSeat better?
+            Send it straight to us.
+          </div>
+          <button onClick={openSupport} style={editorButtonStyle}>
+            CONTACT SUPPORT
+          </button>
+        </div>
+
         {/* TEAM SEATS */}
         {hasAnySeats && (
           <div style={sectionStyle}>
@@ -587,6 +723,22 @@ export default function SettingsPage() {
             Your subscription is scheduled to cancel at the end of the current billing period.
           </div>
         )}
+
+        {/* DELETE ACCOUNT — separate from subscription cancellation; wipes app data + Clerk identity */}
+        <div style={{ ...sectionStyle, borderLeft: '3px solid #8a1a1a', marginTop: 24 }}>
+          <div style={{ ...sectionHeaderStyle, color: '#e0a0a0' }}>▸ DELETE ACCOUNT</div>
+          <div style={{ ...mutedStyle, marginBottom: 12, lineHeight: 1.6 }}>
+            Permanently deletes your DialerSeat account, leads, campaigns, calls, and sign-in.
+            This cannot be undone.
+          </div>
+          {isAdmin ? (
+            <div style={adminNoticeStyle}>ADMIN ACCOUNTS CANNOT SELF-DELETE FROM THIS PANEL</div>
+          ) : (
+            <button onClick={openDeleteAccount} style={miniDangerButtonStyle}>
+              DELETE MY ACCOUNT
+            </button>
+          )}
+        </div>
       </div>
 
       {seatConfirmTarget && (
@@ -648,6 +800,260 @@ export default function SettingsPage() {
                 {seatCancelling !== null ? 'CANCELING...' : 'CONFIRM CANCEL'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showSupport && (
+        <div
+          onClick={closeSupport}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 100, padding: 20,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: CHROME.surface, border: `1px solid ${CHROME.border}`,
+              borderTop: '3px solid var(--brand-primary)', borderRadius: 4, padding: 28,
+              maxWidth: 460, width: '100%', fontFamily: FUTURA, color: CHROME.text,
+              maxHeight: '85vh', overflowY: 'auto', boxSizing: 'border-box',
+            }}
+          >
+            {supportSubmitted ? (
+              <>
+                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 4, color: 'var(--brand-primary)', marginBottom: 14 }}>
+                  SENT
+                </div>
+                <p style={{ fontSize: 13, lineHeight: 1.6, margin: '0 0 20px 0' }}>
+                  Thanks — we&apos;ve got it and will follow up by email if we need anything else.
+                </p>
+                <button onClick={closeSupport} style={secondaryButtonStyle}>CLOSE</button>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 4, color: 'var(--brand-primary)', marginBottom: 14 }}>
+                  CONTACT SUPPORT
+                </div>
+
+                <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
+                  {([
+                    { key: 'support', label: 'QUESTION' },
+                    { key: 'bug', label: 'BUG' },
+                    { key: 'suggestion', label: 'SUGGESTION' },
+                  ] as const).map(t => (
+                    <button
+                      key={t.key}
+                      onClick={() => setSupportType(t.key)}
+                      style={{
+                        padding: '7px 12px', borderRadius: 3, cursor: 'pointer',
+                        border: `1px solid ${supportType === t.key ? 'var(--brand-primary)' : CHROME.border}`,
+                        background: supportType === t.key ? 'var(--brand-primary-soft)' : 'transparent',
+                        color: supportType === t.key ? 'var(--brand-primary)' : CHROME.muted,
+                        fontFamily: FUTURA, fontSize: 10, letterSpacing: 1.5, fontWeight: 700,
+                      }}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+
+                <label style={typePromptStyle}>SUBJECT (OPTIONAL)</label>
+                <input
+                  type="text"
+                  value={supportSubject}
+                  onChange={e => setSupportSubject(e.target.value)}
+                  placeholder={supportType === 'suggestion' ? 'e.g. Dark mode for the dialer' : 'Short summary'}
+                  maxLength={200}
+                  style={{ ...typeInputStyle, color: CHROME.text, border: `1px solid ${CHROME.border}`, fontFamily: FUTURA }}
+                />
+
+                <label style={typePromptStyle}>
+                  {supportType === 'suggestion' ? 'WHAT WOULD MAKE DIALERSEAT BETTER?' : 'WHAT\'S GOING ON?'}
+                </label>
+                <textarea
+                  value={supportBody}
+                  onChange={e => setSupportBody(e.target.value)}
+                  placeholder={
+                    supportType === 'bug' ? 'What happened, and what did you expect instead?'
+                    : supportType === 'suggestion' ? 'Describe the idea — the more detail, the better.'
+                    : 'Tell us what you need help with.'
+                  }
+                  maxLength={8000}
+                  rows={5}
+                  style={{
+                    width: '100%', resize: 'vertical', boxSizing: 'border-box',
+                    background: CHROME.sectionBg, border: `1px solid ${CHROME.border}`, borderRadius: 3,
+                    color: CHROME.text, fontFamily: FUTURA, fontSize: 13, lineHeight: 1.6, padding: 12,
+                    outline: 'none', marginBottom: 16,
+                  }}
+                />
+
+                {supportError && <div style={errorStyle}>{supportError}</div>}
+
+                <div className="settings-confirm-buttons" style={confirmButtonsStyle}>
+                  <button onClick={closeSupport} disabled={supportSubmitting} style={secondaryButtonStyle}>
+                    CANCEL
+                  </button>
+                  <button
+                    onClick={submitSupport}
+                    disabled={supportSubmitting || !supportBody.trim()}
+                    style={{
+                      ...secondaryButtonStyle, flex: 1,
+                      opacity: supportSubmitting || !supportBody.trim() ? 0.4 : 1,
+                      cursor: supportSubmitting || !supportBody.trim() ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    {supportSubmitting ? 'SENDING...' : 'SEND'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {showDelete && (
+        <div
+          onClick={closeDeleteAccount}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 100, padding: 20,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: CHROME.surface, border: `1px solid ${CHROME.border}`,
+              borderTop: '3px solid #8a1a1a', borderRadius: 4, padding: 28,
+              maxWidth: 460, width: '100%', fontFamily: FUTURA, color: CHROME.text,
+              maxHeight: '85vh', overflowY: 'auto', boxSizing: 'border-box',
+            }}
+          >
+            {deleteStep === 'feedback' && (
+              <>
+                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 4, color: '#ff8888', marginBottom: 10 }}>
+                  BEFORE YOU GO
+                </div>
+                <p style={{ fontSize: 13, lineHeight: 1.6, margin: '0 0 16px 0', color: CHROME.text }}>
+                  How was your experience with DialerSeat? Your feedback goes straight to the
+                  team — it genuinely helps us improve.
+                </p>
+
+                <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
+                  {[1, 2, 3, 4, 5].map(n => (
+                    <button
+                      key={n}
+                      onClick={() => setExitRating(n)}
+                      aria-label={`${n} star${n > 1 ? 's' : ''}`}
+                      style={{
+                        flex: 1, padding: '10px 0', borderRadius: 3, cursor: 'pointer',
+                        border: `1px solid ${exitRating >= n ? '#ffaa3e' : CHROME.border}`,
+                        background: exitRating >= n ? 'rgba(255,170,62,0.14)' : 'transparent',
+                        color: exitRating >= n ? '#ffaa3e' : CHROME.muted,
+                        fontSize: 16, fontFamily: FUTURA,
+                      }}
+                    >
+                      ★
+                    </button>
+                  ))}
+                </div>
+
+                <textarea
+                  value={exitFeedback}
+                  onChange={e => setExitFeedback(e.target.value)}
+                  placeholder="What worked, what didn't, what we should fix — anything at all."
+                  maxLength={8000}
+                  rows={5}
+                  style={{
+                    width: '100%', resize: 'vertical', boxSizing: 'border-box',
+                    background: CHROME.sectionBg, border: `1px solid ${CHROME.border}`, borderRadius: 3,
+                    color: CHROME.text, fontFamily: FUTURA, fontSize: 13, lineHeight: 1.6, padding: 12,
+                    outline: 'none', marginBottom: 16,
+                  }}
+                />
+
+                <div className="settings-confirm-buttons" style={confirmButtonsStyle}>
+                  <button
+                    onClick={() => submitExitFeedback(true)}
+                    disabled={exitSubmitting}
+                    style={secondaryButtonStyle}
+                  >
+                    SKIP
+                  </button>
+                  <button
+                    onClick={() => submitExitFeedback(false)}
+                    disabled={exitSubmitting}
+                    style={{ ...secondaryButtonStyle, flex: 1 }}
+                  >
+                    {exitSubmitting ? 'SUBMITTING...' : 'SUBMIT & CONTINUE'}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {deleteStep === 'confirm' && (
+              <>
+                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 4, color: '#ff8888', marginBottom: 14 }}>
+                  PERMANENTLY DELETE YOUR ACCOUNT
+                </div>
+                <p style={{ fontSize: 13, lineHeight: 1.6, margin: '0 0 14px 0', color: CHROME.text }}>
+                  This removes your leads, campaigns, calls, recordings, team memberships, and
+                  sign-in. This cannot be undone.
+                </p>
+                <p style={{ fontSize: 12, lineHeight: 1.6, margin: '0 0 16px 0', color: CHROME.muted }}>
+                  If you have an active subscription, cancel it first — active accounts can&apos;t
+                  be deleted until billing stops.
+                </p>
+
+                <div style={typePromptStyle}>
+                  Type <strong style={{ color: '#ff8888' }}>DELETE</strong> to confirm:
+                </div>
+                <input
+                  type="text"
+                  value={deleteTypedConfirm}
+                  onChange={e => setDeleteTypedConfirm(e.target.value)}
+                  placeholder="DELETE"
+                  autoFocus
+                  disabled={deleteAccSubmitting}
+                  style={typeInputStyle}
+                />
+
+                {deleteAccError && <div style={errorStyle}>{deleteAccError}</div>}
+
+                <div className="settings-confirm-buttons" style={confirmButtonsStyle}>
+                  <button onClick={closeDeleteAccount} disabled={deleteAccSubmitting} style={secondaryButtonStyle}>
+                    KEEP MY ACCOUNT
+                  </button>
+                  <button
+                    onClick={executeDeleteAccount}
+                    disabled={deleteAccSubmitting || deleteTypedConfirm.trim().toUpperCase() !== 'DELETE'}
+                    style={{
+                      ...dangerButtonStyle, marginTop: 0, flex: 1,
+                      opacity: deleteAccSubmitting || deleteTypedConfirm.trim().toUpperCase() !== 'DELETE' ? 0.4 : 1,
+                      cursor: deleteAccSubmitting || deleteTypedConfirm.trim().toUpperCase() !== 'DELETE' ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    {deleteAccSubmitting ? 'DELETING...' : 'DELETE PERMANENTLY'}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {deleteStep === 'done' && (
+              <>
+                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 4, color: '#32ff7e', marginBottom: 14 }}>
+                  ACCOUNT DELETED
+                </div>
+                <p style={{ fontSize: 13, lineHeight: 1.6, color: CHROME.text }}>
+                  Your data has been removed. Taking you home now — thanks for giving
+                  DialerSeat a try.
+                </p>
+              </>
+            )}
           </div>
         </div>
       )}

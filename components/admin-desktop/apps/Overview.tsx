@@ -110,9 +110,11 @@ export default function OverviewApp() {
   const [deleteInFlight, setDeleteInFlight] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deleteResult, setDeleteResult] = useState<any>(null)
+  const [sortMode, setSortMode] = useState<'joined_new' | 'joined_old' | 'active_first' | 'name'>('joined_new')
+  const [lastSynced, setLastSynced] = useState<number>(() => Date.now())
 
   useEffect(() => {
-    const id = setInterval(() => setTick(t => t + 1), 15_000)
+    const id = setInterval(() => setTick(t => t + 1), 10_000)
     return () => clearInterval(id)
   }, [])
 
@@ -121,7 +123,7 @@ export default function OverviewApp() {
 
     const load = (showLoader: boolean) => {
       if (showLoader) setLoading(true)
-      fetch('/api/admin/users')
+      fetch('/api/admin/users', { cache: 'no-store' })
         .then(async r => {
           if (r.status === 403) throw new Error('Forbidden — admin only')
           if (r.status === 401) throw new Error('Not signed in')
@@ -129,7 +131,7 @@ export default function OverviewApp() {
         })
         .then(d => {
           if (cancelled) return
-          if (d.success) setUsers(d.users)
+          if (d.success) { setUsers(d.users); setLastSynced(Date.now()) }
           else setError(d.error || 'Failed to load')
           setLoading(false)
         })
@@ -140,8 +142,9 @@ export default function OverviewApp() {
         })
     }
 
+    // auto-sync every 10 seconds — plain client-side polling, no cron job
     load(true)
-    const id = setInterval(() => load(false), 30_000)
+    const id = setInterval(() => load(false), 10_000)
     return () => { cancelled = true; clearInterval(id) }
   }, [])
 
@@ -156,8 +159,24 @@ export default function OverviewApp() {
         `${u.first_name || ''} ${u.last_name || ''}`.toLowerCase().includes(q)
       )
     }
+    list = [...list]
+    if (sortMode === 'joined_new') {
+      list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    } else if (sortMode === 'joined_old') {
+      list.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+    } else if (sortMode === 'active_first') {
+      list.sort((a, b) => {
+        const aT = a.last_seen_at ? new Date(a.last_seen_at).getTime() : 0
+        const bT = b.last_seen_at ? new Date(b.last_seen_at).getTime() : 0
+        return bT - aT
+      })
+    } else if (sortMode === 'name') {
+      list.sort((a, b) =>
+        `${a.first_name || ''} ${a.last_name || a.email}`.localeCompare(`${b.first_name || ''} ${b.last_name || b.email}`)
+      )
+    }
     return list
-  }, [users, filter, search])
+  }, [users, filter, search, sortMode])
 
   const counts = useMemo(() => ({
     all: users.length,
@@ -280,6 +299,18 @@ export default function OverviewApp() {
           font-size: 12px;
           color: ${T.text};
           outline: none;
+        }
+        .ovr-sort {
+          padding: 8px 10px;
+          background: ${T.bg};
+          border: 1px solid ${T.border};
+          border-radius: 4px;
+          font-family: 'Futura PT', Futura, sans-serif;
+          font-size: 11px;
+          letter-spacing: 0.5px;
+          color: ${T.text};
+          outline: none;
+          cursor: pointer;
         }
         .ovr-list {
           flex: 1;
@@ -603,6 +634,16 @@ export default function OverviewApp() {
               {counts.online} ONLINE
             </span>
           )}
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 5,
+            fontSize: 9, letterSpacing: 1.5, color: T.muted, fontFamily: 'monospace',
+          }}>
+            <span style={{
+              width: 5, height: 5, borderRadius: '50%', background: T.green,
+              animation: 'pulse-blue 2s ease-in-out infinite',
+            }} />
+            SYNCED {Math.max(0, Math.round((Date.now() - lastSynced) / 1000))}S AGO
+          </span>
         </div>
       </div>
 
@@ -624,6 +665,17 @@ export default function OverviewApp() {
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
+        <select
+          className="ovr-sort"
+          value={sortMode}
+          onChange={e => setSortMode(e.target.value as typeof sortMode)}
+          aria-label="Sort users"
+        >
+          <option value="joined_new">Newest joined</option>
+          <option value="joined_old">Oldest joined</option>
+          <option value="active_first">Most active first</option>
+          <option value="name">Name A–Z</option>
+        </select>
       </div>
 
       <div className="ovr-list">

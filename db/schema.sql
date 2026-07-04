@@ -488,7 +488,7 @@ CREATE TABLE IF NOT EXISTS public.gmail_oauth_tokens (
 -- ---- support_submissions ---------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.support_submissions (
   id               uuid NOT NULL DEFAULT gen_random_uuid(),
-  type             text NOT NULL,                               -- support|bug|exit
+  type             text NOT NULL,                               -- support|bug|exit|suggestion
   clerk_id         text,
   snap_name        text,
   snap_username    text,
@@ -683,7 +683,7 @@ ALTER TABLE public.stripe_events ADD CONSTRAINT stripe_events_processing_status_
 ALTER TABLE public.support_submissions ADD CONSTRAINT support_submissions_status_check
   CHECK (status = ANY (ARRAY['new','open','responded','resolved','closed']::text[]));
 ALTER TABLE public.support_submissions ADD CONSTRAINT support_submissions_type_check
-  CHECK (type = ANY (ARRAY['support','bug','exit']::text[]));
+  CHECK (type = ANY (ARRAY['support','bug','exit','suggestion']::text[]));
 ALTER TABLE public.team_agent_payments ADD CONSTRAINT team_agent_payments_status_check
   CHECK (status = ANY (ARRAY['active','canceled','past_due']::text[]));
 ALTER TABLE public.team_campaign_access ADD CONSTRAINT team_campaign_access_access_source_check
