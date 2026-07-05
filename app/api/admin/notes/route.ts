@@ -5,7 +5,7 @@ import { requireAdmin } from '@/lib/requireAdmin'
 const supabaseAdmin = () =>
   getServiceClient('admin/notes')
 
-const NOTE_COLS = 'id, title, body, starred, pin_order, created_at, updated_at'
+const NOTE_COLS = 'id, title, body, starred, pin_order, created_at, updated_at, content_edited_at'
 
 export async function GET() {
   const gate = await requireAdmin()

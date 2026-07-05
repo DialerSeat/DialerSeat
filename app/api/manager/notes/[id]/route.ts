@@ -5,7 +5,7 @@ import { getServiceClient } from '@/lib/supabase'
 const supabaseAdmin = () =>
   getServiceClient('manager/notes/[id]')
 
-const NOTE_COLS = 'id, title, body, starred, pin_order, created_at, updated_at'
+const NOTE_COLS = 'id, title, body, starred, pin_order, created_at, updated_at, content_edited_at'
 
 export async function PATCH(
   req: NextRequest,
@@ -28,6 +28,11 @@ export async function PATCH(
   if (typeof body.title === 'string') patch.title = body.title
   if (typeof body.body === 'string') patch.body = body.body
   if (typeof body.starred === 'boolean') patch.starred = body.starred
+  // content_edited_at reflects an actual content change (title/body) only —
+  // starring a note is not "editing" it.
+  if (typeof body.title === 'string' || typeof body.body === 'string') {
+    patch.content_edited_at = patch.updated_at
+  }
 
   const supabase = supabaseAdmin()
   const { data, error } = await supabase

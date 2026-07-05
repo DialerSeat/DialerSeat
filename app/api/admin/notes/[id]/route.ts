@@ -5,7 +5,7 @@ import { requireAdmin } from '@/lib/requireAdmin'
 const supabaseAdmin = () =>
   getServiceClient('admin/notes/[id]')
 
-const NOTE_COLS = 'id, title, body, starred, pin_order, created_at, updated_at'
+const NOTE_COLS = 'id, title, body, starred, pin_order, created_at, updated_at, content_edited_at'
 
 interface PatchBody {
   title?: string
@@ -36,6 +36,11 @@ export async function PATCH(
   const updates: Record<string, any> = { updated_at: new Date().toISOString() }
   if (typeof body.title === 'string') updates.title = body.title.slice(0, 500)
   if (typeof body.body === 'string') updates.body = body.body.slice(0, 100_000) // 100kb cap
+  // content_edited_at reflects an actual content change (title/body) only —
+  // starring or reordering a note is not "editing" it.
+  if (typeof body.title === 'string' || typeof body.body === 'string') {
+    updates.content_edited_at = updates.updated_at
+  }
 
   if (typeof body.starred === 'boolean') {
     updates.starred = body.starred

@@ -33,6 +33,7 @@ interface Note {
   pin_order: number | null
   created_at: string
   updated_at: string
+  content_edited_at: string
 }
 
 interface ChecklistItem {
@@ -72,6 +73,32 @@ function checklistPreview(items: ChecklistItem[]): string {
   return `${done} / ${items.length} done${names ? ' — ' + names : ''}`
 }
 
+// Apple-Notes-style relative timestamp for when a note's *content* (title
+// or body) was last actually changed — not when it was opened, starred, or
+// reordered. `now` is passed in so callers can force a re-render on a tick
+// without this function reaching for Date.now() itself mid-render.
+function describeEditedAt(iso: string, now: number): { short: string; full: string } {
+  const then = new Date(iso)
+  const ms = now - then.getTime()
+  const mins = Math.floor(ms / 60_000)
+
+  const time = () => then.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  const isSameDay = (a: Date, b: Date) =>
+    a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+
+  const today = new Date(now)
+  const yesterday = new Date(now - 86_400_000)
+
+  if (mins < 1) return { short: 'now', full: 'Edited just now' }
+  if (mins < 60) return { short: `${mins}m`, full: `Edited ${mins}m ago` }
+  if (isSameDay(then, today)) return { short: time(), full: `Edited today at ${time()}` }
+  if (isSameDay(then, yesterday)) return { short: 'Yesterday', full: `Edited yesterday at ${time()}` }
+
+  const sameYear = then.getFullYear() === today.getFullYear()
+  const dateStr = then.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: sameYear ? undefined : 'numeric' })
+  return { short: dateStr, full: `Edited ${dateStr}` }
+}
+
 export default function NotesApp() {
   
   
@@ -91,6 +118,14 @@ export default function NotesApp() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
 
   const [checklistAddInput, setChecklistAddInput] = useState('')
+
+  // Ticks once a minute purely to re-render the "Edited X ago" label as
+  // time passes — no network involved.
+  const [nowTick, setNowTick] = useState(() => Date.now())
+  useEffect(() => {
+    const id = setInterval(() => setNowTick(Date.now()), 60_000)
+    return () => clearInterval(id)
+  }, [])
 
   
   const dragIdRef = useRef<string | null>(null)
@@ -510,6 +545,8 @@ export default function NotesApp() {
               whiteSpace: 'nowrap',
             }}
           >
+            <span style={{ color: '#aaa' }}>{describeEditedAt(n.content_edited_at, nowTick).short}</span>
+            {'  '}
             {preview || 'No content'}
           </div>
         </div>
@@ -597,6 +634,10 @@ export default function NotesApp() {
                 Delete
               </button>
             )}
+          </div>
+
+          <div style={editedIndicatorStyle}>
+            {describeEditedAt(selected.content_edited_at, nowTick).full}
           </div>
 
           {selectedChecklist ? (
@@ -856,6 +897,14 @@ const editorHeaderStyle: CSSProperties = {
   padding: 12,
   borderBottom: '1px solid #e5e8eb',
   flexShrink: 0,
+}
+
+const editedIndicatorStyle: CSSProperties = {
+  padding: '8px 16px 0',
+  fontSize: 11.5,
+  color: '#9a9fa8',
+  flexShrink: 0,
+  userSelect: 'none',
 }
 
 const titleInputStyle: CSSProperties = {

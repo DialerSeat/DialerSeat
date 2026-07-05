@@ -567,6 +567,7 @@ CREATE TABLE IF NOT EXISTS public.admin_notes (
   body           text NOT NULL DEFAULT ''::text,
   created_at     timestamptz NOT NULL DEFAULT now(),
   updated_at     timestamptz NOT NULL DEFAULT now(),
+  content_edited_at timestamptz NOT NULL DEFAULT now(), -- bumped only on title/body changes, not star/pin — drives the "Edited X ago" indicator
   starred        boolean NOT NULL DEFAULT false,
   pin_order      integer
 );
