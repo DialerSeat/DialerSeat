@@ -247,6 +247,15 @@ function DialerPageInner() {
   // startHangupPolling normally only runs every 2s. Set by startHangupPolling
   // while a call is connected; null otherwise.
   const sipHangupCheckRef = useRef<(() => void) | null>(null)
+  // Every session shares one static SIP identity (dialerseat-agent@...) — see
+  // /api/calls/sip-credentials. That means every open tab/window registers
+  // as the exact same softphone, and SignalWire has no way to know which one
+  // is "the real one" when bridging an agent leg. sipChannelRef +
+  // sipTabIdRef enforce that only the most-recently-opened tab keeps its
+  // registration; any older tab cedes immediately (see initSW below), which
+  // is what a single softphone identity is supposed to do (last login wins).
+  const sipChannelRef = useRef<BroadcastChannel | null>(null)
+  const sipTabIdRef = useRef<string>('')
   // TEMP DIAGNOSTIC — remove once the script-box issue is confirmed fixed.
   const scriptDiagLastRef = useRef<string>('')
   
@@ -585,6 +594,35 @@ function DialerPageInner() {
 
   useEffect(() => {
     if (!isActive) return
+
+    // Every tab/window shares the exact same static SIP identity (see the
+    // sipChannelRef declaration above for why). Claim it here, and if a
+    // newer tab claims after us, cede — unregister so this tab stops
+    // shadow-registering as the same softphone and intercepting invites
+    // meant for whichever tab is actually being used.
+    const tabId = `${Date.now()}-${Math.random().toString(36).slice(2)}`
+    sipTabIdRef.current = tabId
+    let channel: BroadcastChannel | null = null
+    try {
+      channel = new BroadcastChannel('dialerseat-sip-session')
+      sipChannelRef.current = channel
+      channel.onmessage = (ev) => {
+        if (ev?.data?.type === 'claim' && ev.data.tabId !== tabId) {
+          console.log('[sip] ceding registration — a newer tab claimed the shared SIP identity')
+          disarmDialing({ force: true })
+          try { registererRef.current?.unregister?.() } catch {}
+          registererRef.current = null
+          swClientRef.current = null
+          setSwReady(false)
+        }
+      }
+      channel.postMessage({ type: 'claim', tabId })
+    } catch (err) {
+      // BroadcastChannel unsupported (very old browser) — fall back to the
+      // prior behavior rather than failing setup entirely.
+      console.error('BroadcastChannel unavailable:', err)
+    }
+
     const initSW = async () => {
       try {
         
@@ -711,6 +749,12 @@ function DialerPageInner() {
       }
     }
     initSW()
+
+    return () => {
+      try { channel?.close() } catch {}
+      if (sipChannelRef.current === channel) sipChannelRef.current = null
+      try { registererRef.current?.unregister?.() } catch {}
+    }
   }, [isActive])
 
   const attachSIPAudio = (session: any) => {
