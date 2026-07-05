@@ -795,12 +795,31 @@ function DialerPageInner() {
       audioEl.play().catch(console.error)
     }
 
+    let iceStateLogged = false
     const tryAttach = () => {
       try {
         const sdh = session.sessionDescriptionHandler
         if (!sdh) return false
         const pc = sdh.peerConnection
         if (!pc) return false
+
+        // DEFINITIVE audio diagnostic — remove once resolved. iceConnectionState
+        // tells us for certain whether media actually connects:
+        // 'connected'/'completed' = the media path works, so a "no audio"
+        // report would point elsewhere (codecs, audio element, etc). 'failed'
+        // = ICE genuinely could not establish a path (consistent with a
+        // missing TURN relay on a restrictive network). Logged once per call
+        // on setup, plus every state change after that.
+        if (!iceStateLogged) {
+          iceStateLogged = true
+          console.log(`[ice] initial iceConnectionState=${pc.iceConnectionState}`)
+          pc.addEventListener('iceconnectionstatechange', () => {
+            console.log(`[ice] iceConnectionState=${pc.iceConnectionState}`)
+          })
+          pc.addEventListener('icecandidateerror', (ev: any) => {
+            console.log(`[ice] icecandidateerror errorCode=${ev.errorCode} errorText=${ev.errorText} url=${ev.url}`)
+          })
+        }
 
         pc.ontrack = (event: RTCTrackEvent) => {
           if (event.track && event.track.kind === 'audio') attachTrack(event.track)
