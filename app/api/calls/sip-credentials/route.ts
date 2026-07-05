@@ -76,6 +76,19 @@ export async function GET() {
       username: turnUsername,
       credential: turnCredential,
     })
+  } else {
+    // STUN alone can't establish media through symmetric NAT or many
+    // corporate/mobile firewalls — signaling (INVITE/200 OK/ACK) completes
+    // fine either way, so this failure mode looks exactly like a call that
+    // "connects" but has no audio in either direction, with nothing in the
+    // SIP trace to point at. Loud on purpose: this previously failed with
+    // zero visibility anywhere.
+    console.warn(
+      '[sip-credentials] No TURN server configured (SIGNALWIRE_TURN_URLS / ' +
+      'SIGNALWIRE_TURN_USERNAME / SIGNALWIRE_TURN_CREDENTIAL) — falling back ' +
+      'to STUN only. Calls may connect with no audio on networks that need a ' +
+      'relay (symmetric NAT, many corporate/mobile networks).'
+    )
   }
 
   

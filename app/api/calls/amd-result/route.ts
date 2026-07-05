@@ -59,16 +59,10 @@ export async function POST(req: Request) {
       detail: { answeredBy },
     })
 
-    // 'unknown' means AMD couldn't confidently tell human from machine within
-    // MachineDetectionSilenceTimeout (5s) — it is NOT a positive machine/fax
-    // detection. Treating it as "not human" auto-hung-up on real answers
-    // whenever the callee took a moment to speak (extremely common), which
-    // is exactly what produced calls that connected, played no audio, and
-    // hung up ~5-6s in. Fail open: only hang up on a confident machine/fax
-    // result.
     const isNotHuman =
       answeredBy.startsWith('machine_') ||
-      answeredBy === 'fax'
+      answeredBy === 'fax' ||
+      answeredBy === 'unknown'
 
     if (isNotHuman) {
       await hangupCall(callSid)
@@ -109,7 +103,7 @@ export async function POST(req: Request) {
 
     const { data: session } = await supabaseAdmin
       .from('agent_sessions')
-      .select('id, state, current_call_id, last_heartbeat, user_id')
+      .select('id, state, current_call_id, last_heartbeat, user_id, team_id, campaign_id')
       .eq('id', sessionId)
       .maybeSingle()
 
@@ -129,45 +123,67 @@ export async function POST(req: Request) {
       return new NextResponse('', { status: 200 })
     }
 
-    
-    
+    // This agent's own session is already tied up with a different call.
+    // Previously: abandon the lead outright. Now: if this is a *team*
+    // campaign (session.team_id set — multiple agents dialing the same
+    // pool), give the connected lead to another agent on that same team +
+    // campaign who's actually free, instead of dropping it. Solo (non-team)
+    // sessions have no teammates to redistribute to, so behavior for them
+    // is unchanged.
+    let winningSessionId = sessionId
+    let winningUserId = session.user_id
+
     if (session.current_call_id && session.current_call_id !== callRow.id) {
-      console.log(`[amd-result] session ${sessionId} already on call ${session.current_call_id}, abandoning ${callSid}`)
-      await abandonCall(callSid)
-      return new NextResponse('', { status: 200 })
+      const teammate = await claimTeammateSession(session, callRow.id)
+      if (teammate) {
+        console.log(`[amd-result] session ${sessionId} busy, redistributed ${callSid} to teammate session ${teammate.id}`)
+        winningSessionId = teammate.id
+        winningUserId = teammate.user_id
+      } else {
+        console.log(`[amd-result] session ${sessionId} already on call ${session.current_call_id}, no free teammate, abandoning ${callSid}`)
+        await abandonCall(callSid)
+        return new NextResponse('', { status: 200 })
+      }
+    } else {
+      // Original session looked free — claim it atomically. Two connects
+      // can race to grab the same free session; whoever loses this update
+      // gets no row back below.
+      const claimRes = await supabaseAdmin
+        .from('agent_sessions')
+        .update({
+          current_call_id: callRow.id,
+          state: 'on_call',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', sessionId)
+        .or(`current_call_id.is.null,current_call_id.eq.${callRow.id}`)
+        .select('id')
+        .maybeSingle()
+
+      if (!claimRes.data) {
+        const teammate = await claimTeammateSession(session, callRow.id)
+        if (teammate) {
+          console.log(`[amd-result] session ${sessionId} claim race lost, redistributed ${callSid} to teammate session ${teammate.id}`)
+          winningSessionId = teammate.id
+          winningUserId = teammate.user_id
+        } else {
+          console.log(`[amd-result] session ${sessionId} claim race lost, no free teammate, abandoning ${callSid}`)
+          await abandonCall(callSid)
+          return new NextResponse('', { status: 200 })
+        }
+      }
     }
 
-    
-    
-    
-    
-    
-    
-    
-    const claimRes = await supabaseAdmin
-      .from('agent_sessions')
-      .update({
-        current_call_id: callRow.id,
-        state: 'on_call',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', sessionId)
-      .or(`current_call_id.is.null,current_call_id.eq.${callRow.id}`)
-      .select('id')
-      .maybeSingle()
-
-    if (!claimRes.data) {
-      
-      console.log(`[amd-result] session ${sessionId} claim race lost, abandoning ${callSid}`)
-      await abandonCall(callSid)
-      return new NextResponse('', { status: 200 })
+    // If a teammate ended up taking this instead of the triggering agent,
+    // re-point ownership so reporting/analytics credit the right person and
+    // /api/calls/check authorizes the right browser session.
+    if (winningSessionId !== sessionId) {
+      await supabaseAdmin
+        .from('calls')
+        .update({ user_id: winningUserId, dial_group_id: winningSessionId })
+        .eq('id', callRow.id)
     }
 
-    
-    
-    
-    
-    
     const { data: roomRow } = await supabaseAdmin
       .from('call_rooms')
       .select('room_name')
@@ -181,8 +197,15 @@ export async function POST(req: Request) {
       await supabaseAdmin
         .from('agent_sessions')
         .update({ current_call_id: null, state: 'ready' })
-        .eq('id', sessionId)
+        .eq('id', winningSessionId)
       return new NextResponse('', { status: 200 })
+    }
+
+    if (winningSessionId !== sessionId) {
+      await supabaseAdmin
+        .from('call_rooms')
+        .update({ user_id: winningUserId })
+        .eq('room_name', roomRow.room_name)
     }
 
     await placeAgentLegForFanout(roomRow.room_name, callRow.phone_number)
@@ -200,6 +223,51 @@ export async function POST(req: Request) {
 
 
 
+
+async function claimTeammateSession(
+  originalSession: { id: string; team_id: string | null; campaign_id: string | null },
+  callId: string
+): Promise<{ id: string; user_id: string } | null> {
+  // No team on this session means there's no shared pool of agents to hand
+  // an overflow lead to — solo campaigns keep the old abandon-only behavior.
+  if (!originalSession.team_id || !originalSession.campaign_id) return null
+
+  const { data: candidates } = await supabaseAdmin
+    .from('agent_sessions')
+    .select('id, user_id, last_heartbeat, current_call_id, state')
+    .eq('team_id', originalSession.team_id)
+    .eq('campaign_id', originalSession.campaign_id)
+    .neq('id', originalSession.id)
+    .is('current_call_id', null)
+    .in('state', ['ready', 'dialing'])
+    .order('last_heartbeat', { ascending: false })
+    .limit(8)
+
+  if (!candidates || candidates.length === 0) return null
+
+  const now = Date.now()
+  for (const candidate of candidates) {
+    const age = now - new Date(candidate.last_heartbeat).getTime()
+    if (age > 15_000) continue // stale — same freshness bar used everywhere else in this file
+
+    const claim = await supabaseAdmin
+      .from('agent_sessions')
+      .update({
+        current_call_id: callId,
+        state: 'on_call',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', candidate.id)
+      .is('current_call_id', null) // still free at the moment we actually write
+      .select('id, user_id')
+      .maybeSingle()
+
+    if (claim.data) return claim.data
+    // someone else claimed this candidate between our SELECT and UPDATE — try the next one
+  }
+
+  return null
+}
 
 async function abandonCall(callSid: string): Promise<void> {
   

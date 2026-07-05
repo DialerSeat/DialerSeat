@@ -247,6 +247,8 @@ function DialerPageInner() {
   // startHangupPolling normally only runs every 2s. Set by startHangupPolling
   // while a call is connected; null otherwise.
   const sipHangupCheckRef = useRef<(() => void) | null>(null)
+  // TEMP DIAGNOSTIC — remove once the script-box issue is confirmed fixed.
+  const scriptDiagLastRef = useRef<string>('')
   
   
   
@@ -2096,23 +2098,29 @@ function DialerPageInner() {
   const activeScript = scriptTabs[activeScriptIdx]?.script || null
 
   // TEMP DIAGNOSTIC — remove once the script-box issue is confirmed fixed.
-  // Plain console.log (not useEffect) so it can't trip rules-of-hooks
-  // against the tier-based early returns further down. Shows exactly where
-  // the chain stands: is a campaign even resolved, does it carry any
-  // scripts, did that survive reordering, would the box actually render.
-  console.log('[script-box]', {
-    selectedScope,
-    selectedCampaign,
-    isSpecificCampaign,
-    isAllActive,
-    currentCampaignId: currentCampaign?.id,
-    currentCampaignScriptsCount: currentCampaign?.scripts?.length ?? null,
-    rawScriptTabsCount: rawScriptTabs.length,
-    scriptTabsCount: scriptTabs.length,
-    activeScriptPresent: !!activeScript,
-    displayLeadPresent: !!(previewLead || currentLead),
-    status,
-  })
+  // Plain string, not an object, so a copy-paste of the console can't get
+  // truncated the way the previous object-log version did. Gated on a ref so
+  // it only prints when something actually changes, not on every render.
+  {
+    const diagKey = [
+      selectedScope, selectedCampaign, isSpecificCampaign, isAllActive,
+      currentCampaign?.id, currentCampaign?.scripts?.length ?? 'null',
+      rawScriptTabs.length, scriptTabs.length, !!activeScript,
+      !!(previewLead || currentLead), status,
+    ].join('|')
+    if (diagKey !== scriptDiagLastRef.current) {
+      scriptDiagLastRef.current = diagKey
+      console.log(
+        `[script-box] scope=${selectedScope} campaign=${selectedCampaign} ` +
+        `isSpecific=${isSpecificCampaign} isAllActive=${isAllActive} ` +
+        `currentCampaignId=${currentCampaign?.id ?? 'undefined'} ` +
+        `currentCampaignScriptsCount=${currentCampaign?.scripts?.length ?? 'null'} ` +
+        `rawScriptTabsCount=${rawScriptTabs.length} scriptTabsCount=${scriptTabs.length} ` +
+        `activeScriptPresent=${!!activeScript} displayLeadPresent=${!!(previewLead || currentLead)} ` +
+        `status=${status}`
+      )
+    }
+  }
 
   
   const reorderScriptTabs = (dragKey: string, targetKey: string) => {
