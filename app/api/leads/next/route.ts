@@ -1,189 +1,105 @@
-import { supabaseAdmin } from '@/lib/supabase'
 import { NextResponse } from 'next/server'
-import { isCallableNow } from '@/lib/callingWindow'
-import { requireUser } from '@/lib/requireUser'
-import { apiError } from '@/lib/apiError'
+import { requireActive } from '@/lib/subscription'
+import { auth } from '@clerk/nextjs/server'
+import { placeOutboundCall } from '@/lib/placeOutboundCall'
+import { logCallEvent } from '@/lib/callEvents'
 
-const CANDIDATE_LIMIT = 50
-
-async function fetchCampaignMode(campaignId: string) {
-  const { data } = await supabaseAdmin
-    .from('campaigns')
-    .select('dialer_mode, amd_enabled')
-    .eq('id', campaignId)
-    .maybeSingle()
-  return {
-    dialer_mode: (data?.dialer_mode as string) || 'power',
-    amd_enabled: data?.amd_enabled !== false,
-  }
-}
-
-export async function GET(req: Request) {
+export async function POST(req: Request) {
   try {
-    const gate = await requireUser()
-    if (!gate.ok) return gate.response
-    const user_id = gate.userId
+    const gate = await requireActive()
+    if (gate) return gate
 
-    const { searchParams } = new URL(req.url)
-    const campaign_id = searchParams.get('campaign_id')
-    const team_id = searchParams.get('team_id')
+    const { userId } = await auth()
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
 
-    if (team_id) {
-      const { data: team } = await supabaseAdmin
-        .from('teams')
-        .select('id, owner_id')
-        .eq('id', team_id)
-        .maybeSingle()
+    const body = await req.json()
+    const { to, leadId, campaignId, teamId } = body
 
-      if (!team) {
-        return NextResponse.json({ success: false, error: 'Team not found' }, { status: 404 })
-      }
+    // ✅ HARD GUARD: prevent invalid outbound calls
+    if (!to || typeof to !== 'string') {
+      return NextResponse.json(
+        { success: false, error: 'Missing or invalid phone number' },
+        { status: 400 }
+      )
+    }
 
-      const isOwner = team.owner_id === user_id
-      if (!isOwner) {
-        const { data: membership } = await supabaseAdmin
-          .from('team_members')
-          .select('id')
-          .eq('team_id', team_id)
-          .eq('user_id', user_id)
-          .eq('status', 'active')
-          .maybeSingle()
-        if (!membership) {
-          return NextResponse.json({ success: false, error: 'Not a member of this team' }, { status: 403 })
-        }
-      }
+    const cleanTo = to.replace(/\D/g, '')
 
-      const { data: tcRows } = await supabaseAdmin
-        .from('team_campaigns')
-        .select('campaign_id, campaigns(status)')
-        .eq('team_id', team_id)
+    if (cleanTo.length < 10) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid phone number format' },
+        { status: 400 }
+      )
+    }
 
-      const teamCampaignIds = (tcRows || [])
-        .filter((tc: any) => tc.campaigns?.status === 'active')
-        .map((tc: any) => tc.campaign_id)
-
-      if (teamCampaignIds.length === 0) {
-        return NextResponse.json({ success: false, error: 'No active campaigns in team' }, { status: 404 })
-      }
-
-      let scopedCampaignIds: string[]
-      if (campaign_id && campaign_id !== 'all') {
-        if (!teamCampaignIds.includes(campaign_id)) {
-          return NextResponse.json({ success: false, error: 'Campaign not in team' }, { status: 403 })
-        }
-        scopedCampaignIds = [campaign_id]
-      } else {
-        scopedCampaignIds = teamCampaignIds
-      }
-
-      const { data: candidates, error } = await supabaseAdmin
-        .from('leads')
-        .select('*, extra_data')
-        .in('campaign_id', scopedCampaignIds)
-        .neq('status', 'dnc')
-        .neq('status', 'closed')
-        .neq('status', 'appointment')
-        .neq('status', 'maxed')
-        .or(`status.eq.uncalled,status.eq.no_answer`)
-        .not('phone', 'is', null)
-        .neq('phone', '')
-        .order('dial_attempts', { ascending: true })
-        .order('created_at', { ascending: true })
-        .limit(CANDIDATE_LIMIT)
-
-      if (error) {
-        return apiError(error, { route: 'leads/next' })
-      }
-
-      let callable: any = null
-      let blockReason: string | null = null
-      for (const c of candidates || []) {
-        const result = isCallableNow({ phone: c.phone, state: c.state })
-        if (result.allowed) { callable = c; break }
-        if (!blockReason) blockReason = result.reason || null
-      }
-
-      if (!callable) {
-
-        const hasAnyCandidates = (candidates?.length || 0) > 0
-        return NextResponse.json({
+    // ✅ HARD GUARD: prevent orphan calls (THIS IS YOUR MAIN BUG FIX)
+    if (!leadId && !campaignId) {
+      return NextResponse.json(
+        {
           success: false,
-          // Previously hardcoded to an "outside 8am-9pm window" message no
-          // matter which of isCallableNow's checks actually failed (e.g. a
-          // federal holiday), which read as a clock bug when the real reason
-          // was the calendar date.
-          error: hasAnyCandidates
-            ? (blockReason || 'All available leads are outside their local calling window. Try again later.')
-            : 'No more team leads',
-          tcpaBlocked: hasAnyCandidates,
-        }, { status: 404 })
-      }
-
-      const campaign = await fetchCampaignMode(callable.campaign_id)
-      return NextResponse.json({ success: true, lead: callable, campaign })
+          error: 'No lead context available — cannot place call',
+        },
+        { status: 400 }
+      )
     }
 
-    const { data: activeCampaigns } = await supabaseAdmin
-      .from('campaigns')
-      .select('id')
-      .eq('user_id', user_id)
-      .eq('status', 'active')
+    const result = await placeOutboundCall({
+      to: cleanTo,
+      userId,
+      leadId,
+      campaignId,
+      teamId,
+      source: 'user_dial',
+    })
 
-    const activeCampaignIds = activeCampaigns?.map(c => c.id) || []
-
-    if (activeCampaignIds.length === 0) {
-      return NextResponse.json({ success: false, error: 'No active campaigns' }, { status: 404 })
+    if (!result.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: result.error,
+          detail: result.detail,
+        },
+        { status: result.httpStatus || 500 }
+      )
     }
 
-    let query = supabaseAdmin
-      .from('leads')
-      .select('*, extra_data')
-      .eq('user_id', user_id)
-      .neq('status', 'dnc')
-      .neq('status', 'closed')
-      .neq('status', 'appointment')
-      .neq('status', 'maxed')
-      .or(`status.eq.uncalled,status.eq.no_answer`)
-      .not('phone', 'is', null)
-      .neq('phone', '')
-      .order('dial_attempts', { ascending: true })
-      .order('created_at', { ascending: true })
-      .limit(CANDIDATE_LIMIT)
+    void logCallEvent({
+      event_type: 'initiated',
+      signalwire_call_id: result.callSid ?? null,
+      user_id: userId,
+      lead_id: leadId ?? null,
+      campaign_id: campaignId ?? null,
+      status: result.status ?? null,
+      source: 'dialer',
+      detail: {
+        amdEnabled: result.amdEnabled,
+        dialerMode: result.dialerMode,
+      },
+    })
 
-    if (campaign_id && campaign_id !== 'all') {
-      query = query.eq('campaign_id', campaign_id)
-    } else {
-      query = query.in('campaign_id', activeCampaignIds)
-    }
-
-    const { data: candidates, error } = await query
-
-    if (error) {
-      return apiError(error, { route: 'leads/next' })
-    }
-
-    let callable: any = null
-    let blockReason: string | null = null
-    for (const c of candidates || []) {
-      const result = isCallableNow({ phone: c.phone, state: c.state })
-      if (result.allowed) { callable = c; break }
-      if (!blockReason) blockReason = result.reason || null
-    }
-
-    if (!callable) {
-      const hasAnyCandidates = (candidates?.length || 0) > 0
-      return NextResponse.json({
-        success: false,
-        error: hasAnyCandidates
-          ? (blockReason || 'All available leads are outside their local calling window. Try again later.')
-          : 'No more leads',
-        tcpaBlocked: hasAnyCandidates,
-      }, { status: 404 })
-    }
-
-    const campaign = await fetchCampaignMode(callable.campaign_id)
-    return NextResponse.json({ success: true, lead: callable, campaign })
+    return NextResponse.json({
+      success: true,
+      callSid: result.callSid,
+      agentCallSid: result.agentCallSid,
+      roomName: result.roomName,
+      fromNumber: result.fromNumber,
+      status: result.status,
+      amdEnabled: result.amdEnabled,
+      dialerMode: result.dialerMode,
+      ringTimeout: result.ringTimeout,
+    })
   } catch (error: any) {
-    return apiError(error, { route: 'leads/next' })
+    return NextResponse.json(
+      {
+        success: false,
+        error: error?.message || 'Outbound call failed',
+      },
+      { status: 500 }
+    )
   }
 }
