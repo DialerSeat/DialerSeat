@@ -3,8 +3,14 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { requireUser } from '@/lib/requireUser'
 import { apiError } from '@/lib/apiError'
 
+// SECURITY (was IDOR): scoped only by client-supplied ?user_id with no auth.
+// Identity now comes from the Clerk session.
+
 const PAGE_SIZE = 50
 
+// Disposition strings for virtual sub-campaigns. These MUST match the ones
+// declared in /api/campaigns/list/route.ts. If the dialer writes different
+// disposition values, update both files together.
 const SUB_DISPOSITIONS: Record<string, string> = {
   appointments: 'APPOINTMENT',
   not_interested: 'NOT_INTERESTED',
@@ -22,6 +28,10 @@ export async function GET(req: NextRequest) {
   const sort = searchParams.get('sort') || 'created_desc'
   const cursor = parseInt(searchParams.get('cursor') || '0', 10)
 
+  // Parse virtual sub-campaign IDs of the form `${parentId}:${subType}`.
+  // When detected, treat it as the parent campaign + an enforced disposition
+  // filter. The colon split is safe: real campaign IDs are UUIDs which contain
+  // dashes but no colons.
   let campaignId = rawCampaignId
   let virtualDispositionFilter: string | null = null
   if (campaignId !== 'all' && campaignId.includes(':')) {
@@ -30,7 +40,8 @@ export async function GET(req: NextRequest) {
       campaignId = parentId
       virtualDispositionFilter = SUB_DISPOSITIONS[subType]
     } else {
-
+      // Malformed virtual id — return empty rather than 400 so the dialer
+      // doesn't error out on a stale URL.
       return NextResponse.json({
         success: true,
         leads: [],
@@ -49,6 +60,8 @@ export async function GET(req: NextRequest) {
     query = query.eq('campaign_id', campaignId)
   }
 
+  // The virtual sub-campaign filter takes precedence over the disposition
+  // query param. A virtual sub is by definition pinned to one disposition.
   if (virtualDispositionFilter) {
     query = query.eq('disposition', virtualDispositionFilter)
   } else if (disposition !== 'all') {
@@ -60,13 +73,14 @@ export async function GET(req: NextRequest) {
   }
 
   if (search) {
-
+    // Search across name, phone fields. Supabase OR syntax.
     const safe = search.replace(/[%,()]/g, '')
     query = query.or(
       `first_name.ilike.%${safe}%,last_name.ilike.%${safe}%,phone.ilike.%${safe}%`
     )
   }
 
+  // Sorting
   switch (sort) {
     case 'created_asc':
       query = query.order('created_at', { ascending: true })
@@ -82,6 +96,7 @@ export async function GET(req: NextRequest) {
       query = query.order('created_at', { ascending: false })
   }
 
+  // Add a stable secondary sort so pagination is deterministic
   query = query.order('id', { ascending: false })
 
   query = query.range(cursor, cursor + PAGE_SIZE - 1)

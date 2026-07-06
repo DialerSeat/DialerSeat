@@ -10,11 +10,13 @@ export async function GET() {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Total leads owned by this user
     const { count: totalLeads } = await supabaseAdmin
       .from('leads')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
 
+    // Leads with consent_date populated
     const { count: withConsent } = await supabaseAdmin
       .from('leads')
       .select('*', { count: 'exact', head: true })

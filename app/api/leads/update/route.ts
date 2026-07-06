@@ -7,7 +7,7 @@ const supabase = getServiceClient('leads/update')
 
 export async function POST(req: NextRequest) {
   try {
-
+    // Always use authenticated user — never trust body.user_id
     const { userId } = await auth()
     if (!userId) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
@@ -20,6 +20,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'lead_id required' }, { status: 400 })
     }
 
+    // Verify ownership
     const { data: existing, error: fetchErr } = await supabase
       .from('leads')
       .select('id, user_id, disposition')
@@ -53,6 +54,7 @@ export async function POST(req: NextRequest) {
       return apiError(error, { route: 'leads/update' })
     }
 
+    // Append to notes history if notes were provided AND non-empty
     const trimmedNotes = String(notes ?? '').trim()
     if (trimmedNotes) {
       await supabase.from('lead_notes').insert({

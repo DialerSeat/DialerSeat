@@ -2,10 +2,10 @@ import { NextRequest } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireUser } from '@/lib/requireUser'
 
-
-
-
-
+// SECURITY (was IDOR): this route exported up to 50,000 lead rows (PII) scoped
+// ONLY by a client-supplied ?user_id, with no auth check. Any signed-in user
+// could export anyone's leads. We now derive identity from the Clerk session
+// and ignore the query param entirely.
 
 function escapeCSV(value: any): string {
   if (value === null || value === undefined) return ''

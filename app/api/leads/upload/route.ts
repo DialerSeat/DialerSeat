@@ -4,9 +4,20 @@ import { requireActive } from '@/lib/subscription'
 import { auth } from '@clerk/nextjs/server'
 import { apiError } from '@/lib/apiError'
 
+/**
+ * Parses optional consent fields from a lead row. Returns the four columns
+ * if they're present and parseable, all null otherwise.
+ *
+ * Accepted CSV header names (case-insensitive, punctuation-stripped):
+ *   consent_date, consent date, consentdate
+ *   consent_source, consent source
+ *   consent_description, consent text, consent_text
+ *   consent_proof_url, consent_proof, proof_url
+ *
+ * This is per the FCC's January 2025 one-to-one consent rule under TCPA.
+ */
 function parseConsent(row: Record<string, any>) {
   const lower: Record<string, string> = {}
-
   for (const [k, v] of Object.entries(row)) {
     if (v !== null && v !== undefined && String(v).trim()) {
       lower[k.toLowerCase().replace(/[^a-z]/g, '')] = String(v).trim()
@@ -19,7 +30,6 @@ function parseConsent(row: Record<string, any>) {
   const proofUrl = lower['consentproofurl'] || lower['consentproof'] || lower['proofurl']
 
   let consentDate: string | null = null
-
   if (dateRaw) {
     const parsed = new Date(dateRaw)
     if (!isNaN(parsed.getTime())) consentDate = parsed.toISOString()
@@ -40,10 +50,7 @@ export async function POST(req: Request) {
 
     const { userId } = await auth()
     if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
 
     const body = await req.json()
@@ -70,95 +77,86 @@ export async function POST(req: Request) {
       .maybeSingle()
 
     if (!campaign) {
-      return NextResponse.json(
-        { success: false, error: 'Campaign not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ success: false, error: 'Campaign not found' }, { status: 404 })
     }
 
     if (campaign.user_id !== userId) {
-      return NextResponse.json(
-        { success: false, error: 'Forbidden' },
-        { status: 403 }
-      )
+      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
     }
 
-    const leadsToInsert = leads
-      .map((lead: any) => {
-        if (!lead || typeof lead !== 'object') return null
+    const leadsToInsert = leads.map((lead: any) => {
+      let phone = ''
+      let first_name = ''
+      let last_name = ''
 
-        const first_name =
-          lead['first_name'] ||
-          lead['First Name'] ||
-          lead['firstname'] ||
-          lead['FirstName'] ||
-          lead['first'] ||
-          lead['First'] ||
-          lead['name'] ||
-          lead['Name'] ||
-          ''
+      if (typeof lead === 'object' && !Array.isArray(lead)) {
+        const keys = Object.keys(lead)
 
-        const last_name =
-          lead['last_name'] ||
-          lead['Last Name'] ||
-          lead['lastname'] ||
-          lead['LastName'] ||
-          lead['last'] ||
-          lead['Last'] ||
-          ''
+        first_name = lead['first_name'] || lead['First Name'] ||
+          lead['firstname'] || lead['FirstName'] ||
+          lead['first'] || lead['First'] ||
+          lead['name'] || lead['Name'] || lead[keys[0]] || ''
 
-        const rawPhone =
-          lead['phone'] ||
-          lead['Phone'] ||
-          lead['phone_number'] ||
-          lead['Phone Number'] ||
-          lead['mobile'] ||
-          lead['Mobile'] ||
-          lead['cell'] ||
-          lead['Cell'] ||
-          Object.values(lead).find(
-            (v: any) =>
-              typeof v === 'string' &&
-              v.replace(/\D/g, '').length >= 10
-          ) ||
-          ''
+        last_name = lead['last_name'] || lead['Last Name'] ||
+          lead['lastname'] || lead['LastName'] ||
+          lead['last'] || lead['Last'] || lead[keys[1]] || ''
 
-        const phone = String(rawPhone).replace(/\D/g, '')
-
-        if (!phone || phone.length < 10) return null
+        phone = lead['phone'] || lead['Phone'] || lead['phone_number'] ||
+          lead['Phone Number'] || lead['PHONE'] || lead['mobile'] ||
+          lead['Mobile'] || lead['cell'] || lead['Cell'] ||
+          Object.values(lead).find((v: any) =>
+            typeof v === 'string' && v.replace(/\D/g, '').length >= 10
+          ) as string || ''
 
         return {
           campaign_id,
           user_id: userId,
           first_name,
           last_name,
-          phone,
-          email: lead['email'] || lead['Email'] || '',
-          state: lead['state'] || lead['State'] || '',
+          phone: String(phone).replace(/\D/g, ''),
+          email: lead['email'] || lead['Email'] || lead['EMAIL'] || '',
+          state: lead['state'] || lead['State'] || lead['STATE'] || '',
           status: 'uncalled',
-
-          // SAFE serialization for Supabase + TS
-          extra_data: JSON.parse(JSON.stringify(lead)),
-
+          extra_data: lead,
           ...parseConsent(lead),
         }
-      })
-      .filter((lead): lead is NonNullable<typeof lead> => lead !== null)
+      }
+
+      if (Array.isArray(lead)) {
+        phone = lead.find((v: any) =>
+          typeof v === 'string' && v.replace(/\D/g, '').length >= 10
+        ) || ''
+
+        return {
+          campaign_id,
+          user_id: userId,
+          first_name: lead[0] || '',
+          last_name: lead[1] || '',
+          phone: String(phone).replace(/\D/g, ''),
+          status: 'uncalled',
+          extra_data: { raw: lead },
+          // Array-format leads can't carry consent metadata cleanly,
+          // so consent fields default to null
+          consent_date: null,
+          consent_source: null,
+          consent_description: null,
+          consent_proof_url: null,
+        }
+      }
+
+      return null
+    }).filter((lead: any) => lead && lead.phone && lead.phone.length >= 10)
 
     if (leadsToInsert.length === 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            'No valid leads found. Make sure your file has phone numbers with at least 10 digits.',
-        },
-        { status: 400 }
-      )
+      return NextResponse.json({
+        success: false,
+        error: 'No valid leads found. Make sure your file has phone numbers with at least 10 digits.'
+      }, { status: 400 })
     }
 
     const { error: insertError } = await supabaseAdmin
       .from('leads')
-      .insert(leadsToInsert as any)
+      .insert(leadsToInsert)
 
     if (insertError) throw insertError
 
@@ -172,9 +170,9 @@ export async function POST(req: Request) {
       .update({ total_leads: actualCount ?? 0 })
       .eq('id', campaign_id)
 
-    const consentCount = leadsToInsert.filter(
-      (l) => l && l.consent_date
-    ).length
+    // Count how many leads in this batch actually carried consent metadata.
+    // Useful for showing "uploaded 1,000 leads (823 with consent)" in the UI.
+    const consentCount = leadsToInsert.filter((l: any) => l && l.consent_date).length
 
     return NextResponse.json({
       success: true,

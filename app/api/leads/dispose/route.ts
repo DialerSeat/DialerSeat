@@ -82,6 +82,12 @@ export async function POST(req: Request) {
       await supabaseAdmin.rpc('increment_called_leads', { campaign_id_input: campaign_id })
     }
 
+    // ─────────────────────────────────────────────────────────────────────
+    // Update the existing calls row (created by /api/calls/outbound at dial
+    // start) instead of inserting a new one. Match the most recent open call
+    // for this lead. If we somehow can't find one (manual dial, edge case),
+    // insert a fallback row so we don't lose the disposition data.
+    // ─────────────────────────────────────────────────────────────────────
     const { data: openCall } = await supabaseAdmin
       .from('calls')
       .select('id')
@@ -104,7 +110,8 @@ export async function POST(req: Request) {
         })
         .eq('id', openCall.id)
     } else {
-
+      // Fallback insert — lead has no open call row (rare, e.g., disposition
+      // came through without a prior outbound dial attempt)
       const { data: inserted } = await supabaseAdmin.from('calls').insert({
         user_id,
         lead_id,
@@ -115,6 +122,7 @@ export async function POST(req: Request) {
       resolvedCallId = inserted?.id ?? null
     }
 
+    // Forensic trail (fire-and-forget; never blocks the response).
     void logCallEvent({
       event_type: 'disposition_set',
       call_id: resolvedCallId,
