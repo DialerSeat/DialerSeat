@@ -19,6 +19,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true })
     }
 
+    // Map SignalWire call status to our disposition.
+    // We only set disposition on terminal statuses; non-terminal updates leave it alone.
     let disposition: string | null = null
     if (callStatus === 'completed') disposition = 'completed'
     else if (callStatus === 'no-answer') disposition = 'no_answer'
@@ -36,6 +38,8 @@ export async function POST(req: Request) {
       .update(updates)
       .eq('signalwire_call_id', callSid)
 
+    // Forensic trail (fire-and-forget). Terminal statuses map to lifecycle
+    // events; non-terminal ones (ringing/in-progress) are logged as status.
     const evType =
       callStatus === 'completed' ? 'completed' :
       (callStatus === 'failed' || callStatus === 'busy' || callStatus === 'no-answer' || callStatus === 'canceled') ? 'failed' :
@@ -51,6 +55,11 @@ export async function POST(req: Request) {
       })
     }
 
+    // On a TERMINAL status, promptly remove the call_rooms bridge row for this
+    // call so dead rooms don't accumulate (the stale-call reaper then only ever
+    // mops up rooms whose terminal webhook never arrived — a pure backstop).
+    // Fire-and-forget: a cleanup failure must never affect the webhook response
+    // or its retry semantics.
     if (disposition) {
       void supabaseAdmin
         .from('call_rooms')

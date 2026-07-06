@@ -4,35 +4,35 @@ import { recordAmdResult } from '@/lib/dialerPacing'
 import { logCallEvent } from '@/lib/callEvents'
 import { verifyWebhook, webhookUrl } from '@/lib/verifyWebhook'
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+// =============================================================================
+// SignalWire AMD result webhook (modified for predictive controller)
+// =============================================================================
+// Records the AMD result on the calls row.
+//
+// Behavior by AMD result:
+//
+//   answeredBy = 'human':
+//     - User-dial calls (no dial_group_id): leave alone, agent is already
+//       in the conference and gets the human normally.
+//     - Controller-fanout calls (dial_group_id is set):
+//         * Check if the originating agent_session is still 'ready' AND
+//           has no other in-flight call already routed to them.
+//         * If yes: leave the call alone — agent gets routed via the
+//           existing conference flow (controller-fanout calls have NO
+//           pre-placed agent leg, so we need to place it NOW).
+//         * If no: this is an EXCESS abandon. Redirect the call to the
+//           abandon-notice TwiML (FTC TSR § 310.4(b)(4) compliance) and
+//           mark the call as abandoned for the 30-day rate calculation.
+//
+//   answeredBy starts with 'machine_', or = 'fax' / 'unknown':
+//     Same as before — hang up the call, auto-dispose lead as no_answer,
+//     delete recording.
+//
+// IMPORTANT: For controller_fanout calls, the agent leg has NOT been
+// placed yet (placeOutboundCall with source='controller_fanout' only fires
+// the lead leg). We need to dial the agent NOW when AMD says human and
+// the agent is still ready. If the agent has gone busy, we abandon.
+// =============================================================================
 
 export async function POST(req: Request) {
   const bad = verifyWebhook(req)
@@ -73,9 +73,9 @@ export async function POST(req: Request) {
       return new NextResponse('', { status: 200 })
     }
 
-    
-    
-    
+    // ── HUMAN ANSWERED ──────────────────────────────────────────────────
+    // Look up the call row to determine if this is a user-dial or
+    // controller-fanout call.
     const { data: callRow } = await supabaseAdmin
       .from('calls')
       .select('id, campaign_id, dial_group_id, signalwire_call_id, phone_number')
@@ -83,39 +83,39 @@ export async function POST(req: Request) {
       .maybeSingle()
 
     if (!callRow) {
-      
-      
+      // No matching call row — can't tell user_dial vs fanout.
+      // Default to leaving alone (existing behavior for user dials).
       console.warn(`[amd-result] No calls row for ${callSid}, treating as user_dial`)
       return new NextResponse('', { status: 200 })
     }
 
     if (!callRow.dial_group_id) {
-      
-      
-      
+      // No dial_group_id = user_dial call. Agent leg already placed and
+      // joined conference at lead pickup. Nothing to do — agent already
+      // has the call.
       return new NextResponse('', { status: 200 })
     }
 
-    
-    
-    
+    // ── CONTROLLER FANOUT — route or abandon ────────────────────────────
+    // dial_group_id is the agent_sessions.id that fired this call.
+    // Check if that session is still ready (no other call routed to them).
     const sessionId = callRow.dial_group_id
 
     const { data: session } = await supabaseAdmin
       .from('agent_sessions')
-      .select('id, state, current_call_id, last_heartbeat, user_id, team_id, campaign_id')
+      .select('id, state, current_call_id, last_heartbeat, user_id')
       .eq('id', sessionId)
       .maybeSingle()
 
     if (!session) {
-      
-      
+      // Session disappeared — agent closed browser before AMD fired.
+      // Abandon the call.
       console.log(`[amd-result] session ${sessionId} gone, abandoning ${callSid}`)
       await abandonCall(callSid)
       return new NextResponse('', { status: 200 })
     }
 
-    
+    // Heartbeat freshness — if agent's tab is closed, abandon
     const heartbeatAge = Date.now() - new Date(session.last_heartbeat).getTime()
     if (heartbeatAge > 15_000) {
       console.log(`[amd-result] session ${sessionId} stale (${Math.round(heartbeatAge/1000)}s), abandoning ${callSid}`)
@@ -123,67 +123,45 @@ export async function POST(req: Request) {
       return new NextResponse('', { status: 200 })
     }
 
-    // This agent's own session is already tied up with a different call.
-    // Previously: abandon the lead outright. Now: if this is a *team*
-    // campaign (session.team_id set — multiple agents dialing the same
-    // pool), give the connected lead to another agent on that same team +
-    // campaign who's actually free, instead of dropping it. Solo (non-team)
-    // sessions have no teammates to redistribute to, so behavior for them
-    // is unchanged.
-    let winningSessionId = sessionId
-    let winningUserId = session.user_id
-
+    // If agent already has a call routed to them (current_call_id set,
+    // AND it's not this call), this is the excess pickup → abandon.
     if (session.current_call_id && session.current_call_id !== callRow.id) {
-      const teammate = await claimTeammateSession(session, callRow.id)
-      if (teammate) {
-        console.log(`[amd-result] session ${sessionId} busy, redistributed ${callSid} to teammate session ${teammate.id}`)
-        winningSessionId = teammate.id
-        winningUserId = teammate.user_id
-      } else {
-        console.log(`[amd-result] session ${sessionId} already on call ${session.current_call_id}, no free teammate, abandoning ${callSid}`)
-        await abandonCall(callSid)
-        return new NextResponse('', { status: 200 })
-      }
-    } else {
-      // Original session looked free — claim it atomically. Two connects
-      // can race to grab the same free session; whoever loses this update
-      // gets no row back below.
-      const claimRes = await supabaseAdmin
-        .from('agent_sessions')
-        .update({
-          current_call_id: callRow.id,
-          state: 'on_call',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', sessionId)
-        .or(`current_call_id.is.null,current_call_id.eq.${callRow.id}`)
-        .select('id')
-        .maybeSingle()
-
-      if (!claimRes.data) {
-        const teammate = await claimTeammateSession(session, callRow.id)
-        if (teammate) {
-          console.log(`[amd-result] session ${sessionId} claim race lost, redistributed ${callSid} to teammate session ${teammate.id}`)
-          winningSessionId = teammate.id
-          winningUserId = teammate.user_id
-        } else {
-          console.log(`[amd-result] session ${sessionId} claim race lost, no free teammate, abandoning ${callSid}`)
-          await abandonCall(callSid)
-          return new NextResponse('', { status: 200 })
-        }
-      }
+      console.log(`[amd-result] session ${sessionId} already on call ${session.current_call_id}, abandoning ${callSid}`)
+      await abandonCall(callSid)
+      return new NextResponse('', { status: 200 })
     }
 
-    // If a teammate ended up taking this instead of the triggering agent,
-    // re-point ownership so reporting/analytics credit the right person and
-    // /api/calls/check authorizes the right browser session.
-    if (winningSessionId !== sessionId) {
-      await supabaseAdmin
-        .from('calls')
-        .update({ user_id: winningUserId, dial_group_id: winningSessionId })
-        .eq('id', callRow.id)
+    // Agent is ready or already claimed this call. Claim it for them
+    // and place the agent leg into the same conference room.
+    // (The lead is already in a conference room created by the lead-call's
+    // initial TwiML URL `/api/calls/twiml?room=room-...`.)
+    //
+    // We mark the session as current_call_id=THIS call atomically so a
+    // simultaneous AMD result for another fanout call can't double-claim.
+    const claimRes = await supabaseAdmin
+      .from('agent_sessions')
+      .update({
+        current_call_id: callRow.id,
+        state: 'on_call',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', sessionId)
+      .or(`current_call_id.is.null,current_call_id.eq.${callRow.id}`)
+      .select('id')
+      .maybeSingle()
+
+    if (!claimRes.data) {
+      // Update touched 0 rows — someone else claimed in the meantime.
+      console.log(`[amd-result] session ${sessionId} claim race lost, abandoning ${callSid}`)
+      await abandonCall(callSid)
+      return new NextResponse('', { status: 200 })
     }
 
+    // Successfully claimed — now place the agent leg.
+    // Use the SAME conference room name pattern from the lead leg's TwiML.
+    // We need to find that room name — the lead's initial call URL has
+    // it as ?room=room-XXX. The cleanest source of truth is the call_rooms
+    // table that placeOutboundCall populated.
     const { data: roomRow } = await supabaseAdmin
       .from('call_rooms')
       .select('room_name')
@@ -193,19 +171,12 @@ export async function POST(req: Request) {
     if (!roomRow) {
       console.error(`[amd-result] no call_rooms row for lead ${callSid}, can't place agent leg`)
       await abandonCall(callSid)
-      
+      // Release session claim
       await supabaseAdmin
         .from('agent_sessions')
         .update({ current_call_id: null, state: 'ready' })
-        .eq('id', winningSessionId)
+        .eq('id', sessionId)
       return new NextResponse('', { status: 200 })
-    }
-
-    if (winningSessionId !== sessionId) {
-      await supabaseAdmin
-        .from('call_rooms')
-        .update({ user_id: winningUserId })
-        .eq('room_name', roomRow.room_name)
     }
 
     await placeAgentLegForFanout(roomRow.room_name, callRow.phone_number)
@@ -217,60 +188,15 @@ export async function POST(req: Request) {
   }
 }
 
-
-
-
-
-
-
-
-async function claimTeammateSession(
-  originalSession: { id: string; team_id: string | null; campaign_id: string | null },
-  callId: string
-): Promise<{ id: string; user_id: string } | null> {
-  // No team on this session means there's no shared pool of agents to hand
-  // an overflow lead to — solo campaigns keep the old abandon-only behavior.
-  if (!originalSession.team_id || !originalSession.campaign_id) return null
-
-  const { data: candidates } = await supabaseAdmin
-    .from('agent_sessions')
-    .select('id, user_id, last_heartbeat, current_call_id, state')
-    .eq('team_id', originalSession.team_id)
-    .eq('campaign_id', originalSession.campaign_id)
-    .neq('id', originalSession.id)
-    .is('current_call_id', null)
-    .in('state', ['ready', 'dialing'])
-    .order('last_heartbeat', { ascending: false })
-    .limit(8)
-
-  if (!candidates || candidates.length === 0) return null
-
-  const now = Date.now()
-  for (const candidate of candidates) {
-    const age = now - new Date(candidate.last_heartbeat).getTime()
-    if (age > 15_000) continue // stale — same freshness bar used everywhere else in this file
-
-    const claim = await supabaseAdmin
-      .from('agent_sessions')
-      .update({
-        current_call_id: callId,
-        state: 'on_call',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', candidate.id)
-      .is('current_call_id', null) // still free at the moment we actually write
-      .select('id, user_id')
-      .maybeSingle()
-
-    if (claim.data) return claim.data
-    // someone else claimed this candidate between our SELECT and UPDATE — try the next one
-  }
-
-  return null
-}
-
+// -----------------------------------------------------------------------------
+// abandonCall — for predictive fanout EXCESS pickups (FTC TSR compliance)
+// -----------------------------------------------------------------------------
+// 1. Marks the call as was_abandoned=true in our DB (counts toward 30d rate)
+// 2. Redirects the SignalWire call to play the abandon-notice TwiML
+//    instead of joining the conference
+// -----------------------------------------------------------------------------
 async function abandonCall(callSid: string): Promise<void> {
-  
+  // Mark in our DB
   try {
     await supabaseAdmin
       .from('calls')
@@ -283,9 +209,9 @@ async function abandonCall(callSid: string): Promise<void> {
     console.error('[amd-result] abandon DB update failed:', err)
   }
 
-  
-  
-  
+  // Redirect the SignalWire call to play the abandon-notice TwiML.
+  // SignalWire's Calls API supports "Url" on a POST update to send the
+  // call to a new TwiML document — same mechanism Twilio uses.
   const spaceUrl = process.env.SIGNALWIRE_SPACE_URL
   const projectId = process.env.SIGNALWIRE_PROJECT_ID
   const apiToken = process.env.SIGNALWIRE_API_TOKEN
@@ -321,8 +247,8 @@ async function abandonCall(callSid: string): Promise<void> {
     console.error('[amd-result] abandon redirect error:', err)
   }
 
-  
-  
+  // Also clean up the lead's claim and bump dial_attempts since we did
+  // technically reach them.
   try {
     const { data: callRow } = await supabaseAdmin
       .from('calls')
@@ -350,10 +276,10 @@ async function abandonCall(callSid: string): Promise<void> {
   }
 }
 
-
-
-
-
+// -----------------------------------------------------------------------------
+// placeAgentLegForFanout — places the SIP call to the agent for a fanout
+// pickup that's been claimed. Joins the lead's existing conference room.
+// -----------------------------------------------------------------------------
 async function placeAgentLegForFanout(roomName: string, phoneNumber: string): Promise<void> {
   const spaceUrl = process.env.SIGNALWIRE_SPACE_URL
   const projectId = process.env.SIGNALWIRE_PROJECT_ID
@@ -372,8 +298,8 @@ async function placeAgentLegForFanout(roomName: string, phoneNumber: string): Pr
   const callsUrl = `https://${spaceUrl}/api/laml/2010-04-01/Accounts/${projectId}/Calls.json`
   const agentSipUri = `sip:${sipUsername}@${sipDomain}`
 
-  
-  
+  // From number for the agent leg — try to use the lead's pool number for
+  // consistency, falls back to SIGNALWIRE_PHONE_NUMBER. Look it up by room.
   let fromNumber = fallbackNumber
   try {
     const { data: room } = await supabaseAdmin
@@ -417,7 +343,7 @@ async function placeAgentLegForFanout(roomName: string, phoneNumber: string): Pr
     } else {
       const data = await res.json()
       console.log(`[amd-result] placed agent leg ${data?.sid} into room ${roomName}`)
-      
+      // Update call_rooms with the agent SID
       try {
         await supabaseAdmin
           .from('call_rooms')
@@ -430,9 +356,9 @@ async function placeAgentLegForFanout(roomName: string, phoneNumber: string): Pr
   }
 }
 
-
-
-
+// -----------------------------------------------------------------------------
+// Existing helpers (unchanged behavior)
+// -----------------------------------------------------------------------------
 
 async function hangupCall(callSid: string): Promise<void> {
   const spaceUrl = process.env.SIGNALWIRE_SPACE_URL
@@ -488,7 +414,7 @@ async function autoDisposeAsNoAnswer(callSid: string): Promise<void> {
       status: 'no_answer',
       last_called_at: new Date().toISOString(),
       dial_attempts: (lead?.dial_attempts || 0) + 1,
-      
+      // Release the claim so the lead can be redialed later
       claimed_at: null,
       claimed_by_session_id: null,
     })
