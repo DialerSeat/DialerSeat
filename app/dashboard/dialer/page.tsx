@@ -1992,7 +1992,12 @@ function DialerPageInner() {
   })()
 
   const activeScriptIdx = scriptIdx < scriptTabs.length ? scriptIdx : 0
-  const activeScript = scriptTabs[activeScriptIdx]?.script || null
+  // NOTE: ?? not || — an empty saved script body ('') is different from "no
+  // script exists." || treated them the same, collapsing activeScript to
+  // null whenever the selected tab's script happened to be blank. Since the
+  // render below keys the whole box (tabs included) off activeScript, one
+  // blank script anywhere in the tab order silently hid every other tab too.
+  const activeScript = scriptTabs[activeScriptIdx]?.script ?? null
 
   // Reorder helper: move the dragged tab key to the position of the target key.
   const reorderScriptTabs = (dragKey: string, targetKey: string) => {
@@ -2833,7 +2838,7 @@ function DialerPageInner() {
                         </div>
                       )}
                     </div>
-                    {activeScript && (
+                    {scriptTabs.length > 0 && (
                       <div className="dialer-script-box" style={{
                         flex: 1, margin: '0 12px 12px',
                         background: terminalBg, border: `1px solid ${terminalBorder}`,
@@ -2871,9 +2876,9 @@ function DialerPageInner() {
                         <div style={{ flex: 1, padding: '10px 12px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                           <div style={{ fontSize: '8px', letterSpacing: '2px', color: terminalMuted, marginBottom: '6px', flexShrink: 0 }}>CALL SCRIPT</div>
                           <div className="dialer-script-body" style={{
-                            fontSize: '11px', lineHeight: '1.7', color: terminalText,
+                            fontSize: '11px', lineHeight: '1.7', color: activeScript ? terminalText : terminalMuted,
                             fontFamily: 'monospace', whiteSpace: 'pre-wrap', overflowY: 'auto', flex: 1,
-                          }}>{activeScript}</div>
+                          }}>{activeScript || 'This script is empty — add content from Manage Scripts.'}</div>
                         </div>
                       </div>
                     )}
