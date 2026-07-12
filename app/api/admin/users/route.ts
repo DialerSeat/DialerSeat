@@ -29,14 +29,20 @@ export async function GET(req: NextRequest) {
 
   const { data: subs } = await supabase
     .from('subscriptions')
-    .select('user_id, status, current_period_end, cancel_at_period_end, discount_coupon')
+    .select('user_id, status, current_period_end, cancel_at_period_end, discount_coupon, created_at')
     .in('user_id', userIds)
 
+  // Always use each user's most recent subscription row as the current one.
+  // A user can accumulate multiple rows over time (resubscribes, retries,
+  // etc.) — only the latest reflects their real, current state. Picking
+  // whichever row happened to be "live" (the old behavior) let a stale
+  // historical row outrank the actual current one.
   const subByUser = new Map<string, any>()
   for (const s of subs || []) {
     const existing = subByUser.get(s.user_id)
-    const isLive = ['active', 'trialing', 'past_due'].includes(s.status)
-    if (!existing || isLive) subByUser.set(s.user_id, s)
+    if (!existing || new Date(s.created_at).getTime() > new Date(existing.created_at).getTime()) {
+      subByUser.set(s.user_id, s)
+    }
   }
 
   const leadCounts = new Map<string, number>()
@@ -79,7 +85,12 @@ export async function GET(req: NextRequest) {
 
   const rows = users.map(u => {
     const sub = subByUser.get(u.clerk_id)
-    const isActive = sub && ['active', 'trialing', 'past_due'].includes(sub.status)
+    // Active means: currently billing AND not on its way out.
+    // - status must be the literal Stripe 'active' (not trialing/past_due/etc.)
+    // - cancel_at_period_end must not be true (a user who's already told
+    //   Stripe to cancel is not an active, recurring customer, even though
+    //   Stripe leaves status='active' until the current period ends)
+    const isActive = !!sub && sub.status === 'active' && !sub.cancel_at_period_end
     return {
       clerk_id: u.clerk_id,
       email: u.email,
@@ -98,7 +109,7 @@ export async function GET(req: NextRequest) {
             discount_coupon: sub.discount_coupon,
           }
         : null,
-      is_active_subscription: !!isActive,
+      is_active_subscription: isActive,
     }
   })
 
