@@ -103,52 +103,7 @@ export function getCallingRule(state: string): CallingRule {
 
 
 
-export function getFederalHolidays(year: number): Set<string> {
-  const dates = new Set<string>()
-  const fmt = (d: Date) => d.toISOString().split('T')[0]
-
-  
-  dates.add(`${year}-01-01`) // New Year's Day
-  dates.add(`${year}-07-04`) // Independence Day
-  dates.add(`${year}-11-11`) // Veterans Day
-  dates.add(`${year}-12-25`) // Christmas
-
-  
-  dates.add(fmt(nthWeekday(year, 0, 1, 3))) // MLK Day — 3rd Monday in January
-  dates.add(fmt(nthWeekday(year, 1, 1, 3))) // Presidents Day — 3rd Monday in February
-  dates.add(fmt(lastWeekday(year, 4, 1)))   // Memorial Day — last Monday in May
-  dates.add(fmt(nthWeekday(year, 8, 1, 1))) // Labor Day — 1st Monday in September
-  dates.add(fmt(nthWeekday(year, 9, 1, 2))) // Columbus Day — 2nd Monday in October
-  dates.add(fmt(nthWeekday(year, 10, 4, 4))) // Thanksgiving — 4th Thursday in November
-
-  
-  const thanksgiving = nthWeekday(year, 10, 4, 4)
-  const dayAfter = new Date(thanksgiving)
-  dayAfter.setDate(dayAfter.getDate() + 1)
-  dates.add(fmt(dayAfter))
-
-  
-  dates.add(`${year}-12-24`)
-
-  
-  dates.add(`${year}-06-19`)
-
-  return dates
-}
-
-
-
-function nthWeekday(year: number, month: number, weekday: number, n: number): Date {
-  const d = new Date(Date.UTC(year, month, 1))
-  const offset = (weekday - d.getUTCDay() + 7) % 7
-  d.setUTCDate(1 + offset + (n - 1) * 7)
-  return d
-}
-
-
-function lastWeekday(year: number, month: number, weekday: number): Date {
-  const d = new Date(Date.UTC(year, month + 1, 0)) // last day of month
-  const offset = (d.getUTCDay() - weekday + 7) % 7
-  d.setUTCDate(d.getUTCDate() - offset)
-  return d
-}
+// Holiday calendar intentionally removed — dialing on federal holidays is
+// left to each user's discretion and is no longer enforced by the system.
+// See lib/callingWindow.ts: isCallableNow() only checks calling-window hours
+// and state Sunday rules.

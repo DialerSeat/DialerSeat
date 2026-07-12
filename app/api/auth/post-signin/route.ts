@@ -64,8 +64,6 @@ const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'dialerseat.com'
 const TARGET_PATH = '/dashboard/analytics'
 const ADMIN_PATH = '/dashboard/admin/desktop' // v2: the admin desktop
 const WELCOME_PATH = '/welcome'               // v3: the post-signup showcase
-const TENANT_COOKIE_NAME = 'ds_last_tenant'
-const TENANT_COOKIE_MAX_AGE = 60 * 60 * 24 * 90 // 90 days
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -113,61 +111,16 @@ function buildWelcomeDest(host: string): string {
 
 
 
-function setOrClearTenantCookie(
-  response: NextResponse,
-  slug: string | null,
-  host: string
-): void {
-  if (isDevHost(host)) {
-    if (slug) {
-      response.cookies.set(TENANT_COOKIE_NAME, slug, {
-        path: '/',
-        maxAge: TENANT_COOKIE_MAX_AGE,
-        httpOnly: true,
-        sameSite: 'lax',
-      })
-    } else {
-      response.cookies.delete(TENANT_COOKIE_NAME)
-    }
-    return
-  }
-
-  if (slug) {
-    response.cookies.set(TENANT_COOKIE_NAME, slug, {
-      domain: `.${ROOT_DOMAIN}`,
-      path: '/',
-      maxAge: TENANT_COOKIE_MAX_AGE,
-      httpOnly: true,
-      secure: true,
-      sameSite: 'lax',
-    })
-  } else {
-    response.cookies.set(TENANT_COOKIE_NAME, '', {
-      domain: `.${ROOT_DOMAIN}`,
-      path: '/',
-      maxAge: 0,
-      httpOnly: true,
-      secure: true,
-      sameSite: 'lax',
-    })
-  }
-}
-
-
-function redirectWithTenantCookie(
+function redirectToTenant(
   slug: string | null,
   host: string
 ): NextResponse {
-  const response = NextResponse.redirect(buildDest(slug, host), 302)
-  setOrClearTenantCookie(response, slug, host)
-  return response
+  return NextResponse.redirect(buildDest(slug, host), 302)
 }
 
 
 function redirectAdminToDesktop(host: string): NextResponse {
-  const response = NextResponse.redirect(buildAdminDest(host), 302)
-  setOrClearTenantCookie(response, null, host)
-  return response
+  return NextResponse.redirect(buildAdminDest(host), 302)
 }
 
 
@@ -363,7 +316,7 @@ export async function GET(req: NextRequest) {
           currentTenant.owner_clerk_id
         )
         if (affiliated) {
-          return redirectWithTenantCookie(currentTenant.slug, host)
+          return redirectToTenant(currentTenant.slug, host)
         }
       }
     }
@@ -371,13 +324,13 @@ export async function GET(req: NextRequest) {
     
     const preferred = await resolvePreferredTenant(userId)
     if (preferred) {
-      return redirectWithTenantCookie(preferred.slug, host)
+      return redirectToTenant(preferred.slug, host)
     }
 
     
     
     
-    return redirectWithTenantCookie(null, host)
+    return redirectToTenant(null, host)
   } catch (err) {
     console.error('[post-signin] unexpected error:', err)
     return NextResponse.redirect(new URL(TARGET_PATH, req.url))

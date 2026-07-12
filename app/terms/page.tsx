@@ -299,7 +299,6 @@ export default function TermsPage() {
             </p>
             <ul>
               <li>Calling-window restrictions per lead's local time (typically 8AM–9PM)</li>
-              <li>Federal holiday blocks</li>
               <li>State-specific calling rule enforcement (Sunday bans where applicable)</li>
               <li>Automated abandon-rate protections in predictive mode (FTC TSR 3% rule)</li>
               <li>STIR/SHAKEN A-attestation on outbound calls where supported</li>

@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { ClerkProvider } from '@clerk/nextjs';
 import { auth } from '@clerk/nextjs/server';
-import { headers, cookies } from 'next/headers';
+import { headers } from 'next/headers';
 import "./globals.css";
 import StructuredData from './components/StructuredData';
 import { ThemeProvider } from '@/components/ThemeProvider';
@@ -159,8 +159,6 @@ const IOS_SPLASH_SCREENS: Array<{ w: number; h: number; orient: 'portrait' | 'la
   { w: 2796, h: 1290, orient: 'landscape' },
 ];
 
-const TENANT_COOKIE_NAME = 'ds_last_tenant';
-
 export const dynamic = 'force-dynamic';
 
 export default async function RootLayout({
@@ -183,15 +181,11 @@ export default async function RootLayout({
       branding = await getActiveTenantForUser(userId);
     } else {
 
+      // Branding is derived only from the current request's hostname —
+      // never from anything cached in the browser. A visitor on the plain
+      // dialerseat.com domain always gets the default experience; a visitor
+      // on a tenant subdomain always gets that tenant's branding.
       branding = await getTenantBranding(tenantSlug);
-      if (!branding) {
-
-        const cookieStore = await cookies();
-        const lastTenant = cookieStore.get(TENANT_COOKIE_NAME)?.value;
-        if (lastTenant) {
-          branding = await getTenantBranding(lastTenant);
-        }
-      }
     }
   }
 
