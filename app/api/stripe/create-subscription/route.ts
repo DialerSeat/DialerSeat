@@ -215,12 +215,20 @@ export async function POST(req: Request) {
       },
     }
 
+    let appliedCoupon: {
+      percentOff: number | null
+      amountOffCents: number | null
+      duration: 'once' | 'repeating' | 'forever'
+      durationInMonths: number | null
+    } | null = null
+
     if (promoCode) {
       try {
         const promos = await stripe.promotionCodes.list({
           code: promoCode,
           active: true,
           limit: 1,
+          expand: ['data.promotion.coupon'],
         })
 
         if (promos.data.length > 0) {
@@ -228,6 +236,20 @@ export async function POST(req: Request) {
           subParams.metadata = {
             ...subParams.metadata,
             promo_code: promoCode,
+          }
+          // promotion.coupon may come back as just an ID if expansion didn't
+          // take (defensive — don't assume the expand always resolves it).
+          const rawCoupon = promos.data[0].promotion.coupon
+          const c = typeof rawCoupon === 'string'
+            ? await stripe.coupons.retrieve(rawCoupon)
+            : rawCoupon
+          if (c) {
+            appliedCoupon = {
+              percentOff: c.percent_off ?? null,
+              amountOffCents: c.amount_off ?? null,
+              duration: c.duration,
+              durationInMonths: c.duration_in_months ?? null,
+            }
           }
         } else {
           try {
@@ -237,6 +259,12 @@ export async function POST(req: Request) {
               subParams.metadata = {
                 ...subParams.metadata,
                 promo_code: promoCode,
+              }
+              appliedCoupon = {
+                percentOff: coupon.percent_off ?? null,
+                amountOffCents: coupon.amount_off ?? null,
+                duration: coupon.duration,
+                durationInMonths: coupon.duration_in_months ?? null,
               }
             } else {
               return NextResponse.json(
@@ -268,12 +296,26 @@ export async function POST(req: Request) {
     const invoice = subscription.latest_invoice as any
     const confirmationSecret = invoice?.confirmation_secret?.client_secret
 
+    // The actual, Stripe-computed amounts for THIS invoice — always derived
+    // from the real invoice, never from a hardcoded plan price. This is what
+    // the billing page now displays instead of a static "$35/$75" label that
+    // never moved when a coupon was applied.
+    const amounts = invoice
+      ? {
+          subtotalCents: invoice.subtotal as number,
+          totalCents: invoice.total as number,
+          currency: (invoice.currency as string) || 'usd',
+        }
+      : null
+
     if (!confirmationSecret) {
       if (subscription.status === 'active') {
         return NextResponse.json({
           subscriptionId: subscription.id,
           clientSecret: null,
           freeWithCoupon: true,
+          amounts,
+          coupon: appliedCoupon,
         })
       }
 
@@ -293,6 +335,8 @@ export async function POST(req: Request) {
       subscriptionId: subscription.id,
       clientSecret: confirmationSecret,
       plan,
+      amounts,
+      coupon: appliedCoupon,
     })
   } catch (err: any) {
     console.error('create-subscription error:', err)

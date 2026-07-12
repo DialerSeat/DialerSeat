@@ -53,6 +53,59 @@ const PLAN_INFO = {
   },
 } as const
 
+function formatCents(cents: number, currency: string): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currency.toUpperCase(),
+  }).format(cents / 100)
+}
+
+// Builds the actual "charged today" / "billed thereafter" copy from the real
+// Stripe invoice + coupon, instead of a static plan price that never moved
+// when a coupon was applied. Falls back to the plan's base price only when
+// we don't have real numbers yet (first paint, before create-subscription
+// has returned).
+function describeBilling(
+  planInfo: (typeof PLAN_INFO)[Plan],
+  amounts: { subtotalCents: number; totalCents: number; currency: string } | null,
+  coupon: {
+    percentOff: number | null
+    amountOffCents: number | null
+    duration: 'once' | 'repeating' | 'forever'
+    durationInMonths: number | null
+  } | null
+) {
+  const fallback = planInfo.weeklyBlurb
+  if (!amounts) {
+    return {
+      todayLabel: fallback,
+      recurringLabel: fallback,
+      hasDiscount: false,
+    }
+  }
+
+  const todayLabel = formatCents(amounts.totalCents, amounts.currency)
+  const fullLabel = formatCents(amounts.subtotalCents, amounts.currency)
+  const hasDiscount = amounts.totalCents !== amounts.subtotalCents
+
+  if (!hasDiscount || !coupon) {
+    return { todayLabel, recurringLabel: todayLabel, hasDiscount: false }
+  }
+
+  // Recurring line depends on how long the coupon actually lasts.
+  let recurringLabel: string
+  if (coupon.duration === 'forever') {
+    recurringLabel = `${todayLabel} weekly (discount applies permanently)`
+  } else if (coupon.duration === 'repeating' && coupon.durationInMonths) {
+    recurringLabel = `${todayLabel} weekly for ${coupon.durationInMonths} month${coupon.durationInMonths === 1 ? '' : 's'}, then ${fullLabel} weekly`
+  } else {
+    // 'once' — discount only applies to this first invoice
+    recurringLabel = `${fullLabel} weekly`
+  }
+
+  return { todayLabel, recurringLabel, hasDiscount: true, fullLabel }
+}
+
 export default function BillingPage() {
   const { user, isLoaded } = useUser()
   const { signOut } = useClerk()
@@ -71,6 +124,13 @@ export default function BillingPage() {
   const [submittingPromo, setSubmittingPromo] = useState(false)
   const [promoApplied, setPromoApplied] = useState<string | null>(null)
   const [freeWithCoupon, setFreeWithCoupon] = useState(false)
+  const [amounts, setAmounts] = useState<{ subtotalCents: number; totalCents: number; currency: string } | null>(null)
+  const [coupon, setCoupon] = useState<{
+    percentOff: number | null
+    amountOffCents: number | null
+    duration: 'once' | 'repeating' | 'forever'
+    durationInMonths: number | null
+  } | null>(null)
   const [abandoning, setAbandoning] = useState(false)
   const [switchingPlan, setSwitchingPlan] = useState(false)
 
@@ -122,6 +182,8 @@ export default function BillingPage() {
 
       if (createData.freeWithCoupon) {
         setFreeWithCoupon(true)
+        setAmounts(createData.amounts ?? null)
+        setCoupon(createData.coupon ?? null)
         setCheckingStatus(false)
         setSubmittingPromo(false)
         setSwitchingPlan(false)
@@ -131,6 +193,8 @@ export default function BillingPage() {
       }
 
       setClientSecret(createData.clientSecret)
+      setAmounts(createData.amounts ?? null)
+      setCoupon(createData.coupon ?? null)
       if (codeToApply) setPromoApplied(codeToApply)
       setCheckingStatus(false)
       setSubmittingPromo(false)
@@ -237,17 +301,32 @@ export default function BillingPage() {
     return null
   }
 
+  const billing = describeBilling(planInfo, amounts, coupon)
+
   return (
     <main style={pageStyle}>
       <div style={cardStyle}>
         <div style={planBadgeStyle}>
           <span style={planBadgeLabelStyle}>{'\u25B8'} PLAN</span>
           <span style={planBadgeNameStyle}>{planInfo.label}</span>
-          <span style={planBadgePriceStyle}>${planInfo.price}/WK</span>
+          {billing.hasDiscount ? (
+            <span style={planBadgePriceStyle}>
+              <span style={{ textDecoration: 'line-through', opacity: 0.5, marginRight: 6 }}>
+                {billing.fullLabel}
+              </span>
+              {billing.todayLabel} TODAY
+            </span>
+          ) : (
+            <span style={planBadgePriceStyle}>{billing.todayLabel}/WK</span>
+          )}
         </div>
 
         <div style={titleStyle}>{planInfo.title}</div>
-        <div style={subtitleStyle}>{planInfo.subtitle}</div>
+        <div style={subtitleStyle}>
+          {billing.hasDiscount
+            ? `Pay ${billing.todayLabel} today and start dialing immediately.`
+            : planInfo.subtitle}
+        </div>
 
         <div style={planDescStyle}>{planInfo.description}</div>
 
@@ -294,11 +373,14 @@ export default function BillingPage() {
           <div style={termsHeaderStyle}>{'\u25B8'} BILLING TERMS</div>
           <ul style={termsListStyle}>
             <li>
-              <strong style={{ color: '#4a9eff' }}>{planInfo.weeklyBlurb}</strong> charged today to start your subscription
+              <strong style={{ color: '#4a9eff' }}>{billing.todayLabel}</strong> charged today to start your subscription
+              {billing.hasDiscount && (
+                <span style={{ color: '#32ff7e' }}> ({promoApplied?.toUpperCase()} applied)</span>
+              )}
             </li>
             <li>
               You will be billed{' '}
-              <strong style={{ color: '#4a9eff' }}>{planInfo.weeklyBlurb} weekly</strong>{' '}
+              <strong style={{ color: '#4a9eff' }}>{billing.recurringLabel}</strong>{' '}
               automatically thereafter
             </li>
             <li>Cancel anytime in Settings {'\u2014'} service continues until period end</li>
@@ -382,6 +464,7 @@ export default function BillingPage() {
             onAbandon={abandonAndSignOut}
             abandoning={abandoning}
             plan={plan}
+            billing={billing}
           />
         </Elements>
 
@@ -397,18 +480,18 @@ function CheckoutForm({
   onAbandon,
   abandoning,
   plan,
+  billing,
 }: {
   onAbandon: () => void
   abandoning: boolean
   plan: Plan
+  billing: ReturnType<typeof describeBilling>
 }) {
   const stripe = useStripe()
   const elements = useElements()
   const [submitting, setSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [agreed, setAgreed] = useState(false)
-
-  const planInfo = PLAN_INFO[plan]
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -456,8 +539,8 @@ function CheckoutForm({
           style={{ marginRight: 10, accentColor: '#4a9eff' }}
         />
         <span>
-          I agree my card will be charged <strong>{planInfo.weeklyBlurb} today</strong> and{' '}
-          <strong>{planInfo.weeklyBlurb} weekly</strong> thereafter unless I cancel.
+          I agree my card will be charged <strong>{billing.todayLabel} today</strong> and{' '}
+          <strong>{billing.recurringLabel}</strong> thereafter unless I cancel.
         </span>
       </label>
 
