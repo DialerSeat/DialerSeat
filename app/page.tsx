@@ -357,7 +357,7 @@ export default async function Home({ searchParams }: PageProps) {
             { icon: '🎯', title: 'MEMORY OF MARKED LEADS', desc: 'Every disposition, callback, and note remembers itself. Your work is never lost between sessions or seats.' },
             { icon: '📞', title: 'MANUAL DIALER', desc: 'When you want to control every call yourself, we have you. Click-to-dial individual numbers any time.' },
             { icon: '🏢', title: 'TEAM WORKFLOW', desc: 'Buy seats for your whole crew. Each agent gets their own login, campaigns, and call data — all under one roof.' },
-            { icon: '🌎', title: 'WORKS GLOBALLY', desc: 'Dial from any country in the world. No increased price rates for dialing on vacation or abroad.' },
+            { icon: '🌎', title: 'WORKS GLOBALLY', desc: 'Dial from any country in the world. No increased price jumps for dialing while traveling abroad.' },
             { icon: '✨', title: 'CLEAN, PLUG-AND-PLAY UI', desc: 'No bloat, no setup wizard, no learning curve. Sign in, upload, dial. Works on desktop and mobile.' },
             { icon: '🔒', title: 'YOUR DATA, ALWAYS YOURS', desc: 'Your leads stay saved even if your subscription lapses. Pick up right where you left off — no questions asked.' },
           ].map((f, i) => (
