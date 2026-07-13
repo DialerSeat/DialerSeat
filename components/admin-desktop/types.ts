@@ -39,6 +39,7 @@ export type AppId =
   | 'clerk-profile'
   | 'browser'
   | 'appstore'
+  | 'explorer'
 
 
 

@@ -102,6 +102,10 @@ const AppStoreApp = dynamic(() => import('./apps/AppStore'), {
   loading: () => <AppLoading />,
   ssr: false,
 })
+const ExplorerApp = dynamic(() => import('./apps/Explorer'), {
+  loading: () => <AppLoading />,
+  ssr: false,
+})
 
 function AppLoading() {
   return (
@@ -270,6 +274,17 @@ export const APPS: AppDefinition[] = [
     visibleTo: ['admin', 'manager'],
     Component: AppStoreApp,
     defaultSize: { width: 880, height: 620 },
+  },
+  {
+    id: 'explorer',
+    name: 'Data Explorer',
+    shortName: 'Explorer',
+    icon: '🔍',
+    iconBg: 'linear-gradient(135deg, #ff6ec7, #c2185b)',
+    description: 'Users, then their campaigns, then leads. Research, CSV export, delete on a user\'s behalf.',
+    visibleTo: ['admin'],
+    Component: ExplorerApp,
+    defaultSize: { width: 1120, height: 760 },
   },
 ]
 
