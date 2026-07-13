@@ -428,8 +428,16 @@ async function upsertPersonalSubscription(
   const item = subscription.items.data[0]
   const priceId = item?.price.id ?? ''
 
-  const periodStart = (subscription as any).current_period_start
-  const periodEnd = (subscription as any).current_period_end
+  // Newer Stripe API versions moved these fields off the top-level
+  // Subscription object onto each item. Falling back to the item-level
+  // value (already done in syncSeatCharge below) keeps this populated
+  // instead of always landing on null.
+  const periodStart =
+    (subscription as any).current_period_start ??
+    (item as any)?.current_period_start
+  const periodEnd =
+    (subscription as any).current_period_end ??
+    (item as any)?.current_period_end
 
   const payload = {
     user_id: clerkId,

@@ -1,6 +1,9 @@
 'use client'
 import { use, useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} from 'recharts'
 
 const T = {
   bg: 'var(--brand-page-bg)',
@@ -29,6 +32,23 @@ interface MemberStat {
   connected: number
   conversions: number
   talkSeconds: number
+  spentCents?: number
+}
+
+interface CampaignStat {
+  campaignId: string
+  name: string | null
+  calls: number
+  connected: number
+  conversions: number
+  talkSeconds: number
+}
+
+interface SeriesPoint {
+  date: string
+  calls: number
+  connected: number
+  conversions: number
 }
 
 interface TeamCampaign {
@@ -66,6 +86,9 @@ interface AnalyticsResponse {
   leaderboard: MemberStat[]
   viewerStats: MemberStat
   recentCalls: RecentCall[]
+  campaignBreakdown: CampaignStat[]
+  series: SeriesPoint[]
+  totalSeatSpendCents: number | null
 }
 
 function fmtTime(s: number): string {
@@ -77,6 +100,10 @@ function fmtTime(s: number): string {
   const h = Math.floor(m / 60)
   const mm = m % 60
   return mm > 0 ? `${h}h ${mm}m` : `${h}h`
+}
+
+function fmtMoney(cents: number): string {
+  return `$${(cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 function fmtDateTime(iso: string): string {
@@ -186,6 +213,35 @@ function Avatar({ name, accent }: { name: string; accent?: string | null }) {
     }}>
       {initials(name)}
     </div>
+  )
+}
+
+function TrendChart({ series }: { series: SeriesPoint[] }) {
+  const data = series.map(p => ({
+    label: new Date(p.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    calls: p.calls,
+    connected: p.connected,
+    conversions: p.conversions,
+  }))
+  return (
+    <ResponsiveContainer width="100%" height={220}>
+      <LineChart data={data}>
+        <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
+        <XAxis dataKey="label" stroke={T.muted} fontSize={10} />
+        <YAxis stroke={T.muted} fontSize={10} allowDecimals={false} domain={[0, 'auto']} />
+        <Tooltip
+          contentStyle={{
+            background: 'var(--brand-sidebar-bg)',
+            border: '1px solid var(--brand-card-border)',
+            color: 'var(--brand-on-sidebar)',
+            fontSize: 11,
+          }}
+        />
+        <Line type="monotone" dataKey="calls" stroke={T.blue} strokeWidth={2} dot={false} name="Calls" />
+        <Line type="monotone" dataKey="connected" stroke={T.amber} strokeWidth={2} dot={false} name="Connected" />
+        <Line type="monotone" dataKey="conversions" stroke={T.green} strokeWidth={2} dot={false} name="Conversions" />
+      </LineChart>
+    </ResponsiveContainer>
   )
 }
 
@@ -565,6 +621,14 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
                               <div className="ta-lb-metric-val">{m.talkSeconds > 0 ? fmtTime(m.talkSeconds) : '—'}</div>
                               <div className="ta-lb-metric-key">TALK</div>
                             </div>
+                            {typeof m.spentCents === 'number' && (
+                              <div className="ta-lb-metric">
+                                <div className="ta-lb-metric-val" style={{ color: m.spentCents > 0 ? T.amber : T.text }}>
+                                  {m.spentCents > 0 ? fmtMoney(m.spentCents) : '—'}
+                                </div>
+                                <div className="ta-lb-metric-key">SEAT SPEND</div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       )
@@ -610,6 +674,95 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
                       <Ring pct={viewerConnectPct} size={64} stroke={6} color={T.blue} />
                     </div>
                   )}
+                </div>
+              </div>
+            )}
+
+            {/* TREND — everyone sees this, same as totals. A shape over
+                time instead of one flat number for the whole range. */}
+            {data.series.length > 1 && (
+              <div className="ta-section">
+                <div className="ta-section-head">▸ TREND</div>
+                <TrendChart series={data.series} />
+              </div>
+            )}
+
+            {/* CAMPAIGN BREAKDOWN — everyone sees this. Aggregated by
+                campaign, not by person, so it doesn't expose any one
+                member's individual numbers. */}
+            {data.campaignBreakdown.length > 0 && (
+              <div className="ta-section">
+                <div className="ta-section-head">▸ BY CAMPAIGN</div>
+                <div className="ta-list">
+                  {data.campaignBreakdown.map(c => {
+                    const cr = c.calls > 0 ? (c.connected / c.calls) * 100 : null
+                    return (
+                      <div key={c.campaignId} className="ta-row">
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {c.name || 'Untitled campaign'}
+                          </span>
+                          {cr !== null && (
+                            <div style={{
+                              marginTop: 5, width: 90, height: 4, borderRadius: 4,
+                              background: 'color-mix(in srgb, var(--brand-on-page-bg) 10%, transparent)', overflow: 'hidden',
+                            }}>
+                              <div style={{ width: `${cr}%`, height: '100%', background: T.blue, borderRadius: 4 }} />
+                            </div>
+                          )}
+                        </div>
+                        <div className="ta-lb-metrics">
+                          <div className="ta-lb-metric">
+                            <div className="ta-lb-metric-val">{c.calls > 0 ? c.calls.toLocaleString() : '—'}</div>
+                            <div className="ta-lb-metric-key">CALLS</div>
+                          </div>
+                          <div className="ta-lb-metric">
+                            <div className="ta-lb-metric-val">{c.calls > 0 ? `${Math.round(cr!)}%` : '—'}</div>
+                            <div className="ta-lb-metric-key">CONNECT</div>
+                          </div>
+                          <div className="ta-lb-metric">
+                            <div className="ta-lb-metric-val" style={{ color: c.conversions > 0 ? T.green : T.text }}>
+                              {c.conversions > 0 ? c.conversions.toLocaleString() : '—'}
+                            </div>
+                            <div className="ta-lb-metric-key">CONV</div>
+                          </div>
+                          <div className="ta-lb-metric">
+                            <div className="ta-lb-metric-val">{c.talkSeconds > 0 ? fmtTime(c.talkSeconds) : '—'}</div>
+                            <div className="ta-lb-metric-key">TALK</div>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* SEAT SPEND VS OUTPUT — owner only, financial data */}
+            {isOwner && typeof data.totalSeatSpendCents === 'number' && (
+              <div className="ta-section">
+                <div className="ta-section-head">▸ SEAT SPEND VS OUTPUT</div>
+                <div className="ta-personal-grid">
+                  <div className="ta-personal-cell">
+                    <span className="ta-personal-key">TOTAL SEAT SPEND</span>
+                    <span className="ta-personal-val">
+                      {data.totalSeatSpendCents > 0 ? fmtMoney(data.totalSeatSpendCents) : <Awaiting />}
+                    </span>
+                  </div>
+                  <div className="ta-personal-cell">
+                    <span className="ta-personal-key">CONVERSIONS THIS PERIOD</span>
+                    <span className="ta-personal-val" style={{ color: data.totals.conversions > 0 ? T.green : T.text }}>
+                      {data.totals.conversions > 0 ? data.totals.conversions.toLocaleString() : <Awaiting />}
+                    </span>
+                  </div>
+                  <div className="ta-personal-cell">
+                    <span className="ta-personal-key">COST PER CONVERSION</span>
+                    <span className="ta-personal-val">
+                      {data.totalSeatSpendCents > 0 && data.totals.conversions > 0
+                        ? fmtMoney(data.totalSeatSpendCents / data.totals.conversions)
+                        : <Awaiting />}
+                    </span>
+                  </div>
                 </div>
               </div>
             )}

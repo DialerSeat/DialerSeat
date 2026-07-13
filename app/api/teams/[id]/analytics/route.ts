@@ -125,13 +125,13 @@ export async function GET(
     }
 
     let calls: any[] = []
+    const { since, until } = rangeBounds(range, startParam, endParam)
     if (scopedCampaignIds.length > 0) {
       let callsQuery = supabaseAdmin
         .from('calls')
         .select('id, user_id, campaign_id, lead_id, disposition, duration, created_at, leads(first_name, last_name, phone)')
         .in('campaign_id', scopedCampaignIds)
 
-      const { since, until } = rangeBounds(range, startParam, endParam)
       if (since) callsQuery = callsQuery.gte('created_at', since.toISOString())
       if (until) callsQuery = callsQuery.lte('created_at', until.toISOString())
 
@@ -160,6 +160,7 @@ export async function GET(
       connected: number
       conversions: number
       talkSeconds: number
+      spentCents?: number
     }
     const statsByUser: Record<string, MemberStat> = {}
 
@@ -210,6 +211,92 @@ export async function GET(
 
     const viewerStats = statsByUser[userId] || seedFor(userId)
 
+    // ── Campaign-level breakdown — same calls array, grouped differently.
+    // Answers "which campaigns are actually performing", not just "which
+    // agent is". Visible to the whole team, same as `totals` — it doesn't
+    // reveal any one person's individual numbers.
+    type CampaignStat = {
+      campaignId: string
+      name: string | null
+      calls: number
+      connected: number
+      conversions: number
+      talkSeconds: number
+    }
+    const statsByCampaign: Record<string, CampaignStat> = {}
+    for (const cid of scopedCampaignIds) {
+      const tc = teamCampaigns.find(t => t.campaignId === cid)
+      statsByCampaign[cid] = { campaignId: cid, name: tc?.name || null, calls: 0, connected: 0, conversions: 0, talkSeconds: 0 }
+    }
+    for (const c of calls) {
+      const cid = c.campaign_id
+      if (!statsByCampaign[cid]) {
+        const tc = teamCampaigns.find(t => t.campaignId === cid)
+        statsByCampaign[cid] = { campaignId: cid, name: tc?.name || null, calls: 0, connected: 0, conversions: 0, talkSeconds: 0 }
+      }
+      const cs = statsByCampaign[cid]
+      cs.calls++
+      if (c.duration && c.duration > 0) { cs.connected++; cs.talkSeconds += c.duration }
+      if (c.disposition && CONVERSION_DISPOS.has(c.disposition)) cs.conversions++
+    }
+    const campaignBreakdown = Object.values(statsByCampaign).sort((a, b) => b.calls - a.calls)
+
+    // ── Trend series — the same calls, bucketed over time instead of
+    // collapsed into one snapshot. Daily buckets normally; weekly once the
+    // span gets long enough that a day-by-day chart would be unreadable.
+    const seriesEndMs = until ? until.getTime() : Date.now()
+    let seriesStartMs: number
+    if (since) {
+      seriesStartMs = since.getTime()
+    } else if (calls.length > 0) {
+      seriesStartMs = Math.min(...calls.map((c: any) => new Date(c.created_at).getTime()))
+    } else {
+      seriesStartMs = seriesEndMs
+    }
+    const daySpan = Math.max(1, Math.ceil((seriesEndMs - seriesStartMs) / 86_400_000))
+    const bucketMs = daySpan > 120 ? 7 * 86_400_000 : 86_400_000
+    const numBuckets = Math.min(400, Math.max(1, Math.floor((seriesEndMs - seriesStartMs) / bucketMs) + 1))
+    const series: { date: string; calls: number; connected: number; conversions: number }[] = []
+    for (let i = 0; i < numBuckets; i++) {
+      series.push({ date: new Date(seriesStartMs + i * bucketMs).toISOString().slice(0, 10), calls: 0, connected: 0, conversions: 0 })
+    }
+    for (const c of calls) {
+      const idx = Math.floor((new Date(c.created_at).getTime() - seriesStartMs) / bucketMs)
+      if (idx >= 0 && idx < series.length) {
+        series[idx].calls++
+        if (c.duration && c.duration > 0) series[idx].connected++
+        if (c.disposition && CONVERSION_DISPOS.has(c.disposition)) series[idx].conversions++
+      }
+    }
+
+    // ── Seat spend vs output — actual charged amounts, never derived from
+    // a plan tier. A Manager+ owner's own $75/wk subscription is separate
+    // from what they pay per seat; every seat is billed at the same price
+    // regardless of the owner's own plan, so this only means anything if
+    // it reads the real amount_cents off each charge. Financial data, so
+    // owner-only, same gating as the leaderboard.
+    let totalSeatSpendCents = 0
+    if (isOwner) {
+      let spendQuery = supabaseAdmin
+        .from('team_seat_charges')
+        .select('agent_id, amount_cents, refunded_amount_cents, created_at')
+        .eq('team_id', teamId)
+        .eq('status', 'paid')
+      if (since) spendQuery = spendQuery.gte('created_at', since.toISOString())
+      if (until) spendQuery = spendQuery.lte('created_at', until.toISOString())
+      const { data: charges } = await spendQuery
+
+      const spendByAgent = new Map<string, number>()
+      for (const ch of charges || []) {
+        const net = (ch.amount_cents || 0) - (ch.refunded_amount_cents || 0)
+        spendByAgent.set(ch.agent_id, (spendByAgent.get(ch.agent_id) || 0) + net)
+        totalSeatSpendCents += net
+      }
+      for (const stat of leaderboard) {
+        stat.spentCents = spendByAgent.get(stat.userId) || 0
+      }
+    }
+
     let recentCalls: any[] = []
     if (isOwner) {
       recentCalls = calls.slice(0, 50).map((c: any) => {
@@ -249,6 +336,9 @@ export async function GET(
       leaderboard: isOwner ? leaderboard : [],
       viewerStats,
       recentCalls,
+      campaignBreakdown,
+      series,
+      totalSeatSpendCents: isOwner ? totalSeatSpendCents : null,
       filters: {
         campaignId: filterCampaignId,
         userId: filterUserId,

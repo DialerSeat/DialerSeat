@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/admin'
+import { isSubscriptionTrulyActive } from '@/lib/subscriptionStatus'
 import Stripe from 'stripe'
 
 const supabase = getServiceClient('admin/billing')
@@ -36,7 +37,13 @@ async function fetchSubscriptionState(subId: string): Promise<BillingState> {
   const intervalCount = price?.recurring?.interval_count ?? 1
   const qty = item?.quantity ?? 1
   const lineCents = amount * qty
-  const live = sub.status === 'active' || sub.status === 'trialing'
+  // MRR should reflect money that's actually recurring right now — a
+  // trialing subscription hasn't been charged yet, and one that's
+  // cancel_at_period_end won't renew, so neither should count toward
+  // forward-looking revenue. Same definition used for the admin active
+  // label; only the revenue figure is affected — `state` below still
+  // reports the literal Stripe status regardless.
+  const live = isSubscriptionTrulyActive({ status: sub.status, cancel_at_period_end: sub.cancel_at_period_end })
 
   const periodEndUnix =
     (item as any)?.current_period_end ??
