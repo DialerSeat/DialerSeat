@@ -136,7 +136,7 @@ export async function GET() {
         }
       }
 
-      if (s.status === 'canceled' && s.canceled_at) {
+      if (s.canceled_at) {
         const canceled = new Date(s.canceled_at).getTime()
         if (canceled >= windowStart && canceled <= now) {
           cancels++

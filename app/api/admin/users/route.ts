@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 import { requireAdmin } from '@/lib/admin'
+import { isSubscriptionTrulyActive } from '@/lib/subscriptionStatus'
 
 const supabase = getServiceClient('admin/users')
 
@@ -90,7 +91,7 @@ export async function GET(req: NextRequest) {
     // - cancel_at_period_end must not be true (a user who's already told
     //   Stripe to cancel is not an active, recurring customer, even though
     //   Stripe leaves status='active' until the current period ends)
-    const isActive = !!sub && sub.status === 'active' && !sub.cancel_at_period_end
+    const isActive = !!sub && isSubscriptionTrulyActive(sub)
     return {
       clerk_id: u.clerk_id,
       email: u.email,

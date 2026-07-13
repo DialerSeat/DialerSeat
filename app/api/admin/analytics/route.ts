@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/admin'
 import { stripe } from '@/lib/stripe'
+import { isSubscriptionTrulyActive } from '@/lib/subscriptionStatus'
 
 const supabase = getServiceClient('admin/analytics')
 
@@ -276,7 +277,7 @@ export async function GET(req: NextRequest) {
   }
 
   const latestSubs = Array.from(byUserPlan.values())
-  const activeSubs = latestSubs.filter(s => ACTIVE_STATUSES.includes(s.status))
+  const activeSubs = latestSubs.filter(isSubscriptionTrulyActive)
   const payingActiveSubs = activeSubs.filter(s => !subIsFullyDiscounted(s))
   const fullDiscountSubs = activeSubs.filter(s => subIsFullyDiscounted(s))
   const payingUserIds = new Set(payingActiveSubs.map(s => s.user_id))

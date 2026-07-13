@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useUser, useClerk } from '@clerk/nextjs'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { loadStripe } from '@stripe/stripe-js'
@@ -106,6 +106,37 @@ function describeBilling(
   return { todayLabel, recurringLabel, hasDiscount: true, fullLabel }
 }
 
+function LoadingCard({ text }: { text: string }) {
+  return (
+    <main style={pageStyle}>
+      <div style={cardStyle}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18, padding: '20px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 8,
+                background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <span style={{ color: 'white', fontWeight: 'bold', fontSize: 16 }}>D</span>
+            </div>
+            <span style={{ fontSize: 18, fontWeight: 'bold', letterSpacing: 6, color: '#e0e2ea', fontFamily: FUTURA }}>
+              DIALERSEAT
+            </span>
+          </div>
+          <div style={{ ...subtitleStyle, margin: 0 }}>{text}</div>
+        </div>
+      </div>
+    </main>
+  )
+}
+
 export default function BillingPage() {
   const { user, isLoaded } = useUser()
   const { signOut } = useClerk()
@@ -119,9 +150,10 @@ export default function BillingPage() {
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [checkingStatus, setCheckingStatus] = useState(true)
+  const [retryingBilling, setRetryingBilling] = useState(false)
   const [promoCode, setPromoCode] = useState('')
   const [showPromo, setShowPromo] = useState(false)
-  const [submittingPromo, setSubmittingPromo] = useState(false)
+  const [promoAction, setPromoAction] = useState<'applying' | 'removing' | null>(null)
   const [promoApplied, setPromoApplied] = useState<string | null>(null)
   const [freeWithCoupon, setFreeWithCoupon] = useState(false)
   const [amounts, setAmounts] = useState<{ subtotalCents: number; totalCents: number; currency: string } | null>(null)
@@ -175,7 +207,8 @@ export default function BillingPage() {
       if (!createRes.ok) {
         setError(createData.error || 'Failed to start subscription')
         setCheckingStatus(false)
-        setSubmittingPromo(false)
+        setPromoAction(null)
+        setRetryingBilling(false)
         setSwitchingPlan(false)
         return
       }
@@ -185,7 +218,8 @@ export default function BillingPage() {
         setAmounts(createData.amounts ?? null)
         setCoupon(createData.coupon ?? null)
         setCheckingStatus(false)
-        setSubmittingPromo(false)
+        setPromoAction(null)
+        setRetryingBilling(false)
         setSwitchingPlan(false)
         const successPath = usePlan === 'wl' ? '/onboarding/whitelabel' : '/dashboard'
         setTimeout(() => router.push(successPath), 1500)
@@ -197,18 +231,32 @@ export default function BillingPage() {
       setCoupon(createData.coupon ?? null)
       if (codeToApply) setPromoApplied(codeToApply)
       setCheckingStatus(false)
-      setSubmittingPromo(false)
+      setPromoAction(null)
+      setRetryingBilling(false)
       setSwitchingPlan(false)
     } catch (err: any) {
       setError(err.message || 'Something went wrong')
       setCheckingStatus(false)
-      setSubmittingPromo(false)
+      setPromoAction(null)
+      setRetryingBilling(false)
       setSwitchingPlan(false)
     }
   }
 
+  // Clerk silently refreshes the session token roughly once a minute, which
+  // can hand back a new `user` object reference without any real change.
+  // Without this guard, that refresh re-triggers the effect below and
+  // re-initializes the subscription with no promo code — wiping out a
+  // discount that was already applied. This ensures the automatic,
+  // on-mount initialization only ever runs once per visit; every later
+  // call to initSubscription() is explicit (apply/remove code, switch
+  // plan, retry) and passes its own arguments.
+  const hasAutoInitialized = useRef(false)
+
   useEffect(() => {
     if (!isLoaded || !user) return
+    if (hasAutoInitialized.current) return
+    hasAutoInitialized.current = true
     initSubscription()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded, user])
@@ -226,7 +274,7 @@ export default function BillingPage() {
 
   const handleApplyPromo = async () => {
     if (!promoCode.trim()) return
-    setSubmittingPromo(true)
+    setPromoAction('applying')
     setClientSecret(null)
     await initSubscription(promoCode.trim())
   }
@@ -234,20 +282,25 @@ export default function BillingPage() {
   const handleRemovePromo = async () => {
     setPromoCode('')
     setPromoApplied(null)
-    setSubmittingPromo(true)
+    setPromoAction('removing')
     setClientSecret(null)
     await initSubscription()
   }
 
   if (!isLoaded || checkingStatus) {
-    return (
-      <main style={pageStyle}>
-        <div style={cardStyle}>
-          <div style={titleStyle}>LOADING...</div>
-          <div style={subtitleStyle}>Preparing secure checkout</div>
-        </div>
-      </main>
-    )
+    return <LoadingCard text={retryingBilling ? 'Returning to billing…' : 'Preparing secure checkout'} />
+  }
+
+  if (promoAction === 'applying') {
+    return <LoadingCard text="Applying code…" />
+  }
+
+  if (promoAction === 'removing') {
+    return <LoadingCard text="Removing code…" />
+  }
+
+  if (switchingPlan) {
+    return <LoadingCard text="Switching plan…" />
   }
 
   if (freeWithCoupon) {
@@ -264,21 +317,25 @@ export default function BillingPage() {
   }
 
   if (error) {
+    const isPromoError = error.toLowerCase().includes('promo code')
     return (
       <main style={pageStyle}>
         <div style={cardStyle}>
-          <div style={{ ...titleStyle, color: '#ff6464' }}>ERROR</div>
+          <div style={{ ...titleStyle, color: '#ff6464' }}>
+            {isPromoError ? 'INVALID CODE' : 'SOMETHING WENT WRONG'}
+          </div>
           <div style={{ ...subtitleStyle, marginBottom: 24 }}>{error}</div>
           <button
             style={buttonStyle}
             onClick={() => {
               setError(null)
+              setRetryingBilling(true)
               setCheckingStatus(true)
               initSubscription(promoApplied || undefined)
             }}
             disabled={abandoning}
           >
-            {'\u25B6'} TRY AGAIN
+            {'\u25B6'} RETURN TO BILLING
           </button>
           <button
             type="button"
@@ -298,7 +355,7 @@ export default function BillingPage() {
   }
 
   if (!clientSecret) {
-    return null
+    return <LoadingCard text="Preparing secure checkout" />
   }
 
   const billing = describeBilling(planInfo, amounts, coupon)
@@ -401,7 +458,7 @@ export default function BillingPage() {
               </span>
               <button
                 onClick={handleRemovePromo}
-                disabled={submittingPromo}
+                disabled={!!promoAction}
                 style={promoRemoveStyle}
               >
                 REMOVE
@@ -429,14 +486,14 @@ export default function BillingPage() {
               />
               <button
                 onClick={handleApplyPromo}
-                disabled={!promoCode.trim() || submittingPromo}
+                disabled={!promoCode.trim() || !!promoAction}
                 style={{
                   ...promoApplyStyle,
-                  opacity: !promoCode.trim() || submittingPromo ? 0.4 : 1,
-                  cursor: !promoCode.trim() || submittingPromo ? 'not-allowed' : 'pointer',
+                  opacity: !promoCode.trim() || !!promoAction ? 0.4 : 1,
+                  cursor: !promoCode.trim() || !!promoAction ? 'not-allowed' : 'pointer',
                 }}
               >
-                {submittingPromo ? '...' : 'APPLY'}
+                {promoAction === 'applying' ? '...' : 'APPLY'}
               </button>
             </div>
           )}
