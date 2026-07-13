@@ -71,8 +71,9 @@ export default function AppWindow({
   const winRef = useRef<HTMLDivElement>(null)
   const [dragging, setDragging] = useState(false)
   const dragOffsetRef = useRef({ x: 0, y: 0 })
-  const [resizing, setResizing] = useState<'br' | null>(null)
-  const resizeStartRef = useRef({ x: 0, y: 0, w: 0, h: 0 })
+  type ResizeDir = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw'
+  const [resizing, setResizing] = useState<ResizeDir | null>(null)
+  const resizeStartRef = useRef({ x: 0, y: 0, w: 0, h: 0, winX: 0, winY: 0 })
 
   
   const onTitleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -114,28 +115,55 @@ export default function AppWindow({
   }, [dragging, state.width, onMove])
 
   
-  const onResizeMouseDown = useCallback((e: React.MouseEvent) => {
+  const onResizeMouseDown = useCallback((dir: ResizeDir) => (e: React.MouseEvent) => {
     if (isMobile || state.maximized) return
     if (e.button !== 0) return
-    setResizing('br')
+    onFocus()
+    setResizing(dir)
     resizeStartRef.current = {
       x: e.clientX, y: e.clientY,
       w: state.width, h: state.height,
+      winX: state.x, winY: state.y,
     }
     e.preventDefault()
     e.stopPropagation()
-  }, [isMobile, state.maximized, state.width, state.height])
+  }, [isMobile, state.maximized, state.width, state.height, state.x, state.y, onFocus])
 
   useEffect(() => {
     if (!resizing) return
+    const MIN_W = 360
+    const MIN_H = 240
     const onMove_ = (e: MouseEvent) => {
-      const dx = e.clientX - resizeStartRef.current.x
-      const dy = e.clientY - resizeStartRef.current.y
-      const newW = Math.max(360, resizeStartRef.current.w + dx)
-      const newH = Math.max(240, resizeStartRef.current.h + dy)
-      const maxW = window.innerWidth - state.x - 8
-      const maxH = window.innerHeight - state.y - 60
-      onResize(Math.min(maxW, newW), Math.min(maxH, newH))
+      const start = resizeStartRef.current
+      const dx = e.clientX - start.x
+      const dy = e.clientY - start.y
+
+      let newW = start.w
+      let newX = start.winX
+      if (resizing.includes('e')) {
+        const maxW = window.innerWidth - start.winX - 8
+        newW = Math.max(MIN_W, Math.min(maxW, start.w + dx))
+      } else if (resizing.includes('w')) {
+        const rawW = Math.max(MIN_W, start.w - dx)
+        // Right edge stays put — only the dragged (left) edge moves.
+        newX = Math.max(0, start.winX + start.w - rawW)
+        newW = start.winX + start.w - newX
+      }
+
+      let newH = start.h
+      let newY = start.winY
+      if (resizing.includes('s')) {
+        const maxH = window.innerHeight - start.winY - 60
+        newH = Math.max(MIN_H, Math.min(maxH, start.h + dy))
+      } else if (resizing.includes('n')) {
+        const rawH = Math.max(MIN_H, start.h - dy)
+        // Bottom edge stays put — only the dragged (top) edge moves.
+        newY = Math.max(0, start.winY + start.h - rawH)
+        newH = start.winY + start.h - newY
+      }
+
+      if (newX !== state.x || newY !== state.y) onMove(newX, newY)
+      onResize(newW, newH)
     }
     const onUp = () => setResizing(null)
     document.addEventListener('mousemove', onMove_)
@@ -144,7 +172,7 @@ export default function AppWindow({
       document.removeEventListener('mousemove', onMove_)
       document.removeEventListener('mouseup', onUp)
     }
-  }, [resizing, state.x, state.y, onResize])
+  }, [resizing, state.x, state.y, onMove, onResize])
 
   
   useEffect(() => {
@@ -322,26 +350,54 @@ export default function AppWindow({
         )}
       </div>
 
-      {/* ── RESIZE GRIP (bottom-right) ────────────────────────────────── */}
+      {/* ── RESIZE HANDLES — all 4 corners + all 4 edges ────────────────── */}
       {!isMobile && !state.maximized && (
-        <div
-          onMouseDown={onResizeMouseDown}
-          style={{
-            position: 'absolute',
-            right: 0, bottom: 0,
-            width: 14, height: 14,
-            cursor: 'nwse-resize',
-            background: `
-              linear-gradient(135deg, transparent 0%, transparent 30%,
-                #888 30%, #888 35%, transparent 35%, transparent 55%,
-                #888 55%, #888 60%, transparent 60%)
-            `,
-            opacity: 0.5,
-            zIndex: 10,
-          }}
-        />
+        <>
+          <ResizeZone dir="n" onMouseDown={onResizeMouseDown('n')} style={{ top: 0, left: 14, right: 14, height: 6, cursor: 'ns-resize' }} />
+          <ResizeZone dir="s" onMouseDown={onResizeMouseDown('s')} style={{ bottom: 0, left: 14, right: 14, height: 6, cursor: 'ns-resize' }} />
+          <ResizeZone dir="w" onMouseDown={onResizeMouseDown('w')} style={{ left: 0, top: 14, bottom: 14, width: 6, cursor: 'ew-resize' }} />
+          <ResizeZone dir="e" onMouseDown={onResizeMouseDown('e')} style={{ right: 0, top: 14, bottom: 14, width: 6, cursor: 'ew-resize' }} />
+          <ResizeZone dir="nw" onMouseDown={onResizeMouseDown('nw')} style={{ top: 0, left: 0, width: 14, height: 14, cursor: 'nwse-resize' }} />
+          <ResizeZone dir="ne" onMouseDown={onResizeMouseDown('ne')} style={{ top: 0, right: 0, width: 14, height: 14, cursor: 'nesw-resize' }} />
+          <ResizeZone dir="sw" onMouseDown={onResizeMouseDown('sw')} style={{ bottom: 0, left: 0, width: 14, height: 14, cursor: 'nesw-resize' }} />
+          <ResizeZone
+            dir="se"
+            onMouseDown={onResizeMouseDown('se')}
+            style={{
+              bottom: 0, right: 0, width: 14, height: 14, cursor: 'nwse-resize',
+              background: `
+                linear-gradient(135deg, transparent 0%, transparent 30%,
+                  #888 30%, #888 35%, transparent 35%, transparent 55%,
+                  #888 55%, #888 60%, transparent 60%)
+              `,
+              opacity: 0.5,
+            }}
+          />
+        </>
       )}
     </div>
+  )
+}
+
+
+
+
+function ResizeZone({
+  onMouseDown, style,
+}: {
+  dir: string
+  onMouseDown: (e: React.MouseEvent) => void
+  style: React.CSSProperties
+}) {
+  return (
+    <div
+      onMouseDown={onMouseDown}
+      style={{
+        position: 'absolute',
+        zIndex: 10,
+        ...style,
+      }}
+    />
   )
 }
 

@@ -341,8 +341,34 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
   
   useEffect(() => {
     const check = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-      setViewport({ w: window.innerWidth, h: window.innerHeight })
+      const w = window.innerWidth
+      const h = window.innerHeight
+      setIsMobile(w < MOBILE_BREAKPOINT)
+      setViewport({ w, h })
+
+      // Keep already-open windows on-screen and within bounds as the
+      // browser viewport shrinks. A window sized/positioned for a wide
+      // screen would otherwise overflow or end up partly off-screen after
+      // the browser window gets smaller. Maximized windows already track
+      // the viewport via CSS (100vw / 100vh) and don't need this.
+      setWindows(prev => {
+        let changed = false
+        const next = prev.map(win => {
+          if (win.maximized) return win
+          const maxW = Math.max(360, w - 40)
+          const maxH = Math.max(240, h - TASKBAR_HEIGHT - 40)
+          const newWidth = Math.min(win.width, maxW)
+          const newHeight = Math.min(win.height, maxH)
+          const newX = Math.max(0, Math.min(win.x, w - newWidth))
+          const newY = Math.max(0, Math.min(win.y, h - TASKBAR_HEIGHT - newHeight))
+          if (newWidth === win.width && newHeight === win.height && newX === win.x && newY === win.y) {
+            return win
+          }
+          changed = true
+          return { ...win, x: newX, y: newY, width: newWidth, height: newHeight }
+        })
+        return changed ? next : prev
+      })
     }
     check()
     window.addEventListener('resize', check)
@@ -351,7 +377,7 @@ export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
       window.removeEventListener('resize', check)
       window.removeEventListener('orientationchange', check)
     }
-  }, [])
+  }, [TASKBAR_HEIGHT])
 
   
   useEffect(() => {
