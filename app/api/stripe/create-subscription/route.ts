@@ -91,12 +91,27 @@ export async function POST(req: Request) {
 
     let plan: 'standard' | 'wl' = 'standard'
     let promoCode: string | null = null
+    let pendingTeamMemberId: string | null = null
     try {
       const body = await req.json().catch(() => ({}))
       if (body?.plan === 'wl') plan = 'wl'
       promoCode = (body?.code as string)?.trim() || null
+      pendingTeamMemberId = (body?.teamMemberId as string)?.trim() || null
     } catch {
 
+    }
+
+    if (pendingTeamMemberId) {
+      const { data: pendingMember } = await supabase
+        .from('team_members')
+        .select('id')
+        .eq('id', pendingTeamMemberId)
+        .eq('user_id', userId)
+        .eq('status', 'pending')
+        .maybeSingle()
+      // Doesn't belong to this user, or isn't actually pending — ignore it
+      // rather than fail the whole subscription attempt.
+      if (!pendingMember) pendingTeamMemberId = null
     }
 
     const priceId =
@@ -212,6 +227,7 @@ export async function POST(req: Request) {
       metadata: {
         clerk_id: userId,
         ...(plan === 'wl' ? { sub_kind: 'whitelabel' } : {}),
+        ...(pendingTeamMemberId ? { pending_team_member_id: pendingTeamMemberId } : {}),
       },
     }
 

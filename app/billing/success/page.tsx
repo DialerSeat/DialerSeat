@@ -27,8 +27,16 @@ export default function BillingSuccessPage() {
   const branding = useBranding()
 
   const isWl = searchParams.get('plan') === 'wl'
-  const destination = isWl ? '/onboarding/whitelabel' : '/dashboard'
-  const price = isWl ? '$75.00' : '$35.00'
+  const teamMemberId = searchParams.get('teamMemberId')
+  const amountParam = searchParams.get('amount')
+
+  const destination = teamMemberId
+    ? '/dashboard/dialer'
+    : isWl ? '/onboarding/whitelabel' : '/dashboard'
+
+  const price = amountParam
+    ? `$${(parseInt(amountParam, 10) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    : isWl ? '$75.00' : '$35.00'
 
   const [countdown, setCountdown] = useState(3)
 
@@ -95,7 +103,7 @@ export default function BillingSuccessPage() {
         </div>
 
         <div style={countdownStyle}>
-          Redirecting to {isWl ? 'tenant setup' : 'dashboard'} in {countdown}…
+          Redirecting to {teamMemberId ? 'the dialer' : isWl ? 'tenant setup' : 'dashboard'} in {countdown}…
         </div>
 
         <button

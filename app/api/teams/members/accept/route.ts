@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { revalidateTag } from 'next/cache'
 import { supabaseAdmin } from '@/lib/supabase'
-import { userCacheTag } from '@/lib/tenant'
 import { createSeatSubscription, isSeatBillingError } from '@/lib/teamBilling'
+import { activatePendingTeamMember } from '@/lib/teamMembership'
 import { apiError } from '@/lib/apiError'
 
 export async function POST(req: Request) {
@@ -115,56 +114,19 @@ export async function POST(req: Request) {
       }
     }
 
-    const { data: updated, error: updateErr } = await supabaseAdmin
+    const { activatedAccessGrants, defaultedToTenantId } = await activatePendingTeamMember(memberId)
+
+    const { data: updated } = await supabaseAdmin
       .from('team_members')
-      .update({
-        status: 'active',
-        accepted_at: new Date().toISOString(),
-      })
-      .eq('id', memberId)
       .select()
+      .eq('id', memberId)
       .single()
-
-    if (updateErr) throw updateErr
-
-    const { data: activated } = await supabaseAdmin
-      .from('team_campaign_access')
-      .update({ is_active: true })
-      .eq('team_member_id', memberId)
-      .eq('is_active', false)
-      .is('revoked_at', null)
-      .select('id')
-
-    let defaultedToTenantId: string | null = null
-    const { data: ownerTenant } = await supabaseAdmin
-      .from('white_label_tenants')
-      .select('id')
-      .eq('owner_clerk_id', team.owner_id)
-      .eq('status', 'active')
-      .eq('is_active', true)
-      .maybeSingle()
-
-    if (ownerTenant) {
-      const { error: tenantErr } = await supabaseAdmin
-        .from('users')
-        .update({ active_tenant_id: ownerTenant.id })
-        .eq('clerk_id', member.user_id)
-
-      if (tenantErr) {
-
-        console.warn('failed to set active_tenant_id on accept:', tenantErr)
-      } else {
-        defaultedToTenantId = ownerTenant.id
-
-        revalidateTag(userCacheTag(member.user_id), { expire: 0 })
-      }
-    }
 
     return NextResponse.json({
       success: true,
       member: updated,
       stripeSubscriptionId: stripeSubId,
-      activatedAccessGrants: activated?.length || 0,
+      activatedAccessGrants,
       defaultedToTenantId,
     })
   } catch (error: any) {

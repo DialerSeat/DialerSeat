@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { createSeatSubscription, isSeatBillingError } from '@/lib/teamBilling'
+import { assignOwnerTenantIfWhitelabeled } from '@/lib/teamMembership'
 import { apiError } from '@/lib/apiError'
 
 const DEFAULT_SEAT_CENTS = 3500
@@ -71,9 +72,18 @@ export async function POST(req: Request) {
       codeRow.code_type === 'seat' &&
       codeRow.payer === 'owner'
 
+    // Free/public-access codes turn on immediately — nobody's paying, so
+    // there's nothing to wait for. Owner-pays codes need the owner's
+    // approval (or are instant for the single-use partner-seat case,
+    // handled below). Agent-pays codes used to also go straight to
+    // 'active' here with zero payment ever collected or enforced — this
+    // is the fix: they now stay pending until the agent's own checkout
+    // actually succeeds (see /api/stripe/create-subscription and the
+    // webhook's pending_team_member_id handling).
     const targetStatus =
       isSingleUsePartnerSeat ? 'active'
       : codeRow.payer === 'owner' ? 'pending'
+      : codeRow.payer === 'agent' ? 'pending'
       : 'active'
 
     const { data: existingActive } = await supabaseAdmin
@@ -266,6 +276,33 @@ export async function POST(req: Request) {
           period_end: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         })
       }
+    } else if (codeRow.payer === 'agent' && memberRow.status === 'pending') {
+      // Agent pays for their own seat. Access stays off (team_campaign_access
+      // rows were already created with is_active: false above) until the
+      // agent's own checkout actually succeeds — the webhook flips these to
+      // 'active' via pending_team_member_id metadata on the subscription it
+      // creates. One row per campaign granted, all sharing whichever
+      // subscription eventually gets created.
+      const campaignsForPayment = campaignsToGrant.filter(
+        cid => !alreadyHeld.includes(cid)
+      )
+      if (campaignsForPayment.length > 0) {
+        await supabaseAdmin.from('team_agent_payments').insert(
+          campaignsForPayment.map(campaignId => ({
+            team_id: team.id,
+            campaign_id: campaignId,
+            agent_id: userId,
+            status: 'pending',
+          }))
+        )
+      }
+    }
+
+    // Whitelabel branding should follow the agent the moment they're
+    // actually active — not just on the slow, manually-approved path.
+    let defaultedToTenantId: string | null = null
+    if (memberRow.status === 'active') {
+      defaultedToTenantId = await assignOwnerTenantIfWhitelabeled(userId, team.owner_id)
     }
 
     return NextResponse.json({
@@ -275,14 +312,18 @@ export async function POST(req: Request) {
       code: { type: codeRow.code_type, payer: codeRow.payer },
       newAccessGrants: newAccessGrants.length,
       alreadyHeldAccess: alreadyHeld.length,
+      defaultedToTenantId,
+      // A freshly-active agent has something to dial right now — send them
+      // straight to it, with the campaign pre-selected when there's exactly
+      // one, instead of dropping them on a team analytics page they may not
+      // even have full visibility into.
+      firstCampaignId: campaignsToGrant.length === 1 ? campaignsToGrant[0] : null,
       nextStep:
         codeRow.payer === 'agent'
-          ? 'redirect_to_billing'
-          : isSingleUsePartnerSeat
-          ? 'redirect_to_team'        // instant — partner seat, no approval
-          : memberRow.status === 'pending'
-          ? 'awaiting_owner_approval' // multi-use owner-pays, manual verify
-          : 'redirect_to_team',
+          ? 'redirect_to_billing'      // pending — agent must complete their own checkout first
+          : memberRow.status === 'active'
+          ? 'redirect_to_dialer'       // instant — partner seat or free/public access
+          : 'awaiting_owner_approval', // multi-use owner-pays, manual verify
     })
   } catch (error: any) {
     console.error('Redeem error:', error)

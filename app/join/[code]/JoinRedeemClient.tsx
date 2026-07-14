@@ -47,14 +47,21 @@ export default function JoinRedeemClient({ code }: { code: string }) {
 
         if (data.nextStep === 'redirect_to_billing') {
           setMessage(`Joined ${data.team?.name || 'the team'}. Taking you to billing…`)
-          setTimeout(() => router.push('/billing'), 1000)
+          const billingUrl = data.member?.id
+            ? `/billing?teamMemberId=${encodeURIComponent(data.member.id)}`
+            : '/billing'
+          setTimeout(() => router.push(billingUrl), 1000)
         } else if (data.nextStep === 'awaiting_owner_approval') {
           setPhase('pending')
           setMessage(`You've requested to join ${data.team?.name || 'the team'}. The owner needs to approve your seat before you can dial.`)
         } else {
-          
-          setMessage(`You're in. Loading ${data.team?.name || 'your team'}…`)
-          setTimeout(() => router.push(`/dashboard/teams/${data.team.id}/analytics`), 1000)
+          // redirect_to_dialer — straight to work, not a stats page. Scoped
+          // to the team, and to the campaign directly when there's exactly
+          // one to dial.
+          setMessage(`You're in. Taking you to the dialer…`)
+          const params = new URLSearchParams({ teamId: data.team.id })
+          if (data.firstCampaignId) params.set('campaignId', data.firstCampaignId)
+          setTimeout(() => router.push(`/dashboard/dialer?${params.toString()}`), 1000)
         }
       } catch (err: any) {
         setPhase('error')

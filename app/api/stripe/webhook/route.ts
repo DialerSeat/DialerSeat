@@ -4,6 +4,7 @@ import Stripe from 'stripe'
 import { getServiceClient } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 import { stripe } from '@/lib/stripe'
+import { activatePendingTeamMember, deactivateTeamMember } from '@/lib/teamMembership'
 import {
   claimStripeEvent,
   markStripeEventProcessed,
@@ -397,6 +398,36 @@ async function syncPersonalSubscription(subscription: Stripe.Subscription) {
 
   await upsertPersonalSubscription(subscription, clerkId)
   await updatePersonalUserStatus(clerkId, subscription)
+
+  // An agent-pays team seat rides on a completely ordinary personal
+  // subscription (same price, no special sub_kind) — the only thing that
+  // marks it as "also unlocks a team seat" is this metadata. Only fire once
+  // the subscription is genuinely active, not on intermediate states like
+  // incomplete/incomplete_expired while the first payment is still being
+  // collected.
+  const pendingTeamMemberId = subscription.metadata?.pending_team_member_id
+  if (pendingTeamMemberId && subscription.status === 'active') {
+    try {
+      await activatePendingTeamMember(pendingTeamMemberId)
+
+      const { data: member } = await supabase
+        .from('team_members')
+        .select('team_id')
+        .eq('id', pendingTeamMemberId)
+        .maybeSingle()
+
+      if (member) {
+        await supabase
+          .from('team_agent_payments')
+          .update({ status: 'active', stripe_subscription_id: subscription.id })
+          .eq('team_id', member.team_id)
+          .eq('agent_id', clerkId)
+          .eq('status', 'pending')
+      }
+    } catch (err) {
+      console.error('[agent-pays] failed to activate pending team member', pendingTeamMemberId, err)
+    }
+  }
 }
 
 async function lookupClerkIdByCustomer(
@@ -507,4 +538,30 @@ async function markPersonalSubCanceled(subscription: Stripe.Subscription) {
     .from('users')
     .update({ subscription_status: 'canceled' })
     .eq('stripe_customer_id', customerId)
+
+  // Symmetric with the agent-pays activation path — this metadata key stays
+  // on the subscription for its whole life once set, not just while pending.
+  const teamMemberId = subscription.metadata?.pending_team_member_id
+  if (teamMemberId) {
+    try {
+      await deactivateTeamMember(teamMemberId)
+
+      const { data: member } = await supabase
+        .from('team_members')
+        .select('team_id, user_id')
+        .eq('id', teamMemberId)
+        .maybeSingle()
+
+      if (member) {
+        await supabase
+          .from('team_agent_payments')
+          .update({ status: 'canceled', canceled_at: new Date().toISOString() })
+          .eq('team_id', member.team_id)
+          .eq('agent_id', member.user_id)
+          .eq('status', 'active')
+      }
+    } catch (err) {
+      console.error('[agent-pays] failed to deactivate team member on cancel', teamMemberId, err)
+    }
+  }
 }

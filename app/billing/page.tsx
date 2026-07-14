@@ -81,6 +81,7 @@ function describeBilling(
       todayLabel: fallback,
       recurringLabel: fallback,
       hasDiscount: false,
+      todayCents: null as number | null,
     }
   }
 
@@ -89,7 +90,7 @@ function describeBilling(
   const hasDiscount = amounts.totalCents !== amounts.subtotalCents
 
   if (!hasDiscount || !coupon) {
-    return { todayLabel, recurringLabel: todayLabel, hasDiscount: false }
+    return { todayLabel, recurringLabel: todayLabel, hasDiscount: false, todayCents: amounts.totalCents }
   }
 
   // Recurring line depends on how long the coupon actually lasts.
@@ -103,7 +104,7 @@ function describeBilling(
     recurringLabel = `${fullLabel} weekly`
   }
 
-  return { todayLabel, recurringLabel, hasDiscount: true, fullLabel }
+  return { todayLabel, recurringLabel, hasDiscount: true, fullLabel, todayCents: amounts.totalCents }
 }
 
 function LoadingCard({ text }: { text: string }) {
@@ -144,6 +145,7 @@ export default function BillingPage() {
   const searchParams = useSearchParams()
 
   const initialPlan: Plan = searchParams.get('plan') === 'wl' ? 'wl' : 'standard'
+  const teamMemberId = searchParams.get('teamMemberId')
   const [plan, setPlan] = useState<Plan>(initialPlan)
   const planInfo = PLAN_INFO[plan]
 
@@ -190,6 +192,17 @@ export default function BillingPage() {
       const statusData = await statusRes.json()
 
       if (statusData.isActive) {
+        if (teamMemberId) {
+          try {
+            await fetch('/api/teams/activate-existing-subscriber', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ teamMemberId }),
+            })
+          } catch {}
+          router.push('/dashboard/dialer')
+          return
+        }
         router.push('/dashboard')
         return
       }
@@ -200,6 +213,7 @@ export default function BillingPage() {
         body: JSON.stringify({
           plan: usePlan,
           ...(codeToApply ? { code: codeToApply } : {}),
+          ...(teamMemberId ? { teamMemberId } : {}),
         }),
       })
       const createData = await createRes.json()
@@ -522,6 +536,7 @@ export default function BillingPage() {
             abandoning={abandoning}
             plan={plan}
             billing={billing}
+            teamMemberId={teamMemberId}
           />
         </Elements>
 
@@ -538,11 +553,13 @@ function CheckoutForm({
   abandoning,
   plan,
   billing,
+  teamMemberId,
 }: {
   onAbandon: () => void
   abandoning: boolean
   plan: Plan
   billing: ReturnType<typeof describeBilling>
+  teamMemberId: string | null
 }) {
   const stripe = useStripe()
   const elements = useElements()
@@ -557,9 +574,11 @@ function CheckoutForm({
     setSubmitting(true)
     setErrorMsg(null)
 
-    const successUrl = plan === 'wl'
-      ? `${window.location.origin}/billing/success?plan=wl`
-      : `${window.location.origin}/billing/success`
+    const successParams = new URLSearchParams()
+    if (plan === 'wl') successParams.set('plan', 'wl')
+    if (teamMemberId) successParams.set('teamMemberId', teamMemberId)
+    if (typeof billing.todayCents === 'number') successParams.set('amount', String(billing.todayCents))
+    const successUrl = `${window.location.origin}/billing/success?${successParams.toString()}`
 
     const { error } = await stripe.confirmPayment({
       elements,
