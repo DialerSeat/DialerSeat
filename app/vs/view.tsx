@@ -78,6 +78,20 @@ const COMPARISONS: Comparison[] = [
     pitch:
       'Same compliance posture without the enterprise sales cycle. Self-serve setup in minutes, not weeks. Flat $35/week per seat vs Five9\'s $175+ with custom quotes and annual commits.',
   },
+  {
+    slug: 'wavv',
+    name: 'VS WAVV',
+    tagline: 'Every dialer mode, one flat price',
+    pitch:
+      'WAVV charges $59–$149/month depending on which dialer mode you unlock, plus $1/mo per number. DialerSeat is $35/week flat — preview, power, and multi-line predictive all included, no tier to climb.',
+  },
+  {
+    slug: '3cx',
+    name: 'VS 3CX',
+    tagline: 'Sales dialer vs business phone system',
+    pitch:
+      '3CX is a real PBX licensed by simultaneous call capacity — not built for outbound sales campaigns. DialerSeat is purpose-built for it: lead lists, dispositions, AMD, and TCPA compliance at $35/week per seat, no capacity planning required.',
+  },
 ]
 
 export default function VsHubView() {
