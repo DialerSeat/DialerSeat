@@ -7,7 +7,6 @@ const isPublicRoute = createRouteMatcher([
   '/sitemap.xml',
   '/sign-in(.*)',
   '/sign-up(.*)',
-  '/welcome(.*)',
   '/api/auth/(.*)',
   '/terms',
   '/privacy',
@@ -414,8 +413,12 @@ export default clerkMiddleware(async (auth, request) => {
     return withTenantHeader(res)
   }
 
+  if (url.pathname.startsWith('/welcome')) {
+    return withTenantHeader(NextResponse.next())
+  }
+
   const welcomeUrl = new URL('/welcome', request.url)
-  return NextResponse.redirect(welcomeUrl)
+  return withTenantHeader(NextResponse.redirect(welcomeUrl, 307))
 })
 
 function pickRedirectDestination(
