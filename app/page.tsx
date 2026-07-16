@@ -80,15 +80,22 @@ export default async function Home({ searchParams }: PageProps) {
         .ds-hero-grid {
           display: grid;
           grid-template-columns: 1.15fr 1fr;
-          gap: 56px;
-          align-items: center;
+          grid-template-areas:
+            "top      showcase"
+            "bottom   showcase";
+          column-gap: 56px;
+          row-gap: 32px;
+          align-items: start;
           max-width: 1280px;
           margin: 0 auto;
         }
+        .ds-hero-copy-top { grid-area: top; }
+        .ds-hero-copy-bottom { grid-area: bottom; }
+        .ds-hero-showcase { grid-area: showcase; align-self: center; }
 
         .ds-showcase-shell { width: 100%; }
 
-        .ds-stats { flex-direction: row; padding: 18px 16px; gap: 8px; }
+        .ds-stats { flex-direction: row; padding: 16px 12px; gap: 8px; }
         .ds-section { padding: 120px 60px; }
         .ds-grid-3 { grid-template-columns: repeat(3, 1fr); }
         .ds-pricing-card { padding: 60px; }
@@ -147,15 +154,21 @@ export default async function Home({ searchParams }: PageProps) {
             padding-right: 20px;
           }
 
-          .ds-hero-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
-          .ds-hero-copy { text-align: left; }
+          .ds-hero-grid {
+            grid-template-columns: 1fr !important;
+            grid-template-areas:
+              "top"
+              "showcase"
+              "bottom" !important;
+            row-gap: 28px !important;
+          }
 
           .ds-showcase-shell {
             width: 720px;
             max-width: 720px;
             transform: scale(0.44);
             transform-origin: top left;
-            margin-bottom: -216px;
+            margin-bottom: -190px;
           }
           .ds-hero-showcase { overflow: hidden; width: 100%; }
 
@@ -246,7 +259,7 @@ export default async function Home({ searchParams }: PageProps) {
 
       <section className={isLoggedIn ? 'ds-hero-logged-in' : 'ds-hero-logged-out'}>
         <div className="ds-hero-grid">
-          <div className="ds-hero-copy" style={{ textAlign: 'left' }}>
+          <div className="ds-hero-copy-top" style={{ textAlign: 'left' }}>
             <div style={{
               fontSize: '11px',
               letterSpacing: '3px',
@@ -263,14 +276,54 @@ export default async function Home({ searchParams }: PageProps) {
               fontWeight: 'bold',
               letterSpacing: '-3px',
               lineHeight: '1.05',
-              marginBottom: '32px',
               maxWidth: '700px',
             }}>
               <span style={{ color: '#1a1c24' }}>DIAL SMARTER.</span>
               <br />
               <span style={{ color: '#2a4a8a' }}>CLOSE FASTER.</span>
             </h1>
+          </div>
 
+          <div className="ds-hero-showcase">
+            <div className="ds-showcase-shell">
+              <DialerShowcase />
+            </div>
+
+            <div className="ds-stats" style={{
+              display: 'flex',
+              alignItems: 'center',
+              marginTop: '16px',
+              borderRadius: '8px',
+              background: '#0e0e16',
+              border: '1px solid rgba(255,255,255,0.08)',
+              maxWidth: '100%',
+              boxSizing: 'border-box',
+            }}>
+              {[
+                { number: '$35', label: 'PER WEEK' },
+                { number: '5X', label: 'CHEAPER THAN OTHERS' },
+                { number: '$0', label: 'SETUP FEES' },
+                { number: '∞', label: 'LEADS UPLOADED' },
+              ].map((stat, i) => (
+                <div key={i} style={{ textAlign: 'center', flex: 1 }}>
+                  <div className="ds-stats-num" style={{
+                    fontSize: '24px',
+                    fontWeight: 'bold',
+                    color: '#4a9eff',
+                    letterSpacing: '-1px',
+                    marginBottom: '4px',
+                  }}>{stat.number}</div>
+                  <div className="ds-stats-label" style={{
+                    fontSize: '9px',
+                    letterSpacing: '2px',
+                    color: 'rgba(255,255,255,0.55)',
+                  }}>{stat.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="ds-hero-copy-bottom" style={{ textAlign: 'left' }}>
             <p className="ds-hero-p" style={{
               fontSize: '17px',
               lineHeight: '1.7',
@@ -321,45 +374,6 @@ export default async function Home({ searchParams }: PageProps) {
             <p style={{ fontSize: '11px', letterSpacing: '3px', color: 'var(--brand-muted-text, #5a5e6a)' }}>
               $35/WEEK · NO CONTRACTS · CANCEL ANYTIME
             </p>
-          </div>
-
-          <div className="ds-hero-showcase">
-            <div className="ds-showcase-shell">
-              <DialerShowcase />
-            </div>
-
-            <div className="ds-stats" style={{
-              display: 'flex',
-              alignItems: 'center',
-              marginTop: '20px',
-              borderRadius: '8px',
-              background: '#1a1a2e',
-              border: '1px solid #2a4a8a',
-              maxWidth: '100%',
-              boxSizing: 'border-box',
-            }}>
-              {[
-                { number: '$35', label: 'PER WEEK' },
-                { number: '5X', label: 'CHEAPER THAN OTHERS' },
-                { number: '$0', label: 'SETUP FEES' },
-                { number: '∞', label: 'LEADS UPLOADED' },
-              ].map((stat, i) => (
-                <div key={i} style={{ textAlign: 'center', flex: 1 }}>
-                  <div className="ds-stats-num" style={{
-                    fontSize: '24px',
-                    fontWeight: 'bold',
-                    color: '#4a9eff',
-                    letterSpacing: '-1px',
-                    marginBottom: '4px',
-                  }}>{stat.number}</div>
-                  <div className="ds-stats-label" style={{
-                    fontSize: '9px',
-                    letterSpacing: '2px',
-                    color: 'rgba(255,255,255,0.55)',
-                  }}>{stat.label}</div>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       </section>

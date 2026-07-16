@@ -102,10 +102,83 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url)
     const campaignId = searchParams.get('campaign_id')
-    // Team scope: URL param wins, then fall back to resolved team affiliation
-    // for the caller. Solo agents resolve to null and get the user-only branch.
-    const teamId =
-      searchParams.get('team_id') ?? (await resolveTeamId(clerkId))
+    // Same principle as team_id above — an explicit campaign_id must
+    // actually be reachable by the caller: either they own it directly, or
+    // it's attached to a team they own/belong to.
+    if (campaignId) {
+      const { data: ownedCampaign } = await supabase
+        .from('campaigns')
+        .select('id')
+        .eq('id', campaignId)
+        .eq('user_id', clerkId)
+        .maybeSingle()
+
+      let campaignAuthorized = !!ownedCampaign
+      if (!campaignAuthorized) {
+        const { data: teamCampaignRows } = await supabase
+          .from('team_campaigns')
+          .select('team_id, teams!inner(owner_id)')
+          .eq('campaign_id', campaignId)
+
+        for (const row of teamCampaignRows || []) {
+          if ((row as any).teams?.owner_id === clerkId) {
+            campaignAuthorized = true
+            break
+          }
+          const { data: membership } = await supabase
+            .from('team_members')
+            .select('id')
+            .eq('team_id', row.team_id)
+            .eq('user_id', clerkId)
+            .eq('status', 'active')
+            .maybeSingle()
+          if (membership) {
+            campaignAuthorized = true
+            break
+          }
+        }
+      }
+
+      if (!campaignAuthorized) {
+        return NextResponse.json({ error: 'forbidden' }, { status: 403 })
+      }
+    }
+
+    const requestedTeamId = searchParams.get('team_id')
+
+    // An explicit team_id in the URL must actually belong to the caller —
+    // either as owner or as an active member. Without this check, any
+    // authenticated user could pass an arbitrary team_id and see that
+    // team's live dialing activity (who's ready, dialing, on a call).
+    if (requestedTeamId) {
+      const { data: ownedTeam } = await supabase
+        .from('teams')
+        .select('id')
+        .eq('id', requestedTeamId)
+        .eq('owner_id', clerkId)
+        .maybeSingle()
+
+      let authorized = !!ownedTeam
+      if (!authorized) {
+        const { data: membership } = await supabase
+          .from('team_members')
+          .select('id')
+          .eq('team_id', requestedTeamId)
+          .eq('user_id', clerkId)
+          .eq('status', 'active')
+          .maybeSingle()
+        authorized = !!membership
+      }
+
+      if (!authorized) {
+        return NextResponse.json({ error: 'forbidden' }, { status: 403 })
+      }
+    }
+
+    // Team scope: URL param wins (now verified above), then fall back to
+    // resolved team affiliation for the caller. Solo agents resolve to null
+    // and get the user-only branch.
+    const teamId = requestedTeamId ?? (await resolveTeamId(clerkId))
 
     // ----- Build the query -----
     // Always exclude offline + stale sessions. Heartbeat sweep marks them

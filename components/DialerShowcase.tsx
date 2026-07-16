@@ -119,7 +119,7 @@ function MacFrame({
           display: 'flex',
           alignItems: 'center',
           gap: 8,
-          padding: '11px 14px',
+          padding: '8px 14px',
           background: 'rgba(0,0,0,0.18)',
           borderBottom: '1px solid rgba(255,255,255,0.07)',
         }}
@@ -156,15 +156,15 @@ export default function DialerShowcase() {
 
   return (
     <MacFrame title="DIALER" titleColor="#5a8a5a" bg={C.sidebar}>
-      <div style={{ display: 'flex', minHeight: 300 }}>
-        <div style={{ flex: 1, padding: 14, borderRight: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ display: 'flex', minHeight: 260 }}>
+        <div style={{ flex: 1, padding: 10, borderRight: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column' }}>
           <div style={{ flex: 1, background: C.page, border: `1px solid ${C.cardBorder}`, borderRadius: 4, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ padding: '7px 12px', background: C.sidebar, borderBottom: `1px solid ${C.cardBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ padding: '5px 12px', background: C.sidebar, borderBottom: `1px solid ${C.cardBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: 9, letterSpacing: 3, color: C.onSidebarMuted, fontWeight: 700 }}>LEAD PROFILE</span>
               <span style={{ fontSize: 9, fontFamily: MONO, color: C.primary }}>ID: 7a3f9c2e</span>
             </div>
-            <div style={{ flex: 1, padding: 12, display: 'flex', flexDirection: 'column' }}>
-              <div style={{ padding: '10px 14px', background: C.page, border: `2px solid ${GREEN}`, borderRadius: 4 }}>
+            <div style={{ flex: 1, padding: 8, display: 'flex', flexDirection: 'column' }}>
+              <div style={{ padding: '8px 14px', background: C.page, border: `2px solid ${GREEN}`, borderRadius: 4 }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
                   <div>
                     <div style={{ fontSize: 19, fontWeight: 800, fontFamily: MONO, color: C.onPage, letterSpacing: 1, marginBottom: 3 }}>JOHN DOE</div>
@@ -175,14 +175,14 @@ export default function DialerShowcase() {
                 </div>
               </div>
 
-              <div style={{ flex: 1, marginTop: 10, background: C.page, border: `1px solid ${C.cardBorder}`, borderLeft: `3px solid ${ACCENT}`, borderRadius: 3, display: 'flex', flexDirection: 'column', minHeight: 96, overflow: 'hidden' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 2, padding: '6px 8px 0', borderBottom: `1px solid ${C.cardBorder}`, flexWrap: 'wrap' }}>
+              <div style={{ flex: 1, marginTop: 6, background: C.page, border: `1px solid ${C.cardBorder}`, borderLeft: `3px solid ${ACCENT}`, borderRadius: 3, display: 'flex', flexDirection: 'column', minHeight: 80, overflow: 'hidden' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 2, padding: '4px 8px 0', borderBottom: `1px solid ${C.cardBorder}`, flexWrap: 'wrap' }}>
                   {SCRIPTS.map((sc, i) => (
                     <button
                       key={sc.key}
                       onClick={() => setScriptIdx(i)}
                       style={{
-                        padding: '5px 10px',
+                        padding: '4px 10px',
                         cursor: 'pointer',
                         border: 'none',
                         borderRadius: '5px 5px 0 0',
@@ -199,9 +199,9 @@ export default function DialerShowcase() {
                     </button>
                   ))}
                 </div>
-                <div style={{ flex: 1, padding: '10px 12px', display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ fontSize: 8, letterSpacing: 2, color: C.muted, marginBottom: 6 }}>CALL SCRIPT</div>
-                  <div key={script.key} style={{ height: 136, fontSize: 11, lineHeight: 1.7, color: C.onPage, fontFamily: MONO, whiteSpace: 'pre-wrap', animation: 'ds-showcase-rise 0.25s ease' }}>
+                <div style={{ flex: 1, padding: '8px 10px', display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ fontSize: 8, letterSpacing: 2, color: C.muted, marginBottom: 4 }}>CALL SCRIPT</div>
+                  <div key={script.key} style={{ height: 122, fontSize: 10.5, lineHeight: 1.65, color: C.onPage, fontFamily: MONO, whiteSpace: 'pre-wrap', animation: 'ds-showcase-rise 0.25s ease' }}>
                     {script.text}
                   </div>
                 </div>

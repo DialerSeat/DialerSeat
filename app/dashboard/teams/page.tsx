@@ -4,6 +4,7 @@ import { useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import SeatLinksPanel from '@/components/teams/SeatLinksPanel'
+import RosterPanel from '@/components/teams/RosterPanel'
 
 
 
@@ -130,14 +131,6 @@ function displayName(u: TeamUser, fallback: string): string {
   if (full) return full
   if (u.email) return u.email
   return fallback
-}
-
-function fmtDate(iso: string): string {
-  try {
-    return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-  } catch {
-    return iso
-  }
 }
 
 export default function TeamsPage() {
@@ -863,10 +856,6 @@ export default function TeamsPage() {
                   const memberCount = team.members.length
                   const codeCount = team.codes.length
                   const campaignCount = team.teamCampaigns.length
-                  const campaignNameById: Record<string, string> = {}
-                  for (const tc of team.teamCampaigns) {
-                    if (tc.campaign) campaignNameById[tc.campaignId] = tc.campaign.name
-                  }
 
                   return (
                     <div key={team.id} style={{
@@ -920,46 +909,21 @@ export default function TeamsPage() {
                       {isExpanded && (
                         <div style={{ padding: '16px 18px', background: T.surface }}>
 
-                          {pendingCount > 0 && (
-                            <Section title="PENDING REQUESTS" accent={T.amber}>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                {team.pendingMembers.map(m => {
-                                  const code = team.codes.find(c => c.code === m.joined_via_code)
-                                  const isOwnerPays = code?.payer === 'owner'
-                                  return (
-                                    <div key={m.id} style={{
-                                      background: T.bg, border: `1px solid ${T.border}`,
-                                      borderLeft: `2px solid ${T.amber}`, borderRadius: 3,
-                                      padding: '10px 12px', display: 'flex', alignItems: 'center',
-                                      gap: 10, flexWrap: 'wrap',
-                                    }}>
-                                      <div style={{ flex: '1 1 200px', minWidth: 0 }}>
-                                        <div style={{ fontSize: 13, fontWeight: 'bold', color: T.text, letterSpacing: 0.5 }}>
-                                          {displayName(m.user, m.user_id.slice(0, 12))}
-                                        </div>
-                                        <div style={{ fontSize: 10, color: T.muted, fontFamily: 'monospace', marginTop: 2 }}>
-                                          via {m.joined_via_code || 'unknown'} · {fmtDate(m.created_at)}
-                                          {isOwnerPays && (
-                                            <span style={{ color: T.amber, fontWeight: 'bold' }}>
-                                              {' · '}OWNER PAYS — accepting starts $35/wk charge
-                                            </span>
-                                          )}
-                                        </div>
-                                      </div>
-                                      <div style={{ display: 'flex', gap: 6 }}>
-                                        <button onClick={() => acceptMember(m)} disabled={actioningId === m.id} style={btnPrimary(actioningId === m.id)}>
-                                          {actioningId === m.id ? '...' : 'ACCEPT'}
-                                        </button>
-                                        <button onClick={() => rejectMember(m)} disabled={actioningId === m.id} style={btnDanger(actioningId === m.id)}>
-                                          REJECT
-                                        </button>
-                                      </div>
-                                    </div>
-                                  )
-                                })}
-                              </div>
-                            </Section>
-                          )}
+                          <Section title="ROSTER" accent={T.accent}>
+                            <RosterPanel
+                              pendingMembers={team.pendingMembers}
+                              activeMembers={team.members}
+                              codes={team.codes}
+                              teamCampaigns={team.teamCampaigns}
+                              actioningId={actioningId}
+                              onAccept={acceptMember}
+                              onReject={rejectMember}
+                              onKick={removeMember}
+                              onReinstate={m => reinstateMember(team, m)}
+                              onAddCampaign={m => openGrantModal(team, m)}
+                              onRevokeAccess={(m, a, cName) => revokeAccess(team, m, a, cName)}
+                            />
+                          </Section>
 
                           <Section
                             title={`ATTACHED CAMPAIGNS (${campaignCount})`}
@@ -1028,113 +992,6 @@ export default function TeamsPage() {
                               teamCampaigns={team.teamCampaigns}
                               onChanged={loadTeams}
                             />
-                          </Section>
-
-                          <Section title={`ACTIVE MEMBERS (${memberCount})`} accent={T.accent}>
-                            {memberCount === 0 ? (
-                              <EmptyHint text="No active members yet. Generate a code and share it with an agent to get started." />
-                            ) : (
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                {team.members.map(m => {
-                                  const accessCount = m.campaignAccess.length
-                                  const hasAccess = accessCount > 0
-                                  const accessibleIds = new Set(m.campaignAccess.map(a => a.campaignId))
-                                  const remainingCampaigns = team.teamCampaigns.filter(tc => !accessibleIds.has(tc.campaignId))
-                                  const canAddMore = remainingCampaigns.length > 0
-                                  const isReinstating = actioningId === m.id
-
-                                  return (
-                                    <div key={m.id} style={{
-                                      background: T.bg,
-                                      border: `1px solid ${T.border}`,
-                                      borderLeft: `3px solid ${hasAccess ? T.green : T.amber}`,
-                                      borderRadius: 3,
-                                      padding: '10px 12px',
-                                      display: 'flex', flexDirection: 'column', gap: 8,
-                                    }}>
-                                      <div style={{
-                                        display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
-                                      }}>
-                                        <div style={{ flex: '1 1 200px', minWidth: 0 }}>
-                                          <div style={{
-                                            fontSize: 12, fontWeight: 'bold', color: T.text, letterSpacing: 0.5,
-                                            display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
-                                          }}>
-                                            {displayName(m.user, m.user_id.slice(0, 12))}
-                                            {!hasAccess && (
-                                              <Badge color={T.amber}>NO ACCESS</Badge>
-                                            )}
-                                          </div>
-                                          <div style={{ fontSize: 10, color: T.muted, fontFamily: 'monospace', marginTop: 2 }}>
-                                            joined {m.accepted_at ? fmtDate(m.accepted_at) : fmtDate(m.created_at)}
-                                            {m.joined_via_code && ` · via ${m.joined_via_code}`}
-                                          </div>
-                                        </div>
-                                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                                          {!hasAccess && campaignCount > 0 && (
-                                            <button
-                                              onClick={() => reinstateMember(team, m)}
-                                              disabled={isReinstating}
-                                              style={btnPrimary(isReinstating)}
-                                              title={team.teamCampaigns.length === 1 ? 'Click to reinstate access' : 'Choose a campaign to grant access'}
-                                            >
-                                              {isReinstating ? '...' : '↻ REINSTATE'}
-                                            </button>
-                                          )}
-                                          {hasAccess && canAddMore && (
-                                            <button
-                                              onClick={() => openGrantModal(team, m)}
-                                              style={btnSubtle(false, T.blue)}
-                                              title="Add this member to another campaign"
-                                            >
-                                              + ADD CAMPAIGN
-                                            </button>
-                                          )}
-                                          <button onClick={() => removeMember(m)} disabled={actioningId === m.id} style={btnSubtle(actioningId === m.id, T.red)}>
-                                            KICK
-                                          </button>
-                                        </div>
-                                      </div>
-
-                                      {hasAccess && (
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                          {m.campaignAccess.map(a => {
-                                            const cName = campaignNameById[a.campaignId] || 'Unknown campaign'
-                                            const payerLabel = a.payer === 'owner' ? 'OWNER PAYS'
-                                              : a.payer === 'agent' ? 'AGENT PAYS'
-                                              : 'FREE'
-                                            const payerColor = a.payer === 'owner' ? T.green
-                                              : a.payer === 'agent' ? T.amber
-                                              : T.accent
-                                            return (
-                                              <div key={a.id} style={{
-                                                background: T.surface,
-                                                border: `1px solid ${T.border}`,
-                                                borderRadius: 2,
-                                                padding: '5px 8px',
-                                                display: 'flex', alignItems: 'center', gap: 8,
-                                                flexWrap: 'wrap',
-                                              }}>
-                                                <span style={{
-                                                  flex: '1 1 120px', minWidth: 0,
-                                                  fontSize: 11, color: T.text, fontWeight: 500,
-                                                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                                                }}>{cName}</span>
-                                                <Badge color={payerColor}>{payerLabel}</Badge>
-                                                <button
-                                                  onClick={() => revokeAccess(team, m, a, cName)}
-                                                  style={btnSubtle(false, T.red)}
-                                                >REVOKE</button>
-                                              </div>
-                                            )
-                                          })}
-                                        </div>
-                                      )}
-                                    </div>
-                                  )
-                                })}
-                              </div>
-                            )}
                           </Section>
 
                           <div style={{
@@ -1614,16 +1471,6 @@ function EmptyHint({ text }: { text: string }) {
       padding: '12px 14px', fontSize: 11, color: 'var(--brand-muted-text)',
       letterSpacing: 0.5, lineHeight: 1.5,
     }}>{text}</div>
-  )
-}
-
-function Badge({ color, children }: { color: string; children: React.ReactNode }) {
-  return (
-    <span style={{
-      padding: '2px 8px', borderRadius: 3, fontSize: 9, fontWeight: 'bold', letterSpacing: 1.5,
-      color, border: `1px solid ${color}`, background: 'transparent',
-      whiteSpace: 'nowrap', fontFamily: 'monospace',
-    }}>{children}</span>
   )
 }
 
