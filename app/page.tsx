@@ -168,7 +168,7 @@ export default async function Home({ searchParams }: PageProps) {
             max-width: 720px;
             transform: scale(0.44);
             transform-origin: top left;
-            margin-bottom: -190px;
+            margin-bottom: -175px;
           }
           .ds-hero-showcase { overflow: hidden; width: 100%; }
 
