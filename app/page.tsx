@@ -4,7 +4,6 @@ import Link from "next/link"
 import SiteFooter from '@/components/site-footer'
 import SiteHeader from '@/components/site-header'
 import LandingAuthSync from '@/components/LandingAuthSync'
-import DialerShowcase from '@/components/DialerShowcase'
 
 interface PageProps {
   searchParams: Promise<{ view?: string; tenant?: string }>
@@ -39,13 +38,13 @@ export default async function Home({ searchParams }: PageProps) {
       {isLoggedIn && <SiteHeader tenantSlug={returnTenantSlug} />}
 
       <main style={{
-        background: 'var(--brand-page-bg, #f0f1f4)',
+        background: 'var(--background)',
         minHeight: isLoggedIn ? 'auto' : '100vh',
         overflowX: 'hidden',
       }}>
       <style>{`
         :root {
-          --hero-fs: 64px;
+          --hero-fs: 80px;
           --section-fs: 36px;
           --cta-fs: 52px;
         }
@@ -59,12 +58,8 @@ export default async function Home({ searchParams }: PageProps) {
         .ds-nav-links { display: flex; align-items: center; gap: 40px; }
         .ds-nav-link { display: inline-block; }
 
-        .ds-announce-banner {
-          padding: 8px 20px;
-        }
-
         .ds-hero-logged-out {
-          padding-top: max(168px, calc(env(safe-area-inset-top, 0px) + 148px));
+          padding-top: max(120px, calc(env(safe-area-inset-top, 0px) + 100px));
           padding-bottom: 80px;
           padding-left: 40px;
           padding-right: 40px;
@@ -77,18 +72,7 @@ export default async function Home({ searchParams }: PageProps) {
           padding-right: 40px;
         }
 
-        .ds-hero-grid {
-          display: grid;
-          grid-template-columns: 1.15fr 1fr;
-          gap: 48px;
-          align-items: center;
-          max-width: 1280px;
-          margin: 0 auto;
-        }
-
-        .ds-showcase-shell { width: 100%; }
-
-        .ds-stats { flex-direction: row; padding: 18px 16px; gap: 8px; }
+        .ds-stats { flex-direction: row; padding: 32px 60px; gap: 48px; }
         .ds-section { padding: 120px 60px; }
         .ds-grid-3 { grid-template-columns: repeat(3, 1fr); }
         .ds-pricing-card { padding: 60px; }
@@ -128,14 +112,8 @@ export default async function Home({ searchParams }: PageProps) {
           .ds-nav-link { display: none; }
           .ds-nav-link.ds-show-mobile { display: inline-block; }
 
-          .ds-announce-banner {
-            padding: 8px 14px !important;
-            font-size: 9px !important;
-            letter-spacing: 2px !important;
-          }
-
           .ds-hero-logged-out {
-            padding-top: max(140px, calc(env(safe-area-inset-top, 0px) + 120px));
+            padding-top: max(100px, calc(env(safe-area-inset-top, 0px) + 80px));
             padding-bottom: 60px;
             padding-left: 20px;
             padding-right: 20px;
@@ -147,29 +125,17 @@ export default async function Home({ searchParams }: PageProps) {
             padding-right: 20px;
           }
 
-          .ds-hero-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
-          .ds-hero-copy { text-align: left; }
-
-          .ds-showcase-shell {
-            width: 720px;
-            max-width: 720px;
-            transform: scale(0.44);
-            transform-origin: top left;
-            margin-bottom: -216px;
-          }
-          .ds-hero-showcase { overflow: hidden; width: 100%; }
-
           .ds-hero-h1 { letter-spacing: -1px !important; line-height: 1.1 !important; }
           .ds-hero-p { font-size: 15px !important; }
           .ds-stats {
-            padding: 14px 10px !important;
-            gap: 6px !important;
-            margin-top: 16px !important;
+            flex-direction: column;
+            padding: 24px 20px;
+            gap: 24px;
+            margin-top: 60px !important;
             width: 100%;
             box-sizing: border-box;
           }
-          .ds-stats-num { font-size: 17px !important; }
-          .ds-stats-label { font-size: 7px !important; letter-spacing: 1px !important; }
+          .ds-stats-num { font-size: 28px !important; }
           .ds-section { padding: 60px 20px; }
           .ds-grid-3 { grid-template-columns: 1fr; }
           .ds-pricing-card { padding: 32px 24px !important; }
@@ -191,190 +157,194 @@ export default async function Home({ searchParams }: PageProps) {
       `}</style>
 
       {!isLoggedIn && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50 }}>
-          <nav className="ds-nav" style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            background: 'rgba(26,26,46,0.94)',
-            backdropFilter: 'blur(20px)',
-            borderBottom: '2px solid #2a4a8a',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '8px',
-                background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}>
-                <span style={{ color: 'white', fontWeight: 'bold', fontSize: '16px' }}>D</span>
-              </div>
-              <span style={{
-                fontSize: '16px',
-                fontWeight: 'bold',
-                letterSpacing: '4px',
-                color: 'var(--text-primary)',
-                whiteSpace: 'nowrap',
-              }}>DIALERSEAT</span>
+        <nav className="ds-nav" style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 50,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          background: 'rgba(10,10,15,0.9)',
+          backdropFilter: 'blur(20px)',
+          borderBottom: '1px solid var(--border)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '8px',
+              background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              <span style={{ color: 'white', fontWeight: 'bold', fontSize: '16px' }}>D</span>
             </div>
-
-            <div className="ds-nav-links">
-              <Link href="#features" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>FEATURES</Link>
-              <Link href="#pricing" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>PRICING</Link>
-              <Link href="#compare" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>COMPARE</Link>
-              <Link href="/sign-in" className="ds-nav-link ds-show-mobile" style={{ fontSize: '11px', letterSpacing: '2px', color: 'var(--text-primary)', textDecoration: 'none', padding: '8px 14px', border: '1px solid var(--border)', borderRadius: '8px', whiteSpace: 'nowrap' }}>SIGN IN</Link>
-              <Link href="/sign-up" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: '#4a9eff', textDecoration: 'none', padding: '10px 20px', borderRadius: '6px', background: 'transparent', border: '1px solid #4a9eff', borderTop: '3px solid #4a9eff', whiteSpace: 'nowrap' }}>GET STARTED</Link>
-            </div>
-          </nav>
-          <div className="ds-announce-banner" style={{
-            textAlign: 'center',
-            background: '#e8eef8',
-            borderBottom: '2px solid #2a4a8a',
-            color: '#2a4a8a',
-            fontSize: '11px',
-            letterSpacing: '3px',
-            fontWeight: 'bold',
-          }}>
-            $35/WEEK · NO CONTRACTS · CANCEL ANYTIME
+            <span style={{
+              fontSize: '16px',
+              fontWeight: 'bold',
+              letterSpacing: '4px',
+              color: 'var(--text-primary)',
+              whiteSpace: 'nowrap',
+            }}>DIALERSEAT</span>
           </div>
-        </div>
+
+          <div className="ds-nav-links">
+            <Link href="#features" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>FEATURES</Link>
+            <Link href="#pricing" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>PRICING</Link>
+            <Link href="#compare" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>COMPARE</Link>
+            <Link href="/sign-in" className="ds-nav-link ds-show-mobile" style={{ fontSize: '11px', letterSpacing: '2px', color: 'var(--text-primary)', textDecoration: 'none', padding: '8px 14px', border: '1px solid var(--border)', borderRadius: '8px', whiteSpace: 'nowrap' }}>SIGN IN</Link>
+            <Link href="/sign-up" className="ds-nav-link" style={{ fontSize: '12px', letterSpacing: '3px', color: 'white', textDecoration: 'none', padding: '10px 20px', borderRadius: '8px', background: 'linear-gradient(135deg, #4a9eff, #2a6eff)', whiteSpace: 'nowrap' }}>GET STARTED</Link>
+          </div>
+        </nav>
       )}
 
-      <section className={isLoggedIn ? 'ds-hero-logged-in' : 'ds-hero-logged-out'}>
-        <div className="ds-hero-grid">
-          <div className="ds-hero-copy" style={{ textAlign: 'left' }}>
-            <div style={{
-              fontSize: '11px',
-              letterSpacing: '3px',
-              fontWeight: 'bold',
-              textTransform: 'uppercase',
-              color: '#2a4a8a',
-              marginBottom: '20px',
-            }}>
-              ▸ The dialer for people who live on the phone
-            </div>
+      <section
+        className={isLoggedIn ? 'ds-hero-logged-in' : 'ds-hero-logged-out'}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          textAlign: 'center',
+        }}
+      >
+        <div style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '8px 20px',
+          borderRadius: '100px',
+          border: '1px solid var(--border)',
+          color: 'var(--accent-blue)',
+          background: 'rgba(74,158,255,0.05)',
+          fontSize: '11px',
+          letterSpacing: '3px',
+          marginBottom: '40px',
+          textAlign: 'center',
+        }}>
+          <div style={{
+            width: '6px', height: '6px', borderRadius: '50%',
+            background: 'var(--accent-blue)', flexShrink: 0,
+          }}></div>
+          $35/WEEK · NO CONTRACTS · CANCEL ANYTIME
+        </div>
 
-            <h1 className="ds-hero-h1" style={{
-              fontSize: 'var(--hero-fs)',
-              fontWeight: 'bold',
-              letterSpacing: '-1.5px',
-              lineHeight: '1.05',
-              marginBottom: '32px',
-              maxWidth: '620px',
-            }}>
-              <span style={{ color: '#1a1c24' }}>DIAL SMARTER.</span>
-              <br />
-              <span style={{ color: '#2a4a8a' }}>CLOSE FASTER.</span>
-            </h1>
+        <h1 className="ds-hero-h1" style={{
+          fontSize: 'var(--hero-fs)',
+          fontWeight: 'bold',
+          letterSpacing: '-2px',
+          lineHeight: '1.05',
+          marginBottom: '32px',
+          maxWidth: '900px',
+        }}>
+          <span style={{ color: 'var(--text-primary)' }}>DIAL </span>
+          <span style={{
+            background: 'linear-gradient(135deg, #4a9eff, #a0c4ff)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+          }}>SMARTER.</span>
+          <br />
+          <span style={{ color: 'var(--text-primary)' }}>CLOSE </span>
+          <span style={{ color: 'var(--accent-silver)' }}>FASTER.</span>
+        </h1>
 
-            <p className="ds-hero-p" style={{
-              fontSize: '17px',
-              lineHeight: '1.7',
-              letterSpacing: '0.5px',
-              color: 'var(--brand-muted-text, #5a5e6a)',
-              maxWidth: '520px',
-              marginBottom: '32px',
-            }}>
-              The professional outbound dialer built for <u>ANYONE</u> who lives on the phone. Upload your leads, launch your campaigns, and let DialerSeat do the heavy lifting — for a fraction of what everyone else charges.
-            </p>
+        <p className="ds-hero-p" style={{
+          fontSize: '18px',
+          lineHeight: '1.7',
+          letterSpacing: '0.5px',
+          color: 'var(--text-secondary)',
+          maxWidth: '600px',
+          marginBottom: '40px',
+          padding: '0 8px',
+        }}>
+          The professional outbound dialer built for <u>ANYONE</u> who lives on the phone. Upload your leads, launch your campaigns, and let DialerSeat do the heavy lifting — for a fraction of what everyone else charges.
+        </p>
 
-            <div className="ds-cta-buttons" style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '16px',
-              marginBottom: '24px',
-              maxWidth: 480,
-            }}>
-              <Link href={ctaHref} style={{
-                padding: '16px 32px',
-                borderRadius: '6px',
-                fontSize: '13px',
+        <div className="ds-cta-buttons" style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '16px',
+          marginBottom: '24px',
+          maxWidth: 480,
+        }}>
+          <Link href={ctaHref} style={{
+            padding: '16px 40px',
+            borderRadius: '12px',
+            fontSize: '13px',
+            fontWeight: 'bold',
+            letterSpacing: '3px',
+            color: 'white',
+            textDecoration: 'none',
+            background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+          }}>
+            {ctaLabel}
+          </Link>
+          <Link href="#compare" style={{
+            padding: '16px 40px',
+            borderRadius: '12px',
+            fontSize: '13px',
+            fontWeight: 'bold',
+            letterSpacing: '3px',
+            color: 'var(--text-primary)',
+            textDecoration: 'none',
+            border: '1px solid var(--border)',
+          }}>
+            SEE HOW WE COMPARE
+          </Link>
+        </div>
+
+        <p style={{ fontSize: '11px', letterSpacing: '3px', color: 'var(--text-secondary)' }}>
+          $35/WEEK · NO CONTRACTS · CANCEL ANYTIME
+        </p>
+
+        <div className="ds-stats" style={{
+          display: 'flex',
+          alignItems: 'center',
+          marginTop: '80px',
+          borderRadius: '16px',
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          maxWidth: '100%',
+          boxSizing: 'border-box',
+        }}>
+          {[
+            { number: '$35', label: 'PER WEEK' },
+            { number: '5X', label: 'CHEAPER THAN OTHERS' },
+            { number: '$0', label: 'SETUP FEES' },
+            { number: '∞', label: 'LEADS UPLOADED' },
+          ].map((stat, i) => (
+            <div key={i} style={{ textAlign: 'center', flex: 1 }}>
+              <div className="ds-stats-num" style={{
+                fontSize: '36px',
                 fontWeight: 'bold',
+                color: 'var(--accent-blue)',
+                letterSpacing: '-1px',
+                marginBottom: '6px',
+              }}>{stat.number}</div>
+              <div style={{
+                fontSize: '10px',
                 letterSpacing: '3px',
-                color: '#4a9eff',
-                textDecoration: 'none',
-                background: '#1a1a2e',
-                borderTop: '3px solid #4a9eff',
-              }}>
-                {ctaLabel} →
-              </Link>
-              <Link href="#compare" style={{
-                padding: '16px 32px',
-                borderRadius: '6px',
-                fontSize: '13px',
-                fontWeight: 'bold',
-                letterSpacing: '3px',
-                color: '#1a1c24',
-                textDecoration: 'none',
-                background: 'transparent',
-                border: '1px solid #c4c8d0',
-                borderTop: '3px solid #1a1c24',
-              }}>
-                SEE HOW WE COMPARE
-              </Link>
+                color: 'var(--text-secondary)',
+              }}>{stat.label}</div>
             </div>
-
-            <p style={{ fontSize: '11px', letterSpacing: '3px', color: 'var(--brand-muted-text, #5a5e6a)' }}>
-              $35/WEEK · NO CONTRACTS · CANCEL ANYTIME
-            </p>
-          </div>
-
-          <div className="ds-hero-showcase">
-            <div className="ds-showcase-shell">
-              <DialerShowcase />
-            </div>
-
-            <div className="ds-stats" style={{
-              display: 'flex',
-              alignItems: 'center',
-              marginTop: '20px',
-              borderRadius: '8px',
-              background: '#1a1a2e',
-              border: '1px solid #2a4a8a',
-              maxWidth: '100%',
-              boxSizing: 'border-box',
-            }}>
-              {[
-                { number: '$35', label: 'PER WEEK' },
-                { number: '5X', label: 'CHEAPER THAN OTHERS' },
-                { number: '$0', label: 'SETUP FEES' },
-                { number: '∞', label: 'LEADS UPLOADED' },
-              ].map((stat, i) => (
-                <div key={i} style={{ textAlign: 'center', flex: 1 }}>
-                  <div className="ds-stats-num" style={{
-                    fontSize: '24px',
-                    fontWeight: 'bold',
-                    color: '#4a9eff',
-                    letterSpacing: '-1px',
-                    marginBottom: '4px',
-                  }}>{stat.number}</div>
-                  <div className="ds-stats-label" style={{
-                    fontSize: '9px',
-                    letterSpacing: '2px',
-                    color: 'rgba(255,255,255,0.55)',
-                  }}>{stat.label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
+          ))}
         </div>
       </section>
 
-      <section id="features" style={{ background: 'rgba(226,228,234,0.5)', borderTop: '1px solid #c4c8d0' }}>
-        <div className="ds-section" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+      <section id="features" className="ds-section" style={{ maxWidth: '1200px', margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: '64px' }}>
           <h2 style={{
             fontSize: 'var(--section-fs)',
             fontWeight: 'bold',
             letterSpacing: '6px',
-            color: '#1a1c24',
+            color: 'var(--text-primary)',
             marginBottom: '16px',
           }}>BUILT FOR VOLUME</h2>
-          <p style={{ fontSize: '12px', letterSpacing: '4px', color: '#5a5e6a' }}>
+          <p style={{ fontSize: '12px', letterSpacing: '4px', color: 'var(--text-secondary)' }}>
             FOR SALES TEAMS, CALL CENTERS, AGENCIES, AND <u>ANYONE</u> WHO WORKS LEADS.
           </p>
         </div>
@@ -393,41 +363,38 @@ export default async function Home({ searchParams }: PageProps) {
           ].map((f, i) => (
             <div key={i} className="ds-feature-card" style={{
               padding: '36px',
-              borderRadius: '8px',
-              background: '#ffffff',
-              border: '1px solid #c4c8d0',
-              borderTop: '3px solid #2a4a8a',
+              borderRadius: '16px',
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
             }}>
               <div style={{ fontSize: '28px', marginBottom: '16px' }}>{f.icon}</div>
               <h3 style={{
                 fontSize: '12px',
                 fontWeight: 'bold',
                 letterSpacing: '3px',
-                color: '#1a1c24',
+                color: 'var(--text-primary)',
                 marginBottom: '12px',
               }}>{f.title}</h3>
               <p style={{
                 fontSize: '13px',
                 lineHeight: '1.7',
-                color: '#5a5e6a',
+                color: 'var(--text-secondary)',
               }}>{f.desc}</p>
             </div>
           ))}
         </div>
-        </div>
       </section>
 
-      <section style={{ borderTop: '1px solid #c4c8d0' }}>
-        <div className="ds-section" style={{ maxWidth: '900px', margin: '0 auto' }}>
+      <section className="ds-section" style={{ maxWidth: '900px', margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: '64px' }}>
           <h2 style={{
             fontSize: 'var(--section-fs)',
             fontWeight: 'bold',
             letterSpacing: '6px',
-            color: '#1a1c24',
+            color: 'var(--text-primary)',
             marginBottom: '16px',
           }}>HOW IT WORKS</h2>
-          <p style={{ fontSize: '12px', letterSpacing: '4px', color: '#5a5e6a' }}>
+          <p style={{ fontSize: '12px', letterSpacing: '4px', color: 'var(--text-secondary)' }}>
             FROM ZERO TO DIALING IN UNDER 2 MINUTES.
           </p>
         </div>
@@ -444,16 +411,15 @@ export default async function Home({ searchParams }: PageProps) {
               alignItems: 'flex-start',
               gap: '32px',
               padding: '36px',
-              borderRadius: '8px',
-              background: '#e2e4ea',
-              border: '1px solid #c4c8d0',
-              borderLeft: '3px solid #4a9eff',
+              borderRadius: '16px',
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
             }}>
               <div className="ds-step-num" style={{
                 fontSize: '48px',
                 fontWeight: 'bold',
-                color: '#4a9eff',
-                opacity: 0.35,
+                color: 'var(--accent-blue)',
+                opacity: 0.3,
                 lineHeight: 1,
                 flexShrink: 0,
                 letterSpacing: '-2px',
@@ -463,48 +429,46 @@ export default async function Home({ searchParams }: PageProps) {
                   fontSize: '13px',
                   fontWeight: 'bold',
                   letterSpacing: '3px',
-                  color: '#1a1c24',
+                  color: 'var(--text-primary)',
                   marginBottom: '12px',
                 }}>{step.title}</h3>
                 <p style={{
                   fontSize: '14px',
                   lineHeight: '1.7',
-                  color: '#5a5e6a',
+                  color: 'var(--text-secondary)',
                 }}>{step.desc}</p>
               </div>
             </div>
           ))}
         </div>
-        </div>
       </section>
 
-      <section id="compare" style={{ background: 'rgba(226,228,234,0.5)', borderTop: '1px solid #c4c8d0' }}>
-        <div className="ds-section" style={{ maxWidth: '900px', margin: '0 auto' }}>
+      <section id="compare" className="ds-section" style={{ maxWidth: '900px', margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: '64px' }}>
           <h2 style={{
             fontSize: 'var(--section-fs)',
             fontWeight: 'bold',
             letterSpacing: '6px',
-            color: '#1a1c24',
+            color: 'var(--text-primary)',
             marginBottom: '16px',
           }}>WHY DIALERSEAT</h2>
-          <p style={{ fontSize: '12px', letterSpacing: '4px', color: '#5a5e6a' }}>
+          <p style={{ fontSize: '12px', letterSpacing: '4px', color: 'var(--text-secondary)' }}>
             THE NUMBERS SPEAK FOR THEMSELVES.
           </p>
         </div>
 
-        <div style={{ borderRadius: '8px', overflow: 'hidden', border: '1px solid #c4c8d0', background: '#ffffff' }}>
+        <div style={{ borderRadius: '20px', overflow: 'hidden', border: '1px solid var(--border)' }}>
           <div className="ds-compare-header" style={{
             display: 'grid',
             gridTemplateColumns: '1fr 1fr 1fr 1fr',
             padding: '20px 32px',
-            background: '#1a1a2e',
-            borderBottom: '2px solid #2a4a8a',
+            background: 'var(--surface-2)',
+            borderBottom: '1px solid var(--border)',
           }}>
-            <div className="ds-compare-cell" style={{ fontSize: '11px', letterSpacing: '3px', color: '#8888aa' }}>FEATURE</div>
-            <div className="ds-compare-cell" style={{ fontSize: '11px', letterSpacing: '3px', color: '#4a9eff', textAlign: 'center' }}>DIALERSEAT</div>
-            <div className="ds-compare-cell" style={{ fontSize: '11px', letterSpacing: '3px', color: '#8888aa', textAlign: 'center' }}>READYMODE</div>
-            <div className="ds-compare-cell" style={{ fontSize: '11px', letterSpacing: '3px', color: '#8888aa', textAlign: 'center' }}>OTHERS</div>
+            <div className="ds-compare-cell" style={{ fontSize: '11px', letterSpacing: '3px', color: 'var(--text-secondary)' }}>FEATURE</div>
+            <div className="ds-compare-cell" style={{ fontSize: '11px', letterSpacing: '3px', color: 'var(--accent-blue)', textAlign: 'center' }}>DIALERSEAT</div>
+            <div className="ds-compare-cell" style={{ fontSize: '11px', letterSpacing: '3px', color: 'var(--text-secondary)', textAlign: 'center' }}>READYMODE</div>
+            <div className="ds-compare-cell" style={{ fontSize: '11px', letterSpacing: '3px', color: 'var(--text-secondary)', textAlign: 'center' }}>OTHERS</div>
           </div>
 
           {[
@@ -528,13 +492,13 @@ export default async function Home({ searchParams }: PageProps) {
               display: 'grid',
               gridTemplateColumns: '1fr 1fr 1fr 1fr',
               padding: '16px 32px',
-              borderBottom: i < arr.length - 1 ? '1px solid #e2e4ea' : 'none',
-              background: i % 2 === 0 ? '#f0f1f4' : '#ffffff',
+              borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none',
+              background: i % 2 === 0 ? 'var(--surface)' : 'transparent',
             }}>
-              <div className="ds-compare-cell" style={{ fontSize: '13px', letterSpacing: '1px', color: '#5a5e6a' }}>{row.feature}</div>
-              <div className="ds-compare-cell" style={{ fontSize: '13px', fontWeight: 'bold', color: '#4a9eff', textAlign: 'center' }}>{row.us}</div>
-              <div className="ds-compare-cell" style={{ fontSize: '13px', color: '#5a5e6a', textAlign: 'center', opacity: 0.6 }}>{row.them1}</div>
-              <div className="ds-compare-cell" style={{ fontSize: '13px', color: '#5a5e6a', textAlign: 'center', opacity: 0.6 }}>{row.them2}</div>
+              <div className="ds-compare-cell" style={{ fontSize: '13px', letterSpacing: '1px', color: 'var(--text-secondary)' }}>{row.feature}</div>
+              <div className="ds-compare-cell" style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--accent-blue)', textAlign: 'center' }}>{row.us}</div>
+              <div className="ds-compare-cell" style={{ fontSize: '13px', color: 'var(--text-secondary)', textAlign: 'center', opacity: 0.6 }}>{row.them1}</div>
+              <div className="ds-compare-cell" style={{ fontSize: '13px', color: 'var(--text-secondary)', textAlign: 'center', opacity: 0.6 }}>{row.them2}</div>
             </div>
           ))}
         </div>
@@ -543,63 +507,59 @@ export default async function Home({ searchParams }: PageProps) {
           <Link href="/vs" style={{
             display: 'inline-block',
             padding: '14px 32px',
-            borderRadius: '6px',
+            borderRadius: '10px',
             fontSize: '12px',
             fontWeight: 'bold',
             letterSpacing: '3px',
-            color: '#1a1c24',
+            color: 'var(--text-primary)',
             textDecoration: 'none',
-            background: 'transparent',
-            border: '1px solid #c4c8d0',
-            borderTop: '3px solid #2a4a8a',
+            border: '1px solid var(--accent-blue)',
+            background: 'rgba(74,158,255,0.05)',
           }}>
             SEE ALL COMPARISONS →
           </Link>
         </div>
-        </div>
       </section>
 
-      <section id="pricing" style={{ borderTop: '1px solid #c4c8d0' }}>
-        <div className="ds-section">
+      <section id="pricing" className="ds-section">
         <div style={{ textAlign: 'center', marginBottom: '64px' }}>
           <h2 style={{
             fontSize: 'var(--section-fs)',
             fontWeight: 'bold',
             letterSpacing: '6px',
-            color: '#1a1c24',
+            color: 'var(--text-primary)',
             marginBottom: '16px',
           }}>SIMPLE PRICING</h2>
-          <p style={{ fontSize: '12px', letterSpacing: '4px', color: '#5a5e6a' }}>
+          <p style={{ fontSize: '12px', letterSpacing: '4px', color: 'var(--text-secondary)' }}>
             ONE PLAN. EVERYTHING INCLUDED. NO SURPRISES.
           </p>
         </div>
 
         <div className="ds-pricing-grid">
 
-          {/* PRO TIER - highlighted, dark */}
+          {/* PRO TIER */}
           <div className="ds-pricing-card" style={{
-            borderRadius: '8px',
-            background: '#1a1a2e',
-            border: '1px solid #1a1a2e',
-            borderTop: '3px solid #4a9eff',
+            borderRadius: '24px',
+            background: 'var(--surface)',
+            border: '1px solid var(--accent-blue)',
             textAlign: 'center',
           }}>
             <div style={{
               fontSize: '11px',
               letterSpacing: '4px',
-              color: '#4a9eff',
+              color: 'var(--accent-blue)',
               marginBottom: '24px',
             }}>DIALERSEAT PRO</div>
 
             <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
-              <span style={{ fontSize: '64px', fontWeight: 'bold', lineHeight: 1, color: '#ffffff' }}>$35</span>
-              <span style={{ fontSize: '16px', color: 'rgba(255,255,255,0.6)', marginBottom: '10px' }}>/week</span>
+              <span style={{ fontSize: '64px', fontWeight: 'bold', lineHeight: 1, color: 'var(--text-primary)' }}>$35</span>
+              <span style={{ fontSize: '16px', color: 'var(--text-secondary)', marginBottom: '10px' }}>/week</span>
             </div>
 
             <p style={{
               fontSize: '11px',
               letterSpacing: '3px',
-              color: 'rgba(255,255,255,0.6)',
+              color: 'var(--text-secondary)',
               marginBottom: '16px',
             }}>PER SEAT · BILLED WEEKLY · CANCEL ANYTIME</p>
 
@@ -607,11 +567,11 @@ export default async function Home({ searchParams }: PageProps) {
               display: 'inline-block',
               padding: '8px 20px',
               borderRadius: '100px',
-              background: 'rgba(74,158,255,0.15)',
-              border: '1px solid #4a9eff',
+              background: 'rgba(74,158,255,0.1)',
+              border: '1px solid var(--accent-blue)',
               fontSize: '11px',
               letterSpacing: '3px',
-              color: '#4a9eff',
+              color: 'var(--accent-blue)',
               marginBottom: '40px',
             }}>
               FIRST CHARGE TODAY · CANCEL ANYTIME
@@ -640,16 +600,16 @@ export default async function Home({ searchParams }: PageProps) {
                     width: '20px',
                     height: '20px',
                     borderRadius: '50%',
-                    background: 'rgba(74,158,255,0.15)',
-                    border: '1px solid #4a9eff',
+                    background: 'rgba(74,158,255,0.1)',
+                    border: '1px solid var(--accent-blue)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     flexShrink: 0,
                   }}>
-                    <span style={{ fontSize: '10px', color: '#4a9eff' }}>✓</span>
+                    <span style={{ fontSize: '10px', color: 'var(--accent-blue)' }}>✓</span>
                   </div>
-                  <span style={{ fontSize: '13px', letterSpacing: '0.5px', color: 'rgba(255,255,255,0.75)' }}>{feature}</span>
+                  <span style={{ fontSize: '13px', letterSpacing: '0.5px', color: 'var(--text-secondary)' }}>{feature}</span>
                 </div>
               ))}
             </div>
@@ -657,48 +617,45 @@ export default async function Home({ searchParams }: PageProps) {
             <Link href={ctaHref} style={{
               display: 'block',
               padding: '16px',
-              borderRadius: '6px',
+              borderRadius: '12px',
               fontSize: '13px',
               fontWeight: 'bold',
               letterSpacing: '3px',
-              color: '#4a9eff',
+              color: 'white',
               textDecoration: 'none',
-              background: 'transparent',
-              border: '1px solid #4a9eff',
-              borderTop: '3px solid #4a9eff',
+              background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
               marginBottom: '16px',
             }}>
               {ctaLabel}
             </Link>
-            <p style={{ fontSize: '11px', letterSpacing: '2px', color: 'rgba(255,255,255,0.5)' }}>
+            <p style={{ fontSize: '11px', letterSpacing: '2px', color: 'var(--text-secondary)' }}>
               $35 CHARGED TODAY · CANCEL ANYTIME
             </p>
           </div>
 
-          {/* MANAGER+ TIER - white, amber accent */}
+          {/* MANAGER+ TIER */}
           <div className="ds-pricing-card" style={{
-            borderRadius: '8px',
-            background: '#ffffff',
-            border: '1px solid #c4c8d0',
-            borderTop: '3px solid #8a6a1a',
+            borderRadius: '24px',
+            background: 'var(--surface)',
+            border: '1px solid var(--accent-blue)',
             textAlign: 'center',
           }}>
             <div style={{
               fontSize: '11px',
               letterSpacing: '4px',
-              color: '#8a6a1a',
+              color: 'var(--accent-blue)',
               marginBottom: '24px',
             }}>DIALERSEAT MANAGER+</div>
 
             <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
-              <span style={{ fontSize: '64px', fontWeight: 'bold', lineHeight: 1, color: '#1a1c24' }}>$75</span>
-              <span style={{ fontSize: '16px', color: '#5a5e6a', marginBottom: '10px' }}>/week</span>
+              <span style={{ fontSize: '64px', fontWeight: 'bold', lineHeight: 1, color: 'var(--text-primary)' }}>$75</span>
+              <span style={{ fontSize: '16px', color: 'var(--text-secondary)', marginBottom: '10px' }}>/week</span>
             </div>
 
             <p style={{
               fontSize: '11px',
               letterSpacing: '3px',
-              color: '#5a5e6a',
+              color: 'var(--text-secondary)',
               marginBottom: '16px',
             }}>PER OWNER · BILLED WEEKLY · CANCEL ANYTIME</p>
 
@@ -706,11 +663,11 @@ export default async function Home({ searchParams }: PageProps) {
               display: 'inline-block',
               padding: '8px 20px',
               borderRadius: '100px',
-              background: '#f7f1e6',
-              border: '1px solid #8a6a1a',
+              background: 'rgba(74,158,255,0.1)',
+              border: '1px solid var(--accent-blue)',
               fontSize: '11px',
               letterSpacing: '3px',
-              color: '#8a6a1a',
+              color: 'var(--accent-blue)',
               marginBottom: '40px',
             }}>
               CUSTOMIZE YOUR WHITELABEL DIALER
@@ -737,19 +694,19 @@ export default async function Home({ searchParams }: PageProps) {
                     width: '20px',
                     height: '20px',
                     borderRadius: '50%',
-                    background: 'rgba(138,106,26,0.12)',
-                    border: '1px solid #8a6a1a',
+                    background: 'rgba(74,158,255,0.1)',
+                    border: '1px solid var(--accent-blue)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     flexShrink: 0,
                   }}>
-                    <span style={{ fontSize: '10px', color: '#8a6a1a' }}>✓</span>
+                    <span style={{ fontSize: '10px', color: 'var(--accent-blue)' }}>✓</span>
                   </div>
                   <span style={{
                     fontSize: '13px',
                     letterSpacing: '0.5px',
-                    color: '#5a5e6a',
+                    color: 'var(--text-secondary)',
                     fontWeight: i === 0 ? 'bold' : 'normal',
                   }}>{feature}</span>
                 </div>
@@ -759,48 +716,49 @@ export default async function Home({ searchParams }: PageProps) {
             <Link href={wlCtaHref} style={{
               display: 'block',
               padding: '16px',
-              borderRadius: '6px',
+              borderRadius: '12px',
               fontSize: '13px',
               fontWeight: 'bold',
               letterSpacing: '3px',
-              color: '#ffffff',
+              color: 'white',
               textDecoration: 'none',
-              background: '#1a1a2e',
-              borderTop: '3px solid #8a6a1a',
+              background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
               marginBottom: '16px',
             }}>
               {wlCtaLabel}
             </Link>
-            <p style={{ fontSize: '11px', letterSpacing: '2px', color: '#5a5e6a' }}>
+            <p style={{ fontSize: '11px', letterSpacing: '2px', color: 'var(--text-secondary)' }}>
               $75 CHARGED TODAY · CANCEL ANYTIME
             </p>
           </div>
 
         </div>
-        </div>
       </section>
 
-      <section style={{ background: '#1a1a2e', borderTop: '3px solid #4a9eff' }}>
-        <div className="ds-section" style={{
-          textAlign: 'center',
-          maxWidth: '800px',
-          margin: '0 auto',
-        }}>
+      <section className="ds-section" style={{
+        textAlign: 'center',
+        maxWidth: '800px',
+        margin: '0 auto',
+      }}>
         <h2 className="ds-final-cta-h2" style={{
           fontSize: 'var(--cta-fs)',
           fontWeight: 'bold',
           letterSpacing: '-1px',
-          color: '#ffffff',
+          color: 'var(--text-primary)',
           marginBottom: '24px',
           lineHeight: '1.1',
         }}>
           STOP PAYING TOO MUCH.<br />
-          <span style={{ color: '#4a9eff' }}>START CLOSING MORE.</span>
+          <span style={{
+            background: 'linear-gradient(135deg, #4a9eff, #a0c4ff)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+          }}>START CLOSING MORE.</span>
         </h2>
         <p style={{
           fontSize: '15px',
           letterSpacing: '0.5px',
-          color: 'rgba(255,255,255,0.6)',
+          color: 'var(--text-secondary)',
           marginBottom: '40px',
           lineHeight: '1.7',
         }}>
@@ -809,22 +767,19 @@ export default async function Home({ searchParams }: PageProps) {
         <Link href={ctaHref} style={{
           display: 'inline-block',
           padding: '20px 60px',
-          borderRadius: '8px',
+          borderRadius: '14px',
           fontSize: '14px',
           fontWeight: 'bold',
           letterSpacing: '4px',
-          color: '#4a9eff',
+          color: 'white',
           textDecoration: 'none',
-          background: 'transparent',
-          border: '1px solid #4a9eff',
-          borderTop: '3px solid #4a9eff',
+          background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
         }}>
-          {ctaLabel} →
+          {ctaLabel}
         </Link>
-        <p style={{ marginTop: '20px', fontSize: '11px', letterSpacing: '3px', color: 'rgba(255,255,255,0.5)' }}>
+        <p style={{ marginTop: '20px', fontSize: '11px', letterSpacing: '3px', color: 'var(--text-secondary)' }}>
           $35/WEEK · NO CONTRACTS · CANCEL ANYTIME
         </p>
-        </div>
       </section>
 
       <SiteFooter />
