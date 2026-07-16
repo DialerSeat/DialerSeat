@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import SeatLinksPanel from '@/components/teams/SeatLinksPanel'
 
 
 
@@ -67,6 +68,9 @@ interface TeamCode {
   code_type: 'seat' | 'recruit'
   campaign_id: string | null
   payer: 'owner' | 'agent'
+  max_uses: number | null
+  use_count: number
+  seat_price_override_cents: number | null
   is_active: boolean
   created_at: string
 }
@@ -159,7 +163,6 @@ export default function TeamsPage() {
   const [expandedTeams, setExpandedTeams] = useState<Record<string, boolean>>({})
   const [actioningId, setActioningId] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
-  const [copiedCode, setCopiedCode] = useState<string | null>(null)
 
   const [editTeam, setEditTeam] = useState<OwnedTeam | null>(null)
   const [editName, setEditName] = useState('')
@@ -173,14 +176,6 @@ export default function TeamsPage() {
   } | null>(null)
   const [deleteTypedConfirm, setDeleteTypedConfirm] = useState('')
   const [deleteSubmitting, setDeleteSubmitting] = useState(false)
-
-  const [codeModalTeam, setCodeModalTeam] = useState<OwnedTeam | null>(null)
-  const [codeType, setCodeType] = useState<'seat' | 'recruit'>('seat')
-  const [codePayer, setCodePayer] = useState<'owner' | 'agent'>('owner')
-  const [codeCampaignId, setCodeCampaignId] = useState<string>('')
-  const [codeCampaigns, setCodeCampaigns] = useState<Campaign[]>([])
-  const [codeCreating, setCodeCreating] = useState(false)
-  const [codeError, setCodeError] = useState<string | null>(null)
 
   const [attachModalTeam, setAttachModalTeam] = useState<OwnedTeam | null>(null)
   const [attachCampaignId, setAttachCampaignId] = useState<string>('')
@@ -333,14 +328,6 @@ export default function TeamsPage() {
 
   const toggleExpanded = (teamId: string) => {
     setExpandedTeams(prev => ({ ...prev, [teamId]: !prev[teamId] }))
-  }
-
-  const copyCode = async (code: string) => {
-    try {
-      await navigator.clipboard.writeText(code)
-      setCopiedCode(code)
-      setTimeout(() => setCopiedCode(null), 1500)
-    } catch {}
   }
 
   const acceptMember = async (m: TeamMember) => {
@@ -525,86 +512,6 @@ export default function TeamsPage() {
         await loadTeams()
       },
     })
-  }
-
-  const regenerateCode = async (c: TeamCode) => {
-    setActioningId(c.id)
-    setActionError(null)
-    try {
-      const res = await fetch('/api/teams/codes/regenerate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ codeId: c.id }),
-      })
-      const data = await res.json()
-      if (!data.success) {
-        setActionError(data.error || 'Failed to regenerate')
-        return
-      }
-      await loadTeams()
-    } catch (err: any) {
-      setActionError(err.message || 'Failed to regenerate')
-    } finally {
-      setActioningId(null)
-    }
-  }
-
-  const deleteCode = (c: TeamCode) => {
-    setConfirmState({
-      title: 'DELETE CODE',
-      body: `Delete code ${c.code}? Anyone who hasn't redeemed it yet won't be able to. Existing members keep their access. Type "remove" to confirm.`,
-      confirmWord: 'remove',
-      danger: true,
-      onConfirm: async () => {
-        const res = await fetch('/api/teams/codes/delete', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ codeId: c.id, confirm: 'remove' }),
-        })
-        const data = await res.json()
-        if (!data.success) throw new Error(data.error || 'Failed to delete')
-        await loadTeams()
-      },
-    })
-  }
-
-  const openCodeModal = async (team: OwnedTeam) => {
-    setCodeModalTeam(team)
-    setCodeType('seat')
-    setCodePayer('owner')
-    setCodeCampaignId('')
-    setCodeError(null)
-    const list = await loadCampaigns()
-    setCodeCampaigns(list)
-  }
-
-  const submitCreateCode = async () => {
-    if (!codeModalTeam) return
-    setCodeCreating(true)
-    setCodeError(null)
-    try {
-      const res = await fetch('/api/teams/codes/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          teamId: codeModalTeam.id,
-          codeType,
-          payer: codePayer,
-          campaignId: codeCampaignId || null,
-        }),
-      })
-      const data = await res.json()
-      if (!data.success) {
-        setCodeError(data.error || 'Failed to create code')
-        return
-      }
-      setCodeModalTeam(null)
-      await loadTeams()
-    } catch (err: any) {
-      setCodeError(err.message || 'Failed to create code')
-    } finally {
-      setCodeCreating(false)
-    }
   }
 
   const openAttachModal = async (team: OwnedTeam) => {
@@ -1114,60 +1021,13 @@ export default function TeamsPage() {
                             )}
                           </Section>
 
-                          <Section
-                            title={`CODES (${codeCount})`}
-                            accent={T.accent}
-                            action={(
-                              <button onClick={() => openCodeModal(team)} style={btnPrimary(false)}>+ NEW CODE</button>
-                            )}
-                          >
-                            {codeCount === 0 ? (
-                              <EmptyHint text="No active codes. Create one to invite agents." />
-                            ) : (
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                {team.codes.map(c => {
-                                  const camp = c.campaign_id
-                                    ? team.teamCampaigns.find(tc => tc.campaignId === c.campaign_id)?.campaign
-                                    : null
-                                  return (
-                                    <div key={c.id} style={{
-                                      background: T.bg, border: `1px solid ${T.border}`, borderRadius: 3,
-                                      padding: '8px 12px', display: 'flex', alignItems: 'center',
-                                      gap: 10, flexWrap: 'wrap',
-                                    }}>
-                                      <div
-                                        onClick={() => copyCode(c.code)}
-                                        style={{
-                                          flex: '1 1 180px', minWidth: 0,
-                                          fontFamily: 'monospace', fontSize: 14, fontWeight: 'bold',
-                                          letterSpacing: 2, color: T.text,
-                                          cursor: 'pointer', padding: '4px 8px',
-                                          background: copiedCode === c.code ? '#e8f5e8' : 'transparent',
-                                          borderRadius: 3, transition: 'background 0.15s',
-                                        }}
-                                        title="Click to copy"
-                                      >
-                                        {c.code}
-                                        {copiedCode === c.code && (
-                                          <span style={{ marginLeft: 8, fontSize: 9, color: T.green, letterSpacing: 1 }}>COPIED</span>
-                                        )}
-                                      </div>
-                                      <Badge color={c.code_type === 'seat' ? T.blue : T.accent}>{c.code_type.toUpperCase()}</Badge>
-                                      <Badge color={c.payer === 'owner' ? T.green : T.amber}>{c.payer === 'owner' ? 'OWNER PAYS' : 'AGENT PAYS'}</Badge>
-                                      {camp && <Badge color={T.muted}>{camp.name}</Badge>}
-                                      <div style={{ display: 'flex', gap: 6 }}>
-                                        <button onClick={() => regenerateCode(c)} disabled={actioningId === c.id} style={btnSubtle(actioningId === c.id, T.muted)}>
-                                          REGEN
-                                        </button>
-                                        <button onClick={() => deleteCode(c)} disabled={actioningId === c.id} style={btnSubtle(actioningId === c.id, T.red)}>
-                                          DELETE
-                                        </button>
-                                      </div>
-                                    </div>
-                                  )
-                                })}
-                              </div>
-                            )}
+                          <Section title={`SEAT LINKS (${codeCount})`} accent={T.accent}>
+                            <SeatLinksPanel
+                              teamId={team.id}
+                              codes={team.codes}
+                              teamCampaigns={team.teamCampaigns}
+                              onChanged={loadTeams}
+                            />
                           </Section>
 
                           <Section title={`ACTIVE MEMBERS (${memberCount})`} accent={T.accent}>
@@ -1527,58 +1387,6 @@ export default function TeamsPage() {
       )}
 
       {/* NEW CODE MODAL */}
-      {codeModalTeam && (
-        <div onClick={() => !codeCreating && setCodeModalTeam(null)} style={overlayStyle}>
-          <div onClick={e => e.stopPropagation()} style={{ ...modalShellStyle, borderTop: `3px solid ${T.blue}` }}>
-            <div style={{ fontSize: 12, fontWeight: 'bold', letterSpacing: 4, color: T.blue, marginBottom: 4 }}>+ NEW CODE</div>
-            <div style={{ fontSize: 11, color: T.muted, marginBottom: 18, letterSpacing: 1 }}>
-              for {codeModalTeam.name}
-            </div>
-
-            <FieldLabel>CODE TYPE</FieldLabel>
-            <SegmentedTwo
-              left={{ label: 'SEAT', value: 'seat', desc: 'Direct join — agent gets access immediately' }}
-              right={{ label: 'RECRUIT', value: 'recruit', desc: 'Owner approval required before access' }}
-              value={codeType} onChange={v => setCodeType(v as 'seat' | 'recruit')}
-            />
-
-            <div style={{ height: 14 }} />
-
-            <FieldLabel>WHO PAYS THE $35/WEEK?</FieldLabel>
-            <SegmentedTwo
-              left={{ label: 'OWNER PAYS', value: 'owner', desc: 'You pay the seat. Agent dials your leads.' }}
-              right={{ label: 'AGENT PAYS', value: 'agent', desc: 'Agent subscribes themselves to access.' }}
-              value={codePayer} onChange={v => setCodePayer(v as 'owner' | 'agent')}
-            />
-
-            <div style={{ height: 14 }} />
-
-            <FieldLabel>CAMPAIGN</FieldLabel>
-            <select
-              value={codeCampaignId}
-              onChange={e => setCodeCampaignId(e.target.value)}
-              disabled={codeCreating}
-              style={{ ...modalInput, fontSize: 12, padding: '10px 12px' }}
-            >
-              <option value="">All attached campaigns</option>
-              {codeCampaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-            <div style={{ fontSize: 10, color: T.muted, letterSpacing: 0.5, marginTop: 6, marginBottom: 16 }}>
-              Limit this code to one campaign, or leave blank for all attached.
-            </div>
-
-            {codeError && <ErrorInline text={codeError} />}
-
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => setCodeModalTeam(null)} disabled={codeCreating} style={modalCancelBtn(codeCreating)}>CANCEL</button>
-              <button onClick={submitCreateCode} disabled={codeCreating} style={modalConfirmBtn(codeCreating, T.blue)}>
-                {codeCreating ? '...' : '▶ CREATE CODE'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* ATTACH CAMPAIGN MODAL */}
       {attachModalTeam && (
         <div onClick={() => !attachSubmitting && setAttachModalTeam(null)} style={overlayStyle}>
