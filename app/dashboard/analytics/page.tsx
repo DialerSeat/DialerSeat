@@ -66,8 +66,9 @@ function renderDispositionLabels(props: {
   outerRadius: number
   index: number
   data: { disposition: string; count: number }[]
+  chartHeight: number
 }) {
-  const { cx, cy, outerRadius, index, data } = props
+  const { cx, cy, outerRadius, index, data, chartHeight } = props
   // Recharts invokes `label` once per slice. We only want to compute
   // and draw the *entire* label set a single time (on the first slice)
   // so labels don't get stacked on top of themselves N times.
@@ -79,8 +80,9 @@ function renderDispositionLabels(props: {
   const labelRadius = outerRadius + 22
   const lineInnerRadius = outerRadius + 4
   const lineBendRadius = outerRadius + 16
-  const lineHeight = 14 // min vertical spacing between stacked labels
+  const lineHeight = 12 // min vertical spacing between stacked labels
   const fontSize = 11
+  const chartMargin = 10 // keep labels this far from the chart's top/bottom edge
 
   // Compute each slice's midpoint angle (in the same coordinate system
   // Recharts uses: 0deg = 3 o'clock, increasing counter-clockwise) and
@@ -134,6 +136,18 @@ function renderDispositionLabels(props: {
       }
     }
 
+    // If every disposition has a label, a long stack can end up taller
+    // than the chart itself. Rather than let it run off the top/bottom,
+    // compress the spacing just enough for the whole stack to fit,
+    // while still keeping strict top-to-bottom ordering (never re-overlaps).
+    const availableHeight = chartHeight - 2 * chartMargin
+    const stackHeight = group[group.length - 1].y - group[0].y
+    if (stackHeight > availableHeight && group.length > 1) {
+      const scale = availableHeight / stackHeight
+      const base = group[0].y
+      group.forEach((it) => { it.y = base + (it.y - base) * scale })
+    }
+
     // Re-center the resulting stack on that original midpoint so it
     // doesn't drift toward the bottom of the chart.
     const first = group[0]
@@ -141,15 +155,23 @@ function renderDispositionLabels(props: {
     const naturalMid = (first.y + last.y) / 2
     const shift = idealMid - naturalMid
     group.forEach((it) => { it.y += shift })
+
+    // Final safety clamp: keep the whole stack within the chart bounds
+    // even after re-centering, sliding it up/down as one unit.
+    const top = group[0].y
+    const bottom = group[group.length - 1].y
+    if (top < chartMargin) {
+      const nudge = chartMargin - top
+      group.forEach((it) => { it.y += nudge })
+    } else if (bottom > chartHeight - chartMargin) {
+      const nudge = bottom - (chartHeight - chartMargin)
+      group.forEach((it) => { it.y -= nudge })
+    }
   })
 
   return (
     <g>
       {items.map((it, i) => {
-        // Skip the tiniest slivers' text entirely (still shown in the
-        // tooltip and legend/colors) — a label has nowhere legible to
-        // go on a <2% slice and just adds clutter/overlap risk.
-        if (it.fraction < 0.02) return null
         const textAnchor = it.side === 'right' ? 'start' : 'end'
         const labelX = it.side === 'right' ? it.x + 4 : it.x - 4
         return (
@@ -757,7 +779,7 @@ export default function AnalyticsPage() {
                       cx="50%"
                       cy="50%"
                       outerRadius={75}
-                      label={(props: any) => renderDispositionLabels({ ...props, data: dispositionsToRender })}
+                      label={(props: any) => renderDispositionLabels({ ...props, data: dispositionsToRender, chartHeight: 240 })}
                       labelLine={false}
                     >
                       {dispositionsToRender.map((d, i) => (
