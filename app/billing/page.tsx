@@ -363,7 +363,9 @@ export default function BillingPage() {
   return (
     <main style={pageStyle} className="billing-page">
       <div style={shellStyle}>
-        <BrandMark />
+        <div className="billing-brand-desktop-only">
+          <BrandMark />
+        </div>
 
         <div style={gridStyle} className="billing-grid">
           {/* ── LEFT: order summary ─────────────────────────────── */}
@@ -553,8 +555,21 @@ export default function BillingPage() {
            stacked single-column phone view to fit a real device viewport
            instead of running noticeably taller than the page. */
         @media (max-width: 859px) {
+          .billing-brand-desktop-only {
+            display: none !important;
+          }
           .billing-page {
-            padding: 20px 14px !important;
+            /* Explicit longhand (not shorthand padding) so only the top
+               edge accounts for the notch / dynamic island via
+               env(safe-area-inset-top) — left/right/bottom stay plain
+               values. The 20px fallback (used when the env() var isn't
+               supported) matches what this rule used before; on real
+               notched devices the safe-area inset takes over and adds
+               whatever the device actually needs on top of it. */
+            padding-top: calc(20px + env(safe-area-inset-top, 0px)) !important;
+            padding-right: 14px !important;
+            padding-bottom: 20px !important;
+            padding-left: 14px !important;
           }
           .billing-col {
             padding: 20px !important;
@@ -630,6 +645,23 @@ function CheckoutForm({
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [agreed, setAgreed] = useState(false)
 
+  // Card section starts open on desktop (room to spare) and collapsed on
+  // mobile (saves scroll). Matches the same 860px boundary the two-column
+  // layout switches on, so nothing here can disagree with the rest of the
+  // page about what counts as "desktop." Defaults to collapsed before the
+  // media query can run client-side (SSR-safe: window isn't touched during
+  // the initial render), which matches the pre-existing mobile-first
+  // behavior and just upgrades to open once we know it's a wide viewport.
+  const [isDesktopViewport, setIsDesktopViewport] = useState(false)
+
+  useEffect(() => {
+    const mql = window.matchMedia('(min-width: 860px)')
+    setIsDesktopViewport(mql.matches)
+    const handleChange = (e: MediaQueryListEvent) => setIsDesktopViewport(e.matches)
+    mql.addEventListener('change', handleChange)
+    return () => mql.removeEventListener('change', handleChange)
+  }, [])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!stripe || !elements || !agreed) return
@@ -663,7 +695,7 @@ function CheckoutForm({
           options={{
             layout: {
               type: 'accordion',
-              defaultCollapsed: true,
+              defaultCollapsed: !isDesktopViewport,
               radios: 'auto',
               spacedAccordionItems: false,
             },
