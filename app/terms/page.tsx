@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   },
 }
 
-const LAST_UPDATED = 'May 20, 2026'
+const LAST_UPDATED = 'July 17, 2026'
 
 export default function TermsPage() {
   return (
@@ -146,7 +146,7 @@ export default function TermsPage() {
 
           <div className="tos-body">
             <div className="meta-row">
-              <strong>The short version:</strong> Pay $35/week per seat. Don't use DialerSeat™ to break the law (TCPA, DNC, harassment). We can suspend accounts that abuse the service. Cancel anytime, no contract. Full terms below.
+              <strong>The short version:</strong> Pay $35/week per seat ($75/week for white-label Manager+). Don't use DialerSeat™ to break the law (TCPA, DNC, harassment). We can suspend accounts that abuse the service. Cancel anytime, no contract. Full terms below.
             </div>
 
             <div className="toc">
@@ -235,6 +235,14 @@ export default function TermsPage() {
               method on file. We may change pricing with at least 30 days' notice; pricing changes
               don't affect the current billing period.
             </p>
+            <p>
+              We also offer <strong>Manager+</strong>, a white-label tier priced at{' '}
+              <strong>$75 per week</strong>, which provisions your own branded subdomain, logo,
+              and brand colors in addition to the standard features. Manager+ is billed under
+              the same weekly, no-contract terms described in this section — the higher price
+              reflects the added white-label provisioning, not different cancellation, refund,
+              or liability terms.
+            </p>
 
             <h3>Billing</h3>
             <p>
@@ -259,6 +267,14 @@ export default function TermsPage() {
               Because the service is billed weekly with no commitment, refunds are generally not
               issued. We may issue refunds at our discretion if the service was materially
               unavailable due to our fault. Contact <a href="mailto:support@dialerseat.com">support@dialerseat.com</a> with refund requests.
+            </p>
+            <p>
+              <strong>No refunds after notable usage.</strong> We track calls placed, minutes
+              dialed, and leads worked on every account. If your account shows notable usage
+              during the billing period in question — meaning you placed outbound calls or
+              otherwise actively used the dialer — that period is not eligible for a refund,
+              regardless of when in the week the request is made. This applies whether the
+              usage came from you or from a team member on a seat you're responsible for.
             </p>
 
             <h3>Taxes</h3>
@@ -443,6 +459,15 @@ export default function TermsPage() {
             </p>
             <p>
               <strong>You agree to resolve disputes individually, not as part of a class action.</strong>
+            </p>
+            <p>
+              <strong>Opt-out of arbitration:</strong> You may decline this arbitration agreement
+              and class-action waiver by emailing <a href="mailto:legal@dialerseat.com">legal@dialerseat.com</a>{' '}
+              with your name, account email, and a clear statement that you opt out, within 30
+              days of the date you first agreed to these Terms (or, for existing users, within
+              30 days of the date this arbitration provision was added or updated). If you opt
+              out, disputes between you and DialerSeat will be resolved in the courts described
+              above rather than through arbitration, and the rest of these Terms remain in effect.
             </p>
 
             <h2 id="changes">15. Changes to these terms</h2>
