@@ -36,13 +36,14 @@ interface LogsResponse {
 }
 
 type FilterMode = 'all' | 'account_created' | 'initial_sub' | 'resub' | 'renewal' | 'cancel'
-type TimeRange = '24h' | '7d' | '30d' | '90d'
+type TimeRange = '24h' | '7d' | '30d' | '90d' | 'all'
 
 const TIME_RANGES: { key: TimeRange; label: string; days: number }[] = [
   { key: '24h', label: '24h', days: 1 },
   { key: '7d', label: '7d', days: 7 },
   { key: '30d', label: '30d', days: 30 },
   { key: '90d', label: '90d', days: 90 },
+  { key: 'all', label: 'All time', days: Infinity },
 ]
 
 
@@ -135,6 +136,7 @@ export default function LogsApp() {
   const rangeMs = (TIME_RANGES.find((r) => r.key === timeRange)?.days ?? 90) * 86400000
   const rangeCutoff = Date.now() - rangeMs
   const timeFiltered = entries.filter((e) => new Date(e.date_iso).getTime() >= rangeCutoff)
+  const rangePhrase = timeRange === 'all' ? 'the available history' : `the last ${timeRange}`
 
   const liveCounts = {
     accountsCreated: timeFiltered.filter((e) => e.event_type === 'account_created').length,
@@ -195,10 +197,9 @@ export default function LogsApp() {
           </button>
         ))}
         <span style={{ color: C.textMute, marginLeft: 'auto', fontSize: 11 }}>
-          showing last {TIME_RANGES.find((r) => r.key === timeRange)?.days ?? 90}d
-          {(TIME_RANGES.find((r) => r.key === timeRange)?.days ?? 90) > (data?.window_days ?? 90)
-            ? ` (server window capped at ${data?.window_days ?? 90}d)`
-            : ''}
+          {timeRange === 'all'
+            ? `showing all available data (server window: last ${data?.window_days ?? 90}d)`
+            : `showing last ${TIME_RANGES.find((r) => r.key === timeRange)?.days ?? 90}d`}
         </span>
       </div>
 
@@ -261,8 +262,8 @@ export default function LogsApp() {
             <span style={{ color: C.textMute }}>{'>'}</span>{' '}
             <span style={{ color: C.textDim }}>
               {filter === 'all'
-                ? `No customer events in the last ${timeRange}.`
-                : `No ${filter.replace('_', ' ')} events in the last ${timeRange}.`}
+                ? `No customer events in ${rangePhrase}.`
+                : `No ${filter.replace('_', ' ')} events in ${rangePhrase}.`}
             </span>
           </div>
         )}
@@ -289,7 +290,7 @@ export default function LogsApp() {
       {/* FOOTER STATUS */}
       {data && (
         <div style={S.footer}>
-          <span>range: last {timeRange}</span>
+          <span>range: {rangePhrase}</span>
           <span>events: {timeFiltered.length}{entries.length === 200 ? ' (server capped at 200)' : ''}</span>
           <span>accounts created: {liveCounts.accountsCreated}</span>
           <span>initial subs: {liveCounts.initialSubs}</span>
