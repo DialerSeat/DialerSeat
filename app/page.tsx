@@ -173,17 +173,18 @@ export default async function Home({ searchParams }: PageProps) {
           .ds-showcase-shell {
             width: 100%;
             overflow: hidden;
-            height: 170px;
+            height: 158px;
           }
           .ds-showcase-scale {
             width: 640px;
-            transform: scale(0.54);
+            transform: scale(0.5);
             transform-origin: top left;
           }
           .ds-hero-showcase { width: 100%; }
 
           .ds-hero-h1 { letter-spacing: -1px !important; line-height: 1.1 !important; }
           .ds-hero-p { font-size: 15px !important; }
+          .ds-hero-fineprint { font-size: 10px !important; letter-spacing: 1.5px !important; }
           .ds-stats {
             padding: 14px 10px !important;
             gap: 6px !important;
@@ -384,7 +385,7 @@ export default async function Home({ searchParams }: PageProps) {
               </Link>
             </div>
 
-            <p style={{ fontSize: '11px', letterSpacing: '3px', color: 'var(--brand-muted-text, #5a5e6a)' }}>
+            <p className="ds-hero-fineprint" style={{ fontSize: '11px', letterSpacing: '3px', color: 'var(--brand-muted-text, #5a5e6a)' }}>
               $35/WEEK · NO CONTRACTS · CANCEL ANYTIME
             </p>
           </div>
