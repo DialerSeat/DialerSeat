@@ -90,14 +90,13 @@ interface Tenant {
 interface TeamRow {
   id: string
   name: string
-  owner_clerk_id: string
-  tenant_id: string | null
-  tenant_slug: string | null
-  member_count: number
-  campaign_count: number
-  total_calls_30d: number
+  tenantSlug: string | null
+  memberCount: number
+  campaignCount: number
+  calls30d: number
   status: 'active' | 'inactive'
-  created_at: string
+  owner: { id: string; name: string; email: string | null }
+  createdAt: string
 }
 
 async function readError(res: Response): Promise<string> {
@@ -860,6 +859,7 @@ function DemoViewSubTab() {
               <th>Members</th>
               <th>Campaigns</th>
               <th>Calls 30d</th>
+              <th>Status</th>
               <th>Action</th>
             </tr>
           </thead>
@@ -867,10 +867,15 @@ function DemoViewSubTab() {
             {teams.map(t => (
               <tr key={t.id}>
                 <td>{t.name}</td>
-                <td>{t.tenant_slug ? <span style={{ fontFamily: 'monospace' }}>{t.tenant_slug}</span> : <span style={{ color: C.muted }}>(DialerSeat)</span>}</td>
-                <td>{t.member_count}</td>
-                <td>{t.campaign_count}</td>
-                <td>{t.total_calls_30d?.toLocaleString() ?? '0'}</td>
+                <td>{t.tenantSlug ? <span style={{ fontFamily: 'monospace' }}>{t.tenantSlug}</span> : <span style={{ color: C.muted }}>(DialerSeat)</span>}</td>
+                <td>{t.memberCount}</td>
+                <td>{t.campaignCount}</td>
+                <td>{t.calls30d.toLocaleString()}</td>
+                <td>
+                  <span style={{ color: t.status === 'active' ? C.green : C.muted, fontSize: 10, fontWeight: 'bold' }}>
+                    {t.status === 'active' ? '● ACTIVE' : '○ INACTIVE'}
+                  </span>
+                </td>
                 <td>
                   <button
                     className="wl-btn primary"

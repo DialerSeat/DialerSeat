@@ -16,7 +16,7 @@ export async function GET() {
       { data: allCodes },
       { data: allSubs },
     ] = await Promise.all([
-      supabaseAdmin.from('teams').select('id, name, description, owner_id, created_at').order('created_at', { ascending: false }),
+      supabaseAdmin.from('teams').select('id, name, description, owner_id, tenant_id, created_at').order('created_at', { ascending: false }),
       supabaseAdmin.from('team_members').select('id, team_id, user_id, status, accepted_at, removed_at').in('status', ['active', 'pending', 'removed']),
       supabaseAdmin.from('team_seat_charges').select('id, team_id, owner_id, agent_id, amount_cents, status, period_start, period_end, stripe_subscription_id'),
       supabaseAdmin.from('team_campaigns').select('team_id, campaign_id, access_mode'),
@@ -46,6 +46,33 @@ export async function GET() {
           first_name: u.first_name,
           last_name: u.last_name,
         }
+      }
+    }
+
+    const tenantIds = Array.from(new Set((teams || []).map((t: any) => t.tenant_id).filter(Boolean)))
+    const tenantById: Record<string, { slug: string }> = {}
+    if (tenantIds.length > 0) {
+      const { data: tenantRows } = await supabaseAdmin
+        .from('white_label_tenants')
+        .select('id, slug')
+        .in('id', tenantIds)
+      for (const tn of tenantRows || []) {
+        tenantById[tn.id] = { slug: tn.slug }
+      }
+    }
+
+    const CALLS_WINDOW_DAYS = 30
+    const callsSince = new Date(Date.now() - CALLS_WINDOW_DAYS * 86400000).toISOString()
+    const callCountByUser: Record<string, number> = {}
+    if (allClerkIds.length > 0) {
+      const { data: recentCalls } = await supabaseAdmin
+        .from('calls')
+        .select('user_id')
+        .in('user_id', allClerkIds)
+        .gte('created_at', callsSince)
+        .limit(50000)
+      for (const c of recentCalls || []) {
+        callCountByUser[c.user_id] = (callCountByUser[c.user_id] || 0) + 1
       }
     }
 
@@ -99,6 +126,12 @@ export async function GET() {
 
       const ownerHasCoupon = couponedUsers.has(t.owner_id)
 
+      const teamUserIds = Array.from(new Set([t.owner_id, ...members.filter((m: any) => m.status === 'active').map((m: any) => m.user_id)]))
+      const calls30d = teamUserIds.reduce((sum, uid) => sum + (callCountByUser[uid] || 0), 0)
+
+      const tenantSlug = t.tenant_id ? (tenantById[t.tenant_id]?.slug ?? null) : null
+      const status: 'active' | 'inactive' = (calls30d > 0 || activeSeats > 0) ? 'active' : 'inactive'
+
       platformTotals.activeSeats += activeSeats
       platformTotals.pendingSeats += pendingSeatsCount
       if (!ownerHasCoupon) {
@@ -118,6 +151,9 @@ export async function GET() {
         createdAt: t.created_at,
         joinCode: code,
         ownerHasCoupon,
+        tenantSlug,
+        calls30d,
+        status,
         owner: {
           id: t.owner_id,
           name: ownerName,

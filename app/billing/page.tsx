@@ -16,40 +16,27 @@ const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
 )
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 type Plan = 'standard' | 'wl'
 
 const PLAN_INFO = {
   standard: {
     label: 'PRO',
     price: 35,
-    title: 'START YOUR SUBSCRIPTION',
+    title: 'Start your subscription',
     subtitle: 'Pay $35 today and start dialing immediately.',
     weeklyBlurb: '$35.00 USD',
-    description: 'DialerSeat Pro \u2014 one agent seat, all features, billed weekly.',
+    description: 'DialerSeat Pro — one agent seat, all features, billed weekly.',
+    switchLabel: 'Switch to Manager+ ($75/wk)',
   },
   wl: {
     label: 'MANAGER+',
     price: 75,
-    title: 'CUSTOMIZE YOUR WHITELABEL DIALER',
+    title: 'Customize your whitelabel dialer',
     subtitle: 'Pay $75 today to provision your branded dialer.',
     weeklyBlurb: '$75.00 USD',
     description:
       'Manager+ unlocks white-label DialerSeat — your subdomain, your branding, full team control. After payment, you\u2019ll pick your subdomain, upload your logo, and set your brand colors.',
+    switchLabel: 'Switch to Pro ($35/wk)',
   },
 } as const
 
@@ -107,31 +94,24 @@ function describeBilling(
   return { todayLabel, recurringLabel, hasDiscount: true, fullLabel, todayCents: amounts.totalCents }
 }
 
+function BrandMark() {
+  return (
+    <div style={brandRowStyle}>
+      <div style={brandMarkStyle}>
+        <span style={{ color: 'white', fontWeight: 'bold', fontSize: 14 }}>D</span>
+      </div>
+      <span style={brandNameStyle}>DIALERSEAT</span>
+    </div>
+  )
+}
+
 function LoadingCard({ text }: { text: string }) {
   return (
     <main style={pageStyle}>
-      <div style={cardStyle}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18, padding: '20px 0' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 8,
-                background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              <span style={{ color: 'white', fontWeight: 'bold', fontSize: 16 }}>D</span>
-            </div>
-            <span style={{ fontSize: 18, fontWeight: 'bold', letterSpacing: 6, color: '#e0e2ea', fontFamily: FUTURA }}>
-              DIALERSEAT
-            </span>
-          </div>
-          <div style={{ ...subtitleStyle, margin: 0 }}>{text}</div>
+      <div style={narrowShellStyle}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18, padding: '48px 32px' }}>
+          <BrandMark />
+          <div style={{ ...mutedTextStyle, margin: 0 }}>{text}</div>
         </div>
       </div>
     </main>
@@ -320,10 +300,13 @@ export default function BillingPage() {
   if (freeWithCoupon) {
     return (
       <main style={pageStyle}>
-        <div style={cardStyle}>
-          <div style={{ ...titleStyle, color: '#32ff7e' }}>SUBSCRIPTION ACTIVE</div>
-          <div style={subtitleStyle}>
-            Promo code applied. Redirecting{plan === 'wl' ? ' to white-label setup' : ' to your dashboard'}...
+        <div style={narrowShellStyle}>
+          <div style={{ padding: '48px 32px', textAlign: 'center' }}>
+            <BrandMark />
+            <div style={{ ...statusTitleStyle, color: '#32ff7e' }}>Subscription active</div>
+            <div style={mutedTextStyle}>
+              Promo code applied. Redirecting{plan === 'wl' ? ' to white-label setup' : ' to your dashboard'}...
+            </div>
           </div>
         </div>
       </main>
@@ -334,35 +317,38 @@ export default function BillingPage() {
     const isPromoError = error.toLowerCase().includes('promo code')
     return (
       <main style={pageStyle}>
-        <div style={cardStyle}>
-          <div style={{ ...titleStyle, color: '#ff6464' }}>
-            {isPromoError ? 'INVALID CODE' : 'SOMETHING WENT WRONG'}
+        <div style={narrowShellStyle}>
+          <div style={{ padding: '48px 32px', textAlign: 'center' }}>
+            <BrandMark />
+            <div style={{ ...statusTitleStyle, color: '#ff6464' }}>
+              {isPromoError ? 'Invalid code' : 'Something went wrong'}
+            </div>
+            <div style={{ ...mutedTextStyle, marginBottom: 28 }}>{error}</div>
+            <button
+              style={primaryButtonStyle}
+              onClick={() => {
+                setError(null)
+                setRetryingBilling(true)
+                setCheckingStatus(true)
+                initSubscription(promoApplied || undefined)
+              }}
+              disabled={abandoning}
+            >
+              Return to billing
+            </button>
+            <button
+              type="button"
+              onClick={abandonAndSignOut}
+              disabled={abandoning}
+              style={{
+                ...textButtonStyle,
+                opacity: abandoning ? 0.5 : 1,
+                cursor: abandoning ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {abandoning ? 'Going back...' : 'Back to home'}
+            </button>
           </div>
-          <div style={{ ...subtitleStyle, marginBottom: 24 }}>{error}</div>
-          <button
-            style={buttonStyle}
-            onClick={() => {
-              setError(null)
-              setRetryingBilling(true)
-              setCheckingStatus(true)
-              initSubscription(promoApplied || undefined)
-            }}
-            disabled={abandoning}
-          >
-            {'\u25B6'} RETURN TO BILLING
-          </button>
-          <button
-            type="button"
-            onClick={abandonAndSignOut}
-            disabled={abandoning}
-            style={{
-              ...cancelStyle,
-              opacity: abandoning ? 0.5 : 1,
-              cursor: abandoning ? 'not-allowed' : 'pointer',
-            }}
-          >
-            {abandoning ? 'Going back...' : 'Back to home'}
-          </button>
         </div>
       </main>
     )
@@ -376,174 +362,189 @@ export default function BillingPage() {
 
   return (
     <main style={pageStyle}>
-      <div style={cardStyle}>
-        <div style={planBadgeStyle}>
-          <span style={planBadgeLabelStyle}>{'\u25B8'} PLAN</span>
-          <span style={planBadgeNameStyle}>{planInfo.label}</span>
-          {billing.hasDiscount ? (
-            <span style={planBadgePriceStyle}>
-              <span style={{ textDecoration: 'line-through', opacity: 0.5, marginRight: 6 }}>
-                {billing.fullLabel}
-              </span>
-              {billing.todayLabel} TODAY
-            </span>
-          ) : (
-            <span style={planBadgePriceStyle}>{billing.todayLabel}/WK</span>
-          )}
-        </div>
+      <div style={shellStyle}>
+        <BrandMark />
 
-        <div style={titleStyle}>{planInfo.title}</div>
-        <div style={subtitleStyle}>
-          {billing.hasDiscount
-            ? `Pay ${billing.todayLabel} today and start dialing immediately.`
-            : planInfo.subtitle}
-        </div>
+        <div style={gridStyle} className="billing-grid">
+          {/* ── LEFT: order summary ─────────────────────────────── */}
+          <div style={summaryColStyle}>
+            <div style={eyebrowStyle}>
+              <span style={eyebrowLabelStyle}>PLAN</span>
+              <span style={eyebrowPlanStyle}>{planInfo.label}</span>
+            </div>
 
-        <div style={planDescStyle}>{planInfo.description}</div>
-
-        {/* ── PLAN SWITCH — restyled to be visibly clickable ─────────── */}
-        {plan === 'standard' ? (
-          <button
-            type="button"
-            onClick={() => switchTo('wl')}
-            disabled={switchingPlan}
-            style={planSwitchStyle}
-            onMouseEnter={(e) => {
-              if (switchingPlan) return
-              e.currentTarget.style.background = 'rgba(74,158,255,0.18)'
-              e.currentTarget.style.borderColor = '#4a9eff'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(74,158,255,0.08)'
-              e.currentTarget.style.borderColor = '#2a4a8a'
-            }}
-          >
-            {switchingPlan ? 'SWITCHING...' : '↗ SWITCH TO MANAGER+ ($75/WK)'}
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={() => switchTo('standard')}
-            disabled={switchingPlan}
-            style={planSwitchStyle}
-            onMouseEnter={(e) => {
-              if (switchingPlan) return
-              e.currentTarget.style.background = 'rgba(74,158,255,0.18)'
-              e.currentTarget.style.borderColor = '#4a9eff'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(74,158,255,0.08)'
-              e.currentTarget.style.borderColor = '#2a4a8a'
-            }}
-          >
-            {switchingPlan ? 'SWITCHING...' : '↘ SWITCH TO PRO ($35/WK)'}
-          </button>
-        )}
-
-        <div style={termsBoxStyle}>
-          <div style={termsHeaderStyle}>{'\u25B8'} BILLING TERMS</div>
-          <ul style={termsListStyle}>
-            <li>
-              <strong style={{ color: '#4a9eff' }}>{billing.todayLabel}</strong> charged today to start your subscription
+            <div style={priceRowStyle}>
               {billing.hasDiscount && (
-                <span style={{ color: '#32ff7e' }}> ({promoApplied?.toUpperCase()} applied)</span>
+                <span style={priceWasStyle}>{billing.fullLabel}</span>
               )}
-            </li>
-            <li>
-              You will be billed{' '}
-              <strong style={{ color: '#4a9eff' }}>{billing.recurringLabel}</strong>{' '}
-              automatically thereafter
-            </li>
-            <li>Cancel anytime in Settings {'\u2014'} service continues until period end</li>
-            <li>Subscription is non-refundable once a billing cycle has been charged</li>
-            {plan === 'wl' && (
-              <li style={{ color: '#ffd96a' }}>
-                After payment you&apos;ll choose your subdomain, upload your logo, and set your brand colors.
-              </li>
+              <span style={priceNowStyle}>{billing.todayLabel}</span>
+              <span style={priceUnitStyle}>{billing.hasDiscount ? 'today' : '/ week'}</span>
+            </div>
+            {billing.hasDiscount ? (
+              <div style={priceCaptionStyle}>
+                <span style={{ color: '#32ff7e' }}>{promoApplied?.toUpperCase()}</span> applied — then {billing.recurringLabel}
+              </div>
+            ) : (
+              <div style={priceCaptionStyle}>Charged today, then weekly until you cancel.</div>
             )}
-          </ul>
-        </div>
 
-        <div style={promoBoxStyle}>
-          {promoApplied ? (
-            <div style={promoAppliedStyle}>
-              <span>
-                ▸ CODE <strong style={{ color: '#32ff7e' }}>{promoApplied.toUpperCase()}</strong> APPLIED
-              </span>
+            <div style={sectionTitleStyle}>{planInfo.title}</div>
+            <div style={planDescStyle}>{planInfo.description}</div>
+
+            {plan === 'standard' ? (
               <button
-                onClick={handleRemovePromo}
-                disabled={!!promoAction}
-                style={promoRemoveStyle}
+                type="button"
+                onClick={() => switchTo('wl')}
+                disabled={switchingPlan}
+                style={switchLinkStyle}
               >
-                REMOVE
+                ↗ {PLAN_INFO.standard.switchLabel}
               </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => switchTo('standard')}
+                disabled={switchingPlan}
+                style={switchLinkStyle}
+              >
+                ↘ {PLAN_INFO.wl.switchLabel}
+              </button>
+            )}
+
+            <div style={dividerStyle} />
+
+            <div style={termsHeaderStyle}>Billing terms</div>
+            <ul style={termsListStyle}>
+              <li style={termItemStyle}>
+                <span style={termBulletStyle} />
+                <span>
+                  <strong style={{ color: '#4a9eff' }}>{billing.todayLabel}</strong> charged today to start your subscription
+                  {billing.hasDiscount && (
+                    <span style={{ color: '#32ff7e' }}> ({promoApplied?.toUpperCase()} applied)</span>
+                  )}
+                </span>
+              </li>
+              <li style={termItemStyle}>
+                <span style={termBulletStyle} />
+                <span>
+                  You will be billed <strong style={{ color: '#4a9eff' }}>{billing.recurringLabel}</strong> automatically thereafter
+                </span>
+              </li>
+              <li style={termItemStyle}>
+                <span style={termBulletStyle} />
+                <span>Cancel anytime in Settings — service continues until period end</span>
+              </li>
+              <li style={termItemStyle}>
+                <span style={termBulletStyle} />
+                <span>Subscription is non-refundable once a billing cycle has been charged</span>
+              </li>
+              {plan === 'wl' && (
+                <li style={termItemStyle}>
+                  <span style={{ ...termBulletStyle, background: '#ffd96a' }} />
+                  <span style={{ color: '#ffd96a' }}>
+                    After payment you&apos;ll choose your subdomain, upload your logo, and set your brand colors.
+                  </span>
+                </li>
+              )}
+            </ul>
+          </div>
+
+          {/* ── RIGHT: payment ──────────────────────────────────── */}
+          <div style={payColStyle}>
+            <div style={payHeaderStyle}>Payment details</div>
+
+            <div style={promoBoxStyle}>
+              {promoApplied ? (
+                <div style={promoAppliedStyle}>
+                  <span>
+                    ✓ CODE <strong style={{ color: '#32ff7e' }}>{promoApplied.toUpperCase()}</strong> APPLIED
+                  </span>
+                  <button
+                    onClick={handleRemovePromo}
+                    disabled={!!promoAction}
+                    style={promoRemoveStyle}
+                  >
+                    REMOVE
+                  </button>
+                </div>
+              ) : !showPromo ? (
+                <button
+                  onClick={() => setShowPromo(true)}
+                  style={promoToggleStyle}
+                >
+                  + Have a code?
+                </button>
+              ) : (
+                <div style={promoFormStyle}>
+                  <input
+                    type="text"
+                    placeholder="Enter code"
+                    value={promoCode}
+                    onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleApplyPromo()
+                    }}
+                    style={promoInputStyle}
+                    autoFocus
+                  />
+                  <button
+                    onClick={handleApplyPromo}
+                    disabled={!promoCode.trim() || !!promoAction}
+                    style={{
+                      ...promoApplyStyle,
+                      opacity: !promoCode.trim() || !!promoAction ? 0.4 : 1,
+                      cursor: !promoCode.trim() || !!promoAction ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    {promoAction === 'applying' ? '...' : 'Apply'}
+                  </button>
+                </div>
+              )}
             </div>
-          ) : !showPromo ? (
-            <button
-              onClick={() => setShowPromo(true)}
-              style={promoToggleStyle}
+
+            <Elements
+              stripe={stripePromise}
+              options={{
+                clientSecret,
+                appearance: {
+                  theme: 'night',
+                  variables: {
+                    colorPrimary: '#4a9eff',
+                    colorBackground: '#14151c',
+                    colorText: '#e0e2ea',
+                    colorDanger: '#ff6464',
+                    fontFamily: FUTURA,
+                    borderRadius: '5px',
+                  },
+                },
+              }}
+              key={clientSecret}
             >
-              + HAVE A CODE?
-            </button>
-          ) : (
-            <div style={promoFormStyle}>
-              <input
-                type="text"
-                placeholder="Enter code"
-                value={promoCode}
-                onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleApplyPromo()
-                }}
-                style={promoInputStyle}
-                autoFocus
+              <CheckoutForm
+                onAbandon={abandonAndSignOut}
+                abandoning={abandoning}
+                plan={plan}
+                billing={billing}
+                teamMemberId={teamMemberId}
               />
-              <button
-                onClick={handleApplyPromo}
-                disabled={!promoCode.trim() || !!promoAction}
-                style={{
-                  ...promoApplyStyle,
-                  opacity: !promoCode.trim() || !!promoAction ? 0.4 : 1,
-                  cursor: !promoCode.trim() || !!promoAction ? 'not-allowed' : 'pointer',
-                }}
-              >
-                {promoAction === 'applying' ? '...' : 'APPLY'}
-              </button>
+            </Elements>
+
+            <div style={footerNoteStyle}>
+              🔒 Payments processed securely by Stripe. Your card details never touch our servers.
             </div>
-          )}
-        </div>
-
-        <Elements
-          stripe={stripePromise}
-          options={{
-            clientSecret,
-            appearance: {
-              theme: 'night',
-              variables: {
-                colorPrimary: '#4a9eff',
-                colorBackground: '#1a1c24',
-                colorText: '#e0e2ea',
-                colorDanger: '#ff6464',
-                fontFamily: FUTURA,
-                borderRadius: '4px',
-              },
-            },
-          }}
-          key={clientSecret}
-        >
-          <CheckoutForm
-            onAbandon={abandonAndSignOut}
-            abandoning={abandoning}
-            plan={plan}
-            billing={billing}
-            teamMemberId={teamMemberId}
-          />
-        </Elements>
-
-        <div style={footerNoteStyle}>
-        Payments processed securely by Stripe. Your card details never touch our servers.
+          </div>
         </div>
       </div>
+
+      {/* Two-column layout kicks in once there's room for it side by side;
+          below that it stacks exactly like the payment-only mobile card. */}
+      <style>{`
+        @media (min-width: 860px) {
+          .billing-grid {
+            grid-template-columns: 380px 1fr !important;
+          }
+        }
+      `}</style>
     </main>
   )
 }
@@ -595,28 +596,30 @@ function CheckoutForm({
 
   return (
     <form onSubmit={handleSubmit}>
-      <PaymentElement
-        options={{
-          layout: {
-            type: 'accordion',
-            defaultCollapsed: true,
-            radios: 'auto',
-            spacedAccordionItems: false,
-          },
-          paymentMethodOrder: ['card', 'apple_pay', 'google_pay', 'link'],
-        }}
-      />
+      <div style={payBlockStyle}>
+        <PaymentElement
+          options={{
+            layout: {
+              type: 'accordion',
+              defaultCollapsed: true,
+              radios: 'auto',
+              spacedAccordionItems: false,
+            },
+            paymentMethodOrder: ['card', 'apple_pay', 'google_pay', 'link'],
+          }}
+        />
+      </div>
 
       <label style={agreementStyle}>
         <input
           type="checkbox"
           checked={agreed}
           onChange={(e) => setAgreed(e.target.checked)}
-          style={{ marginRight: 10, accentColor: '#4a9eff' }}
+          style={{ marginRight: 10, marginTop: 2, accentColor: '#4a9eff', flexShrink: 0 }}
         />
         <span>
-          I agree my card will be charged <strong>{billing.todayLabel} today</strong> and{' '}
-          <strong>{billing.recurringLabel}</strong> thereafter unless I cancel.
+          I agree my card will be charged <strong style={{ color: '#e0e2ea' }}>{billing.todayLabel} today</strong> and{' '}
+          <strong style={{ color: '#e0e2ea' }}>{billing.recurringLabel}</strong> thereafter unless I cancel.
         </span>
       </label>
 
@@ -626,12 +629,12 @@ function CheckoutForm({
         type="submit"
         disabled={!stripe || submitting || !agreed || abandoning}
         style={{
-          ...buttonStyle,
+          ...primaryButtonStyle,
           opacity: !stripe || submitting || !agreed || abandoning ? 0.5 : 1,
           cursor: !stripe || submitting || !agreed || abandoning ? 'not-allowed' : 'pointer',
         }}
       >
-        {submitting ? 'PROCESSING...' : 'CONTINUE'}
+        {submitting ? 'Processing...' : 'Continue'}
       </button>
 
       <button
@@ -639,16 +642,26 @@ function CheckoutForm({
         onClick={onAbandon}
         disabled={submitting || abandoning}
         style={{
-          ...cancelStyle,
+          ...textButtonStyle,
           opacity: submitting || abandoning ? 0.5 : 1,
           cursor: submitting || abandoning ? 'not-allowed' : 'pointer',
         }}
       >
-        {abandoning ? 'CANCELING...' : 'Cancel'}
+        {abandoning ? 'Canceling...' : 'Cancel'}
       </button>
     </form>
   )
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Styles
+//
+// Layout: a single card shell that is one column by default (mobile — the
+// original design's width) and becomes a 380px summary + flexible payment
+// column grid at >=860px, via the plain <style> media query above. Every
+// color, radius, and spacing value below comes from the same dark/blue
+// system used elsewhere in the product (see app/globals.css brand tokens).
+// ─────────────────────────────────────────────────────────────────────────
 
 const pageStyle: React.CSSProperties = {
   minHeight: '100vh',
@@ -656,130 +669,218 @@ const pageStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  padding: 20,
+  padding: '40px 20px',
   fontFamily: FUTURA,
 }
 
-const cardStyle: React.CSSProperties = {
+const shellStyle: React.CSSProperties = {
+  width: '100%',
+  maxWidth: 1040,
+}
+
+const narrowShellStyle: React.CSSProperties = {
   width: '100%',
   maxWidth: 480,
   background: '#1a1c24',
   border: '1px solid #2a2c34',
   borderTop: '3px solid #4a9eff',
-  borderRadius: 4,
-  padding: 32,
+  borderRadius: 6,
   color: '#e0e2ea',
   fontFamily: FUTURA,
 }
 
-const planBadgeStyle: React.CSSProperties = {
+const brandRowStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 12,
+  marginBottom: 24,
+  justifyContent: 'center',
+}
+
+const brandMarkStyle: React.CSSProperties = {
+  width: 30,
+  height: 30,
+  borderRadius: 7,
+  background: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  flexShrink: 0,
+}
+
+const brandNameStyle: React.CSSProperties = {
+  fontSize: 14,
+  fontWeight: 'bold',
+  letterSpacing: 5,
+  color: '#c0c2ca',
+  fontFamily: FUTURA,
+}
+
+const gridStyle: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: '1fr',
+  background: '#1a1c24',
+  border: '1px solid #2a2c34',
+  borderTop: '3px solid #4a9eff',
+  borderRadius: 6,
+  overflow: 'hidden',
+  color: '#e0e2ea',
+}
+
+const summaryColStyle: React.CSSProperties = {
+  padding: 32,
+  background: '#14151c',
+  borderBottom: '1px solid #2a2c34',
+}
+
+const payColStyle: React.CSSProperties = {
+  padding: 32,
+}
+
+const eyebrowStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: 8,
-  background: 'rgba(74,158,255,0.08)',
-  border: '1px solid #2a4a8a',
-  borderLeft: '3px solid #4a9eff',
-  padding: '6px 10px',
-  borderRadius: 3,
-  marginBottom: 16,
-  fontFamily: FUTURA,
+  marginBottom: 14,
 }
 
-const planBadgeLabelStyle: React.CSSProperties = {
-  fontSize: 9,
+const eyebrowLabelStyle: React.CSSProperties = {
+  fontSize: 10,
   letterSpacing: 3,
   color: '#888a92',
   fontWeight: 700,
 }
 
-const planBadgeNameStyle: React.CSSProperties = {
-  fontSize: 11,
-  letterSpacing: 2,
-  color: '#4a9eff',
-  fontWeight: 700,
-}
-
-const planBadgePriceStyle: React.CSSProperties = {
-  fontSize: 11,
-  letterSpacing: 1,
-  color: '#c0c2ca',
-  fontWeight: 700,
-  marginLeft: 'auto',
-}
-
-
-
-
-
-const planSwitchStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '12px 14px',
-  background: 'rgba(74,158,255,0.08)',
-  border: '1px solid #2a4a8a',
-  borderRadius: 4,
-  color: '#4a9eff',
+const eyebrowPlanStyle: React.CSSProperties = {
   fontSize: 12,
   letterSpacing: 2,
+  color: '#4a9eff',
   fontWeight: 700,
-  cursor: 'pointer',
+}
+
+const priceRowStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'baseline',
+  gap: 10,
+  marginBottom: 6,
+  flexWrap: 'wrap',
+}
+
+const priceWasStyle: React.CSSProperties = {
+  fontSize: 15,
+  color: '#666870',
+  textDecoration: 'line-through',
+}
+
+const priceNowStyle: React.CSSProperties = {
+  fontSize: 32,
+  fontWeight: 700,
+  color: '#e0e2ea',
+  letterSpacing: 0.5,
+}
+
+const priceUnitStyle: React.CSSProperties = {
+  fontSize: 12,
+  color: '#888a92',
+  letterSpacing: 1,
+}
+
+const priceCaptionStyle: React.CSSProperties = {
+  fontSize: 12,
+  color: '#888a92',
+  lineHeight: 1.6,
+  marginBottom: 24,
+}
+
+const sectionTitleStyle: React.CSSProperties = {
+  fontSize: 15,
+  fontWeight: 700,
+  letterSpacing: 1,
+  color: '#e0e2ea',
+  marginBottom: 8,
   fontFamily: FUTURA,
-  marginBottom: 16,
-  transition: 'background 0.15s, border-color 0.15s',
+}
+
+const statusTitleStyle: React.CSSProperties = {
+  fontSize: 18,
+  fontWeight: 700,
+  letterSpacing: 3,
+  marginBottom: 12,
+  fontFamily: FUTURA,
 }
 
 const planDescStyle: React.CSSProperties = {
-  fontSize: 11,
+  fontSize: 12,
   lineHeight: 1.6,
   color: '#c0c2ca',
-  marginBottom: 16,
-  padding: '10px 12px',
-  background: '#0d0e14',
-  border: '1px solid #2a2c34',
-  borderRadius: 3,
+  marginBottom: 22,
 }
 
-const titleStyle: React.CSSProperties = {
-  fontSize: 16,
-  fontWeight: 700,
-  letterSpacing: 4,
+const switchLinkStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 6,
+  fontSize: 11,
+  letterSpacing: 1.5,
   color: '#4a9eff',
-  marginBottom: 8,
+  fontWeight: 700,
+  background: 'none',
+  border: 'none',
+  cursor: 'pointer',
+  padding: 0,
+  marginBottom: 24,
   fontFamily: FUTURA,
+  textAlign: 'left',
 }
 
-const subtitleStyle: React.CSSProperties = {
-  fontSize: 12,
-  letterSpacing: 1,
-  color: '#888a92',
-  marginBottom: 16,
-  fontFamily: FUTURA,
-}
-
-const termsBoxStyle: React.CSSProperties = {
-  background: '#0d0e14',
-  border: '1px solid #2a2c34',
-  borderLeft: '3px solid #4a9eff',
-  borderRadius: 3,
-  padding: '12px 16px',
-  marginBottom: 16,
-  fontFamily: FUTURA,
+const dividerStyle: React.CSSProperties = {
+  height: 1,
+  background: '#232530',
+  margin: '22px 0',
 }
 
 const termsHeaderStyle: React.CSSProperties = {
-  fontSize: 9,
-  letterSpacing: 3,
+  fontSize: 10,
+  letterSpacing: 2.5,
   color: '#888a92',
-  marginBottom: 8,
   fontWeight: 700,
+  marginBottom: 14,
   fontFamily: FUTURA,
 }
 
 const termsListStyle: React.CSSProperties = {
-  fontSize: 11,
-  lineHeight: 1.7,
-  color: '#c0c2ca',
-  paddingLeft: 18,
+  listStyle: 'none',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 12,
   margin: 0,
+  padding: 0,
+}
+
+const termItemStyle: React.CSSProperties = {
+  display: 'flex',
+  gap: 10,
+  fontSize: 12,
+  lineHeight: 1.55,
+  color: '#c0c2ca',
+  fontFamily: FUTURA,
+}
+
+const termBulletStyle: React.CSSProperties = {
+  width: 4,
+  height: 4,
+  borderRadius: '50%',
+  background: '#4a9eff',
+  flexShrink: 0,
+  marginTop: 6,
+}
+
+const payHeaderStyle: React.CSSProperties = {
+  fontSize: 11,
+  letterSpacing: 3,
+  color: '#888a92',
+  fontWeight: 700,
+  marginBottom: 18,
   fontFamily: FUTURA,
 }
 
@@ -789,13 +890,14 @@ const promoBoxStyle: React.CSSProperties = {
 
 const promoToggleStyle: React.CSSProperties = {
   width: '100%',
-  padding: '10px 14px',
+  textAlign: 'left',
+  padding: '11px 14px',
   background: 'transparent',
-  border: '1px dashed #4a4a5e',
-  borderRadius: 3,
+  border: '1px dashed #3a3c48',
+  borderRadius: 5,
   color: '#888a92',
   fontSize: 11,
-  letterSpacing: 3,
+  letterSpacing: 2,
   fontWeight: 700,
   cursor: 'pointer',
   fontFamily: FUTURA,
@@ -808,10 +910,10 @@ const promoFormStyle: React.CSSProperties = {
 
 const promoInputStyle: React.CSSProperties = {
   flex: 1,
-  padding: '10px 12px',
+  padding: '11px 14px',
   background: '#0d0e14',
   border: '1px solid #2a4a8a',
-  borderRadius: 3,
+  borderRadius: 5,
   fontFamily: 'monospace',
   fontSize: 16,
   color: '#4a9eff',
@@ -822,15 +924,14 @@ const promoInputStyle: React.CSSProperties = {
 }
 
 const promoApplyStyle: React.CSSProperties = {
-  padding: '10px 18px',
-  background: '#0d0e14',
-  border: 'none',
-  borderTop: '3px solid #4a9eff',
-  borderRadius: 3,
+  padding: '0 20px',
+  background: 'rgba(74,158,255,0.08)',
+  border: '1px solid #2a4a8a',
+  borderRadius: 5,
   color: '#4a9eff',
   fontSize: 11,
   fontWeight: 700,
-  letterSpacing: 3,
+  letterSpacing: 2,
   fontFamily: FUTURA,
 }
 
@@ -838,34 +939,39 @@ const promoAppliedStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
-  padding: '10px 14px',
+  padding: '11px 14px',
   background: 'rgba(50,255,126,0.08)',
   border: '1px solid #1a6a1a',
-  borderLeft: '3px solid #32ff7e',
-  borderRadius: 3,
+  borderRadius: 5,
   fontSize: 11,
-  letterSpacing: 2,
+  letterSpacing: 1,
   color: '#c0c2ca',
   fontFamily: FUTURA,
+  gap: 10,
+  flexWrap: 'wrap',
 }
 
 const promoRemoveStyle: React.CSSProperties = {
   background: 'transparent',
   border: '1px solid #4a4a5e',
-  borderRadius: 3,
+  borderRadius: 4,
   color: '#888a92',
   fontSize: 9,
-  letterSpacing: 2,
-  padding: '4px 10px',
+  letterSpacing: 1.5,
+  padding: '5px 10px',
   cursor: 'pointer',
   fontFamily: FUTURA,
   fontWeight: 700,
 }
 
+const payBlockStyle: React.CSSProperties = {
+  marginBottom: 20,
+}
+
 const agreementStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'flex-start',
-  fontSize: 11,
+  fontSize: 11.5,
   color: '#c0c2ca',
   margin: '20px 0',
   cursor: 'pointer',
@@ -873,30 +979,29 @@ const agreementStyle: React.CSSProperties = {
   fontFamily: FUTURA,
 }
 
-const buttonStyle: React.CSSProperties = {
+const primaryButtonStyle: React.CSSProperties = {
   width: '100%',
-  padding: 14,
-  background: '#0d0e14',
+  padding: 15,
+  background: '#4a9eff',
   border: 'none',
-  borderTop: '3px solid #4a9eff',
-  borderRadius: 4,
-  color: '#4a9eff',
+  borderRadius: 6,
+  color: '#0d0e14',
   fontSize: 12,
   fontWeight: 700,
-  letterSpacing: 4,
+  letterSpacing: 3,
   cursor: 'pointer',
   fontFamily: FUTURA,
-  marginBottom: 8,
+  marginBottom: 10,
 }
 
-const cancelStyle: React.CSSProperties = {
+const textButtonStyle: React.CSSProperties = {
   width: '100%',
   padding: 10,
   background: 'transparent',
   border: 'none',
   color: '#666870',
   fontSize: 11,
-  letterSpacing: 2,
+  letterSpacing: 1.5,
   cursor: 'pointer',
   fontFamily: FUTURA,
 }
@@ -905,20 +1010,31 @@ const errorStyle: React.CSSProperties = {
   background: '#2a1a1a',
   border: '1px solid #8a1a1a',
   color: '#ff6464',
-  padding: '8px 12px',
-  borderRadius: 3,
+  padding: '10px 14px',
+  borderRadius: 5,
   fontSize: 11,
   margin: '12px 0',
   fontFamily: FUTURA,
 }
 
+const mutedTextStyle: React.CSSProperties = {
+  fontSize: 12,
+  letterSpacing: 1,
+  color: '#888a92',
+  marginBottom: 16,
+  fontFamily: FUTURA,
+  textAlign: 'center',
+}
+
 const footerNoteStyle: React.CSSProperties = {
   fontSize: 10,
-  letterSpacing: 1,
+  letterSpacing: 0.5,
   color: '#666870',
   textAlign: 'center',
-  marginTop: 20,
-  paddingTop: 16,
-  borderTop: '1px solid #2a2c34',
+  marginTop: 18,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 6,
   fontFamily: FUTURA,
 }
