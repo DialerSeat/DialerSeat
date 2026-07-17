@@ -92,7 +92,7 @@ export default async function Home({ searchParams }: PageProps) {
         .ds-hero-copy-top { grid-area: top; }
         .ds-hero-copy-paragraph { grid-area: paragraph; }
         .ds-hero-copy-buttons { grid-area: buttons; }
-        .ds-hero-showcase { grid-area: showcase; align-self: center; }
+        .ds-hero-showcase { grid-area: showcase; align-self: center; min-width: 0; }
 
         .ds-showcase-shell { width: 100%; }
         .ds-showcase-scale { width: 100%; }
