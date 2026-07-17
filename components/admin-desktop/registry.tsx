@@ -171,7 +171,7 @@ export const APPS: AppDefinition[] = [
     name: 'Teams',
     icon: '🏢',
     iconBg: 'linear-gradient(135deg, #ffaa3e, #d07020)',
-    description: 'Every team on the platform with members and seats',
+    description: 'Your teams — roster, campaigns, seat links',
     visibleTo: ['admin', 'manager'],
     Component: TeamsApp,
     defaultSize: { width: 1100, height: 720 },

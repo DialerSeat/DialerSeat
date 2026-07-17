@@ -64,14 +64,14 @@ export default async function Home({ searchParams }: PageProps) {
         }
 
         .ds-hero-logged-out {
-          padding-top: max(168px, calc(env(safe-area-inset-top, 0px) + 148px));
-          padding-bottom: 80px;
+          padding-top: max(140px, calc(env(safe-area-inset-top, 0px) + 120px));
+          padding-bottom: 56px;
           padding-left: 40px;
           padding-right: 40px;
         }
         .ds-hero-logged-in {
           padding-top: 40px;
-          padding-bottom: 80px;
+          padding-bottom: 56px;
           padding-left: 40px;
           padding-right: 40px;
         }
@@ -84,7 +84,7 @@ export default async function Home({ searchParams }: PageProps) {
             "paragraph  showcase"
             "buttons    showcase";
           column-gap: 56px;
-          row-gap: 32px;
+          row-gap: 24px;
           align-items: start;
           max-width: 1280px;
           margin: 0 auto;
@@ -98,9 +98,9 @@ export default async function Home({ searchParams }: PageProps) {
         .ds-showcase-scale { width: 100%; }
 
         .ds-stats { flex-direction: row; padding: 16px 12px; gap: 8px; }
-        .ds-section { padding: 120px 60px; }
+        .ds-section { padding: 90px 60px; }
 
-        #features, #compare, #pricing { scroll-margin-top: 110px; }
+        #features, #compare, #pricing { scroll-margin-top: 106px; }
         .ds-grid-3 { grid-template-columns: repeat(3, 1fr); }
         .ds-pricing-card { padding: 60px; }
         .ds-cta-buttons { flex-direction: row; }
@@ -172,13 +172,10 @@ export default async function Home({ searchParams }: PageProps) {
 
           .ds-showcase-shell {
             width: 100%;
-            overflow: hidden;
-            height: 158px;
           }
           .ds-showcase-scale {
             width: 640px;
-            transform: scale(0.5);
-            transform-origin: top left;
+            zoom: 0.5;
           }
           .ds-hero-showcase { width: 100%; }
 
