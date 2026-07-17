@@ -361,35 +361,35 @@ export default function BillingPage() {
   const billing = describeBilling(planInfo, amounts, coupon)
 
   return (
-    <main style={pageStyle}>
+    <main style={pageStyle} className="billing-page">
       <div style={shellStyle}>
         <BrandMark />
 
         <div style={gridStyle} className="billing-grid">
           {/* ── LEFT: order summary ─────────────────────────────── */}
-          <div style={summaryColStyle}>
+          <div style={summaryColStyle} className="billing-col">
             <div style={eyebrowStyle}>
               <span style={eyebrowLabelStyle}>PLAN</span>
               <span style={eyebrowPlanStyle}>{planInfo.label}</span>
             </div>
 
-            <div style={priceRowStyle}>
+            <div style={priceRowStyle} className="billing-price-row">
               {billing.hasDiscount && (
                 <span style={priceWasStyle}>{billing.fullLabel}</span>
               )}
-              <span style={priceNowStyle}>{billing.todayLabel}</span>
+              <span style={priceNowStyle} className="billing-price-now">{billing.todayLabel}</span>
               <span style={priceUnitStyle}>{billing.hasDiscount ? 'today' : '/ week'}</span>
             </div>
             {billing.hasDiscount ? (
-              <div style={priceCaptionStyle}>
+              <div style={priceCaptionStyle} className="billing-price-caption">
                 <span style={{ color: '#32ff7e' }}>{promoApplied?.toUpperCase()}</span> applied — then {billing.recurringLabel}
               </div>
             ) : (
-              <div style={priceCaptionStyle}>Charged today, then weekly until you cancel.</div>
+              <div style={priceCaptionStyle} className="billing-price-caption">Charged today, then weekly until you cancel.</div>
             )}
 
             <div style={sectionTitleStyle}>{planInfo.title}</div>
-            <div style={planDescStyle}>{planInfo.description}</div>
+            <div style={planDescStyle} className="billing-plan-desc">{planInfo.description}</div>
 
             {plan === 'standard' ? (
               <button
@@ -397,6 +397,7 @@ export default function BillingPage() {
                 onClick={() => switchTo('wl')}
                 disabled={switchingPlan}
                 style={switchLinkStyle}
+                className="billing-switch-link"
               >
                 ↗ {PLAN_INFO.standard.switchLabel}
               </button>
@@ -406,15 +407,16 @@ export default function BillingPage() {
                 onClick={() => switchTo('standard')}
                 disabled={switchingPlan}
                 style={switchLinkStyle}
+                className="billing-switch-link"
               >
                 ↘ {PLAN_INFO.wl.switchLabel}
               </button>
             )}
 
-            <div style={dividerStyle} />
+            <div style={dividerStyle} className="billing-divider" />
 
-            <div style={termsHeaderStyle}>Billing terms</div>
-            <ul style={termsListStyle}>
+            <div style={termsHeaderStyle} className="billing-terms-header">Billing terms</div>
+            <ul style={termsListStyle} className="billing-terms-list">
               <li style={termItemStyle}>
                 <span style={termBulletStyle} />
                 <span>
@@ -450,10 +452,10 @@ export default function BillingPage() {
           </div>
 
           {/* ── RIGHT: payment ──────────────────────────────────── */}
-          <div style={payColStyle}>
-            <div style={payHeaderStyle}>Payment details</div>
+          <div style={payColStyle} className="billing-col">
+            <div style={payHeaderStyle} className="billing-pay-header">Payment details</div>
 
-            <div style={promoBoxStyle}>
+            <div style={promoBoxStyle} className="billing-promo-box">
               {promoApplied ? (
                 <div style={promoAppliedStyle}>
                   <span>
@@ -529,8 +531,8 @@ export default function BillingPage() {
               />
             </Elements>
 
-            <div style={footerNoteStyle}>
-              🔒 Payments processed securely by Stripe. Your card details never touch our servers.
+            <div style={footerNoteStyle} className="billing-footer-note">
+              Payments processed securely by Stripe. Your card details never touch our servers.
             </div>
           </div>
         </div>
@@ -542,6 +544,66 @@ export default function BillingPage() {
         @media (min-width: 860px) {
           .billing-grid {
             grid-template-columns: 380px 1fr !important;
+          }
+        }
+
+        /* Mobile only (mirrors the 860px boundary above exactly, so this
+           block and the desktop block above can never both apply at once).
+           Desktop spacing/type is untouched — this only tightens the
+           stacked single-column phone view to fit a real device viewport
+           instead of running noticeably taller than the page. */
+        @media (max-width: 859px) {
+          .billing-page {
+            padding: 20px 14px !important;
+          }
+          .billing-col {
+            padding: 20px !important;
+          }
+          .billing-price-now {
+            font-size: 26px !important;
+          }
+          .billing-price-row {
+            margin-bottom: 4px !important;
+          }
+          .billing-price-caption {
+            margin-bottom: 16px !important;
+          }
+          .billing-plan-desc {
+            margin-bottom: 14px !important;
+          }
+          .billing-switch-link {
+            margin-bottom: 16px !important;
+          }
+          .billing-divider {
+            margin: 14px 0 !important;
+          }
+          .billing-terms-header {
+            margin-bottom: 10px !important;
+          }
+          .billing-terms-list {
+            gap: 9px !important;
+          }
+          .billing-pay-header {
+            margin-bottom: 12px !important;
+          }
+          .billing-promo-box {
+            margin-bottom: 14px !important;
+          }
+          .billing-pay-block {
+            margin-bottom: 14px !important;
+          }
+          .billing-agreement {
+            margin: 14px 0 !important;
+          }
+          .billing-submit-btn {
+            padding: 13px !important;
+            margin-bottom: 8px !important;
+          }
+          .billing-cancel-btn {
+            padding: 8px !important;
+          }
+          .billing-footer-note {
+            margin-top: 12px !important;
           }
         }
       `}</style>
@@ -596,7 +658,7 @@ function CheckoutForm({
 
   return (
     <form onSubmit={handleSubmit}>
-      <div style={payBlockStyle}>
+      <div style={payBlockStyle} className="billing-pay-block">
         <PaymentElement
           options={{
             layout: {
@@ -610,7 +672,7 @@ function CheckoutForm({
         />
       </div>
 
-      <label style={agreementStyle}>
+      <label style={agreementStyle} className="billing-agreement">
         <input
           type="checkbox"
           checked={agreed}
@@ -633,6 +695,7 @@ function CheckoutForm({
           opacity: !stripe || submitting || !agreed || abandoning ? 0.5 : 1,
           cursor: !stripe || submitting || !agreed || abandoning ? 'not-allowed' : 'pointer',
         }}
+        className="billing-submit-btn"
       >
         {submitting ? 'Processing...' : 'Continue'}
       </button>
@@ -646,6 +709,7 @@ function CheckoutForm({
           opacity: submitting || abandoning ? 0.5 : 1,
           cursor: submitting || abandoning ? 'not-allowed' : 'pointer',
         }}
+        className="billing-cancel-btn"
       >
         {abandoning ? 'Canceling...' : 'Cancel'}
       </button>

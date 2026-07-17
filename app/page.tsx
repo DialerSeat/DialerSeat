@@ -181,7 +181,7 @@ export default async function Home({ searchParams }: PageProps) {
 
           .ds-hero-h1 { letter-spacing: -1px !important; line-height: 1.1 !important; }
           .ds-hero-p { font-size: 15px !important; }
-          .ds-hero-fineprint { font-size: 10px !important; letter-spacing: 1.5px !important; }
+          .ds-hero-fineprint { font-size: 10px !important; letter-spacing: 1.5px !important; text-align: center !important; }
           .ds-stats {
             padding: 14px 10px !important;
             gap: 6px !important;
@@ -195,7 +195,7 @@ export default async function Home({ searchParams }: PageProps) {
           .ds-grid-3 { grid-template-columns: 1fr; }
           .ds-pricing-card { padding: 32px 24px !important; }
           .ds-pricing-grid { gap: 16px; padding: 0 8px; }
-          .ds-cta-buttons { flex-direction: column; width: 100%; }
+          .ds-cta-buttons { flex-direction: column; width: 100%; gap: 10px !important; }
           .ds-cta-buttons > a { width: 100%; box-sizing: border-box; text-align: center; }
           .ds-feature-card { padding: 28px !important; }
           .ds-step-card { flex-direction: column !important; gap: 12px !important; padding: 28px !important; }
@@ -389,9 +389,9 @@ export default async function Home({ searchParams }: PageProps) {
         </div>
       </section>
 
-      <section id="features" style={{ background: 'rgba(226,228,234,0.5)', borderTop: '1px solid #c4c8d0' }}>
+      <section style={{ background: 'rgba(226,228,234,0.5)', borderTop: '1px solid #c4c8d0' }}>
         <div className="ds-section" style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: '64px' }}>
+        <div id="features" style={{ textAlign: 'center', marginBottom: '100px' }}>
           <div style={{ fontSize: '11px', letterSpacing: '3px', fontWeight: 'bold', textTransform: 'uppercase', color: '#2a4a8a', marginBottom: '16px' }}>
             ▸ Built for volume
           </div>
@@ -511,9 +511,9 @@ export default async function Home({ searchParams }: PageProps) {
         </div>
       </section>
 
-      <section id="compare" style={{ background: 'rgba(226,228,234,0.5)', borderTop: '1px solid #c4c8d0' }}>
+      <section style={{ background: 'rgba(226,228,234,0.5)', borderTop: '1px solid #c4c8d0' }}>
         <div className="ds-section" style={{ maxWidth: '900px', margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: '64px' }}>
+        <div id="compare" style={{ textAlign: 'center', marginBottom: '64px' }}>
           <div style={{ fontSize: '11px', letterSpacing: '3px', fontWeight: 'bold', textTransform: 'uppercase', color: '#2a4a8a', marginBottom: '16px' }}>
             ▸ Why DialerSeat
           </div>
@@ -596,9 +596,9 @@ export default async function Home({ searchParams }: PageProps) {
         </div>
       </section>
 
-      <section id="pricing" style={{ borderTop: '1px solid #c4c8d0' }}>
+      <section style={{ borderTop: '1px solid #c4c8d0' }}>
         <div className="ds-section">
-        <div style={{ textAlign: 'center', marginBottom: '64px' }}>
+        <div id="pricing" style={{ textAlign: 'center', marginBottom: '64px' }}>
           <div style={{ fontSize: '11px', letterSpacing: '3px', fontWeight: 'bold', textTransform: 'uppercase', color: '#2a4a8a', marginBottom: '16px' }}>
             ▸ Simple pricing
           </div>

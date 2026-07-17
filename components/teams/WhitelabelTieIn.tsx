@@ -68,6 +68,10 @@ export default function WhitelabelTieIn({ tenant }: { tenant: TenantInfo | null 
         {tenant.custom_domain && (
           <span style={{ fontSize: 10, color: T.muted }}>+ {tenant.custom_domain}</span>
         )}
+        <a
+          href="/dashboard/manager/desktop"
+          style={{ fontSize: 10, color: T.muted, textDecoration: 'underline' }}
+        >Edit logo & colors</a>
       </div>
     </div>
   )

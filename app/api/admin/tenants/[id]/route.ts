@@ -76,6 +76,10 @@ export async function PATCH(
       update.accent_color = update.sidebar_color
     }
 
+    if ('is_demo' in body) {
+      update.is_demo = !!body.is_demo
+    }
+
     if ('status' in body) {
       const s = String(body.status ?? '').trim()
       if (!STATUSES.has(s)) {

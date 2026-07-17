@@ -78,7 +78,7 @@ function defaultFillColsFor(role: AppRole): number {
 
 
 
-const MANAGER_DEFAULT_ORDER: string[] = ['dashboard', 'analytics', 'teams', 'appstore']
+const MANAGER_DEFAULT_ORDER: string[] = ['dashboard', 'analytics', 'teams', 'campaigns', 'appstore']
 
 function gridDims(vw: number, vh: number, taskbarH: number) {
   return {

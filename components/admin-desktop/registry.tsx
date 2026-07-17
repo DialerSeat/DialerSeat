@@ -66,6 +66,10 @@ const TeamsApp = dynamic(() => import('./apps/Teams'), {
   loading: () => <AppLoading />,
   ssr: false,
 })
+const CampaignsApp = dynamic(() => import('./apps/Campaigns'), {
+  loading: () => <AppLoading />,
+  ssr: false,
+})
 const NumbersApp = dynamic(() => import('./apps/Numbers'), {
   loading: () => <AppLoading />,
   ssr: false,
@@ -171,10 +175,20 @@ export const APPS: AppDefinition[] = [
     name: 'Teams',
     icon: '🏢',
     iconBg: 'linear-gradient(135deg, #ffaa3e, #d07020)',
-    description: 'Your teams — roster, campaigns, seat links',
+    description: 'Every team on the platform with members and seats',
     visibleTo: ['admin', 'manager'],
     Component: TeamsApp,
     defaultSize: { width: 1100, height: 720 },
+  },
+  {
+    id: 'campaigns',
+    name: 'Campaigns',
+    icon: '📣',
+    iconBg: 'linear-gradient(135deg, #4ad0c0, #1a8a7a)',
+    description: 'Every campaign on the platform — set active/inactive, assign to teams',
+    visibleTo: ['admin', 'manager'],
+    Component: CampaignsApp,
+    defaultSize: { width: 1140, height: 740 },
   },
   {
     id: 'numbers',

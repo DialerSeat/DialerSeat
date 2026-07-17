@@ -68,6 +68,7 @@ interface Tenant {
   custom_domain: string | null
   status: 'active' | 'suspended' | 'cancelled'
   is_active: boolean
+  is_demo: boolean
   owner_clerk_id: string
   brand_name: string
   logo_url: string | null
@@ -346,6 +347,12 @@ function TenantsSubTab() {
                       background: t.primary_color, border: '1px solid rgba(0,0,0,0.2)',
                     }} />
                     {t.brand_name}
+                    {t.is_demo && (
+                      <span style={{
+                        padding: '1px 6px', fontSize: 8, fontWeight: 'bold', letterSpacing: 0.5,
+                        color: C.amber, border: `1px solid currentColor`, borderRadius: 2,
+                      }}>DEMO</span>
+                    )}
                   </span>
                 </td>
                 <td>
@@ -483,6 +490,24 @@ function TenantDetailModal({ tenant, onClose, onUpdated }: {
     }
   }
 
+  const setDemo = async (is_demo: boolean) => {
+    setWorking('demo')
+    setErr(null)
+    try {
+      const res = await fetch(`/api/admin/tenants/${tenant.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_demo }),
+      })
+      if (!res.ok) throw new Error(await readError(res))
+      onUpdated()
+      onClose()
+    } catch (e: any) {
+      setErr(e?.message ?? 'Failed')
+    } finally {
+      setWorking(null)
+    }
+  }
+
   const remove = async () => {
     if (!confirm(`Delete tenant "${tenant.slug}"? This cannot be undone.`)) return
     setWorking('delete')
@@ -511,7 +536,7 @@ function TenantDetailModal({ tenant, onClose, onUpdated }: {
         <Field label="Custom Domain" value={tenant.custom_domain ?? '(none)'} mono />
         <Field label="Stripe Customer" value={tenant.stripe_customer_id ?? '(none)'} mono />
         <Field label="Stripe Subscription" value={tenant.stripe_subscription_id ?? '(none)'} mono />
-        <Field label="Status" value={`${tenant.status || 'active'}${tenant.is_active ? '' : ' (inactive)'}`} />
+        <Field label="Status" value={`${tenant.status || 'active'}${tenant.is_active ? '' : ' (inactive)'}${tenant.is_demo ? ' · DEMO' : ''}`} />
         <Field label="Subdomain URL" value={`https://${tenant.slug}.dialerseat.com`} link />
 
         <div>
@@ -551,6 +576,15 @@ function TenantDetailModal({ tenant, onClose, onUpdated }: {
               {working === 'status' ? 'Activating...' : 'Activate'}
             </button>
           )}
+          <button
+            className="wl-btn"
+            onClick={() => setDemo(!tenant.is_demo)}
+            disabled={working !== null}
+            title="Demo tenants are excluded from billing/revenue totals"
+            style={tenant.is_demo ? { color: C.amber, borderColor: C.amber } : undefined}
+          >
+            {working === 'demo' ? 'Updating...' : tenant.is_demo ? '★ Marked as Demo' : 'Mark as Demo'}
+          </button>
           <a
             href={`https://${tenant.slug}.dialerseat.com`}
             target="_blank" rel="noopener noreferrer"
@@ -921,6 +955,7 @@ interface BillingTenantRow {
   slug: string
   brand_name: string
   status: string
+  is_demo: boolean
   stripe_customer_id: string | null
   stripe_subscription_id: string | null
   billing: BillingState | null
@@ -933,6 +968,7 @@ interface Portfolio {
   activeCount: number
   pastDueCount: number
   canceledCount: number
+  demoCount: number
   mrrCents: number
   arrCents: number
   currency: string
@@ -1005,11 +1041,12 @@ function BillingSubTab() {
       )}
 
       {portfolio && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, marginBottom: 16 }}>
           <PortfolioCard label="MRR" value={money(portfolio.mrrCents, portfolio.currency)} sub={`${money(portfolio.arrCents, portfolio.currency)} ARR`} accent={C.green} />
           <PortfolioCard label="ACTIVE" value={String(portfolio.activeCount)} sub={`of ${portfolio.billedCount} billed`} accent={C.blue} />
           <PortfolioCard label="PAST DUE" value={String(portfolio.pastDueCount)} sub="needs attention" accent={portfolio.pastDueCount > 0 ? C.amber : C.muted} />
           <PortfolioCard label="CANCELED" value={String(portfolio.canceledCount)} sub={`${portfolio.tenantCount} tenants total`} accent={portfolio.canceledCount > 0 ? C.red : C.muted} />
+          <PortfolioCard label="DEMO" value={String(portfolio.demoCount)} sub="excluded from totals" accent={C.muted} />
         </div>
       )}
 
@@ -1030,13 +1067,17 @@ function BillingSubTab() {
               const b = t.billing
               const stateColor = b ? (BILLING_STATE_COLOR[b.state] ?? C.muted) : C.muted
               return (
-                <tr key={t.id} onClick={() => setDetailId(t.id)} style={{ cursor: 'pointer' }}>
+                <tr key={t.id} onClick={() => setDetailId(t.id)} style={{ cursor: 'pointer', opacity: t.is_demo ? 0.6 : 1 }}>
                   <td>
                     <strong>{t.brand_name}</strong>
                     <span style={{ color: C.muted, marginLeft: 6, fontFamily: 'monospace', fontSize: 10 }}>{t.slug}</span>
                   </td>
                   <td>
-                    {t.billingError ? (
+                    {t.is_demo ? (
+                      <span style={{ padding: '1px 6px', fontSize: 9, fontWeight: 'bold', color: C.amber, border: '1px solid currentColor', borderRadius: 2 }}>
+                        DEMO
+                      </span>
+                    ) : t.billingError ? (
                       <span style={{ color: C.red, fontSize: 10 }}>error</span>
                     ) : b ? (
                       <span style={{ padding: '1px 6px', fontSize: 9, fontWeight: 'bold', color: stateColor, border: '1px solid currentColor', borderRadius: 2 }}>
@@ -1047,10 +1088,10 @@ function BillingSubTab() {
                       <span style={{ color: C.muted, fontSize: 10 }}>no subscription</span>
                     )}
                   </td>
-                  <td style={{ fontSize: 10 }}>{b?.planNickname ?? (b ? `every ${intervalLabel(b)}` : '—')}</td>
-                  <td style={{ fontFamily: 'monospace' }}>{b ? `${money(b.amountCents, b.currency)}/${intervalLabel(b)}` : '—'}</td>
-                  <td style={{ fontFamily: 'monospace', color: b && b.mrrCents > 0 ? C.green : C.muted }}>{b ? money(b.mrrCents, b.currency) : '—'}</td>
-                  <td style={{ fontSize: 10, color: C.muted }}>{b?.currentPeriodEnd ? new Date(b.currentPeriodEnd).toLocaleDateString() : '—'}</td>
+                  <td style={{ fontSize: 10 }}>{t.is_demo ? '—' : (b?.planNickname ?? (b ? `every ${intervalLabel(b)}` : '—'))}</td>
+                  <td style={{ fontFamily: 'monospace' }}>{t.is_demo ? '—' : (b ? `${money(b.amountCents, b.currency)}/${intervalLabel(b)}` : '—')}</td>
+                  <td style={{ fontFamily: 'monospace', color: !t.is_demo && b && b.mrrCents > 0 ? C.green : C.muted }}>{t.is_demo ? '—' : (b ? money(b.mrrCents, b.currency) : '—')}</td>
+                  <td style={{ fontSize: 10, color: C.muted }}>{t.is_demo ? '—' : (b?.currentPeriodEnd ? new Date(b.currentPeriodEnd).toLocaleDateString() : '—')}</td>
                 </tr>
               )
             })}
@@ -1112,6 +1153,11 @@ function BillingDetailModal({ tenantId, onClose }: { tenantId: string; onClose: 
       {error && <div style={{ background: '#fff4f4', border: '1px solid #c08080', padding: 8, fontSize: 11, color: C.red }}>{error}</div>}
       {detail && (
         <div style={{ display: 'grid', gap: 10 }}>
+          {detail.is_demo && (
+            <div style={{ background: '#fff8ea', border: `1px solid ${C.amber}`, padding: 8, fontSize: 11, color: C.amber, fontWeight: 'bold' }}>
+              ★ DEMO TENANT — excluded from portfolio totals. Any Stripe data below is real if present, but this account is not a paying customer.
+            </div>
+          )}
           {detail.billingError && (
             <div style={{ background: '#fff4f4', border: '1px solid #c08080', padding: 8, fontSize: 11, color: C.red }}>
               {detail.billingError}

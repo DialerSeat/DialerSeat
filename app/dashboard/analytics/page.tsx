@@ -84,16 +84,21 @@ function renderDispositionLabels(props: {
   const fontSize = 11
   const chartMargin = 10 // keep labels this far from the chart's top/bottom edge
 
-  // Compute each slice's midpoint angle (in the same coordinate system
-  // Recharts uses: 0deg = 3 o'clock, increasing counter-clockwise) and
-  // its natural (unclamped) label position.
+  // Compute each slice's midpoint angle exactly the way Recharts does
+  // internally (verified against its own computePieSectors output): with
+  // no startAngle/endAngle/paddingAngle/minAngle props set on <Pie>, the
+  // first slice starts at raw angle 0 (screen: 3 o'clock) and each
+  // subsequent slice's angle increases by its share of 360deg, which
+  // sweeps counter-clockwise on screen. Getting this exact convention
+  // right is what keeps the label leader lines landing on the true slice
+  // instead of a mirrored/rotated position elsewhere on the pie.
   let cumulative = 0
   const items = data.map((d) => {
     const value = d.count || 0
     const fraction = value / total
-    const startAngle = 90 - (cumulative / total) * 360
+    const startAngle = (cumulative / total) * 360
     cumulative += value
-    const endAngle = 90 - (cumulative / total) * 360
+    const endAngle = (cumulative / total) * 360
     const midAngle = (startAngle + endAngle) / 2
     const angleRad = -midAngle * RADIAN
     const x = cx + labelRadius * Math.cos(angleRad)
@@ -105,6 +110,7 @@ function renderDispositionLabels(props: {
       name: d.disposition,
       value,
       fraction,
+      color: DISPOSITION_COLORS[d.disposition] || '#bbb',
       side: Math.cos(angleRad) >= 0 ? 'right' : 'left',
       x,
       y,
@@ -169,19 +175,23 @@ function renderDispositionLabels(props: {
     }
   })
 
+  const dotRadius = 3
+
   return (
     <g>
       {items.map((it, i) => {
         const textAnchor = it.side === 'right' ? 'start' : 'end'
-        const labelX = it.side === 'right' ? it.x + 4 : it.x - 4
+        const dotX = it.side === 'right' ? it.x + dotRadius : it.x - dotRadius
+        const labelX = it.side === 'right' ? it.x + dotRadius * 2 + 4 : it.x - dotRadius * 2 - 4
         return (
           <g key={i}>
             <polyline
               points={`${it.anchorX},${it.anchorY} ${it.bendX},${it.y} ${it.x},${it.y}`}
               fill="none"
-              stroke={T.muted}
-              strokeWidth={1}
+              stroke={it.color}
+              strokeWidth={1.5}
             />
+            <circle cx={dotX} cy={it.y} r={dotRadius} fill={it.color} />
             <text
               x={labelX}
               y={it.y}

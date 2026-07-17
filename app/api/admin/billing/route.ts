@@ -74,7 +74,7 @@ export async function GET(req: NextRequest) {
     if (tenantId) {
       const { data: tenant, error } = await supabase
         .from('white_label_tenants')
-        .select('id, slug, brand_name, status, is_active, stripe_customer_id, stripe_subscription_id, created_at')
+        .select('id, slug, brand_name, status, is_active, is_demo, stripe_customer_id, stripe_subscription_id, created_at')
         .eq('id', tenantId)
         .maybeSingle()
       if (error) throw error
@@ -122,6 +122,7 @@ export async function GET(req: NextRequest) {
           slug: tenant.slug,
           brand_name: tenant.brand_name,
           status: tenant.status,
+          is_demo: !!tenant.is_demo,
           stripe_customer_id: tenant.stripe_customer_id,
           stripe_subscription_id: tenant.stripe_subscription_id,
           billing,
@@ -133,7 +134,7 @@ export async function GET(req: NextRequest) {
 
     const { data: tenants, error } = await supabase
       .from('white_label_tenants')
-      .select('id, slug, brand_name, status, is_active, stripe_customer_id, stripe_subscription_id, created_at')
+      .select('id, slug, brand_name, status, is_active, is_demo, stripe_customer_id, stripe_subscription_id, created_at')
       .order('created_at', { ascending: false })
     if (error) throw error
 
@@ -141,7 +142,7 @@ export async function GET(req: NextRequest) {
       (tenants ?? []).map(async t => {
         let billing: BillingState | null = null
         let billingError: string | null = null
-        if (t.stripe_subscription_id) {
+        if (t.stripe_subscription_id && !t.is_demo) {
           try {
             billing = await fetchSubscriptionState(t.stripe_subscription_id)
           } catch (e: any) {
@@ -163,9 +164,19 @@ export async function GET(req: NextRequest) {
     let activeCount = 0
     let pastDueCount = 0
     let canceledCount = 0
+    let demoCount = 0
     let currency = 'USD'
 
-    for (const t of resolved) {
+    const finalRows = resolved.map(t => {
+      if (t.is_demo) {
+        demoCount++
+        // Demo tenants are internal test accounts — never counted toward
+        // billed/active/past-due/canceled totals or MRR, and their Stripe
+        // state (if any real subscription happens to be attached) is
+        // deliberately not surfaced as "active"/revenue on this row so it
+        // can't be mistaken for a paying customer.
+        return { ...t, billing: null, billingError: null }
+      }
       if (t.stripe_subscription_id) billedCount++
       if (t.billing) {
         currency = t.billing.currency || currency
@@ -174,7 +185,8 @@ export async function GET(req: NextRequest) {
         else if (t.billing.state === 'past_due' || t.billing.state === 'unpaid') pastDueCount++
         else if (t.billing.state === 'canceled' || t.billing.state === 'incomplete_expired') canceledCount++
       }
-    }
+      return t
+    })
 
     return NextResponse.json({
       success: true,
@@ -184,11 +196,12 @@ export async function GET(req: NextRequest) {
         activeCount,
         pastDueCount,
         canceledCount,
+        demoCount,
         mrrCents,
         arrCents: mrrCents * 12,
         currency,
       },
-      tenants: resolved,
+      tenants: finalRows,
     })
   } catch (err: any) {
     console.error('[admin/billing] failed:', err)
