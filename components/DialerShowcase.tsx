@@ -156,8 +156,8 @@ export default function DialerShowcase() {
 
   return (
     <MacFrame title="DIALER" titleColor="#5a8a5a" bg={C.sidebar}>
-      <div style={{ display: 'flex', minHeight: 220 }}>
-        <div style={{ flex: 1, padding: 8, borderRight: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column' }}>
+      <div className="ds-showcase-row" style={{ display: 'flex', minHeight: 220 }}>
+        <div className="ds-showcase-call" style={{ flex: 1, padding: 8, borderRight: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
           <div style={{ flex: 1, background: C.page, border: `1px solid ${C.cardBorder}`, borderRadius: 4, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: '4px 12px', background: C.sidebar, borderBottom: `1px solid ${C.cardBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: 9, letterSpacing: 3, color: C.onSidebarMuted, fontWeight: 700 }}>LEAD PROFILE</span>
@@ -209,7 +209,7 @@ export default function DialerShowcase() {
             </div>
           </div>
         </div>
-        <div style={{ width: 196, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+        <div className="ds-showcase-metrics" style={{ width: 196, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
           <div style={{ padding: '6px 12px', background: C.sidebar, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
             <span style={{ fontSize: 9, letterSpacing: 3, color: C.onSidebarMuted, fontWeight: 700 }}>TODAY&apos;S METRICS</span>
           </div>
@@ -252,6 +252,11 @@ export default function DialerShowcase() {
         @keyframes ds-showcase-rise {
           from { opacity: 0; transform: translateY(6px); }
           to { opacity: 1; transform: translateY(0); }
+        }
+        @media (max-width: 560px) {
+          .ds-showcase-row { flex-direction: column; }
+          .ds-showcase-call { border-right: none !important; border-bottom: 1px solid rgba(255,255,255,0.08); }
+          .ds-showcase-metrics { width: 100% !important; }
         }
       `}</style>
     </MacFrame>
