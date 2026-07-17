@@ -562,11 +562,11 @@ export default function BillingPage() {
             /* Explicit longhand (not shorthand padding) so only the top
                edge accounts for the notch / dynamic island via
                env(safe-area-inset-top) — left/right/bottom stay plain
-               values. The 20px fallback (used when the env() var isn't
+               values. The 21px fallback (used when the env() var isn't
                supported) matches what this rule used before; on real
                notched devices the safe-area inset takes over and adds
                whatever the device actually needs on top of it. */
-            padding-top: calc(20px + env(safe-area-inset-top, 0px)) !important;
+            padding-top: calc(21px + env(safe-area-inset-top, 0px)) !important;
             padding-right: 14px !important;
             padding-bottom: 20px !important;
             padding-left: 14px !important;

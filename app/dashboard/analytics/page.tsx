@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -211,6 +211,10 @@ function renderDispositionLabels(props: {
 
 type Range = 'today' | 'week' | 'month' | 'all' | 'custom'
 
+// Key for persisting the selected time filter across page refreshes.
+// Namespaced so it can't collide with other pages' saved settings.
+const ANALYTICS_RANGE_STORAGE_KEY = 'dialerseat:analytics:range'
+
 function getRangeBounds(range: Range, customStart?: string, customEnd?: string): { start: string | null; end: string | null } {
   if (range === 'all') return { start: null, end: null }
   const now = new Date()
@@ -317,6 +321,47 @@ export default function AnalyticsPage() {
   const [dispositions, setDispositions] = useState<any[]>([])
   const [campaigns, setCampaigns] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const isFirstRangeSaveRef = useRef(true)
+
+  // Restore the previously-selected time filter. This intentionally runs
+  // in an effect (after mount) rather than in a useState lazy initializer:
+  // localStorage isn't available during server-side rendering, so reading
+  // it during initial render would make the server-rendered HTML disagree
+  // with the client's first render and trigger a hydration mismatch.
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(ANALYTICS_RANGE_STORAGE_KEY)
+      if (!saved) return
+      const parsed = JSON.parse(saved)
+      const validRanges: Range[] = ['today', 'week', 'month', 'all', 'custom']
+      if (validRanges.includes(parsed?.range)) setRange(parsed.range)
+      if (typeof parsed?.customStart === 'string') setCustomStart(parsed.customStart)
+      if (typeof parsed?.customEnd === 'string') setCustomEnd(parsed.customEnd)
+    } catch {
+      // Corrupt or inaccessible storage (e.g. private browsing) — just
+      // keep the default filter, nothing else to do here.
+    }
+  }, [])
+
+  // Persist the filter whenever it changes. The very first fire of this
+  // effect happens right after mount, before the restore effect above has
+  // had a chance to run, so skip it — otherwise it would immediately
+  // overwrite a saved filter with the pre-restore default.
+  useEffect(() => {
+    if (isFirstRangeSaveRef.current) {
+      isFirstRangeSaveRef.current = false
+      return
+    }
+    try {
+      localStorage.setItem(
+        ANALYTICS_RANGE_STORAGE_KEY,
+        JSON.stringify({ range, customStart, customEnd })
+      )
+    } catch {
+      // Ignore write failures (e.g. storage disabled/full) — persistence
+      // is a nice-to-have, not required for the page to function.
+    }
+  }, [range, customStart, customEnd])
 
   
   useEffect(() => {

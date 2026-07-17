@@ -148,7 +148,7 @@ export default async function Home({ searchParams }: PageProps) {
           #features, #compare, #pricing { scroll-margin-top: 90px; }
 
           .ds-hero-logged-out {
-            padding-top: max(105px, calc(env(safe-area-inset-top, 0px) + 90px));
+            padding-top: max(122px, calc(env(safe-area-inset-top, 0px) + 105px));
             padding-bottom: 60px;
             padding-left: 20px;
             padding-right: 20px;
@@ -404,7 +404,7 @@ export default async function Home({ searchParams }: PageProps) {
             maxWidth: '900px',
             margin: '0 auto',
           }}>
-            FOR SALES TEAMS, CALL CENTERS, AGENCIES, AND <u style={{ color: '#2a4a8a' }}>ANYONE</u> WHO WORKS LEADS.
+            FOR SALES TEAMS, CALL CENTERS, AGENCIES, AND <u>ANYONE</u> WHO WORKS LEADS.
           </h2>
         </div>
 
