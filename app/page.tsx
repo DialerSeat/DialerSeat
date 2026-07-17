@@ -100,7 +100,7 @@ export default async function Home({ searchParams }: PageProps) {
         .ds-stats { flex-direction: row; padding: 16px 12px; gap: 8px; }
         .ds-section { padding: 90px 60px; }
 
-        #features, #compare, #pricing { scroll-margin-top: 106px; }
+        #features, #compare, #pricing { scroll-margin-top: 135px; }
         .ds-grid-3 { grid-template-columns: repeat(3, 1fr); }
         .ds-pricing-card { padding: 60px; }
         .ds-cta-buttons { flex-direction: row; }
@@ -145,7 +145,7 @@ export default async function Home({ searchParams }: PageProps) {
             letter-spacing: 2px !important;
           }
 
-          #features, #compare, #pricing { scroll-margin-top: 90px; }
+          #features, #compare, #pricing { scroll-margin-top: 115px; }
 
           .ds-hero-logged-out {
             padding-top: max(122px, calc(env(safe-area-inset-top, 0px) + 105px));
