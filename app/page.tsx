@@ -81,8 +81,9 @@ export default async function Home({ searchParams }: PageProps) {
           display: grid;
           grid-template-columns: 1.15fr 1fr;
           grid-template-areas:
-            "top      showcase"
-            "bottom   showcase";
+            "top        showcase"
+            "paragraph  showcase"
+            "buttons    showcase";
           column-gap: 56px;
           row-gap: 32px;
           align-items: start;
@@ -90,13 +91,16 @@ export default async function Home({ searchParams }: PageProps) {
           margin: 0 auto;
         }
         .ds-hero-copy-top { grid-area: top; }
-        .ds-hero-copy-bottom { grid-area: bottom; }
+        .ds-hero-copy-paragraph { grid-area: paragraph; }
+        .ds-hero-copy-buttons { grid-area: buttons; }
         .ds-hero-showcase { grid-area: showcase; align-self: center; }
 
         .ds-showcase-shell { width: 100%; }
 
         .ds-stats { flex-direction: row; padding: 16px 12px; gap: 8px; }
         .ds-section { padding: 120px 60px; }
+
+        #features, #compare, #pricing { scroll-margin-top: 110px; }
         .ds-grid-3 { grid-template-columns: repeat(3, 1fr); }
         .ds-pricing-card { padding: 60px; }
         .ds-cta-buttons { flex-direction: row; }
@@ -141,6 +145,8 @@ export default async function Home({ searchParams }: PageProps) {
             letter-spacing: 2px !important;
           }
 
+          #features, #compare, #pricing { scroll-margin-top: 90px; }
+
           .ds-hero-logged-out {
             padding-top: max(140px, calc(env(safe-area-inset-top, 0px) + 120px));
             padding-bottom: 60px;
@@ -159,18 +165,15 @@ export default async function Home({ searchParams }: PageProps) {
             grid-template-areas:
               "top"
               "showcase"
-              "bottom" !important;
+              "buttons"
+              "paragraph" !important;
             row-gap: 28px !important;
           }
 
           .ds-showcase-shell {
-            width: 720px;
-            max-width: 720px;
-            transform: scale(0.44);
-            transform-origin: top left;
-            margin-bottom: -175px;
+            width: 100%;
           }
-          .ds-hero-showcase { overflow: hidden; width: 100%; }
+          .ds-hero-showcase { width: 100%; }
 
           .ds-hero-h1 { letter-spacing: -1px !important; line-height: 1.1 !important; }
           .ds-hero-p { font-size: 15px !important; }
@@ -323,18 +326,19 @@ export default async function Home({ searchParams }: PageProps) {
             </div>
           </div>
 
-          <div className="ds-hero-copy-bottom" style={{ textAlign: 'left' }}>
+          <div className="ds-hero-copy-paragraph" style={{ textAlign: 'left' }}>
             <p className="ds-hero-p" style={{
               fontSize: '17px',
               lineHeight: '1.7',
               letterSpacing: '0.5px',
               color: 'var(--brand-muted-text, #5a5e6a)',
               maxWidth: '520px',
-              marginBottom: '32px',
             }}>
               The professional outbound dialer built for <u>ANYONE</u> who lives on the phone. Upload your leads, launch your campaigns, and let DialerSeat do the heavy lifting — for a fraction of what everyone else charges.
             </p>
+          </div>
 
+          <div className="ds-hero-copy-buttons" style={{ textAlign: 'left' }}>
             <div className="ds-cta-buttons" style={{
               display: 'flex',
               alignItems: 'center',

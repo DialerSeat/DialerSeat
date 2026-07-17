@@ -46,6 +46,18 @@ export async function GET(req: NextRequest) {
     let owned = (ownedTeams || []).map((t: any) => ({ ...t, viewerRole: 'owner' as const }))
     const member = memberTeams.map((t: any) => ({ ...t, viewerRole: 'member' as const }))
 
+    if (owned.length > 0) {
+      const { data: ownerTenant } = await supabaseAdmin
+        .from('white_label_tenants')
+        .select('id, slug, brand_name, logo_url, primary_color, custom_domain, status, is_active')
+        .eq('owner_clerk_id', userId)
+        .eq('is_active', true)
+        .maybeSingle()
+
+      const tenant = ownerTenant && ownerTenant.status === 'active' ? ownerTenant : null
+      owned = owned.map((t: any) => ({ ...t, tenant }))
+    }
+
     if (detail && owned.length > 0) {
       const ownedIds = owned.map((t: any) => t.id)
 

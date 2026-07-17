@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import SeatLinksPanel from '@/components/teams/SeatLinksPanel'
 import RosterPanel from '@/components/teams/RosterPanel'
+import CampaignsAccessPanel from '@/components/teams/CampaignsAccessPanel'
+import WhitelabelTieIn from '@/components/teams/WhitelabelTieIn'
 
 
 
@@ -98,6 +100,16 @@ interface OwnedTeam {
   pendingMembers: TeamMember[]
   codes: TeamCode[]
   teamCampaigns: TeamCampaignRow[]
+  tenant: {
+    id: string
+    slug: string
+    brand_name: string | null
+    logo_url: string | null
+    primary_color: string | null
+    custom_domain: string | null
+    status: string
+    is_active: boolean
+  } | null
 }
 interface MemberTeam {
   id: string
@@ -909,6 +921,12 @@ export default function TeamsPage() {
                       {isExpanded && (
                         <div style={{ padding: '16px 18px', background: T.surface }}>
 
+                          {team.tenant && (
+                            <div style={{ marginBottom: 20 }}>
+                              <WhitelabelTieIn tenant={team.tenant} />
+                            </div>
+                          )}
+
                           <Section title="ROSTER" accent={T.accent}>
                             <RosterPanel
                               pendingMembers={team.pendingMembers}
@@ -925,64 +943,16 @@ export default function TeamsPage() {
                             />
                           </Section>
 
-                          <Section
-                            title={`ATTACHED CAMPAIGNS (${campaignCount})`}
-                            accent={T.accent}
-                            action={(
-                              <button onClick={() => openAttachModal(team)} style={btnPrimary(false)}>+ ATTACH</button>
-                            )}
-                          >
-                            {campaignCount === 0 ? (
-                              <EmptyHint text="No campaigns attached. Attach a campaign to grant team members access to its leads." />
-                            ) : (
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                {team.teamCampaigns.map(tc => {
-                                  const busy = actioningId === `${team.id}:${tc.campaignId}`
-                                  return (
-                                    <div key={tc.campaignId} style={{
-                                      background: T.bg, border: `1px solid ${T.border}`, borderRadius: 3,
-                                      padding: '8px 12px', display: 'flex', alignItems: 'center',
-                                      gap: 10, flexWrap: 'wrap',
-                                    }}>
-                                      <div style={{ flex: '1 1 180px', minWidth: 0 }}>
-                                        <div style={{
-                                          fontSize: 12, fontWeight: 'bold', color: T.text, letterSpacing: 0.5,
-                                          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                                        }}>
-                                          {tc.campaign?.name || '(deleted campaign)'}
-                                        </div>
-                                        {tc.campaign && (
-                                          <div style={{ fontSize: 10, color: T.muted, fontFamily: 'monospace', marginTop: 2 }}>
-                                            {tc.campaign.called_leads} / {tc.campaign.total_leads} called
-                                          </div>
-                                        )}
-                                      </div>
-                                      <select
-                                        value={tc.accessMode}
-                                        onChange={e => updateCampaignAccess(team.id, tc.campaignId, e.target.value as AccessMode)}
-                                        disabled={busy}
-                                        style={{
-                                          padding: '5px 8px', background: T.surface,
-                                          border: `1px solid ${T.border}`, borderRadius: 3,
-                                          fontSize: 10, fontFamily: 'monospace', letterSpacing: 1,
-                                          color: T.text, cursor: busy ? 'not-allowed' : 'pointer',
-                                        }}
-                                      >
-                                        <option value="owner_pays">OWNER PAYS</option>
-                                        <option value="agent_pays">AGENT PAYS</option>
-                                        <option value="public">PUBLIC</option>
-                                        <option value="free">FREE</option>
-                                      </select>
-                                      <button
-                                        onClick={() => detachCampaign(team.id, tc.campaignId, tc.campaign?.name || 'this campaign')}
-                                        disabled={busy}
-                                        style={btnSubtle(busy, T.red)}
-                                      >DETACH</button>
-                                    </div>
-                                  )
-                                })}
-                              </div>
-                            )}
+                          <Section title="CAMPAIGNS & ACCESS" accent={T.accent}>
+                            <CampaignsAccessPanel
+                              teamId={team.id}
+                              teamCampaigns={team.teamCampaigns}
+                              activeMembers={team.members}
+                              actioningId={actioningId}
+                              onAttach={() => openAttachModal(team)}
+                              onAccessModeChange={(campaignId, mode) => updateCampaignAccess(team.id, campaignId, mode)}
+                              onDetach={(campaignId, name) => detachCampaign(team.id, campaignId, name)}
+                            />
                           </Section>
 
                           <Section title={`SEAT LINKS (${codeCount})`} accent={T.accent}>
@@ -1461,16 +1431,6 @@ function Section({ title, accent, action, children }: {
       </div>
       {children}
     </div>
-  )
-}
-
-function EmptyHint({ text }: { text: string }) {
-  return (
-    <div style={{
-      background: 'var(--brand-page-bg)', border: '1px dashed var(--brand-card-border)', borderRadius: 3,
-      padding: '12px 14px', fontSize: 11, color: 'var(--brand-muted-text)',
-      letterSpacing: 0.5, lineHeight: 1.5,
-    }}>{text}</div>
   )
 }
 

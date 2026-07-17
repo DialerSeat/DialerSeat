@@ -130,6 +130,13 @@ export async function GET(
         : null,
     }))
 
+    const { data: ownerTenant } = await supabaseAdmin
+      .from('white_label_tenants')
+      .select('id, slug, brand_name, logo_url, primary_color, custom_domain, status, is_active')
+      .eq('owner_clerk_id', team.owner_id)
+      .eq('is_active', true)
+      .maybeSingle()
+
     return NextResponse.json({
       success: true,
       team: {
@@ -140,6 +147,7 @@ export async function GET(
         pendingMembers,
         codes,
         teamCampaigns,
+        tenant: ownerTenant && ownerTenant.status === 'active' ? ownerTenant : null,
       },
     })
   } catch (error: any) {
