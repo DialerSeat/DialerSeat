@@ -53,6 +53,130 @@ const DISPOSITION_COLORS: Record<string, string> = {
   'NO_ANSWER': '#bbb',
 }
 
+// Renders disposition-pie labels without letting them collide.
+// Recharts' built-in `label` fn places every label at the same fixed
+// radius using only that slice's own angle, so slices that are close
+// together (lots of thin slivers) end up with overlapping text. This
+// groups labels by which side of the pie they're on, spaces them out
+// vertically so they never overlap, and draws a short leader line back
+// to the slice so it's still clear which label belongs to which wedge.
+function renderDispositionLabels(props: {
+  cx: number
+  cy: number
+  outerRadius: number
+  index: number
+  data: { disposition: string; count: number }[]
+}) {
+  const { cx, cy, outerRadius, index, data } = props
+  // Recharts invokes `label` once per slice. We only want to compute
+  // and draw the *entire* label set a single time (on the first slice)
+  // so labels don't get stacked on top of themselves N times.
+  if (index !== 0) return null
+  const total = data.reduce((sum, d) => sum + (d.count || 0), 0)
+  if (total <= 0) return null
+
+  const RADIAN = Math.PI / 180
+  const labelRadius = outerRadius + 22
+  const lineInnerRadius = outerRadius + 4
+  const lineBendRadius = outerRadius + 16
+  const lineHeight = 14 // min vertical spacing between stacked labels
+  const fontSize = 11
+
+  // Compute each slice's midpoint angle (in the same coordinate system
+  // Recharts uses: 0deg = 3 o'clock, increasing counter-clockwise) and
+  // its natural (unclamped) label position.
+  let cumulative = 0
+  const items = data.map((d) => {
+    const value = d.count || 0
+    const fraction = value / total
+    const startAngle = 90 - (cumulative / total) * 360
+    cumulative += value
+    const endAngle = 90 - (cumulative / total) * 360
+    const midAngle = (startAngle + endAngle) / 2
+    const angleRad = -midAngle * RADIAN
+    const x = cx + labelRadius * Math.cos(angleRad)
+    const y = cy + labelRadius * Math.sin(angleRad)
+    const anchorX = cx + lineInnerRadius * Math.cos(angleRad)
+    const anchorY = cy + lineInnerRadius * Math.sin(angleRad)
+    const bendX = cx + lineBendRadius * Math.cos(angleRad)
+    return {
+      name: d.disposition,
+      value,
+      fraction,
+      side: Math.cos(angleRad) >= 0 ? 'right' : 'left',
+      x,
+      y,
+      anchorX,
+      anchorY,
+      bendX,
+    }
+  }).filter((it) => it.value > 0)
+
+  // Resolve vertical overlaps independently on each side of the pie,
+  // since labels on the left never collide with labels on the right.
+  const sides: Array<typeof items> = [
+    items.filter((it) => it.side === 'right').sort((a, b) => a.y - b.y),
+    items.filter((it) => it.side === 'left').sort((a, b) => a.y - b.y),
+  ]
+
+  sides.forEach((group) => {
+    if (group.length === 0) return
+    // Capture each label's natural (pre-collision) y and their average —
+    // this is the vertical center we want the final stack to sit on.
+    const idealMid = group.reduce((s, it) => s + it.y, 0) / group.length
+
+    // Push labels down if they're too close to the one above them.
+    for (let i = 1; i < group.length; i++) {
+      const prev = group[i - 1]
+      const cur = group[i]
+      if (cur.y - prev.y < lineHeight) {
+        cur.y = prev.y + lineHeight
+      }
+    }
+
+    // Re-center the resulting stack on that original midpoint so it
+    // doesn't drift toward the bottom of the chart.
+    const first = group[0]
+    const last = group[group.length - 1]
+    const naturalMid = (first.y + last.y) / 2
+    const shift = idealMid - naturalMid
+    group.forEach((it) => { it.y += shift })
+  })
+
+  return (
+    <g>
+      {items.map((it, i) => {
+        // Skip the tiniest slivers' text entirely (still shown in the
+        // tooltip and legend/colors) — a label has nowhere legible to
+        // go on a <2% slice and just adds clutter/overlap risk.
+        if (it.fraction < 0.02) return null
+        const textAnchor = it.side === 'right' ? 'start' : 'end'
+        const labelX = it.side === 'right' ? it.x + 4 : it.x - 4
+        return (
+          <g key={i}>
+            <polyline
+              points={`${it.anchorX},${it.anchorY} ${it.bendX},${it.y} ${it.x},${it.y}`}
+              fill="none"
+              stroke={T.muted}
+              strokeWidth={1}
+            />
+            <text
+              x={labelX}
+              y={it.y}
+              dy={4}
+              textAnchor={textAnchor}
+              fontSize={fontSize}
+              fill={T.text}
+            >
+              {it.name}
+            </text>
+          </g>
+        )
+      })}
+    </g>
+  )
+}
+
 type Range = 'today' | 'week' | 'month' | 'all' | 'custom'
 
 function getRangeBounds(range: Range, customStart?: string, customEnd?: string): { start: string | null; end: string | null } {
@@ -633,7 +757,7 @@ export default function AnalyticsPage() {
                       cx="50%"
                       cy="50%"
                       outerRadius={75}
-                      label={(entry: any) => `${entry.disposition}`}
+                      label={(props: any) => renderDispositionLabels({ ...props, data: dispositionsToRender })}
                       labelLine={false}
                     >
                       {dispositionsToRender.map((d, i) => (

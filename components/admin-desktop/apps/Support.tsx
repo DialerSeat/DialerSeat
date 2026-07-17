@@ -23,6 +23,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 
 
 type SubType = 'support' | 'bug' | 'suggestion' | 'exit'
+type TabKey = 'all' | SubType
 type Status = 'new' | 'open' | 'responded' | 'resolved' | 'closed'
 
 interface Submission {
@@ -43,7 +44,8 @@ interface Submission {
   created_at: string
 }
 
-const TABS: { key: SubType; label: string; icon: string; accent: string }[] = [
+const TABS: { key: TabKey; label: string; icon: string; accent: string }[] = [
+  { key: 'all', label: 'All', icon: '◆', accent: '#8a93ad' },
   { key: 'support', label: 'Support', icon: '✦', accent: '#4a9eff' },
   { key: 'bug', label: 'Bugs', icon: '⚑', accent: '#ff6b5e' },
   { key: 'suggestion', label: 'Suggestions', icon: '💡', accent: '#f7c948' },
@@ -85,7 +87,7 @@ function initials(name: string | null, username: string | null, email: string | 
 }
 
 export default function SupportApp() {
-  const [tab, setTab] = useState<SubType>('support')
+  const [tab, setTab] = useState<TabKey>('all')
   const [items, setItems] = useState<Submission[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -98,11 +100,11 @@ export default function SupportApp() {
   // list, not whatever was auto-selected.
   const [mobileShowDetail, setMobileShowDetail] = useState(false)
 
-  const load = useCallback(async (which: SubType) => {
+  const load = useCallback(async (which: TabKey) => {
     setLoading(true)
     setError(null)
     try {
-      const r = await fetch(`/api/admin/support?type=${which}`, { cache: 'no-store' })
+      const r = await fetch(which === 'all' ? '/api/admin/support' : `/api/admin/support?type=${which}`, { cache: 'no-store' })
       const d = await r.json()
       if (!d.success) throw new Error(d.error || 'load failed')
       setItems(d.submissions as Submission[])
@@ -139,12 +141,16 @@ export default function SupportApp() {
     setMobileShowDetail(true)
   }, [])
 
-  const changeTab = useCallback((t: SubType) => {
+  const changeTab = useCallback((t: TabKey) => {
     setTab(t)
     setMobileShowDetail(false)
   }, [])
 
   const activeTab = TABS.find(t => t.key === tab)!
+  const accentFor = useCallback((it: Submission) => {
+    if (tab !== 'all') return activeTab.accent
+    return TABS.find(t => t.key === it.type)?.accent ?? activeTab.accent
+  }, [tab, activeTab])
   const newCount = (t: SubType) => items.filter(i => i.status === 'new').length
 
   const patch = useCallback(async (id: string, fields: Record<string, any>) => {
@@ -190,7 +196,7 @@ export default function SupportApp() {
       {/* ── LEFT: tab rail + list ── */}
       <div className="sup-list-pane" style={{ width: 340, borderRight: `1px solid ${LINE}`, display: 'flex', flexDirection: 'column', background: PANEL }}>
         {/* tab rail */}
-        <div style={{ display: 'flex', padding: 10, gap: 6, borderBottom: `1px solid ${LINE}` }}>
+        <div style={{ display: 'flex', padding: 8, gap: 4, borderBottom: `1px solid ${LINE}` }}>
           {TABS.map(t => {
             const active = t.key === tab
             return (
@@ -198,17 +204,19 @@ export default function SupportApp() {
                 key={t.key}
                 onClick={() => changeTab(t.key)}
                 style={{
-                  flex: 1, padding: '10px 8px', borderRadius: 8, cursor: 'pointer',
+                  flex: 1, padding: '8px 4px', borderRadius: 8, cursor: 'pointer',
                   border: `1px solid ${active ? t.accent : 'transparent'}`,
                   background: active ? `${t.accent}1f` : 'transparent',
                   color: active ? TXT : TXT_DIM,
-                  fontFamily: FONT, fontSize: 11, letterSpacing: 1.5, fontWeight: 700,
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-                  transition: 'all 0.15s ease',
+                  fontFamily: FONT, fontSize: 9, letterSpacing: 0.8, fontWeight: 700,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                  transition: 'all 0.15s ease', minWidth: 0,
                 }}
               >
-                <span style={{ fontSize: 15, color: active ? t.accent : TXT_FAINT }}>{t.icon}</span>
-                {t.label.toUpperCase()}
+                <span style={{ fontSize: 14, color: active ? t.accent : TXT_FAINT }}>{t.icon}</span>
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>
+                  {t.label.toUpperCase()}
+                </span>
               </button>
             )
           })}
@@ -220,12 +228,14 @@ export default function SupportApp() {
           {error && <div style={{ padding: 20, color: '#ff6b5e', fontSize: 12 }}>{error}</div>}
           {!loading && !error && items.length === 0 && (
             <div style={{ padding: 28, textAlign: 'center', color: TXT_FAINT, fontSize: 12, lineHeight: 1.6 }}>
-              No {activeTab.label.toLowerCase()} submissions yet.
+              No {tab === 'all' ? '' : `${activeTab.label.toLowerCase()} `}submissions yet.
             </div>
           )}
           {items.map(it => {
             const active = it.id === selectedId
             const sm = STATUS_META[it.status]
+            const accent = accentFor(it)
+            const typeMeta = TABS.find(t => t.key === it.type)
             return (
               <button
                 key={it.id}
@@ -234,13 +244,13 @@ export default function SupportApp() {
                   width: '100%', textAlign: 'left', cursor: 'pointer',
                   padding: '12px 14px', borderBottom: `1px solid ${LINE}`,
                   background: active ? PANEL_2 : 'transparent',
-                  borderLeft: `2px solid ${active ? activeTab.accent : 'transparent'}`,
+                  borderLeft: `2px solid ${active ? accent : 'transparent'}`,
                   display: 'flex', gap: 11, alignItems: 'flex-start', fontFamily: FONT,
                 }}
               >
                 <div style={{
                   width: 34, height: 34, borderRadius: 9, flexShrink: 0,
-                  background: `${activeTab.accent}26`, color: activeTab.accent,
+                  background: `${accent}26`, color: accent,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 12, fontWeight: 800, letterSpacing: 0.5,
                 }}>
@@ -255,11 +265,18 @@ export default function SupportApp() {
                       {sm.label}
                     </span>
                   </div>
-                  {it.disposition && (
-                    <div style={{ marginTop: 3, fontSize: 9.5, letterSpacing: 1, color: activeTab.accent, fontWeight: 700 }}>
-                      {it.disposition.toUpperCase()}
-                    </div>
-                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3, flexWrap: 'wrap' }}>
+                    {tab === 'all' && typeMeta && (
+                      <span style={{ fontSize: 9, letterSpacing: 1, color: accent, fontWeight: 700 }}>
+                        {typeMeta.icon} {typeMeta.label.toUpperCase()}
+                      </span>
+                    )}
+                    {it.disposition && (
+                      <span style={{ fontSize: 9.5, letterSpacing: 1, color: accent, fontWeight: 700 }}>
+                        {tab === 'all' && typeMeta ? '· ' : ''}{it.disposition.toUpperCase()}
+                      </span>
+                    )}
+                  </div>
                   <div style={{ marginTop: 3, fontSize: 11.5, color: TXT_DIM, lineHeight: 1.45, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                     {it.body}
                   </div>
@@ -296,7 +313,7 @@ export default function SupportApp() {
                 </button>
                 <div style={{
                   width: 44, height: 44, borderRadius: 11, flexShrink: 0,
-                  background: `${activeTab.accent}26`, color: activeTab.accent,
+                  background: `${accentFor(selected)}26`, color: accentFor(selected),
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 15, fontWeight: 800,
                 }}>
@@ -310,6 +327,14 @@ export default function SupportApp() {
                     {selected.snap_username ? `@${selected.snap_username}` : ''}
                     {selected.snap_username && selected.snap_email ? '  ·  ' : ''}
                     {selected.snap_email || ''}
+                    {tab === 'all' && (
+                      <>
+                        {(selected.snap_username || selected.snap_email) ? '  ·  ' : ''}
+                        <span style={{ color: accentFor(selected), fontWeight: 700 }}>
+                          {TABS.find(t => t.key === selected.type)?.label}
+                        </span>
+                      </>
+                    )}
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
@@ -317,7 +342,7 @@ export default function SupportApp() {
                     {STATUS_META[selected.status].label}
                   </div>
                   {selected.disposition && (
-                    <div style={{ marginTop: 4, fontSize: 9.5, letterSpacing: 1, color: activeTab.accent, fontWeight: 700 }}>
+                    <div style={{ marginTop: 4, fontSize: 9.5, letterSpacing: 1, color: accentFor(selected), fontWeight: 700 }}>
                       {selected.disposition.toUpperCase()}
                     </div>
                   )}
@@ -381,7 +406,7 @@ export default function SupportApp() {
                     style={{
                       padding: '10px 18px', borderRadius: 9, border: 'none',
                       cursor: draft.trim() && !saving ? 'pointer' : 'default',
-                      background: draft.trim() ? activeTab.accent : 'rgba(255,255,255,0.08)',
+                      background: draft.trim() ? accentFor(selected) : 'rgba(255,255,255,0.08)',
                       color: draft.trim() ? '#0b0c12' : TXT_FAINT,
                       fontFamily: FONT, fontSize: 11, letterSpacing: 1.5, fontWeight: 800,
                     }}
