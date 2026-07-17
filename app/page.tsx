@@ -68,7 +68,6 @@ export default async function Home({ searchParams }: PageProps) {
           padding-bottom: 80px;
           padding-left: 40px;
           padding-right: 40px;
-          min-height: 100vh;
         }
         .ds-hero-logged-in {
           padding-top: 40px;
@@ -96,6 +95,7 @@ export default async function Home({ searchParams }: PageProps) {
         .ds-hero-showcase { grid-area: showcase; align-self: center; }
 
         .ds-showcase-shell { width: 100%; }
+        .ds-showcase-scale { width: 100%; }
 
         .ds-stats { flex-direction: row; padding: 16px 12px; gap: 8px; }
         .ds-section { padding: 120px 60px; }
@@ -172,6 +172,13 @@ export default async function Home({ searchParams }: PageProps) {
 
           .ds-showcase-shell {
             width: 100%;
+            overflow: hidden;
+            height: 170px;
+          }
+          .ds-showcase-scale {
+            width: 640px;
+            transform: scale(0.54);
+            transform-origin: top left;
           }
           .ds-hero-showcase { width: 100%; }
 
@@ -289,7 +296,9 @@ export default async function Home({ searchParams }: PageProps) {
 
           <div className="ds-hero-showcase">
             <div className="ds-showcase-shell">
-              <DialerShowcase />
+              <div className="ds-showcase-scale">
+                <DialerShowcase />
+              </div>
             </div>
 
             <div className="ds-stats" style={{

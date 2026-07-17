@@ -253,11 +253,6 @@ export default function DialerShowcase() {
           from { opacity: 0; transform: translateY(6px); }
           to { opacity: 1; transform: translateY(0); }
         }
-        @media (max-width: 560px) {
-          .ds-showcase-row { flex-direction: column; }
-          .ds-showcase-call { border-right: none !important; border-bottom: 1px solid rgba(255,255,255,0.08); }
-          .ds-showcase-metrics { width: 100% !important; }
-        }
       `}</style>
     </MacFrame>
   )
