@@ -7,6 +7,7 @@ const supabase = getServiceClient('admin/push/prefs')
 interface Prefs {
   master_enabled: boolean
   signup: boolean
+  account_deleted: boolean
   new_sub: boolean
   resub: boolean
   renewal: boolean
@@ -16,6 +17,7 @@ interface Prefs {
 const DEFAULT_PREFS: Prefs = {
   master_enabled: true,
   signup: true,
+  account_deleted: true,
   new_sub: true,
   resub: true,
   renewal: true,
@@ -31,7 +33,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('admin_notification_prefs')
-    .select('master_enabled, signup, new_sub, resub, renewal, cancel')
+    .select('master_enabled, signup, account_deleted, new_sub, resub, renewal, cancel')
     .eq('id', 1)
     .maybeSingle()
 
@@ -60,7 +62,7 @@ export async function POST(req: NextRequest) {
   }
 
   const patch: Partial<Prefs> = {}
-  const boolKeys: (keyof Prefs)[] = ['master_enabled', 'signup', 'new_sub', 'resub', 'renewal', 'cancel']
+  const boolKeys: (keyof Prefs)[] = ['master_enabled', 'signup', 'account_deleted', 'new_sub', 'resub', 'renewal', 'cancel']
   for (const key of boolKeys) {
     if (typeof body[key] === 'boolean') patch[key] = body[key]
   }
@@ -73,7 +75,7 @@ export async function POST(req: NextRequest) {
     .from('admin_notification_prefs')
     .update({ ...patch, updated_at: new Date().toISOString() })
     .eq('id', 1)
-    .select('master_enabled, signup, new_sub, resub, renewal, cancel')
+    .select('master_enabled, signup, account_deleted, new_sub, resub, renewal, cancel')
     .maybeSingle()
 
   if (error) {

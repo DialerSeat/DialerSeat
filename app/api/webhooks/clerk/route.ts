@@ -70,5 +70,22 @@ export async function POST(req: NextRequest) {
   const name = `${data.first_name || ''} ${data.last_name || ''}`.trim() || email?.split('@')[0] || 'Someone'
   await sendAdminPush('signup', `${name} just created a DialerSeat account.`)
 
+  // Durable record, independent of the users row this was just written to —
+  // if this account is deleted later, this row survives so the admin Logs
+  // page can still show that the signup happened.
+  try {
+    const { error: eventError } = await supabase.from('billing_events').insert({
+      clerk_id: clerkId,
+      event_type: 'account_created',
+      user_name: name,
+      user_email: email,
+    })
+    if (eventError) {
+      console.error('[webhooks/clerk] failed to record billing_events row:', eventError)
+    }
+  } catch (err) {
+    console.error('[webhooks/clerk] unexpected error recording billing_events:', err)
+  }
+
   return NextResponse.json({ ok: true })
 }

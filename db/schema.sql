@@ -325,8 +325,14 @@ CREATE TABLE IF NOT EXISTS public.subscriptions (
   canceled_at            timestamptz,
   created_at             timestamptz NOT NULL DEFAULT now(),
   updated_at             timestamptz NOT NULL DEFAULT now(),
-  discount_coupon        text
+  discount_coupon        text,
+  -- Stripe event `created` timestamp (not our received time) for whichever
+  -- webhook event most recently wrote this row. See
+  -- migrations/SUBSCRIPTIONS_EVENT_ORDERING_2026-07-18.sql — guards against
+  -- an out-of-order older event clobbering a newer status.
+  last_event_at          timestamptz
 );
+CREATE INDEX IF NOT EXISTS idx_subscriptions_last_event_at ON public.subscriptions (last_event_at);
 
 -- ---- stripe_events (webhook idempotency ledger) ----------------------------
 CREATE TABLE IF NOT EXISTS public.stripe_events (
@@ -1320,3 +1326,28 @@ CREATE TABLE IF NOT EXISTS public.telephony_events (
   attempts          integer NOT NULL DEFAULT 1
 );
 ALTER TABLE public.telephony_events ENABLE ROW LEVEL SECURITY;
+
+-- Append-only audit trail for account/subscription lifecycle events
+-- (account_created, initial_sub, resub, renewal, cancel). Deliberately has
+-- no foreign key to users — it carries a denormalized name/email snapshot
+-- taken at write time so it keeps meaning after an account is deleted.
+-- See migrations/BILLING_EVENTS_AUDIT_LOG_2026-07-18.sql for the full
+-- rationale. Same append-only privilege pattern as call_events above.
+CREATE TABLE IF NOT EXISTS public.billing_events (
+  id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  clerk_id         text NOT NULL,
+  event_type       text NOT NULL CHECK (event_type IN (
+                     'account_created', 'initial_sub', 'resub', 'renewal', 'cancel'
+                   )),
+  plan             text,
+  amount_cents     integer NOT NULL DEFAULT 0,
+  retention_weeks  integer,
+  stripe_subscription_id text,
+  user_name        text NOT NULL,
+  user_email       text,
+  created_at       timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_billing_events_created  ON public.billing_events (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_billing_events_clerk_id ON public.billing_events (clerk_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_billing_events_type     ON public.billing_events (event_type, created_at DESC);
+ALTER TABLE public.billing_events ENABLE ROW LEVEL SECURITY;

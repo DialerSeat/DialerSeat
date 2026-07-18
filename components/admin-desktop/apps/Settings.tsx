@@ -24,7 +24,7 @@ const SEPARATOR = 'rgba(60, 60, 67, 0.29)'
 const SF_STACK =
   '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Arial, sans-serif'
 
-type NotifKey = 'signup' | 'new_sub' | 'resub' | 'renewal' | 'cancel'
+type NotifKey = 'signup' | 'account_deleted' | 'new_sub' | 'resub' | 'renewal' | 'cancel'
 
 interface NotifRow {
   key: NotifKey
@@ -34,6 +34,7 @@ interface NotifRow {
 
 const NOTIF_ROWS: NotifRow[] = [
   { key: 'signup', label: 'New Sign-Ups', description: 'Someone creates a DialerSeat account' },
+  { key: 'account_deleted', label: 'Account Deletions', description: 'Someone deletes their DialerSeat account (rare)' },
   { key: 'new_sub', label: 'New Subscriptions', description: 'A first-time paid subscription starts' },
   { key: 'resub', label: 'Resubscriptions', description: 'A lapsed customer subscribes again' },
   { key: 'renewal', label: 'Renewals', description: 'A weekly subscription payment goes through' },
@@ -43,6 +44,7 @@ const NOTIF_ROWS: NotifRow[] = [
 interface PrefsResponse {
   master_enabled: boolean
   signup: boolean
+  account_deleted: boolean
   new_sub: boolean
   resub: boolean
   renewal: boolean
@@ -52,6 +54,7 @@ interface PrefsResponse {
 const DEFAULT_PREFS: PrefsResponse = {
   master_enabled: true,
   signup: true,
+  account_deleted: true,
   new_sub: true,
   resub: true,
   renewal: true,
@@ -316,6 +319,7 @@ export default function SettingsApp() {
 
   const notifState: Record<NotifKey, boolean> = {
     signup: prefs.signup,
+    account_deleted: prefs.account_deleted,
     new_sub: prefs.new_sub,
     resub: prefs.resub,
     renewal: prefs.renewal,
@@ -403,7 +407,7 @@ export default function SettingsApp() {
   }
 
   function toggleAll(next: boolean) {
-    savePref({ signup: next, new_sub: next, resub: next, renewal: next, cancel: next })
+    savePref({ signup: next, account_deleted: next, new_sub: next, resub: next, renewal: next, cancel: next })
   }
 
   function toggleMaster(next: boolean) {

@@ -7,20 +7,17 @@ import { getServiceClient } from '@/lib/supabase'
 // preference for the given event type FIRST, and only sends if that
 // specific toggle (and the master toggle) is on.
 //
-// Wired in so far, at their confirmed-live trigger points:
+// Wired in, at their confirmed-live trigger points:
+//   signup           -> app/api/webhooks/clerk/route.ts, 'user.created'
+//   account_deleted  -> app/api/webhooks/clerk/route.ts, 'user.deleted'
 //   new_sub / resub  -> app/api/stripe/webhook/route.ts, 'customer.subscription.created'
 //   renewal          -> app/api/stripe/webhook/route.ts, 'invoice.payment_succeeded'
 //   cancel           -> app/api/stripe/webhook/route.ts, 'customer.subscription.deleted'
 //
-// NOT yet wired: 'signup'. The moment a users row is first created isn't
-// located in this codebase (no Clerk webhook, no middleware, no schema
-// trigger found) — this function already supports it (see EVENT_COPY
-// below), it just has nowhere to be called from yet. Once that trigger
-// point is found or built, calling sendAdminPush('signup', ...) there is
-// the only remaining step.
+// All six event types are wired end to end.
 // ─────────────────────────────────────────────────────────────────────────
 
-export type NotifEventType = 'signup' | 'new_sub' | 'resub' | 'renewal' | 'cancel'
+export type NotifEventType = 'signup' | 'account_deleted' | 'new_sub' | 'resub' | 'renewal' | 'cancel'
 
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:support@dialerseat.com'
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || ''
@@ -43,16 +40,18 @@ function ensureVapidConfigured() {
 // Default copy per event type, used when a caller doesn't pass a custom
 // title/body. Keeps call sites at the webhook terse.
 const EVENT_COPY: Record<NotifEventType, { title: string; tag: string }> = {
-  signup:  { title: 'New Sign-Up',       tag: 'ds-signup' },
-  new_sub: { title: 'New Subscription',  tag: 'ds-new-sub' },
-  resub:   { title: 'Resubscription',    tag: 'ds-resub' },
-  renewal: { title: 'Renewal',           tag: 'ds-renewal' },
-  cancel:  { title: 'Cancellation',      tag: 'ds-cancel' },
+  signup:          { title: 'New Sign-Up',        tag: 'ds-signup' },
+  account_deleted: { title: 'Account Deleted',    tag: 'ds-account-deleted' },
+  new_sub:         { title: 'New Subscription',   tag: 'ds-new-sub' },
+  resub:           { title: 'Resubscription',     tag: 'ds-resub' },
+  renewal:         { title: 'Renewal',            tag: 'ds-renewal' },
+  cancel:          { title: 'Cancellation',       tag: 'ds-cancel' },
 }
 
 interface AdminNotificationPrefs {
   master_enabled: boolean
   signup: boolean
+  account_deleted: boolean
   new_sub: boolean
   resub: boolean
   renewal: boolean
@@ -63,7 +62,7 @@ async function getPrefs(): Promise<AdminNotificationPrefs | null> {
   const supabase = getServiceClient('pushNotify:getPrefs')
   const { data, error } = await supabase
     .from('admin_notification_prefs')
-    .select('master_enabled, signup, new_sub, resub, renewal, cancel')
+    .select('master_enabled, signup, account_deleted, new_sub, resub, renewal, cancel')
     .eq('id', 1)
     .maybeSingle()
   if (error) {

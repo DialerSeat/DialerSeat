@@ -20,7 +20,7 @@ import { useEffect, useState } from 'react'
 
 interface LogEntry {
   id: string
-  event_type: 'account_created' | 'initial_sub' | 'resub' | 'renewal' | 'cancel'
+  event_type: 'account_created' | 'account_deleted' | 'initial_sub' | 'resub' | 'renewal' | 'cancel'
   user_name: string
   user_email: string | null
   amount_cents: number
@@ -31,20 +31,11 @@ interface LogEntry {
 
 interface LogsResponse {
   entries: LogEntry[]
-  counts: { accountsCreated: number; initialSubs: number; resubs: number; renewals: number; cancels: number }
+  counts: { accountsCreated: number; accountsDeleted: number; initialSubs: number; resubs: number; renewals: number; cancels: number }
   window_days: number
 }
 
-type FilterMode = 'all' | 'account_created' | 'initial_sub' | 'resub' | 'renewal' | 'cancel'
-type TimeRange = '24h' | '7d' | '30d' | '90d' | 'all'
-
-const TIME_RANGES: { key: TimeRange; label: string; days: number }[] = [
-  { key: '24h', label: '24h', days: 1 },
-  { key: '7d', label: '7d', days: 7 },
-  { key: '30d', label: '30d', days: 30 },
-  { key: '90d', label: '90d', days: 90 },
-  { key: 'all', label: 'All time', days: Infinity },
-]
+type FilterMode = 'all' | 'account_created' | 'account_deleted' | 'initial_sub' | 'resub' | 'renewal' | 'cancel'
 
 
 const C = {
@@ -54,6 +45,7 @@ const C = {
   textDim: '#00a02a',      // Dimmer green for secondary
   textMute: '#0a5a18',     // Even dimmer for labels
   account_created: '#c084fc', // Violet — new account
+  account_deleted: '#e0417a', // Crimson — account gone (distinct from cancel's red)
   initial_sub: '#00ff41',     // Green — first-ever subscription
   resub: '#5ce6b8',           // Teal — came back after lapsing
   renewal: '#5cb6ff',       // Cyan-blue
@@ -64,14 +56,13 @@ const C = {
 
 const FONT = '"SF Mono", "Cascadia Mono", "JetBrains Mono", "Fira Code", Menlo, Consolas, "Courier New", monospace'
 
-const FILTER_KEYS: FilterMode[] = ['all', 'account_created', 'initial_sub', 'resub', 'renewal', 'cancel']
+const FILTER_KEYS: FilterMode[] = ['all', 'account_created', 'account_deleted', 'initial_sub', 'resub', 'renewal', 'cancel']
 
 export default function LogsApp() {
   const [data, setData] = useState<LogsResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<{ message: string; body?: string } | null>(null)
   const [filter, setFilter] = useState<FilterMode>('all')
-  const [timeRange, setTimeRange] = useState<TimeRange>('90d')
 
   
   const refetch = () => {
@@ -132,21 +123,7 @@ export default function LogsApp() {
   }, [])
 
   const entries = data?.entries ?? []
-
-  const rangeMs = (TIME_RANGES.find((r) => r.key === timeRange)?.days ?? 90) * 86400000
-  const rangeCutoff = Date.now() - rangeMs
-  const timeFiltered = entries.filter((e) => new Date(e.date_iso).getTime() >= rangeCutoff)
-  const rangePhrase = timeRange === 'all' ? 'the available history' : `the last ${timeRange}`
-
-  const liveCounts = {
-    accountsCreated: timeFiltered.filter((e) => e.event_type === 'account_created').length,
-    initialSubs: timeFiltered.filter((e) => e.event_type === 'initial_sub').length,
-    resubs: timeFiltered.filter((e) => e.event_type === 'resub').length,
-    renewals: timeFiltered.filter((e) => e.event_type === 'renewal').length,
-    cancels: timeFiltered.filter((e) => e.event_type === 'cancel').length,
-  }
-
-  const visible = filter === 'all' ? timeFiltered : timeFiltered.filter((e) => e.event_type === filter)
+  const visible = filter === 'all' ? entries : entries.filter((e) => e.event_type === filter)
 
   return (
     <div style={S.root}>
@@ -180,39 +157,17 @@ export default function LogsApp() {
         </span>
       </div>
 
-      {/* TIME RANGE TOOLBAR */}
-      <div style={S.toolbar}>
-        <span style={{ color: C.textMute, marginRight: 8 }}>$ range</span>
-        {TIME_RANGES.map((r) => (
-          <button
-            key={r.key}
-            onClick={() => setTimeRange(r.key)}
-            style={{
-              ...S.chip,
-              color: timeRange === r.key ? C.bg : C.text,
-              background: timeRange === r.key ? C.text : 'transparent',
-            }}
-          >
-            {r.label}
-          </button>
-        ))}
-        <span style={{ color: C.textMute, marginLeft: 'auto', fontSize: 11 }}>
-          {timeRange === 'all'
-            ? `showing all available data (server window: last ${data?.window_days ?? 90}d)`
-            : `showing last ${TIME_RANGES.find((r) => r.key === timeRange)?.days ?? 90}d`}
-        </span>
-      </div>
-
       {/* FILTER TOOLBAR */}
       <div style={S.toolbar}>
         <span style={{ color: C.textMute, marginRight: 8 }}>$ filter</span>
         {([
-          { key: 'all', label: 'all', count: timeFiltered.length },
-          { key: 'account_created', label: 'account created', count: liveCounts.accountsCreated },
-          { key: 'initial_sub', label: 'initial sub', count: liveCounts.initialSubs },
-          { key: 'resub', label: 'resub', count: liveCounts.resubs },
-          { key: 'renewal', label: 'renewal', count: liveCounts.renewals },
-          { key: 'cancel', label: 'cancel', count: liveCounts.cancels },
+          { key: 'all', label: 'all', count: entries.length },
+          { key: 'account_created', label: 'account created', count: data?.counts.accountsCreated ?? 0 },
+          { key: 'account_deleted', label: 'account deleted', count: data?.counts.accountsDeleted ?? 0 },
+          { key: 'initial_sub', label: 'initial sub', count: data?.counts.initialSubs ?? 0 },
+          { key: 'resub', label: 'resub', count: data?.counts.resubs ?? 0 },
+          { key: 'renewal', label: 'renewal', count: data?.counts.renewals ?? 0 },
+          { key: 'cancel', label: 'cancel', count: data?.counts.cancels ?? 0 },
         ] as const).map((f, i) => (
           <button
             key={f.key}
@@ -262,8 +217,8 @@ export default function LogsApp() {
             <span style={{ color: C.textMute }}>{'>'}</span>{' '}
             <span style={{ color: C.textDim }}>
               {filter === 'all'
-                ? `No customer events in ${rangePhrase}.`
-                : `No ${filter.replace('_', ' ')} events in ${rangePhrase}.`}
+                ? 'No customer events in the last 90 days.'
+                : `No ${filter.replace('_', ' ')} events in the last 90 days.`}
             </span>
           </div>
         )}
@@ -290,13 +245,13 @@ export default function LogsApp() {
       {/* FOOTER STATUS */}
       {data && (
         <div style={S.footer}>
-          <span>range: {rangePhrase}</span>
-          <span>events: {timeFiltered.length}{entries.length === 200 ? ' (server capped at 200)' : ''}</span>
-          <span>accounts created: {liveCounts.accountsCreated}</span>
-          <span>initial subs: {liveCounts.initialSubs}</span>
-          <span>resubs: {liveCounts.resubs}</span>
-          <span>renewals: {liveCounts.renewals}</span>
-          <span>cancels: {liveCounts.cancels}</span>
+          <span>window: last {data.window_days}d</span>
+          <span>events: {entries.length}{entries.length === 200 ? ' (capped)' : ''}</span>
+          <span>accounts created: {data.counts.accountsCreated}</span>
+          <span>initial subs: {data.counts.initialSubs}</span>
+          <span>resubs: {data.counts.resubs}</span>
+          <span>renewals: {data.counts.renewals}</span>
+          <span>cancels: {data.counts.cancels}</span>
         </div>
       )}
     </div>
