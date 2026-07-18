@@ -2,6 +2,7 @@ import { verifyWebhook } from '@clerk/nextjs/webhooks'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { sendAdminPush } from '@/lib/pushNotify'
+import { logBillingEvent } from '@/lib/billingEvents'
 
 // ─────────────────────────────────────────────────────────────────────────
 // Clerk webhook endpoint. Point Clerk's dashboard (Configure > Webhooks) at
@@ -18,10 +19,17 @@ import { sendAdminPush } from '@/lib/pushNotify'
 // trigger point for the "New Sign-Ups" and "Account Deletions" push
 // notifications.
 //
-// user.deleted does NOT delete the row — it sets users.deleted_at instead
-// (see migrations/ACCOUNT_DELETION_TRACKING_2026-07-18.sql). A real delete
-// would risk orphaning/cascading everything that references
-// users(clerk_id) — calls, campaigns, leads, teams, etc.
+// user.deleted: this only fires if an account is deleted directly through
+// Clerk (dashboard/API), bypassing DialerSeat's own UI entirely. The more
+// common path — someone using DialerSeat's own "delete my account" flow —
+// goes through lib/deleteAccount.ts instead, which hard-deletes the users
+// row (and everything else keyed to it) rather than going through Clerk
+// first. Both paths call logBillingEvent('account_deleted', ...) so the
+// audit trail and notification fire the same way regardless of which
+// route someone's deletion took. Neither path relies on a `deleted_at`
+// column on `users` — deleteAccount() genuinely removes that row, so
+// anything living only on that row can't survive it; billing_events has
+// no foreign key to `users` for exactly this reason.
 //
 // Upsert (not insert) on clerk_id so this is safe to re-run — e.g. if
 // Clerk redelivers a webhook, or if some other path already created the
@@ -41,8 +49,10 @@ export async function POST(req: NextRequest) {
 
   if (evt.type === 'user.deleted') {
     // Clerk's deletion payload only has { id, deleted, external_id? } — the
-    // name/email are already gone by the time this fires, so look up
-    // whatever DialerSeat had on file before marking it deleted.
+    // name/email are already gone from Clerk by the time this fires, so
+    // look up whatever DialerSeat still has on file (the users row itself
+    // is untouched by a Clerk-side deletion — only deleteAccount() removes
+    // that row, and this webhook is a different path from that).
     const clerkId = evt.data.id
     if (!clerkId) {
       return NextResponse.json({ ok: true, skipped: 'no id on delete payload' })
@@ -54,21 +64,18 @@ export async function POST(req: NextRequest) {
       .eq('clerk_id', clerkId)
       .maybeSingle()
 
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({ deleted_at: new Date().toISOString() })
-      .eq('clerk_id', clerkId)
-
-    if (updateError) {
-      console.error('[webhooks/clerk] failed to mark user deleted:', updateError)
-      return NextResponse.json({ error: 'Failed to mark user deleted' }, { status: 500 })
-    }
-
     const name =
       `${existing?.first_name || ''} ${existing?.last_name || ''}`.trim() ||
       existing?.email?.split('@')[0] ||
       'A user'
+
     await sendAdminPush('account_deleted', `${name} deleted account.`)
+    await logBillingEvent({
+      event_type: 'account_deleted',
+      clerk_id: clerkId,
+      user_name: name,
+      user_email: existing?.email ?? null,
+    })
 
     return NextResponse.json({ ok: true })
   }
@@ -109,6 +116,12 @@ export async function POST(req: NextRequest) {
 
   const name = `${data.first_name || ''} ${data.last_name || ''}`.trim() || email?.split('@')[0] || 'Someone'
   await sendAdminPush('signup', `${name} created account.`)
+  await logBillingEvent({
+    event_type: 'account_created',
+    clerk_id: clerkId,
+    user_name: name,
+    user_email: email,
+  })
 
   return NextResponse.json({ ok: true })
 }

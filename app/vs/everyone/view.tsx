@@ -35,7 +35,7 @@ interface FeatureRow {
 }
 
 const features: FeatureRow[] = [
-  { feature: 'Per-seat price (monthly equiv)', ds: '$140/mo ($35/wk)', rm: '$165–$249', mo: '$99+ add-ons', pb: '$140–$215', f9: '$175+', cv: '$189–$249' },
+  { feature: 'Per-seat price', ds: '$35/wk, cancel anytime', rm: '$199–$249/mo', mo: '$149/mo + add-ons', pb: '$165–$215/mo', f9: '$175+/mo', cv: '$90+/mo, custom quote' },
   { feature: 'Weekly billing option', ds: true, rm: false, mo: false, pb: false, f9: false, cv: false },
   { feature: 'Annual contract required', ds: false, rm: 'Typical', mo: false, pb: 'For best price', f9: 'Typical', cv: 'Typical' },
   { feature: 'Public pricing on website', ds: true, rm: false, mo: true, pb: true, f9: false, cv: false },
@@ -49,7 +49,7 @@ const features: FeatureRow[] = [
   { feature: 'AMD voicemail filter (~1.8s)', ds: 'Always on', rm: 'Users report misses', mo: 'Optional', pb: true, f9: true, cv: true },
   { feature: 'Multiple scripts per campaign', ds: true, rm: false, mo: false, pb: false, f9: 'Custom build', cv: false },
   { feature: 'Live mid-call script switching', ds: true, rm: false, mo: false, pb: false, f9: false, cv: false },
-  { feature: 'Works on phones + tablets (PWA install)', ds: true, rm: false, mo: 'Web only', pb: false, f9: false, cv: 'Web only' },
+  { feature: 'Works on phones + tablets', ds: 'Full dialer, same as desktop', rm: false, mo: 'Native app, poor reviews', pb: false, f9: 'Supervisor app only', cv: 'No app found; iOS issues reported' },
   { feature: 'All outbound numbers carrier-registered', ds: true, rm: 'Inconsistent', mo: 'Inconsistent', pb: 'Variable', f9: 'Variable', cv: 'Variable' },
   { feature: 'STIR/SHAKEN A-attestation', ds: true, rm: 'Variable', mo: 'Variable', pb: true, f9: true, cv: 'Variable' },
   { feature: 'TCPA enforced server-side', ds: true, rm: 'Partial', mo: 'Partial', pb: 'Partial', f9: 'Partial', cv: 'Partial' },
@@ -73,12 +73,12 @@ const INDUSTRY_FAILURES = [
   {
     num: '03',
     title: 'ADD-ON STACKING',
-    body: 'The headline $99–$140 advertised price becomes $200–$300 effective once you add data feeds (Mojo $25–$49 per dataset), tier upgrades for basic features, or industry-specific add-ons. Our $35/week is the bill — nothing stacks on top.',
+    body: 'The headline $149–$199 advertised price becomes $200–$300 effective once you add data feeds (Mojo $25–$49 per dataset), tier upgrades for basic features, or industry-specific add-ons. Our $35/week, cancel anytime, is the bill — nothing stacks on top, and it never becomes a monthly premium.',
   },
   {
     num: '04',
     title: 'DESKTOP-ONLY SOFTWARE',
-    body: 'Most legacy dialers were built before tablets existed and never modernized. ReadyMode, PhoneBurner, and Five9 have no real mobile or tablet experience. Field agents and solo reps need to be at their desk. We work on phone, tablet, and desktop — install to home screen and it behaves like a native app.',
+    body: 'Most legacy dialers were built before tablets existed and never modernized. ReadyMode and PhoneBurner have no mobile app at all. Five9 publishes one, but it\'s for supervisors to monitor calls, not for agents to dial from. Field agents and solo reps need to be at their desk. We work on phone, tablet, and desktop, with the full dialer — install to home screen and it behaves like a native app.',
   },
   {
     num: '05',
@@ -96,12 +96,12 @@ const SWITCHING_FROM = [
   {
     name: 'READYMODE',
     href: '/vs/readymode',
-    summary: 'Same multi-line predictive at $35/week instead of $165–$249/month. No $500–$2,000 setup fee. Modern UI. Works on phones and tablets where ReadyMode is desktop-only.',
+    summary: 'Same multi-line predictive at $35/week, cancel anytime, instead of $199–$249/month locked into a contract. No $500–$2,000 setup fee. Modern UI. Works on phones and tablets where ReadyMode is desktop-only.',
   },
   {
     name: 'MOJO DIALER',
     href: '/vs/mojo',
-    summary: 'Same triple-line speed across every industry — not just real estate. No $10/mo Agent Access fee. No $25–$49 data add-ons stacking. Multiple scripts per campaign, calendar-aligned analytics.',
+    summary: 'Same triple-line speed across every industry — not just real estate. No mandatory $10/mo Agent Access fee stacked on top of your plan. No $25–$49 data add-ons stacking. Multiple scripts per campaign, calendar-aligned analytics.',
   },
   {
     name: 'PHONEBURNER',
@@ -115,13 +115,18 @@ const SWITCHING_FROM = [
   },
   {
     name: 'CONVOSO',
-    href: null,
-    summary: 'Same high-volume outbound dialing for insurance, solar, and lead-heavy verticals. Without the $200+/seat pricing, annual contracts, and opaque quoting. One flat weekly price.',
+    href: '/vs/convoso',
+    summary: 'Same high-volume outbound dialing for insurance, solar, and lead-heavy verticals. Without the custom quoting, ~20-seat minimum, and carrier fees billed separately from the base price. One flat weekly price, no seat minimum.',
   },
   {
-    name: 'CALLTOOLS / KIXIE / JUSTCALL',
+    name: 'KIXIE / JUSTCALL',
     href: null,
-    summary: 'Cleaner UI, full multi-line predictive (most mid-market dialers cap at progressive), proper compliance infrastructure, and a public API that works with any CRM. Same price band, more capability.',
+    summary: 'Both tier their dialer capability by price — multi-line and predictive dialing cost more than the advertised entry rate, or require a plan upgrade entirely. DialerSeat includes every dialer mode at one flat weekly price from the first seat.',
+  },
+  {
+    name: 'CALLTOOLS',
+    href: null,
+    summary: 'Cleaner UI, full multi-line predictive, proper compliance infrastructure, and a public API that works with any CRM. Same price band, more capability, no custom quote required.',
   },
 ]
 
@@ -136,6 +141,14 @@ function Cell({ value }: { value: Cell }) {
   }
   return <span style={{ color, fontSize: 11, fontStyle: lower.includes('add-on') || lower.includes('partial') ? 'italic' : 'normal', letterSpacing: 0.3 }}>{value}</span>
 }
+
+const teamScaling: FeatureRow[] = [
+  { feature: 'Whitelabel available', ds: 'Manager+, $75/mo flat', rm: false, mo: false, pb: false, f9: false, cv: false },
+  { feature: 'Manager/supervisor seat', ds: 'Included in Manager+', rm: 'Admin seat can\u2019t dial', mo: false, pb: 'Requires Professional tier', f9: 'Requires 50-seat Optimum quote', cv: 'Custom quote' },
+  { feature: 'Live call monitoring / coaching', ds: true, rm: 'iQ tier only', mo: false, pb: 'Professional tier ($195+/seat)', f9: 'Optimum tier, custom quote', cv: true },
+  { feature: 'Price change as team grows', ds: 'None — flat $35/wk per seat', rm: '+$50/seat at 5th license', mo: 'None — but no team plan exists', pb: '+$30–$50/seat per tier', f9: '50-seat minimum on every plan', cv: '~20-seat minimum before you can meaningfully start' },
+  { feature: 'Reseller / partner program', ds: 'Not needed — sold direct', rm: 'Affiliate/referral only', mo: false, pb: false, f9: 'VAR/reseller, Five9-branded', cv: 'None found — quote-request form only' },
+]
 
 export default function VsEveryoneView() {
   return (
@@ -544,21 +557,21 @@ export default function VsEveryoneView() {
 
         <div className="vs-section" style={{ paddingTop: 0 }}>
           <div className="vs-section-eyebrow">THE REAL COST OF LEGACY DIALERS</div>
-          <h2 className="vs-section-h2">$99–$165 advertised. $200–$300 in practice.</h2>
+          <h2 className="vs-section-h2">$149–$199 advertised. $200–$300 in practice.</h2>
           <p className="vs-section-lede">
             The headline pricing legacy dialers advertise rarely matches the bill teams
             actually receive. Below is a representative "real bill" for a single seat once
             common add-ons and tier upgrades stack. DialerSeat™'s $35/week is the bill —
-            nothing stacks on top.
+            nothing stacks on top, and it's never billed as a monthly premium.
           </p>
 
           <div className="cost-breakdown">
-            <div className="cost-row"><span className="item">Base plan (industry average)</span><span className="price">$165.00/mo</span></div>
+            <div className="cost-row"><span className="item">Base plan (industry average)</span><span className="price">$175.00/mo</span></div>
             <div className="cost-row"><span className="item">Tier upgrade for inbound numbers</span><span className="price">+$30.00/mo</span></div>
             <div className="cost-row"><span className="item">Tier upgrade for live monitoring</span><span className="price">+$25.00/mo</span></div>
             <div className="cost-row"><span className="item">Industry data / skip tracing (Mojo-style)</span><span className="price">+$49.00/mo</span></div>
             <div className="cost-row"><span className="item">Implementation / setup amortized</span><span className="price">+$20.00/mo</span></div>
-            <div className="cost-row"><span className="item">Real effective per-seat bill</span><span className="price">$289.00/mo</span></div>
+            <div className="cost-row"><span className="item">Real effective per-seat bill</span><span className="price">$299.00/mo</span></div>
           </div>
 
           <div className="price-grid">
@@ -569,7 +582,7 @@ export default function VsEveryoneView() {
                 <span className="price-card-big">$35</span>
                 <span className="price-card-suffix">/seat/week</span>
               </div>
-              <div className="price-card-monthly">≈ $140/month equivalent</div>
+              <div className="price-card-monthly">Cancel anytime — no monthly lock-in</div>
               <ul className="price-card-list">
                 <li><span className="check">✓</span> Multi-line predictive + 4 modes</li>
                 <li><span className="check">✓</span> Multiple scripts per campaign</li>
@@ -599,7 +612,7 @@ export default function VsEveryoneView() {
                 <li className="bad"><span className="cross">✕</span> CRM coverage varies</li>
                 <li className="bad"><span className="cross">✕</span> Desktop-only or minimal mobile</li>
                 <li className="bad"><span className="cross">✕</span> Pricing hidden behind sales call</li>
-                <li className="bad"><span className="cross">✕</span> Setup fees $200–$2,000</li>
+                <li className="bad"><span className="cross">✕</span> Setup fees $500–$2,000</li>
                 <li className="bad"><span className="cross">✕</span> Compliance partial / inconsistent</li>
               </ul>
             </div>
@@ -648,6 +661,52 @@ export default function VsEveryoneView() {
         </div>
 
         <div className="vs-section" style={{ paddingTop: 0 }}>
+          <div className="vs-section-eyebrow">SCALING A TEAM</div>
+          <h2 className="vs-section-h2">Whitelabel and manager tools, across the whole category.</h2>
+          <p className="vs-section-lede">
+            Checked directly against each vendor's own pricing pages and independently corroborated
+            pricing research. None of the five offer true whitelabel — the closest most get is a
+            referral or reseller program that keeps their name on the product. DialerSeat™
+            Manager+ is a flat $75/month add-on with full whitelabel included, at any team size.
+          </p>
+
+          <div className="matrix-wrap">
+            <div className="matrix-scroll">
+              <table className="matrix">
+                <thead>
+                  <tr>
+                    <th>FEATURE</th>
+                    <th className="ds-col">DIALERSEAT</th>
+                    <th>READYMODE</th>
+                    <th>MOJO</th>
+                    <th>PHONEBURNER</th>
+                    <th>FIVE9</th>
+                    <th>CONVOSO</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {teamScaling.map((f, i) => (
+                    <tr key={i}>
+                      <td>{f.feature}</td>
+                      <td className="ds-cell"><Cell value={f.ds} /></td>
+                      <td><Cell value={f.rm} /></td>
+                      <td><Cell value={f.mo} /></td>
+                      <td><Cell value={f.pb} /></td>
+                      <td><Cell value={f.f9} /></td>
+                      <td><Cell value={f.cv} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <p className="vs-section-lede" style={{ marginTop: 20, marginBottom: 0, fontSize: 13 }}>
+            See the <Link href="/vs/convoso" style={{ color: T.accent }}>full DialerSeat vs Convoso comparison</Link> for
+            the complete pricing and feature breakdown.
+          </p>
+        </div>
+
+        <div className="vs-section" style={{ paddingTop: 0 }}>
           <div className="vs-section-eyebrow">WHERE DIALERSEAT WINS</div>
           <h2 className="vs-section-h2">Eight advantages no legacy dialer matches.</h2>
 
@@ -685,12 +744,12 @@ export default function VsEveryoneView() {
               </p>
             </div>
             <div className="win-card">
-              <div className="win-card-title">5. Works on phones and tablets — not just desktop</div>
+              <div className="win-card-title">5. The full dialer works on a phone or tablet</div>
               <p className="win-card-body">
                 Install DialerSeat™ to your home screen on iPhone, iPad, Android, or any
-                desktop and it behaves like a native app. Field agents on iPad, solo agents
-                on their phone, manager dashboards on laptop. Most legacy dialers are
-                desktop-only or have minimal mobile experiences.
+                desktop and get the same dialer modes everywhere. Field agents on iPad, solo
+                agents on their phone, manager dashboards on laptop. ReadyMode and PhoneBurner
+                have no mobile app at all; Five9's is for supervisors, not dialing.
               </p>
             </div>
             <div className="win-card">

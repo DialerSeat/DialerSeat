@@ -1337,7 +1337,7 @@ CREATE TABLE IF NOT EXISTS public.billing_events (
   id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   clerk_id         text NOT NULL,
   event_type       text NOT NULL CHECK (event_type IN (
-                     'account_created', 'initial_sub', 'resub', 'renewal', 'cancel'
+                     'account_created', 'initial_sub', 'resub', 'renewal', 'cancel', 'account_deleted'
                    )),
   plan             text,
   amount_cents     integer NOT NULL DEFAULT 0,

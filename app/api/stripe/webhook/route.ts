@@ -6,6 +6,7 @@ import { apiError } from '@/lib/apiError'
 import { stripe } from '@/lib/stripe'
 import { activatePendingTeamMember, deactivateTeamMember } from '@/lib/teamMembership'
 import { sendAdminPush } from '@/lib/pushNotify'
+import { logBillingEvent } from '@/lib/billingEvents'
 import {
   claimStripeEvent,
   markStripeEventProcessed,
@@ -94,7 +95,7 @@ export async function POST(req: Request) {
       case 'customer.subscription.created':
       case 'customer.subscription.updated':
       case 'customer.subscription.trial_will_end':
-        await routeSubscription(event.data.object as Stripe.Subscription, event.type)
+        await routeSubscription(event.data.object as Stripe.Subscription, event.type, undefined, event.created)
         break
 
       case 'customer.subscription.deleted':
@@ -107,7 +108,7 @@ export async function POST(req: Request) {
         const subscriptionId = (invoice as any).subscription as string | null
         if (subscriptionId) {
           const subscription = await stripe.subscriptions.retrieve(subscriptionId)
-          await routeSubscription(subscription, event.type, invoice.billing_reason ?? undefined)
+          await routeSubscription(subscription, event.type, invoice.billing_reason ?? undefined, event.created)
         }
         break
       }
@@ -145,7 +146,8 @@ export async function POST(req: Request) {
 async function routeSubscription(
   subscription: Stripe.Subscription,
   eventType?: string,
-  billingReason?: Stripe.Invoice.BillingReason
+  billingReason?: Stripe.Invoice.BillingReason,
+  eventCreated?: number
 ) {
   const subKind = subscription.metadata?.sub_kind
 
@@ -155,11 +157,11 @@ async function routeSubscription(
   }
 
   if (subKind === 'whitelabel') {
-    await routeWhitelabel(subscription, eventType, billingReason)
+    await routeWhitelabel(subscription, eventType, billingReason, eventCreated)
     return
   }
 
-  await syncPersonalSubscription(subscription, eventType, billingReason)
+  await syncPersonalSubscription(subscription, eventType, billingReason, eventCreated)
 }
 
 async function routeSubscriptionDeleted(subscription: Stripe.Subscription) {
@@ -217,7 +219,8 @@ async function routeSubscriptionDeleted(subscription: Stripe.Subscription) {
 async function routeWhitelabel(
   subscription: Stripe.Subscription,
   eventType?: string,
-  billingReason?: Stripe.Invoice.BillingReason
+  billingReason?: Stripe.Invoice.BillingReason,
+  eventCreated?: number
 ) {
   
   
@@ -247,24 +250,36 @@ async function routeWhitelabel(
       .limit(1)
 
     const isResub = !!(priorSubs && priorSubs.length > 0)
-    const name = await lookupDisplayName(clerkId)
+    const { name, email } = await lookupNameAndEmail(clerkId)
     // "Manager+" matches PLAN_INFO.wl.label in app/billing/page.tsx.
     const planLabel = 'Manager+'
     if (isResub) {
       await sendAdminPush('resub', `${name} resubscribed to ${planLabel}.`)
+      await logBillingEvent({
+        event_type: 'resub', clerk_id: clerkId, user_name: name, user_email: email,
+        plan: 'wl', amount_cents: 7500, stripe_subscription_id: subscription.id,
+      })
     } else {
       await sendAdminPush('new_sub', `${name} subscribed to ${planLabel}.`)
+      await logBillingEvent({
+        event_type: 'initial_sub', clerk_id: clerkId, user_name: name, user_email: email,
+        plan: 'wl', amount_cents: 7500, stripe_subscription_id: subscription.id,
+      })
     }
   } else if (
     eventType === 'invoice.payment_succeeded' &&
     billingReason === 'subscription_cycle'
   ) {
-    const name = await lookupDisplayName(clerkId)
+    const { name, email } = await lookupNameAndEmail(clerkId)
     await sendAdminPush('renewal', `${name} renewed Manager+ subscription.`)
+    await logBillingEvent({
+      event_type: 'renewal', clerk_id: clerkId, user_name: name, user_email: email,
+      plan: 'wl', amount_cents: 7500, stripe_subscription_id: subscription.id,
+    })
   }
 
   
-  await upsertPersonalSubscription(subscription, clerkId)
+  await upsertPersonalSubscription(subscription, clerkId, eventCreated)
   await updatePersonalUserStatus(clerkId, subscription)
 
   
@@ -340,8 +355,17 @@ async function markWhitelabelCanceled(subscription: Stripe.Subscription) {
       .update({ subscription_status: 'canceled' })
       .eq('clerk_id', clerkId)
 
-    const name = await lookupDisplayName(clerkId)
+    const { name, email } = await lookupNameAndEmail(clerkId)
     await sendAdminPush('cancel', `${name} cancelled Manager+ subscription.`)
+
+    const retentionWeeks = subscription.start_date
+      ? Math.max(0, Math.round((Date.now() / 1000 - subscription.start_date) / (7 * 24 * 60 * 60)))
+      : null
+
+    await logBillingEvent({
+      event_type: 'cancel', clerk_id: clerkId, user_name: name, user_email: email,
+      plan: 'wl', stripe_subscription_id: subscription.id, retention_weeks: retentionWeeks,
+    })
   }
 }
 
@@ -433,7 +457,8 @@ async function syncSeatCharge(subscription: Stripe.Subscription) {
 async function syncPersonalSubscription(
   subscription: Stripe.Subscription,
   eventType?: string,
-  billingReason?: Stripe.Invoice.BillingReason
+  billingReason?: Stripe.Invoice.BillingReason,
+  eventCreated?: number
 ) {
   const clerkId =
     subscription.metadata?.clerk_id ||
@@ -468,7 +493,7 @@ async function syncPersonalSubscription(
       .limit(1)
 
     const isResub = !!(priorSubs && priorSubs.length > 0)
-    const name = await lookupDisplayName(clerkId)
+    const { name, email } = await lookupNameAndEmail(clerkId)
     // "Pro" matches PLAN_INFO.standard.label in app/billing/page.tsx —
     // this function only ever runs for the standard personal plan
     // (routeSubscription already branched whitelabel/team_seat away
@@ -476,18 +501,30 @@ async function syncPersonalSubscription(
     const planLabel = 'Pro'
     if (isResub) {
       await sendAdminPush('resub', `${name} resubscribed to ${planLabel}.`)
+      await logBillingEvent({
+        event_type: 'resub', clerk_id: clerkId, user_name: name, user_email: email,
+        plan: 'pro', amount_cents: 3500, stripe_subscription_id: subscription.id,
+      })
     } else {
       await sendAdminPush('new_sub', `${name} subscribed to ${planLabel}.`)
+      await logBillingEvent({
+        event_type: 'initial_sub', clerk_id: clerkId, user_name: name, user_email: email,
+        plan: 'pro', amount_cents: 3500, stripe_subscription_id: subscription.id,
+      })
     }
   } else if (
     eventType === 'invoice.payment_succeeded' &&
     billingReason === 'subscription_cycle'
   ) {
-    const name = await lookupDisplayName(clerkId)
+    const { name, email } = await lookupNameAndEmail(clerkId)
     await sendAdminPush('renewal', `${name} renewed Pro subscription.`)
+    await logBillingEvent({
+      event_type: 'renewal', clerk_id: clerkId, user_name: name, user_email: email,
+      plan: 'pro', amount_cents: 3500, stripe_subscription_id: subscription.id,
+    })
   }
 
-  await upsertPersonalSubscription(subscription, clerkId)
+  await upsertPersonalSubscription(subscription, clerkId, eventCreated)
   await updatePersonalUserStatus(clerkId, subscription)
 
   // An agent-pays team seat rides on a completely ordinary personal
@@ -521,15 +558,29 @@ async function syncPersonalSubscription(
   }
 }
 
-async function lookupDisplayName(clerkId: string): Promise<string> {
+async function lookupNameAndEmail(clerkId: string): Promise<{ name: string; email: string | null }> {
   const { data } = await supabase
     .from('users')
     .select('first_name, last_name, email')
     .eq('clerk_id', clerkId)
     .maybeSingle()
-  if (!data) return 'A customer'
+  if (!data) return { name: 'A customer', email: null }
   const full = `${data.first_name || ''} ${data.last_name || ''}`.trim()
-  return full || data.email?.split('@')[0] || 'A customer'
+  return {
+    name: full || data.email?.split('@')[0] || 'A customer',
+    email: data.email ?? null,
+  }
+}
+
+// Kept as a thin wrapper — several call sites only need the name and
+// predate this refactor; no need to touch every one of them just to widen
+// what they ask for.
+async function lookupDisplayName(clerkId: string): Promise<string> {
+  return (await lookupNameAndEmail(clerkId)).name
+}
+
+async function lookupEmail(clerkId: string): Promise<string | null> {
+  return (await lookupNameAndEmail(clerkId)).email
 }
 
 async function lookupClerkIdByCustomer(
@@ -551,12 +602,48 @@ async function lookupClerkIdByCustomer(
 
 async function upsertPersonalSubscription(
   subscription: Stripe.Subscription,
-  clerkId: string
+  clerkId: string,
+  eventCreated?: number
 ) {
   const customerId =
     typeof subscription.customer === 'string'
       ? subscription.customer
       : subscription.customer.id
+
+  // Guard against out-of-order Stripe webhook delivery (see
+  // migrations/SUBSCRIPTIONS_EVENT_ORDERING_2026-07-18.sql for the full
+  // reasoning). Stripe does not guarantee delivery order — an `updated`
+  // event (status: active, fired the instant payment succeeds) can arrive
+  // before the earlier `created` event (status: incomplete, fired the
+  // moment checkout started) finishes retrying. Without this guard, an
+  // unconditional upsert lets whichever event happens to arrive LAST win,
+  // which could stomp a real 'active' status back down to 'incomplete' if
+  // the created event lands after the updated event.
+  //
+  // eventCreated is the Stripe *event's* own `created` timestamp (when
+  // Stripe originated it, not when we received it) — compare against
+  // whatever timestamp is already stored for this row, and skip the write
+  // entirely if this event is older than the last one that touched it.
+  if (eventCreated != null) {
+    const { data: existing } = await supabase
+      .from('subscriptions')
+      .select('last_event_at')
+      .eq('stripe_subscription_id', subscription.id)
+      .maybeSingle()
+
+    if (existing?.last_event_at) {
+      const existingEventTime = new Date(existing.last_event_at).getTime()
+      const incomingEventTime = eventCreated * 1000 // Stripe's `created` is Unix seconds
+      if (incomingEventTime < existingEventTime) {
+        console.log(
+          `[stripe/webhook] skipping out-of-order write for ${subscription.id}: ` +
+          `incoming event (${new Date(incomingEventTime).toISOString()}) is older than ` +
+          `last-applied event (${existing.last_event_at})`
+        )
+        return
+      }
+    }
+  }
 
   const item = subscription.items.data[0]
   const priceId = item?.price.id ?? ''
@@ -590,6 +677,7 @@ async function upsertPersonalSubscription(
     canceled_at: subscription.canceled_at
       ? new Date(subscription.canceled_at * 1000).toISOString()
       : null,
+    last_event_at: eventCreated != null ? new Date(eventCreated * 1000).toISOString() : undefined,
   }
 
   const { error } = await supabase
@@ -643,8 +731,20 @@ async function markPersonalSubCanceled(subscription: Stripe.Subscription) {
 
   const clerkId = await lookupClerkIdByCustomer(subscription)
   if (clerkId) {
-    const name = await lookupDisplayName(clerkId)
+    const { name, email } = await lookupNameAndEmail(clerkId)
     await sendAdminPush('cancel', `${name} cancelled Pro subscription.`)
+
+    // subscription.start_date is a real Stripe field (Unix seconds) marking
+    // when this subscription object first began — used here purely for the
+    // audit record, not for anything that gates behavior.
+    const retentionWeeks = subscription.start_date
+      ? Math.max(0, Math.round((Date.now() / 1000 - subscription.start_date) / (7 * 24 * 60 * 60)))
+      : null
+
+    await logBillingEvent({
+      event_type: 'cancel', clerk_id: clerkId, user_name: name, user_email: email,
+      plan: 'pro', stripe_subscription_id: subscription.id, retention_weeks: retentionWeeks,
+    })
   }
 
   // Symmetric with the agent-pays activation path — this metadata key stays

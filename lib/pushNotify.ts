@@ -9,12 +9,21 @@ import { getServiceClient } from '@/lib/supabase'
 //
 // Wired in, at their confirmed-live trigger points:
 //   signup           -> app/api/webhooks/clerk/route.ts, 'user.created'
-//   account_deleted  -> app/api/webhooks/clerk/route.ts, 'user.deleted'
+//   account_deleted  -> lib/deleteAccount.ts (the real, in-app deletion path —
+//                       hard-deletes the users row, so name/email are captured
+//                       BEFORE that happens) and, separately,
+//                       app/api/webhooks/clerk/route.ts, 'user.deleted' (only
+//                       fires if an account is deleted directly through Clerk,
+//                       bypassing DialerSeat's own UI)
 //   new_sub / resub  -> app/api/stripe/webhook/route.ts, 'customer.subscription.created'
 //   renewal          -> app/api/stripe/webhook/route.ts, 'invoice.payment_succeeded'
 //   cancel           -> app/api/stripe/webhook/route.ts, 'customer.subscription.deleted'
 //
-// All six event types are wired end to end.
+// All six event types are wired end to end. Every one of these call sites
+// also calls lib/billingEvents.ts's logBillingEvent() with the same event
+// data, which is what the admin Logs page reads — so a notification and
+// its corresponding Logs entry can never say something different from
+// each other, since they're written from the same call site in one pass.
 // ─────────────────────────────────────────────────────────────────────────
 
 export type NotifEventType = 'signup' | 'account_deleted' | 'new_sub' | 'resub' | 'renewal' | 'cancel'

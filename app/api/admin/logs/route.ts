@@ -9,7 +9,7 @@ const MAX_ENTRIES = 200
 
 interface LogEntry {
   id: string
-  event_type: 'account_created' | 'initial_sub' | 'resub' | 'renewal' | 'cancel'
+  event_type: 'account_created' | 'initial_sub' | 'resub' | 'renewal' | 'cancel' | 'account_deleted'
   user_name: string
   user_email: string | null
   amount_cents: number
@@ -73,7 +73,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Failed to build logs' }, { status: 500 })
     }
 
-    const counts = { accountsCreated: 0, initialSubs: 0, resubs: 0, renewals: 0, cancels: 0 }
+    const counts = { accountsCreated: 0, accountsDeleted: 0, initialSubs: 0, resubs: 0, renewals: 0, cancels: 0 }
     const entries: LogEntry[] = []
 
     for (const e of events || []) {
@@ -81,6 +81,7 @@ export async function GET() {
 
       switch (e.event_type) {
         case 'account_created': counts.accountsCreated++; break
+        case 'account_deleted': counts.accountsDeleted++; break
         case 'initial_sub': counts.initialSubs++; break
         case 'resub': counts.resubs++; break
         case 'renewal': counts.renewals++; break

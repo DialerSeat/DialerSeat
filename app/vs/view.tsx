@@ -55,14 +55,14 @@ const COMPARISONS: Comparison[] = [
     name: 'VS READYMODE',
     tagline: 'Same predictive at a fraction of the cost',
     pitch:
-      'Same multi-line predictive at $35/week instead of $165–$249/month. No $500–$2,000 setup fee. Modern UI. Works on phones and tablets where ReadyMode is desktop-only.',
+      'Same multi-line predictive at $35/week, cancel anytime, instead of $199–$249/month locked into a contract. No $500–$2,000 setup fee. Modern UI. Works on phones and tablets where ReadyMode is desktop-only.',
   },
   {
     slug: 'mojo',
     name: 'VS MOJO DIALER',
     tagline: 'Triple-line dialing without the real-estate lock-in',
     pitch:
-      'Same triple-line speed across every industry — not just real estate. No $10/mo Agent Access fee. No $25–$49 data add-ons stacking. Multiple scripts, calendar-aligned analytics.',
+      'Same triple-line speed across every industry — not just real estate. No mandatory $10/mo Agent Access fee stacked on top of your plan. No $25–$49 data add-ons stacking. Multiple scripts, calendar-aligned analytics — all for $35/week, cancel anytime.',
   },
   {
     slug: 'phoneburner',
@@ -91,6 +91,34 @@ const COMPARISONS: Comparison[] = [
     tagline: 'Sales dialer vs business phone system',
     pitch:
       '3CX is a real PBX licensed by simultaneous call capacity — not built for outbound sales campaigns. DialerSeat is purpose-built for it: lead lists, dispositions, AMD, and TCPA compliance at $35/week per seat, no capacity planning required.',
+  },
+  {
+    slug: 'hookedcrm',
+    name: 'VS HOOKED CRM',
+    tagline: 'Named dialer modes vs an unnamed one',
+    pitch:
+      'Hooked CRM calls itself an all-in-one dialer, but never names a specific dialing mode anywhere on their site. DialerSeat includes Preview, Power, Progressive, and Predictive dialing, named and included, at $35/week — self-serve signup, no demo required.',
+  },
+  {
+    slug: 'convoso',
+    name: 'VS CONVOSO',
+    tagline: 'Same dialer modes, no seat minimum',
+    pitch:
+      'Convoso is a genuinely strong predictive dialer built for 20+ seat operations with custom, usage-billed quotes. DialerSeat matches the four dialer modes at a published $35/week per seat — no seat minimum, no demo, no separate carrier billing.',
+  },
+  {
+    slug: 'kixie',
+    name: 'VS KIXIE',
+    tagline: 'Every dialer mode, one price',
+    pitch:
+      'Kixie is well-reviewed but tiers dialing power by price — multi-line dialing runs $95+/seat/month, AI voice detection is a $30/mo add-on. DialerSeat includes predictive, power, progressive, and preview dialing at $35/week, one price, no tier to climb.',
+  },
+  {
+    slug: 'justcall',
+    name: 'VS JUSTCALL',
+    tagline: 'The dialer isn\'t a Pro-tier upsell',
+    pitch:
+      'JustCall advertises $29/user/month, but the power and predictive dialer sit behind the $49+/month Pro tier, plus a 2-seat minimum on every standard plan. DialerSeat includes every dialer mode at $35/week per seat, one seat minimum: one.',
   },
 ]
 
@@ -322,7 +350,7 @@ export default function VsHubView() {
           </div>
 
           <div className="vshub-section">
-            <div className="vshub-section-eyebrow">5 COMPARISONS — MORE COMING SOON</div>
+            <div className="vshub-section-eyebrow">10 COMPARISONS — MORE COMING SOON</div>
             <h2 className="vshub-section-h2">Every legacy dialer, broken down.</h2>
             <p className="vshub-section-lede">
               We'll keep adding more as our customers ask. Convoso, CallTools, Kixie, JustCall
@@ -354,6 +382,19 @@ export default function VsHubView() {
                 )
               })}
             </div>
+          </div>
+
+          <div className="vshub-section" style={{ paddingTop: 0 }}>
+            <div className="vshub-section-eyebrow">FOR TEAMS & AGENCIES</div>
+            <h2 className="vshub-section-h2">Manager+ adds whitelabel for $75/month, flat.</h2>
+            <p className="vshub-section-lede">
+              Running more than one seat, or managing dialing for other people's teams? Manager+
+              is a flat $75/month add-on that puts your brand on the platform — same rate whether
+              you're managing 2 seats or 200. None of the dialers on this page offer true
+              whitelabel; the closest most get is a referral or reseller program that keeps their
+              name on the product. Every comparison below breaks down what each competitor
+              actually charges to scale a team.
+            </p>
           </div>
 
           <div className="vshub-final-cta">

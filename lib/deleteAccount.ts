@@ -1,5 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import { isSubscriptionTrulyActive } from '@/lib/subscriptionStatus'
+import { sendAdminPush } from '@/lib/pushNotify'
+import { logBillingEvent } from '@/lib/billingEvents'
 
 const DELETE_ORDER: Array<[string, string]> = [
   ['call_rooms', 'user_id'],
@@ -68,6 +70,28 @@ export async function deleteAccount(
     }
   }
 
+  // Captured BEFORE the delete loop runs — by the time that loop reaches
+  // the `users` table, this row is gone. This is the only place in
+  // deleteAccount() where the person's name/email can still be read, so
+  // it has to happen here regardless of dryRun (cheap read either way;
+  // only actually used below if this turns out to be a real deletion).
+  let deletedUserName = 'A user'
+  let deletedUserEmail: string | null = null
+  if (!dryRun) {
+    const { data: existing } = await supabaseAdmin
+      .from('users')
+      .select('first_name, last_name, email')
+      .eq('clerk_id', clerkUserId)
+      .maybeSingle()
+    if (existing) {
+      deletedUserName =
+        `${existing.first_name || ''} ${existing.last_name || ''}`.trim() ||
+        existing.email?.split('@')[0] ||
+        'A user'
+      deletedUserEmail = existing.email ?? null
+    }
+  }
+
   for (const [table, col] of DELETE_ORDER) {
     if (dryRun) {
       const { count } = await supabaseAdmin
@@ -109,6 +133,19 @@ export async function deleteAccount(
       }
       counts[table] = count ?? 0
     }
+  }
+
+  if (!dryRun) {
+    // Fires only after every table in DELETE_ORDER succeeded with no
+    // error — a dry run never reaches here (the function would have
+    // already returned inside the loop above on any real error).
+    await sendAdminPush('account_deleted', `${deletedUserName} deleted account.`)
+    await logBillingEvent({
+      event_type: 'account_deleted',
+      clerk_id: clerkUserId,
+      user_name: deletedUserName,
+      user_email: deletedUserEmail,
+    })
   }
 
   return { ok: true, dryRun, counts }
