@@ -17,25 +17,6 @@ const supabase = getServiceClient('stripe/webhook')
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
 
-// Subscription rows in these statuses never had a completed payment — they're
-// either the throwaway `incomplete` subscription Stripe creates the instant
-// someone loads the billing page (before a card is even entered), or one that
-// expired without ever being paid. create-subscription/route.ts routinely
-// cancels one of these and creates a fresh subscription object on plan
-// switches, promo code changes, and retries — none of that is a real
-// cancellation or resubscription by the user. Counting these rows as "prior
-// subscription history" is what made a brand-new subscriber look like a
-// resub, and made the throwaway sub's cancellation show up as a real CANCEL
-// log line. Mirrors NEVER_PAID_STATUSES in app/api/admin/logs/route.ts, which
-// already excludes them when computing initial-sub-vs-resub for the same
-// reason.
-const NEVER_PAID_STATUSES = ['incomplete', 'incomplete_expired']
-
-// A subscription only becomes a real, billable customer once it reaches one
-// of these — 'incomplete' (the placeholder created the instant someone
-// loads the billing page, before a card is entered) doesn't count.
-const LIVE_STATUSES = ['active', 'trialing']
-
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
@@ -113,11 +94,11 @@ export async function POST(req: Request) {
       case 'customer.subscription.created':
       case 'customer.subscription.updated':
       case 'customer.subscription.trial_will_end':
-        await routeSubscription(event.data.object as Stripe.Subscription, event.type, undefined, event.created)
+        await routeSubscription(event.data.object as Stripe.Subscription, event.type)
         break
 
       case 'customer.subscription.deleted':
-        await routeSubscriptionDeleted(event.data.object as Stripe.Subscription, event.created)
+        await routeSubscriptionDeleted(event.data.object as Stripe.Subscription)
         break
 
       case 'invoice.payment_succeeded':
@@ -126,7 +107,7 @@ export async function POST(req: Request) {
         const subscriptionId = (invoice as any).subscription as string | null
         if (subscriptionId) {
           const subscription = await stripe.subscriptions.retrieve(subscriptionId)
-          await routeSubscription(subscription, event.type, invoice.billing_reason ?? undefined, event.created)
+          await routeSubscription(subscription, event.type, invoice.billing_reason ?? undefined)
         }
         break
       }
@@ -164,8 +145,7 @@ export async function POST(req: Request) {
 async function routeSubscription(
   subscription: Stripe.Subscription,
   eventType?: string,
-  billingReason?: Stripe.Invoice.BillingReason,
-  eventCreatedAt?: number
+  billingReason?: Stripe.Invoice.BillingReason
 ) {
   const subKind = subscription.metadata?.sub_kind
 
@@ -175,14 +155,14 @@ async function routeSubscription(
   }
 
   if (subKind === 'whitelabel') {
-    await routeWhitelabel(subscription, eventType, billingReason, eventCreatedAt)
+    await routeWhitelabel(subscription, eventType, billingReason)
     return
   }
 
-  await syncPersonalSubscription(subscription, eventType, billingReason, eventCreatedAt)
+  await syncPersonalSubscription(subscription, eventType, billingReason)
 }
 
-async function routeSubscriptionDeleted(subscription: Stripe.Subscription, eventCreatedAt?: number) {
+async function routeSubscriptionDeleted(subscription: Stripe.Subscription) {
   const subKind = subscription.metadata?.sub_kind
 
   if (subKind === 'team_seat') {
@@ -223,57 +203,21 @@ async function routeSubscriptionDeleted(subscription: Stripe.Subscription, event
   }
 
   if (subKind === 'whitelabel') {
-    await markWhitelabelCanceled(subscription, eventCreatedAt)
+    await markWhitelabelCanceled(subscription)
     return
   }
 
-  await markPersonalSubCanceled(subscription, eventCreatedAt)
+  await markPersonalSubCanceled(subscription)
 }
 
 
 
 
-
-// Shared by syncPersonalSubscription and routeWhitelabel. Stripe does not
-// guarantee webhook delivery order — a later event (e.g. status flipping to
-// active the moment payment succeeds) can arrive at our endpoint before an
-// earlier one (e.g. the initial incomplete-status created event), especially
-// under retries. Comparing against last_event_at (the Stripe event's own
-// `created` timestamp, not our receipt time) lets us detect and ignore a
-// stale, out-of-order event instead of letting it clobber newer state — this
-// is what previously let a real subscribe get mislabeled as "just
-// subscribed" happening at account-creation time and "resubscribed" at the
-// moment of actual payment: an older event landed last and overwrote the
-// correct 'active' status back down to 'incomplete'.
-async function resolveSubscriptionEventOrdering(
-  subscriptionId: string,
-  eventCreatedAt: number | undefined
-): Promise<{ isStale: boolean; wasLive: boolean; existingStatus: string | null }> {
-  const { data: existingRow } = await supabase
-    .from('subscriptions')
-    .select('status, last_event_at')
-    .eq('stripe_subscription_id', subscriptionId)
-    .maybeSingle()
-
-  const wasLive = existingRow ? LIVE_STATUSES.includes(existingRow.status) : false
-  const existingStatus = existingRow?.status ?? null
-
-  if (!existingRow || !existingRow.last_event_at || eventCreatedAt === undefined) {
-    // Nothing stored yet, or we don't have enough info to compare — treat
-    // as not stale so the first write always goes through.
-    return { isStale: false, wasLive, existingStatus }
-  }
-
-  const storedEventTime = new Date(existingRow.last_event_at).getTime()
-  const incomingEventTime = eventCreatedAt * 1000
-  return { isStale: incomingEventTime < storedEventTime, wasLive, existingStatus }
-}
 
 async function routeWhitelabel(
   subscription: Stripe.Subscription,
   eventType?: string,
-  billingReason?: Stripe.Invoice.BillingReason,
-  eventCreatedAt?: number
+  billingReason?: Stripe.Invoice.BillingReason
 ) {
   
   
@@ -287,58 +231,40 @@ async function routeWhitelabel(
     return
   }
 
-  const { isStale, wasLive } = await resolveSubscriptionEventOrdering(subscription.id, eventCreatedAt)
-  if (isStale) {
-    console.log(`[wl] ignoring stale/out-of-order event for subscription ${subscription.id}`)
-    return
-  }
-
-  const isLive = LIVE_STATUSES.includes(subscription.status)
-  const justActivated = isLive && !wasLive
-
-  if (justActivated) {
+  if (eventType === 'customer.subscription.created') {
+    // Same fix as syncPersonalSubscription: exclude incomplete/
+    // incomplete_expired rows from counting as a genuine prior
+    // subscription, since Stripe's default_incomplete payment flow fires
+    // subscription.created before the card is charged — a failed/retried
+    // first attempt shouldn't make a real first subscription look like a
+    // resub.
     const { data: priorSubs } = await supabase
       .from('subscriptions')
       .select('id')
       .eq('user_id', clerkId)
       .neq('stripe_subscription_id', subscription.id)
-      .not('status', 'in', `(${NEVER_PAID_STATUSES.join(',')})`)
+      .not('status', 'in', '(incomplete,incomplete_expired)')
       .limit(1)
 
     const isResub = !!(priorSubs && priorSubs.length > 0)
     const name = await lookupDisplayName(clerkId)
-    const email = await lookupEmail(clerkId)
-    const amountCents = weeklyCentsForPrice(subscription.items.data[0]?.price.id)
-
+    // "Manager+" matches PLAN_INFO.wl.label in app/billing/page.tsx.
+    const planLabel = 'Manager+'
     if (isResub) {
-      await sendAdminPush('resub', `${name} resubscribed to Manager+ (white label).`)
-      await recordBillingEvent({
-        clerkId, eventType: 'resub', plan: 'wl', amountCents,
-        stripeSubscriptionId: subscription.id, userName: name, userEmail: email,
-      })
+      await sendAdminPush('resub', `${name} resubscribed to ${planLabel}.`)
     } else {
-      await sendAdminPush('new_sub', `${name} subscribed to Manager+ (white label).`)
-      await recordBillingEvent({
-        clerkId, eventType: 'initial_sub', plan: 'wl', amountCents,
-        stripeSubscriptionId: subscription.id, userName: name, userEmail: email,
-      })
+      await sendAdminPush('new_sub', `${name} subscribed to ${planLabel}.`)
     }
   } else if (
     eventType === 'invoice.payment_succeeded' &&
     billingReason === 'subscription_cycle'
   ) {
     const name = await lookupDisplayName(clerkId)
-    const email = await lookupEmail(clerkId)
-    const amountCents = weeklyCentsForPrice(subscription.items.data[0]?.price.id)
-    await sendAdminPush('renewal', `${name}'s Manager+ subscription renewed.`)
-    await recordBillingEvent({
-      clerkId, eventType: 'renewal', plan: 'wl', amountCents,
-      stripeSubscriptionId: subscription.id, userName: name, userEmail: email,
-    })
+    await sendAdminPush('renewal', `${name} renewed Manager+ subscription.`)
   }
 
   
-  await upsertPersonalSubscription(subscription, clerkId, eventCreatedAt)
+  await upsertPersonalSubscription(subscription, clerkId)
   await updatePersonalUserStatus(clerkId, subscription)
 
   
@@ -388,44 +314,16 @@ async function routeWhitelabel(
   }
 }
 
-async function markWhitelabelCanceled(subscription: Stripe.Subscription, eventCreatedAt?: number) {
+async function markWhitelabelCanceled(subscription: Stripe.Subscription) {
   const clerkId =
     subscription.metadata?.clerk_id ||
     (await lookupClerkIdByCustomer(subscription))
-
-  // Same throwaway-incomplete-subscription issue as markPersonalSubCanceled
-  // above: Stripe fires this same deleted event when create-subscription
-  // cancels a never-paid incomplete sub during a normal checkout retry, not
-  // just on a genuine cancellation. Only treat it as real if the row had
-  // actually reached 'active' at some point.
-  const { data: existingRow } = await supabase
-    .from('subscriptions')
-    .select('status, created_at, stripe_price_id')
-    .eq('stripe_subscription_id', subscription.id)
-    .maybeSingle()
-
-  const wasEverActive = existingRow?.status === 'active' || subscription.status === 'active'
-
-  if (!wasEverActive) {
-    // Throwaway incomplete subscription being cleaned up, not a real
-    // cancellation — delete rather than stamp canceled_at (see
-    // markPersonalSubCanceled for the full explanation).
-    await supabase
-      .from('subscriptions')
-      .delete()
-      .eq('stripe_subscription_id', subscription.id)
-    return
-  }
-
-  const canceledAt = new Date()
-  const lastEventAt = new Date((eventCreatedAt ?? Math.floor(Date.now() / 1000)) * 1000).toISOString()
 
   await supabase
     .from('subscriptions')
     .update({
       status: 'canceled',
-      canceled_at: canceledAt.toISOString(),
-      last_event_at: lastEventAt,
+      canceled_at: new Date().toISOString(),
     })
     .eq('stripe_subscription_id', subscription.id)
 
@@ -443,22 +341,7 @@ async function markWhitelabelCanceled(subscription: Stripe.Subscription, eventCr
       .eq('clerk_id', clerkId)
 
     const name = await lookupDisplayName(clerkId)
-    const email = await lookupEmail(clerkId)
-    await sendAdminPush('cancel', `${name} canceled their Manager+ (white label) subscription.`)
-
-    const retentionWeeks = existingRow?.created_at
-      ? Math.floor((canceledAt.getTime() - new Date(existingRow.created_at).getTime()) / (7 * 86400000))
-      : null
-    await recordBillingEvent({
-      clerkId,
-      eventType: 'cancel',
-      plan: 'wl',
-      amountCents: weeklyCentsForPrice(existingRow?.stripe_price_id),
-      retentionWeeks,
-      stripeSubscriptionId: subscription.id,
-      userName: name,
-      userEmail: email,
-    })
+    await sendAdminPush('cancel', `${name} cancelled Manager+ subscription.`)
   }
 }
 
@@ -550,8 +433,7 @@ async function syncSeatCharge(subscription: Stripe.Subscription) {
 async function syncPersonalSubscription(
   subscription: Stripe.Subscription,
   eventType?: string,
-  billingReason?: Stripe.Invoice.BillingReason,
-  eventCreatedAt?: number
+  billingReason?: Stripe.Invoice.BillingReason
 ) {
   const clerkId =
     subscription.metadata?.clerk_id ||
@@ -562,68 +444,50 @@ async function syncPersonalSubscription(
     return
   }
 
-  // Ignore a stale/out-of-order event outright (see
-  // resolveSubscriptionEventOrdering) — an older event arriving after a
-  // newer one has already written 'active' must not clobber it back down
-  // to 'incomplete', which is what previously caused a real subscribe to
-  // read as "just subscribed" at signup time and "resubscribed" at the
-  // moment of actual payment.
-  const { isStale, wasLive } = await resolveSubscriptionEventOrdering(subscription.id, eventCreatedAt)
-  if (isStale) {
-    console.log(`[personal-sub] ignoring stale/out-of-order event for subscription ${subscription.id}`)
-    return
-  }
-
-  const isLive = LIVE_STATUSES.includes(subscription.status)
-  const justActivated = isLive && !wasLive
-
-  if (justActivated) {
-    // Mirrors the same first-sub-vs-resub logic the admin Logs app already
-    // computes read-side (earliest subscription per user) — including
-    // excluding incomplete/incomplete_expired rows, which never had a
-    // completed payment and are routinely created and discarded during a
-    // normal first-time checkout (plan switches, promo retries, etc).
+  // Determine push-worthy event BEFORE writing the new row, since "does
+  // this user already have a prior subscription" is only meaningful
+  // pre-upsert. Mirrors the same first-sub-vs-resub logic the admin Logs
+  // app already computes read-side (earliest subscription per user).
+  if (eventType === 'customer.subscription.created') {
+    // Only count a PRIOR subscription that actually succeeded at some
+    // point — never one still stuck in 'incomplete'/'incomplete_expired'.
+    // Stripe's default_incomplete payment flow (see
+    // app/api/stripe/create-subscription/route.ts) creates a real
+    // subscription.created event the moment checkout starts, before the
+    // card is even charged. If that first attempt fails (declined card,
+    // abandoned 3DS, etc.) and the person retries, a second, genuinely
+    // NEW subscription object gets created — but without this filter, the
+    // leftover 'incomplete' row from the failed attempt would make their
+    // real first-ever successful subscription look like a resub.
     const { data: priorSubs } = await supabase
       .from('subscriptions')
       .select('id')
       .eq('user_id', clerkId)
       .neq('stripe_subscription_id', subscription.id)
-      .not('status', 'in', `(${NEVER_PAID_STATUSES.join(',')})`)
+      .not('status', 'in', '(incomplete,incomplete_expired)')
       .limit(1)
 
     const isResub = !!(priorSubs && priorSubs.length > 0)
     const name = await lookupDisplayName(clerkId)
-    const email = await lookupEmail(clerkId)
-    const amountCents = weeklyCentsForPrice(subscription.items.data[0]?.price.id)
-
+    // "Pro" matches PLAN_INFO.standard.label in app/billing/page.tsx —
+    // this function only ever runs for the standard personal plan
+    // (routeSubscription already branched whitelabel/team_seat away
+    // before calling here), so this is never ambiguous.
+    const planLabel = 'Pro'
     if (isResub) {
-      await sendAdminPush('resub', `${name} resubscribed.`)
-      await recordBillingEvent({
-        clerkId, eventType: 'resub', plan: 'pro', amountCents,
-        stripeSubscriptionId: subscription.id, userName: name, userEmail: email,
-      })
+      await sendAdminPush('resub', `${name} resubscribed to ${planLabel}.`)
     } else {
-      await sendAdminPush('new_sub', `${name} subscribed.`)
-      await recordBillingEvent({
-        clerkId, eventType: 'initial_sub', plan: 'pro', amountCents,
-        stripeSubscriptionId: subscription.id, userName: name, userEmail: email,
-      })
+      await sendAdminPush('new_sub', `${name} subscribed to ${planLabel}.`)
     }
   } else if (
     eventType === 'invoice.payment_succeeded' &&
     billingReason === 'subscription_cycle'
   ) {
     const name = await lookupDisplayName(clerkId)
-    const email = await lookupEmail(clerkId)
-    const amountCents = weeklyCentsForPrice(subscription.items.data[0]?.price.id)
-    await sendAdminPush('renewal', `${name}'s subscription renewed.`)
-    await recordBillingEvent({
-      clerkId, eventType: 'renewal', plan: 'pro', amountCents,
-      stripeSubscriptionId: subscription.id, userName: name, userEmail: email,
-    })
+    await sendAdminPush('renewal', `${name} renewed Pro subscription.`)
   }
 
-  await upsertPersonalSubscription(subscription, clerkId, eventCreatedAt)
+  await upsertPersonalSubscription(subscription, clerkId)
   await updatePersonalUserStatus(clerkId, subscription)
 
   // An agent-pays team seat rides on a completely ordinary personal
@@ -685,64 +549,9 @@ async function lookupClerkIdByCustomer(
   return userByCustomer?.clerk_id ?? null
 }
 
-async function lookupEmail(clerkId: string): Promise<string | null> {
-  const { data } = await supabase
-    .from('users')
-    .select('email')
-    .eq('clerk_id', clerkId)
-    .maybeSingle()
-  return data?.email ?? null
-}
-
-const PRO_WEEKLY_CENTS = 35 * 100
-const WL_WEEKLY_CENTS = 75 * 100
-
-function weeklyCentsForPrice(priceId: string | null | undefined): number {
-  if (priceId && priceId === process.env.STRIPE_PRICE_WL_BASE) return WL_WEEKLY_CENTS
-  if (priceId && priceId === process.env.STRIPE_PRICE_ID) return PRO_WEEKLY_CENTS
-  return 0
-}
-
-// Writes a durable, denormalized row to billing_events. This is the single
-// place every lifecycle notification (new_sub, resub, renewal, cancel) also
-// gets logged permanently — independent of whether the users/subscriptions
-// rows it was computed from still exist later. See
-// migrations/BILLING_EVENTS_AUDIT_LOG_2026-07-18.sql for the full
-// rationale. Never throws — a logging failure should never break the
-// webhook's actual business logic.
-async function recordBillingEvent(evt: {
-  clerkId: string
-  eventType: 'account_created' | 'initial_sub' | 'resub' | 'renewal' | 'cancel'
-  plan?: 'pro' | 'wl' | null
-  amountCents?: number
-  retentionWeeks?: number | null
-  stripeSubscriptionId?: string | null
-  userName: string
-  userEmail?: string | null
-}): Promise<void> {
-  try {
-    const { error } = await supabase.from('billing_events').insert({
-      clerk_id: evt.clerkId,
-      event_type: evt.eventType,
-      plan: evt.plan ?? null,
-      amount_cents: evt.amountCents ?? 0,
-      retention_weeks: evt.retentionWeeks ?? null,
-      stripe_subscription_id: evt.stripeSubscriptionId ?? null,
-      user_name: evt.userName,
-      user_email: evt.userEmail ?? null,
-    })
-    if (error) {
-      console.error('[recordBillingEvent] insert failed:', error)
-    }
-  } catch (err) {
-    console.error('[recordBillingEvent] unexpected error:', err)
-  }
-}
-
 async function upsertPersonalSubscription(
   subscription: Stripe.Subscription,
-  clerkId: string,
-  eventCreatedAt?: number
+  clerkId: string
 ) {
   const customerId =
     typeof subscription.customer === 'string'
@@ -781,11 +590,6 @@ async function upsertPersonalSubscription(
     canceled_at: subscription.canceled_at
       ? new Date(subscription.canceled_at * 1000).toISOString()
       : null,
-    // Stripe event `created` timestamp (when Stripe originated this event),
-    // not our own receipt time — this is what lets a future event detect
-    // whether it's older than what's already stored and skip if so. Falls
-    // back to "now" only when the caller genuinely has no event context.
-    last_event_at: new Date((eventCreatedAt ?? Math.floor(Date.now() / 1000)) * 1000).toISOString(),
   }
 
   const { error } = await supabase
@@ -814,48 +618,12 @@ async function updatePersonalUserStatus(
   }
 }
 
-async function markPersonalSubCanceled(subscription: Stripe.Subscription, eventCreatedAt?: number) {
-  // create-subscription/route.ts cancels a user's leftover `incomplete`
-  // subscription (the placeholder Stripe creates the moment someone loads
-  // the billing page, before any card is entered) every time they reload
-  // billing, switch plans, or retry a promo code. Stripe fires the exact
-  // same customer.subscription.deleted event for that as it does for a real
-  // paying customer canceling — the object's status reads 'canceled'
-  // either way. The only way to tell them apart is to check whether this
-  // subscription row ever actually reached 'active' in our own database; an
-  // incomplete sub that got canceled before ever being paid never did. Only
-  // a subscription that was genuinely active is a real cancellation worth
-  // logging or pushing a notification for.
-  const { data: existingRow } = await supabase
-    .from('subscriptions')
-    .select('status, created_at, stripe_price_id')
-    .eq('stripe_subscription_id', subscription.id)
-    .maybeSingle()
-
-  const wasEverActive = existingRow?.status === 'active' || subscription.status === 'active'
-
-  if (!wasEverActive) {
-    // Throwaway incomplete subscription being cleaned up, not a real
-    // cancellation. Delete the row rather than stamping canceled_at on it —
-    // the admin Logs route treats any row with canceled_at set as a real
-    // CANCEL event, so leaving that timestamp on a never-paid row would
-    // still surface it there even though nothing user-facing happened.
-    await supabase
-      .from('subscriptions')
-      .delete()
-      .eq('stripe_subscription_id', subscription.id)
-    return
-  }
-
-  const canceledAt = new Date()
-  const lastEventAt = new Date((eventCreatedAt ?? Math.floor(Date.now() / 1000)) * 1000).toISOString()
-
+async function markPersonalSubCanceled(subscription: Stripe.Subscription) {
   const { error } = await supabase
     .from('subscriptions')
     .update({
       status: 'canceled',
-      canceled_at: canceledAt.toISOString(),
-      last_event_at: lastEventAt,
+      canceled_at: new Date().toISOString(),
     })
     .eq('stripe_subscription_id', subscription.id)
 
@@ -876,22 +644,7 @@ async function markPersonalSubCanceled(subscription: Stripe.Subscription, eventC
   const clerkId = await lookupClerkIdByCustomer(subscription)
   if (clerkId) {
     const name = await lookupDisplayName(clerkId)
-    const email = await lookupEmail(clerkId)
-    await sendAdminPush('cancel', `${name} canceled their subscription.`)
-
-    const retentionWeeks = existingRow?.created_at
-      ? Math.floor((canceledAt.getTime() - new Date(existingRow.created_at).getTime()) / (7 * 86400000))
-      : null
-    await recordBillingEvent({
-      clerkId,
-      eventType: 'cancel',
-      plan: 'pro',
-      amountCents: weeklyCentsForPrice(existingRow?.stripe_price_id),
-      retentionWeeks,
-      stripeSubscriptionId: subscription.id,
-      userName: name,
-      userEmail: email,
-    })
+    await sendAdminPush('cancel', `${name} cancelled Pro subscription.`)
   }
 
   // Symmetric with the agent-pays activation path — this metadata key stays
