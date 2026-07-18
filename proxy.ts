@@ -531,7 +531,24 @@ async function getAccessState(clerkId: string): Promise<AccessState> {
     }
 
     const state: AccessState = { tier, isAdmin, isPreserved, wlOnboardingPending, hasActiveWlSub, hasActiveTeamAccess }
-    ACCESS_STATE_CACHE.set(clerkId, { state, expires: Date.now() + CACHE_TTL_MS })
+
+    // Only cache a result that's safe to serve stale for the next minute.
+    // "active" (and admin) status rarely flips moment-to-moment, so caching
+    // it just saves redundant Supabase round trips. A non-active tier is a
+    // different story: this is exactly the state a user is in for a few
+    // seconds right after paying, while Stripe's webhook is still in flight.
+    // Caching that "not active yet" verdict for a full 60s means every
+    // request in that window — including the redirect straight back from
+    // /welcome to /billing to /dashboard — keeps reading the same stale
+    // answer, which is what produced the /dashboard <-> /welcome bounce.
+    // Skipping the cache here means each request re-checks Supabase, so the
+    // very next request after the webhook lands sees the real, active state.
+    if (tier === 'active' || isAdmin) {
+      ACCESS_STATE_CACHE.set(clerkId, { state, expires: Date.now() + CACHE_TTL_MS })
+    } else {
+      ACCESS_STATE_CACHE.delete(clerkId)
+    }
+
     return state
   } catch (err) {
     console.error('[proxy] access state lookup failed:', err)
