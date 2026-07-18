@@ -17,6 +17,20 @@ const supabase = getServiceClient('stripe/webhook')
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
 
+// Subscription rows in these statuses never had a completed payment — they're
+// either the throwaway `incomplete` subscription Stripe creates the instant
+// someone loads the billing page (before a card is even entered), or one that
+// expired without ever being paid. create-subscription/route.ts routinely
+// cancels one of these and creates a fresh subscription object on plan
+// switches, promo code changes, and retries — none of that is a real
+// cancellation or resubscription by the user. Counting these rows as "prior
+// subscription history" is what made a brand-new subscriber look like a
+// resub, and made the throwaway sub's cancellation show up as a real CANCEL
+// log line. Mirrors NEVER_PAID_STATUSES in app/api/admin/logs/route.ts, which
+// already excludes them when computing initial-sub-vs-resub for the same
+// reason.
+const NEVER_PAID_STATUSES = ['incomplete', 'incomplete_expired']
+
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
@@ -237,6 +251,7 @@ async function routeWhitelabel(
       .select('id')
       .eq('user_id', clerkId)
       .neq('stripe_subscription_id', subscription.id)
+      .not('status', 'in', `(${NEVER_PAID_STATUSES.join(',')})`)
       .limit(1)
 
     const isResub = !!(priorSubs && priorSubs.length > 0)
@@ -309,6 +324,30 @@ async function markWhitelabelCanceled(subscription: Stripe.Subscription) {
   const clerkId =
     subscription.metadata?.clerk_id ||
     (await lookupClerkIdByCustomer(subscription))
+
+  // Same throwaway-incomplete-subscription issue as markPersonalSubCanceled
+  // above: Stripe fires this same deleted event when create-subscription
+  // cancels a never-paid incomplete sub during a normal checkout retry, not
+  // just on a genuine cancellation. Only treat it as real if the row had
+  // actually reached 'active' at some point.
+  const { data: existingRow } = await supabase
+    .from('subscriptions')
+    .select('status')
+    .eq('stripe_subscription_id', subscription.id)
+    .maybeSingle()
+
+  const wasEverActive = existingRow?.status === 'active' || subscription.status === 'active'
+
+  if (!wasEverActive) {
+    // Throwaway incomplete subscription being cleaned up, not a real
+    // cancellation — delete rather than stamp canceled_at (see
+    // markPersonalSubCanceled for the full explanation).
+    await supabase
+      .from('subscriptions')
+      .delete()
+      .eq('stripe_subscription_id', subscription.id)
+    return
+  }
 
   await supabase
     .from('subscriptions')
@@ -438,13 +477,17 @@ async function syncPersonalSubscription(
   // Determine push-worthy event BEFORE writing the new row, since "does
   // this user already have a prior subscription" is only meaningful
   // pre-upsert. Mirrors the same first-sub-vs-resub logic the admin Logs
-  // app already computes read-side (earliest subscription per user).
+  // app already computes read-side (earliest subscription per user) —
+  // including excluding incomplete/incomplete_expired rows, which never had
+  // a completed payment and are routinely created and discarded during a
+  // normal first-time checkout (plan switches, promo retries, etc).
   if (eventType === 'customer.subscription.created') {
     const { data: priorSubs } = await supabase
       .from('subscriptions')
       .select('id')
       .eq('user_id', clerkId)
       .neq('stripe_subscription_id', subscription.id)
+      .not('status', 'in', `(${NEVER_PAID_STATUSES.join(',')})`)
       .limit(1)
 
     const isResub = !!(priorSubs && priorSubs.length > 0)
@@ -594,6 +637,38 @@ async function updatePersonalUserStatus(
 }
 
 async function markPersonalSubCanceled(subscription: Stripe.Subscription) {
+  // create-subscription/route.ts cancels a user's leftover `incomplete`
+  // subscription (the placeholder Stripe creates the moment someone loads
+  // the billing page, before any card is entered) every time they reload
+  // billing, switch plans, or retry a promo code. Stripe fires the exact
+  // same customer.subscription.deleted event for that as it does for a real
+  // paying customer canceling — the object's status reads 'canceled'
+  // either way. The only way to tell them apart is to check whether this
+  // subscription row ever actually reached 'active' in our own database; an
+  // incomplete sub that got canceled before ever being paid never did. Only
+  // a subscription that was genuinely active is a real cancellation worth
+  // logging or pushing a notification for.
+  const { data: existingRow } = await supabase
+    .from('subscriptions')
+    .select('status')
+    .eq('stripe_subscription_id', subscription.id)
+    .maybeSingle()
+
+  const wasEverActive = existingRow?.status === 'active' || subscription.status === 'active'
+
+  if (!wasEverActive) {
+    // Throwaway incomplete subscription being cleaned up, not a real
+    // cancellation. Delete the row rather than stamping canceled_at on it —
+    // the admin Logs route treats any row with canceled_at set as a real
+    // CANCEL event, so leaving that timestamp on a never-paid row would
+    // still surface it there even though nothing user-facing happened.
+    await supabase
+      .from('subscriptions')
+      .delete()
+      .eq('stripe_subscription_id', subscription.id)
+    return
+  }
+
   const { error } = await supabase
     .from('subscriptions')
     .update({
