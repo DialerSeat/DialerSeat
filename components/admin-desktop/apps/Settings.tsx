@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
+import { useUser, SignOutButton } from '@clerk/nextjs'
 
 // ─────────────────────────────────────────────────────────────────────────
 // Settings — Apple-style admin settings app.
@@ -173,6 +174,97 @@ function SettingsRow({
   )
 }
 
+function NavRow({
+  icon,
+  iconBg,
+  title,
+  subtitle,
+  onClick,
+  isLast,
+}: {
+  icon: string
+  iconBg: string
+  title: string
+  subtitle?: string
+  onClick: () => void
+  isLast?: boolean
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        all: 'unset',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        width: '100%',
+        boxSizing: 'border-box',
+        gap: 16,
+        padding: '9px 16px',
+        cursor: 'pointer',
+        minHeight: 44,
+        borderBottom: isLast ? 'none' : `0.5px solid ${SEPARATOR}`,
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+        <div
+          aria-hidden
+          style={{
+            width: 29,
+            height: 29,
+            borderRadius: 7,
+            background: iconBg,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 15,
+            flexShrink: 0,
+          }}
+        >
+          {icon}
+        </div>
+        <div style={{ minWidth: 0, textAlign: 'left' }}>
+          <div style={{ fontSize: 15.5, letterSpacing: -0.2, color: LABEL_PRIMARY }}>{title}</div>
+          {subtitle && (
+            <div style={{ fontSize: 12.5, color: LABEL_SECONDARY, marginTop: 1 }}>{subtitle}</div>
+          )}
+        </div>
+      </div>
+      <span style={{ color: '#C7C7CC', fontSize: 18, lineHeight: 1, flexShrink: 0 }}>›</span>
+    </button>
+  )
+}
+
+function BackHeader({ title, onBack }: { title: string; onBack: () => void }) {
+  return (
+    <>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 14 }}>
+        <button
+          type="button"
+          onClick={onBack}
+          style={{
+            all: 'unset',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+            cursor: 'pointer',
+            color: IOS_BLUE,
+            fontSize: 17,
+            padding: '4px 4px 4px 0',
+          }}
+        >
+          <span style={{ fontSize: 20, lineHeight: 1, marginTop: -2 }}>‹</span>
+          Settings
+        </button>
+      </div>
+      <h1 style={{ fontSize: 30, fontWeight: 700, letterSpacing: -0.4, margin: '0 0 16px 2px' }}>
+        {title}
+      </h1>
+    </>
+  )
+}
+
 function GroupedCard({ children }: { children: React.ReactNode }) {
   return (
     <div
@@ -207,9 +299,10 @@ function GroupLabel({ children }: { children: React.ReactNode }) {
   )
 }
 
-type SettingsPane = 'root' | 'notifications'
+type SettingsPane = 'root' | 'general' | 'notifications' | 'privacy'
 
 export default function SettingsApp() {
+  const { user, isLoaded: userLoaded } = useUser()
   const [pane, setPane] = useState<SettingsPane>('root')
 
   const [prefs, setPrefs] = useState<PrefsResponse>(DEFAULT_PREFS)
@@ -229,6 +322,11 @@ export default function SettingsApp() {
     cancel: prefs.cancel,
   }
   const enabledCount = Object.values(notifState).filter(Boolean).length
+
+  const displayName = user
+    ? (`${user.firstName || ''} ${user.lastName || ''}`.trim() || user.primaryEmailAddress?.emailAddress?.split('@')[0] || 'Admin')
+    : 'Admin'
+  const displayEmail = user?.primaryEmailAddress?.emailAddress || ''
 
   // ── Load saved prefs on mount ──────────────────────────────────────────
   useEffect(() => {
@@ -381,26 +479,17 @@ export default function SettingsApp() {
               fontSize: 30,
               fontWeight: 700,
               letterSpacing: -0.4,
-              margin: '0 0 4px 2px',
+              margin: '0 0 16px 2px',
             }}
           >
             Settings
           </h1>
-          <p
-            style={{
-              fontSize: 13.5,
-              color: LABEL_SECONDARY,
-              margin: '0 0 8px 2px',
-            }}
-          >
-            Admin-only preferences for this DialerSeat workspace.
-          </p>
 
-          <GroupLabel>General</GroupLabel>
+          {/* Account card — top of the list, iOS "Apple ID" style */}
           <GroupedCard>
             <button
               type="button"
-              onClick={() => setPane('notifications')}
+              onClick={() => setPane('general')}
               style={{
                 all: 'unset',
                 display: 'flex',
@@ -408,80 +497,82 @@ export default function SettingsApp() {
                 justifyContent: 'space-between',
                 width: '100%',
                 boxSizing: 'border-box',
-                padding: '11px 16px',
+                padding: '12px 16px',
                 cursor: 'pointer',
-                minHeight: 44,
+                minHeight: 64,
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div
-                  aria-hidden
-                  style={{
-                    width: 29,
-                    height: 29,
-                    borderRadius: 7,
-                    background: `linear-gradient(135deg, ${IOS_RED}, #C41E1E)`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 15,
-                    flexShrink: 0,
-                  }}
-                >
-                  🔔
-                </div>
-                <div>
-                  <div style={{ fontSize: 15.5, letterSpacing: -0.2 }}>Notifications</div>
-                  <div style={{ fontSize: 12.5, color: LABEL_SECONDARY, marginTop: 1 }}>
-                    {prefs.master_enabled ? `${enabledCount} of ${NOTIF_ROWS.length} on` : 'Off'}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+                {userLoaded && user?.imageUrl ? (
+                  <img
+                    src={user.imageUrl}
+                    alt=""
+                    aria-hidden
+                    style={{ width: 50, height: 50, borderRadius: '50%', flexShrink: 0, objectFit: 'cover' }}
+                  />
+                ) : (
+                  <div
+                    aria-hidden
+                    style={{
+                      width: 50,
+                      height: 50,
+                      borderRadius: '50%',
+                      background: '#D1D1D6',
+                      flexShrink: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 20,
+                      color: '#fff',
+                    }}
+                  >
+                    {displayName.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 17, fontWeight: 600, letterSpacing: -0.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {userLoaded ? displayName : 'Loading…'}
+                  </div>
+                  <div style={{ fontSize: 12.5, color: LABEL_SECONDARY, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {displayEmail || 'Admin account'}
                   </div>
                 </div>
               </div>
-              <span style={{ color: '#C7C7CC', fontSize: 18, lineHeight: 1 }}>›</span>
+              <span style={{ color: '#C7C7CC', fontSize: 18, lineHeight: 1, flexShrink: 0 }}>›</span>
             </button>
+          </GroupedCard>
+
+          <GroupLabel>&nbsp;</GroupLabel>
+          <GroupedCard>
+            <NavRow
+              icon="⚙️"
+              iconBg={`linear-gradient(135deg, #8E8E93, #636366)`}
+              title="General"
+              subtitle="Account, sign out"
+              onClick={() => setPane('general')}
+            />
+            <NavRow
+              icon="🔔"
+              iconBg={`linear-gradient(135deg, ${IOS_RED}, #C41E1E)`}
+              title="Notifications"
+              subtitle={prefs.master_enabled ? `${enabledCount} of ${NOTIF_ROWS.length} on` : 'Off'}
+              onClick={() => setPane('notifications')}
+            />
+            <NavRow
+              icon="🔒"
+              iconBg="linear-gradient(135deg, #8E8E93, #636366)"
+              title="Privacy & Security"
+              subtitle="Coming soon"
+              onClick={() => setPane('privacy')}
+              isLast
+            />
           </GroupedCard>
         </div>
       )}
 
       {pane === 'notifications' && (
         <div style={{ maxWidth: 680, margin: '0 auto', padding: '14px 20px 60px' }}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,
-              marginBottom: 14,
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => setPane('root')}
-              style={{
-                all: 'unset',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 2,
-                cursor: 'pointer',
-                color: IOS_BLUE,
-                fontSize: 17,
-                padding: '4px 4px 4px 0',
-              }}
-            >
-              <span style={{ fontSize: 20, lineHeight: 1, marginTop: -2 }}>‹</span>
-              Settings
-            </button>
-          </div>
-
-          <h1
-            style={{
-              fontSize: 30,
-              fontWeight: 700,
-              letterSpacing: -0.4,
-              margin: '0 0 16px 2px',
-            }}
-          >
-            Notifications
-          </h1>
+          <BackHeader title="Notifications" onBack={() => setPane('root')} />
 
           {loadError && (
             <div
@@ -635,6 +726,76 @@ export default function SettingsApp() {
             the same signup, subscription, renewal, and cancellation events already
             tracked in the Logs app.
           </p>
+        </div>
+      )}
+
+      {pane === 'general' && (
+        <div style={{ maxWidth: 680, margin: '0 auto', padding: '14px 20px 60px' }}>
+          <BackHeader title="General" onBack={() => setPane('root')} />
+
+          <GroupLabel>Account</GroupLabel>
+          <GroupedCard>
+            <SettingsRow
+              title="Name"
+              right={
+                <span style={{ color: LABEL_SECONDARY, fontSize: 14.5 }}>
+                  {userLoaded ? displayName : '—'}
+                </span>
+              }
+            />
+            <SettingsRow
+              title="Email"
+              isLast
+              right={
+                <span style={{ color: LABEL_SECONDARY, fontSize: 14.5 }}>
+                  {userLoaded ? (displayEmail || '—') : '—'}
+                </span>
+              }
+            />
+          </GroupedCard>
+
+          <GroupLabel>&nbsp;</GroupLabel>
+          <GroupedCard>
+            <SignOutButton redirectUrl="/">
+              <button
+                type="button"
+                style={{
+                  all: 'unset',
+                  display: 'block',
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  padding: '11px 16px',
+                  cursor: 'pointer',
+                  minHeight: 44,
+                  color: IOS_RED,
+                  fontSize: 15.5,
+                  textAlign: 'center',
+                }}
+              >
+                Sign Out
+              </button>
+            </SignOutButton>
+          </GroupedCard>
+        </div>
+      )}
+
+      {pane === 'privacy' && (
+        <div style={{ maxWidth: 680, margin: '0 auto', padding: '14px 20px 60px' }}>
+          <BackHeader title="Privacy & Security" onBack={() => setPane('root')} />
+
+          <GroupedCard>
+            <div style={{ padding: '20px 16px', textAlign: 'center' }}>
+              <div style={{ fontSize: 28, marginBottom: 6 }}>🔒</div>
+              <div style={{ fontSize: 15, color: LABEL_PRIMARY, fontWeight: 500, marginBottom: 4 }}>
+                Nothing to configure yet
+              </div>
+              <div style={{ fontSize: 12.5, color: LABEL_SECONDARY, lineHeight: 1.5 }}>
+                This section is reserved for upcoming controls — session management,
+                admin access logs, and similar. Nothing here does anything yet, so
+                there's nothing to toggle on this screen for now.
+              </div>
+            </div>
+          </GroupedCard>
         </div>
       )}
     </div>

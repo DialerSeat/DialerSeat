@@ -180,21 +180,31 @@ export default function Page() {
             <h3>8. STIR/SHAKEN attestation</h3>
             <p>
               Outbound calls placed through DialerSeat go through SignalWire,
-              which provides full A-level STIR/SHAKEN attestation. This is
-              the carrier-level proof-of-identity that downstream carriers
-              use to decide whether to label your call as spam, &quot;Likely
-              Scam,&quot; etc. Full attestation doesn&apos;t eliminate
-              spam-labeling risk, but it&apos;s the strongest available.
+              which attests calls at the A level where the call path supports
+              it. This is the carrier-level proof-of-identity that downstream
+              carriers use to decide whether to label your call as spam,
+              &quot;Likely Scam,&quot; etc. A-level attestation doesn&apos;t
+              eliminate spam-labeling risk, and attestation level can vary
+              by number, route, or downstream carrier — it&apos;s the
+              strongest level available, not a guarantee for every call.
             </p>
 
             <h3>9. Records: 24 months minimum, exportable</h3>
             <p>
               Every dial attempt, AMD result, agent assignment, disposition,
-              abandon event, calling-window skip, and recording is stored
-              and retained for at least 24 months — the TSR&apos;s
-              record-keeping floor. Records are exportable from your
-              dashboard for compliance audits, internal QA, or any other
-              reason you need them.
+              abandon event, and calling-window skip is stored and retained
+              for at least 24 months — the TSR&apos;s record-keeping floor.
+              Records are exportable from your dashboard for compliance
+              audits, internal QA, or any other reason you need them.
+            </p>
+            <p>
+              <strong>Call recordings are the one exception:</strong> they&apos;re
+              retained for 30 days, then automatically deleted (see our{' '}
+              <Link href="/privacy#data-retention">Privacy Policy</Link>). Download
+              recordings before the 30-day window closes if you need to keep them
+              longer — the surrounding call record (disposition, duration, AMD
+              result, timestamps) stays in your dashboard for the full 24 months
+              regardless.
             </p>
           </div>
         </section>
@@ -233,15 +243,6 @@ export default function Page() {
             layer of compliance for you is either lying or charging you a
             lot more than $35/week.
           </p>
-          <p>
-            Two things worth reading alongside this page:{' '}
-            <Link href="/faq/leads">how consent metadata actually attaches
-            to a lead at upload</Link>, and{' '}
-            <Link href="/faq/numbers">how outbound numbers stay off spam
-            and scam-likely lists</Link> — since a flagged number and an
-            abandoned call both erode trust the same way, even though
-            only one of them is a TCPA violation.
-          </p>
         </section>
 
         <section className="exp-section alt">
@@ -262,11 +263,10 @@ export default function Page() {
 
             <h3>Scenario B: Predictive abandon rate spikes</h3>
             <p>
-              You&apos;re running predictive at 2.0× with 10 agents — above
-              the 8-agent threshold where multi-line dialing actually
-              engages. A campaign on a Tuesday afternoon hits an unusually
-              high answer rate — maybe a fresh batch of warm leads dropped
-              in — and your in-flight calls outpace agents being free. The
+              You&apos;re running predictive at 2.0× with 6 agents. A
+              campaign on a Tuesday afternoon hits an unusually high
+              answer rate — maybe a fresh batch of warm leads dropped in —
+              and your in-flight calls outpace agents being free. The
               30-day rolling abandon rate ticks up to 2.51%. Within 5
               seconds, the controller cuts you back to 1.0× lines. You
               keep dialing, but as progressive, not predictive. When the
