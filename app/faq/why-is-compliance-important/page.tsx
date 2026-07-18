@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import DialingModeCTA from '@/components/DialingModeCTA'
@@ -11,7 +12,7 @@ export const runtime = 'nodejs'
 export const metadata: Metadata = {
   title: 'Why Is Compliance Important? (And Why Legacy Dialers Don\'t Care) | DialerSeat',
   description:
-    'Telemarketing compliance isn\'t a nice-to-have. The FTC has been writing $20,000-per-violation checks for 30 years. Here\'s why it matters, and why most dialers treat it as someone else\'s problem.',
+    'Telemarketing compliance isn\'t a nice-to-have. The FTC can write checks north of $53,000 per violation. Here\'s why it matters, and why most dialers treat it as someone else\'s problem.',
   alternates: { canonical: 'https://dialerseat.com/faq/why-is-compliance-important' },
   openGraph: {
     title: 'Why Is Compliance Important?',
@@ -33,8 +34,8 @@ export default function Page() {
           <div className="exp-hero-inner">            <div className="exp-eyebrow">EXPLAINER · COMPLIANCE</div>
             <h1>Why is compliance important?</h1>
             <p className="exp-lead">
-              Because the FTC has been writing $20,000-per-violation checks
-              to itself for over twenty years, and it&apos;s not going to
+              Because the FTC has been writing checks with a lot of zeros
+              on them for over twenty years, and it&apos;s not going to
               stop just because your dialer&apos;s out of date.
             </p>
           </div>
@@ -54,7 +55,8 @@ export default function Page() {
           </p>
           <p>
             Break them, and the penalties are not small. TCPA: $500–$1,500
-            <em> per call</em>. TSR: up to $50,120 per violation as of
+            <em> per call</em>. TSR: up to $53,088 per violation, the
+            FTC&apos;s current inflation-adjusted maximum as of January
             2025. When the FTC settles with a serial offender, the numbers
             tend to have a lot of zeros. There have been individual
             settlements over $200 million in the last decade. There have
@@ -86,8 +88,8 @@ export default function Page() {
                 <p>You can&apos;t call numbers on the National Do Not Call Registry. Your responsibility as the seller to scrub before upload.</p>
               </div>
               <div className="exp-card">
-                <h3>ONE-TO-ONE CONSENT</h3>
-                <p>As of January 2025, TCPA consent must name the specific seller calling. Blanket consent to a lead aggregator no longer cuts it.</p>
+                <h3>PRIOR EXPRESS WRITTEN CONSENT</h3>
+                <p>Consent has to be in writing, signed, and clearly disclosed. (A stricter &quot;one-to-one&quot; rule almost took effect in January 2025 but was struck down by the courts days before it started — worth watching in case the FCC tries again.)</p>
               </div>
               <div className="exp-card">
                 <h3>STIR/SHAKEN</h3>
@@ -165,7 +167,9 @@ export default function Page() {
               We&apos;re also transparent about what we <em>don&apos;t</em>
               do for you: DNC scrubbing is still the seller&apos;s
               responsibility, and consent records are too. We&apos;ve
-              written about that split honestly on the dialing-modes page.
+              written about that split honestly on the{' '}
+              <Link href="/faq/how-we-keep-compliance">how we keep
+              compliance page</Link>.
             </p>
           </div>
         </section>

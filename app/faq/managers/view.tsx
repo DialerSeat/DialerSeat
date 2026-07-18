@@ -249,22 +249,26 @@ export default function View() {
           <h2>WHAT IT IS</h2>
 
           <p>
-            Manager mode isn&apos;t a separate plan. It&apos;s included in
-            your <strong>$35/week DialerSeat subscription.</strong> You sign
-            up the same as any other user, you get the same dialer, the same
-            campaigns, the same recordings. The moment you create a team, you
-            unlock the manager view: add agents, attach campaigns, generate
-            seat codes, watch your floor work in real-time.
+            Manager mode runs on <strong>Manager+, DialerSeat&apos;s
+            $75/week tier</strong> — it replaces your $35/week Pro
+            subscription rather than stacking on top of it. You sign up,
+            you get the same dialer, the same campaigns, the same
+            recordings you&apos;d get on Pro, plus the manager view: add
+            agents, attach campaigns, generate seat codes, watch your floor
+            work in real-time. Creating a team requires Manager+; dialing
+            as a member of someone else&apos;s team just needs a regular
+            $35/week Pro seat.
           </p>
 
           <p>
-            What makes it actually useful for you isn&apos;t the feature list.
-            It&apos;s the economics. You decide, per code, who pays the
-            $35/week seat fee — you, or the agent. And you decide what the
-            agent pays <em>you</em> on top of that, completely outside our
-            platform. <strong>We don&apos;t see your resell price. We
-            don&apos;t take a cut of it.</strong> Whatever you charge the
-            agent for access to your leads is yours.
+            What makes it actually useful for you isn&apos;t the feature
+            list. It&apos;s the economics. Beyond your own $75/week
+            platform cost, you decide — per code — who pays the $35/week
+            seat fee for each agent: you, or the agent. And you decide
+            what the agent pays <em>you</em> on top of that, completely
+            outside our platform. <strong>We don&apos;t see your resell
+            price. We don&apos;t take a cut of it.</strong> Whatever you
+            charge the agent for access to your leads is yours.
           </p>
 
           <p>
@@ -305,7 +309,7 @@ export default function View() {
           </p>
 
           <div className="mgr-math">
-            <div className="mgr-math-title">EXAMPLE — 5 AGENTS ON YOUR FLOOR</div>
+            <div className="mgr-math-title">EXAMPLE — 5 AGENTS ON YOUR FLOOR (OWNER PAYS)</div>
             <div className="mgr-math-row">
               <span className="mgr-math-label">You charge each agent / week</span>
               <span className="mgr-math-val">$150</span>
@@ -315,20 +319,26 @@ export default function View() {
               <span className="mgr-math-val">$750 / week</span>
             </div>
             <div className="mgr-math-row">
+              <span className="mgr-math-label">Your Manager+ platform cost</span>
+              <span className="mgr-math-val">−$75 / week</span>
+            </div>
+            <div className="mgr-math-row">
               <span className="mgr-math-label">DialerSeat charges you (5 seats × $35)</span>
               <span className="mgr-math-val">−$175 / week</span>
             </div>
             <div className="mgr-math-row total">
               <span>Your margin on the dialer alone</span>
-              <span className="mgr-math-val">$575 / week</span>
+              <span className="mgr-math-val">$500 / week</span>
             </div>
           </div>
 
           <p className="muted">
-            That&apos;s ~$30,000 a year in dialer-margin alone, on top of
-            whatever you&apos;re already making on commission splits. And it
-            scales linearly — 10 agents is ~$60k, 20 is ~$120k. The dialer
-            stops being a cost center and starts being a revenue line.
+            That&apos;s ~$26,000 a year in dialer-margin alone, on top of
+            whatever you&apos;re already making on commission splits. The
+            $75/week Manager+ cost is fixed no matter how many agents you
+            add, so the math gets better as you scale — 10 agents nets you
+            ~$56k a year, 20 agents ~$116k. The dialer stops being a cost
+            center and starts being a revenue line.
           </p>
 
           <h3>Plus you actually see what they&apos;re doing.</h3>
@@ -384,7 +394,7 @@ export default function View() {
           </p>
 
           <div className="mgr-math">
-            <div className="mgr-math-title">EXAMPLE — 10 AGENTS BUYING YOUR LEADS</div>
+            <div className="mgr-math-title">EXAMPLE — 10 AGENTS BUYING YOUR LEADS (OWNER PAYS)</div>
             <div className="mgr-math-row">
               <span className="mgr-math-label">You bundle dialer access at / week</span>
               <span className="mgr-math-val">$100</span>
@@ -394,21 +404,28 @@ export default function View() {
               <span className="mgr-math-val">$1,000 / week</span>
             </div>
             <div className="mgr-math-row">
+              <span className="mgr-math-label">Your Manager+ platform cost</span>
+              <span className="mgr-math-val">−$75 / week</span>
+            </div>
+            <div className="mgr-math-row">
               <span className="mgr-math-label">DialerSeat charges you (10 seats × $35)</span>
               <span className="mgr-math-val">−$350 / week</span>
             </div>
             <div className="mgr-math-row total">
               <span>Margin on top of lead sales</span>
-              <span className="mgr-math-val">$650 / week</span>
+              <span className="mgr-math-val">$575 / week</span>
             </div>
           </div>
 
           <p className="muted">
-            That&apos;s ~$34,000 a year in pure dialer-bundling margin, on
-            top of every lead dollar you&apos;re already making. The agent
-            doesn&apos;t feel nickeled-and-dimed because they&apos;re used to
-            paying for a dialer anyway, and they get a better one than they
-            had before.
+            That&apos;s ~$30,000 a year in pure dialer-bundling margin, on
+            top of every lead dollar you&apos;re already making. Prefer to
+            skip the platform cost entirely? Set the campaign to AGENT
+            PAYS instead and each buyer covers their own $35 seat directly
+            — you just charge your bundled access fee on top. The agent
+            doesn&apos;t feel nickeled-and-dimed because they&apos;re used
+            to paying for a dialer anyway, and they get a better one than
+            they had before.
           </p>
 
           <h3>The other thing lead vendors get: control over how leads are dialed.</h3>
@@ -512,7 +529,7 @@ export default function View() {
             DialerSeat anywhere. It&apos;s the same product underneath, but
             to them it&apos;s yours.
           </p>
-          <Link href="/white-label">READ ABOUT WHITE-LABEL →</Link>
+          <Link href="/faq/white-label">READ ABOUT WHITE-LABEL →</Link>
         </div>
 
         {/* ── HOW TO ACTUALLY START ──────────────────────────────────────── */}
@@ -565,11 +582,11 @@ export default function View() {
         <div className="mgr-related">
           <div className="mgr-related-label">▸ RELATED READING</div>
           <div className="mgr-related-links">
-            <Link href="/white-label">White-label your dialer</Link>
+            <Link href="/faq/white-label">White-label your dialer</Link>
             <Link href="/faq/why-dialerseat">Why I built DialerSeat</Link>
             <Link href="/dialing-modes">Dialing modes explained</Link>
             <Link href="/faq">FAQ</Link>
-            <Link href="/pricing">Pricing</Link>
+            <Link href="/faq/why-we-charge">Pricing</Link>
           </div>
         </div>
 

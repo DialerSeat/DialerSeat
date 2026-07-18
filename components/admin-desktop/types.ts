@@ -30,7 +30,6 @@ export type AppId =
   | 'overview'
   | 'user-tracker'
   | 'teams'
-  | 'campaigns'
   | 'numbers'
   | 'whitelabel'
   | 'logs'
@@ -41,6 +40,7 @@ export type AppId =
   | 'browser'
   | 'appstore'
   | 'explorer'
+  | 'settings'
 
 
 

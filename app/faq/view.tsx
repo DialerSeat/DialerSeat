@@ -227,6 +227,13 @@ export default function FaqView() {
           }
           .faq-qa .answer p { margin: 0 0 12px 0; }
           .faq-qa .answer p:last-child { margin-bottom: 0; }
+          .faq-qa .answer code {
+            background: ${T.surface};
+            padding: 1px 6px;
+            border-radius: 3px;
+            font-size: 12.5px;
+            font-family: monospace;
+          }
           .faq-qa .answer a {
             color: ${T.accent};
             text-decoration: none;
@@ -331,6 +338,10 @@ export default function FaqView() {
           .faq-exp-card.amd .pill { background: #e8eef8; color: #2a4a8a; border: 1px solid #2a4a8a; }
           .faq-exp-card.pricing .pill { background: #e8f5e8; color: #1a6a1a; border: 1px solid #1a6a1a; }
           .faq-exp-card.teams .pill { background: #f0eafd; color: #5a2a8a; border: 1px solid #5a2a8a; }
+          .faq-exp-card.managerplus .pill { background: #eaf0fd; color: #2a4a8a; border: 1px solid #2a4a8a; }
+          .faq-exp-card.mobile .pill { background: #e8f0fd; color: #1a4a8a; border: 1px solid #1a4a8a; }
+          .faq-exp-card.numbers .pill { background: #fdeaea; color: #8a1a1a; border: 1px solid #8a1a1a; }
+          .faq-exp-card.leads .pill { background: #e8f5e8; color: #1a6a4a; border: 1px solid #1a6a4a; }
 
           @media (max-width: 768px) {
             .faq-hero { padding: 56px 20px 44px; }
@@ -419,6 +430,22 @@ export default function FaqView() {
                   <span className="pill">TEAMS</span>
                   <div>DialerSeat for teams.</div>
                 </Link>
+                <Link href="/faq/manager-plus" className="faq-exp-card managerplus">
+                  <span className="pill">MANAGER+</span>
+                  <div>What Manager+ adds over Pro.</div>
+                </Link>
+                <Link href="/faq/mobile" className="faq-exp-card mobile">
+                  <span className="pill">MOBILE</span>
+                  <div>DialerSeat on mobile — install the PWA.</div>
+                </Link>
+                <Link href="/faq/numbers" className="faq-exp-card numbers">
+                  <span className="pill">NUMBERS</span>
+                  <div>Caller ID, attestation, avoiding spam flags.</div>
+                </Link>
+                <Link href="/faq/leads" className="faq-exp-card leads">
+                  <span className="pill">LEADS</span>
+                  <div>Uploading &amp; managing your lead lists.</div>
+                </Link>
               </div>
             </div>
 
@@ -431,11 +458,11 @@ export default function FaqView() {
                 <summary>How much does DialerSeat cost?</summary>
                 <div className="answer">
                   <p>
-                    $35 per week per seat. That&apos;s the entire price.
-                    No setup fee, no per-call surcharge, no tier upcharges,
-                    no add-on modules, no annual minimum, no &quot;contact
-                    sales for pricing.&quot; Billing is weekly through
-                    Stripe.
+                    $35 per week per seat on Pro. That&apos;s the entire
+                    price for a dialing agent. No setup fee, no per-call
+                    surcharge, no tier upcharges, no add-on modules, no
+                    annual minimum, no &quot;contact sales for pricing.&quot;
+                    Billing is weekly through Stripe.
                   </p>
                   <p>
                     Every seat includes unlimited dial-out numbers,
@@ -445,6 +472,13 @@ export default function FaqView() {
                     <Link href="/faq/why-we-charge">why we charge what we
                     charge</Link> for the full breakdown vs. competitors
                     who stack add-ons.
+                  </p>
+                  <p>
+                    Want to own a team, resell seats, or white-label the
+                    whole platform? That&apos;s <strong>Manager+</strong>{' '}
+                    at $75/week instead of the standard $35 — see{' '}
+                    <Link href="/faq/manager-plus">what Manager+ adds</Link>{' '}
+                    for the full breakdown.
                   </p>
                 </div>
               </details>
@@ -487,6 +521,28 @@ export default function FaqView() {
               </details>
 
               <details>
+                <summary>How do I upload leads?</summary>
+                <div className="answer">
+                  <p>
+                    Drop in a spreadsheet — there&apos;s no template to
+                    match or import wizard to click through. Column
+                    headers like <code>phone</code>, <code>first_name</code>,{' '}
+                    <code>email</code>, and <code>state</code> get
+                    auto-detected regardless of exact capitalization, and
+                    the only hard requirement is a column with something
+                    that has at least 10 digits in it once you strip out
+                    formatting.
+                  </p>
+                  <p>
+                    See <Link href="/faq/leads">uploading &amp; managing
+                    leads</Link> for the full field reference, optional
+                    consent columns, and how the 3-attempt retry cycle
+                    works once leads are in a campaign.
+                  </p>
+                </div>
+              </details>
+
+              <details>
                 <summary>How does DialerSeat handle TCPA compliance?</summary>
                 <div className="answer">
                   <p>
@@ -498,11 +554,35 @@ export default function FaqView() {
                     AMD pre-screen, ring-duration handling.
                   </p>
                   <p>
-                    DNC list scrubbing and consent records remain the
-                    seller&apos;s responsibility — we&apos;re transparent
-                    about which compliance layers we own and which fall on
-                    the campaign owner on the <Link href="/dialing-modes">
-                    dialing modes page</Link>.
+                    National DNC list scrubbing and consent records remain
+                    the seller&apos;s responsibility — we don&apos;t scrub
+                    your list against the registry for you today. We&apos;re
+                    transparent about which compliance layers we own and
+                    which fall on the campaign owner on the{' '}
+                    <Link href="/faq/how-we-keep-compliance">how we keep
+                    compliance page</Link>.
+                  </p>
+                </div>
+              </details>
+
+              <details>
+                <summary>How do you keep numbers from getting flagged as spam?</summary>
+                <div className="answer">
+                  <p>
+                    Every outbound number carries STIR/SHAKEN A-attestation,
+                    is registered for CNAM and the Free Caller Registry, and
+                    dials with local presence by default — the carrier-level
+                    protections that most dialers sell as separate add-ons
+                    are just the default here. The number pool also rotates
+                    and cools down instead of hammering one number until it
+                    burns.
+                  </p>
+                  <p>
+                    See <Link href="/faq/numbers">phone numbers &amp;
+                    caller ID</Link> for the full breakdown — including
+                    what&apos;s still on you (list quality, abandon rate,
+                    DNC scrubbing) since no infrastructure makes a number
+                    permanently immune to flagging.
                   </p>
                 </div>
               </details>
@@ -512,9 +592,13 @@ export default function FaqView() {
                 <div className="answer">
                   <p>
                     Yes. Recordings are captured server-side, stored
-                    encrypted, and accessible from your dashboard. Pulling
-                    them down for review, training, or compliance archives
-                    is straightforward.
+                    encrypted, and accessible from your dashboard for 30
+                    days. Pull them down for review, training, or your own
+                    long-term archive during that window — call metadata
+                    (dial timestamps, dispositions, AMD results) is kept
+                    separately for 24 months to meet the TSR&apos;s
+                    record-keeping floor, but the audio itself follows the
+                    30-day retention window.
                   </p>
                 </div>
               </details>
@@ -523,10 +607,13 @@ export default function FaqView() {
                 <summary>Do you have a team plan?</summary>
                 <div className="answer">
                   <p>
-                    Yes. Each seat is $35/week regardless of team size.
-                    Team owners can pay for the whole team&apos;s seats,
-                    or you can configure it so individual agents pay for
-                    their own access. Both flows are supported.
+                    Yes — <strong>Manager+</strong>, at $75/week. It&apos;s
+                    what the team owner pays to create and own a team; each
+                    individual seat inside the team still runs $35/week,
+                    regardless of team size. You can configure it so the
+                    owner pays for the whole team&apos;s seats, or so
+                    individual agents pay for their own access. Both flows
+                    are supported.
                   </p>
                   <p>
                     See <Link href="/faq/dialerseat-teams">DialerSeat for
@@ -554,10 +641,36 @@ export default function FaqView() {
                 <summary>Do you offer a white-label option?</summary>
                 <div className="answer">
                   <p>
-                    Yes — $115/week. Includes a custom subdomain, your
-                    branding (logo, colors, favicon), and the ability to
-                    onboard your own users under your brand. The
-                    underlying dialer is the same one we run.
+                    Yes — it&apos;s bundled into <strong>Manager+</strong>{' '}
+                    at $75/week, replacing your $35/week Pro subscription
+                    rather than stacking on top of it. Includes a custom
+                    subdomain, your branding (logo, colors, favicon), and
+                    the ability to onboard your own users under your brand.
+                    The underlying dialer is the same one we run. See{' '}
+                    <Link href="/faq/white-label">white-label</Link> for
+                    the branding details, or{' '}
+                    <Link href="/faq/manager-plus">the Manager+
+                    breakdown</Link> for the full tier — team ownership,
+                    advanced analytics, and priority support included.
+                  </p>
+                </div>
+              </details>
+
+              <details>
+                <summary>Is there a mobile app?</summary>
+                <div className="answer">
+                  <p>
+                    Yes — DialerSeat installs to your phone&apos;s home
+                    screen as a Progressive Web App (PWA): the same
+                    dialer terminal, analytics, and teams tools as
+                    desktop, full-screen, with no App Store download
+                    required. We strongly recommend installing it rather
+                    than dialing from a regular browser tab if
+                    you&apos;re working from your phone at all. See{' '}
+                    <Link href="/faq/mobile">DialerSeat on mobile</Link>{' '}
+                    for install steps on iPhone and Android, or{' '}
+                    <Link href="/faq/white-label-mobile">white-label on
+                    mobile</Link> if your account is branded.
                   </p>
                 </div>
               </details>

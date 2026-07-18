@@ -185,18 +185,21 @@ export default function Page() {
                     Total: <strong>~$254/month per agent.</strong>
                   </p>
                   <p>
-                    DialerSeat Pro at $35/week is roughly
-                    <strong> $140/month</strong> — and that includes
-                    <em> unlimited</em> numbers, <em>unlimited</em>
-                    minutes, every dialer mode, and every feature. No
-                    tier gates. No per-line surcharges.
+                    DialerSeat Pro is <strong>$35/week</strong> — and that
+                    includes <em>unlimited</em> numbers, <em>unlimited</em>
+                    minutes, every dialer mode, and every feature. No tier
+                    gates. No per-line surcharges. No monthly contract to
+                    sign either way — you&apos;re never locked into a
+                    billing cycle longer than the week you&apos;re actually
+                    dialing in.
                   </p>
                   <p>
-                    Manager+ at $75/week works out to ~$300/month for
-                    the team owner. Most competitors charge that just
-                    for &ldquo;team admin&rdquo; on top of their per-
-                    agent base — and white-label is usually a separate
-                    enterprise quote on top of that.
+                    Manager+ is <strong>$75/week</strong> for the team
+                    owner. Most competitors charge a comparable amount just
+                    for &ldquo;team admin&rdquo; on top of their per-agent
+                    base — and white-label is usually a separate enterprise
+                    quote on top of that, often billed monthly with a
+                    minimum term attached.
                   </p>
                 </div>
               </details>

@@ -423,6 +423,7 @@ export default function View() {
                 <li>Branded transactional emails (recordings ready, receipts, alerts)</li>
                 <li>Custom support email displayed throughout</li>
                 <li>Hidden &quot;Powered by DialerSeat&quot; — your agents never see us</li>
+                <li>Full mobile branding via installable PWA — home-screen icon, theme, and login screen all carry your brand. See <Link href="/faq/white-label-mobile">how it works on mobile</Link></li>
                 <li>Everything in standard Pro + manager mode</li>
               </ul>
             </div>
@@ -431,7 +432,6 @@ export default function View() {
               <ul>
                 <li>Custom Stripe Connect — agents still pay DialerSeat directly for their $35 seat (we&apos;re building this)</li>
                 <li>Custom Twilio/SignalWire trunks — outbound calls go through our infrastructure</li>
-                <li>Custom mobile app icon (web-only for now)</li>
                 <li>Per-region custom domain SSL (we handle SSL automatically; advanced cert pinning isn&apos;t available)</li>
               </ul>
             </div>
@@ -439,10 +439,29 @@ export default function View() {
 
           <p>
             The honest truth: <strong>everything visual is branded
-            today.</strong> The infrastructure-level white-label (custom call
-            trunks, custom payment routing) is on the roadmap. If those
-            matter to you specifically, email me and we&apos;ll talk about
-            timeline.
+            today, on desktop and mobile alike.</strong> The
+            infrastructure-level white-label (custom call trunks, custom
+            payment routing) is on the roadmap. If those matter to you
+            specifically, email me and we&apos;ll talk about timeline.
+          </p>
+        </section>
+
+        {/* ── MOBILE ─────────────────────────────────────────────────────── */}
+        <section className="wl-section">
+          <h2>▸ IT ALSO WORKS ON MOBILE</h2>
+          <p>
+            Your theme doesn&apos;t stop at the browser tab. Agents install
+            DialerSeat straight to their phone&apos;s home screen as a
+            Progressive Web App — no App Store listing, no separate native
+            build — and the branding carries all the way through: your
+            logo, your colors, your login screen.
+          </p>
+          <p>
+            See <Link href="/faq/white-label-mobile">the full mobile
+            breakdown</Link> for real screenshots of the same account
+            running two completely different themes, and why most
+            white-label dialers don&apos;t bother offering this on mobile
+            at all.
           </p>
         </section>
 
@@ -539,11 +558,13 @@ export default function View() {
         <div className="wl-related">
           <div className="wl-related-label">▸ RELATED READING</div>
           <div className="wl-related-links">
-            <Link href="/managers">Manager mode for agency owners</Link>
+            <Link href="/faq/manager-plus">What Manager+ adds over Pro</Link>
+            <Link href="/faq/white-label-mobile">White-label on mobile</Link>
+            <Link href="/faq/managers">Manager mode for agency owners</Link>
             <Link href="/faq/why-dialerseat">Why I built DialerSeat</Link>
             <Link href="/dialing-modes">Dialing modes explained</Link>
             <Link href="/faq">FAQ</Link>
-            <Link href="/pricing">Pricing</Link>
+            <Link href="/faq/why-we-charge">Pricing</Link>
           </div>
         </div>
 

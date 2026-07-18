@@ -5,6 +5,7 @@ import { getServiceClient } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 import { stripe } from '@/lib/stripe'
 import { activatePendingTeamMember, deactivateTeamMember } from '@/lib/teamMembership'
+import { sendAdminPush } from '@/lib/pushNotify'
 import {
   claimStripeEvent,
   markStripeEventProcessed,
@@ -93,7 +94,7 @@ export async function POST(req: Request) {
       case 'customer.subscription.created':
       case 'customer.subscription.updated':
       case 'customer.subscription.trial_will_end':
-        await routeSubscription(event.data.object as Stripe.Subscription)
+        await routeSubscription(event.data.object as Stripe.Subscription, event.type)
         break
 
       case 'customer.subscription.deleted':
@@ -106,7 +107,7 @@ export async function POST(req: Request) {
         const subscriptionId = (invoice as any).subscription as string | null
         if (subscriptionId) {
           const subscription = await stripe.subscriptions.retrieve(subscriptionId)
-          await routeSubscription(subscription)
+          await routeSubscription(subscription, event.type, invoice.billing_reason ?? undefined)
         }
         break
       }
@@ -141,7 +142,11 @@ export async function POST(req: Request) {
 
 
 
-async function routeSubscription(subscription: Stripe.Subscription) {
+async function routeSubscription(
+  subscription: Stripe.Subscription,
+  eventType?: string,
+  billingReason?: Stripe.Invoice.BillingReason
+) {
   const subKind = subscription.metadata?.sub_kind
 
   if (subKind === 'team_seat') {
@@ -150,11 +155,11 @@ async function routeSubscription(subscription: Stripe.Subscription) {
   }
 
   if (subKind === 'whitelabel') {
-    await routeWhitelabel(subscription)
+    await routeWhitelabel(subscription, eventType, billingReason)
     return
   }
 
-  await syncPersonalSubscription(subscription)
+  await syncPersonalSubscription(subscription, eventType, billingReason)
 }
 
 async function routeSubscriptionDeleted(subscription: Stripe.Subscription) {
@@ -209,7 +214,11 @@ async function routeSubscriptionDeleted(subscription: Stripe.Subscription) {
 
 
 
-async function routeWhitelabel(subscription: Stripe.Subscription) {
+async function routeWhitelabel(
+  subscription: Stripe.Subscription,
+  eventType?: string,
+  billingReason?: Stripe.Invoice.BillingReason
+) {
   
   
   
@@ -220,6 +229,29 @@ async function routeWhitelabel(subscription: Stripe.Subscription) {
   if (!clerkId) {
     console.error('[wl] no clerk_id for subscription', subscription.id)
     return
+  }
+
+  if (eventType === 'customer.subscription.created') {
+    const { data: priorSubs } = await supabase
+      .from('subscriptions')
+      .select('id')
+      .eq('user_id', clerkId)
+      .neq('stripe_subscription_id', subscription.id)
+      .limit(1)
+
+    const isResub = !!(priorSubs && priorSubs.length > 0)
+    const name = await lookupDisplayName(clerkId)
+    if (isResub) {
+      await sendAdminPush('resub', `${name} resubscribed to Manager+ (white label).`)
+    } else {
+      await sendAdminPush('new_sub', `${name} just subscribed to Manager+ (white label).`)
+    }
+  } else if (
+    eventType === 'invoice.payment_succeeded' &&
+    billingReason === 'subscription_cycle'
+  ) {
+    const name = await lookupDisplayName(clerkId)
+    await sendAdminPush('renewal', `${name}'s Manager+ subscription renewed.`)
   }
 
   
@@ -298,6 +330,9 @@ async function markWhitelabelCanceled(subscription: Stripe.Subscription) {
       .from('users')
       .update({ subscription_status: 'canceled' })
       .eq('clerk_id', clerkId)
+
+    const name = await lookupDisplayName(clerkId)
+    await sendAdminPush('cancel', `${name} canceled their Manager+ (white label) subscription.`)
   }
 }
 
@@ -386,7 +421,11 @@ async function syncSeatCharge(subscription: Stripe.Subscription) {
 
 
 
-async function syncPersonalSubscription(subscription: Stripe.Subscription) {
+async function syncPersonalSubscription(
+  subscription: Stripe.Subscription,
+  eventType?: string,
+  billingReason?: Stripe.Invoice.BillingReason
+) {
   const clerkId =
     subscription.metadata?.clerk_id ||
     (await lookupClerkIdByCustomer(subscription))
@@ -394,6 +433,33 @@ async function syncPersonalSubscription(subscription: Stripe.Subscription) {
   if (!clerkId) {
     console.error('No user found for subscription', subscription.id)
     return
+  }
+
+  // Determine push-worthy event BEFORE writing the new row, since "does
+  // this user already have a prior subscription" is only meaningful
+  // pre-upsert. Mirrors the same first-sub-vs-resub logic the admin Logs
+  // app already computes read-side (earliest subscription per user).
+  if (eventType === 'customer.subscription.created') {
+    const { data: priorSubs } = await supabase
+      .from('subscriptions')
+      .select('id')
+      .eq('user_id', clerkId)
+      .neq('stripe_subscription_id', subscription.id)
+      .limit(1)
+
+    const isResub = !!(priorSubs && priorSubs.length > 0)
+    const name = await lookupDisplayName(clerkId)
+    if (isResub) {
+      await sendAdminPush('resub', `${name} resubscribed.`)
+    } else {
+      await sendAdminPush('new_sub', `${name} just subscribed.`)
+    }
+  } else if (
+    eventType === 'invoice.payment_succeeded' &&
+    billingReason === 'subscription_cycle'
+  ) {
+    const name = await lookupDisplayName(clerkId)
+    await sendAdminPush('renewal', `${name}'s subscription renewed.`)
   }
 
   await upsertPersonalSubscription(subscription, clerkId)
@@ -428,6 +494,17 @@ async function syncPersonalSubscription(subscription: Stripe.Subscription) {
       console.error('[agent-pays] failed to activate pending team member', pendingTeamMemberId, err)
     }
   }
+}
+
+async function lookupDisplayName(clerkId: string): Promise<string> {
+  const { data } = await supabase
+    .from('users')
+    .select('first_name, last_name, email')
+    .eq('clerk_id', clerkId)
+    .maybeSingle()
+  if (!data) return 'A customer'
+  const full = `${data.first_name || ''} ${data.last_name || ''}`.trim()
+  return full || data.email?.split('@')[0] || 'A customer'
 }
 
 async function lookupClerkIdByCustomer(
@@ -538,6 +615,12 @@ async function markPersonalSubCanceled(subscription: Stripe.Subscription) {
     .from('users')
     .update({ subscription_status: 'canceled' })
     .eq('stripe_customer_id', customerId)
+
+  const clerkId = await lookupClerkIdByCustomer(subscription)
+  if (clerkId) {
+    const name = await lookupDisplayName(clerkId)
+    await sendAdminPush('cancel', `${name} canceled their subscription.`)
+  }
 
   // Symmetric with the agent-pays activation path — this metadata key stays
   // on the subscription for its whole life once set, not just while pending.

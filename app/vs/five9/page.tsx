@@ -38,7 +38,7 @@ const FAQS = [
   {
     question: 'Does DialerSeat have the same compliance as Five9?',
     answer:
-      "DialerSeat enforces TCPA calling windows server-side per lead state, runs all outbound traffic with full STIR/SHAKEN A-attestation, and registers every outbound number with the carrier registry (CNAM, FCR). The predictive dialer enforces the FTC Telemarketing Sales Rule 3% abandon-rate cap automatically. Five9 offers similar compliance posture at the enterprise level. The technical infrastructure is comparable; the difference is delivery model and price.",
+      "DialerSeat enforces TCPA calling windows server-side per lead state, provisions outbound traffic through a carrier providing STIR/SHAKEN A-attestation where supported, and registers every outbound number with the carrier registry (CNAM, FCR). The predictive dialer enforces the FTC Telemarketing Sales Rule 3% abandon-rate cap automatically. Five9 offers similar compliance posture at the enterprise level. The technical infrastructure is comparable; the difference is delivery model and price.",
   },
   {
     question: 'Can DialerSeat handle high-volume teams like Five9?',

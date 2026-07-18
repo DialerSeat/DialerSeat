@@ -374,15 +374,20 @@ should_dial = max(0, desired_calls - in_flight)`}</div>
           <div className="inner">
             <h2>Where it came from</h2>
             <p>
-              The predictive dialer is older than most people think. The
-              foundational US patent — Doug Samuelson&apos;s
+              The predictive dialer is older than most people think. One
+              foundational US patent — Crockett et al.&apos;s
               &quot;Method for Predictive Dialing&quot; (US patent 4,829,563,
-              filed 1987, granted 1989) — formalized the prediction algorithm
-              that everything since has been some variant of. But the
-              mechanism predates the patent. Mid-1980s call centers at
-              Citibank, Sears, and large collection agencies were already
-              running early predictive systems built on minicomputers and
-              custom hardware.
+              granted May 1989) — formalized a prediction algorithm that
+              much of the industry built on. Around the same time, Douglas
+              A. Samuelson of InfoLogix independently developed a
+              queuing-and-simulation approach to predictive dialing (his
+              own patent, 4,858,120, covers the underlying pacing method),
+              publishing the work in a 1999 <em>Interfaces</em> paper.
+              Between them, these are the two names historians of the
+              category point to. The mechanism itself predates both
+              patents — mid-1980s call centers at large banks, retailers,
+              and collection agencies were already running early predictive
+              systems built on minicomputers and custom hardware.
             </p>
             <p>
               EIS International (acquired by SER Systems, which in turn
@@ -433,8 +438,8 @@ should_dial = max(0, desired_calls - in_flight)`}</div>
               Noble Systems, CallTools, ReadyMode, Convoso — grew up to
               serve the mid-market. By the 2010s, predictive had moved off
               the on-prem boxes and onto cloud platforms, but the
-              underlying algorithm is still the one Doug Samuelson described
-              in 1987.
+              underlying idea is still the same pacing math Crockett and
+              Samuelson separately worked out in the late &apos;80s.
             </p>
           </div>
         </section>
@@ -453,8 +458,8 @@ should_dial = max(0, desired_calls - in_flight)`}</div>
               <p>Big consumer lead lists where every minute of agent talk time produces revenue. This is the home turf.</p>
             </div>
             <div className="dm-shines-card">
-              <h4>TEAMS OF 5+</h4>
-              <p>Predictive math breaks down below ~3 active agents on the same campaign. With 5+, the multiplier really starts paying.</p>
+              <h4>TEAMS OF 8+</h4>
+              <p>DialerSeat&apos;s predictive controller engages true multi-line dialing at 8+ concurrent agents on a campaign — below that threshold it runs as progressive-equivalent so a small surprise in pickups can&apos;t spike your abandon rate.</p>
             </div>
             <div className="dm-shines-card">
               <h4>ESTABLISHED CAMPAIGNS</h4>
@@ -527,7 +532,7 @@ should_dial = max(0, desired_calls - in_flight)`}</div>
               <li>Recovery threshold at 2.0% — stays degraded with a 0.5% safety buffer until the rate clearly drops.</li>
               <li>Live abandon-rate display in the agent terminal so you always know where the campaign is sitting.</li>
               <li>AMD pre-screen so machine pickups never count as abandons against your number.</li>
-              <li>TCPA window check on every dial. DNC scrub on every dial. CNAM-aware caller-ID routing.</li>
+              <li>TCPA window check on every dial. CNAM-aware caller-ID routing. National DNC scrubbing is still on you — see <Link href="/faq/how-we-keep-compliance">how we keep compliance</Link> for the full split.</li>
             </ul>
           </div>
         </section>

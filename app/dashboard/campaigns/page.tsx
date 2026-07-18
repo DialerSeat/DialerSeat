@@ -2914,6 +2914,7 @@ export default function CampaignsPage() {
                     className="settings-mode-select"
                     value={createMode}
                     onChange={e => setCreateMode(e.target.value as DialerMode)}
+                    aria-label="Dialer mode"
                   >
                     {(Object.keys(MODE_LABELS) as DialerMode[]).map(m => (
                       <option key={m} value={m}>{MODE_LABELS[m]}</option>
@@ -2932,6 +2933,16 @@ export default function CampaignsPage() {
                   <div
                     className={`settings-toggle ${createAmd ? 'on' : ''}`}
                     onClick={() => setCreateAmd(v => !v)}
+                    role="switch"
+                    aria-checked={createAmd}
+                    aria-label="Answering machine detection"
+                    tabIndex={0}
+                    onKeyDown={e => {
+                      if (e.key === ' ' || e.key === 'Enter') {
+                        e.preventDefault()
+                        setCreateAmd(v => !v)
+                      }
+                    }}
                   ><div className="knob" /></div>
                 </div>
 
@@ -2970,6 +2981,16 @@ export default function CampaignsPage() {
                   <div
                     className={`settings-toggle ${createApptSub ? 'on' : ''}`}
                     onClick={() => setCreateApptSub(v => !v)}
+                    role="switch"
+                    aria-checked={createApptSub}
+                    aria-label="Appointments sub-campaign"
+                    tabIndex={0}
+                    onKeyDown={e => {
+                      if (e.key === ' ' || e.key === 'Enter') {
+                        e.preventDefault()
+                        setCreateApptSub(v => !v)
+                      }
+                    }}
                   ><div className="knob" /></div>
                 </div>
 
@@ -2984,6 +3005,16 @@ export default function CampaignsPage() {
                   <div
                     className={`settings-toggle ${createNotIntSub ? 'on' : ''}`}
                     onClick={() => setCreateNotIntSub(v => !v)}
+                    role="switch"
+                    aria-checked={createNotIntSub}
+                    aria-label="Not interested sub-campaign"
+                    tabIndex={0}
+                    onKeyDown={e => {
+                      if (e.key === ' ' || e.key === 'Enter') {
+                        e.preventDefault()
+                        setCreateNotIntSub(v => !v)
+                      }
+                    }}
                   ><div className="knob" /></div>
                 </div>
                 </>)}
@@ -3104,6 +3135,20 @@ export default function CampaignsPage() {
                                 if (next.has(s.id)) next.delete(s.id); else next.add(s.id)
                                 return next
                               })}
+                              role="switch"
+                              aria-checked={on}
+                              aria-label={`Enable script: ${s.name || 'Untitled'}`}
+                              tabIndex={0}
+                              onKeyDown={e => {
+                                if (e.key === ' ' || e.key === 'Enter') {
+                                  e.preventDefault()
+                                  setCreateEnabledScriptIds(prev => {
+                                    const next = new Set(prev)
+                                    if (next.has(s.id)) next.delete(s.id); else next.add(s.id)
+                                    return next
+                                  })
+                                }
+                              }}
                             ><div className="knob" /></div>
                           </div>
                         )
@@ -3286,6 +3331,17 @@ export default function CampaignsPage() {
                   <div
                     className={`settings-toggle ${editDraft?.status === 'active' ? 'on' : ''} ${isLapsed ? 'disabled' : ''}`}
                     onClick={() => !isLapsed && patchDraft({ status: editDraft?.status === 'active' ? 'inactive' : 'active' })}
+                    role="switch"
+                    aria-checked={editDraft?.status === 'active'}
+                    aria-label="Campaign active"
+                    aria-disabled={isLapsed}
+                    tabIndex={isLapsed ? -1 : 0}
+                    onKeyDown={e => {
+                      if (!isLapsed && (e.key === ' ' || e.key === 'Enter')) {
+                        e.preventDefault()
+                        patchDraft({ status: editDraft?.status === 'active' ? 'inactive' : 'active' })
+                      }
+                    }}
                   ><div className="knob" /></div>
                 </div>
 
@@ -3302,6 +3358,7 @@ export default function CampaignsPage() {
                       patchDraft({ dialer_mode: m, amd_enabled: AMD_DEFAULT_BY_MODE[m] })
                     }}
                     disabled={isLapsed}
+                    aria-label="Dialer mode"
                   >
                     {(Object.keys(MODE_LABELS) as DialerMode[]).map(m => (
                       <option key={m} value={m}>{MODE_LABELS[m]}</option>
@@ -3317,6 +3374,17 @@ export default function CampaignsPage() {
                   <div
                     className={`settings-toggle ${editDraft?.amd_enabled ? 'on' : ''} ${isLapsed ? 'disabled' : ''}`}
                     onClick={() => !isLapsed && patchDraft({ amd_enabled: !editDraft?.amd_enabled })}
+                    role="switch"
+                    aria-checked={!!editDraft?.amd_enabled}
+                    aria-label="Answering machine detection"
+                    aria-disabled={isLapsed}
+                    tabIndex={isLapsed ? -1 : 0}
+                    onKeyDown={e => {
+                      if (!isLapsed && (e.key === ' ' || e.key === 'Enter')) {
+                        e.preventDefault()
+                        patchDraft({ amd_enabled: !editDraft?.amd_enabled })
+                      }
+                    }}
                   ><div className="knob" /></div>
                 </div>
 
@@ -3356,6 +3424,17 @@ export default function CampaignsPage() {
                   <div
                     className={`settings-toggle ${editDraft?.enable_appointments_sub ? 'on' : ''} ${isLapsed ? 'disabled' : ''}`}
                     onClick={() => !isLapsed && patchDraft({ enable_appointments_sub: !editDraft?.enable_appointments_sub })}
+                    role="switch"
+                    aria-checked={!!editDraft?.enable_appointments_sub}
+                    aria-label="Appointments sub-campaign"
+                    aria-disabled={isLapsed}
+                    tabIndex={isLapsed ? -1 : 0}
+                    onKeyDown={e => {
+                      if (!isLapsed && (e.key === ' ' || e.key === 'Enter')) {
+                        e.preventDefault()
+                        patchDraft({ enable_appointments_sub: !editDraft?.enable_appointments_sub })
+                      }
+                    }}
                   ><div className="knob" /></div>
                 </div>
 
@@ -3370,6 +3449,17 @@ export default function CampaignsPage() {
                   <div
                     className={`settings-toggle ${editDraft?.enable_not_interested_sub ? 'on' : ''} ${isLapsed ? 'disabled' : ''}`}
                     onClick={() => !isLapsed && patchDraft({ enable_not_interested_sub: !editDraft?.enable_not_interested_sub })}
+                    role="switch"
+                    aria-checked={!!editDraft?.enable_not_interested_sub}
+                    aria-label="Not interested sub-campaign"
+                    aria-disabled={isLapsed}
+                    tabIndex={isLapsed ? -1 : 0}
+                    onKeyDown={e => {
+                      if (!isLapsed && (e.key === ' ' || e.key === 'Enter')) {
+                        e.preventDefault()
+                        patchDraft({ enable_not_interested_sub: !editDraft?.enable_not_interested_sub })
+                      }
+                    }}
                   ><div className="knob" /></div>
                 </div>
                 </>)}
@@ -3502,6 +3592,17 @@ export default function CampaignsPage() {
                             <div
                               className={`settings-toggle ${on ? 'on' : ''} ${isLapsed ? 'disabled' : ''}`}
                               onClick={() => !isLapsed && draftToggleScript(s.id)}
+                              role="switch"
+                              aria-checked={on}
+                              aria-label={`Enable script: ${s.name || 'Untitled'}`}
+                              aria-disabled={isLapsed}
+                              tabIndex={isLapsed ? -1 : 0}
+                              onKeyDown={e => {
+                                if (!isLapsed && (e.key === ' ' || e.key === 'Enter')) {
+                                  e.preventDefault()
+                                  draftToggleScript(s.id)
+                                }
+                              }}
                             ><div className="knob" /></div>
                           </div>
                         )

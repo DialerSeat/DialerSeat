@@ -66,10 +66,6 @@ const TeamsApp = dynamic(() => import('./apps/Teams'), {
   loading: () => <AppLoading />,
   ssr: false,
 })
-const CampaignsApp = dynamic(() => import('./apps/Campaigns'), {
-  loading: () => <AppLoading />,
-  ssr: false,
-})
 const NumbersApp = dynamic(() => import('./apps/Numbers'), {
   loading: () => <AppLoading />,
   ssr: false,
@@ -107,6 +103,10 @@ const AppStoreApp = dynamic(() => import('./apps/AppStore'), {
   ssr: false,
 })
 const ExplorerApp = dynamic(() => import('./apps/Explorer'), {
+  loading: () => <AppLoading />,
+  ssr: false,
+})
+const SettingsApp = dynamic(() => import('./apps/Settings'), {
   loading: () => <AppLoading />,
   ssr: false,
 })
@@ -179,16 +179,6 @@ export const APPS: AppDefinition[] = [
     visibleTo: ['admin', 'manager'],
     Component: TeamsApp,
     defaultSize: { width: 1100, height: 720 },
-  },
-  {
-    id: 'campaigns',
-    name: 'Campaigns',
-    icon: '📣',
-    iconBg: 'linear-gradient(135deg, #4ad0c0, #1a8a7a)',
-    description: 'Every campaign on the platform — set active/inactive, assign to teams',
-    visibleTo: ['admin', 'manager'],
-    Component: CampaignsApp,
-    defaultSize: { width: 1140, height: 740 },
   },
   {
     id: 'numbers',
@@ -299,6 +289,16 @@ export const APPS: AppDefinition[] = [
     visibleTo: ['admin'],
     Component: ExplorerApp,
     defaultSize: { width: 1120, height: 760 },
+  },
+  {
+    id: 'settings',
+    name: 'Settings',
+    icon: '⚙️',
+    iconBg: 'linear-gradient(135deg, #8E8E93, #48484A)',
+    description: 'Admin preferences, including which Logs events send a notification',
+    visibleTo: ['admin'],
+    Component: SettingsApp,
+    defaultSize: { width: 760, height: 720 },
   },
 ]
 

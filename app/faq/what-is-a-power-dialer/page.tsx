@@ -423,10 +423,12 @@ export default function PowerDialerPage() {
             <p>
               The other thing power gives up is voicemail filtering — by
               default. If you&apos;re hitting answering machines on every
-              third dial and you don&apos;t have AMD running, you&apos;re
-              going to hear the same robotic &quot;Hi, you&apos;ve reached
-              ...&quot; ten thousand times before the year is out. (DialerSeat
-              runs AMD by default in power mode for this exact reason.)
+              third dial and you don&apos;t turn AMD on, you&apos;re going
+              to hear the same robotic &quot;Hi, you&apos;ve reached
+              ...&quot; ten thousand times before the year is out. It&apos;s
+              a one-click toggle in campaign settings if you&apos;d rather
+              have progressive&apos;s filtering behavior on a power-mode
+              campaign.
             </p>
           </div>
         </section>
@@ -440,11 +442,11 @@ export default function PowerDialerPage() {
               dialing — no per-campaign tuning required.
             </p>
             <ul className="dm-bullets">
-              <li>AMD on by default. Voicemails get detected and dropped; the queue advances automatically.</li>
+              <li>AMD is off by default in power mode — you hear every pickup, voicemail included. Flip it on per-campaign in settings if you want machine pickups filtered out.</li>
               <li>Auto-advance after disposition — no clicking between calls once you&apos;re going.</li>
               <li>One outbound line per agent. Zero abandonment possible. No FTC exposure.</li>
               <li>TCPA window enforcement per lead&apos;s local time zone. No 6 AM Pacific dials to East Coast leads.</li>
-              <li>DNC scrub on every dial — both federal and state lists.</li>
+              <li>National DNC scrubbing is on you — scrub your list against the registry before you upload it. State-specific lists are on you too. See <Link href="/faq/how-we-keep-compliance">how we keep compliance</Link>.</li>
               <li>Keyboard shortcuts for disposition so you keep your hands on the keys, not the mouse.</li>
               <li>Live duration timer, connected-rate counter, and per-session metrics in the right sidebar.</li>
             </ul>
@@ -469,7 +471,7 @@ export default function PowerDialerPage() {
               <Link href="/dialing-modes/predictive" className="dm-other-card predictive">
                 <span className="pill">PREDICTIVE</span>
                 <h3>Multiple lines, agent prediction</h3>
-                <p>1.5–3× lines per agent. Highest throughput, tightest compliance, needs a team.</p>
+                <p>1.5–3× lines per agent. Highest throughput, needs a team of 8+ to really engage, auto-degrade keeps it off the legal line.</p>
               </Link>
             </div>
           </div>

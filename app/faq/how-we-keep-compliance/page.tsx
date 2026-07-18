@@ -233,6 +233,15 @@ export default function Page() {
             layer of compliance for you is either lying or charging you a
             lot more than $35/week.
           </p>
+          <p>
+            Two things worth reading alongside this page:{' '}
+            <Link href="/faq/leads">how consent metadata actually attaches
+            to a lead at upload</Link>, and{' '}
+            <Link href="/faq/numbers">how outbound numbers stay off spam
+            and scam-likely lists</Link> — since a flagged number and an
+            abandoned call both erode trust the same way, even though
+            only one of them is a TCPA violation.
+          </p>
         </section>
 
         <section className="exp-section alt">
@@ -253,10 +262,11 @@ export default function Page() {
 
             <h3>Scenario B: Predictive abandon rate spikes</h3>
             <p>
-              You&apos;re running predictive at 2.0× with 6 agents. A
-              campaign on a Tuesday afternoon hits an unusually high
-              answer rate — maybe a fresh batch of warm leads dropped in —
-              and your in-flight calls outpace agents being free. The
+              You&apos;re running predictive at 2.0× with 10 agents — above
+              the 8-agent threshold where multi-line dialing actually
+              engages. A campaign on a Tuesday afternoon hits an unusually
+              high answer rate — maybe a fresh batch of warm leads dropped
+              in — and your in-flight calls outpace agents being free. The
               30-day rolling abandon rate ticks up to 2.51%. Within 5
               seconds, the controller cuts you back to 1.0× lines. You
               keep dialing, but as progressive, not predictive. When the

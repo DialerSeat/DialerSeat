@@ -11,7 +11,7 @@ export function organizationSchema() {
     url: SITE_URL,
     logo: `${SITE_URL}/logo.png`,
     description:
-      'The modern dialer for sales teams and solo agents. Multi-line predictive dialing with per-campaign mode configuration, multiple scripts per campaign, server-side TCPA enforcement, and full STIR/SHAKEN compliance at flat $35/week per seat. No annual contracts.',
+      'The modern dialer for sales teams and solo agents. Multi-line predictive dialing with per-campaign mode configuration, multiple scripts per campaign, server-side TCPA enforcement, and carrier-level STIR/SHAKEN A-attestation where supported, at flat $35/week per seat. No annual contracts.',
     foundingDate: '2025',
     contactPoint: {
       '@type': 'ContactPoint',
@@ -32,7 +32,7 @@ export function softwareApplicationSchema() {
     '@id': `${SITE_URL}/#software`,
     name: 'DialerSeat',
     description:
-      'Multi-line predictive dialer for sales teams and solo agents. Per-campaign dialer mode, multiple scripts with live mid-call switching, server-side TCPA compliance, full STIR/SHAKEN A-attestation, and a public API that works with any CRM. Works on phone, tablet, and desktop. $35/week per seat with no annual contract.',
+      'Multi-line predictive dialer for sales teams and solo agents. Per-campaign dialer mode, multiple scripts with live mid-call switching, server-side TCPA compliance, carrier-level STIR/SHAKEN A-attestation where supported, and a public API that works with any CRM. Works on phone, tablet, and desktop. $35/week per seat with no annual contract.',
     applicationCategory: 'BusinessApplication',
     applicationSubCategory: 'Sales Dialer',
     operatingSystem: 'Web (works on iOS, Android, macOS, Windows via browser or installable PWA)',
@@ -138,7 +138,7 @@ export const DIALING_MODES_FAQS = [
   {
     question: 'Is predictive dialing legal?',
     answer:
-      'Yes — predictive dialing is legal under TCPA when the abandon rate stays under 3% over a 30-day period and proper disclosure is provided. DialerSeat enforces this cap automatically and includes server-side TCPA window enforcement and full STIR/SHAKEN A-attestation.',
+      'Yes — predictive dialing is legal under TCPA when the abandon rate stays under 3% over a 30-day period and proper disclosure is provided. DialerSeat enforces this cap automatically and includes server-side TCPA window enforcement, and outbound calls carry carrier-level STIR/SHAKEN A-attestation where supported.',
   },
   {
     question: 'What is AMD (Answering Machine Detection)?',

@@ -453,7 +453,7 @@ export default function PreviewDialerPage() {
               <li><em>Skip This Lead</em> dispositions cleanly and pulls the next one — no penalty for passing.</li>
               <li>Auto-pull next lead after disposition (toggle on/off in your settings).</li>
               <li>TCPA window check still runs — leads outside their local 8 AM–9 PM window are skipped automatically.</li>
-              <li>DNC scrub before every dial. The agent never has to remember.</li>
+              <li>National DNC scrubbing is on you — scrub your list against the registry before you upload it. See <Link href="/faq/how-we-keep-compliance">how we keep compliance</Link> for the full split of what we enforce vs. what's yours.</li>
             </ul>
           </div>
         </section>
@@ -476,7 +476,7 @@ export default function PreviewDialerPage() {
               <Link href="/dialing-modes/predictive" className="dm-other-card predictive">
                 <span className="pill">PREDICTIVE</span>
                 <h3>Multiple lines, agent prediction</h3>
-                <p>1.5–3× lines per agent, routed by algorithm. Highest throughput, tightest compliance.</p>
+                <p>1.5–3× lines per agent, routed by algorithm. Highest throughput, closest to the legal abandon-rate line — kept in check by auto-degrade.</p>
               </Link>
             </div>
           </div>
