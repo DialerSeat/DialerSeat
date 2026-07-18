@@ -140,6 +140,7 @@ export default function SettingsPage() {
   const [confirming, setConfirming] = useState(false)
   const [typedConfirm, setTypedConfirm] = useState('')
   const [canceling, setCanceling] = useState(false)
+  const [resuming, setResuming] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
@@ -246,7 +247,35 @@ export default function SettingsPage() {
     setConfirming(true); setTypedConfirm(''); setError(null); setMessage(null)
   }
   const handleAbortCancel = () => { setConfirming(false); setTypedConfirm('') }
-  const handleResubscribe = () => { window.location.href = '/billing' }
+  // "Resume" only makes sense for a subscription that's still active but
+  // scheduled to cancel — cancel_at_period_end just needs to be cleared on
+  // the existing Stripe subscription. A genuinely lapsed subscription has
+  // no live Stripe subscription left to resume, so that case still needs to
+  // go through /billing to start a fresh one.
+  const handleResubscribe = async () => {
+    if (sub?.tier === 'lapsed') {
+      window.location.href = '/billing'
+      return
+    }
+    setResuming(true)
+    setError(null)
+    setMessage(null)
+    try {
+      const res = await fetch('/api/stripe/resume', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || 'Failed to resume subscription')
+        setResuming(false)
+        return
+      }
+      setMessage('Your subscription has been resumed.')
+      await loadStatus()
+    } catch (err: any) {
+      setError(err.message || 'Something went wrong')
+    } finally {
+      setResuming(false)
+    }
+  }
 
   const startCancelSeat = (seat: AgentPaidSeat) => {
     setSeatConfirmTarget(seat); setSeatTypedConfirm('')
@@ -657,8 +686,10 @@ export default function SettingsPage() {
                 : `You'll lose dialing access on ${sub?.currentPeriodEnd ? formatDate(sub.currentPeriodEnd) : 'period end'}. Resume billing now to keep going without interruption.`
               }
             </div>
-            <button onClick={handleResubscribe} style={resubscribeButtonStyle}>
-              {sub?.tier === 'lapsed' ? 'RESUBSCRIBE — $35/WEEK' : 'RESUME SUBSCRIPTION'}
+            <button onClick={handleResubscribe} disabled={resuming} style={{ ...resubscribeButtonStyle, opacity: resuming ? 0.6 : 1, cursor: resuming ? 'not-allowed' : 'pointer' }}>
+              {resuming
+                ? 'RESUMING...'
+                : sub?.tier === 'lapsed' ? 'RESUBSCRIBE — $35/WEEK' : 'RESUME SUBSCRIPTION'}
             </button>
           </div>
         )}
