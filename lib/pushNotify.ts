@@ -67,7 +67,7 @@ interface AdminNotificationPrefs {
   cancel: boolean
 }
 
-async function getPrefs(): Promise<AdminNotificationPrefs | null> {
+async function getPrefs(): Promise<AdminNotificationPrefs> {
   const supabase = getServiceClient('pushNotify:getPrefs')
   const { data, error } = await supabase
     .from('admin_notification_prefs')
@@ -76,9 +76,25 @@ async function getPrefs(): Promise<AdminNotificationPrefs | null> {
     .maybeSingle()
   if (error) {
     console.error('[pushNotify] failed to read admin_notification_prefs:', error)
-    return null
+    // A genuine query error (bad connection, RLS issue, etc.) — don't
+    // guess, just don't send. Distinct from the "no row" case below,
+    // which is a setup gap, not a real signal to suppress everything.
+    return { master_enabled: false, signup: false, account_deleted: false, new_sub: false, resub: false, renewal: false, cancel: false }
   }
-  return data as AdminNotificationPrefs | null
+  if (!data) {
+    // The seed row (migrations/PUSH_NOTIFICATIONS_2026-07-17.sql) never
+    // ran, or was somehow deleted. This is NOT the same thing as an admin
+    // deliberately turning notifications off — treating a missing row as
+    // "everything off" (the old behavior here) meant every single
+    // sendAdminPush() call returned immediately with nothing sent, for
+    // every event type, with no error anywhere to explain why. Default
+    // to everything ON instead, matching the table's own column defaults
+    // (see the CREATE TABLE — every boolean defaults to true), and let
+    // the admin explicitly turn things off if they actually want that.
+    console.warn('[pushNotify] admin_notification_prefs has no row with id=1 — defaulting to all notifications ON.')
+    return { master_enabled: true, signup: true, account_deleted: true, new_sub: true, resub: true, renewal: true, cancel: true }
+  }
+  return data as AdminNotificationPrefs
 }
 
 /**
@@ -95,7 +111,6 @@ export async function sendAdminPush(
 ): Promise<void> {
   try {
     const prefs = await getPrefs()
-    if (!prefs) return
     if (!prefs.master_enabled) return
     if (!prefs[eventType]) return
 

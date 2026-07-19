@@ -916,16 +916,8 @@ Stripe customer deleted: ${deleteResult.stripe.customerDeleted}
 ${deleteResult.stripe.error ? `Stripe error: ${deleteResult.stripe.error}\n` : ''}Clerk deleted: ${deleteResult.clerk.deleted}
 ${deleteResult.clerk.error ? `Clerk error: ${deleteResult.clerk.error}\n` : ''}
 Supabase rows removed:
-  users: ${deleteResult.supabase.users}
-  subscriptions: ${deleteResult.supabase.subscriptions}
-  campaigns: ${deleteResult.supabase.campaigns}
-  campaign_scripts: ${deleteResult.supabase.campaign_scripts}
-  leads: ${deleteResult.supabase.leads}
-  calls: ${deleteResult.supabase.calls}
-  team_members: ${deleteResult.supabase.team_members}
-  teams: ${deleteResult.supabase.teams}
-  data_preserved_users: ${deleteResult.supabase.data_preserved_users}
-${deleteResult.supabase.errors.length > 0 ? `\nSupabase errors:\n  ${deleteResult.supabase.errors.join('\n  ')}` : ''}`}
+${Object.entries(deleteResult.supabase.counts).map(([table, count]) => `  ${table}: ${count}`).join('\n')}
+${deleteResult.supabase.blocked ? `\nBlocked: ${deleteResult.supabase.blocked}` : ''}${deleteResult.supabase.errors.length > 0 ? `\nSupabase errors:\n  ${deleteResult.supabase.errors.join('\n  ')}` : ''}`}
                 </div>
               )}
             </div>

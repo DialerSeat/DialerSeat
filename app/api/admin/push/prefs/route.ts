@@ -71,10 +71,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No valid preference fields in body' }, { status: 400 })
   }
 
+  // upsert, NOT update — if the seed row (migrations/PUSH_NOTIFICATIONS_
+  // 2026-07-17.sql, ON CONFLICT DO NOTHING) never actually ran against
+  // this database, update() would match zero rows and silently succeed
+  // with data: null. That null then fell through to DEFAULT_PREFS below —
+  // which is all-true — meaning every toggle would appear to save
+  // successfully (200 OK, no error) while actually persisting nothing,
+  // and the very next read would show everything back on. upsert() with
+  // an explicit id: 1 self-heals by creating the row the first time this
+  // is ever hit, instead of failing this way forever.
   const { data, error } = await supabase
     .from('admin_notification_prefs')
-    .update({ ...patch, updated_at: new Date().toISOString() })
-    .eq('id', 1)
+    .upsert({ id: 1, ...patch, updated_at: new Date().toISOString() }, { onConflict: 'id' })
     .select('master_enabled, signup, account_deleted, new_sub, resub, renewal, cancel')
     .maybeSingle()
 

@@ -4,6 +4,7 @@ import { clerkClient } from '@clerk/nextjs/server'
 import { requireAdmin } from '@/lib/admin'
 import { stripe } from '@/lib/stripe'
 import { apiError } from '@/lib/apiError'
+import { deleteAccount } from '@/lib/deleteAccount'
 
 const supabase = getServiceClient('admin/users/delete')
 
@@ -20,34 +21,10 @@ interface DeleteSummary {
     error: string | null
   }
   supabase: {
-    team_members: number
-    teams: number
-    campaign_scripts: number
-    calls: number
-    leads: number
-    campaigns: number
-    subscriptions: number
-    data_preserved_users: number
-    users: number
+    counts: Record<string, number>
+    blocked?: string
     errors: string[]
   }
-}
-
-async function safeCount(
-  table: string,
-  match: Record<string, string>,
-  errors: string[]
-): Promise<number> {
-  const { data, error } = await supabase
-    .from(table)
-    .delete()
-    .match(match)
-    .select('*')
-  if (error) {
-    errors.push(`${table}: ${error.message}`)
-    return 0
-  }
-  return data?.length || 0
 }
 
 export async function POST(req: NextRequest) {
@@ -92,15 +69,7 @@ export async function POST(req: NextRequest) {
     stripe: { subscriptionsCanceled: 0, customerDeleted: false, error: null },
     clerk: { deleted: false, error: null },
     supabase: {
-      team_members: 0,
-      teams: 0,
-      campaign_scripts: 0,
-      calls: 0,
-      leads: 0,
-      campaigns: 0,
-      subscriptions: 0,
-      data_preserved_users: 0,
-      users: 0,
+      counts: {},
       errors: [],
     },
   }
@@ -153,49 +122,27 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const errs = summary.supabase.errors
-
-  summary.supabase.team_members += await safeCount(
-    'team_members',
-    { user_id: clerkId },
-    errs
-  )
-
-  summary.supabase.teams = await safeCount('teams', { owner_id: clerkId }, errs)
-
-  {
-    const { data: camps, error: campErr } = await supabase
-      .from('campaigns')
-      .select('id')
-      .eq('user_id', clerkId)
-    if (campErr) {
-      errs.push(`campaigns lookup: ${campErr.message}`)
-    } else if (camps && camps.length > 0) {
-      const ids = camps.map(c => c.id)
-      const { data: scripts, error: scriptErr } = await supabase
-        .from('campaign_scripts')
-        .delete()
-        .in('campaign_id', ids)
-        .select('id')
-      if (scriptErr) errs.push(`campaign_scripts: ${scriptErr.message}`)
-      else summary.supabase.campaign_scripts = scripts?.length || 0
-    }
+  // Stripe cancellation/customer deletion and the Clerk user deletion above
+  // are specific to this admin-initiated "remove someone from the platform
+  // entirely" flow. Everything else — the actual Supabase table cleanup —
+  // now goes through the same deleteAccount() used by the self-service
+  // "delete my account" flow, instead of a second, separately-maintained
+  // version. That second version only ever covered 9 tables by hand and,
+  // critically, never captured the person's name before deleting them or
+  // wrote a billing_events audit entry at all — meaning deletions done
+  // from this admin screen were completely invisible to both Logs and
+  // push notifications. deleteAccount() already does both correctly.
+  //
+  // allowActiveSubscription: true because any live subscription was
+  // already canceled in Stripe above — deleteAccount()'s own guard exists
+  // to stop a SELF-service deletion of a still-paying account, which
+  // doesn't apply here.
+  const result = await deleteAccount(clerkId, { dryRun: false, allowActiveSubscription: true })
+  summary.supabase.counts = result.counts
+  if (!result.ok) {
+    summary.supabase.blocked = result.blocked
+    summary.supabase.errors.push(result.blocked || 'deleteAccount failed for an unspecified reason')
   }
 
-  summary.supabase.calls = await safeCount('calls', { user_id: clerkId }, errs)
-  summary.supabase.leads = await safeCount('leads', { user_id: clerkId }, errs)
-  summary.supabase.campaigns = await safeCount('campaigns', { user_id: clerkId }, errs)
-  summary.supabase.subscriptions = await safeCount(
-    'subscriptions',
-    { user_id: clerkId },
-    errs
-  )
-  summary.supabase.data_preserved_users = await safeCount(
-    'data_preserved_users',
-    { clerk_id: clerkId },
-    errs
-  )
-  summary.supabase.users = await safeCount('users', { clerk_id: clerkId }, errs)
-
-  return NextResponse.json({ success: true, summary })
+  return NextResponse.json({ success: result.ok, summary })
 }

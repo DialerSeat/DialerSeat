@@ -317,6 +317,10 @@ export default function SettingsApp() {
   const [deviceBusy, setDeviceBusy] = useState(false)
   const [deviceError, setDeviceError] = useState<string | null>(null)
 
+  const [diagBusy, setDiagBusy] = useState(false)
+  const [diagResults, setDiagResults] = useState<{ step: string; ok: boolean; detail: string }[] | null>(null)
+  const [diagSendResults, setDiagSendResults] = useState<{ subscriptionId: string; ok: boolean; detail: string; statusCode?: number }[] | null>(null)
+
   const notifState: Record<NotifKey, boolean> = {
     signup: prefs.signup,
     account_deleted: prefs.account_deleted,
@@ -479,6 +483,23 @@ export default function SettingsApp() {
       setDeviceError('Something went wrong enabling push on this device.')
     } finally {
       setDeviceBusy(false)
+    }
+  }
+
+  async function runDiagnostic(sendTest: boolean) {
+    setDiagBusy(true)
+    setDiagResults(null)
+    setDiagSendResults(null)
+    try {
+      const res = await fetch('/api/admin/push/diagnose', { method: sendTest ? 'POST' : 'GET' })
+      const data = await res.json()
+      setDiagResults(data.results || [])
+      setDiagSendResults(data.sendResults ?? null)
+    } catch (err) {
+      console.error('[Settings] runDiagnostic failed:', err)
+      setDiagResults([{ step: 'Run diagnostic', ok: false, detail: 'Failed to reach the diagnostic endpoint itself — check your network connection.' }])
+    } finally {
+      setDiagBusy(false)
     }
   }
 
@@ -675,6 +696,82 @@ export default function SettingsApp() {
                 )
               }
             />
+          </GroupedCard>
+
+          <GroupLabel>Diagnostics</GroupLabel>
+          <GroupedCard>
+            <div style={{ padding: '12px 16px' }}>
+              <div style={{ fontSize: 13, color: LABEL_SECONDARY, marginBottom: 10, lineHeight: 1.4 }}>
+                Checks every step notifications depend on — VAPID configuration, saved
+                preferences, and which devices are subscribed — then optionally sends
+                one real test push to confirm delivery end to end.
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => runDiagnostic(false)}
+                  disabled={diagBusy}
+                  style={{
+                    all: 'unset', background: '#E5E5EA', color: LABEL_PRIMARY, fontSize: 13.5,
+                    fontWeight: 500, padding: '7px 14px', borderRadius: 8,
+                    cursor: diagBusy ? 'default' : 'pointer', opacity: diagBusy ? 0.6 : 1,
+                  }}
+                >
+                  {diagBusy ? 'Checking…' : 'Run Checks'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => runDiagnostic(true)}
+                  disabled={diagBusy}
+                  style={{
+                    all: 'unset', background: IOS_BLUE, color: '#fff', fontSize: 13.5,
+                    fontWeight: 500, padding: '7px 14px', borderRadius: 8,
+                    cursor: diagBusy ? 'default' : 'pointer', opacity: diagBusy ? 0.6 : 1,
+                  }}
+                >
+                  {diagBusy ? 'Sending…' : 'Send Real Test Push'}
+                </button>
+              </div>
+
+              {diagResults && (
+                <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {diagResults.map((r, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        display: 'flex', gap: 8, padding: '8px 10px', borderRadius: 8,
+                        background: r.ok ? 'rgba(52,199,89,0.08)' : 'rgba(255,59,48,0.08)',
+                      }}
+                    >
+                      <span style={{ fontSize: 15, lineHeight: 1.3 }}>{r.ok ? '✅' : '❌'}</span>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: LABEL_PRIMARY }}>{r.step}</div>
+                        <div style={{ fontSize: 12, color: LABEL_SECONDARY, marginTop: 2, lineHeight: 1.4 }}>{r.detail}</div>
+                      </div>
+                    </div>
+                  ))}
+                  {diagSendResults && diagSendResults.length > 0 && (
+                    <>
+                      <div style={{ fontSize: 12, color: LABEL_SECONDARY, marginTop: 4, fontWeight: 600 }}>
+                        Test push results:
+                      </div>
+                      {diagSendResults.map((r, i) => (
+                        <div
+                          key={i}
+                          style={{
+                            display: 'flex', gap: 8, padding: '8px 10px', borderRadius: 8,
+                            background: r.ok ? 'rgba(52,199,89,0.08)' : 'rgba(255,59,48,0.08)',
+                          }}
+                        >
+                          <span style={{ fontSize: 15, lineHeight: 1.3 }}>{r.ok ? '✅' : '❌'}</span>
+                          <div style={{ fontSize: 12, color: LABEL_SECONDARY, lineHeight: 1.4 }}>{r.detail}</div>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
           </GroupedCard>
 
           <GroupLabel>Log Events</GroupLabel>
