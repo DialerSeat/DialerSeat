@@ -120,6 +120,27 @@ const COMPARISONS: Comparison[] = [
     pitch:
       'JustCall advertises $29/user/month, but the power and predictive dialer sit behind the $49+/month Pro tier, plus a 2-seat minimum on every standard plan. DialerSeat includes every dialer mode at $35/week per seat, one seat minimum: one.',
   },
+  {
+    slug: 'cloudtalk',
+    name: 'VS CLOUDTALK',
+    tagline: 'The dialer isn\'t in the $19 seat',
+    pitch:
+      'CloudTalk\'s cheap headline price doesn\'t include a dialer — Power Dialer is a $15/seat/mo add-on, Parallel Dialer is $39/seat/mo, both stacked on top. DialerSeat includes every dialer mode at $35/week, flat, no add-on required.',
+  },
+  {
+    slug: 'aircall',
+    name: 'VS AIRCALL',
+    tagline: 'The power dialer isn\'t on the basic plan',
+    pitch:
+      'Aircall\'s $30 Essentials plan has no Power Dialer, no Salesforce integration, and no call monitoring — all three require the $50 Professional tier, plus a 3-license minimum. DialerSeat includes the dialer at $35/week, no tier upgrade, no seat minimum.',
+  },
+  {
+    slug: 'dialpad',
+    name: 'VS DIALPAD',
+    tagline: 'The dialer is a separate product',
+    pitch:
+      'Dialpad Connect\'s phone plans have no power dialer at any tier — it\'s exclusive to a separate product, Dialpad Sell, starting around $39/seat/mo. DialerSeat includes every dialer mode in one product at $35/week, no second purchase required.',
+  },
 ]
 
 export default function VsHubView() {
@@ -350,7 +371,7 @@ export default function VsHubView() {
           </div>
 
           <div className="vshub-section">
-            <div className="vshub-section-eyebrow">10 COMPARISONS — MORE COMING SOON</div>
+            <div className="vshub-section-eyebrow">13 COMPARISONS — MORE COMING SOON</div>
             <h2 className="vshub-section-h2">Every legacy dialer, broken down.</h2>
             <p className="vshub-section-lede">
               We'll keep adding more as our customers ask. Convoso, CallTools, Kixie, JustCall

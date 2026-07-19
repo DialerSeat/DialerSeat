@@ -78,6 +78,9 @@ function apexSitemap(now: Date): MetadataRoute.Sitemap {
     e('/vs/convoso', 0.8, 'monthly'),
     e('/vs/kixie', 0.8, 'monthly'),
     e('/vs/justcall', 0.8, 'monthly'),
+    e('/vs/cloudtalk', 0.8, 'monthly'),
+    e('/vs/aircall', 0.8, 'monthly'),
+    e('/vs/dialpad', 0.8, 'monthly'),
     
     e('/faq', 0.8, 'monthly'),
     e('/faq/why-dialerseat', 0.85, 'monthly'),
