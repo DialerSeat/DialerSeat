@@ -234,37 +234,64 @@ async function routeWhitelabel(
     return
   }
 
-  if (eventType === 'customer.subscription.created') {
-    // Same fix as syncPersonalSubscription: exclude incomplete/
-    // incomplete_expired rows from counting as a genuine prior
-    // subscription, since Stripe's default_incomplete payment flow fires
-    // subscription.created before the card is charged — a failed/retried
-    // first attempt shouldn't make a real first subscription look like a
-    // resub.
-    const { data: priorSubs } = await supabase
+  // THE REAL GATE: log/notify only on the genuine transition into 'active'
+  // status, never on the raw 'created' event alone. Per Stripe's own docs,
+  // customer.subscription.created fires the INSTANT checkout begins, with
+  // status still 'incomplete' — logging there means every failed/retried
+  // checkout attempt (declined card, abandoned payment sheet, etc.) writes
+  // its own premature "subscribed" entry, even though the person hadn't
+  // actually paid yet. Since 'created' and 'updated' share this same
+  // function (see routeSubscription's switch), checking the subscription's
+  // CURRENT status here — combined with what was already stored before
+  // this write — catches the real moment regardless of which event type
+  // happened to deliver it.
+  if (
+    subscription.status === 'active' &&
+    (eventType === 'customer.subscription.created' || eventType === 'customer.subscription.updated')
+  ) {
+    const { data: existingRow } = await supabase
       .from('subscriptions')
-      .select('id')
-      .eq('user_id', clerkId)
-      .neq('stripe_subscription_id', subscription.id)
-      .not('status', 'in', '(incomplete,incomplete_expired)')
-      .limit(1)
+      .select('status')
+      .eq('stripe_subscription_id', subscription.id)
+      .maybeSingle()
 
-    const isResub = !!(priorSubs && priorSubs.length > 0)
-    const { name, email } = await lookupNameAndEmail(clerkId)
-    // "Manager+" matches PLAN_INFO.wl.label in app/billing/page.tsx.
-    const planLabel = 'Manager+'
-    if (isResub) {
-      await sendAdminPush('resub', `${name} resubscribed to ${planLabel}.`)
-      await logBillingEvent({
-        event_type: 'resub', clerk_id: clerkId, user_name: name, user_email: email,
-        plan: 'wl', amount_cents: 7500, stripe_subscription_id: subscription.id,
-      })
-    } else {
-      await sendAdminPush('new_sub', `${name} subscribed to ${planLabel}.`)
-      await logBillingEvent({
-        event_type: 'initial_sub', clerk_id: clerkId, user_name: name, user_email: email,
-        plan: 'wl', amount_cents: 7500, stripe_subscription_id: subscription.id,
-      })
+    // Already logged as active on a previous event for this exact
+    // subscription — don't log again (e.g. a later 'updated' event that
+    // doesn't change anything meaningful, or a redelivered event that
+    // slipped past claimStripeEvent's id-based dedup for some reason).
+    const alreadyActive = existingRow?.status === 'active'
+
+    if (!alreadyActive) {
+      // Same fix as before, still needed: exclude incomplete/
+      // incomplete_expired rows from counting as a genuine PRIOR
+      // subscription — a failed/retried earlier attempt by the same
+      // person shouldn't make their real first paid subscription look
+      // like a resub.
+      const { data: priorSubs } = await supabase
+        .from('subscriptions')
+        .select('id')
+        .eq('user_id', clerkId)
+        .neq('stripe_subscription_id', subscription.id)
+        .not('status', 'in', '(incomplete,incomplete_expired)')
+        .limit(1)
+
+      const isResub = !!(priorSubs && priorSubs.length > 0)
+      const { name, email } = await lookupNameAndEmail(clerkId)
+      // "Manager+" matches PLAN_INFO.wl.label in app/billing/page.tsx.
+      const planLabel = 'Manager+'
+      if (isResub) {
+        await sendAdminPush('resub', `${name} resubscribed to ${planLabel}.`)
+        await logBillingEvent({
+          event_type: 'resub', clerk_id: clerkId, user_name: name, user_email: email,
+          plan: 'wl', amount_cents: 7500, stripe_subscription_id: subscription.id,
+        })
+      } else {
+        await sendAdminPush('new_sub', `${name} subscribed to ${planLabel}.`)
+        await logBillingEvent({
+          event_type: 'initial_sub', clerk_id: clerkId, user_name: name, user_email: email,
+          plan: 'wl', amount_cents: 7500, stripe_subscription_id: subscription.id,
+        })
+      }
     }
   } else if (
     eventType === 'invoice.payment_succeeded' &&
@@ -469,48 +496,56 @@ async function syncPersonalSubscription(
     return
   }
 
-  // Determine push-worthy event BEFORE writing the new row, since "does
-  // this user already have a prior subscription" is only meaningful
-  // pre-upsert. Mirrors the same first-sub-vs-resub logic the admin Logs
-  // app already computes read-side (earliest subscription per user).
-  if (eventType === 'customer.subscription.created') {
-    // Only count a PRIOR subscription that actually succeeded at some
-    // point — never one still stuck in 'incomplete'/'incomplete_expired'.
-    // Stripe's default_incomplete payment flow (see
-    // app/api/stripe/create-subscription/route.ts) creates a real
-    // subscription.created event the moment checkout starts, before the
-    // card is even charged. If that first attempt fails (declined card,
-    // abandoned 3DS, etc.) and the person retries, a second, genuinely
-    // NEW subscription object gets created — but without this filter, the
-    // leftover 'incomplete' row from the failed attempt would make their
-    // real first-ever successful subscription look like a resub.
-    const { data: priorSubs } = await supabase
+  // THE REAL GATE: log/notify only on the genuine transition into 'active'
+  // status, never on the raw 'created' event alone — see the matching
+  // comment in routeWhitelabel for the full reasoning (Stripe's own docs
+  // confirm customer.subscription.created fires while status is still
+  // 'incomplete' under default_incomplete payment_behavior).
+  if (
+    subscription.status === 'active' &&
+    (eventType === 'customer.subscription.created' || eventType === 'customer.subscription.updated')
+  ) {
+    const { data: existingRow } = await supabase
       .from('subscriptions')
-      .select('id')
-      .eq('user_id', clerkId)
-      .neq('stripe_subscription_id', subscription.id)
-      .not('status', 'in', '(incomplete,incomplete_expired)')
-      .limit(1)
+      .select('status')
+      .eq('stripe_subscription_id', subscription.id)
+      .maybeSingle()
 
-    const isResub = !!(priorSubs && priorSubs.length > 0)
-    const { name, email } = await lookupNameAndEmail(clerkId)
-    // "Pro" matches PLAN_INFO.standard.label in app/billing/page.tsx —
-    // this function only ever runs for the standard personal plan
-    // (routeSubscription already branched whitelabel/team_seat away
-    // before calling here), so this is never ambiguous.
-    const planLabel = 'Pro'
-    if (isResub) {
-      await sendAdminPush('resub', `${name} resubscribed to ${planLabel}.`)
-      await logBillingEvent({
-        event_type: 'resub', clerk_id: clerkId, user_name: name, user_email: email,
-        plan: 'pro', amount_cents: 3500, stripe_subscription_id: subscription.id,
-      })
-    } else {
-      await sendAdminPush('new_sub', `${name} subscribed to ${planLabel}.`)
-      await logBillingEvent({
-        event_type: 'initial_sub', clerk_id: clerkId, user_name: name, user_email: email,
-        plan: 'pro', amount_cents: 3500, stripe_subscription_id: subscription.id,
-      })
+    const alreadyActive = existingRow?.status === 'active'
+
+    if (!alreadyActive) {
+      // Only count a PRIOR subscription that actually succeeded at some
+      // point — never one still stuck in 'incomplete'/'incomplete_expired'.
+      // A failed/retried earlier attempt shouldn't make a real first-ever
+      // successful subscription look like a resub.
+      const { data: priorSubs } = await supabase
+        .from('subscriptions')
+        .select('id')
+        .eq('user_id', clerkId)
+        .neq('stripe_subscription_id', subscription.id)
+        .not('status', 'in', '(incomplete,incomplete_expired)')
+        .limit(1)
+
+      const isResub = !!(priorSubs && priorSubs.length > 0)
+      const { name, email } = await lookupNameAndEmail(clerkId)
+      // "Pro" matches PLAN_INFO.standard.label in app/billing/page.tsx —
+      // this function only ever runs for the standard personal plan
+      // (routeSubscription already branched whitelabel/team_seat away
+      // before calling here), so this is never ambiguous.
+      const planLabel = 'Pro'
+      if (isResub) {
+        await sendAdminPush('resub', `${name} resubscribed to ${planLabel}.`)
+        await logBillingEvent({
+          event_type: 'resub', clerk_id: clerkId, user_name: name, user_email: email,
+          plan: 'pro', amount_cents: 3500, stripe_subscription_id: subscription.id,
+        })
+      } else {
+        await sendAdminPush('new_sub', `${name} subscribed to ${planLabel}.`)
+        await logBillingEvent({
+          event_type: 'initial_sub', clerk_id: clerkId, user_name: name, user_email: email,
+          plan: 'pro', amount_cents: 3500, stripe_subscription_id: subscription.id,
+        })
+      }
     }
   } else if (
     eventType === 'invoice.payment_succeeded' &&

@@ -1,11 +1,28 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/admin'
 
 const supabase = getServiceClient('admin/logs')
 
-const WINDOW_DAYS = 90
 const MAX_ENTRIES = 200
+
+// The 5 selectable timeframes for the Logs UI. 'all' skips the date filter
+// entirely rather than being approximated by a large day-count, so it's a
+// genuine, correct "everything in billing_events since it was introduced,"
+// not "everything from the last N days" for some arbitrarily large N.
+type TimeframeKey = '24h' | '7d' | '30d' | '90d' | 'all'
+const TIMEFRAME_DAYS: Record<Exclude<TimeframeKey, 'all'>, number> = {
+  '24h': 1,
+  '7d': 7,
+  '30d': 30,
+  '90d': 90,
+}
+const DEFAULT_TIMEFRAME: TimeframeKey = '90d'
+
+function parseTimeframe(raw: string | null): TimeframeKey {
+  if (raw === '24h' || raw === '7d' || raw === '30d' || raw === '90d' || raw === 'all') return raw
+  return DEFAULT_TIMEFRAME
+}
 
 interface LogEntry {
   id: string
@@ -34,17 +51,22 @@ interface LogEntry {
 //
 // Note: events that occurred before this table was introduced were never
 // recorded here and won't appear — this only guarantees no *future* event
-// gets lost to a later account deletion.
-export async function GET() {
+// gets lost to a later account deletion. That means even 'all time' here
+// only ever goes back to whenever billing_events first started being
+// written, not to the true beginning of the business.
+export async function GET(req: NextRequest) {
   try {
     await requireAdmin()
   } catch (res) {
     return res as Response
   }
 
-  const now = Date.now()
+  const timeframe = parseTimeframe(req.nextUrl.searchParams.get('timeframe'))
   const day = 86400000
-  const windowStart = new Date(now - WINDOW_DAYS * day).toISOString()
+  const windowStart =
+    timeframe === 'all'
+      ? null
+      : new Date(Date.now() - TIMEFRAME_DAYS[timeframe] * day).toISOString()
 
   try {
     // Admin/excluded users are filtered out at write time everywhere else
@@ -61,12 +83,17 @@ export async function GET() {
 
     const excluded = new Set((excludedUsers || []).map((u: { clerk_id: string }) => u.clerk_id))
 
-    const { data: events, error } = await supabase
+    let query = supabase
       .from('billing_events')
       .select('id, clerk_id, event_type, plan, amount_cents, retention_weeks, created_at, user_name, user_email')
-      .gte('created_at', windowStart)
       .order('created_at', { ascending: false })
       .limit(MAX_ENTRIES + excluded.size) // pad so post-filter still fills MAX_ENTRIES where possible
+
+    if (windowStart) {
+      query = query.gte('created_at', windowStart)
+    }
+
+    const { data: events, error } = await query
 
     if (error) {
       console.error('[admin/logs] failed to read billing_events:', error)
@@ -103,7 +130,8 @@ export async function GET() {
     return NextResponse.json({
       entries: entries.slice(0, MAX_ENTRIES),
       counts,
-      window_days: WINDOW_DAYS,
+      timeframe,
+      window_days: timeframe === 'all' ? null : TIMEFRAME_DAYS[timeframe],
     })
   } catch (err) {
     console.error('[admin/logs] failed:', err)

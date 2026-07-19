@@ -183,6 +183,18 @@ export default function BillingPage() {
           router.push('/dashboard/dialer')
           return
         }
+        // Don't blindly send an already-active person to /dashboard — a
+        // Manager+ (whitelabel) subscriber who paid but hasn't finished
+        // tenant setup yet needs to land back in onboarding, not get
+        // dumped into a dashboard for a brand/tenant that doesn't exist
+        // yet, and not hit "already have an active subscription" by
+        // attempting to resubscribe. wlOnboardingPending (not `plan`,
+        // which requires onboarding to already be complete) is what's
+        // actually true in that exact window.
+        if (statusData.wlOnboardingPending || statusData.plan === 'manager_plus' || statusData.plan === 'both') {
+          router.push('/onboarding/whitelabel')
+          return
+        }
         router.push('/dashboard')
         return
       }

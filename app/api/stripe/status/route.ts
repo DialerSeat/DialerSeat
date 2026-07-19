@@ -34,6 +34,16 @@ export async function GET() {
       !!userRow?.wl_subscription_id &&
       userRow?.wl_onboarding_status === 'complete'
 
+    // Distinct from wlActive: this is true the moment someone has PAID for
+    // Manager+, even before they've finished tenant setup. Needed so
+    // /billing can send a freshly-paid, not-yet-onboarded Manager+
+    // subscriber to /onboarding/whitelabel instead of either creating a
+    // duplicate subscription or dumping them on /dashboard for a brand
+    // that doesn't exist yet.
+    const wlOnboardingPending =
+      !!userRow?.wl_subscription_id &&
+      userRow?.wl_onboarding_status !== 'complete'
+
     const subStatusActive = !!sub && sub.status === 'active'  // strict: only active
     const subIsProPrice = !!PRO_PRICE_ID && sub?.stripe_price_id === PRO_PRICE_ID
     const proActive = subStatusActive && subIsProPrice
@@ -51,20 +61,21 @@ export async function GET() {
 
     if (!sub) {
       return NextResponse.json({
-        hasSubscription: wlActive,
-        isActive: wlActive,
-        status: wlActive ? 'active' : null,
+        hasSubscription: wlActive || wlOnboardingPending,
+        isActive: wlActive || wlOnboardingPending,
+        status: (wlActive || wlOnboardingPending) ? 'active' : null,
         currentPeriodEnd: null,
         trialEnd: null,
         cancelAtPeriodEnd: false,
         tier,
         plan,
         wlActive,
+        wlOnboardingPending,
         weeklyPrice,
       })
     }
 
-    const isActive = subStatusActive || wlActive
+    const isActive = subStatusActive || wlActive || wlOnboardingPending
 
     return NextResponse.json({
       hasSubscription: true,
@@ -76,6 +87,7 @@ export async function GET() {
       tier,
       plan,
       wlActive,
+      wlOnboardingPending,
       weeklyPrice,
     })
   } catch (err: any) {

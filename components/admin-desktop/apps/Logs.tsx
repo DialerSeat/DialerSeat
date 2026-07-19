@@ -32,7 +32,8 @@ interface LogEntry {
 interface LogsResponse {
   entries: LogEntry[]
   counts: { accountsCreated: number; accountsDeleted: number; initialSubs: number; resubs: number; renewals: number; cancels: number }
-  window_days: number
+  timeframe: TimeframeKey
+  window_days: number | null
 }
 
 type FilterMode = 'all' | 'account_created' | 'account_deleted' | 'initial_sub' | 'resub' | 'renewal' | 'cancel'
@@ -58,19 +59,29 @@ const FONT = '"SF Mono", "Cascadia Mono", "JetBrains Mono", "Fira Code", Menlo, 
 
 const FILTER_KEYS: FilterMode[] = ['all', 'account_created', 'account_deleted', 'initial_sub', 'resub', 'renewal', 'cancel']
 
+type TimeframeKey = '24h' | '7d' | '30d' | '90d' | 'all'
+const TIMEFRAME_OPTIONS: { key: TimeframeKey; label: string }[] = [
+  { key: '24h', label: '24h' },
+  { key: '7d', label: '7d' },
+  { key: '30d', label: '30d' },
+  { key: '90d', label: '90d' },
+  { key: 'all', label: 'all time' },
+]
+
 export default function LogsApp() {
   const [data, setData] = useState<LogsResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<{ message: string; body?: string } | null>(null)
   const [filter, setFilter] = useState<FilterMode>('all')
+  const [timeframe, setTimeframe] = useState<TimeframeKey>('90d')
 
   
-  const refetch = () => {
+  const refetch = (tf: TimeframeKey = timeframe) => {
     let cancelled = false
     setLoading(true)
     setError(null)
 
-    fetch('/api/admin/logs', { cache: 'no-store' })
+    fetch(`/api/admin/logs?timeframe=${tf}`, { cache: 'no-store' })
       .then(async (r) => {
         const text = await r.text()
         if (!r.ok) {
@@ -95,6 +106,11 @@ export default function LogsApp() {
       })
 
     return () => { cancelled = true }
+  }
+
+  function selectTimeframe(tf: TimeframeKey) {
+    setTimeframe(tf)
+    refetch(tf)
   }
 
   useEffect(() => {
@@ -126,7 +142,7 @@ export default function LogsApp() {
   const visible = filter === 'all' ? entries : entries.filter((e) => e.event_type === filter)
 
   return (
-    <div style={S.root}>
+    <div className="ds-logs-root" style={S.root}>
       {/* Scanline overlay — subtle CRT vibe */}
       <style>{`
         @keyframes ds-cursor-blink {
@@ -145,6 +161,10 @@ export default function LogsApp() {
         }
         .logs-row:hover {
           background: rgba(0, 255, 65, 0.06);
+        }
+        .ds-logs-root ::selection {
+          background: rgba(0, 255, 65, 0.35);
+          color: #eafff0;
         }
       `}</style>
 
@@ -183,12 +203,30 @@ export default function LogsApp() {
         ))}
 
         <button
-          onClick={refetch}
+          onClick={() => refetch()}
           style={{ ...S.chip, marginLeft: 'auto', color: C.textDim }}
           title="Refetch"
         >
           [r] refresh
         </button>
+      </div>
+
+      {/* TIMEFRAME TOOLBAR */}
+      <div style={S.toolbar}>
+        <span style={{ color: C.textMute, marginRight: 8 }}>$ timeframe</span>
+        {TIMEFRAME_OPTIONS.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => selectTimeframe(t.key)}
+            style={{
+              ...S.chip,
+              color: timeframe === t.key ? C.bg : C.text,
+              background: timeframe === t.key ? C.text : 'transparent',
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
       {/* BODY */}
@@ -207,7 +245,7 @@ export default function LogsApp() {
             </div>
             <pre style={S.errorPre}>{error.message}</pre>
             <div style={{ marginTop: 12 }}>
-              <button onClick={refetch} style={S.chip}>[r] retry</button>
+              <button onClick={() => refetch()} style={S.chip}>[r] retry</button>
             </div>
           </div>
         )}
@@ -245,7 +283,7 @@ export default function LogsApp() {
       {/* FOOTER STATUS */}
       {data && (
         <div style={S.footer}>
-          <span>window: last {data.window_days}d</span>
+          <span>window: {data.window_days == null ? 'all time' : `last ${data.window_days}d`}</span>
           <span>events: {entries.length}{entries.length === 200 ? ' (capped)' : ''}</span>
           <span>accounts created: {data.counts.accountsCreated}</span>
           <span>initial subs: {data.counts.initialSubs}</span>
@@ -358,6 +396,8 @@ const S: Record<string, React.CSSProperties> = {
     overflowX: 'auto',
     padding: '12px 14px',
     minHeight: 0,
+    userSelect: 'text',
+    cursor: 'text',
   },
   line: {
     padding: '2px 0',

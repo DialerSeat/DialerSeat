@@ -17,6 +17,7 @@ const isPublicRoute = createRouteMatcher([
   '/vs',
   '/vs/(.*)',
   '/api/stripe/webhook',
+  '/api/webhooks/clerk',
   '/api/calls/twiml(.*)',
   '/api/calls/twiml-agent(.*)',
   '/api/calls/status(.*)',
