@@ -1080,8 +1080,8 @@ export default function SettingsPage() {
                   ACCOUNT DELETED
                 </div>
                 <p style={{ fontSize: 13, lineHeight: 1.6, color: CHROME.text }}>
-                  Your data has been removed. Taking you home now — thanks for giving
-                  DialerSeat a try.
+                  Your data has been removed. Taking you home now — thanks for using
+                  DialerSeat.
                 </p>
               </>
             )}

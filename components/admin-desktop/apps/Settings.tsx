@@ -74,7 +74,7 @@ function urlBase64ToUint8Array(base64String: string): BufferSource {
   return outputArray
 }
 
-type PushDeviceStatus = 'unknown' | 'unsupported' | 'not_subscribed' | 'subscribed' | 'denied'
+type PushDeviceStatus = 'unknown' | 'unsupported' | 'not_subscribed' | 'subscribed' | 'denied' | 'stale'
 
 function IOSSwitch({
   on,
@@ -365,7 +365,25 @@ export default function SettingsApp() {
       try {
         const reg = await navigator.serviceWorker.getRegistration()
         const existing = await reg?.pushManager.getSubscription()
-        setDeviceStatus(existing ? 'subscribed' : 'not_subscribed')
+        if (!existing) {
+          setDeviceStatus('not_subscribed')
+          return
+        }
+        // Browser believes it's subscribed — confirm the server still
+        // has this exact endpoint on file before trusting that. If a
+        // previous send to this device ever got a 404/410 back,
+        // sendAdminPush() would have quietly deleted the row server-side
+        // with no way for the browser to find out on its own.
+        try {
+          const res = await fetch(`/api/admin/push/subscribe?endpoint=${encodeURIComponent(existing.endpoint)}`)
+          const data = await res.json()
+          setDeviceStatus(res.ok && data.exists ? 'subscribed' : 'stale')
+        } catch {
+          // Couldn't reach the server to confirm — assume the browser's
+          // local state is right rather than falsely alarming the user
+          // over what might just be a network blip.
+          setDeviceStatus('subscribed')
+        }
       } catch {
         setDeviceStatus('not_subscribed')
       }
@@ -614,6 +632,7 @@ export default function SettingsApp() {
             <SettingsRow
               title={
                 deviceStatus === 'subscribed' ? 'Push Enabled'
+                : deviceStatus === 'stale' ? 'Push Stopped Working'
                 : deviceStatus === 'denied' ? 'Notifications Blocked'
                 : deviceStatus === 'unsupported' ? 'Not Supported'
                 : 'Push Not Enabled'
@@ -621,6 +640,8 @@ export default function SettingsApp() {
               subtitle={
                 deviceStatus === 'subscribed'
                   ? 'This device will receive alerts, even when DialerSeat is closed.'
+                : deviceStatus === 'stale'
+                  ? 'This device was subscribed, but the server no longer recognizes it (often after being unused for a while). Tap Enable to reconnect.'
                 : deviceStatus === 'denied'
                   ? 'Notifications are blocked for this app in your phone\u2019s Settings.'
                 : deviceStatus === 'unsupported'

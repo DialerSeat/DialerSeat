@@ -83,12 +83,40 @@ export async function deleteAccount(
       .select('first_name, last_name, email')
       .eq('clerk_id', clerkUserId)
       .maybeSingle()
-    if (existing) {
-      deletedUserName =
-        `${existing.first_name || ''} ${existing.last_name || ''}`.trim() ||
-        existing.email?.split('@')[0] ||
-        'A user'
-      deletedUserEmail = existing.email ?? null
+
+    const supabaseName = existing
+      ? `${existing.first_name || ''} ${existing.last_name || ''}`.trim()
+      : ''
+
+    if (supabaseName || existing?.email) {
+      deletedUserName = supabaseName || existing!.email!.split('@')[0]
+      deletedUserEmail = existing?.email ?? null
+    } else {
+      // Supabase's users row was missing or had no name/email on file —
+      // fall back to Clerk itself, which is the actual source of truth
+      // for this data and may simply never have been synced. Logged so a
+      // future occurrence is traceable instead of silently showing "A
+      // user" with no clue why.
+      console.warn(
+        `[deleteAccount] no usable name/email in Supabase users for clerk_id=${clerkUserId}` +
+        (existing ? ' (row exists but first_name/last_name/email all empty)' : ' (no matching row at all)') +
+        ' — falling back to Clerk.'
+      )
+      try {
+        const { clerkClient } = await import('@clerk/nextjs/server')
+        const client = await clerkClient()
+        const clerkUser = await client.users.getUser(clerkUserId)
+        const clerkName = `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim()
+        const clerkEmail = clerkUser.primaryEmailAddress?.emailAddress ?? null
+        if (clerkName || clerkEmail) {
+          deletedUserName = clerkName || clerkEmail!.split('@')[0]
+          deletedUserEmail = clerkEmail
+        } else {
+          console.warn(`[deleteAccount] Clerk also had no name/email for clerk_id=${clerkUserId} — using generic label.`)
+        }
+      } catch (err) {
+        console.error(`[deleteAccount] Clerk fallback lookup failed for clerk_id=${clerkUserId}:`, err)
+      }
     }
   }
 

@@ -683,6 +683,12 @@ async function upsertPersonalSubscription(
   const item = subscription.items.data[0]
   const priceId = item?.price.id ?? ''
 
+  // The only reliable signal for which plan this is — sub_kind metadata is
+  // set once at creation (app/api/stripe/create-subscription/route.ts) and
+  // is available on every event for this subscription's whole lifetime,
+  // unlike stripe_price_id which is reused for both Pro and team seats.
+  const plan: 'pro' | 'wl' = subscription.metadata?.sub_kind === 'whitelabel' ? 'wl' : 'pro'
+
   // Newer Stripe API versions moved these fields off the top-level
   // Subscription object onto each item. Falling back to the item-level
   // value (already done in syncSeatCharge below) keeps this populated
@@ -699,6 +705,7 @@ async function upsertPersonalSubscription(
     stripe_customer_id: customerId,
     stripe_subscription_id: subscription.id,
     stripe_price_id: priceId,
+    plan,
     status: subscription.status,
     current_period_start: periodStart ? new Date(periodStart * 1000).toISOString() : null,
     current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,

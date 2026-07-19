@@ -38,6 +38,8 @@ interface AdminUser {
     current_period_end: string | null
     cancel_at_period_end: boolean
     discount_coupon: string | null
+    plan: 'pro' | 'wl' | null
+    subscribed_since: string | null
   } | null
   is_active_subscription: boolean
 }
@@ -83,6 +85,33 @@ function timeAgo(iso: string | null) {
   if (days < 30) return `${days}d ago`
   if (days < 365) return `${Math.floor(days / 30)}mo ago`
   return `${Math.floor(days / 365)}y ago`
+}
+
+// Same bucketing as timeAgo(), but phrased as a plain duration rather than
+// a point in the past — e.g. "3mo" not "3mo ago" — since call sites like
+// the Overview subscription cell build their own framing around it
+// ("subscribed for " + tenure(...), "was subscribed for " + tenure(...)).
+function tenure(iso: string | null): string {
+  if (!iso) return 'an unknown amount of time'
+  const ms = Date.now() - new Date(iso).getTime()
+  const days = Math.floor(ms / 86400000)
+  if (days === 0) {
+    const hours = Math.floor(ms / 3600000)
+    if (hours === 0) {
+      const mins = Math.floor(ms / 60000)
+      if (mins <= 1) return 'under a minute'
+      return `${mins} minutes`
+    }
+    return hours === 1 ? '1 hour' : `${hours} hours`
+  }
+  if (days === 1) return '1 day'
+  if (days < 30) return `${days} days`
+  if (days < 365) {
+    const months = Math.floor(days / 30)
+    return months === 1 ? '1 month' : `${months} months`
+  }
+  const years = Math.floor(days / 365)
+  return years === 1 ? '1 year' : `${years} years`
 }
 
 function daysSince(iso: string | null): number {
@@ -781,7 +810,20 @@ export default function OverviewApp() {
                         color: u.is_active_subscription ? T.green : T.muted, fontSize: 11,
                       }}>
                         {u.subscription
-                          ? u.subscription.status.toUpperCase() + (u.subscription.cancel_at_period_end ? ' · CANCEL PENDING' : '')
+                          ? (
+                            <>
+                              {u.subscription.plan === 'wl' ? 'MANAGER+' : u.subscription.plan === 'pro' ? 'PRO' : 'PLAN UNKNOWN'}
+                              {' · '}
+                              {u.subscription.status.toUpperCase()}
+                              {u.subscription.cancel_at_period_end ? ' · CANCEL PENDING' : ''}
+                              {u.subscription.subscribed_since && (
+                                <div style={{ color: T.muted, fontSize: 10, marginTop: 2 }}>
+                                  {u.subscription.status === 'canceled' ? 'was subscribed for ' : 'subscribed for '}
+                                  {tenure(u.subscription.subscribed_since)}
+                                </div>
+                              )}
+                            </>
+                          )
                           : 'NONE'}
                       </div>
                     </div>

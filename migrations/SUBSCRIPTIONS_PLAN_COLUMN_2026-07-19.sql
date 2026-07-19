@@ -1,0 +1,35 @@
+-- Adds a persisted `plan` column to subscriptions, so admin surfaces can
+-- show which plan a subscription actually is (Pro vs Manager+) without
+-- reconstructing it after the fact.
+--
+-- Why this didn't already exist: the only signal distinguishing a personal
+-- Pro subscription from a Manager+ (whitelabel) one is
+-- subscription.metadata.sub_kind on the Stripe object itself — set once at
+-- creation (app/api/stripe/create-subscription/route.ts) purely to route
+-- the incoming webhook to the right handler (routeSubscription's
+-- branching in app/api/stripe/webhook/route.ts). That metadata was never
+-- written to Supabase, so once the webhook finished routing, the
+-- distinction was gone — unrecoverable from stripe_price_id alone, since
+-- STRIPE_PRICE_ID is reused for BOTH personal Pro subscriptions and team
+-- seats (see lib/teamBilling.ts), so price ID can't tell those two apart
+-- either.
+--
+-- Run this before deploying the updated app/api/stripe/webhook/route.ts
+-- that writes this column, and before app/api/admin/users/route.ts starts
+-- selecting it — without this migration, that select will fail against a
+-- column that doesn't exist yet.
+ALTER TABLE public.subscriptions ADD COLUMN IF NOT EXISTS plan text;
+
+-- OPTIONAL backfill for existing rows (new rows are handled automatically
+-- by the updated webhook code — this only matters for subscriptions that
+-- already existed before this migration ran).
+--
+-- Uncomment and fill in your actual Stripe price IDs before running, or
+-- skip entirely — every row will just show as "plan unknown" in the admin
+-- overview until its NEXT webhook event fires, at which point the updated
+-- code writes the correct value automatically. Nothing depends on this
+-- backfill running for the fix to work going forward.
+--
+-- UPDATE public.subscriptions SET plan = 'wl'  WHERE plan IS NULL AND stripe_price_id = '<your STRIPE_PRICE_WL_BASE value>';
+-- UPDATE public.subscriptions SET plan = 'pro' WHERE plan IS NULL AND stripe_price_id = '<your STRIPE_PRICE_ID value>'
+--   AND user_id NOT IN (SELECT DISTINCT owner_id FROM public.teams); -- best-effort: exclude rows that are actually team seats, not personal Pro subs

@@ -14,6 +14,40 @@ interface SubscribeBody {
   userAgentLabel?: string
 }
 
+export async function GET(req: NextRequest) {
+  try {
+    await requireAdmin()
+  } catch (res) {
+    return res as Response
+  }
+
+  const endpoint = req.nextUrl.searchParams.get('endpoint')
+  if (!endpoint) {
+    return NextResponse.json({ error: 'Missing endpoint query param' }, { status: 400 })
+  }
+
+  // Answers "does the server still have this exact subscription on file?"
+  // — deliberately NOT the same question as "does this browser's service
+  // worker still have a local subscription object?" (which is all
+  // reg.pushManager.getSubscription() can tell you). The two can diverge
+  // silently: if a push send ever gets a 404/410 back, sendAdminPush()
+  // quietly deletes the row server-side without the browser ever being
+  // told, so the browser can go on believing it's subscribed while the
+  // server has nothing left to send to.
+  const { data, error } = await supabase
+    .from('push_subscriptions')
+    .select('id')
+    .eq('endpoint', endpoint)
+    .maybeSingle()
+
+  if (error) {
+    console.error('[admin/push/subscribe] existence check failed:', error)
+    return NextResponse.json({ error: 'Failed to check subscription' }, { status: 500 })
+  }
+
+  return NextResponse.json({ exists: !!data })
+}
+
 export async function POST(req: NextRequest) {
   let userId: string
   try {

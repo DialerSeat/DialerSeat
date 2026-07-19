@@ -69,6 +69,19 @@ export async function POST(req: NextRequest) {
       existing?.email?.split('@')[0] ||
       'A user'
 
+    if (name === 'A user') {
+      // Nothing left to fall back to here — Clerk's own user.deleted
+      // payload has no name/email (see comment above), and the person is
+      // already gone from Clerk by the time this fires, so a live Clerk
+      // lookup isn't possible either. Logged so it's at least visible
+      // which path produced a generic label, rather than a silent guess.
+      console.warn(
+        `[webhooks/clerk] user.deleted for clerk_id=${clerkId}: ` +
+        (existing ? 'Supabase users row exists but has no name/email on file' : 'no matching Supabase users row at all') +
+        ' — using generic label.'
+      )
+    }
+
     await sendAdminPush('account_deleted', `${name} deleted account.`)
     await logBillingEvent({
       event_type: 'account_deleted',

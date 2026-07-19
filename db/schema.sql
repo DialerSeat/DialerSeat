@@ -326,6 +326,12 @@ CREATE TABLE IF NOT EXISTS public.subscriptions (
   created_at             timestamptz NOT NULL DEFAULT now(),
   updated_at             timestamptz NOT NULL DEFAULT now(),
   discount_coupon        text,
+  -- Which plan this is ('pro' | 'wl') — persisted at write time from
+  -- Stripe's subscription.metadata.sub_kind, since that metadata itself
+  -- isn't queryable later and stripe_price_id alone can't disambiguate
+  -- (team seats reuse the same price ID as personal Pro subs). See
+  -- migrations/SUBSCRIPTIONS_PLAN_COLUMN_2026-07-19.sql.
+  plan                   text,
   -- Stripe event `created` timestamp (not our received time) for whichever
   -- webhook event most recently wrote this row. See
   -- migrations/SUBSCRIPTIONS_EVENT_ORDERING_2026-07-18.sql — guards against

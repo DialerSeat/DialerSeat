@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
 
   const { data: subs } = await supabase
     .from('subscriptions')
-    .select('user_id, status, current_period_end, cancel_at_period_end, discount_coupon, created_at')
+    .select('user_id, status, current_period_end, cancel_at_period_end, discount_coupon, created_at, plan')
     .in('user_id', userIds)
 
   // Always use each user's most recent subscription row as the current one.
@@ -108,6 +108,8 @@ export async function GET(req: NextRequest) {
             current_period_end: sub.current_period_end,
             cancel_at_period_end: sub.cancel_at_period_end,
             discount_coupon: sub.discount_coupon,
+            plan: sub.plan ?? null,
+            subscribed_since: sub.created_at,
           }
         : null,
       is_active_subscription: isActive,
