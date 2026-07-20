@@ -1,5 +1,5 @@
 'use client'
-import { use, useState, useEffect, useCallback } from 'react'
+import { use, useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -22,6 +22,11 @@ const T = {
 const FUTURA = `'Futura PT', Futura, 'Helvetica Neue', Helvetica, Arial, sans-serif`
 
 type Range = 'today' | 'week' | 'month' | 'custom'
+
+// Key for persisting the selected time filter across page refreshes,
+// scoped per team so switching teams doesn't clobber another team's
+// saved filter.
+const teamAnalyticsRangeStorageKey = (teamId: string) => `dialerseat:team-analytics:${teamId}:range`
 
 interface MemberStat {
   userId: string
@@ -256,6 +261,48 @@ export default function TeamAnalyticsPage({ params }: { params: Promise<{ id: st
   const [data, setData] = useState<AnalyticsResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const isFirstRangeSaveRef = useRef(true)
+
+  // Restore the previously-selected time filter for this team. Runs in an
+  // effect (after mount) rather than a useState lazy initializer, since
+  // localStorage isn't available during server-side rendering — reading it
+  // during initial render would make the server-rendered HTML disagree
+  // with the client's first render and trigger a hydration mismatch.
+  useEffect(() => {
+    isFirstRangeSaveRef.current = true
+    try {
+      const saved = localStorage.getItem(teamAnalyticsRangeStorageKey(teamId))
+      if (!saved) return
+      const parsed = JSON.parse(saved)
+      const validRanges: Range[] = ['today', 'week', 'month', 'custom']
+      if (validRanges.includes(parsed?.range)) setRange(parsed.range)
+      if (typeof parsed?.customStart === 'string') setCustomStart(parsed.customStart)
+      if (typeof parsed?.customEnd === 'string') setCustomEnd(parsed.customEnd)
+    } catch {
+      // Corrupt or inaccessible storage (e.g. private browsing) — just
+      // keep the default filter, nothing else to do here.
+    }
+  }, [teamId])
+
+  // Persist the filter whenever it changes. The very first fire of this
+  // effect happens right after mount, before the restore effect above has
+  // had a chance to run, so skip it — otherwise it would immediately
+  // overwrite a saved filter with the pre-restore default.
+  useEffect(() => {
+    if (isFirstRangeSaveRef.current) {
+      isFirstRangeSaveRef.current = false
+      return
+    }
+    try {
+      localStorage.setItem(
+        teamAnalyticsRangeStorageKey(teamId),
+        JSON.stringify({ range, customStart, customEnd })
+      )
+    } catch {
+      // Ignore write failures (e.g. storage disabled/full) — persistence
+      // is a nice-to-have, not required for the page to function.
+    }
+  }, [teamId, range, customStart, customEnd])
 
   const fetchAnalytics = useCallback(async () => {
     if (range === 'custom' && (!customStart || !customEnd)) {

@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend,
 } from 'recharts'
@@ -131,9 +131,54 @@ function Shell({
 }
 
 function useRangeState() {
+  const services = useDesktopServices()
+  const role = services?.role ?? 'admin'
+  const storageKey = `ds:${role}-desktop:analytics-range:v1`
+
   const [range, setRange] = useState<Range>('30d')
   const [customStart, setCustomStart] = useState('')
   const [customEnd, setCustomEnd] = useState('')
+  const isFirstSaveRef = useRef(true)
+
+  // Restore the previously-selected time filter for this desktop app. Runs
+  // in an effect (after mount) rather than a useState lazy initializer,
+  // since localStorage isn't available during server-side rendering —
+  // reading it during initial render would make the server-rendered HTML
+  // disagree with the client's first render and trigger a hydration
+  // mismatch.
+  useEffect(() => {
+    isFirstSaveRef.current = true
+    try {
+      const saved = localStorage.getItem(storageKey)
+      if (!saved) return
+      const parsed = JSON.parse(saved)
+      const validRanges: Range[] = ['7d', '30d', '90d', '1y', 'all', 'custom']
+      if (validRanges.includes(parsed?.range)) setRange(parsed.range)
+      if (typeof parsed?.customStart === 'string') setCustomStart(parsed.customStart)
+      if (typeof parsed?.customEnd === 'string') setCustomEnd(parsed.customEnd)
+    } catch {
+      // Corrupt or inaccessible storage (e.g. private browsing) — just
+      // keep the default filter, nothing else to do here.
+    }
+  }, [storageKey])
+
+  // Persist the filter whenever it changes. The very first fire of this
+  // effect happens right after mount, before the restore effect above has
+  // had a chance to run, so skip it — otherwise it would immediately
+  // overwrite a saved filter with the pre-restore default.
+  useEffect(() => {
+    if (isFirstSaveRef.current) {
+      isFirstSaveRef.current = false
+      return
+    }
+    try {
+      localStorage.setItem(storageKey, JSON.stringify({ range, customStart, customEnd }))
+    } catch {
+      // Ignore write failures (e.g. storage disabled/full) — persistence
+      // is a nice-to-have, not required for the app to function.
+    }
+  }, [storageKey, range, customStart, customEnd])
+
   return { range, setRange, customStart, setCustomStart, customEnd, setCustomEnd }
 }
 

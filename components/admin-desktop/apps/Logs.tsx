@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 
 
 
@@ -68,12 +68,48 @@ const TIMEFRAME_OPTIONS: { key: TimeframeKey; label: string }[] = [
   { key: 'all', label: 'all time' },
 ]
 
+// Key for persisting the selected timeframe filter across page refreshes.
+// This app is admin-only (see registry.tsx visibleTo), so a fixed key is
+// fine — no role/user scoping needed.
+const LOGS_TIMEFRAME_STORAGE_KEY = 'ds:admin-desktop:logs-timeframe:v1'
+
+function getInitialTimeframe(): TimeframeKey {
+  // This component is loaded with ssr:false (see registry.tsx), so it
+  // never renders on the server — reading localStorage synchronously here
+  // is safe and carries no hydration-mismatch risk. Doing it here (rather
+  // than in an effect) also means the existing mount-only refetch() below
+  // picks up the restored value on its very first call, instead of
+  // fetching with the default and then needing a second fetch.
+  if (typeof window === 'undefined') return '90d'
+  try {
+    const saved = localStorage.getItem(LOGS_TIMEFRAME_STORAGE_KEY)
+    if (!saved) return '90d'
+    const parsed = JSON.parse(saved)
+    const validTimeframes: TimeframeKey[] = ['24h', '7d', '30d', '90d', 'all']
+    return validTimeframes.includes(parsed?.timeframe) ? parsed.timeframe : '90d'
+  } catch {
+    // Corrupt or inaccessible storage (e.g. private browsing) — just
+    // fall back to the default.
+    return '90d'
+  }
+}
+
 export default function LogsApp() {
   const [data, setData] = useState<LogsResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<{ message: string; body?: string } | null>(null)
   const [filter, setFilter] = useState<FilterMode>('all')
-  const [timeframe, setTimeframe] = useState<TimeframeKey>('90d')
+  const [timeframe, setTimeframe] = useState<TimeframeKey>(getInitialTimeframe)
+
+  // Persist the timeframe whenever it changes.
+  useEffect(() => {
+    try {
+      localStorage.setItem(LOGS_TIMEFRAME_STORAGE_KEY, JSON.stringify({ timeframe }))
+    } catch {
+      // Ignore write failures (e.g. storage disabled/full) — persistence
+      // is a nice-to-have, not required for the app to function.
+    }
+  }, [timeframe])
 
   
   const refetch = (tf: TimeframeKey = timeframe) => {

@@ -32,6 +32,11 @@ const C = {
 type RangeKey = 'today' | 'week' | 'all'
 type DetailRangeKey = 'today' | 'week' | 'month30' | 'all'
 
+// Key for persisting the selected time filter across page refreshes. This
+// app is admin-only (see registry.tsx visibleTo), so a fixed key is fine —
+// no role/user scoping needed.
+const USER_TRACKER_RANGE_STORAGE_KEY = 'ds:admin-desktop:usertracker-range:v1'
+
 interface BucketStats {
   calls: number
   dialSeconds: number
@@ -130,6 +135,42 @@ export default function UserTrackerApp() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [range, setRange] = useState<RangeKey>('week')
+  const isFirstRangeSaveRef = useRef(true)
+
+  // Restore the previously-selected time filter. Runs in an effect (after
+  // mount) rather than a useState lazy initializer, since localStorage
+  // isn't available during server-side rendering — reading it during
+  // initial render would make the server-rendered HTML disagree with the
+  // client's first render and trigger a hydration mismatch.
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(USER_TRACKER_RANGE_STORAGE_KEY)
+      if (!saved) return
+      const parsed = JSON.parse(saved)
+      const validRanges: RangeKey[] = ['today', 'week', 'all']
+      if (validRanges.includes(parsed?.range)) setRange(parsed.range)
+    } catch {
+      // Corrupt or inaccessible storage (e.g. private browsing) — just
+      // keep the default filter, nothing else to do here.
+    }
+  }, [])
+
+  // Persist the filter whenever it changes. The very first fire of this
+  // effect happens right after mount, before the restore effect above has
+  // had a chance to run, so skip it — otherwise it would immediately
+  // overwrite a saved filter with the pre-restore default.
+  useEffect(() => {
+    if (isFirstRangeSaveRef.current) {
+      isFirstRangeSaveRef.current = false
+      return
+    }
+    try {
+      localStorage.setItem(USER_TRACKER_RANGE_STORAGE_KEY, JSON.stringify({ range }))
+    } catch {
+      // Ignore write failures (e.g. storage disabled/full) — persistence
+      // is a nice-to-have, not required for the app to function.
+    }
+  }, [range])
   const [search, setSearch] = useState('')
   const [sortKey, setSortKey] = useState<SortKey>('calls')
   const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc')

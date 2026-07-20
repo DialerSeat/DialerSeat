@@ -148,6 +148,12 @@ function daysUntilExpire(iso: string | null) {
   return days > 0 ? days : 0
 }
 
+// Key for persisting the selected time filter across page refreshes,
+// scoped per user (mirrors the per-user localStorage keys already used on
+// the dialer page) since different users may share a browser/device.
+const recordingsTimeFilterStorageKey = (userId: string) => `dialerseat:recordings:${userId}:timeFilter`
+const RECORDINGS_TIME_FILTER_VALUES = ['all', 'today', '7d', '30d', '90d', 'year', 'custom']
+
 export default function RecordingsPage() {
   const { user } = useUser()
   const [recordings, setRecordings] = useState<Recording[]>([])
@@ -157,6 +163,50 @@ export default function RecordingsPage() {
   const [timeFilter, setTimeFilter] = useState('all')
   const [customStart, setCustomStart] = useState('') // yyyy-mm-dd
   const [customEnd, setCustomEnd] = useState('')     // yyyy-mm-dd
+  const isFirstTimeFilterSaveRef = useRef(true)
+
+  // Restore the previously-selected time filter once we know who's
+  // logged in. Runs in an effect (after mount) rather than a useState
+  // lazy initializer, since localStorage isn't available during
+  // server-side rendering — reading it during initial render would make
+  // the server-rendered HTML disagree with the client's first render and
+  // trigger a hydration mismatch.
+  useEffect(() => {
+    if (!user?.id) return
+    isFirstTimeFilterSaveRef.current = true
+    try {
+      const saved = localStorage.getItem(recordingsTimeFilterStorageKey(user.id))
+      if (!saved) return
+      const parsed = JSON.parse(saved)
+      if (RECORDINGS_TIME_FILTER_VALUES.includes(parsed?.timeFilter)) setTimeFilter(parsed.timeFilter)
+      if (typeof parsed?.customStart === 'string') setCustomStart(parsed.customStart)
+      if (typeof parsed?.customEnd === 'string') setCustomEnd(parsed.customEnd)
+    } catch {
+      // Corrupt or inaccessible storage (e.g. private browsing) — just
+      // keep the default filter, nothing else to do here.
+    }
+  }, [user?.id])
+
+  // Persist the filter whenever it changes. The very first fire of this
+  // effect (once a user id is known) happens before the restore effect
+  // above has had a chance to run, so skip it — otherwise it would
+  // immediately overwrite a saved filter with the pre-restore default.
+  useEffect(() => {
+    if (!user?.id) return
+    if (isFirstTimeFilterSaveRef.current) {
+      isFirstTimeFilterSaveRef.current = false
+      return
+    }
+    try {
+      localStorage.setItem(
+        recordingsTimeFilterStorageKey(user.id),
+        JSON.stringify({ timeFilter, customStart, customEnd })
+      )
+    } catch {
+      // Ignore write failures (e.g. storage disabled/full) — persistence
+      // is a nice-to-have, not required for the page to function.
+    }
+  }, [user?.id, timeFilter, customStart, customEnd])
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [cursor, setCursor] = useState<number | null>(0)
