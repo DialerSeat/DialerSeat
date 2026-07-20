@@ -3699,7 +3699,7 @@ export default function CampaignsPage() {
             <div className="settings-head">
               <div style={{
                 flex: 1, fontSize: 11, fontWeight: 'bold', letterSpacing: 3,
-                color: T.text, padding: '6px 10px', fontFamily: FUTURA,
+                color: 'white', padding: '6px 10px', fontFamily: FUTURA,
               }}>
                 CSV REJECTED
               </div>
@@ -3710,8 +3710,8 @@ export default function CampaignsPage() {
                 fontSize: 12, lineHeight: 1.7, color: T.text, margin: 0,
                 letterSpacing: 0.5, fontFamily: 'monospace',
               }}>
-                CSV rejected. Try splitting the content of the sheets to 2500-5000. Contact
-                support@dialerseat.com if this error consists.
+                You have exceeded the limit of 10,000 leads uploaded per campaign. If this
+                problem persists, contact support@dialerseat.com.
               </p>
             </div>
             <div className="settings-footer">

@@ -84,6 +84,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
     }
 
+    const LEAD_LIMIT_PER_CAMPAIGN = 10000
+    const existingCount = campaign.total_leads ?? 0
+    if (existingCount + leads.length > LEAD_LIMIT_PER_CAMPAIGN) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `This upload would exceed the limit of ${LEAD_LIMIT_PER_CAMPAIGN.toLocaleString()} leads per campaign.`,
+        },
+        { status: 400 }
+      )
+    }
+
     const leadsToInsert = leads.map((lead: any) => {
       let phone = ''
       let first_name = ''
