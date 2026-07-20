@@ -478,6 +478,7 @@ export default function VsEveryoneView() {
         <div className="vs-hero">
           <div className="vs-hero-inner">
             <div className="vs-eyebrow">DIALERSEAT VS THE WHOLE INDUSTRY</div>
+            <div style={{ fontSize: 12, color: T.muted, marginBottom: 16 }}>Pricing and features last verified 7/19/26</div>
             <h1 className="vs-h1">
               Every legacy dialer fails the same way.<br />
               <span className="versus">We fix all of it. $35 a week.</span>

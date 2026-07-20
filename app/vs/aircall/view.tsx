@@ -214,6 +214,7 @@ export default function VsAircallView() {
         <div className="vs-hero">
           <div className="vs-hero-inner">
             <div className="vs-eyebrow">DIALERSEAT VS AIRCALL</div>
+            <div style={{ fontSize: 12, color: T.muted, marginBottom: 16 }}>Pricing and features last verified 7/19/26</div>
             <h1 className="vs-h1">
               The dialer is a Professional-tier upsell.<br />
               <span className="versus">Ours dials on the first seat, at $35/week.</span>

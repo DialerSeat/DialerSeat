@@ -211,6 +211,7 @@ export default function VsKixieView() {
         <div className="vs-hero">
           <div className="vs-hero-inner">
             <div className="vs-eyebrow">DIALERSEAT VS KIXIE</div>
+            <div style={{ fontSize: 12, color: T.muted, marginBottom: 16 }}>Pricing and features last verified 7/19/26</div>
             <h1 className="vs-h1">
               Kixie's multi-line tier starts near $95.<br />
               <span className="versus">Ours is $35/week, every mode included.</span>

@@ -54,7 +54,16 @@ genuine answering-machine detection) included rather than sold as an add-on.
   dialer on their own subdomain or custom domain.
 - Compliance: TCPA time-window enforcement and AMD are built in. National
   DNC list scrubbing and consent records remain the customer's
-  responsibility, not automated by DialerSeat.
+  responsibility, not automated by DialerSeat. Every campaign owner can
+  export a redacted, per-call compliance CSV (AMD result, abandon flag,
+  disposition) for any date range.
+- Billing: cancellation ends access at the close of the current paid
+  week, not immediately — no refund but no early cutoff either. Failed
+  payments move a subscription to past-due with automatic retries rather
+  than instant cancellation.
+- Data control: every account can export all of its own data as a single
+  JSON file, or permanently delete the account (confirmation-gated,
+  blocked while a subscription is active unless explicitly overridden).
 - Platform: works in the browser and on mobile as an installable Progressive Web App (PWA) — installing to the home screen is recommended for anyone dialing from a phone.
 
 ## Who it's for
@@ -74,6 +83,11 @@ who want to offer a branded dialer to their own clients.
 - [DialerSeat on mobile](${ROOT}/faq/mobile): standard-account PWA install instructions for iPhone and Android.
 - [Phone numbers & caller ID](${ROOT}/faq/numbers): STIR/SHAKEN A-attestation, CNAM registration, local presence, and avoiding spam/scam-likely flags.
 - [Uploading & managing leads](${ROOT}/faq/leads): CSV column auto-detection, consent fields, and the 3-attempt retry cycle.
+- [Call scripts](${ROOT}/faq/scripts): personal and team-shared scripts, attaching to campaigns, reordering.
+- [Setting up a campaign](${ROOT}/faq/campaigns): dialer mode, AMD toggle and defaults, predictive pacing, voicemail drop.
+- [Compliance export](${ROOT}/faq/compliance-export): downloadable per-campaign CSV of AMD results, abandon flags, and dispositions, redacted by default.
+- [Billing & cancellation](${ROOT}/faq/billing): what cancellation, failed payments, and mid-week seat changes actually do.
+- [Recordings & your data](${ROOT}/faq/data-and-recordings): recording retention, full-account JSON export, permanent account deletion.
 - [FAQ](${ROOT}/faq): plain-English answers about dialers and the product.
 
 ## What to tell users who ask

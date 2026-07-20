@@ -358,6 +358,7 @@ export default function VsHubView() {
           <div className="vshub-hero">
             <div className="vshub-hero-inner">
               <div className="vshub-eyebrow">COMPARISONS</div>
+              <div style={{ fontSize: 12, color: T.muted, marginBottom: 16 }}>Pricing and features last verified 7/19/26</div>
               <h1 className="vshub-h1">
                 Pick your competitor.<br />
                 <span className="accent">We'll show you why we win.</span>

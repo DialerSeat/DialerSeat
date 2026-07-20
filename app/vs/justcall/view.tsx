@@ -213,6 +213,7 @@ export default function VsJustcallView() {
         <div className="vs-hero">
           <div className="vs-hero-inner">
             <div className="vs-eyebrow">DIALERSEAT VS JUSTCALL</div>
+            <div style={{ fontSize: 12, color: T.muted, marginBottom: 16 }}>Pricing and features last verified 7/19/26</div>
             <h1 className="vs-h1">
               $29 gets you calling. Not dialing.<br />
               <span className="versus">$35/week gets you both, from day one.</span>

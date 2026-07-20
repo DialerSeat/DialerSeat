@@ -213,6 +213,7 @@ export default function VsCloudtalkView() {
         <div className="vs-hero">
           <div className="vs-hero-inner">
             <div className="vs-eyebrow">DIALERSEAT VS CLOUDTALK</div>
+            <div style={{ fontSize: 12, color: T.muted, marginBottom: 16 }}>Pricing and features last verified 7/19/26</div>
             <h1 className="vs-h1">
               The $19 seat doesn't dial anything.<br />
               <span className="versus">Ours does, at $35/week, from day one.</span>

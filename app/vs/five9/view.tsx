@@ -22,7 +22,7 @@ const T = {
 }
 
 const features = [
-  { feature: 'Per-seat cost', dialerseat: '$35/wk ($140/mo)', competitor: '$175–$325/mo' },
+  { feature: 'Per-seat cost', dialerseat: '$35/wk, cancel anytime', competitor: '$175–$325/mo, contract' },
   { feature: 'Weekly billing', dialerseat: true, competitor: false },
   { feature: 'Public per-seat pricing', dialerseat: true, competitor: false },
   { feature: 'Self-serve signup, no demo required', dialerseat: true, competitor: false },
@@ -216,6 +216,7 @@ export default function VsFive9View() {
         <div className="vs-hero">
           <div className="vs-hero-inner">
             <div className="vs-eyebrow">DIALERSEAT VS FIVE9</div>
+            <div style={{ fontSize: 12, color: T.muted, marginBottom: 16 }}>Pricing and features last verified 7/19/26</div>
             <h1 className="vs-h1">
               Five9 is built for the Fortune 500.<br />
               <span className="versus">DialerSeat is built for you — at $35 a week.</span>
@@ -261,11 +262,12 @@ export default function VsFive9View() {
           <div className="vs-section-eyebrow">PRICING</div>
           <h2 className="vs-section-h2">$35 a week versus $175+ a month with custom quotes.</h2>
           <p className="vs-section-lede">
-            Five9's published starting price is around $175/seat/month, but real-world quotes for
-            full features and proper line counts typically land at $200–$325 per seat per month
-            depending on tier, plus annual commitments. You won't see a working price until you
-            sit through a demo and submit a custom quote request. DialerSeat™ publishes pricing
-            on the homepage and charges weekly.
+            Five9 doesn't publish pricing, but commonly cited quotes start around $175/seat/month,
+            and real-world quotes for full features and proper line counts typically land at
+            $200–$325 per seat per month depending on tier, plus annual commitments. You won't see
+            a working price until you sit through a demo and submit a custom quote request.
+            DialerSeat™ publishes pricing on the homepage and charges weekly — cancel anytime, no
+            monthly premium.
           </p>
 
           <div className="price-grid">
@@ -276,7 +278,7 @@ export default function VsFive9View() {
                 <span className="price-card-big">$35</span>
                 <span className="price-card-suffix">/seat/week</span>
               </div>
-              <div className="price-card-monthly">≈ $140/month equivalent</div>
+              <div className="price-card-monthly">Cancel anytime — no monthly lock-in</div>
               <ul className="price-card-list">
                 <li><span className="check">✓</span> Public pricing on website</li>
                 <li><span className="check">✓</span> $0 setup fee</li>
@@ -352,6 +354,55 @@ export default function VsFive9View() {
         </div>
 
         <div className="vs-section" style={{ paddingTop: 0 }}>
+          <div className="vs-section-eyebrow">SCALING A TEAM</div>
+          <h2 className="vs-section-h2">Five9's manager tools require a 50-seat minimum to even quote.</h2>
+          <p className="vs-section-lede">
+            Five9 sells five stacked tiers — Core, Premium, Optimum, and Ultimate on top of a
+            digital-only entry plan — and workforce management and quality management (the actual
+            manager/supervisor tooling) don't show up until Optimum, which requires a custom quote.
+            Every Five9 plan has a 50-seat minimum. Five9 has a VAR/reseller program, but it resells
+            Five9-branded software — it isn't whitelabel. DialerSeat™ Manager+ is $75/month flat,
+            whitelabel included, with no seat minimum.
+          </p>
+
+          <div className="price-grid">
+            <div className="price-card winner">
+              <div className="price-card-label">DIALERSEAT MANAGER+</div>
+              <div className="price-card-name">Whitelabel, no seat minimum</div>
+              <div>
+                <span className="price-card-big">$75</span>
+                <span className="price-card-suffix">/month flat</span>
+              </div>
+              <div className="price-card-monthly">Plus $35/week per seat — works the same at 1 seat or 100</div>
+              <ul className="price-card-list">
+                <li><span className="check">✓</span> Full whitelabel — your brand, your domain</li>
+                <li><span className="check">✓</span> No 50-seat minimum to unlock manager tools</li>
+                <li><span className="check">✓</span> No custom quote required</li>
+                <li><span className="check">✓</span> Team performance + campaign oversight included</li>
+                <li><span className="check">✓</span> Published price, not "contact sales"</li>
+              </ul>
+            </div>
+
+            <div className="price-card">
+              <div className="price-card-label">FIVE9 OPTIMUM</div>
+              <div className="price-card-name">Where WFM/QM actually live</div>
+              <div>
+                <span className="price-card-big">Custom</span>
+                <span className="price-card-suffix">quote required</span>
+              </div>
+              <div className="price-card-monthly">Industry estimates: $200-230/seat, 50-seat minimum, annual contract</div>
+              <ul className="price-card-list">
+                <li className="bad"><span className="cross">✕</span> No whitelabel — reseller program only</li>
+                <li className="bad"><span className="cross">✕</span> 50-seat minimum on every plan, including entry tiers</li>
+                <li className="bad"><span className="cross">✕</span> Workforce/quality management is two tiers up</li>
+                <li className="bad"><span className="cross">✕</span> Pricing not published at any tier above entry</li>
+                <li className="bad"><span className="cross">✕</span> Typically requires a 36-month contract</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div className="vs-section" style={{ paddingTop: 0 }}>
           <div className="vs-section-eyebrow">WHERE DIALERSEAT WINS</div>
           <h2 className="vs-section-h2">Six advantages for non-enterprise teams.</h2>
 
@@ -387,10 +438,11 @@ export default function VsFive9View() {
               </p>
             </div>
             <div className="win-card">
-              <div className="win-card-title">5. Works on phones + tablets</div>
+              <div className="win-card-title">5. Agents can actually dial from a phone or tablet</div>
               <p className="win-card-body">
-                Install as a PWA on iPhone, iPad, or Android — behaves like a native app. Five9's
-                agent application is desktop-focused with limited mobile experience.
+                Install as a PWA on iPhone, iPad, or Android and place calls with the same dialer
+                modes as desktop. Five9 does publish a mobile app, but it's built for supervisors
+                to monitor and barge into calls — not for agents to dial from.
               </p>
             </div>
             <div className="win-card">

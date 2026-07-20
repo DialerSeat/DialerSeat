@@ -220,6 +220,7 @@ export default function Vs3cxView() {
         <div className="vs-hero">
           <div className="vs-hero-inner">
             <div className="vs-eyebrow">DIALERSEAT VS 3CX</div>
+            <div style={{ fontSize: 12, color: T.muted, marginBottom: 16 }}>Pricing and features last verified 7/19/26</div>
             <h1 className="vs-h1">
               3CX runs your phones.<br />
               <span className="versus">DialerSeat runs your outbound sales.</span>
@@ -316,7 +317,7 @@ export default function Vs3cxView() {
                 <li className="bad"><span className="cross">✕</span> SIP trunk billed separately (~$15–30/channel/mo)</li>
                 <li className="bad"><span className="cross">✕</span> Hosting billed separately (~$25–250+/mo)</li>
                 <li className="bad"><span className="cross">✕</span> Support tickets ~$75 each</li>
-                <li className="bad"><span className="cross">✕</span> Free tier eliminated as of Jan 2026</li>
+                <li className="bad"><span className="cross">✕</span> Even the entry tier has no lead lists or dispositions</li>
                 <li className="bad"><span className="cross">✕</span> No outbound sales campaign tooling at any tier</li>
               </ul>
             </div>
@@ -364,6 +365,51 @@ export default function Vs3cxView() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+
+        <div className="vs-section" style={{ paddingTop: 0 }}>
+          <div className="vs-section-eyebrow">SCALING A TEAM</div>
+          <h2 className="vs-section-h2">3CX has a reseller ecosystem. It doesn't have whitelabel.</h2>
+          <p className="vs-section-lede">
+            3CX's Channel Partner Program is built for IT/MSPs to sell and host 3CX systems for
+            their clients — but the product itself stays 3CX-branded to whoever's using it. There's
+            no option to run it under your own name. DialerSeat™ Manager+ is a flat $75/month
+            add-on that puts your brand on the platform, no MSP partnership required.
+          </p>
+
+          <div className="price-grid">
+            <div className="price-card winner">
+              <div className="price-card-label">DIALERSEAT MANAGER+</div>
+              <div className="price-card-name">Whitelabel, direct</div>
+              <div>
+                <span className="price-card-big">$75</span>
+                <span className="price-card-suffix">/month flat</span>
+              </div>
+              <div className="price-card-monthly">Plus $35/week per seat — no partner program to join first</div>
+              <ul className="price-card-list">
+                <li><span className="check">✓</span> Full whitelabel — your brand, your domain</li>
+                <li><span className="check">✓</span> No reseller tier or revenue targets to hit</li>
+                <li><span className="check">✓</span> Team performance + campaign oversight included</li>
+                <li><span className="check">✓</span> One flat fee, sold direct</li>
+              </ul>
+            </div>
+
+            <div className="price-card">
+              <div className="price-card-label">3CX CHANNEL PARTNER</div>
+              <div className="price-card-name">Resell 3CX-branded systems</div>
+              <div>
+                <span className="price-card-big">1,000+</span>
+                <span className="price-card-suffix">EUR/USD/GBP per year</span>
+              </div>
+              <div className="price-card-monthly">Five partner tiers with revenue targets — product stays 3CX-branded</div>
+              <ul className="price-card-list">
+                <li className="bad"><span className="cross">✕</span> No whitelabel — end product carries 3CX branding</li>
+                <li className="bad"><span className="cross">✕</span> Partner tier requires ongoing revenue targets</li>
+                <li className="bad"><span className="cross">✕</span> Built for hosting/reselling, not sales-team management</li>
+                <li className="bad"><span className="cross">✕</span> Separate cost from the underlying license/SC pricing</li>
+              </ul>
+            </div>
           </div>
         </div>
 

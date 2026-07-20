@@ -37,7 +37,7 @@ const features = [
   { feature: 'TCPA windows enforced server-side', dialerseat: true, competitor: 'Partial' },
   { feature: 'STIR/SHAKEN A-attestation', dialerseat: true, competitor: 'Variable' },
   { feature: 'Public API + webhooks (any CRM)', dialerseat: true, competitor: false },
-  { feature: 'Works on phones + tablets (PWA install)', dialerseat: true, competitor: false },
+  { feature: 'Works on phones + tablets', dialerseat: 'Same app, any device (PWA)', competitor: 'Separate companion app' },
   { feature: 'Lapsed-user data preservation', dialerseat: true, competitor: false },
 ]
 
@@ -223,6 +223,7 @@ export default function VsWavvView() {
         <div className="vs-hero">
           <div className="vs-hero-inner">
             <div className="vs-eyebrow">DIALERSEAT VS WAVV</div>
+            <div style={{ fontSize: 12, color: T.muted, marginBottom: 16 }}>Pricing and features last verified 7/19/26</div>
             <h1 className="vs-h1">
               WAVV charges more the harder you dial.<br />
               <span className="versus">We charge $35 a week. Every mode included.</span>
@@ -371,6 +372,52 @@ export default function VsWavvView() {
         </div>
 
         <div className="vs-section" style={{ paddingTop: 0 }}>
+          <div className="vs-section-eyebrow">SCALING A TEAM</div>
+          <h2 className="vs-section-h2">WAVV is built for one team, one account. DialerSeat isn't.</h2>
+          <p className="vs-section-lede">
+            WAVV's own team tools cover scheduling and activity tracking within a single account —
+            there's no way to run multiple client accounts from one login, and no whitelabel option
+            at any tier. For agencies managing several teams or clients under one roof, that's a
+            real ceiling. DialerSeat™ Manager+ is a flat $75/month add-on with full whitelabel,
+            so the platform can carry your brand instead of ours.
+          </p>
+
+          <div className="price-grid">
+            <div className="price-card winner">
+              <div className="price-card-label">DIALERSEAT MANAGER+</div>
+              <div className="price-card-name">Whitelabel, built for agencies</div>
+              <div>
+                <span className="price-card-big">$75</span>
+                <span className="price-card-suffix">/month flat</span>
+              </div>
+              <div className="price-card-monthly">Plus $35/week per seat — same rate regardless of how many clients you run</div>
+              <ul className="price-card-list">
+                <li><span className="check">✓</span> Full whitelabel — your brand, your domain</li>
+                <li><span className="check">✓</span> Team performance + campaign oversight</li>
+                <li><span className="check">✓</span> No per-number fee stacking as you scale</li>
+                <li><span className="check">✓</span> One flat fee, not one subscription per rep</li>
+              </ul>
+            </div>
+
+            <div className="price-card">
+              <div className="price-card-label">WAVV</div>
+              <div className="price-card-name">Single-tenant, one account</div>
+              <div>
+                <span className="price-card-big">N/A</span>
+                <span className="price-card-suffix">no whitelabel tier</span>
+              </div>
+              <div className="price-card-monthly">Built for one team; no multi-client dashboard at any price</div>
+              <ul className="price-card-list">
+                <li className="bad"><span className="cross">✕</span> No whitelabel, at any tier</li>
+                <li className="bad"><span className="cross">✕</span> No multi-account or agency dashboard</li>
+                <li className="bad"><span className="cross">✕</span> $1/mo per number adds up across a growing team</li>
+                <li className="bad"><span className="cross">✕</span> Predictive dialing gated to the top Multi Line tier</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div className="vs-section" style={{ paddingTop: 0 }}>
           <div className="vs-section-eyebrow">WHERE DIALERSEAT WINS</div>
           <h2 className="vs-section-h2">Six things WAVV's tiers won't do.</h2>
 
@@ -412,10 +459,11 @@ export default function VsWavvView() {
               </p>
             </div>
             <div className="win-card">
-              <div className="win-card-title">6. Works on phones + tablets</div>
+              <div className="win-card-title">6. One app, not a separate mobile companion</div>
               <p className="win-card-body">
-                Install as a PWA on iPhone, iPad, or Android — full-screen, home-screen icon, no
-                app store required.
+                Install DialerSeat™ as a PWA on iPhone, iPad, or Android — it's the same
+                application as desktop, not a separate download with its own feature set. WAVV's
+                mobile app is a companion to the main platform, installed and updated separately.
               </p>
             </div>
           </div>

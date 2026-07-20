@@ -26,7 +26,7 @@ const features = [
   { feature: 'Self-serve signup, no demo required', dialerseat: true, competitor: false },
   { feature: 'Weekly billing option', dialerseat: true, competitor: false },
   { feature: 'No annual contract required', dialerseat: true, competitor: false },
-  { feature: 'Per-seat cost', dialerseat: '$35/wk ($140/mo)', competitor: '$199+/mo' },
+  { feature: 'Per-seat cost', dialerseat: '$35/wk, cancel anytime', competitor: '$199+/mo, contract' },
   { feature: 'Setup fee', dialerseat: '$0', competitor: '$0–$2,000' },
   { feature: 'Power dialer', dialerseat: true, competitor: true },
   { feature: 'Preview dialer', dialerseat: true, competitor: true },
@@ -215,6 +215,7 @@ export default function VsReadymodeView() {
         <div className="vs-hero">
           <div className="vs-hero-inner">
             <div className="vs-eyebrow">DIALERSEAT VS READYMODE</div>
+            <div style={{ fontSize: 12, color: T.muted, marginBottom: 16 }}>Pricing and features last verified 7/19/26</div>
             <h1 className="vs-h1">
               ReadyMode wants $199 a month.<br />
               <span className="versus">We charge $35 a week. Same predictive dial.</span>
@@ -270,7 +271,7 @@ export default function VsReadymodeView() {
                 <span className="price-card-big">$35</span>
                 <span className="price-card-suffix">/seat/week</span>
               </div>
-              <div className="price-card-monthly">≈ $140/month equivalent</div>
+              <div className="price-card-monthly">Cancel anytime — no monthly lock-in</div>
               <ul className="price-card-list">
                 <li><span className="check">✓</span> Public pricing on website</li>
                 <li><span className="check">✓</span> $0 setup fee</li>
@@ -345,6 +346,53 @@ export default function VsReadymodeView() {
         </div>
 
         <div className="vs-section" style={{ paddingTop: 0 }}>
+          <div className="vs-section-eyebrow">SCALING A TEAM</div>
+          <h2 className="vs-section-h2">Growing past one seat costs you more than seats.</h2>
+          <p className="vs-section-lede">
+            ReadyMode's pricing isn't flat as you add people — it's tiered by headcount. The moment
+            your 5th license gets added, every seat on the account (not just the new one) jumps from
+            Starter to iQ pricing. DialerSeat™ Manager+ is a flat $75/month add-on with full
+            whitelabel included, regardless of team size.
+          </p>
+
+          <div className="price-grid">
+            <div className="price-card winner">
+              <div className="price-card-label">DIALERSEAT MANAGER+</div>
+              <div className="price-card-name">Whitelabel, any team size</div>
+              <div>
+                <span className="price-card-big">$75</span>
+                <span className="price-card-suffix">/month flat</span>
+              </div>
+              <div className="price-card-monthly">Plus $35/week per seat — no per-seat price hike, ever</div>
+              <ul className="price-card-list">
+                <li><span className="check">✓</span> Full whitelabel — your brand, your domain</li>
+                <li><span className="check">✓</span> Same price at 2 seats or 200 seats</li>
+                <li><span className="check">✓</span> Manager seat can dial, not view-only</li>
+                <li><span className="check">✓</span> Team performance + campaign oversight</li>
+                <li><span className="check">✓</span> No per-seat feature gating</li>
+              </ul>
+            </div>
+
+            <div className="price-card">
+              <div className="price-card-label">READYMODE IQ (5+ SEATS)</div>
+              <div className="price-card-name">Mandatory upgrade at 5 licenses</div>
+              <div>
+                <span className="price-card-big">+$50</span>
+                <span className="price-card-suffix">/seat/month</span>
+              </div>
+              <div className="price-card-monthly">$199→$249 per seat the moment you add a 5th license</div>
+              <ul className="price-card-list">
+                <li className="bad"><span className="cross">✕</span> No whitelabel — only a referral/affiliate program</li>
+                <li className="bad"><span className="cross">✕</span> Entire team repriced, not just the new seat</li>
+                <li className="bad"><span className="cross">✕</span> "Complimentary" admin license can't dial or use the webphone</li>
+                <li className="bad"><span className="cross">✕</span> $200 fee for sharing a license across concurrent users</li>
+                <li className="bad"><span className="cross">✕</span> Reputation/DID tools locked to iQ tier only</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div className="vs-section" style={{ paddingTop: 0 }}>
           <div className="vs-section-eyebrow">WHERE DIALERSEAT WINS</div>
           <h2 className="vs-section-h2">Six things ReadyMode won't do.</h2>
 
@@ -378,10 +426,11 @@ export default function VsReadymodeView() {
               </p>
             </div>
             <div className="win-card">
-              <div className="win-card-title">5. Works on phones + tablets</div>
+              <div className="win-card-title">5. The full dialer, on a phone or tablet</div>
               <p className="win-card-body">
-                Install as a PWA on iPhone, iPad, or Android — full-screen, home-screen icon.
-                ReadyMode is desktop-focused with limited mobile support.
+                Not a stripped-down companion app — install as a PWA on iPhone, iPad, or Android
+                and get the same dialer modes as desktop. ReadyMode has no mobile app at all;
+                it's desktop-only.
               </p>
             </div>
             <div className="win-card">

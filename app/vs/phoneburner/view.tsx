@@ -22,7 +22,7 @@ const T = {
 }
 
 const features = [
-  { feature: 'Per-seat cost', dialerseat: '$35/wk ($140/mo)', competitor: '$149+/mo' },
+  { feature: 'Per-seat cost', dialerseat: '$35/wk, cancel anytime', competitor: '$165+/mo, contract for less' },
   { feature: 'Weekly billing', dialerseat: true, competitor: false },
   { feature: 'Self-serve signup', dialerseat: true, competitor: true },
   { feature: 'No annual contract', dialerseat: true, competitor: true },
@@ -211,6 +211,7 @@ export default function VsPhoneBurnerView() {
         <div className="vs-hero">
           <div className="vs-hero-inner">
             <div className="vs-eyebrow">DIALERSEAT VS PHONEBURNER</div>
+            <div style={{ fontSize: 12, color: T.muted, marginBottom: 16 }}>Pricing and features last verified 7/19/26</div>
             <h1 className="vs-h1">
               PhoneBurner sticks to single-line.<br />
               <span className="versus">DialerSeat gives you all four modes — at $35 a week.</span>
@@ -251,11 +252,12 @@ export default function VsPhoneBurnerView() {
 
         <div className="vs-section" style={{ paddingTop: 0 }}>
           <div className="vs-section-eyebrow">PRICING</div>
-          <h2 className="vs-section-h2">$35 a week versus $149+ a month.</h2>
+          <h2 className="vs-section-h2">$35 a week, cancel anytime, versus $165+ a month.</h2>
           <p className="vs-section-lede">
-            PhoneBurner starts at $149/seat/month for their standard plan. Higher tiers reach
-            $169–$199/seat/month for advanced features. DialerSeat™ is $35/week (≈$140/month)
-            with all features included.
+            PhoneBurner starts at $165/seat/month billed monthly for their entry Standard plan
+            (or $140/mo if you commit to annual billing). Higher tiers reach $195–$215/seat/month
+            for advanced features. DialerSeat™ is $35/week, flat — never a monthly premium, no
+            contract required to get the price — with all features included.
           </p>
 
           <div className="price-grid">
@@ -266,7 +268,7 @@ export default function VsPhoneBurnerView() {
                 <span className="price-card-big">$35</span>
                 <span className="price-card-suffix">/seat/week</span>
               </div>
-              <div className="price-card-monthly">≈ $140/month equivalent</div>
+              <div className="price-card-monthly">Cancel anytime — no monthly lock-in</div>
               <ul className="price-card-list">
                 <li><span className="check">✓</span> All 4 dialer modes included</li>
                 <li><span className="check">✓</span> Multi-line predictive available</li>
@@ -282,10 +284,10 @@ export default function VsPhoneBurnerView() {
               <div className="price-card-label">PHONEBURNER</div>
               <div className="price-card-name">Single-line monthly</div>
               <div>
-                <span className="price-card-big">$149+</span>
+                <span className="price-card-big">$165+</span>
                 <span className="price-card-suffix">/seat/month</span>
               </div>
-              <div className="price-card-monthly">Higher tiers up to $199/seat for advanced features.</div>
+              <div className="price-card-monthly">$140/mo only with annual contract. Higher tiers up to $215/seat.</div>
               <ul className="price-card-list">
                 <li className="bad"><span className="cross">✕</span> Single-line philosophy only</li>
                 <li className="bad"><span className="cross">✕</span> No multi-line predictive</li>
@@ -339,6 +341,54 @@ export default function VsPhoneBurnerView() {
         </div>
 
         <div className="vs-section" style={{ paddingTop: 0 }}>
+          <div className="vs-section-eyebrow">SCALING A TEAM</div>
+          <h2 className="vs-section-h2">Coaching tools cost extra, and whitelabel isn't on the menu.</h2>
+          <p className="vs-section-lede">
+            PhoneBurner's Standard plan has no live call monitoring or coaching at all — you're
+            required to move up to Professional just to get a manager watching the floor, and
+            further to Premium for a dedicated number and priority support. None of PhoneBurner's
+            tiers include whitelabel. DialerSeat™ Manager+ is a flat $75/month add-on with full
+            whitelabel included, at any team size.
+          </p>
+
+          <div className="price-grid">
+            <div className="price-card winner">
+              <div className="price-card-label">DIALERSEAT MANAGER+</div>
+              <div className="price-card-name">Whitelabel, any team size</div>
+              <div>
+                <span className="price-card-big">$75</span>
+                <span className="price-card-suffix">/month flat</span>
+              </div>
+              <div className="price-card-monthly">Plus $35/week per seat — monitoring and coaching included, not tier-gated</div>
+              <ul className="price-card-list">
+                <li><span className="check">✓</span> Full whitelabel — your brand, your domain</li>
+                <li><span className="check">✓</span> One flat add-on, not a forced plan upgrade</li>
+                <li><span className="check">✓</span> Team performance + campaign oversight</li>
+                <li><span className="check">✓</span> No live-monitoring feature gate</li>
+                <li><span className="check">✓</span> Same price whether you have 2 seats or 50</li>
+              </ul>
+            </div>
+
+            <div className="price-card">
+              <div className="price-card-label">PHONEBURNER PROFESSIONAL</div>
+              <div className="price-card-name">Where monitoring tools start</div>
+              <div>
+                <span className="price-card-big">$195</span>
+                <span className="price-card-suffix">/seat/month</span>
+              </div>
+              <div className="price-card-monthly">Standard has no monitoring at all. Premium ($215/seat) adds dedicated numbers + priority support.</div>
+              <ul className="price-card-list">
+                <li className="bad"><span className="cross">✕</span> No whitelabel at any tier</li>
+                <li className="bad"><span className="cross">✕</span> Live monitoring locked out of the entry plan</li>
+                <li className="bad"><span className="cross">✕</span> Priority support requires the top tier</li>
+                <li className="bad"><span className="cross">✕</span> Per-seat cost climbs with every tier upgrade</li>
+                <li className="bad"><span className="cross">✕</span> No flat add-on option — it's a full plan switch</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div className="vs-section" style={{ paddingTop: 0 }}>
           <div className="vs-section-eyebrow">WHERE DIALERSEAT WINS</div>
           <h2 className="vs-section-h2">Six advantages for multi-mode teams.</h2>
 
@@ -366,17 +416,19 @@ export default function VsPhoneBurnerView() {
               </p>
             </div>
             <div className="win-card">
-              <div className="win-card-title">4. Lower price</div>
+              <div className="win-card-title">4. $35/week, no contract required</div>
               <p className="win-card-body">
-                $140/mo equivalent vs PhoneBurner's $149+. Plus you get four modes instead of one.
-                Plus weekly billing if you want it.
+                Never a monthly premium — the $35/week price is the price, no annual commitment
+                needed to get there. PhoneBurner's cheapest rate ($140/mo) requires locking into
+                annual billing; pay month to month and it's $165+.
               </p>
             </div>
             <div className="win-card">
-              <div className="win-card-title">5. Works on phones + tablets</div>
+              <div className="win-card-title">5. The full dialer, on a phone or tablet</div>
               <p className="win-card-body">
-                Install as a PWA on iPhone, iPad, or Android — behaves like a native app.
-                PhoneBurner is desktop-focused.
+                Install as a PWA on iPhone, iPad, or Android and dial with the same modes as
+                desktop. PhoneBurner has no mobile app — their own support docs advise against
+                using it on a phone at all, warning it "may be unstable."
               </p>
             </div>
             <div className="win-card">

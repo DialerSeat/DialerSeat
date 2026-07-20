@@ -22,13 +22,13 @@ const T = {
 }
 
 const features = [
-  { feature: 'Per-seat cost', dialerseat: '$35/wk', competitor: '$99–$149/mo' },
+  { feature: 'Per-seat cost', dialerseat: '$35/wk, cancel anytime', competitor: '$99–$149/mo + mandatory fee' },
   { feature: 'Weekly billing', dialerseat: true, competitor: false },
   { feature: 'Self-serve signup', dialerseat: true, competitor: true },
   { feature: 'No annual contract', dialerseat: true, competitor: true },
   { feature: 'Setup fee', dialerseat: '$0', competitor: '$0' },
   { feature: 'Triple-line dialer', dialerseat: '4 modes (Preview, Power, Progressive, Predictive)', competitor: '3-line (Mojo Dialer)' },
-  { feature: 'Single-line dialer', dialerseat: 'Preview mode', competitor: 'Mojo Express ($10/mo)' },
+  { feature: 'Single-line dialer', dialerseat: 'Preview mode, included', competitor: 'Single Line Dialer, $89–99/mo + $10/mo Agent Access' },
   { feature: 'AMD voicemail filter always on', dialerseat: true, competitor: 'Voicemail drop only' },
   { feature: 'Multiple scripts per campaign', dialerseat: true, competitor: 'Scripts feature' },
   { feature: 'Live mid-call script switching', dialerseat: true, competitor: false },
@@ -212,6 +212,7 @@ export default function VsMojoView() {
         <div className="vs-hero">
           <div className="vs-hero-inner">
             <div className="vs-eyebrow">DIALERSEAT VS MOJO DIALER</div>
+            <div style={{ fontSize: 12, color: T.muted, marginBottom: 16 }}>Pricing and features last verified 7/19/26</div>
             <h1 className="vs-h1">
               Mojo is built for real estate.<br />
               <span className="versus">DialerSeat is built for everyone — at $35 a week.</span>
@@ -232,10 +233,12 @@ export default function VsMojoView() {
           <div className="vs-section-eyebrow">THE QUICK VERDICT</div>
           <h2 className="vs-section-h2">If you're not in real estate, you're paying for someone else's workflow.</h2>
           <p className="vs-section-lede">
-            Mojo Dialer ($149/mo) gives you their 3-line dialer plus a real-estate-tuned interface
-            and integrations. Mojo Express ($10/mo) is single-line only. The product is solid but
+            Mojo Dialer ($149/mo with the mandatory Agent Access fee) gives you their 3-line dialer
+            plus a real-estate-tuned interface and integrations. Their Single Line Dialer runs
+            $99–109/mo with that same fee and drops multi-line entirely. The product is solid but
             its DNA is real estate prospecting — neighborhood searches, FSBO/expired tools, MLS
-            integrations. DialerSeat™ is built for any outbound team in any industry.
+            integrations. DialerSeat™ is built for any outbound team in any industry, for $35/week,
+            cancel anytime.
           </p>
 
           <div className="verdict-card">
@@ -252,11 +255,13 @@ export default function VsMojoView() {
 
         <div className="vs-section" style={{ paddingTop: 0 }}>
           <div className="vs-section-eyebrow">PRICING</div>
-          <h2 className="vs-section-h2">$35 a week versus $149 a month.</h2>
+          <h2 className="vs-section-h2">$35 a week, cancel anytime, versus $149 a month, locked in.</h2>
           <p className="vs-section-lede">
-            Mojo Dialer (their 3-line predictive) is $149/seat/month. Mojo Express (single-line) is
-            $10/month but you lose multi-line predictive entirely. DialerSeat™ is $35/week
-            (≈$140/month) with all four dialer modes included.
+            Mojo Dialer (their 3-line predictive) runs $149/seat/month once you include the
+            mandatory $10/mo Agent Access fee every account needs just to place calls. Their
+            Single Line Dialer is cheaper at $99–109/mo with that same fee, but you lose multi-line
+            predictive entirely. DialerSeat™ is $35/week — never a monthly premium — with all four
+            dialer modes included, and you can cancel anytime.
           </p>
 
           <div className="price-grid">
@@ -267,7 +272,7 @@ export default function VsMojoView() {
                 <span className="price-card-big">$35</span>
                 <span className="price-card-suffix">/seat/week</span>
               </div>
-              <div className="price-card-monthly">≈ $140/month equivalent</div>
+              <div className="price-card-monthly">Cancel anytime — no monthly lock-in</div>
               <ul className="price-card-list">
                 <li><span className="check">✓</span> All 4 dialer modes included</li>
                 <li><span className="check">✓</span> Industry-agnostic</li>
@@ -286,9 +291,9 @@ export default function VsMojoView() {
                 <span className="price-card-big">$149</span>
                 <span className="price-card-suffix">/seat/month</span>
               </div>
-              <div className="price-card-monthly">Mojo Express (single-line) $10/mo. Data add-ons separate.</div>
+              <div className="price-card-monthly">Includes mandatory $10/mo Agent Access. Data add-ons separate.</div>
               <ul className="price-card-list">
-                <li className="bad"><span className="cross">✕</span> Single-line at $10 tier only</li>
+                <li className="bad"><span className="cross">✕</span> Mandatory $10/mo access fee on every plan</li>
                 <li className="bad"><span className="cross">✕</span> Real estate niche tooling</li>
                 <li className="bad"><span className="cross">✕</span> Desktop-focused interface</li>
                 <li className="bad"><span className="cross">✕</span> No weekly billing option</li>
@@ -341,15 +346,64 @@ export default function VsMojoView() {
         </div>
 
         <div className="vs-section" style={{ paddingTop: 0 }}>
+          <div className="vs-section-eyebrow">SCALING A TEAM</div>
+          <h2 className="vs-section-h2">Mojo doesn't have a team plan. DialerSeat does.</h2>
+          <p className="vs-section-lede">
+            Checked directly against Mojo's own pricing page: there's no "Pro," "Team," or
+            "Enterprise" tier. Every seat is licensed individually — Agent Access, then a Single
+            or Triple Line license, repeated per person, with no volume pricing and no built-in
+            way to manage a team or brand the tool as your own. DialerSeat™ Manager+ is a flat
+            $75/month add-on with full whitelabel included.
+          </p>
+
+          <div className="price-grid">
+            <div className="price-card winner">
+              <div className="price-card-label">DIALERSEAT MANAGER+</div>
+              <div className="price-card-name">Whitelabel, any team size</div>
+              <div>
+                <span className="price-card-big">$75</span>
+                <span className="price-card-suffix">/month flat</span>
+              </div>
+              <div className="price-card-monthly">Plus $35/week per seat — same rate whether you have 2 people or 20</div>
+              <ul className="price-card-list">
+                <li><span className="check">✓</span> Full whitelabel — your brand, your domain</li>
+                <li><span className="check">✓</span> One flat fee, not one license per person stacked</li>
+                <li><span className="check">✓</span> Manager seat included, can dial</li>
+                <li><span className="check">✓</span> Team performance + campaign oversight</li>
+                <li><span className="check">✓</span> Built for teams from day one</li>
+              </ul>
+            </div>
+
+            <div className="price-card">
+              <div className="price-card-label">MOJO DIALER</div>
+              <div className="price-card-name">No team plan exists</div>
+              <div>
+                <span className="price-card-big">N/A</span>
+                <span className="price-card-suffix">no manager tier</span>
+              </div>
+              <div className="price-card-monthly">Every seat licensed individually, no volume pricing</div>
+              <ul className="price-card-list">
+                <li className="bad"><span className="cross">✕</span> No whitelabel, at any price point</li>
+                <li className="bad"><span className="cross">✕</span> No team/agency dashboard</li>
+                <li className="bad"><span className="cross">✕</span> Each seat pays Agent Access + license separately</li>
+                <li className="bad"><span className="cross">✕</span> No bulk or team pricing discount</li>
+                <li className="bad"><span className="cross">✕</span> No supervisor call monitoring tier</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div className="vs-section" style={{ paddingTop: 0 }}>
           <div className="vs-section-eyebrow">WHERE DIALERSEAT WINS</div>
           <h2 className="vs-section-h2">Six advantages for non-real-estate teams.</h2>
 
           <div className="win-grid">
             <div className="win-card">
-              <div className="win-card-title">1. Lower price</div>
+              <div className="win-card-title">1. $35/week, cancel anytime</div>
               <p className="win-card-body">
-                $140/mo equivalent vs Mojo's $149 — and you get triple-line predictive included.
-                On Mojo, the cheaper $10 tier is single-line only.
+                No monthly premium, no lock-in — walk away after any week. Mojo bills monthly, with
+                every plan carrying a mandatory $10/mo Agent Access fee on top before you've even
+                picked a dialer license.
               </p>
             </div>
             <div className="win-card">
@@ -360,10 +414,11 @@ export default function VsMojoView() {
               </p>
             </div>
             <div className="win-card">
-              <div className="win-card-title">3. Mobile + tablet support</div>
+              <div className="win-card-title">3. The full dialer, on a phone or tablet</div>
               <p className="win-card-body">
-                Install as a PWA on iPhone, iPad, or Android — behaves like a native app. Mojo is
-                desktop-focused; mobile support is limited.
+                Install as a PWA on iPhone, iPad, or Android and get the same dialer modes as
+                desktop. Mojo's "Mojo on the Go" app is a companion tool — reviewers note it lacks
+                the desktop version's feature set and requires a strong data connection to hold calls.
               </p>
             </div>
             <div className="win-card">

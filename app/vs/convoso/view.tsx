@@ -214,6 +214,7 @@ export default function VsConvosoView() {
         <div className="vs-hero">
           <div className="vs-hero-inner">
             <div className="vs-eyebrow">DIALERSEAT VS CONVOSO</div>
+            <div style={{ fontSize: 12, color: T.muted, marginBottom: 16 }}>Pricing and features last verified 7/19/26</div>
             <h1 className="vs-h1">
               Convoso wants a demo and a 20-seat minimum.<br />
               <span className="versus">We publish $35/week and let you start solo.</span>
