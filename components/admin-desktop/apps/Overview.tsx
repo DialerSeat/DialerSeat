@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 
 
 
@@ -45,6 +45,11 @@ interface AdminUser {
 }
 
 type FilterMode = 'all' | 'active' | 'inactive'
+
+// Key for persisting the selected status filter across page refreshes.
+// This app is admin-only (see registry.tsx visibleTo), so a fixed key is
+// fine — no role/user scoping needed.
+const OVERVIEW_FILTER_STORAGE_KEY = 'ds:admin-desktop:overview-filter:v1'
 
 const ONLINE_WINDOW_MS = 90_000
 
@@ -129,6 +134,42 @@ export default function OverviewApp() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<FilterMode>('all')
+  const isFirstFilterSaveRef = useRef(true)
+
+  // Restore the previously-selected status filter. Runs in an effect
+  // (after mount) rather than a useState lazy initializer, since
+  // localStorage isn't available during server-side rendering — reading
+  // it during initial render would make the server-rendered HTML disagree
+  // with the client's first render and trigger a hydration mismatch.
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(OVERVIEW_FILTER_STORAGE_KEY)
+      if (!saved) return
+      const parsed = JSON.parse(saved)
+      const validFilters: FilterMode[] = ['all', 'active', 'inactive']
+      if (validFilters.includes(parsed?.filter)) setFilter(parsed.filter)
+    } catch {
+      // Corrupt or inaccessible storage (e.g. private browsing) — just
+      // keep the default filter, nothing else to do here.
+    }
+  }, [])
+
+  // Persist the filter whenever it changes. The very first fire of this
+  // effect happens right after mount, before the restore effect above has
+  // had a chance to run, so skip it — otherwise it would immediately
+  // overwrite a saved filter with the pre-restore default.
+  useEffect(() => {
+    if (isFirstFilterSaveRef.current) {
+      isFirstFilterSaveRef.current = false
+      return
+    }
+    try {
+      localStorage.setItem(OVERVIEW_FILTER_STORAGE_KEY, JSON.stringify({ filter }))
+    } catch {
+      // Ignore write failures (e.g. storage disabled/full) — persistence
+      // is a nice-to-have, not required for the app to function.
+    }
+  }, [filter])
   const [search, setSearch] = useState('')
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [tick, setTick] = useState(0)

@@ -32,10 +32,10 @@ const C = {
 type RangeKey = 'today' | 'week' | 'all'
 type DetailRangeKey = 'today' | 'week' | 'month30' | 'all'
 
-// Key for persisting the selected time filter across page refreshes. This
-// app is admin-only (see registry.tsx visibleTo), so a fixed key is fine —
-// no role/user scoping needed.
-const USER_TRACKER_RANGE_STORAGE_KEY = 'ds:admin-desktop:usertracker-range:v1'
+// Key for persisting the selected time and status filters across page
+// refreshes. This app is admin-only (see registry.tsx visibleTo), so a
+// fixed key is fine — no role/user scoping needed.
+const USER_TRACKER_FILTERS_STORAGE_KEY = 'ds:admin-desktop:usertracker-filters:v1'
 
 interface BucketStats {
   calls: number
@@ -135,46 +135,51 @@ export default function UserTrackerApp() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [range, setRange] = useState<RangeKey>('week')
-  const isFirstRangeSaveRef = useRef(true)
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const isFirstFiltersSaveRef = useRef(true)
 
-  // Restore the previously-selected time filter. Runs in an effect (after
-  // mount) rather than a useState lazy initializer, since localStorage
-  // isn't available during server-side rendering — reading it during
-  // initial render would make the server-rendered HTML disagree with the
-  // client's first render and trigger a hydration mismatch.
+  // Restore the previously-selected time and status filters. Runs in an
+  // effect (after mount) rather than a useState lazy initializer, since
+  // localStorage isn't available during server-side rendering — reading
+  // it during initial render would make the server-rendered HTML disagree
+  // with the client's first render and trigger a hydration mismatch.
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(USER_TRACKER_RANGE_STORAGE_KEY)
+      const saved = localStorage.getItem(USER_TRACKER_FILTERS_STORAGE_KEY)
       if (!saved) return
       const parsed = JSON.parse(saved)
       const validRanges: RangeKey[] = ['today', 'week', 'all']
+      const validStatusFilters: StatusFilter[] = ['all', 'active', 'inactive']
       if (validRanges.includes(parsed?.range)) setRange(parsed.range)
+      if (validStatusFilters.includes(parsed?.statusFilter)) setStatusFilter(parsed.statusFilter)
     } catch {
       // Corrupt or inaccessible storage (e.g. private browsing) — just
-      // keep the default filter, nothing else to do here.
+      // keep the default filters, nothing else to do here.
     }
   }, [])
 
-  // Persist the filter whenever it changes. The very first fire of this
-  // effect happens right after mount, before the restore effect above has
-  // had a chance to run, so skip it — otherwise it would immediately
-  // overwrite a saved filter with the pre-restore default.
+  // Persist the filters whenever either changes. The very first fire of
+  // this effect happens right after mount, before the restore effect
+  // above has had a chance to run, so skip it — otherwise it would
+  // immediately overwrite saved filters with the pre-restore defaults.
   useEffect(() => {
-    if (isFirstRangeSaveRef.current) {
-      isFirstRangeSaveRef.current = false
+    if (isFirstFiltersSaveRef.current) {
+      isFirstFiltersSaveRef.current = false
       return
     }
     try {
-      localStorage.setItem(USER_TRACKER_RANGE_STORAGE_KEY, JSON.stringify({ range }))
+      localStorage.setItem(
+        USER_TRACKER_FILTERS_STORAGE_KEY,
+        JSON.stringify({ range, statusFilter })
+      )
     } catch {
       // Ignore write failures (e.g. storage disabled/full) — persistence
       // is a nice-to-have, not required for the app to function.
     }
-  }, [range])
+  }, [range, statusFilter])
   const [search, setSearch] = useState('')
   const [sortKey, setSortKey] = useState<SortKey>('calls')
   const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc')
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [lastSynced, setLastSynced] = useState<number>(() => Date.now())
   const [nowTick, setNowTick] = useState(() => Date.now())
