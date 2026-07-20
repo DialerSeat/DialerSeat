@@ -406,6 +406,8 @@ export default function CampaignsPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [deleteTyped, setDeleteTyped] = useState('')
 
+  const [csvUploadError, setCsvUploadError] = useState(false)
+
   const isLapsed = tier === 'lapsed' || tier === 'new'
 
   useEffect(() => {
@@ -423,7 +425,7 @@ export default function CampaignsPage() {
   
   
  useEffect(() => {
-    const anyModalOpen = showCreate || !!settingsId || scriptsManagerOpen || !!deleteConfirm || editorOpen
+    const anyModalOpen = showCreate || !!settingsId || scriptsManagerOpen || !!deleteConfirm || editorOpen || csvUploadError
     if (anyModalOpen) {
       const prevOverflow = document.body.style.overflow
       const prevPosition = document.body.style.position
@@ -444,7 +446,7 @@ export default function CampaignsPage() {
         window.scrollTo(0, scrollY)
       }
     }
-  }, [showCreate, settingsId, scriptsManagerOpen, deleteConfirm, editorOpen])
+  }, [showCreate, settingsId, scriptsManagerOpen, deleteConfirm, editorOpen, csvUploadError])
 
   const fetchCampaigns = async () => {
     setFetching(true)
@@ -489,14 +491,14 @@ export default function CampaignsPage() {
   useEffect(() => {
     const onVisibility = () => {
       if (document.hidden) return
-      if (showCreate || settingsId || editorOpen || deleteConfirm || scriptsManagerOpen) return
+      if (showCreate || settingsId || editorOpen || deleteConfirm || scriptsManagerOpen || csvUploadError) return
       if (creating || savingScript || editorSaving || libSaving) return
       fetchCampaigns()
     }
     document.addEventListener('visibilitychange', onVisibility)
     return () => document.removeEventListener('visibilitychange', onVisibility)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showCreate, settingsId, editorOpen, deleteConfirm, creating, savingScript, editorSaving, scriptsManagerOpen, libSaving, user?.id])
+  }, [showCreate, settingsId, editorOpen, deleteConfirm, creating, savingScript, editorSaving, scriptsManagerOpen, libSaving, csvUploadError, user?.id])
 
   const parseCSV = (text: string) => {
     const lines = text.trim().split('\n').filter(l => l.trim())
@@ -530,6 +532,37 @@ export default function CampaignsPage() {
     }
     reader.readAsText(file)
   }
+
+  
+  
+  useEffect(() => {
+    if (!showCreate) return
+
+    const onWindowDragOver = (e: DragEvent) => {
+      e.preventDefault()
+      setDragging(true)
+    }
+    const onWindowDragLeave = (e: DragEvent) => {
+      
+      if (!e.relatedTarget) setDragging(false)
+    }
+    const onWindowDrop = (e: DragEvent) => {
+      e.preventDefault()
+      setDragging(false)
+      const f = e.dataTransfer?.files?.[0]
+      if (f) handleFile(f)
+    }
+
+    window.addEventListener('dragover', onWindowDragOver)
+    window.addEventListener('dragleave', onWindowDragLeave)
+    window.addEventListener('drop', onWindowDrop)
+    return () => {
+      window.removeEventListener('dragover', onWindowDragOver)
+      window.removeEventListener('dragleave', onWindowDragLeave)
+      window.removeEventListener('drop', onWindowDrop)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showCreate])
 
   const resetCreateForm = () => {
     setCampaignName('')
@@ -672,16 +705,36 @@ export default function CampaignsPage() {
       }
 
       
-      const parallel: Promise<any>[] = []
+      let csvFailed = false
       if (csvData.length > 0) {
-        parallel.push(
-          fetch('/api/leads/upload', {
+        try {
+          const uploadRes = await fetch('/api/leads/upload', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ campaign_id: newId, leads: csvData }),
           })
-        )
+          if (uploadRes.status === 403) {
+            setTier('lapsed')
+          } else {
+            let uploadData: any = null
+            try {
+              uploadData = await uploadRes.json()
+            } catch {
+              
+              uploadData = null
+            }
+            if (!uploadRes.ok || !uploadData?.success) {
+              csvFailed = true
+            }
+          }
+        } catch {
+          
+          csvFailed = true
+        }
       }
+
+      
+      const parallel: Promise<any>[] = []
       for (const scriptId of createEnabledScriptIds) {
         parallel.push(
           fetch('/api/campaigns/script-links/toggle', {
@@ -696,6 +749,7 @@ export default function CampaignsPage() {
       resetCreateForm()
       setShowCreate(false)
       fetchCampaigns()
+      if (csvFailed) setCsvUploadError(true)
     } finally {
       setCreating(false)
     }
@@ -779,15 +833,38 @@ export default function CampaignsPage() {
     reader.onload = async e => {
       const text = e.target?.result as string
       const parsed = parseCSV(text)
-      const res = await fetch('/api/leads/upload', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ campaign_id: campaignId, leads: parsed }),
-      })
-      if (res.status === 403) setTier('lapsed')
-      if (res.ok) {
-        setPendingBlankCampaignId(prev => (prev === campaignId ? null : prev))
+      let ok = false
+      let isLapsedError = false
+      try {
+        const res = await fetch('/api/leads/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ campaign_id: campaignId, leads: parsed }),
+        })
+        if (res.status === 403) {
+          setTier('lapsed')
+          isLapsedError = true
+        }
+        let data: any = null
+        try {
+          data = await res.json()
+        } catch {
+          
+          data = null
+        }
+        ok = res.ok && !!data?.success
+      } catch {
+        
+        ok = false
       }
+
+      if (!ok && !isLapsedError) {
+        setCsvUploadError(true)
+        return
+      }
+      if (!ok) return
+
+      setPendingBlankCampaignId(prev => (prev === campaignId ? null : prev))
       setPreviews(prev => {
         const { [campaignId]: _, ...rest } = prev
         return rest
@@ -2914,7 +2991,6 @@ export default function CampaignsPage() {
                     className="settings-mode-select"
                     value={createMode}
                     onChange={e => setCreateMode(e.target.value as DialerMode)}
-                    aria-label="Dialer mode"
                   >
                     {(Object.keys(MODE_LABELS) as DialerMode[]).map(m => (
                       <option key={m} value={m}>{MODE_LABELS[m]}</option>
@@ -2933,16 +3009,6 @@ export default function CampaignsPage() {
                   <div
                     className={`settings-toggle ${createAmd ? 'on' : ''}`}
                     onClick={() => setCreateAmd(v => !v)}
-                    role="switch"
-                    aria-checked={createAmd}
-                    aria-label="Answering machine detection"
-                    tabIndex={0}
-                    onKeyDown={e => {
-                      if (e.key === ' ' || e.key === 'Enter') {
-                        e.preventDefault()
-                        setCreateAmd(v => !v)
-                      }
-                    }}
                   ><div className="knob" /></div>
                 </div>
 
@@ -2981,16 +3047,6 @@ export default function CampaignsPage() {
                   <div
                     className={`settings-toggle ${createApptSub ? 'on' : ''}`}
                     onClick={() => setCreateApptSub(v => !v)}
-                    role="switch"
-                    aria-checked={createApptSub}
-                    aria-label="Appointments sub-campaign"
-                    tabIndex={0}
-                    onKeyDown={e => {
-                      if (e.key === ' ' || e.key === 'Enter') {
-                        e.preventDefault()
-                        setCreateApptSub(v => !v)
-                      }
-                    }}
                   ><div className="knob" /></div>
                 </div>
 
@@ -3005,16 +3061,6 @@ export default function CampaignsPage() {
                   <div
                     className={`settings-toggle ${createNotIntSub ? 'on' : ''}`}
                     onClick={() => setCreateNotIntSub(v => !v)}
-                    role="switch"
-                    aria-checked={createNotIntSub}
-                    aria-label="Not interested sub-campaign"
-                    tabIndex={0}
-                    onKeyDown={e => {
-                      if (e.key === ' ' || e.key === 'Enter') {
-                        e.preventDefault()
-                        setCreateNotIntSub(v => !v)
-                      }
-                    }}
                   ><div className="knob" /></div>
                 </div>
                 </>)}
@@ -3025,14 +3071,6 @@ export default function CampaignsPage() {
                 <div className="settings-section-title">▸ LEADS CSV</div>
                 <div
                   className="cmp-drop-zone"
-                  onDragOver={e => { e.preventDefault(); setDragging(true) }}
-                  onDragLeave={() => setDragging(false)}
-                  onDrop={e => {
-                    e.preventDefault()
-                    setDragging(false)
-                    const f = e.dataTransfer.files[0]
-                    if (f) handleFile(f)
-                  }}
                   onClick={() => fileRef.current?.click()}
                   style={{
                     border: `2px dashed ${dragging || csvData.length > 0 ? T.blue : T.border}`,
@@ -3135,20 +3173,6 @@ export default function CampaignsPage() {
                                 if (next.has(s.id)) next.delete(s.id); else next.add(s.id)
                                 return next
                               })}
-                              role="switch"
-                              aria-checked={on}
-                              aria-label={`Enable script: ${s.name || 'Untitled'}`}
-                              tabIndex={0}
-                              onKeyDown={e => {
-                                if (e.key === ' ' || e.key === 'Enter') {
-                                  e.preventDefault()
-                                  setCreateEnabledScriptIds(prev => {
-                                    const next = new Set(prev)
-                                    if (next.has(s.id)) next.delete(s.id); else next.add(s.id)
-                                    return next
-                                  })
-                                }
-                              }}
                             ><div className="knob" /></div>
                           </div>
                         )
@@ -3331,17 +3355,6 @@ export default function CampaignsPage() {
                   <div
                     className={`settings-toggle ${editDraft?.status === 'active' ? 'on' : ''} ${isLapsed ? 'disabled' : ''}`}
                     onClick={() => !isLapsed && patchDraft({ status: editDraft?.status === 'active' ? 'inactive' : 'active' })}
-                    role="switch"
-                    aria-checked={editDraft?.status === 'active'}
-                    aria-label="Campaign active"
-                    aria-disabled={isLapsed}
-                    tabIndex={isLapsed ? -1 : 0}
-                    onKeyDown={e => {
-                      if (!isLapsed && (e.key === ' ' || e.key === 'Enter')) {
-                        e.preventDefault()
-                        patchDraft({ status: editDraft?.status === 'active' ? 'inactive' : 'active' })
-                      }
-                    }}
                   ><div className="knob" /></div>
                 </div>
 
@@ -3358,7 +3371,6 @@ export default function CampaignsPage() {
                       patchDraft({ dialer_mode: m, amd_enabled: AMD_DEFAULT_BY_MODE[m] })
                     }}
                     disabled={isLapsed}
-                    aria-label="Dialer mode"
                   >
                     {(Object.keys(MODE_LABELS) as DialerMode[]).map(m => (
                       <option key={m} value={m}>{MODE_LABELS[m]}</option>
@@ -3374,17 +3386,6 @@ export default function CampaignsPage() {
                   <div
                     className={`settings-toggle ${editDraft?.amd_enabled ? 'on' : ''} ${isLapsed ? 'disabled' : ''}`}
                     onClick={() => !isLapsed && patchDraft({ amd_enabled: !editDraft?.amd_enabled })}
-                    role="switch"
-                    aria-checked={!!editDraft?.amd_enabled}
-                    aria-label="Answering machine detection"
-                    aria-disabled={isLapsed}
-                    tabIndex={isLapsed ? -1 : 0}
-                    onKeyDown={e => {
-                      if (!isLapsed && (e.key === ' ' || e.key === 'Enter')) {
-                        e.preventDefault()
-                        patchDraft({ amd_enabled: !editDraft?.amd_enabled })
-                      }
-                    }}
                   ><div className="knob" /></div>
                 </div>
 
@@ -3424,17 +3425,6 @@ export default function CampaignsPage() {
                   <div
                     className={`settings-toggle ${editDraft?.enable_appointments_sub ? 'on' : ''} ${isLapsed ? 'disabled' : ''}`}
                     onClick={() => !isLapsed && patchDraft({ enable_appointments_sub: !editDraft?.enable_appointments_sub })}
-                    role="switch"
-                    aria-checked={!!editDraft?.enable_appointments_sub}
-                    aria-label="Appointments sub-campaign"
-                    aria-disabled={isLapsed}
-                    tabIndex={isLapsed ? -1 : 0}
-                    onKeyDown={e => {
-                      if (!isLapsed && (e.key === ' ' || e.key === 'Enter')) {
-                        e.preventDefault()
-                        patchDraft({ enable_appointments_sub: !editDraft?.enable_appointments_sub })
-                      }
-                    }}
                   ><div className="knob" /></div>
                 </div>
 
@@ -3449,17 +3439,6 @@ export default function CampaignsPage() {
                   <div
                     className={`settings-toggle ${editDraft?.enable_not_interested_sub ? 'on' : ''} ${isLapsed ? 'disabled' : ''}`}
                     onClick={() => !isLapsed && patchDraft({ enable_not_interested_sub: !editDraft?.enable_not_interested_sub })}
-                    role="switch"
-                    aria-checked={!!editDraft?.enable_not_interested_sub}
-                    aria-label="Not interested sub-campaign"
-                    aria-disabled={isLapsed}
-                    tabIndex={isLapsed ? -1 : 0}
-                    onKeyDown={e => {
-                      if (!isLapsed && (e.key === ' ' || e.key === 'Enter')) {
-                        e.preventDefault()
-                        patchDraft({ enable_not_interested_sub: !editDraft?.enable_not_interested_sub })
-                      }
-                    }}
                   ><div className="knob" /></div>
                 </div>
                 </>)}
@@ -3592,17 +3571,6 @@ export default function CampaignsPage() {
                             <div
                               className={`settings-toggle ${on ? 'on' : ''} ${isLapsed ? 'disabled' : ''}`}
                               onClick={() => !isLapsed && draftToggleScript(s.id)}
-                              role="switch"
-                              aria-checked={on}
-                              aria-label={`Enable script: ${s.name || 'Untitled'}`}
-                              aria-disabled={isLapsed}
-                              tabIndex={isLapsed ? -1 : 0}
-                              onKeyDown={e => {
-                                if (!isLapsed && (e.key === ' ' || e.key === 'Enter')) {
-                                  e.preventDefault()
-                                  draftToggleScript(s.id)
-                                }
-                              }}
                             ><div className="knob" /></div>
                           </div>
                         )
@@ -3723,6 +3691,41 @@ export default function CampaignsPage() {
           </div>
         )
       })()}
+
+      {/* ─── CSV UPLOAD REJECTED ─────────────────────────────────────── */}
+      {csvUploadError && (
+        <div className="modal-overlay" onClick={() => setCsvUploadError(false)}>
+          <div className="settings-modal" style={{ maxWidth: 440 }} onClick={e => e.stopPropagation()}>
+            <div className="settings-head">
+              <div style={{
+                flex: 1, fontSize: 11, fontWeight: 'bold', letterSpacing: 3,
+                color: T.text, padding: '6px 10px', fontFamily: FUTURA,
+              }}>
+                CSV REJECTED
+              </div>
+              <button className="settings-close" onClick={() => setCsvUploadError(false)}>×</button>
+            </div>
+            <div className="settings-body">
+              <p style={{
+                fontSize: 12, lineHeight: 1.7, color: T.text, margin: 0,
+                letterSpacing: 0.5, fontFamily: 'monospace',
+              }}>
+                CSV rejected. Try splitting the content of the sheets to 2500-5000. Contact
+                support@dialerseat.com if this error consists.
+              </p>
+            </div>
+            <div className="settings-footer">
+              <div className="settings-footer-left"></div>
+              <div className="settings-footer-right">
+                <button
+                  className="ds-btn"
+                  onClick={() => setCsvUploadError(false)}
+                >OK</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ─── SHEETS EDITOR ────────────────────────────────────────────── */}
       {editorOpen && settingsCampaign && (
