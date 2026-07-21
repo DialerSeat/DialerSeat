@@ -1,4 +1,0 @@
--- OPTIONAL — run only after confirming NO external tool (Retool, manual queries,
--- BI dashboards) reads dialer_sessions. Nothing in the codebase or DB does.
--- The table is decommissioned (no writes), but left in place until you confirm.
--- DROP TABLE IF EXISTS public.dialer_sessions;

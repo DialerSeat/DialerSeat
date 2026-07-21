@@ -285,7 +285,7 @@ export const APPS: AppDefinition[] = [
     shortName: 'Explorer',
     icon: '🔍',
     iconBg: 'linear-gradient(135deg, #ff6ec7, #c2185b)',
-    description: 'Users, then their campaigns, then leads. Research, CSV export, delete on a user\'s behalf.',
+    description: 'Users, campaigns, leads, and call recordings in tabs — sortable, filterable, back/forward navigation. Research, CSV export, delete or play back on a user\'s behalf.',
     visibleTo: ['admin'],
     Component: ExplorerApp,
     defaultSize: { width: 1120, height: 760 },

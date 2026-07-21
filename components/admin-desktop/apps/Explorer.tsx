@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 const T = {
   bg: 'var(--brand-page-bg)',
@@ -72,6 +72,23 @@ interface Lead {
   created_at?: string | null
 }
 
+interface Recording {
+  id: string
+  campaign_id: string | null
+  lead_id: string | null
+  phone_number: string | null
+  duration: number | null
+  disposition: string | null
+  recording_url: string | null
+  recording_status: string | null
+  recording_duration: number | null
+  recording_expires_at: string | null
+  created_at: string | null
+  amd_result: string | null
+  leads: { first_name: string | null; last_name: string | null; phone: string } | null
+  campaigns: { name: string } | null
+}
+
 function relativeTime(iso: string | null | undefined): string {
   if (!iso) return '—'
   const then = new Date(iso).getTime()
@@ -97,6 +114,14 @@ function fmtDate(iso: string | null | undefined): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+function fmtDuration(seconds: number | null | undefined): string {
+  const s = seconds ?? 0
+  if (s <= 0) return '0:00'
+  const m = Math.floor(s / 60)
+  const rem = s % 60
+  return `${m}:${String(rem).padStart(2, '0')}`
+}
+
 function nameFor(u: { first_name: string | null; last_name: string | null; email: string }): string {
   const n = [u.first_name, u.last_name].filter(Boolean).join(' ').trim()
   return n || u.email
@@ -111,26 +136,84 @@ function initials(u: { first_name: string | null; last_name: string | null; emai
     : n.slice(0, 2).toUpperCase()
 }
 
-type View = 'users' | 'campaigns' | 'leads'
+type Tab = 'users' | 'campaigns' | 'leads' | 'recordings'
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'users', label: 'USERS' },
+  { id: 'campaigns', label: 'CAMPAIGNS' },
+  { id: 'leads', label: 'LEADS' },
+  { id: 'recordings', label: 'RECORDINGS' },
+]
+
+// Sort options per tab. Each maps to a getter so the sort function stays
+// generic — "context clues" from the underlying data: dial counts for
+// leads/campaigns, created_at for recency, call duration for recordings.
+type SortDir = 'asc' | 'desc'
+interface SortOption { key: string; label: string; dir: SortDir }
+
+const LEAD_SORTS: SortOption[] = [
+  { key: 'attempts_desc', label: 'MOST TIME DIALED', dir: 'desc' },
+  { key: 'attempts_asc', label: 'LEAST TIME DIALED', dir: 'asc' },
+  { key: 'created_desc', label: 'NEWEST ADDED', dir: 'desc' },
+  { key: 'created_asc', label: 'OLDEST ADDED', dir: 'asc' },
+  { key: 'lastcalled_desc', label: 'RECENTLY CALLED', dir: 'desc' },
+  { key: 'lastcalled_asc', label: 'LEAST RECENTLY CALLED', dir: 'asc' },
+]
+
+const CAMPAIGN_SORTS: SortOption[] = [
+  { key: 'called_desc', label: 'MOST DIALED', dir: 'desc' },
+  { key: 'called_asc', label: 'LEAST DIALED', dir: 'asc' },
+  { key: 'created_desc', label: 'NEWEST ADDED', dir: 'desc' },
+  { key: 'created_asc', label: 'OLDEST ADDED', dir: 'asc' },
+]
+
+const RECORDING_SORTS: SortOption[] = [
+  { key: 'duration_desc', label: 'LONGEST CALLS', dir: 'desc' },
+  { key: 'duration_asc', label: 'SHORTEST CALLS', dir: 'asc' },
+  { key: 'created_desc', label: 'NEWEST FIRST', dir: 'desc' },
+  { key: 'created_asc', label: 'OLDEST FIRST', dir: 'asc' },
+]
+
+const USER_SORTS: SortOption[] = [
+  { key: 'created_desc', label: 'NEWEST JOINED', dir: 'desc' },
+  { key: 'created_asc', label: 'OLDEST JOINED', dir: 'asc' },
+  { key: 'leads_desc', label: 'MOST LEADS', dir: 'desc' },
+  { key: 'leads_asc', label: 'FEWEST LEADS', dir: 'asc' },
+]
+
+// One entry in the back/forward history stack. Recreating exactly what was
+// visible (tab + which user/campaign were selected) is enough to restore a
+// prior screen without re-deriving it from a URL or drill-down chain.
+interface NavState {
+  tab: Tab
+  userId: string | null
+  campaignId: string | null
+}
 
 export default function ExplorerApp() {
-  const [view, setView] = useState<View>('users')
-
   const [users, setUsers] = useState<AdminUser[]>([])
   const [usersLoading, setUsersLoading] = useState(true)
   const [usersError, setUsersError] = useState<string | null>(null)
   const [userSearch, setUserSearch] = useState('')
+  const [userSort, setUserSort] = useState<string>('created_desc')
 
-  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null)
-  const [campaigns, setCampaigns] = useState<Campaign[]>([])
+  const [campaignsByUser, setCampaignsByUser] = useState<Record<string, Campaign[]>>({})
   const [campaignsLoading, setCampaignsLoading] = useState(false)
   const [campaignsError, setCampaignsError] = useState<string | null>(null)
+  const [campaignSort, setCampaignSort] = useState<string>('created_desc')
 
-  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null)
-  const [leads, setLeads] = useState<Lead[]>([])
+  const [leadsByCampaign, setLeadsByCampaign] = useState<Record<string, Lead[]>>({})
   const [leadsLoading, setLeadsLoading] = useState(false)
   const [leadsError, setLeadsError] = useState<string | null>(null)
   const [leadSearch, setLeadSearch] = useState('')
+  const [leadSort, setLeadSort] = useState<string>('created_desc')
+
+  const [recordingsByUser, setRecordingsByUser] = useState<Record<string, Recording[]>>({})
+  const [recordingsLoading, setRecordingsLoading] = useState(false)
+  const [recordingsError, setRecordingsError] = useState<string | null>(null)
+  const [recordingSearch, setRecordingSearch] = useState('')
+  const [recordingSort, setRecordingSort] = useState<string>('created_desc')
+  const [nowPlayingId, setNowPlayingId] = useState<string | null>(null)
 
   const [deleteCampaignTarget, setDeleteCampaignTarget] = useState<Campaign | null>(null)
   const [deleteCampaignTyped, setDeleteCampaignTyped] = useState('')
@@ -138,6 +221,43 @@ export default function ExplorerApp() {
 
   const [deleteLeadTarget, setDeleteLeadTarget] = useState<Lead | null>(null)
   const [deletingLead, setDeletingLead] = useState(false)
+
+  // ── NAVIGATION: back/forward history stack, replacing the old drill-down ──
+  const [history, setHistory] = useState<NavState[]>([{ tab: 'users', userId: null, campaignId: null }])
+  const [historyIndex, setHistoryIndex] = useState(0)
+  const current = history[historyIndex]
+  const tab = current.tab
+  const selectedUserId = current.userId
+  const selectedCampaignId = current.campaignId
+
+  const selectedUser = users.find(u => u.clerk_id === selectedUserId) || null
+  const campaigns = selectedUserId ? (campaignsByUser[selectedUserId] || []) : []
+  const selectedCampaign = campaigns.find(c => c.id === selectedCampaignId) || null
+  const leads = selectedCampaignId ? (leadsByCampaign[selectedCampaignId] || []) : []
+  const recordings = selectedUserId ? (recordingsByUser[selectedUserId] || []) : []
+
+  const canGoBack = historyIndex > 0
+  const canGoForward = historyIndex < history.length - 1
+
+  // Pushes a new nav state, truncating any forward history — the standard
+  // browser-history convention (navigating after going back discards "redo").
+  function navigate(next: Partial<NavState>) {
+    const merged: NavState = { ...current, ...next }
+    setHistory(prev => [...prev.slice(0, historyIndex + 1), merged])
+    setHistoryIndex(i => i + 1)
+  }
+
+  function goBack() {
+    if (canGoBack) setHistoryIndex(i => i - 1)
+  }
+  function goForward() {
+    if (canGoForward) setHistoryIndex(i => i + 1)
+  }
+
+  function switchTab(t: Tab) {
+    if (t === tab) return
+    navigate({ tab: t })
+  }
 
   useEffect(() => { fetchUsers() }, [])
 
@@ -156,17 +276,15 @@ export default function ExplorerApp() {
     }
   }
 
-  async function openUser(u: AdminUser) {
-    setSelectedUser(u)
-    setSelectedCampaign(null)
-    setView('campaigns')
+  async function loadCampaigns(userId: string) {
+    if (campaignsByUser[userId]) return
     setCampaignsLoading(true)
     setCampaignsError(null)
     try {
-      const res = await fetch(`/api/admin/user-data/campaigns?user_id=${encodeURIComponent(u.clerk_id)}`)
+      const res = await fetch(`/api/admin/user-data/campaigns?user_id=${encodeURIComponent(userId)}`)
       const data = await res.json()
       if (!res.ok || !data.success) throw new Error(data.error || 'Failed to load campaigns')
-      setCampaigns(data.campaigns || [])
+      setCampaignsByUser(prev => ({ ...prev, [userId]: data.campaigns || [] }))
     } catch (e: any) {
       setCampaignsError(e.message || 'Failed to load campaigns')
     } finally {
@@ -174,17 +292,15 @@ export default function ExplorerApp() {
     }
   }
 
-  async function openCampaign(c: Campaign) {
-    setSelectedCampaign(c)
-    setView('leads')
-    setLeadSearch('')
+  async function loadLeads(campaignId: string) {
+    if (leadsByCampaign[campaignId]) return
     setLeadsLoading(true)
     setLeadsError(null)
     try {
-      const res = await fetch(`/api/admin/user-data/leads?campaign_id=${encodeURIComponent(c.id)}`)
+      const res = await fetch(`/api/admin/user-data/leads?campaign_id=${encodeURIComponent(campaignId)}`)
       const data = await res.json()
       if (!res.ok || !data.success) throw new Error(data.error || 'Failed to load leads')
-      setLeads(data.leads || [])
+      setLeadsByCampaign(prev => ({ ...prev, [campaignId]: data.leads || [] }))
     } catch (e: any) {
       setLeadsError(e.message || 'Failed to load leads')
     } finally {
@@ -192,18 +308,45 @@ export default function ExplorerApp() {
     }
   }
 
-  function backToUsers() {
-    setView('users')
-    setSelectedUser(null)
-    setSelectedCampaign(null)
-    setCampaigns([])
-    setLeads([])
+  async function loadRecordings(userId: string) {
+    if (recordingsByUser[userId]) return
+    setRecordingsLoading(true)
+    setRecordingsError(null)
+    try {
+      const res = await fetch(`/api/admin/user-data/recordings?user_id=${encodeURIComponent(userId)}`)
+      const data = await res.json()
+      if (!res.ok || !data.success) throw new Error(data.error || 'Failed to load recordings')
+      setRecordingsByUser(prev => ({ ...prev, [userId]: data.recordings || [] }))
+    } catch (e: any) {
+      setRecordingsError(e.message || 'Failed to load recordings')
+    } finally {
+      setRecordingsLoading(false)
+    }
   }
 
-  function backToCampaigns() {
-    setView('campaigns')
-    setSelectedCampaign(null)
-    setLeads([])
+  // Fetch whatever the current tab/selection needs, whenever navigation
+  // changes (tab switch, back/forward, or picking a different user/campaign).
+  useEffect(() => {
+    if (tab === 'campaigns' && selectedUserId) loadCampaigns(selectedUserId)
+    if (tab === 'leads' && selectedCampaignId) loadLeads(selectedCampaignId)
+    if (tab === 'recordings' && selectedUserId) loadRecordings(selectedUserId)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, selectedUserId, selectedCampaignId])
+
+  function openUserCampaigns(u: AdminUser) {
+    navigate({ tab: 'campaigns', userId: u.clerk_id, campaignId: null })
+  }
+
+  function openCampaignLeads(c: Campaign) {
+    navigate({ tab: 'leads', campaignId: c.id })
+  }
+
+  function pickUserFor(t: Tab, userId: string) {
+    navigate({ tab: t, userId, campaignId: null })
+  }
+
+  function pickCampaignFor(campaignId: string) {
+    navigate({ tab: 'leads', campaignId })
   }
 
   async function confirmDeleteCampaign() {
@@ -217,7 +360,12 @@ export default function ExplorerApp() {
       })
       const data = await res.json()
       if (!res.ok || !data.success) throw new Error(data.error || 'Delete failed')
-      setCampaigns(prev => prev.filter(c => c.id !== deleteCampaignTarget.id))
+      if (selectedUserId) {
+        setCampaignsByUser(prev => ({
+          ...prev,
+          [selectedUserId]: (prev[selectedUserId] || []).filter(c => c.id !== deleteCampaignTarget.id),
+        }))
+      }
       setDeleteCampaignTarget(null)
       setDeleteCampaignTyped('')
     } catch (e: any) {
@@ -228,7 +376,7 @@ export default function ExplorerApp() {
   }
 
   async function confirmDeleteLead() {
-    if (!deleteLeadTarget) return
+    if (!deleteLeadTarget || !selectedCampaignId) return
     setDeletingLead(true)
     try {
       const res = await fetch('/api/admin/user-data/leads/delete', {
@@ -238,7 +386,10 @@ export default function ExplorerApp() {
       })
       const data = await res.json()
       if (!res.ok || !data.success) throw new Error(data.error || 'Delete failed')
-      setLeads(prev => prev.filter(l => l.id !== deleteLeadTarget.id))
+      setLeadsByCampaign(prev => ({
+        ...prev,
+        [selectedCampaignId]: (prev[selectedCampaignId] || []).filter(l => l.id !== deleteLeadTarget.id),
+      }))
       setDeleteLeadTarget(null)
     } catch (e: any) {
       setLeadsError(e.message || 'Delete failed')
@@ -252,88 +403,257 @@ export default function ExplorerApp() {
     window.open(`/api/admin/user-data/leads/export?campaign_id=${encodeURIComponent(selectedCampaign.id)}`, '_blank')
   }
 
-  const filteredUsers = users.filter(u => {
-    if (!userSearch.trim()) return true
-    const q = userSearch.trim().toLowerCase()
-    return nameFor(u).toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
-  })
+  function playRecording(id: string) {
+    setNowPlayingId(id)
+  }
 
-  const filteredLeads = leads.filter(l => {
-    if (!leadSearch.trim()) return true
-    const q = leadSearch.trim().toLowerCase()
-    return (
-      `${l.first_name || ''} ${l.last_name || ''}`.toLowerCase().includes(q) ||
-      (l.phone || '').includes(q) ||
-      (l.email || '').toLowerCase().includes(q)
-    )
-  })
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  useEffect(() => {
+    if (nowPlayingId && audioRef.current) {
+      audioRef.current.load()
+      audioRef.current.play().catch(() => {})
+    }
+  }, [nowPlayingId])
+
+  const filteredUsers = useMemo(() => {
+    let rows = users.filter(u => {
+      if (!userSearch.trim()) return true
+      const q = userSearch.trim().toLowerCase()
+      return nameFor(u).toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
+    })
+    rows = [...rows].sort((a, b) => {
+      switch (userSort) {
+        case 'created_asc': return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        case 'leads_desc': return b.lead_count - a.lead_count
+        case 'leads_asc': return a.lead_count - b.lead_count
+        case 'created_desc':
+        default: return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      }
+    })
+    return rows
+  }, [users, userSearch, userSort])
+
+  const sortedCampaigns = useMemo(() => {
+    const rows = [...campaigns]
+    rows.sort((a, b) => {
+      switch (campaignSort) {
+        case 'called_desc': return b.called_leads - a.called_leads
+        case 'called_asc': return a.called_leads - b.called_leads
+        case 'created_asc': return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        case 'created_desc':
+        default: return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      }
+    })
+    return rows
+  }, [campaigns, campaignSort])
+
+  const filteredLeads = useMemo(() => {
+    let rows = leads.filter(l => {
+      if (!leadSearch.trim()) return true
+      const q = leadSearch.trim().toLowerCase()
+      return (
+        `${l.first_name || ''} ${l.last_name || ''}`.toLowerCase().includes(q) ||
+        (l.phone || '').includes(q) ||
+        (l.email || '').toLowerCase().includes(q)
+      )
+    })
+    rows = [...rows].sort((a, b) => {
+      const aAttempts = a.dial_attempts ?? 0
+      const bAttempts = b.dial_attempts ?? 0
+      const aCreated = a.created_at ? new Date(a.created_at).getTime() : 0
+      const bCreated = b.created_at ? new Date(b.created_at).getTime() : 0
+      const aCalled = a.last_called_at ? new Date(a.last_called_at).getTime() : 0
+      const bCalled = b.last_called_at ? new Date(b.last_called_at).getTime() : 0
+      switch (leadSort) {
+        case 'attempts_desc': return bAttempts - aAttempts
+        case 'attempts_asc': return aAttempts - bAttempts
+        case 'created_asc': return aCreated - bCreated
+        case 'lastcalled_desc': return bCalled - aCalled
+        case 'lastcalled_asc': return aCalled - bCalled
+        case 'created_desc':
+        default: return bCreated - aCreated
+      }
+    })
+    return rows
+  }, [leads, leadSearch, leadSort])
+
+  const filteredRecordings = useMemo(() => {
+    let rows = recordings.filter(r => {
+      if (!recordingSearch.trim()) return true
+      const q = recordingSearch.trim().toLowerCase()
+      const lead = r.leads
+      const name = lead ? `${lead.first_name || ''} ${lead.last_name || ''}` : ''
+      return (
+        name.toLowerCase().includes(q) ||
+        (r.phone_number || '').includes(q) ||
+        (r.campaigns?.name || '').toLowerCase().includes(q)
+      )
+    })
+    rows = [...rows].sort((a, b) => {
+      const aDur = a.recording_duration ?? a.duration ?? 0
+      const bDur = b.recording_duration ?? b.duration ?? 0
+      const aCreated = a.created_at ? new Date(a.created_at).getTime() : 0
+      const bCreated = b.created_at ? new Date(b.created_at).getTime() : 0
+      switch (recordingSort) {
+        case 'duration_desc': return bDur - aDur
+        case 'duration_asc': return aDur - bDur
+        case 'created_asc': return aCreated - bCreated
+        case 'created_desc':
+        default: return bCreated - aCreated
+      }
+    })
+    return rows
+  }, [recordings, recordingSearch, recordingSort])
 
   return (
     <div style={{
       width: '100%', height: '100%', display: 'flex', flexDirection: 'column',
       background: T.bg, fontFamily: FUTURA, overflow: 'hidden',
     }}>
-      {/* ── BREADCRUMB HEADER ───────────────────────────────────────────── */}
+      {/* ── TOP BAR: back/forward + tabs ─────────────────────────────────── */}
       <div style={{
-        display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
-        padding: '12px 16px', background: T.surface, borderBottom: `1px solid ${T.border}`,
-        fontSize: 11, letterSpacing: 1, fontWeight: 'bold', flexShrink: 0,
+        display: 'flex', alignItems: 'center', gap: 10,
+        padding: '10px 16px', background: T.surface, borderBottom: `1px solid ${T.border}`,
+        flexShrink: 0,
       }}>
-        <button onClick={backToUsers} style={crumbBtnStyle(view === 'users')}>
-          ALL USERS
-        </button>
-        {selectedUser && (
-          <>
-            <span style={{ color: T.muted }}>›</span>
-            <button onClick={backToCampaigns} style={crumbBtnStyle(view === 'campaigns')}>
-              {nameFor(selectedUser).toUpperCase()}
-            </button>
-          </>
-        )}
-        {selectedCampaign && (
-          <>
-            <span style={{ color: T.muted }}>›</span>
-            <span style={{ ...crumbBtnStyle(true), cursor: 'default' }}>
-              {selectedCampaign.name.toUpperCase()}
-            </span>
-          </>
-        )}
+        <div style={{ display: 'flex', gap: 4 }}>
+          <button onClick={goBack} disabled={!canGoBack} style={navArrowStyle(canGoBack)} title="Back">
+            ‹
+          </button>
+          <button onClick={goForward} disabled={!canGoForward} style={navArrowStyle(canGoForward)} title="Forward">
+            ›
+          </button>
+        </div>
 
-        {view === 'leads' && selectedCampaign && (
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
-            <input
-              value={leadSearch}
-              onChange={e => setLeadSearch(e.target.value)}
-              placeholder="SEARCH NAME / PHONE / EMAIL"
-              style={searchInputStyle}
-            />
-            <button onClick={exportCsv} style={toolbarBtnStyle}>
-              ⬇ DOWNLOAD CSV
+        <div style={{ display: 'flex', gap: 4 }}>
+          {TABS.map(t => (
+            <button key={t.id} onClick={() => switchTab(t.id)} style={tabBtnStyle(tab === t.id)}>
+              {t.label}
             </button>
-          </div>
-        )}
-        {view === 'users' && (
-          <div style={{ marginLeft: 'auto' }}>
-            <input
-              value={userSearch}
-              onChange={e => setUserSearch(e.target.value)}
-              placeholder="SEARCH NAME / EMAIL"
-              style={searchInputStyle}
-            />
-          </div>
-        )}
+          ))}
+        </div>
+
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
+          {tab === 'users' && (
+            <>
+              <select value={userSort} onChange={e => setUserSort(e.target.value)} style={sortSelectStyle}>
+                {USER_SORTS.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+              </select>
+              <input
+                value={userSearch}
+                onChange={e => setUserSearch(e.target.value)}
+                placeholder="SEARCH NAME / EMAIL"
+                style={searchInputStyle}
+              />
+            </>
+          )}
+
+          {tab === 'campaigns' && (
+            <>
+              <select
+                value={selectedUserId || ''}
+                onChange={e => pickUserFor('campaigns', e.target.value)}
+                style={pickerSelectStyle}
+              >
+                <option value="" disabled>SELECT A USER…</option>
+                {users.map(u => (
+                  <option key={u.clerk_id} value={u.clerk_id}>{nameFor(u)}</option>
+                ))}
+              </select>
+              {selectedUserId && (
+                <select value={campaignSort} onChange={e => setCampaignSort(e.target.value)} style={sortSelectStyle}>
+                  {CAMPAIGN_SORTS.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+                </select>
+              )}
+            </>
+          )}
+
+          {tab === 'leads' && (
+            <>
+              <select
+                value={selectedCampaignId || ''}
+                onChange={e => pickCampaignFor(e.target.value)}
+                style={pickerSelectStyle}
+              >
+                <option value="" disabled>SELECT A CAMPAIGN…</option>
+                {campaigns.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+              {selectedCampaignId && (
+                <>
+                  <select value={leadSort} onChange={e => setLeadSort(e.target.value)} style={sortSelectStyle}>
+                    {LEAD_SORTS.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+                  </select>
+                  <input
+                    value={leadSearch}
+                    onChange={e => setLeadSearch(e.target.value)}
+                    placeholder="SEARCH NAME / PHONE / EMAIL"
+                    style={searchInputStyle}
+                  />
+                  <button onClick={exportCsv} style={toolbarBtnStyle}>⬇ DOWNLOAD CSV</button>
+                </>
+              )}
+            </>
+          )}
+
+          {tab === 'recordings' && (
+            <>
+              <select
+                value={selectedUserId || ''}
+                onChange={e => pickUserFor('recordings', e.target.value)}
+                style={pickerSelectStyle}
+              >
+                <option value="" disabled>SELECT A USER…</option>
+                {users.map(u => (
+                  <option key={u.clerk_id} value={u.clerk_id}>{nameFor(u)}</option>
+                ))}
+              </select>
+              {selectedUserId && (
+                <>
+                  <select value={recordingSort} onChange={e => setRecordingSort(e.target.value)} style={sortSelectStyle}>
+                    {RECORDING_SORTS.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+                  </select>
+                  <input
+                    value={recordingSearch}
+                    onChange={e => setRecordingSearch(e.target.value)}
+                    placeholder="SEARCH NAME / PHONE / CAMPAIGN"
+                    style={searchInputStyle}
+                  />
+                </>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
-      {/* ── BODY ─────────────────────────────────────────────────────────── */}
-      <div style={{ flex: 1, overflow: 'auto', padding: 16 }}>
+      {/* ── CONTEXT STRIP: shows current user/campaign selection as breadcrumb-style info, not navigation ── */}
+      {(selectedUser || selectedCampaign) && tab !== 'users' && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 6, padding: '6px 16px',
+          background: T.bg, borderBottom: `1px solid ${T.border}`, fontSize: 10.5,
+          color: T.muted, letterSpacing: 0.5, flexShrink: 0,
+        }}>
+          {selectedUser && <span><strong style={{ color: T.text }}>{nameFor(selectedUser)}</strong></span>}
+          {selectedCampaign && tab === 'leads' && (
+            <>
+              <span style={{ opacity: 0.5 }}>›</span>
+              <span><strong style={{ color: T.text }}>{selectedCampaign.name}</strong></span>
+            </>
+          )}
+        </div>
+      )}
 
-        {view === 'users' && (
+      {/* ── BODY ─────────────────────────────────────────────────────────── */}
+      <div className="dx-scroll" style={{ flex: 1, overflow: 'auto', padding: 16 }}>
+
+        {tab === 'users' && (
           usersLoading ? (
             <div style={emptyStyle}>LOADING USERS…</div>
           ) : usersError ? (
             <div style={{ ...emptyStyle, color: T.red }}>{usersError}</div>
           ) : filteredUsers.length === 0 ? (
-            <div style={emptyStyle}>NO USERS MATCH “{userSearch}”</div>
+            <div style={emptyStyle}>NO USERS MATCH "{userSearch}"</div>
           ) : (
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
               <thead>
@@ -347,7 +667,7 @@ export default function ExplorerApp() {
                 {filteredUsers.map(u => (
                   <tr
                     key={u.clerk_id}
-                    onClick={() => openUser(u)}
+                    onClick={() => openUserCampaigns(u)}
                     style={{ cursor: 'pointer', borderBottom: `1px solid ${T.border}` }}
                     className="dx-row"
                   >
@@ -376,21 +696,23 @@ export default function ExplorerApp() {
           )
         )}
 
-        {view === 'campaigns' && (
-          campaignsLoading ? (
+        {tab === 'campaigns' && (
+          !selectedUserId ? (
+            <div style={emptyStyle}>SELECT A USER ABOVE TO VIEW THEIR CAMPAIGNS.</div>
+          ) : campaignsLoading ? (
             <div style={emptyStyle}>LOADING CAMPAIGNS…</div>
           ) : campaignsError ? (
             <div style={{ ...emptyStyle, color: T.red }}>{campaignsError}</div>
-          ) : campaigns.length === 0 ? (
+          ) : sortedCampaigns.length === 0 ? (
             <div style={emptyStyle}>THIS USER HAS NO CAMPAIGNS.</div>
           ) : (
             <div style={{
               display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 14,
             }}>
-              {campaigns.map(c => {
+              {sortedCampaigns.map(c => {
                 const isActive = c.status === 'active'
                 return (
-                  <div key={c.id} className="dx-card" onClick={() => openCampaign(c)}>
+                  <div key={c.id} className="dx-card" onClick={() => openCampaignLeads(c)}>
                     <div className="dx-card-preview">
                       <span className="dx-card-pin" style={{ color: isActive ? T.green : T.muted }}>
                         {isActive ? '● ACTIVE' : '○ INACTIVE'}
@@ -429,13 +751,15 @@ export default function ExplorerApp() {
           )
         )}
 
-        {view === 'leads' && (
-          leadsLoading ? (
+        {tab === 'leads' && (
+          !selectedCampaignId ? (
+            <div style={emptyStyle}>SELECT A CAMPAIGN ABOVE TO VIEW ITS LEADS.</div>
+          ) : leadsLoading ? (
             <div style={emptyStyle}>LOADING LEADS…</div>
           ) : leadsError ? (
             <div style={{ ...emptyStyle, color: T.red }}>{leadsError}</div>
           ) : filteredLeads.length === 0 ? (
-            <div style={emptyStyle}>{leads.length === 0 ? 'THIS CAMPAIGN HAS NO LEADS.' : `NO LEADS MATCH “${leadSearch}”`}</div>
+            <div style={emptyStyle}>{leads.length === 0 ? 'THIS CAMPAIGN HAS NO LEADS.' : `NO LEADS MATCH "${leadSearch}"`}</div>
           ) : (
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11.5 }}>
               <thead>
@@ -494,7 +818,88 @@ export default function ExplorerApp() {
             </table>
           )
         )}
+
+        {tab === 'recordings' && (
+          !selectedUserId ? (
+            <div style={emptyStyle}>SELECT A USER ABOVE TO VIEW THEIR CALL RECORDINGS.</div>
+          ) : recordingsLoading ? (
+            <div style={emptyStyle}>LOADING RECORDINGS…</div>
+          ) : recordingsError ? (
+            <div style={{ ...emptyStyle, color: T.red }}>{recordingsError}</div>
+          ) : filteredRecordings.length === 0 ? (
+            <div style={emptyStyle}>{recordings.length === 0 ? 'THIS USER HAS NO CALL RECORDINGS.' : `NO RECORDINGS MATCH "${recordingSearch}"`}</div>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11.5 }}>
+              <thead>
+                <tr>
+                  {['NAME', 'PHONE', 'CAMPAIGN', 'DISPOSITION', 'DURATION', 'RECORDED', 'EXPIRES', ''].map((h, i) => (
+                    <th key={i} style={thStyle}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRecordings.map(r => {
+                  const lead = r.leads
+                  const isPlaying = nowPlayingId === r.id
+                  return (
+                    <tr key={r.id} style={{ borderBottom: `1px solid ${T.border}` }} className="dx-row">
+                      <td style={{ ...tdStyle, fontWeight: 'bold' }}>
+                        {lead ? [lead.first_name, lead.last_name].filter(Boolean).join(' ') || '—' : '—'}
+                      </td>
+                      <td style={tdStyle}>{r.phone_number || lead?.phone || '—'}</td>
+                      <td style={{ ...tdStyle, color: T.muted }}>{r.campaigns?.name || '—'}</td>
+                      <td style={tdStyle}>
+                        {r.disposition ? (
+                          <span style={badgeStyle}>{r.disposition.toUpperCase()}</span>
+                        ) : (
+                          <span style={{ color: T.muted }}>—</span>
+                        )}
+                      </td>
+                      <td style={tdStyle}>{fmtDuration(r.recording_duration ?? r.duration)}</td>
+                      <td style={{ ...tdStyle, color: T.muted }}>{relativeTime(r.created_at)}</td>
+                      <td style={{ ...tdStyle, color: T.muted }}>
+                        {r.recording_expires_at ? fmtDate(r.recording_expires_at) : '—'}
+                      </td>
+                      <td style={tdStyle}>
+                        <button
+                          className="dx-card-delete"
+                          style={{ borderColor: T.blue, color: T.blue }}
+                          onClick={() => playRecording(r.id)}
+                        >
+                          {isPlaying ? 'PLAYING' : '▸ PLAY'}
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          )
+        )}
       </div>
+
+      {/* ── PERSISTENT PLAYER: stays visible while a recording plays ────── */}
+      {nowPlayingId && (
+        <div style={{
+          flexShrink: 0, padding: '10px 16px', background: T.surface,
+          borderTop: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: 10,
+        }}>
+          <span style={{ fontSize: 10, letterSpacing: 1, fontWeight: 'bold', color: T.muted }}>NOW PLAYING</span>
+          <audio
+            ref={audioRef}
+            controls
+            style={{ flex: 1, height: 32 }}
+            src={`/api/admin/user-data/recordings/play?call_id=${encodeURIComponent(nowPlayingId)}`}
+          />
+          <a
+            href={`/api/admin/user-data/recordings/play?call_id=${encodeURIComponent(nowPlayingId)}&download=1`}
+            style={{ ...toolbarBtnStyle, textDecoration: 'none', display: 'inline-block' }}
+          >
+            ⬇ DOWNLOAD
+          </a>
+          <button onClick={() => setNowPlayingId(null)} style={modalCancelBtnStyle}>CLOSE</button>
+        </div>
+      )}
 
       {/* ── DELETE CAMPAIGN CONFIRM ─────────────────────────────────────── */}
       {deleteCampaignTarget && (
@@ -654,6 +1059,27 @@ export default function ExplorerApp() {
           cursor: pointer;
         }
         .dx-card-delete:hover { background: rgba(138,26,26,0.1); }
+
+        /* ── SCROLLBAR ─────────────────────────────────────────────────── */
+        .dx-scroll {
+          scrollbar-width: thin;
+          scrollbar-color: ${T.border} transparent;
+        }
+        .dx-scroll::-webkit-scrollbar {
+          width: 10px;
+          height: 10px;
+        }
+        .dx-scroll::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .dx-scroll::-webkit-scrollbar-thumb {
+          background: ${T.border};
+          border-radius: 5px;
+          border: 2px solid ${T.bg};
+        }
+        .dx-scroll::-webkit-scrollbar-thumb:hover {
+          background: ${T.muted};
+        }
       `}</style>
     </div>
   )
@@ -692,17 +1118,34 @@ function LeadPreviewThumb({ leads }: { leads: PreviewLead[] }) {
   )
 }
 
-function crumbBtnStyle(active: boolean): React.CSSProperties {
+function navArrowStyle(enabled: boolean): React.CSSProperties {
   return {
     background: 'transparent',
-    border: 'none',
-    color: active ? T.blue : T.muted,
+    border: `1px solid ${T.border}`,
+    borderRadius: 3,
+    color: enabled ? T.text : T.muted,
+    cursor: enabled ? 'pointer' : 'not-allowed',
+    fontFamily: FUTURA,
+    fontSize: 16,
+    fontWeight: 'bold',
+    lineHeight: 1,
+    padding: '4px 10px',
+    opacity: enabled ? 1 : 0.4,
+  }
+}
+
+function tabBtnStyle(active: boolean): React.CSSProperties {
+  return {
+    background: active ? T.blue : 'transparent',
+    border: `1px solid ${active ? T.blue : T.border}`,
+    borderRadius: 3,
+    color: active ? 'white' : T.text,
     cursor: 'pointer',
     fontFamily: FUTURA,
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: 'bold',
-    letterSpacing: 1,
-    padding: 0,
+    letterSpacing: 1.5,
+    padding: '6px 12px',
   }
 }
 
@@ -714,7 +1157,30 @@ const searchInputStyle: React.CSSProperties = {
   fontFamily: FUTURA,
   fontSize: 11,
   padding: '6px 10px',
-  width: 220,
+  width: 200,
+}
+
+const pickerSelectStyle: React.CSSProperties = {
+  background: T.bg,
+  border: `1px solid ${T.border}`,
+  borderRadius: 3,
+  color: T.text,
+  fontFamily: FUTURA,
+  fontSize: 11,
+  fontWeight: 'bold',
+  padding: '6px 10px',
+  maxWidth: 200,
+}
+
+const sortSelectStyle: React.CSSProperties = {
+  background: T.bg,
+  border: `1px solid ${T.border}`,
+  borderRadius: 3,
+  color: T.muted,
+  fontFamily: FUTURA,
+  fontSize: 10,
+  letterSpacing: 0.5,
+  padding: '6px 8px',
 }
 
 const toolbarBtnStyle: React.CSSProperties = {
