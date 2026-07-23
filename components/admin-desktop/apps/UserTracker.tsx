@@ -42,6 +42,8 @@ interface BucketStats {
   dialSeconds: number
   connectedCalls: number
   connectedSeconds: number
+  skippedCalls: number
+  wastedSeconds: number
 }
 
 interface UserRow {
@@ -68,6 +70,7 @@ interface SeriesPoint {
   calls: number
   dialSeconds: number
   connectedSeconds: number
+  wastedSeconds: number
   activeUsers: number
   avgCallsPerActiveUser: number
 }
@@ -434,6 +437,13 @@ export default function UserTrackerApp() {
                   <div className="ut-kpi-sub">{fmtNum(ov?.totals.connectedCalls ?? 0)} connected calls</div>
                 </div>
                 <div className="ut-kpi">
+                  <div className="ut-kpi-label">Skipped / No Answer</div>
+                  <div className="ut-kpi-value">{fmtNum(ov?.totals.skippedCalls ?? 0)}</div>
+                  <div className="ut-kpi-sub">
+                    {fmtDuration(ov?.totals.wastedSeconds ?? 0)} not counted toward dial time
+                  </div>
+                </div>
+                <div className="ut-kpi">
                   <div className="ut-kpi-label">Avg / Active User</div>
                   <div className="ut-kpi-value">{ov?.avgCallsPerActiveUser ?? 0}</div>
                   <div className="ut-kpi-sub">calls · {ov?.activeUsers ?? 0} of {ov?.totalUsers ?? 0} active</div>
@@ -526,7 +536,7 @@ export default function UserTrackerApp() {
                     key={r.u.clerk_id}
                     className="ut-row"
                     onClick={() => setSelectedId(r.u.clerk_id)}
-                    data-summary={`${fmtNum(r.b.calls)} calls · ${fmtDuration(r.b.dialSeconds)} dialed · ${fmtDuration(r.b.connectedSeconds)} connected`}
+                    data-summary={`${fmtNum(r.b.calls)} calls · ${fmtDuration(r.b.dialSeconds)} dialed · ${fmtDuration(r.b.connectedSeconds)} connected${r.b.skippedCalls > 0 ? ` · ${r.b.skippedCalls} skipped` : ''}`}
                   >
                     <span className={`ut-rank ${idx < 3 && r.b.calls > 0 ? 'top' : ''}`}>{idx + 1}</span>
                     <div className="ut-user">
@@ -536,7 +546,14 @@ export default function UserTrackerApp() {
                         <div className="ut-uemail">{r.u.email}</div>
                       </div>
                     </div>
-                    <div className="ut-metric">{fmtNum(r.b.calls)}</div>
+                    <div>
+                      <div className="ut-metric">{fmtNum(r.b.calls)}</div>
+                      {r.b.skippedCalls > 0 && (
+                        <div className="ut-metric-sub" title="Skipped or no-answer calls, not counted toward dial time">
+                          {r.b.skippedCalls} skipped
+                        </div>
+                      )}
+                    </div>
                     <div>
                       <div className="ut-metric">{fmtDuration(r.b.dialSeconds)}</div>
                     </div>
@@ -599,6 +616,12 @@ export default function UserTrackerApp() {
                       <div className="ut-detail-line">
                         <span className="ut-detail-key">Avg call length</span>
                         <span className="ut-detail-val">{avg > 0 ? fmtDuration(avg) : '—'}</span>
+                      </div>
+                      <div className="ut-detail-line">
+                        <span className="ut-detail-key">Skipped / no answer</span>
+                        <span className="ut-detail-val">
+                          {fmtNum(b.skippedCalls)}{b.wastedSeconds > 0 ? ` (${fmtDuration(b.wastedSeconds)})` : ''}
+                        </span>
                       </div>
                     </div>
                   )

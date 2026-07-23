@@ -16,18 +16,32 @@ interface BucketStats {
   dialSeconds: number
   connectedCalls: number
   connectedSeconds: number
+  skippedCalls: number
+  wastedSeconds: number
 }
 
 function emptyBucket(): BucketStats {
-  return { calls: 0, dialSeconds: 0, connectedCalls: 0, connectedSeconds: 0 }
+  return { calls: 0, dialSeconds: 0, connectedCalls: 0, connectedSeconds: 0, skippedCalls: 0, wastedSeconds: 0 }
 }
 
-function addBucket(target: BucketStats, calls: number, dialSeconds: number, connected: boolean, connectedSeconds: number) {
+function addBucket(
+  target: BucketStats,
+  calls: number,
+  dialSeconds: number,
+  connected: boolean,
+  connectedSeconds: number,
+  isSkippedOrNoAnswer: boolean,
+  wastedSeconds: number
+) {
   target.calls += calls
   target.dialSeconds += dialSeconds
   if (connected) {
     target.connectedCalls += 1
     target.connectedSeconds += connectedSeconds
+  }
+  if (isSkippedOrNoAnswer) {
+    target.skippedCalls += 1
+    target.wastedSeconds += wastedSeconds
   }
 }
 
@@ -43,7 +57,30 @@ function emptyUserStats(): UserStatsRow {
 }
 
 const CONNECTED_DISPOSITIONS = new Set(['completed'])
-const DISCONNECTED_DISPOSITIONS = new Set(['busy', 'canceled', 'failed', 'no_answer'])
+const DISCONNECTED_DISPOSITIONS = new Set([
+  'busy', 'canceled', 'failed', 'no_answer',
+  // Real disposition values confirmed via direct production query
+  // (2026-07-21) that were previously falling through to the catch-all
+  // "duration > 0 and not explicitly disconnected" condition below and
+  // getting wrongly counted as connected calls:
+  'SKIPPED',        // the dialer bypassed this call entirely — it never
+                     // happened, let alone connected. 52 of 364 SKIPPED
+                     // rows had duration > 0 and were being miscounted.
+  'NO_ANSWER',
+  'NO_ANSWER_AMD',  // answering machine detected — not a human conversation.
+                     // All 3 rows with this disposition had duration > 0
+                     // and were being miscounted.
+  'TCPA_BLOCKED',
+])
+
+// Which of the above should ALSO be pulled out of dialSeconds/"time
+// dialed" and surfaced as its own separate "skipped/no answer" metric
+// instead. Confirmed via direct query (2026-07-21): 52 SKIPPED rows carry
+// ~45 minutes of leftover duration even though a skip means the call was
+// never actually placed — that time was silently inflating "time dialed"
+// totals. Rather than just subtract and hide it, it gets its own visible
+// number so nothing about real usage is obscured either way.
+const SKIPPED_OR_NO_ANSWER_DISPOSITIONS = new Set(['SKIPPED', 'NO_ANSWER', 'NO_ANSWER_AMD'])
 
 export async function GET() {
   try {
@@ -148,12 +185,12 @@ export async function GET() {
 
   // ---- per-user aggregation ---------------------------------------------
   const statsByUser = new Map<string, UserStatsRow>()
-  const seriesMap = new Map<string, { calls: number; dialSeconds: number; connectedSeconds: number; activeUsers: Set<string> }>()
+  const seriesMap = new Map<string, { calls: number; dialSeconds: number; connectedSeconds: number; wastedSeconds: number; activeUsers: Set<string> }>()
 
   for (let i = SERIES_DAYS - 1; i >= 0; i--) {
     const d = new Date(now - i * DAY)
     d.setHours(0, 0, 0, 0)
-    seriesMap.set(d.toISOString().slice(0, 10), { calls: 0, dialSeconds: 0, connectedSeconds: 0, activeUsers: new Set() })
+    seriesMap.set(d.toISOString().slice(0, 10), { calls: 0, dialSeconds: 0, connectedSeconds: 0, wastedSeconds: 0, activeUsers: new Set() })
   }
 
   for (const c of calls) {
@@ -163,16 +200,25 @@ export async function GET() {
     if (!s) { s = emptyUserStats(); statsByUser.set(uid, s) }
 
     const t = new Date(c.created_at).getTime()
-    const dialSeconds = c.duration || 0
+    const rawSeconds = c.duration || 0
+    const isSkippedOrNoAnswer = SKIPPED_OR_NO_ANSWER_DISPOSITIONS.has(c.disposition || '')
+    // Real dial time excludes skipped/no-answer duration — that leftover
+    // time was never an actual placed-and-worked call, so it shouldn't
+    // inflate "time dialed." It's tracked separately below instead of
+    // just being dropped.
+    const dialSeconds = isSkippedOrNoAnswer ? 0 : rawSeconds
+    const wastedSeconds = isSkippedOrNoAnswer ? rawSeconds : 0
     const connSeconds = connectedSecondsByCall.get(c.id) ?? 0
-    const isConnected = hasAnsweredEvent.has(c.id)
+    const isConnected = !isSkippedOrNoAnswer && (
+      hasAnsweredEvent.has(c.id)
       || CONNECTED_DISPOSITIONS.has(c.disposition || '')
-      || (dialSeconds > 0 && !DISCONNECTED_DISPOSITIONS.has(c.disposition || ''))
+      || (rawSeconds > 0 && !DISCONNECTED_DISPOSITIONS.has(c.disposition || ''))
+    )
 
-    addBucket(s.all, 1, dialSeconds, isConnected, connSeconds)
-    if (t >= month30Start) addBucket(s.month30, 1, dialSeconds, isConnected, connSeconds)
-    if (t >= weekStart) addBucket(s.week, 1, dialSeconds, isConnected, connSeconds)
-    if (t >= todayStart) addBucket(s.today, 1, dialSeconds, isConnected, connSeconds)
+    addBucket(s.all, 1, dialSeconds, isConnected, connSeconds, isSkippedOrNoAnswer, wastedSeconds)
+    if (t >= month30Start) addBucket(s.month30, 1, dialSeconds, isConnected, connSeconds, isSkippedOrNoAnswer, wastedSeconds)
+    if (t >= weekStart) addBucket(s.week, 1, dialSeconds, isConnected, connSeconds, isSkippedOrNoAnswer, wastedSeconds)
+    if (t >= todayStart) addBucket(s.today, 1, dialSeconds, isConnected, connSeconds, isSkippedOrNoAnswer, wastedSeconds)
 
     const dayKey = new Date(t).toISOString().slice(0, 10)
     const bucket = seriesMap.get(dayKey)
@@ -180,6 +226,7 @@ export async function GET() {
       bucket.calls += 1
       bucket.dialSeconds += dialSeconds
       bucket.connectedSeconds += connSeconds
+      bucket.wastedSeconds += wastedSeconds
       bucket.activeUsers.add(uid)
     }
   }
@@ -209,6 +256,8 @@ export async function GET() {
       out.dialSeconds += b.dialSeconds
       out.connectedCalls += b.connectedCalls
       out.connectedSeconds += b.connectedSeconds
+      out.skippedCalls += b.skippedCalls
+      out.wastedSeconds += b.wastedSeconds
     }
     return out
   }
@@ -239,6 +288,7 @@ export async function GET() {
     calls: v.calls,
     dialSeconds: v.dialSeconds,
     connectedSeconds: v.connectedSeconds,
+    wastedSeconds: v.wastedSeconds,
     activeUsers: v.activeUsers.size,
     avgCallsPerActiveUser: v.activeUsers.size > 0 ? Math.round((v.calls / v.activeUsers.size) * 10) / 10 : 0,
   }))
