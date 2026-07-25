@@ -6,9 +6,21 @@ import { logCallEvent } from '@/lib/callEvents'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-const ROOM_STALE_MINUTES = 120        // 2h — far beyond any real call
 const SESSION_DEAD_HEARTBEAT_MIN = 5  // heartbeat is ~5s; 5min silence = gone
 const BATCH_LIMIT = 500
+
+// =============================================================================
+// STALE-CALL REAPER — Telnyx: room-reaping half removed
+// =============================================================================
+// This cron used to do two jobs: reap stale call_rooms rows, and free
+// agent_sessions stuck with a current_call_id pointing at a call that's
+// long over. Under the direct-bridge Telnyx architecture (no conference,
+// no call_rooms — see TELNYX-MIGRATION-DESIGN.md), call_rooms is never
+// written to at all, so that half of this job would always find zero rows
+// — dead code, removed. The wedged-session half is still very much
+// needed (this is exactly the "agent stuck marked on_call forever after a
+// webhook was missed" failure mode) and is unchanged below.
+// =============================================================================
 
 export async function GET(req: Request) {
   const authHeader = req.headers.get('authorization')
@@ -19,45 +31,7 @@ export async function GET(req: Request) {
   try {
     const db = getServiceClient('cron/stale-call-reaper')
 
-    const roomCutoff = new Date(Date.now() - ROOM_STALE_MINUTES * 60_000).toISOString()
     const sessionCutoff = new Date(Date.now() - SESSION_DEAD_HEARTBEAT_MIN * 60_000).toISOString()
-
-    const { data: staleRooms, error: roomErr } = await db
-      .from('call_rooms')
-      .select('room_name, user_id, phone_number, lead_call_sid, agent_call_sid, created_at')
-      .lt('created_at', roomCutoff)
-      .limit(BATCH_LIMIT)
-
-    if (roomErr) return apiError(roomErr, { route: 'cron/stale-call-reaper' })
-
-    let roomsReaped = 0
-    if (staleRooms && staleRooms.length > 0) {
-
-      for (const r of staleRooms) {
-        await logCallEvent({
-          event_type: 'reaped',
-          signalwire_call_id: r.lead_call_sid ?? r.agent_call_sid ?? null,
-          user_id: r.user_id ?? null,
-          source: 'reaper',
-          detail: {
-            kind: 'call_room',
-            room_name: r.room_name,
-            phone_number: r.phone_number,
-            age_minutes: Math.round((Date.now() - new Date(r.created_at).getTime()) / 60000),
-          },
-        })
-      }
-      const roomNames = staleRooms.map(r => r.room_name).filter(Boolean)
-      const { error: delErr, count } = await db
-        .from('call_rooms')
-        .delete({ count: 'exact' })
-        .in('room_name', roomNames)
-      if (delErr) {
-        console.error('[reaper] failed to delete stale rooms:', delErr.message)
-      } else {
-        roomsReaped = count ?? roomNames.length
-      }
-    }
 
     const { data: wedged, error: sessErr } = await db
       .from('agent_sessions')
@@ -98,9 +72,8 @@ export async function GET(req: Request) {
 
     return NextResponse.json({
       success: true,
-      roomsReaped,
       sessionsFreed,
-      thresholds: { roomStaleMinutes: ROOM_STALE_MINUTES, sessionDeadHeartbeatMin: SESSION_DEAD_HEARTBEAT_MIN },
+      thresholds: { sessionDeadHeartbeatMin: SESSION_DEAD_HEARTBEAT_MIN },
     })
   } catch (error) {
     return apiError(error, { route: 'cron/stale-call-reaper' })

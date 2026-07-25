@@ -1,8 +1,27 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { auth } from '@clerk/nextjs/server'
 
 const supabase = getServiceClient('recordings/play')
+
+// =============================================================================
+// RECORDINGS PLAY — authenticated proxy/stream of a call recording (Telnyx)
+// =============================================================================
+// calls.recording_url now stores a Telnyx download_urls.mp3 link directly
+// (written by the call.recording.saved webhook handler in
+// app/api/calls/events/route.ts, or by the manual recordings/sync
+// backstop) rather than a SignalWire recording SID we'd construct a URL
+// from — so this route no longer needs to build the URL itself, just
+// fetch whatever's stored.
+//
+// AUTH ON THE UPSTREAM FETCH: sending our Bearer token on the request to
+// Telnyx's download URL, same as every other Telnyx REST call in this
+// codebase. Telnyx's own docs weren't unambiguous on whether the
+// recording download link is pre-signed/public or requires auth to fetch
+// the actual bytes — sending the header is harmless either way (a
+// pre-signed URL that doesn't need it will just ignore an extra header),
+// and covers the case where it does require it.
+// =============================================================================
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -31,22 +50,17 @@ export async function GET(req: NextRequest) {
     return new Response('No recording for this call', { status: 404 })
   }
 
-  const projectId = process.env.SIGNALWIRE_PROJECT_ID
-  const apiToken = process.env.SIGNALWIRE_API_TOKEN
-  if (!projectId || !apiToken) {
-    return new Response('SignalWire credentials missing', { status: 500 })
+  const apiKey = process.env.TELNYX_API_KEY
+  if (!apiKey) {
+    return new Response('Telnyx credentials missing', { status: 500 })
   }
 
-  const authHeader = 'Basic ' + Buffer.from(`${projectId}:${apiToken}`).toString('base64')
-
-  const url = call.recording_url.endsWith('.mp3')
-    ? call.recording_url
-    : `${call.recording_url}.mp3`
-
-  const upstream = await fetch(url, { headers: { Authorization: authHeader } })
+  const upstream = await fetch(call.recording_url, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  })
 
   if (!upstream.ok) {
-    return new Response(`SignalWire error: ${upstream.status}`, { status: 502 })
+    return new Response(`Telnyx error: ${upstream.status}`, { status: 502 })
   }
 
   const headers: Record<string, string> = {

@@ -37,22 +37,17 @@ export async function GET(req: NextRequest) {
     return new Response('No recording for this call', { status: 404 })
   }
 
-  const projectId = process.env.SIGNALWIRE_PROJECT_ID
-  const apiToken = process.env.SIGNALWIRE_API_TOKEN
-  if (!projectId || !apiToken) {
-    return new Response('SignalWire credentials missing', { status: 500 })
+  const apiKey = process.env.TELNYX_API_KEY
+  if (!apiKey) {
+    return new Response('Telnyx credentials missing', { status: 500 })
   }
 
-  const authHeader = 'Basic ' + Buffer.from(`${projectId}:${apiToken}`).toString('base64')
-
-  const url = call.recording_url.endsWith('.mp3')
-    ? call.recording_url
-    : `${call.recording_url}.mp3`
-
-  const upstream = await fetch(url, { headers: { Authorization: authHeader } })
+  const upstream = await fetch(call.recording_url, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  })
 
   if (!upstream.ok) {
-    return new Response(`SignalWire error: ${upstream.status}`, { status: 502 })
+    return new Response(`Telnyx error: ${upstream.status}`, { status: 502 })
   }
 
   const headers: Record<string, string> = {

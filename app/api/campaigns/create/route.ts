@@ -18,7 +18,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json()
-    const { name, dialer_mode, amd_enabled, predictive_lines_per_agent, voicemail_drop_url } = body
+    const { name, dialer_mode, amd_enabled, recording_enabled, predictive_lines_per_agent, voicemail_drop_url } = body
 
     let finalName = (typeof name === 'string' ? name.trim() : '')
     if (!finalName) {
@@ -37,12 +37,21 @@ export async function POST(req: Request) {
       }
     }
 
+    // SANDBOX DEFAULT: progressive (per build instruction). Production's
+    // equivalent route still defaults to 'power' — this divergence is
+    // intentional and sandbox-only, matching most current subscribers'
+    // actual mode, so Telnyx validation happens against the mode that
+    // matters most first.
     const mode: DialerMode = dialer_mode && VALID_MODES.includes(dialer_mode)
       ? dialer_mode
-      : 'power'
+      : 'progressive'
 
     const amdDefault = mode === 'progressive' || mode === 'predictive'
     const amdEnabled = typeof amd_enabled === 'boolean' ? amd_enabled : amdDefault
+    // Recording defaults ON regardless of mode — matches how this app
+    // always behaved before the toggle existed. Only an explicit false
+    // turns it off.
+    const recordingEnabled = typeof recording_enabled === 'boolean' ? recording_enabled : true
 
     let lines = 1.5
     if (typeof predictive_lines_per_agent === 'number') {
@@ -57,6 +66,7 @@ export async function POST(req: Request) {
         status: 'active', // new campaigns are active by default
         dialer_mode: mode,
         amd_enabled: amdEnabled,
+        recording_enabled: recordingEnabled,
         predictive_lines_per_agent: lines,
         voicemail_drop_url: voicemail_drop_url || null,
       })

@@ -5,6 +5,35 @@ import { apiError } from '@/lib/apiError'
 
 const supabase = getServiceClient('recordings/delete')
 
+// =============================================================================
+// RECORDINGS DELETE (Telnyx)
+// =============================================================================
+// WHAT'S DIFFERENT FROM THE SIGNALWIRE VERSION: SignalWire's recording SID
+// was embeddable in the URL path itself
+// (.../Recordings/{sid}) and trivially regex-extractable to build a DELETE
+// request. Telnyx's recording id (needed for DELETE /v2/recordings/{id})
+// is a SEPARATE field on the call.recording.saved webhook
+// (payload.recording_id) — it does not appear anywhere in the
+// download_urls themselves, so it can't be recovered from the stored URL
+// alone.
+//
+// We do NOT add a new column to store it (per instruction to keep the
+// shared schema as-is beyond the one recording_enabled migration already
+// on the table). Practical effect: this route reliably clears OUR OWN
+// reference to the recording (which is what actually matters for the
+// user — the recording disappears from their Recordings page and stops
+// being playable through us) but can't always also delete the underlying
+// file from Telnyx's storage, since we may not have the id to target.
+//
+// This is a real, known limitation — flagging it plainly rather than
+// silently no-op'ing: if deleting the underlying file at Telnyx is a hard
+// requirement (e.g. for compliance/retention reasons), the fix is to
+// capture payload.recording_id in the call.recording.saved handler
+// (app/api/calls/events/route.ts) and store it — which does need a small
+// column addition when that's actually wanted. Until then, this route
+// does the best it safely can with the existing schema.
+// =============================================================================
+
 export async function POST(req: Request) {
   try {
     const { userId } = await auth()
@@ -31,30 +60,30 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
     }
 
+    // Best-effort provider-side delete: only possible if the id happens to
+    // be present in the stored URL path (it generally won't be for
+    // Telnyx's S3-backed URLs — see header comment). Attempted anyway in
+    // case a future storage/webhook change makes it recoverable; failure
+    // here never blocks clearing our own reference below.
     if (call.recording_url) {
       try {
-        const projectId = process.env.SIGNALWIRE_PROJECT_ID!
-        const apiToken = process.env.SIGNALWIRE_API_TOKEN!
-        const spaceUrl = process.env.SIGNALWIRE_SPACE_URL!
-        const authHeader = 'Basic ' + Buffer.from(`${projectId}:${apiToken}`).toString('base64')
+        const apiKey = process.env.TELNYX_API_KEY
+        const match = call.recording_url.match(/\/recordings\/([A-Za-z0-9-]+)/i)
+        const recordingId = match?.[1]
 
-        const match = call.recording_url.match(/Recordings\/([A-Za-z0-9-]+)/)
-        const recordingSid = match?.[1]
-
-        if (recordingSid) {
-          const delUrl = `https://${spaceUrl}/api/laml/2010-04-01/Accounts/${projectId}/Recordings/${recordingSid}.json`
-          const delRes = await fetch(delUrl, {
+        if (apiKey && recordingId) {
+          const delRes = await fetch(`https://api.telnyx.com/v2/recordings/${recordingId}`, {
             method: 'DELETE',
-            headers: { 'Authorization': authHeader },
+            headers: { Authorization: `Bearer ${apiKey}` },
           })
           if (!delRes.ok) {
-            console.warn('SignalWire delete failed:', delRes.status, await delRes.text())
+            console.warn('Telnyx recording delete failed:', delRes.status, await delRes.text())
           } else {
-            console.log('Deleted recording from SignalWire:', recordingSid)
+            console.log('Deleted recording from Telnyx:', recordingId)
           }
         }
       } catch (e) {
-        console.warn('SignalWire delete error (continuing):', e)
+        console.warn('Telnyx recording delete error (continuing):', e)
       }
     }
 

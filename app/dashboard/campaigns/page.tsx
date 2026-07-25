@@ -38,6 +38,7 @@ interface Campaign {
   script?: string
   dialer_mode?: DialerMode
   amd_enabled?: boolean
+  recording_enabled?: boolean
   predictive_lines_per_agent?: number
   enable_appointments_sub?: boolean
   enable_not_interested_sub?: boolean
@@ -288,8 +289,9 @@ export default function CampaignsPage() {
   
   const [showCreate, setShowCreate] = useState(false)
   const [campaignName, setCampaignName] = useState('')
-  const [createMode, setCreateMode] = useState<DialerMode>('power')
-  const [createAmd, setCreateAmd] = useState<boolean>(false) // tracks mode default + user override
+  const [createMode, setCreateMode] = useState<DialerMode>('progressive')
+  const [createAmd, setCreateAmd] = useState<boolean>(true) // tracks mode default + user override — true matches AMD_DEFAULT_BY_MODE.progressive
+  const [createRecording, setCreateRecording] = useState<boolean>(true) // recording defaults on regardless of mode
   const [createApptSub, setCreateApptSub] = useState(false)
   const [createNotIntSub, setCreateNotIntSub] = useState(false)
   const [createSubOpen, setCreateSubOpen] = useState(false)
@@ -354,6 +356,7 @@ export default function CampaignsPage() {
     status: string
     dialer_mode: DialerMode
     amd_enabled: boolean
+    recording_enabled: boolean
     enable_appointments_sub: boolean
     enable_not_interested_sub: boolean
     enabledScriptIds: Set<string>   // which library scripts are on for this campaign
@@ -566,8 +569,13 @@ export default function CampaignsPage() {
 
   const resetCreateForm = () => {
     setCampaignName('')
-    setCreateMode('power')
-    setCreateAmd(AMD_DEFAULT_BY_MODE.power)
+    // SANDBOX DEFAULT: new campaigns default to progressive mode (per
+    // build instruction — most current subscribers are already on
+    // progressive, so this is the more representative mode to test
+    // against as new campaigns get created during Telnyx validation).
+    setCreateMode('progressive')
+    setCreateAmd(AMD_DEFAULT_BY_MODE.progressive)
+    setCreateRecording(true)
     setCreateApptSub(false)
     setCreateNotIntSub(false)
     setCreateFirstScriptName('')
@@ -617,7 +625,7 @@ export default function CampaignsPage() {
       const res = await fetch('/api/campaigns/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: campaignName, dialer_mode: createMode, amd_enabled: createAmd }),
+        body: JSON.stringify({ name: campaignName, dialer_mode: createMode, amd_enabled: createAmd, recording_enabled: createRecording }),
       })
       const data = await res.json()
       if (!data.success) {
@@ -682,6 +690,7 @@ export default function CampaignsPage() {
           name: campaignName,
           dialer_mode: createMode,
           amd_enabled: createAmd,
+          recording_enabled: createRecording,
         }),
       })
       const data = await res.json()
@@ -1235,6 +1244,8 @@ export default function CampaignsPage() {
       if (editDraft.status !== editBaseline.status) corePatch.status = editDraft.status
       if (editDraft.dialer_mode !== editBaseline.dialer_mode) corePatch.dialer_mode = editDraft.dialer_mode
       if (editDraft.amd_enabled !== editBaseline.amd_enabled) corePatch.amd_enabled = editDraft.amd_enabled
+      if (editDraft.recording_enabled !== editBaseline.recording_enabled)
+        corePatch.recording_enabled = editDraft.recording_enabled
       if (editDraft.enable_appointments_sub !== editBaseline.enable_appointments_sub)
         corePatch.enable_appointments_sub = editDraft.enable_appointments_sub
       if (editDraft.enable_not_interested_sub !== editBaseline.enable_not_interested_sub)
@@ -1302,6 +1313,11 @@ export default function CampaignsPage() {
       status: campaign.status || 'active',
       dialer_mode: (campaign.dialer_mode || 'power') as DialerMode,
       amd_enabled: !!campaign.amd_enabled,
+      // Defaults to true (not !!campaign.recording_enabled, which would
+      // coerce an unset/pre-migration value to false) — recording was
+      // always-on before this toggle existed, so an absent value should
+      // still read as "on", matching the column's own DEFAULT true.
+      recording_enabled: campaign.recording_enabled !== false,
       enable_appointments_sub: !!campaign.enable_appointments_sub,
       enable_not_interested_sub: !!campaign.enable_not_interested_sub,
       enabledScriptIds: new Set<string>(),
@@ -3012,6 +3028,20 @@ export default function CampaignsPage() {
                   ><div className="knob" /></div>
                 </div>
 
+                <div className="settings-row">
+                  <div className="settings-row-label">
+                    CALL RECORDING
+                    <small>
+                      Record calls placed on this campaign. Turn off if you don't
+                      want audio saved for these leads.
+                    </small>
+                  </div>
+                  <div
+                    className={`settings-toggle ${createRecording ? 'on' : ''}`}
+                    onClick={() => setCreateRecording(v => !v)}
+                  ><div className="knob" /></div>
+                </div>
+
                 <p className="cmp-helper" style={{ marginTop: 10 }}>
                   Not sure on the mode? Start with POWER.{' '}
                   <a
@@ -3386,6 +3416,17 @@ export default function CampaignsPage() {
                   <div
                     className={`settings-toggle ${editDraft?.amd_enabled ? 'on' : ''} ${isLapsed ? 'disabled' : ''}`}
                     onClick={() => !isLapsed && patchDraft({ amd_enabled: !editDraft?.amd_enabled })}
+                  ><div className="knob" /></div>
+                </div>
+
+                <div className="settings-row">
+                  <div className="settings-row-label">
+                    CALL RECORDING
+                    <small>Record calls placed on this campaign.</small>
+                  </div>
+                  <div
+                    className={`settings-toggle ${editDraft?.recording_enabled ? 'on' : ''} ${isLapsed ? 'disabled' : ''}`}
+                    onClick={() => !isLapsed && patchDraft({ recording_enabled: !editDraft?.recording_enabled })}
                   ><div className="knob" /></div>
                 </div>
 

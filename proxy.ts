@@ -18,13 +18,13 @@ const isPublicRoute = createRouteMatcher([
   '/vs/(.*)',
   '/api/stripe/webhook',
   '/api/webhooks/clerk',
-  '/api/calls/twiml(.*)',
-  '/api/calls/twiml-agent(.*)',
-  '/api/calls/status(.*)',
-  '/api/calls/recording(.*)',
-  '/api/calls/inbound(.*)',
-  '/api/calls/amd-result(.*)',
-  '/api/calls/amd-result',
+  // Telnyx native Call Control event webhook — one URL receives all event
+  // types (call.initiated, call.answered, call.hangup,
+  // call.machine.detection.ended, etc. — including inbound-call handling,
+  // folded in here rather than a separate route), dispatched by
+  // event_type inside the handler. Authenticated by Ed25519
+  // (lib/verifyTelnyxWebhook.ts), not by Clerk — must stay public.
+  '/api/calls/events(.*)',
   '/api/cron/(.*)',
 ])
 

@@ -257,8 +257,8 @@ export async function runPredictiveController(
     const result = placements[i]
     const lead = leadsToCall[i]
 
-    if (result.status === 'fulfilled' && result.value.success && result.value.callSid) {
-      callSids.push(result.value.callSid)
+    if (result.status === 'fulfilled' && result.value.success && result.value.callControlId) {
+      callSids.push(result.value.callControlId)
     } else {
       skipped++
       try {

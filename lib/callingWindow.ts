@@ -18,11 +18,30 @@ interface LeadInput {
 
 
 export function isCallableNow(lead: LeadInput): CallabilityResult {
-  
-  
-  
-  
-  
+
+  // ── SANDBOX OVERRIDE: 24/7 TESTING ──────────────────────────────────────
+  // Per build instruction: this sandbox needs to place test calls at any
+  // hour, not just within each state's TCPA/TSR calling window, since
+  // admin testing doesn't happen on a lead's schedule. This bypass is
+  // GATED BEHIND AN ENV VAR (not a hardcoded true) so:
+  //   (a) it's impossible for this file to silently behave differently in
+  //       a deployment that forgot to set the flag — default is OFF, i.e.
+  //       real TCPA enforcement, same as production;
+  //   (b) if this file is ever copied back toward production during
+  //       cutover, it does NOT carry a live compliance hole with it unless
+  //       someone deliberately sets SANDBOX_DISABLE_CALLING_WINDOW=true in
+  //       that environment too.
+  // This does NOT change the underlying rule tables (timezones.ts) or the
+  // real logic below — it's a short-circuit at the very top, so flipping
+  // the env var off instantly restores full enforcement with zero other
+  // code changes.
+  if (process.env.SANDBOX_DISABLE_CALLING_WINDOW === 'true') {
+    return {
+      allowed: true,
+      reason: 'Sandbox: calling-window enforcement disabled for 24/7 testing',
+    }
+  }
+
   let state = normalizeState(lead.state)
 
   

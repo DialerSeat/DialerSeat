@@ -60,7 +60,7 @@ export async function POST(req: Request) {
 
     void logCallEvent({
       event_type: 'initiated',
-      signalwire_call_id: result.callSid ?? null,
+      signalwire_call_id: result.callControlId ?? null,
       user_id: userId,
       lead_id: leadId ?? null,
       campaign_id: campaignId ?? null,
@@ -72,11 +72,21 @@ export async function POST(req: Request) {
       },
     })
 
+    // NOTE: response keys (callSid, agentCallSid, roomName) are kept as-is
+    // for frontend compatibility — app/dashboard/dialer/page.tsx reads
+    // data.callSid/data.agentCallSid unchanged. Only the INTERNAL
+    // PlaceCallResult field names changed when placeOutboundCall.ts was
+    // rewritten for native Call Control (callSid -> callControlId,
+    // agentCallSid -> agentCallControlId, roomName removed entirely since
+    // there's no conference room under the direct-bridge design — see
+    // TELNYX-MIGRATION-DESIGN.md). roomName is sent back as null rather
+    // than omitted, so existing frontend code that reads
+    // data.roomName doesn't hit an undefined-vs-missing-key surprise.
     return NextResponse.json({
       success: true,
-      callSid: result.callSid,
-      agentCallSid: result.agentCallSid,
-      roomName: result.roomName,
+      callSid: result.callControlId,
+      agentCallSid: result.agentCallControlId,
+      roomName: null,
       fromNumber: result.fromNumber,
       status: result.status,
       amdEnabled: result.amdEnabled,

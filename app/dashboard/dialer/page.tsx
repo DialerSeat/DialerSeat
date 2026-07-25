@@ -503,6 +503,43 @@ function DialerPageInner() {
     urlParamsConsumedRef.current = true
   }, [user, campaignsLoaded, scopesLoaded, teamScopes, campaigns, searchParams])
 
+  // ── DEEP-LINK: "Dial Lead" from the leads/recordings pages ──────────────
+  // ?leadId=<id> loads that SPECIFIC lead into the existing preview-ready
+  // flow (same one used by Preview mode's "load next lead" step) rather
+  // than dialing immediately. This deliberately does NOT bypass the
+  // Set-Available / explicit-confirm gating — the agent still sees the
+  // lead on screen and has to press the existing dial-confirm action
+  // (dialPreviewLead) themselves. dialLeadCall's own availableRef guard is
+  // the final backstop either way. Runs once per leadId value (a ref, not
+  // state, so re-navigating to the same URL doesn't re-trigger it if the
+  // agent has since moved on to a different call).
+  const dialLeadDeepLinkConsumedRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!user) return
+    const leadIdParam = searchParams.get('leadId')
+    if (!leadIdParam) return
+    if (dialLeadDeepLinkConsumedRef.current === leadIdParam) return
+    // Don't clobber an already-in-progress or already-loaded call.
+    if (status !== 'idle') return
+
+    dialLeadDeepLinkConsumedRef.current = leadIdParam
+    ;(async () => {
+      try {
+        const res = await fetch(`/api/leads/list?id=${encodeURIComponent(leadIdParam)}`)
+        const data = await res.json()
+        if (data.success && data.lead) {
+          setPreviewLead(data.lead)
+          setStatus('preview_ready')
+          setNoLeads(false)
+        } else {
+          setAmdActivity(prev => [`DIAL LEAD FAILED — lead not found or not yours`, ...prev].slice(0, 5))
+        }
+      } catch {
+        setAmdActivity(prev => [`DIAL LEAD FAILED — network error`, ...prev].slice(0, 5))
+      }
+    })()
+  }, [user, searchParams, status])
+
   useEffect(() => {
     if (user && isActive) fetchCampaigns()
   }, [user, isActive])
@@ -585,14 +622,25 @@ function DialerPageInner() {
         if (!sipUsername || !sipPassword || !sipDomain) return
 
         const { UserAgent, Registerer, SessionState } = await import('sip.js')
+        // SIP URI identity stays port-free — sip:user@domain is the correct
+        // standard SIP URI format, this is not a network address.
         const uri = UserAgent.makeURI(`sip:${sipUsername}@${sipDomain}`)
         if (!uri) return
+
+        // TRANSPORT PORT — Telnyx requires port 7443 specifically for SIP
+        // over WebSocket (wss://sip.telnyx.com:7443), confirmed directly
+        // against Telnyx's own SIP reference docs. This is NOT the same as
+        // sipDomain (which correctly stays bare/port-free for the URI
+        // above) — baking a port into TELNYX_SIP_DOMAIN would be a
+        // confusing env var to maintain, so the port lives here in code
+        // instead, next to the one place that actually needs it.
+        const wssPort = '7443'
 
         const userAgent = new UserAgent({
           uri,
           authorizationUsername: sipUsername,
           authorizationPassword: sipPassword,
-          transportOptions: { server: `wss://${sipDomain}` },
+          transportOptions: { server: `wss://${sipDomain}:${wssPort}` },
           sessionDescriptionHandlerFactoryOptions: {
             // peerConnectionConfiguration.iceServers is THE audio-path fix.
             // Without STUN/TURN the browser can't find a reachable media path
@@ -1486,7 +1534,16 @@ function DialerPageInner() {
 
   const isNotHuman = (amd?: string): boolean => {
     if (!amd) return false
-    return amd.startsWith('machine_') || amd === 'fax' || amd === 'unknown'
+    // Telnyx native Call Control Standard AMD (answering_machine_detection:
+    // 'greeting_end') returns only 'human' | 'machine' | 'not_sure' — a
+    // coarser vocabulary than SignalWire's machine_end_beep/
+    // machine_end_silence/machine_end_other/fax/unknown set. 'not_sure' is
+    // Telnyx's own documented recommendation to treat as human (so it's
+    // deliberately NOT included here — only 'machine' counts as not-human).
+    // Kept the old machine_/fax/unknown checks alongside for
+    // backward-compatibility with any historical rows still carrying
+    // SignalWire-era amd_result values during the transition.
+    return amd === 'machine' || amd.startsWith('machine_') || amd === 'fax' || amd === 'unknown'
   }
 
   const startHangupPolling = (callSid: string) => {

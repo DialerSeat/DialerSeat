@@ -5,6 +5,36 @@ import { apiError } from '@/lib/apiError'
 
 const supabase = getServiceClient('calls/check')
 
+// =============================================================================
+// CHECK — polled by the dialer page (startHangupPolling) to detect when a
+// live call has ended, and to read the AMD result for the isNotHuman()
+// auto-skip logic.
+// =============================================================================
+// REWRITTEN FOR TELNYX, USING ONLY EXISTING COLUMNS (no schema changes):
+//   - Ownership: was call_rooms (now unused under the direct-bridge
+//     design — see TELNYX-MIGRATION-DESIGN.md), now the `calls` table
+//     directly, keyed by the same signalwire_call_id column that holds
+//     the Telnyx call_control_id.
+//   - "Is this call over": the old version made a live GET request to
+//     SignalWire's Calls API and read back a `status` string
+//     (queued/ringing/in-progress/completed/...). Telnyx's native Call
+//     Control GET /v2/calls/{id} has no equivalent status string (just
+//     is_alive/timestamps) — but we don't need a live API call at all:
+//     app/api/calls/events/route.ts's handleHangup already writes a real
+//     `duration` the moment call.hangup fires (see that file). duration
+//     stays 0 while the call is in-flight (same "0 = in-flight" sentinel
+//     dialerPacing.ts already relies on elsewhere in this codebase) and
+//     becomes a real positive number the instant it's over. So `check`
+//     just reads our own DB — faster, and avoids depending on Telnyx API
+//     availability every single poll tick.
+//   - status field: the frontend only checks `d.status === 'completed' ||
+//     'canceled' || 'failed'` (see app/dashboard/dialer/page.tsx
+//     startHangupPolling). We return 'completed' once duration > 0,
+//     'in-progress' otherwise — sufficient for that check without needing
+//     to distinguish canceled/failed separately (the frontend treats all
+//     three identically).
+// =============================================================================
+
 export async function GET(req: Request) {
   try {
     const { userId } = await auth()
@@ -19,59 +49,30 @@ export async function GET(req: Request) {
       return NextResponse.json({ success: false, error: 'No SID' }, { status: 400 })
     }
 
-    // Verify the caller owns this call SID before reporting on it.
-    const { data: room } = await supabase
-      .from('call_rooms')
-      .select('user_id')
-      .or(`lead_call_sid.eq.${sid},agent_call_sid.eq.${sid}`)
-      .maybeSingle()
-
-    if (!room || room.user_id !== userId) {
-      return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 })
-    }
-
-    const spaceUrl = process.env.SIGNALWIRE_SPACE_URL
-    const projectId = process.env.SIGNALWIRE_PROJECT_ID
-    const apiToken = process.env.SIGNALWIRE_API_TOKEN
-
-    const response = await fetch(
-      `https://${spaceUrl}/api/laml/2010-04-01/Accounts/${projectId}/Calls/${sid}.json`,
-      {
-        headers: {
-          'Authorization': 'Basic ' + Buffer.from(`${projectId}:${apiToken}`).toString('base64'),
-        },
-      }
-    )
-
-    const data = await response.json()
-
-    // Look up AMD result from our calls table. The amd-result webhook stores
-    // it as disposition='NO_ANSWER_AMD' and also writes any machine_* result
-    // there. The dialer needs to see this field to skip the disposition tab
-    // when AMD hung up a voicemail.
     const { data: callRow } = await supabase
       .from('calls')
-      .select('disposition, amd_result')
+      .select('user_id, duration, amd_result, disposition')
       .eq('signalwire_call_id', sid)
       .maybeSingle()
 
-    // Build a normalized amd_result: prefer the explicit column if it exists,
-    // otherwise infer from disposition. NO_ANSWER_AMD disposition means a
-    // machine was detected, so report 'machine_end_other' as a sensible default.
-    let amd_result: string | null = null
-    if (callRow) {
-      if ((callRow as any).amd_result) {
-        amd_result = (callRow as any).amd_result
-      } else if (callRow.disposition === 'NO_ANSWER_AMD') {
-        amd_result = 'machine_end_other'
-      }
+    if (!callRow || callRow.user_id !== userId) {
+      return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 })
     }
 
+    const isOver = !!callRow.duration && callRow.duration > 0
+    const status = isOver ? 'completed' : 'in-progress'
+
+    // amd_result is written directly by handleAmdResult in
+    // app/api/calls/events/route.ts using Telnyx's native vocabulary
+    // (human/machine/not_sure) — no inference needed the way the old
+    // SignalWire version had to infer from a NO_ANSWER_AMD disposition,
+    // since that disposition path doesn't exist anymore (AMD-machine is a
+    // silent skip with no disposition at all — see events/route.ts).
     return NextResponse.json({
       success: true,
-      status: data.status,
-      amd_result,
-      data,
+      status,
+      amd_result: callRow.amd_result || null,
+      duration: callRow.duration || 0,
     })
   } catch (error: any) {
     return apiError(error, { route: 'calls/check' })

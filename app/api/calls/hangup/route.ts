@@ -3,8 +3,30 @@ import { auth } from '@clerk/nextjs/server'
 import { getServiceClient } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 import { logCallEvent } from '@/lib/callEvents'
+import { hangupCallControlId } from '@/lib/placeOutboundCall'
 
 const supabase = getServiceClient('calls/hangup')
+
+// =============================================================================
+// HANGUP — user-initiated hangup of a live call (Telnyx native Call Control)
+// =============================================================================
+// OWNERSHIP CHECK CHANGE: the SignalWire version checked call_rooms,
+// looking up by lead_call_sid/agent_call_sid. Under the no-conference
+// direct-bridge architecture (see TELNYX-MIGRATION-DESIGN.md), call_rooms
+// is no longer written to at all — there's no room to track. Ownership is
+// now checked against the calls table instead, which IS still written on
+// every placeOutboundCall (see lib/placeOutboundCall.ts), keyed by the
+// same shared signalwire_call_id column that now holds the Telnyx
+// call_control_id.
+//
+// NOTE: this only covers hanging up the LEAD leg by its own
+// call_control_id (what "sid" means here — same param name kept for
+// frontend compatibility). The agent's own SIP leg ends naturally when
+// their softphone hangs up locally; we don't need to separately hang up
+// the agent leg from the server. For aborting an in-flight (not yet
+// answered) dial, see app/api/dialer/abort/route.ts instead, which is the
+// "cancel before pickup" path this route doesn't handle.
+// =============================================================================
 
 export async function POST(req: Request) {
   try {
@@ -20,35 +42,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'No SID' }, { status: 400 })
     }
 
-    // Verify the caller owns this call SID before hanging it up
-    const { data: room } = await supabase
-      .from('call_rooms')
+    // Verify the caller owns this call before hanging it up.
+    const { data: callRow } = await supabase
+      .from('calls')
       .select('user_id')
-      .or(`lead_call_sid.eq.${sid},agent_call_sid.eq.${sid}`)
+      .eq('signalwire_call_id', sid)
       .maybeSingle()
 
-    if (!room || room.user_id !== userId) {
+    if (!callRow || callRow.user_id !== userId) {
       return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 })
     }
 
-    const spaceUrl = process.env.SIGNALWIRE_SPACE_URL
-    const projectId = process.env.SIGNALWIRE_PROJECT_ID
-    const apiToken = process.env.SIGNALWIRE_API_TOKEN
-
-    const response = await fetch(
-      `https://${spaceUrl}/api/laml/2010-04-01/Accounts/${projectId}/Calls/${sid}.json`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Basic ' + Buffer.from(`${projectId}:${apiToken}`).toString('base64'),
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({ Status: 'completed' }).toString(),
-      }
-    )
-
-    const data = await response.json()
-    console.log('Hangup response:', data)
+    await hangupCallControlId(sid)
 
     void logCallEvent({
       event_type: 'hangup_requested',

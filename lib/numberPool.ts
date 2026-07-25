@@ -6,8 +6,8 @@ import {
 } from './areaCode'
 import {
   acquireNumberByAreaCode,
-  releaseNumber as swReleaseNumber,
-} from './signalwireProvision'
+  releaseNumber as telnyxReleaseNumber,
+} from './telnyxProvision'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -166,6 +166,14 @@ export async function markFlagged(
 }
 
 export async function releasePoolNumber(numberId: string): Promise<void> {
+  // Column is still named signalwire_sid in this shared schema (sandbox
+  // writes to the same phone_numbers table as production — see build
+  // instructions). Storing Telnyx's internal number id here for now
+  // rather than adding a parallel column: the value's role (provider's
+  // own identifier for this number, needed to release/delete it later)
+  // is identical regardless of provider. Revisit naming only at actual
+  // cutover time, not before — same reasoning as placeOutboundCall.ts's
+  // reuse of signalwire_call_id for the Telnyx call sid.
   const { data: number, error: readErr } = await supabase
     .from('phone_numbers')
     .select('signalwire_sid')
@@ -178,9 +186,9 @@ export async function releasePoolNumber(numberId: string): Promise<void> {
   }
 
   try {
-    await swReleaseNumber(number.signalwire_sid)
+    await telnyxReleaseNumber(number.signalwire_sid)
   } catch (err) {
-    console.error('[numberPool] SignalWire release failed:', err)
+    console.error('[numberPool] Telnyx release failed:', err)
     throw err
   }
 
@@ -206,7 +214,10 @@ export async function addNumberByAreaCode(areaCode: string): Promise<PoolNumber 
       area_code: areaCode,
       state: info?.state ?? null,
       region: info?.region ?? null,
-      signalwire_sid: purchased.sid,
+      // Telnyx's PurchasedNumber uses `.id` (their internal number id),
+      // not `.sid` — different provider, different field name, same role.
+      // See the column-reuse note on releasePoolNumber above.
+      signalwire_sid: purchased.id,
       status: 'active',
       daily_call_count: 0,
       daily_cap: 50,
@@ -216,11 +227,11 @@ export async function addNumberByAreaCode(areaCode: string): Promise<PoolNumber 
     .single()
 
   if (error) {
-    console.error('[numberPool] DB insert failed after SignalWire purchase:', error)
+    console.error('[numberPool] DB insert failed after Telnyx purchase:', error)
     try {
-      await swReleaseNumber(purchased.sid)
+      await telnyxReleaseNumber(purchased.id)
     } catch (releaseErr) {
-      console.error('[numberPool] CRITICAL: Bought a number we cannot insert AND cannot release:', purchased.sid, releaseErr)
+      console.error('[numberPool] CRITICAL: Bought a number we cannot insert AND cannot release:', purchased.id, releaseErr)
     }
     return null
   }

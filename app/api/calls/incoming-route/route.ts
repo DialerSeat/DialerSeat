@@ -23,9 +23,11 @@ const supabase = getServiceClient('calls/incoming-route')
 //   2. If session.current_call_id is set → look up that call + lead
 //   3. Return lead info so the page can populate the profile
 //
-// The amd-result route is what SETS current_call_id (when a fanout call
-// detects a human and the agent is available). So this endpoint is
-// essentially asking: "amd-result, do you have any work for me?"
+// The events route (app/api/calls/events/route.ts, Telnyx's unified Call
+// Control webhook — the successor to the old amd-result route) is what
+// SETS current_call_id (when a fanout call's AMD confirms human and the
+// agent is available/claimed). So this endpoint is essentially asking:
+// "events webhook, do you have any work for me?"
 //
 // Performance:
 //   - Most polls return `incoming: false` (just one indexed lookup)
@@ -122,17 +124,12 @@ export async function GET(req: NextRequest) {
       if (leadRow) lead = leadRow
     }
 
-    // Look up the room name so the client knows which conference its SIP
-    // leg should be in (for diagnostic / future websocket features).
-    let roomName: string | null = null
-    try {
-      const { data: room } = await supabase
-        .from('call_rooms')
-        .select('room_name')
-        .eq('lead_call_sid', call.signalwire_call_id)
-        .maybeSingle()
-      if (room) roomName = room.room_name
-    } catch {}
+    // NOTE: room_name is always null under the direct-bridge Telnyx
+    // architecture (no conference, no call_rooms table — see
+    // TELNYX-MIGRATION-DESIGN.md). Kept as a field in the response shape
+    // for frontend compatibility (in case anything still destructures
+    // call.room_name), but there's nothing to look up anymore.
+    const roomName: string | null = null
 
     return NextResponse.json({
       incoming: true,

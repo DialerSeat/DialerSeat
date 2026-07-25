@@ -22,6 +22,30 @@ export async function GET(req: NextRequest) {
   const userId = gate.userId
 
   const { searchParams } = new URL(req.url)
+  const singleId = searchParams.get('id')
+
+  // Single-lead lookup — used by the "Dial Lead" action on the leads and
+  // recordings pages to hand a specific lead to the dialer page via
+  // ?leadId=. Bypasses all the campaign/pagination/search logic below;
+  // still scoped to the authenticated user's own leads (no IDOR).
+  if (singleId) {
+    const { data, error } = await supabaseAdmin
+      .from('leads')
+      .select('*')
+      .eq('id', singleId)
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    if (error) {
+      console.error('leads list (single) error', error)
+      return apiError(error, { route: 'leads/list' })
+    }
+    if (!data) {
+      return NextResponse.json({ success: false, error: 'Lead not found' }, { status: 404 })
+    }
+    return NextResponse.json({ success: true, lead: data })
+  }
+
   const rawCampaignId = searchParams.get('campaign_id') || 'all'
   const disposition = searchParams.get('disposition') || 'all'
   const search = searchParams.get('search')?.trim() || ''

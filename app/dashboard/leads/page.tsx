@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useUser } from '@clerk/nextjs'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 
@@ -137,6 +138,7 @@ const EMPTY_NEW_LEAD: NewLeadDraft = {
 
 export default function LeadsPage() {
   const { user } = useUser()
+  const router = useRouter()
   const [tier, setTier] = useState<AccessTier>(null)
   const [leads, setLeads] = useState<Lead[]>([])
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
@@ -1032,6 +1034,20 @@ export default function LeadsPage() {
                         </div>
 
                         <div style={{ display: 'flex', gap: 6 }}>
+                          <button
+                            onClick={() => router.push(`/dashboard/dialer?leadId=${lead.id}`)}
+                            style={{
+                              flex: 1, padding: 10,
+                              background: 'transparent',
+                              border: `1px solid ${T.dark}`,
+                              borderRadius: 3,
+                              color: T.dark,
+                              fontSize: 10,
+                              letterSpacing: 2,
+                              fontWeight: 'bold',
+                              cursor: 'pointer',
+                              fontFamily: FUTURA,
+                            }}>DIAL LEAD</button>
                           <button
                             onClick={() => requestDelete(lead)}
                             disabled={saving}

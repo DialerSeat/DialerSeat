@@ -30,34 +30,39 @@ export async function GET(req: Request) {
       return NextResponse.json({ success: true, deleted: 0, message: 'nothing expired' })
     }
 
-    const projectId = process.env.SIGNALWIRE_PROJECT_ID
-    const apiToken = process.env.SIGNALWIRE_API_TOKEN
-    const spaceUrl = process.env.SIGNALWIRE_SPACE_URL
-    const authH =
-      projectId && apiToken
-        ? 'Basic ' + Buffer.from(`${projectId}:${apiToken}`).toString('base64')
-        : null
+    // Same limitation as app/api/recordings/delete/route.ts: Telnyx's
+    // recording id (needed for DELETE /v2/recordings/{id}) isn't
+    // embeddable in the stored download URL the way SignalWire's SID
+    // was — this is a best-effort attempt that mostly won't find a match,
+    // but clearing OUR OWN recording_url reference below (which is what
+    // actually stops it being served/played through us) always succeeds
+    // regardless. See recordings/delete/route.ts's header comment for the
+    // full reasoning and the real fix if hard provider-side deletion
+    // becomes a requirement.
+    const apiKey = process.env.TELNYX_API_KEY
 
     let deleted = 0
-    let swErrors = 0
+    let providerErrors = 0
 
     for (const row of expired) {
 
-      if (row.recording_url && authH && spaceUrl && projectId) {
+      if (row.recording_url && apiKey) {
         try {
-          const match = row.recording_url.match(/Recordings\/([A-Za-z0-9-]+)/)
-          const recordingSid = match?.[1]
-          if (recordingSid) {
-            const delUrl = `https://${spaceUrl}/api/laml/2010-04-01/Accounts/${projectId}/Recordings/${recordingSid}.json`
-            const delRes = await fetch(delUrl, { method: 'DELETE', headers: { Authorization: authH } })
+          const match = row.recording_url.match(/\/recordings\/([A-Za-z0-9-]+)/i)
+          const recordingId = match?.[1]
+          if (recordingId) {
+            const delRes = await fetch(`https://api.telnyx.com/v2/recordings/${recordingId}`, {
+              method: 'DELETE',
+              headers: { Authorization: `Bearer ${apiKey}` },
+            })
             if (!delRes.ok && delRes.status !== 404) {
-              swErrors++
-              console.warn('[recording-retention] SignalWire delete failed:', delRes.status)
+              providerErrors++
+              console.warn('[recording-retention] Telnyx delete failed:', delRes.status)
             }
           }
         } catch (e) {
-          swErrors++
-          console.warn('[recording-retention] SignalWire delete error (continuing):', e)
+          providerErrors++
+          console.warn('[recording-retention] Telnyx delete error (continuing):', e)
         }
       }
 
@@ -81,7 +86,7 @@ export async function GET(req: Request) {
     return NextResponse.json({
       success: true,
       deleted,
-      swErrors,
+      providerErrors,
       hadMore: expired.length === BATCH_LIMIT,
     })
   } catch (error) {

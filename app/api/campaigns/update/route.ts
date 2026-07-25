@@ -11,6 +11,7 @@ const ALLOWED_FIELDS = [
   'status',
   'dialer_mode',
   'amd_enabled',
+  'recording_enabled',
   'predictive_lines_per_agent',
   'voicemail_drop_url',
   'enable_appointments_sub',
@@ -77,6 +78,11 @@ export async function POST(req: Request) {
         case 'amd_enabled': {
           if (typeof v !== 'boolean') continue
           updates.amd_enabled = v
+          break
+        }
+        case 'recording_enabled': {
+          if (typeof v !== 'boolean') continue
+          updates.recording_enabled = v
           break
         }
         case 'predictive_lines_per_agent': {

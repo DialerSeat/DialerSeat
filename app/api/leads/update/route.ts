@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { lead_id, disposition, notes } = body
+    const { lead_id, disposition, notes, source } = body
 
     if (!lead_id) {
       return NextResponse.json({ success: false, error: 'lead_id required' }, { status: 400 })
@@ -62,7 +62,12 @@ export async function POST(req: NextRequest) {
         user_id: userId,
         note: trimmedNotes,
         disposition: disposition ?? null,
-        source: 'leads_tab',
+        // 'source' identifies which page made the edit. Defaults to
+        // leads_tab for backward compatibility with any caller that
+        // doesn't pass it (the original behavior before recordings_tab
+        // edits existed) — recordings page passes 'recordings_tab'
+        // explicitly.
+        source: typeof source === 'string' && source ? source : 'leads_tab',
       })
     }
 

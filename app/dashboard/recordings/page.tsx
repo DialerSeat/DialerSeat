@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useUser } from '@clerk/nextjs'
+import { useRouter } from 'next/navigation'
 
 
 
@@ -102,6 +103,21 @@ const dispositionTint = (disp: string | null): string => {
     default: return T.surface
   }
 }
+
+// Used by the editable disposition grid in the expanded row (distinct
+// from the DISPOSITIONS flat-string array above, which feeds the filter
+// dropdown) — matches DISPOSITIONS in app/dashboard/leads/page.tsx
+// exactly (same labels/colors), so editing disposition here or there
+// looks identical and both write the same values to the same
+// leads.disposition column.
+const EDIT_DISPOSITIONS = [
+  { label: 'CLOSED', color: '#16a34a', bg: '#dcfce7' },
+  { label: 'APPOINTMENT', color: '#2563eb', bg: '#dbeafe' },
+  { label: 'NOT INTERESTED', color: '#d97706', bg: '#fef3c7' },
+  { label: 'DO NOT CALL', color: '#dc2626', bg: '#fee2e2' },
+  { label: 'SKIPPED', color: '#64748b', bg: '#f1f5f9' },
+  { label: 'NO_ANSWER', color: '#64748b', bg: '#f1f5f9' },
+]
 
 interface Recording {
   id: string
@@ -216,6 +232,14 @@ export default function RecordingsPage() {
   const [syncMessage, setSyncMessage] = useState<string | null>(null)
   const [playingId, setPlayingId] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const router = useRouter()
+  // Disposition editing (expanded row only, so one shared value is fine —
+  // mirrors the leads page's editDisposition/saving pattern so both pages
+  // behave identically and write through the same /api/leads/update
+  // endpoint against the same leads.disposition column, keeping them in
+  // sync by construction rather than via a separate sync mechanism.
+  const [editDisposition, setEditDisposition] = useState('')
+  const [savingDisposition, setSavingDisposition] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [disclosureOpen, setDisclosureOpen] = useState(false)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
@@ -338,6 +362,54 @@ export default function RecordingsPage() {
 
   const handleDownload = (id: string) => {
     window.location.href = `/api/recordings/play?call_id=${id}&download=1`
+  }
+
+  // Opens/closes a row's expanded section, seeding editDisposition from
+  // that row's current value — same pattern as the leads page's
+  // handleExpand, so the two pages behave identically.
+  const handleExpandRow = (r: Recording) => {
+    if (expandedId === r.id) {
+      setExpandedId(null)
+      return
+    }
+    setExpandedId(r.id)
+    setEditDisposition(r.disposition || '')
+  }
+
+  // Writes through the SAME /api/leads/update endpoint the leads page
+  // uses, against the same leads.disposition column — this is what keeps
+  // the two pages in sync: there's no separate "recordings disposition"
+  // to fall out of step, it's the lead's one disposition value either
+  // page can edit.
+  const handleSaveDisposition = async (r: Recording) => {
+    if (!r.lead_id) return // "Manual Dial" recordings have no lead to update
+    setSavingDisposition(true)
+    try {
+      const res = await fetch('/api/leads/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lead_id: r.lead_id,
+          disposition: editDisposition,
+          source: 'recordings_tab',
+        }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setRecordings(prev => prev.map(row =>
+          row.id === r.id ? { ...row, disposition: editDisposition } : row
+        ))
+        setExpandedId(null)
+      } else {
+        setSyncMessage(`Disposition update failed: ${data.error || 'unknown error'}`)
+        setTimeout(() => setSyncMessage(null), 6000)
+      }
+    } catch (err: any) {
+      setSyncMessage(`Disposition update error: ${err.message}`)
+      setTimeout(() => setSyncMessage(null), 6000)
+    } finally {
+      setSavingDisposition(false)
+    }
   }
 
   const visibleRecordings = (() => {
@@ -609,6 +681,23 @@ export default function RecordingsPage() {
           font-size: 11px;
           margin-bottom: 4px;
         }
+        .disp-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 6px;
+        }
+        .disp-btn {
+          padding: 8px 4px;
+          border-radius: 3px;
+          font-size: 9px;
+          font-weight: bold;
+          letter-spacing: 1px;
+          cursor: pointer;
+          font-family: ${FUTURA};
+          border: 1px solid ${T.border};
+          background: white;
+        }
+        .disp-btn:disabled { cursor: not-allowed; opacity: 0.5; }
         .rec-notes-block {
           padding: 12px;
           background: ${T.surface};
@@ -858,7 +947,7 @@ export default function RecordingsPage() {
               onClick={(e) => {
                 const target = e.target as HTMLElement
                 if (target.closest('button, audio, .rec-actions')) return
-                setExpandedId(isExpanded ? null : r.id)
+                handleExpandRow(r)
               }}
             >
               {/* DESKTOP */}
@@ -901,6 +990,15 @@ export default function RecordingsPage() {
                       onClick={() => handleDownload(r.id)}
                     >↓ SAVE</button>
                   </div>
+                  {hasLead && (
+                    <div className="rec-actions-row">
+                      <button
+                        className="rec-btn"
+                        style={{ width: '100%', borderColor: T.dark, color: T.dark }}
+                        onClick={() => router.push(`/dashboard/dialer?leadId=${r.lead_id}`)}
+                      >☎ DIAL LEAD</button>
+                    </div>
+                  )}
                   <div className="rec-actions-row">
                     {isConfirming ? (
                       <>
@@ -962,6 +1060,15 @@ export default function RecordingsPage() {
                       onClick={() => handleDownload(r.id)}
                     >↓ SAVE</button>
                   </div>
+                  {hasLead && (
+                    <div className="rec-actions-row">
+                      <button
+                        className="rec-btn"
+                        style={{ width: '100%', borderColor: T.dark, color: T.dark }}
+                        onClick={() => router.push(`/dashboard/dialer?leadId=${r.lead_id}`)}
+                      >☎ DIAL LEAD</button>
+                    </div>
+                  )}
                   <div className="rec-actions-row">
                     {isConfirming ? (
                       <>
@@ -1028,6 +1135,67 @@ export default function RecordingsPage() {
                       {notes || 'No notes recorded for this call.'}
                     </div>
                   </div>
+                  {hasLead && (
+                    <div>
+                      <div className="rec-expand-section-label">
+                        EDIT DISPOSITION — SYNCED WITH LEADS PAGE
+                      </div>
+                      <div className="disp-grid">
+                        {EDIT_DISPOSITIONS.filter(d => d.label !== 'NO_ANSWER').map(d => (
+                          <button
+                            key={d.label}
+                            className="disp-btn"
+                            onClick={(e) => { e.stopPropagation(); setEditDisposition(d.label) }}
+                            style={{
+                              background: editDisposition === d.label ? d.color : d.bg,
+                              color: editDisposition === d.label ? 'white' : d.color,
+                              borderColor: d.color,
+                            }}
+                          >{d.label}</button>
+                        ))}
+                        <button
+                          className="disp-btn"
+                          onClick={(e) => { e.stopPropagation(); setEditDisposition('') }}
+                          style={{
+                            background: editDisposition === '' ? T.muted : 'white',
+                            color: editDisposition === '' ? 'white' : T.muted,
+                            borderColor: T.border,
+                          }}
+                        >CLEAR</button>
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setExpandedId(null) }}
+                          style={{
+                            flex: 1, padding: 10,
+                            background: 'transparent',
+                            border: `1px solid ${T.border}`,
+                            borderRadius: 3,
+                            color: T.muted,
+                            fontSize: 10,
+                            letterSpacing: 2,
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                            fontFamily: FUTURA,
+                          }}>CANCEL</button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleSaveDisposition(r) }}
+                          disabled={savingDisposition}
+                          style={{
+                            flex: 2, padding: 10, border: 'none',
+                            background: T.dark,
+                            borderRadius: 3,
+                            color: 'white',
+                            fontSize: 10,
+                            letterSpacing: 2,
+                            fontWeight: 'bold',
+                            cursor: savingDisposition ? 'not-allowed' : 'pointer',
+                            opacity: savingDisposition ? 0.6 : 1,
+                            fontFamily: FUTURA,
+                          }}>{savingDisposition ? 'SAVING...' : 'SAVE DISPOSITION'}</button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
