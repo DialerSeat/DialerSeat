@@ -20,25 +20,54 @@ interface LeadInput {
 export function isCallableNow(lead: LeadInput): CallabilityResult {
 
   // ── SANDBOX OVERRIDE: 24/7 TESTING ──────────────────────────────────────
-  // Per build instruction: this sandbox needs to place test calls at any
+  // Per build instruction: the sandbox needs to place test calls at any
   // hour, not just within each state's TCPA/TSR calling window, since
-  // admin testing doesn't happen on a lead's schedule. This bypass is
-  // GATED BEHIND AN ENV VAR (not a hardcoded true) so:
-  //   (a) it's impossible for this file to silently behave differently in
-  //       a deployment that forgot to set the flag — default is OFF, i.e.
-  //       real TCPA enforcement, same as production;
-  //   (b) if this file is ever copied back toward production during
-  //       cutover, it does NOT carry a live compliance hole with it unless
-  //       someone deliberately sets SANDBOX_DISABLE_CALLING_WINDOW=true in
-  //       that environment too.
-  // This does NOT change the underlying rule tables (timezones.ts) or the
-  // real logic below — it's a short-circuit at the very top, so flipping
-  // the env var off instantly restores full enforcement with zero other
-  // code changes.
-  if (process.env.SANDBOX_DISABLE_CALLING_WINDOW === 'true') {
+  // admin testing doesn't happen on a lead's schedule.
+  //
+  // WHY THIS CHECKS THE HOSTNAME, NOT A MANUAL ENV VAR: the original
+  // version gated this behind SANDBOX_DISABLE_CALLING_WINDOW=true, a
+  // variable someone sets by hand. That's fragile now that sandbox and
+  // production run from the SAME codebase pushed to two different Vercel
+  // projects — env vars get copied between them (exactly what happened
+  // during this migration), and a copy-paste mistake could carry
+  // SANDBOX_DISABLE_CALLING_WINDOW=true into production, silently
+  // disabling real TCPA/TSR compliance for actual subscribers. That's not
+  // a hypothetical; it's the literal failure mode being guarded against
+  // here.
+  //
+  // Instead, this checks VERCEL_URL — a value Vercel itself injects
+  // automatically per-deployment, reflecting the REAL domain the code is
+  // actually running on right now. It cannot be copy-pasted between
+  // projects the way a manual env var can; it's generated fresh by
+  // Vercel's own infrastructure for every single deployment. The bypass
+  // only activates when that hostname matches the sandbox's own known
+  // domain(s) — listed explicitly below, not a wildcard/pattern match, so
+  // there's no ambiguity about what counts as "sandbox."
+  //
+  // Add every real sandbox domain/alias here (the ones from `vercel
+  // inspect`, or your primary sandbox domain) — anything NOT in this list
+  // gets full, real TCPA enforcement, including the actual production
+  // domain, by default, with no separate flag required to keep it safe.
+  // WHY THIS CHECKS VERCEL_PROJECT_PRODUCTION_URL, NOT VERCEL_URL: VERCEL_URL
+  // is the per-deployment generated hash URL (e.g.
+  // sandbox-r71dg6k9n-dialerseats-projects.vercel.app) — it's DIFFERENT on
+  // every single deployment, so a fixed hostname list could never reliably
+  // match it. VERCEL_PROJECT_PRODUCTION_URL is the stable project-level
+  // domain Vercel exposes instead (confirmed via Vercel's own system env
+  // var docs) — the same value across every deployment of a given
+  // project, which is what makes a fixed comparison list actually work.
+  const SANDBOX_HOSTNAMES = [
+    'sandbox21.vercel.app',
+    'sandbox-dialerseats-projects.vercel.app',
+    'sandbox-dialerseat-dialerseats-projects.vercel.app',
+  ]
+  const currentHost = (process.env.VERCEL_PROJECT_PRODUCTION_URL || '').toLowerCase()
+  const isSandboxDeployment = SANDBOX_HOSTNAMES.some(h => currentHost === h.toLowerCase())
+
+  if (isSandboxDeployment) {
     return {
       allowed: true,
-      reason: 'Sandbox: calling-window enforcement disabled for 24/7 testing',
+      reason: 'Sandbox deployment: calling-window enforcement disabled for 24/7 testing',
     }
   }
 
