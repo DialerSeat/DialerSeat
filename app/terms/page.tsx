@@ -200,7 +200,7 @@ export default function TermsPage() {
               <li>Outbound phone number provisioning (where applicable)</li>
             </ul>
             <p>
-              We're not a telephony carrier. We use third-party carriers (currently SignalWire) to
+              We're not a telephony carrier. We use third-party carriers (currently Telnyx) to
               place calls. Carrier outages and limitations affect DialerSeat.
             </p>
             <p>
@@ -371,7 +371,7 @@ export default function TermsPage() {
             <h2 id="availability">9. Service availability</h2>
             <p>
               We aim for high uptime but do not promise specific availability levels. The service
-              depends on third-party providers (Supabase, Vercel, Clerk, Stripe, SignalWire) whose
+              depends on third-party providers (Supabase, Vercel, Clerk, Stripe, Telnyx) whose
               outages affect DialerSeat. We will make reasonable efforts to notify you of planned
               maintenance and to resolve outages promptly.
             </p>
@@ -423,7 +423,7 @@ export default function TermsPage() {
             <ul>
               <li>We are not liable for any indirect, incidental, special, consequential, or punitive damages, including lost profits, lost revenue, lost data, or business interruption</li>
               <li>Our total cumulative liability for any claim arising out of or related to these Terms or the service is limited to the amount you paid us in the 12 months preceding the claim</li>
-              <li>We are not liable for damages caused by third-party providers we use to deliver the service (Supabase, Vercel, Clerk, Stripe, SignalWire, etc.)</li>
+              <li>We are not liable for damages caused by third-party providers we use to deliver the service (Supabase, Vercel, Clerk, Stripe, Telnyx, etc.)</li>
               <li>We are not liable for TCPA, DNC, or other telemarketing law violations committed using DialerSeat, even where our compliance features are involved</li>
             </ul>
             <p>

@@ -93,7 +93,7 @@ export default function Page() {
               </div>
               <div className="exp-card">
                 <h3>STIR/SHAKEN</h3>
-                <p>Carriers now attest to whether outbound calls are legitimate. We provision through SignalWire with full attestation enabled.</p>
+                <p>Carriers now attest to whether outbound calls are legitimate. We provision through Telnyx with full attestation enabled.</p>
               </div>
               <div className="exp-card">
                 <h3>RECORDED NOTICE ON ABANDON</h3>

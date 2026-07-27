@@ -198,7 +198,7 @@ export default function DataRecordingsFaqView() {
           </p>
           <ul>
             <li><strong>Retention is 30 days.</strong> After that, a recording ages out automatically. Call metadata — timestamp, disposition, AMD result — is kept separately for longer; see <Link href="/faq/how-we-keep-compliance">how we keep compliance</Link> for the full retention split.</li>
-            <li><strong>You can delete one early, any time.</strong> Deleting a recording removes it from the carrier directly, not just from your view of it — it&apos;s a real delete, not a hide.</li>
+            <li><strong>You can delete one early, any time.</strong> Deleting a recording clears it from your dashboard immediately and is no longer playable through DialerSeat. We also attempt to delete it from the carrier's storage at the same time; that provider-side step is best-effort depending on how the recording was stored.</li>
             <li><strong>Only the account that made the call can access its recording.</strong> On a Manager+ team, that means the owner sees recordings for calls made under campaigns they own; an individual agent&apos;s own dials are theirs.</li>
           </ul>
         </section>

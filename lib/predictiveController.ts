@@ -45,6 +45,7 @@ export interface ControllerResult {
   skipped: number
   released: number
   dedupedPhones: number      // NEW — how many leads in the batch were dupes
+  dialedPhones: string[]     // NEW — actual numbers placed this tick, for live-activity display
 }
 
 interface RunControllerInput {
@@ -155,7 +156,7 @@ export async function runPredictiveController(
     return {
       fired: 0, desired, inFlight, effectiveLines, degraded,
       reason: `at target: ${inFlight}/${desired} in flight`,
-      callSids: [], skipped: 0, released, dedupedPhones: 0,
+      callSids: [], skipped: 0, released, dedupedPhones: 0, dialedPhones: [],
     }
   }
 
@@ -174,7 +175,7 @@ export async function runPredictiveController(
     return {
       fired: 0, desired, inFlight, effectiveLines, degraded,
       reason: `claim failed: ${claimErr.message}`,
-      callSids: [], skipped: 0, released, dedupedPhones: 0,
+      callSids: [], skipped: 0, released, dedupedPhones: 0, dialedPhones: [],
     }
   }
 
@@ -188,7 +189,7 @@ export async function runPredictiveController(
     return {
       fired: 0, desired, inFlight, effectiveLines, degraded,
       reason: 'no claimable leads',
-      callSids: [], skipped: 0, released, dedupedPhones: 0,
+      callSids: [], skipped: 0, released, dedupedPhones: 0, dialedPhones: [],
     }
   }
 
@@ -231,12 +232,13 @@ export async function runPredictiveController(
     return {
       fired: 0, desired, inFlight, effectiveLines, degraded,
       reason: `claimed ${leads.length} leads but all were dupes/invalid`,
-      callSids: [], skipped: 0, released, dedupedPhones: dupeLeadIds.length,
+      callSids: [], skipped: 0, released, dedupedPhones: dupeLeadIds.length, dialedPhones: [],
     }
   }
 
   
   const callSids: string[] = []
+  const dialedPhones: string[] = []
   let skipped = 0
 
   const placements = await Promise.allSettled(
@@ -259,6 +261,7 @@ export async function runPredictiveController(
 
     if (result.status === 'fulfilled' && result.value.success && result.value.callControlId) {
       callSids.push(result.value.callControlId)
+      dialedPhones.push(lead.phone)
     } else {
       skipped++
       try {
@@ -291,6 +294,7 @@ export async function runPredictiveController(
     skipped,
     released,
     dedupedPhones: dupeLeadIds.length,
+    dialedPhones,
   }
 }
 
@@ -298,6 +302,6 @@ function zeroResult(reason: string, released: number): ControllerResult {
   return {
     fired: 0, desired: 0, inFlight: 0, effectiveLines: 0,
     degraded: false, reason,
-    callSids: [], skipped: 0, released, dedupedPhones: 0,
+    callSids: [], skipped: 0, released, dedupedPhones: 0, dialedPhones: [],
   }
 }

@@ -765,7 +765,7 @@ export default function FaqView() {
                     Application data sits on Supabase (US region).
                     Recordings are stored encrypted. Payments are handled
                     by Stripe — DialerSeat never sees or stores credit
-                    card numbers. Telephony runs through SignalWire with
+                    card numbers. Telephony runs through Telnyx with
                     full STIR/SHAKEN attestation.
                   </p>
                   <p>

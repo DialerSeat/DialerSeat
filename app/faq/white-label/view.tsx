@@ -340,7 +340,7 @@ export default function View() {
               <span className="wl-math-val">$150,000–$300,000</span>
             </div>
             <div className="wl-math-row">
-              <span className="wl-math-label">SignalWire / Twilio infrastructure</span>
+              <span className="wl-math-label">Telnyx / Twilio infrastructure</span>
               <span className="wl-math-val">$2,000+/mo ongoing</span>
             </div>
             <div className="wl-math-row">
@@ -431,7 +431,7 @@ export default function View() {
               <h4>▸ NOT YET</h4>
               <ul>
                 <li>Custom Stripe Connect — agents still pay DialerSeat directly for their $35 seat (we&apos;re building this)</li>
-                <li>Custom Twilio/SignalWire trunks — outbound calls go through our infrastructure</li>
+                <li>Custom Telnyx trunks — outbound calls go through our infrastructure</li>
                 <li>Per-region custom domain SSL (we handle SSL automatically; advanced cert pinning isn&apos;t available)</li>
               </ul>
             </div>

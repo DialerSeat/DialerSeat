@@ -371,9 +371,9 @@ export default function ProgressiveDialerPage() {
               vertical where the cost of a TCPA complaint dwarfed the
               throughput gain from predictive. It&apos;s still that today,
               mostly. AMD has gotten dramatically better — pre-dial
-              SignalWire/Twilio detection in the 2020s is meaningfully more
-              accurate than the early DSP attempts — but the shape of the
-              mode hasn&apos;t changed.
+              carrier-side detection from providers like Telnyx in the
+              2020s is meaningfully more accurate than the early DSP
+              attempts — but the shape of the mode hasn&apos;t changed.
             </p>
           </div>
         </section>
@@ -455,7 +455,7 @@ export default function ProgressiveDialerPage() {
               the whole point of the mode.
             </p>
             <ul className="dm-bullets">
-              <li>SignalWire AMD via the platform&apos;s native call answering analytics. Detects machine_start, machine_end_beep, machine_end_silence, machine_end_other, fax, and unknown.</li>
+              <li>Telnyx AMD via the platform&apos;s native call detection. Classifies every pickup as human, machine, or not_sure (not_sure is treated as human, so a call never stalls on an ambiguous read).</li>
               <li>Machine-detected calls get dropped server-side. Agent sees a quick &quot;VOICEMAIL FILTERED&quot; log line, then the next lead loads.</li>
               <li>Auto-advance after disposition (you don&apos;t click between calls).</li>
               <li>One outbound line per agent. Zero abandonment risk by definition.</li>

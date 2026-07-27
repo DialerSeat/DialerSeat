@@ -242,7 +242,7 @@ export default function StructuredData({ branding }: { branding?: TenantBranding
           name: 'Does DialerSeat detect voicemail automatically?',
           acceptedAnswer: {
             '@type': 'Answer',
-            text: 'Yes. DialerSeat uses SignalWire\'s answering machine detection (AMD) engine to analyze call audio at pickup and classify whether a human, voicemail, fax, or machine answered. When a non-human answer is detected, the call is hung up before the agent is connected, and the recording is automatically deleted on both the local database and the SignalWire side.',
+            text: 'Yes. DialerSeat uses Telnyx\'s native call-detection engine to analyze call audio at pickup and classify whether a human, an uncertain result, or a machine answered. When a machine is detected, the call is hung up before the agent is connected, and the recording reference is removed from your dashboard immediately.',
           },
         },
         {

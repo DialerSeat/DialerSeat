@@ -435,7 +435,7 @@ export default function WhyDialerSeatView() {
                   <h3>WRITTEN BY ENGINEERS</h3>
                   <p>
                     The codebase is held to a standard. We use modern
-                    infrastructure (SignalWire for telephony, Supabase for
+                    infrastructure (Telnyx for telephony, Supabase for
                     data, Stripe for billing) and we keep the implementation
                     tight enough to ship changes weekly without breaking
                     things.

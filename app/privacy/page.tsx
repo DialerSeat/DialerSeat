@@ -273,7 +273,7 @@ export default function PrivacyPolicyPage() {
               <li><strong>Vercel</strong> (application hosting) — runs the DialerSeat web application. <a href="https://vercel.com/legal/privacy-policy" target="_blank" rel="noopener noreferrer">Privacy policy</a></li>
               <li><strong>Clerk</strong> (authentication) — handles login, sessions, and password storage. <a href="https://clerk.com/legal/privacy" target="_blank" rel="noopener noreferrer">Privacy policy</a></li>
               <li><strong>Stripe</strong> (payments) — processes your subscription billing. <a href="https://stripe.com/privacy" target="_blank" rel="noopener noreferrer">Privacy policy</a></li>
-              <li><strong>SignalWire</strong> (telephony) — connects your outbound calls and stores call recordings. <a href="https://signalwire.com/privacy" target="_blank" rel="noopener noreferrer">Privacy policy</a></li>
+              <li><strong>Telnyx</strong> (telephony) — connects your outbound calls and stores call recordings. <a href="https://telnyx.com/privacy-policy" target="_blank" rel="noopener noreferrer">Privacy policy</a></li>
               <li><strong>Sentry</strong> (error monitoring) — receives error reports with stack traces. PII is scrubbed before transmission. <a href="https://sentry.io/privacy/" target="_blank" rel="noopener noreferrer">Privacy policy</a></li>
             </ul>
             <p>
@@ -284,7 +284,7 @@ export default function PrivacyPolicyPage() {
 
             <h2 id="call-recordings">5. Call recordings and consent</h2>
             <p>
-              DialerSeat records outbound calls by default. Recordings are stored in SignalWire's
+              DialerSeat records outbound calls by default. Recordings are stored in Telnyx's
               infrastructure and accessible to you in your dashboard.
             </p>
             <p>
@@ -322,7 +322,7 @@ export default function PrivacyPolicyPage() {
               <li><strong>Encryption at rest:</strong> Supabase encrypts all stored data at rest using AES-256.</li>
               <li><strong>Authentication:</strong> Clerk-managed sessions with industry-standard security.</li>
               <li><strong>Access controls:</strong> Only you (and team members you authorize) can access your account data.</li>
-              <li><strong>Webhook signature verification:</strong> All inbound webhooks (Stripe, SignalWire) are signature-verified to prevent forgery.</li>
+              <li><strong>Webhook signature verification:</strong> All inbound webhooks (Stripe, Telnyx) are signature-verified to prevent forgery.</li>
               <li><strong>PII scrubbing in error reports:</strong> Sentry receives stack traces but not request bodies or headers containing tokens.</li>
               <li><strong>Idempotent payment processing:</strong> Stripe events are deduplicated to prevent double-charging.</li>
             </ul>

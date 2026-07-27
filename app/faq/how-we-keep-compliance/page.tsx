@@ -146,7 +146,8 @@ export default function Page() {
             <h3>5. AMD pre-screen on progressive and predictive</h3>
             <p>
               Answering Machine Detection runs on every progressive and
-              predictive call by default, via SignalWire&apos;s native AMD.
+              predictive call by default, via Telnyx&apos;s native call
+              detection.
               Machine-detected calls drop server-side and never reach an
               agent — which means the abandon-rate math isn&apos;t
               polluted by phantom &quot;answered&quot; calls that are just
@@ -179,7 +180,7 @@ export default function Page() {
 
             <h3>8. STIR/SHAKEN attestation</h3>
             <p>
-              Outbound calls placed through DialerSeat go through SignalWire,
+              Outbound calls placed through DialerSeat go through Telnyx,
               which attests calls at the A level where the call path supports
               it. This is the carrier-level proof-of-identity that downstream
               carriers use to decide whether to label your call as spam,

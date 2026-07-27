@@ -101,11 +101,11 @@ export default function Page() {
                     seconds, which is enough to make people hang up.
                   </p>
                   <p>
-                    On DialerSeat, AMD runs through SignalWire&apos;s
-                    native detection, which is tuned for speed and gets
-                    most calls to about 1.2 seconds of analysis. That&apos;s
-                    short enough that most humans wait, but it&apos;s never
-                    going to be zero. It&apos;s a trade-off.
+                    On DialerSeat, AMD runs through Telnyx&apos;s native
+                    call detection, tuned for speed so the analysis window
+                    stays short. That&apos;s short enough that most humans
+                    wait, but it&apos;s never going to be zero. It&apos;s a
+                    trade-off.
                   </p>
                 </div>
               </details>
@@ -114,14 +114,17 @@ export default function Page() {
                 <summary>How does DialerSeat&apos;s AMD work specifically?</summary>
                 <div className="answer">
                   <p>
-                    We use SignalWire&apos;s native AMD, which is built on
-                    top of their carrier-grade telephony infrastructure. It
-                    classifies every pickup into one of six outcomes:
-                    <code> machine_start</code>, <code>machine_end_beep</code>,
-                    <code> machine_end_silence</code>, <code>machine_end_other</code>,
-                    <code> fax</code>, or <code>unknown</code>. Anything
-                    classified as machine drops server-side; your screen
-                    never lights up.
+                    We use Telnyx&apos;s native call-detection engine,
+                    built on top of their carrier-grade telephony
+                    infrastructure. It classifies every pickup as{' '}
+                    <code>human</code>, <code>machine</code>, or{' '}
+                    <code>not_sure</code>. Anything classified as
+                    <code> machine</code> drops server-side, silently and
+                    instantly, before your screen ever lights up — no
+                    disposition prompt, the dialer just moves on to the
+                    next lead. A <code>not_sure</code> result is treated
+                    the same as a human pickup, so a call never gets stuck
+                    waiting on an ambiguous read.
                   </p>
                   <p>
                     Every AMD result is stored on the call record — so you

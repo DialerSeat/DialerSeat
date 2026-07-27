@@ -91,6 +91,7 @@ interface HeartbeatControllerSummary {
   degraded: boolean
   reason: string
   callSids?: string[]
+  dialedPhones?: string[]
   skipped?: number
   released?: number
   dedupedPhones?: number
@@ -206,6 +207,12 @@ function DialerPageInner() {
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
   const [pacingInfo, setPacingInfo] = useState<PacingInfo | null>(null)
   const [amdActivity, setAmdActivity] = useState<string[]>([])
+  // Currently-ringing numbers for the live-activity panel (predictive: all
+  // lines in flight right now, so they can be shown highlighted together as
+  // a group — distinct from amdActivity's historical scrollback log, which
+  // only ever shows what already happened). Cleared/replaced each
+  // heartbeat tick with whatever's actually in flight that moment.
+  const [activeDialingNumbers, setActiveDialingNumbers] = useState<string[]>([])
 
   const [linesPref, setLinesPref] = useState<LinesPrefInfo | null>(null)
   const [linesPrefSaving, setLinesPrefSaving] = useState(false)
@@ -862,15 +869,28 @@ function DialerPageInner() {
           setLastControllerSummary(data.controller as HeartbeatControllerSummary)
           const summary = data.controller as HeartbeatControllerSummary
           if (summary.fired > 0) {
+            const numbers = summary.dialedPhones && summary.dialedPhones.length > 0
+              ? summary.dialedPhones
+              : []
+            setActiveDialingNumbers(numbers)
             setAmdActivity(prev => [
-              `CONTROLLER FIRED ${summary.fired} LINE${summary.fired === 1 ? '' : 'S'} (${summary.effectiveLines}x target)`,
+              numbers.length > 0
+                ? `DIALING ${numbers.length} LINE${numbers.length === 1 ? '' : 'S'} — ${numbers.join(', ')}`
+                : `CONTROLLER FIRED ${summary.fired} LINE${summary.fired === 1 ? '' : 'S'} (${summary.effectiveLines}x target)`,
               ...prev,
             ].slice(0, 5))
           } else if (summary.degraded) {
+            setActiveDialingNumbers([])
             setAmdActivity(prev => [
               `⚠ AUTO-DEGRADED — abandon rate trigger`,
               ...prev,
             ].slice(0, 5))
+          } else {
+            // Nothing fired this tick — no lines currently in flight from
+            // this controller call. Clear the highlight set so the panel
+            // doesn't keep showing stale numbers as "active" once they've
+            // actually resolved (answered/failed/AMD'd) between ticks.
+            setActiveDialingNumbers([])
           }
         }
       } catch {
@@ -1449,7 +1469,11 @@ function DialerPageInner() {
     armDialing() // user-initiated dial — allow SignalWire to bridge to us
     setLastCallDuration(null) // clear the previous call's duration readout
 
-    setAmdActivity(prev => [`AMD ENABLED — analyzing pickup`, ...prev].slice(0, 5))
+    setAmdActivity(prev => [
+      `DIALING ${lead.first_name || ''} ${lead.last_name || ''} — ${lead.phone}`.trim(),
+      `AMD ENABLED — analyzing pickup`,
+      ...prev,
+    ].slice(0, 5))
 
     try {
       const res = await fetch('/api/calls/outbound', {
@@ -2424,6 +2448,31 @@ function DialerPageInner() {
             font-size: 13px !important;
             line-height: 1.75 !important;
           }
+          /* Live activity panel (dialing state): reduce letter-spacing and
+             font sizes just enough that phone numbers and log lines wrap
+             cleanly instead of crowding/clipping on a narrow screen. Chips
+             go full-width and stack so a full E.164 number always has room. */
+          .dialer-live-activity-label,
+          .dialer-live-activity-sublabel {
+            letter-spacing: 1px !important;
+          }
+          .dialer-live-number-chip {
+            font-size: 13px !important;
+            letter-spacing: 0.5px !important;
+            padding: 7px 10px !important;
+            flex-wrap: wrap;
+          }
+          .dialer-live-now-dialing-number {
+            font-size: 15px !important;
+            letter-spacing: 0.5px !important;
+          }
+          .dialer-live-activity-log {
+            max-height: 140px !important;
+          }
+          .dialer-live-activity-line {
+            font-size: 10.5px !important;
+            letter-spacing: 0 !important;
+          }
           .dialer-status-bar-left { gap: 10px; }
           .dialer-status-bar-right { gap: 10px; }
           .dialer-status-bar-right .dialer-time-block { display: none !important; }
@@ -2827,25 +2876,117 @@ function DialerPageInner() {
 
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
                 {(!displayLead || status === 'calling') ? (
-                  <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                    <p style={{ fontSize: '11px', letterSpacing: '3px', color: terminalMuted }}>
-                      {noLeads ? 'NO MORE LEADS AVAILABLE' : status === 'calling' ? 'DIALING IN QUEUE...' : 'AWAITING DIAL COMMAND'}
-                    </p>
-                    {noLeads && (
-                      <p style={{
-                        fontSize: '10px',
-                        color: tcpaBlockedAll ? terminalAmber : terminalRed,
-                        marginTop: '8px',
-                        letterSpacing: '2px',
+                  status === 'calling' ? (
+                    <div className="dialer-live-activity" style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      <div className="dialer-live-activity-label" style={{ fontSize: '10px', letterSpacing: '3px', color: terminalMuted, fontFamily: FUTURA, fontWeight: 'bold' }}>
+                        LIVE ACTIVITY
+                      </div>
+
+                      {/* ── CURRENT / IN-FLIGHT NUMBER(S) ─────────────────────────
+                          Power/Progressive/Preview: one number, the exact one
+                          being dialed right now. Predictive: every line
+                          currently in flight this tick, shown together and
+                          highlighted as a group — the count matches however
+                          many lines the campaign/dialer is actually set to
+                          dial at once (effectiveLines from the controller),
+                          not a hardcoded number. */}
+                      {isPredictive && activeDialingNumbers.length > 0 ? (
+                        <div>
+                          <div className="dialer-live-activity-sublabel" style={{ fontSize: '9px', letterSpacing: '2px', color: terminalAccent, fontFamily: FUTURA, fontWeight: 'bold', marginBottom: 6 }}>
+                            DIALING {activeDialingNumbers.length} LINE{activeDialingNumbers.length === 1 ? '' : 'S'} SIMULTANEOUSLY
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            {activeDialingNumbers.map((num, i) => (
+                              <div key={`${num}-${i}`} className="dialer-live-number-chip" style={{
+                                padding: '8px 12px',
+                                background: 'rgba(16, 185, 129, 0.12)',
+                                border: `1.5px solid ${terminalGreen}`,
+                                borderRadius: 4,
+                                fontFamily: FUTURA,
+                                fontSize: 14,
+                                fontWeight: 'bold',
+                                color: terminalText,
+                                letterSpacing: '1px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 8,
+                              }}>
+                                <span style={{ color: terminalGreen }}>●</span>
+                                <span className="dialer-live-number-chip-text" style={{ overflowWrap: 'anywhere' }}>{num}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="dialer-live-now-dialing" style={{
+                          padding: '10px 14px',
+                          background: terminalBg,
+                          border: `2px solid ${terminalAccent}`,
+                          borderRadius: 4,
+                        }}>
+                          <div className="dialer-live-activity-sublabel" style={{ fontSize: '9px', letterSpacing: '2px', color: terminalMuted, fontFamily: FUTURA, marginBottom: 4 }}>
+                            NOW DIALING
+                          </div>
+                          <div className="dialer-live-now-dialing-number" style={{ fontFamily: FUTURA, fontSize: 17, fontWeight: 'bold', color: terminalText, letterSpacing: '1px', overflowWrap: 'anywhere' }}>
+                            {previewLead?.phone || activeDialingNumbers[0] || '—'}
+                          </div>
+                          {(previewLead?.first_name || previewLead?.last_name) && (
+                            <div style={{ fontFamily: FUTURA, fontSize: 12, color: terminalMuted, marginTop: 2, overflowWrap: 'anywhere' }}>
+                              {previewLead.first_name} {previewLead.last_name}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* ── FULL SCROLLING LOG — everything happening, in order ── */}
+                      <div className="dialer-live-activity-log" style={{
+                        display: 'flex', flexDirection: 'column', gap: 3,
+                        maxHeight: 180, overflowY: 'auto',
+                        borderTop: `1px solid ${terminalBorder}`, paddingTop: 8,
                       }}>
-                        {tcpaBlockedAll
-                          ? 'ALL LEADS OUTSIDE 8AM-9PM WINDOW — TRY LATER'
-                          : isPersonalScope
-                            ? 'UPLOAD MORE LEADS TO CONTINUE'
-                            : 'NO MORE TEAM LEADS — TRY ANOTHER CAMPAIGN OR SCOPE'}
+                        {amdActivity.length === 0 ? (
+                          <div style={{ fontFamily: FUTURA, fontSize: 11, color: terminalMuted, letterSpacing: '1px' }}>
+                            Waiting for activity…
+                          </div>
+                        ) : (
+                          amdActivity.map((line, i) => (
+                            <div key={i} className="dialer-live-activity-line" style={{
+                              fontFamily: FUTURA,
+                              fontSize: 11,
+                              color: i === 0 ? terminalText : terminalMuted,
+                              letterSpacing: '0.5px',
+                              lineHeight: 1.5,
+                              wordBreak: 'break-word',
+                              overflowWrap: 'anywhere',
+                            }}>
+                              {'> '}{line}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                      <p style={{ fontSize: '11px', letterSpacing: '3px', color: terminalMuted, fontFamily: FUTURA }}>
+                        {noLeads ? 'NO MORE LEADS AVAILABLE' : 'AWAITING DIAL COMMAND'}
                       </p>
-                    )}
-                  </div>
+                      {noLeads && (
+                        <p style={{
+                          fontSize: '10px',
+                          color: tcpaBlockedAll ? terminalAmber : terminalRed,
+                          marginTop: '8px',
+                          letterSpacing: '2px',
+                          fontFamily: FUTURA,
+                        }}>
+                          {tcpaBlockedAll
+                            ? 'ALL LEADS OUTSIDE 8AM-9PM WINDOW — TRY LATER'
+                            : isPersonalScope
+                              ? 'UPLOAD MORE LEADS TO CONTINUE'
+                              : 'NO MORE TEAM LEADS — TRY ANOTHER CAMPAIGN OR SCOPE'}
+                        </p>
+                      )}
+                    </div>
+                  )
                 ) : (
                   <>
                     <div style={{ padding: '12px', flexShrink: 0 }}>
