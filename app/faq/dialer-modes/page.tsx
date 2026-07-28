@@ -74,10 +74,10 @@ export default function DialerModesTldrPage() {
         <style>{`
           .dmt-root, .dmt-root * { box-sizing: border-box; }
           .dmt-root {
-            background: #f0f1f4;
+            background: #0a0a14;
             min-height: 100vh;
             font-family: 'Futura PT', Futura, sans-serif;
-            color: #1a1c24;
+            color: #ffffff;
           }
           .dmt-hero {
             background: linear-gradient(135deg, #0a0a14 0%, #1a1a2e 100%);
@@ -128,8 +128,8 @@ export default function DialerModesTldrPage() {
             gap: 18px;
           }
           .dmt-card {
-            background: white;
-            border: 1px solid #e4e6ec;
+            background: #1a1a2e;
+            border: 1px solid #2a2a4a;
             border-top: 4px solid var(--mc);
             border-radius: 10px;
             padding: 24px 24px 20px;
@@ -153,7 +153,7 @@ export default function DialerModesTldrPage() {
             font-weight: 800;
             letter-spacing: -0.2px;
             margin: 0 0 10px 0;
-            color: #1a1c24;
+            color: #ffffff;
           }
           .dmt-body {
             font-size: 14px;
@@ -183,7 +183,7 @@ export default function DialerModesTldrPage() {
             padding: 8px 24px 64px;
             text-align: center;
             font-size: 13px;
-            color: #5a5e6a;
+            color: #8888aa;
             line-height: 1.6;
           }
           @media (max-width: 720px) {
@@ -195,6 +195,7 @@ export default function DialerModesTldrPage() {
         <section className="dmt-hero">
           <div className="dmt-hero-inner">
             <div className="dmt-eyebrow">DIALER MODES · TL;DR</div>
+          <span style={{ fontSize: 11, color: "#8888aa", letterSpacing: "2px", display: "block", marginBottom: 16 }}>LAST UPDATED 07/28/2026</span>
             <h1>The four modes, in plain English.</h1>
             <p className="dmt-lead">
               DialerSeat has four ways to dial. Here&apos;s the simple version of

@@ -32,10 +32,10 @@ export default function PowerDialerPage() {
         <style>{`
           .dm-root, .dm-root * { box-sizing: border-box; }
           .dm-root {
-            background: #f0f1f4;
+            background: #0a0a14;
             min-height: 100vh;
             font-family: 'Futura PT', Futura, sans-serif;
-            color: #1a1c24;
+            color: #ffffff;
           }
           .dm-hero {
             background: linear-gradient(135deg, #0a0a14 0%, #1a1a2e 100%);
@@ -82,7 +82,7 @@ export default function PowerDialerPage() {
             margin: 0 auto;
             padding: 72px 32px;
           }
-          .dm-section.alt { background: white; max-width: none; }
+          .dm-section.alt { background: #1a1a2e; max-width: none; }
           .dm-section.alt > .inner {
             max-width: 780px;
             margin: 0 auto;
@@ -97,7 +97,7 @@ export default function PowerDialerPage() {
           .dm-section p {
             font-size: 16px;
             line-height: 1.75;
-            color: #2c3038;
+            color: #c4c8d8;
             margin: 0 0 16px 0;
           }
           .dm-steps {
@@ -111,7 +111,7 @@ export default function PowerDialerPage() {
             display: flex;
             gap: 16px;
             padding: 16px 0;
-            border-top: 1px solid #e4e6ec;
+            border-top: 1px solid #2a2a4a;
           }
           .dm-steps li:first-child { border-top: none; }
           .dm-steps li::before {
@@ -126,7 +126,7 @@ export default function PowerDialerPage() {
           .dm-steps li > div {
             font-size: 15px;
             line-height: 1.65;
-            color: #2c3038;
+            color: #c4c8d8;
           }
           .dm-shines-grid {
             display: grid;
@@ -151,7 +151,7 @@ export default function PowerDialerPage() {
           .dm-shines-card p {
             font-size: 13px;
             line-height: 1.55;
-            color: #2c3038;
+            color: #c4c8d8;
             margin: 0;
           }
           .dm-pullquote {
@@ -162,7 +162,7 @@ export default function PowerDialerPage() {
             border-radius: 4px;
             font-size: 15px;
             line-height: 1.7;
-            color: #1a1c24;
+            color: #ffffff;
           }
           .dm-on-ds {
             background: linear-gradient(135deg, #0a0a14 0%, #1a1a2e 100%);
@@ -195,7 +195,7 @@ export default function PowerDialerPage() {
             top: 10px;
           }
           .dm-other {
-            background: #f0f1f4;
+            background: #0a0a14;
             padding: 72px 32px;
           }
           .dm-other > .inner { max-width: 880px; margin: 0 auto; }
@@ -211,11 +211,11 @@ export default function PowerDialerPage() {
           }
           .dm-other-card {
             padding: 22px 20px;
-            background: white;
+            background: #1a1a2e;
             border: 1px solid #d8dce4;
             border-radius: 8px;
             text-decoration: none;
-            color: #1a1c24;
+            color: #ffffff;
             transition: transform 0.12s, border-color 0.12s;
           }
           .dm-other-card:hover { transform: translateY(-2px); }
@@ -228,7 +228,7 @@ export default function PowerDialerPage() {
             border-radius: 3px;
             margin-bottom: 8px;
           }
-          .dm-other-card.preview .pill { background: #f0f0f4; color: #5a5e6a; border: 1px solid #5a5e6a; }
+          .dm-other-card.preview .pill { background: #2a2a4a; color: #8888aa; border: 1px solid #5a5e6a; }
           .dm-other-card.progressive .pill { background: #e8f5e8; color: #1a6a1a; border: 1px solid #1a6a1a; }
           .dm-other-card.predictive .pill { background: #f8e8e8; color: #8a1a1a; border: 1px solid #8a1a1a; }
           .dm-other-card h3 {
@@ -239,18 +239,18 @@ export default function PowerDialerPage() {
           .dm-other-card p {
             font-size: 13px;
             line-height: 1.5;
-            color: #5a5e6a;
+            color: #8888aa;
             margin: 0;
           }
           .dm-cta {
-            background: white;
+            background: #1a1a2e;
             padding: 72px 32px;
             text-align: center;
           }
           .dm-cta h2 { font-size: 32px; margin: 0 0 14px 0; }
           .dm-cta p {
             font-size: 16px;
-            color: #5a5e6a;
+            color: #8888aa;
             max-width: 540px;
             margin: 0 auto 28px;
           }
@@ -270,8 +270,8 @@ export default function PowerDialerPage() {
           .dm-btn-secondary {
             padding: 14px 28px;
             background: transparent;
-            color: #1a1c24;
-            border: 1px solid #c4c8d0;
+            color: #ffffff;
+            border: 1px solid #2a2a4a;
             font-size: 12px;
             letter-spacing: 2.5px;
             font-weight: bold;
@@ -297,6 +297,7 @@ export default function PowerDialerPage() {
         <section className="dm-hero">
           <div className="dm-hero-inner">
             <div className="dm-eyebrow">POWER DIALER</div>
+          <span style={{ fontSize: 11, color: '#8888aa', letterSpacing: '2px', display: 'block', marginBottom: 16 }}>LAST UPDATED 07/28/2026</span>
             <h1>The workhorse of inside sales.</h1>
             <p className="dm-lead">
               One line per agent, queue-driven, auto-advancing. If you&apos;ve

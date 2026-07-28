@@ -19,17 +19,19 @@ import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 
 const T = {
-  bg: '#f0f1f4',
-  surface: '#ffffff',
-  border: '#c4c8d0',
+  bg: '#0a0a14',
+  surface: '#1a1a2e',
+  surface2: '#2a2a4a',
+  border: '#2a2a4a',
   dark: '#1a1a2e',
-  text: '#1a1c24',
-  muted: '#5a5e6a',
+  darker: '#0a0a14',
+  text: '#ffffff',
+  muted: '#8888aa',
   accent: '#4a9eff',
-  accentDark: '#2a4a8a',
-  green: '#1a6a1a',
-  amber: '#8a6a1a',
-  red: '#8a1a1a',
+  blue: '#4a9eff',
+  green: '#4ade80',
+  red: '#f87171',
+  amber: '#fbbf24',
 }
 
 export default function DialerSeatTeamsFaqView() {
@@ -109,7 +111,7 @@ export default function DialerSeatTeamsFaqView() {
             padding: 72px 32px;
           }
           .tfaq-section.alt {
-            background: white;
+            background: ${T.surface};
             max-width: none;
           }
           .tfaq-section.alt > .inner {
@@ -141,7 +143,7 @@ export default function DialerSeatTeamsFaqView() {
           .tfaq-section p {
             font-size: 16px;
             line-height: 1.75;
-            color: #2c3038;
+            color: ${T.text};
             margin: 0 0 16px 0;
           }
           .tfaq-pullquote {
@@ -195,8 +197,8 @@ export default function DialerSeatTeamsFaqView() {
           }
           .tfaq-audience-card {
             padding: 24px 22px;
-            background: white;
-            border: 1px solid #e4e6ec;
+            background: ${T.surface};
+            border: 1px solid ${T.border};
             border-top: 3px solid ${T.accent};
             border-radius: 8px;
           }
@@ -223,8 +225,8 @@ export default function DialerSeatTeamsFaqView() {
           }
           .tfaq-mode-card {
             padding: 22px 24px;
-            background: white;
-            border: 1px solid #e4e6ec;
+            background: ${T.surface};
+            border: 1px solid ${T.border};
             border-left: 3px solid ${T.accent};
             border-radius: 8px;
           }
@@ -282,8 +284,8 @@ export default function DialerSeatTeamsFaqView() {
             margin-top: 28px;
           }
           .tfaq-step-block {
-            background: white;
-            border: 1px solid #e4e6ec;
+            background: ${T.surface};
+            border: 1px solid ${T.border};
             border-radius: 10px;
             overflow: hidden;
           }
@@ -349,7 +351,7 @@ export default function DialerSeatTeamsFaqView() {
             margin: 10px 0 0 0;
             line-height: 1.55;
             padding-top: 10px;
-            border-top: 1px solid #e4e6ec;
+            border-top: 1px solid ${T.border};
           }
 
           /* Q&A GRID */
@@ -361,8 +363,8 @@ export default function DialerSeatTeamsFaqView() {
           }
           .tfaq-qa-card {
             padding: 18px 20px;
-            background: white;
-            border: 1px solid #e4e6ec;
+            background: ${T.surface};
+            border: 1px solid ${T.border};
             border-radius: 8px;
           }
           .tfaq-qa-card h4 {
@@ -404,7 +406,7 @@ export default function DialerSeatTeamsFaqView() {
           .tfaq-cta p {
             font-size: 15px;
             line-height: 1.7;
-            color: #c0c2ca;
+            color: ${T.muted};
             margin: 0 auto 28px;
             max-width: 540px;
           }
@@ -413,7 +415,7 @@ export default function DialerSeatTeamsFaqView() {
           }
           .tfaq-btn-primary {
             padding: 14px 28px;
-            background: linear-gradient(135deg, #4a9eff, #2a6eff);
+            background: linear-gradient(135deg, ${T.blue}, #2a6eff);
             color: white;
             font-size: 12px;
             letter-spacing: 2.5px;
@@ -461,6 +463,7 @@ export default function DialerSeatTeamsFaqView() {
             <div className="tfaq-hero-inner">
               <Link href="/faq" className="tfaq-breadcrumb">← BACK TO FAQ</Link>
               <div className="tfaq-eyebrow">DIALERSEAT TEAMS</div>
+        <span style={{ fontSize: 11, color: '#8888aa', letterSpacing: '2px', display: 'block', marginBottom: 16 }}>LAST UPDATED 07/28/2026</span>
               <h1>Premium leads, agency floors, shared pools.</h1>
               <p className="tfaq-lead">
                 DialerSeat Teams is the overlay that lets you sell seat-based

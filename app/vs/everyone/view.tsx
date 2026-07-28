@@ -270,10 +270,10 @@ export default function VsEveryoneView() {
           /* ── BUTTONS ── */
           .btn-primary {
             padding: 16px 32px;
-            background: #1a1a2e;
+            background: white;
             border: none;
-            border-top: 3px solid ${T.blue};
-            color: ${T.blue};
+            border-top: 3px solid white;
+            color: #1a1a2e;
             font-size: 13px;
             letter-spacing: 4px;
             font-weight: bold;
@@ -311,6 +311,7 @@ export default function VsEveryoneView() {
         <section className="vs-hero">
           <div className="vs-hero-inner">
             <div className="vs-eyebrow">DIALERSEAT™ VS EVERYONE</div>
+            <div style={{ fontSize: 12, color: T.muted, marginBottom: 16 }}>Last Updated 07/28/2026</div>
             <h1 className="vs-h1">
               The industry is broken.<br />
               <span className="versus">WE FIXED IT.</span>

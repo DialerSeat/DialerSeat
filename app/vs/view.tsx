@@ -317,11 +317,26 @@ export default function VsHubView() {
             display: flex;
             flex-direction: column;
             gap: 10px;
-            transition: all 0.15s ease;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+          }
+          .vshub-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(74,158,255,0.08) 0%, transparent 100%);
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            pointer-events: none;
           }
           .vshub-card:hover {
             border-color: ${T.blue};
             transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(74,158,255,0.15);
+          }
+          .vshub-card:hover::before {
+            opacity: 1;
           }
           .vshub-card .tagline {
             font-size: 11px;
@@ -390,10 +405,10 @@ export default function VsHubView() {
           /* Landing page white outlined button style */
           .vshub-btn-primary {
             padding: 16px 32px;
-            background: #1a1a2e;
+            background: white;
             border: none;
-            border-top: 3px solid ${T.blue};
-            color: ${T.blue};
+            border-top: 3px solid white;
+            color: #1a1a2e;
             font-size: 13px;
             letter-spacing: 4px;
             font-weight: bold;
@@ -433,7 +448,7 @@ export default function VsHubView() {
                 dialer. Pricing, features, what each tool wins at, and who should switch.
                 No marketing fluff — just the facts.
               </p>
-              <p className="vshub-verified">Pricing and features last verified 7/19/26</p>
+              <p className="vshub-verified">Last Updated 07/28/2026</p>
             </div>
           </section>
 

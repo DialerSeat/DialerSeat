@@ -27,18 +27,19 @@ import { useUser } from '@clerk/nextjs'
 
 
 const T = {
-  bg: '#f0f1f4',
-  surface: '#e2e4ea',
-  border: '#c4c8d0',
+  bg: '#0a0a14',
+  surface: '#1a1a2e',
+  surface2: '#2a2a4a',
+  border: '#2a2a4a',
   dark: '#1a1a2e',
-  text: '#1a1c24',
-  muted: '#5a5e6a',
-  accent: '#2a4a8a',
+  darker: '#0a0a14',
+  text: '#ffffff',
+  muted: '#8888aa',
+  accent: '#4a9eff',
   blue: '#4a9eff',
-  green: '#1a6a1a',
-  red: '#8a1a1a',
-  amber: '#8a6a1a',
-  gold: '#ffaa3e',
+  green: '#4ade80',
+  red: '#f87171',
+  amber: '#fbbf24',
 }
 
 export default function View() {
@@ -93,7 +94,7 @@ export default function View() {
         .wl-price {
           margin: 0 0 56px 0;
           padding: 28px 32px;
-          background: white;
+          background: ${T.surface};
           border: 1px solid ${T.border};
           border-top: 3px solid ${T.gold};
           border-radius: 8px;
@@ -127,7 +128,7 @@ export default function View() {
         }
         .wl-included-col {
           padding: 22px 24px;
-          background: white;
+          background: ${T.surface};
           border: 1px solid ${T.border};
           border-radius: 6px;
         }
@@ -147,7 +148,7 @@ export default function View() {
 
         .wl-math {
           margin: 28px 0; padding: 24px 28px;
-          background: white;
+          background: ${T.surface};
           border: 1px solid ${T.border};
           border-left: 3px solid ${T.green};
           border-radius: 6px;
@@ -183,7 +184,7 @@ export default function View() {
         .wl-promo {
           margin: 56px 0 32px;
           padding: 20px 24px;
-          background: white;
+          background: ${T.surface};
           border: 1px dashed ${T.amber};
           border-radius: 6px;
           font-size: 14px; line-height: 1.7;
@@ -210,7 +211,7 @@ export default function View() {
           margin: 0 0 12px 0; letter-spacing: -0.2px;
         }
         .wl-cta-box p {
-          font-size: 15px; color: #c0c2ca; line-height: 1.6;
+          font-size: 15px; color: ${T.muted}; line-height: 1.6;
           margin: 0 0 28px 0;
         }
         .wl-cta-box .wl-cta-btn {
@@ -229,7 +230,7 @@ export default function View() {
           color: #888a92; font-size: 11px; letter-spacing: 2px;
           text-decoration: none;
         }
-        .wl-cta-secondary:hover { color: #c0c2ca; }
+        .wl-cta-secondary:hover { color: ${T.muted}; }
 
         .wl-related {
           margin-top: 48px;
@@ -266,6 +267,7 @@ export default function View() {
       <article className="wl-root">
 
         <div className="wl-eyebrow">▸ WHITE-LABEL</div>
+        <span style={{ fontSize: 11, color: '#8888aa', letterSpacing: '2px', display: 'block', marginBottom: 16 }}>LAST UPDATED 07/28/2026</span>
 
         <h1 className="wl-h1">
           Your brand. Your domain. <em>Your dialer.</em>

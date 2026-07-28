@@ -6,19 +6,19 @@ import BackToVsButton from '@/components/back-to-vs-button'
 
 
 const T = {
-  bg: '#f0f1f4',
-  surface: '#e2e4ea',
-  surface2: '#d4d7df',
-  border: '#c4c8d0',
+  bg: '#0a0a14',
+  surface: '#1a1a2e',
+  surface2: '#2a2a4a',
+  border: '#2a2a4a',
   dark: '#1a1a2e',
   darker: '#0a0a14',
-  text: '#1a1c24',
-  muted: '#5a5e6a',
+  text: '#ffffff',
+  muted: '#8888aa',
   accent: '#2a4a8a',
   blue: '#4a9eff',
-  green: '#1a6a1a',
-  red: '#8a1a1a',
-  amber: '#8a6a1a',
+  green: '#4ade80',
+  red: '#f87171',
+  amber: '#fbbf24',
 }
 
 const features = [
@@ -118,7 +118,7 @@ export default function VsAircallView() {
           .vs-section-h2 { font-size: 36px; letter-spacing: -0.5px; line-height: 1.15; font-weight: 800; margin: 0 0 16px 0; color: ${T.text}; }
           .vs-section-lede { font-size: 16px; color: ${T.muted}; line-height: 1.65; max-width: 720px; margin: 0 0 48px 0; }
           .verdict-card {
-            background: white;
+            background: ${T.surface};
             border: 1px solid ${T.border};
             border-radius: 12px;
             padding: 32px;
@@ -129,7 +129,7 @@ export default function VsAircallView() {
           .verdict-title { font-size: 14px; font-weight: bold; letter-spacing: 3px; color: ${T.blue}; margin-bottom: 12px; }
           .verdict-text { font-size: 17px; line-height: 1.7; color: ${T.text}; margin: 0; }
           .price-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
-          .price-card { padding: 32px; border-radius: 12px; background: white; border: 1px solid ${T.border}; position: relative; }
+          .price-card { padding: 32px; border-radius: 12px; background: ${T.surface}; border: 1px solid ${T.border}; position: relative; }
           .price-card.winner { border: 2px solid ${T.blue}; box-shadow: 0 8px 32px rgba(74,158,255,0.12); }
           .price-card-label { font-size: 11px; letter-spacing: 3px; font-weight: bold; color: ${T.muted}; margin-bottom: 8px; }
           .price-card.winner .price-card-label { color: ${T.blue}; }
@@ -154,7 +154,7 @@ export default function VsAircallView() {
           .feature-table {
             width: 100%;
             border-collapse: collapse;
-            background: white;
+            background: ${T.surface};
             border-radius: 12px;
             overflow: hidden;
             border: 1px solid ${T.border};
@@ -172,7 +172,7 @@ export default function VsAircallView() {
           .feature-table th:nth-child(2), .feature-table th:nth-child(3) { text-align: center; width: 18%; }
           .feature-table td { padding: 14px 20px; border-top: 1px solid ${T.border}; font-size: 14px; }
           .feature-table td:nth-child(2), .feature-table td:nth-child(3) { text-align: center; font-weight: bold; }
-          .feature-table tr:nth-child(even) td { background: ${T.bg}; }
+          .feature-table tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
           .feature-table .yes { color: ${T.green}; font-size: 18px; }
           .feature-table .no { color: ${T.red}; font-size: 18px; }
           .feature-table .partial { color: ${T.amber}; font-style: italic; font-size: 12px; }
@@ -180,7 +180,7 @@ export default function VsAircallView() {
           .win-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-top: 24px; }
           .win-card {
             padding: 28px;
-            background: white;
+            background: ${T.surface};
             border: 1px solid ${T.border};
             border-radius: 12px;
             border-left: 4px solid ${T.green};
@@ -197,6 +197,35 @@ export default function VsAircallView() {
           .vs-final-cta-h2 { font-size: 42px; font-weight: 800; letter-spacing: -0.5px; margin: 0 0 16px 0; line-height: 1.15; }
           .vs-final-cta-p { font-size: 17px; color: #c4c8d8; line-height: 1.6; margin: 0 0 32px 0; }
 
+
+          /* ── DARK THEME OVERRIDES (vs/everyone style) ── */
+          .verdict-card {
+            background: ${T.surface} !important;
+            border: 1px solid ${T.border} !important;
+            border-radius: 4px !important;
+            border-left: none !important;
+            border-top: 3px solid ${T.blue} !important;
+            box-shadow: none !important;
+          }
+          .verdict-title { color: ${T.blue} !important; }
+          .verdict-text { color: ${T.muted} !important; }
+          .price-card { background: ${T.surface} !important; border: 1px solid ${T.border} !important; border-radius: 4px !important; }
+          .price-card.winner { border: 1px solid ${T.blue} !important; box-shadow: none !important; }
+          .price-card-name { color: ${T.text} !important; }
+          .price-card-big { color: ${T.text} !important; }
+          .price-card-list { border-top-color: ${T.border} !important; }
+          .price-card-list li { color: ${T.text} !important; }
+          .price-card-list li.bad { color: ${T.muted} !important; }
+          .feature-table { background: ${T.surface} !important; border-color: ${T.border} !important; border-radius: 4px !important; }
+          .feature-table tr:nth-child(even) td { background: rgba(255,255,255,0.02) !important; }
+          .win-card { background: ${T.surface} !important; border: 1px solid ${T.border} !important; border-radius: 4px !important; border-left: 3px solid ${T.green} !important; }
+          .win-card-title { color: ${T.text} !important; }
+          .win-card-body { color: ${T.muted} !important; }
+          .check { color: ${T.green} !important; }
+          .cross { color: ${T.red} !important; }
+          .feature-table .yes { color: ${T.green} !important; }
+          .feature-table .no { color: ${T.red} !important; }
+          .feature-table .partial { color: ${T.amber} !important; }
           @media (max-width: 768px) {
             .vs-hero { padding: 56px 20px 64px; }
             .vs-h1 { font-size: 36px; }
@@ -214,7 +243,7 @@ export default function VsAircallView() {
         <div className="vs-hero">
           <div className="vs-hero-inner">
             <div className="vs-eyebrow">DIALERSEAT VS AIRCALL</div>
-            <div style={{ fontSize: 12, color: T.muted, marginBottom: 16 }}>Pricing and features last verified 7/19/26</div>
+            <div style={{ fontSize: 12, color: T.muted, marginBottom: 16 }}>Last Updated 07/28/2026</div>
             <h1 className="vs-h1">
               The dialer is a Professional-tier upsell.<br />
               <span className="versus">Ours dials on the first seat, at $35/week.</span>

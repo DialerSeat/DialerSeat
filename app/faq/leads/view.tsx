@@ -3,17 +3,19 @@ import Link from 'next/link'
 import { useUser } from '@clerk/nextjs'
 
 const T = {
-  bg: '#f0f1f4',
-  surface: '#e2e4ea',
-  border: '#c4c8d0',
+  bg: '#0a0a14',
+  surface: '#1a1a2e',
+  surface2: '#2a2a4a',
+  border: '#2a2a4a',
   dark: '#1a1a2e',
-  text: '#1a1c24',
-  muted: '#5a5e6a',
-  accent: '#2a4a8a',
+  darker: '#0a0a14',
+  text: '#ffffff',
+  muted: '#8888aa',
+  accent: '#4a9eff',
   blue: '#4a9eff',
-  green: '#1a6a1a',
-  red: '#8a1a1a',
-  amber: '#8a6a1a',
+  green: '#4ade80',
+  red: '#f87171',
+  amber: '#fbbf24',
 }
 
 export default function LeadsFaqView() {
@@ -48,9 +50,9 @@ export default function LeadsFaqView() {
         .lead-badge {
           padding: 8px 16px; border-radius: 20px; font-size: 12px;
           font-weight: bold; letter-spacing: 1px; border: 1px solid ${T.border};
-          background: white; color: ${T.text};
+          background: ${T.surface}; color: ${T.text};
         }
-        .lead-badge.hi { background: ${T.dark}; color: #8fd18f; border-color: ${T.dark}; }
+        .lead-badge.hi { background: ${T.dark}; color: ${T.green}; border-color: ${T.dark}; }
 
         .lead-section { margin: 56px 0; }
         .lead-section h2 {
@@ -77,7 +79,7 @@ export default function LeadsFaqView() {
         }
 
         /* FIELD TABLE */
-        .lead-field-table { margin: 20px 0 8px; border: 1px solid ${T.border}; border-radius: 8px; overflow: hidden; background: white; }
+        .lead-field-table { margin: 20px 0 8px; border: 1px solid ${T.border}; border-radius: 8px; overflow: hidden; background: ${T.surface}; }
         .lead-field-row { display: grid; grid-template-columns: 160px 1fr; }
         .lead-field-row + .lead-field-row { border-top: 1px solid ${T.border}; }
         .lead-field-row.head { background: ${T.dark}; }
@@ -133,17 +135,17 @@ export default function LeadsFaqView() {
           border-radius: 8px; text-align: center;
         }
         .lead-cta-box .lead-cta-eyebrow {
-          font-size: 10px; letter-spacing: 4px; color: #8fd18f;
+          font-size: 10px; letter-spacing: 4px; color: ${T.green};
           font-weight: bold; margin-bottom: 14px;
         }
         .lead-cta-box .lead-cta-h {
           font-size: 26px; color: white; font-weight: 700;
           margin: 0 0 12px 0; letter-spacing: -0.2px;
         }
-        .lead-cta-box p { font-size: 15px; color: #c0c2ca; line-height: 1.6; margin: 0 0 28px 0; }
+        .lead-cta-box p { font-size: 15px; color: ${T.muted}; line-height: 1.6; margin: 0 0 28px 0; }
         .lead-cta-box .lead-cta-btn {
           display: inline-block; padding: 16px 36px;
-          background: linear-gradient(135deg, #2fd16a, #1a8a4a);
+          background: linear-gradient(135deg, ${T.green}, #1a8a4a);
           border: none; border-radius: 6px; color: white;
           font-size: 12px; font-weight: bold; letter-spacing: 3px;
           text-decoration: none; font-family: 'Futura PT', Futura, sans-serif;
@@ -165,6 +167,7 @@ export default function LeadsFaqView() {
 
       <article className="lead-root">
         <div className="lead-eyebrow">▸ UPLOADING &amp; MANAGING LEADS</div>
+        <span style={{ fontSize: 11, color: '#8888aa', letterSpacing: '2px', display: 'block', marginBottom: 16 }}>LAST UPDATED 07/28/2026</span>
 
         <h1 className="lead-h1">
           Drop in a spreadsheet. It figures out the columns <em>itself.</em>

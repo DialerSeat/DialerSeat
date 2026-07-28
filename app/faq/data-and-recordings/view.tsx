@@ -3,17 +3,19 @@ import Link from 'next/link'
 import { useUser } from '@clerk/nextjs'
 
 const T = {
-  bg: '#f0f1f4',
-  surface: '#e2e4ea',
-  border: '#c4c8d0',
+  bg: '#0a0a14',
+  surface: '#1a1a2e',
+  surface2: '#2a2a4a',
+  border: '#2a2a4a',
   dark: '#1a1a2e',
-  text: '#1a1c24',
-  muted: '#5a5e6a',
-  accent: '#2a4a8a',
+  darker: '#0a0a14',
+  text: '#ffffff',
+  muted: '#8888aa',
+  accent: '#4a9eff',
   blue: '#4a9eff',
-  green: '#1a6a1a',
-  red: '#8a1a1a',
-  amber: '#8a6a1a',
+  green: '#4ade80',
+  red: '#f87171',
+  amber: '#fbbf24',
 }
 
 export default function DataRecordingsFaqView() {
@@ -48,7 +50,7 @@ export default function DataRecordingsFaqView() {
         .drc-badge {
           padding: 8px 16px; border-radius: 20px; font-size: 12px;
           font-weight: bold; letter-spacing: 1px; border: 1px solid ${T.border};
-          background: white; color: ${T.text};
+          background: ${T.surface}; color: ${T.text};
         }
         .drc-badge.hi { background: ${T.dark}; color: #a8b8ff; border-color: ${T.dark}; }
 
@@ -79,7 +81,7 @@ export default function DataRecordingsFaqView() {
         /* EXPORT TABLE INCLUDED */
         .drc-export-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 20px 0 8px; }
         .drc-export-item {
-          background: white; border: 1px solid ${T.border}; border-radius: 6px;
+          background: ${T.surface}; border: 1px solid ${T.border}; border-radius: 6px;
           padding: 10px 12px; font-size: 12.5px; font-weight: 600; color: ${T.text};
           text-align: center;
         }
@@ -108,7 +110,7 @@ export default function DataRecordingsFaqView() {
         .drc-callout strong { color: ${T.accent}; }
 
         .drc-warn {
-          margin: 28px 0; padding: 24px 26px; background: white;
+          margin: 28px 0; padding: 24px 26px; background: ${T.surface};
           border: 1px solid ${T.border}; border-left: 3px solid ${T.red};
           border-radius: 6px;
         }
@@ -145,7 +147,7 @@ export default function DataRecordingsFaqView() {
           font-size: 26px; color: white; font-weight: 700;
           margin: 0 0 12px 0; letter-spacing: -0.2px;
         }
-        .drc-cta-box p { font-size: 15px; color: #c0c2ca; line-height: 1.6; margin: 0 0 28px 0; }
+        .drc-cta-box p { font-size: 15px; color: ${T.muted}; line-height: 1.6; margin: 0 0 28px 0; }
         .drc-cta-box .drc-cta-btn {
           display: inline-block; padding: 16px 36px;
           background: linear-gradient(135deg, #6a7aff, #4a5aff);
@@ -169,6 +171,7 @@ export default function DataRecordingsFaqView() {
 
       <article className="drc-root">
         <div className="drc-eyebrow">▸ RECORDINGS &amp; YOUR DATA</div>
+        <span style={{ fontSize: 11, color: '#8888aa', letterSpacing: '2px', display: 'block', marginBottom: 16 }}>LAST UPDATED 07/28/2026</span>
 
         <h1 className="drc-h1">
           Your recordings. Your data. Actually <em>yours</em> to take or delete.

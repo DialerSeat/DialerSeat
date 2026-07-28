@@ -32,6 +32,7 @@ export default function Page() {
 
         <section className="exp-hero">
           <div className="exp-hero-inner">            <div className="exp-eyebrow">EXPLAINER · PRICING</div>
+            <span style={{ fontSize: 11, color: "#8888aa", letterSpacing: "2px", display: "block", marginBottom: 16 }}>LAST UPDATED 07/28/2026</span>
             <h1>Why we charge what we charge.</h1>
             <p className="exp-lead">
               $35 a week, per seat. Unlimited dial-out numbers, multiple

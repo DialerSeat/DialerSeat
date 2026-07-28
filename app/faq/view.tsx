@@ -313,10 +313,10 @@ export default function FaqView() {
           /* Landing page white outlined button style */
           .faq-btn-primary {
             padding: 14px 28px;
-            background: #1a1a2e;
+            background: white;
             border: none;
-            border-top: 3px solid ${T.blue};
-            color: ${T.blue};
+            border-top: 3px solid white;
+            color: #1a1a2e;
             font-size: 12px;
             letter-spacing: 4px;
             font-weight: bold;
@@ -373,6 +373,7 @@ export default function FaqView() {
           <section className="faq-hero">
             <div className="faq-hero-inner">
               <div className="faq-eyebrow">FREQUENTLY ASKED QUESTIONS</div>
+              <div style={{ fontSize: 12, color: '#8888aa', marginBottom: 16, letterSpacing: '2px' }}>LAST UPDATED 07/28/2026</div>
               <h1>The questions buyers actually ask.</h1>
               <p className="faq-lead">
                 Pricing, contracts, compliance, team setup, and the bigger question

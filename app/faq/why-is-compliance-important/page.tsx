@@ -32,6 +32,7 @@ export default function Page() {
 
         <section className="exp-hero">
           <div className="exp-hero-inner">            <div className="exp-eyebrow">EXPLAINER · COMPLIANCE</div>
+            <span style={{ fontSize: 11, color: "#8888aa", letterSpacing: "2px", display: "block", marginBottom: 16 }}>LAST UPDATED 07/28/2026</span>
             <h1>Why is compliance important?</h1>
             <p className="exp-lead">
               Because the FTC has been writing checks with a lot of zeros

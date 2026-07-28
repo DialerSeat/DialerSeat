@@ -32,6 +32,7 @@ export default function Page() {
 
         <section className="exp-hero">
           <div className="exp-hero-inner">            <div className="exp-eyebrow">EXPLAINER · AMD</div>
+            <span style={{ fontSize: 11, color: "#8888aa", letterSpacing: "2px", display: "block", marginBottom: 16 }}>LAST UPDATED 07/28/2026</span>
             <h1>How does AMD work?</h1>
             <p className="exp-lead">
               Answering Machine Detection listens to a phone pickup and

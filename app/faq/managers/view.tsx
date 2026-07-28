@@ -26,17 +26,19 @@ import { useUser } from '@clerk/nextjs'
 
 
 const T = {
-  bg: '#f0f1f4',
-  surface: '#e2e4ea',
-  border: '#c4c8d0',
+  bg: '#0a0a14',
+  surface: '#1a1a2e',
+  surface2: '#2a2a4a',
+  border: '#2a2a4a',
   dark: '#1a1a2e',
-  text: '#1a1c24',
-  muted: '#5a5e6a',
-  accent: '#2a4a8a',
+  darker: '#0a0a14',
+  text: '#ffffff',
+  muted: '#8888aa',
+  accent: '#4a9eff',
   blue: '#4a9eff',
-  green: '#1a6a1a',
-  red: '#8a1a1a',
-  amber: '#8a6a1a',
+  green: '#4ade80',
+  red: '#f87171',
+  amber: '#fbbf24',
 }
 
 export default function View() {
@@ -89,7 +91,7 @@ export default function View() {
 
         .mgr-math {
           margin: 28px 0; padding: 24px 28px;
-          background: white;
+          background: ${T.surface};
           border: 1px solid ${T.border};
           border-left: 3px solid ${T.green};
           border-radius: 6px;
@@ -125,7 +127,7 @@ export default function View() {
         .mgr-promo {
           margin: 56px 0 32px;
           padding: 20px 24px;
-          background: white;
+          background: ${T.surface};
           border: 1px dashed ${T.amber};
           border-radius: 6px;
           font-size: 14px; line-height: 1.7;
@@ -152,7 +154,7 @@ export default function View() {
           letter-spacing: -0.2px; line-height: 1.3;
         }
         .mgr-wl-upsell p {
-          font-size: 14px; line-height: 1.7; color: #c0c2ca;
+          font-size: 14px; line-height: 1.7; color: ${T.muted};
           margin: 0 0 16px 0;
         }
         .mgr-wl-upsell a {
@@ -178,13 +180,13 @@ export default function View() {
           margin: 0 0 12px 0; letter-spacing: -0.2px;
         }
         .mgr-cta-box p {
-          font-size: 15px; color: #c0c2ca; line-height: 1.6;
+          font-size: 15px; color: ${T.muted}; line-height: 1.6;
           margin: 0 0 28px 0;
         }
         .mgr-cta-box .mgr-cta-btn {
           display: inline-block;
           padding: 16px 36px;
-          background: linear-gradient(135deg, #4a9eff, #2a6eff);
+          background: linear-gradient(135deg, ${T.blue}, #2a6eff);
           border: none; border-radius: 6px;
           color: white;
           font-size: 12px; font-weight: bold; letter-spacing: 3px;
@@ -197,7 +199,7 @@ export default function View() {
           color: #888a92; font-size: 11px; letter-spacing: 2px;
           text-decoration: none;
         }
-        .mgr-cta-secondary:hover { color: #c0c2ca; }
+        .mgr-cta-secondary:hover { color: ${T.muted}; }
 
         .mgr-related {
           margin-top: 48px;
@@ -232,6 +234,7 @@ export default function View() {
       <article className="mgr-root">
 
         <div className="mgr-eyebrow">▸ FOR MANAGERS</div>
+        <span style={{ fontSize: 11, color: '#8888aa', letterSpacing: '2px', display: 'block', marginBottom: 16 }}>LAST UPDATED 07/28/2026</span>
 
         <h1 className="mgr-h1">
           Built for the people <em>actually running the sales floor.</em>

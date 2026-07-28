@@ -5,18 +5,19 @@ import Image from 'next/image'
 import { useUser } from '@clerk/nextjs'
 
 const T = {
-  bg: '#f0f1f4',
-  surface: '#e2e4ea',
-  border: '#c4c8d0',
+  bg: '#0a0a14',
+  surface: '#1a1a2e',
+  surface2: '#2a2a4a',
+  border: '#2a2a4a',
   dark: '#1a1a2e',
-  text: '#1a1c24',
-  muted: '#5a5e6a',
-  accent: '#2a4a8a',
+  darker: '#0a0a14',
+  text: '#ffffff',
+  muted: '#8888aa',
+  accent: '#4a9eff',
   blue: '#4a9eff',
-  green: '#1a6a1a',
-  red: '#8a1a1a',
-  amber: '#8a6a1a',
-  gold: '#ffaa3e',
+  green: '#4ade80',
+  red: '#f87171',
+  amber: '#fbbf24',
 }
 
 type Slide = { src: string; alt: string; caption: string }
@@ -125,7 +126,7 @@ export default function ManagerPlusFaqView() {
         .mp-badge {
           padding: 8px 16px; border-radius: 20px; font-size: 12px;
           font-weight: bold; letter-spacing: 1px; border: 1px solid ${T.border};
-          background: white; color: ${T.text};
+          background: ${T.surface}; color: ${T.text};
         }
         .mp-badge.price { background: ${T.dark}; color: white; border-color: ${T.dark}; }
 
@@ -155,7 +156,7 @@ export default function ManagerPlusFaqView() {
           margin: 28px 0 32px;
         }
         .mp-tier-card {
-          background: white; border: 1px solid ${T.border}; border-radius: 8px;
+          background: ${T.surface}; border: 1px solid ${T.border}; border-radius: 8px;
           padding: 24px 22px;
         }
         .mp-tier-card.hi {
@@ -176,7 +177,7 @@ export default function ManagerPlusFaqView() {
         /* MATH BLOCK */
         .mp-math {
           margin: 28px 0; padding: 24px 28px;
-          background: white; border: 1px solid ${T.border};
+          background: ${T.surface}; border: 1px solid ${T.border};
           border-left: 3px solid ${T.green}; border-radius: 6px;
         }
         .mp-math-title {
@@ -198,7 +199,7 @@ export default function ManagerPlusFaqView() {
 
         /* SCENARIO CARDS */
         .mp-scenario {
-          margin: 28px 0; padding: 26px 28px; background: white;
+          margin: 28px 0; padding: 26px 28px; background: ${T.surface};
           border: 1px solid ${T.border}; border-radius: 8px;
         }
         .mp-scenario-eyebrow {
@@ -257,7 +258,7 @@ export default function ManagerPlusFaqView() {
           margin: 20px 0 8px;
         }
         .mp-priority-item {
-          background: white; border: 1px solid ${T.border}; border-radius: 8px;
+          background: ${T.surface}; border: 1px solid ${T.border}; border-radius: 8px;
           padding: 18px 20px;
         }
         .mp-priority-item h5 {
@@ -278,10 +279,10 @@ export default function ManagerPlusFaqView() {
           font-size: 26px; color: white; font-weight: 700;
           margin: 0 0 12px 0; letter-spacing: -0.2px;
         }
-        .mp-cta-box p { font-size: 15px; color: #c0c2ca; line-height: 1.6; margin: 0 0 28px 0; }
+        .mp-cta-box p { font-size: 15px; color: ${T.muted}; line-height: 1.6; margin: 0 0 28px 0; }
         .mp-cta-box .mp-cta-btn {
           display: inline-block; padding: 16px 36px;
-          background: linear-gradient(135deg, #4a9eff, #2a6eff);
+          background: linear-gradient(135deg, ${T.blue}, #2a6eff);
           border: none; border-radius: 6px; color: white;
           font-size: 12px; font-weight: bold; letter-spacing: 3px;
           text-decoration: none; font-family: 'Futura PT', Futura, sans-serif;
@@ -291,7 +292,7 @@ export default function ManagerPlusFaqView() {
           display: inline-block; margin-top: 16px; color: #888a92;
           font-size: 11px; letter-spacing: 2px; text-decoration: none;
         }
-        .mp-cta-secondary:hover { color: #c0c2ca; }
+        .mp-cta-secondary:hover { color: ${T.muted}; }
 
         .mp-related {
           margin-top: 48px; padding-top: 28px; border-top: 1px solid ${T.border};
@@ -326,6 +327,7 @@ export default function ManagerPlusFaqView() {
 
       <article className="mp-root">
         <div className="mp-eyebrow">▸ THE TIER ABOVE PRO</div>
+        <span style={{ fontSize: 11, color: '#8888aa', letterSpacing: '2px', display: 'block', marginBottom: 16 }}>LAST UPDATED 07/28/2026</span>
 
         <h1 className="mp-h1">
           Manager+: the higher tier for people who <em>own</em> the operation, not just work it.
