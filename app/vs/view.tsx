@@ -1,19 +1,22 @@
 'use client'
+import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 
 const T = {
   bg: '#f0f1f4',
-  surface: '#ffffff',
+  surface: '#e2e4ea',
   border: '#c4c8d0',
   dark: '#1a1a2e',
   darker: '#0a0a14',
   text: '#1a1c24',
   muted: '#5a5e6a',
-  accent: '#4a9eff',
-  accentDark: '#2a4a8a',
+  accent: '#2a4a8a',
+  blue: '#4a9eff',
 }
+
+const FUTURA = `'Futura PT', Futura, 'Helvetica Neue', Helvetica, Arial, sans-serif`
 
 interface Comparison {
   slug: string
@@ -126,13 +129,16 @@ const COMPARISONS: Comparison[] = [
 ]
 
 export default function VsHubView() {
+  const { isLoaded, isSignedIn } = useUser()
+  const showSignedIn = isLoaded && isSignedIn
+
   return (
     <>
       <SiteHeader />
       <main style={{
         background: T.bg,
         minHeight: '100vh',
-        fontFamily: 'Futura PT, Futura, sans-serif',
+        fontFamily: FUTURA,
         color: T.text,
       }}>
         <style>{`
@@ -146,13 +152,7 @@ export default function VsHubView() {
             text-align: center;
             position: relative;
             overflow: hidden;
-          }
-          .vshub-hero::before {
-            content: '';
-            position: absolute; inset: 0;
-            background:
-              radial-gradient(circle at 20% 30%, rgba(74,158,255,0.18) 0%, transparent 45%),
-              radial-gradient(circle at 80% 60%, rgba(74,158,255,0.12) 0%, transparent 45%);
+            border-bottom: 2px solid ${T.accent};
           }
           .vshub-hero-inner {
             position: relative;
@@ -163,9 +163,9 @@ export default function VsHubView() {
             display: inline-block;
             padding: 6px 14px;
             background: rgba(74,158,255,0.15);
-            border: 1px solid ${T.accent};
+            border: 1px solid ${T.blue};
             border-radius: 4px;
-            color: ${T.accent};
+            color: ${T.blue};
             font-size: 11px;
             letter-spacing: 3px;
             font-weight: bold;
@@ -177,12 +177,6 @@ export default function VsHubView() {
             letter-spacing: -1.5px;
             line-height: 1.05;
             margin: 0 0 20px 0;
-          }
-          .vshub-hero h1 .accent {
-            background: linear-gradient(135deg, ${T.accent}, #a0c4ff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
           }
           .vshub-lead {
             font-size: 18px;
@@ -231,37 +225,28 @@ export default function VsHubView() {
             text-align: center;
           }
           .vshub-section-lede a {
-            color: ${T.accent};
-            text-decoration: underline;
+            color: ${T.blue};
+            text-decoration: none;
           }
 
           /* ── FEATURED CARD (START HERE) ── */
           .vshub-featured {
             display: block;
-            background: linear-gradient(135deg, ${T.dark} 0%, #2a2c44 100%);
-            border-radius: 14px;
+            background: ${T.dark};
+            border-radius: 4px;
             padding: 40px 44px;
             text-decoration: none;
             color: white;
             position: relative;
             overflow: hidden;
             margin-bottom: 20px;
-            transition: transform 0.15s, box-shadow 0.15s;
-            border: 1px solid rgba(255,255,255,0.05);
-            border-top: 4px solid ${T.accent};
+            transition: transform 0.15s;
+            border: 1px solid ${T.border};
+            border-top: 3px solid ${T.blue};
           }
           .vshub-featured:hover {
             transform: translateY(-2px);
-            box-shadow: 0 12px 32px rgba(0,0,0,0.22);
-            border-color: ${T.accent};
-            border-top-color: ${T.accent};
-          }
-          .vshub-featured::before {
-            content: '';
-            position: absolute; right: -60px; top: -60px;
-            width: 280px; height: 280px;
-            background: radial-gradient(circle, rgba(74,158,255,0.2) 0%, transparent 70%);
-            pointer-events: none;
+            border-color: ${T.blue};
           }
           .vshub-featured-badge {
             position: absolute;
@@ -270,7 +255,7 @@ export default function VsHubView() {
             letter-spacing: 2.5px;
             font-weight: bold;
             color: white;
-            background: ${T.accent};
+            background: ${T.blue};
             padding: 4px 10px;
             border-radius: 100px;
           }
@@ -279,9 +264,9 @@ export default function VsHubView() {
             display: inline-block;
             padding: 4px 10px;
             background: rgba(74,158,255,0.15);
-            border: 1px solid ${T.accent};
+            border: 1px solid ${T.blue};
             border-radius: 4px;
-            color: ${T.accent};
+            color: ${T.blue};
             font-size: 9px;
             letter-spacing: 2.5px;
             font-weight: bold;
@@ -312,7 +297,7 @@ export default function VsHubView() {
             font-size: 11px;
             letter-spacing: 2.5px;
             font-weight: bold;
-            color: ${T.accent};
+            color: ${T.blue};
           }
 
           /* ── COMPARISON GRID ── */
@@ -323,9 +308,9 @@ export default function VsHubView() {
             margin-bottom: 72px;
           }
           .vshub-card {
-            background: white;
+            background: ${T.surface};
             border: 1px solid ${T.border};
-            border-radius: 14px;
+            border-radius: 4px;
             padding: 28px 32px;
             text-decoration: none;
             color: ${T.text};
@@ -333,19 +318,16 @@ export default function VsHubView() {
             flex-direction: column;
             gap: 10px;
             transition: all 0.15s ease;
-            position: relative;
-            overflow: hidden;
           }
           .vshub-card:hover {
-            border-color: ${T.accent};
+            border-color: ${T.blue};
             transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(74,158,255,0.12);
           }
           .vshub-card .tagline {
             font-size: 11px;
             letter-spacing: 2.5px;
             font-weight: bold;
-            color: ${T.accent};
+            color: ${T.blue};
             margin: 0;
           }
           .vshub-card h3 {
@@ -365,7 +347,7 @@ export default function VsHubView() {
             font-size: 10px;
             letter-spacing: 2px;
             font-weight: bold;
-            color: ${T.accent};
+            color: ${T.blue};
             margin-top: auto;
             padding-top: 8px;
           }
@@ -375,10 +357,11 @@ export default function VsHubView() {
 
           /* ── CTA ── */
           .vshub-cta {
-            background: linear-gradient(135deg, ${T.dark}, ${T.darker});
+            background: ${T.dark};
             color: white;
             padding: 80px 32px;
             text-align: center;
+            border-top: 2px solid ${T.accent};
           }
           .vshub-cta-inner { max-width: 720px; margin: 0 auto; }
           .vshub-cta-eyebrow {
@@ -405,15 +388,15 @@ export default function VsHubView() {
           }
           .vshub-btn-primary {
             padding: 16px 32px;
-            background: linear-gradient(135deg, ${T.accent}, #2a6eff);
-            color: white;
+            background: ${T.dark};
+            border: none;
+            border-top: 3px solid ${T.blue};
+            color: ${T.blue};
             font-size: 13px;
-            letter-spacing: 2.5px;
+            letter-spacing: 4px;
             font-weight: bold;
-            border-radius: 8px;
             text-decoration: none;
             display: inline-block;
-            box-shadow: 0 0 24px rgba(74,158,255,0.4);
           }
 
           /* ── RESPONSIVE ── */
@@ -440,7 +423,7 @@ export default function VsHubView() {
               <div className="vshub-eyebrow">COMPARISONS</div>
               <h1>
                 Pick your competitor.<br />
-                <span className="accent">We&apos;ll show you why we win.</span>
+                We&apos;ll show you why we win.
               </h1>
               <p className="vshub-lead">
                 Honest, side-by-side breakdowns of DialerSeat™ against every major outbound
@@ -478,7 +461,7 @@ export default function VsHubView() {
             <p className="vshub-section-lede">
               We&apos;ll keep adding more as our customers ask. Don&apos;t see your current
               dialer?{' '}
-              <a href="mailto:support@dialerseat.com">Tell us at support@dialerseat.com</a>{' '}
+              <a href="mailto:support@dialerseat.com">Email support@dialerseat.com</a>{' '}
               and we&apos;ll prioritize it.
             </p>
 
@@ -506,7 +489,7 @@ export default function VsHubView() {
                 Manager+ is a flat $75/week upgrade that puts your brand on the platform — same
                 rate whether you&apos;re managing 2 seats or 200. None of the dialers on this
                 page offer true whitelabel; the closest most get is a referral or reseller
-                program that keeps their name on the product. Every comparison above breaks down
+                program that keeps their name on the product. Every comparison below breaks down
                 what each competitor actually charges to scale a team.
               </p>
             </div>
@@ -523,8 +506,8 @@ export default function VsHubView() {
                 contract, no demos. The fastest way to know if DialerSeat™ beats whatever
                 you&apos;re using now is to actually use it.
               </p>
-              <Link href="/sign-up" className="vshub-btn-primary">
-                START DIALING →
+              <Link href={showSignedIn ? '/dashboard/analytics' : '/sign-up'} className="vshub-btn-primary">
+                {showSignedIn ? 'GO TO DASHBOARD →' : 'GET STARTED →'}
               </Link>
             </div>
           </section>

@@ -7,15 +7,17 @@ import SiteFooter from '@/components/site-footer'
 
 const T = {
   bg: '#f0f1f4',
-  surface: '#ffffff',
+  surface: '#e2e4ea',
   border: '#c4c8d0',
   dark: '#1a1a2e',
   darker: '#0a0a14',
   text: '#1a1c24',
   muted: '#5a5e6a',
-  accent: '#4a9eff',
-  accentDark: '#2a4a8a',
+  accent: '#2a4a8a',
+  blue: '#4a9eff',
 }
+
+const FUTURA = `'Futura PT', Futura, 'Helvetica Neue', Helvetica, Arial, sans-serif`
 
 export default function FaqView() {
   const { isLoaded, isSignedIn } = useUser()
@@ -27,7 +29,7 @@ export default function FaqView() {
       <main style={{
         background: T.bg,
         minHeight: '100vh',
-        fontFamily: 'Futura PT, Futura, sans-serif',
+        fontFamily: FUTURA,
         color: T.text,
       }}>
         <style>{`
@@ -37,244 +39,201 @@ export default function FaqView() {
           .faq-hero {
             background: linear-gradient(135deg, ${T.darker} 0%, ${T.dark} 100%);
             color: white;
-            padding: 100px 32px 80px;
+            padding: 80px 32px 64px;
             text-align: center;
             position: relative;
             overflow: hidden;
-          }
-          .faq-hero::before {
-            content: '';
-            position: absolute; inset: 0;
-            background:
-              radial-gradient(circle at 20% 30%, rgba(74,158,255,0.18) 0%, transparent 45%),
-              radial-gradient(circle at 80% 60%, rgba(74,158,255,0.12) 0%, transparent 45%);
+            border-bottom: 2px solid ${T.accent};
           }
           .faq-hero-inner {
             position: relative;
-            max-width: 880px;
+            max-width: 720px;
             margin: 0 auto;
           }
           .faq-eyebrow {
             display: inline-block;
             padding: 6px 14px;
             background: rgba(74,158,255,0.15);
-            border: 1px solid ${T.accent};
+            border: 1px solid ${T.blue};
             border-radius: 4px;
-            color: ${T.accent};
+            color: ${T.blue};
             font-size: 11px;
             letter-spacing: 3px;
             font-weight: bold;
-            margin-bottom: 24px;
+            margin-bottom: 22px;
           }
           .faq-hero h1 {
-            font-size: 56px;
+            font-size: 44px;
             font-weight: 800;
-            letter-spacing: -1.5px;
-            line-height: 1.05;
-            margin: 0 0 20px 0;
-          }
-          .faq-hero h1 .accent {
-            background: linear-gradient(135deg, ${T.accent}, #a0c4ff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            letter-spacing: -0.5px;
+            line-height: 1.1;
+            margin: 0 0 16px 0;
           }
           .faq-lead {
-            font-size: 18px;
+            font-size: 16px;
             line-height: 1.6;
             color: #c4c8d8;
-            max-width: 680px;
+            max-width: 560px;
             margin: 0 auto;
           }
 
           /* ── BODY ── */
           .faq-body {
-            max-width: 1180px;
+            max-width: 800px;
             margin: 0 auto;
-            padding: 80px 32px;
+            padding: 56px 32px 72px;
           }
 
-          /* ── SECTION HEADER ── */
-          .faq-section-eyebrow {
-            font-size: 11px;
+          /* ── SECTION LABELS ── */
+          .faq-section-label {
+            font-size: 10px;
             letter-spacing: 4px;
             color: ${T.muted};
             font-weight: bold;
-            margin-bottom: 12px;
-            text-align: center;
+            margin-bottom: 14px;
           }
-          .faq-section-h2 {
-            font-size: 36px;
-            letter-spacing: -0.5px;
-            line-height: 1.15;
+          .faq-section-title {
+            font-size: 24px;
             font-weight: 800;
-            margin: 0 0 16px 0;
+            letter-spacing: -0.3px;
+            margin: 0 0 24px 0;
             color: ${T.text};
-            text-align: center;
-          }
-          .faq-section-lede {
-            font-size: 16px;
-            color: ${T.muted};
-            line-height: 1.65;
-            max-width: 680px;
-            margin: 0 auto 48px auto;
-            text-align: center;
           }
 
           /* ── FEATURED CARD ── */
           .faq-featured {
             display: block;
-            background: linear-gradient(135deg, ${T.dark} 0%, #2a2c44 100%);
-            border-radius: 14px;
-            padding: 40px 44px;
+            background: ${T.dark};
+            border-radius: 4px;
+            padding: 32px 36px;
             text-decoration: none;
             color: white;
             position: relative;
             overflow: hidden;
-            margin-bottom: 72px;
-            transition: transform 0.15s, box-shadow 0.15s;
-            border: 1px solid rgba(255,255,255,0.05);
-            border-top: 4px solid ${T.accent};
+            margin-bottom: 48px;
+            transition: transform 0.15s;
+            border: 1px solid ${T.border};
+            border-top: 3px solid ${T.blue};
           }
           .faq-featured:hover {
             transform: translateY(-2px);
-            box-shadow: 0 12px 32px rgba(0,0,0,0.22);
-            border-color: ${T.accent};
-            border-top-color: ${T.accent};
-          }
-          .faq-featured::before {
-            content: '';
-            position: absolute; right: -60px; top: -60px;
-            width: 280px; height: 280px;
-            background: radial-gradient(circle, rgba(74,158,255,0.2) 0%, transparent 70%);
-            pointer-events: none;
+            border-color: ${T.blue};
           }
           .faq-featured-eyebrow {
             position: relative;
             display: inline-block;
             padding: 4px 10px;
             background: rgba(74,158,255,0.15);
-            border: 1px solid ${T.accent};
+            border: 1px solid ${T.blue};
             border-radius: 4px;
-            color: ${T.accent};
-            font-size: 9px;
-            letter-spacing: 2.5px;
+            color: ${T.blue};
+            font-size: 10px;
+            letter-spacing: 3px;
             font-weight: bold;
-            margin-bottom: 16px;
+            margin-bottom: 14px;
           }
           .faq-featured h2 {
             position: relative;
-            font-size: 32px;
+            font-size: 28px;
             font-weight: 800;
-            letter-spacing: -0.5px;
-            line-height: 1.15;
-            margin: 0 0 14px 0;
+            letter-spacing: -0.3px;
+            line-height: 1.2;
+            margin: 0 0 12px 0;
             color: white;
           }
           .faq-featured p {
             position: relative;
             font-size: 15px;
-            line-height: 1.7;
+            line-height: 1.65;
             color: #c4c8d8;
-            margin: 0 0 20px 0;
-            max-width: 600px;
+            margin: 0 0 18px 0;
+            max-width: 560px;
           }
           .faq-featured-cta {
             position: relative;
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            font-size: 11px;
+            font-size: 12px;
             letter-spacing: 2.5px;
             font-weight: bold;
-            color: ${T.accent};
+            color: ${T.blue};
           }
 
           /* ── EXPLAINER GRID ── */
-          .faq-explainers { margin-bottom: 72px; }
+          .faq-explainers { margin-bottom: 44px; }
           .faq-explainers-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 14px;
-            margin-top: 0;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 18px;
           }
           .faq-exp-card {
-            background: white;
+            background: ${T.surface};
             border: 1px solid ${T.border};
-            border-radius: 14px;
-            padding: 22px 24px;
+            border-radius: 4px;
+            padding: 16px 18px;
             text-decoration: none;
             color: ${T.text};
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 8px;
             transition: all 0.15s ease;
-            position: relative;
-            overflow: hidden;
           }
           .faq-exp-card:hover {
-            border-color: ${T.accent};
+            border-color: ${T.blue};
             transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(74,158,255,0.12);
           }
           .faq-exp-card .pill {
             display: inline-block;
             font-size: 9px;
-            letter-spacing: 2.5px;
-            font-weight: bold;
-            padding: 3px 8px;
-            border-radius: 100px;
-            width: fit-content;
-          }
-          .faq-exp-card .card-title {
-            font-size: 14px;
-            font-weight: 700;
-            line-height: 1.4;
-            color: ${T.text};
-          }
-          .faq-exp-card .read-more {
-            font-size: 10px;
             letter-spacing: 2px;
             font-weight: bold;
-            color: ${T.accent};
-            margin-top: auto;
-            padding-top: 4px;
+            padding: 2px 7px;
+            border-radius: 3px;
+            width: fit-content;
+            border-top: 3px solid transparent;
+          }
+          .faq-exp-card .card-title {
+            font-size: 13px;
+            font-weight: 600;
+            line-height: 1.4;
           }
 
-          /* pill color variants */
-          .faq-exp-card.preview .pill   { background: #f0f0f4; color: #5a5e6a; border: 1px solid #5a5e6a; }
-          .faq-exp-card.power .pill     { background: #e8eef8; color: #2a4a8a; border: 1px solid #2a4a8a; }
-          .faq-exp-card.progressive .pill { background: #e8f5e8; color: #1a6a1a; border: 1px solid #1a6a1a; }
-          .faq-exp-card.predictive .pill  { background: #f8e8e8; color: #8a1a1a; border: 1px solid #8a1a1a; }
-          .faq-exp-card.compliance .pill  { background: #fdf4e8; color: #8a6a1a; border: 1px solid #8a6a1a; }
-          .faq-exp-card.amd .pill         { background: #e8eef8; color: #2a4a8a; border: 1px solid #2a4a8a; }
-          .faq-exp-card.pricing .pill     { background: #e8f5e8; color: #1a6a1a; border: 1px solid #1a6a1a; }
-          .faq-exp-card.teams .pill       { background: #f0eafd; color: #5a2a8a; border: 1px solid #5a2a8a; }
-          .faq-exp-card.managerplus .pill { background: #eaf0fd; color: #2a4a8a; border: 1px solid #2a4a8a; }
-          .faq-exp-card.mobile .pill      { background: #e8f0fd; color: #1a4a8a; border: 1px solid #1a4a8a; }
-          .faq-exp-card.numbers .pill     { background: #fdeaea; color: #8a1a1a; border: 1px solid #8a1a1a; }
-          .faq-exp-card.leads .pill       { background: #e8f5e8; color: #1a6a4a; border: 1px solid #1a6a4a; }
-          .faq-exp-card.scripts .pill     { background: #eaeaff; color: #4a4aa8; border: 1px solid #4a4aa8; }
-          .faq-exp-card.campaigns .pill   { background: #e8f0fd; color: #2a4a8a; border: 1px solid #2a4a8a; }
-          .faq-exp-card.billing .pill     { background: #e8f5e8; color: #1a6a1a; border: 1px solid #1a6a1a; }
-          .faq-exp-card.compliance-export .pill { background: #fdf4e8; color: #8a6a1a; border: 1px solid #8a6a1a; }
-          .faq-exp-card.data .pill        { background: #eaeaff; color: #4a4aa8; border: 1px solid #4a4aa8; }
+          /* pill color variants from PALETTE.md status pills */
+          .faq-exp-card.preview .pill   { background: #f0f0f4; color: #5a5e6a; border-top-color: #5a5e6a; }
+          .faq-exp-card.power .pill     { background: #e8eef8; color: ${T.accent}; border-top-color: ${T.accent}; }
+          .faq-exp-card.progressive .pill { background: #e8f5e8; color: #1a6a1a; border-top-color: #1a6a1a; }
+          .faq-exp-card.predictive .pill  { background: #f8e8e8; color: #8a1a1a; border-top-color: #8a1a1a; }
+          .faq-exp-card.compliance .pill  { background: #fdf4e8; color: #8a6a1a; border-top-color: #8a6a1a; }
+          .faq-exp-card.amd .pill         { background: #e8eef8; color: ${T.accent}; border-top-color: ${T.accent}; }
+          .faq-exp-card.pricing .pill     { background: #e8f5e8; color: #1a6a1a; border-top-color: #1a6a1a; }
+          .faq-exp-card.teams .pill       { background: #f0eafd; color: #5a2a8a; border-top-color: #5a2a8a; }
+          .faq-exp-card.managerplus .pill { background: #eaf0fd; color: ${T.accent}; border-top-color: ${T.accent}; }
+          .faq-exp-card.mobile .pill      { background: #e8f0fd; color: #1a4a8a; border-top-color: #1a4a8a; }
+          .faq-exp-card.numbers .pill     { background: #fdeaea; color: #8a1a1a; border-top-color: #8a1a1a; }
+          .faq-exp-card.leads .pill       { background: #e8f5e8; color: #1a6a4a; border-top-color: #1a6a4a; }
+          .faq-exp-card.scripts .pill     { background: #eaeaff; color: #4a4aa8; border-top-color: #4a4aa8; }
+          .faq-exp-card.campaigns .pill   { background: #e8f0fd; color: ${T.accent}; border-top-color: ${T.accent}; }
+          .faq-exp-card.billing .pill     { background: #e8f5e8; color: #1a6a1a; border-top-color: #1a6a1a; }
+          .faq-exp-card.compliance-export .pill { background: #fdf4e8; color: #8a6a1a; border-top-color: #8a6a1a; }
+          .faq-exp-card.data .pill        { background: #eaeaff; color: #4a4aa8; border-top-color: #4a4aa8; }
 
           /* ── ACCORDION ── */
-          .faq-qa-section { margin-bottom: 72px; }
           .faq-qa details {
             background: white;
             border: 1px solid ${T.border};
-            border-radius: 14px;
+            border-radius: 4px;
             margin-bottom: 10px;
             overflow: hidden;
             transition: border-color 0.12s;
           }
           .faq-qa details[open] {
-            border-color: ${T.accent};
+            border-color: ${T.blue};
+            border-top: 3px solid ${T.blue};
           }
           .faq-qa summary {
-            padding: 22px 28px;
+            padding: 18px 22px;
             font-size: 15px;
             font-weight: 700;
             color: ${T.text};
@@ -288,7 +247,7 @@ export default function FaqView() {
           .faq-qa summary::-webkit-details-marker { display: none; }
           .faq-qa summary::after {
             content: '+';
-            color: ${T.accent};
+            color: ${T.blue};
             font-size: 22px;
             font-weight: bold;
             flex-shrink: 0;
@@ -296,101 +255,111 @@ export default function FaqView() {
           }
           .faq-qa details[open] summary::after { content: '−'; }
           .faq-qa .answer {
-            padding: 0 28px 24px;
+            padding: 0 22px 20px;
             font-size: 14px;
-            line-height: 1.8;
+            line-height: 1.75;
             color: ${T.muted};
           }
           .faq-qa .answer p { margin: 0 0 12px 0; }
           .faq-qa .answer p:last-child { margin-bottom: 0; }
           .faq-qa .answer code {
             background: ${T.bg};
-            padding: 2px 6px;
-            border-radius: 4px;
+            padding: 1px 6px;
+            border-radius: 3px;
             font-size: 12.5px;
             font-family: monospace;
           }
           .faq-qa .answer a {
-            color: ${T.accent};
+            color: ${T.blue};
             text-decoration: none;
-            border-bottom: 1px dotted ${T.accent};
+            border-bottom: 1px dotted ${T.blue};
           }
           .faq-qa .answer strong { color: ${T.text}; }
 
           /* ── CTA ── */
           .faq-cta {
-            background: linear-gradient(135deg, ${T.dark}, ${T.darker});
+            background: ${T.dark};
             color: white;
-            padding: 80px 32px;
+            padding: 64px 32px;
             text-align: center;
+            border-top: 2px solid ${T.accent};
           }
-          .faq-cta-inner { max-width: 720px; margin: 0 auto; }
+          .faq-cta-inner { max-width: 600px; margin: 0 auto; }
           .faq-cta-eyebrow {
             font-size: 11px;
             letter-spacing: 4px;
             color: #8888aa;
             font-weight: bold;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
           }
           .faq-cta h2 {
-            font-size: 42px;
+            font-size: 26px;
             font-weight: 800;
-            letter-spacing: -0.5px;
+            letter-spacing: -0.3px;
             color: white;
-            margin: 0 0 16px 0;
-            line-height: 1.15;
+            margin: 0 0 12px 0;
           }
           .faq-cta p {
-            font-size: 17px;
-            line-height: 1.6;
-            color: #c4c8d8;
-            margin: 0 auto 32px;
-            max-width: 520px;
+            font-size: 15px;
+            line-height: 1.7;
+            color: #c0c2ca;
+            margin: 0 auto 24px;
+            max-width: 480px;
           }
           .faq-cta-row {
             display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
           }
           .faq-btn-primary {
-            padding: 16px 32px;
-            background: linear-gradient(135deg, ${T.accent}, #2a6eff);
-            color: white;
-            font-size: 13px;
-            letter-spacing: 2.5px;
+            padding: 14px 28px;
+            background: ${T.dark};
+            border: none;
+            border-top: 3px solid ${T.blue};
+            color: ${T.blue};
+            font-size: 12px;
+            letter-spacing: 4px;
             font-weight: bold;
-            border-radius: 8px;
             text-decoration: none;
             display: inline-block;
-            box-shadow: 0 0 24px rgba(74,158,255,0.4);
           }
           .faq-btn-secondary {
-            padding: 16px 32px;
+            padding: 14px 28px;
             background: transparent;
             color: white;
             border: 1px solid rgba(255,255,255,0.25);
-            font-size: 13px;
-            letter-spacing: 2.5px;
+            border-top: 3px solid rgba(255,255,255,0.25);
+            font-size: 12px;
+            letter-spacing: 4px;
             font-weight: bold;
-            border-radius: 8px;
             text-decoration: none;
             display: inline-block;
           }
 
+          /* ── EMAIL ── */
+          .faq-support-prompt {
+            font-size: 16px;
+            color: ${T.muted};
+            line-height: 1.65;
+            max-width: 680px;
+            margin: 0 auto 48px auto;
+            text-align: center;
+          }
+          .faq-support-prompt a {
+            color: ${T.blue};
+            text-decoration: none;
+          }
+
           /* ── RESPONSIVE ── */
           @media (max-width: 768px) {
-            .faq-hero { padding: 64px 20px 56px; }
-            .faq-hero h1 { font-size: 36px; letter-spacing: -0.5px; }
-            .faq-lead { font-size: 16px; }
-            .faq-body { padding: 56px 20px; }
-            .faq-featured { padding: 28px 24px; }
-            .faq-featured h2 { font-size: 24px; }
-            .faq-section-h2 { font-size: 28px; }
-            .faq-explainers-grid { grid-template-columns: 1fr 1fr; }
-            .faq-cta { padding: 56px 20px; }
-            .faq-cta h2 { font-size: 30px; }
-            .faq-btn-primary, .faq-btn-secondary { width: 100%; box-sizing: border-box; text-align: center; }
-          }
-          @media (max-width: 480px) {
+            .faq-hero { padding: 56px 20px 44px; }
+            .faq-hero h1 { font-size: 30px; }
+            .faq-lead { font-size: 14px; }
+            .faq-body { padding: 40px 20px 56px; }
+            .faq-featured { padding: 24px; }
+            .faq-featured h2 { font-size: 22px; }
             .faq-explainers-grid { grid-template-columns: 1fr; }
+            .faq-cta { padding: 48px 20px; }
+            .faq-cta h2 { font-size: 22px; }
+            .faq-btn-primary, .faq-btn-secondary { width: 100%; box-sizing: border-box; text-align: center; }
           }
         `}</style>
 
@@ -400,10 +369,7 @@ export default function FaqView() {
           <section className="faq-hero">
             <div className="faq-hero-inner">
               <div className="faq-eyebrow">FREQUENTLY ASKED QUESTIONS</div>
-              <h1>
-                The questions buyers<br />
-                <span className="accent">actually ask.</span>
-              </h1>
+              <h1>The questions buyers actually ask.</h1>
               <p className="faq-lead">
                 Pricing, contracts, compliance, team setup, and the bigger question
                 of why we built DialerSeat in the first place — answered honestly.
@@ -430,112 +396,93 @@ export default function FaqView() {
 
             {/* QUICK EXPLAINERS */}
             <div className="faq-explainers">
-              <div className="faq-section-eyebrow">▸ QUICK EXPLAINERS</div>
-              <h2 className="faq-section-h2">Plain-English answers to the big topics.</h2>
-              <p className="faq-section-lede">
-                Every major feature, concept, and policy — each on its own dedicated page
-                so you can link directly to what you need.
-              </p>
+              <div className="faq-section-label">▸ QUICK EXPLAINERS</div>
+              <h2 className="faq-section-title">Plain-English answers to the big topics.</h2>
+              
               <div className="faq-explainers-grid">
                 <Link href="/faq/what-is-a-preview-dialer" className="faq-exp-card preview">
                   <span className="pill">PREVIEW</span>
                   <div className="card-title">What is a preview dialer?</div>
-                  <div className="read-more">READ MORE →</div>
                 </Link>
                 <Link href="/faq/what-is-a-power-dialer" className="faq-exp-card power">
                   <span className="pill">POWER</span>
                   <div className="card-title">What is a power dialer?</div>
-                  <div className="read-more">READ MORE →</div>
                 </Link>
                 <Link href="/faq/what-is-a-progressive-dialer" className="faq-exp-card progressive">
                   <span className="pill">PROGRESSIVE</span>
                   <div className="card-title">What is a progressive dialer?</div>
-                  <div className="read-more">READ MORE →</div>
                 </Link>
                 <Link href="/faq/what-is-a-predictive-dialer" className="faq-exp-card predictive">
                   <span className="pill">PREDICTIVE</span>
                   <div className="card-title">What is a predictive dialer?</div>
-                  <div className="read-more">READ MORE →</div>
                 </Link>
                 <Link href="/faq/why-is-compliance-important" className="faq-exp-card compliance">
                   <span className="pill">COMPLIANCE · WHY</span>
                   <div className="card-title">Why is compliance important?</div>
-                  <div className="read-more">READ MORE →</div>
                 </Link>
                 <Link href="/faq/how-we-keep-compliance" className="faq-exp-card compliance">
                   <span className="pill">COMPLIANCE · HOW</span>
                   <div className="card-title">How we keep compliance.</div>
-                  <div className="read-more">READ MORE →</div>
                 </Link>
                 <Link href="/faq/how-does-amd-work" className="faq-exp-card amd">
                   <span className="pill">AMD</span>
                   <div className="card-title">How does AMD work?</div>
-                  <div className="read-more">READ MORE →</div>
                 </Link>
                 <Link href="/faq/why-we-charge" className="faq-exp-card pricing">
                   <span className="pill">PRICING</span>
                   <div className="card-title">Why we charge what we charge.</div>
-                  <div className="read-more">READ MORE →</div>
                 </Link>
                 <Link href="/faq/dialerseat-teams" className="faq-exp-card teams">
                   <span className="pill">TEAMS</span>
                   <div className="card-title">DialerSeat for teams.</div>
-                  <div className="read-more">READ MORE →</div>
                 </Link>
                 <Link href="/faq/manager-plus" className="faq-exp-card managerplus">
                   <span className="pill">MANAGER+</span>
                   <div className="card-title">What Manager+ adds over Pro.</div>
-                  <div className="read-more">READ MORE →</div>
                 </Link>
                 <Link href="/faq/mobile" className="faq-exp-card mobile">
                   <span className="pill">MOBILE</span>
                   <div className="card-title">DialerSeat on mobile — install the PWA.</div>
-                  <div className="read-more">READ MORE →</div>
                 </Link>
                 <Link href="/faq/numbers" className="faq-exp-card numbers">
                   <span className="pill">NUMBERS</span>
                   <div className="card-title">Caller ID, attestation, avoiding spam flags.</div>
-                  <div className="read-more">READ MORE →</div>
                 </Link>
                 <Link href="/faq/leads" className="faq-exp-card leads">
                   <span className="pill">LEADS</span>
                   <div className="card-title">Uploading &amp; managing your lead lists.</div>
-                  <div className="read-more">READ MORE →</div>
                 </Link>
                 <Link href="/faq/campaigns" className="faq-exp-card campaigns">
                   <span className="pill">CAMPAIGNS</span>
                   <div className="card-title">Mode, AMD, voicemail drop — campaign setup.</div>
-                  <div className="read-more">READ MORE →</div>
                 </Link>
                 <Link href="/faq/scripts" className="faq-exp-card scripts">
                   <span className="pill">SCRIPTS</span>
                   <div className="card-title">Call scripts — write, attach, reorder.</div>
-                  <div className="read-more">READ MORE →</div>
                 </Link>
                 <Link href="/faq/compliance-export" className="faq-exp-card compliance-export">
                   <span className="pill">COMPLIANCE EXPORT</span>
                   <div className="card-title">Prove it, don&apos;t just claim it.</div>
-                  <div className="read-more">READ MORE →</div>
                 </Link>
                 <Link href="/faq/billing" className="faq-exp-card billing">
                   <span className="pill">BILLING</span>
                   <div className="card-title">What cancel, failed cards, and seats actually do.</div>
-                  <div className="read-more">READ MORE →</div>
                 </Link>
                 <Link href="/faq/data-and-recordings" className="faq-exp-card data">
                   <span className="pill">DATA</span>
                   <div className="card-title">Recordings, full export, account deletion.</div>
-                  <div className="read-more">READ MORE →</div>
                 </Link>
               </div>
             </div>
 
             {/* COMMON Q&A */}
             <div className="faq-qa-section">
-              <div className="faq-section-eyebrow">▸ EVERYTHING ELSE</div>
-              <h2 className="faq-section-h2">Common questions.</h2>
-              <p className="faq-section-lede">
-                The questions that come up most often — answered directly, without the runaround.
+              <div className="faq-section-label">▸ EVERYTHING ELSE</div>
+              <h2 className="faq-section-title">Common questions.</h2>
+              
+              <p className="faq-support-prompt">
+                Have a question that isn&apos;t listed? Email{' '}
+                <a href="mailto:support@dialerseat.com">support@dialerseat.com</a>
               </p>
 
               <div className="faq-qa">
@@ -834,7 +781,7 @@ export default function FaqView() {
                   <p>The terminal&apos;s waiting.</p>
                   <div className="faq-cta-row">
                     <Link href="/dashboard/dialer" className="faq-btn-primary">
-                      OPEN DIALER →
+                      GO TO DASHBOARD →
                     </Link>
                     <Link href="/dialing-modes" className="faq-btn-secondary">
                       DIALING MODES
@@ -849,7 +796,7 @@ export default function FaqView() {
                   </p>
                   <div className="faq-cta-row">
                     <Link href="/sign-up" className="faq-btn-primary">
-                      START DIALING →
+                      GET STARTED →
                     </Link>
                     <Link href="/faq/why-dialerseat" className="faq-btn-secondary">
                       WHY DIALERSEAT?
