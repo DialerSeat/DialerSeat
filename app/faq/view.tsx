@@ -6,13 +6,13 @@ import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 
 const T = {
-  bg: '#f0f1f4',
-  surface: '#e2e4ea',
-  border: '#c4c8d0',
+  bg: '#0a0a14',
+  surface: '#1a1a2e',
+  border: '#2a2a4a',
   dark: '#1a1a2e',
   darker: '#0a0a14',
-  text: '#1a1c24',
-  muted: '#5a5e6a',
+  text: '#ffffff',
+  muted: '#8888aa',
   accent: '#2a4a8a',
   blue: '#4a9eff',
 }
@@ -103,7 +103,7 @@ export default function FaqView() {
           /* ── FEATURED CARD ── */
           .faq-featured {
             display: block;
-            background: ${T.dark};
+            background: ${T.surface};
             border-radius: 4px;
             padding: 32px 36px;
             text-decoration: none;
@@ -201,27 +201,27 @@ export default function FaqView() {
           }
 
           /* pill color variants from PALETTE.md status pills */
-          .faq-exp-card.preview .pill   { background: #f0f0f4; color: #5a5e6a; border-top-color: #5a5e6a; }
-          .faq-exp-card.power .pill     { background: #e8eef8; color: ${T.accent}; border-top-color: ${T.accent}; }
-          .faq-exp-card.progressive .pill { background: #e8f5e8; color: #1a6a1a; border-top-color: #1a6a1a; }
-          .faq-exp-card.predictive .pill  { background: #f8e8e8; color: #8a1a1a; border-top-color: #8a1a1a; }
-          .faq-exp-card.compliance .pill  { background: #fdf4e8; color: #8a6a1a; border-top-color: #8a6a1a; }
-          .faq-exp-card.amd .pill         { background: #e8eef8; color: ${T.accent}; border-top-color: ${T.accent}; }
-          .faq-exp-card.pricing .pill     { background: #e8f5e8; color: #1a6a1a; border-top-color: #1a6a1a; }
-          .faq-exp-card.teams .pill       { background: #f0eafd; color: #5a2a8a; border-top-color: #5a2a8a; }
-          .faq-exp-card.managerplus .pill { background: #eaf0fd; color: ${T.accent}; border-top-color: ${T.accent}; }
-          .faq-exp-card.mobile .pill      { background: #e8f0fd; color: #1a4a8a; border-top-color: #1a4a8a; }
-          .faq-exp-card.numbers .pill     { background: #fdeaea; color: #8a1a1a; border-top-color: #8a1a1a; }
-          .faq-exp-card.leads .pill       { background: #e8f5e8; color: #1a6a4a; border-top-color: #1a6a4a; }
-          .faq-exp-card.scripts .pill     { background: #eaeaff; color: #4a4aa8; border-top-color: #4a4aa8; }
-          .faq-exp-card.campaigns .pill   { background: #e8f0fd; color: ${T.accent}; border-top-color: ${T.accent}; }
-          .faq-exp-card.billing .pill     { background: #e8f5e8; color: #1a6a1a; border-top-color: #1a6a1a; }
-          .faq-exp-card.compliance-export .pill { background: #fdf4e8; color: #8a6a1a; border-top-color: #8a6a1a; }
-          .faq-exp-card.data .pill        { background: #eaeaff; color: #4a4aa8; border-top-color: #4a4aa8; }
+          .faq-exp-card.preview .pill   { background: #1a1a2e; color: #8888aa; border-top-color: #8888aa; }
+          .faq-exp-card.power .pill     { background: rgba(74,158,255,0.1); color: ${T.blue}; border-top-color: ${T.blue}; }
+          .faq-exp-card.progressive .pill { background: rgba(26,106,26,0.1); color: #4ade80; border-top-color: #4ade80; }
+          .faq-exp-card.predictive .pill  { background: rgba(138,26,26,0.1); color: #f87171; border-top-color: #f87171; }
+          .faq-exp-card.compliance .pill  { background: rgba(138,106,26,0.1); color: #fbbf24; border-top-color: #fbbf24; }
+          .faq-exp-card.amd .pill         { background: rgba(74,158,255,0.1); color: ${T.blue}; border-top-color: ${T.blue}; }
+          .faq-exp-card.pricing .pill     { background: rgba(26,106,26,0.1); color: #4ade80; border-top-color: #4ade80; }
+          .faq-exp-card.teams .pill       { background: rgba(90,42,138,0.1); color: #a78bfa; border-top-color: #a78bfa; }
+          .faq-exp-card.managerplus .pill { background: rgba(74,158,255,0.1); color: ${T.blue}; border-top-color: ${T.blue}; }
+          .faq-exp-card.mobile .pill      { background: rgba(74,158,255,0.1); color: ${T.blue}; border-top-color: ${T.blue}; }
+          .faq-exp-card.numbers .pill     { background: rgba(138,26,26,0.1); color: #f87171; border-top-color: #f87171; }
+          .faq-exp-card.leads .pill       { background: rgba(26,106,74,0.1); color: #34d399; border-top-color: #34d399; }
+          .faq-exp-card.scripts .pill     { background: rgba(74,74,168,0.1); color: #818cf8; border-top-color: #818cf8; }
+          .faq-exp-card.campaigns .pill   { background: rgba(74,158,255,0.1); color: ${T.blue}; border-top-color: ${T.blue}; }
+          .faq-exp-card.billing .pill     { background: rgba(26,106,26,0.1); color: #4ade80; border-top-color: #4ade80; }
+          .faq-exp-card.compliance-export .pill { background: rgba(138,106,26,0.1); color: #fbbf24; border-top-color: #fbbf24; }
+          .faq-exp-card.data .pill        { background: rgba(74,74,168,0.1); color: #818cf8; border-top-color: #818cf8; }
 
           /* ── ACCORDION ── */
           .faq-qa details {
-            background: white;
+            background: ${T.surface};
             border: 1px solid ${T.border};
             border-radius: 4px;
             margin-bottom: 10px;
@@ -309,9 +309,11 @@ export default function FaqView() {
           .faq-cta-row {
             display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
           }
+          
+          /* Landing page white outlined button style */
           .faq-btn-primary {
             padding: 14px 28px;
-            background: ${T.dark};
+            background: #1a1a2e;
             border: none;
             border-top: 3px solid ${T.blue};
             color: ${T.blue};
@@ -320,18 +322,20 @@ export default function FaqView() {
             font-weight: bold;
             text-decoration: none;
             display: inline-block;
+            border-radius: 6px;
           }
           .faq-btn-secondary {
             padding: 14px 28px;
             background: transparent;
             color: white;
-            border: 1px solid rgba(255,255,255,0.25);
-            border-top: 3px solid rgba(255,255,255,0.25);
+            border: 1px solid #c4c8d0;
+            border-top: 3px solid white;
             font-size: 12px;
             letter-spacing: 4px;
             font-weight: bold;
             text-decoration: none;
             display: inline-block;
+            border-radius: 6px;
           }
 
           /* ── EMAIL ── */
@@ -780,7 +784,7 @@ export default function FaqView() {
                   <h2>Hop back in.</h2>
                   <p>The terminal&apos;s waiting.</p>
                   <div className="faq-cta-row">
-                    <Link href="/dashboard/dialer" className="faq-btn-primary">
+                    <Link href="/dashboard/analytics" className="faq-btn-primary">
                       GO TO DASHBOARD →
                     </Link>
                     <Link href="/dialing-modes" className="faq-btn-secondary">

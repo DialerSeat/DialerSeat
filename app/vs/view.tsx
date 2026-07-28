@@ -5,13 +5,13 @@ import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 
 const T = {
-  bg: '#f0f1f4',
-  surface: '#e2e4ea',
-  border: '#c4c8d0',
+  bg: '#0a0a14',
+  surface: '#1a1a2e',
+  border: '#2a2a4a',
   dark: '#1a1a2e',
   darker: '#0a0a14',
-  text: '#1a1c24',
-  muted: '#5a5e6a',
+  text: '#ffffff',
+  muted: '#8888aa',
   accent: '#2a4a8a',
   blue: '#4a9eff',
 }
@@ -232,7 +232,7 @@ export default function VsHubView() {
           /* ── FEATURED CARD (START HERE) ── */
           .vshub-featured {
             display: block;
-            background: ${T.dark};
+            background: ${T.surface};
             border-radius: 4px;
             padding: 40px 44px;
             text-decoration: none;
@@ -386,9 +386,11 @@ export default function VsHubView() {
             margin: 0 auto 32px;
             max-width: 520px;
           }
+          
+          /* Landing page white outlined button style */
           .vshub-btn-primary {
             padding: 16px 32px;
-            background: ${T.dark};
+            background: #1a1a2e;
             border: none;
             border-top: 3px solid ${T.blue};
             color: ${T.blue};
@@ -397,12 +399,13 @@ export default function VsHubView() {
             font-weight: bold;
             text-decoration: none;
             display: inline-block;
+            border-radius: 6px;
           }
 
           /* ── RESPONSIVE ── */
           @media (max-width: 768px) {
             .vshub-hero { padding: 64px 20px 56px; }
-            .vshub-hero h1 { font-size: 36px; letter-spacing: -0.5px; }
+            .vshub-h1 { font-size: 36px; letter-spacing: -0.5px; }
             .vshub-lead { font-size: 16px; }
             .vshub-body { padding: 56px 20px; }
             .vshub-featured { padding: 28px 24px; }
