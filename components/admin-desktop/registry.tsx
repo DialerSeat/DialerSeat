@@ -78,10 +78,6 @@ const LogsApp = dynamic(() => import('./apps/Logs'), {
   loading: () => <AppLoading />,
   ssr: false,
 })
-const SupportApp = dynamic(() => import('./apps/Support'), {
-  loading: () => <AppLoading />,
-  ssr: false,
-})
 const NotesApp = dynamic(() => import('./apps/Notes'), {
   loading: () => <AppLoading />,
   ssr: false,
@@ -210,19 +206,6 @@ export const APPS: AppDefinition[] = [
     visibleTo: ['admin'],
     Component: LogsApp,
     defaultSize: { width: 1000, height: 700 },
-  },
-  {
-    
-    
-    
-    id: 'support',
-    name: 'Support',
-    icon: '🎧',
-    iconBg: 'linear-gradient(135deg, #4a9eff, #6a4aff)',
-    description: 'User support queries, bug reports, and exit feedback',
-    visibleTo: ['admin'],
-    Component: SupportApp,
-    defaultSize: { width: 1100, height: 720 },
   },
   {
     id: 'notes',

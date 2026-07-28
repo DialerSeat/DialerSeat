@@ -119,9 +119,44 @@ const SWITCHING_FROM = [
     summary: 'Same high-volume outbound dialing for insurance, solar, and lead-heavy verticals. Without the custom quoting, ~20-seat minimum, and carrier fees billed separately from the base price. One flat weekly price, no seat minimum.',
   },
   {
-    name: 'KIXIE / JUSTCALL',
-    href: null,
-    summary: 'Both tier their dialer capability by price — multi-line and predictive dialing cost more than the advertised entry rate, or require a plan upgrade entirely. DialerSeat includes every dialer mode at one flat weekly price from the first seat.',
+    name: 'KIXIE',
+    href: '/vs/kixie',
+    summary: 'Same predictive and multi-line dialing without paying Kixie\'s $95+/seat/month multi-line tier. Every dialer mode is included in the base $35/week price, not tiered by how much calling power you need.',
+  },
+  {
+    name: 'JUSTCALL',
+    href: '/vs/justcall',
+    summary: 'Same power and predictive dialing without the Pro-tier upgrade — JustCall\'s $29/month Team plan doesn\'t include a dialer; that runs $49+/seat/month and up. $35/week, dialer included from the first seat.',
+  },
+  {
+    name: '3CX',
+    href: '/vs/3cx',
+    summary: 'A different category, not a straight swap — 3CX is a general business phone system licensed by call capacity (~$350+/year), not an outbound sales dialer. DialerSeat is built for campaigns, dispositions, and compliance windows; plenty of teams run both.',
+  },
+  {
+    name: 'AIRCALL',
+    href: '/vs/aircall',
+    summary: 'Same self-serve outbound dialing without the Professional-tier upsell — Aircall gates its dialer behind a $50/seat/month tier with a 3-seat minimum. Flat $35/week, dialer included from the first seat.',
+  },
+  {
+    name: 'CLOUDTALK',
+    href: '/vs/cloudtalk',
+    summary: 'Same outbound dialer without assembling it from a base seat plus separate add-ons — CloudTalk\'s dialing capability runs $34+/seat/month once Power Dialer is added on. $35/week flat, dialer included.',
+  },
+  {
+    name: 'DIALPAD',
+    href: '/vs/dialpad',
+    summary: 'Same power dialer without buying a second, separate product — Dialpad\'s phone plans don\'t include one; Dialpad Sell is a separate purchase at $39+/seat/month. $35/week includes the dialer from day one.',
+  },
+  {
+    name: 'WAVV',
+    href: '/vs/wavv',
+    summary: 'Same multi-line predictive dialing without paying WAVV\'s top $149/month tier to unlock it, or its $1/month-per-number add-on fees. Every dialer mode included at one flat $35/week price.',
+  },
+  {
+    name: 'ORUM',
+    href: '/vs/orum',
+    summary: 'Same focus on outbound calling without Orum\'s reported ~$250–$800/user/month pricing, annual-only contract, and 3-seat minimum. $35/week, published pricing, cancel anytime, one seat minimum: one.',
   },
   {
     name: 'CALLTOOLS',

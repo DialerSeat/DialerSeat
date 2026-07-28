@@ -264,17 +264,10 @@ export default function TermsPage() {
 
             <h3>Refunds</h3>
             <p>
-              Because the service is billed weekly with no commitment, refunds are generally not
-              issued. We may issue refunds at our discretion if the service was materially
-              unavailable due to our fault. Contact <a href="mailto:support@dialerseat.com">support@dialerseat.com</a> with refund requests.
-            </p>
-            <p>
-              <strong>No refunds after notable usage.</strong> We track calls placed, minutes
-              dialed, and leads worked on every account. If your account shows notable usage
-              during the billing period in question — meaning you placed outbound calls or
-              otherwise actively used the dialer — that period is not eligible for a refund,
-              regardless of when in the week the request is made. This applies whether the
-              usage came from you or from a team member on a seat you're responsible for.
+              Refunds are only considered within 24 hours of the charge going through. Once that
+              24-hour window has passed, the charge is final — canceling afterward stops future
+              billing (see Cancellation, above) but does not refund the period you're already in.
+              Contact <a href="mailto:support@dialerseat.com">support@dialerseat.com</a> with refund requests.
             </p>
 
             <h3>Taxes</h3>

@@ -268,6 +268,22 @@ export default function BillingFaqView() {
           </p>
         </section>
 
+        {/* ── REFUNDS ─────────────────────────────────────────────────────── */}
+        <section className="bil-section">
+          <h2>▸ REFUNDS</h2>
+          <p>
+            Refunds are only considered within <strong>24 hours</strong>{' '}
+            of the charge going through. Once that 24-hour window has
+            passed, the charge is final — canceling afterward stops
+            future billing (see above) but doesn&apos;t refund the period
+            you&apos;re already in.
+          </p>
+          <p className="muted">
+            Contact support for more information at{' '}
+            support@dialerseat.com.
+          </p>
+        </section>
+
         {/* ── HONEST NOTE ───────────────────────────────────────────────── */}
         <div className="bil-callout">
           <p>

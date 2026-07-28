@@ -452,7 +452,7 @@ export default function BillingPage() {
               </li>
               <li style={termItemStyle}>
                 <span style={termBulletStyle} />
-                <span>Subscription is non-refundable once a billing cycle has been charged</span>
+                <span>Refunds are only considered within 24 hours of being charged — contact support@dialerseat.com</span>
               </li>
               {plan === 'wl' && (
                 <li style={termItemStyle}>

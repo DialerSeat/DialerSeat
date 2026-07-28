@@ -386,7 +386,7 @@ export default function TeamsManager() {
   const removeMember = (m: TeamMember) => {
     setConfirmState({
       title: 'KICK MEMBER',
-      body: `Remove ${displayName(m.user, 'this member')} from the team? They lose all campaign access and any owner-paid subs end at period close. Refunds for partial periods are only available via dispute through the cardholder's bank. Type "remove" to confirm.`,
+      body: `Remove ${displayName(m.user, 'this member')} from the team? They lose all campaign access and any owner-paid subs end at period close. Type "remove" to confirm.`,
       confirmWord: 'remove',
       danger: true,
       onConfirm: async () => {
@@ -498,7 +498,7 @@ export default function TeamsManager() {
   const revokeAccess = (team: OwnedTeam, member: TeamMember, access: MemberCampaignAccess, campaignName: string) => {
     setConfirmState({
       title: 'REVOKE CAMPAIGN ACCESS',
-      body: `Revoke ${displayName(member.user, 'this member')}'s access to "${campaignName}"? Their seat sub for this campaign ends at period close. They stay on the team and can be reinstated anytime. Refunds for partial periods are only available via dispute through the cardholder's bank. Type "remove" to confirm.`,
+      body: `Revoke ${displayName(member.user, 'this member')}'s access to "${campaignName}"? Their seat sub for this campaign ends at period close. They stay on the team and can be reinstated anytime. Type "remove" to confirm.`,
       confirmWord: 'remove',
       danger: true,
       onConfirm: async () => {
@@ -589,7 +589,7 @@ export default function TeamsManager() {
   const detachCampaign = (teamId: string, campaignId: string, campaignName: string) => {
     setConfirmState({
       title: 'DETACH CAMPAIGN',
-      body: `Detach "${campaignName}" from this team? Member access to this campaign will be revoked. Owner-paid seat subs tied to this campaign end at period close. Refunds for partial periods are only available via dispute through the cardholder's bank. Type "remove" to confirm.`,
+      body: `Detach "${campaignName}" from this team? Member access to this campaign will be revoked. Owner-paid seat subs tied to this campaign end at period close. Type "remove" to confirm.`,
       confirmWord: 'remove',
       danger: true,
       onConfirm: async () => {
@@ -1175,7 +1175,7 @@ export default function TeamsManager() {
                   Are you sure you want to delete <strong>{deleteTeamStage.team.name}</strong>?
                 </p>
                 <p style={{ fontSize: 12, lineHeight: 1.6, color: T.muted, margin: '0 0 16px 0' }}>
-                  All members lose access. Owner-paid seat subscriptions end at period close. Refunds for partial periods are only available via dispute through the cardholder&apos;s bank. This cannot be undone.
+                  All members lose access. Owner-paid seat subscriptions end at period close. This cannot be undone.
                 </p>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button onClick={() => setDeleteTeamStage(null)} style={modalCancelBtn(false)}>NO, KEEP TEAM</button>

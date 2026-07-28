@@ -152,15 +152,6 @@ export default function SettingsPage() {
   const [brandOptions, setBrandOptions] = useState<BrandOptions | null>(null)
   const [switchingBrand, setSwitchingBrand] = useState(false)
 
-  // ── support form (settings → subscription details) ──
-  const [showSupport, setShowSupport] = useState(false)
-  const [supportType, setSupportType] = useState<'support' | 'bug' | 'suggestion'>('support')
-  const [supportSubject, setSupportSubject] = useState('')
-  const [supportBody, setSupportBody] = useState('')
-  const [supportSubmitting, setSupportSubmitting] = useState(false)
-  const [supportSubmitted, setSupportSubmitted] = useState(false)
-  const [supportError, setSupportError] = useState<string | null>(null)
-
   // ── delete account (feedback first, then confirm) ──
   const [showDelete, setShowDelete] = useState(false)
   const [deleteStep, setDeleteStep] = useState<'feedback' | 'confirm' | 'done'>('feedback')
@@ -337,47 +328,6 @@ export default function SettingsPage() {
     } catch (err: any) {
       setError(err.message || 'Failed to switch view')
       setSwitchingBrand(false)
-    }
-  }
-
-  function openSupport() {
-    setShowSupport(true)
-    setSupportType('support')
-    setSupportSubject('')
-    setSupportBody('')
-    setSupportError(null)
-    setSupportSubmitted(false)
-  }
-  function closeSupport() {
-    if (supportSubmitting) return
-    setShowSupport(false)
-  }
-  async function submitSupport() {
-    if (!supportBody.trim()) { setSupportError('Please describe what\'s going on.'); return }
-    setSupportSubmitting(true)
-    setSupportError(null)
-    try {
-      const res = await fetch('/api/admin/support/submit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: supportType,
-          subject: supportSubject.trim() || null,
-          body: supportBody.trim(),
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok || !data.success) {
-        setSupportError(data.error || 'Failed to send. Please try again.')
-        return
-      }
-      setSupportSubmitted(true)
-      setSupportSubject('')
-      setSupportBody('')
-    } catch (err: any) {
-      setSupportError(err?.message || 'Failed to send. Please try again.')
-    } finally {
-      setSupportSubmitting(false)
     }
   }
 
@@ -598,16 +548,16 @@ export default function SettingsPage() {
           )}
         </div>
 
-        {/* SUPPORT — reaches the same inbox as the admin Support desktop app */}
+        {/* SUPPORT */}
         <div style={sectionStyle}>
           <div style={sectionHeaderStyle}>▸ SUPPORT</div>
           <div style={{ ...mutedStyle, marginBottom: 12, lineHeight: 1.6 }}>
             Found a bug, need help, or have an idea to make DialerSeat better?
             Send it straight to us.
           </div>
-          <button onClick={openSupport} style={editorButtonStyle}>
-            CONTACT SUPPORT
-          </button>
+          <div style={{ fontSize: 13, fontFamily: FUTURA, color: CHROME.text }}>
+            support@dialerseat.com
+          </div>
         </div>
 
         {/* TEAM SEATS */}
@@ -665,7 +615,7 @@ export default function SettingsPage() {
               fontSize: 10, color: CHROME.muted, letterSpacing: 1, lineHeight: 1.5,
               marginTop: 12, paddingTop: 12, borderTop: `1px solid ${CHROME.borderSoft}`,
             }}>
-              Canceling a seat ends campaign access only. You remain on the team and can rejoin a campaign anytime. Refunds for partial periods are only available via dispute through your bank.
+              Canceling a seat ends campaign access only. You remain on the team and can rejoin a campaign anytime.
             </div>
           </div>
         )}
@@ -713,7 +663,7 @@ export default function SettingsPage() {
                   <strong style={{ color: 'var(--brand-primary)' }}>
                     {sub.currentPeriodEnd ? formatDate(sub.currentPeriodEnd) : 'period end'}
                   </strong>
-                  . No further charges. Refunds for partial periods are only available via dispute through your bank.
+                  . No further charges.
                 </div>
 
                 <div style={typePromptStyle}>
@@ -799,7 +749,7 @@ export default function SettingsPage() {
               Cancel your access to <strong>{seatConfirmTarget.campaignName || 'this campaign'}</strong> on team <strong>{seatConfirmTarget.teamName}</strong>?
             </p>
             <p style={{ fontSize: 12, lineHeight: 1.6, color: CHROME.muted, margin: '0 0 16px 0' }}>
-              You stay on the team but lose dialing access to this campaign. Your $35/wk for this seat stops at period close. Refunds for partial periods are only available via dispute through your bank.
+              You stay on the team but lose dialing access to this campaign. Your $35/wk for this seat stops at period close.
             </p>
             <div style={typePromptStyle}>
               Type <strong style={{ color: '#ff8888' }}>cancel</strong> to confirm:
@@ -831,117 +781,6 @@ export default function SettingsPage() {
                 {seatCancelling !== null ? 'CANCELING...' : 'CONFIRM CANCEL'}
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {showSupport && (
-        <div
-          onClick={closeSupport}
-          style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 100, padding: 20,
-          }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              background: CHROME.surface, border: `1px solid ${CHROME.border}`,
-              borderTop: '3px solid var(--brand-primary)', borderRadius: 4, padding: 28,
-              maxWidth: 460, width: '100%', fontFamily: FUTURA, color: CHROME.text,
-              maxHeight: '85vh', overflowY: 'auto', boxSizing: 'border-box',
-            }}
-          >
-            {supportSubmitted ? (
-              <>
-                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 4, color: 'var(--brand-primary)', marginBottom: 14 }}>
-                  SENT
-                </div>
-                <p style={{ fontSize: 13, lineHeight: 1.6, margin: '0 0 20px 0' }}>
-                  Thanks — we&apos;ve got it and will follow up by email if we need anything else.
-                </p>
-                <button onClick={closeSupport} style={secondaryButtonStyle}>CLOSE</button>
-              </>
-            ) : (
-              <>
-                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 4, color: 'var(--brand-primary)', marginBottom: 14 }}>
-                  CONTACT SUPPORT
-                </div>
-
-                <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
-                  {([
-                    { key: 'support', label: 'QUESTION' },
-                    { key: 'bug', label: 'BUG' },
-                    { key: 'suggestion', label: 'SUGGESTION' },
-                  ] as const).map(t => (
-                    <button
-                      key={t.key}
-                      onClick={() => setSupportType(t.key)}
-                      style={{
-                        padding: '7px 12px', borderRadius: 3, cursor: 'pointer',
-                        border: `1px solid ${supportType === t.key ? 'var(--brand-primary)' : CHROME.border}`,
-                        background: supportType === t.key ? 'var(--brand-primary-soft)' : 'transparent',
-                        color: supportType === t.key ? 'var(--brand-primary)' : CHROME.muted,
-                        fontFamily: FUTURA, fontSize: 10, letterSpacing: 1.5, fontWeight: 700,
-                      }}
-                    >
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
-
-                <label style={typePromptStyle}>SUBJECT (OPTIONAL)</label>
-                <input
-                  type="text"
-                  value={supportSubject}
-                  onChange={e => setSupportSubject(e.target.value)}
-                  placeholder={supportType === 'suggestion' ? 'e.g. Dark mode for the dialer' : 'Short summary'}
-                  maxLength={200}
-                  style={{ ...typeInputStyle, color: CHROME.text, border: `1px solid ${CHROME.border}`, fontFamily: FUTURA }}
-                />
-
-                <label style={typePromptStyle}>
-                  {supportType === 'suggestion' ? 'WHAT WOULD MAKE DIALERSEAT BETTER?' : 'WHAT\'S GOING ON?'}
-                </label>
-                <textarea
-                  value={supportBody}
-                  onChange={e => setSupportBody(e.target.value)}
-                  placeholder={
-                    supportType === 'bug' ? 'What happened, and what did you expect instead?'
-                    : supportType === 'suggestion' ? 'Describe the idea — the more detail, the better.'
-                    : 'Tell us what you need help with.'
-                  }
-                  maxLength={8000}
-                  rows={5}
-                  style={{
-                    width: '100%', resize: 'vertical', boxSizing: 'border-box',
-                    background: CHROME.sectionBg, border: `1px solid ${CHROME.border}`, borderRadius: 3,
-                    color: CHROME.text, fontFamily: FUTURA, fontSize: 13, lineHeight: 1.6, padding: 12,
-                    outline: 'none', marginBottom: 16,
-                  }}
-                />
-
-                {supportError && <div style={errorStyle}>{supportError}</div>}
-
-                <div className="settings-confirm-buttons" style={confirmButtonsStyle}>
-                  <button onClick={closeSupport} disabled={supportSubmitting} style={secondaryButtonStyle}>
-                    CANCEL
-                  </button>
-                  <button
-                    onClick={submitSupport}
-                    disabled={supportSubmitting || !supportBody.trim()}
-                    style={{
-                      ...secondaryButtonStyle, flex: 1,
-                      opacity: supportSubmitting || !supportBody.trim() ? 0.4 : 1,
-                      cursor: supportSubmitting || !supportBody.trim() ? 'not-allowed' : 'pointer',
-                    }}
-                  >
-                    {supportSubmitting ? 'SENDING...' : 'SEND'}
-                  </button>
-                </div>
-              </>
-            )}
           </div>
         </div>
       )}
