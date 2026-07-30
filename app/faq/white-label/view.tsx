@@ -56,7 +56,7 @@ export default function View() {
       <style>{`
         .wl-root { max-width: 820px; margin: 0 auto; padding: 80px 32px 120px; }
         .wl-eyebrow {
-          font-size: 11px; letter-spacing: 4px; color: ${T.gold};
+          font-size: 11px; letter-spacing: 4px; color: ${T.amber};
           font-weight: bold; margin-bottom: 18px;
         }
         .wl-h1 {
@@ -64,7 +64,7 @@ export default function View() {
           font-weight: 700; margin: 0 0 24px 0;
         }
         .wl-h1 em {
-          font-style: normal; color: ${T.gold};
+          font-style: normal; color: ${T.amber};
         }
         .wl-deck {
           font-size: 19px; line-height: 1.6; color: ${T.muted};
@@ -96,7 +96,7 @@ export default function View() {
           padding: 28px 32px;
           background: ${T.surface};
           border: 1px solid ${T.border};
-          border-top: 3px solid ${T.gold};
+          border-top: 3px solid ${T.amber};
           border-radius: 8px;
           display: flex; align-items: center; gap: 24px;
           flex-wrap: wrap;
@@ -203,7 +203,7 @@ export default function View() {
           text-align: center;
         }
         .wl-cta-box .wl-cta-eyebrow {
-          font-size: 10px; letter-spacing: 4px; color: ${T.gold};
+          font-size: 10px; letter-spacing: 4px; color: ${T.amber};
           font-weight: bold; margin-bottom: 14px;
         }
         .wl-cta-box .wl-cta-h {

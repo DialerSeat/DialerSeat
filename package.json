@@ -23,7 +23,8 @@
     "sip.js": "^0.21.2",
     "stripe": "^22.1.0",
     "tweetnacl": "^1.0.3",
-    "web-push": "^3.6.7"
+    "web-push": "^3.6.7",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.4",

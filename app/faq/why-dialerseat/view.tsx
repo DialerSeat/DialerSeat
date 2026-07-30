@@ -176,7 +176,7 @@ export default function WhyDialerSeatView() {
             font-weight: 700;
             letter-spacing: 0.5px;
             margin: 0 0 8px 0;
-            color: ${T.accentDark};
+            color: ${T.accent};
           }
           .why-card p {
             font-size: 14px;

@@ -213,6 +213,20 @@ function DialerPageInner() {
   // only ever shows what already happened). Cleared/replaced each
   // heartbeat tick with whatever's actually in flight that moment.
   const [activeDialingNumbers, setActiveDialingNumbers] = useState<string[]>([])
+  // Leads queued for this campaign, fetched once the agent goes available
+  // (predictiveView transitions to 'available') and shown in the lead
+  // profile slot so they can see what's about to be worked, before they
+  // click Initiate Dial Sequence. Once dialing starts, entries matching
+  // activeDialingNumbers get visually highlighted rather than replaced —
+  // the list itself stays visible throughout.
+  interface QueuedLead {
+    id: string
+    phone: string
+    first_name?: string | null
+    last_name?: string | null
+  }
+  const [queuedLeads, setQueuedLeads] = useState<QueuedLead[]>([])
+  const [queuedLeadsLoading, setQueuedLeadsLoading] = useState(false)
 
   const [linesPref, setLinesPref] = useState<LinesPrefInfo | null>(null)
   const [linesPrefSaving, setLinesPrefSaving] = useState(false)
@@ -358,6 +372,52 @@ function DialerPageInner() {
     if (status === 'connected' && currentLead) return 'on_call'
     return 'available'
   })()
+
+  // ── QUEUED LEADS LIST — fetched the moment the agent goes available ─────
+  // Shows "what's about to be worked" before Initiate Dial Sequence is
+  // clicked. Reuses the existing /api/leads/list route (campaign_id +
+  // disposition=uncalled filter) rather than a new endpoint — this is the
+  // same data source the leads page itself already reads from, just
+  // scoped to this one campaign's not-yet-dialed rows.
+  //
+  // DELIBERATELY SHOWS LEADS REGARDLESS OF TCPA CALLING HOURS: leads/list
+  // has no calling-window filter at all (confirmed — only
+  // placeOutboundCall.ts's isCallableNow() enforces that, at the moment a
+  // call is actually placed, not when leads are listed). So the agent can
+  // set available and see their full queue at any hour — e.g. reviewing
+  // who's coming up before the 8AM window opens, or after 9PM. The
+  // existing tcpaBlockedAll banner (already shown elsewhere on this page
+  // when fetchNextLead reports every lead is outside the window) is
+  // reused below to make clear WHY nothing is actually dialing yet, even
+  // though the queue itself is fully visible.
+  useEffect(() => {
+    if (predictiveView === 'offline') {
+      setQueuedLeads([])
+      return
+    }
+    if (!selectedCampaign) return
+
+    let cancelled = false
+    setQueuedLeadsLoading(true)
+    fetch(`/api/leads/list?campaign_id=${encodeURIComponent(selectedCampaign)}&disposition=uncalled&sort=created_asc`)
+      .then(res => res.json())
+      .then(data => {
+        if (cancelled) return
+        if (data.success && Array.isArray(data.leads)) {
+          setQueuedLeads(data.leads.slice(0, 50)) // cap the render list; the real queue can be much larger than what's useful to show at once
+        }
+      })
+      .catch(() => {
+        // Non-fatal — the queue view is informational, not load-bearing for
+        // actually dialing (that still goes through fetchNextLead/the
+        // controller regardless of whether this list loaded).
+      })
+      .finally(() => {
+        if (!cancelled) setQueuedLeadsLoading(false)
+      })
+
+    return () => { cancelled = true }
+  }, [predictiveView, selectedCampaign])
 
   // ── SESSION METRICS PERSISTENCE ─────────────────────────────────────────
   useEffect(() => {
@@ -2875,7 +2935,83 @@ function DialerPageInner() {
               </div>
 
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
-                {(!displayLead || status === 'calling') ? (
+                {isPredictive && predictiveView === 'available' && !predictiveEngineStarted ? (
+                  <div className="dialer-queue-list" style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ fontSize: '10px', letterSpacing: '3px', color: terminalMuted, fontFamily: FUTURA, fontWeight: 'bold' }}>
+                      QUEUED — {queuedLeads.length} LEAD{queuedLeads.length === 1 ? '' : 'S'} READY
+                    </div>
+
+                    {/* Leads are shown regardless of calling hours — this banner
+                        explains WHY nothing will actually dial yet if the
+                        window is currently closed, without hiding the queue
+                        itself. Reuses the existing tcpaBlockedAll signal
+                        already set elsewhere on this page when the server
+                        reports every lead is outside the 8AM-9PM window. */}
+                    {tcpaBlockedAll && (
+                      <div style={{
+                        padding: '8px 12px',
+                        background: 'rgba(217, 119, 6, 0.1)',
+                        border: `1px solid ${terminalAmber}`,
+                        borderRadius: 4,
+                        fontFamily: FUTURA,
+                        fontSize: 11,
+                        color: terminalAmber,
+                        letterSpacing: '0.5px',
+                      }}>
+                        ⏱ Outside 8AM–9PM calling window — queue shown for review, dialing will resume automatically once the window opens.
+                      </div>
+                    )}
+
+                    {queuedLeadsLoading ? (
+                      <div style={{ fontFamily: FUTURA, fontSize: 11, color: terminalMuted, letterSpacing: '1px', padding: '20px 0', textAlign: 'center' }}>
+                        Loading queue…
+                      </div>
+                    ) : queuedLeads.length === 0 ? (
+                      <div style={{ fontFamily: FUTURA, fontSize: 11, color: terminalMuted, letterSpacing: '1px', padding: '20px 0', textAlign: 'center' }}>
+                        No uncalled leads in this campaign right now.
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 320, overflowY: 'auto' }}>
+                        {queuedLeads.map(lead => {
+                          // Highlighted, not replaced — the queue stays visible
+                          // once dialing starts (Initiate Dial Sequence), and
+                          // whichever entries match activeDialingNumbers (the
+                          // numbers actually in flight this tick) get called
+                          // out with the same green highlight the live-activity
+                          // panel uses, so it reads as one consistent visual
+                          // language rather than two different UIs.
+                          const isActive = activeDialingNumbers.includes(lead.phone)
+                          return (
+                            <div key={lead.id} style={{
+                              padding: '8px 12px',
+                              background: isActive ? 'rgba(16, 185, 129, 0.12)' : terminalBg,
+                              border: `1.5px solid ${isActive ? terminalGreen : terminalBorder}`,
+                              borderRadius: 4,
+                              fontFamily: FUTURA,
+                              fontSize: 13,
+                              fontWeight: isActive ? 'bold' : 'normal',
+                              color: terminalText,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: 8,
+                            }}>
+                              <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                {isActive && <span style={{ color: terminalGreen }}>●</span>}
+                                {lead.phone}
+                              </span>
+                              {(lead.first_name || lead.last_name) && (
+                                <span style={{ color: terminalMuted, fontSize: 11 }}>
+                                  {lead.first_name} {lead.last_name}
+                                </span>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                ) : (!displayLead || status === 'calling') ? (
                   status === 'calling' ? (
                     <div className="dialer-live-activity" style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
                       <div className="dialer-live-activity-label" style={{ fontSize: '10px', letterSpacing: '3px', color: terminalMuted, fontFamily: FUTURA, fontWeight: 'bold' }}>

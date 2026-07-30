@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import useTouchReorder from '@/lib/useTouchReorder'
 import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
+import { parseLeadsFile, inspectFile, isAcceptedLeadsFile, ACCEPTED_LEADS_ACCEPT_ATTR } from '@/lib/parseLeadsFile'
 
 const T = {
   bg: 'var(--brand-page-bg)',
@@ -303,6 +304,13 @@ export default function CampaignsPage() {
   const [createEnabledScriptIds, setCreateEnabledScriptIds] = useState<Set<string>>(new Set())
   const [csvData, setCsvData] = useState<any[]>([])
   const [csvName, setCsvName] = useState('')
+  const [fileTypeError, setFileTypeError] = useState('')
+  // Sheet picker: when a dropped/selected workbook has more than one
+  // sheet, we pause here instead of parsing immediately. `target` says
+  // which upload flow to resume once a sheet is chosen — 'create' for the
+  // new-campaign drop zone, or a campaign id for the "upload more leads"
+  // drop zone in campaign settings.
+  const [sheetPicker, setSheetPicker] = useState<{ file: File; target: 'create' | string; sheetNames: string[] } | null>(null)
   const [dragging, setDragging] = useState(false)
   const [settingsDragging, setSettingsDragging] = useState(false)
   const [creating, setCreating] = useState(false)
@@ -428,7 +436,7 @@ export default function CampaignsPage() {
   
   
  useEffect(() => {
-    const anyModalOpen = showCreate || !!settingsId || scriptsManagerOpen || !!deleteConfirm || editorOpen || csvUploadError
+    const anyModalOpen = showCreate || !!settingsId || scriptsManagerOpen || !!deleteConfirm || editorOpen || csvUploadError || !!fileTypeError
     if (anyModalOpen) {
       const prevOverflow = document.body.style.overflow
       const prevPosition = document.body.style.position
@@ -449,7 +457,7 @@ export default function CampaignsPage() {
         window.scrollTo(0, scrollY)
       }
     }
-  }, [showCreate, settingsId, scriptsManagerOpen, deleteConfirm, editorOpen, csvUploadError])
+  }, [showCreate, settingsId, scriptsManagerOpen, deleteConfirm, editorOpen, csvUploadError, fileTypeError])
 
   const fetchCampaigns = async () => {
     setFetching(true)
@@ -494,46 +502,42 @@ export default function CampaignsPage() {
   useEffect(() => {
     const onVisibility = () => {
       if (document.hidden) return
-      if (showCreate || settingsId || editorOpen || deleteConfirm || scriptsManagerOpen || csvUploadError) return
+      if (showCreate || settingsId || editorOpen || deleteConfirm || scriptsManagerOpen || csvUploadError || fileTypeError) return
       if (creating || savingScript || editorSaving || libSaving) return
       fetchCampaigns()
     }
     document.addEventListener('visibilitychange', onVisibility)
     return () => document.removeEventListener('visibilitychange', onVisibility)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showCreate, settingsId, editorOpen, deleteConfirm, creating, savingScript, editorSaving, scriptsManagerOpen, libSaving, csvUploadError, user?.id])
+  }, [showCreate, settingsId, editorOpen, deleteConfirm, creating, savingScript, editorSaving, scriptsManagerOpen, libSaving, csvUploadError, fileTypeError, user?.id])
 
-  const parseCSV = (text: string) => {
-    const lines = text.trim().split('\n').filter(l => l.trim())
-    if (lines.length === 0) return []
-    const firstLine = lines[0]
-    const delim = firstLine.includes('\t') ? '\t' : ','
-    const first = firstLine.split(delim).map(v => v.trim().replace(/"/g, ''))
-    const hasPhone = first.some(v => v.replace(/\D/g, '').length >= 10)
-    const hasHeaders = !hasPhone
-    if (hasHeaders) {
-      const headers = first
-      return lines.slice(1).map(line => {
-        const vals = line.split(delim).map(v => v.trim().replace(/"/g, ''))
-        return headers.reduce((obj: any, h, i) => {
-          obj[h] = vals[i] || ''
-          return obj
-        }, {})
+  const finishParseForCreate = (file: File, sheetName?: string) => {
+    setCsvName(file.name)
+    parseLeadsFile(file, sheetName)
+      .then(parsed => setCsvData(parsed))
+      .catch(err => {
+        setFileTypeError(err instanceof Error ? err.message : 'Failed to read that file.')
+        setCsvName('')
       })
-    } else {
-      return lines.map(l => l.split(delim).map(v => v.trim().replace(/"/g, '')))
-    }
   }
 
   const handleFile = (file: File) => {
-    if (!file.name.endsWith('.csv')) return
-    setCsvName(file.name)
-    const reader = new FileReader()
-    reader.onload = e => {
-      const text = e.target?.result as string
-      setCsvData(parseCSV(text))
+    if (!isAcceptedLeadsFile(file.name)) {
+      setFileTypeError(`"${file.name}" isn't a supported file type. Use CSV, TSV, TXT, or Excel (.xlsx/.xls).`)
+      return
     }
-    reader.readAsText(file)
+    setFileTypeError('')
+    inspectFile(file)
+      .then(info => {
+        if (info.needsSheetPicker) {
+          setSheetPicker({ file, target: 'create', sheetNames: info.sheetNames })
+        } else {
+          finishParseForCreate(file)
+        }
+      })
+      .catch(err => {
+        setFileTypeError(err instanceof Error ? err.message : 'Failed to read that file.')
+      })
   }
 
   
@@ -837,51 +841,84 @@ export default function CampaignsPage() {
     setSettingsId(null)
   }
 
-  const handleUploadMore = async (campaignId: string, file: File) => {
-    const reader = new FileReader()
-    reader.onload = async e => {
-      const text = e.target?.result as string
-      const parsed = parseCSV(text)
-      let ok = false
-      let isLapsedError = false
+  const finishUploadMore = async (campaignId: string, file: File, sheetName?: string) => {
+    let parsed: any[]
+    try {
+      parsed = await parseLeadsFile(file, sheetName)
+    } catch (err) {
+      setFileTypeError(err instanceof Error ? err.message : 'Failed to read that file.')
+      return
+    }
+
+    let ok = false
+    let isLapsedError = false
+    try {
+      const res = await fetch('/api/leads/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ campaign_id: campaignId, leads: parsed }),
+      })
+      if (res.status === 403) {
+        setTier('lapsed')
+        isLapsedError = true
+      }
+      let data: any = null
       try {
-        const res = await fetch('/api/leads/upload', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ campaign_id: campaignId, leads: parsed }),
-        })
-        if (res.status === 403) {
-          setTier('lapsed')
-          isLapsedError = true
-        }
-        let data: any = null
-        try {
-          data = await res.json()
-        } catch {
-          
-          data = null
-        }
-        ok = res.ok && !!data?.success
+        data = await res.json()
       } catch {
         
-        ok = false
+        data = null
       }
+      ok = res.ok && !!data?.success
+    } catch {
+      
+      ok = false
+    }
 
-      if (!ok && !isLapsedError) {
-        setCsvUploadError(true)
+    if (!ok && !isLapsedError) {
+      setCsvUploadError(true)
+      return
+    }
+    if (!ok) return
+
+    setPendingBlankCampaignId(prev => (prev === campaignId ? null : prev))
+    setPreviews(prev => {
+      const { [campaignId]: _, ...rest } = prev
+      return rest
+    })
+    fetchCampaigns()
+    loadPreview(campaignId)
+  }
+
+  const handleUploadMore = async (campaignId: string, file: File) => {
+    if (!isAcceptedLeadsFile(file.name)) {
+      setFileTypeError(`"${file.name}" isn't a supported file type. Use CSV, TSV, TXT, or Excel (.xlsx/.xls).`)
+      return
+    }
+
+    try {
+      const info = await inspectFile(file)
+      if (info.needsSheetPicker) {
+        setSheetPicker({ file, target: campaignId, sheetNames: info.sheetNames })
         return
       }
-      if (!ok) return
-
-      setPendingBlankCampaignId(prev => (prev === campaignId ? null : prev))
-      setPreviews(prev => {
-        const { [campaignId]: _, ...rest } = prev
-        return rest
-      })
-      fetchCampaigns()
-      loadPreview(campaignId)
+    } catch (err) {
+      setFileTypeError(err instanceof Error ? err.message : 'Failed to read that file.')
+      return
     }
-    reader.readAsText(file)
+
+    finishUploadMore(campaignId, file)
+  }
+
+  const handleSheetChosen = (sheetName: string) => {
+    if (!sheetPicker) return
+    const { file, target } = sheetPicker
+    setSheetPicker(null)
+    if (target === 'create') {
+      finishParseForCreate(file, sheetName)
+    } else {
+      finishUploadMore(target, file, sheetName)
+    }
   }
 
   
@@ -2907,7 +2944,7 @@ export default function CampaignsPage() {
             <div className="cmp-empty-sub">
               {isLapsed
                 ? 'RESUBSCRIBE TO CREATE YOUR FIRST CAMPAIGN AND UPLOAD LEADS.'
-                : 'CREATE YOUR FIRST CAMPAIGN, UPLOAD A LEADS CSV, AND START DIALING.'}
+                : 'CREATE YOUR FIRST CAMPAIGN, UPLOAD YOUR LEADS, AND START DIALING.'}
             </div>
             {!isLapsed ? (
               <button className="cmp-new-btn" onClick={openCreate}>
@@ -3110,7 +3147,7 @@ export default function CampaignsPage() {
                   <input
                     ref={fileRef}
                     type="file"
-                    accept=".csv"
+                    accept={ACCEPTED_LEADS_ACCEPT_ATTR}
                     style={{ display: 'none' }}
                     onChange={e => {
                       const f = e.target.files?.[0]
@@ -3136,13 +3173,19 @@ export default function CampaignsPage() {
                         fontSize: 11, color: T.muted, margin: '0 0 4px',
                         letterSpacing: 2, fontWeight: 'bold', fontFamily: FUTURA,
                       }}>
-                        DROP YOUR CSV HERE
+                        DROP YOUR FILE HERE
                       </p>
                       <p style={{
                         fontSize: 9, color: T.muted, opacity: 0.7, margin: 0,
                         letterSpacing: 1.5, fontFamily: FUTURA,
                       }}>
                         OR CLICK TO BROWSE
+                      </p>
+                      <p style={{
+                        fontSize: 8, color: T.muted, opacity: 0.5, margin: '6px 0 0',
+                        letterSpacing: 1, fontFamily: FUTURA,
+                      }}>
+                        CSV · TSV · TXT · XLSX · XLS
                       </p>
                     </>
                   )}
@@ -3157,7 +3200,7 @@ export default function CampaignsPage() {
                     title={'Open a blank lead sheet'}
                   >▤ START A BLANK LEAD SHEET</button>
                   <span className="cmp-blank-sheet-tip">
-                    Skip the CSV and build leads by hand, like a blank spreadsheet.
+                    Skip the file and build leads by hand, like a blank spreadsheet.
                   </span>
                 </div>
               </div>
@@ -3501,7 +3544,7 @@ export default function CampaignsPage() {
                         e.preventDefault()
                         setSettingsDragging(false)
                         const f = e.dataTransfer.files[0]
-                        if (f && f.name.endsWith('.csv')) handleUploadMore(settingsCampaign.id, f)
+                        if (f && isAcceptedLeadsFile(f.name)) handleUploadMore(settingsCampaign.id, f)
                       }}
                       onClick={() => settingsFileRef.current?.click()}
                       style={{
@@ -3512,7 +3555,7 @@ export default function CampaignsPage() {
                       <input
                         ref={settingsFileRef}
                         type="file"
-                        accept=".csv"
+                        accept={ACCEPTED_LEADS_ACCEPT_ATTR}
                         style={{ display: 'none' }}
                         onChange={e => {
                           const f = e.target.files?.[0]
@@ -3524,13 +3567,19 @@ export default function CampaignsPage() {
                         fontSize: 11, color: T.muted, margin: '0 0 4px',
                         letterSpacing: 2, fontWeight: 'bold', fontFamily: FUTURA,
                       }}>
-                        DROP YOUR CSV HERE
+                        DROP YOUR FILE HERE
                       </p>
                       <p style={{
                         fontSize: 9, color: T.muted, opacity: 0.7, margin: 0,
                         letterSpacing: 1.5, fontFamily: FUTURA,
                       }}>
                         OR CLICK TO BROWSE
+                      </p>
+                      <p style={{
+                        fontSize: 8, color: T.muted, opacity: 0.5, margin: '6px 0 0',
+                        letterSpacing: 1, fontFamily: FUTURA,
+                      }}>
+                        CSV · TSV · TXT · XLSX · XLS
                       </p>
                     </div>
                     <div className="cmp-blank-sheet-row">
@@ -3543,7 +3592,7 @@ export default function CampaignsPage() {
                         title={'Open a blank lead sheet'}
                       >▤ START A BLANK LEAD SHEET</button>
                       <span className="cmp-blank-sheet-tip">
-                        Skip the CSV and build leads by hand, like a blank spreadsheet.
+                        Skip the file and build leads by hand, like a blank spreadsheet.
                       </span>
                     </div>
                   </>
@@ -3631,7 +3680,7 @@ export default function CampaignsPage() {
                       ↑ UPLOAD MORE LEADS
                       <input
                         type="file"
-                        accept=".csv"
+                        accept={ACCEPTED_LEADS_ACCEPT_ATTR}
                         onChange={e => {
                           const f = e.target.files?.[0]
                           if (f) handleUploadMore(settingsCampaign.id, f)
@@ -3768,6 +3817,101 @@ export default function CampaignsPage() {
         </div>
       )}
 
+      {fileTypeError && (
+        <div className="modal-overlay" onClick={() => setFileTypeError('')}>
+          <div className="settings-modal" style={{ maxWidth: 440 }} onClick={e => e.stopPropagation()}>
+            <div className="settings-head">
+              <div style={{
+                flex: 1, fontSize: 11, fontWeight: 'bold', letterSpacing: 3,
+                color: 'white', padding: '6px 10px', fontFamily: FUTURA,
+              }}>
+                FILE NOT SUPPORTED
+              </div>
+              <button className="settings-close" onClick={() => setFileTypeError('')}>×</button>
+            </div>
+            <div className="settings-body">
+              <p style={{
+                fontSize: 12, lineHeight: 1.7, color: T.text, margin: 0,
+                letterSpacing: 0.5, fontFamily: 'monospace',
+              }}>
+                {fileTypeError}
+              </p>
+            </div>
+            <div className="settings-footer">
+              <div className="settings-footer-left"></div>
+              <div className="settings-footer-right">
+                <button
+                  className="ds-btn"
+                  onClick={() => setFileTypeError('')}
+                >OK</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {sheetPicker && (
+        <div className="modal-overlay" onClick={() => setSheetPicker(null)}>
+          <div className="settings-modal" style={{ maxWidth: 440 }} onClick={e => e.stopPropagation()}>
+            <div className="settings-head">
+              <div style={{
+                flex: 1, fontSize: 11, fontWeight: 'bold', letterSpacing: 3,
+                color: 'white', padding: '6px 10px', fontFamily: FUTURA,
+              }}>
+                CHOOSE A SHEET
+              </div>
+              <button className="settings-close" onClick={() => setSheetPicker(null)}>×</button>
+            </div>
+            <div className="settings-body">
+              <p style={{
+                fontSize: 12, lineHeight: 1.6, color: T.text, margin: '0 0 14px',
+                letterSpacing: 0.5, fontFamily: 'monospace',
+              }}>
+                "{sheetPicker.file.name}" has {sheetPicker.sheetNames.length} sheets. Pick the one with your leads.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {sheetPicker.sheetNames.map(name => (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => handleSheetChosen(name)}
+                    style={{
+                      all: 'unset',
+                      cursor: 'pointer',
+                      boxSizing: 'border-box',
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: 6,
+                      border: `1px solid ${T.border}`,
+                      background: T.surface,
+                      color: T.text,
+                      fontSize: 12.5,
+                      fontFamily: 'monospace',
+                      letterSpacing: 0.3,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+                    <span style={{ color: T.muted, flexShrink: 0, marginLeft: 10 }}>›</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="settings-footer">
+              <div className="settings-footer-left"></div>
+              <div className="settings-footer-right">
+                <button
+                  className="ds-btn"
+                  onClick={() => setSheetPicker(null)}
+                >CANCEL</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ─── SHEETS EDITOR ────────────────────────────────────────────── */}
       {editorOpen && settingsCampaign && (
         <div className="editor-fullscreen">
@@ -3865,7 +4009,7 @@ export default function CampaignsPage() {
             ) : editorRows.length === 0 ? (
               <div className="editor-empty">
                 NO LEADS. CLICK <strong>+ ADD ROW</strong> TO CREATE THE FIRST ONE,
-                <br />OR CLOSE AND USE UPLOAD MORE LEADS TO IMPORT A CSV.
+                <br />OR CLOSE AND USE UPLOAD MORE LEADS TO IMPORT A FILE.
               </div>
             ) : (
               <table className="editor-grid">

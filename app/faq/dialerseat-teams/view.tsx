@@ -138,7 +138,7 @@ export default function DialerSeatTeamsFaqView() {
             font-weight: 700;
             letter-spacing: 0.2px;
             margin: 28px 0 12px 0;
-            color: ${T.accentDark};
+            color: ${T.accent};
           }
           .tfaq-section p {
             font-size: 16px;
@@ -207,7 +207,7 @@ export default function DialerSeatTeamsFaqView() {
             font-weight: 700;
             letter-spacing: 2px;
             margin: 0 0 10px 0;
-            color: ${T.accentDark};
+            color: ${T.accent};
           }
           .tfaq-audience-card p {
             font-size: 13px;
@@ -236,7 +236,7 @@ export default function DialerSeatTeamsFaqView() {
             font-weight: 700;
             letter-spacing: 2px;
             margin: 0 0 4px 0;
-            color: ${T.accentDark};
+            color: ${T.accent};
           }
           .tfaq-mode-card.free h3 { color: ${T.green}; }
           .tfaq-mode-card .sub {
@@ -372,7 +372,7 @@ export default function DialerSeatTeamsFaqView() {
             font-weight: 700;
             letter-spacing: 0.4px;
             margin: 0 0 8px 0;
-            color: ${T.accentDark};
+            color: ${T.accent};
           }
           .tfaq-qa-card p {
             font-size: 13px;

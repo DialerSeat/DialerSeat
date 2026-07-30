@@ -117,10 +117,27 @@ function getTelnyxEnv(): TelnyxEnv | null {
   const sipDomain = process.env.TELNYX_SIP_DOMAIN
   const appUrl = process.env.NEXT_PUBLIC_APP_URL
 
-  if (!apiKey || !connectionId || !sipUsername || !sipDomain || !appUrl) {
+  const missing: string[] = []
+  if (!apiKey) missing.push('TELNYX_API_KEY')
+  if (!connectionId) missing.push('TELNYX_CONNECTION_ID')
+  if (!sipUsername) missing.push('TELNYX_SIP_USERNAME')
+  if (!sipDomain) missing.push('TELNYX_SIP_DOMAIN')
+  if (!appUrl) missing.push('NEXT_PUBLIC_APP_URL')
+
+  if (missing.length > 0) {
+    // This used to fail completely silently — placeOutboundCall would
+    // return { error: 'Missing credentials' } to the caller with NOTHING
+    // logged server-side, so a misconfigured/missing env var produced
+    // zero call records on Telnyx's side (the request never left this
+    // function) and zero trace in Vercel's logs explaining why. Naming
+    // the exact missing variable(s) here is what actually makes "why
+    // aren't calls reaching Telnyx" diagnosable from server logs instead
+    // of requiring a guess-and-check pass through every env var.
+    console.error(`[placeOutboundCall] Cannot place call — missing env var(s): ${missing.join(', ')}`)
     return null
   }
-  return { apiKey, connectionId, sipUsername, sipDomain, appUrl }
+
+  return { apiKey: apiKey!, connectionId: connectionId!, sipUsername: sipUsername!, sipDomain: sipDomain!, appUrl: appUrl! }
 }
 
 /**

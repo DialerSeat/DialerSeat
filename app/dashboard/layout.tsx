@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
 import { useBranding } from '@/components/ThemeProvider'
+import DashboardBanners from '@/components/DashboardBanners'
 
 const userNavItems = [
   { label: 'ANALYTICS', href: '/dashboard/analytics' },
@@ -597,6 +598,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <UserButton />
         </div>
 
+        <DashboardBanners />
         {children}
       </div>
 
