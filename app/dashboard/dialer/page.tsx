@@ -224,9 +224,26 @@ function DialerPageInner() {
     phone: string
     first_name?: string | null
     last_name?: string | null
+    city?: string | null
+    state?: string | null
   }
   const [queuedLeads, setQueuedLeads] = useState<QueuedLead[]>([])
   const [queuedLeadsLoading, setQueuedLeadsLoading] = useState(false)
+  // FILTER control on the queue panel — a real, server-backed name/phone
+  // search (reuses /api/leads/list's existing `search` param) plus a sort
+  // toggle (existing `sort` param: created_asc/created_desc). No client-side
+  // fake filters — both of these are genuine query params the backend
+  // already supports for this exact table.
+  const [queueSearch, setQueueSearch] = useState('')
+  const [queueSortDesc, setQueueSortDesc] = useState(false)
+  const [queueFilterOpen, setQueueFilterOpen] = useState(false)
+  // Transient per-lead outcome text shown briefly in the queue row right
+  // after a dial resolves without connecting (e.g. "Sorry, couldn't
+  // answer…"), mirroring the reference UX. Populated ONLY from real dial
+  // resolutions in startCallPolling/startHangupPolling — never invented —
+  // and auto-cleared a few seconds later once the lead has actually dropped
+  // out of the uncalled queue on the next fetch.
+  const [queueOutcomeByLeadId, setQueueOutcomeByLeadId] = useState<Record<string, string>>({})
 
   const [linesPref, setLinesPref] = useState<LinesPrefInfo | null>(null)
   const [linesPrefSaving, setLinesPrefSaving] = useState(false)
@@ -376,9 +393,10 @@ function DialerPageInner() {
   // ── QUEUED LEADS LIST — fetched the moment the agent goes available ─────
   // Shows "what's about to be worked" before Initiate Dial Sequence is
   // clicked. Reuses the existing /api/leads/list route (campaign_id +
-  // disposition=uncalled filter) rather than a new endpoint — this is the
-  // same data source the leads page itself already reads from, just
-  // scoped to this one campaign's not-yet-dialed rows.
+  // disposition=uncalled filter, + search/sort passthrough for the panel's
+  // FILTER control) rather than a new endpoint — this is the same data
+  // source the leads page itself already reads from, just scoped to this
+  // one campaign's not-yet-dialed rows.
   //
   // DELIBERATELY SHOWS LEADS REGARDLESS OF TCPA CALLING HOURS: leads/list
   // has no calling-window filter at all (confirmed — only
@@ -390,19 +408,18 @@ function DialerPageInner() {
   // when fetchNextLead reports every lead is outside the window) is
   // reused below to make clear WHY nothing is actually dialing yet, even
   // though the queue itself is fully visible.
-  useEffect(() => {
-    if (predictiveView === 'offline') {
-      setQueuedLeads([])
-      return
-    }
+  const fetchQueuedLeads = useCallback((opts?: { silent?: boolean }) => {
     if (!selectedCampaign) return
-
-    let cancelled = false
-    setQueuedLeadsLoading(true)
-    fetch(`/api/leads/list?campaign_id=${encodeURIComponent(selectedCampaign)}&disposition=uncalled&sort=created_asc`)
+    if (!opts?.silent) setQueuedLeadsLoading(true)
+    const params = new URLSearchParams({
+      campaign_id: selectedCampaign,
+      disposition: 'uncalled',
+      sort: queueSortDesc ? 'created_desc' : 'created_asc',
+    })
+    if (queueSearch.trim()) params.set('search', queueSearch.trim())
+    return fetch(`/api/leads/list?${params.toString()}`)
       .then(res => res.json())
       .then(data => {
-        if (cancelled) return
         if (data.success && Array.isArray(data.leads)) {
           setQueuedLeads(data.leads.slice(0, 50)) // cap the render list; the real queue can be much larger than what's useful to show at once
         }
@@ -412,12 +429,22 @@ function DialerPageInner() {
         // actually dialing (that still goes through fetchNextLead/the
         // controller regardless of whether this list loaded).
       })
-      .finally(() => {
-        if (!cancelled) setQueuedLeadsLoading(false)
-      })
+      .finally(() => setQueuedLeadsLoading(false))
+  }, [selectedCampaign, queueSearch, queueSortDesc])
 
-    return () => { cancelled = true }
-  }, [predictiveView, selectedCampaign])
+  // REFRESH button on the queue panel — re-runs the exact same fetch on
+  // demand, in addition to the automatic re-fetches below.
+  const refreshQueue = useCallback(() => { fetchQueuedLeads() }, [fetchQueuedLeads])
+
+  useEffect(() => {
+    if (predictiveView === 'offline') {
+      setQueuedLeads([])
+      return
+    }
+    if (!selectedCampaign) return
+    fetchQueuedLeads()
+  }, [predictiveView, selectedCampaign, queueSearch, queueSortDesc, fetchQueuedLeads])
+
 
   // ── SESSION METRICS PERSISTENCE ─────────────────────────────────────────
   useEffect(() => {
@@ -1528,6 +1555,13 @@ function DialerPageInner() {
     playInitiateBlip()
     armDialing() // user-initiated dial — allow SignalWire to bridge to us
     setLastCallDuration(null) // clear the previous call's duration readout
+    // Optimistically drop this lead out of the visible queue the instant it's
+    // actually dialed — the row-level queue view (LeadQueuePanel) reads
+    // queuedLeads directly, so without this a just-called lead would keep
+    // showing as "queued" until the next background refetch. The effect that
+    // populates queuedLeads still re-fetches on its own cadence as a
+    // self-healing backstop if this ever drifts from the server's real state.
+    setQueuedLeads(prev => prev.filter(l => l.id !== lead.id))
 
     setAmdActivity(prev => [
       `DIALING ${lead.first_name || ''} ${lead.last_name || ''} — ${lead.phone}`.trim(),
@@ -1588,12 +1622,20 @@ function DialerPageInner() {
             `TCPA SKIP — ${data.leadState || '?'}: ${data.detail}`,
             ...prev,
           ].slice(0, 5))
+          showQueueOutcome(lead.id, 'Outside calling window…')
           setStatus('idle')
           setCurrentLead(null)
           if (autoChainOnFailure) scheduleDial(500)
           else scheduleDial(300)
           return
         }
+        // Outbound call POST failed for a reason other than 403/451 (e.g. the
+        // provider rejected it, a missing env var, or any other server error —
+        // see /api/calls/outbound's catch block for the real message logged
+        // server-side). Surface it in the queue row instead of failing
+        // silently — this is real error text from the response, not invented.
+        console.error('Outbound call failed:', res.status, data)
+        showQueueOutcome(lead.id, data?.error ? `Call failed — ${data.error}` : 'Call failed…')
         await fetch('/api/leads/dispose', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1611,6 +1653,7 @@ function DialerPageInner() {
       }
     } catch (error) {
       console.error('Call error:', error)
+      showQueueOutcome(lead.id, 'Call failed…')
       setStatus('idle')
       setCurrentLead(null)
     }
@@ -1628,6 +1671,26 @@ function DialerPageInner() {
     // backward-compatibility with any historical rows still carrying
     // SignalWire-era amd_result values during the transition.
     return amd === 'machine' || amd.startsWith('machine_') || amd === 'fax' || amd === 'unknown'
+  }
+
+  // Writes a short-lived outcome line under a lead's row in the queue panel,
+  // right after ITS OWN dial resolves — e.g. "Sorry, couldn't answer…" for a
+  // real no-answer/busy/failed/canceled status from /api/calls/check, or
+  // "Voicemail detected…" for a real AMD machine result. Only ever called
+  // with an actual resolution from the polling functions below — never
+  // simulated. Auto-clears after a few seconds; by then the lead has also
+  // normally dropped out of queuedLeads on the next background refetch.
+  const showQueueOutcome = (leadId: string | undefined | null, text: string) => {
+    if (!leadId) return
+    setQueueOutcomeByLeadId(prev => ({ ...prev, [leadId]: text }))
+    setTimeout(() => {
+      setQueueOutcomeByLeadId(prev => {
+        if (prev[leadId] !== text) return prev // already replaced/cleared by something newer
+        const next = { ...prev }
+        delete next[leadId]
+        return next
+      })
+    }, 4000)
   }
 
   const startHangupPolling = (callSid: string) => {
@@ -1695,6 +1758,7 @@ function DialerPageInner() {
             setAmdActivity(prev =>
               [`VOICEMAIL FILTERED — ${statusData.amd_result}`, ...prev].slice(0, 5)
             )
+            showQueueOutcome(currentLeadRef.current?.id, 'Voicemail detected…')
             setActiveCallSid(null)
             disarmDialing() // machine — drop any browser leg; next dial re-arms
             setStatus('idle')
@@ -1730,6 +1794,10 @@ function DialerPageInner() {
           if (ld) {
             const isAmdHangup = isNotHuman(statusData.amd_result)
             if (!isAmdHangup) {
+              showQueueOutcome(
+                ld.id,
+                statusData.status === 'busy' ? 'Line busy…' : 'Sorry, couldn\u2019t answer…'
+              )
               await fetch('/api/leads/dispose', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1741,6 +1809,8 @@ function DialerPageInner() {
                   duration: 0,
                 }),
               })
+            } else {
+              showQueueOutcome(ld.id, 'Voicemail detected…')
             }
           }
           setStatus('idle')
@@ -2329,77 +2399,318 @@ function DialerPageInner() {
     </>
   )
 
-  const PredictiveAvailableCard = () => {
+  // Small inline metrics strip — reuses the same numbers the old
+  // predictive-only "AVAILABLE" card showed (lines in flight, connected
+  // today, 30-day abandon rate), now surfaced inside LeadQueuePanel's header
+  // for predictive campaigns once dialing is armed, instead of replacing the
+  // row view entirely.
+  const QueueStatsStrip = () => {
     const linesActive = lastControllerSummary?.inFlight ?? 0
     const linesTarget = linesPref?.effective_lines || pacingInfo?.configuredLines || 3
     return (
-      <div style={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '20px 16px',
-        background: terminalSurface,
-        border: `1px solid ${terminalBorder}`,
-        borderLeft: `3px solid ${terminalAccent}`,
-        borderRadius: 4,
-        minHeight: 280,
-      }}>
-        <style>{`
-          @keyframes predictiveAvailablePulse {
-            0%, 100% { opacity: 1; box-shadow: 0 0 12px ${terminalAccent}; }
-            50% { opacity: 0.4; box-shadow: 0 0 4px ${terminalAccent}; }
-          }
-          .predictive-pulse-dot {
-            animation: predictiveAvailablePulse 1.4s ease-in-out infinite;
-          }
-        `}</style>
-        <div style={{
-          width: 24, height: 24, borderRadius: '50%',
-          background: terminalAccent, marginBottom: 18,
-        }} className="predictive-pulse-dot" />
-        <div style={{
-          fontSize: 20, fontWeight: 'bold', letterSpacing: 6,
-          color: terminalAccent, marginBottom: 10, textAlign: 'center',
-        }}>
-          AVAILABLE
-        </div>
-        <div style={{
-          fontSize: 11, letterSpacing: 2, color: terminalMuted,
-          textAlign: 'center', lineHeight: 1.7, maxWidth: 360, marginBottom: 22,
-        }}>
-          System is dialing in the background.
-        </div>
-        <div style={{
-          display: 'flex', gap: 14, flexWrap: 'wrap', justifyContent: 'center',
-        }}>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 8, letterSpacing: 2, color: terminalMuted }}>LINES IN FLIGHT</div>
-            <div style={{ fontSize: 18, fontFamily: 'monospace', fontWeight: 'bold', color: terminalText }}>
-              {linesActive} / {linesTarget}
-            </div>
+      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', padding: '0 14px 10px' }}>
+        <div style={{ textAlign: 'left' }}>
+          <div style={{ fontSize: 8, letterSpacing: 2, color: terminalMuted, fontFamily: FUTURA }}>LINES IN FLIGHT</div>
+          <div style={{ fontSize: 16, fontFamily: 'monospace', fontWeight: 'bold', color: terminalText }}>
+            {linesActive} / {linesTarget}
           </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 8, letterSpacing: 2, color: terminalMuted }}>CONNECTED TODAY</div>
-            <div style={{ fontSize: 18, fontFamily: 'monospace', fontWeight: 'bold', color: terminalAccent }}>
-              {sessionStats.connected}
-            </div>
+        </div>
+        <div style={{ textAlign: 'left' }}>
+          <div style={{ fontSize: 8, letterSpacing: 2, color: terminalMuted, fontFamily: FUTURA }}>CONNECTED TODAY</div>
+          <div style={{ fontSize: 16, fontFamily: 'monospace', fontWeight: 'bold', color: terminalAccent }}>
+            {sessionStats.connected}
           </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 8, letterSpacing: 2, color: terminalMuted }}>30D ABANDON</div>
-            <div style={{
-              fontSize: 18, fontFamily: 'monospace', fontWeight: 'bold',
-              color: pacingInfo && pacingInfo.abandonRate >= 0.025 ? terminalRed
-                : pacingInfo && pacingInfo.abandonRate >= 0.020 ? terminalAmber : terminalGreen,
-            }}>
-              {pacingInfo ? `${(pacingInfo.abandonRate * 100).toFixed(2)}%` : '—'}
-            </div>
+        </div>
+        <div style={{ textAlign: 'left' }}>
+          <div style={{ fontSize: 8, letterSpacing: 2, color: terminalMuted, fontFamily: FUTURA }}>30D ABANDON</div>
+          <div style={{
+            fontSize: 16, fontFamily: 'monospace', fontWeight: 'bold',
+            color: pacingInfo && pacingInfo.abandonRate >= 0.025 ? terminalRed
+              : pacingInfo && pacingInfo.abandonRate >= 0.020 ? terminalAmber : terminalGreen,
+          }}>
+            {pacingInfo ? `${(pacingInfo.abandonRate * 100).toFixed(2)}%` : '—'}
           </div>
         </div>
       </div>
     )
   }
+
+  // ===========================================================================
+  // LEAD QUEUE PANEL — live, row-by-row view of the actual dialing queue
+  // ===========================================================================
+  // What this is: the visual replacement for "trust that something is
+  // happening in the background." Every uncalled lead in the campaign is
+  // rendered as its own row, and whichever row(s) are ACTUALLY being dialed
+  // right now light up -- accurately, per dialer mode, not simulated:
+  //
+  //   PREDICTIVE  -- activeDialingNumbers comes straight from the heartbeat
+  //                 controller's real dialedPhones for this tick, so however
+  //                 many lines the campaign is actually set to fire at once
+  //                 (2, 3, 5...) light up together, simultaneously, matching
+  //                 what Telnyx is really doing right now.
+  //   POWER /
+  //   PROGRESSIVE /
+  //   PREVIEW     -- exactly one row lights up: whichever lead matches
+  //                 currentLead (actively dialing/connected) or previewLead
+  //                 (loaded, about to be dialed). Matched by lead id, never by
+  //                 list position -- fetchNextLead can return any lead in the
+  //                 pool, not necessarily row #1, so a position-based guess
+  //                 would misrepresent which row is really live.
+  //
+  // Mounted the moment the agent is available and no call is connected yet
+  // (idle, previewing, or calling), and unmounted the instant status flips to
+  // 'connected' -- the parent's existing displayLead branch already swaps to
+  // the lead-profile/script view at that point, so this panel just needs to
+  // get out of the way, which it does via the fade/collapse below rather than
+  // a hard cut.
+  //
+  // INACTIVE vs DIALING: before the agent presses INITIATE DIAL SEQUENCE
+  // (non-predictive) or the predictive engine is armed, the table renders but
+  // every row sits at plain "Upcoming" — no highlighting, nothing pulses.
+  // Highlighting only turns on once dialing has genuinely started
+  // (isQueueDialingArmed below), so the panel never claims something is
+  // happening before it actually is.
+  //
+  // Note: this panel is only ever mounted while status is 'idle' or
+  // 'calling' (the center-panel branch below swaps to the lead-profile/
+  // script card the instant status becomes 'connected' or 'preview_ready',
+  // so those two states never actually reach here — 'calling' is the only
+  // "in progress" state this component itself will ever see).
+  const isQueueDialingArmed = isPredictive
+    ? predictiveEngineStarted
+    : status === 'calling'
+
+  const activeQueueNumbers: string[] = isQueueDialingArmed
+    ? (isPredictive
+        ? activeDialingNumbers
+        : [currentLead?.phone, previewLead?.phone].filter((p): p is string => !!p))
+    : []
+
+  const activeQueueLeadIds = new Set(
+    isQueueDialingArmed
+      ? (isPredictive
+          ? queuedLeads.filter(l => activeDialingNumbers.includes(l.phone)).map(l => l.id)
+          : [currentLead?.id, previewLead?.id].filter((id): id is string => !!id))
+      : []
+  )
+
+  const LeadQueuePanel = () => {
+    const dialingCount = activeQueueNumbers.length
+    return (
+      <div className="dialer-queue-panel dialer-queue-panel-enter" style={{ display: 'flex', flexDirection: 'column', minHeight: 0, flex: 1 }}>
+        <style>{`
+          @keyframes queuePanelFadeIn {
+            0% { opacity: 0; transform: translateY(-6px); }
+            100% { opacity: 1; transform: translateY(0); }
+          }
+          @keyframes queueRowPulse {
+            0%, 100% { background: rgba(16, 185, 129, 0.10); }
+            50% { background: rgba(16, 185, 129, 0.20); }
+          }
+          .dialer-queue-panel-enter { animation: queuePanelFadeIn 0.25s ease; }
+          .dialer-queue-row-active { animation: queueRowPulse 1.6s ease-in-out infinite; }
+          .dialer-queue-row { transition: background 0.2s ease, border-color 0.2s ease, opacity 0.2s ease; overflow: hidden; }
+          .dialer-queue-search-input::placeholder { color: ${terminalMuted}; }
+          .dialer-queue-btn { transition: opacity 0.15s ease, transform 0.1s ease; }
+          .dialer-queue-btn:active { transform: scale(0.97); }
+        `}</style>
+
+        {/* ── HEADER — big campaign name + live status pill, video-style ───── */}
+        <div style={{ padding: '18px 18px 4px', flexShrink: 0 }}>
+          <div style={{ fontSize: 22, fontWeight: 800, color: terminalText, letterSpacing: '-0.5px', marginBottom: 8 }}>
+            {currentCampaign?.name || 'Lead Queue'}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <span style={{
+              fontSize: 11, fontWeight: 'bold', letterSpacing: 0.3, fontFamily: FUTURA,
+              padding: '4px 10px', borderRadius: 20,
+              background: isQueueDialingArmed ? 'rgba(16, 185, 129, 0.18)' : 'rgba(90, 94, 106, 0.12)',
+              color: isQueueDialingArmed ? '#0d7a3f' : terminalMuted,
+            }}>
+              {isQueueDialingArmed ? `Dialing ${dialingCount || 1} line${dialingCount === 1 || dialingCount === 0 ? '' : 's'}` : 'Not dialed in'}
+            </span>
+            <span style={{ fontSize: 13, color: terminalMuted, fontFamily: FUTURA }}>
+              {queuedLeads.length} prospect{queuedLeads.length === 1 ? '' : 's'} left to dial
+            </span>
+          </div>
+        </div>
+
+        {/* ── CONTROLS ROW — REFRESH / FILTER, video-style pill buttons ────── */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', padding: '14px 18px 12px', flexShrink: 0 }}>
+          <button
+            className="dialer-queue-btn"
+            onClick={refreshQueue}
+            disabled={queuedLeadsLoading}
+            title="Refresh queue"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 7,
+              padding: '9px 16px', borderRadius: 6, border: 'none',
+              background: terminalDark, color: '#fff',
+              fontFamily: FUTURA, fontSize: 11, fontWeight: 'bold', letterSpacing: '0.5px',
+              cursor: queuedLeadsLoading ? 'default' : 'pointer',
+              opacity: queuedLeadsLoading ? 0.6 : 1,
+            }}
+          >
+            <span style={{ display: 'inline-block', transition: 'transform 0.5s ease', transform: queuedLeadsLoading ? 'rotate(180deg)' : 'none' }}>⟳</span>
+            REFRESH
+          </button>
+
+          <div style={{ position: 'relative' }}>
+            <button
+              className="dialer-queue-btn"
+              onClick={() => setQueueFilterOpen(v => !v)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 7,
+                padding: '9px 16px', borderRadius: 6, border: 'none',
+                background: queueSearch || queueSortDesc ? terminalAccent : terminalDark,
+                color: '#fff',
+                fontFamily: FUTURA, fontSize: 11, fontWeight: 'bold', letterSpacing: '0.5px',
+                cursor: 'pointer',
+              }}
+            >
+              ▾ FILTER{(queueSearch || queueSortDesc) ? ' •' : ''}
+            </button>
+            {queueFilterOpen && (
+              <div style={{
+                position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 5,
+                background: terminalSurface, border: `1px solid ${terminalBorder}`, borderRadius: 6,
+                padding: 12, minWidth: 230, boxShadow: '0 8px 24px rgba(0,0,0,0.16)',
+                display: 'flex', flexDirection: 'column', gap: 10,
+              }}>
+                <div>
+                  <div style={{ fontSize: 9, letterSpacing: 1.5, color: terminalMuted, marginBottom: 5, fontFamily: FUTURA, fontWeight: 'bold' }}>SEARCH NAME / PHONE</div>
+                  <input
+                    autoFocus
+                    className="dialer-queue-search-input"
+                    value={queueSearch}
+                    onChange={(e) => setQueueSearch(e.target.value)}
+                    placeholder="e.g. Arlene or (447)…"
+                    style={{
+                      width: '100%', padding: '7px 9px', borderRadius: 4,
+                      border: `1px solid ${terminalBorder}`, background: terminalBg,
+                      color: terminalText, fontFamily: FUTURA, fontSize: 12, outline: 'none',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                </div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, letterSpacing: 0.5, color: terminalMuted, cursor: 'pointer', fontFamily: FUTURA }}>
+                  <input type="checkbox" checked={queueSortDesc} onChange={(e) => setQueueSortDesc(e.target.checked)} />
+                  NEWEST LEADS FIRST
+                </label>
+                {(queueSearch || queueSortDesc) && (
+                  <button
+                    onClick={() => { setQueueSearch(''); setQueueSortDesc(false) }}
+                    style={{
+                      alignSelf: 'flex-start', background: 'none', border: 'none', padding: 0,
+                      color: terminalRed, fontFamily: FUTURA, fontSize: 10, letterSpacing: 0.5,
+                      fontWeight: 'bold', cursor: 'pointer', textDecoration: 'underline',
+                    }}
+                  >
+                    RESET FILTERS
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {isPredictive && isQueueDialingArmed && <QueueStatsStrip />}
+
+        {tcpaBlockedAll && (
+          <div style={{
+            margin: '0 18px 12px',
+            padding: '9px 14px',
+            background: 'rgba(217, 119, 6, 0.1)',
+            border: `1px solid ${terminalAmber}`,
+            borderRadius: 6,
+            fontFamily: FUTURA,
+            fontSize: 11,
+            color: terminalAmber,
+            letterSpacing: '0.3px',
+            flexShrink: 0,
+          }}>
+            ⏱ Outside 8AM–9PM calling window — queue shown for review, dialing will resume automatically once the window opens.
+          </div>
+        )}
+
+        {/* ── TABLE ─────────────────────────────────────────────────────────── */}
+        <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+          {queuedLeadsLoading && queuedLeads.length === 0 ? (
+            <div style={{ fontFamily: FUTURA, fontSize: 12, color: terminalMuted, letterSpacing: '0.3px', padding: '48px 0', textAlign: 'center' }}>
+              Loading queue…
+            </div>
+          ) : queuedLeads.length === 0 ? (
+            <div style={{ fontFamily: FUTURA, fontSize: 12, color: terminalMuted, letterSpacing: '0.3px', padding: '48px 0', textAlign: 'center' }}>
+              {queueSearch
+                ? `No leads match "${queueSearch}".`
+                : noLeads
+                  ? 'No uncalled leads in this campaign right now.'
+                  : 'Queue is empty.'}
+            </div>
+          ) : (
+            <>
+              <div style={{
+                display: 'grid', gridTemplateColumns: '110px 140px 1fr 1fr', gap: 10,
+                padding: '0 18px 10px', position: 'sticky', top: 0, background: terminalSurface, zIndex: 1,
+                borderBottom: `1px solid ${terminalBorder}`,
+              }}>
+                {['STATUS', 'PHONE', 'FIRST NAME', 'LAST NAME'].map(h => (
+                  <div key={h} style={{ fontSize: 9, letterSpacing: 1.5, color: terminalMuted, fontFamily: FUTURA, fontWeight: 'bold', paddingBottom: 8 }}>{h}</div>
+                ))}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {queuedLeads.map(lead => {
+                  const isRowActive = activeQueueLeadIds.has(lead.id)
+                  const outcome = queueOutcomeByLeadId[lead.id]
+                  return (
+                    <div
+                      key={lead.id}
+                      className={`dialer-queue-row ${isRowActive ? 'dialer-queue-row-active' : ''}`}
+                      style={{
+                        padding: '11px 18px',
+                        background: isRowActive ? 'rgba(16, 185, 129, 0.10)' : 'transparent',
+                        borderLeft: `3px solid ${isRowActive ? terminalGreen : 'transparent'}`,
+                        borderBottom: `1px solid ${terminalBorder}`,
+                      }}
+                    >
+                      <div style={{
+                        display: 'grid', gridTemplateColumns: '107px 140px 1fr 1fr', gap: 10,
+                        alignItems: 'center', fontFamily: FUTURA, fontSize: 14,
+                      }}>
+                        <span style={{
+                          display: 'flex', alignItems: 'center', gap: 6,
+                          fontSize: 13, fontWeight: isRowActive ? 'bold' : 600,
+                          color: isRowActive ? '#0d7a3f' : terminalText,
+                        }}>
+                          {isRowActive && <span style={{ fontSize: 10 }}>☎</span>}
+                          {isRowActive ? 'Dialing' : 'Upcoming'}
+                        </span>
+                        <span style={{ color: terminalText, fontVariantNumeric: 'tabular-nums', overflowWrap: 'anywhere' }}>
+                          {lead.phone}
+                        </span>
+                        <span style={{ color: terminalText, overflowWrap: 'anywhere' }}>{lead.first_name || '—'}</span>
+                        <span style={{ color: terminalText, overflowWrap: 'anywhere' }}>{lead.last_name || '—'}</span>
+                      </div>
+                      {outcome && (
+                        <div style={{
+                          marginTop: 7,
+                          fontFamily: FUTURA, fontSize: 12, color: terminalMuted, letterSpacing: 0.2,
+                          display: 'flex', alignItems: 'center', gap: 6,
+                        }}>
+                          <span>💬</span>{outcome}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    )
+  }
+
 
   return (
     <div className="dialer-root" style={{
@@ -2887,9 +3198,14 @@ function DialerPageInner() {
           </div>
 
           {/* CENTER PANEL */}
-          {isPredictive && predictiveView === 'available' && isSpecificCampaign && predictiveEngineStarted ? (
-            <PredictiveAvailableCard />
-          ) : isPredictive && (predictiveView === 'offline' || (predictiveView === 'available' && !predictiveEngineStarted)) ? (
+          {available && isSpecificCampaign && status !== 'connected' && !(status === 'preview_ready' && !isPredictive) ? (
+            <div className="dialer-queue-card" style={{
+              flex: 1, background: terminalSurface, border: `1px solid ${terminalBorder}`,
+              borderRadius: '4px', overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 280,
+            }}>
+              <LeadQueuePanel />
+            </div>
+          ) : (!available || !isSpecificCampaign) && status !== 'connected' && status !== 'calling' && !currentLead && !previewLead ? (
             <div style={{
               flex: 1, background: terminalSurface, border: `1px solid ${terminalBorder}`,
               borderRadius: '4px', overflow: 'hidden', display: 'flex',
@@ -2899,9 +3215,7 @@ function DialerPageInner() {
               <p style={{ fontSize: 11, letterSpacing: 3, color: terminalMuted, textAlign: 'center' }}>
                 {!isSpecificCampaign
                   ? 'SELECT A CAMPAIGN TO BEGIN'
-                  : !available
-                    ? 'SET AVAILABLE TO BEGIN'
-                    : 'CLICK INITIATE DIAL SEQUENCE TO START'}
+                  : 'SET AVAILABLE TO BEGIN'}
               </p>
             </div>
           ) : (
@@ -2935,83 +3249,7 @@ function DialerPageInner() {
               </div>
 
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
-                {isPredictive && predictiveView === 'available' && !predictiveEngineStarted ? (
-                  <div className="dialer-queue-list" style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <div style={{ fontSize: '10px', letterSpacing: '3px', color: terminalMuted, fontFamily: FUTURA, fontWeight: 'bold' }}>
-                      QUEUED — {queuedLeads.length} LEAD{queuedLeads.length === 1 ? '' : 'S'} READY
-                    </div>
-
-                    {/* Leads are shown regardless of calling hours — this banner
-                        explains WHY nothing will actually dial yet if the
-                        window is currently closed, without hiding the queue
-                        itself. Reuses the existing tcpaBlockedAll signal
-                        already set elsewhere on this page when the server
-                        reports every lead is outside the 8AM-9PM window. */}
-                    {tcpaBlockedAll && (
-                      <div style={{
-                        padding: '8px 12px',
-                        background: 'rgba(217, 119, 6, 0.1)',
-                        border: `1px solid ${terminalAmber}`,
-                        borderRadius: 4,
-                        fontFamily: FUTURA,
-                        fontSize: 11,
-                        color: terminalAmber,
-                        letterSpacing: '0.5px',
-                      }}>
-                        ⏱ Outside 8AM–9PM calling window — queue shown for review, dialing will resume automatically once the window opens.
-                      </div>
-                    )}
-
-                    {queuedLeadsLoading ? (
-                      <div style={{ fontFamily: FUTURA, fontSize: 11, color: terminalMuted, letterSpacing: '1px', padding: '20px 0', textAlign: 'center' }}>
-                        Loading queue…
-                      </div>
-                    ) : queuedLeads.length === 0 ? (
-                      <div style={{ fontFamily: FUTURA, fontSize: 11, color: terminalMuted, letterSpacing: '1px', padding: '20px 0', textAlign: 'center' }}>
-                        No uncalled leads in this campaign right now.
-                      </div>
-                    ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 320, overflowY: 'auto' }}>
-                        {queuedLeads.map(lead => {
-                          // Highlighted, not replaced — the queue stays visible
-                          // once dialing starts (Initiate Dial Sequence), and
-                          // whichever entries match activeDialingNumbers (the
-                          // numbers actually in flight this tick) get called
-                          // out with the same green highlight the live-activity
-                          // panel uses, so it reads as one consistent visual
-                          // language rather than two different UIs.
-                          const isActive = activeDialingNumbers.includes(lead.phone)
-                          return (
-                            <div key={lead.id} style={{
-                              padding: '8px 12px',
-                              background: isActive ? 'rgba(16, 185, 129, 0.12)' : terminalBg,
-                              border: `1.5px solid ${isActive ? terminalGreen : terminalBorder}`,
-                              borderRadius: 4,
-                              fontFamily: FUTURA,
-                              fontSize: 13,
-                              fontWeight: isActive ? 'bold' : 'normal',
-                              color: terminalText,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              gap: 8,
-                            }}>
-                              <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                {isActive && <span style={{ color: terminalGreen }}>●</span>}
-                                {lead.phone}
-                              </span>
-                              {(lead.first_name || lead.last_name) && (
-                                <span style={{ color: terminalMuted, fontSize: 11 }}>
-                                  {lead.first_name} {lead.last_name}
-                                </span>
-                              )}
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
-                  </div>
-                ) : (!displayLead || status === 'calling') ? (
+                {(!displayLead || status === 'calling') ? (
                   status === 'calling' ? (
                     <div className="dialer-live-activity" style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
                       <div className="dialer-live-activity-label" style={{ fontSize: '10px', letterSpacing: '3px', color: terminalMuted, fontFamily: FUTURA, fontWeight: 'bold' }}>
