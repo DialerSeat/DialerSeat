@@ -39,6 +39,16 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url)
     const campaign_id = searchParams.get('campaign_id')
     const team_id = searchParams.get('team_id')
+    // Optional allowlist of lead ids — set by the dialer's queue panel when
+    // the agent has an active FILTER (name/phone/state) applied. When
+    // present, dialing is restricted to exactly these leads, so what's
+    // actually dialed matches what the filtered queue is showing, not the
+    // full unfiltered pool. Comma-separated; capped so a pathological huge
+    // list can't blow up the query.
+    const leadIdsParam = searchParams.get('lead_ids')
+    const leadIdAllowlist = leadIdsParam
+      ? leadIdsParam.split(',').map(s => s.trim()).filter(Boolean).slice(0, 200)
+      : null
 
     // ── TEAM SCOPE ──
     if (team_id) {
@@ -90,7 +100,7 @@ export async function GET(req: Request) {
       }
 
       // Fetch a batch of candidates, then filter by calling window in JS
-      const { data: candidates, error } = await supabaseAdmin
+      let candidateQuery = supabaseAdmin
         .from('leads')
         .select('*, extra_data')
         .in('campaign_id', scopedCampaignIds)
@@ -104,6 +114,16 @@ export async function GET(req: Request) {
         .order('dial_attempts', { ascending: true })
         .order('created_at', { ascending: true })
         .limit(CANDIDATE_LIMIT)
+
+      if (leadIdAllowlist) {
+        if (leadIdAllowlist.length === 0) {
+          // Filter matched zero leads — nothing is dialable, full stop.
+          return NextResponse.json({ success: false, error: 'No leads match the current filter', tcpaBlocked: false }, { status: 404 })
+        }
+        candidateQuery = candidateQuery.in('id', leadIdAllowlist)
+      }
+
+      const { data: candidates, error } = await candidateQuery
 
       if (error) {
         return apiError(error, { route: 'leads/next' })
@@ -195,6 +215,13 @@ export async function GET(req: Request) {
       query = query.eq('campaign_id', campaign_id)
     } else {
       query = query.in('campaign_id', activeCampaignIds)
+    }
+
+    if (leadIdAllowlist) {
+      if (leadIdAllowlist.length === 0) {
+        return NextResponse.json({ success: false, error: 'No leads match the current filter', tcpaBlocked: false }, { status: 404 })
+      }
+      query = query.in('id', leadIdAllowlist)
     }
 
     const { data: candidates, error } = await query
