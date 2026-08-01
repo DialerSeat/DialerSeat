@@ -1405,25 +1405,56 @@ function DialerPageInner() {
   // fetchNextLead reports every lead is outside the window) is reused
   // below to make clear WHY nothing is actually dialing yet, even though
   // the queue itself is fully visible.
-  const fetchQueuedLeadsFor = useCallback((campaignIds: string[]): Promise<QueuedLead[]> => {
-    if (campaignIds.length === 0) return Promise.resolve([])
-    const buildUrl = (campaignId: string) => {
-      const params = new URLSearchParams({
-        campaign_id: campaignId,
-        disposition: 'uncalled',
-        sort: queueSortDesc ? 'created_desc' : 'created_asc',
-      })
-      if (queueSearch.trim()) params.set('search', queueSearch.trim())
-      return `/api/leads/list?${params.toString()}`
+  const fetchQueuedLeadsFor = useCallback(async (campaignIds: string[]): Promise<QueuedLead[]> => {
+    if (campaignIds.length === 0) return []
+
+    // Fully paginate through EVERY page for EVERY campaign — /api/leads/list
+    // only returns PAGE_SIZE (50) leads per request and hands back a
+    // nextCursor when more exist. The previous version only ever fetched
+    // page 1, so any campaign with more than 50 uncalled leads silently lost
+    // everything past the 50th (sorted by created_at, so — as reported —
+    // 50 duplicate/early-created test rows could fill the entire visible
+    // queue and hide real leads created later, e.g. Hawaii leads added
+    // after a batch of NC test rows). All leads in the campaign should be
+    // searchable at all times, so this now follows nextCursor until the
+    // server reports there isn't one, for every campaign in scope.
+    //
+    // SAFETY_PAGE_CEILING is not a "how many leads to show" limit — it's a
+    // circuit breaker against an infinite loop if the server ever returned
+    // a malformed/non-advancing cursor. At PAGE_SIZE=50 that's 50,000 leads
+    // per campaign before it would ever stop early; any real account is
+    // expected to finish long before that.
+    const SAFETY_PAGE_CEILING = 1000
+
+    const fetchAllPagesFor = async (campaignId: string): Promise<QueuedLead[]> => {
+      const all: QueuedLead[] = []
+      let cursor: number | null = 0
+      let pages = 0
+      while (cursor !== null && pages < SAFETY_PAGE_CEILING) {
+        const params = new URLSearchParams({
+          campaign_id: campaignId,
+          disposition: 'uncalled',
+          sort: queueSortDesc ? 'created_desc' : 'created_asc',
+          cursor: String(cursor),
+        })
+        if (queueSearch.trim()) params.set('search', queueSearch.trim())
+        try {
+          const res = await fetch(`/api/leads/list?${params.toString()}`)
+          const data = await res.json()
+          if (data.success && Array.isArray(data.leads)) {
+            all.push(...(data.leads as QueuedLead[]))
+          }
+          cursor = typeof data.nextCursor === 'number' ? data.nextCursor : null
+        } catch {
+          break // network hiccup mid-pagination — return what we have so far rather than lose everything
+        }
+        pages++
+      }
+      return all
     }
-    return Promise.all(
-      campaignIds.map(id =>
-        fetch(buildUrl(id))
-          .then(res => res.json())
-          .then(data => (data.success && Array.isArray(data.leads) ? data.leads as QueuedLead[] : []))
-          .catch(() => [] as QueuedLead[])
-      )
-    ).then(results => results.flat())
+
+    const results = await Promise.all(campaignIds.map(fetchAllPagesFor))
+    return results.flat()
   }, [queueSearch, queueSortDesc])
 
   const fetchQueuedLeads = useCallback((opts?: { silent?: boolean }) => {
@@ -1439,14 +1470,16 @@ function DialerPageInner() {
       .then(leads => {
         // Merge, sort consistently (fetching per-campaign in parallel means
         // results arrive in campaign order, not the requested created_at
-        // order), then cap the render list — the real queue can be much
-        // larger than what's useful to show at once.
+        // order). No slice/cap here — every uncalled lead across the
+        // selected scope is kept, since the panel is meant to be a
+        // complete, searchable view of the queue at all times, not a
+        // preview of the first N.
         const sorted = [...leads].sort((a, b) => {
           const at = a.created_at ? new Date(a.created_at).getTime() : 0
           const bt = b.created_at ? new Date(b.created_at).getTime() : 0
           return queueSortDesc ? bt - at : at - bt
         })
-        setQueuedLeads(sorted.slice(0, 50))
+        setQueuedLeads(sorted)
       })
       .finally(() => setQueuedLeadsLoading(false))
   }, [isSpecificCampaign, selectedCampaign, activeScopeCampaigns, fetchQueuedLeadsFor, queueSortDesc])
