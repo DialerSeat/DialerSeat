@@ -458,7 +458,7 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
       return {
         success: false,
         error: 'Destination country not whitelisted on Telnyx',
-        detail: `Telnyx rejected this call because ${toFormatted}'s country isn't in your Outbound Voice Profile's whitelisted destinations. Fix: Telnyx Mission Control → Outbound Voice Profiles → your profile → add that country/region, then retry.`,
+        detail: `Telnyx rejected this call because ${p.toFormatted}'s country isn't in your Outbound Voice Profile's whitelisted destinations. Fix: Telnyx Mission Control → Outbound Voice Profiles → your profile → add that country/region, then retry.`,
         httpStatus: 500,
       }
     }
