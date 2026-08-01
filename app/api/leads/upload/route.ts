@@ -102,16 +102,22 @@ export async function POST(req: Request) {
       let last_name = ''
 
       if (typeof lead === 'object' && !Array.isArray(lead)) {
-        const keys = Object.keys(lead)
-
+        // Only match recognized header name variants — no positional
+        // fallback to keys[0]/keys[1]. A positional fallback silently
+        // assigns whatever happens to be in the first/second column to
+        // first_name/last_name even when that column is something else
+        // entirely (e.g. a duplicated phone number, a notes field) — which
+        // is exactly what produced rows where last_name showed a raw phone
+        // number. Leaving these blank when no recognized header matches is
+        // more honest than guessing from column position.
         first_name = lead['first_name'] || lead['First Name'] ||
           lead['firstname'] || lead['FirstName'] ||
           lead['first'] || lead['First'] ||
-          lead['name'] || lead['Name'] || lead[keys[0]] || ''
+          lead['name'] || lead['Name'] || ''
 
         last_name = lead['last_name'] || lead['Last Name'] ||
           lead['lastname'] || lead['LastName'] ||
-          lead['last'] || lead['Last'] || lead[keys[1]] || ''
+          lead['last'] || lead['Last'] || ''
 
         phone = lead['phone'] || lead['Phone'] || lead['phone_number'] ||
           lead['Phone Number'] || lead['PHONE'] || lead['mobile'] ||
@@ -139,6 +145,11 @@ export async function POST(req: Request) {
           typeof v === 'string' && v.replace(/\D/g, '').length >= 10
         ) || ''
 
+        // Array-format rows genuinely have no header names to match against
+        // at all, so a positional guess is the only option here — kept
+        // as-is (unlike the object path above, which now has real header
+        // names available and shouldn't guess). Flagged in extra_data.raw
+        // so a bad guess is at least traceable back to the original row.
         return {
           campaign_id,
           user_id: userId,

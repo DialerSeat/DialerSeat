@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { normalizeState } from '@/lib/normalizeState'
 
 // =============================================================================
 // DIALER PAGE — Pass 2 Phase C9 (mobile fixes on top of C8)
@@ -1510,8 +1511,27 @@ function DialerPageInner() {
   // page client-side against the real `state` field on each lead. Combined
   // with queueSearch (name/phone, server-side) via the FILTER control.
   const [queueStateFilter, setQueueStateFilter] = useState('')
+  // Real lead data is wildly inconsistent about how state is written — the
+  // same state can appear as "HI", "hawaii", "Hawaii", "FL", "florida",
+  // "fla", even "Fl orida" (a stray space typo, seen in real campaign
+  // data). An exact lowercase-string match against queueStateFilter missed
+  // all of these — searching "HI" would only match rows literally
+  // containing "HI", not "hawaii". normalizeState (the same function
+  // driving real TCPA state detection elsewhere in this app) maps both
+  // sides to a canonical 2-letter code before comparing, so "HI" and
+  // "hawaii" are correctly recognized as the same state. Falls back to a
+  // loose case-insensitive substring match if normalizeState can't
+  // recognize either value (e.g. a genuinely malformed state field) rather
+  // than silently excluding it.
   const visibleQueuedLeads = queueStateFilter.trim()
-    ? queuedLeads.filter(l => (l.state || '').toLowerCase() === queueStateFilter.trim().toLowerCase())
+    ? queuedLeads.filter(l => {
+        const filterNorm = normalizeState(queueStateFilter)
+        const leadNorm = normalizeState(l.state)
+        if (filterNorm && leadNorm) return filterNorm === leadNorm
+        // Either side didn't normalize cleanly — fall back to a loose
+        // substring match rather than excluding the lead outright.
+        return (l.state || '').toLowerCase().includes(queueStateFilter.trim().toLowerCase())
+      })
     : queuedLeads
 
   const isQueueFiltered = !!(queueSearch.trim() || queueStateFilter.trim())
@@ -2628,6 +2648,24 @@ function DialerPageInner() {
           .dialer-queue-row-active { animation: queueRowPulse 1.6s ease-in-out infinite; }
           .dialer-queue-row { transition: background 0.2s ease, border-color 0.2s ease, opacity 0.2s ease; overflow: hidden; }
           .dialer-queue-search-input::placeholder { color: ${terminalMuted}; }
+          .dialer-queue-scroll {
+            scrollbar-width: thin;
+            scrollbar-color: ${terminalBorder} transparent;
+          }
+          .dialer-queue-scroll::-webkit-scrollbar {
+            width: 10px;
+          }
+          .dialer-queue-scroll::-webkit-scrollbar-track {
+            background: transparent;
+          }
+          .dialer-queue-scroll::-webkit-scrollbar-thumb {
+            background-color: ${terminalMuted};
+            border-radius: 5px;
+            border: 2px solid ${terminalSurface};
+          }
+          .dialer-queue-scroll::-webkit-scrollbar-thumb:hover {
+            background-color: ${terminalText};
+          }
           .dialer-queue-btn {
             display: flex; align-items: center; gap: 6px;
             padding: 7px 12px; border-radius: 3px;
@@ -2794,7 +2832,7 @@ function DialerPageInner() {
         )}
 
         {/* ── TABLE ─────────────────────────────────────────────────────────── */}
-        <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+        <div className="dialer-queue-scroll" style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
           {queuedLeadsLoading && visibleQueuedLeads.length === 0 ? (
             <div style={{ fontFamily: FUTURA, fontSize: 12, color: terminalMuted, letterSpacing: '0.3px', padding: '48px 0', textAlign: 'center' }}>
               Loading queue…
@@ -2811,7 +2849,7 @@ function DialerPageInner() {
             <>
               <div className="dialer-queue-head-row" style={{
                 gap: 10,
-                padding: '10px 16px 8px', position: 'sticky', top: 0, background: terminalSurface, zIndex: 1,
+                padding: '8px 16px 6px', position: 'sticky', top: 0, background: terminalSurface, zIndex: 1,
                 borderBottom: `1px solid ${terminalBorder}`,
               }}>
                 {isQueueDialingArmed && <div className="dq-col-status" style={{ fontSize: 9, letterSpacing: 1.5, color: terminalMuted, fontFamily: FUTURA, fontWeight: 'bold' }}>STATUS</div>}
@@ -2829,7 +2867,7 @@ function DialerPageInner() {
                       key={lead.id}
                       className={`dialer-queue-row ${isRowActive ? 'dialer-queue-row-active' : ''}`}
                       style={{
-                        padding: '11px 16px',
+                        padding: '7px 16px',
                         background: isRowActive ? 'rgba(16, 185, 129, 0.10)' : 'transparent',
                         borderLeft: `3px solid ${isRowActive ? terminalGreen : 'transparent'}`,
                         borderBottom: `1px solid ${terminalBorder}`,
@@ -3376,7 +3414,8 @@ function DialerPageInner() {
           {available && (isSpecificCampaign || activeScopeCampaigns.length > 0) && status !== 'connected' && !(status === 'preview_ready' && !isPredictive) ? (
             <div className="dialer-queue-card" style={{
               flex: 1, background: terminalSurface, border: `1px solid ${terminalBorder}`,
-              borderRadius: '4px', overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 280,
+              borderRadius: '4px', overflow: 'hidden', display: 'flex', flexDirection: 'column',
+              minHeight: 280, maxHeight: 'calc(100vh - 220px)',
             }}>
               {LeadQueuePanel()}
             </div>
