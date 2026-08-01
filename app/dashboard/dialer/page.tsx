@@ -1431,13 +1431,15 @@ function DialerPageInner() {
       let cursor: number | null = 0
       let pages = 0
       while (cursor !== null && pages < SAFETY_PAGE_CEILING) {
-        const params = new URLSearchParams({
+        const cursorValue: number = cursor
+        const paramEntries: Record<string, string> = {
           campaign_id: campaignId,
           disposition: 'uncalled',
           sort: queueSortDesc ? 'created_desc' : 'created_asc',
-          cursor: String(cursor),
-        })
-        if (queueSearch.trim()) params.set('search', queueSearch.trim())
+          cursor: String(cursorValue),
+        }
+        if (queueSearch.trim()) paramEntries.search = queueSearch.trim()
+        const params = new URLSearchParams(paramEntries)
         try {
           const res = await fetch(`/api/leads/list?${params.toString()}`)
           const data = await res.json()
