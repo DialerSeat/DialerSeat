@@ -260,6 +260,20 @@ function DialerPageInner() {
 
   const [shouldYield, setShouldYield] = useState(false)
   const [tcpaBlockedAll, setTcpaBlockedAll] = useState(false)
+  // The real, specific reason /api/leads/next gave for why no lead was
+  // returned (e.g. "Too early in TX (6:30 local, window starts 8:00)",
+  // "Unknown state — cannot determine calling window", "Not a member of
+  // this team", "No leads match the current filter") — previously this
+  // was discarded entirely and every non-success response collapsed into
+  // either a hardcoded "ALL LEADS OUTSIDE 8AM-9PM WINDOW" string (if
+  // tcpaBlocked was true) or a generic "upload more leads" message,
+  // regardless of what actually went wrong server-side.
+  const [noLeadsReason, setNoLeadsReason] = useState<string | null>(null)
+  // HTTP status that came with noLeadsReason — lets the UI tell a real
+  // permission problem (403: not a team member, campaign not in team) apart
+  // from an ordinary "nothing to dial right now" state (404), since those
+  // need different visual urgency and, eventually, different next actions.
+  const [noLeadsStatus, setNoLeadsStatus] = useState<number | null>(null)
 
   const [modeDropdownOpen, setModeDropdownOpen] = useState(false)
   const [modeSaving, setModeSaving] = useState(false)
@@ -1486,10 +1500,14 @@ function DialerPageInner() {
     if (data.success) {
       setNoLeads(false)
       setTcpaBlockedAll(false)
+      setNoLeadsReason(null)
+      setNoLeadsStatus(null)
       return data.lead
     } else {
       setNoLeads(true)
       setTcpaBlockedAll(!!data.tcpaBlocked)
+      setNoLeadsReason(typeof data.error === 'string' ? data.error : null)
+      setNoLeadsStatus(res.status)
       return null
     }
   }
@@ -3469,16 +3487,29 @@ function DialerPageInner() {
                       {noLeads && (
                         <p style={{
                           fontSize: '10px',
-                          color: tcpaBlockedAll ? terminalAmber : terminalRed,
+                          color: noLeadsStatus === 403 ? terminalRed : tcpaBlockedAll ? terminalAmber : terminalMuted,
                           marginTop: '8px',
-                          letterSpacing: '2px',
+                          letterSpacing: '1px',
                           fontFamily: FUTURA,
+                          padding: '0 20px',
+                          lineHeight: 1.6,
                         }}>
-                          {tcpaBlockedAll
-                            ? 'ALL LEADS OUTSIDE 8AM-9PM WINDOW — TRY LATER'
-                            : isPersonalScope
-                              ? 'UPLOAD MORE LEADS TO CONTINUE'
-                              : 'NO MORE TEAM LEADS — TRY ANOTHER CAMPAIGN OR SCOPE'}
+                          {/* Real reason from the server when we have one — e.g.
+                              "Too early in TX (6:30 local, window starts 8:00)",
+                              "Unknown state — cannot determine calling window",
+                              "Not a member of this team", "No leads match the
+                              current filter" — instead of collapsing every
+                              non-success response into one hardcoded 8am-9pm
+                              message regardless of the actual cause. Falls back
+                              to the old generic messages only if the server
+                              didn't provide a specific reason at all. */}
+                          {noLeadsReason
+                            ? noLeadsReason.toUpperCase()
+                            : tcpaBlockedAll
+                              ? 'ALL LEADS OUTSIDE CALLING WINDOW — TRY LATER'
+                              : isPersonalScope
+                                ? 'UPLOAD MORE LEADS TO CONTINUE'
+                                : 'NO MORE TEAM LEADS — TRY ANOTHER CAMPAIGN OR SCOPE'}
                         </p>
                       )}
                     </div>

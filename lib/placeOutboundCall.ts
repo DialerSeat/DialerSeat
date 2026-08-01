@@ -111,11 +111,11 @@ export function normalizeToE164(raw: string | null | undefined): string | null {
 }
 
 function getTelnyxEnv(): TelnyxEnv | null {
-  const apiKey = process.env.TELNYX_API_KEY
-  const connectionId = process.env.TELNYX_CONNECTION_ID
-  const sipUsername = process.env.TELNYX_SIP_USERNAME
-  const sipDomain = process.env.TELNYX_SIP_DOMAIN
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL
+  const apiKey = process.env.TELNYX_API_KEY?.trim()
+  const connectionId = process.env.TELNYX_CONNECTION_ID?.trim()
+  const sipUsername = process.env.TELNYX_SIP_USERNAME?.trim()
+  const sipDomain = process.env.TELNYX_SIP_DOMAIN?.trim()
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim()
 
   const missing: string[] = []
   if (!apiKey) missing.push('TELNYX_API_KEY')
@@ -136,6 +136,25 @@ function getTelnyxEnv(): TelnyxEnv | null {
     console.error(`[placeOutboundCall] Cannot place call — missing env var(s): ${missing.join(', ')}`)
     return null
   }
+
+  // DIAGNOSTIC ONLY — never logs the actual key. This exists because a
+  // real production failure (Telnyx 401 "10009 Authentication failed —
+  // Could not find any usable credentials in the request") turned out to
+  // require a full round trip through Vercel's logs to even see the raw
+  // Telnyx response, before we could tell the var was PRESENT but Telnyx
+  // still rejected it as invalid — which is a different failure mode than
+  // "missing" and gives no hint from the missing-var check above.
+  //
+  // NOTE: an earlier version of this check warned when the key didn't
+  // start with "KEY_", based on Telnyx's own docs showing that format.
+  // That turned out to be wrong for at least one real, active, portal-
+  // confirmed v2 key on this account (no underscore, ever) — so the
+  // prefix isn't a reliable signal and asserting it produces a false
+  // alarm. Logging length only (never the value) still gives a real,
+  // format-agnostic signal — e.g. a key that's suspiciously short because
+  // it got truncated when pasted into Vercel — without claiming anything
+  // about what a "valid" key must look like.
+  console.log(`[placeOutboundCall] TELNYX_API_KEY present, length ${apiKey!.length}`)
 
   return { apiKey: apiKey!, connectionId: connectionId!, sipUsername: sipUsername!, sipDomain: sipDomain!, appUrl: appUrl! }
 }
@@ -418,6 +437,32 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
         console.error('[placeOutboundCall] failed to clean up orphaned agent leg:', err)
       )
     }
+
+    // D13 — "403 Dialed Number is not included in whitelisted countries" is
+    // Telnyx's documented rejection when the destination's country isn't
+    // added to the Outbound Voice Profile's whitelisted_destinations list.
+    // This is a real, common, and entirely fixable account-config issue —
+    // e.g. dialing a UK/AU/FR lead (see internationalCallingWindow.ts —
+    // this app now correctly computes THAT a UK/AU/FR lead is callable by
+    // time-of-day, but that's a separate check from whether Telnyx's
+    // account-level profile will actually let the call leave at all) on a
+    // profile still scoped to US-only. Surfaced with the actual fix
+    // spelled out rather than making the agent go decode a raw Telnyx
+    // error title themselves.
+    const rawTitle = leadData.errors?.[0]?.title || ''
+    const rawDetail = leadData.errors?.[0]?.detail || ''
+    const isWhitelistRejection =
+      /whitelist/i.test(rawTitle) || /whitelist/i.test(rawDetail) || rawDetail.includes('D13')
+
+    if (isWhitelistRejection) {
+      return {
+        success: false,
+        error: 'Destination country not whitelisted on Telnyx',
+        detail: `Telnyx rejected this call because ${toFormatted}'s country isn't in your Outbound Voice Profile's whitelisted destinations. Fix: Telnyx Mission Control → Outbound Voice Profiles → your profile → add that country/region, then retry.`,
+        httpStatus: 500,
+      }
+    }
+
     return {
       success: false,
       error: leadData.errors?.[0]?.title || 'Lead call failed',

@@ -1,6 +1,7 @@
 import { getAreaCodeInfo, extractAreaCode } from './areaCode'
 import { STATE_TIMEZONES, getCallingRule } from './timezones'
 import { normalizeState } from './normalizeState'
+import { detectInternationalRegion, isCallableNowInternational } from './internationalCallingWindow'
 
 export interface CallabilityResult {
   allowed: boolean
@@ -68,6 +69,29 @@ export function isCallableNow(lead: LeadInput): CallabilityResult {
     return {
       allowed: true,
       reason: 'Sandbox deployment: calling-window enforcement disabled for 24/7 testing',
+    }
+  }
+
+  // ── INTERNATIONAL LEADS (UK / AU / FR / other) ──────────────────────────
+  // Checked BEFORE the US state-detection logic below, on purpose: a UK/AU/
+  // FR number would otherwise fall into extractAreaCode()/getAreaCodeInfo()
+  // (which only knows US area codes) and either misdetect a "state" from
+  // digits that were never a US area code, or hit the "Unknown state"
+  // fallback — neither of which would apply the right country's real
+  // rules. Detection is phone-prefix-based (see
+  // internationalCallingWindow.ts for why: there's no leads.country column
+  // in the schema), so this only activates for numbers actually carrying a
+  // non-US international dialing code — ordinary US-format numbers (no
+  // leading +, or +1 followed by 10 digits) fall straight through to the
+  // existing logic below, completely unchanged.
+  const intlRegion = detectInternationalRegion(lead.phone)
+  if (intlRegion) {
+    const intlResult = isCallableNowInternational(lead.phone, intlRegion)
+    return {
+      allowed: intlResult.allowed,
+      reason: intlResult.reason,
+      leadState: intlRegion === 'OTHER_INTL' ? undefined : intlRegion,
+      leadLocalTime: intlResult.localTime,
     }
   }
 
