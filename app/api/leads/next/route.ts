@@ -129,9 +129,30 @@ export async function GET(req: Request) {
         return apiError(error, { route: 'leads/next' })
       }
 
+      // When the client sent an ORDERED lead_ids list (the queue panel's
+      // filtered — and possibly shuffled — row order), dial in exactly
+      // that sequence instead of the database's own dial_attempts/
+      // created_at order. Supabase's .in() filter does NOT preserve the
+      // order ids were listed in — it still applies whatever .order()
+      // clause was on the query — so without this, "shuffle" would
+      // reorder what's shown on screen but the server would silently keep
+      // dialing in its own original order regardless. Only actually
+      // reorders when an allowlist was provided; with no filter active,
+      // candidates keep the server's normal dial_attempts/created_at
+      // priority order untouched.
+      let orderedCandidates = candidates || []
+      if (leadIdAllowlist) {
+        const positionById = new Map(leadIdAllowlist.map((id, idx) => [id, idx]))
+        orderedCandidates = [...orderedCandidates].sort((a, b) => {
+          const posA = positionById.get(a.id) ?? Number.MAX_SAFE_INTEGER
+          const posB = positionById.get(b.id) ?? Number.MAX_SAFE_INTEGER
+          return posA - posB
+        })
+      }
+
       let callable: any = null
       let blockReason: string | null = null
-      for (const c of candidates || []) {
+      for (const c of orderedCandidates) {
         const result = isCallableNow({ phone: c.phone, state: c.state })
         if (result.allowed) { callable = c; break }
         if (!blockReason) blockReason = result.reason || null
@@ -230,12 +251,26 @@ export async function GET(req: Request) {
       return apiError(error, { route: 'leads/next' })
     }
 
+    // Same reordering as the team-scope branch above — when lead_ids came
+    // in with a specific order (queue panel filter/shuffle), dial in that
+    // exact order rather than the database's own dial_attempts/created_at
+    // sort, which Supabase's .in() doesn't override on its own.
+    let orderedPersonalCandidates = candidates || []
+    if (leadIdAllowlist) {
+      const positionById = new Map(leadIdAllowlist.map((id, idx) => [id, idx]))
+      orderedPersonalCandidates = [...orderedPersonalCandidates].sort((a, b) => {
+        const posA = positionById.get(a.id) ?? Number.MAX_SAFE_INTEGER
+        const posB = positionById.get(b.id) ?? Number.MAX_SAFE_INTEGER
+        return posA - posB
+      })
+    }
+
     // Filter to only leads currently inside their local TCPA window, keeping
     // the real reason for the first blocked lead so a data problem (missing
     // state, unrecognized area code) isn't misreported as a time-of-day issue.
     let callable: any = null
     let blockReason: string | null = null
-    for (const c of candidates || []) {
+    for (const c of orderedPersonalCandidates) {
       const result = isCallableNow({ phone: c.phone, state: c.state })
       if (result.allowed) { callable = c; break }
       if (!blockReason) blockReason = result.reason || null

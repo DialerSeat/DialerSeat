@@ -45,7 +45,8 @@ export interface ControllerResult {
   skipped: number
   released: number
   dedupedPhones: number      // NEW — how many leads in the batch were dupes
-  dialedPhones: string[]     // NEW — actual numbers placed this tick, for live-activity display
+  dialedPhones: string[]     // NEW — actual numbers placed THIS TICK ONLY, for live-activity log entries
+  inFlightPhones: string[]   // NEW — real, live numbers currently in flight (any tick, refreshed every heartbeat) — this is what row-highlighting should actually use, not dialedPhones
 }
 
 interface RunControllerInput {
@@ -54,6 +55,17 @@ interface RunControllerInput {
   clerkId: string
   internalUserId: string
   teamId: string | null
+  // Ordered lead ids from the dialer's queue panel FILTER/shuffle, or null
+  // if no filter/shuffle is active. When present, predictive claims leads
+  // as usual (the atomic claim_next_leads_for_campaign RPC is untouched —
+  // this doesn't introduce any race condition into claiming itself), then
+  // releases any claimed lead that isn't in this list before dialing, so
+  // predictive's background engine actually respects "the only numbers
+  // dialed are the ones from the filter results" instead of pulling from
+  // the full active pool regardless of what's filtered/shuffled on screen.
+  // When more filtered candidates exist than lines available this tick,
+  // the ones earlier in this list's order are preferred.
+  leadIdAllowlist?: string[] | null
 }
 
 
@@ -68,7 +80,7 @@ function normalizePhone(raw: string): string {
 export async function runPredictiveController(
   input: RunControllerInput
 ): Promise<ControllerResult> {
-  const { sessionId, campaignId, clerkId, internalUserId, teamId } = input
+  const { sessionId, campaignId, clerkId, internalUserId, teamId, leadIdAllowlist } = input
 
   
   let released = 0
@@ -140,15 +152,34 @@ export async function runPredictiveController(
   
   
   const ninetySecondsAgo = new Date(Date.now() - 90_000).toISOString()
-  const { count: inFlightCount } = await supabase
+  const { data: inFlightCallsRaw } = await supabase
     .from('calls')
-    .select('id', { count: 'exact', head: true })
+    .select('id, phone_number, lead_id')
     .eq('campaign_id', campaignId)
     .eq('dial_group_id', sessionId)
     .gte('created_at', ninetySecondsAgo)
     .is('disposition', null)
 
-  const inFlight = inFlightCount || 0
+  const inFlightCalls = (inFlightCallsRaw || []) as Array<{
+    id: string
+    phone_number: string | null
+    lead_id: string | null
+  }>
+
+  const inFlight = inFlightCalls.length
+  // Real, live phone numbers currently in flight — genuinely still ringing
+  // or connected right now, not just "were dialed on the last tick that
+  // fired." Previously the frontend only learned about dialed numbers on
+  // the specific tick they were fired, with nothing refreshing or clearing
+  // that list on every subsequent tick (predictive doesn't fire new calls
+  // most ticks — it only fires when capacity opens up) — so the queue
+  // panel's highlighted rows could sit stale for an entire call's duration,
+  // or worse, keep showing numbers from a call that already ended. This is
+  // returned unconditionally below (not just when shouldDial/fired > 0) so
+  // the frontend always has a true current snapshot every single heartbeat.
+  const inFlightPhones = inFlightCalls
+    .map(c => c.phone_number)
+    .filter((p): p is string => !!p)
   const desired = effectiveLines
   const shouldDial = Math.max(0, desired - inFlight)
 
@@ -156,7 +187,7 @@ export async function runPredictiveController(
     return {
       fired: 0, desired, inFlight, effectiveLines, degraded,
       reason: `at target: ${inFlight}/${desired} in flight`,
-      callSids: [], skipped: 0, released, dedupedPhones: 0, dialedPhones: [],
+      callSids: [], skipped: 0, released, dedupedPhones: 0, dialedPhones: [], inFlightPhones,
     }
   }
 
@@ -175,7 +206,7 @@ export async function runPredictiveController(
     return {
       fired: 0, desired, inFlight, effectiveLines, degraded,
       reason: `claim failed: ${claimErr.message}`,
-      callSids: [], skipped: 0, released, dedupedPhones: 0, dialedPhones: [],
+      callSids: [], skipped: 0, released, dedupedPhones: 0, dialedPhones: [], inFlightPhones,
     }
   }
 
@@ -189,7 +220,7 @@ export async function runPredictiveController(
     return {
       fired: 0, desired, inFlight, effectiveLines, degraded,
       reason: 'no claimable leads',
-      callSids: [], skipped: 0, released, dedupedPhones: 0, dialedPhones: [],
+      callSids: [], skipped: 0, released, dedupedPhones: 0, dialedPhones: [], inFlightPhones,
     }
   }
 
@@ -228,11 +259,57 @@ export async function runPredictiveController(
     console.log(`[controller] released ${dupeLeadIds.length} dupes/invalid from batch`)
   }
 
+  // ── FILTER/SHUFFLE ENFORCEMENT ──────────────────────────────────────────
+  // If the queue panel has an active filter or shuffle, leadIdAllowlist
+  // carries the exact ordered set of leads that are actually allowed to be
+  // dialed right now. claim_next_leads_for_campaign has no knowledge of
+  // this (it's a database function, selecting purely by its own
+  // dial_attempts/created_at priority) — so any claimed lead NOT in this
+  // list gets released back to the pool immediately, unfired, exactly like
+  // the dupe-release above. When there are more allowed candidates than
+  // lines available this tick, the ones earlier in the allowlist's order
+  // (i.e. earlier in shuffle order, when shuffled) are kept preferentially.
+  let filteredOutCount = 0
+  if (leadIdAllowlist !== null && leadIdAllowlist !== undefined) {
+    const allowedSet = new Set(leadIdAllowlist)
+    const positionById = new Map(leadIdAllowlist.map((id, idx) => [id, idx]))
+    const allowed: typeof leadsToCall = []
+    const disallowedIds: string[] = []
+
+    for (const lead of leadsToCall) {
+      if (allowedSet.has(lead.id)) {
+        allowed.push(lead)
+      } else {
+        disallowedIds.push(lead.id)
+      }
+    }
+
+    if (disallowedIds.length > 0) {
+      await Promise.allSettled(
+        disallowedIds.map(leadId =>
+          supabase.rpc('release_lead_claim', { p_lead_id: leadId })
+        )
+      )
+      console.log(`[controller] released ${disallowedIds.length} leads outside the active filter/shuffle`)
+    }
+
+    // Sort the surviving allowed leads by their position in the allowlist
+    // (shuffle order), so if there are more allowed leads than lines this
+    // tick, the ones earlier in shuffle order are the ones actually dialed.
+    allowed.sort((a, b) => (positionById.get(a.id) ?? 0) - (positionById.get(b.id) ?? 0))
+
+    filteredOutCount = disallowedIds.length
+    leadsToCall.length = 0
+    leadsToCall.push(...allowed)
+  }
+
   if (leadsToCall.length === 0) {
     return {
       fired: 0, desired, inFlight, effectiveLines, degraded,
-      reason: `claimed ${leads.length} leads but all were dupes/invalid`,
-      callSids: [], skipped: 0, released, dedupedPhones: dupeLeadIds.length, dialedPhones: [],
+      reason: filteredOutCount > 0
+        ? `claimed ${leads.length} leads but none matched the active filter/shuffle`
+        : `claimed ${leads.length} leads but all were dupes/invalid`,
+      callSids: [], skipped: 0, released, dedupedPhones: dupeLeadIds.length, dialedPhones: [], inFlightPhones,
     }
   }
 
@@ -295,6 +372,13 @@ export async function runPredictiveController(
     released,
     dedupedPhones: dupeLeadIds.length,
     dialedPhones,
+    // inFlightPhones was snapshotted BEFORE this tick's calls were placed —
+    // the numbers just dialed this tick are also genuinely in flight now,
+    // so combine both rather than report only the pre-dial snapshot (which
+    // would miss exactly the calls this tick just started) or only the
+    // newly-dialed ones (which would miss calls still ringing from a prior
+    // tick).
+    inFlightPhones: Array.from(new Set([...inFlightPhones, ...dialedPhones])),
   }
 }
 
@@ -302,6 +386,6 @@ function zeroResult(reason: string, released: number): ControllerResult {
   return {
     fired: 0, desired: 0, inFlight: 0, effectiveLines: 0,
     degraded: false, reason,
-    callSids: [], skipped: 0, released, dedupedPhones: 0, dialedPhones: [],
+    callSids: [], skipped: 0, released, dedupedPhones: 0, dialedPhones: [], inFlightPhones: [],
   }
 }

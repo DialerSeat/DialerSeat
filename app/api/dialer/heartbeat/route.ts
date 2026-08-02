@@ -137,6 +137,16 @@ export async function POST(req: NextRequest) {
     // the INITIATE button — never merely because the agent toggled Available.
     // The client sends predictive_armed=true only while the engine is started.
     const predictiveArmed: boolean = body.predictive_armed === true
+    // Ordered lead ids from the dialer's queue panel FILTER/shuffle. Sent
+    // as a comma-separated string (consistent with how /api/leads/next
+    // already accepts lead_ids as a query param) rather than a JSON array,
+    // since the heartbeat body already mixes a few different shapes and
+    // this keeps it simple to construct client-side without restructuring
+    // the whole payload. null/absent means "no filter active" — the
+    // controller dials from the full active pool as before.
+    const leadIdAllowlist: string[] | null = typeof body.lead_ids === 'string' && body.lead_ids.trim()
+      ? body.lead_ids.split(',').map((s: string) => s.trim()).filter(Boolean)
+      : null
     // current_call_id and campaign_id are uuid columns. The client may pass a
     // provider call SID (non-uuid) or a virtual sub-campaign id ("<uuid>:appt").
     // Writing those into a uuid column throws and 500s the heartbeat. Normalize:
@@ -286,6 +296,7 @@ export async function POST(req: NextRequest) {
           clerkId,
           internalUserId: userInternalId,
           teamId,
+          leadIdAllowlist,
         })
       } catch (controllerErr) {
         console.error('[heartbeat] controller failed', controllerErr)

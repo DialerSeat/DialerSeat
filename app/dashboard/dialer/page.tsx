@@ -93,6 +93,7 @@ interface HeartbeatControllerSummary {
   reason: string
   callSids?: string[]
   dialedPhones?: string[]
+  inFlightPhones?: string[]
   skipped?: number
   released?: number
   dedupedPhones?: number
@@ -245,6 +246,31 @@ function DialerPageInner() {
   const [queueSearch, setQueueSearch] = useState('')
   const [queueSortDesc, setQueueSortDesc] = useState(false)
   const [queueFilterOpen, setQueueFilterOpen] = useState(false)
+  // Client-side STATE filter — /api/leads/list has no state param (it only
+  // searches name/phone server-side), so this narrows the already-fetched
+  // page client-side against the real `state` field on each lead. Combined
+  // with queueSearch (name/phone, server-side) via the FILTER control.
+  // Declared here (not down near fetchNextLead, where it originally lived)
+  // because the filter/shuffle derivation block that uses it now sits
+  // early in the file too — see right after the click-outside effect below
+  // — since the heartbeat effect's dependency array references
+  // visibleQueuedLeads/isQueueFiltered and is itself declared before that
+  // point in the component body.
+  const [queueStateFilter, setQueueStateFilter] = useState('')
+  // Ref on the filter dropdown's outer wrapper (button + panel together) —
+  // used by the click-outside effect below to close the dropdown when a
+  // click lands anywhere else on the page, instead of requiring the FILTER
+  // button itself to be clicked again to toggle it shut.
+  const queueFilterRef = useRef<HTMLDivElement>(null)
+  // Shuffle — a seeded randomization of the currently-visible (post-filter)
+  // row order, living in the filter dropdown rather than as its own
+  // button per instruction. This NOW genuinely affects dial order, not
+  // just display: fetchNextLead sends the shuffled order to /api/leads/next
+  // as an ordered lead_ids allowlist, and the predictive controller
+  // receives the same ordering via the heartbeat — both prioritize dialing
+  // in this order when a shuffle is active. See the filter/shuffle
+  // derivation block below for the actual reorder logic.
+  const [queueShuffleSeed, setQueueShuffleSeed] = useState(0)
   // Transient per-lead outcome text shown briefly in the queue row right
   // after a dial resolves without connecting (e.g. "Sorry, couldn't
   // answer…"), mirroring the reference UX. Populated ONLY from real dial
@@ -252,6 +278,95 @@ function DialerPageInner() {
   // and auto-cleared a few seconds later once the lead has actually dropped
   // out of the uncalled queue on the next fetch.
   const [queueOutcomeByLeadId, setQueueOutcomeByLeadId] = useState<Record<string, string>>({})
+
+  // Closes the filter dropdown when a click lands anywhere outside it —
+  // previously the only way to close it was clicking the FILTER button a
+  // second time. 'mousedown' (not 'click') so this fires before any click
+  // handler on whatever was actually clicked, and checks
+  // queueFilterRef.current.contains(...) so clicks genuinely inside the
+  // dropdown (the search input, the state input, the checkbox, RESET
+  // FILTERS) don't immediately close it.
+  useEffect(() => {
+    if (!queueFilterOpen) return
+    const handleClickOutside = (e: MouseEvent) => {
+      if (queueFilterRef.current && !queueFilterRef.current.contains(e.target as Node)) {
+        setQueueFilterOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [queueFilterOpen])
+
+  // ── QUEUE FILTER/SHUFFLE DERIVATION ──────────────────────────────────────
+  // Deliberately placed here (early in the component body) rather than down
+  // near where it's mainly consumed (LeadQueuePanel/fetchNextLead) — the
+  // heartbeat effect further down references visibleQueuedLeads and
+  // isQueueFiltered in its dependency array, and effect dependency arrays
+  // are evaluated during the synchronous render pass (unlike the effect
+  // body itself, which only runs after render commits) — so these have to
+  // be declared before that effect in source order, not just be "available
+  // by the time it matters" the way a plain closure reference would be.
+  //
+  // Real lead data is wildly inconsistent about how state is written — the
+  // same state can appear as "HI", "hawaii", "Hawaii", "FL", "florida",
+  // "fla", even "Fl orida" (a stray space typo, seen in real campaign
+  // data). An exact lowercase-string match against queueStateFilter missed
+  // all of these — searching "HI" would only match rows literally
+  // containing "HI", not "hawaii". normalizeState (the same function
+  // driving real TCPA state detection elsewhere in this app) maps both
+  // sides to a canonical 2-letter code before comparing, so "HI" and
+  // "hawaii" are correctly recognized as the same state. Falls back to a
+  // loose case-insensitive substring match if normalizeState can't
+  // recognize either value (e.g. a genuinely malformed state field) rather
+  // than silently excluding it.
+  const stateFilteredQueuedLeads = queueStateFilter.trim()
+    ? queuedLeads.filter(l => {
+        const filterNorm = normalizeState(queueStateFilter)
+        const leadNorm = normalizeState(l.state)
+        if (filterNorm && leadNorm) return filterNorm === leadNorm
+        // Either side didn't normalize cleanly — fall back to a loose
+        // substring match rather than excluding the lead outright.
+        return (l.state || '').toLowerCase().includes(queueStateFilter.trim().toLowerCase())
+      })
+    : queuedLeads
+
+  // Shuffle — a seeded, deterministic reorder of the currently-visible
+  // (post-filter) rows. Seeded rather than re-randomized on every render:
+  // queueShuffleSeed only changes when the user explicitly clicks Shuffle,
+  // so the order stays STABLE across re-renders in between (a fresh Math.
+  // random() sort on every render would make rows visibly jitter/reorder
+  // constantly, which would look broken rather than like a deliberate
+  // shuffle action). seed===0 means "never shuffled" — original
+  // (created_at-sorted) order is preserved in that case. This order is now
+  // also what actually gets dialed (see fetchNextLead and the heartbeat's
+  // lead_ids, both further down) — not just a display reorder.
+  const seededRandom = (seed: number) => {
+    // Small deterministic PRNG (mulberry32) — same seed always produces
+    // the same shuffle order, good enough for a display-only reorder with
+    // no security/statistical requirements.
+    let t = seed + 0x6D2B79F5
+    return () => {
+      t = (t + 0x6D2B79F5) | 0
+      let r = Math.imul(t ^ (t >>> 15), 1 | t)
+      r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r
+      return ((r ^ (r >>> 14)) >>> 0) / 4294967296
+    }
+  }
+  const visibleQueuedLeads = queueShuffleSeed === 0
+    ? stateFilteredQueuedLeads
+    : (() => {
+        const rand = seededRandom(queueShuffleSeed)
+        const shuffled = [...stateFilteredQueuedLeads]
+        // Fisher-Yates, using the seeded PRNG instead of Math.random() so
+        // the result is reproducible for a given seed.
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          const j = Math.floor(rand() * (i + 1))
+          ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+        }
+        return shuffled
+      })()
+
+  const isQueueFiltered = !!(queueSearch.trim() || queueStateFilter.trim())
 
   const [linesPref, setLinesPref] = useState<LinesPrefInfo | null>(null)
   const [linesPrefSaving, setLinesPrefSaving] = useState(false)
@@ -912,6 +1027,16 @@ function DialerPageInner() {
             // Server-side ghost guard: the controller only fans out lines when
             // the agent has explicitly started the predictive engine.
             predictive_armed: isPredictive && predictiveEngineStarted,
+            // "predictive mode be effected by the filtered order in all
+            // cases" — send the same ordered allowlist fetchNextLead sends
+            // to /api/leads/next, so the predictive controller can release
+            // any claimed lead that isn't in the current filter/shuffle
+            // (see runPredictiveController's FILTER/SHUFFLE ENFORCEMENT
+            // block) instead of dialing from the full active pool
+            // regardless of what's filtered/shuffled on screen.
+            lead_ids: (isQueueFiltered || queueShuffleSeed !== 0)
+              ? visibleQueuedLeads.map(l => l.id).join(',')
+              : undefined,
           }),
         })
         if (!res.ok) return
@@ -922,11 +1047,21 @@ function DialerPageInner() {
         if (data.controller_invoked && data.controller) {
           setLastControllerSummary(data.controller as HeartbeatControllerSummary)
           const summary = data.controller as HeartbeatControllerSummary
+          // inFlightPhones is a real, live snapshot of what's actually still
+          // ringing/connected RIGHT NOW, refreshed unconditionally on every
+          // single heartbeat (see predictiveController.ts) — this is the
+          // correct source for row highlighting. dialedPhones only ever
+          // reflected numbers placed on the specific tick they fired, with
+          // nothing to refresh or clear it on the many ticks in between
+          // where predictive isn't firing anything NEW but previously-fired
+          // calls are still very much active — so highlighting was going
+          // stale/blank almost immediately during real operation.
+          setActiveDialingNumbers(summary.inFlightPhones || [])
+
           if (summary.fired > 0) {
             const numbers = summary.dialedPhones && summary.dialedPhones.length > 0
               ? summary.dialedPhones
               : []
-            setActiveDialingNumbers(numbers)
             setAmdActivity(prev => [
               numbers.length > 0
                 ? `DIALING ${numbers.length} LINE${numbers.length === 1 ? '' : 'S'} — ${numbers.join(', ')}`
@@ -934,17 +1069,10 @@ function DialerPageInner() {
               ...prev,
             ].slice(0, 5))
           } else if (summary.degraded) {
-            setActiveDialingNumbers([])
             setAmdActivity(prev => [
               `⚠ AUTO-DEGRADED — abandon rate trigger`,
               ...prev,
             ].slice(0, 5))
-          } else {
-            // Nothing fired this tick — no lines currently in flight from
-            // this controller call. Clear the highlight set so the panel
-            // doesn't keep showing stale numbers as "active" once they've
-            // actually resolved (answered/failed/AMD'd) between ticks.
-            setActiveDialingNumbers([])
           }
         }
       } catch {
@@ -970,6 +1098,17 @@ function DialerPageInner() {
     activeCallSid,
     isPredictive,
     predictiveEngineStarted,
+    isQueueFiltered,
+    queueShuffleSeed,
+    // visibleQueuedLeads itself is a new array reference every render (it's
+    // derived via .filter()/.sort(), never memoized) — depending on the
+    // array directly would tear down and recreate this interval on nearly
+    // every render. A joined id signature only changes when the actual
+    // filtered/shuffled SET or ORDER changes, matching the same pattern
+    // already used elsewhere in this file (activeScopeCampaigns) for the
+    // identical problem.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    visibleQueuedLeads.map(l => l.id).join(','),
   ])
 
   useEffect(() => {
@@ -1487,9 +1626,65 @@ function DialerPageInner() {
       .finally(() => setQueuedLeadsLoading(false))
   }, [isSpecificCampaign, selectedCampaign, activeScopeCampaigns, fetchQueuedLeadsFor, queueSortDesc])
 
-  // REFRESH button on the queue panel — re-runs the exact same fetch on
-  // demand, in addition to the automatic re-fetches below.
+  // Internal refresh trigger — no longer exposed as a button (removed per
+  // instruction), but still needed: it's what actually re-syncs the
+  // visible queue against real server-side disposition state after a
+  // dial resolves. See disposeLead below, which calls this after every
+  // real disposition write.
   const refreshQueue = useCallback(() => { fetchQueuedLeads() }, [fetchQueuedLeads])
+
+  // Debounced so several dispositions firing in quick succession (e.g. fast
+  // Power-mode dialing, or predictive's multi-line fanout resolving several
+  // calls close together) coalesce into a single refetch shortly after the
+  // last one, instead of one full paginated refetch per disposition.
+  const refreshQueueDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const refreshQueueDebounced = useCallback(() => {
+    if (refreshQueueDebounceRef.current) clearTimeout(refreshQueueDebounceRef.current)
+    refreshQueueDebounceRef.current = setTimeout(() => {
+      refreshQueueDebounceRef.current = null
+      refreshQueue()
+    }, 600)
+  }, [refreshQueue])
+
+  // ── SHARED DISPOSE WRAPPER ────────────────────────────────────────────
+  // Every /api/leads/dispose call in this file now routes through here.
+  // Why this exists: leads used to be stripped from the visible queue
+  // OPTIMISTICALLY the instant they were dialed (see dialLeadCall below),
+  // with no periodic background refetch to ever bring them back — so any
+  // lead that was dialed but never actually received a terminal
+  // disposition (call failed before disposing, still ringing, etc.) was
+  // permanently hidden from the queue for the rest of the session. Per
+  // instruction: a lead should only leave the visible queue when a REAL
+  // disposition changes its server-side status away from "uncalled" — not
+  // merely because it was dialed once. Routing every dispose call through
+  // one place guarantees that a real refetch always follows a real
+  // disposition, consistently, regardless of which of the several dispose
+  // call sites in this file triggered it.
+  interface DisposeLeadParams {
+    lead_id: string
+    campaign_id?: string | null
+    user_id?: string | null
+    disposition: string
+    duration: number
+    notes?: string
+    source?: string
+  }
+  const disposeLead = useCallback(async (params: DisposeLeadParams) => {
+    try {
+      await fetch('/api/leads/dispose', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
+      })
+    } finally {
+      // Always attempt the refetch, even if the dispose call itself failed
+      // — the queue should reflect real server state either way, and a
+      // failed dispose might still be worth re-syncing against (e.g. to
+      // confirm nothing actually changed, rather than leaving the client
+      // in a stale guessed state).
+      refreshQueueDebounced()
+    }
+  }, [refreshQueueDebounced])
 
   useEffect(() => {
     if (predictiveView === 'offline') {
@@ -1506,48 +1701,24 @@ function DialerPageInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [predictiveView, isSpecificCampaign, selectedCampaign, queueSearch, queueSortDesc, activeScopeCampaigns.length, activeScopeCampaigns.map(c => c.id).join(',')])
 
-  // Client-side STATE filter — /api/leads/list has no state param (it only
-  // searches name/phone server-side), so this narrows the already-fetched
-  // page client-side against the real `state` field on each lead. Combined
-  // with queueSearch (name/phone, server-side) via the FILTER control.
-  const [queueStateFilter, setQueueStateFilter] = useState('')
-  // Real lead data is wildly inconsistent about how state is written — the
-  // same state can appear as "HI", "hawaii", "Hawaii", "FL", "florida",
-  // "fla", even "Fl orida" (a stray space typo, seen in real campaign
-  // data). An exact lowercase-string match against queueStateFilter missed
-  // all of these — searching "HI" would only match rows literally
-  // containing "HI", not "hawaii". normalizeState (the same function
-  // driving real TCPA state detection elsewhere in this app) maps both
-  // sides to a canonical 2-letter code before comparing, so "HI" and
-  // "hawaii" are correctly recognized as the same state. Falls back to a
-  // loose case-insensitive substring match if normalizeState can't
-  // recognize either value (e.g. a genuinely malformed state field) rather
-  // than silently excluding it.
-  const visibleQueuedLeads = queueStateFilter.trim()
-    ? queuedLeads.filter(l => {
-        const filterNorm = normalizeState(queueStateFilter)
-        const leadNorm = normalizeState(l.state)
-        if (filterNorm && leadNorm) return filterNorm === leadNorm
-        // Either side didn't normalize cleanly — fall back to a loose
-        // substring match rather than excluding the lead outright.
-        return (l.state || '').toLowerCase().includes(queueStateFilter.trim().toLowerCase())
-      })
-    : queuedLeads
-
-  const isQueueFiltered = !!(queueSearch.trim() || queueStateFilter.trim())
-
   const fetchNextLead = async (): Promise<Lead | null> => {
     const params = new URLSearchParams({ user_id: user?.id || '' })
     if (isSpecificCampaign) params.append('campaign_id', selectedCampaign)
     if (!isPersonalScope) params.append('team_id', selectedScope)
     // When the queue panel's FILTER (name/phone search and/or state) is
-    // active, restrict dialing to exactly the leads currently matching it —
-    // "when filter is set, the only numbers dialed are the ones from the
-    // filter results." visibleQueuedLeads is the already-filtered set the
-    // panel is showing; passing their ids as an allowlist means the server
-    // can't hand back a lead outside the filter even though it still enforces
-    // TCPA/dnc/status rules itself.
-    if (isQueueFiltered) {
+    // active, OR the list has been shuffled, send the exact visible/ordered
+    // lead ids as an allowlist — "when filter is set, the only numbers
+    // dialed are the ones from the filter results," and "I want shuffle to
+    // influence the dialer." visibleQueuedLeads already reflects both the
+    // current filter AND the current shuffle order (shuffle reorders it
+    // in-place — see its definition above), so sending it as an ORDERED
+    // list (not just a set) lets the server dial in that exact sequence
+    // instead of its own dial_attempts/created_at priority order. Without
+    // this, a shuffle-only reorder (no search/state filter set) would never
+    // send lead_ids at all, and the server-side reordering would never
+    // actually activate.
+    const isQueueReordered = isQueueFiltered || queueShuffleSeed !== 0
+    if (isQueueReordered) {
       params.append('lead_ids', visibleQueuedLeads.map(l => l.id).join(','))
     }
     const res = await fetch(`/api/leads/next?${params}`)
@@ -1637,17 +1808,13 @@ function DialerPageInner() {
 
   const skipPreviewLead = async () => {
     if (!previewLead) return
-    await fetch('/api/leads/dispose', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        lead_id: previewLead.id,
-        campaign_id: previewLead.campaign_id,
-        user_id: user?.id,
-        disposition: 'SKIPPED',
-        duration: 0,
-        source: 'preview_skip',
-      }),
+    await disposeLead({
+      lead_id: previewLead.id,
+      campaign_id: previewLead.campaign_id,
+      user_id: user?.id,
+      disposition: 'SKIPPED',
+      duration: 0,
+      source: 'preview_skip',
     })
     setPreviewLead(null)
     setStatus('idle')
@@ -1670,16 +1837,12 @@ function DialerPageInner() {
     }
     const rawPhone = lead.phone?.replace(/\D/g, '')
     if (!rawPhone || rawPhone.length < 10) {
-      await fetch('/api/leads/dispose', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          lead_id: lead.id,
-          campaign_id: lead.campaign_id,
-          user_id: user?.id,
-          disposition: 'SKIPPED',
-          duration: 0,
-        }),
+      await disposeLead({
+        lead_id: lead.id,
+        campaign_id: lead.campaign_id,
+        user_id: user?.id,
+        disposition: 'SKIPPED',
+        duration: 0,
       })
       setCurrentLead(null)
       if (autoChainOnFailure) scheduleDial(300)
@@ -1692,13 +1855,19 @@ function DialerPageInner() {
     playInitiateBlip()
     armDialing() // user-initiated dial — allow SignalWire to bridge to us
     setLastCallDuration(null) // clear the previous call's duration readout
-    // Optimistically drop this lead out of the visible queue the instant it's
-    // actually dialed — the row-level queue view (LeadQueuePanel) reads
-    // queuedLeads directly, so without this a just-called lead would keep
-    // showing as "queued" until the next background refetch. The effect that
-    // populates queuedLeads still re-fetches on its own cadence as a
-    // self-healing backstop if this ever drifts from the server's real state.
-    setQueuedLeads(prev => prev.filter(l => l.id !== lead.id))
+    // NOTE: this used to optimistically strip the lead out of queuedLeads
+    // here, on the theory that a background refetch would "self-heal" the
+    // list. There was no such periodic refetch anywhere in this file — the
+    // only refetches were the manual REFRESH button and a few state-change
+    // effects — so a dialed lead was hidden from the queue PERMANENTLY for
+    // the rest of the session regardless of whether it ever actually
+    // received a real disposition. Leads should only leave the visible
+    // queue when the server's own disposition state says so (see
+    // fetchQueuedLeads/disposition=uncalled) — a lead that's mid-dial or
+    // was dialed but never dispositioned should still be findable. The
+    // active-row highlight (activeQueueLeadIds, driven by currentLead/
+    // previewLead/activeDialingNumbers) already visually marks this row as
+    // "Dialing" without needing to remove it from the list.
 
     setAmdActivity(prev => [
       `DIALING ${lead.first_name || ''} ${lead.last_name || ''} — ${lead.phone}`.trim(),
@@ -1743,17 +1912,13 @@ function DialerPageInner() {
         }
         if (res.status === 451) {
           console.warn('TCPA window block:', data.detail)
-          await fetch('/api/leads/dispose', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              lead_id: lead.id,
-              campaign_id: lead.campaign_id,
-              disposition: 'TCPA_BLOCKED',
-              duration: 0,
-              notes: data.detail,
-              source: 'tcpa_block',
-            }),
+          await disposeLead({
+            lead_id: lead.id,
+            campaign_id: lead.campaign_id,
+            disposition: 'TCPA_BLOCKED',
+            duration: 0,
+            notes: data.detail,
+            source: 'tcpa_block',
           })
           setAmdActivity(prev => [
             `TCPA SKIP — ${data.leadState || '?'}: ${data.detail}`,
@@ -1773,16 +1938,12 @@ function DialerPageInner() {
         // silently — this is real error text from the response, not invented.
         console.error('Outbound call failed:', res.status, data)
         showQueueOutcome(lead.id, data?.error ? `Call failed — ${data.error}` : 'Call failed…')
-        await fetch('/api/leads/dispose', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            lead_id: lead.id,
-            campaign_id: lead.campaign_id,
-            user_id: user?.id,
-            disposition: 'SKIPPED',
-            duration: 0,
-          }),
+        await disposeLead({
+          lead_id: lead.id,
+          campaign_id: lead.campaign_id,
+          user_id: user?.id,
+          disposition: 'SKIPPED',
+          duration: 0,
         })
         setStatus('idle')
         setCurrentLead(null)
@@ -1935,16 +2096,12 @@ function DialerPageInner() {
                 ld.id,
                 statusData.status === 'busy' ? 'Line busy…' : 'Sorry, couldn\u2019t answer…'
               )
-              await fetch('/api/leads/dispose', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  lead_id: ld.id,
-                  campaign_id: ld.campaign_id,
-                  user_id: user?.id,
-                  disposition: 'NO_ANSWER',
-                  duration: 0,
-                }),
+              await disposeLead({
+                lead_id: ld.id,
+                campaign_id: ld.campaign_id,
+                user_id: user?.id,
+                disposition: 'NO_ANSWER',
+                duration: 0,
               })
             } else {
               showQueueOutcome(ld.id, 'Voicemail detected…')
@@ -2098,17 +2255,13 @@ function DialerPageInner() {
     if (activePollRef.current) clearInterval(activePollRef.current)
     if (activeCallSid) await hangupCall(activeCallSid)
     if (currentLead) {
-      await fetch('/api/leads/dispose', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          lead_id: currentLead.id,
-          campaign_id: currentLead.campaign_id,
-          disposition: 'SKIPPED',
-          duration: Math.floor((Date.now() - (callStartRef.current || callStart)) / 1000),
-          notes: notes.trim() || undefined,
-          source: 'skip',
-        }),
+      await disposeLead({
+        lead_id: currentLead.id,
+        campaign_id: currentLead.campaign_id,
+        disposition: 'SKIPPED',
+        duration: Math.floor((Date.now() - (callStartRef.current || callStart)) / 1000),
+        notes: notes.trim() || undefined,
+        source: 'skip',
       })
     }
     setNotes('')
@@ -2133,17 +2286,13 @@ function DialerPageInner() {
       notInterested: disp === 'NOT INTERESTED' ? s.notInterested + 1 : s.notInterested,
     }))
     if (currentLead) {
-      await fetch('/api/leads/dispose', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          lead_id: currentLead.id,
-          campaign_id: currentLead.campaign_id,
-          disposition: disp,
-          duration: Math.floor((Date.now() - (callStartRef.current || callStart)) / 1000),
-          notes: notes.trim() || undefined,
-          source: 'dialer',
-        }),
+      await disposeLead({
+        lead_id: currentLead.id,
+        campaign_id: currentLead.campaign_id,
+        disposition: disp,
+        duration: Math.floor((Date.now() - (callStartRef.current || callStart)) / 1000),
+        notes: notes.trim() || undefined,
+        source: 'dialer',
       })
     }
 
@@ -2641,8 +2790,8 @@ function DialerPageInner() {
             100% { opacity: 1; transform: translateY(0); }
           }
           @keyframes queueRowPulse {
-            0%, 100% { background: rgba(16, 185, 129, 0.10); }
-            50% { background: rgba(16, 185, 129, 0.20); }
+            0%, 100% { background: rgba(42, 74, 138, 0.10); }
+            50% { background: rgba(42, 74, 138, 0.20); }
           }
           .dialer-queue-panel-enter { animation: queuePanelFadeIn 0.25s ease; }
           .dialer-queue-row-active { animation: queueRowPulse 1.6s ease-in-out infinite; }
@@ -2694,20 +2843,20 @@ function DialerPageInner() {
           .dialer-queue-row-mobile-status { display: none; }
         `}</style>
 
-        {/* ── CONTROLS ROW — REFRESH / FILTER, outline-style to match the rest of dialerseat (leads page filter bar, etc.) ────── */}
+        {/* ── CONTROLS ROW — FILTER (far right), outline-style to match the rest of dialerseat (leads page filter bar, etc.) ────── */}
         <div className="dialer-queue-controls" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', padding: '14px 16px 12px', flexShrink: 0, borderBottom: `1px solid ${terminalBorder}` }}>
-          <button
-            className="dialer-queue-btn"
-            onClick={refreshQueue}
-            disabled={queuedLeadsLoading}
-            title="Refresh queue"
-            style={{ border: `1px solid ${terminalBorder}`, color: terminalText }}
-          >
-            <span style={{ display: 'inline-block', transition: 'transform 0.5s ease', transform: queuedLeadsLoading ? 'rotate(180deg)' : 'none' }}>⟳</span>
-            REFRESH
-          </button>
+          {isQueueDialingArmed && (
+            <span style={{
+              fontSize: 10, fontWeight: 'bold', letterSpacing: 1.5, fontFamily: FUTURA,
+              color: terminalAccent,
+            }}>
+              ● DIALING {dialingCount || 1} LINE{dialingCount === 1 || dialingCount === 0 ? '' : 'S'}
+            </span>
+          )}
 
-          <div style={{ position: 'relative' }}>
+          <div style={{ flex: 1 }} />
+
+          <div ref={queueFilterRef} style={{ position: 'relative' }}>
             <button
               className="dialer-queue-btn"
               onClick={() => setQueueFilterOpen(v => !v)}
@@ -2721,7 +2870,7 @@ function DialerPageInner() {
             </button>
             {queueFilterOpen && (
               <div style={{
-                position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 5,
+                position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 5,
                 background: terminalSurface, border: `1px solid ${terminalBorder}`, borderRadius: 4,
                 padding: 12, minWidth: 230, boxShadow: '0 8px 24px rgba(0,0,0,0.16)',
                 display: 'flex', flexDirection: 'column', gap: 10,
@@ -2762,14 +2911,43 @@ function DialerPageInner() {
                   <input type="checkbox" checked={queueSortDesc} onChange={(e) => setQueueSortDesc(e.target.checked)} />
                   NEWEST LEADS FIRST
                 </label>
+
+                <div style={{ borderTop: `1px solid ${terminalBorder}`, paddingTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                  <button
+                    className="dialer-queue-btn"
+                    onClick={() => setQueueShuffleSeed(Math.floor(Math.random() * 2147483647) || 1)}
+                    title="Randomize the order of the currently visible rows — also changes dialing priority: leads earlier in the shuffled order are dialed first"
+                    style={{
+                      border: `1px solid ${queueShuffleSeed !== 0 ? terminalAccent : terminalBorder}`,
+                      color: queueShuffleSeed !== 0 ? terminalAccent : terminalText,
+                      background: queueShuffleSeed !== 0 ? 'rgba(42, 74, 138, 0.08)' : 'transparent',
+                      fontSize: 9, padding: '6px 10px',
+                    }}
+                  >
+                    ⇄ SHUFFLE
+                  </button>
+                  {queueShuffleSeed !== 0 && (
+                    <button
+                      onClick={() => setQueueShuffleSeed(0)}
+                      style={{
+                        background: 'none', border: 'none', padding: 0,
+                        color: terminalMuted, fontFamily: FUTURA, fontSize: 9, letterSpacing: 0.5,
+                        cursor: 'pointer', textDecoration: 'underline',
+                      }}
+                    >
+                      UNSHUFFLE
+                    </button>
+                  )}
+                </div>
+
                 {isQueueFiltered && (
                   <div style={{ fontSize: 10, color: terminalMuted, fontFamily: FUTURA, lineHeight: 1.5 }}>
                     Only leads matching this filter will be dialed{isPredictive ? ' in Power/Progressive/Preview modes' : ''}.
                   </div>
                 )}
-                {(queueSearch || queueStateFilter || queueSortDesc) && (
+                {(queueSearch || queueStateFilter || queueSortDesc || queueShuffleSeed !== 0) && (
                   <button
-                    onClick={() => { setQueueSearch(''); setQueueStateFilter(''); setQueueSortDesc(false) }}
+                    onClick={() => { setQueueSearch(''); setQueueStateFilter(''); setQueueSortDesc(false); setQueueShuffleSeed(0) }}
                     style={{
                       alignSelf: 'flex-start', background: 'none', border: 'none', padding: 0,
                       color: terminalRed, fontFamily: FUTURA, fontSize: 10, letterSpacing: 0.5,
@@ -2782,17 +2960,6 @@ function DialerPageInner() {
               </div>
             )}
           </div>
-
-          <div style={{ flex: 1 }} />
-
-          {isQueueDialingArmed && (
-            <span style={{
-              fontSize: 10, fontWeight: 'bold', letterSpacing: 1.5, fontFamily: FUTURA,
-              color: '#0d7a3f',
-            }}>
-              ● DIALING {dialingCount || 1} LINE{dialingCount === 1 || dialingCount === 0 ? '' : 'S'}
-            </span>
-          )}
         </div>
 
         {isPredictive && isQueueFiltered && isQueueDialingArmed && (
@@ -2868,15 +3035,15 @@ function DialerPageInner() {
                       className={`dialer-queue-row ${isRowActive ? 'dialer-queue-row-active' : ''}`}
                       style={{
                         padding: '7px 16px',
-                        background: isRowActive ? 'rgba(16, 185, 129, 0.10)' : 'transparent',
-                        borderLeft: `3px solid ${isRowActive ? terminalGreen : 'transparent'}`,
+                        background: isRowActive ? 'rgba(42, 74, 138, 0.10)' : 'transparent',
+                        borderLeft: `3px solid ${isRowActive ? terminalAccent : 'transparent'}`,
                         borderBottom: `1px solid ${terminalBorder}`,
                       }}
                     >
                       {isRowActive && (
                         <div className="dialer-queue-row-mobile-status" style={{
                           alignItems: 'center', gap: 6, marginBottom: 4,
-                          fontSize: 11, fontWeight: 'bold', color: '#0d7a3f', fontFamily: FUTURA,
+                          fontSize: 11, fontWeight: 'bold', color: terminalAccent, fontFamily: FUTURA,
                         }}>
                           <span style={{ fontSize: 10 }}>☎</span> Dialing
                         </div>
@@ -2891,7 +3058,7 @@ function DialerPageInner() {
                           <span className="dq-col-status" style={{
                             display: 'flex', alignItems: 'center', gap: 6,
                             fontSize: 13, fontWeight: isRowActive ? 'bold' : 600,
-                            color: isRowActive ? '#0d7a3f' : terminalText,
+                            color: isRowActive ? terminalAccent : terminalText,
                           }}>
                             {isRowActive && <span style={{ fontSize: 10 }}>☎</span>}
                             {isRowActive ? 'Dialing' : 'Upcoming'}
@@ -3487,8 +3654,8 @@ function DialerPageInner() {
                             {activeDialingNumbers.map((num, i) => (
                               <div key={`${num}-${i}`} className="dialer-live-number-chip" style={{
                                 padding: '8px 12px',
-                                background: 'rgba(16, 185, 129, 0.12)',
-                                border: `1.5px solid ${terminalGreen}`,
+                                background: 'rgba(42, 74, 138, 0.12)',
+                                border: `1.5px solid ${terminalAccent}`,
                                 borderRadius: 4,
                                 fontFamily: FUTURA,
                                 fontSize: 14,
@@ -3499,7 +3666,7 @@ function DialerPageInner() {
                                 alignItems: 'center',
                                 gap: 8,
                               }}>
-                                <span style={{ color: terminalGreen }}>●</span>
+                                <span style={{ color: terminalAccent }}>●</span>
                                 <span className="dialer-live-number-chip-text" style={{ overflowWrap: 'anywhere' }}>{num}</span>
                               </div>
                             ))}

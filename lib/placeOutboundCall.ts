@@ -93,8 +93,24 @@ export function normalizeToE164(raw: string | null | undefined): string | null {
 
   if (!digits) return null
 
+  // E.164 (the actual ITU-T standard, not a made-up limit) caps a phone
+  // number at 15 digits total, INCLUDING the country code — no real,
+  // dialable phone number is longer than that. The previous version had no
+  // upper bound at all: any digit string over 11 characters got a bare "+"
+  // prepended and was treated as valid, which is how genuinely malformed
+  // data (e.g. a 12-digit value ending in a run of zeros, confirmed present
+  // in real uploaded lead data) reached Telnyx's API instead of being
+  // caught here — Telnyx correctly rejected it downstream with a generic
+  // "must be in +E164 format" error that gave no hint WHICH lead or WHY,
+  // several layers removed from the actual bad data. Catching it here
+  // means the failure is attributable to a specific lead immediately.
+  const MAX_E164_DIGITS = 15
+  const MIN_E164_DIGITS = 8 // shortest real-world numbers (some small-country lines) are ~8 digits
+
+  if (digits.length > MAX_E164_DIGITS) return null
+
   if (hadPlus) {
-    return digits.length >= 8 ? `+${digits}` : null
+    return digits.length >= MIN_E164_DIGITS ? `+${digits}` : null
   }
 
   if (digits.length === 10) {
@@ -103,7 +119,7 @@ export function normalizeToE164(raw: string | null | undefined): string | null {
   if (digits.length === 11 && digits.startsWith('1')) {
     return `+${digits}`
   }
-  if (digits.length > 11) {
+  if (digits.length > 11 && digits.length <= MAX_E164_DIGITS) {
     return `+${digits}`
   }
 
