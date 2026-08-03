@@ -112,12 +112,33 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'No valid fields to update' }, { status: 400 })
     }
 
-    const { data, error } = await supabaseAdmin
+    let { data, error } = await supabaseAdmin
       .from('campaigns')
       .update(updates)
       .eq('id', id)
       .select()
       .single()
+
+    // Same defensive fallback as campaigns/create — see
+    // db/migrations/2026-08-02-add-campaigns-recording-enabled.sql for the
+    // real fix. Retry without recording_enabled specifically so an edit
+    // that happens to touch that field doesn't fail the WHOLE update
+    // (including any other real field changes bundled in the same request)
+    // just because that one column isn't there yet.
+    if (error && (error as any).code === 'PGRST204' && /recording_enabled/i.test(error.message || '') && 'recording_enabled' in updates) {
+      console.error('[campaigns/update] recording_enabled column missing — retrying update without it. Run db/migrations/2026-08-02-add-campaigns-recording-enabled.sql to fix permanently.')
+      const { recording_enabled: _omit, ...fallbackUpdates } = updates
+      if (Object.keys(fallbackUpdates).length > 0) {
+        const retry = await supabaseAdmin
+          .from('campaigns')
+          .update(fallbackUpdates)
+          .eq('id', id)
+          .select()
+          .single()
+        data = retry.data
+        error = retry.error
+      }
+    }
 
     if (error) throw error
 

@@ -235,6 +235,8 @@ function DialerPageInner() {
     // correctly attributed back to its own campaign when dialed.
     campaign_id?: string | null
     created_at?: string | null
+    dial_attempts?: number | null
+    disposition?: string | null
   }
   const [queuedLeads, setQueuedLeads] = useState<QueuedLead[]>([])
   const [queuedLeadsLoading, setQueuedLeadsLoading] = useState(false)
@@ -262,6 +264,18 @@ function DialerPageInner() {
   // click lands anywhere else on the page, instead of requiring the FILTER
   // button itself to be clicked again to toggle it shut.
   const queueFilterRef = useRef<HTMLDivElement>(null)
+  // Guards against a real race condition: fetchQueuedLeadsFor paginates
+  // through potentially many pages per campaign, and there was previously
+  // no way to tell a late-arriving response from an OLD selection apart
+  // from the current one. Switching from a specific campaign to "All
+  // Active Campaigns" (or between campaigns) while a slow fetch for the
+  // PREVIOUS selection was still in flight could let that old fetch finish
+  // AFTER the new one and silently overwrite it with stale data — matching
+  // the reported "switching doesn't update, I have to refresh" symptom
+  // exactly. Each fetchQueuedLeads call captures the current generation
+  // number; only the response matching the CURRENT (latest) generation is
+  // ever applied to state.
+  const queueFetchGenerationRef = useRef(0)
   // Shuffle — a seeded randomization of the currently-visible (post-filter)
   // row order, living in the filter dropdown rather than as its own
   // button per instruction. This NOW genuinely affects dial order, not
@@ -271,6 +285,17 @@ function DialerPageInner() {
   // in this order when a shuffle is active. See the filter/shuffle
   // derivation block below for the actual reorder logic.
   const [queueShuffleSeed, setQueueShuffleSeed] = useState(0)
+  // How many times a lead should be dialed in a row before moving to the
+  // next one, per user selection (1x/2x/3x, hard-capped at 3). Preview mode
+  // is forced to 1 regardless of this value — see the UI and handleDial.
+  const [dialRepeatCount, setDialRepeatCount] = useState<1 | 2 | 3>(1)
+  // Tracks how many times the CURRENT lead has actually been dialed in this
+  // back-to-back sequence. A ref (not state) because it's read/written
+  // inside the async call-status poll callback in startCallPolling, which
+  // would otherwise see a stale value from whatever render captured it as a
+  // closure. Reset to 1 whenever a genuinely NEW lead starts (see
+  // handleDial); incremented on each same-lead redial.
+  const leadAttemptCountRef = useRef(1)
   // Transient per-lead outcome text shown briefly in the queue row right
   // after a dial resolves without connecting (e.g. "Sorry, couldn't
   // answer…"), mirroring the reference UX. Populated ONLY from real dial
@@ -1027,14 +1052,13 @@ function DialerPageInner() {
             // Server-side ghost guard: the controller only fans out lines when
             // the agent has explicitly started the predictive engine.
             predictive_armed: isPredictive && predictiveEngineStarted,
-            // "predictive mode be effected by the filtered order in all
-            // cases" — send the same ordered allowlist fetchNextLead sends
-            // to /api/leads/next, so the predictive controller can release
-            // any claimed lead that isn't in the current filter/shuffle
-            // (see runPredictiveController's FILTER/SHUFFLE ENFORCEMENT
-            // block) instead of dialing from the full active pool
-            // regardless of what's filtered/shuffled on screen.
-            lead_ids: (isQueueFiltered || queueShuffleSeed !== 0)
+            // Always send the current displayed order to the predictive
+            // controller too, matching fetchNextLead's behavior — dialing
+            // must always follow the queue panel's top-down order in every
+            // mode, not just when a filter/shuffle is explicitly active.
+            // Same load-race guard as fetchNextLead: skip only while the
+            // queue's first load hasn't produced any leads yet.
+            lead_ids: !(queuedLeadsLoading && visibleQueuedLeads.length === 0)
               ? visibleQueuedLeads.map(l => l.id).join(',')
               : undefined,
           }),
@@ -1574,7 +1598,7 @@ function DialerPageInner() {
         const cursorValue: number = cursor
         const paramEntries: Record<string, string> = {
           campaign_id: campaignId,
-          disposition: 'uncalled',
+          disposition: 'dialable',
           sort: queueSortDesc ? 'created_desc' : 'created_asc',
           cursor: String(cursorValue),
         }
@@ -1600,16 +1624,26 @@ function DialerPageInner() {
   }, [queueSearch, queueSortDesc])
 
   const fetchQueuedLeads = useCallback((opts?: { silent?: boolean }) => {
+    const myGeneration = ++queueFetchGenerationRef.current
     const campaignIds = isSpecificCampaign
       ? [selectedCampaign]
       : activeScopeCampaigns.map(c => c.id)
     if (campaignIds.length === 0) {
-      setQueuedLeads([])
+      // Still respect generation here — an empty-scope "fetch" is
+      // effectively instant, but if a slower real fetch from a moment ago
+      // is still in flight it should still win once IT lands, not be
+      // clobbered by this synchronous empty-state clear.
+      if (myGeneration === queueFetchGenerationRef.current) setQueuedLeads([])
       return Promise.resolve()
     }
     if (!opts?.silent) setQueuedLeadsLoading(true)
     return fetchQueuedLeadsFor(campaignIds)
       .then(leads => {
+        // Discard this result if a newer fetch has started since this one
+        // began — this is exactly the "stale response wins the race"
+        // scenario. Only the response from the MOST RECENT fetch call is
+        // ever allowed to update state.
+        if (myGeneration !== queueFetchGenerationRef.current) return
         // Merge, sort consistently (fetching per-campaign in parallel means
         // results arrive in campaign order, not the requested created_at
         // order). No slice/cap here — every uncalled lead across the
@@ -1623,8 +1657,31 @@ function DialerPageInner() {
         })
         setQueuedLeads(sorted)
       })
-      .finally(() => setQueuedLeadsLoading(false))
+      .finally(() => {
+        if (myGeneration === queueFetchGenerationRef.current) setQueuedLeadsLoading(false)
+      })
   }, [isSpecificCampaign, selectedCampaign, activeScopeCampaigns, fetchQueuedLeadsFor, queueSortDesc])
+
+  // Refetch campaigns AND the queue whenever this tab/page becomes visible
+  // again — Next.js's client-side navigation can keep this page's
+  // component instance alive in the background (rather than truly
+  // unmounting it) when you navigate away to create/edit a campaign and
+  // come back, so the original mount-only fetchCampaigns() effect never
+  // refires and the campaign list (lead counts, newly added campaigns)
+  // goes stale until a hard browser refresh. This covers that case and the
+  // literal switch-tabs-and-back case, matching the reported "have to
+  // refresh the page" symptom.
+  useEffect(() => {
+    if (!user || !isActive) return
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchCampaigns()
+        fetchQueuedLeads({ silent: true })
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
+  }, [user, isActive, fetchQueuedLeads])
 
   // Internal refresh trigger — no longer exposed as a button (removed per
   // instruction), but still needed: it's what actually re-syncs the
@@ -1705,20 +1762,31 @@ function DialerPageInner() {
     const params = new URLSearchParams({ user_id: user?.id || '' })
     if (isSpecificCampaign) params.append('campaign_id', selectedCampaign)
     if (!isPersonalScope) params.append('team_id', selectedScope)
-    // When the queue panel's FILTER (name/phone search and/or state) is
-    // active, OR the list has been shuffled, send the exact visible/ordered
-    // lead ids as an allowlist — "when filter is set, the only numbers
-    // dialed are the ones from the filter results," and "I want shuffle to
-    // influence the dialer." visibleQueuedLeads already reflects both the
-    // current filter AND the current shuffle order (shuffle reorders it
-    // in-place — see its definition above), so sending it as an ORDERED
-    // list (not just a set) lets the server dial in that exact sequence
-    // instead of its own dial_attempts/created_at priority order. Without
-    // this, a shuffle-only reorder (no search/state filter set) would never
-    // send lead_ids at all, and the server-side reordering would never
-    // actually activate.
-    const isQueueReordered = isQueueFiltered || queueShuffleSeed !== 0
-    if (isQueueReordered) {
+    // ALWAYS send the exact currently-displayed order as an ordered
+    // allowlist — not just when a filter/shuffle is active. Per explicit
+    // instruction: dialing must always follow the queue panel's displayed
+    // top-down order, not the server's own dial_attempts/created_at
+    // priority (which is a DIFFERENT sort key than the panel's display
+    // order — a lead with a prior failed attempt sorts later in dial
+    // priority even though it can still be sitting near the top of the
+    // displayed list, which is why dialing looked like it was "picking a
+    // random number" instead of the top entry). visibleQueuedLeads already
+    // reflects the current filter, sort, and shuffle state — sending it
+    // unconditionally means what's dialed next always matches what's shown
+    // next, with no exceptions.
+    //
+    // Only skipped while the queue's first load hasn't finished yet
+    // (queuedLeadsLoading with zero leads loaded so far) — sending an EMPTY
+    // allowlist during that race would make the server correctly report
+    // "no leads match," blocking a dial that should have been allowed once
+    // the list finishes loading. Once at least one page has loaded, the
+    // list is used as-is even if more pages are still being fetched in the
+    // background, since fetchQueuedLeads accumulates all pages before ever
+    // setting queuedLeads in the first place — by the time visibleQueuedLeads
+    // is non-empty, it already reflects the FULL dialable set for the
+    // current scope, not a partial page.
+    const queueReadyForOrderedDial = !(queuedLeadsLoading && visibleQueuedLeads.length === 0)
+    if (queueReadyForOrderedDial) {
       params.append('lead_ids', visibleQueuedLeads.map(l => l.id).join(','))
     }
     const res = await fetch(`/api/leads/next?${params}`)
@@ -2092,6 +2160,37 @@ function DialerPageInner() {
           if (ld) {
             const isAmdHangup = isNotHuman(statusData.amd_result)
             if (!isAmdHangup) {
+              // effectiveMax: the real cap for THIS session — the user's
+              // selected 1x/2x/3x, hard-capped at 3 regardless (per
+              // instruction, 3x is the maximum in a row no matter what).
+              // Preview is excluded entirely — it's a manual, agent-in-the-
+              // loop flow with no redial concept at all, forced to 1.
+              const effectiveMax = isPreview ? 1 : Math.min(dialRepeatCount, 3)
+              const attemptsSoFar = leadAttemptCountRef.current
+
+              if (attemptsSoFar < effectiveMax) {
+                // Still have retries left for this same lead — redial it
+                // directly instead of dispositioning + fetching a new one.
+                leadAttemptCountRef.current = attemptsSoFar + 1
+                showQueueOutcome(
+                  ld.id,
+                  `${statusData.status === 'busy' ? 'Line busy' : 'No answer'} — redialing (attempt ${attemptsSoFar + 1} of ${effectiveMax})…`
+                )
+                setActiveCallSid(null)
+                disarmDialing()
+                setStatus('idle')
+                // Same lead object, same id — currentLead/currentLeadRef
+                // stay pointed at it, no fetchNextLead involved.
+                const redialTimeoutId = setTimeout(() => {
+                  dialChainTimeoutsRef.current.delete(redialTimeoutId)
+                  if (abortDialingRef.current) return
+                  if (!availableRef.current) return
+                  dialLeadCall(ld)
+                }, 800)
+                dialChainTimeoutsRef.current.add(redialTimeoutId)
+                return
+              }
+
               showQueueOutcome(
                 ld.id,
                 statusData.status === 'busy' ? 'Line busy…' : 'Sorry, couldn\u2019t answer…'
@@ -2110,6 +2209,7 @@ function DialerPageInner() {
           setStatus('idle')
           setCurrentLead(null)
           disarmDialing() // call ended without a human; next dial re-arms
+          leadAttemptCountRef.current = 1 // moving to a new lead next — reset for it
 
           scheduleDial(800)
         }
@@ -2247,6 +2347,7 @@ function DialerPageInner() {
 
     const lead = await fetchNextLead()
     if (!lead) return
+    leadAttemptCountRef.current = 1
     setCurrentLead(lead)
     await dialLeadCall(lead)
   }
@@ -2824,6 +2925,28 @@ function DialerPageInner() {
           }
           .dialer-queue-btn:active { opacity: 0.7; }
           .dialer-queue-btn:disabled { cursor: default; opacity: 0.5; }
+          .dialer-repeat-btn {
+            font-family: ${FUTURA}; font-size: 11px; font-weight: bold;
+            padding: 5px 9px; border-radius: 3px; cursor: pointer;
+            transition: opacity 0.15s ease, background 0.15s ease;
+          }
+          .dialer-repeat-btn:disabled { cursor: default; opacity: 0.45; }
+          .dialer-repeat-help {
+            position: relative; display: inline-flex; align-items: center;
+            justify-content: center; width: 15px; height: 15px; border-radius: 50%;
+            border: 1px solid ${terminalMuted}; color: ${terminalMuted};
+            font-size: 9px; font-weight: bold; cursor: default; user-select: none;
+          }
+          .dialer-repeat-help .dialer-repeat-tooltip {
+            visibility: hidden; opacity: 0;
+            position: absolute; bottom: calc(100% + 8px); left: 0;
+            width: 220px; padding: 8px 10px; border-radius: 4px;
+            background: ${terminalDark}; color: #fff;
+            font-size: 10px; font-weight: normal; letter-spacing: 0.2px; line-height: 1.5;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.2);
+            transition: opacity 0.15s ease; z-index: 6;
+          }
+          .dialer-repeat-help:hover .dialer-repeat-tooltip { visibility: visible; opacity: 1; }
           .dialer-queue-head-row {
             display: grid; grid-template-columns: 90px 130px 1fr 1fr 70px; gap: 10px;
           }
@@ -2845,6 +2968,33 @@ function DialerPageInner() {
 
         {/* ── CONTROLS ROW — FILTER (far right), outline-style to match the rest of dialerseat (leads page filter bar, etc.) ────── */}
         <div className="dialer-queue-controls" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', padding: '14px 16px 12px', flexShrink: 0, borderBottom: `1px solid ${terminalBorder}` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            {([1, 2, 3] as const).map(n => {
+              const active = isPreview ? n === 1 : dialRepeatCount === n
+              return (
+                <button
+                  key={n}
+                  className="dialer-repeat-btn"
+                  disabled={isPreview}
+                  onClick={() => !isPreview && setDialRepeatCount(n)}
+                  style={{
+                    border: `1px solid ${active ? terminalAccent : terminalBorder}`,
+                    background: active ? 'rgba(42, 74, 138, 0.14)' : 'transparent',
+                    color: active ? terminalAccent : terminalText,
+                  }}
+                >
+                  {n}x
+                </button>
+              )
+            })}
+            <span className="dialer-repeat-help">
+              ?
+              <span className="dialer-repeat-tooltip">
+                Dials the same lead this many times in a row (max 3) before moving to the next one if it doesn't connect. {isPreview ? 'Preview mode always dials once — the agent reviews each lead manually.' : ''}
+              </span>
+            </span>
+          </div>
+
           {isQueueDialingArmed && (
             <span style={{
               fontSize: 10, fontWeight: 'bold', letterSpacing: 1.5, fontFamily: FUTURA,
@@ -3009,82 +3159,110 @@ function DialerPageInner() {
               {isQueueFiltered
                 ? 'No leads match this filter.'
                 : noLeads
-                  ? 'No uncalled leads right now.'
+                  ? 'No dialable leads right now.'
                   : 'Queue is empty.'}
             </div>
           ) : (
-            <>
-              <div className="dialer-queue-head-row" style={{
-                gap: 10,
-                padding: '8px 16px 6px', position: 'sticky', top: 0, background: terminalSurface, zIndex: 1,
-                borderBottom: `1px solid ${terminalBorder}`,
-              }}>
-                {isQueueDialingArmed && <div className="dq-col-status" style={{ fontSize: 9, letterSpacing: 1.5, color: terminalMuted, fontFamily: FUTURA, fontWeight: 'bold' }}>STATUS</div>}
-                <div style={{ fontSize: 9, letterSpacing: 1.5, color: terminalMuted, fontFamily: FUTURA, fontWeight: 'bold' }}>PHONE</div>
-                <div style={{ fontSize: 9, letterSpacing: 1.5, color: terminalMuted, fontFamily: FUTURA, fontWeight: 'bold' }}>FIRST NAME</div>
-                <div style={{ fontSize: 9, letterSpacing: 1.5, color: terminalMuted, fontFamily: FUTURA, fontWeight: 'bold' }}>LAST NAME</div>
-                <div className="dq-col-state" style={{ fontSize: 9, letterSpacing: 1.5, color: terminalMuted, fontFamily: FUTURA, fontWeight: 'bold' }}>STATE</div>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                {visibleQueuedLeads.map(lead => {
-                  const isRowActive = activeQueueLeadIds.has(lead.id)
-                  const outcome = queueOutcomeByLeadId[lead.id]
-                  return (
-                    <div
-                      key={lead.id}
-                      className={`dialer-queue-row ${isRowActive ? 'dialer-queue-row-active' : ''}`}
-                      style={{
-                        padding: '7px 16px',
-                        background: isRowActive ? 'rgba(42, 74, 138, 0.10)' : 'transparent',
-                        borderLeft: `3px solid ${isRowActive ? terminalAccent : 'transparent'}`,
-                        borderBottom: `1px solid ${terminalBorder}`,
-                      }}
-                    >
-                      {isRowActive && (
-                        <div className="dialer-queue-row-mobile-status" style={{
-                          alignItems: 'center', gap: 6, marginBottom: 4,
-                          fontSize: 11, fontWeight: 'bold', color: terminalAccent, fontFamily: FUTURA,
-                        }}>
-                          <span style={{ fontSize: 10 }}>☎</span> Dialing
-                        </div>
-                      )}
-                      <div className="dialer-queue-row-grid" style={{
-                        display: 'grid',
-                        gridTemplateColumns: isQueueDialingArmed ? '90px 130px 1fr 1fr 70px' : '130px 1fr 1fr 70px',
-                        gap: 10,
-                        alignItems: 'center', fontFamily: FUTURA, fontSize: 14,
-                      }}>
-                        {isQueueDialingArmed && (
-                          <span className="dq-col-status" style={{
-                            display: 'flex', alignItems: 'center', gap: 6,
-                            fontSize: 13, fontWeight: isRowActive ? 'bold' : 600,
-                            color: isRowActive ? terminalAccent : terminalText,
+            <div style={{ display: 'flex', flexDirection: 'column', padding: '10px 16px 16px', gap: 6 }}>
+              {visibleQueuedLeads.map(lead => {
+                const isRowActive = activeQueueLeadIds.has(lead.id)
+                const outcome = queueOutcomeByLeadId[lead.id]
+                const attempts = lead.dial_attempts || 0
+                // Same disposition color mapping as the leads tab (see
+                // dispositionTint/DISPOSITIONS in app/dashboard/leads/page.tsx)
+                // — kept as real, shared string values rather than a fresh
+                // guess, so a lead's badge here looks and reads identically
+                // to how it appears on the leads tab.
+                const dispInfo: { label: string; color: string; bg: string; tint: string } | null =
+                  lead.disposition === 'CLOSED' ? { label: 'CLOSED', color: '#16a34a', bg: '#dcfce7', tint: 'rgba(22, 163, 74, 0.08)' }
+                  : lead.disposition === 'APPOINTMENT' ? { label: 'APPOINTMENT', color: '#2563eb', bg: '#dbeafe', tint: 'rgba(37, 99, 235, 0.08)' }
+                  : lead.disposition === 'NOT INTERESTED' ? { label: 'NOT INTERESTED', color: '#d97706', bg: '#fef3c7', tint: 'rgba(217, 119, 6, 0.08)' }
+                  : lead.disposition === 'DO NOT CALL' ? { label: 'DO NOT CALL', color: '#dc2626', bg: '#fee2e2', tint: 'rgba(220, 38, 38, 0.08)' }
+                  : lead.disposition === 'SKIPPED' ? { label: 'SKIPPED', color: '#64748b', bg: '#f1f5f9', tint: 'rgba(100, 116, 139, 0.05)' }
+                  : lead.disposition === 'NO_ANSWER' ? { label: 'NO ANSWER', color: '#64748b', bg: '#f1f5f9', tint: 'rgba(100, 116, 139, 0.05)' }
+                  : lead.disposition === 'TCPA_BLOCKED' ? { label: 'TIME BLOCKED', color: terminalAmber, bg: '#fef3c7', tint: 'rgba(217, 119, 6, 0.06)' }
+                  : null
+
+                return (
+                  <div
+                    key={lead.id}
+                    className={`dialer-queue-row dialer-queue-card ${isRowActive ? 'dialer-queue-row-active' : ''}`}
+                    style={{
+                      padding: '10px 12px',
+                      background: isRowActive ? 'rgba(42, 74, 138, 0.10)' : (dispInfo?.tint || terminalBg),
+                      border: `1px solid ${isRowActive ? terminalAccent : terminalBorder}`,
+                      borderLeft: `3px solid ${isRowActive ? terminalAccent : 'transparent'}`,
+                      borderRadius: 4,
+                    }}
+                  >
+                    <div className="dialer-queue-row-grid" style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1.6fr 1fr 0.5fr 0.6fr',
+                      gridTemplateAreas: '"name phone state badge"',
+                      gap: 10,
+                      alignItems: 'center', fontFamily: FUTURA, fontSize: 13,
+                    }}>
+                      <span className="dq-cell-name" style={{ gridArea: 'name', color: terminalText, fontWeight: 'bold', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {(lead.first_name || lead.last_name) ? `${lead.first_name || ''} ${lead.last_name || ''}`.trim() : '—'}
+                      </span>
+                      <span className="dq-cell-phone" style={{ gridArea: 'phone', color: terminalAccent, fontWeight: 'bold', fontVariantNumeric: 'tabular-nums', overflowWrap: 'anywhere' }}>
+                        {lead.phone}
+                      </span>
+                      <span className="dq-cell-state" style={{ gridArea: 'state', color: terminalMuted, fontSize: 12 }}>
+                        {lead.state || '—'}
+                      </span>
+                      <span className="dq-cell-badge" style={{ gridArea: 'badge', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontSize: 11, fontFamily: 'monospace', fontWeight: 'bold', color: attempts > 0 ? terminalAccent : terminalMuted }}>
+                          {attempts}x
+                        </span>
+                        {isRowActive ? (
+                          // The ONE and only "currently dialing" indicator for
+                          // this row — replaces the normal disposition/NEW
+                          // badge while active, rather than adding a second
+                          // separate element. No emoji, per instruction.
+                          <span style={{
+                            fontSize: 9, fontWeight: 'bold', letterSpacing: 0.5,
+                            padding: '3px 7px', borderRadius: 3,
+                            background: 'rgba(42, 74, 138, 0.16)', color: terminalAccent,
+                            border: `1px solid ${terminalAccent}`,
                           }}>
-                            {isRowActive && <span style={{ fontSize: 10 }}>☎</span>}
-                            {isRowActive ? 'Dialing' : 'Upcoming'}
+                            DIALING
+                          </span>
+                        ) : dispInfo ? (
+                          <span style={{
+                            fontSize: 9, fontWeight: 'bold', letterSpacing: 0.5,
+                            padding: '3px 7px', borderRadius: 3,
+                            background: dispInfo.bg, color: dispInfo.color,
+                            border: `1px solid ${dispInfo.color}`,
+                            whiteSpace: 'nowrap',
+                          }}>
+                            {dispInfo.label}
+                          </span>
+                        ) : (
+                          <span style={{
+                            fontSize: 9, fontWeight: 'bold', letterSpacing: 0.5,
+                            padding: '3px 7px', borderRadius: 3,
+                            background: '#e8e8ec', color: terminalMuted,
+                            border: `1px solid ${terminalBorder}`,
+                          }}>
+                            NEW
                           </span>
                         )}
-                        <span style={{ color: terminalText, fontVariantNumeric: 'tabular-nums', overflowWrap: 'anywhere' }}>
-                          {lead.phone}
-                        </span>
-                        <span style={{ color: terminalText, overflowWrap: 'anywhere' }}>{lead.first_name || '—'}</span>
-                        <span style={{ color: terminalText, overflowWrap: 'anywhere' }}>{lead.last_name || '—'}</span>
-                        <span className="dq-col-state" style={{ color: terminalText, overflowWrap: 'anywhere' }}>{lead.state || '—'}</span>
-                      </div>
-                      {outcome && (
-                        <div style={{
-                          marginTop: 7,
-                          fontFamily: FUTURA, fontSize: 12, color: terminalMuted, letterSpacing: 0.2,
-                          display: 'flex', alignItems: 'center', gap: 6,
-                        }}>
-                          <span>💬</span>{outcome}
-                        </div>
-                      )}
+                      </span>
                     </div>
-                  )
-                })}
-              </div>
-            </>
+                    {outcome && (
+                      <div style={{
+                        marginTop: 6,
+                        fontFamily: FUTURA, fontSize: 12, color: terminalMuted, letterSpacing: 0.2,
+                        display: 'flex', alignItems: 'center', gap: 6,
+                      }}>
+                        <span>💬</span>{outcome}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
           )}
         </div>
       </div>

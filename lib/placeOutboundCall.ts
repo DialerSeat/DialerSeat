@@ -88,6 +88,20 @@ export function normalizeToE164(raw: string | null | undefined): string | null {
   const trimmed = String(raw).trim()
   if (!trimmed) return null
 
+  // Reject outright if the raw value contains anything other than digits,
+  // and the small set of characters a real phone number can legitimately
+  // be formatted with (+, spaces, dashes, dots, parens, x for extensions).
+  // Letters are the tell — no real phone number contains them, so their
+  // presence means this value is contaminated (e.g. a name or state that
+  // got concatenated into the phone field during a bad CSV import — this
+  // is a real, confirmed pattern in actual uploaded lead data, e.g. a
+  // phone/initials/phone-again/state string all merged into one field).
+  // This catches contamination directly rather than relying on it
+  // coincidentally pushing the digit count out of the valid E.164 range —
+  // stripping non-digits from a letter-contaminated string can still land
+  // in a plausible-looking digit count purely by chance.
+  if (/[a-zA-Z]/.test(trimmed)) return null
+
   const hadPlus = trimmed.startsWith('+')
   const digits = trimmed.replace(/\D/g, '')
 
@@ -95,7 +109,7 @@ export function normalizeToE164(raw: string | null | undefined): string | null {
 
   // E.164 (the actual ITU-T standard, not a made-up limit) caps a phone
   // number at 15 digits total, INCLUDING the country code — no real,
-  // dialable phone number is longer than that. The previous version had no
+  // dialable phone number is longer than that. An earlier version had no
   // upper bound at all: any digit string over 11 characters got a bare "+"
   // prepended and was treated as valid, which is how genuinely malformed
   // data (e.g. a 12-digit value ending in a run of zeros, confirmed present

@@ -84,10 +84,27 @@ export async function GET(req: NextRequest) {
     query = query.eq('campaign_id', campaignId)
   }
 
+  // Dispositions that should permanently remove a lead from the "dialable"
+  // view — everything else (null/never-dialed, APPOINTMENT, SKIPPED,
+  // NO_ANSWER, TCPA_BLOCKED, etc.) stays visible and re-dialable. Per
+  // explicit instruction: "I want all leads at all time unless given a do
+  // not call or not interested, or closed disposition."
+  const EXCLUDED_DIALABLE_DISPOSITIONS = new Set(['DO NOT CALL', 'NOT INTERESTED', 'CLOSED'])
+
   // The virtual sub-campaign filter takes precedence over the disposition
   // query param. A virtual sub is by definition pinned to one disposition.
   if (virtualDispositionFilter) {
     query = query.eq('disposition', virtualDispositionFilter)
+  } else if (disposition === 'dialable') {
+    // No DB-level filter here on purpose — see EXCLUDED_DIALABLE_DISPOSITIONS
+    // above and the post-fetch filter below. A DB-level "disposition IS NULL
+    // OR disposition NOT IN (...)" filter is the semantically correct query,
+    // but two of the three excluded values ('DO NOT CALL', 'NOT INTERESTED')
+    // contain spaces, and constructing that as a raw PostgREST OR-filter
+    // string without being able to test it against the real database risks
+    // a silent, hard-to-diagnose mismatch (rows wrongly shown OR wrongly
+    // hidden) — a plain JS array filter after the fetch is directly
+    // readable and carries no query-syntax risk.
   } else if (disposition !== 'all') {
     if (disposition === 'uncalled') {
       query = query.is('disposition', null)
@@ -132,10 +149,20 @@ export async function GET(req: NextRequest) {
     return apiError(error, { route: 'leads/list' })
   }
 
+  const rawLeads = data || []
+  const leads = disposition === 'dialable'
+    ? rawLeads.filter((l: any) => !EXCLUDED_DIALABLE_DISPOSITIONS.has(l.disposition))
+    : rawLeads
+
   return NextResponse.json({
     success: true,
-    leads: data || [],
+    leads,
     total: count || 0,
-    nextCursor: (data && data.length === PAGE_SIZE) ? cursor + PAGE_SIZE : null,
+    // Based on rawLeads.length (the actual DB page size), not the
+    // post-filter leads.length — filtering can make this page's returned
+    // array shorter than PAGE_SIZE even though more rows genuinely exist
+    // past this window, and cursor advancement needs to reflect the real
+    // window, not how many of those rows happened to survive the filter.
+    nextCursor: (rawLeads.length === PAGE_SIZE) ? cursor + PAGE_SIZE : null,
   })
 }

@@ -3061,7 +3061,21 @@ export default function CampaignsPage() {
                   </div>
                   <div
                     className={`settings-toggle ${createAmd ? 'on' : ''}`}
-                    onClick={() => setCreateAmd(v => !v)}
+                    onClick={() => {
+                      const turningOn = !createAmd
+                      // Same rule as the edit-flow toggle: "the only
+                      // difference between power and progressive is amd."
+                      // Predictive is untouched either direction.
+                      if (!turningOn && createMode === 'progressive') {
+                        setCreateMode('power')
+                        setCreateAmd(false)
+                      } else if (turningOn && createMode === 'power') {
+                        setCreateMode('progressive')
+                        setCreateAmd(true)
+                      } else {
+                        setCreateAmd(turningOn)
+                      }
+                    }}
                   ><div className="knob" /></div>
                 </div>
 
@@ -3458,7 +3472,23 @@ export default function CampaignsPage() {
                   </div>
                   <div
                     className={`settings-toggle ${editDraft?.amd_enabled ? 'on' : ''} ${isLapsed ? 'disabled' : ''}`}
-                    onClick={() => !isLapsed && patchDraft({ amd_enabled: !editDraft?.amd_enabled })}
+                    onClick={() => {
+                      if (isLapsed) return
+                      const turningOn = !editDraft?.amd_enabled
+                      const currentMode = editDraft?.dialer_mode || 'power'
+                      // "the only difference between power and progressive is
+                      // amd" — turning AMD off while on progressive drops to
+                      // power; turning it on while on power promotes to
+                      // progressive. Predictive is untouched either way (not
+                      // part of this rule per instruction).
+                      if (!turningOn && currentMode === 'progressive') {
+                        patchDraft({ amd_enabled: false, dialer_mode: 'power' })
+                      } else if (turningOn && currentMode === 'power') {
+                        patchDraft({ amd_enabled: true, dialer_mode: 'progressive' })
+                      } else {
+                        patchDraft({ amd_enabled: turningOn })
+                      }
+                    }}
                   ><div className="knob" /></div>
                 </div>
 

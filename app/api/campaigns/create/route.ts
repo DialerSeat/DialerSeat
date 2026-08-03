@@ -58,20 +58,42 @@ export async function POST(req: Request) {
       lines = Math.max(1.0, Math.min(3.0, predictive_lines_per_agent))
     }
 
-    const { data, error } = await supabaseAdmin
+    const insertPayload: Record<string, unknown> = {
+      user_id: userId,
+      name: finalName,
+      status: 'active', // new campaigns are active by default
+      dialer_mode: mode,
+      amd_enabled: amdEnabled,
+      recording_enabled: recordingEnabled,
+      predictive_lines_per_agent: lines,
+      voicemail_drop_url: voicemail_drop_url || null,
+    }
+
+    let { data, error } = await supabaseAdmin
       .from('campaigns')
-      .insert({
-        user_id: userId,
-        name: finalName,
-        status: 'active', // new campaigns are active by default
-        dialer_mode: mode,
-        amd_enabled: amdEnabled,
-        recording_enabled: recordingEnabled,
-        predictive_lines_per_agent: lines,
-        voicemail_drop_url: voicemail_drop_url || null,
-      })
+      .insert(insertPayload)
       .select()
       .single()
+
+    // Defensive fallback: PGRST204 ("Could not find the '<col>' column ...
+    // in the schema cache") means the DB is missing a column the code
+    // expects — confirmed happening for recording_enabled in production
+    // (see db/migrations/2026-08-02-add-campaigns-recording-enabled.sql,
+    // which is the real fix). Rather than let campaign creation hard-fail
+    // entirely whenever the DB and code briefly drift like this, retry once
+    // without the offending field so campaigns can still be created — the
+    // recording preference just won't persist until the migration runs.
+    if (error && (error as any).code === 'PGRST204' && /recording_enabled/i.test(error.message || '')) {
+      console.error('[campaigns/create] recording_enabled column missing — retrying insert without it. Run db/migrations/2026-08-02-add-campaigns-recording-enabled.sql to fix permanently.')
+      const { recording_enabled: _omit, ...fallbackPayload } = insertPayload
+      const retry = await supabaseAdmin
+        .from('campaigns')
+        .insert(fallbackPayload)
+        .select()
+        .single()
+      data = retry.data
+      error = retry.error
+    }
 
     if (error) throw error
 

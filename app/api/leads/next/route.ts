@@ -46,7 +46,7 @@ export async function GET(req: Request) {
     // full unfiltered pool. Comma-separated; capped so a pathological huge
     // list can't blow up the query.
     const leadIdsParam = searchParams.get('lead_ids')
-    const leadIdAllowlist = leadIdsParam
+    const leadIdAllowlist = leadIdsParam !== null
       ? leadIdsParam.split(',').map(s => s.trim()).filter(Boolean).slice(0, 200)
       : null
 
