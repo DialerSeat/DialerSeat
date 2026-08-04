@@ -18,7 +18,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json()
-    const { name, dialer_mode, amd_enabled, recording_enabled, predictive_lines_per_agent, voicemail_drop_url } = body
+    const { name, dialer_mode, amd_enabled, recording_enabled, predictive_lines_per_agent, dial_repeat_count, voicemail_drop_url } = body
 
     let finalName = (typeof name === 'string' ? name.trim() : '')
     if (!finalName) {
@@ -58,6 +58,14 @@ export async function POST(req: Request) {
       lines = Math.max(1.0, Math.min(3.0, predictive_lines_per_agent))
     }
 
+    // How many times a lead should be dialed in a row before being set
+    // aside, 1x/2x/3x — hard-capped at 3 regardless of what's sent, since
+    // that's a firm rule regardless of client input.
+    let dialRepeatCount = 1
+    if (typeof dial_repeat_count === 'number') {
+      dialRepeatCount = Math.max(1, Math.min(3, Math.round(dial_repeat_count)))
+    }
+
     const insertPayload: Record<string, unknown> = {
       user_id: userId,
       name: finalName,
@@ -66,6 +74,7 @@ export async function POST(req: Request) {
       amd_enabled: amdEnabled,
       recording_enabled: recordingEnabled,
       predictive_lines_per_agent: lines,
+      dial_repeat_count: dialRepeatCount,
       voicemail_drop_url: voicemail_drop_url || null,
     }
 
@@ -78,21 +87,32 @@ export async function POST(req: Request) {
     // Defensive fallback: PGRST204 ("Could not find the '<col>' column ...
     // in the schema cache") means the DB is missing a column the code
     // expects — confirmed happening for recording_enabled in production
-    // (see db/migrations/2026-08-02-add-campaigns-recording-enabled.sql,
-    // which is the real fix). Rather than let campaign creation hard-fail
-    // entirely whenever the DB and code briefly drift like this, retry once
-    // without the offending field so campaigns can still be created — the
-    // recording preference just won't persist until the migration runs.
-    if (error && (error as any).code === 'PGRST204' && /recording_enabled/i.test(error.message || '')) {
-      console.error('[campaigns/create] recording_enabled column missing — retrying insert without it. Run db/migrations/2026-08-02-add-campaigns-recording-enabled.sql to fix permanently.')
-      const { recording_enabled: _omit, ...fallbackPayload } = insertPayload
+    // (see db/migrations/2026-08-02-add-campaigns-recording-enabled.sql)
+    // and the same class of gap applies to dial_repeat_count (see
+    // db/migrations/2026-08-03-add-campaigns-dial-repeat-count.sql) if that
+    // migration hasn't been run yet either. Rather than hardcode a
+    // separate check per column (which just means writing this same block
+    // again for the next new column), extract whichever column name
+    // Telnyx's error actually names and retry once without just that
+    // field — campaigns can still be created either way, the affected
+    // preference just won't persist until its migration runs.
+    let retryAttempts = 0
+    let payloadForRetry = insertPayload
+    while (error && (error as any).code === 'PGRST204' && retryAttempts < 3) {
+      const missingColMatch = /Could not find the '([^']+)' column/.exec(error.message || '')
+      const missingCol = missingColMatch?.[1]
+      if (!missingCol || !(missingCol in payloadForRetry)) break
+      console.error(`[campaigns/create] '${missingCol}' column missing — retrying insert without it. Run the matching migration in db/migrations to fix permanently.`)
+      const { [missingCol]: _omit, ...fallbackPayload } = payloadForRetry
+      payloadForRetry = fallbackPayload
       const retry = await supabaseAdmin
         .from('campaigns')
-        .insert(fallbackPayload)
+        .insert(payloadForRetry)
         .select()
         .single()
       data = retry.data
       error = retry.error
+      retryAttempts++
     }
 
     if (error) throw error

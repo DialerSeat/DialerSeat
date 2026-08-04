@@ -358,6 +358,16 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
   let agentCallControlId: string | undefined
   if (p.source === 'user_dial') {
     const agentSipUri = `sip:${p.env.sipUsername}@${p.env.sipDomain}`
+    // Diagnostic only — logs shape, never the actual username/domain
+    // values. This exact generic Telnyx error ("Phone number must be in
+    // +E164 format or a SIP endpoint") can come from THIS leg (a malformed
+    // SIP URI — wrong domain, stray characters, a `sip:` prefix already
+    // baked into the env var producing "sip:sip:...") just as easily as
+    // from the lead leg (a bad phone number) — Telnyx uses the same title
+    // for both, and until now the error text sent to the frontend didn't
+    // distinguish which leg actually failed, making this genuinely
+    // undiagnosable from the browser console alone.
+    console.log(`[placeOutboundCall:${p.source}] Agent leg SIP URI shape: sip:${p.env.sipUsername.length}chars@${p.env.sipDomain.length}chars, domain contains dot: ${p.env.sipDomain.includes('.')}`)
     const agentRes = await fetch(dialUrl, {
       method: 'POST',
       headers: {
@@ -378,12 +388,15 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
 
     if (!agentRes.ok || !agentData.data?.call_control_id) {
       console.error(
-        `[placeOutboundCall:${p.source}] Telnyx rejected agent leg`,
+        `[placeOutboundCall:${p.source}] Telnyx rejected AGENT leg (this is the agent's own SIP endpoint, NOT the lead's phone number)`,
         { status: agentRes.status, errors: agentData.errors }
       )
       return {
         success: false,
-        error: agentData.errors?.[0]?.title || 'Agent leg failed',
+        // "Agent connection" prefix so this is unmistakably distinct from a
+        // lead-leg failure in the queue row / console — same underlying
+        // Telnyx error title can otherwise read identically for either leg.
+        error: `Agent connection failed — ${agentData.errors?.[0]?.title || 'unknown error'}`,
         detail: agentData.errors?.[0]?.detail,
         httpStatus: 500,
       }
@@ -495,7 +508,7 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
 
     return {
       success: false,
-      error: leadData.errors?.[0]?.title || 'Lead call failed',
+      error: `Lead call failed — ${leadData.errors?.[0]?.title || 'unknown error'}`,
       detail: leadData.errors?.[0]?.detail,
       httpStatus: 500,
     }

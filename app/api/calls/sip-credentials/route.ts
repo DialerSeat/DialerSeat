@@ -40,9 +40,9 @@ export async function GET() {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
   }
 
-  const sipUsername = process.env.TELNYX_SIP_USERNAME
-  const sipPassword = process.env.TELNYX_SIP_PASSWORD
-  const sipDomain = process.env.TELNYX_SIP_DOMAIN
+  const sipUsername = process.env.TELNYX_SIP_USERNAME?.trim()
+  const sipPassword = process.env.TELNYX_SIP_PASSWORD?.trim()
+  const sipDomain = process.env.TELNYX_SIP_DOMAIN?.trim()
 
   if (!sipUsername || !sipPassword || !sipDomain) {
     return NextResponse.json(

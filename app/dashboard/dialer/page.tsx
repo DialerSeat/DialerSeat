@@ -48,6 +48,7 @@ interface Campaign {
   dialer_mode?: DialerMode
   amd_enabled?: boolean
   predictive_lines_per_agent?: number
+  dial_repeat_count?: number
 }
 
 interface TeamScopeCampaign {
@@ -519,6 +520,26 @@ function DialerPageInner() {
       : isAllActive
         ? allActiveOverrideMode
         : 'power'
+
+  // Load the selected campaign's persisted dial-repeat-count whenever the
+  // campaign selection changes, so the 1x/2x/3x selector reflects that
+  // specific campaign's real saved setting rather than always defaulting
+  // to 1x. Only relevant for a specific campaign — "All Active Campaigns"
+  // has no single campaign to read from, so it's left at whatever was last
+  // selected (each specific campaign's own value still applies correctly
+  // once you switch to it individually, since predictive's server-side cap
+  // reads the LEAD's own campaign, not this UI selector, when actually
+  // enforcing the limit).
+  useEffect(() => {
+    if (isSpecificCampaign && currentCampaign) {
+      const persisted = currentCampaign.dial_repeat_count
+      if (persisted === 1 || persisted === 2 || persisted === 3) {
+        setDialRepeatCount(persisted)
+      } else {
+        setDialRepeatCount(1)
+      }
+    }
+  }, [isSpecificCampaign, currentCampaign?.id, currentCampaign?.dial_repeat_count])
 
   const isPredictive = dialerMode === 'predictive'
   const isProgressive = dialerMode === 'progressive'
@@ -2514,6 +2535,33 @@ function DialerPageInner() {
     }
   }
 
+  // Persists the 1x/2x/3x redial selection to the campaign — required for
+  // predictive, which resolves calls entirely server-side (see
+  // bumpLeadAttemptAndRelease in app/api/calls/events/route.ts) and has no
+  // access to this page's React state at all. Power/Progressive/Preview
+  // enforce the setting directly client-side regardless, but persisting it
+  // here too keeps the selector consistent across a page reload and across
+  // modes for the same campaign.
+  const handleDialRepeatChange = async (n: 1 | 2 | 3) => {
+    setDialRepeatCount(n) // update immediately — don't block the UI on the network round trip
+    if (!currentCampaign) return // "All Active Campaigns" has no single campaign to persist to
+    try {
+      await fetch('/api/campaigns/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: currentCampaign.id,
+          dial_repeat_count: n,
+        }),
+      })
+      setCampaigns(prev => prev.map(c =>
+        c.id === currentCampaign.id ? { ...c, dial_repeat_count: n } : c
+      ))
+    } catch (err) {
+      console.error('Dial repeat count change failed:', err)
+    }
+  }
+
   useEffect(() => {
     if (!modeDropdownOpen) return
     const onDoc = (e: MouseEvent) => {
@@ -2939,7 +2987,7 @@ function DialerPageInner() {
           }
           .dialer-repeat-help .dialer-repeat-tooltip {
             visibility: hidden; opacity: 0;
-            position: absolute; bottom: calc(100% + 8px); left: 0;
+            position: absolute; top: calc(100% + 8px); left: 0;
             width: 220px; padding: 8px 10px; border-radius: 4px;
             background: ${terminalDark}; color: #fff;
             font-size: 10px; font-weight: normal; letter-spacing: 0.2px; line-height: 1.5;
@@ -2976,7 +3024,7 @@ function DialerPageInner() {
                   key={n}
                   className="dialer-repeat-btn"
                   disabled={isPreview}
-                  onClick={() => !isPreview && setDialRepeatCount(n)}
+                  onClick={() => !isPreview && handleDialRepeatChange(n)}
                   style={{
                     border: `1px solid ${active ? terminalAccent : terminalBorder}`,
                     background: active ? 'rgba(42, 74, 138, 0.14)' : 'transparent',

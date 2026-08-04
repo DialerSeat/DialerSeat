@@ -464,20 +464,70 @@ async function bumpLeadAttemptAndRelease(callId: string): Promise<void> {
 
   const { data: lead } = await supabaseAdmin
     .from('leads')
-    .select('dial_attempts')
+    .select('dial_attempts, campaign_id')
     .eq('id', callRow.lead_id)
     .maybeSingle()
 
-  await supabaseAdmin
-    .from('leads')
-    .update({
-      status: 'no_answer',
-      last_called_at: new Date().toISOString(),
-      dial_attempts: (lead?.dial_attempts || 0) + 1,
-      claimed_at: null,
-      claimed_by_session_id: null,
-    })
-    .eq('id', callRow.lead_id)
+  const newAttempts = (lead?.dial_attempts || 0) + 1
+
+  // How many times this lead should be dialed before being set aside for
+  // good — the same "1x/2x/3x, redial before moving on" setting Power/
+  // Progressive already enforce client-side, but predictive resolves
+  // calls entirely server-side via this webhook with no access to any
+  // client React state, so it has to read the campaign's own persisted
+  // setting instead. Defaults to 3 (not 1) if the column is missing/unset
+  // — this campaign never previously had ANY cap at all (a lead was
+  // released back to claimable indefinitely, forever), so defaulting to 1
+  // would be a real regression for every existing predictive campaign;
+  // defaulting to 3 preserves close-to-existing behavior (retries still
+  // happen) while finally giving it a real, sane ceiling instead of none.
+  let repeatCap = 3
+  if (lead?.campaign_id) {
+    const { data: campaign, error: campaignErr } = await supabaseAdmin
+      .from('campaigns')
+      .select('dial_repeat_count')
+      .eq('id', lead.campaign_id)
+      .maybeSingle()
+    // PGRST204-style "column doesn't exist yet" errors (migration not run)
+    // fall through to the default of 3 above, same as campaign===null.
+    if (!campaignErr && typeof campaign?.dial_repeat_count === 'number') {
+      repeatCap = Math.max(1, Math.min(3, campaign.dial_repeat_count))
+    }
+  }
+
+  if (newAttempts >= repeatCap) {
+    // Attempts exhausted — set aside for good. Matches the exact
+    // status/disposition pairing app/api/leads/dispose/route.ts already
+    // uses for its own "newAttempts >= 3" exhausted case (status: 'maxed',
+    // disposition: 'NO_ANSWER'), so a maxed-out lead reads identically in
+    // the queue panel and leads tab regardless of which dialer mode
+    // exhausted it.
+    await supabaseAdmin
+      .from('leads')
+      .update({
+        status: 'maxed',
+        disposition: 'NO_ANSWER',
+        last_called_at: new Date().toISOString(),
+        dial_attempts: newAttempts,
+        claimed_at: null,
+        claimed_by_session_id: null,
+      })
+      .eq('id', callRow.lead_id)
+  } else {
+    // Still has retries left — release back to claimable, no terminal
+    // disposition yet, so the predictive controller's own claim query
+    // (ordered by dial_attempts ascending) can pick it up again.
+    await supabaseAdmin
+      .from('leads')
+      .update({
+        status: 'no_answer',
+        last_called_at: new Date().toISOString(),
+        dial_attempts: newAttempts,
+        claimed_at: null,
+        claimed_by_session_id: null,
+      })
+      .eq('id', callRow.lead_id)
+  }
 }
 
 async function dialAndBridgeAgentForFanout(leadCallControlId: string): Promise<boolean> {

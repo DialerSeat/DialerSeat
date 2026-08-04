@@ -99,7 +99,18 @@ export async function GET(req: Request) {
         scopedCampaignIds = teamCampaignIds
       }
 
-      // Fetch a batch of candidates, then filter by calling window in JS
+      // Fetch a batch of candidates, then filter by calling window in JS.
+      // When an ordered lead_ids allowlist is present, the limit must cover
+      // the WHOLE allowlist, not just CANDIDATE_LIMIT — otherwise Postgres
+      // filters to the allowlist, orders by dial_attempts/created_at (its
+      // own priority, NOT display order), and only THEN applies the limit —
+      // so the database's own top-50-by-priority could silently exclude
+      // the actual #1 DISPLAYED lead if it happens to have a higher
+      // dial_attempts count than 50+ other allowlisted leads. The
+      // allowlist itself is already capped at 200 client-side, so this
+      // never fetches more than that regardless.
+      const effectiveLimit = leadIdAllowlist ? Math.max(CANDIDATE_LIMIT, leadIdAllowlist.length) : CANDIDATE_LIMIT
+
       let candidateQuery = supabaseAdmin
         .from('leads')
         .select('*, extra_data')
@@ -113,7 +124,7 @@ export async function GET(req: Request) {
         .neq('phone', '')
         .order('dial_attempts', { ascending: true })
         .order('created_at', { ascending: true })
-        .limit(CANDIDATE_LIMIT)
+        .limit(effectiveLimit)
 
       if (leadIdAllowlist) {
         if (leadIdAllowlist.length === 0) {
@@ -217,6 +228,10 @@ export async function GET(req: Request) {
       return NextResponse.json({ success: false, error: 'No active campaigns' }, { status: 404 })
     }
 
+    // See the team-scope query above for why this can't just use
+    // CANDIDATE_LIMIT when an allowlist is present.
+    const effectiveLimit = leadIdAllowlist ? Math.max(CANDIDATE_LIMIT, leadIdAllowlist.length) : CANDIDATE_LIMIT
+
     let query = supabaseAdmin
       .from('leads')
       .select('*, extra_data')
@@ -230,7 +245,7 @@ export async function GET(req: Request) {
       .neq('phone', '')
       .order('dial_attempts', { ascending: true })
       .order('created_at', { ascending: true })
-      .limit(CANDIDATE_LIMIT)
+      .limit(effectiveLimit)
 
     if (campaign_id && campaign_id !== 'all') {
       query = query.eq('campaign_id', campaign_id)
