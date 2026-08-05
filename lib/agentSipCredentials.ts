@@ -138,6 +138,46 @@ interface CredentialConnection {
   id?: string
   user_name?: string
   connection_name?: string
+  encrypted_media?: string | null
+}
+
+/**
+ * Clear encrypted_media on a connection that has it set.
+ *
+ * Only exists to undo damage from an earlier version of
+ * createManagedCredentialConnection that set 'SRTP'. Browsers speak
+ * DTLS-SRTP; Telnyx's encrypted_media means SDES-SRTP; the mismatch produces
+ * a call that connects and carries no audio. Runs at most once per process
+ * (guarded by the connection-id cache that gates its only caller), is a no-op
+ * when the field is already clear, and never blocks the dial path — a failure
+ * here is logged and dialing continues.
+ */
+async function clearEncryptedMediaIfSet(
+  connection: CredentialConnection,
+  apiKey: string
+): Promise<void> {
+  if (!connection.id || !connection.encrypted_media) return
+
+  const { ok, status, env } = await telnyxRequest<CredentialConnection>(
+    `/credential_connections/${connection.id}`,
+    apiKey,
+    { method: 'PATCH', body: JSON.stringify({ encrypted_media: null }) }
+  )
+
+  if (!ok) {
+    console.error(
+      `[agentSipCredentials] connection ${connection.id} has encrypted_media=` +
+      `"${connection.encrypted_media}", which prevents browsers from negotiating media ` +
+      `(calls connect with no audio). Automatic repair failed (${describeErrors(env, status)}). ` +
+      `Clear "Encrypted Media" on this connection in Telnyx Mission Control.`
+    )
+    return
+  }
+
+  console.log(
+    `[agentSipCredentials] cleared encrypted_media on connection ${connection.id} — ` +
+    `browsers can now negotiate DTLS-SRTP, which is what was blocking call audio`
+  )
 }
 
 let cachedConnectionId: string | null | undefined
@@ -210,6 +250,12 @@ export async function resolveCredentialConnectionId(
       `[agentSipCredentials] using previously auto-created credential connection ` +
       `"${MANAGED_CONNECTION_NAME}" (${existingManaged.id})`
     )
+    // Repair a connection created by the earlier version of this function,
+    // which set encrypted_media: 'SRTP'. That value makes Telnyx offer
+    // SDES-SRTP, which browsers can't negotiate, so calls connect with no
+    // audio in either direction. Best-effort and idempotent — see
+    // createManagedCredentialConnection for the full reasoning.
+    void clearEncryptedMediaIfSet(existingManaged, config.apiKey)
     return cachedConnectionId
   }
 
@@ -256,10 +302,21 @@ async function createManagedCredentialConnection(
         user_name: userName,
         password,
         active: true,
-        // Agents connect from browsers over WSS, so media must be encrypted —
-        // without this the softphone negotiates DTLS-SRTP and Telnyx expects
-        // plain RTP, which connects the call and then delivers no audio.
-        encrypted_media: 'SRTP',
+        // encrypted_media is deliberately NOT set.
+        //
+        // An earlier version set it to 'SRTP', reasoning that browser media
+        // must be encrypted. That was wrong and it broke audio: Telnyx's
+        // encrypted_media means SDES-SRTP (a=crypto in the SDP, RTP/SAVP),
+        // which browsers do not implement — and Telnyx documents that it
+        // cannot be set at all when the transport is TLS, which WSS is. The
+        // result was a call that signalled perfectly, connected, and then
+        // carried no audio in either direction, because the two sides never
+        // agreed on a media profile.
+        //
+        // Browsers connecting over WSS negotiate DTLS-SRTP, which is
+        // mandatory in WebRTC and which Telnyx handles natively. Leaving
+        // this unset lets that happen. Media is still encrypted — just by
+        // the mechanism the browser actually speaks.
         // Our own Call Control Application dials these credentials, so the
         // connection has to accept calls addressed to its SIP URIs.
         // "internal" = same Telnyx account only, which is exactly our case;

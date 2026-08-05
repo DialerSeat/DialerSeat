@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireUser } from '@/lib/requireUser'
 import { apiError } from '@/lib/apiError'
-import { DIALABLE_STATUSES, EXCLUDED_DIALABLE_DISPOSITIONS } from '@/lib/dialableLead'
+import { EXCLUDED_DIALABLE_DISPOSITIONS } from '@/lib/dialableLead'
 
 // SECURITY (was IDOR): scoped only by client-supplied ?user_id with no auth.
 // Identity now comes from the Clerk session.
@@ -89,20 +89,6 @@ export async function GET(req: NextRequest) {
   // query param. A virtual sub is by definition pinned to one disposition.
   if (virtualDispositionFilter) {
     query = query.eq('disposition', virtualDispositionFilter)
-  } else if (disposition === 'queue') {
-    // ── DIAL QUEUE MODE ────────────────────────────────────────────────────
-    // Exactly the set /api/leads/next will actually dial, so the dialer's
-    // queue panel shows the real queue and its top row is genuinely the next
-    // lead up. See lib/dialableLead.ts for what this was fixing — 'dialable'
-    // below answers a DIFFERENT question (what the leads page should show)
-    // and using it here put 528 permanently-undialable rows in the queue.
-    //
-    // Applied at the database level, not post-fetch: these rows would
-    // otherwise be paginated through 50 at a time and then thrown away.
-    query = query
-      .in('status', DIALABLE_STATUSES as unknown as string[])
-      .not('phone', 'is', null)
-      .neq('phone', '')
   } else if (disposition === 'dialable') {
     // No DB-level filter here on purpose — see EXCLUDED_DIALABLE_DISPOSITIONS
     // above and the post-fetch filter below. A DB-level "disposition IS NULL
@@ -159,7 +145,7 @@ export async function GET(req: NextRequest) {
 
   const rawLeads = data || []
   const leads =
-    disposition === 'dialable' || disposition === 'queue'
+    disposition === 'dialable'
       ? rawLeads.filter((l: any) => !EXCLUDED_DIALABLE_DISPOSITIONS.has(l.disposition))
       : rawLeads
 

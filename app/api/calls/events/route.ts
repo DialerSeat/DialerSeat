@@ -165,9 +165,34 @@ async function handleCallAnswered(callControlId: string): Promise<void> {
     signalwire_call_id: callControlId,
     source: 'webhook',
   })
-  // user_dial: already bridged via bridge_on_answer, nothing to do.
-  // controller_fanout: wait for AMD before deciding routing — see module
-  // header. No action here either way.
+
+  // ── RECORD THE ACTUAL ANSWER ─────────────────────────────────────────────
+  // This is the ONLY moment we learn a human picked up the phone, and until
+  // now nothing persisted it — /api/calls/check inferred "in progress" from
+  // duration = 0, which is equally true while the phone is still ringing. So
+  // the dialer flipped to CONNECTED and showed the lead profile and scripts
+  // within ~1.5s of dialing, well before the lead answered.
+  //
+  // Safe against the agent leg: this webhook fires for BOTH legs, but the
+  // calls row is keyed by the lead leg's call_control_id and no row exists
+  // for the agent leg — so the agent's browser auto-answering updates
+  // nothing. Only a real lead answer can set this.
+  //
+  // Written once. A duplicate/late call.answered (Telnyx retries) must not
+  // move the timestamp forward, or the on-screen call timer would jump.
+  try {
+    await supabaseAdmin
+      .from('calls')
+      .update({ answered_at: new Date().toISOString() })
+      .eq('signalwire_call_id', callControlId)
+      .is('answered_at', null)
+  } catch (err) {
+    console.error(`[calls/events] failed to record answered_at for ${callControlId}:`, err)
+  }
+
+  // Bridging itself needs no action here: user_dial was already bridged by
+  // bridge_on_answer, and controller_fanout waits for AMD before deciding
+  // routing — see the module header.
 }
 
 // =============================================================================

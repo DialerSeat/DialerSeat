@@ -51,7 +51,7 @@ export async function GET(req: Request) {
 
     const { data: callRow } = await supabase
       .from('calls')
-      .select('user_id, duration, amd_result, disposition')
+      .select('user_id, duration, amd_result, disposition, answered_at')
       .eq('signalwire_call_id', sid)
       .maybeSingle()
 
@@ -59,8 +59,25 @@ export async function GET(req: Request) {
       return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 })
     }
 
+    // ── THREE STATES, NOT TWO ────────────────────────────────────────────
+    // This used to be a boolean on duration: 0 meant 'in-progress',
+    // anything else meant 'completed'. But duration is 0 from the moment the
+    // row is inserted — which is when Telnyx ACCEPTS the dial, not when
+    // anyone answers. So 'in-progress' was reported while the phone was
+    // still ringing, and the dialer (startCallPolling) flipped straight to
+    // CONNECTED: the queue panel disappeared and the lead profile + scripts
+    // appeared seconds before the lead actually picked up.
+    //
+    // answered_at is written by the call.answered webhook and is the only
+    // real signal that someone is on the line. 'ringing' is deliberately a
+    // status the client does nothing with — it neither connects nor treats
+    // the call as over — so it just keeps polling, which is correct.
     const isOver = !!callRow.duration && callRow.duration > 0
-    const status = isOver ? 'completed' : 'in-progress'
+    const status = isOver
+      ? 'completed'
+      : callRow.answered_at
+        ? 'in-progress'
+        : 'ringing'
 
     // amd_result is written directly by handleAmdResult in
     // app/api/calls/events/route.ts using Telnyx's native vocabulary

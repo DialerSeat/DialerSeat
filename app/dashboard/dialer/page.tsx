@@ -4,6 +4,7 @@ import { useUser } from '@clerk/nextjs'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { normalizeState } from '@/lib/normalizeState'
+import { isDialableLead } from '@/lib/dialableLead'
 
 // =============================================================================
 // DIALER PAGE — Pass 2 Phase C9 (mobile fixes on top of C8)
@@ -378,7 +379,7 @@ function DialerPageInner() {
       return ((r ^ (r >>> 14)) >>> 0) / 4294967296
     }
   }
-  const visibleQueuedLeads = queueShuffleSeed === 0
+  const orderedQueuedLeads = queueShuffleSeed === 0
     ? stateFilteredQueuedLeads
     : (() => {
         const rand = seededRandom(queueShuffleSeed)
@@ -391,6 +392,37 @@ function DialerPageInner() {
         }
         return shuffled
       })()
+
+  // ── DIALABLE FIRST ───────────────────────────────────────────────────────
+  // Two requirements that pull in opposite directions, reconciled by sorting
+  // rather than by filtering:
+  //
+  //   1. A lead disappears from this panel ONLY when it gets a terminal
+  //      disposition (do-not-call, not interested, closed). Being dialed is
+  //      not a reason to vanish — the agent needs to see the lead they just
+  //      worked, and the outcome text that appears on its row.
+  //   2. Dialing runs top-to-bottom, and the highlighted row is the one
+  //      actually being dialed.
+  //
+  // An earlier attempt satisfied (2) by filtering the panel down to dialable
+  // leads only. That broke (1) outright: dialing a lead moves its status to
+  // 'called'/'maxed', so it dropped off the list the moment it was dialed.
+  //
+  // Sorting satisfies both. Everything stays visible, and leads that can't be
+  // dialed right now (attempts exhausted, already worked) sink below the ones
+  // that can — so the top row is always genuinely the next lead up, and
+  // /api/leads/next (which walks this same order and skips undialable rows)
+  // lands on it. Stable within each group, so the created_at order and any
+  // active shuffle are preserved inside the groups.
+  const visibleQueuedLeads = (() => {
+    const dialable: typeof orderedQueuedLeads = []
+    const exhausted: typeof orderedQueuedLeads = []
+    for (const lead of orderedQueuedLeads) {
+      if (isDialableLead(lead)) dialable.push(lead)
+      else exhausted.push(lead)
+    }
+    return dialable.concat(exhausted)
+  })()
 
   const isQueueFiltered = !!(queueSearch.trim() || queueStateFilter.trim())
 
@@ -970,6 +1002,47 @@ function DialerPageInner() {
         if (!sdh) return false
         const pc = sdh.peerConnection
         if (!pc) return false
+
+        // ── MEDIA-PATH DIAGNOSTICS ────────────────────────────────────────
+        // "Call connects, nobody hears anything" has several possible causes
+        // that look identical from the UI — SIP signalling succeeds either
+        // way. These two lines distinguish them without guessing:
+        //
+        //   iceConnectionState 'failed'       -> no reachable media path.
+        //                                        STUN wasn't enough and no
+        //                                        TURN server is configured
+        //                                        (see /api/calls/sip-
+        //                                        credentials — TURN is only
+        //                                        added when its env vars are
+        //                                        present).
+        //   ICE 'connected' but no audio      -> media path is fine and the
+        //                                        two sides disagreed on a
+        //                                        media profile, e.g. Telnyx
+        //                                        offering SDES-SRTP to a
+        //                                        browser that only speaks
+        //                                        DTLS-SRTP.
+        //
+        // Cheap, only attached during a live call, and the difference
+        // between a five-minute answer and another round of speculation.
+        // tryAttach is called several times per call (immediately, then on a
+        // few timers), so guard against stacking duplicate handlers on the
+        // same peer connection.
+        const taggedPc = pc as RTCPeerConnection & { __dsIceLoggingAttached?: boolean }
+        if (!taggedPc.__dsIceLoggingAttached) {
+          taggedPc.__dsIceLoggingAttached = true
+          pc.oniceconnectionstatechange = () => {
+            const state = pc.iceConnectionState
+            if (state === 'failed' || state === 'disconnected') {
+              console.error(
+                `[sip] ICE ${state} — no media path to Telnyx, so this call has no audio. ` +
+                `STUN alone did not work from this network; a TURN server is needed ` +
+                `(TELNYX_TURN_URLS / TELNYX_TURN_USERNAME / TELNYX_TURN_CREDENTIAL).`
+              )
+            } else {
+              console.log(`[sip] ICE ${state}`)
+            }
+          }
+        }
 
         pc.ontrack = (event: RTCTrackEvent) => {
           if (event.streams && event.streams[0]) {
@@ -1625,14 +1698,13 @@ function DialerPageInner() {
         const cursorValue: number = cursor
         const paramEntries: Record<string, string> = {
           campaign_id: campaignId,
-          // 'queue', not 'dialable' — this panel IS the dial queue, so it must
-          // show exactly what /api/leads/next will dial. 'dialable' answers a
-          // different question (what the leads page shows) and included 528
-          // permanently-undialable status='maxed' rows, which the dialer then
-          // silently skipped past — making it look like dialing started
-          // somewhere in the middle of the list instead of at the top.
-          // See lib/dialableLead.ts.
-          disposition: 'queue',
+          // 'dialable' = everything except the terminal dispositions
+          // (do-not-call, not interested, closed). Deliberately NOT filtered
+          // down to what is dialable *right now* — a lead must not vanish
+          // from the queue just because it was dialed. The top-of-list
+          // ordering requirement is handled by sorting instead, in
+          // visibleQueuedLeads above.
+          disposition: 'dialable',
           sort: queueSortDesc ? 'created_desc' : 'created_asc',
           cursor: String(cursorValue),
         }
