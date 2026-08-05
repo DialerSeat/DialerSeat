@@ -5,6 +5,8 @@ import { recordAmdResult, markCallAbandoned } from '@/lib/dialerPacing'
 import { logCallEvent } from '@/lib/callEvents'
 import { hangupCallControlId } from '@/lib/placeOutboundCall'
 import { handleOverflowAnsweredCall } from '@/lib/teamOverflow'
+import { resolveTelnyxConfigOrLog } from '@/lib/telnyxConfig'
+import { agentSipUriForUserId } from '@/lib/agentSipCredentials'
 
 // =============================================================================
 // UNIFIED CALL CONTROL EVENTS WEBHOOK — replaces status + amd-result
@@ -282,7 +284,11 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
   const sessionId = callRow.dial_group_id
   const { data: session } = await supabaseAdmin
     .from('agent_sessions')
-    .select('id, state, current_call_id, last_heartbeat')
+    // user_id is needed to resolve THIS agent's own SIP credential — the
+    // whole point of claiming a specific session is to ring that specific
+    // person, which requires addressing their own SIP endpoint rather than
+    // a shared one that rings everybody.
+    .select('id, user_id, state, current_call_id, last_heartbeat')
     .eq('id', sessionId)
     .maybeSingle()
 
@@ -307,7 +313,7 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
       .maybeSingle()
 
     if (claim.data) {
-      const dialed = await dialAndBridgeAgentForFanout(callControlId)
+      const dialed = await dialAndBridgeAgentForFanout(callControlId, session!.user_id)
       if (dialed) return
       // Failed to actually connect the agent leg — release the claim and
       // fall through to overflow handling below.
@@ -530,53 +536,50 @@ async function bumpLeadAttemptAndRelease(callId: string): Promise<void> {
   }
 }
 
-async function dialAndBridgeAgentForFanout(leadCallControlId: string): Promise<boolean> {
-  const apiKey = process.env.TELNYX_API_KEY
-  const connectionId = process.env.TELNYX_CONNECTION_ID
-  const sipUsername = process.env.TELNYX_SIP_USERNAME
-  const sipDomain = process.env.TELNYX_SIP_DOMAIN
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL
-  const fallbackNumber = process.env.TELNYX_PHONE_NUMBER
+async function dialAndBridgeAgentForFanout(
+  leadCallControlId: string,
+  agentUserId: string
+): Promise<boolean> {
+  // Same resolved+normalized config lib/placeOutboundCall.ts uses for the
+  // user_dial agent leg. This path used to build its own
+  // `sip:${user}@${domain}` from raw env, which meant a bad
+  // TELNYX_SIP_DOMAIN broke predictive/fanout dialing in a second, separate
+  // place that had to be found and fixed independently.
+  const env = resolveTelnyxConfigOrLog('calls/events:fanout')
+  if (!env) return false
 
-  if (!apiKey || !connectionId || !sipUsername || !sipDomain || !appUrl) {
-    console.error('[calls/events] missing Telnyx env for fanout agent dial')
-    return false
-  }
-
-  // From-number consistency: try to reuse the pool number this lead call
-  // used, matching the prior SignalWire version's intent. Falls back to
-  // TELNYX_PHONE_NUMBER if not found.
-  let fromNumber = fallbackNumber
-  try {
-    const { data: callRow } = await supabaseAdmin
-      .from('calls')
-      .select('phone_number')
-      .eq('signalwire_call_id', leadCallControlId)
-      .maybeSingle()
-    void callRow // phone_number here is the LEAD's number, not ours — kept
-    // for potential future use; from-number pool lookup isn't tracked per
-    // call in the no-conference design (no call_rooms table anymore), so
-    // we use the fallback number for the agent leg's caller id.
-  } catch {
-    // non-fatal
-  }
-
+  // CALLER ID FOR THE AGENT LEG: TELNYX_PHONE_NUMBER.
+  //
+  // There used to be a calls-table lookup here that selected phone_number
+  // and then explicitly discarded it (`void callRow`) — the column holds
+  // the LEAD's number, not the pool number we dialed FROM, and the
+  // no-conference design doesn't record the from-number per call anywhere.
+  // So the query could never inform this decision; it was a round trip on
+  // every fanout bridge that always fell through to the same fallback.
+  // Removed. If per-call from-number consistency is wanted later, it needs
+  // a real column (calls.from_number) to read, not this one.
+  const fromNumber = process.env.TELNYX_PHONE_NUMBER
   if (!fromNumber) {
-    console.error('[calls/events] no from number available for fanout agent leg')
+    console.error('[calls/events] TELNYX_PHONE_NUMBER not set, no caller id for fanout agent leg')
     return false
   }
+
+  // Ring the SPECIFIC agent whose session was just claimed above, not a
+  // shared endpoint. Without this the atomic claim is decorative: it picks
+  // one agent, then dials a URI that rings every registered browser.
+  const agentSipUri = await agentSipUriForUserId(agentUserId, env)
 
   const res = await fetch('https://api.telnyx.com/v2/calls', {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: `Bearer ${env.apiKey}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      connection_id: connectionId,
-      to: `sip:${sipUsername}@${sipDomain}`,
+      connection_id: env.connectionId,
+      to: agentSipUri,
       from: fromNumber,
-      webhook_url: `${appUrl}/api/calls/events`,
+      webhook_url: env.webhookUrl,
       timeout_secs: 30,
       link_to: leadCallControlId,
       bridge_on_answer: true,
@@ -585,7 +588,10 @@ async function dialAndBridgeAgentForFanout(leadCallControlId: string): Promise<b
 
   if (!res.ok) {
     const text = await res.text()
-    console.error(`[calls/events] fanout agent dial failed (${res.status}): ${text}`)
+    console.error(
+      `[calls/events] fanout agent dial failed (${res.status}): ${text}`,
+      { agentSipUri, agentUserId, configWarnings: env.warnings }
+    )
     return false
   }
   return true

@@ -1,5 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { hangupCallControlId } from '@/lib/placeOutboundCall'
+import { resolveTelnyxConfigOrLog } from '@/lib/telnyxConfig'
+import { agentSipUriForUserId } from '@/lib/agentSipCredentials'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -158,7 +160,7 @@ export async function handleOverflowAnsweredCall(params: {
         // will be a brief ring on the agent's device before the bridge
         // completes. That's an acceptable tradeoff for "give this lead
         // to a real person instead of dropping them."
-        const dialed = await dialAndBridgeOverflowAgent(leadCallControlId)
+        const dialed = await dialAndBridgeOverflowAgent(leadCallControlId, agent.userId)
         if (dialed) {
           return 'bridged'
         }
@@ -178,30 +180,42 @@ export async function handleOverflowAnsweredCall(params: {
   return 'dropped'
 }
 
-async function dialAndBridgeOverflowAgent(leadCallControlId: string): Promise<boolean> {
-  const apiKey = process.env.TELNYX_API_KEY
-  const connectionId = process.env.TELNYX_CONNECTION_ID
-  const sipUsername = process.env.TELNYX_SIP_USERNAME
-  const sipDomain = process.env.TELNYX_SIP_DOMAIN
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL
-  const fromNumber = process.env.TELNYX_PHONE_NUMBER
+async function dialAndBridgeOverflowAgent(
+  leadCallControlId: string,
+  agentUserId: string
+): Promise<boolean> {
+  // Third of the three places that used to build the agent SIP URI from raw
+  // env independently — now all of them share lib/telnyxConfig.ts, so a bad
+  // TELNYX_SIP_DOMAIN is diagnosed and corrected once instead of breaking
+  // user_dial, predictive fanout, and team overflow as three separate bugs.
+  const env = resolveTelnyxConfigOrLog('teamOverflow')
+  if (!env) return false
 
-  if (!apiKey || !connectionId || !sipUsername || !sipDomain || !appUrl || !fromNumber) {
-    console.error('[teamOverflow] missing Telnyx env, cannot dial overflow agent')
+  const fromNumber = process.env.TELNYX_PHONE_NUMBER
+  if (!fromNumber) {
+    console.error('[teamOverflow] TELNYX_PHONE_NUMBER not set, cannot dial overflow agent')
     return false
   }
+
+  // The claimed agent's OWN SIP endpoint. This is the path where a shared
+  // SIP identity did the most damage: claimNextReadyAgentForOverflow goes to
+  // real trouble to atomically pick one specific agent out of a team, and
+  // then this dial used to ring every registered browser on the account —
+  // so the lead could land on an agent who was mid-call on a different lead,
+  // which is precisely the outcome the claim exists to prevent.
+  const agentSipUri = await agentSipUriForUserId(agentUserId, env)
 
   const res = await fetch('https://api.telnyx.com/v2/calls', {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: `Bearer ${env.apiKey}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      connection_id: connectionId,
-      to: `sip:${sipUsername}@${sipDomain}`,
+      connection_id: env.connectionId,
+      to: agentSipUri,
       from: fromNumber,
-      webhook_url: `${appUrl}/api/calls/events`,
+      webhook_url: env.webhookUrl,
       timeout_secs: 30,
       link_to: leadCallControlId,
       bridge_on_answer: true,
@@ -210,7 +224,10 @@ async function dialAndBridgeOverflowAgent(leadCallControlId: string): Promise<bo
 
   if (!res.ok) {
     const text = await res.text()
-    console.error(`[teamOverflow] agent dial for overflow failed (${res.status}): ${text}`)
+    console.error(
+      `[teamOverflow] agent dial for overflow failed (${res.status}): ${text}`,
+      { agentSipUri, agentUserId, configWarnings: env.warnings }
+    )
     return false
   }
   return true

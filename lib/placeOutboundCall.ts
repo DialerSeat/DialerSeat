@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 import { pickNumberForLead, recordUsage } from '@/lib/numberPool'
 import { isCallableNow } from '@/lib/callingWindow'
+import { resolveTelnyxConfigOrLog, type TelnyxConfig } from '@/lib/telnyxConfig'
+import { agentSipUriForClerkId } from '@/lib/agentSipCredentials'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -65,20 +67,6 @@ export interface PlaceCallResult {
   leadLocalTime?: string | null
   retryAfter?: string
   httpStatus?: number
-}
-
-interface TelnyxEnv {
-  apiKey: string
-  connectionId: string  // Call Control Application id
-  sipUsername: string
-  sipDomain: string
-  appUrl: string
-  // Populated by getTelnyxEnv()'s proactive shape check — non-empty means
-  // the SIP URI has a strong, specific, named reason to suspect it'll be
-  // rejected (see getTelnyxEnv). Threaded through so a real agent-leg
-  // failure can surface the actual likely cause directly in the error
-  // returned to the frontend, not just in server logs.
-  sipIssues: string[]
 }
 
 // =============================================================================
@@ -146,88 +134,6 @@ export function normalizeToE164(raw: string | null | undefined): string | null {
   return null
 }
 
-function getTelnyxEnv(): TelnyxEnv | null {
-  const apiKey = process.env.TELNYX_API_KEY?.trim()
-  const connectionId = process.env.TELNYX_CONNECTION_ID?.trim()
-  const sipUsername = process.env.TELNYX_SIP_USERNAME?.trim()
-  const sipDomain = process.env.TELNYX_SIP_DOMAIN?.trim()
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim()
-
-  const missing: string[] = []
-  if (!apiKey) missing.push('TELNYX_API_KEY')
-  if (!connectionId) missing.push('TELNYX_CONNECTION_ID')
-  if (!sipUsername) missing.push('TELNYX_SIP_USERNAME')
-  if (!sipDomain) missing.push('TELNYX_SIP_DOMAIN')
-  if (!appUrl) missing.push('NEXT_PUBLIC_APP_URL')
-
-  if (missing.length > 0) {
-    // This used to fail completely silently — placeOutboundCall would
-    // return { error: 'Missing credentials' } to the caller with NOTHING
-    // logged server-side, so a misconfigured/missing env var produced
-    // zero call records on Telnyx's side (the request never left this
-    // function) and zero trace in Vercel's logs explaining why. Naming
-    // the exact missing variable(s) here is what actually makes "why
-    // aren't calls reaching Telnyx" diagnosable from server logs instead
-    // of requiring a guess-and-check pass through every env var.
-    console.error(`[placeOutboundCall] Cannot place call — missing env var(s): ${missing.join(', ')}`)
-    return null
-  }
-
-  // DIAGNOSTIC ONLY — never logs the actual key. This exists because a
-  // real production failure (Telnyx 401 "10009 Authentication failed —
-  // Could not find any usable credentials in the request") turned out to
-  // require a full round trip through Vercel's logs to even see the raw
-  // Telnyx response, before we could tell the var was PRESENT but Telnyx
-  // still rejected it as invalid — which is a different failure mode than
-  // "missing" and gives no hint from the missing-var check above.
-  //
-  // NOTE: an earlier version of this check warned when the key didn't
-  // start with "KEY_", based on Telnyx's own docs showing that format.
-  // That turned out to be wrong for at least one real, active, portal-
-  // confirmed v2 key on this account (no underscore, ever) — so the
-  // prefix isn't a reliable signal and asserting it produces a false
-  // alarm. Logging length only (never the value) still gives a real,
-  // format-agnostic signal — e.g. a key that's suspiciously short because
-  // it got truncated when pasted into Vercel — without claiming anything
-  // about what a "valid" key must look like.
-  console.log(`[placeOutboundCall] TELNYX_API_KEY present, length ${apiKey!.length}`)
-
-  // Proactive SIP URI shape check — confirmed via a real production 422
-  // ("Phone number must be in +E164 format or a SIP endpoint", agent leg)
-  // that Telnyx will reject a malformed sip:${username}@${domain} URI with
-  // a generic error that gives no hint the SIP fields themselves are the
-  // problem. Rather than wait for another confusing round trip through
-  // Telnyx, catch the most common real misconfigurations directly:
-  //   - a literal "sip:" prefix already baked into the username or domain
-  //     env var (produces sip:sip:user@domain or sip:user@sip:domain —
-  //     both invalid), from pasting a full SIP URI into a field that
-  //     should hold only the bare username/domain
-  //   - an "@" or whitespace inside either value, which breaks the
-  //     user@host shape entirely
-  //   - a domain with no dot at all — not proof of invalidity on its own,
-  //     but a very strong signal for a real DNS domain (as opposed to,
-  //     say, a connection name or placeholder accidentally pasted in
-  //     instead of the actual SIP domain)
-  const sipIssues: string[] = []
-  if (/^sip:/i.test(sipUsername!)) sipIssues.push('TELNYX_SIP_USERNAME starts with "sip:" — it should be just the username, not the full URI')
-  if (/^sip:/i.test(sipDomain!)) sipIssues.push('TELNYX_SIP_DOMAIN starts with "sip:" — it should be just the domain, not the full URI')
-  if (/[@\s]/.test(sipUsername!)) sipIssues.push('TELNYX_SIP_USERNAME contains "@" or whitespace, which breaks the sip:user@domain format')
-  if (/[@\s]/.test(sipDomain!)) sipIssues.push('TELNYX_SIP_DOMAIN contains "@" or whitespace, which breaks the sip:user@domain format')
-  if (!sipDomain!.includes('.')) sipIssues.push(`TELNYX_SIP_DOMAIN ("${sipDomain!.length} chars, no dot found") doesn't look like a real domain — double check it's the actual SIP domain from Telnyx, not a connection name or placeholder`)
-
-  if (sipIssues.length > 0) {
-    console.error(`[placeOutboundCall] SIP URI would likely be rejected by Telnyx — ${sipIssues.join('; ')}`)
-    // Deliberately NOT returning null here — these are strong signals, not
-    // certainties (e.g. some legitimate internal/test domains have no dot),
-    // so still attempt the real call and let Telnyx's own response be the
-    // final word, but the issue is now already named in the logs before
-    // that response even comes back.
-  } else {
-    console.log(`[placeOutboundCall] SIP URI shape looks valid: sip:${sipUsername!.length}chars@${sipDomain!.length}chars`)
-  }
-
-  return { apiKey: apiKey!, connectionId: connectionId!, sipUsername: sipUsername!, sipDomain: sipDomain!, appUrl: appUrl!, sipIssues }
-}
 
 /**
  * Main entry point — places a call. Only ever invoked in response to an
@@ -243,9 +149,14 @@ export async function placeOutboundCall(
     return { success: false, error: 'Missing destination', httpStatus: 400 }
   }
 
-  const env = getTelnyxEnv()
+  const env = resolveTelnyxConfigOrLog('placeOutboundCall')
   if (!env) {
-    return { success: false, error: 'Missing credentials', httpStatus: 500 }
+    return {
+      success: false,
+      error: 'Telnyx is not configured',
+      detail: 'Server is missing required Telnyx env vars — see server logs, or GET /api/calls/diagnostics for the full checklist.',
+      httpStatus: 500,
+    }
   }
 
   const toFormatted = normalizeToE164(to)
@@ -363,7 +274,7 @@ interface DoPlaceCallParams {
   dialerMode: string
   source: 'user_dial' | 'controller_fanout'
   agentSessionId: string | null
-  env: TelnyxEnv
+  env: TelnyxConfig
 }
 
 interface TelnyxDialResponse {
@@ -397,11 +308,19 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
   // agent on overflow — see lib/teamOverflow.ts and the events webhook).
   let agentCallControlId: string | undefined
   if (p.source === 'user_dial') {
-    const agentSipUri = `sip:${p.env.sipUsername}@${p.env.sipDomain}`
-    // Full shape/issue diagnostics for this URI already logged once by
-    // getTelnyxEnv() above — see "SIP URI shape looks valid" or "SIP URI
-    // would likely be rejected by Telnyx" in the logs for that campaign
-    // call, rather than repeating the same check here per-call.
+    // THIS agent's own SIP endpoint — not a shared one. p.userId is the
+    // Clerk id of the person who clicked dial, and agentSipUriForClerkId
+    // resolves it to the credential their browser registered with, so the
+    // INVITE rings exactly one browser. Falls back to the shared username
+    // for a user who hasn't been provisioned yet (see
+    // lib/agentSipCredentials.ts), which preserves the old behavior rather
+    // than failing the call.
+    //
+    // Domain and normalization come from lib/telnyxConfig.ts, the same
+    // resolver /api/calls/sip-credentials uses to tell the browser where to
+    // register — so the URI we dial and the identity it registered as
+    // cannot drift apart.
+    const agentSipUri = await agentSipUriForClerkId(p.userId, p.env)
     const agentRes = await fetch(dialUrl, {
       method: 'POST',
       headers: {
@@ -412,7 +331,7 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
         connection_id: p.env.connectionId,
         to: agentSipUri,
         from: p.fromNumber,
-        webhook_url: `${p.env.appUrl}/api/calls/events`,
+        webhook_url: p.env.webhookUrl,
         timeout_secs: 30, // agent's own device ring timeout — generous but bounded
       }),
     })
@@ -423,21 +342,32 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
     if (!agentRes.ok || !agentData.data?.call_control_id) {
       console.error(
         `[placeOutboundCall:${p.source}] Telnyx rejected AGENT leg (this is the agent's own SIP endpoint, NOT the lead's phone number)`,
-        { status: agentRes.status, errors: agentData.errors, likelyKnownCause: p.env.sipIssues }
+        {
+          status: agentRes.status,
+          errors: agentData.errors,
+          agentSipUri,
+          configWarnings: p.env.warnings,
+        }
       )
       return {
         success: false,
         // "Agent connection" prefix so this is unmistakably distinct from a
         // lead-leg failure in the queue row / console — same underlying
         // Telnyx error title can otherwise read identically for either leg.
-        // If getTelnyxEnv() already flagged a specific likely cause for
-        // this exact SIP URI, surface it directly here instead of only in
-        // server logs — this is what actually breaks the "check Vercel
-        // logs, report back, repeat" cycle for this specific error class.
         error: `Agent connection failed — ${agentData.errors?.[0]?.title || 'unknown error'}`,
-        detail: p.env.sipIssues.length > 0
-          ? `Likely cause: ${p.env.sipIssues.join('; ')}`
-          : agentData.errors?.[0]?.detail,
+        // Telnyx's own error text for this leg is close to useless on its
+        // own (a malformed SIP URI comes back as "must be in +E164 format",
+        // pointing at phone numbers when the problem is SIP config), so
+        // always say WHICH URI was dialed, and lead with any config
+        // normalization warnings — those name the actual misconfiguration.
+        detail: [
+          `Dialed agent SIP endpoint: ${agentSipUri}`,
+          ...p.env.warnings,
+          agentData.errors?.[0]?.detail,
+          'Run GET /api/calls/diagnostics for a full Telnyx config check.',
+        ]
+          .filter(Boolean)
+          .join(' — '),
         httpStatus: 500,
       }
     }
@@ -457,7 +387,7 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
     connection_id: p.env.connectionId,
     to: p.toFormatted,
     from: p.fromNumber,
-    webhook_url: `${p.env.appUrl}/api/calls/events`,
+    webhook_url: p.env.webhookUrl,
     timeout_secs: ringTimeoutSecs,
   }
 

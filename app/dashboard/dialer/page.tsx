@@ -820,6 +820,7 @@ function DialerPageInner() {
         let sipUsername: string | undefined
         let sipPassword: string | undefined
         let sipDomain: string | undefined
+        let sipWssUrl: string | undefined
         let iceServers: RTCIceServer[] | undefined
         try {
           const credRes = await fetch('/api/calls/sip-credentials')
@@ -829,12 +830,13 @@ function DialerPageInner() {
           }
           const cred = await credRes.json()
           if (!cred?.success) {
-            console.error('SIP credentials unavailable:', cred?.error)
+            console.error('SIP credentials unavailable:', cred?.error, cred?.detail || '')
             return
           }
           sipUsername = cred.sipUsername
           sipPassword = cred.sipPassword
           sipDomain = cred.sipDomain
+          sipWssUrl = cred.sipWssUrl
           iceServers = cred.iceServers
         } catch (credErr) {
           console.error('SIP credentials request error:', credErr)
@@ -849,20 +851,20 @@ function DialerPageInner() {
         const uri = UserAgent.makeURI(`sip:${sipUsername}@${sipDomain}`)
         if (!uri) return
 
-        // TRANSPORT PORT — Telnyx requires port 7443 specifically for SIP
-        // over WebSocket (wss://sip.telnyx.com:7443), confirmed directly
-        // against Telnyx's own SIP reference docs. This is NOT the same as
-        // sipDomain (which correctly stays bare/port-free for the URI
-        // above) — baking a port into TELNYX_SIP_DOMAIN would be a
-        // confusing env var to maintain, so the port lives here in code
-        // instead, next to the one place that actually needs it.
-        const wssPort = '7443'
+        // TRANSPORT ADDRESS — Telnyx serves SIP over WebSocket on port 7443
+        // (wss://sip.telnyx.com:7443). This is NOT the same as sipDomain,
+        // which correctly stays bare/port-free for the URI above: the URI
+        // is an identity, this is a network address. The server now builds
+        // it (lib/telnyxConfig.ts) and hands it over, so the port and the
+        // regional domain stay defined in exactly one place. Fall back to
+        // composing it locally if an older server response lacks the field.
+        const wssServer = sipWssUrl || `wss://${sipDomain}:7443`
 
         const userAgent = new UserAgent({
           uri,
           authorizationUsername: sipUsername,
           authorizationPassword: sipPassword,
-          transportOptions: { server: `wss://${sipDomain}:${wssPort}` },
+          transportOptions: { server: wssServer },
           sessionDescriptionHandlerFactoryOptions: {
             // peerConnectionConfiguration.iceServers is THE audio-path fix.
             // Without STUN/TURN the browser can't find a reachable media path
@@ -873,7 +875,11 @@ function DialerPageInner() {
               iceServers:
                 iceServers && iceServers.length > 0
                   ? iceServers
-                  : [{ urls: ['stun:stun.signalwire.com:3478', 'stun:stun.l.google.com:19302'] }],
+                  // Leftover stun.signalwire.com here outlived the migration
+                  // — on a Telnyx account that host is just a hostname that
+                  // may or may not resolve, and a dead STUN server in the
+                  // list costs ICE gathering time before it's given up on.
+                  : [{ urls: ['stun:stun.telnyx.com:3478', 'stun:stun.l.google.com:19302'] }],
               // Pool a candidate ahead of time so gathering doesn't add latency
               // at answer. Small but helps the "pickup = hear" goal.
               iceCandidatePoolSize: 1,
