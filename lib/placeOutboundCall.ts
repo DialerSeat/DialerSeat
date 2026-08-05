@@ -73,6 +73,12 @@ interface TelnyxEnv {
   sipUsername: string
   sipDomain: string
   appUrl: string
+  // Populated by getTelnyxEnv()'s proactive shape check — non-empty means
+  // the SIP URI has a strong, specific, named reason to suspect it'll be
+  // rejected (see getTelnyxEnv). Threaded through so a real agent-leg
+  // failure can surface the actual likely cause directly in the error
+  // returned to the frontend, not just in server logs.
+  sipIssues: string[]
 }
 
 // =============================================================================
@@ -186,7 +192,41 @@ function getTelnyxEnv(): TelnyxEnv | null {
   // about what a "valid" key must look like.
   console.log(`[placeOutboundCall] TELNYX_API_KEY present, length ${apiKey!.length}`)
 
-  return { apiKey: apiKey!, connectionId: connectionId!, sipUsername: sipUsername!, sipDomain: sipDomain!, appUrl: appUrl! }
+  // Proactive SIP URI shape check — confirmed via a real production 422
+  // ("Phone number must be in +E164 format or a SIP endpoint", agent leg)
+  // that Telnyx will reject a malformed sip:${username}@${domain} URI with
+  // a generic error that gives no hint the SIP fields themselves are the
+  // problem. Rather than wait for another confusing round trip through
+  // Telnyx, catch the most common real misconfigurations directly:
+  //   - a literal "sip:" prefix already baked into the username or domain
+  //     env var (produces sip:sip:user@domain or sip:user@sip:domain —
+  //     both invalid), from pasting a full SIP URI into a field that
+  //     should hold only the bare username/domain
+  //   - an "@" or whitespace inside either value, which breaks the
+  //     user@host shape entirely
+  //   - a domain with no dot at all — not proof of invalidity on its own,
+  //     but a very strong signal for a real DNS domain (as opposed to,
+  //     say, a connection name or placeholder accidentally pasted in
+  //     instead of the actual SIP domain)
+  const sipIssues: string[] = []
+  if (/^sip:/i.test(sipUsername!)) sipIssues.push('TELNYX_SIP_USERNAME starts with "sip:" — it should be just the username, not the full URI')
+  if (/^sip:/i.test(sipDomain!)) sipIssues.push('TELNYX_SIP_DOMAIN starts with "sip:" — it should be just the domain, not the full URI')
+  if (/[@\s]/.test(sipUsername!)) sipIssues.push('TELNYX_SIP_USERNAME contains "@" or whitespace, which breaks the sip:user@domain format')
+  if (/[@\s]/.test(sipDomain!)) sipIssues.push('TELNYX_SIP_DOMAIN contains "@" or whitespace, which breaks the sip:user@domain format')
+  if (!sipDomain!.includes('.')) sipIssues.push(`TELNYX_SIP_DOMAIN ("${sipDomain!.length} chars, no dot found") doesn't look like a real domain — double check it's the actual SIP domain from Telnyx, not a connection name or placeholder`)
+
+  if (sipIssues.length > 0) {
+    console.error(`[placeOutboundCall] SIP URI would likely be rejected by Telnyx — ${sipIssues.join('; ')}`)
+    // Deliberately NOT returning null here — these are strong signals, not
+    // certainties (e.g. some legitimate internal/test domains have no dot),
+    // so still attempt the real call and let Telnyx's own response be the
+    // final word, but the issue is now already named in the logs before
+    // that response even comes back.
+  } else {
+    console.log(`[placeOutboundCall] SIP URI shape looks valid: sip:${sipUsername!.length}chars@${sipDomain!.length}chars`)
+  }
+
+  return { apiKey: apiKey!, connectionId: connectionId!, sipUsername: sipUsername!, sipDomain: sipDomain!, appUrl: appUrl!, sipIssues }
 }
 
 /**
@@ -358,16 +398,10 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
   let agentCallControlId: string | undefined
   if (p.source === 'user_dial') {
     const agentSipUri = `sip:${p.env.sipUsername}@${p.env.sipDomain}`
-    // Diagnostic only — logs shape, never the actual username/domain
-    // values. This exact generic Telnyx error ("Phone number must be in
-    // +E164 format or a SIP endpoint") can come from THIS leg (a malformed
-    // SIP URI — wrong domain, stray characters, a `sip:` prefix already
-    // baked into the env var producing "sip:sip:...") just as easily as
-    // from the lead leg (a bad phone number) — Telnyx uses the same title
-    // for both, and until now the error text sent to the frontend didn't
-    // distinguish which leg actually failed, making this genuinely
-    // undiagnosable from the browser console alone.
-    console.log(`[placeOutboundCall:${p.source}] Agent leg SIP URI shape: sip:${p.env.sipUsername.length}chars@${p.env.sipDomain.length}chars, domain contains dot: ${p.env.sipDomain.includes('.')}`)
+    // Full shape/issue diagnostics for this URI already logged once by
+    // getTelnyxEnv() above — see "SIP URI shape looks valid" or "SIP URI
+    // would likely be rejected by Telnyx" in the logs for that campaign
+    // call, rather than repeating the same check here per-call.
     const agentRes = await fetch(dialUrl, {
       method: 'POST',
       headers: {
@@ -389,15 +423,21 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
     if (!agentRes.ok || !agentData.data?.call_control_id) {
       console.error(
         `[placeOutboundCall:${p.source}] Telnyx rejected AGENT leg (this is the agent's own SIP endpoint, NOT the lead's phone number)`,
-        { status: agentRes.status, errors: agentData.errors }
+        { status: agentRes.status, errors: agentData.errors, likelyKnownCause: p.env.sipIssues }
       )
       return {
         success: false,
         // "Agent connection" prefix so this is unmistakably distinct from a
         // lead-leg failure in the queue row / console — same underlying
         // Telnyx error title can otherwise read identically for either leg.
+        // If getTelnyxEnv() already flagged a specific likely cause for
+        // this exact SIP URI, surface it directly here instead of only in
+        // server logs — this is what actually breaks the "check Vercel
+        // logs, report back, repeat" cycle for this specific error class.
         error: `Agent connection failed — ${agentData.errors?.[0]?.title || 'unknown error'}`,
-        detail: agentData.errors?.[0]?.detail,
+        detail: p.env.sipIssues.length > 0
+          ? `Likely cause: ${p.env.sipIssues.join('; ')}`
+          : agentData.errors?.[0]?.detail,
         httpStatus: 500,
       }
     }

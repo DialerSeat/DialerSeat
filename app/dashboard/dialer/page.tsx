@@ -2026,7 +2026,12 @@ function DialerPageInner() {
         // server-side). Surface it in the queue row instead of failing
         // silently — this is real error text from the response, not invented.
         console.error('Outbound call failed:', res.status, data)
-        showQueueOutcome(lead.id, data?.error ? `Call failed — ${data.error}` : 'Call failed…')
+        showQueueOutcome(
+          lead.id,
+          data?.error
+            ? `Call failed — ${data.error}${data?.detail ? ` (${data.detail})` : ''}`
+            : 'Call failed…'
+        )
         await disposeLead({
           lead_id: lead.id,
           campaign_id: lead.campaign_id,
@@ -2461,6 +2466,8 @@ function DialerPageInner() {
           setStatus('idle')
           return
         }
+        console.error('Manual dial failed:', res.status, data)
+        alert(`Call failed${data?.error ? ` — ${data.error}` : ''}${data?.detail ? `\n\n${data.detail}` : ''}`)
         setStatus('idle')
       }
     } catch {
