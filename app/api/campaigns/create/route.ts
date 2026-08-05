@@ -48,10 +48,11 @@ export async function POST(req: Request) {
 
     const amdDefault = mode === 'progressive' || mode === 'predictive'
     const amdEnabled = typeof amd_enabled === 'boolean' ? amd_enabled : amdDefault
-    // Recording defaults ON regardless of mode — matches how this app
-    // always behaved before the toggle existed. Only an explicit false
-    // turns it off.
-    const recordingEnabled = typeof recording_enabled === 'boolean' ? recording_enabled : true
+    // Recording defaults OFF. It is opt-in per campaign: recording bills per
+    // minute plus storage on Telnyx, and silently recording by default is a
+    // legal exposure in two-party-consent states for a multi-tenant product.
+    // Only an explicit true turns it on.
+    const recordingEnabled = typeof recording_enabled === 'boolean' ? recording_enabled : false
 
     let lines = 1.5
     if (typeof predictive_lines_per_agent === 'number') {

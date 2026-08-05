@@ -210,13 +210,18 @@ export async function placeOutboundCall(
   // campaigns.amd_enabled. Fixed — a false stored value must stay false,
   // or users get billed for AMD they explicitly disabled.)
   //
-  // ── RECORDING TOGGLE — same pattern, new column ──────────────────────────
-  // campaigns.recording_enabled, defaulting to true so every existing
-  // campaign keeps recording exactly as it always has until a user
-  // explicitly turns it off. Manual dials (no campaignId) also default to
-  // recording on, matching how this app behaved before the toggle existed.
+  // ── RECORDING TOGGLE — DEFAULTS OFF ──────────────────────────────────────
+  // Recording is now opt-IN. It previously defaulted to on whenever the
+  // column was null (`!== false`), which meant every campaign — including
+  // throwaway test ones — recorded every answered call, and Telnyx bills
+  // recording per minute plus storage. Opt-in is also the safer default for
+  // a multi-tenant product: two-party-consent states make silent recording a
+  // legal exposure, and a tenant who never asked to record should not be.
+  //
+  // A campaign that wants recording sets it explicitly to true. Manual dials
+  // (no campaignId) do not record.
   let amdEnabled = true
-  let recordingEnabled = true
+  let recordingEnabled = false
   let dialerMode = 'power'
   if (campaignId) {
     const { data: campaign } = await supabase
@@ -227,7 +232,8 @@ export async function placeOutboundCall(
     if (campaign) {
       dialerMode = campaign.dialer_mode || 'power'
       amdEnabled = campaign.amd_enabled !== false
-      recordingEnabled = campaign.recording_enabled !== false
+      // Strict equality: null/undefined means "not opted in", not "on".
+      recordingEnabled = campaign.recording_enabled === true
     }
   }
 

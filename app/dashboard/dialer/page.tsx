@@ -6,6 +6,24 @@ import Link from 'next/link'
 import { normalizeState } from '@/lib/normalizeState'
 import { isDialableLead } from '@/lib/dialableLead'
 
+/**
+ * Whole seconds since a start timestamp, 0 when never started.
+ *
+ * Module scope on purpose: React's compiler lint treats a bare Date.now() in
+ * the component body as an impure render-time call, even inside an event
+ * handler where it is perfectly correct. Keeping the clock read out here
+ * expresses the same thing without tripping it.
+ */
+function elapsedSecondsSince(startMs: number): number {
+  if (!startMs) return 0
+  return Math.max(0, Math.floor((Date.now() - startMs) / 1000))
+}
+
+/** Current time as an ISO string. Module scope for the same lint reason. */
+function nowIso(): string {
+  return new Date().toISOString()
+}
+
 // =============================================================================
 // DIALER PAGE — Pass 2 Phase C9 (mobile fixes on top of C8)
 // =============================================================================
@@ -247,6 +265,10 @@ function DialerPageInner() {
     created_at?: string | null
     dial_attempts?: number | null
     disposition?: string | null
+    // Already returned by /api/leads/list (it selects *). Typed here because
+    // it drives queue ROTATION — see visibleQueuedLeads. Null means never
+    // dialed, which is what puts fresh leads at the top.
+    last_called_at?: string | null
   }
   const [queuedLeads, setQueuedLeads] = useState<QueuedLead[]>([])
   const [queuedLeadsLoading, setQueuedLeadsLoading] = useState(false)
@@ -429,7 +451,38 @@ function DialerPageInner() {
       if (isDialableLead(lead)) dialable.push(lead)
       else exhausted.push(lead)
     }
-    return dialable.concat(exhausted)
+
+    // ── ROTATION: A DIALED LEAD SINKS, IT DOES NOT VANISH ─────────────────
+    // The queue is worked top-down, so "what have I already tried" has to be
+    // expressed as POSITION. Without this, a lead that was dialed and
+    // released back as no_answer kept its original created_at position at
+    // the top of the list and was simply dialed again, forever — the whole
+    // queue was one lead deep.
+    //
+    // Sorting by last_called_at ascending, nulls first, gives exactly the
+    // intended behavior with no extra state:
+    //   - never dialed (null)  -> top, in whatever order the panel is
+    //                             showing (created_at, or a shuffle)
+    //   - dialed before        -> below those, least-recently-dialed first
+    //   - just dialed          -> bottom
+    //
+    // Crucially this does NOT disturb a 1x/2x/3x repeat sequence. Those
+    // redials happen client-side against the same lead object without
+    // consulting the queue, and last_called_at is only written when the lead
+    // is finally dispositioned — i.e. once its attempts are exhausted. So the
+    // lead genuinely stays put at the top for all 2 or 3 attempts, and only
+    // then sinks to the bottom and hands over to the next one.
+    //
+    // Stable sort, so the incoming order (created_at or an active shuffle) is
+    // preserved among leads that share a last_called_at — including all the
+    // never-dialed ones.
+    const rotated = [...dialable].sort((a, b) => {
+      const at = a.last_called_at ? Date.parse(a.last_called_at) : 0
+      const bt = b.last_called_at ? Date.parse(b.last_called_at) : 0
+      return at - bt
+    })
+
+    return rotated.concat(exhausted)
   })()
 
   const isQueueFiltered = !!(queueSearch.trim() || queueStateFilter.trim())
@@ -511,16 +564,6 @@ function DialerPageInner() {
   // expires on its own, and it cannot be left dangling by a teardown path
   // that forgot to re-arm. Ghost protection is preserved — an INVITE arriving
   // outside both the window and an armed intent is still rejected.
-  // ── MID-CALL RECORDING ────────────────────────────────────────────────────
-  // isRecording is this browser's belief about the live call, seeded from the
-  // campaign default (a campaign with recording on is already recording from
-  // answer) and then driven by the agent's own toggle. Deliberately not
-  // polled from the server: the agent needs the indicator to react the
-  // instant they press it, and the authoritative record of what was captured
-  // is the recording itself plus the recording_started/stopped call events.
-  const [isRecording, setIsRecording] = useState(false)
-  const [recordingBusy, setRecordingBusy] = useState(false)
-
   const sipInstanceCounterRef = useRef<number>(0)
   const expectingAgentLegRef = useRef<boolean>(false)
   const expectAgentLegTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -1831,37 +1874,6 @@ function DialerPageInner() {
     }
   }
 
-  const toggleRecording = async () => {
-    const sid = activeCallSidRef.current || activeCallSid
-    if (!sid || recordingBusy) return
-    const next = !isRecording
-    setRecordingBusy(true)
-    // Optimistic: the indicator has to move the moment it's pressed, or the
-    // agent presses it again thinking it missed. Reverted below on failure.
-    setIsRecording(next)
-    try {
-      const res = await fetch('/api/calls/record', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sid, action: next ? 'start' : 'stop' }),
-      })
-      const data = await res.json()
-      if (!data.success) {
-        setIsRecording(!next)
-        setAmdActivity(prev => [`⚠ ${data.error || 'Recording toggle failed'}`, ...prev].slice(0, 5))
-      } else {
-        setAmdActivity(prev =>
-          [next ? '● RECORDING STARTED' : '○ RECORDING STOPPED', ...prev].slice(0, 5)
-        )
-      }
-    } catch {
-      setIsRecording(!next)
-      setAmdActivity(prev => ['⚠ Recording toggle failed', ...prev].slice(0, 5))
-    } finally {
-      setRecordingBusy(false)
-    }
-  }
-
   const hangupCall = async (sid: string | null) => {
     // Any hangup means the user is no longer on a call they initiated — disarm
     // so a follow-on INVITE can't reconnect audio behind their back.
@@ -2099,7 +2111,31 @@ function DialerPageInner() {
     notes?: string
     source?: string
   }
+  /**
+   * Stamp a lead as just-dialed in local queue state so it rotates to the
+   * bottom immediately.
+   *
+   * The server is the source of truth for last_called_at, but waiting for a
+   * refetch is not good enough here: the next dial is scheduled within
+   * ~600ms, and it sends the CURRENT visible order to /api/leads/next as the
+   * allowlist. If the just-dialed lead is still sitting at the top of that
+   * list, the server dutifully picks it again — which is exactly how the
+   * queue ended up re-dialing the first lead forever instead of advancing.
+   *
+   * Stamping locally makes rotation immediate and race-free; the debounced
+   * refetch then confirms it against the server a moment later.
+   */
+  const markLeadDialedLocally = useCallback((leadId?: string | null) => {
+    if (!leadId) return
+    const stamp = nowIso()
+    setQueuedLeads(prev =>
+      prev.map(l => (l.id === leadId ? { ...l, last_called_at: stamp } : l))
+    )
+  }, [])
+
   const disposeLead = useCallback(async (params: DisposeLeadParams) => {
+    // Rotate it out of the way now — see markLeadDialedLocally.
+    markLeadDialedLocally(params.lead_id)
     try {
       await fetch('/api/leads/dispose', {
         method: 'POST',
@@ -2114,7 +2150,7 @@ function DialerPageInner() {
       // in a stale guessed state).
       refreshQueueDebounced()
     }
-  }, [refreshQueueDebounced])
+  }, [refreshQueueDebounced, markLeadDialedLocally])
 
   useEffect(() => {
     if (predictiveView === 'offline') {
@@ -2302,12 +2338,6 @@ function DialerPageInner() {
     // subsequent dial, including ones that never connected. See
     // agentWasOnTheCall in startHangupPolling.
     callStartRef.current = 0
-    // Seed the REC indicator from THIS lead's campaign. A campaign with
-    // recording on is already recording from answer, so the header must say
-    // REC from the start rather than inviting the agent to "start" something
-    // that is already running.
-    const leadCampaign = campaigns.find(c => c.id === lead.campaign_id)
-    setIsRecording(leadCampaign ? leadCampaign.recording_enabled !== false : true)
     // Open the agent-leg window BEFORE the request that causes the agent leg
     // to be dialed. The server places the agent leg first, so its INVITE can
     // land while the POST below is still in flight — see the ref's comment
@@ -2530,25 +2560,30 @@ function DialerPageInner() {
           clearInterval(pollInterval)
           activePollRef.current = null
 
-          // AMD says machine, but for a user_dial the agent leg is ALREADY
-          // bridged — dropping here tears down a call a human may be talking
-          // on. AMD is probabilistic, and 'greeting_end' reliably mistakes a
-          // real person answering "Hello?" and pausing for a short voicemail
-          // greeting; that is exactly the "hangs up the moment I pick up"
-          // symptom. The server stopped hanging these up (see the
-          // agentAlreadyBridged branch in app/api/calls/events/route.ts) and
-          // the client has to agree, or it would just tear the call down from
-          // this side instead.
+          // AMD says machine — skip instantly, no disposition, next lead.
           //
-          // The signal is not discarded — it is surfaced so the agent can act
-          // on it in the half-second it takes them to hear a machine
-          // themselves. Machines still cost a moment here rather than zero;
-          // that is the deliberate price of never cutting off a live prospect.
+          // This briefly did NOT skip, on a misdiagnosis: calls were dropping
+          // the moment they were answered and that was blamed on AMD
+          // false-positives. The real cause was media negotiation (Telnyx
+          // offering SDP without a=rtcp-mux). With that fixed, AMD is
+          // demonstrably correct — and leaving the call up just meant the
+          // agent read a script at a voicemail greeting and hung up by hand.
           if (isNotHuman(statusData.amd_result)) {
             setAmdActivity(prev =>
-              [`⚠ LIKELY VOICEMAIL (${statusData.amd_result}) — skip if so`, ...prev].slice(0, 5)
+              [`VOICEMAIL FILTERED — ${statusData.amd_result}`, ...prev].slice(0, 5)
             )
-            showQueueOutcome(currentLeadRef.current?.id, 'Likely voicemail…')
+            showQueueOutcome(currentLeadRef.current?.id, 'Voicemail detected…')
+            // AMD skip writes NO disposition, so it never reaches
+            // disposeLead — and therefore never rotated the lead out of the
+            // way. The next dial 600ms later would resend the same order and
+            // get the same lead back. Rotate it explicitly.
+            markLeadDialedLocally(currentLeadRef.current?.id)
+            setActiveCallSid(null)
+            disarmDialing() // machine — drop the browser leg; next dial re-arms
+            setStatus('idle')
+            setCurrentLead(null)
+            scheduleDial(600)
+            return
           }
 
           playPickup()
@@ -2796,6 +2831,53 @@ function DialerPageInner() {
     await dialLeadCall(lead)
   }
 
+  /**
+   * TERMINATE CALL — end THIS call and continue the session.
+   *
+   * This button was wired to abortAllDialing(), the master kill switch: it
+   * stopped the active call, cancelled every queued dial, cleared the abort
+   * latch and dropped the agent all the way back to an inactive dialer. So
+   * hanging up one call ended the whole session and the agent had to
+   * re-arm to keep working — on every single call.
+   *
+   * "Terminate" means end the call in front of me, not end my shift. The
+   * master abort still exists and is still reachable by going unavailable;
+   * this button now does the thing its position in the call controls
+   * implies.
+   *
+   * Ends with the disposition sheet when the agent was actually on the call,
+   * because that outcome is worth capturing and its submit handler already
+   * chains to the next lead. A call that never connected has nothing to
+   * disposition, so it goes straight to the next lead.
+   */
+  const terminateCall = async () => {
+    const sid = activeCallSidRef.current || activeCallSid
+    const agentWasOnTheCall = !!callStartRef.current
+
+    if (activePollRef.current) {
+      clearInterval(activePollRef.current)
+      activePollRef.current = null
+    }
+    if (sid) await hangupCall(sid)
+
+    if (agentWasOnTheCall) {
+      setLastCallDuration(elapsedSecondsSince(callStartRef.current))
+      setProfileFullscreen(false) // ensure the sheet is reachable
+      setStatus('ended')
+      setShowDisposition(true)
+      return
+    }
+
+    // Never connected — nothing to disposition, so keep the queue moving.
+    setStatus('idle')
+    setCurrentLead(null)
+    if (isPredictive) {
+      lastIncomingCallSidRef.current = null
+    } else {
+      scheduleDial(400)
+    }
+  }
+
   const handleSkip = async () => {
     if (activePollRef.current) clearInterval(activePollRef.current)
     if (activeCallSid) await hangupCall(activeCallSid)
@@ -2869,9 +2951,6 @@ function DialerPageInner() {
     // the browser rejecting its own INVITE.
     openAgentLegWindow()
     callStartRef.current = 0 // see the queue dial path for why this must reset
-    // Manual dials have no campaign, so they follow the app default (record
-    // from answer) unless the agent says otherwise.
-    setIsRecording(true)
     try {
       const res = await fetch('/api/calls/outbound', {
         method: 'POST',
@@ -3983,43 +4062,6 @@ function DialerPageInner() {
             </span>
           </div>
 
-          {/* ── MID-CALL RECORD TOGGLE ────────────────────────────────────
-              Only interactive while a call is actually up — Telnyx's
-              record_start/record_stop act on a live call_control_id, so
-              offering it at any other time would just produce errors. Shown
-              greyed rather than hidden so its position never shifts. */}
-          <button
-            onClick={toggleRecording}
-            disabled={!activeCallSid || recordingBusy}
-            title={
-              !activeCallSid
-                ? 'Recording can be started once a call is connected'
-                : isRecording
-                  ? 'Stop recording this call'
-                  : 'Start recording this call now'
-            }
-            style={{
-              display: 'flex', alignItems: 'center', gap: 5,
-              padding: '3px 9px', borderRadius: 3,
-              border: `1px solid ${
-                !activeCallSid ? 'var(--brand-on-header-muted)'
-                  : isRecording ? '#ff6464' : 'var(--brand-on-header-muted)'
-              }`,
-              background: isRecording ? 'rgba(255,100,100,0.15)' : 'transparent',
-              cursor: !activeCallSid || recordingBusy ? 'default' : 'pointer',
-              opacity: !activeCallSid ? 0.45 : 1,
-              fontFamily: FUTURA, fontSize: 9, fontWeight: 'bold', letterSpacing: 2,
-              color: isRecording ? '#ff6464' : 'var(--brand-on-header-muted)',
-              transition: 'opacity 0.15s ease, border-color 0.15s ease, background 0.15s ease',
-            }}
-          >
-            <span style={{
-              width: 7, height: 7, borderRadius: '50%',
-              background: isRecording ? '#ff6464' : 'var(--brand-on-header-muted)',
-              boxShadow: isRecording ? '0 0 6px #ff6464' : 'none',
-            }} />
-            {recordingBusy ? '…' : isRecording ? 'REC' : 'REC OFF'}
-          </button>
         </div>
         <div className="dialer-status-bar-right">
           <div className="dialer-connected-pill" title="Connected calls today">
@@ -4685,7 +4727,7 @@ function DialerPageInner() {
                     fontSize: '11px', fontWeight: 'bold', letterSpacing: '3px',
                     cursor: 'pointer', fontFamily: FUTURA,
                   }}>SKIP / NEXT LEAD</button>
-                  <button onClick={() => { abortAllDialing() }} style={{
+                  <button onClick={() => { terminateCall() }} style={{
                     padding: '14px', borderRadius: '4px', border: 'none',
                     background: '#f8e8e8', borderTop: `3px solid ${terminalRed}`,
                     color: terminalRed, fontSize: '11px', fontWeight: 'bold',
@@ -4743,7 +4785,7 @@ function DialerPageInner() {
                 </>
               )}
               {status === 'calling' && (
-                <button onClick={() => { abortAllDialing() }} style={{
+                <button onClick={() => { terminateCall() }} style={{
                   padding: '14px', borderRadius: '4px', border: 'none',
                   background: '#f8e8e8', color: terminalRed,
                   fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
@@ -4760,7 +4802,7 @@ function DialerPageInner() {
                     fontSize: '11px', fontWeight: 'bold', letterSpacing: '3px',
                     cursor: 'pointer', fontFamily: FUTURA,
                   }}>SKIP / NEXT LEAD</button>
-                  <button onClick={() => { abortAllDialing() }} style={{
+                  <button onClick={() => { terminateCall() }} style={{
                     padding: '14px', borderRadius: '4px', border: 'none',
                     background: '#f8e8e8', borderTop: `3px solid ${terminalRed}`,
                     color: terminalRed, fontSize: '11px', fontWeight: 'bold',

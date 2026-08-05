@@ -69,7 +69,20 @@ export async function POST(req: Request) {
       .select('signalwire_call_id')
       .eq('user_id', userId)
       .gte('created_at', sinceIso)
-      .is('duration', 0) // still in-flight/unresolved — a completed call has a real duration written
+      // .eq, NOT .is — PostgREST's `is` operator only accepts null/true/false/
+      // unknown, so `.is('duration', 0)` is not an equality test and matched
+      // nothing. The sweep therefore hung up NOTHING, silently.
+      //
+      // It looked fine in power/progressive because the client separately
+      // hangs up the one call id it knows about, which is all those modes
+      // have. Predictive places N calls server-side that the client has no
+      // ids for and relies entirely on this sweep — so aborting predictive
+      // left every fanned-out line ringing the lead's phone with no way to
+      // stop it. That is the reported "abort doesn't stop the ringing".
+      //
+      // duration = 0 is the in-flight sentinel; a finished call always has a
+      // real duration (floored at 1) written by the hangup webhook.
+      .eq('duration', 0)
     if (callsErr) {
       console.error('[abort] calls lookup failed:', callsErr)
     }

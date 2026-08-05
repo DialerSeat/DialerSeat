@@ -278,39 +278,23 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
   })
 
   if (result === 'machine') {
-    // ── SILENT INSTANT SKIP — BUT ONLY IF NO AGENT IS ON THE CALL ───────
-    // For controller_fanout the lead leg is not bridged to anyone yet, so
-    // hanging up on a detected machine is exactly right: nobody is
-    // listening, and dropping instantly is the whole point.
+    // ── SILENT INSTANT SKIP ────────────────────────────────────────────
+    // Hang up now, write no disposition, move on. The lead row is bumped
+    // (attempt count, last_called_at) so it cycles back into rotation
+    // normally, but the agent is never asked to tag a call they never had.
     //
-    // For user_dial the agent leg was bridged the moment the lead answered.
-    // Hanging up here cuts off a conversation a human being is already
-    // having. AMD is a probabilistic classifier, not an oracle — 'greeting_end'
-    // in particular mistakes a real person answering "Hello?" and pausing for
-    // a short voicemail greeting, which is precisely the reported symptom of
-    // calls dropping the instant they were picked up.
+    // A previous revision exempted user_dial from this, on the theory that
+    // 'greeting_end' was false-positiving on real people and cutting off
+    // live conversations. That diagnosis was wrong: the calls dropping the
+    // instant they were answered were failing at MEDIA negotiation (Telnyx
+    // offered SDP without a=rtcp-mux, Chrome refused it, sip.js replied 480)
+    // — nothing to do with AMD. Production data since confirms AMD is
+    // classifying correctly, with 'machine' on genuine voicemails.
     //
-    // The asymmetry matters: a false 'machine' on fanout costs one wasted
-    // dial, while a false 'machine' on user_dial hangs up on a live prospect
-    // mid-sentence. So user_dial keeps the call and lets the agent — who can
-    // actually hear whether it's a machine — decide.
-    const { data: amdCallRow } = await supabaseAdmin
-      .from('calls')
-      .select('id, dial_group_id')
-      .eq('signalwire_call_id', callControlId)
-      .maybeSingle()
-
-    const agentAlreadyBridged = !!amdCallRow && !amdCallRow.dial_group_id
-
-    if (agentAlreadyBridged) {
-      console.log(
-        `[calls/events] AMD says machine for ${callControlId}, but an agent is already bridged ` +
-        `(user_dial) — leaving the call up. The agent decides; the client still surfaces the ` +
-        `voicemail hint from amd_result.`
-      )
-      return
-    }
-
+    // The exemption's only real effect was to leave the agent staring at a
+    // script while a voicemail greeting played, hanging up by hand every
+    // time. Removed. Instant skip is the specified behavior and the correct
+    // one.
     await hangupCallControlId(callControlId)
     await autoAdvanceLeadNoDisposition(callControlId)
     return

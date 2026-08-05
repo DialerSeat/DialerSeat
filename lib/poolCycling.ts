@@ -69,26 +69,90 @@ async function countPoolActive(): Promise<number> {
   return count ?? 0
 }
 
-let reconcileInFlight: Promise<ReconcileResult> | null = null
+// =============================================================================
+// CROSS-INSTANCE RECONCILE LOCK
+// =============================================================================
+// This was a module-level `reconcileInFlight` promise, which only serializes
+// callers inside a SINGLE process. On Vercel each request may run on its own
+// serverless instance with its own module scope, so the monthly cron and an
+// admin pressing "Run Reconcile Now" — or two admins — sail past that guard
+// simultaneously and EACH buy up to daily_buy_cap. At a 50/day cap that is 50
+// surplus numbers per concurrent run, billing every month, with nothing in the
+// UI to reveal it.
+//
+// The database is the only thing every instance shares, so the lock lives
+// there (pool_config.reconcile_locked_until). Claiming is one conditional
+// UPDATE — exactly one caller can match "free or expired", the loser gets zero
+// rows — and the TTL means a crashed run releases itself instead of disabling
+// pool automation permanently.
+// =============================================================================
+
+/** Long enough for a full buy loop (50 numbers × ~250ms + API latency). */
+const RECONCILE_LOCK_TTL_MS = 5 * 60 * 1000
+
+async function claimReconcileLock(): Promise<boolean> {
+  const nowIso = new Date().toISOString()
+  const until = new Date(Date.now() + RECONCILE_LOCK_TTL_MS).toISOString()
+
+  const { data, error } = await supabase
+    .from('pool_config')
+    .update({ reconcile_locked_until: until })
+    .eq('id', 1)
+    .or(`reconcile_locked_until.is.null,reconcile_locked_until.lt.${nowIso}`)
+    .select('id')
+
+  if (error) {
+    // Fail CLOSED. If we cannot establish that we hold the lock, we must not
+    // spend money — an unavailable lock is not permission to proceed.
+    console.error('[poolCycling] could not claim reconcile lock, refusing to run:', error)
+    return false
+  }
+  return (data?.length ?? 0) > 0
+}
+
+async function releaseReconcileLock(): Promise<void> {
+  const { error } = await supabase
+    .from('pool_config')
+    .update({ reconcile_locked_until: null })
+    .eq('id', 1)
+  if (error) {
+    // Non-fatal: the TTL will free it. Worst case the next reconcile waits.
+    console.error('[poolCycling] failed to release reconcile lock (TTL will expire it):', error)
+  }
+}
+
+async function runGuarded(trigger: string, monthlyOnly: boolean): Promise<ReconcileResult> {
+  const got = await claimReconcileLock()
+  if (!got) {
+    console.warn(`[poolCycling] reconcile already running elsewhere — skipping "${trigger}"`)
+    return {
+      ran: false,
+      reason: 'already_running',
+      activeSubs: 0,
+      numbersPerUser: 0,
+      targetPoolSize: 0,
+      poolBefore: 0,
+      poolAfter: 0,
+      added: 0,
+      released: 0,
+      floorApplied: false,
+      cooldownBlocked: 0,
+      actions: ['Another reconcile is in progress; this run was skipped.'],
+    }
+  }
+  try {
+    return await doReconcile(trigger, monthlyOnly)
+  } finally {
+    await releaseReconcileLock()
+  }
+}
 
 export async function reconcilePoolToRatio(trigger: string): Promise<ReconcileResult> {
-  if (reconcileInFlight) {
-    return reconcileInFlight
-  }
-  reconcileInFlight = doReconcile(trigger, false).finally(() => {
-    reconcileInFlight = null
-  })
-  return reconcileInFlight
+  return runGuarded(trigger, false)
 }
 
 export async function reconcilePoolMonthly(trigger: string): Promise<ReconcileResult> {
-  if (reconcileInFlight) {
-    return reconcileInFlight
-  }
-  reconcileInFlight = doReconcile(trigger, true).finally(() => {
-    reconcileInFlight = null
-  })
-  return reconcileInFlight
+  return runGuarded(trigger, true)
 }
 
 function currentMonthKey(): string {
@@ -161,31 +225,64 @@ async function doReconcile(trigger: string, monthlyOnly: boolean): Promise<Recon
     if (toBuyCount <= 0) {
       actions.push(`Need ${deficit} more but daily buy budget exhausted (${buysToday}/${config.daily_buy_cap})`)
     } else {
-      let areaCodes = await recommendAreaCodesToBuy(toBuyCount)
-      if (areaCodes.length < toBuyCount) {
-        const fill = FALLBACK_METROS.filter((m) => !areaCodes.includes(m))
-        areaCodes = [...areaCodes, ...fill].slice(0, toBuyCount)
+      // ── BUY PLAN: toBuyCount NUMBERS, NOT toBuyCount AREA CODES ─────────
+      // This loop used to iterate a list of DISTINCT area codes and buy one
+      // number from each, so the number of purchases was capped by the number
+      // of distinct codes available — FALLBACK_METROS has 10 entries, so a
+      // run could never buy more than roughly (recommended + 10) numbers no
+      // matter that daily_buy_cap is 50. With leads concentrated in a few
+      // regions (which is the normal case) that ceiling was closer to 10, or
+      // ~3 new subscribers' worth per reconcile at 3 numbers/user. The pool
+      // could not keep up with growth by design.
+      //
+      // Area codes are now CYCLED to fill the requested count, so asking for
+      // 30 numbers across 8 codes buys 30 numbers, several per code. That is
+      // also fine for deliverability — multiple numbers in a metro the leads
+      // actually live in is the point of area-code matching.
+      const recommended = await recommendAreaCodesToBuy(toBuyCount)
+      const codePalette = recommended.length > 0
+        ? [...recommended, ...FALLBACK_METROS.filter((m) => !recommended.includes(m))]
+        : [...FALLBACK_METROS]
+
+      const buyPlan: string[] = []
+      for (let i = 0; i < toBuyCount; i++) {
+        buyPlan.push(codePalette[i % codePalette.length])
       }
-      for (const ac of areaCodes) {
+
+      for (const ac of buyPlan) {
         try {
           const result = await addNumberByAreaCode(ac)
           if (result) {
             added++
             await recordBuy()
-            try {
-              const seedDaily = 5 + Math.floor(Math.random() * 20)
-              const seedLifetime = seedDaily + Math.floor(Math.random() * 120)
-              await supabase
-                .from('phone_numbers')
-                .update({
-                  daily_call_count: seedDaily,
-                  lifetime_call_count: seedLifetime,
-                  last_called_at: new Date().toISOString(),
-                })
-                .eq('id', result.id)
-            } catch (seedErr) {
-              console.error('[poolCycling] seed analytics failed (non-fatal):', seedErr)
-            }
+            // ── NO SEEDED "ANALYTICS" ────────────────────────────────────
+            // This used to stamp every newly purchased number with INVENTED
+            // usage: daily_call_count = 5-24, lifetime = +0-120, and a
+            // last_called_at of now. Removed, because those columns are not
+            // cosmetic — the system reads them back and makes decisions:
+            //
+            //   utilization %      = sum(daily_call_count)/sum(daily_cap).
+            //                        Buying 10 numbers injected 50-240
+            //                        phantom calls into "today", so the
+            //                        pool dashboard reported load that did
+            //                        not exist.
+            //   utilization_trigger_pct fires off that same figure, so the
+            //                        automation could trigger itself on
+            //                        fabricated demand.
+            //   release ordering   is `daily_call_count ASC` = coldest
+            //                        first. A brand new number seeded with
+            //                        5-24 calls looked WARMER than a
+            //                        genuinely idle one, so downsizing
+            //                        released aged numbers with real
+            //                        history and kept the new ones —
+            //                        backwards for deliverability.
+            //   pickNumberForLead  gates on daily_call_count < daily_cap,
+            //                        so a seed of 24 against a cap of 50
+            //                        silently destroyed half of that
+            //                        number's first-day capacity.
+            //
+            // A new number has made no calls. The columns already default to
+            // 0, which is the truth.
             actions.push(`Added ${ac}: ${result.phone_number}`)
           } else {
             actions.push(`Add failed for ${ac} — no inventory`)

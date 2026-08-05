@@ -152,6 +152,28 @@ export async function runPredictiveController(
   
   
   const ninetySecondsAgo = new Date(Date.now() - 90_000).toISOString()
+  // ── LIVE CALLS ONLY ──────────────────────────────────────────────────
+  // duration = 0 is this codebase's "still in flight" sentinel: the row is
+  // inserted with 0 and app/api/calls/events/route.ts writes a real duration
+  // the moment call.hangup fires (never 0 — it floors at 1 precisely so this
+  // distinction holds).
+  //
+  // Without it this query counted every call from the last 90 seconds that
+  // had no disposition yet — which includes calls that ALREADY ENDED. An AMD
+  // machine-skip writes no disposition at all by design, so each one stayed
+  // in this set for a full 90 seconds after hanging up. Two consequences,
+  // one cosmetic and one not:
+  //
+  //   - inFlightPhones ballooned, so the queue panel highlighted dozens of
+  //     rows as "dialing" when only a few lines were live. On 4 lines it
+  //     eventually lit up the whole list.
+  //   - inFlight feeds the pacing decision (shouldDial = desired - inFlight),
+  //     so predictive believed it was already at target and STOPPED FIRING
+  //     new lines while actually idle. The dialer quietly ran far below the
+  //     configured line count.
+  //
+  // The 90-second window still bounds this in case a hangup webhook is
+  // missed and duration never gets written.
   const { data: inFlightCallsRaw } = await supabase
     .from('calls')
     .select('id, phone_number, lead_id')
@@ -159,6 +181,7 @@ export async function runPredictiveController(
     .eq('dial_group_id', sessionId)
     .gte('created_at', ninetySecondsAgo)
     .is('disposition', null)
+    .eq('duration', 0)
 
   const inFlightCalls = (inFlightCallsRaw || []) as Array<{
     id: string
