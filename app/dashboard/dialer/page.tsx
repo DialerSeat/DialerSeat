@@ -960,6 +960,52 @@ function DialerPageInner() {
         // composing it locally if an older server response lacks the field.
         const wssServer = sipWssUrl || `wss://${sipDomain}:7443`
 
+        // ── RTCP-MUX: THE ACTUAL CAUSE OF THE SILENT CALLS ─────────────────
+        // Telnyx relays the agent leg from a plain UDP SIP leg and its SDP
+        // offer contains no `a=rtcp-mux`. Since Chrome 57 the default
+        // rtcpMuxPolicy is "require", so Chrome REFUSES that offer outright:
+        //
+        //   setRemoteDescription failed: The m= section with mid='0' is
+        //   invalid. RTCP-MUX is not enabled when it is required.
+        //
+        // accept() then throws, sip.js answers 480 Temporarily Unavailable,
+        // and the call dies the instant the lead picks up. Every other
+        // symptom chased for hours — the 486s, the silence, the drop on
+        // answer — was downstream of this one missing SDP attribute.
+        //
+        // "negotiate" is the documented workaround for exactly this
+        // SIP-gateway case (it is how Chrome-to-Asterisk was solved when the
+        // default flipped). It is also DEPRECATED and Chrome has long
+        // intended to remove it, so it is feature-detected rather than
+        // assumed: probing with a throwaway RTCPeerConnection means a browser
+        // that has dropped the value leaves us on "require" instead of
+        // throwing on every single UserAgent construction and taking the
+        // whole softphone down with it.
+        //
+        // The durable fix is server-side — Telnyx offering rtcp-mux for
+        // WebRTC endpoints — but that is an account/connection concern, and
+        // this keeps calls working regardless of it.
+        // Typed loosely on purpose: TypeScript's DOM lib has already removed
+        // "negotiate" from RTCRtcpMuxPolicy, so the value cannot be expressed
+        // in the standard type even where the browser still honours it. The
+        // runtime probe below — not the type — is what decides whether it is
+        // used.
+        let rtcpMuxPolicy: string | undefined
+        try {
+          const probe = new RTCPeerConnection(
+            { rtcpMuxPolicy: 'negotiate' } as unknown as RTCConfiguration
+          )
+          probe.close()
+          rtcpMuxPolicy = 'negotiate'
+          console.log('[sip] rtcpMuxPolicy=negotiate supported — will accept non-muxed SDP from Telnyx')
+        } catch {
+          console.warn(
+            '[sip] this browser no longer supports rtcpMuxPolicy "negotiate". If calls fail with ' +
+            '"RTCP-MUX is not enabled when it is required", Telnyx must be configured to offer ' +
+            'rtcp-mux for WebRTC endpoints — it cannot be worked around from the browser.'
+          )
+        }
+
         // Tracked locally so cleanup can tear down THIS instance specifically,
         // rather than whatever happens to be in the ref by then.
         const userAgent: import('sip.js').UserAgent = new UserAgent({
@@ -985,6 +1031,8 @@ function DialerPageInner() {
               // Pool a candidate ahead of time so gathering doesn't add latency
               // at answer. Small but helps the "pickup = hear" goal.
               iceCandidatePoolSize: 1,
+              // Only set when the browser still accepts it — see the probe above.
+              ...((rtcpMuxPolicy ? { rtcpMuxPolicy } : {}) as unknown as RTCConfiguration),
             },
             constraints: { audio: true, video: false },
           },
