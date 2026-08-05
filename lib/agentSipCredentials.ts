@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import { resolveTelnyxConfig, type TelnyxConfig } from '@/lib/telnyxConfig'
+import { ensureSipUriCallingEnabled } from '@/lib/telnyxSipUriCalling'
 
 // =============================================================================
 // PER-AGENT SIP CREDENTIALS — fully automated Telnyx provisioning
@@ -142,6 +143,67 @@ interface CredentialConnection {
 }
 
 /**
+ * Make a connection actually reachable by a SIP URI dial.
+ *
+ * WHY THIS IS PROACTIVE AND NOT ERROR-DRIVEN
+ *
+ * Telnyx creates every connection with sip_uri_calling_preference =
+ * "disabled", which refuses calls addressed to its SIP URIs. There was
+ * already a self-heal for this, but it only triggered on Telnyx error 10016 —
+ * a REQUEST-time rejection. That is the wrong failure to hang it on.
+ *
+ * What actually happens when the setting is disabled is subtler and worse:
+ * the dial request SUCCEEDS, Telnyx creates the call and returns a
+ * call_control_id, and then refuses to route it — hanging the leg up
+ * ~100ms later with cause 'user_busy' (SIP 486 Busy Here). No error is ever
+ * returned to the caller, so nothing downstream can detect it. From the
+ * app's side the agent leg looks placed; the agent's browser never receives
+ * an INVITE at all; the lead answers to silence; and every diagnostic points
+ * at the browser, which is entirely innocent. That mis-attribution cost
+ * several rounds of debugging into SIP guards and registrations.
+ *
+ * So it is checked when the connection is resolved — once per process, before
+ * any call depends on it — rather than waiting for an error that never comes.
+ *
+ * "internal" not "unrestricted": internal permits calls from connections on
+ * this same Telnyx account, which is exactly our Call Control Application
+ * dialing our own agent credential, while leaving agents' browsers
+ * unreachable from the public internet.
+ */
+async function ensureAgentConnectionIsDialable(
+  connection: CredentialConnection,
+  apiKey: string
+): Promise<void> {
+  if (!connection.id) return
+  // Telnyx returns ids in a couple of shapes across its APIs
+  // ("3010785211936933233" vs "connection:3010785211936933233"). The
+  // /security/connections endpoint wants the bare id.
+  const bareId = String(connection.id).replace(/^connection:/, '')
+
+  try {
+    const outcome = await ensureSipUriCallingEnabled(bareId, apiKey)
+    if (outcome === 'enabled') {
+      console.log(
+        `[agentSipCredentials] connection ${bareId} had SIP URI calling DISABLED — every agent-leg ` +
+        `dial was being hung up by Telnyx with 'user_busy' before reaching the browser. ` +
+        `Set to "internal".`
+      )
+    } else if (outcome === 'failed') {
+      console.error(
+        `[agentSipCredentials] could not verify SIP URI calling on connection ${bareId}. If agent ` +
+        `legs are hanging up ~100ms after dial with cause 'user_busy' and the browser never sees ` +
+        `an INVITE, set "Receive SIP URI calls" to "Only from my Connections" on this connection ` +
+        `in Telnyx Mission Control.`
+      )
+    }
+  } catch (err) {
+    console.error(`[agentSipCredentials] SIP URI calling check threw for ${bareId}:`, err)
+  }
+
+  await clearEncryptedMediaIfSet(connection, apiKey)
+}
+
+/**
  * Clear encrypted_media on a connection that has it set.
  *
  * Only exists to undo damage from an earlier version of
@@ -215,6 +277,7 @@ export async function resolveCredentialConnectionId(
       `[agentSipCredentials] using credential connection "${byUsername.connection_name || byUsername.id}" ` +
       `(matched TELNYX_SIP_USERNAME) as the parent for per-agent credentials`
     )
+    await ensureAgentConnectionIsDialable(byUsername, config.apiKey)
     return cachedConnectionId
   }
 
@@ -224,6 +287,7 @@ export async function resolveCredentialConnectionId(
       `[agentSipCredentials] using the account's only credential connection ` +
       `"${connections[0].connection_name || connections[0].id}" as the parent for per-agent credentials`
     )
+    await ensureAgentConnectionIsDialable(connections[0], config.apiKey)
     return cachedConnectionId
   }
 
@@ -250,12 +314,7 @@ export async function resolveCredentialConnectionId(
       `[agentSipCredentials] using previously auto-created credential connection ` +
       `"${MANAGED_CONNECTION_NAME}" (${existingManaged.id})`
     )
-    // Repair a connection created by the earlier version of this function,
-    // which set encrypted_media: 'SRTP'. That value makes Telnyx offer
-    // SDES-SRTP, which browsers can't negotiate, so calls connect with no
-    // audio in either direction. Best-effort and idempotent — see
-    // createManagedCredentialConnection for the full reasoning.
-    void clearEncryptedMediaIfSet(existingManaged, config.apiKey)
+    await ensureAgentConnectionIsDialable(existingManaged, config.apiKey)
     return cachedConnectionId
   }
 

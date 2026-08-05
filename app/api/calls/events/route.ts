@@ -426,6 +426,29 @@ async function handleHangup(
       .eq('signalwire_call_id', callControlId)
       .maybeSingle()
 
+    // ── AGENT LEG REFUSED BY TELNYX ──────────────────────────────────────
+    // No calls row means this call_control_id is an AGENT leg (we only ever
+    // insert rows for lead legs). An agent leg ending in 'user_busy' means
+    // Telnyx declined to route to the agent's SIP URI — almost always
+    // sip_uri_calling_preference being "disabled" on the credential
+    // connection.
+    //
+    // This is worth shouting about because it is otherwise undetectable: the
+    // dial request returns 200 with a call_control_id, so nothing upstream
+    // sees a failure, the browser never receives an INVITE, and the only
+    // visible symptom is a connected call with no audio. Naming it here
+    // turns a multi-round debugging exercise into one log line.
+    if (!callRow && hangupCause === 'user_busy') {
+      console.error(
+        `[calls/events] AGENT LEG REFUSED — Telnyx hung up agent leg ${callControlId} with ` +
+        `'user_busy' (SIP 486) without delivering an INVITE to the browser. This call has NO ` +
+        `AGENT AUDIO. Cause is almost always SIP URI calling disabled on the agent credential ` +
+        `connection — see ensureAgentConnectionIsDialable in lib/agentSipCredentials.ts, which ` +
+        `sets it automatically, or set "Receive SIP URI calls" to "Only from my Connections" in ` +
+        `Telnyx Mission Control.`
+      )
+    }
+
     if (callRow) {
       const updates: Record<string, unknown> = {}
       // Only set duration once — a call already marked over shouldn't have
