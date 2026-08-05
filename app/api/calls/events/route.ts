@@ -526,11 +526,18 @@ async function handleRecordingSaved(
   // cannot stop the recording from being MADE — so say so loudly.
   const { data: ownerRow } = await supabaseAdmin
     .from('calls')
-    .select('id, campaign_id')
+    .select('id, campaign_id, recording_status')
     .eq('signalwire_call_id', callControlId)
     .maybeSingle()
 
-  if (ownerRow?.campaign_id) {
+  // An agent who hit the record toggle mid-call asked for this explicitly, so
+  // the campaign default does not apply and the recording must be kept. Set
+  // by /api/calls/record. Without this exception the enforcement below would
+  // delete the recording moments after the agent deliberately started it —
+  // the toggle would appear to work and then quietly destroy its own output.
+  const manuallyRequested = ownerRow?.recording_status === 'manual'
+
+  if (ownerRow?.campaign_id && !manuallyRequested) {
     const { data: campaign } = await supabaseAdmin
       .from('campaigns')
       .select('recording_enabled')

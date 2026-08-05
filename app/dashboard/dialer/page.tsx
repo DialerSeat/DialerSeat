@@ -51,6 +51,11 @@ interface Campaign {
   scripts?: { id: string; name: string; body: string; sort_order?: number }[]
   dialer_mode?: DialerMode
   amd_enabled?: boolean
+  // Already returned by /api/campaigns/list (it selects *) — typed here so the
+  // header's REC indicator can start in the right state. A campaign with
+  // recording on is ALREADY recording from answer, so showing "REC OFF" on
+  // such a call would be a lie the agent might act on.
+  recording_enabled?: boolean
   predictive_lines_per_agent?: number
   dial_repeat_count?: number
 }
@@ -506,6 +511,16 @@ function DialerPageInner() {
   // expires on its own, and it cannot be left dangling by a teardown path
   // that forgot to re-arm. Ghost protection is preserved — an INVITE arriving
   // outside both the window and an armed intent is still rejected.
+  // ── MID-CALL RECORDING ────────────────────────────────────────────────────
+  // isRecording is this browser's belief about the live call, seeded from the
+  // campaign default (a campaign with recording on is already recording from
+  // answer) and then driven by the agent's own toggle. Deliberately not
+  // polled from the server: the agent needs the indicator to react the
+  // instant they press it, and the authoritative record of what was captured
+  // is the recording itself plus the recording_started/stopped call events.
+  const [isRecording, setIsRecording] = useState(false)
+  const [recordingBusy, setRecordingBusy] = useState(false)
+
   const sipInstanceCounterRef = useRef<number>(0)
   const expectingAgentLegRef = useRef<boolean>(false)
   const expectAgentLegTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -1816,6 +1831,37 @@ function DialerPageInner() {
     }
   }
 
+  const toggleRecording = async () => {
+    const sid = activeCallSidRef.current || activeCallSid
+    if (!sid || recordingBusy) return
+    const next = !isRecording
+    setRecordingBusy(true)
+    // Optimistic: the indicator has to move the moment it's pressed, or the
+    // agent presses it again thinking it missed. Reverted below on failure.
+    setIsRecording(next)
+    try {
+      const res = await fetch('/api/calls/record', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sid, action: next ? 'start' : 'stop' }),
+      })
+      const data = await res.json()
+      if (!data.success) {
+        setIsRecording(!next)
+        setAmdActivity(prev => [`⚠ ${data.error || 'Recording toggle failed'}`, ...prev].slice(0, 5))
+      } else {
+        setAmdActivity(prev =>
+          [next ? '● RECORDING STARTED' : '○ RECORDING STOPPED', ...prev].slice(0, 5)
+        )
+      }
+    } catch {
+      setIsRecording(!next)
+      setAmdActivity(prev => ['⚠ Recording toggle failed', ...prev].slice(0, 5))
+    } finally {
+      setRecordingBusy(false)
+    }
+  }
+
   const hangupCall = async (sid: string | null) => {
     // Any hangup means the user is no longer on a call they initiated — disarm
     // so a follow-on INVITE can't reconnect audio behind their back.
@@ -2256,6 +2302,12 @@ function DialerPageInner() {
     // subsequent dial, including ones that never connected. See
     // agentWasOnTheCall in startHangupPolling.
     callStartRef.current = 0
+    // Seed the REC indicator from THIS lead's campaign. A campaign with
+    // recording on is already recording from answer, so the header must say
+    // REC from the start rather than inviting the agent to "start" something
+    // that is already running.
+    const leadCampaign = campaigns.find(c => c.id === lead.campaign_id)
+    setIsRecording(leadCampaign ? leadCampaign.recording_enabled !== false : true)
     // Open the agent-leg window BEFORE the request that causes the agent leg
     // to be dialed. The server places the agent leg first, so its INVITE can
     // land while the POST below is still in flight — see the ref's comment
@@ -2817,6 +2869,9 @@ function DialerPageInner() {
     // the browser rejecting its own INVITE.
     openAgentLegWindow()
     callStartRef.current = 0 // see the queue dial path for why this must reset
+    // Manual dials have no campaign, so they follow the app default (record
+    // from answer) unless the agent says otherwise.
+    setIsRecording(true)
     try {
       const res = await fetch('/api/calls/outbound', {
         method: 'POST',
@@ -3927,6 +3982,44 @@ function DialerPageInner() {
               {swReady ? 'AUDIO' : '...'}
             </span>
           </div>
+
+          {/* ── MID-CALL RECORD TOGGLE ────────────────────────────────────
+              Only interactive while a call is actually up — Telnyx's
+              record_start/record_stop act on a live call_control_id, so
+              offering it at any other time would just produce errors. Shown
+              greyed rather than hidden so its position never shifts. */}
+          <button
+            onClick={toggleRecording}
+            disabled={!activeCallSid || recordingBusy}
+            title={
+              !activeCallSid
+                ? 'Recording can be started once a call is connected'
+                : isRecording
+                  ? 'Stop recording this call'
+                  : 'Start recording this call now'
+            }
+            style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              padding: '3px 9px', borderRadius: 3,
+              border: `1px solid ${
+                !activeCallSid ? 'var(--brand-on-header-muted)'
+                  : isRecording ? '#ff6464' : 'var(--brand-on-header-muted)'
+              }`,
+              background: isRecording ? 'rgba(255,100,100,0.15)' : 'transparent',
+              cursor: !activeCallSid || recordingBusy ? 'default' : 'pointer',
+              opacity: !activeCallSid ? 0.45 : 1,
+              fontFamily: FUTURA, fontSize: 9, fontWeight: 'bold', letterSpacing: 2,
+              color: isRecording ? '#ff6464' : 'var(--brand-on-header-muted)',
+              transition: 'opacity 0.15s ease, border-color 0.15s ease, background 0.15s ease',
+            }}
+          >
+            <span style={{
+              width: 7, height: 7, borderRadius: '50%',
+              background: isRecording ? '#ff6464' : 'var(--brand-on-header-muted)',
+              boxShadow: isRecording ? '0 0 6px #ff6464' : 'none',
+            }} />
+            {recordingBusy ? '…' : isRecording ? 'REC' : 'REC OFF'}
+          </button>
         </div>
         <div className="dialer-status-bar-right">
           <div className="dialer-connected-pill" title="Connected calls today">

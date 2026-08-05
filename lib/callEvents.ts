@@ -17,6 +17,12 @@ export type CallEventType =
   | 'disposition_set'
   | 'hangup_requested'
   | 'recording_ready'
+  // Agent used the mid-call recording toggle. Distinct from
+  // 'recording_ready', which is Telnyx telling us a finished recording is
+  // available — these two record the agent's INTENT, which is what matters
+  // for consent questions after the fact.
+  | 'recording_started'
+  | 'recording_stopped'
   | 'reaped'
 
 interface CallEventInput {
