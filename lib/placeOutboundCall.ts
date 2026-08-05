@@ -2,7 +2,8 @@ import { createClient } from '@supabase/supabase-js'
 import { pickNumberForLead, recordUsage } from '@/lib/numberPool'
 import { isCallableNow } from '@/lib/callingWindow'
 import { resolveTelnyxConfigOrLog, type TelnyxConfig } from '@/lib/telnyxConfig'
-import { agentSipUriForClerkId } from '@/lib/agentSipCredentials'
+import { agentSipUriForClerkId, resolveCredentialConnectionId } from '@/lib/agentSipCredentials'
+import { ensureSipUriCallingEnabled, isSipUriRejection } from '@/lib/telnyxSipUriCalling'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -321,23 +322,54 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
     // register — so the URI we dial and the identity it registered as
     // cannot drift apart.
     const agentSipUri = await agentSipUriForClerkId(p.userId, p.env)
-    const agentRes = await fetch(dialUrl, {
-      method: 'POST',
-      headers: {
-        Authorization: authHeader,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        connection_id: p.env.connectionId,
-        to: agentSipUri,
-        from: p.fromNumber,
-        webhook_url: p.env.webhookUrl,
-        timeout_secs: 30, // agent's own device ring timeout — generous but bounded
-      }),
-    })
 
-    const agentData: TelnyxDialResponse = await agentRes.json()
+    const dialAgentLeg = () =>
+      fetch(dialUrl, {
+        method: 'POST',
+        headers: {
+          Authorization: authHeader,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          connection_id: p.env.connectionId,
+          to: agentSipUri,
+          from: p.fromNumber,
+          webhook_url: p.env.webhookUrl,
+          timeout_secs: 30, // agent's own device ring timeout — generous but bounded
+        }),
+      })
+
+    let agentRes = await dialAgentLeg()
+    let agentData: TelnyxDialResponse = await agentRes.json()
     console.log(`[placeOutboundCall:${p.source}] Agent leg dial response:`, agentData)
+
+    // ── SELF-HEAL: SIP URI CALLING DISABLED ─────────────────────────────────
+    // Telnyx disables SIP URI calling on every connection by default, which
+    // rejects the agent leg with 10016 "Phone number must be in +E164
+    // format" — an error about phone numbers, raised for a SIP URI, caused
+    // by a setting on a resource that isn't in this request. On a fresh
+    // account that single default breaks 100% of dials.
+    //
+    // It's detectable and its fix is one API call, so fix it here rather
+    // than making every operator of every deployment decode that error
+    // themselves. Bounded and memoized in lib/telnyxSipUriCalling.ts: at
+    // most one remediation per connection per process, never widens an
+    // already-permissive setting, and only ever fires on this exact
+    // signature.
+    if (!agentRes.ok && isSipUriRejection(agentData.errors)) {
+      const targetConnection =
+        (await resolveCredentialConnectionId(p.env)) || p.env.connectionId
+      const outcome = await ensureSipUriCallingEnabled(targetConnection, p.env.apiKey)
+
+      if (outcome === 'enabled') {
+        console.log(
+          `[placeOutboundCall:${p.source}] enabled SIP URI calling on ${targetConnection}, retrying agent leg`
+        )
+        agentRes = await dialAgentLeg()
+        agentData = await agentRes.json()
+        console.log(`[placeOutboundCall:${p.source}] Agent leg retry response:`, agentData)
+      }
+    }
 
     if (!agentRes.ok || !agentData.data?.call_control_id) {
       console.error(
@@ -363,8 +395,19 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
         detail: [
           `Dialed agent SIP endpoint: ${agentSipUri}`,
           ...p.env.warnings,
-          agentData.errors?.[0]?.detail,
-          'Run GET /api/calls/diagnostics for a full Telnyx config check.',
+          // Telnyx's 10016 on a SIP URI never means what it says. Spell out
+          // the two things it actually indicates, in likelihood order, so
+          // the message is self-sufficient — the self-heal above already
+          // tried the first one, so reaching here means it could not be
+          // read/written (usually an API key without account-settings
+          // permission) or the cause is the second one.
+          isSipUriRejection(agentData.errors)
+            ? 'Telnyx did not accept this as a SIP endpoint. Either SIP URI calling is ' +
+              'disabled on the connection (auto-fix was attempted and did not succeed — ' +
+              'check TELNYX_API_KEY has account permissions), or the SIP username begins ' +
+              'with a digit, which Telnyx parses as a phone number.'
+            : agentData.errors?.[0]?.detail,
+          'GET /api/calls/diagnostics (as an admin) reports which.',
         ]
           .filter(Boolean)
           .join(' — '),

@@ -9,6 +9,10 @@ import {
   type TelnyxConfig,
 } from '@/lib/telnyxConfig'
 import { resolveCredentialConnectionId } from '@/lib/agentSipCredentials'
+import {
+  readSipUriCallingPreference,
+  setSipUriCallingPreference,
+} from '@/lib/telnyxSipUriCalling'
 
 // =============================================================================
 // TELNYX DIAGNOSTICS — verify the account config against Telnyx's own API
@@ -164,82 +168,9 @@ function telnyxErrorSummary(r: TelnyxGetResult): string {
   return formatErrors(r.body?.errors) || `HTTP ${r.status}`
 }
 
-// =============================================================================
-// SIP URI CALLING PREFERENCE
-// =============================================================================
-// NOTE THE HOST PATH: this setting lives at api.telnyx.com/security/... — NOT
-// under /v2 like every other endpoint in this codebase. That is Telnyx's
-// layout, not a typo. Getting it wrong returns a 404 that looks like "the
-// connection doesn't exist", which is a misleading answer to a different
-// question, so it's isolated in these two helpers rather than being open-
-// coded next to the /v2 calls.
-// =============================================================================
-
-type SipUriCallingPreference = 'disabled' | 'unrestricted' | 'internal'
-
-const SECURITY_BASE = 'https://api.telnyx.com/security'
-
-async function readSipUriCallingPreference(
-  connectionId: string,
-  apiKey: string
-): Promise<SipUriCallingPreference | null> {
-  try {
-    const res = await fetch(`${SECURITY_BASE}/connections/${connectionId}`, {
-      headers: { Authorization: `Bearer ${apiKey}` },
-      cache: 'no-store',
-    })
-    if (!res.ok) {
-      console.error(
-        `[calls/diagnostics] could not read sip_uri_calling_preference for ${connectionId}: HTTP ${res.status}`
-      )
-      return null
-    }
-    const body = (await res.json()) as {
-      data?: { sip_uri_calling_preference?: string }
-      sip_uri_calling_preference?: string
-    }
-    // Telnyx's non-v2 endpoints are inconsistent about whether the resource
-    // is wrapped in `data`, so accept either rather than guessing.
-    const pref = body?.data?.sip_uri_calling_preference ?? body?.sip_uri_calling_preference
-    if (pref === 'disabled' || pref === 'unrestricted' || pref === 'internal') return pref
-    return null
-  } catch (err) {
-    console.error(`[calls/diagnostics] sip_uri_calling_preference read threw for ${connectionId}:`, err)
-    return null
-  }
-}
-
-async function setSipUriCallingPreference(
-  connectionId: string,
-  apiKey: string,
-  preference: SipUriCallingPreference
-): Promise<boolean> {
-  try {
-    const res = await fetch(`${SECURITY_BASE}/connections/${connectionId}`, {
-      method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ sip_uri_calling_preference: preference }),
-    })
-    if (!res.ok) {
-      const text = await res.text()
-      console.error(
-        `[calls/diagnostics] failed to set sip_uri_calling_preference=${preference} on ${connectionId} ` +
-        `(${res.status}): ${text.slice(0, 300)}`
-      )
-      return false
-    }
-    console.log(
-      `[calls/diagnostics] set sip_uri_calling_preference=${preference} on connection ${connectionId}`
-    )
-    return true
-  } catch (err) {
-    console.error(`[calls/diagnostics] sip_uri_calling_preference write threw for ${connectionId}:`, err)
-    return false
-  }
-}
+// SIP URI calling read/write helpers live in lib/telnyxSipUriCalling.ts —
+// the dial path self-heals this setting inline, and diagnostics must report
+// on exactly the same logic it uses, so there is one implementation.
 
 export async function GET() {
   return runDiagnostics({ ringTest: false })
@@ -513,6 +444,65 @@ async function runDiagnostics(opts: { ringTest: boolean }) {
             ? undefined
             : 'Not an error, just nobody has opened the dialer yet since this shipped. Open the dialer once to provision your own.',
       })
+    }
+
+    // ── 5b-ii. EVERY PROVISIONED AGENT USERNAME MUST BE DIALABLE ────────────
+    // Telnyx requires the user part of a SIP URI to start with a NON-NUMERIC
+    // character — their docs give 123456@sip.telnyx.com as an explicitly
+    // invalid example. A digit-leading username is parsed as a phone number
+    // instead of a SIP endpoint, and the rejection is the same misleading
+    // 10016 "Phone number must be in +E164 format".
+    //
+    // Checked across ALL provisioned agents, not just whoever is running
+    // this: the account that hits the bug is usually not the admin account
+    // running diagnostics, and each agent dials its OWN username — so a
+    // check scoped to the caller would happily pass while the account
+    // actually failing has an unusable one.
+    const { data: allCredentials, error: credScanErr } = await supabaseAdmin
+      .from('agent_sip_credentials')
+      .select('clerk_id, sip_username')
+      .limit(500)
+
+    if (credScanErr) {
+      checks.push({
+        id: 'agent-username-format',
+        label: 'Provisioned agent SIP usernames are dialable',
+        status: 'warn',
+        detail: `Could not scan agent_sip_credentials: ${credScanErr.message}`,
+      })
+    } else {
+      const badUsernames = (allCredentials || []).filter((c) => /^\d/.test(c.sip_username || ''))
+      const sharedIsBad = /^\d/.test(config.sipUsername)
+
+      if (badUsernames.length > 0 || sharedIsBad) {
+        const parts: string[] = []
+        if (sharedIsBad) {
+          parts.push(`the shared TELNYX_SIP_USERNAME ("${config.sipUsername}")`)
+        }
+        if (badUsernames.length > 0) {
+          parts.push(
+            `${badUsernames.length} per-agent credential(s): ` +
+            badUsernames.map((c) => `${c.sip_username} (user ${c.clerk_id})`).join(', ')
+          )
+        }
+        checks.push({
+          id: 'agent-username-format',
+          label: 'Provisioned agent SIP usernames are dialable',
+          status: 'fail',
+          detail:
+            `SIP username(s) starting with a digit — ${parts.join('; ')}. Telnyx parses these as ` +
+            `phone numbers rather than SIP endpoints, so every dial for the affected agent fails ` +
+            `with 10016 "Phone number must be in +E164 format".`,
+          fix: 'SIP usernames must begin with a letter. Telnyx-generated telephony credentials always do — a digit-leading one was set by hand and needs replacing.',
+        })
+      } else {
+        checks.push({
+          id: 'agent-username-format',
+          label: 'Provisioned agent SIP usernames are dialable',
+          status: 'pass',
+          detail: `${(allCredentials || []).length} per-agent username(s) plus the shared one all begin with a non-numeric character.`,
+        })
+      }
     }
 
     // ── 5c. SIP URI CALLING (the setting that silently blocks everything) ───
