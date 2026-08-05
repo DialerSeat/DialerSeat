@@ -4,6 +4,7 @@ import { isCallableNow } from '@/lib/callingWindow'
 import { resolveTelnyxConfigOrLog, type TelnyxConfig } from '@/lib/telnyxConfig'
 import { agentSipUriForClerkId, resolveCredentialConnectionId } from '@/lib/agentSipCredentials'
 import { ensureSipUriCallingEnabled, isSipUriRejection } from '@/lib/telnyxSipUriCalling'
+import { syncNumberPoolOnce, isUnverifiedOriginationError } from '@/lib/telnyxNumberSync'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -468,17 +469,51 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
     dialBody.answering_machine_detection = 'greeting_end'
   }
 
-  const leadRes = await fetch(dialUrl, {
-    method: 'POST',
-    headers: {
-      Authorization: authHeader,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(dialBody),
-  })
+  const dialLeadLeg = () =>
+    fetch(dialUrl, {
+      method: 'POST',
+      headers: {
+        Authorization: authHeader,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(dialBody),
+    })
 
-  const leadData: TelnyxDialResponse = await leadRes.json()
+  let leadRes = await dialLeadLeg()
+  let leadData: TelnyxDialResponse = await leadRes.json()
   console.log(`[placeOutboundCall:${p.source}] Lead leg dial response:`, leadData)
+
+  // ── SELF-HEAL: CALLER ID ISN'T A TELNYX NUMBER (D51) ────────────────────
+  // The pool still contains numbers from the previous provider. Telnyx
+  // refuses to originate from a number it doesn't own, so every dial dies
+  // here — after the agent's leg has already been placed and is ringing.
+  //
+  // Telnyx knows exactly which numbers we own, so reconcile the pool against
+  // it, pick again, and retry. Once per process (memoized), and the sync
+  // itself never retires anything on a failed or empty response — see
+  // lib/telnyxNumberSync.ts.
+  if (!leadRes.ok && isUnverifiedOriginationError(leadData.errors)) {
+    console.warn(
+      `[placeOutboundCall:${p.source}] caller ID ${p.fromNumber} is not a Telnyx number — ` +
+      `reconciling the number pool with Telnyx and retrying`
+    )
+    const sync = await syncNumberPoolOnce(p.env.apiKey)
+
+    if (sync.ok && (sync.imported.length > 0 || sync.reactivated.length > 0 || sync.retired.length > 0)) {
+      const replacement = await pickNumberForLead(p.toFormatted, p.dialerMode)
+      if (replacement?.phone_number && replacement.phone_number !== p.fromNumber) {
+        console.log(
+          `[placeOutboundCall:${p.source}] retrying with Telnyx-owned caller ID ${replacement.phone_number}`
+        )
+        dialBody.from = replacement.phone_number
+        p.fromNumber = replacement.phone_number
+        p.poolNumberId = replacement.id
+        leadRes = await dialLeadLeg()
+        leadData = await leadRes.json()
+        console.log(`[placeOutboundCall:${p.source}] Lead leg retry response:`, leadData)
+      }
+    }
+  }
 
   if (!leadRes.ok || !leadData.data?.call_control_id) {
     console.error(
@@ -515,6 +550,23 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
         success: false,
         error: 'Destination country not whitelisted on Telnyx',
         detail: `Telnyx rejected this call because ${p.toFormatted}'s country isn't in your Outbound Voice Profile's whitelisted destinations. Fix: Telnyx Mission Control → Outbound Voice Profiles → your profile → add that country/region, then retry.`,
+        httpStatus: 500,
+      }
+    }
+
+    // D51 — the caller ID isn't a number this Telnyx account owns. The
+    // self-heal above already tried reconciling the pool, so reaching here
+    // means there was nothing to swap in: the account owns no usable number,
+    // or every owned number is at its daily cap.
+    if (isUnverifiedOriginationError(leadData.errors)) {
+      return {
+        success: false,
+        error: 'Caller ID is not a Telnyx number',
+        detail:
+          `Telnyx refused to place a call from ${p.fromNumber} because that number isn't owned by ` +
+          `this Telnyx account (their D51). The number pool was reconciled with Telnyx automatically ` +
+          `and no usable replacement was available. Buy at least one number on Telnyx — admin → ` +
+          `numbers, or Telnyx Mission Control → Numbers — and dial again.`,
         httpStatus: 500,
       }
     }
