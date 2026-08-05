@@ -55,6 +55,12 @@ const TELNYX_BASE = 'https://api.telnyx.com/v2'
 export interface AgentSipCredential {
   telnyxCredentialId: string
   sipUsername: string
+  /**
+   * The Telnyx SIP connection this credential hangs off. Carried so the dial
+   * path can verify the connection is actually reachable by SIP URI without
+   * re-resolving it — see agentSipUriForClerkId.
+   */
+  connectionId?: string | null
   /** True when this is the shared fallback rather than a per-agent identity. */
   isSharedFallback: boolean
 }
@@ -528,7 +534,7 @@ async function readStoredCredential(clerkId: string): Promise<AgentSipCredential
 
   const { data, error } = await supabaseAdmin
     .from('agent_sip_credentials')
-    .select('telnyx_credential_id, sip_username')
+    .select('telnyx_credential_id, sip_username, connection_id')
     .eq('clerk_id', clerkId)
     .maybeSingle()
 
@@ -553,6 +559,7 @@ async function readStoredCredential(clerkId: string): Promise<AgentSipCredential
   return {
     telnyxCredentialId: data.telnyx_credential_id,
     sipUsername: data.sip_username,
+    connectionId: data.connection_id,
     isSharedFallback: false,
   }
 }
@@ -605,6 +612,37 @@ export async function agentSipUriForClerkId(
   const credential = await getOrCreateAgentCredential(clerkId)
 
   if (credential && !credential.isSharedFallback) {
+    // Verify the connection will actually ACCEPT a SIP URI call before we
+    // dial one at it.
+    //
+    // This has to happen here, not only in resolveCredentialConnectionId:
+    // getOrCreateAgentCredential returns early the moment a stored credential
+    // exists, so for every already-provisioned agent — i.e. everyone, after
+    // their first session — the resolver is never reached and its checks
+    // never run. That is exactly why the fix appeared to do nothing and
+    // produced no logs at all.
+    //
+    // Cheap to call on every dial: ensureSipUriCallingEnabled memoizes per
+    // connection for the life of the process, so this is a Map lookup after
+    // the first call.
+    if (credential.connectionId) {
+      const bareId = String(credential.connectionId).replace(/^connection:/, '')
+      const outcome = await ensureSipUriCallingEnabled(bareId, config.apiKey)
+      if (outcome === 'enabled') {
+        console.log(
+          `[agentSipCredentials] connection ${bareId} had SIP URI calling DISABLED — that is why ` +
+          `agent legs were being hung up by Telnyx (~100ms, 'user_busy') without ever reaching ` +
+          `the browser. Set to "internal".`
+        )
+      } else if (outcome === 'failed') {
+        console.error(
+          `[agentSipCredentials] could NOT read/write SIP URI calling on connection ${bareId}. ` +
+          `If agent legs keep ending in 'user_busy' with no INVITE at the browser, set ` +
+          `"Receive SIP URI calls" to "Only from my Connections" on this connection in Telnyx ` +
+          `Mission Control — the API could not do it.`
+        )
+      }
+    }
     return `sip:${credential.sipUsername}@${config.sipDomain}`
   }
 
