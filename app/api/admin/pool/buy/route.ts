@@ -18,9 +18,26 @@ export async function POST(req: Request) {
 
   const config = await getPoolConfig()
 
-  if (config.buys_today >= config.daily_buy_cap) {
+  // ── COUNT TODAY'S BUYS, NOT WHATEVER WAS LEFT IN THE COLUMN ─────────────
+  // buys_today is only meaningful alongside buys_today_date. recordBuy()
+  // resets the counter when the date rolls over, but that reset happens on a
+  // SUCCESSFUL buy — so the raw column can sit stale for days (live example:
+  // buys_today = 3 dated four days earlier).
+  //
+  // Comparing the stale value against the cap is not just inaccurate, it can
+  // deadlock: if the counter was at the cap on some earlier day, every
+  // purchase is rejected with "Daily buy cap reached … Resets tomorrow", and
+  // it never does reset, because the only thing that resets it is a
+  // successful buy. Manual purchasing would be permanently blocked with a
+  // message actively telling the admin to wait.
+  //
+  // Same normalization lib/poolCycling.ts already applies.
+  const today = new Date().toISOString().split('T')[0]
+  const buysToday = config.buys_today_date === today ? config.buys_today : 0
+
+  if (buysToday >= config.daily_buy_cap) {
     return NextResponse.json({
-      error: `Daily buy cap reached (${config.buys_today}/${config.daily_buy_cap}). Resets tomorrow.`,
+      error: `Daily buy cap reached (${buysToday}/${config.daily_buy_cap}). Resets tomorrow.`,
     }, { status: 429 })
   }
 

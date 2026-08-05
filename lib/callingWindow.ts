@@ -131,10 +131,19 @@ export function isCallableNow(lead: LeadInput): CallabilityResult {
 
   const leadLocalTime = `${partMap.hour}:${partMap.minute} ${leadWeekday} ${leadDateStr} (${tz})`
 
-  // Holiday blocking is intentionally absent (removed by request). The hour
-  // window and Sunday rules below still apply.
+  // ── HOURS ONLY ───────────────────────────────────────────────────────────
+  // No holiday calendar and no day-of-week rules: the single check is whether
+  // the lead's LOCAL time is inside the window (9am-9pm, see
+  // lib/timezones.ts). Sundays and federal holidays are dialable as far as
+  // this system is concerned — deciding whether that is appropriate is left
+  // to the operator.
+  //
+  // The rule object still carries optional Sunday fields so a stricter policy
+  // can be reinstated by populating STATE_RULES, without changing this file.
+  const startHour = isSunday ? (rule.sundayStartHour ?? rule.startHour) : rule.startHour
+  const endHour = isSunday ? (rule.sundayEndHour ?? rule.endHour) : rule.endHour
 
-  if (isSunday && rule.noSundayCalls) {
+  if (rule.noSundayCalls && isSunday) {
     return {
       allowed: false,
       reason: `${state} prohibits Sunday telemarketing calls`,
@@ -144,9 +153,6 @@ export function isCallableNow(lead: LeadInput): CallabilityResult {
       leadLocalTime,
     }
   }
-
-  const startHour = isSunday ? (rule.sundayStartHour ?? rule.startHour) : rule.startHour
-  const endHour = isSunday ? (rule.sundayEndHour ?? rule.endHour) : rule.endHour
 
   if (leadHour < startHour) {
     return {
