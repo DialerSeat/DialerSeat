@@ -25,7 +25,25 @@ export async function GET(req: NextRequest) {
     .eq('user_id', userId)
     .not('recording_url', 'is', null)
 
-    .or('amd_result.is.null,amd_result.eq.human')
+    // ── WHY THIS IS NOT JUST "amd_result = human" ──────────────────────────
+    // This used to be `amd_result.is.null,amd_result.eq.human`, which hid
+    // every call AMD tagged 'machine' or 'not_sure'. That was correct under
+    // the old behavior: a machine detection hung the call up instantly with
+    // no agent attached, so the recording was a few seconds of voicemail
+    // greeting and pure noise in this tab.
+    //
+    // That is no longer true. AMD no longer hangs up a call an agent is
+    // already bridged into (see the agentAlreadyBridged branch in
+    // app/api/calls/events/route.ts) because 'greeting_end' misfires on real
+    // people who answer and pause. So a 'machine' call can now be a genuine
+    // conversation the agent actually had — and hiding its recording loses
+    // the one artifact of that call.
+    //
+    // 'not_sure' is included outright: Telnyx's own guidance is to treat it
+    // as human. And any call that was ANSWERED is included regardless of what
+    // AMD guessed, because a recording of an answered call is real audio by
+    // definition — AMD's opinion doesn't change that.
+    .or('amd_result.is.null,amd_result.eq.human,amd_result.eq.not_sure,answered_at.not.is.null')
 
   if (campaignId !== 'all') {
     query = query.eq('campaign_id', campaignId)

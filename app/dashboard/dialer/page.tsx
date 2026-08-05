@@ -2249,6 +2249,13 @@ function DialerPageInner() {
     setSessionStats(s => ({ ...s, calls: s.calls + 1 }))
     playInitiateBlip()
     armDialing() // user-initiated dial — allow Telnyx to bridge to us
+    // Clear the previous call's connect timestamp. It is only ever SET (when
+    // status hits 'connected') and never cleared, so without this it stays
+    // populated forever after the first answered call — and anything asking
+    // "was the agent actually on this call?" would answer yes for every
+    // subsequent dial, including ones that never connected. See
+    // agentWasOnTheCall in startHangupPolling.
+    callStartRef.current = 0
     // Open the agent-leg window BEFORE the request that causes the agent leg
     // to be dialed. The server places the agent leg first, so its INVITE can
     // land while the POST below is still in flight — see the ref's comment
@@ -2413,7 +2420,21 @@ function DialerPageInner() {
           // / the disposition sheet. An auto-chained next dial re-arms itself.
           disarmDialing()
 
-          if (isNotHuman(d.amd_result)) {
+          // A call the agent was actually ON always gets a disposition sheet,
+          // whatever AMD guessed.
+          //
+          // This branch used to key purely on amd_result, which was right when
+          // a 'machine' verdict meant the call had been hung up instantly with
+          // no agent attached — there was nothing to disposition. Now that AMD
+          // no longer tears down a bridged call, a 'machine' verdict can sit on
+          // a real conversation, and skipping the sheet silently threw away the
+          // agent's outcome and auto-dialed the next lead out from under them.
+          //
+          // callStartRef is set when the call reached 'connected', so it is the
+          // honest test for "was a human on this call", independent of AMD.
+          const agentWasOnTheCall = !!callStartRef.current
+
+          if (isNotHuman(d.amd_result) && !agentWasOnTheCall) {
             setAmdActivity(prev =>
               [`VOICEMAIL FILTERED LATE — ${d.amd_result}`, ...prev].slice(0, 5)
             )
@@ -2795,6 +2816,7 @@ function DialerPageInner() {
     // agent leg exactly the same way, so it needs the same protection against
     // the browser rejecting its own INVITE.
     openAgentLegWindow()
+    callStartRef.current = 0 // see the queue dial path for why this must reset
     try {
       const res = await fetch('/api/calls/outbound', {
         method: 'POST',
