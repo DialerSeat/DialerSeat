@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { apiError } from '@/lib/apiError'
 import { logCallEvent } from '@/lib/callEvents'
+import { lifetimeAttemptCap } from '@/lib/dialerConstants'
 
 export async function POST(req: Request) {
   try {
@@ -22,7 +23,7 @@ export async function POST(req: Request) {
 
     const { data: lead, error: leadErr } = await supabaseAdmin
       .from('leads')
-      .select('id, user_id, dial_attempts')
+      .select('id, user_id, dial_attempts, campaign_id')
       .eq('id', lead_id)
       .single()
 
@@ -36,14 +37,30 @@ export async function POST(req: Request) {
     const currentAttempts = lead.dial_attempts || 0
     const newAttempts = currentAttempts + 1
 
+    // LIFETIME cap, not the per-pass 1x/2x/3x repeat count — see
+    // lib/dialerConstants.ts. This was hardcoded to 3, which meant a campaign
+    // set to 3x spent a lead's entire allowance on one visit and retired it
+    // permanently after a single pass. Now 1x -> 3, 2x -> 6, 3x -> 9, so the
+    // repeat setting controls pacing within a pass and the lead still gets
+    // three passes before being set aside.
+    let attemptCap = lifetimeAttemptCap(1)
+    if (lead.campaign_id) {
+      const { data: campaign } = await supabaseAdmin
+        .from('campaigns')
+        .select('dial_repeat_count')
+        .eq('id', lead.campaign_id)
+        .maybeSingle()
+      attemptCap = lifetimeAttemptCap(campaign?.dial_repeat_count)
+    }
+
     let newStatus = 'called'
     if (disposition === 'DO NOT CALL') newStatus = 'dnc'
     else if (disposition === 'CLOSED') newStatus = 'closed'
     else if (disposition === 'APPOINTMENT') newStatus = 'appointment'
     else if (disposition === 'NOT INTERESTED') newStatus = 'called'
-    else if (disposition === 'SKIPPED') newStatus = newAttempts >= 3 ? 'maxed' : 'uncalled'
+    else if (disposition === 'SKIPPED') newStatus = newAttempts >= attemptCap ? 'maxed' : 'uncalled'
     else if (disposition === 'NO_ANSWER') {
-      newStatus = newAttempts >= 3 ? 'maxed' : 'no_answer'
+      newStatus = newAttempts >= attemptCap ? 'maxed' : 'no_answer'
     }
 
     const updates: Record<string, any> = {

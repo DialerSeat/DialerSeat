@@ -1,22 +1,31 @@
 import { NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/requireAdmin'
 import { getServiceClient } from '@/lib/supabase'
-import { getAreaCodeInfo, extractAreaCode } from '@/lib/areaCode'
 import { apiError } from '@/lib/apiError'
+import { syncNumberPoolWithTelnyx } from '@/lib/telnyxNumberSync'
 
 const supabase = getServiceClient('admin/pool/sync')
 
 // =============================================================================
 // POOL SYNC (Telnyx) — bulk reconcile Telnyx's owned numbers against our pool
 // =============================================================================
-// Admin tool: pulls every number Telnyx says we own and reconciles it
-// against phone_numbers — importing anything missing, and flagging
-// "orphans" (rows in our pool that Telnyx no longer shows as owned,
-// e.g. released outside this app). Same job as the SignalWire version,
-// rewritten against GET /v2/phone_numbers with page[size]/page[number]
-// pagination (confirmed against Telnyx's own number-search/list docs
-// during the build) instead of SignalWire's IncomingPhoneNumbers.json +
-// next_page_uri cursor style.
+// Admin button for the same reconciliation the dial path runs automatically
+// when it hits Telnyx's D51 ("unverified origination number") — see
+// lib/telnyxNumberSync.ts.
+//
+// THIS ROUTE USED TO HAVE ITS OWN COPY OF THAT LOGIC, and the copy was
+// subtly weaker in the way that actually mattered: it *detected* orphans
+// (numbers in our pool that Telnyx doesn't own) and reported them in the
+// response, but left every one of them status='active'. So the admin could
+// run a sync, be told "10 orphaned", and the dialer would go right on
+// picking those numbers as caller ID and failing every call with D51. The
+// tool named the problem and left it in place.
+//
+// Delegating to the shared module means the button and the automatic
+// self-heal cannot diverge again, and orphans are actually retired rather
+// than merely counted. The response keeps its original shape so the admin
+// desktop's Numbers app keeps working, with the retirement surfaced
+// alongside.
 // =============================================================================
 
 export async function POST() {
@@ -24,129 +33,41 @@ export async function POST() {
     const gate = await requireAdmin()
     if (!gate.ok) return NextResponse.json({ error: gate.message }, { status: gate.status })
 
-    const apiKey = process.env.TELNYX_API_KEY
-    if (!apiKey) {
-      return NextResponse.json({ error: 'TELNYX_API_KEY not set' }, { status: 500 })
+    const result = await syncNumberPoolWithTelnyx()
+
+    if (!result.ok) {
+      return NextResponse.json({ error: result.error || 'Sync failed' }, { status: 500 })
     }
 
-    const telnyxNumbers: Array<{ id: string; phone_number: string; created_at?: string }> = []
-    let page = 1
-    const pageSize = 250
-    const maxPages = 40 // 40 * 250 = 10,000 numbers, generous ceiling
-
-    while (page <= maxPages) {
-      const params = new URLSearchParams({ 'page[size]': String(pageSize), 'page[number]': String(page) })
-      const res = await fetch(`https://api.telnyx.com/v2/phone_numbers?${params}`, {
-        headers: { Authorization: `Bearer ${apiKey}` },
-      })
-      if (!res.ok) {
-        const text = await res.text()
-        return NextResponse.json({
-          error: `Telnyx fetch failed (${res.status}): ${text}`,
-        }, { status: 500 })
-      }
-      const data = await res.json()
-      const batch: Array<{ id: string; phone_number: string; created_at?: string }> = data.data || []
-      telnyxNumbers.push(...batch)
-
-      if (batch.length < pageSize) break // last page
-      page++
-    }
-
-    const { data: existingPool } = await supabase
+    const { count: poolTotal } = await supabase
       .from('phone_numbers')
-      .select('phone_number, signalwire_sid, status')
-
-    // Column is still named signalwire_sid in this shared schema — holds
-    // Telnyx's own number id here, same reasoning as
-    // lib/telnyxProvision.ts's other writes to this column.
-    const existingIds = new Set((existingPool ?? []).map((n) => n.signalwire_sid))
-    const existingPhones = new Set((existingPool ?? []).map((n) => n.phone_number))
-
-    const results: Array<{
-      phone_number: string
-      id: string
-      action: 'imported' | 'already_in_pool' | 'failed'
-      area_code?: string
-      state?: string | null
-      region?: string | null
-      error?: string
-    }> = []
-
-    for (const tn of telnyxNumbers) {
-      const phoneNumber = tn.phone_number
-      const id = tn.id
-
-      if (existingIds.has(id) || existingPhones.has(phoneNumber)) {
-        results.push({
-          phone_number: phoneNumber,
-          id,
-          action: 'already_in_pool',
-        })
-        continue
-      }
-
-      const areaCode = extractAreaCode(phoneNumber)
-      const info = areaCode ? getAreaCodeInfo(areaCode) : null
-
-      const { error: insertErr } = await supabase
-        .from('phone_numbers')
-        .insert({
-          phone_number: phoneNumber,
-          area_code: areaCode || '???',
-          state: info?.state ?? null,
-          region: info?.region ?? null,
-          signalwire_sid: id,
-          status: 'active',
-          daily_call_count: 0,
-          daily_cap: 50,
-          lifetime_call_count: 0,
-          monthly_cost_cents: 100,
-          acquired_at: tn.created_at
-            ? new Date(tn.created_at).toISOString()
-            : new Date().toISOString(),
-        })
-
-      if (insertErr) {
-        results.push({
-          phone_number: phoneNumber,
-          id,
-          action: 'failed',
-          error: insertErr.message,
-        })
-      } else {
-        results.push({
-          phone_number: phoneNumber,
-          id,
-          action: 'imported',
-          area_code: areaCode || undefined,
-          state: info?.state,
-          region: info?.region,
-        })
-      }
-    }
-
-    const telnyxIds = new Set(telnyxNumbers.map((n) => n.id))
-    const orphans = (existingPool ?? [])
-      .filter((p) => p.status !== 'released' && !telnyxIds.has(p.signalwire_sid))
-      .map((p) => p.phone_number)
-
-    const summary = {
-      telnyx_total: telnyxNumbers.length,
-      pool_total: existingPool?.length ?? 0,
-      imported: results.filter((r) => r.action === 'imported').length,
-      already_in_pool: results.filter((r) => r.action === 'already_in_pool').length,
-      failed: results.filter((r) => r.action === 'failed').length,
-      orphans: orphans.length,
-      orphan_numbers: orphans,
-    }
+      .select('id', { count: 'exact', head: true })
 
     return NextResponse.json({
       success: true,
-      summary,
-      results,
+      summary: {
+        telnyx_total: result.ownedCount,
+        pool_total: poolTotal ?? 0,
+        imported: result.imported.length,
+        // Everything Telnyx owns that we didn't have to import was already
+        // tracked (possibly after being reactivated, counted separately).
+        already_in_pool: Math.max(0, result.ownedCount - result.imported.length),
+        reactivated: result.reactivated.length,
+        // Retained under the original key so the Numbers app keeps reading
+        // it, but these are no longer merely *found* — they are retired.
+        orphans: result.retired.length,
+        orphan_numbers: result.retired,
+        retired: result.retired.length,
+        failed: 0,
+      },
+      // Telnyx answered but owns nothing — the sync deliberately changes
+      // nothing in that case rather than retiring the entire pool and
+      // leaving zero caller IDs. Pass the explanation through.
+      note: result.error || undefined,
+      imported_numbers: result.imported,
+      reactivated_numbers: result.reactivated,
     })
-  } catch (err: any) {
+  } catch (err) {
     console.error('[pool/sync] error:', err)
     return apiError(err, { route: 'admin/pool/sync' })
   }

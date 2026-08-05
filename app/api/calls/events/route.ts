@@ -456,6 +456,49 @@ async function handleRecordingSaved(
     return
   }
 
+  // ── ENFORCE THE CAMPAIGN'S RECORDING TOGGLE ──────────────────────────────
+  // lib/placeOutboundCall.ts only sends the `record` parameter when the
+  // campaign has recording on, so in the normal case a disabled campaign
+  // never produces a recording at all and this webhook never fires for it.
+  //
+  // But the per-call parameter is not the only thing that can start a
+  // recording: Telnyx can also be configured to record ALL outbound calls at
+  // the account level (Outbound Voice Profile / number settings). That
+  // setting overrides nothing and asks no permission — it simply records,
+  // and the campaign toggle silently becomes a lie.
+  //
+  // Receiving this event for a campaign with recording turned off is
+  // therefore proof that something outside this app started it. Refuse to
+  // store it, and delete it from Telnyx so it doesn't sit there costing
+  // money and holding audio the user explicitly said not to keep. The
+  // account-level setting still needs turning off at the source — this
+  // cannot stop the recording from being MADE — so say so loudly.
+  const { data: ownerRow } = await supabaseAdmin
+    .from('calls')
+    .select('id, campaign_id')
+    .eq('signalwire_call_id', callControlId)
+    .maybeSingle()
+
+  if (ownerRow?.campaign_id) {
+    const { data: campaign } = await supabaseAdmin
+      .from('campaigns')
+      .select('recording_enabled')
+      .eq('id', ownerRow.campaign_id)
+      .maybeSingle()
+
+    if (campaign && campaign.recording_enabled === false) {
+      console.error(
+        `[calls/events] REFUSING a recording for campaign ${ownerRow.campaign_id}, which has ` +
+        `recording DISABLED. This app never asked for it, so it was started by Telnyx account-level ` +
+        `recording (Mission Control -> Outbound Voice Profiles / number settings -> call recording). ` +
+        `Turn that off — until then every call is being recorded and billed regardless of the ` +
+        `campaign toggle. Deleting this recording and not storing it.`
+      )
+      await deleteTelnyxRecordingForCall(callControlId)
+      return
+    }
+  }
+
   const { data, error } = await supabaseAdmin
     .from('calls')
     .update({
@@ -471,6 +514,52 @@ async function handleRecordingSaved(
   }
   if (!data || data.length === 0) {
     console.warn(`[calls/events] recording.saved did not match any calls row: ${callControlId}`)
+  }
+}
+
+/**
+ * Delete every recording Telnyx holds for a call, by call_leg_id.
+ *
+ * Used only to enforce a campaign's recording-off setting against a
+ * recording this app never requested. Best-effort: a failure here leaves
+ * audio on Telnyx's side that the user asked not to keep, so it is logged
+ * loudly rather than swallowed, but it must not break webhook handling.
+ */
+async function deleteTelnyxRecordingForCall(callControlId: string): Promise<void> {
+  const apiKey = process.env.TELNYX_API_KEY
+  if (!apiKey) return
+
+  try {
+    // Telnyx's recordings list filters by call_leg_id / call_session_id, not
+    // call_control_id, so find the recording records first rather than
+    // guessing an id.
+    const res = await fetch(
+      `https://api.telnyx.com/v2/recordings?filter[call_control_id]=${encodeURIComponent(callControlId)}`,
+      { headers: { Authorization: `Bearer ${apiKey}` }, cache: 'no-store' }
+    )
+    if (!res.ok) {
+      console.error(
+        `[calls/events] could not list recordings to delete for ${callControlId}: HTTP ${res.status}`
+      )
+      return
+    }
+    const body = (await res.json()) as { data?: Array<{ id?: string }> }
+    const recordings = Array.isArray(body?.data) ? body.data : []
+
+    for (const rec of recordings) {
+      if (!rec.id) continue
+      const del = await fetch(`https://api.telnyx.com/v2/recordings/${rec.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${apiKey}` },
+      })
+      if (!del.ok) {
+        console.error(`[calls/events] failed to delete unwanted recording ${rec.id}: HTTP ${del.status}`)
+      } else {
+        console.log(`[calls/events] deleted unwanted recording ${rec.id} for ${callControlId}`)
+      }
+    }
+  } catch (err) {
+    console.error(`[calls/events] deleting unwanted recording for ${callControlId} threw:`, err)
   }
 }
 

@@ -111,7 +111,22 @@ function initials(u: { first_name: string | null; last_name: string | null; emai
     : n.slice(0, 2).toUpperCase()
 }
 
-type View = 'users' | 'campaigns' | 'leads' | 'recordings'
+// ── NAVIGATION MODEL ────────────────────────────────────────────────────────
+// There used to be four sibling views — 'users' | 'campaigns' | 'leads' |
+// 'recordings' — which meant a user's campaigns and a user's recordings were
+// mutually exclusive SCREENS. Opening a person showed campaigns and nothing
+// else; seeing their recordings meant going back to the user list and
+// clicking a separate per-row button, which then replaced the whole screen
+// again. Two halves of the same person's data, never visible from the same
+// place, each reached by a different gesture.
+//
+// Now there is one 'user' view holding both as tabs, so opening a person is a
+// single click and everything about them is one tab away. 'campaigns' and
+// 'recordings' are no longer views at all — they're panels inside 'user'.
+type View = 'users' | 'user' | 'leads'
+
+/** Which panel of the user view is showing. */
+type UserTab = 'campaigns' | 'recordings'
 
 interface Recording {
   id: string
@@ -133,6 +148,11 @@ export default function ExplorerApp() {
   const [usersLoading, setUsersLoading] = useState(true)
   const [usersError, setUsersError] = useState<string | null>(null)
   const [userSearch, setUserSearch] = useState('')
+
+  const [userTab, setUserTab] = useState<UserTab>('campaigns')
+  // Recordings load lazily on first visit to the tab, then stay cached for
+  // this user — switching tabs back and forth shouldn't refetch.
+  const [recordingsLoadedFor, setRecordingsLoadedFor] = useState<string | null>(null)
 
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null)
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
@@ -178,7 +198,13 @@ export default function ExplorerApp() {
   async function openUser(u: AdminUser) {
     setSelectedUser(u)
     setSelectedCampaign(null)
-    setView('campaigns')
+    setView('user')
+    setUserTab('campaigns')
+    // Drop the previous user's recordings so their tab doesn't briefly show
+    // someone else's audio while the new fetch is in flight.
+    setRecordings([])
+    setRecordingsCursor(null)
+    setRecordingsLoadedFor(null)
     setCampaignsLoading(true)
     setCampaignsError(null)
     try {
@@ -193,9 +219,11 @@ export default function ExplorerApp() {
     }
   }
 
-  async function openRecordings(u: AdminUser, cursor = 0) {
-    setSelectedUser(u)
-    setView('recordings')
+  /**
+   * Load (or page) a user's recordings. No longer navigates anywhere — it
+   * fills the recordings panel of whichever user is already open.
+   */
+  async function loadRecordings(u: AdminUser, cursor = 0) {
     setRecordingsLoading(true)
     setRecordingsError(null)
     try {
@@ -204,10 +232,19 @@ export default function ExplorerApp() {
       if (!res.ok || !data.success) throw new Error(data.error || 'Failed to load recordings')
       setRecordings(prev => cursor === 0 ? (data.recordings || []) : [...prev, ...(data.recordings || [])])
       setRecordingsCursor(data.nextCursor)
+      setRecordingsLoadedFor(u.clerk_id)
     } catch (e: any) {
       setRecordingsError(e.message || 'Failed to load recordings')
     } finally {
       setRecordingsLoading(false)
+    }
+  }
+
+  /** Switch panels, fetching recordings the first time they're asked for. */
+  function selectUserTab(tab: UserTab) {
+    setUserTab(tab)
+    if (tab === 'recordings' && selectedUser && recordingsLoadedFor !== selectedUser.clerk_id) {
+      void loadRecordings(selectedUser, 0)
     }
   }
 
@@ -237,10 +274,12 @@ export default function ExplorerApp() {
     setLeads([])
     setRecordings([])
     setRecordingsCursor(null)
+    setRecordingsLoadedFor(null)
   }
 
-  function backToCampaigns() {
-    setView('campaigns')
+  /** Back out of a campaign's leads to the user, landing on the tab they came from. */
+  function backToUser() {
+    setView('user')
     setSelectedCampaign(null)
     setLeads([])
   }
@@ -324,20 +363,9 @@ export default function ExplorerApp() {
         {selectedUser && (
           <>
             <span style={{ color: T.muted }}>›</span>
-            <button
-              onClick={() => (view === 'recordings' ? backToUsers() : backToCampaigns())}
-              style={crumbBtnStyle(view === 'campaigns' || view === 'recordings')}
-            >
+            <button onClick={backToUser} style={crumbBtnStyle(view === 'user')}>
               {nameFor(selectedUser).toUpperCase()}
             </button>
-          </>
-        )}
-        {view === 'recordings' && (
-          <>
-            <span style={{ color: T.muted }}>›</span>
-            <span style={{ ...crumbBtnStyle(true), cursor: 'default' }}>
-              RECORDINGS
-            </span>
           </>
         )}
         {selectedCampaign && (
@@ -374,6 +402,65 @@ export default function ExplorerApp() {
         )}
       </div>
 
+      {/* ── USER TABS ────────────────────────────────────────────────────── */}
+      {/* Campaigns and recordings side by side, so a person's data is one
+          click apart instead of two navigations and a screen swap. Counts sit
+          on the tabs so "does this user have recordings at all" is answerable
+          without opening the panel. */}
+      {view === 'user' && selectedUser && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 4,
+          padding: '0 16px', background: T.surface,
+          borderBottom: `1px solid ${T.border}`, flexShrink: 0,
+        }}>
+          {([
+            { key: 'campaigns' as const, label: 'CAMPAIGNS', count: campaignsLoading ? null : campaigns.length },
+            {
+              key: 'recordings' as const,
+              label: 'RECORDINGS',
+              count: recordingsLoadedFor === selectedUser.clerk_id ? recordings.length : null,
+            },
+          ]).map(tab => {
+            const active = userTab === tab.key
+            return (
+              <button
+                key={tab.key}
+                onClick={() => selectUserTab(tab.key)}
+                style={{
+                  position: 'relative',
+                  padding: '11px 16px 10px',
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  fontFamily: FUTURA,
+                  fontSize: 11,
+                  fontWeight: 'bold',
+                  letterSpacing: 1.2,
+                  color: active ? T.text : T.muted,
+                  borderBottom: `2px solid ${active ? T.accent : 'transparent'}`,
+                  transition: 'color 0.15s ease, border-color 0.15s ease',
+                }}
+              >
+                {tab.label}
+                {tab.count !== null && (
+                  <span style={{
+                    marginLeft: 7,
+                    padding: '1px 6px',
+                    borderRadius: 9,
+                    fontSize: 9.5,
+                    background: active ? T.accent : 'transparent',
+                    color: active ? '#fff' : T.muted,
+                    border: `1px solid ${active ? T.accent : T.border}`,
+                  }}>
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      )}
+
       {/* ── BODY ─────────────────────────────────────────────────────────── */}
       <div style={{ flex: 1, overflow: 'auto', padding: 16 }}>
 
@@ -388,7 +475,7 @@ export default function ExplorerApp() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
               <thead>
                 <tr>
-                  {['', 'NAME', 'EMAIL', 'LEADS', 'TEAM', 'SUBSCRIPTION', 'JOINED', '', ''].map((h, i) => (
+                  {['', 'NAME', 'EMAIL', 'LEADS', 'TEAM', 'SUBSCRIPTION', 'JOINED', ''].map((h, i) => (
                     <th key={i} style={thStyle}>{h}</th>
                   ))}
                 </tr>
@@ -418,14 +505,12 @@ export default function ExplorerApp() {
                       </span>
                     </td>
                     <td style={{ ...tdStyle, color: T.muted }}>{fmtDate(u.created_at)}</td>
-                    <td style={{ ...tdStyle, color: T.muted }}>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); openRecordings(u) }}
-                        style={{ ...crumbBtnStyle(false), fontSize: 10, padding: '4px 8px' }}
-                      >
-                        ▶ RECORDINGS
-                      </button>
-                    </td>
+                    {/* The separate "▶ RECORDINGS" button that used to live
+                        here is gone. It was a second, competing way into the
+                        same person — and the only way to reach their
+                        recordings at all. Recordings are now a tab inside the
+                        user view, so the row has exactly one meaning: open
+                        this user. */}
                     <td style={{ ...tdStyle, color: T.muted }}>OPEN ›</td>
                   </tr>
                 ))}
@@ -434,7 +519,7 @@ export default function ExplorerApp() {
           )
         )}
 
-        {view === 'campaigns' && (
+        {view === 'user' && userTab === 'campaigns' && (
           campaignsLoading ? (
             <div style={emptyStyle}>LOADING CAMPAIGNS…</div>
           ) : campaignsError ? (
@@ -553,7 +638,7 @@ export default function ExplorerApp() {
           )
         )}
 
-        {view === 'recordings' && (
+        {view === 'user' && userTab === 'recordings' && (
           recordingsLoading && recordings.length === 0 ? (
             <div style={emptyStyle}>LOADING RECORDINGS…</div>
           ) : recordingsError ? (
@@ -622,7 +707,7 @@ export default function ExplorerApp() {
               {recordingsCursor !== null && (
                 <div style={{ padding: 16, textAlign: 'center' }}>
                   <button
-                    onClick={() => selectedUser && openRecordings(selectedUser, recordingsCursor)}
+                    onClick={() => selectedUser && loadRecordings(selectedUser, recordingsCursor)}
                     disabled={recordingsLoading}
                     style={crumbBtnStyle(false)}
                   >

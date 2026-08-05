@@ -493,11 +493,18 @@ export default function NumbersApp() {
       const res = await fetch('/api/admin/pool/sync', { method: 'POST' })
       const d = await res.json()
       if (d.success) {
-        const { imported, already_in_pool, orphans } = d.summary
-        const orphanNote = orphans > 0
-          ? `, ${orphans} orphaned (in pool but not in SignalWire)`
-          : ''
-        alert(`Sync complete: ${imported} imported, ${already_in_pool} already tracked${orphanNote}`)
+        const { imported, already_in_pool, orphans, reactivated } = d.summary
+        const parts = [
+          `${imported} imported`,
+          `${already_in_pool} already tracked`,
+        ]
+        if (reactivated > 0) parts.push(`${reactivated} reactivated`)
+        // "orphans" are numbers in our pool that Telnyx does not own — they
+        // are now RETIRED by the sync, not just counted. Leaving them active
+        // is what made every dial fail with Telnyx's D51 "unverified
+        // origination number", so say plainly that they were dealt with.
+        if (orphans > 0) parts.push(`${orphans} retired (not owned on Telnyx)`)
+        alert(`Sync complete: ${parts.join(', ')}${d.note ? `\n\n${d.note}` : ''}`)
         await load(false)
       } else {
         alert(`Sync failed: ${d.error}`)
@@ -1058,7 +1065,7 @@ export default function NumbersApp() {
               <br />or <strong>BUY NOW</strong> to add specific area codes or batches.
             </div>
             <div style={{ fontSize: 10, color: T.muted, fontFamily: 'monospace', letterSpacing: 1 }}>
-              Each number costs ~$1/mo from SignalWire.
+              Each number costs ~$1/mo from Telnyx.
             </div>
           </div>
         )}
@@ -1826,7 +1833,7 @@ export default function NumbersApp() {
               <br />
               215 Philadelphia · 210 San Antonio · 619 San Diego · 214 Dallas · 408 San Jose
               <br /><br />
-              Cost: ~<strong>$10 one-time SignalWire charge</strong> + ~$10/mo recurring.
+              Cost: ~<strong>$10 one-time Telnyx charge</strong> + ~$10/mo recurring.
               <br /><br />
               Idempotent — running twice won&apos;t double-buy.
             </div>

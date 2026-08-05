@@ -66,7 +66,19 @@ export async function GET(req: Request) {
       for (const l of links || []) {
         const sc = scriptById.get(l.script_id)
         if (!sc) continue
-        ;(byCampaign[l.campaign_id] ||= []).push({ id: sc.id, name: sc.name, body: sc.body })
+        // sort_order travels WITH each script rather than being implied by
+        // array position. The dialer previously trusted the order this array
+        // happened to arrive in, which made "campaign order drives dialer
+        // order" an accident of two queries lining up rather than a
+        // guarantee — any future change to how these are fetched or merged
+        // would silently scramble the agent's script tabs with nothing to
+        // catch it. Carrying the field lets the dialer sort explicitly.
+        ;(byCampaign[l.campaign_id] ||= []).push({
+          id: sc.id,
+          name: sc.name,
+          body: sc.body,
+          sort_order: l.sort_order ?? 0,
+        })
       }
       for (const c of campaigns) {
         ;(c as any).scripts = byCampaign[c.id] || []

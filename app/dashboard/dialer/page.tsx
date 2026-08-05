@@ -480,6 +480,35 @@ function DialerPageInner() {
   //      idle and re-register when armed. While unregistered, SignalWire has no
   //      route to this browser at all.
   const callIntentRef = useRef<boolean>(false)
+  // ── AGENT-LEG EXPECTATION WINDOW ──────────────────────────────────────────
+  // Timestamp (ms) until which this browser is expecting its own agent leg to
+  // ring, opened immediately before POSTing to /api/calls/outbound.
+  //
+  // WHY THIS EXISTS — this is the bug that produced silent calls:
+  // call_events showed EVERY agent leg dying ~300ms after creation with
+  // hangup_cause 'user_busy', which is SIP 486 Busy Here — the exact code
+  // onInvite's ghost-dialing guard sends when it considers a call unarmed. So
+  // the browser was hanging up on itself on every single dial: the lead
+  // answered, AMD ran on the lead leg, and there was no agent in the call at
+  // all. No audio in either direction, and nothing in the UI to suggest why.
+  //
+  // callIntentRef alone was too fragile to be the sole gate. It is a single
+  // boolean shared by every path that ends a call (hangup, AMD-machine skip,
+  // redial teardown, disposition), each of which disarms — so any ordering or
+  // remount that leaves it false when the INVITE lands rejects a call the
+  // user very much did ask for, permanently and silently.
+  //
+  // This window is a second, positive signal with a bounded lifetime: it is
+  // only ever opened by an outbound dial this browser itself initiated, it
+  // expires on its own, and it cannot be left dangling by a teardown path
+  // that forgot to re-arm. Ghost protection is preserved — an INVITE arriving
+  // outside both the window and an armed intent is still rejected.
+  const expectingAgentLegRef = useRef<boolean>(false)
+  const expectAgentLegTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // How long after initiating a dial an agent-leg INVITE is still expected.
+  // Comfortably longer than the agent leg's own 30s Telnyx ring timeout, so a
+  // slow round trip can never fall outside it.
+  const AGENT_LEG_EXPECT_MS = 45_000
   const registererRef = useRef<any>(null)
 
   const sessionHeartbeatRef = useRef<NodeJS.Timeout | null>(null)
@@ -927,15 +956,38 @@ function DialerPageInner() {
             // fanout, late AMD redirect, leftover agent leg, another tab) is
             // hard-rejected so the user can never be bridged to audio they didn't
             // ask for. This is the strict, multi-user-safe lock.
-            if (!callIntentRef.current) {
+            // Accept on EITHER signal: an explicitly armed intent, or an
+            // outbound dial this browser started within the expectation
+            // window. Requiring only the former is what made every call
+            // silent — see expectingAgentLegRef and openAgentLegWindow. An INVITE
+            // matching neither is still a genuine ghost and still rejected.
+            const armed = callIntentRef.current
+            const expectingAgentLeg = expectingAgentLegRef.current
+
+            if (!armed && !expectingAgentLeg) {
               try {
                 await invitation.reject({ statusCode: 486 }) // Busy Here
-                console.warn('[sip] rejected unarmed INVITE (ghost-dialing guard)')
+                // Loud, and visible ON SCREEN — not just in a console nobody
+                // has open. A rejected agent leg is indistinguishable from a
+                // working call in the UI: it connects, AMD runs, and there is
+                // simply no audio. That ambiguity cost a full debugging cycle,
+                // so it now announces itself.
+                console.error(
+                  '[sip] REJECTED an INVITE (486) — ghost-dialing guard saw no armed intent and ' +
+                  'no in-flight dial. If this happened during a call you started, that call has ' +
+                  'NO AGENT AUDIO.'
+                )
+                setAmdActivity(prev =>
+                  ['⚠ AGENT LEG REJECTED — no audio on this call', ...prev].slice(0, 5)
+                )
               } catch (err) {
                 console.error('[sip] failed to reject unarmed INVITE:', err)
               }
               return
             }
+            console.log(
+              `[sip] accepting agent leg (armed=${armed}, expectingAgentLeg=${expectingAgentLeg})`
+            )
             try {
               invitation.stateChange.addListener((state: any) => {
                 if (state === SessionState.Established) {
@@ -1562,6 +1614,27 @@ function DialerPageInner() {
   // (call ended, terminated, skipped to no call, went offline). While disarmed,
   // onInvite rejects everything, so no ghost call can connect.
   const armDialing = () => { callIntentRef.current = true }
+  /**
+   * Open the agent-leg expectation window. Call immediately BEFORE any request
+   * that causes this browser's own agent leg to be dialed — the server places
+   * that leg first, so its INVITE can land while the request is still in
+   * flight. Self-closing, so no teardown path can leave it stuck open.
+   */
+  const openAgentLegWindow = () => {
+    expectingAgentLegRef.current = true
+    if (expectAgentLegTimerRef.current) clearTimeout(expectAgentLegTimerRef.current)
+    expectAgentLegTimerRef.current = setTimeout(() => {
+      expectingAgentLegRef.current = false
+      expectAgentLegTimerRef.current = null
+    }, AGENT_LEG_EXPECT_MS)
+  }
+  const closeAgentLegWindow = () => {
+    expectingAgentLegRef.current = false
+    if (expectAgentLegTimerRef.current) {
+      clearTimeout(expectAgentLegTimerRef.current)
+      expectAgentLegTimerRef.current = null
+    }
+  }
   // disarmDialing({ force }): normally we keep the browser armed while the
   // predictive engine is running, because humans route in continuously and a
   // brief disarm between calls could reject an in-flight human. The explicit
@@ -1583,6 +1656,12 @@ function DialerPageInner() {
       return
     }
     callIntentRef.current = false
+    // Close the agent-leg expectation window too. A force disarm means the
+    // user has genuinely stopped (terminated, went offline, page unload), so
+    // a late INVITE from a dial that was already in flight must NOT be
+    // accepted on the strength of that window — otherwise the window would
+    // reintroduce exactly the ghost-audio case the guard exists to prevent.
+    if (opts?.force) closeAgentLegWindow()
     // Proactively tear down any SIP session that may still be up so a lingering
     // leg can't keep audio flowing after the user expects silence.
     if (swCallRef.current) {
@@ -2027,7 +2106,12 @@ function DialerPageInner() {
     setStatus('calling')
     setSessionStats(s => ({ ...s, calls: s.calls + 1 }))
     playInitiateBlip()
-    armDialing() // user-initiated dial — allow SignalWire to bridge to us
+    armDialing() // user-initiated dial — allow Telnyx to bridge to us
+    // Open the agent-leg window BEFORE the request that causes the agent leg
+    // to be dialed. The server places the agent leg first, so its INVITE can
+    // land while the POST below is still in flight — see the ref's comment
+    // for the silent-call bug this prevents.
+    openAgentLegWindow()
     setLastCallDuration(null) // clear the previous call's duration readout
     // NOTE: this used to optimistically strip the lead out of queuedLeads
     // here, on the theory that a background refetch would "self-heal" the
@@ -2557,6 +2641,10 @@ function DialerPageInner() {
     setSessionStats(s => ({ ...s, calls: s.calls + 1 }))
     playInitiateBlip()
     armDialing() // user pressed dial on the keypad — allow bridge
+    // Same agent-leg window as the queue dial path — a manual dial places an
+    // agent leg exactly the same way, so it needs the same protection against
+    // the browser rejecting its own INVITE.
+    openAgentLegWindow()
     try {
       const res = await fetch('/api/calls/outbound', {
         method: 'POST',
@@ -2713,6 +2801,18 @@ function DialerPageInner() {
   // legacy single `script` field if a campaign has no linked scripts yet.
   const campaignScriptTabs = (c: Campaign): { key: string; name: string; script: string }[] => {
     if (c.scripts && c.scripts.length > 0) {
+      // Sort by the campaign's own script order EXPLICITLY. This is the order
+      // the user sets by dragging the script chips on the campaign (which
+      // writes campaign_script_links.sort_order). Relying on the array's
+      // arrival order made that a coincidence of query ordering rather than a
+      // guarantee. The agent's manual drag in the dialer still overrides this
+      // — see scriptOrder below, which is reset per campaign so the campaign's
+      // order is always the starting point.
+      return [...c.scripts]
+        .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+        .map(s => ({ key: s.id, name: s.name, script: s.body }))
+    }
+    if (false) {
       return c.scripts.map(s => ({ key: s.id, name: s.name, script: s.body }))
     }
     if (c.script) return [{ key: c.id, name: c.name, script: c.script }]
