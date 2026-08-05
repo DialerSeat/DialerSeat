@@ -997,15 +997,30 @@ function DialerPageInner() {
             // fanout, late AMD redirect, leftover agent leg, another tab) is
             // hard-rejected so the user can never be bridged to audio they didn't
             // ask for. This is the strict, multi-user-safe lock.
-            // Accept on EITHER signal: an explicitly armed intent, or an
-            // outbound dial this browser started within the expectation
-            // window. Requiring only the former is what made every call
-            // silent — see expectingAgentLegRef and openAgentLegWindow. An INVITE
-            // matching neither is still a genuine ghost and still rejected.
+            // ── WHY THIS NO LONGER GATES ON ARM STATE ──────────────────────
+            // The original guard rejected any INVITE unless callIntentRef was
+            // set, to stop a SHARED SIP identity from bridging one agent into
+            // another agent's call. That risk no longer exists: every agent
+            // now has their own Telnyx credential (lib/agentSipCredentials.ts)
+            // and this UserAgent is registered as that credential alone. The
+            // only thing that dials this URI is our own server placing an
+            // agent leg for THIS user. The identity is now the guard.
+            //
+            // Meanwhile the cost of a false reject is catastrophic and
+            // silent. call_events shows the agent leg dying with 'user_busy'
+            // (SIP 486 — this exact reject) on call after call, while the lead
+            // still answered and AMD still ran. The UI showed a normal
+            // connected call with no audio in either direction and no error
+            // anywhere. Arm state proved far too fragile to be load-bearing:
+            // every path that ends a call disarms, so any ordering, remount,
+            // or auto-chain gap silently kills the next call's audio.
+            //
+            // The gate is now availability — the thing that actually means
+            // "this person is working a queue". Offline still refuses.
             const armed = callIntentRef.current
             const expectingAgentLeg = expectingAgentLegRef.current
 
-            if (!armed && !expectingAgentLeg) {
+            if (!availableRef.current) {
               try {
                 await invitation.reject({ statusCode: 486 }) // Busy Here
                 // Loud, and visible ON SCREEN — not just in a console nobody
@@ -1014,10 +1029,9 @@ function DialerPageInner() {
                 // simply no audio. That ambiguity cost a full debugging cycle,
                 // so it now announces itself.
                 console.error(
-                  `[sip #${sipInstanceId}] REJECTED an INVITE (486) — ghost-dialing guard saw no ` +
-                  'armed intent and no in-flight dial. If this happened during a call you started, ' +
-                  'that call has NO AGENT AUDIO. If this instance id is older than the newest ' +
-                  '"registered as instance #N" line above, a stale registration answered it.'
+                  `[sip #${sipInstanceId}] REJECTED an INVITE (486) — this agent is marked ` +
+                  'OFFLINE/unavailable. If this happened during a call you started, that call ' +
+                  'has NO AGENT AUDIO.'
                 )
                 setAmdActivity(prev =>
                   ['⚠ AGENT LEG REJECTED — no audio on this call', ...prev].slice(0, 5)
@@ -2396,17 +2410,25 @@ function DialerPageInner() {
           clearInterval(pollInterval)
           activePollRef.current = null
 
+          // AMD says machine, but for a user_dial the agent leg is ALREADY
+          // bridged — dropping here tears down a call a human may be talking
+          // on. AMD is probabilistic, and 'greeting_end' reliably mistakes a
+          // real person answering "Hello?" and pausing for a short voicemail
+          // greeting; that is exactly the "hangs up the moment I pick up"
+          // symptom. The server stopped hanging these up (see the
+          // agentAlreadyBridged branch in app/api/calls/events/route.ts) and
+          // the client has to agree, or it would just tear the call down from
+          // this side instead.
+          //
+          // The signal is not discarded — it is surfaced so the agent can act
+          // on it in the half-second it takes them to hear a machine
+          // themselves. Machines still cost a moment here rather than zero;
+          // that is the deliberate price of never cutting off a live prospect.
           if (isNotHuman(statusData.amd_result)) {
             setAmdActivity(prev =>
-              [`VOICEMAIL FILTERED — ${statusData.amd_result}`, ...prev].slice(0, 5)
+              [`⚠ LIKELY VOICEMAIL (${statusData.amd_result}) — skip if so`, ...prev].slice(0, 5)
             )
-            showQueueOutcome(currentLeadRef.current?.id, 'Voicemail detected…')
-            setActiveCallSid(null)
-            disarmDialing() // machine — drop any browser leg; next dial re-arms
-            setStatus('idle')
-            setCurrentLead(null)
-            scheduleDial(600)
-            return
+            showQueueOutcome(currentLeadRef.current?.id, 'Likely voicemail…')
           }
 
           playPickup()
