@@ -45,7 +45,10 @@ interface Campaign {
   status: string
   total_leads: number
   script?: string
-  scripts?: { id: string; name: string; body: string }[]
+  // sort_order comes from campaign_script_links — the order the user sets by
+  // dragging the script chips on the campaign. Carried per-script so the
+  // dialer can sort explicitly instead of trusting array position.
+  scripts?: { id: string; name: string; body: string; sort_order?: number }[]
   dialer_mode?: DialerMode
   amd_enabled?: boolean
   predictive_lines_per_agent?: number
@@ -2811,9 +2814,6 @@ function DialerPageInner() {
       return [...c.scripts]
         .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
         .map(s => ({ key: s.id, name: s.name, script: s.body }))
-    }
-    if (false) {
-      return c.scripts.map(s => ({ key: s.id, name: s.name, script: s.body }))
     }
     if (c.script) return [{ key: c.id, name: c.name, script: c.script }]
     return []
