@@ -992,58 +992,38 @@ function DialerPageInner() {
 
         userAgent.delegate = {
           onInvite: async (invitation: any) => {
-            // GHOST-DIALING GUARD: only accept an inbound INVITE if the user has
-            // actively armed dialing. Any call the user did not initiate (stale
-            // fanout, late AMD redirect, leftover agent leg, another tab) is
-            // hard-rejected so the user can never be bridged to audio they didn't
-            // ask for. This is the strict, multi-user-safe lock.
-            // ── WHY THIS NO LONGER GATES ON ARM STATE ──────────────────────
-            // The original guard rejected any INVITE unless callIntentRef was
-            // set, to stop a SHARED SIP identity from bridging one agent into
-            // another agent's call. That risk no longer exists: every agent
-            // now has their own Telnyx credential (lib/agentSipCredentials.ts)
-            // and this UserAgent is registered as that credential alone. The
-            // only thing that dials this URI is our own server placing an
-            // agent leg for THIS user. The identity is now the guard.
+            // ── NO GATE. THE REGISTRATION IS THE GATE. ─────────────────────
+            // Every version of a conditional guard here has silently broken
+            // calls, and each one cost a debugging cycle:
             //
-            // Meanwhile the cost of a false reject is catastrophic and
-            // silent. call_events shows the agent leg dying with 'user_busy'
-            // (SIP 486 — this exact reject) on call after call, while the lead
-            // still answered and AMD still ran. The UI showed a normal
-            // connected call with no audio in either direction and no error
-            // anywhere. Arm state proved far too fragile to be load-bearing:
-            // every path that ends a call disarms, so any ordering, remount,
-            // or auto-chain gap silently kills the next call's audio.
+            //   callIntentRef        every path that ends a call disarms it,
+            //                        so any ordering/remount/auto-chain gap
+            //                        left it false and killed the next call.
+            //   + expectation window same problem, just narrower.
+            //   availableRef         false at INVITE time during a dial the
+            //                        agent themselves started. Rejected it.
             //
-            // The gate is now availability — the thing that actually means
-            // "this person is working a queue". Offline still refuses.
-            const armed = callIntentRef.current
-            const expectingAgentLeg = expectingAgentLegRef.current
-
-            if (!availableRef.current) {
-              try {
-                await invitation.reject({ statusCode: 486 }) // Busy Here
-                // Loud, and visible ON SCREEN — not just in a console nobody
-                // has open. A rejected agent leg is indistinguishable from a
-                // working call in the UI: it connects, AMD runs, and there is
-                // simply no audio. That ambiguity cost a full debugging cycle,
-                // so it now announces itself.
-                console.error(
-                  `[sip #${sipInstanceId}] REJECTED an INVITE (486) — this agent is marked ` +
-                  'OFFLINE/unavailable. If this happened during a call you started, that call ' +
-                  'has NO AGENT AUDIO.'
-                )
-                setAmdActivity(prev =>
-                  ['⚠ AGENT LEG REJECTED — no audio on this call', ...prev].slice(0, 5)
-                )
-              } catch (err) {
-                console.error('[sip] failed to reject unarmed INVITE:', err)
-              }
-              return
-            }
+            // The thing they were all protecting against no longer exists.
+            // The guard was written when every agent shared ONE SIP identity,
+            // so an INVITE really might have belonged to someone else. Now
+            // each agent has their own Telnyx credential and this UserAgent
+            // is registered as that credential alone — the only thing that
+            // dials this URI is our server placing an agent leg for THIS
+            // user, and the controller already checks availability server
+            // side before routing anyone a call.
+            //
+            // So the correct SIP-native control is REGISTRATION, not
+            // rejection: if this agent shouldn't take calls, we unregister
+            // (see the effect cleanup) and Telnyx cannot route to them at
+            // all. While registered, an INVITE is by construction theirs.
+            //
+            // Rejecting is also the worst possible failure shape — it is
+            // invisible. The lead answers, AMD runs, the UI shows a normal
+            // connected call, and there is simply no audio and no error.
             console.log(
               `[sip #${sipInstanceId}] accepting agent leg ` +
-              `(armed=${armed}, expectingAgentLeg=${expectingAgentLeg})`
+              `(available=${availableRef.current}, armed=${callIntentRef.current}, ` +
+              `expectingAgentLeg=${expectingAgentLegRef.current})`
             )
             try {
               invitation.stateChange.addListener((state: any) => {
@@ -1063,7 +1043,26 @@ function DialerPageInner() {
               swCallRef.current = invitation
               attachSIPAudio(invitation)
             } catch (err) {
-              console.error('Error accepting SIP invite:', err)
+              // sip.js calls getUserMedia while building the answer, so a
+              // blocked/denied microphone surfaces HERE — as a failed accept,
+              // not as anything that mentions permissions. Left generic, this
+              // reads as a mysterious silent call, which is the same dead end
+              // every other cause of "no audio" produced tonight. Name it.
+              const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err)
+              const micBlocked =
+                err instanceof Error &&
+                ['NotAllowedError', 'NotFoundError', 'NotReadableError', 'SecurityError'].includes(err.name)
+              console.error(`[sip #${sipInstanceId}] FAILED to accept agent leg — ${msg}`)
+              if (micBlocked) {
+                console.error(
+                  '[sip] ^ that is a MICROPHONE problem, not a SIP problem. The browser refused ' +
+                  'or could not open the mic, so no answer could be built and this call has no ' +
+                  'audio. Allow the microphone for this site and reload.'
+                )
+                setAmdActivity(prev =>
+                  ['⚠ MICROPHONE BLOCKED — allow mic access, no audio until then', ...prev].slice(0, 5)
+                )
+              }
             }
           },
         }
