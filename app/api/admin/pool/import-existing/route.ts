@@ -110,7 +110,7 @@ export async function POST(req: Request) {
         signalwire_sid: telnyxNumber.id,
         status: 'active',
         daily_call_count: 0,
-        daily_cap: 50,
+        daily_cap: 125,
         lifetime_call_count: 0,
         monthly_cost_cents: 100,
         acquired_at: telnyxNumber.created_at

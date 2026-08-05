@@ -2858,7 +2858,23 @@ function DialerPageInner() {
       clearInterval(activePollRef.current)
       activePollRef.current = null
     }
-    if (sid) await hangupCall(sid)
+
+    // Hang up the call this client knows about AND sweep any lines placed
+    // server-side that it doesn't. In power/progressive the local hangup is
+    // sufficient — there is only ever one call. Predictive fans out several
+    // lines the client has no ids for, so terminating there used to leave the
+    // rest ringing the lead's phone with nothing able to stop them.
+    //
+    // scope 'calls' silences the lines WITHOUT releasing claims or pausing
+    // the session — terminate ends the call, not the shift.
+    await Promise.all([
+      sid ? hangupCall(sid).catch(() => {}) : Promise.resolve(),
+      fetch('/api/dialer/abort', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scope: 'calls' }),
+      }).catch(err => console.error('[terminate] server call sweep failed:', err)),
+    ])
 
     if (agentWasOnTheCall) {
       setLastCallDuration(elapsedSecondsSince(callStartRef.current))
@@ -3442,10 +3458,29 @@ function DialerPageInner() {
         : [currentLead?.phone, previewLead?.phone].filter((p): p is string => !!p))
     : []
 
+  // ── PHONE MATCHING MUST BE FORMAT-AGNOSTIC ────────────────────────────────
+  // activeDialingNumbers comes from calls.phone_number, which is E.164
+  // ("+13365925053"). lead.phone is whatever was imported, typically bare
+  // digits ("3852821027"). A plain includes() between those two never matches,
+  // so predictive row highlighting could not work at all — it was comparing
+  // two different notations for the same number.
+  //
+  // Compared on the last 10 digits, which is the part that identifies a US
+  // subscriber regardless of +1 / 1 / punctuation on either side.
+  const activeDialingKeys = new Set(
+    activeDialingNumbers.map(p => (p || '').replace(/\D/g, '').slice(-10)).filter(Boolean)
+  )
+  const leadPhoneKey = (phone?: string | null) => (phone || '').replace(/\D/g, '').slice(-10)
+
   const activeQueueLeadIds = new Set(
     isQueueDialingArmed
       ? (isPredictive
-          ? visibleQueuedLeads.filter(l => activeDialingNumbers.includes(l.phone)).map(l => l.id)
+          ? visibleQueuedLeads
+              .filter(l => {
+                const key = leadPhoneKey(l.phone)
+                return !!key && activeDialingKeys.has(key)
+              })
+              .map(l => l.id)
           : [currentLead?.id, previewLead?.id].filter((id): id is string => !!id))
       : []
   )

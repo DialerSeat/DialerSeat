@@ -295,6 +295,39 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
     // script while a voicemail greeting played, hanging up by hand every
     // time. Removed. Instant skip is the specified behavior and the correct
     // one.
+    // ── FLOOR: NEVER HANG UP ON A VERDICT THIS FAST ──────────────────────
+    // A 'machine' result arriving within a couple of seconds of answer is not
+    // a detection, it is a guess about someone who said "Hello?" and paused.
+    // Observed in production at exactly 2s on live humans, and the hangup
+    // below is instant and unrecoverable — the prospect is gone mid-sentence
+    // with no disposition and no way to tell it happened.
+    //
+    // A genuine voicemail greeting cannot END in under this floor, so
+    // refusing to act on such a verdict costs nothing real: the machine keeps
+    // playing, the agent hears it, and the queue moves on a beat later. This
+    // sits underneath the AMD tuning in lib/placeOutboundCall.ts as a
+    // backstop, so a future config change cannot reintroduce instant
+    // hang-ups on humans.
+    const MIN_MS_BEFORE_MACHINE_HANGUP = 3500
+
+    const { data: amdRow } = await supabaseAdmin
+      .from('calls')
+      .select('answered_at')
+      .eq('signalwire_call_id', callControlId)
+      .maybeSingle()
+
+    if (amdRow?.answered_at) {
+      const sinceAnswer = Date.now() - new Date(amdRow.answered_at).getTime()
+      if (sinceAnswer >= 0 && sinceAnswer < MIN_MS_BEFORE_MACHINE_HANGUP) {
+        console.warn(
+          `[calls/events] IGNORING 'machine' for ${callControlId} — verdict arrived ${sinceAnswer}ms ` +
+          `after answer, under the ${MIN_MS_BEFORE_MACHINE_HANGUP}ms floor. Too fast to be a real ` +
+          `greeting; treating as human so a live person is not cut off.`
+        )
+        return
+      }
+    }
+
     await hangupCallControlId(callControlId)
     await autoAdvanceLeadNoDisposition(callControlId)
     return

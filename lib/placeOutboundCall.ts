@@ -473,6 +473,41 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
     // disposition shown), the only branch that matters downstream is
     // result === 'machine'. See app/api/calls/events/route.ts.
     dialBody.answering_machine_detection = 'greeting_end'
+
+    // ── AMD TUNING — STOP CUTTING OFF REAL PEOPLE ─────────────────────────
+    // Untuned, this was returning 'machine' TWO SECONDS after answer on live
+    // humans, and the machine branch hangs up instantly. Confirmed in
+    // production: answered 13:03:22 -> amd_result machine 13:03:24 -> call
+    // ended, on a call a person had picked up and spoken on.
+    //
+    // The cause is the shape of a human answer. Someone says "Hello?" (~1s)
+    // and then WAITS for a response. 'greeting_end' sees a short utterance
+    // followed by silence and concludes the greeting has ended — which is
+    // also exactly what a short voicemail greeting looks like. With the
+    // default post-greeting silence window (~800ms) a completely normal human
+    // pause clears the bar.
+    //
+    //   after_greeting_silence_millis: a human pausing for breath is under
+    //     ~2s; a real greeting is followed by a longer gap before the beep.
+    //     3s puts the threshold above conversational hesitation.
+    //   total_analysis_time_millis: greeting_end must be allowed to hear a
+    //     greeting all the way out. Too short and every long greeting times
+    //     out as 'not_sure' (treated as human), which defeats AMD entirely.
+    //   maximum_number_of_words: a person answering says one or two words;
+    //     a recorded greeting keeps going. This is the strongest human signal
+    //     available and costs nothing to use.
+    //
+    // These are starting values chosen against the observed failure, not
+    // measured optimums — AMD is empirical and wants tuning against real
+    // call volume. They are deliberately biased toward keeping a call: a
+    // false 'machine' hangs up on a live prospect mid-sentence and is
+    // unrecoverable, while a false 'human' costs a couple of seconds of
+    // voicemail before the agent skips it.
+    dialBody.answering_machine_detection_config = {
+      after_greeting_silence_millis: 3000,
+      total_analysis_time_millis: 15000,
+      maximum_number_of_words: 3,
+    }
   }
 
   const dialLeadLeg = () =>

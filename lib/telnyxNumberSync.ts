@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { extractAreaCode, getAreaCodeInfo } from '@/lib/areaCode'
+import { DEFAULT_DAILY_CAP } from '@/lib/numberPool'
 
 // =============================================================================
 // NUMBER POOL ↔ TELNYX RECONCILIATION
@@ -235,7 +236,7 @@ export async function syncNumberPoolWithTelnyx(apiKey?: string): Promise<NumberS
       signalwire_sid: telnyxNumber.id || phone,
       status: 'active',
       daily_call_count: 0,
-      daily_cap: 50,
+      daily_cap: DEFAULT_DAILY_CAP,
       monthly_cost_cents: 100,
     })
 

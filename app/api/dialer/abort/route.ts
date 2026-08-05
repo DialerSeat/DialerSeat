@@ -59,6 +59,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
 
+    // ── SCOPE ────────────────────────────────────────────────────────────
+    // 'all'   (default) — the full kill switch: hang up in-flight calls,
+    //         release claims, pause sessions. Used when the agent stops
+    //         working entirely.
+    // 'calls' — hang up in-flight calls ONLY, leaving claims and sessions
+    //         alone so the agent keeps working.
+    //
+    // 'calls' exists for TERMINATE CALL. In power/progressive the client can
+    // hang up unaided because it holds the one call id there is. Predictive
+    // places several lines SERVER-side that the client has no ids for, so
+    // terminating a predictive call left every other fanned-out line ringing
+    // the lead's phone with nothing able to stop it. Terminate needs the
+    // sweep — it just must not also end the agent's session, which is what
+    // the full abort does.
+    const body = await req.json().catch(() => ({}))
+    const scope: 'all' | 'calls' = body?.scope === 'calls' ? 'calls' : 'all'
+
     let hungUp = 0
     let claimsReleased = 0
 
@@ -103,6 +120,12 @@ export async function POST(req: Request) {
         }
       })
     )
+
+    // Calls-only scope stops here: the lines are silenced, but the agent's
+    // claims and session stay intact so they keep working.
+    if (scope === 'calls') {
+      return NextResponse.json({ success: true, hungUp, claimsReleased: 0, scope })
+    }
 
     // ── 2. Release this agent's claimed leads ────────────────────────────────
     // Find the agent's session ids, then clear claims tied to them so the

@@ -14,6 +14,20 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+/**
+ * Calls a single pool number may place per day.
+ *
+ * One constant rather than a literal repeated across every insert path
+ * (manual buy, ratio automation, Telnyx sync, import-existing) — those had
+ * drifted independently before, which meant the pool's real capacity depended
+ * on which code path happened to create a given number.
+ *
+ * This is a DELIVERABILITY dial, not just a throughput one: the more calls a
+ * single number places per day, the faster carriers flag it as spam. Raising
+ * it increases capacity per number and increases that risk together.
+ */
+export const DEFAULT_DAILY_CAP = 125
+
 export interface PoolNumber {
   id: string
   phone_number: string
@@ -220,7 +234,7 @@ export async function addNumberByAreaCode(areaCode: string): Promise<PoolNumber 
       signalwire_sid: purchased.id,
       status: 'active',
       daily_call_count: 0,
-      daily_cap: 50,
+      daily_cap: DEFAULT_DAILY_CAP,
       monthly_cost_cents: 100,
     })
     .select()
