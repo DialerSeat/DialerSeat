@@ -164,6 +164,83 @@ function telnyxErrorSummary(r: TelnyxGetResult): string {
   return formatErrors(r.body?.errors) || `HTTP ${r.status}`
 }
 
+// =============================================================================
+// SIP URI CALLING PREFERENCE
+// =============================================================================
+// NOTE THE HOST PATH: this setting lives at api.telnyx.com/security/... — NOT
+// under /v2 like every other endpoint in this codebase. That is Telnyx's
+// layout, not a typo. Getting it wrong returns a 404 that looks like "the
+// connection doesn't exist", which is a misleading answer to a different
+// question, so it's isolated in these two helpers rather than being open-
+// coded next to the /v2 calls.
+// =============================================================================
+
+type SipUriCallingPreference = 'disabled' | 'unrestricted' | 'internal'
+
+const SECURITY_BASE = 'https://api.telnyx.com/security'
+
+async function readSipUriCallingPreference(
+  connectionId: string,
+  apiKey: string
+): Promise<SipUriCallingPreference | null> {
+  try {
+    const res = await fetch(`${SECURITY_BASE}/connections/${connectionId}`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      cache: 'no-store',
+    })
+    if (!res.ok) {
+      console.error(
+        `[calls/diagnostics] could not read sip_uri_calling_preference for ${connectionId}: HTTP ${res.status}`
+      )
+      return null
+    }
+    const body = (await res.json()) as {
+      data?: { sip_uri_calling_preference?: string }
+      sip_uri_calling_preference?: string
+    }
+    // Telnyx's non-v2 endpoints are inconsistent about whether the resource
+    // is wrapped in `data`, so accept either rather than guessing.
+    const pref = body?.data?.sip_uri_calling_preference ?? body?.sip_uri_calling_preference
+    if (pref === 'disabled' || pref === 'unrestricted' || pref === 'internal') return pref
+    return null
+  } catch (err) {
+    console.error(`[calls/diagnostics] sip_uri_calling_preference read threw for ${connectionId}:`, err)
+    return null
+  }
+}
+
+async function setSipUriCallingPreference(
+  connectionId: string,
+  apiKey: string,
+  preference: SipUriCallingPreference
+): Promise<boolean> {
+  try {
+    const res = await fetch(`${SECURITY_BASE}/connections/${connectionId}`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ sip_uri_calling_preference: preference }),
+    })
+    if (!res.ok) {
+      const text = await res.text()
+      console.error(
+        `[calls/diagnostics] failed to set sip_uri_calling_preference=${preference} on ${connectionId} ` +
+        `(${res.status}): ${text.slice(0, 300)}`
+      )
+      return false
+    }
+    console.log(
+      `[calls/diagnostics] set sip_uri_calling_preference=${preference} on connection ${connectionId}`
+    )
+    return true
+  } catch (err) {
+    console.error(`[calls/diagnostics] sip_uri_calling_preference write threw for ${connectionId}:`, err)
+    return false
+  }
+}
+
 export async function GET() {
   return runDiagnostics({ ringTest: false })
 }
@@ -435,6 +512,74 @@ async function runDiagnostics(opts: { ringTest: boolean }) {
           (provisionedCount ?? 0) > 0
             ? undefined
             : 'Not an error, just nobody has opened the dialer yet since this shipped. Open the dialer once to provision your own.',
+      })
+    }
+
+    // ── 5c. SIP URI CALLING (the setting that silently blocks everything) ───
+    // Telnyx ships every connection with sip_uri_calling_preference =
+    // "disabled", which refuses ALL calls addressed to that connection's SIP
+    // URI. The rejection is not "SIP URI calling is disabled" — Telnyx
+    // declines to treat the destination as a SIP endpoint at all, falls
+    // through to its phone-number validator, and returns
+    // 10016 "Phone number must be in +E164 format".
+    //
+    // So a perfectly-formed sip:user@sip.telnyx.com, a valid credential, and
+    // a correct Call Control Application all produce an error message about
+    // phone number formatting. There is nothing in that error, or in the
+    // request, pointing at an account setting on a different resource.
+    //
+    // "internal" is the right value here, not "unrestricted": it permits
+    // calls from connections on this same Telnyx account (which is exactly
+    // what our Call Control Application dialing our own agent credential
+    // is) while keeping the agent's browser unreachable from the public
+    // internet. "unrestricted" would let anyone who guesses an agent's SIP
+    // URI ring their softphone directly.
+    const sipUriPrefTarget = credentialConnectionId || config.connectionId
+    let sipUriPref = await readSipUriCallingPreference(sipUriPrefTarget, config.apiKey)
+    let sipUriPrefFixed = false
+
+    if (opts.ringTest && sipUriPref === 'disabled') {
+      // POST is the "do something" verb and already places a real call, so
+      // remediate here rather than making this a second manual step.
+      const set = await setSipUriCallingPreference(sipUriPrefTarget, config.apiKey, 'internal')
+      if (set) {
+        sipUriPrefFixed = true
+        sipUriPref = 'internal'
+      }
+    }
+
+    if (sipUriPref === null) {
+      checks.push({
+        id: 'sip-uri-calling',
+        label: 'SIP URI calling enabled on the agent connection',
+        status: 'warn',
+        detail: `Could not read sip_uri_calling_preference for connection ${sipUriPrefTarget}.`,
+        fix: 'Telnyx Mission Control → SIP Connections → edit → Authentication and routing → "Receive SIP URI calls" → set to "Only from my Connections".',
+      })
+    } else if (sipUriPref === 'disabled') {
+      checks.push({
+        id: 'sip-uri-calling',
+        label: 'SIP URI calling enabled on the agent connection',
+        status: 'fail',
+        detail:
+          `Connection ${sipUriPrefTarget} has sip_uri_calling_preference = "disabled" (Telnyx's default). ` +
+          `This blocks every call to ${config.agentSipUri}, and Telnyx reports it as ` +
+          `10016 "Phone number must be in +E164 format" rather than as a blocked SIP URI — ` +
+          `which is almost certainly the error you are seeing on every dial.`,
+        fix: 'POST to this endpoint to set it to "internal" automatically, or set it in Telnyx Mission Control → SIP Connections → Authentication and routing → "Receive SIP URI calls" → "Only from my Connections".',
+      })
+    } else {
+      checks.push({
+        id: 'sip-uri-calling',
+        label: 'SIP URI calling enabled on the agent connection',
+        status: sipUriPref === 'unrestricted' ? 'warn' : 'pass',
+        detail:
+          `Connection ${sipUriPrefTarget} has sip_uri_calling_preference = "${sipUriPref}"` +
+          `${sipUriPrefFixed ? ' (just set automatically by this request)' : ''}.`,
+        fix:
+          sipUriPref === 'unrestricted'
+            ? 'Works, but "unrestricted" lets anyone on the public internet who knows an agent\'s SIP URI ring their browser directly. "internal" allows your own connections only, which is all this app needs.'
+            : undefined,
       })
     }
 

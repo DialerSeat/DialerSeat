@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { isCallableNow } from '@/lib/callingWindow'
 import { requireUser } from '@/lib/requireUser'
 import { apiError } from '@/lib/apiError'
+import { DIALABLE_STATUSES, isDialableLead } from '@/lib/dialableLead'
 
 // SECURITY (was IDOR): this route took ?user_id from the query string and used
 // it for BOTH personal lead scoping AND team-membership verification. That let
@@ -236,11 +237,11 @@ export async function GET(req: Request) {
       .from('leads')
       .select('*, extra_data')
       .eq('user_id', user_id)
-      .neq('status', 'dnc')
-      .neq('status', 'closed')
-      .neq('status', 'appointment')
-      .neq('status', 'maxed')
-      .or(`status.eq.uncalled,status.eq.no_answer`)
+      // Dialable statuses come from lib/dialableLead.ts, the same definition
+      // /api/leads/list?disposition=queue uses to build the panel — so the
+      // displayed queue and the dial order describe the same set of leads.
+      // They used to be maintained separately here and there, and drifted.
+      .in('status', DIALABLE_STATUSES as unknown as string[])
       .not('phone', 'is', null)
       .neq('phone', '')
       .order('dial_attempts', { ascending: true })
@@ -286,6 +287,13 @@ export async function GET(req: Request) {
     let callable: any = null
     let blockReason: string | null = null
     for (const c of orderedPersonalCandidates) {
+      // Belt-and-braces against the status query above: isDialableLead also
+      // rejects the retiring dispositions (DO NOT CALL / NOT INTERESTED /
+      // CLOSED), which the status filter alone would miss for any row whose
+      // status and disposition disagree. Same predicate the queue panel is
+      // built from, so a lead can never be shown as next-up here and
+      // rejected there.
+      if (!isDialableLead(c)) continue
       const result = isCallableNow({ phone: c.phone, state: c.state })
       if (result.allowed) { callable = c; break }
       if (!blockReason) blockReason = result.reason || null

@@ -1625,7 +1625,14 @@ function DialerPageInner() {
         const cursorValue: number = cursor
         const paramEntries: Record<string, string> = {
           campaign_id: campaignId,
-          disposition: 'dialable',
+          // 'queue', not 'dialable' — this panel IS the dial queue, so it must
+          // show exactly what /api/leads/next will dial. 'dialable' answers a
+          // different question (what the leads page shows) and included 528
+          // permanently-undialable status='maxed' rows, which the dialer then
+          // silently skipped past — making it look like dialing started
+          // somewhere in the middle of the list instead of at the top.
+          // See lib/dialableLead.ts.
+          disposition: 'queue',
           sort: queueSortDesc ? 'created_desc' : 'created_asc',
           cursor: String(cursorValue),
         }
@@ -2191,38 +2198,66 @@ function DialerPageInner() {
           const ld = currentLeadRef.current
           if (ld) {
             const isAmdHangup = isNotHuman(statusData.amd_result)
-            if (!isAmdHangup) {
-              // effectiveMax: the real cap for THIS session — the user's
-              // selected 1x/2x/3x, hard-capped at 3 regardless (per
-              // instruction, 3x is the maximum in a row no matter what).
-              // Preview is excluded entirely — it's a manual, agent-in-the-
-              // loop flow with no redial concept at all, forced to 1.
-              const effectiveMax = isPreview ? 1 : Math.min(dialRepeatCount, 3)
-              const attemptsSoFar = leadAttemptCountRef.current
 
-              if (attemptsSoFar < effectiveMax) {
-                // Still have retries left for this same lead — redial it
-                // directly instead of dispositioning + fetching a new one.
-                leadAttemptCountRef.current = attemptsSoFar + 1
-                showQueueOutcome(
-                  ld.id,
-                  `${statusData.status === 'busy' ? 'Line busy' : 'No answer'} — redialing (attempt ${attemptsSoFar + 1} of ${effectiveMax})…`
-                )
-                setActiveCallSid(null)
-                disarmDialing()
-                setStatus('idle')
-                // Same lead object, same id — currentLead/currentLeadRef
-                // stay pointed at it, no fetchNextLead involved.
-                const redialTimeoutId = setTimeout(() => {
-                  dialChainTimeoutsRef.current.delete(redialTimeoutId)
-                  if (abortDialingRef.current) return
-                  if (!availableRef.current) return
-                  dialLeadCall(ld)
-                }, 800)
-                dialChainTimeoutsRef.current.add(redialTimeoutId)
-                return
-              }
+            // effectiveMax: the real cap for THIS session — the user's
+            // selected 1x/2x/3x, hard-capped at 3 regardless (per
+            // instruction, 3x is the maximum in a row no matter what).
+            // Preview is excluded entirely — it's a manual, agent-in-the-
+            // loop flow with no redial concept at all, forced to 1.
+            const effectiveMax = isPreview ? 1 : Math.min(dialRepeatCount, 3)
+            const attemptsSoFar = leadAttemptCountRef.current
 
+            // AMD-DETECTED VOICEMAIL COUNTS AS AN ATTEMPT AND STILL REDIALS.
+            //
+            // This retry block used to sit inside 'if (!isAmdHangup)', so an
+            // AMD 'machine' result skipped it entirely and fell straight
+            // through to the next lead. On 3x, a lead that hit voicemail was
+            // therefore dialed exactly ONCE and abandoned — the repeat
+            // setting silently did nothing for the single most common
+            // no-connect outcome there is, which is precisely the case it
+            // exists to cover. Specified behavior: dial, hit AMD, dial
+            // again, dial again, then move to the next lead.
+            //
+            // Voicemail is still never dispositioned (see below) — the
+            // silent-skip rule is about not making the agent tag a machine,
+            // not about giving that lead fewer attempts than any other.
+            if (attemptsSoFar < effectiveMax) {
+              // Still have retries left for this same lead — redial it
+              // directly instead of dispositioning + fetching a new one.
+              leadAttemptCountRef.current = attemptsSoFar + 1
+              const outcomeReason = isAmdHangup
+                ? 'Voicemail'
+                : statusData.status === 'busy'
+                  ? 'Line busy'
+                  : 'No answer'
+              showQueueOutcome(
+                ld.id,
+                `${outcomeReason} — redialing (attempt ${attemptsSoFar + 1} of ${effectiveMax})…`
+              )
+              setActiveCallSid(null)
+              disarmDialing()
+              setStatus('idle')
+              // Same lead object, same id — currentLead/currentLeadRef
+              // stay pointed at it, no fetchNextLead involved.
+              const redialTimeoutId = setTimeout(() => {
+                dialChainTimeoutsRef.current.delete(redialTimeoutId)
+                if (abortDialingRef.current) return
+                if (!availableRef.current) return
+                dialLeadCall(ld)
+              }, 800)
+              dialChainTimeoutsRef.current.add(redialTimeoutId)
+              return
+            }
+
+            // Attempts exhausted — done with this lead, move on.
+            if (isAmdHangup) {
+              // NO disposition on voicemail, deliberately — machine
+              // detection is a silent skip by design, the same rule the
+              // server-side AMD handler follows in
+              // app/api/calls/events/route.ts. The agent is never asked to
+              // tag a call they never actually had.
+              showQueueOutcome(ld.id, 'Voicemail detected…')
+            } else {
               showQueueOutcome(
                 ld.id,
                 statusData.status === 'busy' ? 'Line busy…' : 'Sorry, couldn\u2019t answer…'
@@ -2234,8 +2269,6 @@ function DialerPageInner() {
                 disposition: 'NO_ANSWER',
                 duration: 0,
               })
-            } else {
-              showQueueOutcome(ld.id, 'Voicemail detected…')
             }
           }
           setStatus('idle')

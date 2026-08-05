@@ -198,6 +198,25 @@ export function resolveTelnyxConfig(): TelnyxConfigResult {
     }
     if (!sipUsername) {
       errors.push('TELNYX_SIP_USERNAME contained no usable username after stripping the SIP URI wrapper')
+    } else if (/^\d/.test(sipUsername)) {
+      // Telnyx REQUIRES the user part of a SIP URI to begin with a
+      // non-numeric character, explicitly to stop SIP users from being
+      // confusable with phone numbers (their docs give 123456@sip.telnyx.com
+      // as an invalid example). A digit-leading username is parsed as a
+      // number rather than a SIP endpoint, and the rejection you get is
+      // "Phone number must be in +E164 format" — which describes the
+      // symptom perfectly and the cause not at all.
+      //
+      // This is a hard error rather than a warning because the resulting URI
+      // provably cannot ever connect: failing here names the real reason,
+      // instead of spending a Telnyx round trip to be told something
+      // misleading about phone numbers.
+      errors.push(
+        `TELNYX_SIP_USERNAME ("${sipUsername}") starts with a digit. Telnyx rejects SIP URIs whose ` +
+        `user part begins with a number — it parses sip:${sipUsername}@... as a phone number, which ` +
+        `is why the dial fails with "must be in +E164 format". Use a SIP username starting with a ` +
+        `letter (Telnyx-generated telephony credentials always do).`
+      )
     }
   }
 
