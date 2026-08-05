@@ -187,14 +187,109 @@ export async function resolveCredentialConnectionId(
     return cachedConnectionId
   }
 
-  console.error(
-    `[agentSipCredentials] could not determine which SIP connection to attach agent credentials to ` +
-    `(${connections.length} credential connection(s) found, none matching TELNYX_SIP_USERNAME ` +
-    `"${config.sipUsername}"). Set TELNYX_CREDENTIAL_CONNECTION_ID to pin it. ` +
-    `Falling back to the shared SIP user for now.`
+  // ── NOTHING TO ATTACH TO — CREATE ONE ───────────────────────────────────
+  // A brand new Telnyx account has a Call Control Application and no
+  // Credential Connection at all. Without one there is nowhere to hang agent
+  // credentials, so provisioning silently degrades to the shared
+  // TELNYX_SIP_USERNAME — a value typed in by hand that, on a fresh account,
+  // names a SIP user that does not exist. Telnyx then rejects the agent leg
+  // and 100% of dials fail.
+  //
+  // Creating it is the only step in the whole setup that genuinely cannot be
+  // discovered, and it is a hard prerequisite for the product to function at
+  // all. Doing it automatically is what makes a bare Telnyx account plus an
+  // API key sufficient to run this app.
+  //
+  // Idempotent by name: the lookup above already ran, and this re-checks by
+  // MANAGED_CONNECTION_NAME before creating, so a restart or a concurrent
+  // cold start cannot produce a second one.
+  const existingManaged = connections.find((c) => c.connection_name === MANAGED_CONNECTION_NAME)
+  if (existingManaged?.id) {
+    cachedConnectionId = existingManaged.id
+    console.log(
+      `[agentSipCredentials] using previously auto-created credential connection ` +
+      `"${MANAGED_CONNECTION_NAME}" (${existingManaged.id})`
+    )
+    return cachedConnectionId
+  }
+
+  const created = await createManagedCredentialConnection(config)
+  cachedConnectionId = created
+  return created
+}
+
+/**
+ * Fixed name so the auto-created connection is recognizable in the Telnyx
+ * portal AND findable again by this code. Changing it would orphan the
+ * existing one and create a duplicate, so it is a constant, not config.
+ */
+const MANAGED_CONNECTION_NAME = 'dialerseat-agents'
+
+interface CreatedCredentialConnection {
+  id?: string
+  connection_name?: string
+}
+
+async function createManagedCredentialConnection(
+  config: TelnyxConfig
+): Promise<string | null> {
+  // The connection's own SIP user. Distinct from the per-agent telephony
+  // credentials that will hang off it — those get their own Telnyx-generated
+  // usernames. This one just has to be unique on Telnyx and syntactically
+  // valid, so: a letter-leading prefix (Telnyx rejects SIP users that start
+  // with a digit, since it parses those as phone numbers) plus randomness.
+  const suffix = Math.random().toString(36).slice(2, 10)
+  const userName = `dialerseat${suffix}`
+  // Telnyx requires 8–128 characters. Generated, never stored, and never
+  // used by this app — agents authenticate with their own credentials, not
+  // this one — so it exists purely to satisfy the required field.
+  const password =
+    Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2).toUpperCase()
+
+  const { ok, status, env } = await telnyxRequest<CreatedCredentialConnection>(
+    '/credential_connections',
+    config.apiKey,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        connection_name: MANAGED_CONNECTION_NAME,
+        user_name: userName,
+        password,
+        active: true,
+        // Agents connect from browsers over WSS, so media must be encrypted —
+        // without this the softphone negotiates DTLS-SRTP and Telnyx expects
+        // plain RTP, which connects the call and then delivers no audio.
+        encrypted_media: 'SRTP',
+        // Our own Call Control Application dials these credentials, so the
+        // connection has to accept calls addressed to its SIP URIs.
+        // "internal" = same Telnyx account only, which is exactly our case;
+        // "unrestricted" would expose agents' softphones to the public
+        // internet. Telnyx defaults this to "disabled", which would block
+        // every agent leg — see lib/telnyxSipUriCalling.ts.
+        sip_uri_calling_preference: 'internal',
+        webhook_event_url: config.webhookUrl,
+      }),
+    }
   )
-  cachedConnectionId = null
-  return null
+
+  const id = env?.data?.id
+  if (!ok || !id) {
+    console.error(
+      `[agentSipCredentials] could not auto-create the "${MANAGED_CONNECTION_NAME}" credential ` +
+      `connection (${describeErrors(env, status)}). Per-agent credentials are unavailable, so ` +
+      `dialing falls back to TELNYX_SIP_USERNAME — which must then name a SIP credential that ` +
+      `really exists on this Telnyx account. Either grant TELNYX_API_KEY permission to manage ` +
+      `connections, or create a Credential Connection in Telnyx and set ` +
+      `TELNYX_CREDENTIAL_CONNECTION_ID.`
+    )
+    return null
+  }
+
+  console.log(
+    `[agentSipCredentials] auto-created credential connection "${MANAGED_CONNECTION_NAME}" (${id}) — ` +
+    `per-agent SIP credentials will now be provisioned against it`
+  )
+  return id
 }
 
 /** Test/ops hook — forget the discovered connection so the next call re-resolves. */
@@ -375,19 +470,34 @@ async function deleteTelnyxCredential(credentialId: string, apiKey: string): Pro
 /**
  * The SIP URI that rings THIS agent's browser and no one else's.
  *
- * Read-only on purpose: this runs on the dial path, and provisioning a
- * credential mid-dial would add a Telnyx round trip to every call. An agent
- * who has never opened the dialer has no credential yet, and correctly falls
- * back to the shared username — by the time they can actually take a call,
- * their browser will have registered and provisioned one.
+ * PROVISIONS ON MISS rather than just reading. An earlier version was
+ * read-only, to keep a Telnyx round trip off the dial path — but that made
+ * dialing depend on /api/calls/sip-credentials having already run and
+ * succeeded for this user, and when it hadn't, the dial silently fell back to
+ * the shared TELNYX_SIP_USERNAME. On an account where that env var doesn't
+ * name a real SIP credential, that fallback isn't a graceful degradation, it
+ * is a guaranteed failed call with a misleading error.
+ *
+ * The cost is one Telnyx round trip on an agent's very first dial and never
+ * again (the row is then in the database). That is the right trade against a
+ * class of failure that is invisible until someone tries to place a call.
  */
 export async function agentSipUriForClerkId(
   clerkId: string,
   config: TelnyxConfig
 ): Promise<string> {
-  const stored = await readStoredCredential(clerkId)
-  const username = stored?.sipUsername || config.sipUsername
-  return `sip:${username}@${config.sipDomain}`
+  const credential = await getOrCreateAgentCredential(clerkId)
+
+  if (credential && !credential.isSharedFallback) {
+    return `sip:${credential.sipUsername}@${config.sipDomain}`
+  }
+
+  console.warn(
+    `[agentSipCredentials] dialing ${clerkId} via the SHARED SIP user — no per-agent credential ` +
+    `could be provisioned. This rings every registered browser, and fails outright if ` +
+    `TELNYX_SIP_USERNAME does not name a real credential on this Telnyx account.`
+  )
+  return `sip:${credential?.sipUsername || config.sipUsername}@${config.sipDomain}`
 }
 
 /**
