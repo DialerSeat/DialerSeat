@@ -506,6 +506,7 @@ function DialerPageInner() {
   // expires on its own, and it cannot be left dangling by a teardown path
   // that forgot to re-arm. Ghost protection is preserved — an INVITE arriving
   // outside both the window and an armed intent is still rejected.
+  const sipInstanceCounterRef = useRef<number>(0)
   const expectingAgentLegRef = useRef<boolean>(false)
   const expectAgentLegTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // How long after initiating a dial an agent-leg INVITE is still expected.
@@ -875,6 +876,41 @@ function DialerPageInner() {
 
   useEffect(() => {
     if (!isActive) return
+
+    // ── ZOMBIE REGISTRATION GUARD ──────────────────────────────────────────
+    // This effect had NO cleanup. Every time isActive toggled — or this
+    // component remounted, which Next's client-side navigation does freely —
+    // it built a brand new UserAgent and registered it with the SAME SIP
+    // credentials, leaving the previous one registered forever.
+    //
+    // Telnyx then holds several contacts for one SIP user and forks the
+    // agent-leg INVITE to all of them. The zombies' onInvite closes over refs
+    // belonging to a dead render, so callIntentRef/expectingAgentLegRef are
+    // permanently false there and they answer with 486 Busy Here — killing
+    // the agent leg of a call the live instance is legitimately placing.
+    //
+    // This is what call_events showed: the agent leg dying ~150-300ms after
+    // creation with hangup_cause 'user_busy', on call after call, with no
+    // audio in either direction. It also explains why it later became
+    // intermittent rather than total — which registration wins the race
+    // varies, so some calls survived and some were cut down the moment they
+    // were answered.
+    //
+    // `cancelled` covers the async gap too: initSW awaits several times, so
+    // the effect can be torn down mid-setup, and without this the half-built
+    // UserAgent would finish registering after cleanup had already run.
+    let cancelled = false
+    let localUserAgent: import('sip.js').UserAgent | null = null
+    let localRegisterer: import('sip.js').Registerer | null = null
+
+    // Identifies THIS effect run in the logs. If an INVITE is ever handled by
+    // an instance whose id isn't the newest one printed at registration, a
+    // zombie is still alive and the cleanup above didn't cover some path —
+    // which is the difference between "fixed" and "looks fixed", and is not
+    // something to infer from call audio.
+    sipInstanceCounterRef.current += 1
+    const sipInstanceId = sipInstanceCounterRef.current
+
     const initSW = async () => {
       try {
         // SECURITY: fetch SIP credentials from an authenticated server endpoint
@@ -924,7 +960,9 @@ function DialerPageInner() {
         // composing it locally if an older server response lacks the field.
         const wssServer = sipWssUrl || `wss://${sipDomain}:7443`
 
-        const userAgent = new UserAgent({
+        // Tracked locally so cleanup can tear down THIS instance specifically,
+        // rather than whatever happens to be in the ref by then.
+        const userAgent: import('sip.js').UserAgent = new UserAgent({
           uri,
           authorizationUsername: sipUsername,
           authorizationPassword: sipPassword,
@@ -976,9 +1014,10 @@ function DialerPageInner() {
                 // simply no audio. That ambiguity cost a full debugging cycle,
                 // so it now announces itself.
                 console.error(
-                  '[sip] REJECTED an INVITE (486) — ghost-dialing guard saw no armed intent and ' +
-                  'no in-flight dial. If this happened during a call you started, that call has ' +
-                  'NO AGENT AUDIO.'
+                  `[sip #${sipInstanceId}] REJECTED an INVITE (486) — ghost-dialing guard saw no ` +
+                  'armed intent and no in-flight dial. If this happened during a call you started, ' +
+                  'that call has NO AGENT AUDIO. If this instance id is older than the newest ' +
+                  '"registered as instance #N" line above, a stale registration answered it.'
                 )
                 setAmdActivity(prev =>
                   ['⚠ AGENT LEG REJECTED — no audio on this call', ...prev].slice(0, 5)
@@ -989,7 +1028,8 @@ function DialerPageInner() {
               return
             }
             console.log(
-              `[sip] accepting agent leg (armed=${armed}, expectingAgentLeg=${expectingAgentLeg})`
+              `[sip #${sipInstanceId}] accepting agent leg ` +
+              `(armed=${armed}, expectingAgentLeg=${expectingAgentLeg})`
             )
             try {
               invitation.stateChange.addListener((state: any) => {
@@ -1014,21 +1054,59 @@ function DialerPageInner() {
           },
         }
 
+        localUserAgent = userAgent
+        if (cancelled) return // torn down while constructing — cleanup handles it
+
         await userAgent.start()
+        if (cancelled) return
+
         // Keep the registerer handle so we can register/unregister with the
         // user's dialing intent (see armDialing/disarmDialing). We register now
         // so the endpoint is reachable the instant the user arms a call, but the
         // onInvite guard above still blocks anything they didn't initiate.
         const registerer = new Registerer(userAgent)
+        localRegisterer = registerer
         registererRef.current = registerer
         await registerer.register()
+        if (cancelled) return
+
         swClientRef.current = userAgent
         setSwReady(true)
+        console.log(`[sip] registered as instance #${sipInstanceId} (${sipUsername})`)
       } catch (err: any) {
         console.error('SIP init error:', err?.message || err)
       }
     }
     initSW()
+
+    return () => {
+      cancelled = true
+      // Unregister BEFORE stopping: unregistering removes this contact from
+      // Telnyx so no further INVITE can be forked to it. Stopping without
+      // unregistering can leave the registration alive on Telnyx's side until
+      // it expires, which is exactly the window in which a dead instance
+      // answers 486 and kills a live call.
+      void (async () => {
+        try {
+          if (localRegisterer) await localRegisterer.unregister()
+        } catch (err) {
+          console.warn('[sip] unregister during cleanup failed:', err)
+        }
+        try {
+          if (localUserAgent) await localUserAgent.stop()
+        } catch (err) {
+          console.warn('[sip] userAgent.stop during cleanup failed:', err)
+        }
+      })()
+
+      // Only clear the shared refs if they still point at THIS instance — a
+      // newer effect run may have already replaced them.
+      if (registererRef.current === localRegisterer) registererRef.current = null
+      if (swClientRef.current === localUserAgent) {
+        swClientRef.current = null
+        setSwReady(false)
+      }
+    }
   }, [isActive])
 
   const attachSIPAudio = (session: any) => {
