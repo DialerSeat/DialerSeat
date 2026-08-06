@@ -3140,9 +3140,24 @@ function DialerPageInner() {
         setCampaigns(prev => prev.map(c =>
           c.id === currentCampaign.id ? { ...c, dialer_mode: newMode, amd_enabled: amd } : c
         ))
+        setAmdActivity(prev => [`MODE SET TO ${newMode.toUpperCase()}`, ...prev].slice(0, 5))
+      } else {
+        // Previously there was no else at all. A rejected save looked exactly
+        // like nothing happening: no error, no message, the dropdown just
+        // closed and the mode quietly stayed as it was. If you were switching
+        // to predictive and it didn't take, there was no way to tell.
+        console.error('[dialer] mode change rejected:', data.error)
+        setAmdActivity(prev => [
+          `MODE CHANGE FAILED — STILL ${dialerMode.toUpperCase()}${data.error ? ` (${String(data.error).toUpperCase()})` : ''}`,
+          ...prev,
+        ].slice(0, 5))
       }
     } catch (err) {
       console.error('Mode change failed:', err)
+      setAmdActivity(prev => [
+        `MODE CHANGE FAILED — STILL ${dialerMode.toUpperCase()}`,
+        ...prev,
+      ].slice(0, 5))
     } finally {
       setModeSaving(false)
       setModeDropdownOpen(false)

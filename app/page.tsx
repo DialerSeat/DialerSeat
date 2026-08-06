@@ -124,8 +124,13 @@ export default async function Home({ searchParams }: PageProps) {
             grid-template-columns: minmax(0, 635px) minmax(0, 1fr);
             gap: 162px;
             text-align: left;
-            align-items: center;
+            /* Top-aligned, not centred. In the mockup the eyebrow sits a fixed
+               distance below the panel's top edge rather than floating at its
+               vertical middle — centring made the text drift down as the panel
+               grew, which is what put "BUILT FOR VOLUME" too low. */
+            align-items: start;
           }
+          .ds-volume-copy { padding-top: 76px; }
           .ds-volume-demo { margin: 0; max-width: none; }
           /* The eyebrow label sits left; the headline is CENTRED in the right
              column — that's what puts "LEADS." on its own centred line rather
