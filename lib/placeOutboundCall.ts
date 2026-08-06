@@ -297,6 +297,21 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
   const authHeader = `Bearer ${p.env.apiKey}`
   const dialUrl = 'https://api.telnyx.com/v2/calls'
 
+  // ── WHO OWNS THIS CALL, recorded ON THE CALL ─────────────────────────────
+  // Stamped into Telnyx's client_state so a leg can be traced back to its
+  // agent from Telnyx's own active-call list, with no database lookup.
+  //
+  // This is what lets ABORT be authoritative. The sweep used to read the
+  // `calls` table and hang up what it found there — which cannot reach a leg
+  // whose row does not exist yet (the row is written AFTER Telnyx accepts the
+  // dial) or never got written at all (the insert is best-effort). Those are
+  // exactly the legs that keep ringing after the agent presses stop.
+  //
+  // Telnyx echoes client_state back on every webhook and includes it in
+  // GET /v2/connections/{id}/active_calls, so this is readable from both
+  // directions. See buildClientState / parseClientState below.
+  const clientState = buildClientState({ u: p.userId, s: p.source })
+
   const isTsrRegulated = p.dialerMode === 'progressive' || p.dialerMode === 'predictive'
   const ringTimeoutSecs = isTsrRegulated ? 20 : 60
 
@@ -337,6 +352,7 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
         },
         body: JSON.stringify({
           connection_id: p.env.connectionId,
+          client_state: clientState,
           to: agentSipUri,
           from: p.fromNumber,
           webhook_url: p.env.webhookUrl,
@@ -433,6 +449,7 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
   // target only once a human is confirmed" design.
   const dialBody: Record<string, unknown> = {
     connection_id: p.env.connectionId,
+    client_state: clientState,
     to: p.toFormatted,
     from: p.fromNumber,
     webhook_url: p.env.webhookUrl,
@@ -617,8 +634,13 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
   const leadCallLegId = leadData.data.call_leg_id
 
   // ── INSERT calls ROW ─────────────────────────────────────────────────────
+  // NOTE the error check below. supabase-js does NOT throw on a failed
+  // insert — it resolves with { error } — so the try/catch this used to rely
+  // on caught nothing, and a failed insert produced a live call with no row.
+  // Nothing downstream could then find it: not the abort sweep, not the
+  // recordings list, not analytics.
   try {
-    await supabase.from('calls').insert({
+    const { error: insertErr } = await supabase.from('calls').insert({
       user_id: p.userId,
       lead_id: p.leadId,
       campaign_id: p.campaignId,
@@ -648,8 +670,15 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
         ? { dial_group_id: p.agentSessionId }
         : {}),
     })
-  } catch (insertErr) {
-    console.error(`[placeOutboundCall:${p.source}] Failed to insert calls row:`, insertErr)
+    if (insertErr) {
+      console.error(
+        `[placeOutboundCall:${p.source}] calls row insert FAILED for ${leadCallControlId} — ` +
+        `this call is live and untracked; abort will still reach it via client_state:`,
+        insertErr
+      )
+    }
+  } catch (thrown) {
+    console.error(`[placeOutboundCall:${p.source}] calls row insert threw:`, thrown)
   }
 
   if (p.poolNumberId) {
@@ -685,6 +714,67 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
  * hangup/abort routes and the AMD-machine-detected handler, so there's one
  * place that knows the correct Telnyx endpoint/auth shape.
  */
+/**
+ * Telnyx's client_state is an opaque base64 string it stores on the call and
+ * hands back on webhooks and in the active-call list.
+ */
+export function buildClientState(payload: { u: string; s: string }): string {
+  return Buffer.from(JSON.stringify(payload), 'utf8').toString('base64')
+}
+
+/** Returns null for anything that isn't one of ours. */
+export function parseClientState(raw?: string | null): { u: string; s: string } | null {
+  if (!raw) return null
+  try {
+    const parsed = JSON.parse(Buffer.from(raw, 'base64').toString('utf8'))
+    return typeof parsed?.u === 'string' ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Every call currently live on our Telnyx connection that belongs to `userId`.
+ *
+ * Telnyx is the only party that actually knows what is ringing right now. Our
+ * `calls` table is a record of what we *believe* we dialed, written after the
+ * fact and best-effort — so a sweep that trusts it will miss the newest legs
+ * and any whose insert failed. Asking Telnyx closes both gaps.
+ *
+ * Scoped by client_state: a leg with no client_state, or one belonging to
+ * another agent, is left strictly alone. This connection is shared by every
+ * tenant, so an unscoped hangup here would drop other people's live calls.
+ */
+export async function listActiveCallControlIdsForUser(
+  userId: string,
+  apiKey = process.env.TELNYX_API_KEY,
+  connectionId = process.env.TELNYX_CONNECTION_ID
+): Promise<string[]> {
+  if (!apiKey || !connectionId) return []
+
+  const ids: string[] = []
+  try {
+    const res = await fetch(
+      `https://api.telnyx.com/v2/connections/${encodeURIComponent(connectionId)}/active_calls?page[size]=250`,
+      { headers: { Authorization: `Bearer ${apiKey}` }, cache: 'no-store' }
+    )
+    if (!res.ok) {
+      console.warn('[activeCalls] Telnyx active_calls lookup failed:', res.status)
+      return []
+    }
+    const json = await res.json().catch(() => null)
+    for (const call of json?.data || []) {
+      const owner = parseClientState(call?.client_state)
+      if (owner?.u === userId && call?.call_control_id) {
+        ids.push(call.call_control_id)
+      }
+    }
+  } catch (err) {
+    console.warn('[activeCalls] Telnyx active_calls lookup threw:', err)
+  }
+  return ids
+}
+
 export async function hangupCallControlId(
   callControlId: string,
   apiKey?: string

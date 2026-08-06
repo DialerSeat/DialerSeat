@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { createClient } from '@supabase/supabase-js'
 import { apiError } from '@/lib/apiError'
-import { hangupCallControlId } from '@/lib/placeOutboundCall'
+import { hangupCallControlId, listActiveCallControlIdsForUser } from '@/lib/placeOutboundCall'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -32,19 +32,13 @@ const supabase = createClient(
 //   3. Mark the agent's sessions paused so the heartbeat controller won't
 //      immediately re-fill on the next beat.
 //
-// SOURCE CHANGE FROM SIGNALWIRE VERSION: the old version pulled both leg
-// SIDs from call_rooms (lead_call_sid, agent_call_sid). Under the
-// no-conference direct-bridge architecture, call_rooms is no longer
-// written to at all (see TELNYX-MIGRATION-DESIGN.md) — there's no room to
-// track. This version pulls the lead leg's call_control_id from the
-// `calls` table instead (call_control_id column, same one every other
-// rewritten route uses). We only need to hang up the LEAD leg here: for a
-// user_dial call, hanging up the lead leg via Telnyx also tears down the
-// bridged agent leg (they're linked); for a controller_fanout call with no
-// agent bridged yet, there's no separate agent leg in flight to worry
-// about — the agent's own SIP leg (if any was reactively dialed for
-// overflow) will simply stop ringing on its own once the lead leg it was
-// linked to is gone.
+// TWO SOURCES, DELIBERATELY. Reading only our own `calls` table was the bug:
+// that table records what we believe we dialed, written after Telnyx accepts
+// each dial and best-effort at that, so it cannot see a leg placed a moment
+// ago or one whose insert failed. Telnyx's active-call list knows what is
+// actually ringing, and every leg carries a client_state naming its owner, so
+// the sweep can be both authoritative and correctly scoped to one agent on a
+// connection shared by every tenant.
 //
 // Idempotent and best-effort: every step is wrapped so a single failure can't
 // block the others. Returns counts for observability.
@@ -79,111 +73,102 @@ export async function POST(req: Request) {
     let hungUp = 0
     let claimsReleased = 0
 
-    // ── 1. Hang up the lead leg of every recent call for this user ─────────
     const sinceIso = new Date(Date.now() - LOOKBACK_MINUTES * 60_000).toISOString()
-    const { data: recentCalls, error: callsErr } = await supabase
-      .from('calls')
-      .select('call_control_id, agent_call_control_id')
-      .eq('user_id', userId)
-      .gte('created_at', sinceIso)
-      // .eq, NOT .is — PostgREST's `is` operator only accepts null/true/false/
-      // unknown, so `.is('duration', 0)` is not an equality test and matched
-      // nothing. The sweep therefore hung up NOTHING, silently.
-      //
-      // It looked fine in power/progressive because the client separately
-      // hangs up the one call id it knows about, which is all those modes
-      // have. Predictive places N calls server-side that the client has no
-      // ids for and relies entirely on this sweep — so aborting predictive
-      // left every fanned-out line ringing the lead's phone with no way to
-      // stop it. That is the reported "abort doesn't stop the ringing".
-      //
-      // duration = 0 is the in-flight sentinel; a finished call always has a
-      // real duration (floored at 1) written by the hangup webhook.
-      .eq('duration', 0)
-    if (callsErr) {
-      console.error('[abort] calls lookup failed:', callsErr)
-    }
+    const alreadyHungUp = new Set<string>()
 
-    const callControlIds = new Set<string>()
-    for (const c of recentCalls || []) {
-      if (c.call_control_id) callControlIds.add(c.call_control_id)
-      // ── AND THE AGENT'S OWN LEG ────────────────────────────────────────
-      // Agent legs never get their own `calls` row — only lead legs do — so
-      // for as long as this sweep read just call_control_id, it could not
-      // reach them. Hanging up the lead does not reliably tear down an agent
-      // leg that is still ringing: it was dialed FIRST and only linked to the
-      // lead via link_to, so cancelling the lead can leave the agent's phone
-      // ringing with nothing able to stop it. That is the reported "I hit stop
-      // and it's still dialing".
-      //
-      // Recorded on the lead's row at dial time (see lib/placeOutboundCall),
-      // which also covers predictive lines the client holds no ids for.
-      if (c.agent_call_control_id) callControlIds.add(c.agent_call_control_id)
-    }
-    // Hang them up in parallel; each is best-effort — hangupCallControlId
-    // already treats "already gone" (404/422) as a non-fatal outcome.
-    await Promise.all(
-      [...callControlIds].map(async (id) => {
+    const hangUpAll = async (ids: Iterable<string>) => {
+      const fresh = [...ids].filter(id => id && !alreadyHungUp.has(id))
+      if (fresh.length === 0) return 0
+      fresh.forEach(id => alreadyHungUp.add(id))
+      await Promise.all(fresh.map(async (id) => {
         try {
           await hangupCallControlId(id)
           hungUp++
         } catch (e) {
           console.error('[abort] hangup failed for', id, e)
         }
-      })
-    )
+      }))
+      return fresh.length
+    }
 
-    // ── SECOND PASS ────────────────────────────────────────────────────────
-    // The first sweep can miss calls that did not exist yet when its query
-    // ran. Predictive fires from the heartbeat: a tick already in flight when
-    // STOP was pressed will finish placing its lines a moment later, and those
-    // rows land AFTER the sweep has read the table. The engine is disarmed by
-    // then so no further ticks fire — but that last batch would keep ringing
-    // with nothing left to stop it.
+    // ── WHAT IS ACTUALLY LIVE, ACCORDING TO TELNYX ─────────────────────────
+    // The authoritative source, and the one that fixes the reported bug.
     //
-    // A short second pass closes that window. It is cheap (one indexed query,
-    // usually zero rows) and idempotent — hangupCallControlId already treats
-    // an already-ended call as a non-error.
-    await new Promise(resolve => setTimeout(resolve, 1200))
-    const { data: stragglers } = await supabase
-      .from('calls')
-      .select('call_control_id, agent_call_control_id')
-      .eq('user_id', userId)
-      .gte('created_at', sinceIso)
-      .eq('duration', 0)
-
-    const secondPass = new Set<string>()
-    for (const c of stragglers || []) {
-      if (c.call_control_id && !callControlIds.has(c.call_control_id)) {
-        secondPass.add(c.call_control_id)
-      }
-      // The fanout agent leg is written by the events webhook the instant a
-      // lead answers (see dialAndBridgeAgentForFanout), so it very often only
-      // appears on this pass — it is exactly the leg that rings the agent's
-      // own phone after they pressed stop.
-      if (c.agent_call_control_id && !callControlIds.has(c.agent_call_control_id)) {
-        secondPass.add(c.agent_call_control_id)
+    // The sweep below it reads our own `calls` table, which is a record of
+    // what we believe we dialed — written AFTER Telnyx accepts each dial, and
+    // best-effort at that. It structurally cannot see the leg placed half a
+    // second ago, or one whose insert failed. In predictive those are most of
+    // them, which is why stop left phones ringing.
+    //
+    // Telnyx knows what is ringing right now. Scoped to this user through the
+    // client_state stamped on every leg at dial time (see
+    // lib/placeOutboundCall), so a shared connection never leaks one tenant's
+    // abort into another's live calls.
+    const fromTelnyx = async () => {
+      const ids = await listActiveCallControlIdsForUser(userId)
+      if (ids.length > 0) {
+        const n = await hangUpAll(ids)
+        if (n > 0) console.warn(`[abort] Telnyx active-call sweep hung up ${n} leg(s)`)
       }
     }
 
-    if (secondPass.size > 0) {
-      console.warn(`[abort] second pass caught ${secondPass.size} straggler leg(s)`)
-      await Promise.all(
-        [...secondPass].map(async (id) => {
-          try {
-            await hangupCallControlId(id)
-            hungUp++
-          } catch (e) {
-            console.error('[abort] second-pass hangup failed for', id, e)
-          }
-        })
-      )
+    // ── AND WHAT OUR TABLE KNOWS ───────────────────────────────────────────
+    // Still worth running: it reaches a leg Telnyx has already moved out of
+    // "active" but that our records show as unfinished, and it costs one
+    // indexed query.
+    const fromDatabase = async () => {
+      const { data: rows, error: callsErr } = await supabase
+        .from('calls')
+        .select('call_control_id, agent_call_control_id')
+        .eq('user_id', userId)
+        .gte('created_at', sinceIso)
+        // duration is 0 while in flight and gets a real value from the hangup
+        // webhook. null is included because a row that never received the
+        // webhook is exactly the kind that might still be up.
+        //
+        // This was `.eq('duration', 0)` alone, and before that `.is('duration',
+        // 0)` — which PostgREST does not accept as an equality test, so the
+        // sweep silently matched nothing at all.
+        .or('duration.eq.0,duration.is.null')
+      if (callsErr) {
+        console.error('[abort] calls lookup failed:', callsErr)
+        return
+      }
+
+      const ids: string[] = []
+      for (const c of rows || []) {
+        if (c.call_control_id) ids.push(c.call_control_id)
+        // Agent legs get no row of their own, so they live on the lead's row.
+        // Hanging up the lead does not reliably tear down an agent leg that is
+        // still ringing: it was dialed first and only linked via link_to.
+        if (c.agent_call_control_id) ids.push(c.agent_call_control_id)
+      }
+      await hangUpAll(ids)
+    }
+
+    await Promise.all([fromTelnyx(), fromDatabase()])
+
+    // ── SECOND AND THIRD PASSES ────────────────────────────────────────────
+    // A dial already in flight when STOP was pressed lands after the first
+    // sweep has read. The engine is disarmed by then so nothing new starts,
+    // but that last batch would otherwise ring on with nothing left to stop
+    // it. Two spaced passes cover a dial that was mid-flight and one that had
+    // not reached Telnyx yet. Both are cheap and idempotent — hanging up an
+    // already-ended call is a no-op, and alreadyHungUp keeps us from asking
+    // twice about the same leg.
+    for (const delay of [1200, 1800]) {
+      await new Promise(resolve => setTimeout(resolve, delay))
+      const before = hungUp
+      await Promise.all([fromTelnyx(), fromDatabase()])
+      if (hungUp > before) {
+        console.warn(`[abort] late pass caught ${hungUp - before} straggler leg(s)`)
+      }
     }
 
     // Calls-only scope stops here: the lines are silenced, but the agent's
     // claims and session stay intact so they keep working.
     if (scope === 'calls') {
-      return NextResponse.json({ success: true, hungUp, scope, secondPass: secondPass.size })
+      return NextResponse.json({ success: true, hungUp, scope })
     }
 
     // ── 2. Release this agent's claimed leads ────────────────────────────────

@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
 import { useBranding } from '@/components/ThemeProvider'
 import DashboardBanners from '@/components/DashboardBanners'
+import PortraitLock from '@/components/PortraitLock'
 
 const userNavItems = [
   { label: 'ANALYTICS', href: '/dashboard/analytics' },
@@ -161,7 +162,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [user, pathname, bare])
 
   if (bare) {
-    return <>{children}</>
+    // The admin desktop takes this branch. It force-maximizes below 768px, so
+    // it needs the portrait gate every bit as much as the normal shell.
+    return <><PortraitLock />{children}</>
   }
 
   const navItems = isAdmin ? adminNavItems : userNavItems
@@ -493,6 +496,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <main style={{ minHeight: '100vh', background: 'var(--brand-page-bg)', display: 'flex' }}>
+      <PortraitLock />
       <style>{`
         .ds-sidebar-desktop {
           width: 260px; height: 100vh; position: sticky; top: 0;

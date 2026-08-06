@@ -6,8 +6,12 @@
   "start_url": "/dashboard",
   "scope": "/dashboard",
   "display": "standalone",
-  "display_override": ["standalone", "minimal-ui", "browser"],
-  "orientation": "any",
+  "display_override": [
+    "standalone",
+    "minimal-ui",
+    "browser"
+  ],
+  "orientation": "portrait-primary",
   "background_color": "#0a0a0f",
   "theme_color": "#4a9eff",
   "lang": "en-US",
@@ -58,7 +62,11 @@
       "description": "Jump straight into the dialer and start calling.",
       "url": "/dashboard/dialer",
       "icons": [
-        { "src": "/icons/android-chrome-192x192.png", "sizes": "192x192", "type": "image/png" }
+        {
+          "src": "/icons/android-chrome-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
       ]
     },
     {
@@ -67,7 +75,11 @@
       "description": "See today's dials, connects, and closes.",
       "url": "/dashboard/analytics",
       "icons": [
-        { "src": "/icons/android-chrome-192x192.png", "sizes": "192x192", "type": "image/png" }
+        {
+          "src": "/icons/android-chrome-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
       ]
     },
     {
@@ -76,7 +88,11 @@
       "description": "Manage and toggle your calling campaigns.",
       "url": "/dashboard/campaigns",
       "icons": [
-        { "src": "/icons/android-chrome-192x192.png", "sizes": "192x192", "type": "image/png" }
+        {
+          "src": "/icons/android-chrome-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
       ]
     }
   ],

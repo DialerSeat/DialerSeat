@@ -918,23 +918,41 @@ function DialerPageInner() {
 
   useEffect(() => {
     if (!isActive) return
+    // Browsers only allow audio to start inside a user gesture, so the first
+    // click or keypress creates the context and plays one silent sample to
+    // unlock it.
+    //
+    // These listeners USED TO REMOVE THEMSELVES after firing once. A context
+    // can be suspended again later — switching tabs, a phone locking, an iOS
+    // audio interruption — and once that happened there was nothing left to
+    // wake it, so the dialer went quiet for the rest of the shift. They now
+    // stay attached and re-resume on any interaction, which is cheap: the
+    // body is a no-op once the context is already running.
     const warmUp = () => {
       if (!audioCtxRef.current) {
-        audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
-        const buffer = audioCtxRef.current.createBuffer(1, 1, 22050)
-        const source = audioCtxRef.current.createBufferSource()
+        const Ctor = resolveAudioContextCtor()
+        if (!Ctor) return
+        audioCtxRef.current = new Ctor()
+        const buffer = audioCtxRef.current!.createBuffer(1, 1, 22050)
+        const source = audioCtxRef.current!.createBufferSource()
         source.buffer = buffer
-        source.connect(audioCtxRef.current.destination)
+        source.connect(audioCtxRef.current!.destination)
         source.start()
+        return
       }
-      window.removeEventListener('click', warmUp)
-      window.removeEventListener('keydown', warmUp)
+      if (audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume().catch(() => {})
+      }
     }
+    window.addEventListener('pointerdown', warmUp)
     window.addEventListener('click', warmUp)
     window.addEventListener('keydown', warmUp)
+    window.addEventListener('touchstart', warmUp, { passive: true })
     return () => {
+      window.removeEventListener('pointerdown', warmUp)
       window.removeEventListener('click', warmUp)
       window.removeEventListener('keydown', warmUp)
+      window.removeEventListener('touchstart', warmUp)
     }
   }, [isActive])
 
@@ -1238,7 +1256,7 @@ function DialerPageInner() {
     // Ensure the AudioContext is running (autoplay policies can suspend it).
     try {
       if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
-        audioCtxRef.current.resume()
+        audioCtxRef.current.resume().catch(() => {})
       }
     } catch {}
 
@@ -1451,6 +1469,11 @@ function DialerPageInner() {
           setActiveDialingLeadIds(summary.inFlightLeadIds || [])
 
           if (summary.fired > 0) {
+            // Predictive places its lines SERVER-side, so it never passes
+            // through handleDial and never reached the dial tone there. The
+            // agent got no audible signal that a batch had gone out — the one
+            // mode where they are least likely to be watching the screen.
+            playInitiateBlip()
             const numbers = summary.dialedPhones && summary.dialedPhones.length > 0
               ? summary.dialedPhones
               : []
@@ -1776,25 +1799,87 @@ function DialerPageInner() {
     setAvailable(prev => !prev)
   }
 
-  const getAudioCtx = () => {
+  // ── TONES ────────────────────────────────────────────────────────────────
+  // WHY THESE WENT SILENT: every tone here used to be scheduled against
+  // ctx.currentTime the instant it was requested, on a context that might be
+  // SUSPENDED. resume() is asynchronous, and a suspended context's currentTime
+  // does not advance — so the gain envelope and the oscillator's start/stop
+  // were all pinned to a timestamp that was already in the past by the time
+  // audio actually started flowing. The notes were scheduled, then thrown
+  // away. No error, no sound.
+  //
+  // Everything now goes through playTones, which waits for the context to be
+  // RUNNING and only then reads currentTime.
+  const getAudioCtx = (): AudioContext | null => {
+    if (typeof window === 'undefined') return null
     if (!audioCtxRef.current) {
-      audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
+      const Ctor = resolveAudioContextCtor()
+      if (!Ctor) return null
+      audioCtxRef.current = new Ctor()
     }
-    if (audioCtxRef.current.state === 'suspended') audioCtxRef.current.resume()
     return audioCtxRef.current
   }
 
-  const playInitiateBlip = () => {
+  interface Tone {
+    freq: number
+    /** Seconds from now. */
+    at: number
+    dur: number
+    gain?: number
+    type?: OscillatorType
+  }
+
+  const playTones = async (tones: Tone[]) => {
     const ctx = getAudioCtx()
-    const gain = ctx.createGain()
-    gain.gain.setValueAtTime(0.12, ctx.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18)
-    gain.connect(ctx.destination)
-    const osc = ctx.createOscillator()
-    osc.frequency.value = 660
-    osc.connect(gain)
-    osc.start()
-    osc.stop(ctx.currentTime + 0.18)
+    if (!ctx) return
+
+    if (ctx.state === 'suspended') {
+      try {
+        await ctx.resume()
+      } catch {
+        return // Blocked by autoplay policy — no gesture yet. Nothing to do.
+      }
+    }
+    // Still not running (an interrupted context on iOS, say). Scheduling here
+    // would silently discard the notes, so don't.
+    if (ctx.state !== 'running') return
+
+    // Read AFTER the await: the clock only advances while running, and this is
+    // the whole point of the rewrite.
+    const t0 = ctx.currentTime
+
+    for (const tone of tones) {
+      const start = t0 + tone.at
+      const peak = tone.gain ?? 0.12
+
+      const gain = ctx.createGain()
+      gain.gain.setValueAtTime(0.0001, start)
+      gain.gain.linearRampToValueAtTime(peak, start + 0.01)
+      gain.gain.exponentialRampToValueAtTime(0.001, start + tone.dur)
+      gain.connect(ctx.destination)
+
+      const osc = ctx.createOscillator()
+      osc.type = tone.type ?? 'sine'
+      osc.frequency.value = tone.freq
+      osc.connect(gain)
+      osc.start(start)
+      osc.stop(start + tone.dur)
+    }
+  }
+
+  /** Dialing has started. One short mid tone. */
+  const playInitiateBlip = () => {
+    void playTones([{ freq: 660, at: 0, dur: 0.18 }])
+  }
+
+  /** Someone picked up. A rising two-note figure — deliberately unlike the
+   *  dial blip, because the whole job of this sound is to pull an agent's
+   *  attention back to the screen. */
+  const playPickup = () => {
+    void playTones([
+      { freq: 1046, at: 0,    dur: 0.3, gain: 0.2 },
+      { freq: 1318, at: 0.11, dur: 0.3, gain: 0.2 },
+    ])
   }
 
   const playDTMF = (key: string) => {
@@ -1804,38 +1889,9 @@ function DialerPageInner() {
       '7': [852, 1209], '8': [852, 1336], '9': [852, 1477],
       '*': [941, 1209], '0': [941, 1336], '#': [941, 1477],
     }
-    const ctx = getAudioCtx()
     const pair = freqs[key]
     if (!pair) return
-    const duration = 0.4
-    const gainNode = ctx.createGain()
-    gainNode.gain.setValueAtTime(0.12, ctx.currentTime)
-    gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration)
-    gainNode.connect(ctx.destination)
-    pair.forEach(freq => {
-      const osc = ctx.createOscillator()
-      osc.frequency.value = freq
-      osc.connect(gainNode)
-      osc.start()
-      osc.stop(ctx.currentTime + duration)
-    })
-  }
-
-  const playPickup = () => {
-    const ctx = getAudioCtx()
-    ;[0, 0.11].forEach((delay, i) => {
-      const gain = ctx.createGain()
-      gain.gain.setValueAtTime(0, ctx.currentTime + delay)
-      gain.gain.linearRampToValueAtTime(0.2, ctx.currentTime + delay + 0.01)
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.3)
-      gain.connect(ctx.destination)
-      const osc = ctx.createOscillator()
-      osc.type = 'sine'
-      osc.frequency.value = i === 0 ? 1046 : 1318
-      osc.connect(gain)
-      osc.start(ctx.currentTime + delay)
-      osc.stop(ctx.currentTime + delay + 0.3)
-    })
+    void playTones(pair.map(freq => ({ freq, at: 0, dur: 0.4, gain: 0.12 })))
   }
 
   // ── GHOST-DIALING ARM / DISARM ────────────────────────────────────────────
@@ -5101,6 +5157,18 @@ const navLinkStyle: React.CSSProperties = {
   border: '1px solid #2a4a8a', borderRadius: 3,
   color: 'var(--brand-primary)', fontSize: 10, fontWeight: 700, letterSpacing: 2,
   textDecoration: 'none', fontFamily: 'Futura PT, Futura, sans-serif',
+}
+
+/**
+ * Safari still only exposes webkitAudioContext. One typed lookup, so the
+ * fallback isn't spelled out (and cast away) at every call site.
+ */
+function resolveAudioContextCtor(): typeof AudioContext | undefined {
+  if (typeof window === 'undefined') return undefined
+  return (
+    window.AudioContext ||
+    (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+  )
 }
 
 export default function DialerPage() {
