@@ -30,7 +30,12 @@
  * renders identically for every visitor. Phone numbers use 555 prefixes,
  * which are reserved for fiction.
  *
- * Dark by design — it reads as "the product" against light marketing sections.
+ * Skinned in the real dialer's light terminal palette (the same brand tokens
+ * app/dashboard/dialer/page.tsx resolves), so what a visitor sees on the
+ * landing page is what they get after signing in.
+ *
+ * (Was dark by design — it reads as "the product" against light marketing sections — which meant
+ * advertising a product that does not exist.)
  *
  * MOBILE: fluid, not zoom-scaled. The hero's DialerShowcase is wrapped in
  * .ds-showcase-scale (fixed 640px + zoom: 0.5) because its internal layout is
@@ -44,25 +49,36 @@ import { useState, useEffect } from 'react'
 const FUTURA = 'Futura PT, Futura, "Trebuchet MS", sans-serif'
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace'
 
-// Fixed palette rather than brand CSS vars: this panel is meant to look like
-// the dark dialer terminal on any background, including whitelabel tenants
-// whose brand vars would otherwise recolour it into something unrecognisable.
+// The REAL dialer's palette, token for token. These are the same values
+// app/dashboard/dialer/page.tsx uses (terminalBg/Surface/Border/Text/Muted/
+// Accent, resolved from app/globals.css), not an approximation of them — a
+// marketing mockup that shows a different product than the one people sign up
+// for is a small lie that gets found out on day one.
+//
+// Brand vars with the DialerSeat defaults as fallbacks, exactly as the dialer
+// declares them, so a whitelabel tenant's colours carry through here too.
 const D = {
-  // Matched to the hero DialerShowcase, which uses C.sidebar
-  // (var(--brand-sidebar-bg, #111118)). Two dark panels on one page reading
-  // as slightly different blacks looks like a mistake rather than a choice —
-  // and this one follows the whitelabel token for the same reason the hero
-  // does, so a tenant's sidebar colour carries through both.
-  shell: 'var(--brand-sidebar-bg, #111118)',
-  bar: 'rgba(0,0,0,0.18)',
-  row: 'rgba(255,255,255,0.04)',
-  border: '#262633',
-  borderActive: '#4a9eff',
-  text: '#f2f3f7',
-  muted: '#7d7f92',
-  accent: '#4a9eff',
-  green: '#4ade80',
-  amber: '#fbbf24',
+  /** --brand-card-surface: the queue panel itself. */
+  shell: 'var(--brand-card-surface, #e2e4ea)',
+  /** --brand-header-bg: the dark terminal title bar. */
+  bar: 'var(--brand-header-bg, #1a1a2e)',
+  /** --brand-page-bg: an individual row sitting on the panel. */
+  row: 'var(--brand-page-bg, #f0f1f4)',
+  border: 'var(--brand-card-border, #c4c8d0)',
+  text: 'var(--brand-on-page-bg, #1a1c24)',
+  muted: 'var(--brand-muted-text, #5a5e6a)',
+  /** terminalAccent — the deep navy on phone numbers and the DIALING badge. */
+  accent: '#2a4a8a',
+  /** --brand-primary — only ever on the dark title bar, as in the real app. */
+  barAccent: 'var(--brand-primary, #4a9eff)',
+  green: '#16a34a',
+  greenBg: '#dcfce7',
+  amber: '#8a6a1a',
+  amberBg: '#fef3c7',
+  slate: '#64748b',
+  slateBg: '#f1f5f9',
+  /** The NEW badge's fill in the real queue. */
+  idleBg: '#e8e8ec',
 }
 
 type Outcome = 'no-answer' | 'voicemail' | 'connected'
@@ -72,8 +88,11 @@ interface Row {
   name: string
   phone: string
   state: string
-  /** Attempts used so far in the current pass. */
+  /** Attempts used so far in the current pass. Resets when the lead rotates. */
   attempts: number
+  /** Lifetime dials, which is what the queue's "Nx" column counts. Unlike
+      `attempts` this never resets — a lead that has been round once reads 1x. */
+  dialed?: number
   /** Set once the lead has been worked and rotated to the bottom. */
   outcome?: Outcome
 }
@@ -151,10 +170,13 @@ const RING_SECONDS: Record<Outcome, number> = {
 /** How long the outcome tag stays up before the queue moves on. */
 const RESULT_MS = 600
 
-const OUTCOME_COPY: Record<Outcome, { label: string; color: string }> = {
-  'no-answer': { label: 'NO ANSWER', color: D.muted },
-  voicemail:   { label: 'VOICEMAIL', color: D.amber },
-  connected:   { label: 'CONNECTED', color: D.green },
+// Filled badges, matching the real queue's disposition chips (dispInfo in
+// app/dashboard/dialer/page.tsx) rather than the outline chips this mockup
+// used to draw.
+const OUTCOME_COPY: Record<Outcome, { label: string; color: string; bg: string }> = {
+  'no-answer': { label: 'NO ANSWER', color: D.slate, bg: D.slateBg },
+  voicemail:   { label: 'VOICEMAIL', color: D.amber, bg: D.amberBg },
+  connected:   { label: 'CONNECTED', color: D.green, bg: D.greenBg },
 }
 
 /**
@@ -241,7 +263,10 @@ export default function LeadQueueShowcase() {
             missStreak: prev.missStreak + 1,
             missIdx: prev.missIdx + 1,
             // Rotate to the bottom carrying its outcome — never removed.
-            rows: [...prev.rows.filter(r => r.id !== top.id), { ...top, attempts: 0, outcome }],
+            rows: [
+              ...prev.rows.filter(r => r.id !== top.id),
+              { ...top, attempts: 0, dialed: (top.dialed || 0) + 1, outcome },
+            ],
           }
         })
       }, RESULT_MS)
@@ -269,7 +294,7 @@ export default function LeadQueueShowcase() {
             missStreak: 0,
             rows: [
               ...prev.rows.filter(r => r.id !== top.id),
-              { ...top, attempts: 0, outcome: 'connected' as Outcome },
+              { ...top, attempts: 0, dialed: (top.dialed || 0) + 1, outcome: 'connected' as Outcome },
             ],
           }
         })
@@ -310,26 +335,32 @@ export default function LeadQueueShowcase() {
         width: '100%',
         background: D.shell,
         border: `1px solid ${D.border}`,
-        borderRadius: 8,
+        // 4px, like every card in the app. The 8px here was mockup-only.
+        borderRadius: 4,
         overflow: 'hidden',
         fontFamily: FUTURA,
         color: D.text,
-        boxShadow: '0 18px 50px rgba(0,0,0,0.38)',
+        boxShadow: '0 18px 44px rgba(26,28,36,0.16)',
       }}
     >
       <style>{`
+        /* queueRowPulse, copied from the dialer verbatim. */
         @keyframes lq-pulse {
-          0%, 100% { background: rgba(74,158,255,0.08); }
-          50%      { background: rgba(74,158,255,0.18); }
+          0%, 100% { background: rgba(42, 74, 138, 0.10); }
+          50%      { background: rgba(42, 74, 138, 0.20); }
         }
         @keyframes lq-blink { 0%, 100% { opacity: 1 } 50% { opacity: 0.25 } }
         @keyframes lq-rise {
           from { opacity: 0; transform: translateY(6px); }
           to   { opacity: 1; transform: translateY(0); }
         }
+        /* The dark title strip. The real header is
+           background: var(--brand-header-bg) with a 2px accent underline —
+           the one dark element on an otherwise light screen. */
         .lq-bar {
           display: flex; align-items: center; gap: 10px;
           padding: 9px 12px; background: ${D.bar};
+          border-bottom: 2px solid ${D.barAccent};
         }
         .lq-strip {
           display: flex; align-items: center; gap: 6px;
@@ -337,7 +368,7 @@ export default function LeadQueueShowcase() {
         }
         .lq-row {
           display: grid;
-          grid-template-columns: 1.15fr 1fr 34px 86px;
+          grid-template-columns: 1.6fr 1fr 0.5fr 26px 78px;
           align-items: center;
           gap: 8px;
           /* Tight rows. The panel has to fit inside the viewport alongside the
@@ -351,26 +382,31 @@ export default function LeadQueueShowcase() {
           transition: background .25s ease, border-color .25s ease;
         }
         .lq-row.is-active {
-          border-color: ${D.borderActive};
-          border-left-color: ${D.borderActive};
-          animation: lq-pulse 1.5s ease-in-out infinite;
+          border-color: ${D.accent};
+          border-left-color: ${D.accent};
+          animation: lq-pulse 1.6s ease-in-out infinite;
         }
         .lq-row.is-done { opacity: .55; }
         .lq-list { display: flex; flex-direction: column; gap: 4px; padding: 8px 12px 10px; }
+        /* Filled chips with a matching border, same as the queue's badges. */
         .lq-tag {
-          font-size: 8.5px; font-weight: 700; letter-spacing: 1.2px;
+          font-size: 8.5px; font-weight: 700; letter-spacing: .5px;
           padding: 2px 6px; border-radius: 3px; text-align: center; white-space: nowrap;
+        }
+        .lq-attempts {
+          font-family: ${MONO}; font-size: 9.5px; font-weight: 700;
+          color: ${D.muted}; text-align: right;
         }
         .lq-chip {
           font-size: 9.5px; font-weight: 700; letter-spacing: 1px;
           padding: 4px 9px; border-radius: 3px; cursor: pointer;
-          background: transparent; color: ${D.muted};
+          background: ${D.row}; color: ${D.muted};
           border: 1px solid ${D.border};
           font-family: inherit;
         }
         .lq-chip.is-on {
           border-color: ${D.accent}; color: ${D.accent};
-          background: rgba(74,158,255,0.14);
+          background: rgba(42, 74, 138, 0.12);
         }
         /* Inert control — looks like the real one, doesn't pretend to be
            clickable. */
@@ -395,11 +431,11 @@ export default function LeadQueueShowcase() {
            the queue can't be left silently narrowed by a resize. */
         @media (max-width: 560px) {
           .lq-row {
-            grid-template-columns: minmax(0, 1fr) auto 74px;
+            grid-template-columns: minmax(0, 1fr) auto 66px;
             gap: 6px;
             padding: 8px 9px;
           }
-          .lq-state, .lq-help, .lq-footnote { display: none; }
+          .lq-state, .lq-help, .lq-footnote, .lq-attempts { display: none; }
           .lq-phone { font-size: 10px; }
           .lq-bar, .lq-strip { padding: 8px 9px; gap: 7px; }
           .lq-list { padding: 8px 9px 11px; }
@@ -409,20 +445,18 @@ export default function LeadQueueShowcase() {
       `}</style>
 
       {/* ── TITLE BAR ─────────────────────────────────────────────────── */}
-      <div className="lq-bar" style={{ borderBottom: `1px solid ${D.border}` }}>
-        <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: 2, color: D.muted }}>
-          LEAD QUEUE
+      <div className="lq-bar">
+        <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: 3, color: D.barAccent }}>
+          DIALERSEAT TERMINAL
         </span>
-        <span
-          style={{
-            fontSize: 9, fontWeight: 700, letterSpacing: 1.4, color: D.accent,
-            animation: 'lq-blink 1.4s ease-in-out infinite', whiteSpace: 'nowrap',
-          }}
-        >
-          ● DIALING 1 LINE
+        <span style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: 1.4, color: '#4ade80', whiteSpace: 'nowrap' }}>
+          ● LIVE
+        </span>
+        <span className="lq-help" style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: 1.4, color: '#6b6f85', whiteSpace: 'nowrap' }}>
+          ● AUDIO
         </span>
         <div style={{ flex: 1 }} />
-        <span style={{ fontSize: 9, letterSpacing: 1.2, color: D.muted, fontFamily: MONO, whiteSpace: 'nowrap' }}>
+        <span style={{ fontSize: 9, letterSpacing: 1.2, color: '#8b8fa3', fontFamily: MONO, whiteSpace: 'nowrap' }}>
           {q.dials} DIALS
         </span>
       </div>
@@ -435,13 +469,23 @@ export default function LeadQueueShowcase() {
             style={{
               fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 3,
               border: `1px solid ${n === REPEAT ? D.accent : D.border}`,
-              background: n === REPEAT ? 'rgba(74,158,255,0.14)' : 'transparent',
+              background: n === REPEAT ? 'rgba(42, 74, 138, 0.12)' : D.row,
               color: n === REPEAT ? D.accent : D.muted,
             }}
           >
             {n}x
           </span>
         ))}
+        {/* Where the live line count sits in the real toolbar. */}
+        <span
+          style={{
+            fontSize: 9, fontWeight: 700, letterSpacing: 1.2, color: D.accent,
+            animation: 'lq-blink 1.4s ease-in-out infinite',
+            whiteSpace: 'nowrap', marginLeft: 4,
+          }}
+        >
+          ● DIALING 1 LINE
+        </span>
         <span className="lq-help" style={{ fontSize: 9, letterSpacing: 1, color: D.muted, marginLeft: 4 }}>
           REDIAL BEFORE MOVING ON
         </span>
@@ -466,20 +510,42 @@ export default function LeadQueueShowcase() {
           return (
             <div
               key={r.id}
-              className={`lq-row${isActive ? ' is-active' : ''}${r.outcome ? ' is-done' : ''}`}
+              // is-done dims a worked lead. It must not apply to the row
+              // currently being dialed — after one full rotation every lead
+              // carries an outcome, and the active row would sit at 55%
+              // opacity while it was the one thing on screen doing something.
+              className={`lq-row${isActive ? ' is-active' : ''}${r.outcome && !isActive ? ' is-done' : ''}`}
               style={{ animation: 'lq-rise .3s ease' }}
             >
               <span className="lq-name">{r.name}</span>
-              <span className="lq-phone" style={{ fontFamily: MONO, color: D.muted, fontSize: 10.5 }}>
+              {/* Accent-coloured and bold, like the real queue's phone column:
+                  it is the field an agent actually scans for. */}
+              <span
+                className="lq-phone"
+                style={{
+                  color: D.accent, fontWeight: 700, fontSize: 10.5,
+                  fontVariantNumeric: 'tabular-nums',
+                }}
+              >
                 {r.phone}
               </span>
               <span className="lq-state" style={{ color: D.muted, fontSize: 10 }}>{r.state}</span>
+              <span
+                className="lq-attempts"
+                // Accent once it is non-zero, matching the real column.
+                style={{ color: (r.dialed || 0) > 0 ? D.accent : D.muted }}
+              >
+                {r.dialed || 0}x
+              </span>
 
               {isActive ? (
                 q.phase === 'talking' ? (
                   <span
                     className="lq-tag"
-                    style={{ color: D.green, border: `1px solid ${D.green}`, fontFamily: MONO }}
+                    style={{
+                      color: D.green, background: D.greenBg,
+                      border: `1px solid ${D.green}`, fontFamily: MONO,
+                    }}
                   >
                     {/* A live conversation, counting up. This is the only beat
                         where the agent is actually on the phone. */}
@@ -490,6 +556,7 @@ export default function LeadQueueShowcase() {
                     className="lq-tag"
                     style={{
                       color: OUTCOME_COPY[currentOutcome].color,
+                      background: OUTCOME_COPY[currentOutcome].bg,
                       border: `1px solid ${OUTCOME_COPY[currentOutcome].color}`,
                     }}
                   >
@@ -498,7 +565,10 @@ export default function LeadQueueShowcase() {
                 ) : (
                   <span
                     className="lq-tag"
-                    style={{ color: D.accent, border: `1px solid ${D.accent}`, fontFamily: MONO }}
+                    style={{
+                      color: D.accent, background: 'rgba(42, 74, 138, 0.16)',
+                      border: `1px solid ${D.accent}`, fontFamily: MONO,
+                    }}
                   >
                     {/* Ring timer plus attempt counter: the timer proves the
                         call is live, the counter proves the lead holds the slot
@@ -507,12 +577,18 @@ export default function LeadQueueShowcase() {
                   </span>
                 )
               ) : oc ? (
-                <span className="lq-tag" style={{ color: oc.color, border: `1px solid ${oc.color}` }}>
+                <span
+                  className="lq-tag"
+                  style={{ color: oc.color, background: oc.bg, border: `1px solid ${oc.color}` }}
+                >
                   {oc.label}
                 </span>
               ) : (
-                <span className="lq-tag" style={{ color: D.muted, border: `1px solid ${D.border}` }}>
-                  QUEUED
+                <span
+                  className="lq-tag"
+                  style={{ color: D.muted, background: D.idleBg, border: `1px solid ${D.border}` }}
+                >
+                  NEW
                 </span>
               )}
             </div>
@@ -525,7 +601,7 @@ export default function LeadQueueShowcase() {
       <div
         style={{
           padding: '8px 12px', borderTop: `1px solid ${D.border}`,
-          background: D.bar, fontSize: 9, letterSpacing: 1.1, color: D.muted,
+          background: D.row, fontSize: 9, letterSpacing: 1.1, color: D.muted,
         }}
       >
         WORKED TOP-DOWN

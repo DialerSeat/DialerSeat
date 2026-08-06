@@ -25,10 +25,10 @@ export async function GET(req: NextRequest) {
   const { data: recordings, error } = await supabase
     .from('calls')
     .select(
-      'id, campaign_id, lead_id, phone_number, duration, disposition, recording_url, recording_status, recording_duration, recording_expires_at, created_at, amd_result, leads(first_name, last_name, phone), campaigns(name)'
+      'id, campaign_id, lead_id, phone_number, duration, disposition, recording_url, recording_id, recording_status, recording_duration, recording_expires_at, created_at, amd_result, leads(first_name, last_name, phone), campaigns(name)'
     )
     .eq('user_id', userId)
-    .not('recording_url', 'is', null)
+    .or('recording_url.not.is.null,recording_id.not.is.null')
     .order('created_at', { ascending: false })
     .limit(2000)
 

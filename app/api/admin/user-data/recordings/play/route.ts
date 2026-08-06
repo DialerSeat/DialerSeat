@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/admin'
+import { resolvePlayableUrl, streamRecording } from '@/lib/telnyxRecording'
 
 const supabase = getServiceClient('admin/user-data/recordings/play')
 
@@ -26,14 +27,14 @@ export async function GET(req: NextRequest) {
 
   const { data: call, error } = await supabase
     .from('calls')
-    .select('*')
+    .select('id, recording_id, recording_url, call_control_id')
     .eq('id', callId)
     .single()
 
   if (error || !call) {
     return new Response('Recording not found', { status: 404 })
   }
-  if (!call.recording_url) {
+  if (!call.recording_id && !call.recording_url) {
     return new Response('No recording for this call', { status: 404 })
   }
 
@@ -42,22 +43,21 @@ export async function GET(req: NextRequest) {
     return new Response('Telnyx credentials missing', { status: 500 })
   }
 
-  const upstream = await fetch(call.recording_url, {
-    headers: { Authorization: `Bearer ${apiKey}` },
+  const resolved = await resolvePlayableUrl(call, apiKey)
+  if (!resolved) {
+    return new Response('Recording is no longer available from the carrier', { status: 410 })
+  }
+  if (resolved.discoveredRecordingId) {
+    void supabase
+      .from('calls')
+      .update({ recording_id: resolved.discoveredRecordingId })
+      .eq('id', callId)
+      .then(undefined, () => {})
+  }
+
+  return streamRecording(resolved.url, {
+    range: req.headers.get('range'),
+    download,
+    filename: `dialerseat-${callId}.mp3`,
   })
-
-  if (!upstream.ok) {
-    return new Response(`Telnyx error: ${upstream.status}`, { status: 502 })
-  }
-
-  const headers: Record<string, string> = {
-    'Content-Type': upstream.headers.get('Content-Type') || 'audio/mpeg',
-    'Cache-Control': 'private, max-age=3600',
-  }
-  if (download) {
-    const filename = `dialerseat-${callId}.mp3`
-    headers['Content-Disposition'] = `attachment; filename="${filename}"`
-  }
-
-  return new Response(upstream.body, { status: 200, headers })
 }

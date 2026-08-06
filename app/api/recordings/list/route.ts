@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
     .from('calls')
     .select('*, leads(first_name, last_name, phone, notes), campaigns(name)', { count: 'exact' })
     .eq('user_id', userId)
-    .not('recording_url', 'is', null)
+    .or('recording_url.not.is.null,recording_id.not.is.null')
 
     // ── WHY THIS IS NOT JUST "amd_result = human" ──────────────────────────
     // This used to be `amd_result.is.null,amd_result.eq.human`, which hid

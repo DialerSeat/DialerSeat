@@ -1,26 +1,17 @@
 import { NextRequest } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { auth } from '@clerk/nextjs/server'
+import { resolvePlayableUrl, streamRecording } from '@/lib/telnyxRecording'
 
 const supabase = getServiceClient('recordings/play')
 
 // =============================================================================
-// RECORDINGS PLAY — authenticated proxy/stream of a call recording (Telnyx)
+// RECORDINGS PLAY — authenticated stream of a call recording (Telnyx)
 // =============================================================================
-// calls.recording_url now stores a Telnyx download_urls.mp3 link directly
-// (written by the call.recording.saved webhook handler in
-// app/api/calls/events/route.ts, or by the manual recordings/sync
-// backstop) rather than a SignalWire recording SID we'd construct a URL
-// from — so this route no longer needs to build the URL itself, just
-// fetch whatever's stored.
-//
-// AUTH ON THE UPSTREAM FETCH: sending our Bearer token on the request to
-// Telnyx's download URL, same as every other Telnyx REST call in this
-// codebase. Telnyx's own docs weren't unambiguous on whether the
-// recording download link is pre-signed/public or requires auth to fetch
-// the actual bytes — sending the header is harmless either way (a
-// pre-signed URL that doesn't need it will just ignore an extra header),
-// and covers the case where it does require it.
+// Playback resolves a FRESH download URL from calls.recording_id on every
+// request. It does not play calls.recording_url: that is a presigned S3 link
+// with X-Amz-Expires=600, dead ten minutes after the call. See
+// lib/telnyxRecording.ts for the full account of the bug this fixes.
 // =============================================================================
 
 export async function GET(req: NextRequest) {
@@ -38,7 +29,7 @@ export async function GET(req: NextRequest) {
 
   const { data: call, error } = await supabase
     .from('calls')
-    .select('*')
+    .select('id, recording_id, recording_url, call_control_id')
     .eq('id', callId)
     .eq('user_id', userId)
     .single()
@@ -46,7 +37,7 @@ export async function GET(req: NextRequest) {
   if (error || !call) {
     return new Response('Recording not found', { status: 404 })
   }
-  if (!call.recording_url) {
+  if (!call.recording_id && !call.recording_url) {
     return new Response('No recording for this call', { status: 404 })
   }
 
@@ -55,22 +46,26 @@ export async function GET(req: NextRequest) {
     return new Response('Telnyx credentials missing', { status: 500 })
   }
 
-  const upstream = await fetch(call.recording_url, {
-    headers: { Authorization: `Bearer ${apiKey}` },
+  const resolved = await resolvePlayableUrl(call, apiKey)
+  if (!resolved) {
+    // Telnyx deletes recordings on its own retention schedule, so a row that
+    // has no resolvable audio is a real state, not necessarily a fault.
+    return new Response('Recording is no longer available from the carrier', { status: 410 })
+  }
+
+  // Learned the id off a legacy row — write it back so the next play is one
+  // request instead of two.
+  if (resolved.discoveredRecordingId) {
+    void supabase
+      .from('calls')
+      .update({ recording_id: resolved.discoveredRecordingId })
+      .eq('id', callId)
+      .then(undefined, () => {})
+  }
+
+  return streamRecording(resolved.url, {
+    range: req.headers.get('range'),
+    download,
+    filename: `dialerseat-${callId}.mp3`,
   })
-
-  if (!upstream.ok) {
-    return new Response(`Telnyx error: ${upstream.status}`, { status: 502 })
-  }
-
-  const headers: Record<string, string> = {
-    'Content-Type': upstream.headers.get('Content-Type') || 'audio/mpeg',
-    'Cache-Control': 'private, max-age=3600',
-  }
-  if (download) {
-    const filename = `dialerseat-${callId}.mp3`
-    headers['Content-Disposition'] = `attachment; filename="${filename}"`
-  }
-
-  return new Response(upstream.body, { status: 200, headers })
 }

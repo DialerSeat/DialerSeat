@@ -231,6 +231,9 @@ export default function RecordingsPage() {
   const [syncing, setSyncing] = useState(false)
   const [syncMessage, setSyncMessage] = useState<string | null>(null)
   const [playingId, setPlayingId] = useState<string | null>(null)
+  // Per-recording playback failure, so a dead one says so instead of showing
+  // a scrubber stuck at 0:00 / 0:00 with no explanation.
+  const [playErrors, setPlayErrors] = useState<Record<string, boolean>>({})
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const router = useRouter()
   // Disposition editing (expanded row only, so one shared value is fine —
@@ -1201,10 +1204,29 @@ export default function RecordingsPage() {
 
               {isPlaying && (
                 <div className="rec-player">
-                  <audio controls autoPlay style={{ width: '100%' }}>
-                    <source src={`/api/recordings/play?call_id=${r.id}`} type="audio/mpeg" />
-                    Your browser does not support audio playback.
-                  </audio>
+                  {/* src on the element, not a <source> child: a failed
+                      <source> leaves the player sitting at 0:00 / 0:00 with
+                      no error event to react to. With src, onError fires and
+                      we can say what actually happened. */}
+                  <audio
+                    controls
+                    autoPlay
+                    preload="metadata"
+                    style={{ width: '100%' }}
+                    src={`/api/recordings/play?call_id=${r.id}`}
+                    onError={() => setPlayErrors(prev => ({ ...prev, [r.id]: true }))}
+                    onLoadedMetadata={() => setPlayErrors(prev => (
+                      prev[r.id] ? { ...prev, [r.id]: false } : prev
+                    ))}
+                  />
+                  {playErrors[r.id] && (
+                    <div style={{
+                      marginTop: 6, fontSize: 10, letterSpacing: 1,
+                      color: T.red, fontFamily: 'monospace',
+                    }}>
+                      THIS RECORDING COULD NOT BE LOADED — IT MAY HAVE PASSED THE CARRIER&apos;S RETENTION WINDOW
+                    </div>
+                  )}
                   {expDays !== null && (
                     <div style={{
                       marginTop: 6,

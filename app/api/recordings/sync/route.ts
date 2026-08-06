@@ -41,7 +41,10 @@ export async function POST(req: NextRequest) {
       .from('calls')
       .select('id, call_control_id')
       .eq('user_id', userId)
-      .is('recording_url', null)
+      // Rows with no recording at all, AND rows written before recording_id
+      // existed — those have a recording_url, but it expired ten minutes
+      // after the call, so they need the id backfilled to be playable.
+      .or('recording_url.is.null,recording_id.is.null')
       .not('call_control_id', 'is', null)
       .order('created_at', { ascending: false })
       .limit(200)
@@ -87,6 +90,7 @@ export async function POST(req: NextRequest) {
       }
       const json = await res.json()
       const recordings: Array<{
+        id?: string
         call_control_id?: string
         download_urls?: { mp3?: string; wav?: string }
         duration_millis?: number
@@ -101,12 +105,17 @@ export async function POST(req: NextRequest) {
 
         const call = callByControlId.get(rec.call_control_id)!
         const recordingUrl = rec.download_urls?.mp3 || rec.download_urls?.wav
-        if (!recordingUrl) continue
+        // rec.id is the part that matters — download_urls expire in 10
+        // minutes, so a synced row with only a URL is a synced row that
+        // cannot be played. Skip anything with no id rather than write a
+        // record that looks fine and isn't.
+        if (!rec.id) continue
 
         const { error: updateErr } = await supabase
           .from('calls')
           .update({
-            recording_url: recordingUrl,
+            recording_id: rec.id,
+            recording_url: recordingUrl ?? null,
             recording_duration: Math.round((rec.duration_millis || 0) / 1000),
             recording_status: 'completed',
             recording_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),

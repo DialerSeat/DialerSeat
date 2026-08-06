@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
   let query = supabase
     .from('calls')
     .select('*, leads(first_name, last_name, phone, notes), campaigns(name)', { count: 'exact' })
-    .not('recording_url', 'is', null)
+    .or('recording_url.not.is.null,recording_id.not.is.null')
 
   if (userId !== 'all') {
     query = query.eq('user_id', userId)

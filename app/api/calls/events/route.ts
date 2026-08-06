@@ -89,6 +89,9 @@ interface TelnyxWebhookPayload {
       hangup_cause?: string    // call.hangup
       hangup_source?: string   // call.hangup
       recording_urls?: { mp3?: string; wav?: string } // call.recording.saved
+      recording_id?: string    // call.recording.saved — the STABLE id; see below
+      recording_started_at?: string
+      recording_ended_at?: string
     }
   }
 }
@@ -163,7 +166,13 @@ export async function POST(req: Request) {
         break
 
       case 'call.recording.saved':
-        await handleRecordingSaved(callControlId, payload.recording_urls)
+        await handleRecordingSaved(
+          callControlId,
+          payload.recording_urls,
+          payload.recording_id,
+          payload.recording_started_at,
+          payload.recording_ended_at,
+        )
         break
 
       default:
@@ -523,14 +532,23 @@ async function handleHangup(
 // so call_control_id always matches the exact calls row directly. The
 // call_rooms fallback path is gone along with call_rooms itself.
 //
-// Telnyx delivers recording_urls as a small object ({ mp3, wav }), not a
-// single URL string the way SignalWire's RecordingUrl form field was —
-// we store the mp3 url (matches what the recordings player/download
-// routes already expect as a single playable URL).
+// WHAT WE ACTUALLY STORE, AND WHY IT CHANGED: recording_urls.mp3 is a
+// presigned S3 link carrying X-Amz-Expires=600. It is valid for TEN MINUTES.
+// The first version of this handler stored it as though it were permanent,
+// which is why every recording in the app played as 0:00 / 0:00 — by the time
+// anyone opened the Recordings tab the link was long dead.
+//
+// recording_id is the stable identifier. Playback mints a fresh download URL
+// from it on every request (lib/telnyxRecording.ts). The URL is still written
+// here — it's a useful record that a recording exists, and it IS playable in
+// the first few minutes — but nothing depends on it.
 // =============================================================================
 async function handleRecordingSaved(
   callControlId: string,
-  recordingUrls?: { mp3?: string; wav?: string }
+  recordingUrls?: { mp3?: string; wav?: string },
+  recordingId?: string,
+  startedAt?: string,
+  endedAt?: string
 ): Promise<void> {
   void logCallEvent({
     event_type: 'recording_ready',
@@ -539,9 +557,25 @@ async function handleRecordingSaved(
   })
 
   const recordingUrl = recordingUrls?.mp3 || recordingUrls?.wav
-  if (!recordingUrl) {
-    console.warn(`[calls/events] call.recording.saved for ${callControlId} had no usable URL`)
+  // Either identifier is enough to keep the row: the id is what plays, and a
+  // URL with no id can still be recovered later via the call_control_id
+  // lookup in lib/telnyxRecording.ts.
+  if (!recordingUrl && !recordingId) {
+    console.warn(`[calls/events] call.recording.saved for ${callControlId} had no url and no id`)
     return
+  }
+  // Telnyx sends the recording's own start/end, not a duration. Derive it.
+  let recordingSeconds: number | null = null
+  if (startedAt && endedAt) {
+    const ms = Date.parse(endedAt) - Date.parse(startedAt)
+    if (Number.isFinite(ms) && ms > 0) recordingSeconds = Math.round(ms / 1000)
+  }
+
+  if (!recordingId) {
+    console.warn(
+      `[calls/events] call.recording.saved for ${callControlId} had no recording_id — ` +
+      `playback will have to look it up by call_control_id on first play`
+    )
   }
 
   // ── ENFORCE THE CAMPAIGN'S RECORDING TOGGLE ──────────────────────────────
@@ -598,7 +632,12 @@ async function handleRecordingSaved(
     .from('calls')
     .update({
       recording_status: 'completed',
-      recording_url: recordingUrl,
+      recording_url: recordingUrl ?? null,
+      recording_id: recordingId ?? null,
+      // The recordings list shows a duration next to each row. Without this
+      // it fell back to the call's own duration, which counts ring time the
+      // recording doesn't contain.
+      ...(recordingSeconds !== null ? { recording_duration: recordingSeconds } : {}),
     })
     .eq('call_control_id', callControlId)
     .select('id')

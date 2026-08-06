@@ -2,36 +2,22 @@ import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { getServiceClient } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
+import { deleteTelnyxRecording } from '@/lib/telnyxRecording'
 
 const supabase = getServiceClient('recordings/delete')
 
 // =============================================================================
 // RECORDINGS DELETE (Telnyx)
 // =============================================================================
-// WHAT'S DIFFERENT FROM THE SIGNALWIRE VERSION: SignalWire's recording SID
-// was embeddable in the URL path itself
-// (.../Recordings/{sid}) and trivially regex-extractable to build a DELETE
-// request. Telnyx's recording id (needed for DELETE /v2/recordings/{id})
-// is a SEPARATE field on the call.recording.saved webhook
-// (payload.recording_id) — it does not appear anywhere in the
-// download_urls themselves, so it can't be recovered from the stored URL
-// alone.
+// This route used to be able to clear only OUR OWN reference: Telnyx's
+// recording id, needed for DELETE /v2/recordings/{id}, is a separate field on
+// the call.recording.saved webhook and appears nowhere in the download URL,
+// which is an S3 link. The code tried to regex an id out of that URL anyway.
+// It never matched, so the underlying audio stayed on Telnyx forever while
+// the UI reported the recording deleted.
 //
-// We do NOT add a new column to store it (per instruction to keep the
-// shared schema as-is beyond the one recording_enabled migration already
-// on the table). Practical effect: this route reliably clears OUR OWN
-// reference to the recording (which is what actually matters for the
-// user — the recording disappears from their Recordings page and stops
-// being playable through us) but can't always also delete the underlying
-// file from Telnyx's storage, since we may not have the id to target.
-//
-// This is a real, known limitation — flagging it plainly rather than
-// silently no-op'ing: if deleting the underlying file at Telnyx is a hard
-// requirement (e.g. for compliance/retention reasons), the fix is to
-// capture payload.recording_id in the call.recording.saved handler
-// (app/api/calls/events/route.ts) and store it — which does need a small
-// column addition when that's actually wanted. Until then, this route
-// does the best it safely can with the existing schema.
+// calls.recording_id now stores that id, so the delete is real on both sides.
+// A user who deletes a recording gets it deleted.
 // =============================================================================
 
 export async function POST(req: Request) {
@@ -48,7 +34,7 @@ export async function POST(req: Request) {
 
     const { data: call, error: fetchErr } = await supabase
       .from('calls')
-      .select('id, user_id, recording_url, call_control_id')
+      .select('id, user_id, recording_id, recording_url, call_control_id')
       .eq('id', call_id)
       .maybeSingle()
 
@@ -60,30 +46,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
     }
 
-    // Best-effort provider-side delete: only possible if the id happens to
-    // be present in the stored URL path (it generally won't be for
-    // Telnyx's S3-backed URLs — see header comment). Attempted anyway in
-    // case a future storage/webhook change makes it recoverable; failure
-    // here never blocks clearing our own reference below.
-    if (call.recording_url) {
-      try {
-        const apiKey = process.env.TELNYX_API_KEY
-        const match = call.recording_url.match(/\/recordings\/([A-Za-z0-9-]+)/i)
-        const recordingId = match?.[1]
-
-        if (apiKey && recordingId) {
-          const delRes = await fetch(`https://api.telnyx.com/v2/recordings/${recordingId}`, {
-            method: 'DELETE',
-            headers: { Authorization: `Bearer ${apiKey}` },
-          })
-          if (!delRes.ok) {
-            console.warn('Telnyx recording delete failed:', delRes.status, await delRes.text())
-          } else {
-            console.log('Deleted recording from Telnyx:', recordingId)
-          }
-        }
-      } catch (e) {
-        console.warn('Telnyx recording delete error (continuing):', e)
+    // Provider-side delete, by calls.recording_id. This is a real delete
+    // now: the old version regexed an id out of recording_url, which is an
+    // S3 link containing no id, so "delete" only ever cleared our own row
+    // while the audio stayed on Telnyx. A user who deletes a recording is
+    // asking for it to be gone.
+    const apiKey = process.env.TELNYX_API_KEY
+    if (apiKey) {
+      const gone = await deleteTelnyxRecording(call, apiKey)
+      if (!gone) {
+        console.warn(`[recordings/delete] Telnyx-side delete did not confirm for call ${call_id}`)
       }
     }
 
@@ -91,6 +63,7 @@ export async function POST(req: Request) {
       .from('calls')
       .update({
         recording_url: null,
+        recording_id: null,
         recording_status: 'deleted',
         recording_duration: 0,
         recording_expires_at: null,

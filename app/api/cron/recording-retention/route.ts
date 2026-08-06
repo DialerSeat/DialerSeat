@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
+import { deleteTelnyxRecording } from '@/lib/telnyxRecording'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -18,9 +19,9 @@ export async function GET(req: Request) {
 
     const { data: expired, error } = await supabase
       .from('calls')
-      .select('id, recording_url')
+      .select('id, recording_id, recording_url, call_control_id')
       .lt('recording_expires_at', new Date().toISOString())
-      .not('recording_url', 'is', null)
+      .or('recording_url.not.is.null,recording_id.not.is.null')
       .neq('recording_status', 'deleted')
       .limit(BATCH_LIMIT)
 
@@ -46,23 +47,14 @@ export async function GET(req: Request) {
 
     for (const row of expired) {
 
-      if (row.recording_url && apiKey) {
-        try {
-          const match = row.recording_url.match(/\/recordings\/([A-Za-z0-9-]+)/i)
-          const recordingId = match?.[1]
-          if (recordingId) {
-            const delRes = await fetch(`https://api.telnyx.com/v2/recordings/${recordingId}`, {
-              method: 'DELETE',
-              headers: { Authorization: `Bearer ${apiKey}` },
-            })
-            if (!delRes.ok && delRes.status !== 404) {
-              providerErrors++
-              console.warn('[recording-retention] Telnyx delete failed:', delRes.status)
-            }
-          }
-        } catch (e) {
+      if (apiKey) {
+        // Deletes by calls.recording_id. The previous version tried to regex
+        // an id out of recording_url, which is an S3 link with no id in it —
+        // so no recording was ever actually removed from Telnyx.
+        const gone = await deleteTelnyxRecording(row, apiKey)
+        if (!gone) {
           providerErrors++
-          console.warn('[recording-retention] Telnyx delete error (continuing):', e)
+          console.warn(`[recording-retention] could not delete recording for call ${row.id} at Telnyx`)
         }
       }
 
@@ -70,6 +62,7 @@ export async function GET(req: Request) {
         .from('calls')
         .update({
           recording_url: null,
+          recording_id: null,
           recording_status: 'deleted',
           recording_duration: 0,
           recording_expires_at: null,
