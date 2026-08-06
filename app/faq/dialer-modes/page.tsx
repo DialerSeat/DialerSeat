@@ -1,3 +1,5 @@
+import { breadcrumbSchema } from '@/lib/schema'
+import JsonLd from '@/components/json-ld'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
@@ -69,6 +71,12 @@ const ACCENT = '#2a4a8a'
 export default function DialerModesTldrPage() {
   return (
     <>
+      <JsonLd data={breadcrumbSchema([
+        { name: 'Home', url: '/' },
+        { name: 'Faq', url: '/faq' },
+        { name: 'Dialer Modes (TL;DR)', url: '/faq/dialer-modes' },
+      ])} />
+      <>
       <SiteHeader />
       <main className="dmt-root">
         <style>{`
@@ -229,6 +237,7 @@ export default function DialerModesTldrPage() {
         />
       </main>
       <SiteFooter />
+    </>
     </>
   )
 }

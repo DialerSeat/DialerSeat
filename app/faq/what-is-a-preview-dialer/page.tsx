@@ -1,3 +1,5 @@
+import { breadcrumbSchema } from '@/lib/schema'
+import JsonLd from '@/components/json-ld'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
@@ -27,6 +29,12 @@ const MODE_BG = '#f0f0f4'
 export default function PreviewDialerPage() {
   return (
     <>
+      <JsonLd data={breadcrumbSchema([
+        { name: 'Home', url: '/' },
+        { name: 'Faq', url: '/faq' },
+        { name: 'Preview Dialer', url: '/faq/what-is-a-preview-dialer' },
+      ])} />
+      <>
       <SiteHeader />
       <main className="dm-root dm-preview">
         <style>{`
@@ -490,6 +498,7 @@ export default function PreviewDialerPage() {
         />
       </main>
       <SiteFooter />
+    </>
     </>
   )
 }

@@ -1,3 +1,5 @@
+import { breadcrumbSchema } from '@/lib/schema'
+import JsonLd from '@/components/json-ld'
 import type { Metadata } from 'next'
 import ComplianceExportFaqView from './view'
 
@@ -31,5 +33,14 @@ export const metadata: Metadata = {
 }
 
 export default function ComplianceExportFaqPage() {
-  return <ComplianceExportFaqView />
+  return (
+    <>
+      <JsonLd data={breadcrumbSchema([
+        { name: 'Home', url: '/' },
+        { name: 'Faq', url: '/faq' },
+        { name: 'Compliance Export', url: '/faq/compliance-export' },
+      ])} />
+      <ComplianceExportFaqView />
+    </>
+  )
 }

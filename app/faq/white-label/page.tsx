@@ -1,3 +1,5 @@
+import { breadcrumbSchema } from '@/lib/schema'
+import JsonLd from '@/components/json-ld'
 import type { Metadata } from 'next'
 import View from './view'
 
@@ -16,5 +18,14 @@ export const metadata: Metadata = {
 }
 
 export default function Page() {
-  return <View />
+  return (
+    <>
+      <JsonLd data={breadcrumbSchema([
+        { name: 'Home', url: '/' },
+        { name: 'Faq', url: '/faq' },
+        { name: 'White-Label Your Dialer', url: '/faq/white-label' },
+      ])} />
+      <View />
+    </>
+  )
 }

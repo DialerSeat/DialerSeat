@@ -1,3 +1,5 @@
+import { breadcrumbSchema } from '@/lib/schema'
+import JsonLd from '@/components/json-ld'
 import type { Metadata } from 'next'
 import FaqView from './view'
 
@@ -31,5 +33,13 @@ export const metadata: Metadata = {
 }
 
 export default function FaqPage() {
-  return <FaqView />
+  return (
+    <>
+      <JsonLd data={breadcrumbSchema([
+        { name: 'Home', url: '/' },
+        { name: 'Frequently Asked Questions', url: '/faq' },
+      ])} />
+      <FaqView />
+    </>
+  )
 }

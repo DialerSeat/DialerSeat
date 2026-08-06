@@ -1,3 +1,5 @@
+import { breadcrumbSchema } from '@/lib/schema'
+import JsonLd from '@/components/json-ld'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
@@ -33,6 +35,11 @@ const LAST_UPDATED = 'May 20, 2026'
 export default function PrivacyPolicyPage() {
   return (
     <>
+      <JsonLd data={breadcrumbSchema([
+        { name: 'Home', url: '/' },
+        { name: 'Privacy Policy', url: '/privacy' },
+      ])} />
+      <>
       <SiteHeader />
       <main style={{
         background: '#f0f1f4',
@@ -413,6 +420,7 @@ export default function PrivacyPolicyPage() {
         </div>
       </main>
       <SiteFooter />
+    </>
     </>
   )
 }

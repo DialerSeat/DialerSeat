@@ -1,3 +1,5 @@
+import { breadcrumbSchema } from '@/lib/schema'
+import JsonLd from '@/components/json-ld'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
@@ -26,6 +28,12 @@ export const metadata: Metadata = {
 export default function Page() {
   return (
     <>
+      <JsonLd data={breadcrumbSchema([
+        { name: 'Home', url: '/' },
+        { name: 'Faq', url: '/faq' },
+        { name: 'How We Keep Compliance', url: '/faq/how-we-keep-compliance' },
+      ])} />
+      <>
       <SiteHeader />
       <main className="exp-root">
         <ExplainerStyles accent="#8a6a1a" accentBg="#fdf4e8" />
@@ -316,6 +324,7 @@ export default function Page() {
         />
       </main>
       <SiteFooter />
+    </>
     </>
   )
 }

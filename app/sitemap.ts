@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next'
 import { headers } from 'next/headers'
+import { crossShoppedPairs, matchupSlug } from '@/lib/competitors'
 
 
 
@@ -99,6 +100,15 @@ function apexSitemap(now: Date): MetadataRoute.Sitemap {
     e('/faq/managers', 0.7, 'monthly'),
     e('/faq/white-label', 0.7, 'monthly'),
     
+    // Head-to-head pages, generated from the same registry the pages render
+    // from — a hand-maintained list here would go stale the first time a
+    // competitor is added and the new pages would sit unindexed.
+    ...crossShoppedPairs().map(([a, b]) =>
+      e(`/vs/${matchupSlug(a, b)}`, 0.7, 'monthly')),
+
+    e('/status', 0.5, 'weekly'),
+    e('/data/connect-rates', 0.7, 'weekly'),
+
     e('/terms', 0.3, 'yearly'),
     e('/privacy', 0.3, 'yearly'),
     e('/sign-up', 0.5, 'yearly'),

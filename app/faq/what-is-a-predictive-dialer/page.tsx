@@ -1,3 +1,5 @@
+import { breadcrumbSchema } from '@/lib/schema'
+import JsonLd from '@/components/json-ld'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
@@ -27,6 +29,12 @@ const MODE_BG = '#f8e8e8'
 export default function PredictiveDialerPage() {
   return (
     <>
+      <JsonLd data={breadcrumbSchema([
+        { name: 'Home', url: '/' },
+        { name: 'Faq', url: '/faq' },
+        { name: 'Predictive Dialer', url: '/faq/what-is-a-predictive-dialer' },
+      ])} />
+      <>
       <SiteHeader />
       <main className="dm-root dm-predictive">
         <style>{`
@@ -569,6 +577,7 @@ should_dial = max(0, desired_calls - in_flight)`}</div>
         />
       </main>
       <SiteFooter />
+    </>
     </>
   )
 }

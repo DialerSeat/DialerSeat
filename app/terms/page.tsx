@@ -1,3 +1,5 @@
+import { breadcrumbSchema } from '@/lib/schema'
+import JsonLd from '@/components/json-ld'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
@@ -26,6 +28,11 @@ const LAST_UPDATED = 'July 17, 2026'
 export default function TermsPage() {
   return (
     <>
+      <JsonLd data={breadcrumbSchema([
+        { name: 'Home', url: '/' },
+        { name: 'Terms of Service', url: '/terms' },
+      ])} />
+      <>
       <SiteHeader />
       <main style={{
         background: '#f0f1f4',
@@ -492,6 +499,7 @@ export default function TermsPage() {
         </div>
       </main>
       <SiteFooter />
+    </>
     </>
   )
 }

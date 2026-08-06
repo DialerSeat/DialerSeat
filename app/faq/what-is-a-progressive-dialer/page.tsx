@@ -1,3 +1,5 @@
+import { breadcrumbSchema } from '@/lib/schema'
+import JsonLd from '@/components/json-ld'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
@@ -27,6 +29,12 @@ const MODE_BG = '#e8f5e8'
 export default function ProgressiveDialerPage() {
   return (
     <>
+      <JsonLd data={breadcrumbSchema([
+        { name: 'Home', url: '/' },
+        { name: 'Faq', url: '/faq' },
+        { name: 'Progressive Dialer', url: '/faq/what-is-a-progressive-dialer' },
+      ])} />
+      <>
       <SiteHeader />
       <main className="dm-root dm-progressive">
         <style>{`
@@ -498,6 +506,7 @@ export default function ProgressiveDialerPage() {
         />
       </main>
       <SiteFooter />
+    </>
     </>
   )
 }

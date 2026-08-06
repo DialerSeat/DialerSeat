@@ -1,3 +1,5 @@
+import { breadcrumbSchema } from '@/lib/schema'
+import JsonLd from '@/components/json-ld'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
@@ -26,6 +28,12 @@ export const metadata: Metadata = {
 export default function Page() {
   return (
     <>
+      <JsonLd data={breadcrumbSchema([
+        { name: 'Home', url: '/' },
+        { name: 'Faq', url: '/faq' },
+        { name: 'Why Is Compliance Important? (And Why Legacy Dialers Don\\', url: '/faq/why-is-compliance-important' },
+      ])} />
+      <>
       <SiteHeader />
       <main className="exp-root">
         <ExplainerStyles accent="#8a6a1a" accentBg="#fdf4e8" />
@@ -199,6 +207,7 @@ export default function Page() {
         />
       </main>
       <SiteFooter />
+    </>
     </>
   )
 }
