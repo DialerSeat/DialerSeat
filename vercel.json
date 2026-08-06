@@ -1,6 +1,10 @@
 {
   "crons": [
     {
+      "path": "/api/cron/recording-retention",
+      "schedule": "0 8 * * *"
+    },
+    {
       "path": "/api/cron/pool-reset",
       "schedule": "0 9 * * *"
     },
@@ -10,15 +14,15 @@
     },
     {
       "path": "/api/cron/stale-call-reaper",
-      "schedule": "*/10 * * * *"
+      "schedule": "0 4 * * *"
     },
     {
       "path": "/api/cron/number-health",
-      "schedule": "0 10 * * *"
+      "schedule": "0 11 * * *"
     },
     {
       "path": "/api/cron/ops-health",
-      "schedule": "*/15 * * * *"
+      "schedule": "0 12 * * *"
     }
   ]
 }

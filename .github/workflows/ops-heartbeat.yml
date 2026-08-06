@@ -1,0 +1,107 @@
+name: Ops heartbeat
+
+# =============================================================================
+# WHY THIS EXISTS
+# =============================================================================
+# Two cron routes need to run every few minutes to be worth anything:
+#
+#   stale-call-reaper  frees agent sessions wedged in 'on_call' after a missed
+#                      webhook. Its threshold is 5 minutes. On a daily
+#                      schedule an agent stays unable to dial for up to a day.
+#   ops-health         "the dialer is broken right now" alerts. Found 20 hours
+#                      later, they're a post-mortem rather than an alert.
+#
+# Vercel's Hobby plan rejects any sub-daily cron at DEPLOY time — it fails the
+# whole deployment, not just the cron — so vercel.json keeps them daily and
+# this drives the real cadence from outside.
+#
+# Both routes are safe to call often: ops-health de-duplicates every alert
+# through ops_alert_log (COOLDOWN_MINUTES), and the reaper only touches
+# sessions already silent past its threshold. Extra invocations are no-ops.
+#
+# Delete this workflow if the project ever moves to Vercel Pro, and put the
+# real schedules back in vercel.json.
+# =============================================================================
+
+on:
+  schedule:
+    # Every 10 minutes. GitHub's scheduler is best-effort and can run late
+    # under load — fine here, since both routes are idempotent and neither
+    # needs to land on an exact minute.
+    - cron: '*/10 * * * *'
+  # Lets you run it by hand from the Actions tab to check wiring without
+  # waiting for the next tick.
+  workflow_dispatch:
+
+# If a run is somehow still going when the next tick fires, skip rather than
+# stack up. Nothing here benefits from concurrent execution.
+concurrency:
+  group: ops-heartbeat
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping cron endpoints
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          # Repository variable, so a staging fork can point elsewhere without
+          # editing this file. Falls back to production.
+          BASE_URL: ${{ vars.APP_BASE_URL || 'https://dialerseat.com' }}
+        run: |
+          set -uo pipefail
+
+          if [ -z "${CRON_SECRET}" ]; then
+            echo "::error::CRON_SECRET repository secret is not set. Add it under"
+            echo "::error::Settings > Secrets and variables > Actions, matching the"
+            echo "::error::CRON_SECRET value in Vercel exactly."
+            exit 1
+          fi
+
+          fail=0
+
+          ping() {
+            local path="$1"
+            local body_file
+            body_file="$(mktemp)"
+            local code
+            # -sS: quiet but still print real transport errors.
+            # --max-time: never let one hung request eat the job timeout.
+            code="$(curl -sS -o "${body_file}" -w '%{http_code}' \
+              --max-time 60 \
+              -H "Authorization: Bearer ${CRON_SECRET}" \
+              "${BASE_URL}${path}" || echo 000)"
+
+            case "${code}" in
+              2*)
+                echo "✓ ${path} — ${code}"
+                # Response bodies are small status objects and contain no
+                # secrets, so they're useful in the run log.
+                head -c 500 "${body_file}"; echo
+                ;;
+              401)
+                echo "::error::${path} returned 401. The CRON_SECRET in GitHub does not"
+                echo "::error::match the one in Vercel. Both must be the identical string."
+                fail=1
+                ;;
+              000)
+                echo "::error::${path} — could not connect to ${BASE_URL} (DNS, TLS or timeout)."
+                fail=1
+                ;;
+              *)
+                echo "::error::${path} returned ${code}"
+                head -c 500 "${body_file}"; echo
+                fail=1
+                ;;
+            esac
+            rm -f "${body_file}"
+          }
+
+          ping /api/cron/stale-call-reaper
+          ping /api/cron/ops-health
+
+          # Fail the job on any bad response so GitHub emails you, rather than
+          # a broken heartbeat sitting green forever.
+          exit "${fail}"

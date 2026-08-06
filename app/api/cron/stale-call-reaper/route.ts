@@ -8,6 +8,21 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 const SESSION_DEAD_HEARTBEAT_MIN = 5  // heartbeat is ~5s; 5min silence = gone
+
+// ── SCHEDULING CONSTRAINT — READ BEFORE CHANGING vercel.json ────────────────
+// This route WANTS to run every ~10 minutes: the threshold above is 5 minutes,
+// and a wedged agent session blocks that agent from dialing until it's reaped.
+// Daily means someone can be stuck for up to 24 hours.
+//
+// It runs DAILY anyway because Vercel's Hobby plan rejects any sub-daily cron
+// at DEPLOY time — "Hobby accounts are limited to daily cron jobs" — which
+// fails the whole deployment, not just the cron. A */10 here once blocked a
+// release containing everything else.
+//
+// To get the real cadence back, either move the project to Pro (which allows
+// minute granularity) or hit this endpoint from an external scheduler with the
+// CRON_SECRET bearer token. Do not reintroduce */10 here while on Hobby.
+// ────────────────────────────────────────────────────────────────────────────
 const BATCH_LIMIT = 500
 
 // =============================================================================

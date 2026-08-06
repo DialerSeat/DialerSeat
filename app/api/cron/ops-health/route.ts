@@ -40,6 +40,19 @@ export const runtime = 'nodejs'
 
 const supabase = getServiceClient('cron/ops-health')
 
+// ── SCHEDULING CONSTRAINT — READ BEFORE CHANGING vercel.json ────────────────
+// These are "the product is broken right now" alerts and are worth very little
+// on a daily schedule — a webhook outage found 20 hours later is not an alert,
+// it's a post-mortem. The intended cadence is every 15 minutes.
+//
+// It runs daily because Vercel's Hobby plan rejects sub-daily crons at DEPLOY
+// time, failing the entire deployment. A */15 here silently blocked releases.
+//
+// Pro allows minute granularity; alternatively drive this from an external
+// scheduler using the CRON_SECRET bearer token. The COOLDOWN_MINUTES
+// de-duplication below already makes frequent invocation safe.
+// ────────────────────────────────────────────────────────────────────────────
+
 /** How long before the same alert may fire again. */
 const COOLDOWN_MINUTES = 60
 
