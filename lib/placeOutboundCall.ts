@@ -496,29 +496,39 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
     // on them mid-word.
     //
     // Measured over three days of real traffic: 33 'machine' verdicts to 8
-    // 'human', with machine verdicts landing 2.0–4.7s after answer and human
-    // verdicts 1.7–3.3s. A real voicemail greeting does not END two seconds
-    // in — "you've reached… leave a message" runs 8–15s. Those were live
-    // people. The two distributions also overlap almost entirely, which is
-    // why no timing threshold downstream could ever have separated them:
-    // arrival time carries no signal about which verdict is which.
+    // 'human', with machine verdicts landing 2.0-4.7s after answer. A real
+    // voicemail greeting does not END two seconds in — "you've reached...
+    // leave a message" runs 8-15s. Those were live people.
     //
-    // 'premium' is Telnyx's own recommendation for precisely this failure
-    // (speech recognition rather than silence-timing) and returns a finer
-    // vocabulary: human_residence / human_business / machine / silence /
-    // fax_detected / not_sure. Only 'machine' and 'fax_detected' end the
-    // call — see handleAmdResult in app/api/calls/events/route.ts.
+    // THE FIX IS TUNING, NOT A MORE EXPENSIVE DETECTOR. Telnyx's default
+    // total analysis time is around 3.5s, which forces a verdict while a
+    // human is still deciding whether to say more than "hello". Giving the
+    // standard detector more time costs nothing; premium costs ~2.5x per leg
+    // to solve the same problem with a different algorithm.
     //
-    // COST: premium bills ~$0.005 per call leg against ~$0.002 for standard.
-    // That is a real increase at volume and it is worth it — the failure it
-    // fixes is hanging up on answered prospects.
+    // Timing out returns 'not_sure', which does NOT hang up (see
+    // handleAmdResult in app/api/calls/events/route.ts — only 'machine' and
+    // 'fax_detected' end a call). So a longer window fails toward "put the
+    // agent on", which is the correct direction: wasting five seconds of an
+    // agent's time is recoverable, hanging up on a prospect is not.
     //
-    // STILL no answering_machine_detection_config. A tuning block was added
-    // here once and reverted: unverified parameters risk Telnyx rejecting the
-    // whole dial request, which fails EVERY call rather than just mistuning
-    // detection. Changing the DETECTOR is the fix; hand-tuning silence
-    // thresholds is what got us here.
-    dialBody.answering_machine_detection = 'premium'
+    // Detector and timings are configurable rather than hardcoded because
+    // both move the carrier bill, and that is the account owner's call.
+    // Cached for 30s by getPlatformConfig, so this is a memo read rather than
+    // a query on the dial path.
+    const amdCfg = await getPlatformConfig()
+    dialBody.answering_machine_detection = amdCfg.amd_detector || 'greeting_end'
+
+    // Guarded by its own switch: an unrecognised parameter name makes Telnyx
+    // reject the WHOLE dial request, failing every call rather than merely
+    // mistuning detection. That risk is why an earlier tuning attempt was
+    // reverted. It can now be turned off from the admin app in seconds.
+    if (amdCfg.amd_tuning_enabled) {
+      dialBody.answering_machine_detection_config = {
+        total_analysis_time_millis: amdCfg.amd_total_analysis_ms,
+        after_greeting_silence_millis: amdCfg.amd_after_greeting_silence_ms,
+      }
+    }
   }
 
   const dialLeadLeg = () =>

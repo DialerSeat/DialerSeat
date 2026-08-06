@@ -21,13 +21,16 @@
 export const COST_PER_MINUTE_USD = 0.002
 
 /**
- * Premium answering-machine detection, per call leg.
+ * Answering-machine detection, per call leg.
  *
  * Charged on every leg AMD runs against, including calls nobody picks up,
- * which is why this dominates. Standard AMD is $0.002; we run premium because
- * the cheaper detector was hanging up on humans who paused after "hello".
+ * which is why it dominates the bill at volume rather than minutes.
+ *
+ * This is the STANDARD rate. The premium detector is roughly $0.005 — if
+ * platform_config.amd_detector is switched to 'premium', update this to match
+ * or the margin figures understate cost by 2.5x.
  */
-export const COST_PER_AMD_LEG_USD = 0.005
+export const COST_PER_AMD_LEG_USD = 0.002
 
 /** Recording storage and processing, per minute recorded. */
 export const COST_PER_RECORDED_MINUTE_USD = 0.0005

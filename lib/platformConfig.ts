@@ -50,6 +50,18 @@ export interface PlatformConfig {
    * and should be updated to match whatever Telnyx actually allows.
    */
   concurrency_budget: number
+
+  // ── ANSWERING MACHINE DETECTION ─────────────────────────────────────────
+  // Detector choice and tuning live here rather than in code because both
+  // change the carrier bill, and that is an account-owner decision.
+  /** Telnyx detector. 'greeting_end' is standard; 'premium' costs ~2.5x. */
+  amd_detector: string
+  /** Send answering_machine_detection_config with the dial. */
+  amd_tuning_enabled: boolean
+  /** Max listen time before returning not_sure (which does not hang up). */
+  amd_total_analysis_ms: number
+  /** Silence after speech before the greeting counts as ended. */
+  amd_after_greeting_silence_ms: number
 }
 
 export const PLATFORM_CONFIG_DEFAULTS: PlatformConfig = {
@@ -64,13 +76,20 @@ export const PLATFORM_CONFIG_DEFAULTS: PlatformConfig = {
   agent_leg_refusal_alert_count: 1,
   // The Telnyx account-level outbound concurrent call limit. Display only.
   concurrency_budget: 10,
+  // Standard detector, tuned. Premium is 2.5x the per-leg cost and the
+  // failure it fixes is fixable here for nothing.
+  amd_detector: 'greeting_end',
+  amd_tuning_enabled: true,
+  amd_total_analysis_ms: 6000,
+  amd_after_greeting_silence_ms: 1600,
 }
 
 const CONFIG_COLUMNS =
   'amd_enabled_global, recording_enabled_global, number_buying_frozen, ' +
   'predictive_line_ceiling, poll_interval_ms, hangup_poll_interval_ms, ' +
   'pool_capacity_alert_pct, webhook_silence_minutes, agent_leg_refusal_alert_count, ' +
-  'concurrency_budget'
+  'concurrency_budget, amd_detector, amd_tuning_enabled, ' +
+  'amd_total_analysis_ms, amd_after_greeting_silence_ms'
 
 // Cached per process. These are read on hot paths (every dial consults the AMD
 // and recording overrides), and the values change by human action at most a few

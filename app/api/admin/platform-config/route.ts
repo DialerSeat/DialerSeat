@@ -51,6 +51,16 @@ const FIELDS: Record<keyof PlatformConfig, Validator> = {
   // The carrier's account limit, mirrored for the Live Ops gauge only.
   // Nothing enforces it — see lib/concurrency.ts.
   concurrency_budget:        v => intInRange(v, 1, 5000),
+  // Only Telnyx's documented modes. An unrecognised value here would be
+  // rejected at dial time, failing every call.
+  amd_detector: v => (typeof v === 'string' &&
+    ['detect', 'detect_beep', 'detect_words', 'greeting_end', 'premium'].includes(v))
+    ? (v as unknown as number) : null,
+  amd_tuning_enabled:        v => typeof v === 'boolean' ? v : null,
+  // Floors and ceilings that keep a typo from making detection useless: too
+  // short and it decides on nothing, too long and the agent waits.
+  amd_total_analysis_ms:         v => intInRange(v, 1000, 30000),
+  amd_after_greeting_silence_ms: v => intInRange(v, 200, 10000),
 }
 
 function intInRange(v: unknown, min: number, max: number): number | null {
