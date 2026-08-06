@@ -65,103 +65,73 @@ export interface PoolNumber {
 
 
 
+/**
+ * Pick a caller ID for this lead AND record the usage, atomically.
+ *
+ * WHY THIS IS ONE OPERATION NOW: it used to be two — findActive() chose a
+ * number, then recordUsage() counted the call afterwards. Both halves raced,
+ * and a team is by definition concurrent:
+ *
+ *   STAMPEDE — findActive ordered by last_called_at ASC and returned the first
+ *   number with headroom. Concurrent agents all read before any of them wrote,
+ *   so every agent got the SAME number. The whole floor dialed from one caller
+ *   ID while the rest of the pool idled, which is the fastest route to a
+ *   "Spam Likely" label there is.
+ *
+ *   LOST INCREMENTS — recordUsage read the count, added one in JS, wrote it
+ *   back. Two concurrent calls both read 10 and both wrote 11. Daily caps
+ *   under-counted under exactly the load they exist to guard against.
+ *
+ * The claim_pool_number RPC does selection and increment in a single statement
+ * with FOR UPDATE SKIP LOCKED, so concurrent callers get different numbers and
+ * no increment is lost. Locality preference (area code, then state, then
+ * region) is expressed in its ORDER BY rather than as separate round trips.
+ */
 export async function pickNumberForLead(
   leadPhone: string,
   dialerMode?: string
 ): Promise<PoolNumber | null> {
-  
-  
-  
-  
-  if (dialerMode === 'predictive') {
-    return findActive({})
+  // Predictive fans out across many leads at once, so matching the caller ID
+  // to any single lead's geography is meaningless — take whatever is freshest.
+  const useLocality = dialerMode !== 'predictive'
+
+  let areaCode: string | null = null
+  let state: string | null = null
+  let region: string | null = null
+
+  if (useLocality) {
+    areaCode = extractAreaCode(leadPhone)
+    const info = areaCode ? getAreaCodeInfo(areaCode) : null
+    state = info?.state ?? null
+    region = info?.region && info.region !== 'unknown' ? info.region : null
   }
 
-  
-  
-  
-  
-  const areaCode = extractAreaCode(leadPhone)
-  const info = areaCode ? getAreaCodeInfo(areaCode) : null
-  const state = info?.state ?? null
-  const region = info?.region ?? null
-
-  if (areaCode) {
-    const exact = await findActive({ areaCode })
-    if (exact) return exact
-  }
-
-  if (state) {
-    const stateMatch = await findActive({ state })
-    if (stateMatch) return stateMatch
-  }
-
-  if (region && region !== 'unknown') {
-    const regionMatch = await findActive({ region })
-    if (regionMatch) return regionMatch
-  }
-
-  
-  
-  return findActive({})
-}
-
-async function findActive(filter: {
-  areaCode?: string
-  state?: string
-  region?: string
-}): Promise<PoolNumber | null> {
-  let query = supabase
-    .from('phone_numbers')
-    .select('*')
-    .eq('status', 'active')
-    .order('last_called_at', { ascending: true, nullsFirst: true })
-    .limit(20)
-
-  if (filter.areaCode) query = query.eq('area_code', filter.areaCode)
-  if (filter.state) query = query.eq('state', filter.state)
-  if (filter.region) query = query.eq('region', filter.region)
-
-  const { data, error } = await query
+  const { data, error } = await supabase.rpc('claim_pool_number', {
+    p_area_code: areaCode,
+    p_state: state,
+    p_region: region,
+  })
 
   if (error) {
-    console.error('[numberPool] findActive error:', error)
+    console.error('[numberPool] claim_pool_number failed:', error)
     return null
   }
 
-  const available = (data ?? []).find((n) => n.daily_call_count < n.daily_cap)
-  return (available as PoolNumber) ?? null
+  const rows = (data ?? []) as PoolNumber[]
+  return rows[0] ?? null
 }
 
+/**
+ * @deprecated Usage is now counted inside claim_pool_number, in the same
+ * statement that selects the number.
+ *
+ * Kept as an explicit no-op rather than deleted: calling it after
+ * pickNumberForLead would DOUBLE-COUNT every call, halving every number's
+ * effective daily cap. Leaving a working-looking function here that silently
+ * corrupts the counts is worse than leaving one that does nothing and says so.
+ */
 export async function recordUsage(numberId: string): Promise<void> {
-  const { data: current, error: readErr } = await supabase
-    .from('phone_numbers')
-    .select('daily_call_count, daily_cap, lifetime_call_count')
-    .eq('id', numberId)
-    .single()
-
-  if (readErr || !current) {
-    console.error('[numberPool] recordUsage read failed:', readErr)
-    return
-  }
-
-  const newDaily = current.daily_call_count + 1
-  const newLifetime = current.lifetime_call_count + 1
-  const hitCap = newDaily >= current.daily_cap
-
-  const { error: updateErr } = await supabase
-    .from('phone_numbers')
-    .update({
-      daily_call_count: newDaily,
-      lifetime_call_count: newLifetime,
-      last_called_at: new Date().toISOString(),
-      ...(hitCap ? { status: 'resting' } : {}),
-    })
-    .eq('id', numberId)
-
-  if (updateErr) {
-    console.error('[numberPool] recordUsage update failed:', updateErr)
-  }
+  void numberId
 }
 
 export async function markFlagged(

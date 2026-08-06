@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import { pickNumberForLead, recordUsage } from '@/lib/numberPool'
+import { pickNumberForLead } from '@/lib/numberPool'
 import { isCallableNow } from '@/lib/callingWindow'
 import { hasCallingWindowOverride } from '@/lib/callingWindowOverride'
 import { resolveTelnyxConfigOrLog, type TelnyxConfig } from '@/lib/telnyxConfig'
@@ -681,13 +681,16 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
     console.error(`[placeOutboundCall:${p.source}] calls row insert threw:`, thrown)
   }
 
-  if (p.poolNumberId) {
-    try {
-      await recordUsage(p.poolNumberId)
-    } catch (err) {
-      console.error(`[placeOutboundCall:${p.source}] recordUsage failed:`, err)
-    }
-  }
+  // Usage is no longer recorded here. claim_pool_number counts the call in the
+  // same statement that selects the number, because doing it as a second write
+  // lost increments whenever two agents dialed at once — see lib/numberPool.
+  //
+  // ONE BEHAVIOUR CHANGE, ACCEPTED DELIBERATELY: the count now happens when the
+  // number is picked rather than after the dial is accepted, so a rejected dial
+  // still consumes one from that number's daily cap. That errs toward resting a
+  // number slightly early, which is the safe direction — the cap exists to
+  // protect the number's reputation, and under-counting is the failure that
+  // actually costs money.
 
   // No call_rooms tracking — there is no room. If a downstream piece needs
   // to find "the agent leg for this lead call," it should look up the

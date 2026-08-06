@@ -222,6 +222,24 @@ export async function POST(req: NextRequest) {
       .select('id, state, campaign_id, dialer_mode')
       .single()
 
+    // ── RENEW THIS AGENT'S LEAD CLAIMS ────────────────────────────────────
+    // Claims expire after 30 seconds so a crashed session cannot strand a
+    // lead. But dial_attempts is only incremented when a call ENDS, so a lead
+    // on a three-minute conversation would otherwise expire its own claim and
+    // become dialable by another agent on the same team — while the first
+    // agent is still talking to them.
+    //
+    // Renewing here turns the claim into a lease held for exactly as long as
+    // the agent is alive: the moment heartbeats stop, the lead frees itself.
+    if (upserted?.id) {
+      void supabase
+        .from('leads')
+        .update({ claimed_at: now })
+        .eq('claimed_by_session_id', upserted.id)
+        .not('claimed_at', 'is', null)
+        .then(undefined, (e: unknown) => console.error('[heartbeat] claim renewal failed', e))
+    }
+
     if (upsertErr || !upserted) {
       console.error('[heartbeat] upsert failed', upsertErr)
       // Degrade gracefully rather than 500-spamming the client every 5s. The

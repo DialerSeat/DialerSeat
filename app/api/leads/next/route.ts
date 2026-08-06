@@ -32,6 +32,50 @@ async function fetchCampaignMode(campaignId: string) {
   }
 }
 
+/**
+ * The agent_sessions row id for this agent, used as the claim owner.
+ *
+ * Claims are a LEASE, not a lock: claim_next_lead_across_campaigns only
+ * considers a lead taken for 30 seconds, and the heartbeat renews the lease
+ * every 5 seconds for as long as the agent is live. That combination is what
+ * makes a crashed browser release its lead automatically while a three-minute
+ * conversation keeps hold of one — dial_attempts is not incremented until the
+ * call ENDS, so without renewal a long call would expire its own claim and
+ * another agent could dial the person it was already talking to.
+ *
+ * Falls back to a random id if no session exists yet. In practice the dialer
+ * heartbeats before it can dial, so this is the cold-start case only; the
+ * consequence is simply that the claim is not renewable and expires normally.
+ */
+/** The columns of `leads` this route actually reads off a claimed row. */
+interface ClaimedLead {
+  id: string
+  phone: string | null
+  state: string | null
+  campaign_id: string
+  [key: string]: unknown
+}
+
+async function resolveAgentSessionId(clerkId: string): Promise<string> {
+  const { data: userRow } = await supabaseAdmin
+    .from('users')
+    .select('id')
+    .eq('clerk_id', clerkId)
+    .maybeSingle()
+
+  if (userRow?.id) {
+    const { data: session } = await supabaseAdmin
+      .from('agent_sessions')
+      .select('id')
+      .eq('user_id', userRow.id)
+      .maybeSingle()
+    if (session?.id) return session.id
+  }
+
+  console.warn(`[leads/next] no agent_session for ${clerkId} — claim will not be renewable`)
+  return crypto.randomUUID()
+}
+
 export async function GET(req: Request) {
   try {
     const gate = await requireUser()
@@ -106,74 +150,63 @@ export async function GET(req: Request) {
         scopedCampaignIds = teamCampaignIds
       }
 
-      // Fetch a batch of candidates, then filter by calling window in JS.
-      // When an ordered lead_ids allowlist is present, the limit must cover
-      // the WHOLE allowlist, not just CANDIDATE_LIMIT — otherwise Postgres
-      // filters to the allowlist, orders by dial_attempts/created_at (its
-      // own priority, NOT display order), and only THEN applies the limit —
-      // so the database's own top-50-by-priority could silently exclude
-      // the actual #1 DISPLAYED lead if it happens to have a higher
-      // dial_attempts count than 50+ other allowlisted leads. The
-      // allowlist itself is already capped at 200 client-side, so this
-      // never fetches more than that regardless.
-      const effectiveLimit = leadIdAllowlist ? Math.max(CANDIDATE_LIMIT, leadIdAllowlist.length) : CANDIDATE_LIMIT
+      // ── ATOMIC CLAIM ──────────────────────────────────────────────────
+      // This used to be a plain SELECT that returned the top lead and marked
+      // nothing. Fine for one agent; broken for a team. Nothing in the
+      // codebase wrote claimed_at and nothing filtered on it, so every agent
+      // sharing a campaign was handed the SAME lead — not as a race, but
+      // deterministically, because the ordering is stable. The prospect got
+      // simultaneous calls from several different numbers, which is a bad
+      // experience and real TCPA exposure.
+      //
+      // claim_next_lead_across_campaigns claims a batch with FOR UPDATE SKIP
+      // LOCKED, so concurrent agents are handed different rows instead of
+      // blocking on each other. We claim a batch rather than one row because
+      // the top lead may be outside its calling window — we need candidates
+      // to fall through to, and we release every one we don't use.
+      const sessionId = await resolveAgentSessionId(user_id)
 
-      let candidateQuery = supabaseAdmin
-        .from('leads')
-        .select('*, extra_data')
-        .in('campaign_id', scopedCampaignIds)
-        .neq('status', 'dnc')
-        .neq('status', 'closed')
-        .neq('status', 'appointment')
-        .neq('status', 'maxed')
-        .or(`status.eq.uncalled,status.eq.no_answer`)
-        .not('phone', 'is', null)
-        .neq('phone', '')
-        .order('dial_attempts', { ascending: true })
-        .order('created_at', { ascending: true })
-        .limit(effectiveLimit)
-
-      if (leadIdAllowlist) {
-        if (leadIdAllowlist.length === 0) {
-          // Filter matched zero leads — nothing is dialable, full stop.
-          return NextResponse.json({ success: false, error: 'No leads match the current filter', tcpaBlocked: false }, { status: 404 })
+      const { data: claimedRaw, error: claimErr } = await supabaseAdmin.rpc(
+        'claim_next_lead_across_campaigns',
+        {
+          p_campaign_ids: scopedCampaignIds,
+          p_session_id: sessionId,
+          p_lead_ids: leadIdAllowlist,
+          p_limit: leadIdAllowlist ? Math.min(200, Math.max(CANDIDATE_LIMIT, leadIdAllowlist.length)) : CANDIDATE_LIMIT,
         }
-        candidateQuery = candidateQuery.in('id', leadIdAllowlist)
+      )
+
+      if (claimErr) {
+        return apiError(claimErr, { route: 'leads/next' })
       }
 
-      const { data: candidates, error } = await candidateQuery
+      // The RPC already returns them in the client's requested order when an
+      // allowlist was sent, and in dial_attempts/created_at priority otherwise
+      // — the ordering that used to be re-done in JS here now lives in SQL,
+      // where it has to be anyway for the claim to pick the right rows.
+      const orderedCandidates = (claimedRaw || []) as ClaimedLead[]
 
-      if (error) {
-        return apiError(error, { route: 'leads/next' })
-      }
-
-      // When the client sent an ORDERED lead_ids list (the queue panel's
-      // filtered — and possibly shuffled — row order), dial in exactly
-      // that sequence instead of the database's own dial_attempts/
-      // created_at order. Supabase's .in() filter does NOT preserve the
-      // order ids were listed in — it still applies whatever .order()
-      // clause was on the query — so without this, "shuffle" would
-      // reorder what's shown on screen but the server would silently keep
-      // dialing in its own original order regardless. Only actually
-      // reorders when an allowlist was provided; with no filter active,
-      // candidates keep the server's normal dial_attempts/created_at
-      // priority order untouched.
-      let orderedCandidates = candidates || []
-      if (leadIdAllowlist) {
-        const positionById = new Map(leadIdAllowlist.map((id, idx) => [id, idx]))
-        orderedCandidates = [...orderedCandidates].sort((a, b) => {
-          const posA = positionById.get(a.id) ?? Number.MAX_SAFE_INTEGER
-          const posB = positionById.get(b.id) ?? Number.MAX_SAFE_INTEGER
-          return posA - posB
-        })
-      }
-
-      let callable: any = null
+      let callable: ClaimedLead | null = null
       let blockReason: string | null = null
+      const toRelease: string[] = []
+
       for (const c of orderedCandidates) {
-        const result = isCallableNow({ phone: c.phone, state: c.state }, { overrideWindow })
-        if (result.allowed) { callable = c; break }
+        if (callable) { toRelease.push(c.id); continue }
+        const result = isCallableNow({ phone: c.phone ?? '', state: c.state }, { overrideWindow })
+        if (result.allowed) { callable = c; continue }
         if (!blockReason) blockReason = result.reason || null
+        toRelease.push(c.id)
+      }
+
+      // Hand back everything we claimed and aren't dialing, immediately —
+      // otherwise a single request would lock up to CANDIDATE_LIMIT leads for
+      // the full 30-second TTL and starve every other agent on the floor.
+      if (toRelease.length > 0) {
+        void supabaseAdmin
+          .from('leads')
+          .update({ claimed_at: null, claimed_by_session_id: null })
+          .in('id', toRelease)
+          .then(undefined, (e: unknown) => console.error('[leads/next] claim release failed', e))
       }
 
       if (!callable) {
@@ -181,9 +214,8 @@ export async function GET(req: Request) {
         // Surface the REAL reason from isCallableNow (e.g. "Unknown state —
         // cannot determine calling window", a Sunday-calling restriction, or an
         // actual too-early/too-late window) instead of a hardcoded 8am-9pm
-        // message that's misleading when the true cause is something else
-        // (like a lead missing state data / an unrecognized area code).
-        const hasAnyCandidates = (candidates?.length || 0) > 0
+        // message that's misleading when the true cause is something else.
+        const hasAnyCandidates = orderedCandidates.length > 0
         return NextResponse.json({
           success: false,
           error: hasAnyCandidates
