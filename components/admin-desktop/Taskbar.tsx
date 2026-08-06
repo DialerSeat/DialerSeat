@@ -15,6 +15,8 @@ interface TaskbarProps {
   isMobile: boolean
   
   onReorderWindows: (dragWindowId: string, targetWindowId: string) => void
+  /** Shift-click / middle-click a taskbar button to open another window. */
+  onOpenNewInstance?: (appId: WindowState['appId']) => void
 }
 
 
@@ -38,6 +40,7 @@ export default function Taskbar({
   onStartClick,
   startMenuOpen,
   onTaskbarItemClick,
+  onOpenNewInstance,
   onTaskbarItemContextMenu,
   onShowDesktop,
   isMobile,
@@ -148,12 +151,32 @@ export default function Taskbar({
           height: '100%',
           alignItems: 'center',
         }}>
-          {windows.map((win) => {
+          {/* One entry per app. Windows groups same-app windows behind a
+              single button rather than listing each one. */}
+          {windows
+            .filter((w, i, arr) => arr.findIndex(x => x.appId === w.appId) === i)
+            .map((first) => {
+            const group = windows.filter(w => w.appId === first.appId)
+            const focusedInGroup = group.find(w => w.id === focusedWindowId && !w.minimized)
+            const win = focusedInGroup || group[0]
             const app = getApp(win.appId)
             if (!app) return null
-            const isFocused = focusedWindowId === win.id && !win.minimized
-            const isMinimized = win.minimized
-            const isDragTarget = dragOverWindowId === win.id
+            // Group-level state: the button lights up if ANY window in the
+            // group has focus, and only reads as minimized when they ALL are.
+            const isFocused = group.some(w => w.id === focusedWindowId && !w.minimized)
+            const isMinimized = group.every(w => w.minimized)
+            const isDragTarget = group.some(w => w.id === dragOverWindowId)
+            // ── WINDOWS-STYLE GROUPING ──────────────────────────────────
+            // Windows does not number duplicate windows; it collapses them
+            // into ONE button with a stacked edge, and clicking cycles
+            // through them. Numbered labels ("User Tracker 2") are a thing
+            // Windows deliberately doesn't do — the grouping is the affordance.
+            //
+            // This renders one button per APP. `win` here is the group's
+            // representative: the focused window if one of them has focus,
+            // otherwise the first.
+            const sameApp = windows.filter(w => w.appId === win.appId)
+            const groupCount = sameApp.length
             const label = isMobile ? '' : (app.shortName || app.name)
 
             return (
@@ -186,12 +209,38 @@ export default function Taskbar({
                   dragWindowIdRef.current = null
                   setDragOverWindowId(null)
                 }}
-                onClick={() => onTaskbarItemClick(win.id)}
+                onClick={(e) => {
+                  // Shift+click opens a new window, exactly as Windows does.
+                  if (e.shiftKey && onOpenNewInstance) {
+                    onOpenNewInstance(win.appId)
+                    return
+                  }
+                  // Otherwise cycle: focus the next window in the group, so a
+                  // grouped button steps through its windows on repeat clicks.
+                  if (groupCount > 1) {
+                    const idx = sameApp.findIndex(w => w.id === focusedWindowId)
+                    const next = sameApp[(idx + 1) % groupCount]
+                    onTaskbarItemClick(next.id)
+                    return
+                  }
+                  onTaskbarItemClick(win.id)
+                }}
+                onAuxClick={(e) => {
+                  // Middle click — the other Windows shortcut for a new window.
+                  if (e.button === 1 && onOpenNewInstance) {
+                    e.preventDefault()
+                    onOpenNewInstance(win.appId)
+                  }
+                }}
                 onContextMenu={(e) => {
                   e.preventDefault()
                   onTaskbarItemContextMenu(win.id, e.clientX, e.clientY)
                 }}
-                title={app.name}
+                title={
+                  groupCount > 1
+                    ? `${app.name} — ${groupCount} windows (shift-click for a new one)`
+                    : `${app.name} (shift-click for a new window)`
+                }
                 style={{
                   height: 40,
                   minWidth: isMobile ? 44 : 120,
@@ -212,7 +261,17 @@ export default function Taskbar({
                   color: 'white',
                   borderRadius: 3,
                   cursor: 'pointer',
-                  boxShadow: isFocused ? '0 0 6px rgba(126,192,255,0.5) inset, 0 0 8px rgba(126,192,255,0.3)' : 'none',
+                  // A grouped button gets Windows' stacked edge: offset copies
+                  // peeking out behind it. That IS the "there are more windows
+                  // here" signal — no count badge, no numbered labels.
+                  boxShadow: [
+                    isFocused ? '0 0 6px rgba(126,192,255,0.5) inset, 0 0 8px rgba(126,192,255,0.3)' : '',
+                    groupCount > 1 ? '2px -2px 0 -1px #2a3550, 2px -2px 0 0 #3a4a6a' : '',
+                    groupCount > 2 ? '4px -4px 0 -1px #222c44, 4px -4px 0 0 #3a4a6a' : '',
+                  ].filter(Boolean).join(', ') || 'none',
+                  // Leave room for the stack so it doesn't clip the neighbour.
+                  marginRight: groupCount > 2 ? 6 : (groupCount > 1 ? 4 : 0),
+                  marginTop: groupCount > 2 ? 6 : (groupCount > 1 ? 4 : 0),
                   fontFamily: 'inherit',
                   fontSize: 11,
                   fontWeight: 600,

@@ -133,10 +133,57 @@ export async function POST(req: Request) {
       })
     )
 
+    // ── SECOND PASS ────────────────────────────────────────────────────────
+    // The first sweep can miss calls that did not exist yet when its query
+    // ran. Predictive fires from the heartbeat: a tick already in flight when
+    // STOP was pressed will finish placing its lines a moment later, and those
+    // rows land AFTER the sweep has read the table. The engine is disarmed by
+    // then so no further ticks fire — but that last batch would keep ringing
+    // with nothing left to stop it.
+    //
+    // A short second pass closes that window. It is cheap (one indexed query,
+    // usually zero rows) and idempotent — hangupCallControlId already treats
+    // an already-ended call as a non-error.
+    await new Promise(resolve => setTimeout(resolve, 1200))
+    const { data: stragglers } = await supabase
+      .from('calls')
+      .select('call_control_id, agent_call_control_id')
+      .eq('user_id', userId)
+      .gte('created_at', sinceIso)
+      .eq('duration', 0)
+
+    const secondPass = new Set<string>()
+    for (const c of stragglers || []) {
+      if (c.call_control_id && !callControlIds.has(c.call_control_id)) {
+        secondPass.add(c.call_control_id)
+      }
+      // The fanout agent leg is written by the events webhook the instant a
+      // lead answers (see dialAndBridgeAgentForFanout), so it very often only
+      // appears on this pass — it is exactly the leg that rings the agent's
+      // own phone after they pressed stop.
+      if (c.agent_call_control_id && !callControlIds.has(c.agent_call_control_id)) {
+        secondPass.add(c.agent_call_control_id)
+      }
+    }
+
+    if (secondPass.size > 0) {
+      console.warn(`[abort] second pass caught ${secondPass.size} straggler leg(s)`)
+      await Promise.all(
+        [...secondPass].map(async (id) => {
+          try {
+            await hangupCallControlId(id)
+            hungUp++
+          } catch (e) {
+            console.error('[abort] second-pass hangup failed for', id, e)
+          }
+        })
+      )
+    }
+
     // Calls-only scope stops here: the lines are silenced, but the agent's
     // claims and session stay intact so they keep working.
     if (scope === 'calls') {
-      return NextResponse.json({ success: true, hungUp, claimsReleased: 0, scope })
+      return NextResponse.json({ success: true, hungUp, scope, secondPass: secondPass.size })
     }
 
     // ── 2. Release this agent's claimed leads ────────────────────────────────

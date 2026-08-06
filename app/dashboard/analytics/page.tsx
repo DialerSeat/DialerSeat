@@ -1,7 +1,6 @@
 'use client'
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useUser } from '@clerk/nextjs'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
@@ -330,8 +329,7 @@ export default function AnalyticsPage({
   displayNameOverride,
 }: AnalyticsPageProps = {}) {
   const { user } = useUser()
-  const router = useRouter()
-  const [adminChecked, setAdminChecked] = useState(false)
+  const [adminChecked] = useState(true)
   const [range, setRange] = useState<Range>('week')
   const [customStart, setCustomStart] = useState('')
   const [customEnd, setCustomEnd] = useState('')
@@ -384,19 +382,18 @@ export default function AnalyticsPage({
   }, [range, customStart, customEnd])
 
   
-  useEffect(() => {
-    if (!user) return
-    fetch('/api/admin/check')
-      .then(r => r.json())
-      .then(d => {
-        if (d.isAdmin) {
-          router.replace('/dashboard/admin/analytics')
-        } else {
-          setAdminChecked(true)
-        }
-      })
-      .catch(() => setAdminChecked(true))
-  }, [user, router])
+  // ── ADMIN REDIRECT: REMOVED ─────────────────────────────────────────────
+  // An effect here used to send admins to /dashboard/admin/analytics. THAT
+  // ROUTE DOES NOT EXIST — app/dashboard/admin contains only `desktop` and
+  // `profile` — so every admin opening /dashboard/analytics was redirected
+  // straight to a 404. It also fired when this component is embedded in the
+  // admin desktop's User Tracker, navigating the whole window away from the
+  // app it was rendered inside.
+  //
+  // There is nothing to redirect TO, so it's gone, and with it the
+  // `adminChecked` gate that existed only to delay rendering until the
+  // redirect decision came back. An admin now just sees analytics; the
+  // platform-wide view lives in the admin desktop.
 
   const bounds = useMemo(() => getRangeBounds(range, customStart, customEnd), [range, customStart, customEnd])
 

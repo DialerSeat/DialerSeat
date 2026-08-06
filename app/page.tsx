@@ -98,16 +98,22 @@ export default async function Home({ searchParams }: PageProps) {
         .ds-showcase-shell { width: 100%; }
         .ds-showcase-scale { width: 100%; }
 
-        /* Built-for-volume section: demo left, claim right. Single column and
-           demo-first on narrow screens — the panel is the thing worth seeing,
-           and a headline pushed above it would bury it below the fold. */
+        /* Built-for-volume section: demo left, claim right on desktop.
+           On narrow screens it stacks with the HEADLINE FIRST and the panel
+           beneath it — a phone visitor needs to be told what they're looking
+           at before they see it, where a desktop visitor takes in both at
+           once. The DOM order is demo-then-copy for the desktop layout, so
+           the mobile order is set with the order property rather than by reordering the
+           markup. */
         .ds-volume-grid {
           display: grid;
           grid-template-columns: minmax(0, 1fr);
-          gap: 40px;
+          gap: 32px;
           align-items: center;
           text-align: center;
         }
+        .ds-volume-demo { order: 2; }
+        .ds-volume-copy { order: 1; }
         .ds-volume-demo { max-width: 640px; margin: 0 auto; width: 100%; text-align: left; }
         /* Near full-bleed. The mockup runs the panel to ~80px from the left
            edge and the headline to ~80px from the right; a 1200px (or even
@@ -136,7 +142,8 @@ export default async function Home({ searchParams }: PageProps) {
             align-items: start;
           }
           .ds-volume-copy { padding-top: 76px; }
-          .ds-volume-demo { margin: 0; max-width: none; }
+          .ds-volume-demo { margin: 0; max-width: none; order: 1; }
+          .ds-volume-copy { order: 2; }
           /* The eyebrow label sits left; the headline is CENTRED in the right
              column — that's what puts "LEADS." on its own centred line rather
              than ragged-left. */

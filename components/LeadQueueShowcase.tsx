@@ -48,9 +48,14 @@ const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace'
 // the dark dialer terminal on any background, including whitelabel tenants
 // whose brand vars would otherwise recolour it into something unrecognisable.
 const D = {
-  shell: '#0e0e16',
-  bar: '#15151f',
-  row: '#191922',
+  // Matched to the hero DialerShowcase, which uses C.sidebar
+  // (var(--brand-sidebar-bg, #111118)). Two dark panels on one page reading
+  // as slightly different blacks looks like a mistake rather than a choice —
+  // and this one follows the whitelabel token for the same reason the hero
+  // does, so a tenant's sidebar colour carries through both.
+  shell: 'var(--brand-sidebar-bg, #111118)',
+  bar: 'rgba(0,0,0,0.18)',
+  row: 'rgba(255,255,255,0.04)',
   border: '#262633',
   borderActive: '#4a9eff',
   text: '#f2f3f7',
@@ -114,7 +119,7 @@ const REPEAT = 1
 const MISSES_BEFORE_CONNECT = 5
 
 /** How long a connected call is held before the queue moves on, in seconds. */
-const TALK_SECONDS = 12
+const TALK_SECONDS = 4
 
 /**
  * Ring length in SECONDS, per outcome — these are how long the real thing
@@ -132,14 +137,19 @@ const TALK_SECONDS = 12
  * on — at a carrier-typical 20s that lead alone would hold the panel for most
  * of a minute. 13s is still a genuine no-answer, and halves the dwell.
  */
+// Demo pacing, NOT real-world timing. An earlier version used true carrier
+// durations (13s no-answer, twice over) and the panel sat still for half a
+// minute at a time — accurate and useless as a landing-page animation. A
+// visitor gives this a few seconds; it has to be visibly working in that
+// window.
 const RING_SECONDS: Record<Outcome, number> = {
-  connected: 6,
-  voicemail: 9,
-  'no-answer': 13,
+  connected: 3,
+  voicemail: 3,
+  'no-answer': 3,
 }
 
 /** How long the outcome tag stays up before the queue moves on. */
-const RESULT_MS = 1200
+const RESULT_MS = 600
 
 const OUTCOME_COPY: Record<Outcome, { label: string; color: string }> = {
   'no-answer': { label: 'NO ANSWER', color: D.muted },
@@ -291,7 +301,6 @@ export default function LeadQueueShowcase() {
   // slot is replaced by one that wasn't on screen a moment ago.
   const matching = q.rows
   const visible = matching.slice(0, VISIBLE_ROWS)
-  const hiddenCount = matching.length - visible.length
   const active = visible[0]
   const currentOutcome: Outcome = outcomeFor(q.missStreak, q.missIdx)
 
@@ -510,19 +519,6 @@ export default function LeadQueueShowcase() {
           )
         })}
 
-        {/* The queue is deeper than the window. Saying so is what makes the
-            rotation legible: without it, a lead dropping off the bottom and a
-            new name arriving at the top looks like leads being discarded. */}
-        {hiddenCount > 0 && (
-          <div
-            style={{
-              padding: '5px 4px 0', fontSize: 8.5, letterSpacing: 1.4,
-              color: D.muted, textAlign: 'center',
-            }}
-          >
-            + {hiddenCount} MORE BELOW
-          </div>
-        )}
       </div>
 
       {/* ── FOOTER ────────────────────────────────────────────────────── */}

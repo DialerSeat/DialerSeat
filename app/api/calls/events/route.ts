@@ -803,5 +803,27 @@ async function dialAndBridgeAgentForFanout(
     )
     return false
   }
+
+  // ── RECORD THE AGENT LEG SO ABORT CAN REACH IT ──────────────────────────
+  // Predictive places NO agent leg at dial time — placeOutboundCall only does
+  // that for user_dial. The agent's leg is born HERE, in a webhook, the moment
+  // a lead answers. Until now its call_control_id was never written anywhere,
+  // so STOP DIAL SEQUENCE had no way to find it: the sweep reads `calls`, and
+  // this leg has no row of its own and wasn't referenced from the lead's.
+  // That is why the agent's phone kept ringing after abort in predictive.
+  try {
+    const agentLegId = (await res.json())?.data?.call_control_id
+    if (agentLegId) {
+      await supabaseAdmin
+        .from('calls')
+        .update({ agent_call_control_id: agentLegId })
+        .eq('call_control_id', leadCallControlId)
+    }
+  } catch (err) {
+    // Non-fatal: the bridge itself already succeeded. Worst case abort can't
+    // reach this one leg, which is the behaviour that existed before.
+    console.error('[calls/events] could not record fanout agent leg id:', err)
+  }
+
   return true
 }

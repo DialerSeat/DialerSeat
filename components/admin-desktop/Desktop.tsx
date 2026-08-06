@@ -620,7 +620,16 @@ function DesktopWindowed({ role = 'admin' }: { role?: AppRole } = {}) {
     setHiddenApps(prev => prev.filter(h => h !== id))
   }, [])
 
-  const openApp = useCallback((appId: AppId, hint?: PositionHint) => {
+  const openApp = useCallback((
+    appId: AppId,
+    hint?: PositionHint,
+    // Open a SECOND window of an app that's already running instead of
+    // focusing the existing one. Wanted for genuinely comparative work —
+    // two User Trackers side by side on different people, two Teams windows
+    // on different teams. Off by default: clicking an icon should still
+    // raise what you already have open rather than pile up duplicates.
+    opts?: { forceNew?: boolean }
+  ) => {
     const app = getApp(appId)
     if (!app) return
     
@@ -633,7 +642,7 @@ function DesktopWindowed({ role = 'admin' }: { role?: AppRole } = {}) {
     }
 
     setWindows(prev => {
-      const existing = prev.find(w => w.appId === appId)
+      const existing = opts?.forceNew ? undefined : prev.find(w => w.appId === appId)
       if (existing) {
         const newZ = topZ + 1
         setTopZ(newZ)
@@ -967,6 +976,16 @@ function DesktopWindowed({ role = 'admin' }: { role?: AppRole } = {}) {
       const base = isBaseApp(appId, role)
       return [
         { label: 'Open', icon: '▶', onClick: () => openApp(appId) },
+        // Only offered once something is already open — "open another" on a
+        // closed app is just "open", and two entries that do the same thing
+        // is worse than one.
+        ...(alreadyOpen
+          ? [{
+              label: 'Open another window',
+              icon: '⧉',
+              onClick: () => openApp(appId, undefined, { forceNew: true }),
+            }]
+          : []),
         {},
         { label: 'Remove from desktop', onClick: () => removeFromDesktop(appId) },
         ...(!base ? [{ label: 'Uninstall', icon: '✕', danger: true, onClick: () => requestUninstall(appId) }] : []),
@@ -978,11 +997,48 @@ function DesktopWindowed({ role = 'admin' }: { role?: AppRole } = {}) {
       const windowId = contextMenu.payload as string
       const win = windows.find(w => w.id === windowId)
       if (!win) return []
+      // Right-clicking a GROUPED taskbar button in Windows lists the windows
+      // in that group first, so you can jump straight to one instead of
+      // clicking through the cycle. Titlebar menus stay per-window.
+      const group = contextMenu.type === 'taskbar-item'
+        ? windows.filter(w => w.appId === win.appId)
+        : [win]
+      const app = getApp(win.appId)
+      const jumpList: ContextMenuItem[] = group.length > 1
+        ? [
+            { label: app?.name || 'Windows', disabled: true },
+            // Windows labels these with each window's own title; ours don't
+            // have one, so they're numbered here — inside the list, where the
+            // numbers disambiguate, not on the button, where they'd be noise.
+            ...group.map((w, i) => ({
+              label: `Window ${i + 1}${w.minimized ? ' (minimized)' : ''}`,
+              icon: w.id === focusedId ? '●' : '▫',
+              onClick: () => focusWindow(w.id),
+            })),
+            {},
+          ]
+        : []
       return [
+        ...jumpList,
+        ...(contextMenu.type === 'taskbar-item'
+          ? [{
+              label: 'Open new window',
+              icon: '⧉',
+              onClick: () => openApp(win.appId, undefined, { forceNew: true }),
+            }, {}]
+          : []),
         { label: win.minimized ? 'Restore' : 'Minimize', onClick: () => toggleMinimize(windowId) },
         { label: win.maximized ? 'Restore down' : 'Maximize', onClick: () => toggleMaximize(windowId) },
         {},
         { label: 'Close', icon: '✕', danger: true, onClick: () => closeWindow(windowId) },
+        ...(group.length > 1
+          ? [{
+              label: `Close all ${group.length} windows`,
+              icon: '✕',
+              danger: true,
+              onClick: () => group.forEach(w => closeWindow(w.id)),
+            }]
+          : []),
       ]
     }
     return []
@@ -1118,6 +1174,7 @@ function DesktopWindowed({ role = 'admin' }: { role?: AppRole } = {}) {
           onShowDesktop={showDesktop}
           isMobile={isMobile}
           onReorderWindows={reorderWindows}
+          onOpenNewInstance={(appId) => openApp(appId, undefined, { forceNew: true })}
         />
 
         {startMenuOpen && (
