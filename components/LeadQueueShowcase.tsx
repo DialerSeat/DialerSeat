@@ -331,7 +331,9 @@ export default function LeadQueueShowcase() {
           grid-template-columns: 1.15fr 1fr 34px 86px;
           align-items: center;
           gap: 8px;
-          padding: 9px 12px;
+          /* Tight rows. The panel has to fit inside the viewport alongside the
+             headline; at 9px vertical padding it ran past the fold. */
+          padding: 3px 12px;
           border: 1px solid ${D.border};
           border-left: 3px solid transparent;
           border-radius: 4px;
@@ -345,7 +347,7 @@ export default function LeadQueueShowcase() {
           animation: lq-pulse 1.5s ease-in-out infinite;
         }
         .lq-row.is-done { opacity: .55; }
-        .lq-list { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px 14px; }
+        .lq-list { display: flex; flex-direction: column; gap: 4px; padding: 8px 12px 10px; }
         .lq-tag {
           font-size: 8.5px; font-weight: 700; letter-spacing: 1.2px;
           padding: 2px 6px; border-radius: 3px; text-align: center; white-space: nowrap;

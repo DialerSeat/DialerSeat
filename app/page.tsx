@@ -114,7 +114,12 @@ export default async function Home({ searchParams }: PageProps) {
            1720px) centred container can't reach either. */
         .ds-volume-section { padding-bottom: 40px; max-width: none; }
         @media (min-width: 1000px) {
-          .ds-section.ds-volume-section { padding-left: 80px; padding-right: 80px; }
+          /* Tight to the section divider. The default 90px top padding pushed
+             the whole block ~67px lower than the mockup, which is what dragged
+             "BUILT FOR VOLUME" and the headline down with it. */
+          .ds-section.ds-volume-section {
+            padding-left: 80px; padding-right: 80px; padding-top: 24px;
+          }
         }
         @media (min-width: 1000px) {
           .ds-volume-grid {
