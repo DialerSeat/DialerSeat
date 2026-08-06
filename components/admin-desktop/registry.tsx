@@ -66,6 +66,14 @@ const TeamsApp = dynamic(() => import('./apps/Teams'), {
   loading: () => <AppLoading />,
   ssr: false,
 })
+const LiveOpsApp = dynamic(() => import('./apps/LiveOps'), {
+  loading: () => <AppLoading />,
+  ssr: false,
+})
+const UnitEconomicsApp = dynamic(() => import('./apps/UnitEconomics'), {
+  loading: () => <AppLoading />,
+  ssr: false,
+})
 const NumbersApp = dynamic(() => import('./apps/Numbers'), {
   loading: () => <AppLoading />,
   ssr: false,
@@ -175,6 +183,28 @@ export const APPS: AppDefinition[] = [
     visibleTo: ['admin', 'manager'],
     Component: TeamsApp,
     defaultSize: { width: 1100, height: 720 },
+  },
+  {
+    id: 'live-ops',
+    name: 'Live Ops',
+    shortName: 'Ops',
+    icon: '📡',
+    iconBg: 'linear-gradient(135deg, #4ade80, #16a34a)',
+    description: 'Concurrency, calls in flight, dial mix, AMD and recording health',
+    visibleTo: ['admin'],
+    Component: LiveOpsApp,
+    defaultSize: { width: 1180, height: 780 },
+  },
+  {
+    id: 'unit-economics',
+    name: 'Unit Economics',
+    shortName: 'Margin',
+    icon: '💵',
+    iconBg: 'linear-gradient(135deg, #ffd96a, #c48a1a)',
+    description: 'Telephony cost per customer against seat revenue',
+    visibleTo: ['admin'],
+    Component: UnitEconomicsApp,
+    defaultSize: { width: 1120, height: 720 },
   },
   {
     id: 'numbers',

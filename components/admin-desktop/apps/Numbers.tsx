@@ -57,6 +57,13 @@ interface PoolNumber {
   monthly_cost_cents: number
   acquired_at: string
   is_registered: boolean
+  // Written by the number-health cron. Collected since it shipped and never
+  // displayed anywhere — which meant the one metric that tells you a caller ID
+  // is going bad was being computed and thrown away.
+  health_answer_rate: number | null
+  health_window_calls: number | null
+  health_window_answered: number | null
+  health_checked_at: string | null
 }
 
 interface PoolConfig {
@@ -1240,6 +1247,38 @@ export default function NumbersApp() {
                     background: usagePct >= 90 ? T.red : usagePct >= 70 ? T.amber : T.green,
                   }} />
                 </div>
+
+                {/* ── ANSWER-RATE HEALTH ──────────────────────────────────
+                    The early-warning signal. A number whose answer rate has
+                    collapsed is being filtered by carriers, and it will keep
+                    burning its daily cap at near-zero return until someone
+                    notices. MIN_HEALTH_SAMPLE guards against calling a number
+                    dead on six calls. */}
+                {(() => {
+                  const MIN_HEALTH_SAMPLE = 30
+                  const calls = n.health_window_calls ?? 0
+                  const rate = n.health_answer_rate
+                  const enough = calls >= MIN_HEALTH_SAMPLE && rate !== null
+                  const color = !enough ? T.muted
+                    : rate! < 0.02 ? T.red
+                    : rate! < 0.05 ? T.amber
+                    : T.green
+                  return (
+                    <div style={{
+                      display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+                      gap: 6, marginTop: 8, paddingTop: 8, borderTop: `1px solid ${T.border}`,
+                      fontSize: 9, letterSpacing: 1, fontFamily: 'monospace', color: T.muted,
+                    }}>
+                      <span>ANSWER RATE</span>
+                      <span style={{ color, fontWeight: 'bold', fontSize: 11 }}>
+                        {enough ? `${(rate! * 100).toFixed(1)}%` : '—'}
+                        <span style={{ color: T.muted, fontWeight: 'normal', fontSize: 9 }}>
+                          {' '}({calls.toLocaleString()} calls)
+                        </span>
+                      </span>
+                    </div>
+                  )
+                })()}
 
                 <div style={{
                   display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4,
