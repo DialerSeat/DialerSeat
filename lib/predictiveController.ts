@@ -46,7 +46,10 @@ export interface ControllerResult {
   released: number
   dedupedPhones: number      // NEW — how many leads in the batch were dupes
   dialedPhones: string[]     // NEW — actual numbers placed THIS TICK ONLY, for live-activity log entries
-  inFlightPhones: string[]   // NEW — real, live numbers currently in flight (any tick, refreshed every heartbeat) — this is what row-highlighting should actually use, not dialedPhones
+  inFlightPhones: string[]   // real, live numbers currently in flight (any tick, refreshed every heartbeat)
+  /** Lead ids currently in flight. THIS is what row highlighting must use —
+   *  phone numbers are not unique per lead. Refreshed every heartbeat. */
+  inFlightLeadIds: string[]
 }
 
 interface RunControllerInput {
@@ -203,6 +206,20 @@ export async function runPredictiveController(
   const inFlightPhones = inFlightCalls
     .map(c => c.phone_number)
     .filter((p): p is string => !!p)
+
+  // ── THE IDS, NOT JUST THE NUMBERS ──────────────────────────────────────
+  // Row highlighting used to match queue rows against inFlightPhones by
+  // comparing the last 10 digits. That is only correct while every lead has a
+  // distinct number: the moment a list contains the same number on several
+  // leads — a test list, or a real one with a shared household or business
+  // line — dialing ONE of them lights up EVERY row sharing that number. On a
+  // list where all the numbers are the same, the whole panel highlights.
+  //
+  // A lead id identifies the row being dialed. A phone number identifies a
+  // telephone, which is not the same thing and never was.
+  const inFlightLeadIds = inFlightCalls
+    .map(c => c.lead_id)
+    .filter((id): id is string => !!id)
   const desired = effectiveLines
   const shouldDial = Math.max(0, desired - inFlight)
 
@@ -210,7 +227,7 @@ export async function runPredictiveController(
     return {
       fired: 0, desired, inFlight, effectiveLines, degraded,
       reason: `at target: ${inFlight}/${desired} in flight`,
-      callSids: [], skipped: 0, released, dedupedPhones: 0, dialedPhones: [], inFlightPhones,
+      callSids: [], skipped: 0, released, dedupedPhones: 0, dialedPhones: [], inFlightPhones, inFlightLeadIds,
     }
   }
 
@@ -229,7 +246,7 @@ export async function runPredictiveController(
     return {
       fired: 0, desired, inFlight, effectiveLines, degraded,
       reason: `claim failed: ${claimErr.message}`,
-      callSids: [], skipped: 0, released, dedupedPhones: 0, dialedPhones: [], inFlightPhones,
+      callSids: [], skipped: 0, released, dedupedPhones: 0, dialedPhones: [], inFlightPhones, inFlightLeadIds,
     }
   }
 
@@ -243,7 +260,7 @@ export async function runPredictiveController(
     return {
       fired: 0, desired, inFlight, effectiveLines, degraded,
       reason: 'no claimable leads',
-      callSids: [], skipped: 0, released, dedupedPhones: 0, dialedPhones: [], inFlightPhones,
+      callSids: [], skipped: 0, released, dedupedPhones: 0, dialedPhones: [], inFlightPhones, inFlightLeadIds,
     }
   }
 
@@ -332,13 +349,14 @@ export async function runPredictiveController(
       reason: filteredOutCount > 0
         ? `claimed ${leads.length} leads but none matched the active filter/shuffle`
         : `claimed ${leads.length} leads but all were dupes/invalid`,
-      callSids: [], skipped: 0, released, dedupedPhones: dupeLeadIds.length, dialedPhones: [], inFlightPhones,
+      callSids: [], skipped: 0, released, dedupedPhones: dupeLeadIds.length, dialedPhones: [], inFlightPhones, inFlightLeadIds,
     }
   }
 
   
   const callSids: string[] = []
   const dialedPhones: string[] = []
+  const dialedLeadIds: string[] = []
   let skipped = 0
 
   const placements = await Promise.allSettled(
@@ -362,6 +380,7 @@ export async function runPredictiveController(
     if (result.status === 'fulfilled' && result.value.success && result.value.callControlId) {
       callSids.push(result.value.callControlId)
       dialedPhones.push(lead.phone)
+      dialedLeadIds.push(lead.id)
     } else {
       skipped++
       try {
@@ -402,6 +421,9 @@ export async function runPredictiveController(
     // newly-dialed ones (which would miss calls still ringing from a prior
     // tick).
     inFlightPhones: Array.from(new Set([...inFlightPhones, ...dialedPhones])),
+    // Same reasoning as inFlightPhones above: the snapshot predates this
+    // tick's dials, so union it with the leads just placed.
+    inFlightLeadIds: Array.from(new Set([...inFlightLeadIds, ...dialedLeadIds])),
   }
 }
 
@@ -409,6 +431,6 @@ function zeroResult(reason: string, released: number): ControllerResult {
   return {
     fired: 0, desired: 0, inFlight: 0, effectiveLines: 0,
     degraded: false, reason,
-    callSids: [], skipped: 0, released, dedupedPhones: 0, dialedPhones: [], inFlightPhones: [],
+    callSids: [], skipped: 0, released, dedupedPhones: 0, dialedPhones: [], inFlightPhones: [], inFlightLeadIds: [],
   }
 }

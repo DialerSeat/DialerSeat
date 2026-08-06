@@ -119,12 +119,44 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Subscription is not paused' }, { status: 400 })
     }
 
-    await stripe.subscriptions.update(sub.stripe_subscription_id, { pause_collection: null })
+    // Clearing pause_collection puts the subscription back on schedule. If the
+    // paid period already elapsed while paused, Stripe bills on resume — which
+    // is the one moment this can fail.
+    const resumed = await stripe.subscriptions.update(sub.stripe_subscription_id, {
+      pause_collection: null,
+    })
+
+    // ── DID THE CARD ACTUALLY GO THROUGH? ─────────────────────────────────
+    // Product rule: a successful resume is SILENT — they just have access
+    // again, no confirmation to dismiss. A failure is the only thing worth
+    // interrupting someone for, and it needs to point at the fix rather than
+    // just saying no.
+    //
+    // 'past_due' and 'unpaid' mean Stripe tried and the card refused;
+    // 'incomplete' means the first payment never completed. Any of the three
+    // and they need a working card before access returns.
+    const billingFailed = ['past_due', 'unpaid', 'incomplete'].includes(resumed.status)
 
     const { error } = await supabase
       .from('subscriptions')
-      .update({ paused_at: null })
+      .update({
+        paused_at: null,
+        // Keep our copy of the status honest — the webhook will confirm it,
+        // but the UI shouldn't have to wait on that round trip to know.
+        status: resumed.status,
+      })
       .eq('stripe_subscription_id', sub.stripe_subscription_id)
+
+    if (billingFailed) {
+      console.warn(`[stripe/pause] resume left subscription ${resumed.id} in status ${resumed.status}`)
+      return NextResponse.json({
+        success: false,
+        billingFailed: true,
+        status: resumed.status,
+        error: 'Your card was declined, so billing could not restart. Update your payment method to resume.',
+        redirectTo: '/billing',
+      }, { status: 402 })
+    }
 
     if (error) {
       // Billing resumed but the marker says paused: they'd be charged with no

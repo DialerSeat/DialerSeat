@@ -298,14 +298,12 @@ export default function UserTrackerApp() {
   // sidebar, which is the whole reason it couldn't show anything useful.
   // Returning early also stops the table's 10s poll re-rendering behind it.
   if (selected) {
+    // Renders the user's OWN analytics dashboard (the real component, not a
+    // copy), so it carries that page's own range controls — no separate date
+    // filter is threaded through from here.
     return (
       <div className="ut-root">
-        <UserProfilePage
-          user={selected}
-          allUsers={users}
-          onBack={() => setSelectedId(null)}
-          customLabel={applied ? `${fmtDate(applied.from)} – ${fmtDate(applied.to)}` : null}
-        />
+        <UserProfilePage user={selected} onBack={() => setSelectedId(null)} />
       </div>
     )
   }

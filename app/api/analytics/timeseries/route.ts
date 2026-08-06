@@ -1,16 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import { requireUser } from '@/lib/requireUser'
 import { apiError } from '@/lib/apiError'
+import { resolveAnalyticsScope } from '@/lib/analyticsScope'
 
 const CONVERSION_DISPS = ['CLOSED', 'APPOINTMENT']
 
 export async function GET(req: NextRequest) {
-  const gate = await requireUser()
-  if (!gate.ok) return gate.response
-  const userId = gate.userId
-
   const { searchParams } = new URL(req.url)
+
+  // Own data by default; an admin may request another user's by id.
+  const scoped = await resolveAnalyticsScope(searchParams.get('user_id'))
+  if (!scoped.ok) {
+    return NextResponse.json({ success: false, error: scoped.error }, { status: scoped.status })
+  }
+  const userId = scoped.scope.userId
   const start = searchParams.get('start')
   const end = searchParams.get('end')
 

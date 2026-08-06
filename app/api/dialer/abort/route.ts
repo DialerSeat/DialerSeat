@@ -83,7 +83,7 @@ export async function POST(req: Request) {
     const sinceIso = new Date(Date.now() - LOOKBACK_MINUTES * 60_000).toISOString()
     const { data: recentCalls, error: callsErr } = await supabase
       .from('calls')
-      .select('call_control_id')
+      .select('call_control_id, agent_call_control_id')
       .eq('user_id', userId)
       .gte('created_at', sinceIso)
       // .eq, NOT .is — PostgREST's `is` operator only accepts null/true/false/
@@ -107,6 +107,18 @@ export async function POST(req: Request) {
     const callControlIds = new Set<string>()
     for (const c of recentCalls || []) {
       if (c.call_control_id) callControlIds.add(c.call_control_id)
+      // ── AND THE AGENT'S OWN LEG ────────────────────────────────────────
+      // Agent legs never get their own `calls` row — only lead legs do — so
+      // for as long as this sweep read just call_control_id, it could not
+      // reach them. Hanging up the lead does not reliably tear down an agent
+      // leg that is still ringing: it was dialed FIRST and only linked to the
+      // lead via link_to, so cancelling the lead can leave the agent's phone
+      // ringing with nothing able to stop it. That is the reported "I hit stop
+      // and it's still dialing".
+      //
+      // Recorded on the lead's row at dial time (see lib/placeOutboundCall),
+      // which also covers predictive lines the client holds no ids for.
+      if (c.agent_call_control_id) callControlIds.add(c.agent_call_control_id)
     }
     // Hang them up in parallel; each is best-effort — hangupCallControlId
     // already treats "already gone" (404/422) as a non-fatal outcome.

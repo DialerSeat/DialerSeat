@@ -515,14 +515,28 @@ async function getAccessState(clerkId: string): Promise<AccessState> {
     if (subs && subs.length > 0) {
       tier = 'lapsed'
       for (const sub of subs) {
-        // A PAUSED subscription is not an active one, even though Stripe still
-        // reports status 'active' — pause_collection stops invoicing, not the
-        // subscription. Skipping it here is the whole mechanism: without this
-        // line a paused subscriber keeps unlimited dialing and is never
-        // billed for it. They fall through to 'lapsed', which combined with
-        // data_preserved_users is exactly the intended pause experience —
-        // everything kept, read-only, one click back.
-        if (sub.paused_at) continue
+        // ── PAUSED ────────────────────────────────────────────────────────
+        // Pausing does not take away the week already paid for. Stripe's
+        // pause_collection stops the NEXT invoice, not the current period, so
+        // access runs to current_period_end and only then falls away.
+        //
+        // After that they are "unsubscribed, with data": tier drops to lapsed,
+        // every lead, campaign and recording stays exactly where it was, and
+        // resuming is one click with no re-signup.
+        //
+        // Note Stripe still reports status 'active' throughout — pause_collection
+        // pauses invoicing, not the subscription — so without this branch a
+        // paused subscriber would keep full access forever and never be billed.
+        if (sub.paused_at) {
+          if (
+            sub.current_period_end &&
+            new Date(sub.current_period_end).getTime() > now
+          ) {
+            tier = 'active'
+            break
+          }
+          continue
+        }
 
         if (ACTIVE_STATUSES.includes(sub.status)) {
           tier = 'active'

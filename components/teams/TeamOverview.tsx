@@ -225,7 +225,7 @@ export default function TeamOverview({
           disabled={generating !== null}
           onClick={() => quickLink('owner')}
         >
-          {generating === 'owner' ? 'CREATING…' : 'I PAY — COPY LINK'}
+          {generating === 'owner' ? 'CREATING…' : 'MY BILLING — COPY LINK'}
         </button>
         <button
           className="tov-btn"

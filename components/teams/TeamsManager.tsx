@@ -25,15 +25,20 @@ import TeamOverview from '@/components/teams/TeamOverview'
 
 
 
+// Canonical palette — docs/PALETTE.md. The hex fallbacks are the locked Pass 1
+// values, not approximations: a whitelabel tenant overrides the --brand-*
+// token, and anyone without one gets exactly the spec'd colour. Previously
+// these had no fallback at all, so a missing or misspelled token resolved to
+// nothing and the surface simply vanished.
 const T = {
-  bg: 'var(--brand-page-bg)',
-  surface: 'var(--brand-card-surface)',
-  border: 'var(--brand-card-border)',
-  dark: 'var(--brand-sidebar-bg)',
-  text: 'var(--brand-on-page-bg)',
-  muted: 'var(--brand-muted-text)',
+  bg: 'var(--brand-page-bg, #f0f1f4)',
+  surface: 'var(--brand-card-surface, #e2e4ea)',
+  border: 'var(--brand-card-border, #c4c8d0)',
+  dark: 'var(--brand-sidebar-bg, #1a1a2e)',
+  text: 'var(--brand-on-page-bg, #1a1c24)',
+  muted: 'var(--brand-muted-text, #5a5e6a)',
   accent: '#2a4a8a',
-  blue: 'var(--brand-primary)',
+  blue: 'var(--brand-primary, #4a9eff)',
   green: '#1a6a1a',
   red: '#8a1a1a',
   amber: '#8a6a1a',

@@ -308,7 +308,27 @@ const EMPTY_CAMPAIGNS = [
   { name: '—', total: 0, contacted: 0, converted: 0 },
 ]
 
-export default function AnalyticsPage() {
+/**
+ * Props exist so the ADMIN user tracker can render this exact page for another
+ * user, rather than maintaining a second, drifting copy of it. Both are
+ * optional and default to the signed-in user, so the /dashboard/analytics
+ * route is unchanged.
+ *
+ * The API side enforces who may read whose data — see lib/analyticsScope.ts.
+ * Passing targetUserId here does NOT grant access; a non-admin gets their own
+ * numbers back regardless of what this asks for.
+ */
+export interface AnalyticsPageProps {
+  /** Whose analytics to show. Defaults to the signed-in user. */
+  targetUserId?: string
+  /** Replaces the "WELCOME BACK, X." line with a plain name. */
+  displayNameOverride?: string
+}
+
+export default function AnalyticsPage({
+  targetUserId,
+  displayNameOverride,
+}: AnalyticsPageProps = {}) {
   const { user } = useUser()
   const router = useRouter()
   const [adminChecked, setAdminChecked] = useState(false)
@@ -392,7 +412,8 @@ export default function AnalyticsPage() {
     if (!user || !adminChecked) return
     if (range === 'custom' && (!customStart || !customEnd)) return
 
-    const params = new URLSearchParams({ user_id: user.id })
+    const scopedUserId = targetUserId || user.id
+    const params = new URLSearchParams({ user_id: scopedUserId })
     if (bounds.start) params.append('start', bounds.start)
     if (bounds.end) params.append('end', bounds.end)
 
@@ -400,7 +421,7 @@ export default function AnalyticsPage() {
     tsParams.append('bucket', range === 'today' ? 'hour' : 'day')
 
     const secondaryParams = new URLSearchParams({
-      user_id: user.id,
+      user_id: scopedUserId,
       start: secondaryBounds.start,
       end: secondaryBounds.end,
     })
@@ -734,7 +755,11 @@ export default function AnalyticsPage() {
 
       <div className="welcome-row">
         <div className="welcome-line">
-          WELCOME BACK{fullName ? `, ${fullName}` : ''}.
+          {/* Admin view names the person being looked at; the self-service
+              route keeps the greeting. */}
+          {displayNameOverride
+            ? displayNameOverride.toUpperCase()
+            : `WELCOME BACK${fullName ? `, ${fullName}` : ''}.`}
         </div>
       </div>
 

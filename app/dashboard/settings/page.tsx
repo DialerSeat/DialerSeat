@@ -206,6 +206,58 @@ export default function SettingsPage() {
 
   const confirmReady = typedConfirm.toLowerCase().trim() === 'cancel'
 
+  // ── PAUSE / RESUME ──────────────────────────────────────────────────────
+  // The gentler alternative to cancelling, and the point of it is that coming
+  // back is trivial: no re-signup, no re-entering a card, no verification
+  // step. Weekly billing means 52 keep-or-quit decisions a year, and "I'm not
+  // dialing for a couple of weeks" should not have to be spelled "cancel".
+  const [pausing, setPausing] = useState(false)
+  const [paused, setPaused] = useState(false)
+  const [pauseError, setPauseError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/stripe/pause')
+      .then(r => r.json())
+      .then(d => { if (!cancelled && d?.success) setPaused(!!d.paused) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
+
+  const handlePauseToggle = async (action: 'pause' | 'resume') => {
+    setPausing(true)
+    setPauseError(null)
+    try {
+      const res = await fetch('/api/stripe/pause', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      })
+      const data = await res.json()
+
+      if (data.success) {
+        // A successful resume is deliberately SILENT — no confirmation to
+        // dismiss, access is simply back. Only the failure path talks.
+        setPaused(action === 'pause')
+        if (action === 'resume') window.location.reload()
+        return
+      }
+
+      // Card declined on resume. This is the one case worth interrupting for,
+      // and it should hand them the fix rather than just the bad news.
+      if (data.billingFailed) {
+        setPauseError(data.error || 'Your card was declined. Update your payment method to resume.')
+        setTimeout(() => { window.location.href = data.redirectTo || '/billing' }, 2200)
+        return
+      }
+      setPauseError(data.error || 'Could not update your subscription')
+    } catch (e) {
+      setPauseError(e instanceof Error ? e.message : 'Something went wrong')
+    } finally {
+      setPausing(false)
+    }
+  }
+
   const handleCancel = async () => {
     if (!confirmReady) return
     setCanceling(true)
@@ -647,6 +699,68 @@ export default function SettingsPage() {
         {isAdmin && sub?.isActive && !sub.cancelAtPeriodEnd && (
           <div style={adminNoticeStyle}>
             ADMIN ACCOUNTS CANNOT CANCEL FROM THIS PANEL
+          </div>
+        )}
+
+        {/* ── PAUSE ─────────────────────────────────────────────────────────
+            Deliberately ABOVE the cancel button. Someone who has decided to
+            stop paying reads down this panel, and the reversible option should
+            be the one they meet first. */}
+        {!isAdmin && sub?.hasSubscription && !sub.cancelAtPeriodEnd && (
+          <div style={{ ...sectionStyle, borderLeft: '3px solid var(--brand-primary)' }}>
+            <div style={sectionHeaderStyle}>
+              ▸ {paused ? 'SUBSCRIPTION PAUSED' : 'PAUSE SUBSCRIPTION'}
+            </div>
+            <div style={{ ...mutedStyle, marginBottom: 12, lineHeight: 1.6 }}>
+              {paused ? (
+                <>
+                  Billing is paused. You can resume weekly billing at any time —
+                  one click, no re-signup, and everything is exactly where you
+                  left it.
+                  {sub.currentPeriodEnd && (
+                    <> Your current week runs to{' '}
+                      <strong style={{ color: 'var(--brand-primary)' }}>
+                        {formatDate(sub.currentPeriodEnd)}
+                      </strong>.
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  Stopping for a while? Pause instead of cancelling. You keep the
+                  week you&apos;ve already paid for, your leads, campaigns and
+                  call history stay untouched, and{' '}
+                  <strong style={{ color: 'var(--brand-primary)' }}>
+                    you can resume weekly billing at any time
+                  </strong>.
+                </>
+              )}
+            </div>
+
+            {pauseError && (
+              <div style={{
+                marginBottom: 12, padding: '8px 10px', borderRadius: 3,
+                background: 'rgba(138, 26, 26, 0.18)', borderLeft: '3px solid #8a1a1a',
+                color: '#ff8888', fontSize: 12, lineHeight: 1.5,
+              }}>
+                {pauseError}
+              </div>
+            )}
+
+            <button
+              onClick={() => handlePauseToggle(paused ? 'resume' : 'pause')}
+              disabled={pausing}
+              style={{
+                ...secondaryButtonStyle,
+                width: '100%', flex: 'none',
+                opacity: pausing ? 0.5 : 1,
+                cursor: pausing ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {pausing
+                ? (paused ? 'RESUMING...' : 'PAUSING...')
+                : (paused ? 'RESUME SUBSCRIPTION' : 'PAUSE SUBSCRIPTION')}
+            </button>
           </div>
         )}
 

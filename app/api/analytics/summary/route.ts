@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
-import { auth } from '@clerk/nextjs/server'
 import { apiError } from '@/lib/apiError'
+import { resolveAnalyticsScope } from '@/lib/analyticsScope'
 
 const supabase = getServiceClient('analytics/summary')
 
@@ -10,15 +10,16 @@ const CONTACT_DISPS = ['CLOSED', 'APPOINTMENT', 'NOT INTERESTED', 'DO NOT CALL']
 
 export async function GET(req: NextRequest) {
 
-  const { userId: authUserId } = await auth()
-  if (!authUserId) {
-    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
-  }
-
   const { searchParams } = new URL(req.url)
 
-  const requestedUserId = searchParams.get('user_id')
-  const userId = (requestedUserId && requestedUserId === authUserId) ? authUserId : authUserId
+  // Own data by default; an admin may request another user's by id. See
+  // lib/analyticsScope.ts — the previous expression here always resolved back
+  // to the caller, so ?user_id looked supported and silently wasn't.
+  const scoped = await resolveAnalyticsScope(searchParams.get('user_id'))
+  if (!scoped.ok) {
+    return NextResponse.json({ success: false, error: scoped.error }, { status: scoped.status })
+  }
+  const userId = scoped.scope.userId
 
   const start = searchParams.get('start')
   const end = searchParams.get('end')

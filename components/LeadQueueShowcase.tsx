@@ -101,7 +101,20 @@ const POOL: Row[] = [
 const VISIBLE_ROWS = 6
 
 /** Repeat count on display — matches the dialer's 1x/2x/3x control. */
-const REPEAT = 2
+const REPEAT = 1
+
+/**
+ * Dials that miss before one connects.
+ *
+ * Not a random rate: it's the honest shape of outbound. Most dials don't reach
+ * a person, and the product's value is getting through those fast rather than
+ * pretending they don't happen. A demo where every third call connects would
+ * be a nicer animation and a worse advertisement.
+ */
+const MISSES_BEFORE_CONNECT = 5
+
+/** How long a connected call is held before the queue moves on, in seconds. */
+const TALK_SECONDS = 12
 
 /**
  * Ring length in SECONDS, per outcome — these are how long the real thing
@@ -134,27 +147,40 @@ const OUTCOME_COPY: Record<Outcome, { label: string; color: string }> = {
   connected:   { label: 'CONNECTED', color: D.green },
 }
 
-// Scripted so the demo always shows one of each result rather than random
-// noise — a viewer should see a connect, a voicemail skip, and a no-answer.
-// Ordered connect-first so the quickest, best-looking beat is the one a
-// visitor lands on.
-const OUTCOME_CYCLE: Outcome[] = ['connected', 'voicemail', 'no-answer']
+/**
+ * The miss outcomes, cycled so the demo shows both kinds rather than the same
+ * one five times. Which one comes up doesn't matter; that there are five of
+ * them before a connect does — see MISSES_BEFORE_CONNECT.
+ */
+const MISS_CYCLE: Outcome[] = ['no-answer', 'voicemail']
 
-/** Filter chips, derived from the pool so the two can never drift apart. */
-const STATES = [...new Set(POOL.map(r => r.state))]
-
-type Phase = 'dialing' | 'result'
+// 'talking' is a real third beat, not a longer result flash: a connect is the
+// only outcome where the agent is actually on the phone, and showing that as a
+// 12-second live timer is the point the whole panel is making.
+type Phase = 'dialing' | 'result' | 'talking'
 
 interface QueueState {
   rows: Row[]
   phase: Phase
-  outcomeIdx: number
+  /** Which miss to show next. Only advances on a miss. */
+  missIdx: number
+  /** Misses since the last connect. At MISSES_BEFORE_CONNECT, the next dial connects. */
+  missStreak: number
   dials: number
-  /** Seconds elapsed on the current ring. Drives the visible timer. */
+  /** Seconds elapsed on the current ring or talk. Drives the visible timer. */
   ringSec: number
 }
 
-const INITIAL: QueueState = { rows: POOL, phase: 'dialing', outcomeIdx: 0, dials: 31, ringSec: 0 }
+const INITIAL: QueueState = {
+  rows: POOL, phase: 'dialing', missIdx: 0, missStreak: 0, dials: 31, ringSec: 0,
+}
+
+/** The outcome the CURRENT dial is scripted to produce. */
+function outcomeFor(missStreak: number, missIdx: number): Outcome {
+  return missStreak >= MISSES_BEFORE_CONNECT
+    ? 'connected'
+    : MISS_CYCLE[missIdx % MISS_CYCLE.length]
+}
 
 function mmss(total: number): string {
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`
@@ -162,33 +188,38 @@ function mmss(total: number): string {
 
 export default function LeadQueueShowcase() {
   const [q, setQ] = useState<QueueState>(INITIAL)
-  const [stateFilter, setStateFilter] = useState<string | null>(null)
-  const [filterOpen, setFilterOpen] = useState(false)
 
   useEffect(() => {
-    // RESULT beat: hold the outcome tag briefly, then resolve the lead —
-    // redial it in place if it has attempts left, otherwise rotate it out.
+    // ── RESULT beat ───────────────────────────────────────────────────────
+    // Hold the outcome tag briefly. A connect then goes to 'talking'; a miss
+    // rotates the lead out and the next dial starts.
     if (q.phase === 'result') {
       const t = setTimeout(() => {
         setQ(prev => {
-          const visible = stateFilter ? prev.rows.filter(r => r.state === stateFilter) : prev.rows
+          const visible = prev.rows
           const top = visible[0]
           // Nothing to resolve. Must still leave the result phase: returning
           // prev unchanged would stop the effect re-running (its deps wouldn't
           // change) and the panel would freeze on a result tag forever.
           if (!top) return { ...prev, phase: 'dialing', ringSec: 0 }
 
-          const outcome = OUTCOME_CYCLE[prev.outcomeIdx % OUTCOME_CYCLE.length]
-          const attempts = top.attempts + 1
+          const outcome = outcomeFor(prev.missStreak, prev.missIdx)
 
-          // A connect, or an exhausted repeat count, ends the lead's turn. A
-          // voicemail or no-answer with attempts left keeps it in the top slot,
-          // which is the behaviour the panel exists to demonstrate.
-          if (outcome !== 'connected' && attempts < REPEAT) {
+          if (outcome === 'connected') {
+            // Stay on this lead and start the talk timer. The row keeps the
+            // top slot for the whole conversation, which is what actually
+            // happens — the queue does not move while you are on a call.
+            return { ...prev, phase: 'talking', ringSec: 0 }
+          }
+
+          const attempts = top.attempts + 1
+          if (attempts < REPEAT) {
             return {
               ...prev,
               phase: 'dialing',
               ringSec: 0,
+              missStreak: prev.missStreak + 1,
+              missIdx: prev.missIdx + 1,
               rows: prev.rows.map(r => (r.id === top.id ? { ...r, attempts } : r)),
             }
           }
@@ -197,23 +228,52 @@ export default function LeadQueueShowcase() {
             ...prev,
             phase: 'dialing',
             ringSec: 0,
-            // Rotate to the bottom carrying its outcome — never removed. The
-            // scripted outcome only advances when a lead actually finished, so
-            // a mid-sequence redial doesn't change what the next result is.
+            missStreak: prev.missStreak + 1,
+            missIdx: prev.missIdx + 1,
+            // Rotate to the bottom carrying its outcome — never removed.
             rows: [...prev.rows.filter(r => r.id !== top.id), { ...top, attempts: 0, outcome }],
-            outcomeIdx: prev.outcomeIdx + 1,
           }
         })
       }, RESULT_MS)
       return () => clearTimeout(t)
     }
 
-    // DIALING beat: one interval ticking the ring timer. It runs to the ring
-    // length for whichever outcome is scripted next, so the wait a viewer sits
-    // through matches the result they're about to see.
+    // ── TALKING beat ──────────────────────────────────────────────────────
+    // A live conversation, held for TALK_SECONDS with the timer running. When
+    // it ends the lead rotates out marked CONNECTED and the miss streak
+    // resets, so the next run of five misses begins.
+    if (q.phase === 'talking') {
+      const iv = setInterval(() => {
+        setQ(prev => {
+          const sec = prev.ringSec + 1
+          if (sec < TALK_SECONDS) return { ...prev, ringSec: sec }
+
+          const visible = prev.rows
+          const top = visible[0]
+          if (!top) return { ...prev, phase: 'dialing', ringSec: 0, missStreak: 0 }
+
+          return {
+            ...prev,
+            phase: 'dialing',
+            ringSec: 0,
+            missStreak: 0,
+            rows: [
+              ...prev.rows.filter(r => r.id !== top.id),
+              { ...top, attempts: 0, outcome: 'connected' as Outcome },
+            ],
+          }
+        })
+      }, 1000)
+      return () => clearInterval(iv)
+    }
+
+    // ── DIALING beat ──────────────────────────────────────────────────────
+    // One interval ticking the ring timer, running to the ring length for
+    // whichever outcome this dial is scripted to produce — so the wait a
+    // viewer sits through matches the result they are about to see.
     const iv = setInterval(() => {
       setQ(prev => {
-        const target = RING_SECONDS[OUTCOME_CYCLE[prev.outcomeIdx % OUTCOME_CYCLE.length]]
+        const target = RING_SECONDS[outcomeFor(prev.missStreak, prev.missIdx)]
         const ringSec = prev.ringSec + 1
         if (ringSec >= target) {
           return { ...prev, phase: 'result', ringSec, dials: prev.dials + 1 }
@@ -224,41 +284,16 @@ export default function LeadQueueShowcase() {
     return () => clearInterval(iv)
     // Deliberately keyed on phase only: the interval must survive its own
     // ringSec updates rather than being torn down and re-armed every second.
-  }, [q.phase, stateFilter])
-
-  // The filter's controls are hidden under the mobile breakpoint, so its STATE
-  // must not survive into that layout: a visitor who filters at desktop width
-  // and then narrows the window would otherwise be left with a silently
-  // narrowed queue and nothing on screen to widen it again.
-  useEffect(() => {
-    if (typeof window === 'undefined' || !window.matchMedia) return
-    const mq = window.matchMedia('(max-width: 560px)')
-    const sync = () => {
-      if (!mq.matches) return
-      setFilterOpen(false)
-      // Returning prev unchanged when already null keeps this from looping.
-      setStateFilter(prev => (prev === null ? prev : null))
-    }
-    sync()
-    mq.addEventListener('change', sync)
-    return () => mq.removeEventListener('change', sync)
-  }, [])
-
-  // Changing the filter restarts the beat so a result tag from the previous
-  // top lead can't linger on a different row.
-  function applyFilter(next: string | null) {
-    setStateFilter(next)
-    setQ(prev => ({ ...prev, phase: 'dialing', ringSec: 0 }))
-  }
+  }, [q.phase])
 
   // `matching` is the whole queue the dialer would work; `visible` is only the
   // top of it. Rotation happens in the full list, so a lead leaving the top
   // slot is replaced by one that wasn't on screen a moment ago.
-  const matching = stateFilter ? q.rows.filter(r => r.state === stateFilter) : q.rows
+  const matching = q.rows
   const visible = matching.slice(0, VISIBLE_ROWS)
   const hiddenCount = matching.length - visible.length
   const active = visible[0]
-  const currentOutcome = OUTCOME_CYCLE[q.outcomeIdx % OUTCOME_CYCLE.length]
+  const currentOutcome: Outcome = outcomeFor(q.missStreak, q.missIdx)
 
   return (
     <div
@@ -326,6 +361,9 @@ export default function LeadQueueShowcase() {
           border-color: ${D.accent}; color: ${D.accent};
           background: rgba(74,158,255,0.14);
         }
+        /* Inert control — looks like the real one, doesn't pretend to be
+           clickable. */
+        .lq-chip.is-static { cursor: default; user-select: none; }
 
         .lq-name {
           font-weight: 700; letter-spacing: .4px;
@@ -397,55 +435,15 @@ export default function LeadQueueShowcase() {
           REDIAL BEFORE MOVING ON
         </span>
         <div className="lq-spacer" style={{ flex: 1 }} />
-        <button
-          type="button"
-          onClick={() => setFilterOpen(v => !v)}
-          className={`lq-chip lq-filter-btn${stateFilter ? ' is-on' : ''}`}
-        >
-          ▾ FILTER{stateFilter ? ' •' : ''}
-        </button>
+        {/* Inert on purpose. It shows the real panel has a filter without
+            inviting a click that does nothing useful on a marketing page —
+            and without a visitor stopping the demo by narrowing it to one
+            state and wandering off. aria-hidden so screen readers aren't
+            offered a control that isn't one. */}
+        <span className="lq-chip lq-filter-btn is-static" aria-hidden="true">
+          ▾ FILTER
+        </span>
       </div>
-
-      {/* ── FILTER TRAY ───────────────────────────────────────────────────
-          In-flow rather than an absolutely-positioned dropdown like the real
-          panel's: this sits inside marketing page flow where an overlay would
-          have to fight for stacking context, and wrapping chips survive a
-          320px viewport that a fixed-width popover would not. */}
-      {filterOpen && (
-        <div className="lq-strip lq-filter-tray" style={{ background: D.bar, borderBottom: `1px solid ${D.border}` }}>
-          <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1.5, color: D.muted, marginRight: 2 }}>
-            STATE
-          </span>
-          <button
-            type="button"
-            onClick={() => applyFilter(null)}
-            className={`lq-chip${stateFilter === null ? ' is-on' : ''}`}
-          >
-            ALL
-          </button>
-          {STATES.map(s => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => applyFilter(s)}
-              className={`lq-chip${stateFilter === s ? ' is-on' : ''}`}
-            >
-              {s}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {stateFilter && (
-        <div
-          style={{
-            padding: '7px 12px', fontSize: 9, letterSpacing: 1.1, color: D.accent,
-            borderBottom: `1px solid ${D.border}`, background: 'rgba(74,158,255,0.06)',
-          }}
-        >
-          {matching.length} OF {q.rows.length} MATCH {stateFilter} &middot; ONLY THESE ARE DIALED
-        </div>
-      )}
 
       {/* ── ROWS ──────────────────────────────────────────────────────── */}
       <div className="lq-list">
@@ -467,7 +465,16 @@ export default function LeadQueueShowcase() {
               <span className="lq-state" style={{ color: D.muted, fontSize: 10 }}>{r.state}</span>
 
               {isActive ? (
-                showResult ? (
+                q.phase === 'talking' ? (
+                  <span
+                    className="lq-tag"
+                    style={{ color: D.green, border: `1px solid ${D.green}`, fontFamily: MONO }}
+                  >
+                    {/* A live conversation, counting up. This is the only beat
+                        where the agent is actually on the phone. */}
+                    ● {mmss(q.ringSec)}
+                  </span>
+                ) : showResult ? (
                   <span
                     className="lq-tag"
                     style={{

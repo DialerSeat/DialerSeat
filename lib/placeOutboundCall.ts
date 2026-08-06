@@ -630,6 +630,12 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
       // burns its full daily cap at a near-zero answer rate forever.
       // See app/api/cron/number-health.
       pool_number_id: p.poolNumberId,
+      // The agent's SIP leg, recorded on the LEAD's row because the agent leg
+      // never gets a row of its own. Without this the abort sweep — which
+      // reads from `calls` — had no way to reach it, so stopping a dial hung
+      // up the lead and left the agent's own leg ringing. See
+      // app/api/dialer/abort.
+      agent_call_control_id: agentCallControlId ?? null,
       // The Telnyx call_control_id — it's the identifier every
       // subsequent command/webhook correlates against, playing the exact
       // same role SignalWire's CallSid did. Revisit naming only at actual

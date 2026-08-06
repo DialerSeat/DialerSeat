@@ -98,6 +98,26 @@ export default async function Home({ searchParams }: PageProps) {
         .ds-showcase-shell { width: 100%; }
         .ds-showcase-scale { width: 100%; }
 
+        /* Built-for-volume section: demo left, claim right. Single column and
+           demo-first on narrow screens — the panel is the thing worth seeing,
+           and a headline pushed above it would bury it below the fold. */
+        .ds-volume-grid {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr);
+          gap: 40px;
+          align-items: center;
+          text-align: center;
+        }
+        .ds-volume-demo { max-width: 640px; margin: 0 auto; width: 100%; text-align: left; }
+        @media (min-width: 900px) {
+          .ds-volume-grid {
+            grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+            gap: 56px;
+            text-align: left;
+          }
+          .ds-volume-demo { margin: 0; }
+        }
+
         .ds-stats { flex-direction: row; padding: 16px 12px; gap: 8px; }
         .ds-section { padding: 90px 60px; }
 
@@ -392,34 +412,21 @@ export default async function Home({ searchParams }: PageProps) {
 
       <section style={{ background: 'rgba(226,228,234,0.5)', borderTop: '1px solid #c4c8d0' }}>
         <div className="ds-section" style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        <div id="features" style={{ textAlign: 'center', marginBottom: '100px' }}>
-          <div style={{ fontSize: '11px', letterSpacing: '3px', fontWeight: 'bold', textTransform: 'uppercase', color: '#2a4a8a', marginBottom: '16px' }}>
-            ▸ Built for volume
-          </div>
-          <h2 style={{
-            fontSize: 'var(--section-fs)',
-            fontWeight: 'bold',
-            letterSpacing: '-1px',
-            lineHeight: '1.15',
-            color: '#1a1c24',
-            maxWidth: '900px',
-            margin: '0 auto',
-          }}>
-            FOR SALES TEAMS, CALL CENTERS, AGENCIES, AND <u>ANYONE</u> WHO WORKS LEADS.
-          </h2>
+        {/* Two columns: the demo on the LEFT, the claim on the RIGHT — the
+            mirror of the hero, which runs copy-left / product-right. Alternating
+            the sides keeps the page from reading as one long centred column,
+            and putting the panel first here means the evidence is what the eye
+            lands on when the section says "built for volume".
 
-          {/* Live queue demo. Deliberately placed under this headline: the
-              claim is "built for volume", and the queue working itself
-              top-down is the evidence. Self-contained and animation-only —
-              see components/LeadQueueShowcase.tsx. */}
-          {/* NOT wrapped in .ds-showcase-shell/.ds-showcase-scale like the hero
-              dialer. That pair pins a 640px inner width and applies zoom: 0.5 on
-              mobile, which the hero needs because DialerShowcase has a fixed
-              internal layout. This panel is a four-column list that reflows
-              cleanly, so it stays fluid and keeps its type at full size —
-              halving it would render the rows at ~5px. Its own narrow-viewport
-              rules live in components/LeadQueueShowcase.tsx. */}
-          <div style={{ maxWidth: '640px', margin: '48px auto 0', textAlign: 'left' }}>
+            NOT wrapped in .ds-showcase-shell/.ds-showcase-scale like the hero
+            dialer. That pair pins a 640px inner width and applies zoom: 0.5 on
+            mobile, which the hero needs because DialerShowcase has a fixed
+            internal layout. This panel is a four-column list that reflows
+            cleanly, so it stays fluid and keeps its type at full size —
+            halving it would render the rows at ~5px. Its own narrow-viewport
+            rules live in components/LeadQueueShowcase.tsx. */}
+        <div id="features" className="ds-volume-grid" style={{ marginBottom: '100px' }}>
+          <div className="ds-volume-demo">
             <LeadQueueShowcase />
             <p style={{
               marginTop: '14px',
@@ -430,6 +437,22 @@ export default async function Home({ searchParams }: PageProps) {
             }}>
               LIVE DEMO &middot; THE QUEUE WORKS ITSELF TOP-DOWN
             </p>
+          </div>
+
+          <div className="ds-volume-copy">
+            <div style={{ fontSize: '11px', letterSpacing: '3px', fontWeight: 'bold', textTransform: 'uppercase', color: '#2a4a8a', marginBottom: '16px' }}>
+              ▸ Built for volume
+            </div>
+            <h2 style={{
+              fontSize: 'var(--section-fs)',
+              fontWeight: 'bold',
+              letterSpacing: '-1px',
+              lineHeight: '1.15',
+              color: '#1a1c24',
+              margin: 0,
+            }}>
+              FOR SALES TEAMS, CALL CENTERS, AGENCIES, AND <u>ANYONE</u> WHO WORKS LEADS.
+            </h2>
           </div>
         </div>
 

@@ -122,6 +122,9 @@ interface HeartbeatControllerSummary {
   callSids?: string[]
   dialedPhones?: string[]
   inFlightPhones?: string[]
+  /** Lead ids in flight — what row highlighting keys off. Phone numbers are
+   *  not unique per lead, so they can't identify a row. */
+  inFlightLeadIds?: string[]
   skipped?: number
   released?: number
   dedupedPhones?: number
@@ -243,6 +246,9 @@ function DialerPageInner() {
   // only ever shows what already happened). Cleared/replaced each
   // heartbeat tick with whatever's actually in flight that moment.
   const [activeDialingNumbers, setActiveDialingNumbers] = useState<string[]>([])
+  // Lead ids currently in flight, straight from the controller. Row
+  // highlighting keys off THIS, not phone numbers — see activeQueueLeadIds.
+  const [activeDialingLeadIds, setActiveDialingLeadIds] = useState<string[]>([])
   // Leads queued for this campaign, fetched once the agent goes available
   // (predictiveView transitions to 'available') and shown in the lead
   // profile slot so they can see what's about to be worked, before they
@@ -1442,6 +1448,7 @@ function DialerPageInner() {
           // calls are still very much active — so highlighting was going
           // stale/blank almost immediately during real operation.
           setActiveDialingNumbers(summary.inFlightPhones || [])
+          setActiveDialingLeadIds(summary.inFlightLeadIds || [])
 
           if (summary.fired > 0) {
             const numbers = summary.dialedPhones && summary.dialedPhones.length > 0
@@ -3570,15 +3577,22 @@ function DialerPageInner() {
   )
   const leadPhoneKey = (phone?: string | null) => (phone || '').replace(/\D/g, '').slice(-10)
 
+  // ── HIGHLIGHT BY LEAD ID ────────────────────────────────────────────────
+  // Predictive highlighting used to match rows by PHONE NUMBER (last 10
+  // digits). That is only correct while every lead has a distinct number.
+  // Repeat a number across leads — a test list, a shared household line, one
+  // business number on several contacts — and dialing ONE of them lit up
+  // EVERY row carrying that number. On a list where all the numbers are the
+  // same, the entire panel highlighted.
+  //
+  // The controller knows exactly which LEADS are in flight (it selects
+  // lead_id on the in-flight query), so it now reports inFlightLeadIds and
+  // this matches on identity instead of on a telephone. Exactly N rows light
+  // up for N lines, which is what "3 lines highlights the top 3" requires.
   const activeQueueLeadIds = new Set(
     isQueueDialingArmed
       ? (isPredictive
-          ? visibleQueuedLeads
-              .filter(l => {
-                const key = leadPhoneKey(l.phone)
-                return !!key && activeDialingKeys.has(key)
-              })
-              .map(l => l.id)
+          ? activeDialingLeadIds
           : [currentLead?.id, previewLead?.id].filter((id): id is string => !!id))
       : []
   )
