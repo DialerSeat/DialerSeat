@@ -5,6 +5,7 @@ import SiteFooter from '@/components/site-footer'
 import SiteHeader from '@/components/site-header'
 import LandingAuthSync from '@/components/LandingAuthSync'
 import DialerShowcase from '@/components/DialerShowcase'
+import LeadQueueShowcase from '@/components/LeadQueueShowcase'
 
 interface PageProps {
   searchParams: Promise<{ view?: string; tenant?: string }>
@@ -406,6 +407,30 @@ export default async function Home({ searchParams }: PageProps) {
           }}>
             FOR SALES TEAMS, CALL CENTERS, AGENCIES, AND <u>ANYONE</u> WHO WORKS LEADS.
           </h2>
+
+          {/* Live queue demo. Deliberately placed under this headline: the
+              claim is "built for volume", and the queue working itself
+              top-down is the evidence. Self-contained and animation-only —
+              see components/LeadQueueShowcase.tsx. */}
+          {/* NOT wrapped in .ds-showcase-shell/.ds-showcase-scale like the hero
+              dialer. That pair pins a 640px inner width and applies zoom: 0.5 on
+              mobile, which the hero needs because DialerShowcase has a fixed
+              internal layout. This panel is a four-column list that reflows
+              cleanly, so it stays fluid and keeps its type at full size —
+              halving it would render the rows at ~5px. Its own narrow-viewport
+              rules live in components/LeadQueueShowcase.tsx. */}
+          <div style={{ maxWidth: '640px', margin: '48px auto 0', textAlign: 'left' }}>
+            <LeadQueueShowcase />
+            <p style={{
+              marginTop: '14px',
+              fontSize: '11px',
+              letterSpacing: '2px',
+              textAlign: 'center',
+              color: 'var(--brand-muted-text, #5a5e6a)',
+            }}>
+              LIVE DEMO &middot; THE QUEUE WORKS ITSELF TOP-DOWN
+            </p>
+          </div>
         </div>
 
         <div className="ds-grid-3" style={{ display: 'grid', gap: '20px' }}>

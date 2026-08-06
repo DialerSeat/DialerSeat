@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
 } from 'recharts'
+import UserProfilePage from './UserProfilePage'
 
 // ─────────────────────────────────────────────────────────────────────────
 // A deliberately different visual language from the rest of the admin
@@ -29,7 +30,7 @@ const C = {
   red: '#e0463f',
 }
 
-type RangeKey = 'today' | 'week' | 'all'
+type RangeKey = 'today' | 'week' | 'all' | 'custom'
 type DetailRangeKey = 'today' | 'week' | 'month30' | 'all'
 
 // Key for persisting the selected time and status filters across page
@@ -53,7 +54,7 @@ interface UserRow {
   last_name: string | null
   created_at: string
   last_seen_at: string | null
-  stats: { today: BucketStats; week: BucketStats; month30: BucketStats; all: BucketStats }
+  stats: { today: BucketStats; week: BucketStats; month30: BucketStats; all: BucketStats; custom?: BucketStats }
 }
 
 interface OverviewBlock {
@@ -83,9 +84,11 @@ interface ApiResponse {
     week: OverviewBlock
     month30: OverviewBlock
     all: OverviewBlock
+    custom: OverviewBlock | null
     series: SeriesPoint[]
   }
   users: UserRow[]
+  range: { from: string; to: string } | null
 }
 
 const SYNC_MS = 10_000
@@ -113,6 +116,19 @@ function fmtDayShort(iso: string): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
+/**
+ * "Active now" = seen in the last 15 minutes.
+ *
+ * Module scope on purpose: react-hooks/purity forbids Date.now() during
+ * render, and hoisting the clock read out of the component is the fix used
+ * elsewhere in this codebase for the same rule.
+ */
+const ACTIVE_NOW_WINDOW_MS = 15 * 60_000
+function isRecentlyActive(lastSeenAt: string | null): boolean {
+  if (!lastSeenAt) return false
+  return Date.now() - new Date(lastSeenAt).getTime() < ACTIVE_NOW_WINDOW_MS
+}
+
 function nameFor(u: UserRow): string {
   const full = `${u.first_name || ''} ${u.last_name || ''}`.trim()
   return full || u.email?.split('@')[0] || 'Unknown'
@@ -125,7 +141,7 @@ function initials(u: UserRow): string {
   return full.slice(0, 2).toUpperCase()
 }
 
-const RANGE_LABEL: Record<RangeKey, string> = { today: 'Today', week: 'This Week', all: 'All Time' }
+const RANGE_LABEL: Record<RangeKey, string> = { today: 'Today', week: 'This Week', all: 'All Time', custom: 'Custom' }
 const DETAIL_LABEL: Record<DetailRangeKey, string> = {
   today: 'Today', week: 'This Week', month30: 'Last 30 Days', all: 'All Time',
 }
@@ -184,6 +200,11 @@ export default function UserTrackerApp() {
   const [sortKey, setSortKey] = useState<SortKey>('calls')
   const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc')
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  // Custom range. Kept as draft inputs plus an applied pair so typing a
+  // half-finished date doesn't refetch on every keystroke.
+  const [fromDraft, setFromDraft] = useState('')
+  const [toDraft, setToDraft] = useState('')
+  const [applied, setApplied] = useState<{ from: string; to: string } | null>(null)
   const [lastSynced, setLastSynced] = useState<number>(() => Date.now())
   const [nowTick, setNowTick] = useState(() => Date.now())
   const inFlight = useRef(false)
@@ -192,7 +213,8 @@ export default function UserTrackerApp() {
     if (inFlight.current) return
     inFlight.current = true
     try {
-      const r = await fetch('/api/admin/user-tracker', { cache: 'no-store' })
+      const qs = applied ? `?from=${applied.from}&to=${applied.to}` : ''
+      const r = await fetch(`/api/admin/user-tracker${qs}`, { cache: 'no-store' })
       const d = await r.json()
       if (d.success) {
         setData(d)
@@ -207,7 +229,7 @@ export default function UserTrackerApp() {
       setLoading(false)
       inFlight.current = false
     }
-  }, [])
+  }, [applied])
 
   // initial load + auto-sync every 10s, no cron — plain client polling
   useEffect(() => {
@@ -225,9 +247,11 @@ export default function UserTrackerApp() {
 
   const rows = useMemo(() => {
     let list = users.map(u => {
-      const b = u.stats[range]
+      // `custom` is undefined until a range is applied; fall back to all-time
+      // so the table never renders blank rows mid-selection.
+      const b = (range === 'custom' ? u.stats.custom : u.stats[range]) ?? u.stats.all
       const avgCall = b.calls > 0 ? b.dialSeconds / b.calls : 0
-      const isActiveNow = !!u.last_seen_at && Date.now() - new Date(u.last_seen_at).getTime() < 15 * 60_000
+      const isActiveNow = isRecentlyActive(u.last_seen_at)
       return { u, b, avgCall, isActiveNow }
     })
 
@@ -260,10 +284,31 @@ export default function UserTrackerApp() {
     else { setSortKey(key); setSortDir('desc') }
   }
 
-  const ov = data?.overview[range]
+  // `custom` is null until a range is applied — fall back so the KPI strip
+  // never blanks out between selecting Custom and applying dates.
+  const ov = range === 'custom'
+    ? (data?.overview.custom ?? data?.overview.all)
+    : data?.overview[range]
   const series = data?.overview.series ?? []
 
   const syncedAgo = Math.max(0, Math.round((nowTick - lastSynced) / 1000))
+
+  // Full-page profile REPLACES the list rather than overlaying it. A drawer
+  // over a still-mounted table meant the profile could never be wider than a
+  // sidebar, which is the whole reason it couldn't show anything useful.
+  // Returning early also stops the table's 10s poll re-rendering behind it.
+  if (selected) {
+    return (
+      <div className="ut-root">
+        <UserProfilePage
+          user={selected}
+          allUsers={users}
+          onBack={() => setSelectedId(null)}
+          customLabel={applied ? `${fmtDate(applied.from)} – ${fmtDate(applied.to)}` : null}
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="ut-root">
@@ -405,7 +450,7 @@ export default function UserTrackerApp() {
           )}
 
           <div className="ut-segmented" role="tablist">
-            {(['today', 'week', 'all'] as RangeKey[]).map(r => (
+            {(['today', 'week', 'all', 'custom'] as RangeKey[]).map(r => (
               <button
                 key={r}
                 className={`ut-seg-btn ${range === r ? 'active' : ''}`}
@@ -415,6 +460,68 @@ export default function UserTrackerApp() {
               </button>
             ))}
           </div>
+
+          {/* Custom range picker. Only rendered on the Custom tab — the fixed
+              ranges answer "how are things now", this answers "what happened
+              during that specific stretch", and showing both at once just
+              crowds the header. */}
+          {range === 'custom' && (
+            <div style={{
+              display: 'flex', alignItems: 'flex-end', gap: 10, flexWrap: 'wrap',
+              margin: '0 0 16px', padding: '12px 14px',
+              background: C.card, border: `1px solid ${C.border}`, borderRadius: 12,
+            }}>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.4, color: C.muted, textTransform: 'uppercase' }}>From</span>
+                <input
+                  type="date"
+                  value={fromDraft}
+                  max={toDraft || undefined}
+                  onChange={e => setFromDraft(e.target.value)}
+                  style={dateInputStyle}
+                />
+              </label>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.4, color: C.muted, textTransform: 'uppercase' }}>To</span>
+                <input
+                  type="date"
+                  value={toDraft}
+                  min={fromDraft || undefined}
+                  onChange={e => setToDraft(e.target.value)}
+                  style={dateInputStyle}
+                />
+              </label>
+              <button
+                onClick={() => setApplied(fromDraft && toDraft ? { from: fromDraft, to: toDraft } : null)}
+                disabled={!fromDraft || !toDraft}
+                style={{
+                  padding: '8px 16px', borderRadius: 10, cursor: (!fromDraft || !toDraft) ? 'not-allowed' : 'pointer',
+                  border: 'none', background: (!fromDraft || !toDraft) ? C.border : C.accent,
+                  color: (!fromDraft || !toDraft) ? C.faint : '#fff',
+                  fontSize: 12, fontWeight: 700,
+                }}
+              >
+                Apply
+              </button>
+              {applied && (
+                <button
+                  onClick={() => { setApplied(null); setFromDraft(''); setToDraft('') }}
+                  style={{
+                    padding: '8px 12px', borderRadius: 10, cursor: 'pointer',
+                    border: `1px solid ${C.border}`, background: 'transparent',
+                    color: C.muted, fontSize: 12, fontWeight: 600,
+                  }}
+                >
+                  Clear
+                </button>
+              )}
+              <span style={{ fontSize: 11, color: C.faint, marginLeft: 'auto' }}>
+                {applied
+                  ? `Showing ${fmtDate(applied.from)} – ${fmtDate(applied.to)}, inclusive`
+                  : 'Pick two dates. Both days are included.'}
+              </span>
+            </div>
+          )}
 
           {loading && !data ? (
             <div className="ut-empty">Loading usage data…</div>
@@ -570,67 +677,17 @@ export default function UserTrackerApp() {
         </div>
       </div>
 
-      {selected && (
-        <div className="ut-drawer-backdrop" onClick={() => setSelectedId(null)}>
-          <div className="ut-drawer" onClick={e => e.stopPropagation()}>
-            <div className="ut-drawer-head" style={{ position: 'relative' }}>
-              <button className="ut-close-btn" onClick={() => setSelectedId(null)} aria-label="Close">✕</button>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div className="ut-avatar" style={{ width: 42, height: 42, borderRadius: 12, fontSize: 14 }}>
-                  {initials(selected)}
-                </div>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 15, fontWeight: 700 }}>{nameFor(selected)}</div>
-                  <div style={{ fontSize: 12, color: C.muted }}>{selected.email}</div>
-                </div>
-              </div>
-              <div style={{ marginTop: 12, fontSize: 11, color: C.muted }}>
-                Joined {fmtDate(selected.created_at)}
-              </div>
-            </div>
-
-            <div className="ut-drawer-scroll">
-              <div className="ut-detail-grid">
-                {(['today', 'week', 'month30', 'all'] as DetailRangeKey[]).map(dr => {
-                  const b = selected.stats[dr]
-                  const avg = b.calls > 0 ? b.dialSeconds / b.calls : 0
-                  return (
-                    <div key={dr} className="ut-detail-card">
-                      <div className="ut-detail-range">{DETAIL_LABEL[dr]}</div>
-                      <div className="ut-detail-line">
-                        <span className="ut-detail-key">Numbers dialed</span>
-                        <span className="ut-detail-val">{fmtNum(b.calls)}</span>
-                      </div>
-                      <div className="ut-detail-line">
-                        <span className="ut-detail-key">Time dialed</span>
-                        <span className="ut-detail-val">{fmtDuration(b.dialSeconds)}</span>
-                      </div>
-                      <div className="ut-detail-line">
-                        <span className="ut-detail-key">Time connected</span>
-                        <span className="ut-detail-val">{fmtDuration(b.connectedSeconds)}</span>
-                      </div>
-                      <div className="ut-detail-line">
-                        <span className="ut-detail-key">Connected calls</span>
-                        <span className="ut-detail-val">{fmtNum(b.connectedCalls)}</span>
-                      </div>
-                      <div className="ut-detail-line">
-                        <span className="ut-detail-key">Avg call length</span>
-                        <span className="ut-detail-val">{avg > 0 ? fmtDuration(avg) : '—'}</span>
-                      </div>
-                      <div className="ut-detail-line">
-                        <span className="ut-detail-key">Skipped / no answer</span>
-                        <span className="ut-detail-val">
-                          {fmtNum(b.skippedCalls)}{b.wastedSeconds > 0 ? ` (${fmtDuration(b.wastedSeconds)})` : ''}
-                        </span>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
+}
+
+const dateInputStyle: React.CSSProperties = {
+  padding: '7px 10px',
+  borderRadius: 9,
+  border: `1px solid ${C.border}`,
+  background: C.bg,
+  color: C.ink,
+  fontSize: 12.5,
+  fontFamily: 'inherit',
+  outline: 'none',
 }

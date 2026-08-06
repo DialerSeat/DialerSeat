@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 import { logCallEvent } from '@/lib/callEvents'
+import { sweepTelnyxEvents, TELNYX_EVENT_RETENTION_HOURS } from '@/lib/telnyxIdempotency'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -70,10 +71,20 @@ export async function GET(req: Request) {
       }
     }
 
+    // Janitorial: the Telnyx webhook dedupe table is a lock, not a log, and
+    // takes millions of rows a day at scale. Swept here rather than on its own
+    // schedule because this cron already exists for exactly this kind of work
+    // and runs often enough that each sweep stays small.
+    const dedupeRowsSwept = await sweepTelnyxEvents()
+
     return NextResponse.json({
       success: true,
       sessionsFreed,
-      thresholds: { sessionDeadHeartbeatMin: SESSION_DEAD_HEARTBEAT_MIN },
+      dedupeRowsSwept,
+      thresholds: {
+        sessionDeadHeartbeatMin: SESSION_DEAD_HEARTBEAT_MIN,
+        telnyxEventRetentionHours: TELNYX_EVENT_RETENTION_HOURS,
+      },
     })
   } catch (error) {
     return apiError(error, { route: 'cron/stale-call-reaper' })

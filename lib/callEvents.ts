@@ -28,7 +28,7 @@ export type CallEventType =
 interface CallEventInput {
   event_type: CallEventType
   call_id?: string | null
-  signalwire_call_id?: string | null
+  call_control_id?: string | null
   user_id?: string | null
   campaign_id?: string | null
   lead_id?: string | null
@@ -43,7 +43,7 @@ export async function logCallEvent(input: CallEventInput): Promise<void> {
     const { error } = await db.from('call_events').insert({
       event_type: input.event_type,
       call_id: input.call_id ?? null,
-      signalwire_call_id: input.signalwire_call_id ?? null,
+      call_control_id: input.call_control_id ?? null,
       user_id: input.user_id ?? null,
       campaign_id: input.campaign_id ?? null,
       lead_id: input.lead_id ?? null,

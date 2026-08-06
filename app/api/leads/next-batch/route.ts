@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { getServiceClient } from '@/lib/supabase'
 import { isCallableNow } from '@/lib/callingWindow'
+import { hasCallingWindowOverride } from '@/lib/callingWindowOverride'
 
 const supabase = getServiceClient('leads/next-batch')
 
@@ -125,11 +126,15 @@ export async function POST(req: NextRequest) {
     const callable: ClaimedLead[] = []
     const blocked: string[] = []
 
+    // Resolved once for the whole batch rather than per lead. False for any
+    // account not on the allowlist in lib/callingWindowOverride.ts.
+    const overrideWindow = await hasCallingWindowOverride(clerkId)
+
     for (const lead of claimedLeads) {
-      const check = isCallableNow({
-        phone: lead.phone,
-        state: lead.state,
-      })
+      const check = isCallableNow(
+        { phone: lead.phone, state: lead.state },
+        { overrideWindow }
+      )
       if (check.allowed) {
         callable.push(lead)
       } else {

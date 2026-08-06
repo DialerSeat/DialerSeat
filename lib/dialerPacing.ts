@@ -128,7 +128,7 @@ export async function markCallAbandoned(callSid: string): Promise<void> {
   await supabaseAdmin
     .from('calls')
     .update({ was_abandoned: true })
-    .eq('signalwire_call_id', callSid)
+    .eq('call_control_id', callSid)
 }
 
 
@@ -136,5 +136,5 @@ export async function recordAmdResult(callSid: string, amdResult: string): Promi
   await supabaseAdmin
     .from('calls')
     .update({ amd_result: amdResult })
-    .eq('signalwire_call_id', callSid)
+    .eq('call_control_id', callSid)
 }

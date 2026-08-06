@@ -30,6 +30,19 @@ interface LeadInput {
   state?: string | null  // explicit state column from leads table (optional)
 }
 
+export interface CallabilityOptions {
+  /**
+   * Allow this call even when the lead is outside their local window.
+   *
+   * Resolved per request from an email allowlist — see
+   * lib/callingWindowOverride.ts for why it works that way and what it is for.
+   * It is a PARAMETER rather than something this module looks up on its own so
+   * that enforcement remains the default: a bypass has to be passed in, by
+   * name, at the call site.
+   */
+  overrideWindow?: boolean
+}
+
 // ── SANDBOX 24/7 TESTING BYPASS ────────────────────────────────────────────
 // Sandbox needs to place test calls at any hour; admin testing doesn't happen
 // on a lead's schedule.
@@ -60,7 +73,27 @@ function isSandboxDeployment(): boolean {
   return SANDBOX_HOSTNAMES.some(h => currentHost === h.toLowerCase())
 }
 
-export function isCallableNow(lead: LeadInput): CallabilityResult {
+export function isCallableNow(lead: LeadInput, opts?: CallabilityOptions): CallabilityResult {
+  const result = evaluateCallability(lead)
+  if (result.allowed || !opts?.overrideWindow) return result
+
+  // The override is applied AFTER the real evaluation rather than short-
+  // circuiting it, for two reasons: the result still carries the lead's state,
+  // timezone and local time (which the dialer displays and the logs need), and
+  // the reason the lead would have been blocked survives into the log line
+  // below. A short-circuit would throw both away.
+  console.warn(
+    `[callingWindow] OVERRIDE — dialing outside the window for a named account. ` +
+    `Would have been blocked: ${result.reason ?? 'unknown reason'}`
+  )
+  return {
+    ...result,
+    allowed: true,
+    reason: `Calling-window override active for this account (would otherwise be blocked: ${result.reason ?? 'unknown reason'})`,
+  }
+}
+
+function evaluateCallability(lead: LeadInput): CallabilityResult {
   if (isSandboxDeployment()) {
     return {
       allowed: true,

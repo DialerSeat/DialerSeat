@@ -12,6 +12,11 @@ interface Prefs {
   resub: boolean
   renewal: boolean
   cancel: boolean
+  sub_paused: boolean
+  sub_resumed: boolean
+  agent_leg_refused: boolean
+  pool_capacity: boolean
+  webhook_silence: boolean
 }
 
 const DEFAULT_PREFS: Prefs = {
@@ -22,6 +27,11 @@ const DEFAULT_PREFS: Prefs = {
   resub: true,
   renewal: true,
   cancel: true,
+  sub_paused: true,
+  sub_resumed: true,
+  agent_leg_refused: true,
+  pool_capacity: true,
+  webhook_silence: true,
 }
 
 export async function GET() {
@@ -33,7 +43,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('admin_notification_prefs')
-    .select('master_enabled, signup, account_deleted, new_sub, resub, renewal, cancel')
+    .select('master_enabled, signup, account_deleted, new_sub, resub, renewal, cancel, sub_paused, sub_resumed, agent_leg_refused, pool_capacity, webhook_silence')
     .eq('id', 1)
     .maybeSingle()
 
@@ -62,7 +72,9 @@ export async function POST(req: NextRequest) {
   }
 
   const patch: Partial<Prefs> = {}
-  const boolKeys: (keyof Prefs)[] = ['master_enabled', 'signup', 'account_deleted', 'new_sub', 'resub', 'renewal', 'cancel']
+  // Operational alert keys are included here or the new Notifications
+  // switches would render, appear to toggle, and silently fail to persist.
+  const boolKeys: (keyof Prefs)[] = ['master_enabled', 'signup', 'account_deleted', 'new_sub', 'resub', 'renewal', 'cancel', 'sub_paused', 'sub_resumed', 'agent_leg_refused', 'pool_capacity', 'webhook_silence']
   for (const key of boolKeys) {
     if (typeof body[key] === 'boolean') patch[key] = body[key]
   }
@@ -83,7 +95,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase
     .from('admin_notification_prefs')
     .upsert({ id: 1, ...patch, updated_at: new Date().toISOString() }, { onConflict: 'id' })
-    .select('master_enabled, signup, account_deleted, new_sub, resub, renewal, cancel')
+    .select('master_enabled, signup, account_deleted, new_sub, resub, renewal, cancel, sub_paused, sub_resumed, agent_leg_refused, pool_capacity, webhook_silence')
     .maybeSingle()
 
   if (error) {

@@ -104,10 +104,9 @@ export async function POST(req: Request) {
         area_code: areaCode,
         state: info?.state ?? null,
         region: info?.region ?? null,
-        // Column is still named signalwire_sid in this shared schema —
-        // storing Telnyx's own number id here, same reasoning as
-        // lib/telnyxProvision.ts's other writes to this column.
-        signalwire_sid: telnyxNumber.id,
+        // Telnyx's own number id, same as every other write to this column
+        // (see lib/telnyxProvision.ts).
+        provider_number_id: telnyxNumber.id,
         status: 'active',
         daily_call_count: 0,
         daily_cap: 125,

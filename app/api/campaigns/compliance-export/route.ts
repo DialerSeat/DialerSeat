@@ -42,7 +42,7 @@ export async function GET(req: Request) {
 
     const { data: calls, error } = await supabaseAdmin
       .from('calls')
-      .select('id, signalwire_call_id, user_id, phone_number, amd_result, was_abandoned, disposition, duration, created_at')
+      .select('id, call_control_id, user_id, phone_number, amd_result, was_abandoned, disposition, duration, created_at')
       .eq('campaign_id', campaignId)
       .gte('created_at', startDate)
       .lte('created_at', endDate)
@@ -50,17 +50,17 @@ export async function GET(req: Request) {
 
     if (error) throw error
 
-    const callIds = (calls || []).map(c => c.signalwire_call_id).filter(Boolean) as string[]
+    const callIds = (calls || []).map(c => c.call_control_id).filter(Boolean) as string[]
 
     let recordingMap: Record<string, string> = {}
     if (callIds.length > 0) {
       const { data: recs } = await supabaseAdmin
         .from('recordings')
-        .select('signalwire_call_id, recording_url')
-        .in('signalwire_call_id', callIds)
+        .select('call_control_id, recording_url')
+        .in('call_control_id', callIds)
       for (const r of recs || []) {
-        if (r.signalwire_call_id && r.recording_url) {
-          recordingMap[r.signalwire_call_id] = r.recording_url
+        if (r.call_control_id && r.recording_url) {
+          recordingMap[r.call_control_id] = r.recording_url
         }
       }
     }
@@ -95,9 +95,9 @@ export async function GET(req: Request) {
         ? maskPhone(c.phone_number)
         : (c.phone_number || '')
       const agent = c.user_id ? (userMap[c.user_id] || c.user_id.slice(0, 12)) : ''
-      const recordingUrl = c.signalwire_call_id ? (recordingMap[c.signalwire_call_id] || '') : ''
+      const recordingUrl = c.call_control_id ? (recordingMap[c.call_control_id] || '') : ''
       return [
-        csvEscape(c.signalwire_call_id || c.id),
+        csvEscape(c.call_control_id || c.id),
         csvEscape(c.created_at || ''),
         csvEscape(agent),
         csvEscape(phone),

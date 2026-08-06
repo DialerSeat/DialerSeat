@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { verifyTelnyxWebhook } from '@/lib/verifyTelnyxWebhook'
+import {
+  claimTelnyxEvent,
+  markTelnyxEventProcessed,
+  markTelnyxEventFailed,
+} from '@/lib/telnyxIdempotency'
 import { recordAmdResult, markCallAbandoned } from '@/lib/dialerPacing'
 import { logCallEvent } from '@/lib/callEvents'
 import { hangupCallControlId } from '@/lib/placeOutboundCall'
@@ -110,12 +115,30 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true })
   }
 
+  // ── IDEMPOTENCY ──────────────────────────────────────────────────────────
+  // Telnyx retries delivery, and this dispatcher has handlers with real side
+  // effects — hanging up a leg on an AMD machine result, writing duration,
+  // triggering a recording sync. Individual handlers guard some of that ad
+  // hoc; this makes it structural, so the next handler added is covered
+  // without its author having to remember.
+  //
+  // Fails OPEN by design (see lib/telnyxIdempotency.ts): a bookkeeping table
+  // being unavailable must never cause a dropped call.hangup, which would
+  // leave an agent wedged on a call that already ended.
+  const eventId = body?.data?.id
+  const claim = await claimTelnyxEvent(eventId, eventType)
+  if (!claim.shouldProcess) {
+    // 200, not an error — this is Telnyx doing exactly what it should, and a
+    // non-2xx would just earn another retry of an event we already handled.
+    return NextResponse.json({ ok: true, deduped: claim.reason })
+  }
+
   try {
     switch (eventType) {
       case 'call.initiated':
         void logCallEvent({
           event_type: 'initiated',
-          signalwire_call_id: callControlId,
+          call_control_id: callControlId,
           source: 'webhook',
         })
         if (payload.direction === 'incoming') {
@@ -148,8 +171,15 @@ export async function POST(req: Request) {
         // needed today, but we don't want to log noise for every one.
         break
     }
+    // Marked processed only after the dispatch completed without throwing, so
+    // a genuine failure leaves the row 'received' -> retryable rather than
+    // permanently suppressing the event.
+    await markTelnyxEventProcessed(eventId)
   } catch (err) {
     console.error(`[calls/events] handler error for ${eventType}:`, err)
+    // Recorded as failed so a Telnyx retry is allowed to have another go,
+    // instead of being deduped away against a half-finished attempt.
+    await markTelnyxEventFailed(eventId, err)
     // Always 200 — Telnyx retries on non-2xx, and retrying a handler that
     // already partially executed (e.g. already hung up a call) can cause
     // duplicate side effects. Errors are logged for us to see, not
@@ -162,7 +192,7 @@ export async function POST(req: Request) {
 async function handleCallAnswered(callControlId: string): Promise<void> {
   void logCallEvent({
     event_type: 'answered',
-    signalwire_call_id: callControlId,
+    call_control_id: callControlId,
     source: 'webhook',
   })
 
@@ -184,7 +214,7 @@ async function handleCallAnswered(callControlId: string): Promise<void> {
     await supabaseAdmin
       .from('calls')
       .update({ answered_at: new Date().toISOString() })
-      .eq('signalwire_call_id', callControlId)
+      .eq('call_control_id', callControlId)
       .is('answered_at', null)
   } catch (err) {
     console.error(`[calls/events] failed to record answered_at for ${callControlId}:`, err)
@@ -271,7 +301,7 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
   await recordAmdResult(callControlId, result)
   void logCallEvent({
     event_type: 'amd_result',
-    signalwire_call_id: callControlId,
+    call_control_id: callControlId,
     status: result,
     source: 'webhook',
     detail: { result },
@@ -295,39 +325,21 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
     // script while a voicemail greeting played, hanging up by hand every
     // time. Removed. Instant skip is the specified behavior and the correct
     // one.
-    // ── FLOOR: NEVER HANG UP ON A VERDICT THIS FAST ──────────────────────
-    // A 'machine' result arriving within a couple of seconds of answer is not
-    // a detection, it is a guess about someone who said "Hello?" and paused.
-    // Observed in production at exactly 2s on live humans, and the hangup
-    // below is instant and unrecoverable — the prospect is gone mid-sentence
-    // with no disposition and no way to tell it happened.
+    // NO TIMING FLOOR. A 3.5s minimum-age guard was tried here and removed:
+    // measured against real traffic it suppressed 20 of 22 machine detections
+    // (they land at ~2.4s on average), so it did not delay AMD — it disabled
+    // it, and agents sat listening to voicemail greetings.
     //
-    // A genuine voicemail greeting cannot END in under this floor, so
-    // refusing to act on such a verdict costs nothing real: the machine keeps
-    // playing, the agent hears it, and the queue moves on a beat later. This
-    // sits underneath the AMD tuning in lib/placeOutboundCall.ts as a
-    // backstop, so a future config change cannot reintroduce instant
-    // hang-ups on humans.
-    const MIN_MS_BEFORE_MACHINE_HANGUP = 3500
-
-    const { data: amdRow } = await supabaseAdmin
-      .from('calls')
-      .select('answered_at')
-      .eq('signalwire_call_id', callControlId)
-      .maybeSingle()
-
-    if (amdRow?.answered_at) {
-      const sinceAnswer = Date.now() - new Date(amdRow.answered_at).getTime()
-      if (sinceAnswer >= 0 && sinceAnswer < MIN_MS_BEFORE_MACHINE_HANGUP) {
-        console.warn(
-          `[calls/events] IGNORING 'machine' for ${callControlId} — verdict arrived ${sinceAnswer}ms ` +
-          `after answer, under the ${MIN_MS_BEFORE_MACHINE_HANGUP}ms floor. Too fast to be a real ` +
-          `greeting; treating as human so a live person is not cut off.`
-        )
-        return
-      }
-    }
-
+    // It could not have worked in principle either. Human verdicts averaged
+    // 2272ms and machine verdicts 2441ms: the two distributions overlap
+    // almost entirely, so ARRIVAL TIME carries no signal about which is
+    // which. A time threshold can only suppress verdicts, never classify
+    // them. Separating human from machine requires changing what AMD
+    // measures (its detection config), not when we are willing to believe it.
+    //
+    // Product decision: skip instantly on 'machine'. A few seconds of
+    // voicemail in an agent's ear is an acceptable price for never sitting on
+    // a dead call, and speed through the list is the point of the dialer.
     await hangupCallControlId(callControlId)
     await autoAdvanceLeadNoDisposition(callControlId)
     return
@@ -337,7 +349,7 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
   const { data: callRow } = await supabaseAdmin
     .from('calls')
     .select('id, dial_group_id, campaign_id, team_id, user_id')
-    .eq('signalwire_call_id', callControlId)
+    .eq('call_control_id', callControlId)
     .maybeSingle()
 
   if (!callRow) {
@@ -411,7 +423,7 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
     await supabaseAdmin
       .from('calls')
       .update({ disposition: 'ABANDONED' })
-      .eq('signalwire_call_id', callControlId)
+      .eq('call_control_id', callControlId)
     await bumpLeadAttemptAndRelease(callRow.id)
   }
 }
@@ -423,7 +435,7 @@ async function handleHangup(
 ): Promise<void> {
   void logCallEvent({
     event_type: 'completed',
-    signalwire_call_id: callControlId,
+    call_control_id: callControlId,
     status: hangupCause,
     source: 'webhook',
     detail: { hangup_cause: hangupCause, hangup_source: hangupSource },
@@ -440,7 +452,7 @@ async function handleHangup(
     const { data: callRow } = await supabaseAdmin
       .from('calls')
       .select('id, created_at, duration, disposition')
-      .eq('signalwire_call_id', callControlId)
+      .eq('call_control_id', callControlId)
       .maybeSingle()
 
     // ── AGENT LEG REFUSED BY TELNYX ──────────────────────────────────────
@@ -514,7 +526,7 @@ async function handleRecordingSaved(
 ): Promise<void> {
   void logCallEvent({
     event_type: 'recording_ready',
-    signalwire_call_id: callControlId,
+    call_control_id: callControlId,
     source: 'webhook',
   })
 
@@ -544,7 +556,7 @@ async function handleRecordingSaved(
   const { data: ownerRow } = await supabaseAdmin
     .from('calls')
     .select('id, campaign_id, recording_status')
-    .eq('signalwire_call_id', callControlId)
+    .eq('call_control_id', callControlId)
     .maybeSingle()
 
   // An agent who hit the record toggle mid-call asked for this explicitly, so
@@ -580,7 +592,7 @@ async function handleRecordingSaved(
       recording_status: 'completed',
       recording_url: recordingUrl,
     })
-    .eq('signalwire_call_id', callControlId)
+    .eq('call_control_id', callControlId)
     .select('id')
 
   if (error) {
@@ -642,7 +654,7 @@ async function autoAdvanceLeadNoDisposition(callControlId: string): Promise<void
   const { data: callRow } = await supabaseAdmin
     .from('calls')
     .select('id, lead_id')
-    .eq('signalwire_call_id', callControlId)
+    .eq('call_control_id', callControlId)
     .maybeSingle()
 
   if (!callRow || !callRow.lead_id) return

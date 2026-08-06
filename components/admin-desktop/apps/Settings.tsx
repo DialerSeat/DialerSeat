@@ -27,7 +27,20 @@ const CHEVRON = '#5C5C60'
 const SF_STACK =
   '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Arial, sans-serif'
 
-type NotifKey = 'signup' | 'account_deleted' | 'new_sub' | 'resub' | 'renewal' | 'cancel'
+type NotifKey =
+  // Revenue events
+  | 'signup'
+  | 'account_deleted'
+  | 'new_sub'
+  | 'resub'
+  | 'renewal'
+  | 'cancel'
+  | 'sub_paused'
+  | 'sub_resumed'
+  // Operational events — see NOTIF_ROWS below
+  | 'agent_leg_refused'
+  | 'pool_capacity'
+  | 'webhook_silence'
 
 interface NotifRow {
   key: NotifKey
@@ -42,6 +55,18 @@ const NOTIF_ROWS: NotifRow[] = [
   { key: 'resub', label: 'Resubscriptions', description: 'A lapsed customer subscribes again' },
   { key: 'renewal', label: 'Renewals', description: 'A weekly subscription payment goes through' },
   { key: 'cancel', label: 'Cancellations', description: 'A customer cancels their subscription' },
+  // A pause is the churn signal you can still act on — unlike a cancel, they
+  // haven't left yet and their data is intact.
+  { key: 'sub_paused', label: 'Subscriptions Paused', description: 'A customer pauses billing instead of cancelling — reach out before they decide' },
+  { key: 'sub_resumed', label: 'Subscriptions Resumed', description: 'A paused customer starts paying again' },
+
+  // ── OPERATIONAL ALERTS ────────────────────────────────────────────────
+  // Everything above is revenue. These are "the product is broken", and each
+  // one exists because that exact failure already happened silently and was
+  // caught by a human noticing something felt off rather than by any alert.
+  { key: 'agent_leg_refused', label: 'Calls With No Audio', description: 'Telnyx refused the agent leg — those calls connected with no audio at all' },
+  { key: 'pool_capacity', label: 'Number Pool Filling Up', description: 'Caller-ID pool nearing its daily cap — at 100% every user gets "no numbers available"' },
+  { key: 'webhook_silence', label: 'Call Webhooks Silent', description: 'Calls placed but no webhook events arriving — talk time, AMD and recordings all stop working' },
 ]
 
 interface PrefsResponse {
@@ -52,6 +77,11 @@ interface PrefsResponse {
   resub: boolean
   renewal: boolean
   cancel: boolean
+  sub_paused: boolean
+  sub_resumed: boolean
+  agent_leg_refused: boolean
+  pool_capacity: boolean
+  webhook_silence: boolean
 }
 
 const DEFAULT_PREFS: PrefsResponse = {
@@ -62,6 +92,11 @@ const DEFAULT_PREFS: PrefsResponse = {
   resub: true,
   renewal: true,
   cancel: true,
+  sub_paused: true,
+  sub_resumed: true,
+  agent_leg_refused: true,
+  pool_capacity: true,
+  webhook_silence: true,
 }
 
 // Standard base64url -> Uint8Array conversion the Push API requires for
@@ -436,14 +471,6 @@ interface EmptyPaneDef {
 // no scaffolding needed beyond adding the real content where noted.
 const EMPTY_PANES: EmptyPaneDef[] = [
   {
-    pane: 'dialer',
-    title: 'Dialer & Calling',
-    icon: '📞',
-    iconBg: `linear-gradient(135deg, ${IOS_GREEN}, #248A3D)`,
-    subtitle: 'Pacing, dispositions, recordings',
-    blurb: 'Controls for dialing modes, call pacing, dispositions, and recording will live here.',
-  },
-  {
     pane: 'team',
     title: 'Team & Access',
     icon: '👥',
@@ -537,6 +564,7 @@ function Sidebar({
   const items: { pane: SettingsPane; icon: string; iconBg: string; title: string; subtitle: string }[] = [
     { pane: 'general', icon: '⚙️', iconBg: 'linear-gradient(135deg, #8E8E93, #636366)', title: 'General', subtitle: 'Account, sign out' },
     { pane: 'notifications', icon: '🔔', iconBg: `linear-gradient(135deg, ${IOS_RED}, #C41E1E)`, title: 'Notifications', subtitle: notifSubtitle },
+    { pane: 'dialer', icon: '📞', iconBg: `linear-gradient(135deg, ${IOS_GREEN}, #248A3D)`, title: 'Dialer & Calling', subtitle: 'Global kill switches' },
     ...EMPTY_PANES.map(def => ({ pane: def.pane, icon: def.icon, iconBg: def.iconBg, title: def.title, subtitle: def.subtitle })),
   ]
   const filtered = items.filter(i => matches(i.title, i.subtitle))
@@ -638,6 +666,204 @@ function Sidebar({
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+// =============================================================================
+// DIALER & CALLING — the global kill switches
+// =============================================================================
+// These write platform_config, which the dial path reads on every call. They
+// are OVERRIDES, not defaults: turning one off stops the behaviour everywhere
+// regardless of what each campaign has set, and turning it back on returns
+// every campaign to its own setting untouched. Nothing here ever writes to a
+// tenant's campaign rows.
+//
+// Two of them are money, and that's why they're one tap:
+//   - AMD bills PER CALL (~$0.002), not per minute. Across a heavy dialing
+//     day that can exceed the cost of the talk time itself.
+//   - Number buying is ~$1/mo per number, and a runaway ratio loop is a bill
+//     that keeps growing until a human notices.
+//
+// Recording is the legal one — two-party-consent states make silent recording
+// an exposure worth being able to stop in seconds.
+//
+// A flip takes up to ~30s to reach every serverless instance, because
+// platform_config is cached per process with a 30s TTL. Said plainly in the
+// UI rather than letting an admin wonder whether the switch worked.
+// =============================================================================
+
+interface PlatformConfigShape {
+  amd_enabled_global: boolean
+  recording_enabled_global: boolean
+  number_buying_frozen: boolean
+  predictive_line_ceiling: number
+}
+
+function DialerPane({ onBack }: { onBack: () => void }) {
+  const [config, setConfig] = useState<PlatformConfigShape | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [saving, setSaving] = useState<string | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    const load = async () => {
+      try {
+        const res = await fetch('/api/admin/platform-config')
+        const json = await res.json()
+        if (cancelled) return
+        if (json.success) setConfig(json.config)
+        else setLoadError(json.error || 'Could not load settings')
+      } catch (e) {
+        if (!cancelled) setLoadError(e instanceof Error ? e.message : 'Could not load settings')
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [])
+
+  const patch = async (key: keyof PlatformConfigShape, value: boolean | number) => {
+    if (!config) return
+    const previous = config
+    // Optimistic: a toggle that waits on a round trip before moving feels
+    // broken. Rolled back below if the write is rejected.
+    setConfig({ ...config, [key]: value })
+    setSaving(key)
+    setSaveError(null)
+    try {
+      const res = await fetch('/api/admin/platform-config', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [key]: value }),
+      })
+      const json = await res.json()
+      if (!json.success) {
+        setConfig(previous)
+        setSaveError(json.error || 'Could not save')
+        return
+      }
+      setConfig(json.config)
+    } catch (e) {
+      setConfig(previous)
+      setSaveError(e instanceof Error ? e.message : 'Could not save')
+    } finally {
+      setSaving(null)
+    }
+  }
+
+  const anyOverrideActive = config
+    ? !config.amd_enabled_global || !config.recording_enabled_global || config.number_buying_frozen
+    : false
+
+  return (
+    <div>
+      <BackHeader title="Dialer & Calling" onBack={onBack} />
+
+      {loadError && (
+        <div style={{ padding: '12px 16px', fontSize: 13, color: IOS_RED }}>{loadError}</div>
+      )}
+
+      {config && (
+        <>
+          {anyOverrideActive && (
+            <div style={{
+              margin: '8px 16px 4px', padding: '10px 12px', borderRadius: 10,
+              background: 'rgba(255,159,10,0.14)', border: '1px solid rgba(255,159,10,0.4)',
+              fontSize: 12.5, color: '#FF9F0A', lineHeight: 1.45,
+            }}>
+              A global override is active. It applies to every tenant and every
+              campaign on the platform, not just yours.
+            </div>
+          )}
+
+          <GroupLabel>Global overrides</GroupLabel>
+          <GroupedCard>
+            <SettingsRow
+              title="Answering machine detection"
+              subtitle={
+                config.amd_enabled_global
+                  ? 'Campaigns decide. Billed per call, not per minute.'
+                  : 'OFF everywhere — campaign settings ignored'
+              }
+              right={
+                <IOSSwitch
+                  on={config.amd_enabled_global}
+                  onChange={v => patch('amd_enabled_global', v)}
+                  label="Answering machine detection, platform-wide"
+                />
+              }
+            />
+            <SettingsRow
+              title="Call recording"
+              subtitle={
+                config.recording_enabled_global
+                  ? 'Campaigns decide. Off by default on new campaigns.'
+                  : 'OFF everywhere — nothing records, any campaign setting'
+              }
+              right={
+                <IOSSwitch
+                  on={config.recording_enabled_global}
+                  onChange={v => patch('recording_enabled_global', v)}
+                  label="Call recording, platform-wide"
+                />
+              }
+            />
+            <SettingsRow
+              title="Freeze number buying"
+              subtitle={
+                config.number_buying_frozen
+                  ? 'FROZEN — automation and manual buys both refuse'
+                  : 'Automation and manual buys allowed'
+              }
+              isLast
+              right={
+                <IOSSwitch
+                  on={config.number_buying_frozen}
+                  onChange={v => patch('number_buying_frozen', v)}
+                  label="Freeze number buying"
+                />
+              }
+            />
+          </GroupedCard>
+
+          <GroupLabel>Predictive</GroupLabel>
+          <GroupedCard>
+            <SettingsRow
+              title="Line ceiling per agent"
+              subtitle="Caps every campaign. Can lower the limit, never raise it above 5."
+              isLast
+              right={
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {[1, 2, 3, 4, 5].map(n => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => patch('predictive_line_ceiling', n)}
+                      style={{
+                        width: 30, height: 30, borderRadius: 8, cursor: 'pointer',
+                        fontSize: 13, fontWeight: 500,
+                        border: config.predictive_line_ceiling === n
+                          ? `1.5px solid ${IOS_GREEN}` : `1px solid ${SEPARATOR}`,
+                        background: config.predictive_line_ceiling === n
+                          ? 'rgba(48,209,88,0.16)' : 'transparent',
+                        color: config.predictive_line_ceiling === n ? IOS_GREEN : LABEL_SECONDARY,
+                      }}
+                    >{n}</button>
+                  ))}
+                </div>
+              }
+            />
+          </GroupedCard>
+
+          <div style={{
+            padding: '10px 16px 20px', fontSize: 12, color: LABEL_SECONDARY, lineHeight: 1.5,
+          }}>
+            {saving ? 'Saving…' : 'Changes take up to 30 seconds to reach every server.'}
+            {saveError && <span style={{ color: IOS_RED }}> {saveError}</span>}
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -1403,6 +1629,11 @@ export default function SettingsApp() {
     resub: prefs.resub,
     renewal: prefs.renewal,
     cancel: prefs.cancel,
+    sub_paused: prefs.sub_paused,
+    sub_resumed: prefs.sub_resumed,
+    agent_leg_refused: prefs.agent_leg_refused,
+    pool_capacity: prefs.pool_capacity,
+    webhook_silence: prefs.webhook_silence,
   }
   const enabledCount = Object.values(notifState).filter(Boolean).length
 
@@ -1504,7 +1735,7 @@ export default function SettingsApp() {
   }
 
   function toggleAll(next: boolean) {
-    savePref({ signup: next, account_deleted: next, new_sub: next, resub: next, renewal: next, cancel: next })
+    savePref({ signup: next, account_deleted: next, new_sub: next, resub: next, renewal: next, cancel: next, sub_paused: next, sub_resumed: next })
   }
 
   function toggleMaster(next: boolean) {
@@ -2096,6 +2327,8 @@ export default function SettingsApp() {
           </GroupedCard>
         </div>
       )}
+
+      {pane === 'dialer' && <DialerPane onBack={() => setPane('root')} />}
 
       {EMPTY_PANES.filter(def => def.pane === pane).map(def => (
         <EmptyPane key={def.pane} def={def} onBack={() => setPane('root')} />

@@ -146,7 +146,30 @@ export async function GET(req: Request) {
       summary.actions.push(`Ratio reconcile failed: ${err?.message ?? 'unknown'}`)
     }
 
-    return NextResponse.json({ success: true, summary })
+    // ── PARTITION RUNWAY ─────────────────────────────────────────────────
+    // call_events is partitioned by month. A DEFAULT partition means a lapsed
+    // runway can never break inserts (the webhook keeps working), but rows
+    // landing there pile into one unbounded child and defeat the point — so
+    // keep several months created ahead.
+    //
+    // Deliberately last and deliberately swallowed: this is housekeeping, and
+    // it must not be able to fail the pool maintenance that runs above it.
+    let partitionsCreated: string[] = []
+    try {
+      const { data, error } = await supabase.rpc('ensure_call_event_partitions', { months_ahead: 3 })
+      if (error) {
+        console.error('[cron/pool-maintenance] partition maintenance failed:', error.message)
+      } else if (Array.isArray(data)) {
+        partitionsCreated = data.map((r: { created: string }) => r.created).filter(Boolean)
+        if (partitionsCreated.length > 0) {
+          console.log('[cron/pool-maintenance] created partitions:', partitionsCreated.join(', '))
+        }
+      }
+    } catch (partErr) {
+      console.error('[cron/pool-maintenance] partition maintenance threw:', partErr)
+    }
+
+    return NextResponse.json({ success: true, summary, partitionsCreated })
   } catch (err: any) {
     console.error('[cron/pool-maintenance] error:', err)
     return apiError(err, { route: 'cron/pool-maintenance' })

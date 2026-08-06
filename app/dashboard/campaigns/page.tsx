@@ -47,15 +47,10 @@ interface Campaign {
   sub_type?: 'appointments' | 'not_interested'
 }
 
-interface CampaignScript {
-  id: string
-  name: string
-  body: string
-  is_default: boolean
-  sort_order: number
-  created_at: string
-  updated_at: string
-}
+// (The `CampaignScript` type that described a row of the campaign-owned
+// `campaign_scripts` table lived here. That whole parallel system is gone —
+// see the note further down and CampaignScriptLink below, which is the shape
+// the library-plus-per-campaign-links model actually uses.)
 
 interface GlobalScript {
   id: string
@@ -346,12 +341,6 @@ export default function CampaignsPage() {
   
   const [settingsId, setSettingsId] = useState<string | null>(null)
   const settingsCampaign = campaigns.find(c => c.id === settingsId) || null
-  const [settingsScripts, setSettingsScripts] = useState<CampaignScript[]>([])
-  const [scriptsLoading, setScriptsLoading] = useState(false)
-  const [activeScriptId, setActiveScriptId] = useState<string | null>(null)
-  const [editingScriptName, setEditingScriptName] = useState('')
-  const [editingScriptBody, setEditingScriptBody] = useState('')
-  const [dirtyScript, setDirtyScript] = useState(false)
   const [savingScript, setSavingScript] = useState(false)
 
   
@@ -376,8 +365,6 @@ export default function CampaignsPage() {
   const [editBaseline, setEditBaseline] = useState<EditDraft | null>(null)
 
   
-  const [draggedScriptId, setDraggedScriptId] = useState<string | null>(null)
-  const [dragOverScriptId, setDragOverScriptId] = useState<string | null>(null)
 
   
   const [scriptsManagerOpen, setScriptsManagerOpen] = useState(false)
@@ -1327,9 +1314,6 @@ export default function CampaignsPage() {
       setEditDraft(null)
       setEditBaseline(null)
       setSettingsId(null)
-      setSettingsScripts([])
-      setActiveScriptId(null)
-      setDirtyScript(false)
     } catch (err: any) {
       alert(`Couldn't save changes: ${err.message || 'unknown error'}`)
     } finally {
@@ -1339,12 +1323,7 @@ export default function CampaignsPage() {
 
   const openSettings = async (campaign: Campaign) => {
     setSettingsId(campaign.id)
-    setScriptsLoading(true)
-    setSettingsScripts([])
-    setActiveScriptId(null)
-    setDirtyScript(false)
-    
-    
+
     const baseDraft: EditDraft = {
       name: campaign.name || '',
       status: campaign.status || 'active',
@@ -1362,27 +1341,12 @@ export default function CampaignsPage() {
     }
     setEditDraft(baseDraft)
     setEditBaseline(baseDraft)
+    // The campaign's scripts come from the library links, nothing else.
     loadCampaignLinks(campaign.id, true /* seedDraft */)
-    try {
-      const res = await fetch(`/api/campaigns/scripts/list?campaign_id=${campaign.id}`)
-      const data = await res.json()
-      if (data.success) {
-        const list = data.scripts || []
-        setSettingsScripts(list)
-        if (list.length > 0) {
-          const def = list.find((s: CampaignScript) => s.is_default) || list[0]
-          setActiveScriptId(def.id)
-          setEditingScriptName(def.name)
-          setEditingScriptBody(def.body)
-        }
-      }
-    } finally {
-      setScriptsLoading(false)
-    }
   }
 
   const closeSettings = () => {
-    if ((dirtyScript || editDirty) && !confirm('You have unsaved changes. Discard them?')) return
+    if (editDirty && !confirm('You have unsaved changes. Discard them?')) return
 
     
     
@@ -1390,171 +1354,26 @@ export default function CampaignsPage() {
     const wasPendingBlank = pendingBlankCampaignId && settingsId === pendingBlankCampaignId
 
     setSettingsId(null)
-    setSettingsScripts([])
-    setActiveScriptId(null)
-    setDirtyScript(false)
     setEditDraft(null)
     setEditBaseline(null)
 
     if (wasPendingBlank) discardPendingBlankCampaign(pendingBlankCampaignId!)
   }
 
-  const switchScript = (id: string) => {
-    if (dirtyScript && !confirm('Unsaved changes on this script. Switch anyway?')) return
-    const s = settingsScripts.find(x => x.id === id)
-    if (!s) return
-    setActiveScriptId(id)
-    setEditingScriptName(s.name)
-    setEditingScriptBody(s.body)
-    setDirtyScript(false)
-  }
-
-  const addScript = async () => {
-    if (!settingsCampaign) return
-    const name = prompt('Script name (e.g. "Cold open", "Voicemail")')
-    if (!name?.trim()) return
-    setSavingScript(true)
-    try {
-      const res = await fetch('/api/campaigns/scripts/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ campaign_id: settingsCampaign.id, name: name.trim(), body: '' }),
-      })
-      const data = await res.json()
-      if (data.success && data.script) {
-        const updated = [...settingsScripts, data.script].sort((a, b) => a.sort_order - b.sort_order)
-        setSettingsScripts(updated)
-        setActiveScriptId(data.script.id)
-        setEditingScriptName(data.script.name)
-        setEditingScriptBody(data.script.body)
-        setDirtyScript(false)
-      }
-    } finally {
-      setSavingScript(false)
-    }
-  }
-
-  const saveScript = async () => {
-    if (!activeScriptId) return
-    setSavingScript(true)
-    try {
-      const res = await fetch('/api/campaigns/scripts/update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: activeScriptId,
-          name: editingScriptName.trim() || 'Untitled',
-          body: editingScriptBody,
-        }),
-      })
-      const data = await res.json()
-      if (data.success && data.script) {
-        setSettingsScripts(prev => prev.map(s => s.id === data.script.id ? data.script : s))
-        setDirtyScript(false)
-        if (data.script.is_default && settingsCampaign) {
-          setCampaigns(prev => prev.map(c =>
-            c.id === settingsCampaign.id ? { ...c, script: data.script.body } : c
-          ))
-        }
-      }
-    } finally {
-      setSavingScript(false)
-    }
-  }
-
-  const deleteScript = async () => {
-    if (!activeScriptId) return
-    if (!confirm('Delete this script?')) return
-    setSavingScript(true)
-    try {
-      const res = await fetch('/api/campaigns/scripts/delete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: activeScriptId }),
-      })
-      const data = await res.json()
-      if (data.success) {
-        const remaining = settingsScripts.filter(s => s.id !== activeScriptId)
-        setSettingsScripts(remaining)
-        if (remaining.length > 0) {
-          const next = remaining[0]
-          setActiveScriptId(next.id)
-          setEditingScriptName(next.name)
-          setEditingScriptBody(next.body)
-        } else {
-          setActiveScriptId(null)
-          setEditingScriptName('')
-          setEditingScriptBody('')
-        }
-        setDirtyScript(false)
-      }
-    } finally {
-      setSavingScript(false)
-    }
-  }
-
-  
-  const onTabDragStart = (e: React.DragEvent, id: string) => {
-    if (isLapsed) { e.preventDefault(); return }
-    setDraggedScriptId(id)
-    e.dataTransfer.effectAllowed = 'move'
-    
-    try { e.dataTransfer.setData('text/plain', id) } catch {}
-  }
-
-  const onTabDragOver = (e: React.DragEvent, id: string) => {
-    if (!draggedScriptId) return
-    e.preventDefault()
-    e.dataTransfer.dropEffect = 'move'
-    if (id !== draggedScriptId) setDragOverScriptId(id)
-  }
-
-  const onTabDragLeave = () => {
-    setDragOverScriptId(null)
-  }
-
-  const onTabDrop = async (e: React.DragEvent, targetId: string) => {
-    e.preventDefault()
-    const fromId = draggedScriptId
-    setDraggedScriptId(null)
-    setDragOverScriptId(null)
-    if (!fromId || !settingsCampaign || fromId === targetId) return
-
-    const arr = [...settingsScripts]
-    const fromIdx = arr.findIndex(s => s.id === fromId)
-    const toIdx = arr.findIndex(s => s.id === targetId)
-    if (fromIdx < 0 || toIdx < 0) return
-
-    const [moved] = arr.splice(fromIdx, 1)
-    arr.splice(toIdx, 0, moved)
-
-    
-    const reordered = arr.map((s, i) => ({ ...s, sort_order: i }))
-    setSettingsScripts(reordered)
-
-    
-    try {
-      await fetch('/api/campaigns/scripts/reorder', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          campaign_id: settingsCampaign.id,
-          ordered_ids: reordered.map(s => s.id),
-        }),
-      })
-    } catch (err) {
-      console.error('Reorder failed, reverting:', err)
-      
-      setSettingsScripts(settingsScripts)
-    }
-  }
-
-  const onTabDragEnd = () => {
-    setDraggedScriptId(null)
-    setDragOverScriptId(null)
-  }
-
-  
+  // NOTE: the per-campaign script EDITOR that lived here has been removed.
+  //
+  // It managed the `campaign_scripts` table — a second, parallel script system
+  // in which every campaign owned private copies of its scripts. It was
+  // completely unreachable: the state was never rendered and none of its
+  // handlers (add / switch / save / delete / the whole tab-drag set) were ever
+  // attached to an element. It still wrote to a live table and shipped in the
+  // bundle, which is how it came to look like the drag control that wasn't
+  // taking effect.
+  //
+  // The real model is the one below and in the dialer: `scripts` is the
+  // library, and `campaign_script_links` records which scripts a campaign has
+  // switched on and in what order, independently per campaign. See
+  // campaignScriptLinks / toggleScriptLink / the script-links API routes.
   const openEditor = async (campaignOverride?: Campaign) => {
     const target = campaignOverride || settingsCampaign
     if (!target) return

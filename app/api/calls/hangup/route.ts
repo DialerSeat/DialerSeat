@@ -16,7 +16,7 @@ const supabase = getServiceClient('calls/hangup')
 // is no longer written to at all — there's no room to track. Ownership is
 // now checked against the calls table instead, which IS still written on
 // every placeOutboundCall (see lib/placeOutboundCall.ts), keyed by the
-// same shared signalwire_call_id column that now holds the Telnyx
+// same shared call_control_id column that now holds the Telnyx
 // call_control_id.
 //
 // NOTE: this only covers hanging up the LEAD leg by its own
@@ -46,7 +46,7 @@ export async function POST(req: Request) {
     const { data: callRow } = await supabase
       .from('calls')
       .select('user_id')
-      .eq('signalwire_call_id', sid)
+      .eq('call_control_id', sid)
       .maybeSingle()
 
     if (!callRow || callRow.user_id !== userId) {
@@ -57,7 +57,7 @@ export async function POST(req: Request) {
 
     void logCallEvent({
       event_type: 'hangup_requested',
-      signalwire_call_id: sid,
+      call_control_id: sid,
       user_id: userId,
       source: 'dialer',
     })

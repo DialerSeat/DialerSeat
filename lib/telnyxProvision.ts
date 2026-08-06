@@ -18,7 +18,7 @@
 //   - Release is DELETE /v2/phone_numbers/{id}, keyed by TELNYX'S internal
 //     id (a UUID Telnyx assigns), NOT the phone number string itself. We
 //     store that id in phone_numbers.telnyx_id (parallel to today's
-//     phone_numbers.signalwire_sid) — see the schema migration note in
+//     phone_numbers.provider_number_id) — see the schema migration note in
 //     TELNYX-MIGRATION-DESIGN.md.
 //   - A number can be assigned to our TeXML Application at purchase time
 //     via `connection_id` in the number-order request — this is the

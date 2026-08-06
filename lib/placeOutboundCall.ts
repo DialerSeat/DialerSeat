@@ -1,10 +1,21 @@
 import { createClient } from '@supabase/supabase-js'
 import { pickNumberForLead, recordUsage } from '@/lib/numberPool'
 import { isCallableNow } from '@/lib/callingWindow'
+import { hasCallingWindowOverride } from '@/lib/callingWindowOverride'
 import { resolveTelnyxConfigOrLog, type TelnyxConfig } from '@/lib/telnyxConfig'
 import { agentSipUriForClerkId, resolveCredentialConnectionId } from '@/lib/agentSipCredentials'
 import { ensureSipUriCallingEnabled, isSipUriRejection } from '@/lib/telnyxSipUriCalling'
 import { syncNumberPoolOnce, isUnverifiedOriginationError } from '@/lib/telnyxNumberSync'
+import { getPlatformConfig, resolveWithGlobal } from '@/lib/platformConfig'
+import { normalizeToE164 } from '@/lib/phoneNormalize'
+import { checkSuppression } from '@/lib/suppression'
+
+// Re-exported so existing importers (and anything reaching for it here out of
+// habit) keep working. The implementation moved to lib/phoneNormalize.ts
+// because it is pure, has caused two production incidents, and could not be
+// unit tested while it lived in a module that opens a Supabase client at
+// import time.
+export { normalizeToE164 }
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -71,70 +82,6 @@ export interface PlaceCallResult {
   httpStatus?: number
 }
 
-// =============================================================================
-// PHONE NORMALIZATION — E.164 (provider-agnostic, unchanged)
-// =============================================================================
-// See prior version's header comment for the full rationale (the historical
-// double-country-code bug this fixes). Logic itself is unchanged — Telnyx
-// requires the same strict E.164 format SignalWire did.
-// =============================================================================
-export function normalizeToE164(raw: string | null | undefined): string | null {
-  if (raw === null || raw === undefined) return null
-
-  const trimmed = String(raw).trim()
-  if (!trimmed) return null
-
-  // Reject outright if the raw value contains anything other than digits,
-  // and the small set of characters a real phone number can legitimately
-  // be formatted with (+, spaces, dashes, dots, parens, x for extensions).
-  // Letters are the tell — no real phone number contains them, so their
-  // presence means this value is contaminated (e.g. a name or state that
-  // got concatenated into the phone field during a bad CSV import — this
-  // is a real, confirmed pattern in actual uploaded lead data, e.g. a
-  // phone/initials/phone-again/state string all merged into one field).
-  // This catches contamination directly rather than relying on it
-  // coincidentally pushing the digit count out of the valid E.164 range —
-  // stripping non-digits from a letter-contaminated string can still land
-  // in a plausible-looking digit count purely by chance.
-  if (/[a-zA-Z]/.test(trimmed)) return null
-
-  const hadPlus = trimmed.startsWith('+')
-  const digits = trimmed.replace(/\D/g, '')
-
-  if (!digits) return null
-
-  // E.164 (the actual ITU-T standard, not a made-up limit) caps a phone
-  // number at 15 digits total, INCLUDING the country code — no real,
-  // dialable phone number is longer than that. An earlier version had no
-  // upper bound at all: any digit string over 11 characters got a bare "+"
-  // prepended and was treated as valid, which is how genuinely malformed
-  // data (e.g. a 12-digit value ending in a run of zeros, confirmed present
-  // in real uploaded lead data) reached Telnyx's API instead of being
-  // caught here — Telnyx correctly rejected it downstream with a generic
-  // "must be in +E164 format" error that gave no hint WHICH lead or WHY,
-  // several layers removed from the actual bad data. Catching it here
-  // means the failure is attributable to a specific lead immediately.
-  const MAX_E164_DIGITS = 15
-  const MIN_E164_DIGITS = 8 // shortest real-world numbers (some small-country lines) are ~8 digits
-
-  if (digits.length > MAX_E164_DIGITS) return null
-
-  if (hadPlus) {
-    return digits.length >= MIN_E164_DIGITS ? `+${digits}` : null
-  }
-
-  if (digits.length === 10) {
-    return `+1${digits}`
-  }
-  if (digits.length === 11 && digits.startsWith('1')) {
-    return `+${digits}`
-  }
-  if (digits.length > 11 && digits.length <= MAX_E164_DIGITS) {
-    return `+${digits}`
-  }
-
-  return null
-}
 
 
 /**
@@ -171,6 +118,31 @@ export async function placeOutboundCall(
     }
   }
 
+  // ── SUPPRESSION ──────────────────────────────────────────────────────────
+  // Checked before ANYTHING else, including the manual-dial bypass and the
+  // calling window. Suppression is not a scheduling rule that a manual dial
+  // can reasonably skip — it is somebody having said "stop calling me", and
+  // the one path where an agent types a number by hand is exactly where that
+  // gets forgotten.
+  //
+  // One indexed exact-match lookup, and it fails open (see lib/suppression.ts)
+  // so an unavailable table cannot stop a legitimate business dialing.
+  const suppressed = await checkSuppression(toFormatted, userId)
+  if (suppressed) {
+    console.warn(
+      `[placeOutboundCall:${source}] BLOCKED — ${toFormatted} is on the ` +
+      `${suppressed.scope} suppression list (source: ${suppressed.source})`
+    )
+    return {
+      success: false,
+      error: suppressed.scope === 'platform'
+        ? 'This number is on the platform do-not-call list'
+        : 'This number is on your do-not-call list',
+      detail: suppressed.reason ?? undefined,
+      httpStatus: 451,
+    }
+  }
+
   // ── MANUAL DIAL BYPASS (unchanged from prior version) ───────────────────
   const isManualDial = !leadId && !campaignId
 
@@ -187,10 +159,14 @@ export async function placeOutboundCall(
       }
     }
 
-    const tcpaCheck = isCallableNow({
-      phone: toFormatted,
-      state: leadStateForTcpa,
-    })
+    // Resolved from an email allowlist, once per dial. False for every account
+    // that isn't named, and false on any lookup failure.
+    const overrideWindow = await hasCallingWindowOverride(userId)
+
+    const tcpaCheck = isCallableNow(
+      { phone: toFormatted, state: leadStateForTcpa },
+      { overrideWindow }
+    )
 
     if (!tcpaCheck.allowed) {
       return {
@@ -236,6 +212,28 @@ export async function placeOutboundCall(
       recordingEnabled = campaign.recording_enabled === true
     }
   }
+
+  // ── GLOBAL OVERRIDES ─────────────────────────────────────────────────────
+  // Applied AFTER the campaign's own values, and only ever to turn something
+  // OFF (see resolveWithGlobal). Two reasons this direction matters:
+  //
+  //   - AMD is billed PER CALL, not per minute (~$0.002 standard). On a heavy
+  //     dialing day it can exceed the cost of the talk time itself. This is
+  //     the switch that stops that bleeding without a deploy or touching a
+  //     single tenant's campaign settings.
+  //   - Recording carries legal exposure in two-party-consent states. Being
+  //     able to stop it platform-wide in seconds is worth more than the
+  //     seconds it takes.
+  //
+  // Flipping a global back on restores every campaign to its own setting,
+  // untouched — the override never writes to campaigns.
+  //
+  // getPlatformConfig is cached for 30s and fails safe to shipped defaults, so
+  // this adds no per-dial query and cannot block a call if the table is
+  // unreadable.
+  const platform = await getPlatformConfig()
+  amdEnabled = resolveWithGlobal(amdEnabled, platform.amd_enabled_global)
+  recordingEnabled = resolveWithGlobal(recordingEnabled, platform.recording_enabled_global)
 
   const poolNumber = await pickNumberForLead(toFormatted, dialerMode)
   const fromNumber = poolNumber?.phone_number || process.env.TELNYX_PHONE_NUMBER
@@ -602,13 +600,17 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
       campaign_id: p.campaignId,
       team_id: p.teamId,
       phone_number: p.toFormatted,
-      // Column is still named signalwire_call_id in this shared schema
-      // (sandbox writes to the same tables as production). Storing the
-      // Telnyx call_control_id here — it's the identifier every
+      // WHICH caller ID placed this call. Recorded so per-number answer rate
+      // is computable at all — without it a number the carriers have labelled
+      // "Spam Likely" is indistinguishable from a healthy one, and quietly
+      // burns its full daily cap at a near-zero answer rate forever.
+      // See app/api/cron/number-health.
+      pool_number_id: p.poolNumberId,
+      // The Telnyx call_control_id — it's the identifier every
       // subsequent command/webhook correlates against, playing the exact
       // same role SignalWire's CallSid did. Revisit naming only at actual
       // cutover time.
-      signalwire_call_id: leadCallControlId,
+      call_control_id: leadCallControlId,
       duration: 0,
       disposition: null,
       dial_source: p.source,

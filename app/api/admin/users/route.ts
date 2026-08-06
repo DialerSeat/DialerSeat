@@ -57,6 +57,22 @@ export async function GET(req: NextRequest) {
     })
   )
 
+  // Recordings per user, for the Data Explorer column beside LEADS.
+  // A recording only exists once recording_url is populated by the
+  // call.recording.saved webhook, so this counts real playable recordings
+  // rather than calls that merely had recording enabled.
+  const recordingCounts = new Map<string, number>()
+  await Promise.all(
+    userIds.map(async (uid) => {
+      const { count } = await supabase
+        .from('calls')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', uid)
+        .not('recording_url', 'is', null)
+      recordingCounts.set(uid, count || 0)
+    })
+  )
+
   const lastActivity = new Map<string, string>()
   await Promise.all(
     userIds.map(async (uid) => {
@@ -108,6 +124,7 @@ export async function GET(req: NextRequest) {
       created_at: u.created_at,
       is_admin: !!u.is_admin,
       lead_count: leadCounts.get(u.clerk_id) || 0,
+      recording_count: recordingCounts.get(u.clerk_id) || 0,
       last_active_at: lastActivity.get(u.clerk_id) || null,
       team_member_count: teamMemberCounts.get(u.clerk_id) || 0,
       subscription: sub

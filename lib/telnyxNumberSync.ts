@@ -231,9 +231,8 @@ export async function syncNumberPoolWithTelnyx(apiKey?: string): Promise<NumberS
       region: info?.region ?? null,
       // Legacy column name reused for Telnyx's number id, exactly as
       // numberPool.addNumberByAreaCode already does (and as
-      // calls.signalwire_call_id holds a Telnyx call_control_id). Renaming
-      // it is a separate migration, not this fix's job.
-      signalwire_sid: telnyxNumber.id || phone,
+      // calls.call_control_id holds a Telnyx call_control_id).
+      provider_number_id: telnyxNumber.id || phone,
       status: 'active',
       daily_call_count: 0,
       daily_cap: DEFAULT_DAILY_CAP,

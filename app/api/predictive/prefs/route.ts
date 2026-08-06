@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { getServiceClient } from '@/lib/supabase'
+import { getPlatformConfig } from '@/lib/platformConfig'
 
 const supabase = getServiceClient('predictive/prefs')
 
@@ -24,6 +25,21 @@ const supabase = getServiceClient('predictive/prefs')
 // =============================================================================
 
 const HARD_LINE_CAP = 5
+
+/**
+ * The line cap actually in force: the shipped hard cap, lowered by the
+ * platform ceiling if an admin has set one.
+ *
+ * Never raises above HARD_LINE_CAP — the DB CHECK constraint on
+ * predictive_lines_per_agent rejects anything outside [1, 5], so a higher
+ * platform value would only produce write failures. Fails safe: if
+ * platform_config can't be read, getPlatformConfig returns the default of 5
+ * and behaviour is exactly as it was before this switch existed.
+ */
+async function effectiveLineCeiling(): Promise<number> {
+  const { predictive_line_ceiling } = await getPlatformConfig()
+  return Math.min(HARD_LINE_CAP, Math.max(1, predictive_line_ceiling))
+}
 
 interface CampaignConfig {
   id: string
@@ -87,8 +103,15 @@ export async function GET(req: NextRequest) {
       .eq('campaign_id', campaignId)
       .maybeSingle()
 
-    const campaignMax = Math.min(campaign.predictive_lines_max || 5, HARD_LINE_CAP)
-    const campaignMin = Math.max(campaign.predictive_lines_min || 1, 1)
+    // The platform ceiling can only ever LOWER the cap — HARD_LINE_CAP stays
+    // the absolute bound because the DB CHECK constraint enforces [1, 5] and
+    // a value above it would be rejected at write time anyway.
+    const ceiling = await effectiveLineCeiling()
+    const campaignMax = Math.min(campaign.predictive_lines_max || 5, ceiling)
+    // Clamped against campaignMax, not just 1: a campaign whose min is 3 under
+    // a ceiling of 2 would otherwise get pushed back up to 3 by the Math.max
+    // below, quietly defeating the ceiling.
+    const campaignMin = Math.min(Math.max(campaign.predictive_lines_min || 1, 1), campaignMax)
     const campaignDefault = campaign.predictive_lines_per_agent || 3
 
     // Effective lines = pref if set, else campaign default. Always clamped.
@@ -152,8 +175,11 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Clamp the requested value ──────────────────────────────────────
-    const campaignMax = Math.min(campaign.predictive_lines_max || 5, HARD_LINE_CAP)
-    const campaignMin = Math.max(campaign.predictive_lines_min || 1, 1)
+    // Same ceiling logic as the GET — see the note there on why the min is
+    // clamped against the max rather than just against 1.
+    const ceiling = await effectiveLineCeiling()
+    const campaignMax = Math.min(campaign.predictive_lines_max || 5, ceiling)
+    const campaignMin = Math.min(Math.max(campaign.predictive_lines_min || 1, 1), campaignMax)
     const clamped = Math.max(campaignMin, Math.min(requestedLines, campaignMax))
 
     // ── Resolve target user ────────────────────────────────────────────

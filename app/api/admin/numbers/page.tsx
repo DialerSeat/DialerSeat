@@ -21,7 +21,7 @@ interface PoolNumber {
   area_code: string
   state: string | null
   region: string | null
-  signalwire_sid: string
+  provider_number_id: string
   status: 'active' | 'resting' | 'flagged' | 'released'
   daily_call_count: number
   daily_cap: number

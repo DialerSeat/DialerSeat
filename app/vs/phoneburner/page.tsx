@@ -28,7 +28,7 @@ const FAQS = [
   {
     question: 'How does DialerSeat compare to PhoneBurner on price?',
     answer:
-      'DialerSeat is $35 per seat per week (about $140/month equivalent) with everything in one tier — no upgrades needed for inbound numbers, advanced reporting, or public API access. PhoneBurner advertises $140/seat/month at the Professional tier but real bills land at $200–$250 once Premium-tier features (inbound numbers, advanced reporting) and annual-contract assumptions are factored in.',
+      'DialerSeat is $35 per seat per week, billed weekly and cancellable any week, with everything in one tier — no upgrades needed for inbound numbers, advanced reporting, or public API access. PhoneBurner advertises $140/seat/month at the Professional tier but real bills land at $200–$250 once Premium-tier features (inbound numbers, advanced reporting) and annual-contract assumptions are factored in.',
   },
   {
     question: 'Does PhoneBurner have multi-line dialing?',

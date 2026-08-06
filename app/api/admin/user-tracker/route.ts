@@ -50,10 +50,15 @@ interface UserStatsRow {
   week: BucketStats
   month30: BucketStats
   all: BucketStats
+  /** Populated only when the request supplies a from/to range. */
+  custom: BucketStats
 }
 
 function emptyUserStats(): UserStatsRow {
-  return { today: emptyBucket(), week: emptyBucket(), month30: emptyBucket(), all: emptyBucket() }
+  return {
+    today: emptyBucket(), week: emptyBucket(), month30: emptyBucket(),
+    all: emptyBucket(), custom: emptyBucket(),
+  }
 }
 
 const CONNECTED_DISPOSITIONS = new Set(['completed'])
@@ -82,7 +87,7 @@ const DISCONNECTED_DISPOSITIONS = new Set([
 // number so nothing about real usage is obscured either way.
 const SKIPPED_OR_NO_ANSWER_DISPOSITIONS = new Set(['SKIPPED', 'NO_ANSWER', 'NO_ANSWER_AMD'])
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     await requireAdmin()
   } catch (res) {
@@ -90,6 +95,30 @@ export async function GET() {
   }
 
   const now = Date.now()
+
+  // ── CUSTOM RANGE ────────────────────────────────────────────────────────
+  // Optional ?from=YYYY-MM-DD&to=YYYY-MM-DD. The fixed today/week/30d buckets
+  // answer "how are things right now"; a custom range answers "what happened
+  // during that campaign / that month / the week we changed something", which
+  // is the question an operator actually brings to this screen.
+  //
+  // `to` is INCLUSIVE of the whole day named — an admin typing the same date
+  // in both boxes means "that day", not "an empty zero-length window".
+  const { searchParams } = new URL(req.url)
+  const parseDay = (raw: string | null, endOfDay: boolean): number | null => {
+    if (!raw || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) return null
+    const d = new Date(`${raw}T00:00:00`)
+    if (Number.isNaN(d.getTime())) return null
+    if (endOfDay) d.setHours(23, 59, 59, 999)
+    return d.getTime()
+  }
+  let customFrom = parseDay(searchParams.get('from'), false)
+  let customTo = parseDay(searchParams.get('to'), true)
+  // Reversed dates are a slip, not an error worth rejecting — swap them.
+  if (customFrom !== null && customTo !== null && customFrom > customTo) {
+    const t = customFrom; customFrom = customTo; customTo = t
+  }
+  const hasCustomRange = customFrom !== null && customTo !== null
 
   const todayStart = (() => {
     const d = new Date(now)
@@ -128,7 +157,7 @@ export async function GET() {
   // ---- calls (source of truth for count + total dial time) -------------
   const { data: callsRaw, error: callsErr } = await supabase
     .from('calls')
-    .select('id, user_id, duration, created_at, disposition')
+    .select('id, user_id, duration, created_at, disposition, call_control_id, answered_at')
     .order('created_at', { ascending: false })
     .limit(CALLS_ROW_CAP)
 
@@ -138,6 +167,24 @@ export async function GET() {
 
   const calls = (callsRaw || []).filter(c => !excluded.has(c.user_id))
   const callIds = calls.map(c => c.id)
+
+  // ── EVENTS ARE KEYED BY call_control_id, NOT call_id ─────────────────
+  // Every talk-time event this route needs (answered / bridged / completed)
+  // is written by the Telnyx webhook handler, which only has the provider's
+  // call_control_id at that point — so it populates call_control_id and
+  // leaves call_id NULL. Measured against live data: 350 answered/bridged/
+  // completed rows exist, and 0 of them have call_id set.
+  //
+  // This route used to filter call_events on call_id, which therefore matched
+  // nothing, leaving connectedSeconds at 0 for every user — the dashboard
+  // reported "0m connected" for agents who had been talking all day. Joining
+  // on call_control_id and mapping back to calls.id fixes it without
+  // touching the write path.
+  const callIdBySwId = new Map<string, string>()
+  for (const c of calls) {
+    if (c.call_control_id) callIdBySwId.set(c.call_control_id, c.id)
+  }
+  const swIds = [...callIdBySwId.keys()]
 
   // ---- call_events (source of truth for connected/talk time) -----------
   // call_events only exists going back to 2026-06-28, so coverage may be
@@ -152,24 +199,28 @@ export async function GET() {
     const answeredAt = new Map<string, number>()
     const completedAt = new Map<string, number>()
 
-    for (let i = 0; i < callIds.length; i += CHUNK) {
-      const chunk = callIds.slice(i, i + CHUNK)
+    for (let i = 0; i < swIds.length; i += CHUNK) {
+      const chunk = swIds.slice(i, i + CHUNK)
       const { data: events } = await supabase
         .from('call_events')
-        .select('call_id, event_type, created_at')
-        .in('call_id', chunk)
+        .select('call_control_id, event_type, created_at')
+        .in('call_control_id', chunk)
         .in('event_type', ['answered', 'completed', 'bridged'])
         .limit(EVENTS_ROW_CAP)
 
       for (const e of events || []) {
-        if (!e.call_id) continue
+        if (!e.call_control_id) continue
+        // Resolve the provider id back to our own calls.id, which is what
+        // every downstream map here is keyed by.
+        const cid = callIdBySwId.get(e.call_control_id)
+        if (!cid) continue
         const t = new Date(e.created_at).getTime()
         if (e.event_type === 'answered' || e.event_type === 'bridged') {
-          hasAnsweredEvent.add(e.call_id)
-          const existing = answeredAt.get(e.call_id)
-          if (existing === undefined || t < existing) answeredAt.set(e.call_id, t)
+          hasAnsweredEvent.add(cid)
+          const existing = answeredAt.get(cid)
+          if (existing === undefined || t < existing) answeredAt.set(cid, t)
         } else if (e.event_type === 'completed') {
-          completedAt.set(e.call_id, t)
+          completedAt.set(cid, t)
         }
       }
     }
@@ -180,6 +231,29 @@ export async function GET() {
       if (a !== undefined && c !== undefined && c > a) {
         connectedSecondsByCall.set(id, Math.round((c - a) / 1000))
       }
+    }
+  }
+
+  // ── FALLBACK: DERIVE TALK TIME FROM THE CALLS ROW ITSELF ────────────────
+  // calls.answered_at is written when the lead actually picks up, and
+  // duration is written at hangup measured from created_at — so
+  // (created_at + duration) is the end of the call and the gap from
+  // answered_at to there is talk time.
+  //
+  // Used only where the event pair is missing. Talk time should not silently
+  // read as zero just because a webhook was dropped, a retry collapsed two
+  // events, or the row predates call_events: this route is what tells an
+  // operator whether an agent is actually working, and under-reporting it is
+  // worse than approximating it.
+  for (const c of calls) {
+    if (connectedSecondsByCall.has(c.id)) continue
+    if (!c.answered_at || !c.duration || c.duration <= 0) continue
+    const answered = new Date(c.answered_at).getTime()
+    const ended = new Date(c.created_at).getTime() + c.duration * 1000
+    const talk = Math.round((ended - answered) / 1000)
+    if (talk > 0) {
+      connectedSecondsByCall.set(c.id, talk)
+      hasAnsweredEvent.add(c.id)
     }
   }
 
@@ -219,6 +293,9 @@ export async function GET() {
     if (t >= month30Start) addBucket(s.month30, 1, dialSeconds, isConnected, connSeconds, isSkippedOrNoAnswer, wastedSeconds)
     if (t >= weekStart) addBucket(s.week, 1, dialSeconds, isConnected, connSeconds, isSkippedOrNoAnswer, wastedSeconds)
     if (t >= todayStart) addBucket(s.today, 1, dialSeconds, isConnected, connSeconds, isSkippedOrNoAnswer, wastedSeconds)
+    if (hasCustomRange && t >= customFrom! && t <= customTo!) {
+      addBucket(s.custom, 1, dialSeconds, isConnected, connSeconds, isSkippedOrNoAnswer, wastedSeconds)
+    }
 
     const dayKey = new Date(t).toISOString().slice(0, 10)
     const bucket = seriesMap.get(dayKey)
@@ -301,8 +378,14 @@ export async function GET() {
       week: overviewFor(s => s.week),
       month30: overviewFor(s => s.month30),
       all: overviewFor(s => s.all),
+      // null rather than a zeroed bucket when no range was asked for, so the
+      // UI can tell "no range selected" from "range with no activity".
+      custom: hasCustomRange ? overviewFor(s => s.custom) : null,
       series,
     },
+    range: hasCustomRange
+      ? { from: new Date(customFrom!).toISOString(), to: new Date(customTo!).toISOString() }
+      : null,
     users,
     callsRowsCapped: (callsRaw || []).length >= CALLS_ROW_CAP,
   })

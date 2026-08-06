@@ -13,7 +13,7 @@ const supabase = getServiceClient('calls/check')
 // REWRITTEN FOR TELNYX, USING ONLY EXISTING COLUMNS (no schema changes):
 //   - Ownership: was call_rooms (now unused under the direct-bridge
 //     design — see TELNYX-MIGRATION-DESIGN.md), now the `calls` table
-//     directly, keyed by the same signalwire_call_id column that holds
+//     directly, keyed by the same call_control_id column that holds
 //     the Telnyx call_control_id.
 //   - "Is this call over": the old version made a live GET request to
 //     SignalWire's Calls API and read back a `status` string
@@ -52,7 +52,7 @@ export async function GET(req: Request) {
     const { data: callRow } = await supabase
       .from('calls')
       .select('user_id, duration, amd_result, disposition, answered_at')
-      .eq('signalwire_call_id', sid)
+      .eq('call_control_id', sid)
       .maybeSingle()
 
     if (!callRow || callRow.user_id !== userId) {

@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import { NextResponse } from 'next/server'
 import { isCallableNow } from '@/lib/callingWindow'
+import { hasCallingWindowOverride } from '@/lib/callingWindowOverride'
 import { requireUser } from '@/lib/requireUser'
 import { apiError } from '@/lib/apiError'
 import { DIALABLE_STATUSES, isDialableLead } from '@/lib/dialableLead'
@@ -36,6 +37,11 @@ export async function GET(req: Request) {
     const gate = await requireUser()
     if (!gate.ok) return gate.response
     const user_id = gate.userId
+
+    // Resolved once per request and passed into every isCallableNow below —
+    // both the team path and the personal path. False for any account not on
+    // the allowlist in lib/callingWindowOverride.ts, and on any lookup error.
+    const overrideWindow = await hasCallingWindowOverride(user_id)
 
     const { searchParams } = new URL(req.url)
     const campaign_id = searchParams.get('campaign_id')
@@ -165,7 +171,7 @@ export async function GET(req: Request) {
       let callable: any = null
       let blockReason: string | null = null
       for (const c of orderedCandidates) {
-        const result = isCallableNow({ phone: c.phone, state: c.state })
+        const result = isCallableNow({ phone: c.phone, state: c.state }, { overrideWindow })
         if (result.allowed) { callable = c; break }
         if (!blockReason) blockReason = result.reason || null
       }
@@ -294,7 +300,7 @@ export async function GET(req: Request) {
       // built from, so a lead can never be shown as next-up here and
       // rejected there.
       if (!isDialableLead(c)) continue
-      const result = isCallableNow({ phone: c.phone, state: c.state })
+      const result = isCallableNow({ phone: c.phone, state: c.state }, { overrideWindow })
       if (result.allowed) { callable = c; break }
       if (!blockReason) blockReason = result.reason || null
     }

@@ -7,6 +7,7 @@ import SeatLinksPanel from '@/components/teams/SeatLinksPanel'
 import RosterPanel from '@/components/teams/RosterPanel'
 import CampaignsAccessPanel from '@/components/teams/CampaignsAccessPanel'
 import WhitelabelTieIn from '@/components/teams/WhitelabelTieIn'
+import TeamOverview from '@/components/teams/TeamOverview'
 
 
 
@@ -918,6 +919,29 @@ export default function TeamsManager() {
                         }}>OWNER</div>
                       </div>
 
+                      {/* Outside the isExpanded guard on purpose. The reason
+                          the old page was hard to use is that a team collapsed
+                          to just its name — an owner had to expand to learn
+                          anything, including whether anyone was dialing or
+                          waiting to be let in. This strip is the answer to
+                          "what's happening and what's it costing me", so it
+                          has to be visible without a click. */}
+                      <div style={{ padding: '14px 16px 0', background: T.surface }}>
+                        <TeamOverview
+                          teamId={team.id}
+                          pending={team.pendingMembers.map(m => ({
+                            id: m.id,
+                            label: displayName(m.user, m.user_id),
+                          }))}
+                          acceptingId={actioningId}
+                          onAccept={memberId => {
+                            const m = team.pendingMembers.find(p => p.id === memberId)
+                            if (m) acceptMember(m)
+                          }}
+                          onChanged={loadTeams}
+                        />
+                      </div>
+
                       {isExpanded && (
                         <div style={{ padding: '16px 18px', background: T.surface }}>
 
@@ -1501,26 +1525,6 @@ const modalInput: React.CSSProperties = {
   background: 'var(--brand-card-surface)', border: '1px solid var(--brand-card-border)', borderRadius: 3,
   fontFamily: 'monospace', fontSize: 13, color: 'var(--brand-on-page-bg)',
   outline: 'none', boxSizing: 'border-box',
-}
-
-function btnPrimary(disabled: boolean): React.CSSProperties {
-  return {
-    padding: '6px 12px', background: 'var(--brand-sidebar-bg)', border: 'none', borderRadius: 3,
-    borderTop: '2px solid var(--brand-primary)', color: 'var(--brand-primary)',
-    fontSize: 10, fontWeight: 'bold', letterSpacing: 2,
-    cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1,
-    fontFamily: 'Futura PT, Futura, sans-serif', whiteSpace: 'nowrap',
-  }
-}
-
-function btnDanger(disabled: boolean): React.CSSProperties {
-  return {
-    padding: '6px 12px', background: 'transparent', border: '1px solid #8a1a1a',
-    borderRadius: 3, color: '#8a1a1a',
-    fontSize: 10, fontWeight: 'bold', letterSpacing: 2,
-    cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1,
-    fontFamily: 'Futura PT, Futura, sans-serif', whiteSpace: 'nowrap',
-  }
 }
 
 function btnSubtle(disabled: boolean, color: string): React.CSSProperties {

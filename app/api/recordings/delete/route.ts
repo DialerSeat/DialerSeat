@@ -48,7 +48,7 @@ export async function POST(req: Request) {
 
     const { data: call, error: fetchErr } = await supabase
       .from('calls')
-      .select('id, user_id, recording_url, signalwire_call_id')
+      .select('id, user_id, recording_url, call_control_id')
       .eq('id', call_id)
       .maybeSingle()
 

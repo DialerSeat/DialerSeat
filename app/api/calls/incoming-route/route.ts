@@ -79,7 +79,7 @@ export async function GET(req: NextRequest) {
     // ── Look up the call + lead for the routed call ────────────────────
     const { data: call } = await supabase
       .from('calls')
-      .select('id, signalwire_call_id, lead_id, phone_number, created_at, was_abandoned, disposition')
+      .select('id, call_control_id, lead_id, phone_number, created_at, was_abandoned, disposition')
       .eq('id', session.current_call_id)
       .maybeSingle()
 
@@ -135,7 +135,7 @@ export async function GET(req: NextRequest) {
       incoming: true,
       call: {
         id: call.id,
-        sid: call.signalwire_call_id,
+        sid: call.call_control_id,
         lead_id: call.lead_id,
         phone_number: call.phone_number,
         started_at: call.created_at,

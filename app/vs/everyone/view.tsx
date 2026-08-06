@@ -95,6 +95,7 @@ const INDUSTRY_FAILURES = [
 
 const SWITCHING_FROM = [
   { name: 'READYMODE', href: '/vs/readymode', summary: 'Same multi-line predictive at $35/week, cancel anytime, instead of $199–$249/month locked into a contract. No $500–$2,000 setup fee.' },
+  { name: 'BATCHDIALER', href: '/vs/batchdialer', summary: "Their $95/seat headline is the annual prepay rate — month to month it's $119–$249. Automatic number replacement on every DialerSeat plan, not gated behind Pro." },
   { name: 'MOJO DIALER', href: '/vs/mojo', summary: 'Same triple-line speed across every industry — not just real estate. No mandatory $10/mo Agent Access fee stacked on top.' },
   { name: 'PHONEBURNER', href: '/vs/phoneburner', summary: 'Multi-line predictive included (PhoneBurner is single-line only). Weekly billing, no annual contract.' },
   { name: 'FIVE9', href: '/vs/five9', summary: 'Same compliance posture without the enterprise sales cycle. Self-serve setup in minutes, not weeks.' },

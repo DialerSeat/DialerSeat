@@ -4,6 +4,7 @@ import { auth } from '@clerk/nextjs/server'
 import { apiError } from '@/lib/apiError'
 import { logCallEvent } from '@/lib/callEvents'
 import { lifetimeAttemptCap } from '@/lib/dialerConstants'
+import { addSuppression } from '@/lib/suppression'
 
 export async function POST(req: Request) {
   try {
@@ -23,7 +24,8 @@ export async function POST(req: Request) {
 
     const { data: lead, error: leadErr } = await supabaseAdmin
       .from('leads')
-      .select('id, user_id, dial_attempts, campaign_id')
+      // phone is selected for the DO NOT CALL suppression write below.
+      .select('id, user_id, dial_attempts, campaign_id, phone')
       .eq('id', lead_id)
       .single()
 
@@ -51,6 +53,32 @@ export async function POST(req: Request) {
         .eq('id', lead.campaign_id)
         .maybeSingle()
       attemptCap = lifetimeAttemptCap(campaign?.dial_repeat_count)
+    }
+
+    // ── DO NOT CALL SUPPRESSES THE NUMBER, NOT JUST THIS LEAD ──────────────
+    // Marking the lead 'dnc' only protects this row. The same person in a
+    // second campaign is a different lead with no disposition, and the next
+    // CSV import re-creates them clean — so a request to stop calling was
+    // only ever honoured until the next upload. Suppression is keyed on the
+    // NUMBER, which is what the person actually asked about.
+    //
+    // Scoped to this user: one tenant's opt-out is not another tenant's
+    // business, and a shared list would leak who they've been calling.
+    //
+    // Awaited but non-fatal — if this write fails the lead is still marked,
+    // and the alternative (failing the disposition) would leave the agent
+    // stuck on a lead they've already handled.
+    if (disposition === 'DO NOT CALL' && lead.phone) {
+      const result = await addSuppression({
+        phone: lead.phone,
+        userId: user_id,
+        scope: 'user',
+        reason: 'Agent marked DO NOT CALL',
+        source: 'disposition',
+      })
+      if (!result.ok) {
+        console.error('[leads/dispose] suppression write failed:', result.error)
+      }
     }
 
     let newStatus = 'called'

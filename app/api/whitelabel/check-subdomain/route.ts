@@ -9,7 +9,10 @@ const RESERVED = new Set([
   'dashboard', 'billing', 'auth', 'docs', 'help', 'status',
   'staging', 'dev', 'test', 'preview', 'sandbox',
   'cdn', 'assets', 'static', 'media', 'images', 'files',
-  'sip', 'voice', 'webhook', 'webhooks', 'signalwire',
+  // Vendor names stay blocked even after we stop using them: dropping
+  // 'signalwire' here would newly allow a tenant to claim that subdomain,
+  // which is worse than an obsolete entry costing nothing.
+  'sip', 'voice', 'webhook', 'webhooks', 'signalwire', 'telnyx',
   'stripe', 'clerk', 'supabase', 'vercel', 'sentry',
   'dialerseat', 'whitelabel', 'wl', 'onboarding',
   'manager', 'managers', 'pro', 'team', 'teams',

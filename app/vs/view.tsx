@@ -43,6 +43,13 @@ const COMPARISONS: Comparison[] = [
       'Same multi-line predictive at $35/week, cancel anytime, instead of $199–$249/month locked into a contract. No $500–$2,000 setup fee. Modern UI. Works on phones and tablets where ReadyMode is desktop-only.',
   },
   {
+    slug: 'batchdialer',
+    name: 'VS BATCHDIALER',
+    tagline: 'Their annual rate without the annual contract',
+    pitch:
+      "BatchDialer's advertised $95/seat is the annual prepay rate — month to month it's $119–$249. Automatic number replacement is gated behind their Pro tier; DialerSeat cycles numbers on every plan. No per-number fees, no lead-package add-ons, whitelabel at $75/mo flat.",
+  },
+  {
     slug: 'mojo',
     name: 'VS MOJO DIALER',
     tagline: 'Triple-line dialing without the real-estate lock-in',

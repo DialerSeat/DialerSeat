@@ -22,6 +22,9 @@ interface AdminUser {
   last_name: string | null
   created_at: string
   lead_count: number
+  /** Calls with a stored recording_url — real playable recordings, not just
+   *  calls that had recording enabled. */
+  recording_count: number
   team_member_count: number
   is_active_subscription: boolean
 }
@@ -475,7 +478,7 @@ export default function ExplorerApp() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
               <thead>
                 <tr>
-                  {['', 'NAME', 'EMAIL', 'LEADS', 'TEAM', 'SUBSCRIPTION', 'JOINED', ''].map((h, i) => (
+                  {['', 'NAME', 'EMAIL', 'LEADS', 'RECORDINGS', 'TEAM', 'SUBSCRIPTION', 'JOINED', ''].map((h, i) => (
                     <th key={i} style={thStyle}>{h}</th>
                   ))}
                 </tr>
@@ -494,6 +497,11 @@ export default function ExplorerApp() {
                     <td style={{ ...tdStyle, fontWeight: 'bold' }}>{nameFor(u)}</td>
                     <td style={{ ...tdStyle, color: T.muted }}>{u.email}</td>
                     <td style={tdStyle}>{u.lead_count.toLocaleString()}</td>
+                    <td style={tdStyle}>
+                      {u.recording_count > 0
+                        ? u.recording_count.toLocaleString()
+                        : <span style={{ color: T.muted }}>—</span>}
+                    </td>
                     <td style={tdStyle}>{u.team_member_count > 0 ? u.team_member_count : '—'}</td>
                     <td style={tdStyle}>
                       <span style={{

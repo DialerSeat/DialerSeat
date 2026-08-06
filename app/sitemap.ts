@@ -69,6 +69,7 @@ function apexSitemap(now: Date): MetadataRoute.Sitemap {
     e('/vs', 0.9, 'monthly'),
     e('/vs/everyone', 0.9, 'monthly'),
     e('/vs/readymode', 0.8, 'monthly'),
+    e('/vs/batchdialer', 0.8, 'monthly'),
     e('/vs/mojo', 0.8, 'monthly'),
     e('/vs/phoneburner', 0.8, 'monthly'),
     

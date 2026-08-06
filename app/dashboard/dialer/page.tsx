@@ -1728,9 +1728,25 @@ function DialerPageInner() {
       // up any call currently attached. This is what makes "unavailable" mean it.
       disarmDialing({ force: true })
       cancelAllPendingDials()
-      if (activeCallSidRef.current) {
-        await hangupCall(activeCallSidRef.current)
-      }
+      // Local hangup covers the one call this client holds an id for. The
+      // server sweep covers the rest — predictive places lines server-side
+      // that the client never sees, and without this they carried on ringing
+      // the lead's phone after the agent had gone offline.
+      //
+      // scope 'all' here, unlike abort: clocking off SHOULD release claimed
+      // leads back to the pool and pause the session so the controller stops
+      // filling lines. Abort deliberately does not, because the agent is
+      // still working.
+      await Promise.all([
+        activeCallSidRef.current
+          ? hangupCall(activeCallSidRef.current).catch(() => {})
+          : Promise.resolve(),
+        fetch('/api/dialer/abort', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ scope: 'all' }),
+        }).catch(err => console.error('[offline] server sweep failed:', err)),
+      ])
       setStatus('idle')
       setCurrentLead(null)
       setPreviewLead(null)
@@ -2336,7 +2352,7 @@ function DialerPageInner() {
     // populated forever after the first answered call — and anything asking
     // "was the agent actually on this call?" would answer yes for every
     // subsequent dial, including ones that never connected. See
-    // agentWasOnTheCall in startHangupPolling.
+    // agentWasOnTheCall in terminateCall.
     callStartRef.current = 0
     // Open the agent-leg window BEFORE the request that causes the agent leg
     // to be dialed. The server places the agent leg first, so its INVITE can
@@ -2502,21 +2518,23 @@ function DialerPageInner() {
           // / the disposition sheet. An auto-chained next dial re-arms itself.
           disarmDialing()
 
-          // A call the agent was actually ON always gets a disposition sheet,
-          // whatever AMD guessed.
+          // AMD 'machine' ALWAYS auto-advances, even if the UI had already
+          // flipped to connected.
           //
-          // This branch used to key purely on amd_result, which was right when
-          // a 'machine' verdict meant the call had been hung up instantly with
-          // no agent attached — there was nothing to disposition. Now that AMD
-          // no longer tears down a bridged call, a 'machine' verdict can sit on
-          // a real conversation, and skipping the sheet silently threw away the
-          // agent's outcome and auto-dialed the next lead out from under them.
+          // The `&& !agentWasOnTheCall` qualifier that used to be here is why
+          // a detected voicemail sat on screen looking like a live call: AMD
+          // fires ~2.4s after answer, but the poll can flip status to
+          // 'connected' first, which sets callStartRef — so by the time the
+          // call ended the client believed the agent had been on it and
+          // showed the disposition sheet for a machine. The agent then had to
+          // dismiss a sheet for a call that never happened before the queue
+          // would move.
           //
-          // callStartRef is set when the call reached 'connected', so it is the
-          // honest test for "was a human on this call", independent of AMD.
-          const agentWasOnTheCall = !!callStartRef.current
-
-          if (isNotHuman(d.amd_result) && !agentWasOnTheCall) {
+          // There is nothing to disposition on a machine, so this skips
+          // straight to the next lead. Human calls still get their sheet:
+          // that qualifier still guards the non-AMD branch below, which is
+          // what makes TERMINATE on a live call capture an outcome.
+          if (isNotHuman(d.amd_result)) {
             setAmdActivity(prev =>
               [`VOICEMAIL FILTERED LATE — ${d.amd_result}`, ...prev].slice(0, 5)
             )
@@ -2718,59 +2736,6 @@ function DialerPageInner() {
   // is the one signal every dial path (client auto-chain via availableRef, and
   // the server controller via the heartbeat 'paused' state) actually respects.
   const abortDialingRef = useRef(false)
-  const abortAllDialing = async () => {
-    // 1) Latch on — stays on; it is cleared only when the user explicitly goes
-    //    available again (see toggleAvailable). No self-releasing timer.
-    abortDialingRef.current = true
-
-    // 2) Go UNAVAILABLE. This is the master switch: availableRef flips false
-    //    immediately (the ref effect is synchronous enough for in-flight async
-    //    guards, and we also set the ref directly here to be certain), the
-    //    heartbeat starts reporting 'paused', and the server controller stops
-    //    fanning out lines on the next beat.
-    availableRef.current = false
-    setAvailable(false)
-
-    // 3) Tear down predictive engine state so predictive_armed goes false now.
-    setPredictiveEngineStarted(false)
-    predictiveEngineStartedRef.current = false
-
-    // 4) Reject any in-flight / follow-on SIP INVITE instantly.
-    disarmDialing({ force: true })
-
-    // 5) Kill queued client auto-chain timers and stop polling.
-    cancelAllPendingDials()
-    if (activePollRef.current) { clearInterval(activePollRef.current); activePollRef.current = null }
-
-    // 6) INSTANT local + server kill, in PARALLEL (don't make the known active
-    //    call wait on the server round-trip):
-    //    - hang up the SID we already know about immediately, and
-    //    - tell the SERVER to sweep & hang up every other in-flight call for
-    //      this agent across ALL modes (calls it placed server-side that the
-    //      client has no SID for). The server sweeps both call_rooms AND the
-    //      calls table, so progressive/predictive fanout calls are covered.
-    const knownSid = activeCallSidRef.current || activeCallSid
-    await Promise.all([
-      knownSid ? hangupCall(knownSid).catch(() => {}) : Promise.resolve(),
-      fetch('/api/dialer/abort', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ campaign_id: isSpecificCampaign ? selectedCampaign : null }),
-      }).catch((e) => {
-        console.error('[abort] server abort failed (local teardown already done):', e)
-      }),
-    ])
-
-    // 7) Reset UI to a clean idle/offline state.
-    setStatus('idle')
-    setCurrentLead(null)
-    setShowDisposition(false)
-    setDisposition('')
-    setSeconds(0)
-    lastIncomingCallSidRef.current = null
-    setActiveCallSid('')
-    activeCallSidRef.current = null
-  }
 
   // Schedules the next auto-chain dial, but tracked so it can be cancelled, and
   // re-checks availability when it fires. Use this everywhere instead of a bare
@@ -2834,7 +2799,7 @@ function DialerPageInner() {
   /**
    * TERMINATE CALL — end THIS call and continue the session.
    *
-   * This button was wired to abortAllDialing(), the master kill switch: it
+   * This button was wired to the old master kill switch: it
    * stopped the active call, cancelled every queued dial, cleared the abort
    * latch and dropped the agent all the way back to an inactive dialer. So
    * hanging up one call ended the whole session and the agent had to
@@ -2850,6 +2815,80 @@ function DialerPageInner() {
    * chains to the next lead. A call that never connected has nothing to
    * disposition, so it goes straight to the next lead.
    */
+  /**
+   * ABORT DIALING — stop, and stay stopped, without going offline.
+   *
+   * "Abort" previously routed into terminateCall(), which ends with
+   * scheduleDial() for a call that never connected — so aborting a ringing
+   * call hung it up and instantly dialed the next lead. There was no way to
+   * actually stop: the button looked like it worked and the dialer picked
+   * straight back up. That was a regression introduced when TERMINATE was
+   * rewired away from the master kill switch.
+   *
+   * The other extreme is equally wrong: going fully offline stops everything
+   * by flipping the agent UNAVAILABLE, which drops them out of the session and
+   * makes going again a two-step recovery. (That teardown now lives in
+   * handleSetAvailable, which is the only place it belongs.)
+   *
+   * What abort should mean is the state between those — not dialing, but live
+   * and one click from starting. So: latch off, cancel every queued dial,
+   * silence in-flight lines server-side, stop the predictive engine, and leave
+   * `available` alone so the UI lands back on INITIATE DIAL SEQUENCE.
+   */
+  const abortDialing = async () => {
+    // Latch first, so anything already mid-flight bails rather than racing us.
+    abortDialingRef.current = true
+    cancelAllPendingDials()
+    if (activePollRef.current) {
+      clearInterval(activePollRef.current)
+      activePollRef.current = null
+    }
+
+    const sid = activeCallSidRef.current || activeCallSid
+
+    // Local hangup AND the server sweep, in parallel. Predictive places lines
+    // the client holds no ids for, so the local hangup alone would leave them
+    // ringing the lead's phone. scope 'calls' silences them without releasing
+    // claims or pausing the session — we are stopping, not clocking off.
+    await Promise.all([
+      sid ? hangupCall(sid).catch(() => {}) : Promise.resolve(),
+      fetch('/api/dialer/abort', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scope: 'calls' }),
+      }).catch(err => console.error('[abort] server call sweep failed:', err)),
+    ])
+
+    setPredictiveEngineStarted(false)
+    predictiveEngineStartedRef.current = false
+    lastIncomingCallSidRef.current = null
+
+    disarmDialing({ force: true })
+    setStatus('idle')
+    setCurrentLead(null)
+    setPreviewLead(null)
+    setShowDisposition(false)
+    setSeconds(0)
+    setActiveCallSid(null)
+    activeCallSidRef.current = null
+    setAmdActivity(prev => ['■ DIALING ABORTED — idle, still live', ...prev].slice(0, 5))
+  }
+
+  /**
+   * Explicit "start dialing" from the agent. Clears the abort latch first.
+   *
+   * The latch is what makes abort stick, and it is only otherwise cleared by
+   * toggling availability — so without this, pressing INITIATE DIAL SEQUENCE
+   * after an abort would be silently ignored and the agent would have to go
+   * offline and back on to recover. scheduleDial() still checks the latch
+   * before auto-chaining, so clearing it here only ever happens because a
+   * human asked to dial.
+   */
+  const startDialSequence = async () => {
+    abortDialingRef.current = false
+    await handleDial()
+  }
+
   const terminateCall = async () => {
     const sid = activeCallSidRef.current || activeCallSid
     const agentWasOnTheCall = !!callStartRef.current
@@ -3142,13 +3181,32 @@ function DialerPageInner() {
   if (isSpecificCampaign && currentCampaign) {
     rawScriptTabs = campaignScriptTabs(currentCampaign)
   } else if (isAllActive && isPersonalScope) {
-    const seen = new Set<string>()
-    for (const c of campaigns) {
-      if (c.status !== 'active') continue
-      for (const t of campaignScriptTabs(c)) {
-        if (seen.has(t.key)) continue
-        seen.add(t.key)
-        rawScriptTabs.push(t)
+    // ── ALL ACTIVE: FOLLOW THE LEAD, NOT THE UNION ───────────────────────
+    // Each campaign decides independently which scripts are on and in what
+    // order, so under ALL ACTIVE the only correct answer is "whatever the
+    // campaign THIS lead belongs to says". Showing the union of every active
+    // campaign's scripts — the previous behaviour — handed the agent tabs
+    // belonging to campaigns the person on the phone has nothing to do with,
+    // in an order no campaign actually chose.
+    const leadCampaign = currentLead?.campaign_id
+      ? campaigns.find(c => c.id === currentLead.campaign_id)
+      : undefined
+
+    if (leadCampaign) {
+      rawScriptTabs = campaignScriptTabs(leadCampaign)
+    } else {
+      // No lead up yet (idle, between calls, or a manual dial with no
+      // campaign). Falling back to the union keeps the panel populated so an
+      // agent can read a script before the first lead loads, rather than
+      // staring at an empty box.
+      const seen = new Set<string>()
+      for (const c of campaigns) {
+        if (c.status !== 'active') continue
+        for (const t of campaignScriptTabs(c)) {
+          if (seen.has(t.key)) continue
+          seen.add(t.key)
+          rawScriptTabs.push(t)
+        }
       }
     }
   }
@@ -4724,7 +4782,7 @@ function DialerPageInner() {
 
               {predictiveView === 'available' && !predictiveEngineStarted && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', flexShrink: 0 }}>
-                  <button onClick={handleDial} style={{
+                  <button onClick={startDialSequence} style={{
                     padding: '14px', borderRadius: '4px', border: 'none',
                     background: terminalDark, color: 'var(--brand-primary)',
                     fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
@@ -4742,7 +4800,10 @@ function DialerPageInner() {
                     // ones. Route through the full kill switch so in-flight calls
                     // are swept and hung up server-side across the board.
                     setAmdActivity(prev => [`PREDICTIVE ENGINE STOPPED`, ...prev].slice(0, 5))
-                    abortAllDialing()
+                    // abortDialing, not a full offline: stopping the engine
+                    // should leave the agent live and one click from starting
+                    // again, not flip them offline.
+                    abortDialing()
                   }} style={{
                     padding: '14px', borderRadius: '4px', border: 'none',
                     background: '#f8e8e8', color: terminalRed,
@@ -4791,7 +4852,7 @@ function DialerPageInner() {
                 }}>[ NO ACTIVE CAMPAIGNS IN SCOPE ]</div>
               )}
               {status === 'idle' && available && activeScopeCampaigns.length > 0 && (
-                <button onClick={handleDial} style={{
+                <button onClick={startDialSequence} style={{
                   padding: '14px', borderRadius: '4px', border: 'none',
                   background: terminalDark, color: 'var(--brand-primary)',
                   fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
@@ -4820,7 +4881,7 @@ function DialerPageInner() {
                 </>
               )}
               {status === 'calling' && (
-                <button onClick={() => { terminateCall() }} style={{
+                <button onClick={() => { abortDialing() }} style={{
                   padding: '14px', borderRadius: '4px', border: 'none',
                   background: '#f8e8e8', color: terminalRed,
                   fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
@@ -4847,7 +4908,7 @@ function DialerPageInner() {
                 </>
               )}
               {status === 'ended' && !showDisposition && (
-                <button onClick={handleDial} style={{
+                <button onClick={startDialSequence} style={{
                   padding: '14px', borderRadius: '4px', border: 'none',
                   background: terminalDark, color: 'var(--brand-primary)',
                   fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',

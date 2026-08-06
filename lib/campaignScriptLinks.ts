@@ -4,6 +4,17 @@ export interface CampaignScriptSummary {
   id: string
   name: string
   body: string
+  /**
+   * The campaign's own ordering for this script.
+   *
+   * Carried explicitly because the dialer sorts by it. It used to be dropped
+   * here, so every script arrived with sort_order undefined, the dialer's
+   * `sort(a.sort_order ?? 0 - b.sort_order ?? 0)` compared 0 against 0 for
+   * every pair, and the displayed order only happened to be right because
+   * Array.prototype.sort is stable and this function already pushed in link
+   * order. Correct by accident is one refactor away from wrong.
+   */
+  sort_order: number
 }
 
 /**
@@ -50,7 +61,12 @@ export async function loadScriptsByCampaign(
   for (const l of links || []) {
     const sc = scriptById.get(l.script_id)
     if (!sc) continue
-    ;(byCampaign[l.campaign_id] ||= []).push({ id: sc.id, name: sc.name, body: sc.body })
+    ;(byCampaign[l.campaign_id] ||= []).push({
+      id: sc.id,
+      name: sc.name,
+      body: sc.body,
+      sort_order: l.sort_order ?? 0,
+    })
   }
   return byCampaign
 }

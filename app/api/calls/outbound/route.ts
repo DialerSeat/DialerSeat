@@ -60,7 +60,7 @@ export async function POST(req: Request) {
 
     void logCallEvent({
       event_type: 'initiated',
-      signalwire_call_id: result.callControlId ?? null,
+      call_control_id: result.callControlId ?? null,
       user_id: userId,
       lead_id: leadId ?? null,
       campaign_id: campaignId ?? null,

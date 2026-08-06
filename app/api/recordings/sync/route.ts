@@ -19,7 +19,7 @@ const supabase = getServiceClient('recordings/sync')
 // heuristic) because conference recordings had no direct call SID to
 // match against. Telnyx's /v2/recordings response includes
 // call_control_id directly on every recording — the same identifier
-// stored in calls.signalwire_call_id — so matching is always direct. No
+// stored in calls.call_control_id — so matching is always direct. No
 // call_rooms table, no time-window guessing.
 // =============================================================================
 
@@ -39,14 +39,14 @@ export async function POST(req: NextRequest) {
     // — no point paging through Telnyx's whole recordings list otherwise.
     const { data: pendingCallsRaw } = await supabase
       .from('calls')
-      .select('id, signalwire_call_id')
+      .select('id, call_control_id')
       .eq('user_id', userId)
       .is('recording_url', null)
-      .not('signalwire_call_id', 'is', null)
+      .not('call_control_id', 'is', null)
       .order('created_at', { ascending: false })
       .limit(200)
 
-    const pendingCalls = (pendingCallsRaw || []) as Array<{ id: string; signalwire_call_id: string }>
+    const pendingCalls = (pendingCallsRaw || []) as Array<{ id: string; call_control_id: string }>
 
     if (!pendingCalls || pendingCalls.length === 0) {
       return NextResponse.json({ success: true, synced: 0, message: 'No calls pending a recording' })
@@ -65,8 +65,8 @@ export async function POST(req: NextRequest) {
     // volume here is an acceptable tradeoff for staying correct without
     // needing to store call_leg_id as well.
     const sinceIso = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
-    const pendingIds = new Set(pendingCalls.map(c => c.signalwire_call_id))
-    const callByControlId = new Map(pendingCalls.map(c => [c.signalwire_call_id, c]))
+    const pendingIds = new Set(pendingCalls.map(c => c.call_control_id))
+    const callByControlId = new Map(pendingCalls.map(c => [c.call_control_id, c]))
 
     let page = 1
     let matched = 0

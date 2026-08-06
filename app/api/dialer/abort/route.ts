@@ -37,7 +37,7 @@ const supabase = createClient(
 // no-conference direct-bridge architecture, call_rooms is no longer
 // written to at all (see TELNYX-MIGRATION-DESIGN.md) — there's no room to
 // track. This version pulls the lead leg's call_control_id from the
-// `calls` table instead (signalwire_call_id column, same one every other
+// `calls` table instead (call_control_id column, same one every other
 // rewritten route uses). We only need to hang up the LEAD leg here: for a
 // user_dial call, hanging up the lead leg via Telnyx also tears down the
 // bridged agent leg (they're linked); for a controller_fanout call with no
@@ -83,7 +83,7 @@ export async function POST(req: Request) {
     const sinceIso = new Date(Date.now() - LOOKBACK_MINUTES * 60_000).toISOString()
     const { data: recentCalls, error: callsErr } = await supabase
       .from('calls')
-      .select('signalwire_call_id')
+      .select('call_control_id')
       .eq('user_id', userId)
       .gte('created_at', sinceIso)
       // .eq, NOT .is — PostgREST's `is` operator only accepts null/true/false/
@@ -106,7 +106,7 @@ export async function POST(req: Request) {
 
     const callControlIds = new Set<string>()
     for (const c of recentCalls || []) {
-      if (c.signalwire_call_id) callControlIds.add(c.signalwire_call_id)
+      if (c.call_control_id) callControlIds.add(c.call_control_id)
     }
     // Hang them up in parallel; each is best-effort — hangupCallControlId
     // already treats "already gone" (404/422) as a non-fatal outcome.

@@ -458,7 +458,7 @@ async function getAccessState(clerkId: string): Promise<AccessState> {
     ] = await Promise.all([
       supabase
         .from('subscriptions')
-        .select('status, current_period_end, stripe_subscription_id, stripe_price_id')
+        .select('status, current_period_end, stripe_subscription_id, stripe_price_id, paused_at')
         .eq('user_id', clerkId)
         .order('created_at', { ascending: false }),
       supabase
@@ -478,11 +478,16 @@ async function getAccessState(clerkId: string): Promise<AccessState> {
       // subscription reads as tier "new" below and gets bounced to
       // /welcome on every single page — a real active member, locked out
       // of the app entirely.
+      // `.is('seat_suspended_at', null)` is load-bearing: a paused or
+      // cancelled seat leaves the member's status as 'active' (they stay on
+      // the roster on purpose), so without this a suspended seat would keep
+      // granting full dialing access that nobody is being billed for.
       supabase
         .from('team_members')
         .select('id')
         .eq('user_id', clerkId)
         .eq('status', 'active')
+        .is('seat_suspended_at', null)
         .limit(1)
         .maybeSingle(),
     ])
@@ -510,6 +515,15 @@ async function getAccessState(clerkId: string): Promise<AccessState> {
     if (subs && subs.length > 0) {
       tier = 'lapsed'
       for (const sub of subs) {
+        // A PAUSED subscription is not an active one, even though Stripe still
+        // reports status 'active' — pause_collection stops invoicing, not the
+        // subscription. Skipping it here is the whole mechanism: without this
+        // line a paused subscriber keeps unlimited dialing and is never
+        // billed for it. They fall through to 'lapsed', which combined with
+        // data_preserved_users is exactly the intended pause experience —
+        // everything kept, read-only, one click back.
+        if (sub.paused_at) continue
+
         if (ACTIVE_STATUSES.includes(sub.status)) {
           tier = 'active'
           break

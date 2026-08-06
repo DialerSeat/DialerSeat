@@ -6,6 +6,7 @@ import AppWindow from './AppWindow'
 import Taskbar from './Taskbar'
 import StartMenu from './StartMenu'
 import ContextMenu, { type ContextMenuItem } from './ContextMenu'
+import MobileShell from './MobileShell'
 import { DesktopServicesContext, isBaseApp, uninstallWarns, DEFAULT_HIDDEN_APP_IDS, type DesktopServices } from './desktopServices'
 import type { AppId, AppRole, WindowState, RecentApp } from './types'
 import { appVisibleToRole } from './types'
@@ -268,7 +269,7 @@ interface PositionHint {
   shiftY?: number
 }
 
-export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
+function DesktopWindowed({ role = 'admin' }: { role?: AppRole } = {}) {
   const router = useRouter()
 
   const initial = (typeof window !== 'undefined') ? loadPersistedState(role) : null
@@ -1628,4 +1629,41 @@ function DesktopIcon({
       }}>{name}</div>
     </div>
   )
+}
+// =============================================================================
+// SHELL SELECTION
+// =============================================================================
+// The windowed desktop above and MobileShell are two frames around the same
+// registry of apps. This picks one.
+//
+// It is a separate component rather than an early return inside
+// DesktopWindowed because that function runs ~40 hooks — bailing out partway
+// would break the rules of hooks. Keeping the default export here also means
+// neither /dashboard/admin/desktop nor /dashboard/manager/desktop had to
+// change.
+//
+// Renders nothing on the first pass, deliberately: the breakpoint can only be
+// measured in the browser, and defaulting to either shell would flash the
+// wrong one and mount every app component twice.
+//
+// Uses the SAME MOBILE_BREAKPOINT the windowed shell already uses to decide
+// whether to force-open windows maximized. Under that width the windowed shell
+// was already showing one full-screen window at a time — it just kept the
+// taskbar, start menu and drag-positioned icons around it. MobileShell is that
+// same one-app-at-a-time reality with the pointer-only chrome removed.
+// =============================================================================
+
+export default function Desktop({ role = 'admin' }: { role?: AppRole } = {}) {
+  const [isNarrow, setIsNarrow] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
+    const sync = () => setIsNarrow(mq.matches)
+    sync()
+    mq.addEventListener('change', sync)
+    return () => mq.removeEventListener('change', sync)
+  }, [])
+
+  if (isNarrow === null) return null
+  return isNarrow ? <MobileShell role={role} /> : <DesktopWindowed role={role} />
 }

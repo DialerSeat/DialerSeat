@@ -143,13 +143,49 @@ export async function POST(req: Request) {
 
 
 
+/**
+ * Which product a Stripe subscription is, resolved from metadata first and the
+ * PRICE ID second.
+ *
+ * WHY THE FALLBACK EXISTS: routing used to read subscription.metadata.sub_kind
+ * alone, with personal/Pro as the untested default for anything else. So a
+ * Manager+ subscription whose metadata was missing or written by an older
+ * checkout flow fell silently into the Pro branch — and every admin push about
+ * it read "subscribed to Pro" / "renewed Pro subscription", regardless of what
+ * the customer actually bought. That is exactly the reported symptom: every
+ * notification says Pro.
+ *
+ * Metadata is set by our own checkout code and can therefore be absent or
+ * stale; the price id is assigned by Stripe on the subscription item and is
+ * always present (confirmed against live data — 10 subscription rows have a
+ * NULL plan column while every single row has a stripe_price_id). So the price
+ * is the more trustworthy signal and is consulted whenever metadata doesn't
+ * answer the question.
+ */
+function resolveSubKind(subscription: Stripe.Subscription): 'team_seat' | 'whitelabel' | 'personal' {
+  const fromMetadata = subscription.metadata?.sub_kind
+  if (fromMetadata === 'team_seat') return 'team_seat'
+  if (fromMetadata === 'whitelabel') return 'whitelabel'
+
+  const wlPriceId = process.env.STRIPE_PRICE_WL_BASE
+  if (wlPriceId && subscription.items?.data?.some(i => i.price?.id === wlPriceId)) {
+    console.warn(
+      `[stripe/webhook] subscription ${subscription.id} has no sub_kind metadata but carries the ` +
+      `Manager+ price — treating as whitelabel. Without this it would be reported to admins as Pro.`
+    )
+    return 'whitelabel'
+  }
+
+  return 'personal'
+}
+
 async function routeSubscription(
   subscription: Stripe.Subscription,
   eventType?: string,
   billingReason?: Stripe.Invoice.BillingReason,
   eventCreated?: number
 ) {
-  const subKind = subscription.metadata?.sub_kind
+  const subKind = resolveSubKind(subscription)
 
   if (subKind === 'team_seat') {
     await syncSeatCharge(subscription)
@@ -165,7 +201,10 @@ async function routeSubscription(
 }
 
 async function routeSubscriptionDeleted(subscription: Stripe.Subscription) {
-  const subKind = subscription.metadata?.sub_kind
+  // Same metadata-or-price resolution as routeSubscription — a Manager+
+  // cancellation with absent metadata would otherwise be reported to admins
+  // as a Pro cancellation.
+  const subKind = resolveSubKind(subscription)
 
   if (subKind === 'team_seat') {
     
@@ -683,11 +722,13 @@ async function upsertPersonalSubscription(
   const item = subscription.items.data[0]
   const priceId = item?.price.id ?? ''
 
-  // The only reliable signal for which plan this is — sub_kind metadata is
-  // set once at creation (app/api/stripe/create-subscription/route.ts) and
-  // is available on every event for this subscription's whole lifetime,
-  // unlike stripe_price_id which is reused for both Pro and team seats.
-  const plan: 'pro' | 'wl' = subscription.metadata?.sub_kind === 'whitelabel' ? 'wl' : 'pro'
+  // sub_kind metadata is set once at creation
+  // (app/api/stripe/create-subscription/route.ts) and is normally present on
+  // every event for the subscription's lifetime — but it is OUR field, so it
+  // can be missing on anything created by an older flow. resolveSubKind falls
+  // back to the Manager+ price id in that case, which is why the `plan` column
+  // stops being written as 'pro' for Manager+ subscribers.
+  const plan: 'pro' | 'wl' = resolveSubKind(subscription) === 'whitelabel' ? 'wl' : 'pro'
 
   // Newer Stripe API versions moved these fields off the top-level
   // Subscription object onto each item. Falling back to the item-level

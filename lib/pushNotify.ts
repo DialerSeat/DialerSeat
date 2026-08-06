@@ -26,7 +26,26 @@ import { getServiceClient } from '@/lib/supabase'
 // each other, since they're written from the same call site in one pass.
 // ─────────────────────────────────────────────────────────────────────────
 
-export type NotifEventType = 'signup' | 'account_deleted' | 'new_sub' | 'resub' | 'renewal' | 'cancel'
+// Business events (money in/out) and OPERATIONAL events (the product is
+// broken). Until the operational ones existed, every alert this system could
+// send was about revenue — nothing told an admin the dialer had stopped
+// working. Each operational type below maps to a failure that already happened
+// silently and was found by a human noticing something felt off:
+//   agent_leg_refused  Telnyx refusing the agent leg -> calls with no audio
+//   pool_capacity      caller-ID pool about to exhaust -> every dial fails
+//   webhook_silence    no call_events while calls exist -> all metrics read 0
+export type NotifEventType =
+  | 'signup'
+  | 'account_deleted'
+  | 'new_sub'
+  | 'resub'
+  | 'renewal'
+  | 'cancel'
+  | 'sub_paused'
+  | 'sub_resumed'
+  | 'agent_leg_refused'
+  | 'pool_capacity'
+  | 'webhook_silence'
 
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:support@dialerseat.com'
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || ''
@@ -55,6 +74,16 @@ const EVENT_COPY: Record<NotifEventType, { title: string; tag: string }> = {
   resub:           { title: 'Resubscription',     tag: 'ds-resub' },
   renewal:         { title: 'Renewal',            tag: 'ds-renewal' },
   cancel:          { title: 'Cancellation',       tag: 'ds-cancel' },
+  // Distinct tags so a pause and a later resume from the same person don't
+  // collapse into one another in the notification tray.
+  sub_paused:      { title: 'Subscription Paused', tag: 'ds-sub-paused' },
+  sub_resumed:     { title: 'Subscription Resumed', tag: 'ds-sub-resumed' },
+  // Operational alerts get a marker in the title so they are distinguishable
+  // from revenue notifications at a glance on a lock screen — these mean
+  // "go look now", not "nice, money".
+  agent_leg_refused: { title: '⚠ Calls Have No Audio', tag: 'ds-agent-leg-refused' },
+  pool_capacity:     { title: '⚠ Number Pool Filling', tag: 'ds-pool-capacity' },
+  webhook_silence:   { title: '⚠ Call Webhooks Silent', tag: 'ds-webhook-silence' },
 }
 
 interface AdminNotificationPrefs {
@@ -65,13 +94,18 @@ interface AdminNotificationPrefs {
   resub: boolean
   renewal: boolean
   cancel: boolean
+  sub_paused: boolean
+  sub_resumed: boolean
+  agent_leg_refused: boolean
+  pool_capacity: boolean
+  webhook_silence: boolean
 }
 
 async function getPrefs(): Promise<AdminNotificationPrefs> {
   const supabase = getServiceClient('pushNotify:getPrefs')
   const { data, error } = await supabase
     .from('admin_notification_prefs')
-    .select('master_enabled, signup, account_deleted, new_sub, resub, renewal, cancel')
+    .select('master_enabled, signup, account_deleted, new_sub, resub, renewal, cancel, sub_paused, sub_resumed, agent_leg_refused, pool_capacity, webhook_silence')
     .eq('id', 1)
     .maybeSingle()
   if (error) {
@@ -79,7 +113,7 @@ async function getPrefs(): Promise<AdminNotificationPrefs> {
     // A genuine query error (bad connection, RLS issue, etc.) — don't
     // guess, just don't send. Distinct from the "no row" case below,
     // which is a setup gap, not a real signal to suppress everything.
-    return { master_enabled: false, signup: false, account_deleted: false, new_sub: false, resub: false, renewal: false, cancel: false }
+    return { master_enabled: false, signup: false, account_deleted: false, new_sub: false, resub: false, renewal: false, cancel: false, sub_paused: false, sub_resumed: false, agent_leg_refused: false, pool_capacity: false, webhook_silence: false }
   }
   if (!data) {
     // The seed row (migrations/PUSH_NOTIFICATIONS_2026-07-17.sql) never
@@ -92,7 +126,7 @@ async function getPrefs(): Promise<AdminNotificationPrefs> {
     // (see the CREATE TABLE — every boolean defaults to true), and let
     // the admin explicitly turn things off if they actually want that.
     console.warn('[pushNotify] admin_notification_prefs has no row with id=1 — defaulting to all notifications ON.')
-    return { master_enabled: true, signup: true, account_deleted: true, new_sub: true, resub: true, renewal: true, cancel: true }
+    return { master_enabled: true, signup: true, account_deleted: true, new_sub: true, resub: true, renewal: true, cancel: true, sub_paused: true, sub_resumed: true, agent_leg_refused: true, pool_capacity: true, webhook_silence: true }
   }
   return data as AdminNotificationPrefs
 }

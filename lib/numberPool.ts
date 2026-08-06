@@ -8,6 +8,7 @@ import {
   acquireNumberByAreaCode,
   releaseNumber as telnyxReleaseNumber,
 } from './telnyxProvision'
+import { getPlatformConfig } from './platformConfig'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -34,7 +35,7 @@ export interface PoolNumber {
   area_code: string
   state: string | null
   region: string | null
-  signalwire_sid: string
+  provider_number_id: string
   status: 'active' | 'resting' | 'flagged' | 'released'
   daily_call_count: number
   daily_cap: number
@@ -180,17 +181,17 @@ export async function markFlagged(
 }
 
 export async function releasePoolNumber(numberId: string): Promise<void> {
-  // Column is still named signalwire_sid in this shared schema (sandbox
-  // writes to the same phone_numbers table as production — see build
-  // instructions). Storing Telnyx's internal number id here for now
-  // rather than adding a parallel column: the value's role (provider's
+  // provider_number_id holds Telnyx's own number id. The column was called
+  // signalwire_sid until the 2026-08-05 rename; the legacy name still exists
+  // alongside it and is kept in sync by a trigger until the contract-phase
+  // migration drops it. The value's role (provider's
   // own identifier for this number, needed to release/delete it later)
   // is identical regardless of provider. Revisit naming only at actual
   // cutover time, not before — same reasoning as placeOutboundCall.ts's
-  // reuse of signalwire_call_id for the Telnyx call sid.
+  // reuse of call_control_id for the Telnyx call sid.
   const { data: number, error: readErr } = await supabase
     .from('phone_numbers')
-    .select('signalwire_sid')
+    .select('provider_number_id')
     .eq('id', numberId)
     .single()
 
@@ -200,7 +201,7 @@ export async function releasePoolNumber(numberId: string): Promise<void> {
   }
 
   try {
-    await telnyxReleaseNumber(number.signalwire_sid)
+    await telnyxReleaseNumber(number.provider_number_id)
   } catch (err) {
     console.error('[numberPool] Telnyx release failed:', err)
     throw err
@@ -213,6 +214,26 @@ export async function releasePoolNumber(numberId: string): Promise<void> {
 }
 
 export async function addNumberByAreaCode(areaCode: string): Promise<PoolNumber | null> {
+  // ── BUYING FREEZE ────────────────────────────────────────────────────────
+  // Checked HERE rather than at each caller on purpose. Five paths buy
+  // numbers today — the admin buy route, the admin seed route, two branches
+  // of pool-maintenance, and the ratio automation in poolCycling — and a
+  // freeze that has to be re-implemented at each one is a freeze that the
+  // sixth caller silently ignores. This is the chokepoint they all share, so
+  // the switch holds by construction.
+  //
+  // Money is the reason it exists: runaway ratio automation buying numbers at
+  // ~$1/mo each, or a bad area-code loop, is a bill that keeps growing until
+  // someone notices. This stops it in under 30 seconds with no deploy.
+  const { number_buying_frozen } = await getPlatformConfig()
+  if (number_buying_frozen) {
+    console.warn(
+      `[numberPool] Purchase of an ${areaCode} number BLOCKED — number buying is frozen ` +
+      `in platform_config. Unfreeze in admin settings to resume.`
+    )
+    return null
+  }
+
   const purchased = await acquireNumberByAreaCode(areaCode)
   if (!purchased) {
     console.warn(`[numberPool] No numbers available in area code ${areaCode}`)
@@ -231,7 +252,7 @@ export async function addNumberByAreaCode(areaCode: string): Promise<PoolNumber 
       // Telnyx's PurchasedNumber uses `.id` (their internal number id),
       // not `.sid` — different provider, different field name, same role.
       // See the column-reuse note on releasePoolNumber above.
-      signalwire_sid: purchased.id,
+      provider_number_id: purchased.id,
       status: 'active',
       daily_call_count: 0,
       daily_cap: DEFAULT_DAILY_CAP,
