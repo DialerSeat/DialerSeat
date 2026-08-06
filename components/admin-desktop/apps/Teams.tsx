@@ -120,35 +120,52 @@ const ACCESS_MODE_LABELS: Record<TeamAttachment['accessMode'], string> = {
 
 type TeamsAppTab = 'teams' | 'campaigns'
 
-// ── glass design tokens ─────────────────────────────────────────────────
+// ── design tokens — docs/PALETTE.md ─────────────────────────────────────
+// This app used to carry its own dark "glass" theme: near-black gradient,
+// drifting blur glows, #5ec9ff cyan, translucent white cards. It looked
+// nothing like the Teams page it administers, so an admin moved between two
+// visually unrelated screens showing the same data.
+//
+// The KEY NAMES are kept deliberately. There are 110 references to these
+// tokens across the file, and remapping the object is one reviewable change
+// where rewriting every call site would be 110 chances to introduce a typo
+// no compiler would catch. The names now describe roles rather than looks —
+// `card` is the canonical surface, `line` the canonical border.
+//
+// Soft variants are the GLOBAL status-pill backgrounds from PALETTE.md, which
+// never change per whitelabel because they encode meaning.
 const G = {
-  bgA: '#0a0d14',
-  bgB: '#0d1220',
-  glow1: 'rgba(94,201,255,0.10)',
-  glow2: 'rgba(168,124,255,0.08)',
-  card: 'rgba(255,255,255,0.045)',
-  cardHover: 'rgba(255,255,255,0.07)',
-  cardBorder: 'rgba(255,255,255,0.09)',
-  cardBorderHover: 'rgba(255,255,255,0.16)',
-  line: 'rgba(255,255,255,0.08)',
-  text: '#eef1f8',
-  textDim: '#9aa3ba',
-  textFaint: '#5c6478',
-  accent: '#5ec9ff',
-  accentSoft: 'rgba(94,201,255,0.14)',
-  teal: '#4ad0c0',
-  tealSoft: 'rgba(74,208,192,0.14)',
-  blue: '#5ec9ff',
-  blueSoft: 'rgba(94,201,255,0.14)',
-  amber: '#ffb454',
-  amberSoft: 'rgba(255,180,84,0.14)',
-  red: '#ff6b6b',
-  redSoft: 'rgba(255,107,107,0.14)',
-  green: '#5adba0',
-  greenSoft: 'rgba(90,219,160,0.14)',
+  bgA: '#f0f1f4',                 // T.bg
+  bgB: '#f0f1f4',                 // flat — the gradient is gone
+  glow1: 'transparent',           // ambient glows removed; kept so the
+  glow2: 'transparent',           // render sites don't need touching
+  card: '#e2e4ea',                // T.surface
+  cardHover: '#dadce4',           // one step down from surface
+  cardBorder: '#c4c8d0',          // T.border
+  cardBorderHover: '#2a4a8a',     // T.accent
+  line: '#c4c8d0',                // T.border
+  text: '#1a1c24',                // T.text
+  textDim: '#5a5e6a',             // T.muted
+  textFaint: '#8a8e9a',           // lighter than muted, still AA on surface
+  accent: '#2a4a8a',              // T.accent
+  accentSoft: '#e8eef8',          // Info pill
+  // No teal in the canonical palette — folded onto accent so the two stop
+  // being visually distinct roles that mean nothing.
+  teal: '#2a4a8a',
+  tealSoft: '#e8eef8',
+  blue: '#2a4a8a',                // T.accent
+  blueSoft: '#e8eef8',
+  amber: '#8a6a1a',               // T.amber
+  amberSoft: '#f8f4e8',           // Warn pill
+  red: '#8a1a1a',                 // T.red
+  redSoft: '#f8e8e8',             // Danger pill
+  green: '#1a6a1a',               // T.green
+  greenSoft: '#e8f5e8',           // Success pill
 }
 
-const SANS = `-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Helvetica, Arial, sans-serif`
+// docs/PALETTE.md: Futura for UI labels, buttons and titles. The name stays
+// SANS because it's referenced throughout and the role hasn't changed.
+const SANS = `'Futura PT', Futura, 'Helvetica Neue', Helvetica, Arial, sans-serif`
 
 
 function fmtMoney(cents: number): string {
@@ -180,13 +197,9 @@ export default function TeamsApp() {
   return (
     <div style={S.root}>
       <style>{`
-        @keyframes ts-drift {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          50% { transform: translate(-3%, 2%) scale(1.05); }
-        }
         .ts-scroll { overflow-y: auto; overflow-x: hidden; }
         .ts-scroll::-webkit-scrollbar { width: 8px; }
-        .ts-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 8px; }
+        .ts-scroll::-webkit-scrollbar-thumb { background: #c4c8d0; border-radius: 4px; }
         .ts-scroll::-webkit-scrollbar-track { background: transparent; }
         .ts-card {
           transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
@@ -196,15 +209,11 @@ export default function TeamsApp() {
           border-color: ${G.cardBorderHover};
         }
         .ts-row-btn { transition: background 0.12s ease; }
-        .ts-row-btn:hover { background: rgba(255,255,255,0.05); }
+        .ts-row-btn:hover { background: #dadce4; }
         .ts-chip-btn { transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease; }
         .ts-toggle { transition: background 0.15s ease; }
         input.ts-search::placeholder { color: ${G.textFaint}; }
       `}</style>
-
-      {/* ambient glow backdrop */}
-      <div style={{ ...S.glowBlob, top: -140, left: -100, background: G.glow1, animation: 'ts-drift 22s ease-in-out infinite' }} />
-      <div style={{ ...S.glowBlob, bottom: -160, right: -120, background: G.glow2, animation: 'ts-drift 26s ease-in-out infinite reverse' }} />
 
       {/* tab strip */}
       <div style={S.tabStrip}>
@@ -374,7 +383,7 @@ function TeamsTab() {
               style={{
                 ...S.sortChip,
                 background: sort === o.key ? G.accentSoft : 'transparent',
-                borderColor: sort === o.key ? 'rgba(94,201,255,0.35)' : G.cardBorder,
+                borderColor: sort === o.key ? G.accent : G.cardBorder,
                 color: sort === o.key ? G.accent : G.textDim,
               }}
             >
@@ -499,7 +508,7 @@ function TeamCard({
     <div className="ts-card" style={{ ...S.card, gridColumn: expanded ? '1 / -1' : undefined }}>
       <button className="ts-row-btn" onClick={onToggle} style={S.cardHead}>
         <div style={{
-          width: 38, height: 38, borderRadius: 11, flexShrink: 0,
+          width: 38, height: 38, borderRadius: 4, flexShrink: 0,
           background: G.accentSoft, color: G.accent,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 13, fontWeight: 800,
@@ -560,7 +569,7 @@ function TeamCard({
               {team.activeSeats > 0 && <SeatPill label="active" count={team.activeSeats} color={G.green} bg={G.greenSoft} />}
               {team.pendingSeats > 0 && <SeatPill label="pending" count={team.pendingSeats} color={G.amber} bg={G.amberSoft} />}
               {team.failedSeats > 0 && <SeatPill label="failed" count={team.failedSeats} color={G.red} bg={G.redSoft} />}
-              {team.voidedSeats > 0 && <SeatPill label="voided" count={team.voidedSeats} color={G.textFaint} bg="rgba(255,255,255,0.05)" />}
+              {team.voidedSeats > 0 && <SeatPill label="voided" count={team.voidedSeats} color={G.textFaint} bg="#f0f0f4" />}
             </div>
           )}
 
@@ -654,7 +663,7 @@ function SeatPill({ label, count, color, bg }: { label: string; count: number; c
 function EmptyHint({ text }: { text: string }) {
   return (
     <div style={{
-      padding: '12px 14px', borderRadius: 10, border: `1px dashed ${G.cardBorder}`,
+      padding: '12px 14px', borderRadius: 4, border: `1px dashed ${G.cardBorder}`,
       color: G.textFaint, fontSize: 11.5,
     }}>{text}</div>
   )
@@ -824,7 +833,7 @@ function CampaignsTab() {
               style={{
                 ...S.sortChip,
                 background: statusFilter === o.key ? G.tealSoft : 'transparent',
-                borderColor: statusFilter === o.key ? 'rgba(74,208,192,0.35)' : G.cardBorder,
+                borderColor: statusFilter === o.key ? G.accent : G.cardBorder,
                 color: statusFilter === o.key ? G.teal : G.textDim,
               }}
             >
@@ -846,7 +855,7 @@ function CampaignsTab() {
               style={{
                 ...S.sortChip,
                 background: sort === o.key ? G.accentSoft : 'transparent',
-                borderColor: sort === o.key ? 'rgba(94,201,255,0.35)' : G.cardBorder,
+                borderColor: sort === o.key ? G.accent : G.cardBorder,
                 color: sort === o.key ? G.accent : G.textDim,
               }}
             >
@@ -932,8 +941,8 @@ function CampaignCard({
       <div style={S.campaignCardHead}>
         <button className="ts-row-btn" onClick={onToggleExpand} style={S.campaignCardHeadBtn}>
           <div style={{
-            width: 38, height: 38, borderRadius: 11, flexShrink: 0,
-            background: isActive ? G.tealSoft : 'rgba(255,255,255,0.05)',
+            width: 38, height: 38, borderRadius: 4, flexShrink: 0,
+            background: isActive ? G.tealSoft : '#f0f0f4',
             color: isActive ? G.teal : G.textFaint,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 13, fontWeight: 800,
@@ -1019,7 +1028,7 @@ function CampaignCard({
                   <div key={t.teamId} style={S.memberRow}>
                     <span style={{ ...S.dot, background: G.accent }} />
                     <span style={S.memberName}>{t.teamName}</span>
-                    <span style={{ ...S.badge, background: 'rgba(255,255,255,0.06)', color: G.textDim, marginLeft: 'auto' }}>
+                    <span style={{ ...S.badge, background: '#f0f0f4', color: G.textDim, marginLeft: 'auto' }}>
                       {ACCESS_MODE_LABELS[t.accessMode]}
                     </span>
                     <button
@@ -1049,14 +1058,14 @@ function StatusToggle({ isActive, busy, onClick }: { isActive: boolean; busy: bo
       style={{
         flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6,
         padding: '6px 10px 6px 8px', borderRadius: 20, border: 'none', cursor: busy ? 'wait' : 'pointer',
-        background: isActive ? G.greenSoft : 'rgba(255,255,255,0.06)',
+        background: isActive ? G.greenSoft : '#f0f0f4',
         color: isActive ? G.green : G.textFaint, fontFamily: SANS,
         fontSize: 10, fontWeight: 700, letterSpacing: 0.4, opacity: busy ? 0.6 : 1,
       }}
     >
       <span style={{
-        width: 26, height: 14, borderRadius: 8, position: 'relative', flexShrink: 0,
-        background: isActive ? G.green : 'rgba(255,255,255,0.15)', transition: 'background 0.15s ease',
+        width: 26, height: 14, borderRadius: 4, position: 'relative', flexShrink: 0,
+        background: isActive ? G.green : '#b4b8c2', transition: 'background 0.15s ease',
       }}>
         <span style={{
           position: 'absolute', top: 2, left: isActive ? 14 : 2, width: 10, height: 10, borderRadius: '50%',
@@ -1089,20 +1098,25 @@ const S: Record<string, React.CSSProperties> = {
   root: {
     position: 'relative', display: 'flex', flexDirection: 'column',
     width: '100%', height: '100%', overflow: 'hidden',
-    background: `linear-gradient(160deg, ${G.bgA}, ${G.bgB})`,
+    background: G.bgA,
     color: G.text, fontFamily: SANS,
   },
-  glowBlob: {
-    position: 'absolute', width: 480, height: 480, borderRadius: '50%',
-    filter: 'blur(90px)', pointerEvents: 'none', zIndex: 0,
-  },
   header: {
-    position: 'relative', zIndex: 1, padding: '18px 22px 14px',
+    position: 'relative', zIndex: 1, padding: '10px 20px',
     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-    gap: 16, flexWrap: 'wrap', borderBottom: `1px solid ${G.line}`,
+    gap: 16, flexWrap: 'wrap',
+    background: '#1a1a2e',                    // T.dark
+    borderBottom: `2px solid ${G.accent}`,    // T.accent
   },
-  headerTitle: { fontSize: 17, fontWeight: 700, letterSpacing: 0.2, color: G.text },
-  headerSub: { fontSize: 11.5, color: G.textFaint, letterSpacing: 0.3 },
+  headerTitle: {
+    fontSize: 14, fontWeight: 700, letterSpacing: 4,
+    color: 'var(--brand-primary, #4a9eff)', textTransform: 'uppercase',
+  },
+  // Monospace for the stats line, per the palette's data-values rule.
+  headerSub: {
+    fontSize: 11, color: '#8888aa', letterSpacing: 2,
+    fontFamily: 'monospace',
+  },
   statRow: { display: 'flex', gap: 22, alignItems: 'center' },
   statCell: { textAlign: 'right' },
   tabStrip: {
@@ -1121,7 +1135,7 @@ const S: Record<string, React.CSSProperties> = {
   },
   searchWrap: {
     flex: '1 1 240px', minWidth: 180, display: 'flex', alignItems: 'center', gap: 8,
-    background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10,
+    background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 4,
     padding: '8px 12px',
   },
   searchInput: {
@@ -1129,11 +1143,11 @@ const S: Record<string, React.CSSProperties> = {
     color: G.text, fontSize: 12.5, fontFamily: SANS,
   },
   sortChip: {
-    padding: '7px 12px', borderRadius: 8, border: '1px solid transparent',
+    padding: '7px 12px', borderRadius: 4, border: '1px solid transparent',
     fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: SANS, whiteSpace: 'nowrap',
   },
   refreshBtn: {
-    width: 32, height: 32, borderRadius: 8, background: G.card, border: `1px solid ${G.cardBorder}`,
+    width: 32, height: 32, borderRadius: 4, background: G.card, border: `1px solid ${G.cardBorder}`,
     color: G.textDim, cursor: 'pointer', fontSize: 14, flexShrink: 0,
   },
   body: { position: 'relative', zIndex: 1, flex: 1, padding: '18px 22px 26px', minHeight: 0 },
@@ -1141,8 +1155,7 @@ const S: Record<string, React.CSSProperties> = {
     display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(420px, 1fr))', gap: 12,
   },
   card: {
-    background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 16,
-    backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+    background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 4,
     overflow: 'hidden',
   },
   cardHead: {
@@ -1159,7 +1172,7 @@ const S: Record<string, React.CSSProperties> = {
   },
   codeChip: {
     display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px',
-    background: 'rgba(255,255,255,0.04)', border: `1px solid ${G.cardBorder}`, borderRadius: 8,
+    background: '#f0f1f4', border: `1px solid ${G.cardBorder}`, borderRadius: 4,
     color: G.text, fontSize: 11.5, cursor: 'pointer', fontFamily: SANS,
   },
   seatSummary: { display: 'flex', gap: 8, flexWrap: 'wrap' },
@@ -1170,7 +1183,7 @@ const S: Record<string, React.CSSProperties> = {
   },
   memberList: {
     display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 220, overflowY: 'auto',
-    background: 'rgba(0,0,0,0.15)', borderRadius: 10, border: `1px solid ${G.line}`,
+    background: '#f0f1f4', borderRadius: 4, border: `1px solid ${G.line}`,
   },
   memberRow: {
     display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px',
@@ -1187,12 +1200,12 @@ const S: Record<string, React.CSSProperties> = {
     display: 'flex', justifyContent: 'flex-end', paddingTop: 10, borderTop: `1px solid ${G.line}`,
   },
   deleteBtn: {
-    padding: '7px 14px', borderRadius: 8, background: 'transparent',
-    border: `1px solid rgba(255,107,107,0.35)`, color: G.red,
+    padding: '7px 14px', borderRadius: 4, background: 'transparent',
+    border: `1px solid ${G.red}`, color: G.red,
     fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: SANS,
   },
   smallBtn: {
-    padding: '7px 14px', borderRadius: 8, background: G.card, border: `1px solid ${G.cardBorder}`,
+    padding: '7px 14px', borderRadius: 4, background: G.card, border: `1px solid ${G.cardBorder}`,
     color: G.text, fontSize: 11.5, cursor: 'pointer', fontFamily: SANS,
   },
   centerMsg: {
@@ -1200,38 +1213,37 @@ const S: Record<string, React.CSSProperties> = {
     height: '100%', color: G.textFaint, fontSize: 13, minHeight: 200,
   },
   errorCard: {
-    maxWidth: 420, margin: '40px auto', padding: 20, borderRadius: 14,
+    maxWidth: 420, margin: '40px auto', padding: 20, borderRadius: 4,
     background: G.card, border: `1px solid ${G.cardBorder}`, textAlign: 'center',
   },
   overlay: {
-    position: 'fixed', inset: 0, background: 'rgba(4,6,12,0.65)', backdropFilter: 'blur(4px)',
+    position: 'fixed', inset: 0, background: 'rgba(26,26,46,0.45)',
     display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 20,
   },
   modal: {
     width: '100%', maxWidth: 420, background: '#12162140', backgroundColor: '#141826',
-    border: `1px solid ${G.cardBorder}`, borderRadius: 16, padding: 24,
-    boxShadow: '0 20px 60px rgba(0,0,0,0.5)', fontFamily: SANS,
+    border: `1px solid ${G.cardBorder}`, borderRadius: 4, padding: 24,
+    boxShadow: '0 12px 32px rgba(26,26,46,0.18)', fontFamily: SANS,
   },
   modalInput: {
-    width: '100%', padding: '10px 12px', borderRadius: 8,
-    background: 'rgba(0,0,0,0.25)', border: `1px solid ${G.cardBorder}`,
+    width: '100%', padding: '10px 12px', borderRadius: 4,
+    background: '#f0f1f4', border: `1px solid ${G.cardBorder}`,
     color: G.text, fontSize: 13, fontFamily: SANS, outline: 'none', boxSizing: 'border-box',
   },
   modalCancelBtn: {
-    flex: 1, padding: '10px', borderRadius: 8, background: 'transparent',
+    flex: 1, padding: '10px', borderRadius: 4, background: 'transparent',
     border: `1px solid ${G.cardBorder}`, color: G.textDim, fontSize: 12, fontWeight: 600,
     cursor: 'pointer', fontFamily: SANS,
   },
   modalDeleteBtn: {
-    flex: 1, padding: '10px', borderRadius: 8, background: G.redSoft,
-    border: `1px solid rgba(255,107,107,0.4)`, color: G.red, fontSize: 12, fontWeight: 700,
+    flex: 1, padding: '10px', borderRadius: 4, background: G.redSoft,
+    border: `1px solid ${G.red}`, color: G.red, fontSize: 12, fontWeight: 700,
     fontFamily: SANS,
   },
 
   // ── campaigns tab ──
   campaignCard: {
-    background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 16,
-    backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+    background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 4,
     overflow: 'visible',
   },
   campaignCardHead: {
@@ -1242,21 +1254,21 @@ const S: Record<string, React.CSSProperties> = {
     background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: SANS, textAlign: 'left', padding: 0,
   },
   progressTrack: {
-    height: 3, background: 'rgba(255,255,255,0.06)', margin: '0 16px 14px', borderRadius: 3, overflow: 'hidden',
+    height: 3, background: '#f0f0f4', margin: '0 16px 14px', borderRadius: 3, overflow: 'hidden',
   },
   progressFill: { height: '100%', borderRadius: 3 },
   assignBtn: {
-    padding: '6px 11px', borderRadius: 8, background: 'rgba(255,255,255,0.05)',
+    padding: '6px 11px', borderRadius: 4, background: '#f0f1f4',
     border: `1px solid ${G.cardBorder}`, color: G.text, fontSize: 10.5, fontWeight: 600,
     fontFamily: SANS,
   },
   teamPicker: {
     position: 'absolute', top: '110%', right: 0, zIndex: 50, minWidth: 200, maxHeight: 220, overflowY: 'auto',
-    background: '#141c1a', border: `1px solid ${G.cardBorder}`, borderRadius: 10,
-    boxShadow: '0 12px 32px rgba(0,0,0,0.4)', padding: 6,
+    background: '#141c1a', border: `1px solid ${G.cardBorder}`, borderRadius: 4,
+    boxShadow: '0 8px 20px rgba(26,26,46,0.16)', padding: 6,
   },
   teamPickerItem: {
-    display: 'block', width: '100%', textAlign: 'left', padding: '8px 10px', borderRadius: 6,
+    display: 'block', width: '100%', textAlign: 'left', padding: '8px 10px', borderRadius: 4,
     background: 'transparent', border: 'none', color: G.text, fontSize: 12, cursor: 'pointer', fontFamily: SANS,
   },
   unassignBtn: {
@@ -1264,8 +1276,8 @@ const S: Record<string, React.CSSProperties> = {
     padding: '2px 4px', flexShrink: 0,
   },
   actionErrorBar: {
-    position: 'relative', zIndex: 1, margin: '10px 22px 0', padding: '8px 12px', borderRadius: 8,
-    background: G.redSoft, border: '1px solid rgba(255,107,107,0.3)', color: G.red,
+    position: 'relative', zIndex: 1, margin: '10px 22px 0', padding: '8px 12px', borderRadius: 4,
+    background: G.redSoft, border: `1px solid ${G.red}`, color: G.red,
     fontSize: 11.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
   },
   actionErrorClose: {

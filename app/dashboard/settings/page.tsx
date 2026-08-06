@@ -707,7 +707,7 @@ export default function SettingsPage() {
             stop paying reads down this panel, and the reversible option should
             be the one they meet first. */}
         {!isAdmin && sub?.hasSubscription && !sub.cancelAtPeriodEnd && (
-          <div style={{ ...sectionStyle, borderLeft: '3px solid var(--brand-primary)' }}>
+          <div style={sectionStyle}>
             <div style={sectionHeaderStyle}>
               ▸ {paused ? 'SUBSCRIPTION PAUSED' : 'PAUSE SUBSCRIPTION'}
             </div>
@@ -1085,11 +1085,14 @@ const pageStyle: React.CSSProperties = {
   padding: 40, fontFamily: FUTURA,
 }
 
+// The outer settings panel. No top stripe: docs/PALETTE.md reserves that for
+// the primary button and for cards carrying semantic weight, and putting it on
+// the container that wraps every section made it decoration rather than a
+// signal — the whole page read as "important".
 const cardStyle: React.CSSProperties = {
   width: '100%', maxWidth: 640,
   background: CHROME.surface,
   border: `1px solid ${CHROME.border}`,
-  borderTop: '3px solid var(--brand-primary)',
   borderRadius: 4, padding: 32,
   color: CHROME.text,
   fontFamily: FUTURA, boxSizing: 'border-box',
@@ -1106,10 +1109,17 @@ const subtitleStyle: React.CSSProperties = {
   marginBottom: 28, wordBreak: 'break-word',
 }
 
+// Plain bordered card. No accent stripe by default.
+//
+// Every section used to carry a blue borderLeft, which meant the accent marked
+// nothing — six boxes in a row all flagged as important is the same as none of
+// them being flagged. docs/PALETTE.md treats the left/top stripe as an OPTIONAL
+// accent for semantic weight, so it's reserved for that now: DELETE ACCOUNT
+// keeps its red, and anything genuinely dangerous or exceptional can opt in by
+// overriding borderLeft.
 const sectionStyle: React.CSSProperties = {
   background: CHROME.sectionBg,
   border: `1px solid ${CHROME.border}`,
-  borderLeft: '3px solid var(--brand-primary)',
   borderRadius: 3,
   padding: 16, marginBottom: 20,
 }
