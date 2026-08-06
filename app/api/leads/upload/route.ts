@@ -96,12 +96,60 @@ export async function POST(req: Request) {
       )
     }
 
-    const leadsToInsert = leads.map((lead: any) => {
-      let phone = ''
-      let first_name = ''
-      let last_name = ''
+    // ── ROW-BY-ROW VALIDATION WITH REASONS ────────────────────────────────
+    // This used to be a .map().filter() that silently dropped anything without
+    // a 10-digit phone, and only reported a problem when EVERY row failed. A
+    // user uploading 1,000 rows of which 900 were unusable was told the upload
+    // succeeded — the single worst outcome, because the list looks fine and the
+    // shortfall is discovered days later while dialing.
+    //
+    // Every rejection is now categorised and counted, with a few real examples
+    // per category so the user can see the actual offending value rather than
+    // being told to go and check their file.
+    type RejectReason =
+      | 'no_phone_column'
+      | 'phone_too_short'
+      | 'phone_too_long'
+      | 'duplicate_in_file'
+      | 'malformed_row'
 
-      if (typeof lead === 'object' && !Array.isArray(lead)) {
+    const REJECT_LABELS: Record<RejectReason, string> = {
+      no_phone_column:   'No phone number found in the row',
+      phone_too_short:   'Phone number has fewer than 10 digits',
+      phone_too_long:    'Phone number has more digits than a valid US number',
+      duplicate_in_file: 'Duplicate phone number within this file',
+      malformed_row:     'Row could not be read (not a record or a list of values)',
+    }
+
+    const rejects: Record<RejectReason, { count: number; examples: string[] }> = {
+      no_phone_column:   { count: 0, examples: [] },
+      phone_too_short:   { count: 0, examples: [] },
+      phone_too_long:    { count: 0, examples: [] },
+      duplicate_in_file: { count: 0, examples: [] },
+      malformed_row:     { count: 0, examples: [] },
+    }
+
+    const EXAMPLES_PER_REASON = 3
+    const reject = (reason: RejectReason, rowNumber: number, sample: string) => {
+      const bucket = rejects[reason]
+      bucket.count++
+      if (bucket.examples.length < EXAMPLES_PER_REASON) {
+        // Row number is 1-based and offset by the header row, so it matches
+        // what the user sees in their spreadsheet.
+        bucket.examples.push(`row ${rowNumber + 2}: ${sample || '(empty)'}`)
+      }
+    }
+
+    const seenPhones = new Set<string>()
+    /** A row that passed validation and is ready to insert. */
+    type LeadRow = Record<string, unknown> & { phone: string }
+    const leadsToInsert: LeadRow[] = []
+
+    leads.forEach((lead: any, i: number) => {
+      let phone = ''
+      let built: LeadRow | null = null
+
+      if (typeof lead === 'object' && lead !== null && !Array.isArray(lead)) {
         // Only match recognized header name variants — no positional
         // fallback to keys[0]/keys[1]. A positional fallback silently
         // assigns whatever happens to be in the first/second column to
@@ -110,12 +158,12 @@ export async function POST(req: Request) {
         // is exactly what produced rows where last_name showed a raw phone
         // number. Leaving these blank when no recognized header matches is
         // more honest than guessing from column position.
-        first_name = lead['first_name'] || lead['First Name'] ||
+        const first_name = lead['first_name'] || lead['First Name'] ||
           lead['firstname'] || lead['FirstName'] ||
           lead['first'] || lead['First'] ||
           lead['name'] || lead['Name'] || ''
 
-        last_name = lead['last_name'] || lead['Last Name'] ||
+        const last_name = lead['last_name'] || lead['Last Name'] ||
           lead['lastname'] || lead['LastName'] ||
           lead['last'] || lead['Last'] || ''
 
@@ -126,7 +174,7 @@ export async function POST(req: Request) {
             typeof v === 'string' && v.replace(/\D/g, '').length >= 10
           ) as string || ''
 
-        return {
+        built = {
           campaign_id,
           user_id: userId,
           first_name,
@@ -138,19 +186,15 @@ export async function POST(req: Request) {
           extra_data: lead,
           ...parseConsent(lead),
         }
-      }
-
-      if (Array.isArray(lead)) {
+      } else if (Array.isArray(lead)) {
         phone = lead.find((v: any) =>
           typeof v === 'string' && v.replace(/\D/g, '').length >= 10
         ) || ''
 
         // Array-format rows genuinely have no header names to match against
-        // at all, so a positional guess is the only option here — kept
-        // as-is (unlike the object path above, which now has real header
-        // names available and shouldn't guess). Flagged in extra_data.raw
-        // so a bad guess is at least traceable back to the original row.
-        return {
+        // at all, so a positional guess is the only option here. Flagged in
+        // extra_data.raw so a bad guess is traceable to the original row.
+        built = {
           campaign_id,
           user_id: userId,
           first_name: lead[0] || '',
@@ -158,22 +202,70 @@ export async function POST(req: Request) {
           phone: String(phone).replace(/\D/g, ''),
           status: 'uncalled',
           extra_data: { raw: lead },
-          // Array-format leads can't carry consent metadata cleanly,
-          // so consent fields default to null
           consent_date: null,
           consent_source: null,
           consent_description: null,
           consent_proof_url: null,
         }
+      } else {
+        reject('malformed_row', i, typeof lead)
+        return
       }
 
-      return null
-    }).filter((lead: any) => lead && lead.phone && lead.phone.length >= 10)
+      const digits: string = built.phone
+      const raw = String(phone || '').slice(0, 40)
+
+      if (digits.length === 0) {
+        reject('no_phone_column', i, raw)
+        return
+      }
+      if (digits.length < 10) {
+        reject('phone_too_short', i, `${raw} (${digits.length} digits)`)
+        return
+      }
+      // 11 is fine when it is a US country code; anything longer is not a
+      // number we can dial and would fail at the carrier instead.
+      if (digits.length > 11 || (digits.length === 11 && !digits.startsWith('1'))) {
+        reject('phone_too_long', i, `${raw} (${digits.length} digits)`)
+        return
+      }
+      if (seenPhones.has(digits)) {
+        reject('duplicate_in_file', i, raw)
+        return
+      }
+
+      seenPhones.add(digits)
+      leadsToInsert.push(built)
+    })
+
+    // A human-readable summary, built once and reused for both the failure
+    // response and the partial-success one.
+    const rejectSummary = (Object.keys(rejects) as RejectReason[])
+      .filter(k => rejects[k].count > 0)
+      .map(k => ({
+        reason: k,
+        label: REJECT_LABELS[k],
+        count: rejects[k].count,
+        examples: rejects[k].examples,
+      }))
+
+    const rejectedTotal = rejectSummary.reduce((n, r) => n + r.count, 0)
 
     if (leadsToInsert.length === 0) {
+      // Say WHICH problem, with examples. "No valid leads found" on its own
+      // gives the user nothing to act on and generates a support ticket.
+      const detail = rejectSummary
+        .map(r => `${r.label} (${r.count}): ${r.examples.join('; ')}`)
+        .join(' | ')
+
       return NextResponse.json({
         success: false,
-        error: 'No valid leads found. Make sure your file has phone numbers with at least 10 digits.'
+        error: rejectSummary.length === 1
+          ? `No leads could be imported — every row was rejected: ${rejectSummary[0].label.toLowerCase()}.`
+          : `No leads could be imported. All ${rejectedTotal} rows were rejected.`,
+        detail: detail || 'The file contained no readable rows.',
+        rejected: rejectedTotal,
+        rejections: rejectSummary,
       }, { status: 400 })
     }
 
@@ -202,6 +294,11 @@ export async function POST(req: Request) {
       count: leadsToInsert.length,
       total: actualCount,
       withConsent: consentCount,
+      // A PARTIAL import is still a problem the user needs to know about.
+      // Reporting only the success count is how someone uploads 1,000 rows,
+      // imports 100, and finds out days later while dialing.
+      rejected: rejectedTotal,
+      rejections: rejectSummary,
     })
   } catch (error: any) {
     return apiError(error, { route: 'leads/upload' })

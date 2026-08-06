@@ -120,7 +120,10 @@ describe('isCallableNow — fails closed', () => {
     // the area code can place this lead.
     const r = isCallableNow({ phone: '+19995550142', state: null })
     expect(r.allowed).toBe(false)
-    expect(r.reason).toMatch(/unknown state/i)
+    // The message names the area code now instead of saying "unknown state".
+    // Same refusal, but it tells the agent what to fix — the old wording read
+    // as a time restriction and sent people away to wait for a window.
+    expect(r.reason).toMatch(/unrecognised area code 999/i)
   })
 
   it('refuses an unusable phone value rather than defaulting to allowed', () => {
@@ -161,5 +164,39 @@ describe('isCallableNow — override', () => {
     expect(isCallableNow({ phone: '+13365550142', state: 'NC' }).allowed).toBe(false)
     expect(isCallableNow({ phone: '+13365550142', state: 'NC' }, {}).allowed).toBe(false)
     expect(isCallableNow({ phone: '+13365550142', state: 'NC' }, { overrideWindow: false }).allowed).toBe(false)
+  })
+})
+
+// ── SPECIFIC REASONS, NOT "outside the calling window" ─────────────────────
+// An agent told to wait for a calling window will wait. If the real problem is
+// a seven-digit phone number, waiting never helps — so these three causes must
+// report as three different problems, not one.
+describe('isCallableNow — unreachable leads report why', () => {
+  it('says the phone is missing, not that the window is closed', () => {
+    const r = isCallableNow({ phone: '', state: null })
+    expect(r.allowed).toBe(false)
+    expect(r.reason).toBe('No phone number on this lead')
+  })
+
+  it('says the number is invalid and how many digits it had', () => {
+    const r = isCallableNow({ phone: '555-1234', state: null })
+    expect(r.allowed).toBe(false)
+    expect(r.reason).toContain('Invalid phone number')
+    expect(r.reason).toContain('7 digit')
+    expect(r.reason).not.toContain('window starts')
+  })
+
+  it('names an unrecognised area code rather than blaming the clock', () => {
+    // 999 is not an assigned NANP area code.
+    const r = isCallableNow({ phone: '9995550142', state: null })
+    expect(r.allowed).toBe(false)
+    expect(r.reason).toContain('999')
+    expect(r.reason).toContain('Unrecognised area code')
+  })
+
+  it('treats a leading US country code as valid length', () => {
+    const r = isCallableNow({ phone: '19995550142', state: null })
+    expect(r.reason).toContain('Unrecognised area code 999')
+    expect(r.reason).not.toContain('Invalid phone number')
   })
 })

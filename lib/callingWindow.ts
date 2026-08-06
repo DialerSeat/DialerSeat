@@ -131,10 +131,41 @@ function evaluateCallability(lead: LeadInput): CallabilityResult {
 
   // Fail CLOSED. If we cannot establish where the lead is, we cannot
   // establish that calling them is legal, and the safe answer is no.
+  //
+  // But SAY WHICH PROBLEM IT IS. Every one of these used to report "cannot
+  // determine calling window", which reads as a time-of-day restriction — so
+  // an agent with a malformed phone number was told to wait until morning for
+  // a lead that would never become dialable. The three causes need three
+  // different actions from the user, so they get three different messages.
   if (!state || !STATE_TIMEZONES[state]) {
+    const digits = (lead.phone || '').replace(/\D/g, '')
+
+    if (digits.length === 0) {
+      return { allowed: false, reason: 'No phone number on this lead' }
+    }
+
+    // 10 digits, or 11 starting with a US country code.
+    const isPlausibleUsNumber =
+      digits.length === 10 || (digits.length === 11 && digits.startsWith('1'))
+
+    if (!isPlausibleUsNumber) {
+      return {
+        allowed: false,
+        reason:
+          `Invalid phone number — ${digits.length} digit${digits.length === 1 ? '' : 's'} ` +
+          `(a US number needs 10)`,
+      }
+    }
+
+    // A well-formed number whose area code we do not recognise. Genuinely
+    // different from a malformed one: the number may be fine and our area-code
+    // table may simply be behind, so name the area code so it can be checked.
+    const areaCode = digits.length === 11 ? digits.slice(1, 4) : digits.slice(0, 3)
     return {
       allowed: false,
-      reason: 'Unknown state — cannot determine calling window',
+      reason:
+        `Unrecognised area code ${areaCode} — cannot confirm the lead's state, ` +
+        `so the calling window cannot be checked. Add a state to this lead to dial it.`,
     }
   }
 

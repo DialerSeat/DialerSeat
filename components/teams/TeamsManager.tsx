@@ -749,7 +749,6 @@ export default function TeamsManager() {
         <div style={{
           background: T.surface,
           border: `1px solid ${T.border}`,
-          borderTop: `3px solid ${T.blue}`,
           borderRadius: 4,
           padding: '16px 20px',
           marginBottom: 16,
@@ -1138,7 +1137,7 @@ export default function TeamsManager() {
       {/* CREATE TEAM MODAL */}
       {showCreateModal && (
         <div onClick={() => !creating && setShowCreateModal(false)} style={overlayStyle}>
-          <div onClick={e => e.stopPropagation()} style={{ ...modalShellStyle, borderTop: `3px solid ${T.blue}` }}>
+          <div onClick={e => e.stopPropagation()} style={modalShellStyle}>
             <div style={{ fontSize: 12, fontWeight: 'bold', letterSpacing: 4, color: T.blue, marginBottom: 16 }}>+ CREATE A TEAM</div>
             <FieldLabel>TEAM NAME</FieldLabel>
             <input
@@ -1166,7 +1165,7 @@ export default function TeamsManager() {
       {/* EDIT TEAM MODAL */}
       {editTeam && (
         <div onClick={() => !editSubmitting && setEditTeam(null)} style={overlayStyle}>
-          <div onClick={e => e.stopPropagation()} style={{ ...modalShellStyle, borderTop: `3px solid ${T.blue}` }}>
+          <div onClick={e => e.stopPropagation()} style={modalShellStyle}>
             <div style={{ fontSize: 12, fontWeight: 'bold', letterSpacing: 4, color: T.blue, marginBottom: 16 }}>EDIT TEAM</div>
             <FieldLabel>TEAM NAME</FieldLabel>
             <input
@@ -1246,7 +1245,7 @@ export default function TeamsManager() {
       {/* ATTACH CAMPAIGN MODAL */}
       {attachModalTeam && (
         <div onClick={() => !attachSubmitting && setAttachModalTeam(null)} style={overlayStyle}>
-          <div onClick={e => e.stopPropagation()} style={{ ...modalShellStyle, borderTop: `3px solid ${T.blue}` }}>
+          <div onClick={e => e.stopPropagation()} style={modalShellStyle}>
             <div style={{ fontSize: 12, fontWeight: 'bold', letterSpacing: 4, color: T.blue, marginBottom: 4 }}>+ ATTACH CAMPAIGN</div>
             <div style={{ fontSize: 11, color: T.muted, marginBottom: 18, letterSpacing: 1 }}>
               to {attachModalTeam.name}
@@ -1324,7 +1323,7 @@ export default function TeamsManager() {
         const selectedMode: AccessMode | undefined = selectedTC?.accessMode
         return (
           <div onClick={() => !grantSubmitting && setGrantTarget(null)} style={overlayStyle}>
-            <div onClick={e => e.stopPropagation()} style={{ ...modalShellStyle, borderTop: `3px solid ${T.blue}` }}>
+            <div onClick={e => e.stopPropagation()} style={modalShellStyle}>
               <div style={{ fontSize: 12, fontWeight: 'bold', letterSpacing: 4, color: T.blue, marginBottom: 4 }}>
                 + ADD CAMPAIGN ACCESS
               </div>

@@ -274,6 +274,20 @@ const tdStyle: React.CSSProperties = {
   textOverflow: 'ellipsis',
 }
 
+interface UploadRejection {
+  reason: string
+  label: string
+  count: number
+  examples: string[]
+}
+
+interface UploadFailure {
+  error: string
+  detail?: string
+  rejected?: number
+  rejections?: UploadRejection[]
+}
+
 export default function CampaignsPage() {
   const { user } = useUser()
   const [tier, setTier] = useState<AccessTier>(null)
@@ -404,7 +418,11 @@ export default function CampaignsPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [deleteTyped, setDeleteTyped] = useState('')
 
-  const [csvUploadError, setCsvUploadError] = useState(false)
+  // The server's actual reason, not a boolean. This was a flag, and the modal
+  // hardcoded "you have exceeded the limit of 10,000 leads" for EVERY upload
+  // failure — so a file with malformed phone numbers reported a quota problem
+  // the user did not have, and there was nothing to act on.
+  const [csvUploadError, setCsvUploadError] = useState<UploadFailure | null>(null)
 
   const isLapsed = tier === 'lapsed' || tier === 'new'
 
@@ -705,7 +723,7 @@ export default function CampaignsPage() {
       }
 
       
-      let csvFailed = false
+      let csvFailed: UploadFailure | null = null
       if (csvData.length > 0) {
         try {
           const uploadRes = await fetch('/api/leads/upload', {
@@ -724,12 +742,30 @@ export default function CampaignsPage() {
               uploadData = null
             }
             if (!uploadRes.ok || !uploadData?.success) {
-              csvFailed = true
+              csvFailed = {
+                error: typeof uploadData?.error === 'string'
+                  ? uploadData.error
+                  : 'The leads file could not be imported. The campaign was created without it.',
+                detail: typeof uploadData?.detail === 'string' ? uploadData.detail : undefined,
+                rejected: typeof uploadData?.rejected === 'number' ? uploadData.rejected : undefined,
+                rejections: Array.isArray(uploadData?.rejections) ? uploadData.rejections : undefined,
+              }
+            } else if (typeof uploadData?.rejected === 'number' && uploadData.rejected > 0) {
+              // Campaign created and leads imported, but not all of them —
+              // still worth telling someone before they start dialing a list
+              // that is smaller than the file they uploaded.
+              csvFailed = {
+                error: `Campaign created. Imported ${uploadData.count?.toLocaleString?.() ?? uploadData.count} ` +
+                       `leads — ${uploadData.rejected.toLocaleString()} rows could not be used.`,
+                rejected: uploadData.rejected,
+                rejections: Array.isArray(uploadData?.rejections) ? uploadData.rejections : undefined,
+              }
             }
           }
         } catch {
-          
-          csvFailed = true
+          csvFailed = {
+            error: 'The leads file could not be uploaded — the request failed. The campaign was created without it.',
+          }
         }
       }
 
@@ -749,7 +785,7 @@ export default function CampaignsPage() {
       resetCreateForm()
       setShowCreate(false)
       fetchCampaigns()
-      if (csvFailed) setCsvUploadError(true)
+      if (csvFailed) setCsvUploadError(csvFailed)
     } finally {
       setCreating(false)
     }
@@ -839,6 +875,7 @@ export default function CampaignsPage() {
 
     let ok = false
     let isLapsedError = false
+    let failure: UploadFailure | null = null
     try {
       const res = await fetch('/api/leads/upload', {
         method: 'POST',
@@ -857,16 +894,40 @@ export default function CampaignsPage() {
         data = null
       }
       ok = res.ok && !!data?.success
+      if (!ok && !isLapsedError) {
+        failure = {
+          error: typeof data?.error === 'string'
+            ? data.error
+            : 'The upload could not be completed.',
+          detail: typeof data?.detail === 'string' ? data.detail : undefined,
+          rejected: typeof data?.rejected === 'number' ? data.rejected : undefined,
+          rejections: Array.isArray(data?.rejections) ? data.rejections : undefined,
+        }
+      }
+      // A PARTIAL import still needs surfacing. Reporting only the success
+      // count is how someone uploads 1,000 rows, imports 100, and discovers
+      // the shortfall days later while dialing.
+      if (ok && typeof data?.rejected === 'number' && data.rejected > 0) {
+        failure = {
+          error: `Imported ${data.count?.toLocaleString?.() ?? data.count} leads — ` +
+                 `${data.rejected.toLocaleString()} rows could not be used.`,
+          rejected: data.rejected,
+          rejections: Array.isArray(data?.rejections) ? data.rejections : undefined,
+        }
+      }
     } catch {
-      
+
       ok = false
     }
 
     if (!ok && !isLapsedError) {
-      setCsvUploadError(true)
+      setCsvUploadError(failure ?? {
+        error: 'The upload could not be completed. If this persists, contact support@dialerseat.com.',
+      })
       return
     }
     if (!ok) return
+    if (failure) setCsvUploadError(failure)
 
     setPendingBlankCampaignId(prev => (prev === campaignId ? null : prev))
     setPreviews(prev => {
@@ -1656,7 +1717,6 @@ export default function CampaignsPage() {
         .cmp-card {
           background: ${T.surface};
           border: 1px solid ${T.border};
-          border-top: 3px solid ${T.blue};
           border-radius: 4px;
           overflow: hidden;
           display: flex;
@@ -2513,7 +2573,6 @@ export default function CampaignsPage() {
           padding: 60px 24px;
           background: ${T.surface};
           border: 1px solid ${T.border};
-          border-top: 3px solid ${T.blue};
           border-radius: 4px;
           max-width: 480px;
           margin: 40px auto;
@@ -3633,24 +3692,70 @@ export default function CampaignsPage() {
 
       {/* ─── CSV UPLOAD REJECTED ─────────────────────────────────────── */}
       {csvUploadError && (
-        <div className="modal-overlay" onClick={() => setCsvUploadError(false)}>
+        <div className="modal-overlay" onClick={() => setCsvUploadError(null)}>
           <div className="settings-modal" style={{ maxWidth: 440 }} onClick={e => e.stopPropagation()}>
             <div className="settings-head">
               <div style={{
                 flex: 1, fontSize: 11, fontWeight: 'bold', letterSpacing: 3,
                 color: 'white', padding: '6px 10px', fontFamily: FUTURA,
               }}>
-                CSV REJECTED
+                {csvUploadError.rejections && (csvUploadError.rejected ?? 0) > 0 && !csvUploadError.detail
+                  ? 'SOME ROWS SKIPPED'
+                  : 'UPLOAD PROBLEM'}
               </div>
-              <button className="settings-close" onClick={() => setCsvUploadError(false)}>×</button>
+              <button className="settings-close" onClick={() => setCsvUploadError(null)}>×</button>
             </div>
             <div className="settings-body">
               <p style={{
-                fontSize: 12, lineHeight: 1.7, color: T.text, margin: 0,
-                letterSpacing: 0.5, fontFamily: 'monospace',
+                fontSize: 12.5, lineHeight: 1.7, color: T.text, margin: 0,
+                letterSpacing: 0.3, fontFamily: FUTURA, fontWeight: 'bold',
               }}>
-                You have exceeded the limit of 10,000 leads uploaded per campaign. If this
-                problem persists, contact support@dialerseat.com.
+                {csvUploadError.error}
+              </p>
+
+              {/* Per-reason breakdown with real examples, so the user can see
+                  the offending value instead of being told to go and check. */}
+              {csvUploadError.rejections && csvUploadError.rejections.length > 0 && (
+                <div style={{ marginTop: 14 }}>
+                  {csvUploadError.rejections.map(r => (
+                    <div key={r.reason} style={{
+                      marginBottom: 10, paddingBottom: 10,
+                      borderBottom: `1px solid ${T.border}`,
+                    }}>
+                      <div style={{
+                        fontSize: 11, fontWeight: 'bold', letterSpacing: 0.4,
+                        color: T.text, fontFamily: FUTURA,
+                      }}>
+                        {r.label} — {r.count.toLocaleString()} row{r.count === 1 ? '' : 's'}
+                      </div>
+                      {r.examples.length > 0 && (
+                        <div style={{
+                          fontSize: 11, lineHeight: 1.65, color: T.muted,
+                          fontFamily: 'monospace', marginTop: 4, wordBreak: 'break-all',
+                        }}>
+                          {r.examples.join('\n')}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {csvUploadError.detail && !csvUploadError.rejections && (
+                <p style={{
+                  fontSize: 11, lineHeight: 1.65, color: T.muted, marginTop: 10,
+                  fontFamily: 'monospace', wordBreak: 'break-word',
+                }}>
+                  {csvUploadError.detail}
+                </p>
+              )}
+
+              <p style={{
+                fontSize: 11, lineHeight: 1.6, color: T.muted, marginTop: 14,
+                fontFamily: FUTURA,
+              }}>
+                Row numbers match your spreadsheet. If this looks wrong, send the file to
+                support@dialerseat.com.
               </p>
             </div>
             <div className="settings-footer">
@@ -3658,7 +3763,7 @@ export default function CampaignsPage() {
               <div className="settings-footer-right">
                 <button
                   className="ds-btn"
-                  onClick={() => setCsvUploadError(false)}
+                  onClick={() => setCsvUploadError(null)}
                 >OK</button>
               </div>
             </div>

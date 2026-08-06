@@ -752,6 +752,9 @@ export default function SettingsPage() {
               disabled={pausing}
               style={{
                 ...secondaryButtonStyle,
+                // No accent bar on this one — it is a reversible, low-stakes
+                // action and the coloured rule read as a warning.
+                borderTop: 'none',
                 width: '100%', flex: 'none',
                 opacity: pausing ? 0.5 : 1,
                 cursor: pausing ? 'not-allowed' : 'pointer',

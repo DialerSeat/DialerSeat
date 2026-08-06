@@ -501,6 +501,11 @@ function DialerPageInner() {
 
   const [shouldYield, setShouldYield] = useState(false)
   const [tcpaBlockedAll, setTcpaBlockedAll] = useState(false)
+  // The SERVER's reason for the block. The banner used to hardcode an
+  // 8AM-9PM message, which told an agent to wait until morning for leads that
+  // were actually unreachable — bad area codes, malformed numbers, a Sunday
+  // restriction. Those never resolve by waiting.
+  const [tcpaBlockedReason, setTcpaBlockedReason] = useState<string | null>(null)
   // The real, specific reason /api/leads/next gave for why no lead was
   // returned (e.g. "Too early in TX (6:30 local, window starts 8:00)",
   // "Unknown state — cannot determine calling window", "Not a member of
@@ -2291,12 +2296,14 @@ function DialerPageInner() {
     if (data.success) {
       setNoLeads(false)
       setTcpaBlockedAll(false)
+      setTcpaBlockedReason(null)
       setNoLeadsReason(null)
       setNoLeadsStatus(null)
       return data.lead
     } else {
       setNoLeads(true)
       setTcpaBlockedAll(!!data.tcpaBlocked)
+      setTcpaBlockedReason(typeof data.error === 'string' ? data.error : null)
       setNoLeadsReason(typeof data.error === 'string' ? data.error : null)
       setNoLeadsStatus(res.status)
       return null
@@ -2501,7 +2508,10 @@ function DialerPageInner() {
             `TCPA SKIP — ${data.leadState || '?'}: ${data.detail}`,
             ...prev,
           ].slice(0, 5))
-          showQueueOutcome(lead.id, 'Outside calling window…')
+          // The server's own reason, not a generic one — "Invalid phone
+          // number — 7 digits" is actionable where "outside calling window"
+          // sends the agent to wait for a window that will never help.
+          showQueueOutcome(lead.id, data.detail || 'Outside calling window…')
           setStatus('idle')
           setCurrentLead(null)
           if (autoChainOnFailure) scheduleDial(500)
@@ -3931,7 +3941,9 @@ function DialerPageInner() {
             letterSpacing: '0.3px',
             flexShrink: 0,
           }}>
-            ⏱ Outside 8AM–9PM calling window — queue shown for review, dialing will resume automatically once the window opens.
+            ⏱ {tcpaBlockedReason
+              ? `${tcpaBlockedReason} — queue shown for review.`
+              : 'Outside the calling window — queue shown for review, dialing will resume automatically once the window opens.'}
           </div>
         )}
 
