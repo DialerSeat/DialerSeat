@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState, useMemo, useRef } from 'react'
+import CopyableEmail from '../CopyableEmail'
 
 
 
@@ -424,7 +425,9 @@ export default function OverviewApp() {
           color: ${T.muted};
           font-family: monospace;
           margin-top: 2px;
+          display: block;
         }
+        .ovr-email:hover { color: ${T.text}; }
         .ovr-status-stack {
           display: flex;
           flex-direction: column;
@@ -793,7 +796,7 @@ export default function OverviewApp() {
                       }}>ADMIN</span>
                     )}
                   </div>
-                  <div className="ovr-email">{u.email}</div>
+                  <CopyableEmail email={u.email} className="ovr-email" />
                 </div>
                 <div className="ovr-leadcount" style={{
                   fontFamily: 'monospace', fontSize: 11, color: T.muted, whiteSpace: 'nowrap',
@@ -824,7 +827,11 @@ export default function OverviewApp() {
                   <div className="ovr-detail">
                     <div className="ovr-detail-cell">
                       <div className="ovr-detail-label">EMAIL</div>
-                      <div className="ovr-detail-value" style={{ fontSize: 11 }}>{u.email}</div>
+                      <CopyableEmail
+                        email={u.email}
+                        className="ovr-detail-value"
+                        style={{ fontSize: 11 }}
+                      />
                     </div>
                     <div className="ovr-detail-cell">
                       <div className="ovr-detail-label">JOINED</div>

@@ -4,6 +4,7 @@ import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
 } from 'recharts'
 import UserProfilePage from './UserProfilePage'
+import CopyableEmail from '../CopyableEmail'
 
 // ─────────────────────────────────────────────────────────────────────────
 // A deliberately different visual language from the rest of the admin
@@ -387,7 +388,8 @@ export default function UserTrackerApp() {
           display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; flex-shrink: 0;
         }
         .ut-uname { font-size: 13px; font-weight: 600; color: ${C.ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .ut-uemail { font-size: 11px; color: ${C.muted}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .ut-uemail { display: block; font-size: 11px; color: ${C.muted}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .ut-uemail:hover { color: ${C.ink}; }
         .ut-metric { font-size: 12.5px; font-weight: 600; color: ${C.ink}; font-variant-numeric: tabular-nums; }
         .ut-metric-sub { font-size: 10px; color: ${C.muted}; }
         .ut-empty { padding: 48px 20px; text-align: center; color: ${C.muted}; font-size: 13px; }
@@ -648,7 +650,7 @@ export default function UserTrackerApp() {
                       <div className="ut-avatar">{initials(r.u)}</div>
                       <div style={{ minWidth: 0 }}>
                         <div className="ut-uname">{nameFor(r.u)}</div>
-                        <div className="ut-uemail">{r.u.email}</div>
+                        <CopyableEmail email={r.u.email} className="ut-uemail" />
                       </div>
                     </div>
                     <div>
