@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { createClient } from '@supabase/supabase-js'
 import { apiError } from '@/lib/apiError'
@@ -148,22 +148,31 @@ export async function POST(req: Request) {
 
     await Promise.all([fromTelnyx(), fromDatabase()])
 
-    // ── SECOND AND THIRD PASSES ────────────────────────────────────────────
+    // ── LATE PASSES, AFTER THE RESPONSE ────────────────────────────────────
     // A dial already in flight when STOP was pressed lands after the first
     // sweep has read. The engine is disarmed by then so nothing new starts,
     // but that last batch would otherwise ring on with nothing left to stop
     // it. Two spaced passes cover a dial that was mid-flight and one that had
-    // not reached Telnyx yet. Both are cheap and idempotent — hanging up an
-    // already-ended call is a no-op, and alreadyHungUp keeps us from asking
-    // twice about the same leg.
-    for (const delay of [1200, 1800]) {
-      await new Promise(resolve => setTimeout(resolve, delay))
-      const before = hungUp
-      await Promise.all([fromTelnyx(), fromDatabase()])
-      if (hungUp > before) {
-        console.warn(`[abort] late pass caught ${hungUp - before} straggler leg(s)`)
+    // not reached Telnyx yet.
+    //
+    // They run in `after()` rather than inline. The client awaits this request
+    // before it will show the dial as stopped, so three seconds of sleeps in
+    // the handler means three seconds of a dead STOP button — trading one
+    // visible bug for another. after() lets the response go immediately and
+    // the sweeps continue on the server.
+    //
+    // Both passes are idempotent: hanging up an already-ended call is a no-op,
+    // and alreadyHungUp keeps us from asking twice about the same leg.
+    after(async () => {
+      for (const delay of [1200, 1800]) {
+        await new Promise(resolve => setTimeout(resolve, delay))
+        const before = hungUp
+        await Promise.all([fromTelnyx(), fromDatabase()])
+        if (hungUp > before) {
+          console.warn(`[abort] late pass caught ${hungUp - before} straggler leg(s)`)
+        }
       }
-    }
+    })
 
     // Calls-only scope stops here: the lines are silenced, but the agent's
     // claims and session stay intact so they keep working.
