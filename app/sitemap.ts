@@ -106,6 +106,12 @@ function apexSitemap(now: Date): MetadataRoute.Sitemap {
     ...crossShoppedPairs().map(([a, b]) =>
       e(`/vs/${matchupSlug(a, b)}`, 0.7, 'monthly')),
 
+    // Teams is the highest-intent cluster on the site — a manager comparing
+    // seat economics is closer to buying than anyone reading a feature page.
+    e('/vs/teams', 0.9, 'monthly'),
+    e('/faq/teams-how-it-works', 0.85, 'monthly'),
+    e('/faq/dialer-for-offshore-agents', 0.85, 'monthly'),
+
     e('/status', 0.5, 'weekly'),
     e('/data/connect-rates', 0.7, 'weekly'),
 

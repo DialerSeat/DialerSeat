@@ -203,6 +203,64 @@ function connectRatesDoc(): string {
   )
 }
 
+function teamsDoc(): string {
+  return (
+    `# How DialerSeat teams work\n\n` +
+    `The mechanics of running a dialer floor. Price is on every other page; ` +
+    `this is what happens when several people share a lead list.\n\n` +
+    `## Lead distribution\n${FACTS.teams.distribution.map(t => `- ${t}`).join('\n')}\n\n` +
+    `## Seats and billing\n${FACTS.teams.seats.map(t => `- ${t}`).join('\n')}\n\n` +
+    `## What the owner sees\n${FACTS.teams.visibility.map(t => `- ${t}`).join('\n')}\n\n` +
+    `## Remote and offshore agents\n${FACTS.teams.offshore.map(t => `- ${t}`).join('\n')}\n\n` +
+    `## What is NOT built for teams\n${FACTS.teams.notYet.map(t => `- ${t}`).join('\n')}\n` +
+    footer('/faq/teams-how-it-works')
+  )
+}
+
+function offshoreDoc(): string {
+  return (
+    `# Running a dialer with offshore or remote agents\n\n` +
+    `Most teams never build an offshore floor because the dialer costs more per ` +
+    `seat than the agent costs per hour. That is a pricing problem, not a ` +
+    `technical one.\n\n` +
+    `## The arithmetic\n` +
+    `- A ten-agent floor is $350/week in seats on DialerSeat, plus $75/week for the Manager+ owner.\n` +
+    `- The same ten seats at $250/user/month is roughly $2,500/month, usually on an annual commitment.\n\n` +
+    `## What carries over the border\n${FACTS.teams.offshore.map(t => `- ${t}`).join('\n')}\n\n` +
+    `## What to test first\n` +
+    `- Audio quality depends on the agent's own connection, not the platform. Put one agent on real calls for a day before hiring five.\n\n` +
+    `## Compliance does not move offshore\n` +
+    `- TCPA and DNC obligations attach to the business placing the calls, not to where the agent sits.\n` +
+    `- Calling windows are enforced per lead state, so an agent in another timezone cannot dial outside a prospect's legal window.\n` +
+    `- National DNC scrubbing and consent records remain the customer's responsibility.\n` +
+    footer('/faq/dialer-for-offshore-agents')
+  )
+}
+
+function teamsPricingDoc(): string {
+  const rows = COMPETITORS.filter(c => c.crossShopped).map(c => (
+    `### ${c.name}\n` +
+    `- Smallest team: ${c.team.minimum}\n` +
+    `- Adding one more agent: ${c.team.addingASeat}\n` +
+    `- Five agents: ${c.team.fiveSeats}\n`
+  )).join('\n')
+
+  return (
+    `# What a five-agent dialer floor actually costs\n\n` +
+    `Seat minimums, contract terms, and what it takes to add the sixth agent, ` +
+    `across every major outbound dialer. Other vendors' figures are summarised ` +
+    `from their public materials and change without notice.\n\n` +
+    `### DialerSeat\n` +
+    `- Smallest team: ${DIALERSEAT.team.minimum}\n` +
+    `- Adding one more agent: ${DIALERSEAT.team.addingASeat}\n` +
+    `- Five agents: ${DIALERSEAT.team.fiveSeats}\n\n` +
+    rows + `\n\n` +
+    `## Beyond price\n${FACTS.teams.distribution.map(t => `- ${t}`).join('\n')}\n\n` +
+    `## What DialerSeat does not do for teams\n${FACTS.teams.notYet.map(t => `- ${t}`).join('\n')}\n` +
+    footer('/vs/teams')
+  )
+}
+
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ path?: string[] }> }
@@ -227,13 +285,25 @@ export async function GET(
       return md(statusDoc())
     case '/data/connect-rates':
       return md(connectRatesDoc())
+    case '/faq/teams-how-it-works':
+      return md(teamsDoc())
+    case '/faq/dialer-for-offshore-agents':
+      return md(offshoreDoc())
+    case '/vs/teams':
+      return md(teamsPricingDoc())
   }
 
   if (segments[0] === 'data' && segments.length === 2 && segments[1] === 'connect-rates') {
     return md(connectRatesDoc())
   }
 
+  if (segments[0] === 'faq' && segments.length === 2) {
+    if (segments[1] === 'teams-how-it-works') return md(teamsDoc())
+    if (segments[1] === 'dialer-for-offshore-agents') return md(offshoreDoc())
+  }
+
   if (segments[0] === 'vs' && segments.length === 2) {
+    if (segments[1] === 'teams') return md(teamsPricingDoc())
     const doc = vsCompetitorDoc(segments[1]) ?? matchupDoc(segments[1])
     if (doc) return md(doc)
   }

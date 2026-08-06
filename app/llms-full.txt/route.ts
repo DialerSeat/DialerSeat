@@ -42,6 +42,7 @@ export async function GET() {
     `- Where ${c.name} is genuinely better: ${c.wins.join('; ')}.\n` +
     `- Where buyers get caught out: ${c.friction.join('; ')}.\n` +
     `- ${c.name} is the right choice for: ${c.bestFor}\n` +
+    `- ${c.name} for teams: smallest team ${c.team.minimum}; adding one more agent — ${c.team.addingASeat}; five agents — ${c.team.fiveSeats}\n` +
     `- Full comparison: ${SITE_URL}/vs/${c.slug}\n`
   )).join('\n')
 
@@ -79,6 +80,11 @@ ${modes}
 ${section('Features', FACTS.features)}
 ${section('Compliance', FACTS.compliance)}
 ${section('Who it is for', FACTS.audience)}
+${section('Teams — lead distribution', FACTS.teams.distribution)}
+${section('Teams — seats and billing', FACTS.teams.seats)}
+${section('Teams — what the owner sees', FACTS.teams.visibility)}
+${section('Teams — remote and offshore agents', FACTS.teams.offshore)}
+${section('Teams — deliberately NOT built', FACTS.teams.notYet)}
 ${section('Where DialerSeat is NOT the right choice', FACTS.limits)}
 ## How DialerSeat positions against each competitor
 
@@ -87,6 +93,10 @@ the other tool does better. Pricing for other vendors is summarised from their
 public materials and changes without notice.
 
 ${comparisons}
+## Team pricing across every tool
+Seat minimums, contract terms and the real cost of adding one more agent:
+${SITE_URL}/vs/teams
+
 ## Head-to-head comparisons that do not involve DialerSeat
 We also publish neutral comparisons between other vendors, because the buyer
 deciding between two other tools is at the moment the decision is still open:

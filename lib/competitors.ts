@@ -40,6 +40,22 @@ export interface Competitor {
   /** Who this tool is genuinely the right answer for. */
   bestFor: string
   /**
+   * What it takes to add one more agent.
+   *
+   * This is the field the team comparison runs on, and it is deliberately
+   * about FRICTION rather than price. A manager comparing tools already knows
+   * the headline rate; what decides the purchase is whether adding a seat is
+   * an afternoon decision or a procurement event.
+   */
+  team: {
+    /** Smallest purchasable configuration. */
+    minimum: string
+    /** What actually happens when you want one more agent. */
+    addingASeat: string
+    /** Approximate monthly cost of a five-agent floor, stated as the vendor states it. */
+    fiveSeats: string
+  }
+  /**
    * Do buyers actually cross-shop this against other tools on this list?
    * Only true-for-true pairs get a pairwise page — see the comment in
    * app/vs/[matchup]/page.tsx on why we do not generate all of them.
@@ -69,6 +85,11 @@ export const DIALERSEAT = {
   ],
   bestFor:
     'Solo agents through mid-size floors who dial daily, want every mode included, and refuse an annual contract.',
+  team: {
+    minimum: 'One seat',
+    addingASeat: 'Send a join code. The seat is live the moment they accept, and the owner chooses who pays.',
+    fiveSeats: '$175/week in seats plus $75/week for the Manager+ owner — all four dialer modes included, no contract.',
+  },
 }
 
 export const COMPETITORS: Competitor[] = [
@@ -91,6 +112,11 @@ export const COMPETITORS: Competitor[] = [
       'Interface and device support show their age',
     ],
     bestFor: 'Established call centers that want a single system of record and will absorb onboarding.',
+    team: {
+      minimum: 'Quoted per deployment',
+      addingASeat: 'Contact the vendor; setup fee applies before the first call',
+      fiveSeats: 'Quoted, plus a $500–$2,000 setup fee',
+    },
     crossShopped: true,
   },
   {
@@ -113,6 +139,11 @@ export const COMPETITORS: Competitor[] = [
       'Strongest fit is real estate specifically',
     ],
     bestFor: 'Residential real-estate agents who want dialer and lead data from one vendor.',
+    team: {
+      minimum: 'One agent',
+      addingASeat: "Add an Agent Access licence, roughly $10/month, plus that agent's dialer plan",
+      fiveSeats: 'Dialer plans plus ~$10/agent, before lead-data add-ons',
+    },
     crossShopped: true,
   },
   {
@@ -133,6 +164,11 @@ export const COMPETITORS: Competitor[] = [
       'List-size handling can constrain large campaigns',
     ],
     bestFor: 'Consultative sellers who value connection quality over raw dial volume.',
+    team: {
+      minimum: 'One user',
+      addingASeat: 'Add a paid user at the standard per-seat monthly rate',
+      fiveSeats: 'Five per-seat monthly licences',
+    },
     crossShopped: true,
   },
   {
@@ -153,6 +189,11 @@ export const COMPETITORS: Competitor[] = [
       'Overbuilt for teams under roughly fifty seats',
     ],
     bestFor: 'Contact centers of 50–500+ seats with procurement and a dedicated ops function.',
+    team: {
+      minimum: 'Enterprise-scale',
+      addingASeat: 'A sales conversation and a revised contract',
+      fiveSeats: 'Not published; quotes commonly land at $175+ per seat per month',
+    },
     crossShopped: true,
   },
   {
@@ -173,6 +214,11 @@ export const COMPETITORS: Competitor[] = [
       'Usage billing makes the monthly cost harder to predict',
     ],
     bestFor: 'Outbound floors of 20+ seats that need aggressive pacing and will negotiate a contract.',
+    team: {
+      minimum: 'Seat minimum applies',
+      addingASeat: 'Renegotiate the quote; usage billing changes with volume',
+      fiveSeats: 'Custom quote, usage-billed',
+    },
     crossShopped: true,
   },
   {
@@ -193,6 +239,11 @@ export const COMPETITORS: Competitor[] = [
       'Cost climbs quickly off the prepay plan',
     ],
     bestFor: 'Real-estate investors already inside the BatchLeads ecosystem.',
+    team: {
+      minimum: 'One seat',
+      addingASeat: 'Add a seat at the prepay or month-to-month rate',
+      fiveSeats: '~$475 on annual prepay, or roughly $595–$1,245 month to month',
+    },
     crossShopped: true,
   },
   {
@@ -213,6 +264,11 @@ export const COMPETITORS: Competitor[] = [
       'Value depends on already using a supported CRM',
     ],
     bestFor: 'Teams committed to a CRM who want dialing inside it.',
+    team: {
+      minimum: 'One user',
+      addingASeat: 'Add a user, plus $1/month for each additional number',
+      fiveSeats: '$149/month Multi Line for predictive, plus per-number charges',
+    },
     crossShopped: true,
   },
   {
@@ -232,6 +288,11 @@ export const COMPETITORS: Competitor[] = [
       'Cost per seat climbs steeply with capability',
     ],
     bestFor: 'HubSpot-centric sales teams that want tight CRM coupling.',
+    team: {
+      minimum: 'One user',
+      addingASeat: 'Add a user at the tier your dialing needs, which for multi-line is $95+',
+      fiveSeats: '$475+/month at the multi-line tier',
+    },
     crossShopped: true,
   },
   {
@@ -252,6 +313,11 @@ export const COMPETITORS: Competitor[] = [
       'No public pricing',
     ],
     bestFor: 'Funded SDR teams where a rep’s hour is worth far more than the seat.',
+    team: {
+      minimum: 'Three seats',
+      addingASeat: 'Amend the annual contract',
+      fiveSeats: '~$1,250/month, billed annually',
+    },
     crossShopped: true,
   },
   {
@@ -264,6 +330,11 @@ export const COMPETITORS: Competitor[] = [
     wins: ['Broad integration catalogue', 'Solid SMS and shared-inbox features', 'Good international coverage'],
     friction: ['Dialer is behind a higher tier', 'Two-seat minimum', 'Advertised price excludes the dialer'],
     bestFor: 'Teams that want one vendor for calls, SMS, and light dialing.',
+    team: {
+      minimum: 'Two seats',
+      addingASeat: 'Add a user on the Pro tier or above',
+      fiveSeats: '$245+/month on the tier that includes dialing',
+    },
     crossShopped: true,
   },
   {
@@ -276,6 +347,11 @@ export const COMPETITORS: Competitor[] = [
     wins: ['Strong international numbers', 'Clean analytics', 'Low entry price for basic telephony'],
     friction: ['Dialing is an add-on on top of the seat', 'The real cost is well above the headline'],
     bestFor: 'Distributed support or sales teams whose main need is telephony, not volume dialing.',
+    team: {
+      minimum: 'One seat',
+      addingASeat: 'Add a seat, plus the dialer add-on per seat',
+      fiveSeats: '$95 in seats plus $75–$195 in dialer add-ons',
+    },
     crossShopped: true,
   },
   {
@@ -288,6 +364,11 @@ export const COMPETITORS: Competitor[] = [
     wins: ['Very polished product', 'Large integration marketplace', 'Reliable and well supported'],
     friction: ['Power Dialer requires the $50 tier', 'Three-licence minimum', 'No predictive dialing'],
     bestFor: 'Teams that primarily need a great phone system, with light outbound.',
+    team: {
+      minimum: 'Three licences',
+      addingASeat: 'Add a licence on Professional to keep the Power Dialer',
+      fiveSeats: '$250/month on Professional',
+    },
     crossShopped: true,
   },
   {
@@ -300,6 +381,11 @@ export const COMPETITORS: Competitor[] = [
     wins: ['Excellent voice AI and transcription', 'Strong UCaaS feature set', 'Good meetings and messaging'],
     friction: ['Two products to buy outbound dialing', 'Sell is priced separately from the phone system'],
     bestFor: 'Companies standardising on one communications platform company-wide.',
+    team: {
+      minimum: 'One user',
+      addingASeat: 'Add a Dialpad Sell licence, separate from the phone system',
+      fiveSeats: '~$195/month for Sell, on top of Connect',
+    },
     crossShopped: false,
   },
   {
@@ -316,6 +402,11 @@ export const COMPETITORS: Competitor[] = [
       'Capacity planning required',
     ],
     bestFor: 'Organisations that need a PBX and will run outbound some other way.',
+    team: {
+      minimum: 'Licensed by call capacity',
+      addingASeat: 'Increase the simultaneous-call licence tier',
+      fiveSeats: 'Capacity licence — not priced per agent',
+    },
     crossShopped: false,
   },
 ]

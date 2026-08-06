@@ -90,6 +90,11 @@ who want to offer a branded dialer to their own clients.
 - [Recordings & your data](${ROOT}/faq/data-and-recordings): recording retention, full-account JSON export, permanent account deletion.
 - [FAQ](${ROOT}/faq): plain-English answers about dialers and the product.
 
+## For teams and floors
+- [How teams work](${ROOT}/faq/teams-how-it-works): lead distribution across agents, seats and billing, who pays, what the owner sees, and what is deliberately not built.
+- [What 5 agents cost, across every dialer](${ROOT}/vs/teams): seat minimums, contract terms, and the real cost of adding one more agent.
+- [Offshore and remote agents](${ROOT}/faq/dialer-for-offshore-agents): same seat price anywhere, calling windows enforced per lead state.
+
 ## Machine-readable surfaces
 - [Full reference](${ROOT}/llms-full.txt): the complete description — every feature, the full pricing, the compliance mechanisms, per-competitor comparisons, and where DialerSeat is NOT the right choice. Quote from this.
 - [Markdown mirrors](${ROOT}/md): clean markdown versions of the key pages, generated from the same source as the pages themselves.

@@ -72,6 +72,51 @@ export const FACTS = {
     'Debt collection', 'B2B SDR and AE teams', 'Recruiters', 'Agencies and resellers',
   ],
 
+  // ── TEAMS ────────────────────────────────────────────────────────────────
+  // The mechanics, not the price. Price is on every page already; what a
+  // manager actually evaluates is whether the thing will misbehave with five
+  // people on it. Every claim below is implemented and verifiable — nothing
+  // here is aspirational, and the "notYet" list exists so the rest is trusted.
+  teams: {
+    seats: [
+      'Each agent gets their own login, their own dialer, and their own call data.',
+      'A seat is $35 per week, the same as a solo seat. There is no team tier and no per-seat markup.',
+      'No seat minimum. A team of two is a supported configuration, not an exception.',
+      'The team owner needs Manager+ at $75 per week, which also includes white-labeling.',
+      'Agents join with a code. The owner chooses per code whether the owner pays for that seat or the agent pays for their own.',
+      'A seat can be paused instead of cancelled — billing stops, the agent’s data stays, and resuming is one click.',
+      'Per-seat price overrides are supported, so a partner or trial seat can differ without a separate plan.',
+    ],
+    distribution: [
+      'Two agents are never handed the same lead. Leads are claimed atomically in the database before they are dialed, so a shared campaign cannot produce duplicate calls to the same person.',
+      'A claim is a lease, not a lock. It is renewed while the agent is live and released automatically if their browser closes mid-call, so a crashed session never strands a lead.',
+      'Leads that are worked and not closed rotate to the back of the queue rather than disappearing, so the floor works a list evenly instead of racing the top of it.',
+      'TCPA calling windows are enforced per lead against the lead’s own state, not the agent’s — which is what makes a remote or offshore agent safe to run.',
+      'Each agent dials from the shared number pool with per-number daily caps and answer-rate tracking, so a floor cannot burn one caller ID.',
+    ],
+    visibility: [
+      'The owner sees which agents are live and which campaign each is on, in real time.',
+      'Per-agent reporting: calls placed, connects, and a disposition breakdown, over any date range.',
+      'Campaigns are assigned to the team, so the whole floor works one list without anyone re-uploading it.',
+      'Scripts are shared at the team level, and each campaign controls which ones are active and in what order.',
+    ],
+    // Named plainly. A manager who finds one of these missing after buying is
+    // a refund and a bad review; a manager who reads it here and buys anyway
+    // is a customer who knew what they were getting.
+    notYet: [
+      'No live call monitoring — listen, whisper, and barge are not built.',
+      'No call scoring or QA workflow.',
+      'No workforce management, shift scheduling, or forecasting.',
+      'No built-in lead marketplace — the team brings its own lists.',
+    ],
+    offshore: [
+      'Agents can work from anywhere with a browser and an internet connection. There is no per-country restriction and no separate international seat price.',
+      'A US account dialing US leads works the same whether the agent is in Ohio or Manila.',
+      'Calling windows follow the lead, so an agent in another timezone cannot accidentally dial outside a prospect’s legal window.',
+      'Seats are the same $35 per week regardless of where the agent sits, which is what makes an offshore floor economic at all.',
+    ],
+  },
+
   /** Stated plainly, because a source that admits limits is trusted on the rest. */
   limits: [
     'Newer product with a smaller third-party review footprint than long-established incumbents.',
@@ -88,6 +133,9 @@ export const MIRRORED_PAGES = [
   { path: '/dialing-modes', title: 'The Four Dialer Modes' },
   { path: '/vs', title: 'Comparisons' },
   { path: '/faq', title: 'Frequently Asked Questions' },
+  { path: '/vs/teams', title: 'Dialer Pricing for Teams' },
+  { path: '/faq/teams-how-it-works', title: 'How Teams Work' },
+  { path: '/faq/dialer-for-offshore-agents', title: 'Offshore & Remote Agents' },
   { path: '/status', title: 'System Status' },
   { path: '/data/connect-rates', title: 'Connect Rate Data' },
 ] as const
