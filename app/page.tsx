@@ -4,6 +4,7 @@ import Link from "next/link"
 import SiteFooter from '@/components/site-footer'
 import SiteHeader from '@/components/site-header'
 import LandingAuthSync from '@/components/LandingAuthSync'
+import HashScrollFix from '@/components/HashScrollFix'
 import DialerShowcase from '@/components/DialerShowcase'
 import LeadQueueShowcase from '@/components/LeadQueueShowcase'
 
@@ -36,6 +37,7 @@ export default async function Home({ searchParams }: PageProps) {
   return (
     <>
       <LandingAuthSync serverThoughtLoggedIn={isLoggedIn} />
+      <HashScrollFix />
 
       {isLoggedIn && <SiteHeader tenantSlug={returnTenantSlug} />}
 
@@ -118,13 +120,20 @@ export default async function Home({ searchParams }: PageProps) {
         /* Near full-bleed. The mockup runs the panel to ~80px from the left
            edge and the headline to ~80px from the right; a 1200px (or even
            1720px) centred container can't reach either. */
-        .ds-volume-section { padding-bottom: 40px; max-width: none; }
+        /* padding-bottom lives on the two-class rule below, not here: the
+           later .ds-section padding shorthand outranks a single-class
+           longhand on source order and silently wins. */
+        .ds-volume-section { max-width: none; }
         @media (min-width: 1000px) {
           /* Tight to the section divider. The default 90px top padding pushed
              the whole block ~67px lower than the mockup, which is what dragged
              "BUILT FOR VOLUME" and the headline down with it. */
           .ds-section.ds-volume-section {
             padding-left: 80px; padding-right: 80px; padding-top: 24px;
+            /* Tight to the feature cards. The demo and its caption are this
+               section's payoff; 90px of trough under them made the cards read
+               as an unrelated block rather than the continuation they are. */
+            padding-bottom: 24px;
           }
         }
         @media (min-width: 1000px) {
@@ -141,14 +150,12 @@ export default async function Home({ searchParams }: PageProps) {
                grew, which is what put "BUILT FOR VOLUME" too low. */
             align-items: start;
           }
-          .ds-volume-copy { padding-top: 76px; }
+          .ds-volume-copy { padding-top: 33px; }
           .ds-volume-demo { margin: 0; max-width: none; order: 1; }
           .ds-volume-copy { order: 2; }
-          /* The eyebrow label sits left; the headline is CENTRED in the right
-             column — that's what puts "LEADS." on its own centred line rather
-             than ragged-left. */
+          /* The headline is CENTRED in its column — that's what puts "LEADS."
+             on its own centred line rather than ragged-left. */
           .ds-volume-copy { text-align: center; }
-          .ds-volume-eyebrow { text-align: left; }
         }
 
         .ds-stats { flex-direction: row; padding: 16px 12px; gap: 8px; }
@@ -461,7 +468,17 @@ export default async function Home({ searchParams }: PageProps) {
             cleanly, so it stays fluid and keeps its type at full size —
             halving it would render the rows at ~5px. Its own narrow-viewport
             rules live in components/LeadQueueShowcase.tsx. */}
-        <div id="features" className="ds-volume-grid" style={{ marginBottom: '100px' }}>
+        {/* Eyebrow above the grid, in the centred header block every other
+            section uses (How it works, Why DialerSeat, Simple pricing). The
+            headline stays in the right column: this section's whole point is
+            the demo-left / claim-right split, which a centred h2 would undo. */}
+        <div className="ds-volume-head" style={{ textAlign: 'center', marginBottom: '32px' }}>
+          <div style={{ fontSize: '11px', letterSpacing: '3px', fontWeight: 'bold', textTransform: 'uppercase', color: '#2a4a8a' }}>
+            ▸ Built for volume
+          </div>
+        </div>
+
+        <div className="ds-volume-grid" style={{ marginBottom: '32px' }}>
           <div className="ds-volume-demo">
             <LeadQueueShowcase />
             <p style={{
@@ -476,9 +493,6 @@ export default async function Home({ searchParams }: PageProps) {
           </div>
 
           <div className="ds-volume-copy">
-            <div className="ds-volume-eyebrow" style={{ fontSize: '11px', letterSpacing: '3px', fontWeight: 'bold', textTransform: 'uppercase', color: '#2a4a8a', marginBottom: '16px' }}>
-              ▸ Built for volume
-            </div>
             <h2 style={{
               fontSize: 'var(--section-fs)',
               fontWeight: 'bold',
@@ -494,7 +508,7 @@ export default async function Home({ searchParams }: PageProps) {
         </div>
 
         <div className="ds-section" style={{ maxWidth: '1200px', margin: '0 auto', paddingTop: 0 }}>
-        <div className="ds-grid-3" style={{ display: 'grid', gap: '20px' }}>
+        <div id="features" className="ds-grid-3" style={{ display: 'grid', gap: '20px' }}>
           {[
             { icon: '⚡', title: 'PREDICTIVE DIALING', desc: 'Multiple leads dialed at once. The first to pick up is yours. Maximum live conversations per hour, every hour.' },
             { icon: '🎙️', title: 'IDENTIFIES VOICEMAIL', desc: 'Stop wasting your day on dead air. DialerSeat knows when a machine answers and skips ahead to the next live human.' },

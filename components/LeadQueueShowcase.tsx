@@ -121,8 +121,16 @@ const POOL: Row[] = [
   { id: 14, name: 'H. MARCHETTI', phone: '904-555-0136', state: 'FL', attempts: 0 },
 ]
 
-/** How many of the pool are on screen at once. */
-const VISIBLE_ROWS = 6
+/**
+ * How many of the pool are on screen at once.
+ *
+ * 7, not 6, because the footer strip that used to sit under the list is gone
+ * and the queue grows into the space it left — a row is 28px including its
+ * gap and the footer was 29px, so the panel keeps the height it was tuned to
+ * against the headline beside it. More queue is also the better use of the
+ * space: the list is the thing worth looking at.
+ */
+const VISIBLE_ROWS = 7
 
 /** Repeat count on display — matches the dialer's 1x/2x/3x control. */
 const REPEAT = 1
@@ -326,7 +334,6 @@ export default function LeadQueueShowcase() {
   // slot is replaced by one that wasn't on screen a moment ago.
   const matching = q.rows
   const visible = matching.slice(0, VISIBLE_ROWS)
-  const active = visible[0]
   const currentOutcome: Outcome = outcomeFor(q.missStreak, q.missIdx)
 
   return (
@@ -435,7 +442,7 @@ export default function LeadQueueShowcase() {
             gap: 6px;
             padding: 8px 9px;
           }
-          .lq-state, .lq-help, .lq-footnote, .lq-attempts { display: none; }
+          .lq-state, .lq-help, .lq-attempts { display: none; }
           .lq-phone { font-size: 10px; }
           .lq-bar, .lq-strip { padding: 8px 9px; gap: 7px; }
           .lq-list { padding: 8px 9px 11px; }
@@ -505,6 +512,13 @@ export default function LeadQueueShowcase() {
         {visible.map((r, i) => {
           const isActive = i === 0
           const showResult = isActive && q.phase === 'result'
+
+          // Which pass this lead is on. The dial in progress COUNTS — a lead
+          // coming back around for its second go reads 2x while it rings, not
+          // 1x. Waiting for the call to finish before crediting it would mean
+          // the number only ever describes the past, which is the opposite of
+          // what someone watching the row wants to know.
+          const passNo = (r.dialed || 0) + (isActive ? 1 : 0)
           const oc = r.outcome ? OUTCOME_COPY[r.outcome] : null
 
           return (
@@ -533,9 +547,9 @@ export default function LeadQueueShowcase() {
               <span
                 className="lq-attempts"
                 // Accent once it is non-zero, matching the real column.
-                style={{ color: (r.dialed || 0) > 0 ? D.accent : D.muted }}
+                style={{ color: passNo > 0 ? D.accent : D.muted }}
               >
-                {r.dialed || 0}x
+                {passNo}x
               </span>
 
               {isActive ? (
@@ -594,19 +608,6 @@ export default function LeadQueueShowcase() {
             </div>
           )
         })}
-
-      </div>
-
-      {/* ── FOOTER ────────────────────────────────────────────────────── */}
-      <div
-        style={{
-          padding: '8px 12px', borderTop: `1px solid ${D.border}`,
-          background: D.row, fontSize: 9, letterSpacing: 1.1, color: D.muted,
-        }}
-      >
-        WORKED TOP-DOWN
-        <span className="lq-footnote"> &middot; DIALED LEADS ROTATE TO THE BOTTOM, NEVER REMOVED</span>
-        {active ? <> &middot; NEXT: {active.name}</> : null}
       </div>
     </div>
   )
