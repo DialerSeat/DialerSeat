@@ -468,16 +468,6 @@ export default async function Home({ searchParams }: PageProps) {
             cleanly, so it stays fluid and keeps its type at full size —
             halving it would render the rows at ~5px. Its own narrow-viewport
             rules live in components/LeadQueueShowcase.tsx. */}
-        {/* Eyebrow above the grid, in the centred header block every other
-            section uses (How it works, Why DialerSeat, Simple pricing). The
-            headline stays in the right column: this section's whole point is
-            the demo-left / claim-right split, which a centred h2 would undo. */}
-        <div className="ds-volume-head" style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <div style={{ fontSize: '11px', letterSpacing: '3px', fontWeight: 'bold', textTransform: 'uppercase', color: '#2a4a8a' }}>
-            ▸ Built for volume
-          </div>
-        </div>
-
         <div className="ds-volume-grid" style={{ marginBottom: '32px' }}>
           <div className="ds-volume-demo">
             <LeadQueueShowcase />
@@ -508,7 +498,18 @@ export default async function Home({ searchParams }: PageProps) {
         </div>
 
         <div className="ds-section" style={{ maxWidth: '1200px', margin: '0 auto', paddingTop: 0 }}>
-        <div id="features" className="ds-grid-3" style={{ display: 'grid', gap: '20px' }}>
+        {/* Heads the feature cards, the way "Simple pricing" heads the pricing
+            cards and "Why DialerSeat" heads the comparison — centred block,
+            16px to what follows it, 64px to the grid. It carries the #features
+            anchor for the same reason those carry theirs: the label belongs to
+            the section it names, so arriving at it lands on the label. */}
+        <div id="features" style={{ textAlign: 'center', marginBottom: '64px' }}>
+          <div style={{ fontSize: '11px', letterSpacing: '3px', fontWeight: 'bold', textTransform: 'uppercase', color: '#2a4a8a' }}>
+            ▸ Built for volume
+          </div>
+        </div>
+
+        <div className="ds-grid-3" style={{ display: 'grid', gap: '20px' }}>
           {[
             { icon: '⚡', title: 'PREDICTIVE DIALING', desc: 'Multiple leads dialed at once. The first to pick up is yours. Maximum live conversations per hour, every hour.' },
             { icon: '🎙️', title: 'IDENTIFIES VOICEMAIL', desc: 'Stop wasting your day on dead air. DialerSeat knows when a machine answers and skips ahead to the next live human.' },
