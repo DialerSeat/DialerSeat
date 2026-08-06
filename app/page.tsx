@@ -109,13 +109,29 @@ export default async function Home({ searchParams }: PageProps) {
           text-align: center;
         }
         .ds-volume-demo { max-width: 640px; margin: 0 auto; width: 100%; text-align: left; }
-        @media (min-width: 900px) {
+        /* Near full-bleed. The mockup runs the panel to ~80px from the left
+           edge and the headline to ~80px from the right; a 1200px (or even
+           1720px) centred container can't reach either. */
+        .ds-volume-section { padding-bottom: 40px; max-width: none; }
+        @media (min-width: 1000px) {
+          .ds-section.ds-volume-section { padding-left: 80px; padding-right: 80px; }
+        }
+        @media (min-width: 1000px) {
           .ds-volume-grid {
-            grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
-            gap: 56px;
+            /* Demo holds a fixed readable width on the left; the headline takes
+               everything else. A generous gap is what keeps the two halves from
+               reading as one crowded row. */
+            grid-template-columns: minmax(0, 635px) minmax(0, 1fr);
+            gap: 162px;
             text-align: left;
+            align-items: center;
           }
-          .ds-volume-demo { margin: 0; }
+          .ds-volume-demo { margin: 0; max-width: none; }
+          /* The eyebrow label sits left; the headline is CENTRED in the right
+             column — that's what puts "LEADS." on its own centred line rather
+             than ragged-left. */
+          .ds-volume-copy { text-align: center; }
+          .ds-volume-eyebrow { text-align: left; }
         }
 
         .ds-stats { flex-direction: row; padding: 16px 12px; gap: 8px; }
@@ -411,7 +427,10 @@ export default async function Home({ searchParams }: PageProps) {
       </section>
 
       <section style={{ background: 'rgba(226,228,234,0.5)', borderTop: '1px solid #c4c8d0' }}>
-        <div className="ds-section" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+        {/* Wider than the 1200px the rest of the section uses. The demo needs
+            real width to read, and at 1200 the headline column got squeezed
+            into five short lines instead of the three it's written for. */}
+        <div className="ds-section ds-volume-section">
         {/* Two columns: the demo on the LEFT, the claim on the RIGHT — the
             mirror of the hero, which runs copy-left / product-right. Alternating
             the sides keeps the page from reading as one long centred column,
@@ -440,7 +459,7 @@ export default async function Home({ searchParams }: PageProps) {
           </div>
 
           <div className="ds-volume-copy">
-            <div style={{ fontSize: '11px', letterSpacing: '3px', fontWeight: 'bold', textTransform: 'uppercase', color: '#2a4a8a', marginBottom: '16px' }}>
+            <div className="ds-volume-eyebrow" style={{ fontSize: '11px', letterSpacing: '3px', fontWeight: 'bold', textTransform: 'uppercase', color: '#2a4a8a', marginBottom: '16px' }}>
               ▸ Built for volume
             </div>
             <h2 style={{
@@ -455,7 +474,9 @@ export default async function Home({ searchParams }: PageProps) {
             </h2>
           </div>
         </div>
+        </div>
 
+        <div className="ds-section" style={{ maxWidth: '1200px', margin: '0 auto', paddingTop: 0 }}>
         <div className="ds-grid-3" style={{ display: 'grid', gap: '20px' }}>
           {[
             { icon: '⚡', title: 'PREDICTIVE DIALING', desc: 'Multiple leads dialed at once. The first to pick up is yours. Maximum live conversations per hour, every hour.' },
