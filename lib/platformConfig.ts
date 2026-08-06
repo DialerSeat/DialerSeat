@@ -43,15 +43,13 @@ export interface PlatformConfig {
   /** Agent-leg refusals in the window before alerting. */
   agent_leg_refusal_alert_count: number
   /**
-   * Maximum simultaneous outbound call LEGS across the whole platform.
+   * The carrier's account-level concurrent call limit, mirrored for DISPLAY.
    *
-   * Must match the carrier's account limit. Setting it higher does not buy
-   * capacity — the carrier enforces its own regardless — it only converts a
-   * clean refusal we control into a rejected dial we don't.
+   * Nothing enforces this — see lib/concurrency.ts for why the enforcement was
+   * removed. It exists so the Live Ops gauge has a ceiling to draw against,
+   * and should be updated to match whatever Telnyx actually allows.
    */
   concurrency_budget: number
-  /** Legs held back from the predictive controller so a human dial is never blocked. */
-  concurrency_reserve: number
 }
 
 export const PLATFORM_CONFIG_DEFAULTS: PlatformConfig = {
@@ -64,17 +62,15 @@ export const PLATFORM_CONFIG_DEFAULTS: PlatformConfig = {
   pool_capacity_alert_pct: 80,
   webhook_silence_minutes: 20,
   agent_leg_refusal_alert_count: 1,
-  // Matches the Telnyx account-level outbound concurrent call limit. Raise
-  // this the moment they raise theirs — not before.
+  // The Telnyx account-level outbound concurrent call limit. Display only.
   concurrency_budget: 10,
-  concurrency_reserve: 2,
 }
 
 const CONFIG_COLUMNS =
   'amd_enabled_global, recording_enabled_global, number_buying_frozen, ' +
   'predictive_line_ceiling, poll_interval_ms, hangup_poll_interval_ms, ' +
   'pool_capacity_alert_pct, webhook_silence_minutes, agent_leg_refusal_alert_count, ' +
-  'concurrency_budget, concurrency_reserve'
+  'concurrency_budget'
 
 // Cached per process. These are read on hot paths (every dial consults the AMD
 // and recording overrides), and the values change by human action at most a few

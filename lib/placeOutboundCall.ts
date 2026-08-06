@@ -9,7 +9,6 @@ import { syncNumberPoolOnce, isUnverifiedOriginationError } from '@/lib/telnyxNu
 import { getPlatformConfig, resolveWithGlobal } from '@/lib/platformConfig'
 import { normalizeToE164 } from '@/lib/phoneNormalize'
 import { checkSuppression } from '@/lib/suppression'
-import { checkCapacity } from '@/lib/concurrency'
 
 // Re-exported so existing importers (and anything reaching for it here out of
 // habit) keep working. The implementation moved to lib/phoneNormalize.ts
@@ -144,32 +143,6 @@ export async function placeOutboundCall(
     }
   }
 
-  // ── CARRIER CONCURRENCY ───────────────────────────────────────────────────
-  // The carrier caps simultaneous outbound legs at the ACCOUNT level, shared by
-  // every tenant. Without this check the ceiling announced itself as a rejected
-  // dial and a generic error, with the predictive controller cheerfully firing
-  // into it on every heartbeat.
-  //
-  // A user_dial needs TWO legs — the agent's SIP leg and the lead leg — so it
-  // is refused earlier than a fan-out line, which needs one. Counting calls
-  // rather than legs here would understate usage by half on exactly the modes
-  // a team uses most.
-  const legsNeeded = source === 'user_dial' ? 2 : 1
-  const capacity = await checkCapacity(legsNeeded, source === 'user_dial' ? 'agent' : 'controller')
-  if (!capacity.allowed) {
-    console.warn(
-      `[placeOutboundCall:${source}] REFUSED — ${capacity.reason} ` +
-      `(${capacity.snapshot.inFlightLegs}/${capacity.snapshot.budget} legs)`
-    )
-    return {
-      success: false,
-      error: 'All outbound lines are in use',
-      detail: capacity.reason,
-      // 503, not 500: this is a temporary capacity condition and retrying in a
-      // moment is the correct response, which is exactly what the status says.
-      httpStatus: 503,
-    }
-  }
 
   // ── MANUAL DIAL BYPASS (unchanged from prior version) ───────────────────
   const isManualDial = !leadId && !campaignId

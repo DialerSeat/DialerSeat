@@ -1,6 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
 import { placeOutboundCall } from '@/lib/placeOutboundCall'
-import { getConcurrencySnapshot } from '@/lib/concurrency'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -223,28 +222,7 @@ export async function runPredictiveController(
     .filter((id): id is string => !!id)
   const desired = effectiveLines
 
-  // ── PLATFORM CEILING ──────────────────────────────────────────────────────
-  // `inFlight` above is this agent's own pacing. It says nothing about the
-  // rest of the platform, and the carrier limit is shared by everyone — so a
-  // controller pacing itself perfectly could still be the tick that pushes the
-  // account over and starts failing other people's dials.
-  //
-  // The controller is held to a lower ceiling than a person on purpose. An
-  // agent who presses dial and is refused concludes the product is broken; a
-  // background process that waits one beat has cost nobody anything.
-  const capacity = await getConcurrencySnapshot()
-  const shouldDial = Math.max(
-    0,
-    Math.min(desired - inFlight, capacity.availableForController)
-  )
-
-  if (shouldDial === 0 && capacity.availableForController <= 0) {
-    return {
-      fired: 0, desired, inFlight, effectiveLines, degraded,
-      reason: `platform at capacity: ${capacity.inFlightLegs}/${capacity.budget} lines in use`,
-      callSids: [], skipped: 0, released, dedupedPhones: 0, dialedPhones: [], inFlightPhones, inFlightLeadIds,
-    }
-  }
+  const shouldDial = Math.max(0, desired - inFlight)
 
   if (shouldDial === 0) {
     return {

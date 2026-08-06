@@ -48,13 +48,9 @@ const FIELDS: Record<keyof PlatformConfig, Validator> = {
   pool_capacity_alert_pct:   v => intInRange(v, 1, 100),
   webhook_silence_minutes:   v => intInRange(v, 5, 240),
   agent_leg_refusal_alert_count: v => intInRange(v, 1, 500),
-  // The carrier's own account limit, mirrored so it can be raised the instant
-  // Telnyx raises theirs. NOT a way to buy capacity: set above what the
-  // carrier allows and dials get rejected by them rather than refused cleanly
-  // by us, which is strictly worse for the agent watching it happen.
+  // The carrier's account limit, mirrored for the Live Ops gauge only.
+  // Nothing enforces it — see lib/concurrency.ts.
   concurrency_budget:        v => intInRange(v, 1, 5000),
-  // Small on purpose. Headroom for a human pressing dial, not a pool.
-  concurrency_reserve:       v => intInRange(v, 0, 100),
 }
 
 function intInRange(v: unknown, min: number, max: number): number | null {

@@ -42,11 +42,9 @@ const POLL_MS = 5000
 interface OpsData {
   generatedAt: string
   concurrency: {
-    inFlightLegs: number
+    inFlightLegs: number | null
     budget: number
-    reserve: number
-    availableForAgent: number
-    availableForController: number
+    authoritative: boolean
   }
   inFlight: Array<{
     id: string
@@ -145,7 +143,9 @@ export default function LiveOps() {
   }
 
   const c = data?.concurrency
-  const usedPct = c && c.budget > 0 ? (c.inFlightLegs / c.budget) * 100 : 0
+  const usedPct = c && c.budget > 0 && c.inFlightLegs !== null
+    ? (c.inFlightLegs / c.budget) * 100
+    : 0
   const gaugeColor = usedPct >= 90 ? T.red : usedPct >= 65 ? T.amber : T.green
 
   // Machine-vs-human is the ratio that exposed the AMD regression. Surfaced
@@ -194,11 +194,11 @@ export default function LiveOps() {
           {/* ── CONCURRENCY ─────────────────────────────────────────────── */}
           <Panel
             title="CARRIER CONCURRENCY"
-            note="Simultaneous legs against the account ceiling. A user dial uses two — agent leg plus lead leg."
+            note="Live legs on the Telnyx connection, straight from the carrier. A user dial uses two — agent leg plus lead leg."
           >
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
               <span style={{ fontSize: 34, fontWeight: 'bold', color: gaugeColor, lineHeight: 1 }}>
-                {c!.inFlightLegs}
+                {c!.inFlightLegs === null ? '—' : c!.inFlightLegs}
               </span>
               <span style={{ fontSize: 15, color: T.muted }}>/ {c!.budget} legs</span>
             </div>
@@ -210,10 +210,10 @@ export default function LiveOps() {
                 transition: 'width .4s ease',
               }} />
             </div>
-            <div style={{ fontSize: 11, color: T.muted, marginTop: 10, lineHeight: 1.7 }}>
-              Agent dials available: <strong style={{ color: T.text }}>{c!.availableForAgent}</strong><br />
-              Predictive available: <strong style={{ color: T.text }}>{c!.availableForController}</strong>{' '}
-              <span style={{ color: T.muted }}>(reserve {c!.reserve} held for humans)</span>
+            <div style={{ fontSize: 11, color: T.muted, marginTop: 10, lineHeight: 1.65 }}>
+              {c!.authoritative
+                ? 'Reported by Telnyx. Nothing in DialerSeat blocks a dial at this number — the carrier enforces its own ceiling.'
+                : 'Carrier unreachable, so no live figure. The gauge shows a dash rather than a guess.'}
             </div>
           </Panel>
 

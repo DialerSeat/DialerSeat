@@ -1,149 +1,84 @@
-import { getServiceClient } from '@/lib/supabase'
 import { getPlatformConfig } from '@/lib/platformConfig'
 
 // =============================================================================
-// CONCURRENCY BUDGET
+// CONCURRENCY — OBSERVATION ONLY
 // =============================================================================
-// The carrier caps simultaneous outbound calls at the ACCOUNT level, shared by
-// every tenant on the platform. Ours is currently 10. That is not a theoretical
-// ceiling — one six-agent floor on progressive needs more than that on its own.
+// This file used to REFUSE dials at a budget. That has been removed, and the
+// reason is worth recording so nobody rebuilds it the same way.
 //
-// Until this existed there was no backpressure at all. At the limit the carrier
-// simply rejected each dial, the predictive controller kept firing into the
-// wall on every heartbeat, and the agent saw a generic failure with no
-// indication that the platform was full rather than broken. This turns that
-// into a refusal we control, with a reason we can show.
+// The enforcement counted in-flight legs from the `calls` table using
+// `duration = 0` as the "still live" sentinel — the same sentinel the abort
+// sweep uses. That sentinel is wrong for counting.
 //
-// WHY THE COUNT IS AN ESTIMATE, AND WHY THAT IS THE RIGHT TRADE
-// The authoritative source is the carrier's own active-call list, but that is a
-// network round trip and this runs before every single dial. So we count from
-// `calls` instead, using the same in-flight sentinel the abort sweep uses
-// (duration = 0). It can drift — a row whose insert failed is invisible, and a
-// call the hangup webhook has not caught up with lingers a moment too long.
+// `duration = 0` is not a transient state. It is the PERMANENT resting value
+// of every call nobody answered: 1,404 of 1,831 calls over thirty days sit at
+// zero forever, and correctly so — an unanswered call has no talk time. Only 3
+// rows in that period were genuinely mis-written.
 //
-// Both drifts are handled by the reserve rather than by pretending the number
-// is exact: we stop short of the true ceiling, so an undercount does not become
-// a rejected dial. Being approximately right in 20ms beats being exactly right
-// in 300ms on a path that runs thousands of times an hour.
+// So the count did not measure live calls. It measured "calls placed recently,
+// mostly ones that already rang out". One agent on power dial at a 10% answer
+// rate leaves roughly eighteen phantom legs inside a ten-minute window. Against
+// a carrier budget of 10 the guard would have refused every dial about five
+// minutes into a session, while the carrier still had capacity — breaking
+// dialing to prevent a problem that had not occurred.
+//
+// A guard that is wrong in the restrictive direction is worse than no guard.
+// The carrier enforces its own ceiling regardless; the only thing ours added
+// was a second, less accurate ceiling underneath it.
+//
+// WHAT REPLACED IT: nothing on the dial path. The gauge below asks TELNYX what
+// is actually live, which is authoritative, and is used only by the admin Live
+// Ops screen — one API call per refresh on a screen a human is looking at, not
+// per dial.
 // =============================================================================
 
-/**
- * How long a row with duration = 0 is still believed to be live.
- *
- * Past this it is treated as finished regardless, because a stuck row would
- * otherwise consume budget forever and slowly strangle the platform. The
- * stale-call reaper cleans these up properly; this is just the read-side guard
- * so a reaper outage cannot take dialing down with it.
- */
-const IN_FLIGHT_MAX_AGE_MS = 10 * 60_000
+const TELNYX_API = 'https://api.telnyx.com/v2'
 
 export interface ConcurrencySnapshot {
-  /** Estimated legs currently up across the platform. */
-  inFlightLegs: number
-  /** The carrier ceiling we are respecting. */
+  /** Legs live on the connection right now, per the carrier. Null if unknown. */
+  inFlightLegs: number | null
+  /** The carrier ceiling, as configured. Display only — we do not enforce it. */
   budget: number
-  /** Legs held back from predictive so a human dial is never blocked. */
-  reserve: number
-  /** Legs a manual/progressive dial may still use. */
-  availableForAgent: number
-  /** Legs the predictive controller may still use. */
-  availableForController: number
+  /** True when the figure came from Telnyx rather than being unavailable. */
+  authoritative: boolean
 }
 
 /**
- * Count what is up right now.
+ * What is actually live on the carrier connection.
  *
- * Legs, not calls. A user_dial places TWO — the agent's SIP leg and the lead
- * leg — and both occupy carrier capacity. Counting rows instead of legs would
- * understate usage by roughly half on exactly the modes a team uses most, which
- * is the error that lets you sail past the ceiling believing you are at half.
+ * Asks Telnyx directly rather than inferring from our own tables, because our
+ * tables cannot answer the question — see the note above. Returns null rather
+ * than a guess when the lookup fails: a concurrency gauge showing a confident
+ * wrong number is the thing that caused this rewrite.
  */
 export async function getConcurrencySnapshot(): Promise<ConcurrencySnapshot> {
   const config = await getPlatformConfig()
   const budget = Math.max(1, config.concurrency_budget)
-  const reserve = Math.max(0, Math.min(config.concurrency_reserve, budget - 1))
 
-  let inFlightLegs = 0
+  const apiKey = process.env.TELNYX_API_KEY
+  const connectionId = process.env.TELNYX_CONNECTION_ID
+  if (!apiKey || !connectionId) {
+    return { inFlightLegs: null, budget, authoritative: false }
+  }
+
   try {
-    const supabase = getServiceClient('concurrency')
-    const sinceIso = new Date(Date.now() - IN_FLIGHT_MAX_AGE_MS).toISOString()
-
-    const { data, error } = await supabase
-      .from('calls')
-      .select('agent_call_control_id')
-      .eq('duration', 0)
-      .gte('created_at', sinceIso)
-
-    if (error) {
-      // Fail OPEN. A failed count must not stop the platform dialing — the
-      // carrier still enforces its own limit, so the worst case on a read
-      // failure is the behaviour we had before this file existed.
-      console.error('[concurrency] in-flight count failed, allowing dial:', error.message)
-      return {
-        inFlightLegs: 0, budget, reserve,
-        availableForAgent: budget,
-        availableForController: Math.max(0, budget - reserve),
-      }
+    const res = await fetch(
+      `${TELNYX_API}/connections/${encodeURIComponent(connectionId)}/active_calls?page[size]=250`,
+      { headers: { Authorization: `Bearer ${apiKey}` }, cache: 'no-store' }
+    )
+    if (!res.ok) {
+      console.warn('[concurrency] Telnyx active_calls lookup failed:', res.status)
+      return { inFlightLegs: null, budget, authoritative: false }
     }
+    const json = await res.json().catch(() => null)
+    const rows = Array.isArray(json?.data) ? json.data : null
+    if (!rows) return { inFlightLegs: null, budget, authoritative: false }
 
-    for (const row of data || []) {
-      inFlightLegs += row.agent_call_control_id ? 2 : 1
-    }
+    // Every entry is one leg on the connection, which is exactly the unit the
+    // carrier's own limit is expressed in.
+    return { inFlightLegs: rows.length, budget, authoritative: true }
   } catch (err) {
-    console.error('[concurrency] in-flight count threw, allowing dial:', err)
-    return {
-      inFlightLegs: 0, budget, reserve,
-      availableForAgent: budget,
-      availableForController: Math.max(0, budget - reserve),
-    }
-  }
-
-  return {
-    inFlightLegs,
-    budget,
-    reserve,
-    availableForAgent: Math.max(0, budget - inFlightLegs),
-    availableForController: Math.max(0, budget - reserve - inFlightLegs),
-  }
-}
-
-export interface CapacityDecision {
-  allowed: boolean
-  /** Shown to the agent verbatim, so it must read like an explanation. */
-  reason?: string
-  snapshot: ConcurrencySnapshot
-}
-
-/**
- * May a dial proceed?
- *
- * `legsNeeded` is 2 for a user_dial (agent leg plus lead leg) and 1 for a
- * controller fan-out line, which has no agent leg until someone answers.
- *
- * The controller is held to a lower ceiling than a person. An agent who presses
- * dial and is refused has been told the product is broken; a background process
- * that pauses for one beat has not. So the reserve always belongs to the human.
- */
-export async function checkCapacity(
-  legsNeeded: number,
-  source: 'agent' | 'controller'
-): Promise<CapacityDecision> {
-  const snapshot = await getConcurrencySnapshot()
-  const available = source === 'controller'
-    ? snapshot.availableForController
-    : snapshot.availableForAgent
-
-  if (available >= legsNeeded) {
-    return { allowed: true, snapshot }
-  }
-
-  return {
-    allowed: false,
-    reason:
-      source === 'controller'
-        ? `at platform capacity (${snapshot.inFlightLegs}/${snapshot.budget} lines in use)`
-        : `All ${snapshot.budget} outbound lines are in use right now. This is a platform-wide ` +
-          `limit, not a problem with your account — try again in a few seconds.`,
-    snapshot,
+    console.warn('[concurrency] Telnyx active_calls lookup threw:', err)
+    return { inFlightLegs: null, budget, authoritative: false }
   }
 }
