@@ -109,8 +109,7 @@ export async function GET(req: NextRequest) {
     //   Stripe leaves status='active' until the current period ends)
     const isActive = !!sub && isSubscriptionTrulyActive(sub)
     // exclude_from_analytics is already set true on known demo/test
-    // accounts (e.g. whitelabel@dialerseat.com, joshuacribbffl@gmail.com)
-    // — reusing the same flag Logs already uses to keep these out of
+    // accounts — reusing the same flag Logs already uses to keep these out of
     // admin-facing counts, rather than hardcoding specific emails. This
     // ONLY overrides what this row DISPLAYS as active — `sub` itself and
     // everything in the `subscription` object below is untouched, so the

@@ -32,16 +32,20 @@ const supabase = getServiceClient('callingWindowOverride')
 /**
  * Accounts exempt from calling-window hours.
  *
- * Deliberately in code rather than a database column: a column is something
- * that can be set by any path with write access to the users table, including
- * an admin UI misclick, and it would not show up in review. Adding a name here
- * is a commit.
+ * Empty in source ON PURPOSE. This list used to be hardcoded, on the reasoning
+ * that "adding a name here is a commit" and therefore reviewable — which is a
+ * good property, but it puts a real person's email address in the repository
+ * permanently, including in the history of every clone.
+ *
+ * The environment variable keeps the property that mattered: setting it needs
+ * privileged access to the deployment, so it is still a deliberate act and
+ * still not something an admin UI misclick can do. It is simply not committed.
+ *
+ * Set CALLING_WINDOW_OVERRIDE_EMAILS to a comma-separated list.
  */
-const OVERRIDE_EMAILS = [
-  'joshuacribbffl@gmail.com',
-]
+const OVERRIDE_EMAILS: string[] = []
 
-/** Optional additions, comma-separated. Extends the list above, never replaces it. */
+/** The effective allowlist: whatever the environment names. */
 function allowlist(): Set<string> {
   const extra = (process.env.CALLING_WINDOW_OVERRIDE_EMAILS || '')
     .split(',')
