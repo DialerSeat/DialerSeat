@@ -287,6 +287,30 @@ export async function POST(req: NextRequest) {
     let controllerInvoked = false
     let controllerSummary: any = null
 
+    // ── WHY THE CONTROLLER DIDN'T RUN ────────────────────────────────────
+    // Every condition below is a legitimate reason to skip a tick, and until
+    // now skipping was completely silent. That is how predictive came to have
+    // placed ZERO calls in the product's lifetime without anyone being able to
+    // point at a failure: the agent armed the engine, the UI said "PREDICTIVE
+    // ENGINE STARTED", and the server quietly declined on every heartbeat.
+    //
+    // Only computed when the agent has actually armed predictive, so this adds
+    // nothing to the hot path for every other mode.
+    let controllerSkippedReason: string | null = null
+    if (predictiveArmed && dialerMode === 'predictive') {
+      if (!campaignId) {
+        controllerSkippedReason =
+          'no campaign selected — predictive fans out within ONE campaign, so it cannot run on "All Active"'
+      } else if (shouldYield) {
+        controllerSkippedReason = 'abandon rate at or above the FTC threshold — throttling'
+      } else if (!CONTROLLER_TRIGGER_STATES.has(state)) {
+        controllerSkippedReason = `agent state "${state}" is not a dialing state`
+      }
+      if (controllerSkippedReason) {
+        console.warn(`[heartbeat] predictive armed but skipped: ${controllerSkippedReason}`)
+      }
+    }
+
     if (
       dialerMode === 'predictive' &&
       predictiveArmed &&
@@ -318,6 +342,7 @@ export async function POST(req: NextRequest) {
       stale_window_seconds: STALE_HEARTBEAT_SECONDS,
       controller_invoked: controllerInvoked,
       controller: controllerSummary,
+      controller_skipped_reason: controllerSkippedReason,
     })
   } catch (err: unknown) {
     console.error('[heartbeat] unhandled', err)

@@ -470,13 +470,37 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
     // on-AMD has been removed entirely (machine = silent instant skip, no
     // disposition shown), the only branch that matters downstream is
     // result === 'machine'. See app/api/calls/events/route.ts.
-    // NOTE: no answering_machine_detection_config is sent. A tuning block was
-    // added here and reverted — adding unverified parameters to the dial body
-    // risks Telnyx rejecting the whole request, which fails EVERY call rather
-    // than just mistuning detection. The AMD false-positive problem is handled
-    // downstream instead, in app/api/calls/events/route.ts, where ignoring a
-    // suspiciously fast 'machine' verdict cannot break dialing.
-    dialBody.answering_machine_detection = 'greeting_end'
+    // ── WHY 'premium' AND NOT 'greeting_end' ────────────────────────────
+    // 'greeting_end' decides a greeting has finished by LISTENING FOR
+    // SILENCE. On a live call that is a description of a human pausing.
+    // Someone answering with "Hello?" and waiting produces exactly the
+    // signal it is built to detect, so it returned 'machine' and we hung up
+    // on them mid-word.
+    //
+    // Measured over three days of real traffic: 33 'machine' verdicts to 8
+    // 'human', with machine verdicts landing 2.0–4.7s after answer and human
+    // verdicts 1.7–3.3s. A real voicemail greeting does not END two seconds
+    // in — "you've reached… leave a message" runs 8–15s. Those were live
+    // people. The two distributions also overlap almost entirely, which is
+    // why no timing threshold downstream could ever have separated them:
+    // arrival time carries no signal about which verdict is which.
+    //
+    // 'premium' is Telnyx's own recommendation for precisely this failure
+    // (speech recognition rather than silence-timing) and returns a finer
+    // vocabulary: human_residence / human_business / machine / silence /
+    // fax_detected / not_sure. Only 'machine' and 'fax_detected' end the
+    // call — see handleAmdResult in app/api/calls/events/route.ts.
+    //
+    // COST: premium bills ~$0.005 per call leg against ~$0.002 for standard.
+    // That is a real increase at volume and it is worth it — the failure it
+    // fixes is hanging up on answered prospects.
+    //
+    // STILL no answering_machine_detection_config. A tuning block was added
+    // here once and reverted: unverified parameters risk Telnyx rejecting the
+    // whole dial request, which fails EVERY call rather than just mistuning
+    // detection. Changing the DETECTOR is the fix; hand-tuning silence
+    // thresholds is what got us here.
+    dialBody.answering_machine_detection = 'premium'
   }
 
   const dialLeadLeg = () =>

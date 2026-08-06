@@ -1420,6 +1420,15 @@ function DialerPageInner() {
         if (typeof data.should_yield === 'boolean') {
           setShouldYield(data.should_yield)
         }
+        // The engine is armed but the server declined to fan out. Say so.
+        // This was silent, and silence is why predictive could sit "started"
+        // indefinitely without placing a call. Deduped against the last line
+        // so a persistent condition doesn't flood the feed every 5 seconds.
+        if (data.controller_skipped_reason) {
+          const line = `PREDICTIVE IDLE — ${String(data.controller_skipped_reason).toUpperCase()}`
+          setAmdActivity(prev => (prev[0] === line ? prev : [line, ...prev].slice(0, 5)))
+        }
+
         if (data.controller_invoked && data.controller) {
           setLastControllerSummary(data.controller as HeartbeatControllerSummary)
           const summary = data.controller as HeartbeatControllerSummary
@@ -2469,16 +2478,31 @@ function DialerPageInner() {
 
   const isNotHuman = (amd?: string): boolean => {
     if (!amd) return false
-    // Telnyx native Call Control Standard AMD (answering_machine_detection:
-    // 'greeting_end') returns only 'human' | 'machine' | 'not_sure' — a
-    // coarser vocabulary than SignalWire's machine_end_beep/
-    // machine_end_silence/machine_end_other/fax/unknown set. 'not_sure' is
-    // Telnyx's own documented recommendation to treat as human (so it's
-    // deliberately NOT included here — only 'machine' counts as not-human).
-    // Kept the old machine_/fax/unknown checks alongside for
-    // backward-compatibility with any historical rows still carrying
-    // SignalWire-era amd_result values during the transition.
-    return amd === 'machine' || amd.startsWith('machine_') || amd === 'fax' || amd === 'unknown'
+    // MUST stay in step with ROBOT_RESULTS in app/api/calls/events/route.ts.
+    // The server decides whether to hang up; this only decides what the agent
+    // is told. If they disagree, the UI narrates something that didn't happen.
+    //
+    // The dial path requests PREMIUM AMD, whose vocabulary is
+    // human_residence / human_business / machine / silence / fax_detected /
+    // not_sure. Only an actual robot counts:
+    //
+    //   machine, fax_detected  -> not human
+    //   human_residence, human_business, human, not_sure, silence -> human
+    //
+    // 'silence' is deliberately treated as human. It means AMD heard nothing
+    // yet — a person who hasn't spoken, or a moment of dead air — and cutting
+    // those off was the bug this vocabulary change fixes. 'not_sure' is
+    // Telnyx's own documented recommendation to treat as human.
+    //
+    // machine_* / 'fax' / 'unknown' are SignalWire-era values, kept so
+    // historical rows still render correctly.
+    return (
+      amd === 'machine' ||
+      amd === 'fax_detected' ||
+      amd.startsWith('machine_') ||
+      amd === 'fax' ||
+      amd === 'unknown'
+    )
   }
 
   // Writes a short-lived outcome line under a lead's row in the queue panel,
@@ -3066,6 +3090,22 @@ function DialerPageInner() {
     }
 
     if (isAllActive) {
+      // Predictive cannot run across All Active, and offering it here was a
+      // dead end: the heartbeat sends campaign_id: null in this scope, and the
+      // server-side controller requires a single campaign — it fans out
+      // multiple lines WITHIN one campaign's lead pool and enforces that
+      // campaign's own line cap and abandon rate. So the engine would arm, the
+      // UI would say it started, and nothing would ever dial.
+      //
+      // Refused with an explanation rather than silently accepted.
+      if (newMode === 'predictive') {
+        setModeDropdownOpen(false)
+        setAmdActivity(prev => [
+          'PREDICTIVE NEEDS ONE CAMPAIGN — PICK A CAMPAIGN, NOT "ALL ACTIVE"',
+          ...prev,
+        ].slice(0, 5))
+        return
+      }
       setAllActiveOverrideMode(newMode)
       setModeDropdownOpen(false)
       return

@@ -307,45 +307,53 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
     detail: { result },
   })
 
-  if (result === 'machine') {
+  // ── WHAT ENDS A CALL ───────────────────────────────────────────────────
+  // Only a robot: a voicemail system, or a fax tone. Everything else — a
+  // person, a pause, silence, an uncertain verdict — stays connected.
+  //
+  // The dial path now requests PREMIUM AMD, whose vocabulary is
+  // human_residence / human_business / machine / silence / fax_detected /
+  // not_sure. 'human' is kept for calls placed before that switch and for
+  // standard AMD if it is ever re-enabled.
+  //
+  // CORRECTING AN EARLIER NOTE IN THIS FILE: it previously claimed
+  // "production data confirms AMD is classifying correctly." That was wrong.
+  // Three days of traffic showed 33 'machine' verdicts against 8 'human',
+  // machine landing 2.0–4.7s after answer — far too fast to be the end of a
+  // real greeting. Those were live people saying hello. The cause was
+  // 'greeting_end', which decides a greeting has ended by detecting SILENCE
+  // and therefore fires on any human pause. Fixed at the detector, in
+  // lib/placeOutboundCall.ts.
+  //
+  // NO TIMING FLOOR HERE, still. A 3.5s minimum-age guard was tried and
+  // removed: human verdicts averaged 2272ms and machine 2441ms, so the
+  // distributions overlap almost entirely and arrival time carries no signal
+  // about which is which. A threshold can only suppress verdicts, never
+  // classify them.
+  const ROBOT_RESULTS = new Set(['machine', 'fax_detected'])
+
+  if (ROBOT_RESULTS.has(result)) {
     // ── SILENT INSTANT SKIP ────────────────────────────────────────────
     // Hang up now, write no disposition, move on. The lead row is bumped
     // (attempt count, last_called_at) so it cycles back into rotation
     // normally, but the agent is never asked to tag a call they never had.
     //
-    // A previous revision exempted user_dial from this, on the theory that
-    // 'greeting_end' was false-positiving on real people and cutting off
-    // live conversations. That diagnosis was wrong: the calls dropping the
-    // instant they were answered were failing at MEDIA negotiation (Telnyx
-    // offered SDP without a=rtcp-mux, Chrome refused it, sip.js replied 480)
-    // — nothing to do with AMD. Production data since confirms AMD is
-    // classifying correctly, with 'machine' on genuine voicemails.
-    //
-    // The exemption's only real effect was to leave the agent staring at a
-    // script while a voicemail greeting played, hanging up by hand every
-    // time. Removed. Instant skip is the specified behavior and the correct
-    // one.
-    // NO TIMING FLOOR. A 3.5s minimum-age guard was tried here and removed:
-    // measured against real traffic it suppressed 20 of 22 machine detections
-    // (they land at ~2.4s on average), so it did not delay AMD — it disabled
-    // it, and agents sat listening to voicemail greetings.
-    //
-    // It could not have worked in principle either. Human verdicts averaged
-    // 2272ms and machine verdicts 2441ms: the two distributions overlap
-    // almost entirely, so ARRIVAL TIME carries no signal about which is
-    // which. A time threshold can only suppress verdicts, never classify
-    // them. Separating human from machine requires changing what AMD
-    // measures (its detection config), not when we are willing to believe it.
-    //
-    // Product decision: skip instantly on 'machine'. A few seconds of
-    // voicemail in an agent's ear is an acceptable price for never sitting on
-    // a dead call, and speed through the list is the point of the dialer.
+    // A few seconds of voicemail in an agent's ear is an acceptable price for
+    // never sitting on a dead call — speed through the list is the point of
+    // the dialer. That trade only holds while the verdict is trustworthy,
+    // which is why the detector change above matters more than anything here.
     await hangupCallControlId(callControlId)
     await autoAdvanceLeadNoDisposition(callControlId)
     return
   }
 
-  // 'human' or 'not_sure' (treated as human per Telnyx's own guidance).
+  // Everything else continues as a live call: human_residence,
+  // human_business, human, not_sure, and silence.
+  //
+  // 'silence' deliberately does NOT hang up. It means AMD heard nothing yet,
+  // which is a person who hasn't spoken, a slow handset, or a moment of dead
+  // air — none of which are a robot. Ending the call on silence is the exact
+  // complaint this change exists to fix.
   const { data: callRow } = await supabaseAdmin
     .from('calls')
     .select('id, dial_group_id, campaign_id, team_id, user_id')
