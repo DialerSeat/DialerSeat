@@ -38,11 +38,17 @@ const supabase = createClient(
 //      bridge_on_answer = true. The moment the lead picks up, Telnyx
 //      bridges the two legs automatically — no separate bridge command,
 //      no gap. This is what gives instant connect with zero dead air.
-//   3. AMD (answering_machine_detection: 'greeting_end') runs AFTER
-//      answer, in parallel with the (already-bridged) call. It's a
-//      background safety net: if it later reports 'machine', the
-//      webhook handler hangs up immediately — no disposition, silent
-//      skip to the next lead (see amd webhook handler, not this file).
+//   3. AMD (answering_machine_detection: 'detect') runs AFTER answer, in
+//      parallel with the (already-bridged) call. It's a background safety
+//      net: if it later reports 'machine', the webhook handler hangs up
+//      immediately — no disposition, silent skip to the next lead (see amd
+//      webhook handler, not this file).
+//
+//      Step 3 was briefly inverted — AMD first, bridge on the verdict — on
+//      the strength of a Telnyx docs note advising against bridging during
+//      analysis. It cost 1-6 seconds of silence on every single answered
+//      call, measured, and was reverted. Do not reintroduce it: any design
+//      where the bridge waits on a webhook is dead air by construction.
 //
 // PRODUCT-LEVEL RULES this file enforces (see design doc for full spec):
 //   - Dialing only ever happens because something explicitly requested it
@@ -478,95 +484,80 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
     dialBody.record_channels = 'dual'
   }
 
-  // ── BRIDGE TIMING DEPENDS ON WHETHER AMD IS RUNNING ─────────────────────
-  // Telnyx's own guidance: "Bridge AFTER detection completes... avoid using
-  // bridge_on_answer during AMD analysis — wait for your detection webhook
-  // before bridging."
-  //   https://developers.telnyx.com/docs/voice/programmable-voice/answering-machine-detection
+  // ── ALWAYS BRIDGE ON ANSWER ─────────────────────────────────────────────
+  // The agent hears the lead the millisecond they pick up. No exceptions, no
+  // dependence on a webhook, no detector in the audio path.
   //
-  // We were doing exactly the thing it warns against: setting AMD and
-  // bridge_on_answer on the SAME request, so the detector was asked to
-  // classify a call that had already been joined to the agent. The result was
-  // a 100% false-positive rate — 12 of 12 answered calls returned 'machine',
-  // every one of them a human picking up.
+  // This reverses a change made a day earlier, and the reversal is measured
+  // rather than reasoned. Telnyx's docs advise bridging only AFTER detection
+  // completes, so AMD-enabled calls were dialed alone and bridged when
+  // call.machine.detection.ended arrived. Production data for what that cost:
   //
-  // So the two cases are now genuinely different flows:
+  //     answered → bridged        0.74s   3.93s   6.04s
+  //     answered → AMD verdict    0.73s   3.92s   6.03s
   //
-  //   AMD OFF → link_to + bridge_on_answer, exactly as before. Instant
-  //             connect, zero dead air. This is preview, and any campaign
-  //             with detection turned off.
+  // The bridge tracked the verdict to within ten milliseconds, because it WAS
+  // the verdict. Every answered call bought its detection accuracy with one to
+  // six seconds of silence on both ends — the prospect saying "hello?" into
+  // nothing, the agent hearing nothing back. On a voicemail it was worse: the
+  // greeting played to an empty line and the agent joined partway through.
   //
-  //   AMD ON  → dial the lead ALONE. The agent leg is already up and waiting.
-  //             When call.machine.detection.ended arrives, bridge on a human
-  //             verdict or hang up on a machine — see handleAmdResult in
-  //             app/api/calls/events/route.ts.
+  // That trade is not worth making. A dialer's first job is that the call
+  // sounds instant; detection is a convenience that saves an agent a few
+  // seconds of listening. Paying three seconds on EVERY answered call to save
+  // three seconds on the ones that turn out to be machines is a straight loss.
   //
-  // The cost of the second path is real and worth naming: the prospect hears
-  // silence for however long detection takes. That is the price of a verdict
-  // that means something, and it is why AMD is a toggle rather than always-on.
-  if (agentCallControlId && !p.amdEnabled) {
+  // So AMD now runs alongside a live, bridged call and decides only whether to
+  // END it — see handleAmdResult in app/api/calls/events/route.ts. What that
+  // demands of the detector is covered below.
+  if (agentCallControlId) {
     dialBody.link_to = agentCallControlId
     dialBody.bridge_on_answer = true
   }
 
   if (p.amdEnabled) {
-    // ── AMD (native Call Control) ──────────────────────────────────────────
-    // 'greeting_end' is the closest native equivalent to SignalWire's
-    // DetectMessageEnd — waits for the actual end of the greeting
-    // (silence/beep) before deciding, which is what catches human-voiced
-    // voicemail instead of committing to "human" on the first sound. See
-    // TELNYX-MIGRATION-DESIGN.md for the full reasoning and the Standard
-    // vs Premium tradeoff (Standard chosen for cost, matching the original
-    // brief's guidance).
+    // ── AMD RUNS ALONGSIDE A LIVE CALL, NOT IN FRONT OF IT ─────────────────
+    // The call is already bridged by the time detection finishes. AMD's only
+    // remaining job is to answer "should this call continue?" — and on a
+    // machine, to end it and advance the queue without the agent doing
+    // anything. Hearing a second or two of a voicemail greeting before it
+    // drops is the accepted cost, and it is a far smaller one than making
+    // every answered call start with silence.
     //
-    // Result arrives via call.machine.detection.ended webhook,
-    // payload.result = 'human' | 'machine' | 'not_sure'. Per Telnyx's own
-    // docs, 'not_sure' should be treated as human — and since disposition-
-    // on-AMD has been removed entirely (machine = silent instant skip, no
-    // disposition shown), the only branch that matters downstream is
-    // result === 'machine'. See app/api/calls/events/route.ts.
-    // ── WHY 'premium' AND NOT 'greeting_end' ────────────────────────────
-    // 'greeting_end' decides a greeting has finished by LISTENING FOR
-    // SILENCE. On a live call that is a description of a human pausing.
-    // Someone answering with "Hello?" and waiting produces exactly the
-    // signal it is built to detect, so it returned 'machine' and we hung up
-    // on them mid-word.
+    // ── WHY 'detect' AND NOT 'greeting_end' ────────────────────────────────
+    // 'greeting_end' waits for the greeting to END, which it decides by
+    // hearing silence. Two things make that unusable here:
     //
-    // Measured over three days of real traffic: 33 'machine' verdicts to 8
-    // 'human', with machine verdicts landing 2.0-4.7s after answer. A real
-    // voicemail greeting does not END two seconds in — "you've reached...
-    // leave a message" runs 8-15s. Those were live people.
+    //   1. A person who says "Hello?" and waits produces precisely the signal
+    //      it looks for. Three days of traffic gave 33 'machine' to 8 'human',
+    //      machine landing 2.0-4.7s after answer. A real voicemail greeting
+    //      does not end two seconds in — those were live people.
     //
-    // TUNING DID NOT FIX IT — recorded here so nobody retries it. After
-    // raising after_greeting_silence to 4500ms, 12 of 12 answered calls still
-    // returned 'machine', with verdict timing unchanged. Either the config
-    // block below is being ignored, or greeting_end cannot classify on this
-    // path at all.
+    //   2. Now that the agent is bridged from the first millisecond, the audio
+    //      on this leg includes the agent. 'greeting_end' would be measuring
+    //      the length of a conversation and calling it a greeting.
     //
-    // THE LEADING SUSPICION IS THE BRIDGE. A user_dial sets link_to +
-    // bridge_on_answer on this same request, so the agent is joined the
-    // instant the lead answers and the detector is then asked to analyse a
-    // call that has already been bridged. The conventional pattern is the
-    // reverse — detect first, bridge only on 'human' — which is exactly why
-    // predictive fan-out, where nothing is bridged until a human is
-    // confirmed, is the mode AMD was designed around.
+    // 'detect' classifies from the initial answer pattern and reports as soon
+    // as it can, which is what a concurrent detector has to do: decide while
+    // the lead's own greeting is still the only thing on the line, before the
+    // agent has said enough to matter.
     //
-    // The logging below exists to settle it: one test call shows whether
-    // Telnyx echoes the config back, which tells us whether we are debugging
-    // our parameters or their detector.
+    // NOT premium. Premium is a per-leg surcharge and the account owner has
+    // been explicit about not paying it; it also emits a different event
+    // (call.machine.premium.detection.ended), handled but not requested.
     //
-    // Timing out returns 'not_sure', which does NOT hang up (see
-    // handleAmdResult in app/api/calls/events/route.ts — only 'machine' and
-    // 'fax_detected' end a call). So a longer window fails toward "put the
-    // agent on", which is the correct direction: wasting five seconds of an
-    // agent's time is recoverable, hanging up on a prospect is not.
+    // Result arrives via call.machine.detection.ended,
+    // payload.result = 'human' | 'machine' | 'not_sure'. Only 'machine' and
+    // 'fax_detected' end a call — 'not_sure' and silence deliberately do not,
+    // so a detector that cannot make up its mind fails toward leaving two
+    // people talking.
     //
-    // Detector and timings are configurable rather than hardcoded because
-    // both move the carrier bill, and that is the account owner's call.
-    // Cached for 30s by getPlatformConfig, so this is a memo read rather than
-    // a query on the dial path.
+    // Detector and timings are configurable rather than hardcoded because both
+    // move the carrier bill, and that is the account owner's call. Cached for
+    // 30s by getPlatformConfig, so this is a memo read rather than a query on
+    // the dial path.
     const amdCfg = await getPlatformConfig()
-    dialBody.answering_machine_detection = amdCfg.amd_detector || 'greeting_end'
+    dialBody.answering_machine_detection = amdCfg.amd_detector || 'detect'
 
     // Guarded by its own switch: an unrecognised parameter name makes Telnyx
     // reject the WHOLE dial request, failing every call rather than merely
@@ -580,14 +571,12 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
       //   maximum_number_of_words       "If number of detected words is
       //                                 greater than this value, consider it a
       //                                 machine." DEFAULT 5. Anyone who
-      //                                 answers with a sentence — "hi, you've
-      //                                 reached Josh, how can I help" is eight
-      //                                 words — is a machine at the default.
+      //                                 answers with a sentence is a machine at
+      //                                 the default.
       //
       //   greeting_duration_millis      "Maximum threshold of a human
       //                                 greeting. If greeting longer than this
-      //                                 value, considered machine." DEFAULT
-      //                                 3500, i.e. shorter than one sentence.
+      //                                 value, considered machine."
       //
       //   initial_silence_millis        "If initial silence duration is
       //                                 greater than this value, consider it a
@@ -598,17 +587,16 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
       //                                 considered HUMAN." Note the direction:
       //                                 this is how long we wait to CONFIRM a
       //                                 human, not grace before judging one.
-      //                                 Raising it delays the human verdict
-      //                                 and lets the two rules above fire
-      //                                 first — which is exactly the mistake
-      //                                 made earlier tonight.
+      //                                 Raising it delays the human verdict and
+      //                                 lets the two rules above fire first —
+      //                                 a mistake already made once here.
       //
       //   total_analysis_time_millis    Overall cap. On timeout the result is
-      //                                 'not_sure', which bridges rather than
-      //                                 hangs up, so this fails safe.
-      //
-      // A real voicemail greeting runs 8-15 seconds and 25+ words, so the
-      // raised thresholds still separate the two cases.
+      //                                 'not_sure', which leaves the call up,
+      //                                 so this fails safe. It NO LONGER gates
+      //                                 the bridge, so shortening it costs
+      //                                 accuracy rather than responsiveness —
+      //                                 the two used to be the same dial.
       dialBody.answering_machine_detection_config = {
         total_analysis_time_millis: amdCfg.amd_total_analysis_ms,
         after_greeting_silence_millis: amdCfg.amd_after_greeting_silence_ms,

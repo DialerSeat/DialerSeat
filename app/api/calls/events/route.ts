@@ -1,4 +1,4 @@
-import { NextResponse, after } from 'next/server'
+import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { verifyTelnyxWebhook } from '@/lib/verifyTelnyxWebhook'
 import {
@@ -221,17 +221,19 @@ export async function POST(req: Request) {
 /**
  * Join the agent to the lead, exactly once.
  *
- * Bridging used to be Telnyx's job via bridge_on_answer. It is now ours,
- * because the detector cannot classify a call that has already been joined —
- * so two different things can call this for the same lead:
+ * PREDICTIVE FAN-OUT ONLY. An agent-attended call (user_dial) is bridged by
+ * Telnyx itself via bridge_on_answer at the instant of pickup — nothing here
+ * touches it, because anything that waits for a webhook first is by definition
+ * dead air. See the bridge comment in lib/placeOutboundCall.ts for the
+ * measurements behind that.
  *
- *   1. the AMD verdict, on 'human'/'not_sure'
- *   2. the safety net below, if that verdict never turns up
+ * Fan-out is the genuinely different case: those lines are placed with no
+ * agent attached at all, so there is nobody to hear silence, and routing
+ * really does have to wait for a verdict.
  *
- * The conditional update is what makes that safe: `.is('bridged_at', null)`
- * means only the first caller gets rows back, and only that caller issues the
- * bridge command. A slow webhook arriving after the timer has already
- * connected the call is a no-op rather than a second bridge.
+ * The conditional update keeps it idempotent: `.is('bridged_at', null)` means
+ * only the first caller gets rows back, and only that caller issues the bridge
+ * command, so a duplicate webhook is a no-op rather than a second bridge.
  */
 async function bridgeAgentOntoLead(
   leadCallControlId: string,
@@ -251,8 +253,8 @@ async function bridgeAgentOntoLead(
 
   const ok = await bridgeCallControlIds(leadCallControlId, agentLeg)
   if (!ok) {
-    // Put it back so the safety net or a later verdict can retry rather than
-    // the call being permanently marked as bridged when it is not.
+    // Put it back so a later verdict can retry rather than the call being
+    // permanently marked as bridged when it is not.
     await supabaseAdmin
       .from('calls')
       .update({ bridged_at: null })
@@ -293,55 +295,6 @@ async function handleCallAnswered(callControlId: string): Promise<void> {
       .is('answered_at', null)
   } catch (err) {
     console.error(`[calls/events] failed to record answered_at for ${callControlId}:`, err)
-  }
-
-  // ── SAFETY NET: BRIDGE EVEN IF THE VERDICT NEVER ARRIVES ────────────────
-  // The failure mode this closes is one the detect-then-bridge change
-  // introduced, and it is the worst kind: silent.
-  //
-  // With bridge_on_answer, Telnyx joined the legs and a lost webhook cost us
-  // only a missing analytics row. Now the bridge DEPENDS on
-  // call.machine.detection.ended arriving. If it is delayed, dropped, or the
-  // detector simply never reports, the prospect sits listening to silence
-  // with an agent on the other side of a bridge that never happens — and
-  // nothing in the system notices.
-  //
-  // So: wait past the detector's own analysis ceiling, then connect them
-  // regardless. Failing toward "the agent is talking to someone" is right;
-  // the alternative is a real person hearing nothing until they hang up.
-  //
-  // Only for calls actually waiting on a verdict. When AMD is off the dial
-  // still carries bridge_on_answer, bridged_at is never set, and arming this
-  // would double-bridge — hence the amdEnabled check via the row itself.
-  const { data: pending } = await supabaseAdmin
-    .from('calls')
-    .select('agent_call_control_id, bridged_at, dial_source')
-    .eq('call_control_id', callControlId)
-    .maybeSingle()
-
-  const waitingOnVerdict =
-    pending?.dial_source === 'user_dial' &&
-    !!pending?.agent_call_control_id &&
-    !pending?.bridged_at
-
-  if (waitingOnVerdict) {
-    const cfg = await getPlatformConfig()
-    // Telnyx returns 'not_sure' at total_analysis_time_millis, so a verdict
-    // should always beat this. The margin is for webhook latency, not for the
-    // detector.
-    const graceMs = cfg.amd_total_analysis_ms + 3000
-
-    after(async () => {
-      await new Promise(r => setTimeout(r, graceMs))
-      const outcome = await bridgeAgentOntoLead(callControlId, 'safety net — no AMD verdict')
-      if (outcome === 'bridged') {
-        console.warn(
-          `[calls/events] NO AMD verdict for ${callControlId} within ${graceMs}ms — ` +
-          `bridged the agent anyway rather than leave the prospect in silence. ` +
-          `If this is frequent, detection is not reporting and AMD is costing without earning.`
-        )
-      }
-    })
   }
 
   // Bridging itself needs no action here: user_dial was already bridged by
@@ -435,47 +388,23 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
   // Only a robot: a voicemail system, or a fax tone. Everything else — a
   // person, a pause, silence, an uncertain verdict — stays connected.
   //
-  // The dial path now requests PREMIUM AMD, whose vocabulary is
-  // human_residence / human_business / machine / silence / fax_detected /
-  // not_sure. 'human' is kept for calls placed before that switch and for
-  // standard AMD if it is ever re-enabled.
+  // The dial path requests STANDARD AMD in 'detect' mode, which returns
+  // 'human' | 'machine' | 'not_sure'. The premium vocabulary
+  // (human_residence / human_business / silence) is still accepted below so
+  // that calls placed while premium was briefly enabled, and any future switch
+  // to it, are handled without another change here.
   //
-  // CORRECTING AN EARLIER NOTE IN THIS FILE: it previously claimed
-  // "production data confirms AMD is classifying correctly." That was wrong.
-  // Three days of traffic showed 33 'machine' verdicts against 8 'human',
-  // machine landing 2.0–4.7s after answer — far too fast to be the end of a
-  // real greeting. Those were live people saying hello. The cause was
-  // 'greeting_end', which decides a greeting has ended by detecting SILENCE
-  // and therefore fires on any human pause. Fixed at the detector, in
-  // lib/placeOutboundCall.ts.
-  //
-  // NO TIMING FLOOR HERE, still. A 3.5s minimum-age guard was tried and
-  // removed: human verdicts averaged 2272ms and machine 2441ms, so the
-  // distributions overlap almost entirely and arrival time carries no signal
-  // about which is which. A threshold can only suppress verdicts, never
-  // classify them.
+  // The verdict no longer decides whether to CONNECT the call — it is already
+  // connected, from the instant of pickup. It decides only whether to end one.
+  // See the bridge comment in lib/placeOutboundCall.ts for why.
   const ROBOT_RESULTS = new Set(['machine', 'fax_detected'])
 
   if (ROBOT_RESULTS.has(result)) {
-    // ── NEVER HANG UP ON A CALL THE AGENT IS ALREADY ON ────────────────
-    // This is the guard that was missing, and it is the reason agents were
-    // being cut off mid-sentence.
-    //
-    // In preview, power and progressive the lead leg is dialed with link_to +
-    // bridge_on_answer, so the agent is connected the INSTANT the lead picks
-    // up. AMD then reports a couple of seconds later — into a conversation
-    // that is already happening. Acting on that verdict hangs up on a real
-    // person while the agent is talking to them.
-    //
-    // The entire purpose of AMD is to avoid CONNECTING an agent to a machine.
-    // Once they are connected, that has already failed or already succeeded,
-    // and the agent can hear which. They have ears and a skip button; a
-    // detector that fires on silence does not get to overrule them.
-    //
-    // Predictive is the opposite case and still hangs up: controller_fanout
-    // lines have no agent bridged yet, so a machine verdict is exactly the
-    // signal the mode exists to act on, and dropping it costs nobody a
-    // conversation.
+    // EVERY agent-attended call is bridged at pickup, so 'the agent is already
+    // on it' is no longer the exception — it is the normal case, and hanging up
+    // is now something we do TO a live call rather than instead of starting
+    // one. Two guards below decide whether that is safe: how long the call has
+    // been up, and the hangup_when_bridged setting.
     const { data: callRow } = await supabaseAdmin
       .from('calls')
       .select('dial_source, agent_call_control_id, answered_at')
@@ -492,33 +421,39 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
     // where a wrong verdict hurts most, no longer runs AMD at all.
     const {
       amd_hangup_when_bridged: hangupWhenBridged,
-      amd_min_seconds_before_hangup: minSeconds,
+      amd_max_seconds_after_answer: maxSeconds,
     } = await getPlatformConfig()
 
-    // ── TOO SOON TO BE A GREETING ─────────────────────────────────────────
-    // The floor, and the thing that actually stops live people being cut off.
+    // ── IS THIS VERDICT STILL ABOUT THE LEAD? ─────────────────────────────
+    // Every agent-attended call is bridged at pickup now, so by the time a
+    // verdict lands there may be two people mid-sentence. The question is no
+    // longer "do we trust the detector" but "is it still describing the person
+    // who answered, or the conversation that started since?"
     //
-    // Over 90 minutes of testing every answered call came back 'machine' —
-    // 12 of 12, all of them a human answering their own phone. The detector is
-    // not mistimed, it is wrong, so no amount of adjusting how long it listens
-    // repairs it.
+    // Time answers that. A verdict one or two seconds after answer was formed
+    // from the lead's own greeting and nothing else. One arriving eight seconds
+    // in was formed from a live exchange, and acting on it means hanging up on
+    // an agent mid-call.
     //
-    // Timing is the one signal that does separate the cases. A real voicemail
-    // greeting runs 8-15 seconds, so a genuine "greeting ended" verdict lands
-    // late. A verdict two seconds after answer is a person who said hello and
-    // paused. Below the floor we simply do not believe it.
+    // THIS REPLACES A MINIMUM-AGE FLOOR, WHICH WAS BACKWARDS AND BROKEN. It
+    // required verdicts to be at least amd_min_seconds_before_hangup (6s) old
+    // before being believed, while total_analysis_time_millis capped analysis
+    // at 6000ms — so essentially every verdict arrived under the floor and was
+    // discarded. That is why voicemails stopped being skipped: the skip was
+    // suppressed on all of them. Production data, machine verdicts, seconds
+    // after answer: 1.76, 2.01, 2.06, 2.07, 2.22, 2.36, 2.47, 2.52, 2.62, 2.70,
+    // 3.03, 3.07, 3.95. Thirteen real voicemails, every one silently ignored.
     //
-    // This is deliberately OUR check rather than a carrier parameter: it works
-    // regardless of whether Telnyx honours answering_machine_detection_config,
-    // which — given 12 of 12 — is itself in question.
-    if (minSeconds > 0 && callRow?.answered_at) {
+    // The floor's original purpose — stopping 'greeting_end' from firing on a
+    // human pause — is handled at the detector instead, which is now 'detect'.
+    if (maxSeconds > 0 && callRow?.answered_at) {
       const secondsSinceAnswer =
         (Date.now() - new Date(callRow.answered_at).getTime()) / 1000
-      if (secondsSinceAnswer < minSeconds) {
+      if (secondsSinceAnswer > maxSeconds) {
         console.warn(
-          `[calls/events] AMD said '${result}' only ${secondsSinceAnswer.toFixed(1)}s ` +
-          `after answer (floor ${minSeconds}s) — too fast to be the end of a real ` +
-          `greeting. Ignoring and leaving the call up.`
+          `[calls/events] AMD said '${result}' ${secondsSinceAnswer.toFixed(1)}s ` +
+          `after answer (window ${maxSeconds}s) — too late to be about the greeting. ` +
+          `A conversation is likely underway. Leaving the call up.`
         )
         return
       }
@@ -532,11 +467,35 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
       return
     }
 
-    // ── SILENT INSTANT SKIP (predictive fan-out only) ──────────────────
+    // ── SILENT INSTANT SKIP ────────────────────────────────────────────
     // Hang up now, write no disposition, move on. The lead row is bumped
     // (attempt count, last_called_at) so it cycles back into rotation
     // normally, but the agent is never asked to tag a call they never had.
+    //
+    // On an agent-attended call this is audible: a second or two of the
+    // voicemail greeting, then the line drops and the next lead comes up. That
+    // is the intended behaviour, and it is the trade that buys instant audio on
+    // every call that turns out to be a person.
     await hangupCallControlId(callControlId)
+
+    // ── AND THE AGENT'S LEG ───────────────────────────────────────────────
+    // Hanging up the lead alone leaves the agent's SIP leg up with nothing on
+    // the other side: their softphone still shows a call in progress, they hear
+    // silence, and the dialer never advances — the exact opposite of a skip.
+    //
+    // Safe to end because the agent leg is per-dial, not per-session. Step 1 of
+    // placeOutboundCall dials the agent's SIP endpoint fresh for every
+    // user_dial, so ending this one costs nothing; the next dial places
+    // another. What it buys is a clean call-ended event in the browser, which
+    // is what actually moves the queue on.
+    //
+    // Not gated on whether Telnyx propagates hangup across a linked pair. If it
+    // already did, this is a no-op against a leg that is gone; if it did not,
+    // this is the difference between skipping and stalling.
+    if (agentAlreadyBridged && callRow?.agent_call_control_id) {
+      await hangupCallControlId(callRow.agent_call_control_id)
+    }
+
     await autoAdvanceLeadNoDisposition(callControlId)
     return
   }
@@ -574,7 +533,11 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
     //
     // When AMD is OFF the dial still uses bridge_on_answer and no detection
     // webhook ever arrives, so this path simply never runs for those calls.
-    if (callRow.agent_call_control_id) {
+    // user_dial is already bridged — Telnyx did it at pickup, and calling
+    // bridge again on a live call is at best a no-op and at worst drops the
+    // audio the agent is currently using. Only fan-out lines, which were
+    // placed with nobody attached, still need connecting here.
+    if (callRow.agent_call_control_id && callRow.dial_source !== 'user_dial') {
       const outcome = await bridgeAgentOntoLead(callControlId, `AMD '${result}'`)
       if (outcome === 'failed') {
         // The agent leg is gone — they hung up, or it never came up. Do not

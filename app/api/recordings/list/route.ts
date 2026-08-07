@@ -32,12 +32,13 @@ export async function GET(req: NextRequest) {
     // no agent attached, so the recording was a few seconds of voicemail
     // greeting and pure noise in this tab.
     //
-    // That is no longer true. AMD no longer hangs up a call an agent is
-    // already bridged into (see the agentAlreadyBridged branch in
-    // app/api/calls/events/route.ts) because 'greeting_end' misfires on real
-    // people who answer and pause. So a 'machine' call can now be a genuine
-    // conversation the agent actually had — and hiding its recording loses
-    // the one artifact of that call.
+    // That is no longer true. Every agent-attended call is bridged the instant
+    // the lead picks up, so a 'machine' verdict now lands on a call that was
+    // already live. It only ends that call if it arrives inside the
+    // amd_max_seconds_after_answer window and the hangup setting allows it
+    // (see handleAmdResult in app/api/calls/events/route.ts) — otherwise the
+    // conversation continues and is tagged 'machine' anyway. Hiding those
+    // recordings loses the one artifact of a call that really happened.
     //
     // 'not_sure' is included outright: Telnyx's own guidance is to treat it
     // as human. And any call that was ANSWERED is included regardless of what

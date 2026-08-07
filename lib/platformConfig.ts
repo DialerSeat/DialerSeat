@@ -54,7 +54,7 @@ export interface PlatformConfig {
   // ── ANSWERING MACHINE DETECTION ─────────────────────────────────────────
   // Detector choice and tuning live here rather than in code because both
   // change the carrier bill, and that is an account-owner decision.
-  /** Telnyx detector. 'greeting_end' is standard; 'premium' costs ~2.5x. */
+  /** Telnyx detector. 'detect' and 'greeting_end' are standard; 'premium' costs ~2.5x. */
   amd_detector: string
   /** Send answering_machine_detection_config with the dial. */
   amd_tuning_enabled: boolean
@@ -66,8 +66,14 @@ export interface PlatformConfig {
   amd_in_preview: boolean
   /** Whether a machine verdict ends a call the agent is already bridged into. */
   amd_hangup_when_bridged: boolean
-  /** A machine verdict sooner than this after answer is ignored. 0 disables. */
-  amd_min_seconds_before_hangup: number
+  /**
+   * How long after answer a machine verdict is still believed, in seconds.
+   *
+   * The call is bridged at pickup, so a late verdict is describing a live
+   * conversation rather than the greeting that opened it. 0 disables the
+   * window and every verdict is acted on.
+   */
+  amd_max_seconds_after_answer: number
   /** Telnyx greeting_duration_millis — a greeting longer than this is a machine. */
   amd_greeting_duration_ms: number
   /** Telnyx maximum_number_of_words — more words than this is a machine. */
@@ -88,20 +94,27 @@ export const PLATFORM_CONFIG_DEFAULTS: PlatformConfig = {
   agent_leg_refusal_alert_count: 1,
   // The Telnyx account-level outbound concurrent call limit. Display only.
   concurrency_budget: 10,
-  // Standard detector, tuned. Premium is 2.5x the per-leg cost and the
-  // failure it fixes is fixable here for nothing.
-  amd_detector: 'greeting_end',
+  // 'detect' classifies from the initial answer pattern and reports as fast as
+  // it can. That is what a detector running ALONGSIDE a bridged call has to
+  // do — it has to decide while the lead's greeting is still the only audio on
+  // the line. 'greeting_end' waits for silence to mark the end of a greeting,
+  // which on a connected call is a description of two people talking.
+  // Premium is 2.5x the per-leg cost and is not in use.
+  amd_detector: 'detect',
   amd_tuning_enabled: true,
-  amd_total_analysis_ms: 6000,
-  amd_after_greeting_silence_ms: 1600,
+  // No longer gates the bridge, so this is purely an accuracy/cost dial now.
+  amd_total_analysis_ms: 3500,
+  amd_after_greeting_silence_ms: 800,
   // Preview is the one mode where the agent deliberately chose this lead and
   // is watching it answer. A wrong verdict there costs more than it saves.
   amd_in_preview: false,
   // Voicemail skipping is why AMD exists; keep it, now that preview is out.
   amd_hangup_when_bridged: true,
-  // A real voicemail greeting ends at 8-15s. Anything faster is a human who
-  // paused after "hello".
-  amd_min_seconds_before_hangup: 6,
+  // Five seconds covers every machine verdict actually observed in production
+  // (1.76s to 3.95s across thirteen real voicemails) with room to spare, while
+  // still refusing to hang up on a call that has been live long enough for
+  // someone to be mid-sentence.
+  amd_max_seconds_after_answer: 5,
   // Telnyx defaults are 3500 / 5 / 3500, and the first two are what produced
   // a 100% false-positive rate: five words is fewer than most people say when
   // they answer, and 3.5s is shorter than a normal sentence. A real voicemail
@@ -117,7 +130,7 @@ const CONFIG_COLUMNS =
   'pool_capacity_alert_pct, webhook_silence_minutes, agent_leg_refusal_alert_count, ' +
   'concurrency_budget, amd_detector, amd_tuning_enabled, ' +
   'amd_total_analysis_ms, amd_after_greeting_silence_ms, ' +
-  'amd_in_preview, amd_hangup_when_bridged, amd_min_seconds_before_hangup, ' +
+  'amd_in_preview, amd_hangup_when_bridged, amd_max_seconds_after_answer, ' +
   'amd_greeting_duration_ms, amd_max_words, amd_initial_silence_ms'
 
 // Cached per process. These are read on hot paths (every dial consults the AMD
