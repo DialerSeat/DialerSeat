@@ -26,9 +26,15 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Billing & Cancellation — DialerSeat',
     description:
-      'Cancel and keep dialing through what you already paid for. What a failed payment actually does. How seats bill mid-week.',
+      'The most you can be out is one week, $35. Cancel and keep dialing through what you already paid for. What a failed payment actually does.',
     url: 'https://dialerseat.com/faq/billing',
     type: 'article',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Billing & Cancellation — DialerSeat',
+    description:
+      'The most you can be out is one week, $35. What cancel actually does, what a failed card does, and how refunds work.',
   },
 }
 

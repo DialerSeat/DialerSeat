@@ -275,19 +275,51 @@ export default function BillingFaqView() {
             </p>
           </section>
 
-          {/* ── REFUNDS ─────────────────────────────────────────────────────── */}
+          {/* ── WHAT YOU CAN ACTUALLY LOSE ──────────────────────────────────
+              The refund policy used to be stated first and alone, which made a
+              $35 weekly product read as riskier than it is: "only considered
+              within 24 hours" is an accurate sentence that lands as a warning.
+              The exposure figure is the honest headline — the 24-hour window is
+              a second chance on top of it, not the only thing standing between
+              a buyer and a lost charge. Same policy, stated in the order that
+              reflects what is actually at stake. */}
           <section className="bil-section">
-            <h2>▸ REFUNDS</h2>
+            <h2>▸ WHAT YOU CAN ACTUALLY LOSE</h2>
             <p>
-              Refunds are only considered within <strong>24 hours</strong>{' '}
-              of the charge going through. Once that 24-hour window has
-              passed, the charge is final — canceling afterward stops
-              future billing (see above) but doesn&apos;t refund the period
-              you&apos;re already in.
+              <strong>One week. $35.</strong> That is the whole downside, and
+              it is worth saying plainly, because most of this industry does
+              not let you find out this cheaply. There is no annual contract to
+              break, no setup fee to write off and no implementation project to
+              walk away from — the incumbents commonly charge $500–$2,000
+              before the first call is placed.
+            </p>
+            <p>
+              Cancel in Settings and you keep access through the week you have
+              already paid for. You are not charged again, and nothing
+              auto-renews.
+            </p>
+            <p>
+              Your <strong>lead data is preserved</strong> if a subscription
+              lapses. Campaigns, leads, dispositions and call history stay
+              where they are, so coming back later means signing in rather than
+              rebuilding — which also means leaving is not a decision you have
+              to be certain about.
+            </p>
+
+            <h3 style={{ fontSize: 17, marginTop: 28, marginBottom: 10 }}>
+              And if it is wrong within the first day
+            </h3>
+            <p>
+              Not what you expected? Email{' '}
+              <a href="mailto:support@dialerseat.com">support@dialerseat.com</a>{' '}
+              within <strong>24 hours</strong> of the charge and we will refund
+              it. After that window the charge is final — canceling stops
+              future billing but does not refund the period you are already in.
             </p>
             <p className="muted">
-              Contact support for more information at{' '}
-              support@dialerseat.com.
+              Which is the part worth remembering: past 24 hours, the most you
+              are out is the week you are standing in. Not a quarter, not a
+              year.
             </p>
           </section>
 
