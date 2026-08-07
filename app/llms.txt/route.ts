@@ -84,7 +84,7 @@ who want to offer a branded dialer to their own clients.
 - [Phone numbers & caller ID](${ROOT}/faq/numbers): STIR/SHAKEN A-attestation, CNAM registration, local presence, and avoiding spam/scam-likely flags.
 - [Uploading & managing leads](${ROOT}/faq/leads): CSV column auto-detection, consent fields, and the 3-attempt retry cycle.
 - [Call scripts](${ROOT}/faq/scripts): personal and team-shared scripts, attaching to campaigns, reordering.
-- [Setting up a campaign](${ROOT}/faq/campaigns): dialer mode, AMD toggle and defaults, predictive pacing, voicemail drop.
+- [Setting up a campaign](${ROOT}/faq/campaigns): dialer mode, AMD toggle and defaults, predictive pacing.
 - [Compliance export](${ROOT}/faq/compliance-export): downloadable per-campaign CSV of AMD results, abandon flags, and dispositions, redacted by default.
 - [Billing & cancellation](${ROOT}/faq/billing): what cancellation, failed payments, and mid-week seat changes actually do.
 - [Recordings & your data](${ROOT}/faq/data-and-recordings): recording retention, full-account JSON export, permanent account deletion.

@@ -199,13 +199,14 @@ export default function Page() {
                 <summary>Are voicemail drops a separate feature?</summary>
                 <div className="answer">
                   <p>
-                    Yes — different feature, related concept. AMD <em>detects</em>
+                    Different feature, related concept. AMD <em>detects</em>
                     voicemails. Voicemail drops <em>play a pre-recorded
-                    message into</em> a voicemail once detected. We support
-                    voicemail drops as an opt-in per-campaign setting.
-                    By default it&apos;s off because, well, it&apos;s an
-                    aggressive practice that doesn&apos;t suit every
-                    industry.
+                    message into</em> one once detected.
+                    DialerSeat does not do voicemail drops today. When AMD
+                    calls a machine, the call ends and the queue advances —
+                    nothing is left behind.
+                    It is on the list rather than shipped, and we would rather
+                    say that than have you plan a campaign around it.
                   </p>
                 </div>
               </details>

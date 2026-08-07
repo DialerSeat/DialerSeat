@@ -459,7 +459,7 @@ export default function FaqView() {
                 </Link>
                 <Link href="/faq/campaigns" className="faq-exp-card campaigns">
                   <span className="pill">CAMPAIGNS</span>
-                  <div className="card-title">Mode, AMD, voicemail drop — campaign setup.</div>
+                  <div className="card-title">Mode, AMD, predictive pacing — campaign setup.</div>
                 </Link>
                 <Link href="/faq/scripts" className="faq-exp-card scripts">
                   <span className="pill">SCRIPTS</span>
@@ -596,7 +596,7 @@ export default function FaqView() {
                     <p>
                       Create it, name it or don&apos;t, pick a dialer mode (defaults to power),
                       and it&apos;s active immediately — no setup wizard, no required fields
-                      beyond that. AMD, predictive pacing, and voicemail drop are all optional
+                      beyond that. AMD and predictive pacing are both optional
                       settings with sane defaults.
                     </p>
                     <p>

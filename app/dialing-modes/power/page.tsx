@@ -457,7 +457,7 @@ export default function PowerDialerPage() {
               <li>Auto-advance after disposition — no clicking between calls once you&apos;re going.</li>
               <li>One outbound line per agent. Zero abandonment possible. No FTC exposure.</li>
               <li>TCPA window enforcement per lead&apos;s local time zone. No 6 AM Pacific dials to East Coast leads.</li>
-              <li>DNC scrub on every dial — both federal and state lists.</li>
+              <li>National DNC scrubbing is on you — scrub your list against the registry before you upload it. State lists too. See <Link href="/faq/how-we-keep-compliance">how we keep compliance</Link>.</li>
               <li>Keyboard shortcuts for disposition so you keep your hands on the keys, not the mouse.</li>
               <li>Live duration timer, connected-rate counter, and per-session metrics in the right sidebar.</li>
             </ul>

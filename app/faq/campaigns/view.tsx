@@ -227,10 +227,6 @@ export default function CampaignsFaqView() {
                 <div className="cmp-settings-cell">Predictive-only. A multiplier between <code>1.0</code> and <code>3.0</code>, defaulting to <code>1.5</code>. Higher means more aggressive pacing; the abandon-rate auto-degrade still applies regardless of where you set it.</div>
               </div>
               <div className="cmp-settings-row">
-                <div className="cmp-settings-cell name">Voicemail drop URL</div>
-                <div className="cmp-settings-cell">Optional audio file. When AMD detects a machine, this plays instead of an agent leaving a live message — set it once, it fires automatically from then on.</div>
-              </div>
-              <div className="cmp-settings-row">
                 <div className="cmp-settings-cell name">Status</div>
                 <div className="cmp-settings-cell"><code>active</code> or <code>inactive</code>. New campaigns start active — there&apos;s no draft state you have to publish out of.</div>
               </div>
@@ -298,7 +294,7 @@ export default function CampaignsFaqView() {
               <div className="cmp-flow-step">
                 <div className="cmp-flow-body">
                   <h4>4. ADJUST MODE-SPECIFIC SETTINGS</h4>
-                  <p>AMD toggle, lines-per-agent if predictive, voicemail drop if you have an audio file ready. All optional, all editable later.</p>
+                  <p>AMD toggle, and lines-per-agent if predictive. Both optional, both editable later.</p>
                 </div>
               </div>
               <div className="cmp-flow-step">

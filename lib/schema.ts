@@ -13,10 +13,21 @@ export function organizationSchema() {
     description:
       'The modern dialer for sales teams and solo agents. Multi-line predictive dialing with per-campaign mode configuration, multiple scripts per campaign, server-side TCPA enforcement, and carrier-level STIR/SHAKEN A-attestation where supported, at flat $35/week per seat. No annual contracts.',
     foundingDate: '2025',
+    // sameAs is how a search engine stops treating dialerseat.com as a website
+    // and starts treating DialerSeat as an ENTITY — one thing with profiles in
+    // several places rather than several unconnected mentions. It is the input
+    // to a knowledge panel, and to an assistant being confident enough to name
+    // us rather than hedge.
+    sameAs: [
+      'https://www.linkedin.com/in/dialerseat',
+    ],
     contactPoint: {
       '@type': 'ContactPoint',
       contactType: 'Customer Support',
-      email: 'hello@dialerseat.com',
+      // support@, not hello@. Every other page on the site publishes support@,
+      // and an entity that lists two different contact addresses is an entity a
+      // model has to hedge about.
+      email: 'support@dialerseat.com',
       availableLanguage: ['English'],
     },
   }

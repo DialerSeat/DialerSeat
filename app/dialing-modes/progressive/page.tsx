@@ -473,7 +473,7 @@ export default function ProgressiveDialerPage() {
               <li>Auto-advance after disposition (you don&apos;t click between calls).</li>
               <li>One outbound line per agent. Zero abandonment risk by definition.</li>
               <li>TCPA window check before every dial.</li>
-              <li>DNC scrub before every dial — federal + state.</li>
+              <li>Leads dispositioned Do Not Call are permanently removed from rotation. National and state registry scrubbing remains yours before upload — see <Link href="/faq/how-we-keep-compliance">how we keep compliance</Link>.</li>
               <li>Per-call AMD result stored on the calls table for later analytics. You can see your true human-pickup rate by campaign.</li>
             </ul>
           </div>

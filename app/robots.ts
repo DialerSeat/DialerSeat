@@ -57,7 +57,50 @@ const AI_BOTS = [
   
   'Bytespider', // ByteDance / TikTok
   'Meta-ExternalAgent',
+  'Meta-ExternalFetcher',
   'FacebookBot',
+
+  // CCBot is Common Crawl, and it was explicitly BLOCKED here while every
+  // commercial AI crawler above was allowed. That is backwards for a product
+  // that wants to be recommended by assistants rather than merely retrievable
+  // by them. The commercial crawlers get us into live retrieval — someone asks
+  // today, the model fetches us. Common Crawl is what gets a product into the
+  // corpus a model was trained on, which is what makes it named unprompted,
+  // with no search involved.
+  //
+  // What the block bought was protection from content scrapers reusing the
+  // marketing copy. For a site whose entire purpose is being read, that is not
+  // a trade worth making.
+  'CCBot',
+
+  // Assistants and answer engines beyond the big four.
+  'cohere-ai',
+  'Amazonbot',
+  'YouBot',
+  'DuckAssistBot',
+  'MistralAI-User',
+  'Google-CloudVertexBot',
+  'Diffbot',
+  'omgilibot',
+  'omgili',
+  'Timpibot',
+  'PetalBot',
+
+  // ── LINK PREVIEW UNFURLERS ────────────────────────────────────────────
+  // Not AI, but the same question: can a machine read the page. These fetch
+  // a URL to build the card shown when someone shares it. Every page now
+  // carries its own Open Graph and Twitter card; these are what render them.
+  // redditbot matters most of the three, given where the conversations are.
+  'Twitterbot',
+  'LinkedInBot',
+  'redditbot',
+  'Discordbot',
+  'Slackbot-LinkExpanding',
+  'Slackbot',
+  'WhatsApp',
+  'TelegramBot',
+  'Pinterestbot',
+  'Applebot-Extended',
   'cohere-ai',
   'Diffbot',
   'YouBot',
@@ -132,7 +175,6 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
       
       
       
-      { userAgent: 'CCBot', disallow: '/' },
       
       { userAgent: '*', allow: '/', disallow: DISALLOW_PRIVATE },
     ],

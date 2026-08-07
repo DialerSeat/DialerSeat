@@ -540,7 +540,7 @@ should_dial = max(0, desired_calls - in_flight)`}</div>
               <li>Recovery threshold at 2.0% — stays degraded with a 0.5% safety buffer until the rate clearly drops.</li>
               <li>Live abandon-rate display in the agent terminal so you always know where the campaign is sitting.</li>
               <li>AMD pre-screen so machine pickups never count as abandons against your number.</li>
-              <li>TCPA window check on every dial. DNC scrub on every dial. CNAM-aware caller-ID routing.</li>
+              <li>TCPA window check on every dial. CNAM-aware caller-ID routing. National DNC scrubbing is still on you — see <Link href="/faq/how-we-keep-compliance">how we keep compliance</Link> for the full split.</li>
             </ul>
           </div>
         </section>

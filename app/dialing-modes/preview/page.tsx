@@ -466,7 +466,7 @@ export default function PreviewDialerPage() {
               <li><em>Skip This Lead</em> dispositions cleanly and pulls the next one — no penalty for passing.</li>
               <li>Auto-pull next lead after disposition (toggle on/off in your settings).</li>
               <li>TCPA window check still runs — leads outside their local 8 AM–9 PM window are skipped automatically.</li>
-              <li>DNC scrub before every dial. The agent never has to remember.</li>
+              <li>Leads you have marked Do Not Call are never served again — that much the agent does not have to remember. Scrubbing against the National Registry is still yours to do before upload; see <Link href="/faq/how-we-keep-compliance">how we keep compliance</Link>.</li>
             </ul>
           </div>
         </section>
