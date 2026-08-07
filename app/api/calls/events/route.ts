@@ -364,7 +364,7 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
     // conversation.
     const { data: callRow } = await supabaseAdmin
       .from('calls')
-      .select('dial_source, agent_call_control_id')
+      .select('dial_source, agent_call_control_id, answered_at')
       .eq('call_control_id', callControlId)
       .maybeSingle()
 
@@ -376,7 +376,39 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
     // real voicemails, ignoring it protects real people. Default is to honour
     // it — skipping voicemail is the whole point — now that preview, the mode
     // where a wrong verdict hurts most, no longer runs AMD at all.
-    const { amd_hangup_when_bridged: hangupWhenBridged } = await getPlatformConfig()
+    const {
+      amd_hangup_when_bridged: hangupWhenBridged,
+      amd_min_seconds_before_hangup: minSeconds,
+    } = await getPlatformConfig()
+
+    // ── TOO SOON TO BE A GREETING ─────────────────────────────────────────
+    // The floor, and the thing that actually stops live people being cut off.
+    //
+    // Over 90 minutes of testing every answered call came back 'machine' —
+    // 12 of 12, all of them a human answering their own phone. The detector is
+    // not mistimed, it is wrong, so no amount of adjusting how long it listens
+    // repairs it.
+    //
+    // Timing is the one signal that does separate the cases. A real voicemail
+    // greeting runs 8-15 seconds, so a genuine "greeting ended" verdict lands
+    // late. A verdict two seconds after answer is a person who said hello and
+    // paused. Below the floor we simply do not believe it.
+    //
+    // This is deliberately OUR check rather than a carrier parameter: it works
+    // regardless of whether Telnyx honours answering_machine_detection_config,
+    // which — given 12 of 12 — is itself in question.
+    if (minSeconds > 0 && callRow?.answered_at) {
+      const secondsSinceAnswer =
+        (Date.now() - new Date(callRow.answered_at).getTime()) / 1000
+      if (secondsSinceAnswer < minSeconds) {
+        console.warn(
+          `[calls/events] AMD said '${result}' only ${secondsSinceAnswer.toFixed(1)}s ` +
+          `after answer (floor ${minSeconds}s) — too fast to be the end of a real ` +
+          `greeting. Ignoring and leaving the call up.`
+        )
+        return
+      }
+    }
 
     if (agentAlreadyBridged && !hangupWhenBridged) {
       console.warn(

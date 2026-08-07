@@ -66,6 +66,8 @@ export interface PlatformConfig {
   amd_in_preview: boolean
   /** Whether a machine verdict ends a call the agent is already bridged into. */
   amd_hangup_when_bridged: boolean
+  /** A machine verdict sooner than this after answer is ignored. 0 disables. */
+  amd_min_seconds_before_hangup: number
 }
 
 export const PLATFORM_CONFIG_DEFAULTS: PlatformConfig = {
@@ -91,6 +93,9 @@ export const PLATFORM_CONFIG_DEFAULTS: PlatformConfig = {
   amd_in_preview: false,
   // Voicemail skipping is why AMD exists; keep it, now that preview is out.
   amd_hangup_when_bridged: true,
+  // A real voicemail greeting ends at 8-15s. Anything faster is a human who
+  // paused after "hello".
+  amd_min_seconds_before_hangup: 6,
 }
 
 const CONFIG_COLUMNS =
@@ -99,7 +104,7 @@ const CONFIG_COLUMNS =
   'pool_capacity_alert_pct, webhook_silence_minutes, agent_leg_refusal_alert_count, ' +
   'concurrency_budget, amd_detector, amd_tuning_enabled, ' +
   'amd_total_analysis_ms, amd_after_greeting_silence_ms, ' +
-  'amd_in_preview, amd_hangup_when_bridged'
+  'amd_in_preview, amd_hangup_when_bridged, amd_min_seconds_before_hangup'
 
 // Cached per process. These are read on hot paths (every dial consults the AMD
 // and recording overrides), and the values change by human action at most a few

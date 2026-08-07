@@ -63,6 +63,7 @@ const FIELDS: Record<keyof PlatformConfig, Validator> = {
   amd_after_greeting_silence_ms: v => intInRange(v, 200, 10000),
   amd_in_preview:            v => typeof v === 'boolean' ? v : null,
   amd_hangup_when_bridged:   v => typeof v === 'boolean' ? v : null,
+  amd_min_seconds_before_hangup: v => intInRange(v, 0, 60),
 }
 
 function intInRange(v: unknown, min: number, max: number): number | null {
