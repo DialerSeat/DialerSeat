@@ -342,15 +342,46 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
   const ROBOT_RESULTS = new Set(['machine', 'fax_detected'])
 
   if (ROBOT_RESULTS.has(result)) {
-    // ── SILENT INSTANT SKIP ────────────────────────────────────────────
+    // ── NEVER HANG UP ON A CALL THE AGENT IS ALREADY ON ────────────────
+    // This is the guard that was missing, and it is the reason agents were
+    // being cut off mid-sentence.
+    //
+    // In preview, power and progressive the lead leg is dialed with link_to +
+    // bridge_on_answer, so the agent is connected the INSTANT the lead picks
+    // up. AMD then reports a couple of seconds later — into a conversation
+    // that is already happening. Acting on that verdict hangs up on a real
+    // person while the agent is talking to them.
+    //
+    // The entire purpose of AMD is to avoid CONNECTING an agent to a machine.
+    // Once they are connected, that has already failed or already succeeded,
+    // and the agent can hear which. They have ears and a skip button; a
+    // detector that fires on silence does not get to overrule them.
+    //
+    // Predictive is the opposite case and still hangs up: controller_fanout
+    // lines have no agent bridged yet, so a machine verdict is exactly the
+    // signal the mode exists to act on, and dropping it costs nobody a
+    // conversation.
+    const { data: callRow } = await supabaseAdmin
+      .from('calls')
+      .select('dial_source, agent_call_control_id')
+      .eq('call_control_id', callControlId)
+      .maybeSingle()
+
+    const agentAlreadyBridged =
+      callRow?.dial_source === 'user_dial' && !!callRow?.agent_call_control_id
+
+    if (agentAlreadyBridged) {
+      console.warn(
+        `[calls/events] AMD said '${result}' for ${callControlId}, but the agent ` +
+        `is already bridged in — NOT hanging up. Leaving the call to the human.`
+      )
+      return
+    }
+
+    // ── SILENT INSTANT SKIP (predictive fan-out only) ──────────────────
     // Hang up now, write no disposition, move on. The lead row is bumped
     // (attempt count, last_called_at) so it cycles back into rotation
     // normally, but the agent is never asked to tag a call they never had.
-    //
-    // A few seconds of voicemail in an agent's ear is an acceptable price for
-    // never sitting on a dead call — speed through the list is the point of
-    // the dialer. That trade only holds while the verdict is trustworthy,
-    // which is why the detector change above matters more than anything here.
     await hangupCallControlId(callControlId)
     await autoAdvanceLeadNoDisposition(callControlId)
     return

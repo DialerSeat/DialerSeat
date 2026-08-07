@@ -44,7 +44,6 @@ const supabase = createClient(
 // block the others. Returns counts for observability.
 // =============================================================================
 
-const LOOKBACK_MINUTES = 10
 
 export async function POST(req: Request) {
   try {
@@ -73,37 +72,42 @@ export async function POST(req: Request) {
     let hungUp = 0
     let claimsReleased = 0
 
-    const sinceIso = new Date(Date.now() - LOOKBACK_MINUTES * 60_000).toISOString()
     const alreadyHungUp = new Set<string>()
 
+    /**
+     * Hang up a set of legs, a few at a time.
+     *
+     * BOUNDED ON PURPOSE. This used to be an unbounded Promise.all, which
+     * turned one abort into a burst of dozens of simultaneous Call Control
+     * requests. Telnyx rate-limits those, and the request that actually
+     * matters — the client's own hangup of the live call, fired at the same
+     * instant — ends up queued behind the burst. The symptom is the phone
+     * carrying on ringing for a second or two after STOP, which is precisely
+     * the thing this whole endpoint exists to prevent.
+     */
     const hangUpAll = async (ids: Iterable<string>) => {
       const fresh = [...ids].filter(id => id && !alreadyHungUp.has(id))
       if (fresh.length === 0) return 0
       fresh.forEach(id => alreadyHungUp.add(id))
-      await Promise.all(fresh.map(async (id) => {
-        try {
-          await hangupCallControlId(id)
-          hungUp++
-        } catch (e) {
-          console.error('[abort] hangup failed for', id, e)
-        }
-      }))
+
+      const CONCURRENCY = 5
+      for (let i = 0; i < fresh.length; i += CONCURRENCY) {
+        await Promise.all(fresh.slice(i, i + CONCURRENCY).map(async (id) => {
+          try {
+            await hangupCallControlId(id)
+            hungUp++
+          } catch (e) {
+            console.error('[abort] hangup failed for', id, e)
+          }
+        }))
+      }
       return fresh.length
     }
 
-    // ── WHAT IS ACTUALLY LIVE, ACCORDING TO TELNYX ─────────────────────────
-    // The authoritative source, and the one that fixes the reported bug.
-    //
-    // The sweep below it reads our own `calls` table, which is a record of
-    // what we believe we dialed — written AFTER Telnyx accepts each dial, and
-    // best-effort at that. It structurally cannot see the leg placed half a
-    // second ago, or one whose insert failed. In predictive those are most of
-    // them, which is why stop left phones ringing.
-    //
-    // Telnyx knows what is ringing right now. Scoped to this user through the
-    // client_state stamped on every leg at dial time (see
-    // lib/placeOutboundCall), so a shared connection never leaks one tenant's
-    // abort into another's live calls.
+    // ── PRIMARY: WHAT TELNYX SAYS IS LIVE ─────────────────────────────────
+    // Authoritative, and — the part that matters here — SMALL. It returns the
+    // handful of legs actually up right now, scoped to this agent by the
+    // client_state stamped at dial time.
     const fromTelnyx = async () => {
       const ids = await listActiveCallControlIdsForUser(userId)
       if (ids.length > 0) {
@@ -112,24 +116,29 @@ export async function POST(req: Request) {
       }
     }
 
-    // ── AND WHAT OUR TABLE KNOWS ───────────────────────────────────────────
-    // Still worth running: it reaches a leg Telnyx has already moved out of
-    // "active" but that our records show as unfinished, and it costs one
-    // indexed query.
+    // ── BACKSTOP: A LEG TOO NEW FOR TELNYX'S LIST ─────────────────────────
+    // Deliberately a NARROW window, and this is the fix for the regression.
+    //
+    // The filter is `duration = 0`, which reads like an in-flight sentinel and
+    // is not one: it is the permanent resting value of every call nobody
+    // answered — 1,404 of 1,831 rows over thirty days. Over a ten-minute
+    // lookback that matched every call placed in the session, so a single
+    // abort tried to hang up dozens of long-dead calls and drowned the live
+    // one in rate-limited noise.
+    //
+    // 90 seconds is enough to cover a leg placed moments ago that Telnyx has
+    // not surfaced in active_calls yet, while keeping the set to the few calls
+    // that could plausibly still be up. The ring timeout is 20-60s, so
+    // anything older than this is finished regardless of what `duration` says.
+    const RECENT_MS = 90_000
     const fromDatabase = async () => {
       const { data: rows, error: callsErr } = await supabase
         .from('calls')
         .select('call_control_id, agent_call_control_id')
         .eq('user_id', userId)
-        .gte('created_at', sinceIso)
-        // duration is 0 while in flight and gets a real value from the hangup
-        // webhook. null is included because a row that never received the
-        // webhook is exactly the kind that might still be up.
-        //
-        // This was `.eq('duration', 0)` alone, and before that `.is('duration',
-        // 0)` — which PostgREST does not accept as an equality test, so the
-        // sweep silently matched nothing at all.
+        .gte('created_at', new Date(Date.now() - RECENT_MS).toISOString())
         .or('duration.eq.0,duration.is.null')
+        .limit(40)
       if (callsErr) {
         console.error('[abort] calls lookup failed:', callsErr)
         return
@@ -146,31 +155,28 @@ export async function POST(req: Request) {
       await hangUpAll(ids)
     }
 
-    await Promise.all([fromTelnyx(), fromDatabase()])
+    // Telnyx first and ALONE, then the backstop. Sequential rather than
+    // parallel so the authoritative, live set is dealt with before any
+    // best-effort extras compete for the same rate limit.
+    await fromTelnyx()
+    await fromDatabase()
 
-    // ── LATE PASSES, AFTER THE RESPONSE ────────────────────────────────────
-    // A dial already in flight when STOP was pressed lands after the first
-    // sweep has read. The engine is disarmed by then so nothing new starts,
-    // but that last batch would otherwise ring on with nothing left to stop
-    // it. Two spaced passes cover a dial that was mid-flight and one that had
-    // not reached Telnyx yet.
+    // ── ONE LATE PASS, AFTER THE RESPONSE ─────────────────────────────────
+    // A dial already in flight when STOP was pressed lands after the sweep has
+    // read. The engine is disarmed by then so nothing new starts, but that
+    // last leg would otherwise ring on.
     //
-    // They run in `after()` rather than inline. The client awaits this request
-    // before it will show the dial as stopped, so three seconds of sleeps in
-    // the handler means three seconds of a dead STOP button — trading one
-    // visible bug for another. after() lets the response go immediately and
-    // the sweeps continue on the server.
-    //
-    // Both passes are idempotent: hanging up an already-ended call is a no-op,
-    // and alreadyHungUp keeps us from asking twice about the same leg.
+    // One pass, not two: each is another burst against the same rate limit,
+    // and the first sweep now uses the authoritative source so there is far
+    // less left to catch. after() lets the response go immediately — the
+    // client waits on this request before showing the dial as stopped.
     after(async () => {
-      for (const delay of [1200, 1800]) {
-        await new Promise(resolve => setTimeout(resolve, delay))
-        const before = hungUp
-        await Promise.all([fromTelnyx(), fromDatabase()])
-        if (hungUp > before) {
-          console.warn(`[abort] late pass caught ${hungUp - before} straggler leg(s)`)
-        }
+      await new Promise(resolve => setTimeout(resolve, 1500))
+      const before = hungUp
+      await fromTelnyx()
+      await fromDatabase()
+      if (hungUp > before) {
+        console.warn(`[abort] late pass caught ${hungUp - before} straggler leg(s)`)
       }
     })
 

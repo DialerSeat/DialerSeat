@@ -2943,18 +2943,27 @@ function DialerPageInner() {
 
     const sid = activeCallSidRef.current || activeCallSid
 
-    // Local hangup AND the server sweep, in parallel. Predictive places lines
-    // the client holds no ids for, so the local hangup alone would leave them
-    // ringing the lead's phone. scope 'calls' silences them without releasing
-    // claims or pausing the session — we are stopping, not clocking off.
-    await Promise.all([
-      sid ? hangupCall(sid).catch(() => {}) : Promise.resolve(),
-      fetch('/api/dialer/abort', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scope: 'calls' }),
-      }).catch(err => console.error('[abort] server call sweep failed:', err)),
-    ])
+    // ── THE AUDIBLE CALL FIRST, ON ITS OWN ────────────────────────────────
+    // These used to fire together in a Promise.all. They compete: both end up
+    // as Call Control requests against the same rate limit, and the sweep can
+    // issue several at once, so the one hangup the agent can actually HEAR
+    // ends up queued behind housekeeping. That is the phone carrying on
+    // ringing for a beat after STOP.
+    //
+    // Sequential, live call first. It is a single request and returns in
+    // milliseconds.
+    if (sid) await hangupCall(sid).catch(() => {})
+
+    // Then the server sweep, NOT awaited. Predictive places lines the client
+    // holds no ids for, so this still has to run — but nothing on screen
+    // depends on its result, and making the UI wait for it only delays the
+    // agent seeing that they have stopped. scope 'calls' silences the lines
+    // without releasing claims or pausing the session.
+    void fetch('/api/dialer/abort', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scope: 'calls' }),
+    }).catch(err => console.error('[abort] server call sweep failed:', err))
 
     setPredictiveEngineStarted(false)
     predictiveEngineStartedRef.current = false
@@ -3003,14 +3012,15 @@ function DialerPageInner() {
     //
     // scope 'calls' silences the lines WITHOUT releasing claims or pausing
     // the session — terminate ends the call, not the shift.
-    await Promise.all([
-      sid ? hangupCall(sid).catch(() => {}) : Promise.resolve(),
-      fetch('/api/dialer/abort', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scope: 'calls' }),
-      }).catch(err => console.error('[terminate] server call sweep failed:', err)),
-    ])
+    // Live call first and alone — see the note in abortDialing. Running these
+    // together puts the audible hangup in a queue behind the sweep's requests.
+    if (sid) await hangupCall(sid).catch(() => {})
+
+    void fetch('/api/dialer/abort', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scope: 'calls' }),
+    }).catch(err => console.error('[terminate] server call sweep failed:', err))
 
     if (agentWasOnTheCall) {
       setLastCallDuration(elapsedSecondsSince(callStartRef.current))
