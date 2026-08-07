@@ -357,10 +357,6 @@ export default function LeadQueueShowcase() {
           50%      { background: rgba(42, 74, 138, 0.20); }
         }
         @keyframes lq-blink { 0%, 100% { opacity: 1 } 50% { opacity: 0.25 } }
-        @keyframes lq-rise {
-          from { opacity: 0; transform: translateY(6px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
         /* The dark title strip. The real header is
            background: var(--brand-header-bg) with a 2px accent underline —
            the one dark element on an otherwise light screen. */
@@ -528,8 +524,13 @@ export default function LeadQueueShowcase() {
               // currently being dialed — after one full rotation every lead
               // carries an outcome, and the active row would sit at 55%
               // opacity while it was the one thing on screen doing something.
+              // NO ENTRANCE ANIMATION. Rows are keyed by lead id, so when a
+              // lead rotates to the bottom React moves the existing DOM node
+              // rather than creating a new one — and moving a node restarts a
+              // CSS animation attached to it. The result was every row
+              // translating 6px on every rotation: a small, constant twitch in
+              // a panel that is meant to look like a steady piece of software.
               className={`lq-row${isActive ? ' is-active' : ''}${r.outcome && !isActive ? ' is-done' : ''}`}
-              style={{ animation: 'lq-rise .3s ease' }}
             >
               <span className="lq-name">{r.name}</span>
               {/* Accent-coloured and bold, like the real queue's phone column:
