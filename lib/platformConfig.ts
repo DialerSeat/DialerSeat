@@ -126,26 +126,33 @@ export const PLATFORM_CONFIG_DEFAULTS: PlatformConfig = {
   // detector can only ever answer human/not_sure. placeOutboundCall clamps them
   // if they drift above it; these values are chosen to sit below it honestly.
   //
+  // They must also sit WELL clear of the ceiling, not merely under it. At 4000
+  // against a 6000 ceiling, machine verdicts landed at 5.01s — the agent heard
+  // five seconds of voicemail before the skip — and any greeting that was not
+  // cleanly continuous ran past 6000 and came back 'not_sure', which never
+  // hangs up. One such call sat open for 65 seconds. Both symptoms, one cause:
+  // the trip threshold was too close to the ceiling to conclude in time.
+  //
   //   greeting_duration_millis  A greeting longer than this is a machine.
   //                             Someone answering their own phone says "hello"
-  //                             or "hello, this is Josh" — under two seconds.
-  //                             A voicemail greeting is still going. 4000
-  //                             separates them with margin either side.
+  //                             or "hello, this is Josh" — under two seconds. A
+  //                             voicemail greeting is still going at three, and
+  //                             concluding there leaves 3s of headroom under
+  //                             the ceiling instead of 1s.
   //
   //   maximum_number_of_words   More words than this is a machine. Telnyx's
   //                             default of 5 is fewer than most people say when
   //                             they answer, which is what produced a 100%
-  //                             false-positive rate. In the six seconds we
-  //                             listen, a voicemail greeting runs past 10 while
-  //                             a full human sentence — "hi this is Josh how
-  //                             can I help you" — is nine.
+  //                             false-positive rate. Eight still clears a human
+  //                             sentence — "hi this is Josh how can I help you"
+  //                             is nine — while a voicemail greeting passes it
+  //                             inside three seconds.
   //
   //   initial_silence_millis    Silence before any speech this long is a
-  //                             machine. Kept generous; a slow handset or a
-  //                             quiet room should not be a robot.
-  amd_greeting_duration_ms: 4000,
-  amd_max_words: 10,
-  amd_initial_silence_ms: 4500,
+  //                             machine.
+  amd_greeting_duration_ms: 3000,
+  amd_max_words: 8,
+  amd_initial_silence_ms: 3000,
 }
 
 const CONFIG_COLUMNS =

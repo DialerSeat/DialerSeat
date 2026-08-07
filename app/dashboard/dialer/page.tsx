@@ -2559,6 +2559,19 @@ function DialerPageInner() {
     }
   }
 
+  /**
+   * AMD ran out of time without reaching a conclusion.
+   *
+   * Worth telling the agent about, because silence from the dialer reads as
+   * "detection has this covered" — and on a voicemail that ends with the agent
+   * sitting on a greeting waiting for a skip that is never coming. One
+   * observed case ran 65 seconds before it was killed by hand.
+   *
+   * Not a robot verdict: 'not_sure' never hangs up, here or on the server.
+   * This only changes what the agent is told, so they use their own ears.
+   */
+  const isUndecided = (amd?: string): boolean => amd === 'not_sure'
+
   const isNotHuman = (amd?: string): boolean => {
     if (!amd) return false
     // MUST stay in step with ROBOT_RESULTS in app/api/calls/events/route.ts.
@@ -2709,6 +2722,12 @@ function DialerPageInner() {
             setCurrentLead(null)
             scheduleDial(600)
             return
+          }
+
+          if (isUndecided(statusData.amd_result)) {
+            setAmdActivity(prev =>
+              ['⚠ AMD COULD NOT TELL — LISTEN AND SKIP IF IT IS A MACHINE', ...prev].slice(0, 5)
+            )
           }
 
           playPickup()
