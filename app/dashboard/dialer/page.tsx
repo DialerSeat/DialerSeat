@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { normalizeState } from '@/lib/normalizeState'
 import { isDialableLead } from '@/lib/dialableLead'
+import type { QueueDiagnosis } from '@/lib/queueDiagnosis'
 
 /**
  * Whole seconds since a start timestamp, 0 when never started.
@@ -506,6 +507,11 @@ function DialerPageInner() {
   // were actually unreachable — bad area codes, malformed numbers, a Sunday
   // restriction. Those never resolve by waiting.
   const [tcpaBlockedReason, setTcpaBlockedReason] = useState<string | null>(null)
+  // Full per-reason breakdown from /api/leads/next. The banner used to show
+  // one reason — whichever refusal the scan happened to meet first — so a
+  // queue of unusable phone numbers was reported as a time-of-day problem and
+  // the agent was told to wait for a window that would never help.
+  const [queueDiagnosis, setQueueDiagnosis] = useState<QueueDiagnosis | null>(null)
   // The real, specific reason /api/leads/next gave for why no lead was
   // returned (e.g. "Too early in TX (6:30 local, window starts 8:00)",
   // "Unknown state — cannot determine calling window", "Not a member of
@@ -2297,6 +2303,7 @@ function DialerPageInner() {
       setNoLeads(false)
       setTcpaBlockedAll(false)
       setTcpaBlockedReason(null)
+      setQueueDiagnosis(null)
       setNoLeadsReason(null)
       setNoLeadsStatus(null)
       return data.lead
@@ -2304,6 +2311,9 @@ function DialerPageInner() {
       setNoLeads(true)
       setTcpaBlockedAll(!!data.tcpaBlocked)
       setTcpaBlockedReason(typeof data.error === 'string' ? data.error : null)
+      setQueueDiagnosis(
+        data.diagnosis && Array.isArray(data.diagnosis.reasons) ? data.diagnosis : null
+      )
       setNoLeadsReason(typeof data.error === 'string' ? data.error : null)
       setNoLeadsStatus(res.status)
       return null
@@ -3996,24 +4006,63 @@ function DialerPageInner() {
 
         {isPredictive && isQueueDialingArmed && QueueStatsStrip()}
 
-        {tcpaBlockedAll && (
-          <div style={{
-            margin: '12px 16px 0',
-            padding: '9px 14px',
-            background: 'rgba(217, 119, 6, 0.1)',
-            border: `1px solid ${terminalAmber}`,
-            borderRadius: 4,
-            fontFamily: FUTURA,
-            fontSize: 11,
-            color: terminalAmber,
-            letterSpacing: '0.3px',
-            flexShrink: 0,
-          }}>
-            ⏱ {tcpaBlockedReason
-              ? `${tcpaBlockedReason} — queue shown for review.`
-              : 'Outside the calling window — queue shown for review, dialing will resume automatically once the window opens.'}
-          </div>
-        )}
+        {(tcpaBlockedAll || (queueDiagnosis && queueDiagnosis.reasons.length > 0)) && (() => {
+          // Two different situations wearing one banner, and they need
+          // different colours because they need different actions.
+          //
+          //   Amber  — everything is blocked by the clock. Wait; it resolves.
+          //   Red    — at least one reason is permanent. Waiting achieves
+          //            nothing, and the leads need fixing.
+          //
+          // Showing "dialing will resume automatically" over a queue of
+          // unroutable numbers is the specific lie this replaces.
+          const permanent = (queueDiagnosis?.reasons ?? []).filter(
+            r => r.code !== 'too_early' && r.code !== 'too_late' && r.code !== 'sunday'
+          )
+          const hasPermanent = permanent.length > 0
+          const tone = hasPermanent ? '#dc2626' : terminalAmber
+          return (
+            <div style={{
+              margin: '12px 16px 0',
+              padding: '9px 14px',
+              background: hasPermanent ? 'rgba(220, 38, 38, 0.08)' : 'rgba(217, 119, 6, 0.1)',
+              border: `1px solid ${tone}`,
+              borderRadius: 4,
+              fontFamily: FUTURA,
+              fontSize: 11,
+              color: tone,
+              letterSpacing: '0.3px',
+              flexShrink: 0,
+            }}>
+              <div>
+                {hasPermanent ? '⚠' : '⏱'}{' '}
+                {queueDiagnosis?.summary
+                  || (tcpaBlockedReason ? `${tcpaBlockedReason} — queue shown for review.` : null)
+                  || 'Outside the calling window — queue shown for review, dialing will resume automatically once the window opens.'}
+              </div>
+
+              {/* Per-reason lines with a real example, so the user can go and
+                  look at an actual offending lead rather than hunt for one. */}
+              {queueDiagnosis && queueDiagnosis.reasons.length > 1 && (
+                <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 2, opacity: 0.85 }}>
+                  {queueDiagnosis.reasons.map(r => (
+                    <div key={r.code} style={{ fontSize: 10 }}>
+                      · {r.count.toLocaleString()} — {QUEUE_REASON_LABELS[r.code] ?? r.code}
+                      {r.example ? ` (e.g. ${r.example})` : ''}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Only promise a resume when waiting actually delivers one. */}
+              {!hasPermanent && queueDiagnosis?.waitingOnClock && (
+                <div style={{ marginTop: 4, fontSize: 10, opacity: 0.8 }}>
+                  Dialing resumes automatically once the window opens.
+                </div>
+              )}
+            </div>
+          )
+        })()}
 
         {/* ── TABLE ─────────────────────────────────────────────────────────── */}
         <div className="dialer-queue-scroll" style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
@@ -5249,6 +5298,24 @@ function resolveAudioContextCtor(): typeof AudioContext | undefined {
     window.AudioContext ||
     (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
   )
+}
+
+/**
+ * Short forms of the server's reason labels, for the breakdown list.
+ *
+ * The server sentence is prose and reads as one thought; these have to be
+ * scannable in a stack of four, so they are clipped rather than reused.
+ */
+const QUEUE_REASON_LABELS: Record<string, string> = {
+  no_number: 'no phone number',
+  invalid_number: 'invalid phone number',
+  impossible_number: 'not a routable US number',
+  unknown_area: 'area code not recognised, no state set',
+  too_early: 'before their local calling window',
+  too_late: 'past their local calling window',
+  sunday: 'state prohibits Sunday calls',
+  international: 'outside US calling rules',
+  other: 'not dialable right now',
 }
 
 export default function DialerPage() {

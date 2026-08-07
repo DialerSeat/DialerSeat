@@ -16,9 +16,71 @@ import { detectInternationalRegion, isCallableNowInternational } from './interna
 // window, regardless of what time it is for the agent.
 // =============================================================================
 
+/**
+ * Why a lead cannot be dialed, as a stable value rather than prose.
+ *
+ * The reason string is written for a human and gets reworded; anything that
+ * needs to GROUP or COUNT refusals has to key off something that does not
+ * change when the copy does. Without this the dialer could only ever report
+ * the first refusal it met, which is how "outside calling hours" ended up
+ * being shown for a queue whose real problem was malformed phone numbers.
+ */
+export type CallabilityCode =
+  | 'no_number'        // nothing to dial
+  | 'invalid_number'   // wrong number of digits to be a US number
+  | 'impossible_number' // right length, but not a number the NANP can route
+  | 'unknown_area'     // well-formed, but the area code is not one we know
+  | 'too_early'        // before the lead's local window opens
+  | 'too_late'         // after it closes
+  | 'sunday'           // state prohibits Sunday telemarketing
+  | 'international'    // outside US rules — see internationalCallingWindow
+  | 'other'
+
+/**
+ * Is this a number the North American Numbering Plan could never route?
+ *
+ * Distinct from "we don't recognise the area code", and the distinction
+ * matters because the two need opposite advice. An unrecognised area code may
+ * be a real number our lookup table has not caught up with — adding a state
+ * fixes it. A number whose area code starts with 1, or whose exchange is 011,
+ * is not a US phone number at all, and no amount of state data will make it
+ * dialable; it will burn a call attempt and come back as an invalid-number
+ * error from the carrier every single time.
+ *
+ * Deliberately lenient. It only rejects what the NANP itself forbids, so a
+ * real number never trips it:
+ *   - area code and exchange must start 2-9   (NANP assignment rule)
+ *   - N11 area codes are service codes         (411, 611, 911, …)
+ *
+ * Everything else — including unusual, new, or non-geographic area codes —
+ * passes. Being wrong in the strict direction would block real leads, which is
+ * far worse than letting a bad number through to fail at the carrier.
+ *
+ * The reserved 555-0100..555-0199 fiction range is deliberately NOT rejected.
+ * It is genuinely undialable, but the only lists that actually contain it are
+ * sample files and test fixtures, while the cost of getting it wrong is a
+ * blocked real lead. Not worth the rule.
+ */
+export function isImpossibleUsNumber(phone: string): boolean {
+  const all = (phone || '').replace(/\D/g, '')
+  const digits = all.length === 11 && all.startsWith('1') ? all.slice(1) : all
+  if (digits.length !== 10) return false  // length is a different problem
+
+  const npa = digits.slice(0, 3)   // area code
+  const nxx = digits.slice(3, 6)   // exchange
+
+  if (npa[0] === '0' || npa[0] === '1') return true
+  if (npa[1] === '1' && npa[2] === '1') return true   // N11 service codes
+  if (nxx[0] === '0' || nxx[0] === '1') return true
+
+  return false
+}
+
 export interface CallabilityResult {
   allowed: boolean
   reason?: string
+  /** Stable classification of `reason`, safe to group and count on. */
+  code?: CallabilityCode
   retryAfter?: Date  // earliest time when this lead becomes callable again
   leadState?: string
   leadTimezone?: string
@@ -113,9 +175,26 @@ function evaluateCallability(lead: LeadInput): CallabilityResult {
     const intlResult = isCallableNowInternational(lead.phone, intlRegion)
     return {
       allowed: intlResult.allowed,
+      code: 'international',
       reason: intlResult.reason,
       leadState: intlRegion === 'OTHER_INTL' ? undefined : intlRegion,
       leadLocalTime: intlResult.localTime,
+    }
+  }
+
+  // Checked BEFORE the state lookup. A lead carrying state 'TX' and a phone of
+  // 111-111-1111 would otherwise sail through to the window check and be
+  // dialed, failing at the carrier on every pass — forever, since a failed
+  // call leaves it in the queue to be tried again.
+  if (isImpossibleUsNumber(lead.phone)) {
+    const d = (lead.phone || '').replace(/\D/g, '')
+    return {
+      allowed: false,
+      code: 'impossible_number',
+      reason:
+        `${lead.phone} is not a dialable US number — no carrier can route it ` +
+        `(area code ${d.length === 11 ? d.slice(1, 4) : d.slice(0, 3)} / exchange ` +
+        `${d.length === 11 ? d.slice(4, 7) : d.slice(3, 6)} is not a valid combination).`,
     }
   }
 
@@ -141,7 +220,7 @@ function evaluateCallability(lead: LeadInput): CallabilityResult {
     const digits = (lead.phone || '').replace(/\D/g, '')
 
     if (digits.length === 0) {
-      return { allowed: false, reason: 'No phone number on this lead' }
+      return { allowed: false, code: 'no_number', reason: 'No phone number on this lead' }
     }
 
     // 10 digits, or 11 starting with a US country code.
@@ -151,6 +230,7 @@ function evaluateCallability(lead: LeadInput): CallabilityResult {
     if (!isPlausibleUsNumber) {
       return {
         allowed: false,
+        code: 'invalid_number',
         reason:
           `Invalid phone number — ${digits.length} digit${digits.length === 1 ? '' : 's'} ` +
           `(a US number needs 10)`,
@@ -163,6 +243,7 @@ function evaluateCallability(lead: LeadInput): CallabilityResult {
     const areaCode = digits.length === 11 ? digits.slice(1, 4) : digits.slice(0, 3)
     return {
       allowed: false,
+      code: 'unknown_area',
       reason:
         `Unrecognised area code ${areaCode} — cannot confirm the lead's state, ` +
         `so the calling window cannot be checked. Add a state to this lead to dial it.`,
@@ -210,6 +291,7 @@ function evaluateCallability(lead: LeadInput): CallabilityResult {
   if (rule.noSundayCalls && isSunday) {
     return {
       allowed: false,
+      code: 'sunday',
       reason: `${state} prohibits Sunday telemarketing calls`,
       retryAfter: atHourInTz(now, tz, rule.startHour, 1),
       leadState: state,
@@ -221,6 +303,7 @@ function evaluateCallability(lead: LeadInput): CallabilityResult {
   if (leadHour < startHour) {
     return {
       allowed: false,
+      code: 'too_early',
       reason: `Too early in ${state} (${leadHour}:${String(leadMinute).padStart(2, '0')} local, window starts ${startHour}:00)`,
       retryAfter: atHourInTz(now, tz, startHour, 0),
       leadState: state,
@@ -231,6 +314,7 @@ function evaluateCallability(lead: LeadInput): CallabilityResult {
   if (leadHour >= endHour) {
     return {
       allowed: false,
+      code: 'too_late',
       reason: `Too late in ${state} (${leadHour}:${String(leadMinute).padStart(2, '0')} local, window ends ${endHour}:00)`,
       retryAfter: atHourInTz(now, tz, startHour, 1),
       leadState: state,

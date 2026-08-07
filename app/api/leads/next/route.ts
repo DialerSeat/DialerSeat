@@ -5,6 +5,7 @@ import { hasCallingWindowOverride } from '@/lib/callingWindowOverride'
 import { requireUser } from '@/lib/requireUser'
 import { apiError } from '@/lib/apiError'
 import { DIALABLE_STATUSES, isDialableLead } from '@/lib/dialableLead'
+import { QueueDiagnosisBuilder } from '@/lib/queueDiagnosis'
 
 // SECURITY (was IDOR): this route took ?user_id from the query string and used
 // it for BOTH personal lead scoping AND team-membership verification. That let
@@ -189,12 +190,17 @@ export async function GET(req: Request) {
       let callable: ClaimedLead | null = null
       let blockReason: string | null = null
       const toRelease: string[] = []
+      // Counts every refusal rather than keeping the first. See
+      // lib/queueDiagnosis — reporting only the first reason is how a queue of
+      // broken phone numbers came to be described as "outside calling hours".
+      const diagnosis = new QueueDiagnosisBuilder()
 
       for (const c of orderedCandidates) {
         if (callable) { toRelease.push(c.id); continue }
         const result = isCallableNow({ phone: c.phone ?? '', state: c.state }, { overrideWindow })
         if (result.allowed) { callable = c; continue }
         if (!blockReason) blockReason = result.reason || null
+        diagnosis.add(result.code, c.phone ?? undefined)
         toRelease.push(c.id)
       }
 
@@ -216,12 +222,19 @@ export async function GET(req: Request) {
         // actual too-early/too-late window) instead of a hardcoded 8am-9pm
         // message that's misleading when the true cause is something else.
         const hasAnyCandidates = orderedCandidates.length > 0
+        const summary = diagnosis.build()
         return NextResponse.json({
           success: false,
           error: hasAnyCandidates
-            ? (blockReason || 'All available leads are outside their local calling window. Try again later.')
-            : 'No more team leads',
-          tcpaBlocked: hasAnyCandidates,
+            ? summary.summary
+            : 'No leads left to dial in this team’s campaigns.',
+          // The single most specific reason, for the per-row outcome chip.
+          detail: blockReason ?? undefined,
+          // Full breakdown so the UI can show every reason, not just the top one.
+          diagnosis: hasAnyCandidates ? summary : undefined,
+          // Only true when waiting actually helps. Broken numbers never become
+          // dialable, so promising "dialing will resume" would be a lie.
+          tcpaBlocked: hasAnyCandidates && summary.waitingOnClock,
         }, { status: 404 })
       }
 
@@ -324,6 +337,7 @@ export async function GET(req: Request) {
     // state, unrecognized area code) isn't misreported as a time-of-day issue.
     let callable: any = null
     let blockReason: string | null = null
+    const personalDiagnosis = new QueueDiagnosisBuilder()
     for (const c of orderedPersonalCandidates) {
       // Belt-and-braces against the status query above: isDialableLead also
       // rejects the retiring dispositions (DO NOT CALL / NOT INTERESTED /
@@ -335,16 +349,20 @@ export async function GET(req: Request) {
       const result = isCallableNow({ phone: c.phone, state: c.state }, { overrideWindow })
       if (result.allowed) { callable = c; break }
       if (!blockReason) blockReason = result.reason || null
+      personalDiagnosis.add(result.code, c.phone ?? undefined)
     }
 
     if (!callable) {
       const hasAnyCandidates = (candidates?.length || 0) > 0
+      const summary = personalDiagnosis.build()
       return NextResponse.json({
         success: false,
         error: hasAnyCandidates
-          ? (blockReason || 'All available leads are outside their local calling window. Try again later.')
-          : 'No more leads',
-        tcpaBlocked: hasAnyCandidates,
+          ? summary.summary
+          : 'No leads left to dial in this campaign.',
+        detail: blockReason ?? undefined,
+        diagnosis: hasAnyCandidates ? summary : undefined,
+        tcpaBlocked: hasAnyCandidates && summary.waitingOnClock,
       }, { status: 404 })
     }
 

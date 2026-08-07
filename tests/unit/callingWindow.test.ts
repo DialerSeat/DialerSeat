@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { isCallableNow } from '@/lib/callingWindow'
+import { isCallableNow, isImpossibleUsNumber } from '@/lib/callingWindow'
 
 // =============================================================================
 // The calling window is legally load-bearing and entirely time-dependent, so
@@ -198,5 +198,53 @@ describe('isCallableNow — unreachable leads report why', () => {
     const r = isCallableNow({ phone: '19995550142', state: null })
     expect(r.reason).toContain('Unrecognised area code 999')
     expect(r.reason).not.toContain('Invalid phone number')
+  })
+})
+
+describe('isImpossibleUsNumber — lenient, but realistic', () => {
+  // The point of this check is the leads that pass every other test: right
+  // length, right shape, imports cleanly, sits in the queue forever burning a
+  // call attempt every pass because no carrier can route it.
+  it('rejects an area code starting with 0 or 1', () => {
+    expect(isImpossibleUsNumber('1112223333')).toBe(true)
+    expect(isImpossibleUsNumber('0123456789')).toBe(true)
+  })
+
+  it('rejects N11 service codes as area codes', () => {
+    expect(isImpossibleUsNumber('9112223333')).toBe(true)
+    expect(isImpossibleUsNumber('4112223333')).toBe(true)
+  })
+
+  it('rejects an exchange starting with 0 or 1', () => {
+    expect(isImpossibleUsNumber('3360123456')).toBe(true)
+    expect(isImpossibleUsNumber('3361234567')).toBe(true)
+  })
+
+  it('accepts ordinary numbers, including the fictional 555-01xx range', () => {
+    // 555-0100..0199 is genuinely reserved, but the only lists carrying it are
+    // samples and fixtures — not worth the risk of blocking a real lead.
+    expect(isImpossibleUsNumber('3365550142')).toBe(false)
+    expect(isImpossibleUsNumber('2125551234')).toBe(false)
+    expect(isImpossibleUsNumber('+1 (336) 555-0142')).toBe(false)
+  })
+
+  it('accepts an area code we do not recognise but that is validly shaped', () => {
+    // Not our job to second-guess the NANP on new assignments — an unknown
+    // area code is a different verdict with different advice.
+    expect(isImpossibleUsNumber('9995550142')).toBe(false)
+  })
+
+  it('ignores wrong-length numbers — that is a separate verdict', () => {
+    expect(isImpossibleUsNumber('5551234')).toBe(false)
+    expect(isImpossibleUsNumber('')).toBe(false)
+  })
+
+  it('blocks an impossible number even when the lead carries a valid state', () => {
+    // The regression guard: a state column used to be enough to send the lead
+    // straight to the window check, so 111-111-1111 in Texas was dialed.
+    const r = isCallableNow({ phone: '1112223333', state: 'TX' })
+    expect(r.allowed).toBe(false)
+    expect(r.code).toBe('impossible_number')
+    expect(r.reason).toContain('not a dialable US number')
   })
 })

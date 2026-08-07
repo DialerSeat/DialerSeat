@@ -286,6 +286,15 @@ interface UploadFailure {
   detail?: string
   rejected?: number
   rejections?: UploadRejection[]
+  /**
+   * Rows that DID import but will not dial — an unrecognised area code with no
+   * state, an unroutable number, a Sunday-restricted state.
+   *
+   * Kept apart from `rejections` because the fix is different: these leads are
+   * already in the campaign and need editing, not re-uploading. Merging them
+   * would tell the user to fix their file when the file was fine.
+   */
+  warnings?: UploadRejection[]
 }
 
 export default function CampaignsPage() {
@@ -749,16 +758,36 @@ export default function CampaignsPage() {
                 detail: typeof uploadData?.detail === 'string' ? uploadData.detail : undefined,
                 rejected: typeof uploadData?.rejected === 'number' ? uploadData.rejected : undefined,
                 rejections: Array.isArray(uploadData?.rejections) ? uploadData.rejections : undefined,
+                warnings: Array.isArray(uploadData?.warnings) ? uploadData.warnings : undefined,
               }
-            } else if (typeof uploadData?.rejected === 'number' && uploadData.rejected > 0) {
-              // Campaign created and leads imported, but not all of them —
-              // still worth telling someone before they start dialing a list
-              // that is smaller than the file they uploaded.
-              csvFailed = {
-                error: `Campaign created. Imported ${uploadData.count?.toLocaleString?.() ?? uploadData.count} ` +
-                       `leads — ${uploadData.rejected.toLocaleString()} rows could not be used.`,
-                rejected: uploadData.rejected,
-                rejections: Array.isArray(uploadData?.rejections) ? uploadData.rejections : undefined,
+            } else {
+              // Campaign created and leads imported, but not necessarily all of
+              // them, and not necessarily in a dialable state. Both are worth
+              // saying before someone starts a session on a list that is
+              // smaller — or quieter — than the file they uploaded.
+              const warnings = Array.isArray(uploadData?.warnings) && uploadData.warnings.length > 0
+                ? uploadData.warnings
+                : undefined
+              const warnedTotal = (warnings ?? []).reduce(
+                (n: number, w: UploadRejection) => n + (w.count || 0), 0
+              )
+              const rejected = typeof uploadData?.rejected === 'number' ? uploadData.rejected : 0
+
+              if (rejected > 0 || warnings) {
+                const imported = uploadData.count?.toLocaleString?.() ?? uploadData.count
+                csvFailed = {
+                  error: rejected > 0
+                    ? `Campaign created. Imported ${imported} leads — ` +
+                      `${rejected.toLocaleString()} rows could not be used` +
+                      (warnedTotal > 0 ? `, and ${warnedTotal.toLocaleString()} more need attention.` : '.')
+                    : `Campaign created. Imported ${imported} leads — ` +
+                      `${warnedTotal.toLocaleString()} of them need attention before they will dial.`,
+                  rejected,
+                  rejections: Array.isArray(uploadData?.rejections) && uploadData.rejections.length > 0
+                    ? uploadData.rejections
+                    : undefined,
+                  warnings,
+                }
               }
             }
           }
@@ -902,17 +931,34 @@ export default function CampaignsPage() {
           detail: typeof data?.detail === 'string' ? data.detail : undefined,
           rejected: typeof data?.rejected === 'number' ? data.rejected : undefined,
           rejections: Array.isArray(data?.rejections) ? data.rejections : undefined,
+          warnings: Array.isArray(data?.warnings) ? data.warnings : undefined,
         }
       }
       // A PARTIAL import still needs surfacing. Reporting only the success
       // count is how someone uploads 1,000 rows, imports 100, and discovers
       // the shortfall days later while dialing.
-      if (ok && typeof data?.rejected === 'number' && data.rejected > 0) {
+      const warnings = Array.isArray(data?.warnings) && data.warnings.length > 0
+        ? data.warnings
+        : undefined
+      const warnedTotal = (warnings ?? []).reduce(
+        (n: number, w: UploadRejection) => n + (w.count || 0), 0
+      )
+
+      if (ok && ((typeof data?.rejected === 'number' && data.rejected > 0) || warnings)) {
+        const imported = data.count?.toLocaleString?.() ?? data.count
+        const rejected = typeof data?.rejected === 'number' ? data.rejected : 0
+        // A clean import with warnings is NOT a failure, and must not read
+        // like one — the leads are in, some just need attention.
         failure = {
-          error: `Imported ${data.count?.toLocaleString?.() ?? data.count} leads — ` +
-                 `${data.rejected.toLocaleString()} rows could not be used.`,
-          rejected: data.rejected,
-          rejections: Array.isArray(data?.rejections) ? data.rejections : undefined,
+          error: rejected > 0
+            ? `Imported ${imported} leads — ${rejected.toLocaleString()} rows could not be used` +
+              (warnedTotal > 0 ? `, and ${warnedTotal.toLocaleString()} more need attention.` : '.')
+            : `Imported ${imported} leads — ${warnedTotal.toLocaleString()} of them need attention before they will dial.`,
+          rejected,
+          rejections: Array.isArray(data?.rejections) && data.rejections.length > 0
+            ? data.rejections
+            : undefined,
+          warnings,
         }
       }
     } catch {
@@ -3699,9 +3745,11 @@ export default function CampaignsPage() {
                 flex: 1, fontSize: 11, fontWeight: 'bold', letterSpacing: 3,
                 color: 'white', padding: '6px 10px', fontFamily: FUTURA,
               }}>
-                {csvUploadError.rejections && (csvUploadError.rejected ?? 0) > 0 && !csvUploadError.detail
-                  ? 'SOME ROWS SKIPPED'
-                  : 'UPLOAD PROBLEM'}
+                {(csvUploadError.rejected ?? 0) === 0 && csvUploadError.warnings?.length
+                  ? 'IMPORTED — NEEDS ATTENTION'
+                  : (csvUploadError.rejections && (csvUploadError.rejected ?? 0) > 0 && !csvUploadError.detail)
+                    ? 'SOME ROWS SKIPPED'
+                    : 'UPLOAD PROBLEM'}
               </div>
               <button className="settings-close" onClick={() => setCsvUploadError(null)}>×</button>
             </div>
@@ -3738,6 +3786,50 @@ export default function CampaignsPage() {
                       )}
                     </div>
                   ))}
+                </div>
+              )}
+
+              {/* IMPORTED BUT NOT DIALABLE.
+                  Visually separated from the rejections above because the two
+                  ask for different things: rejected rows never made it in and
+                  need a corrected file; these are in the campaign right now and
+                  will sit in the queue being skipped until someone edits them.
+                  Without this, the upload reports success and the shortfall is
+                  discovered days later, mid-session. */}
+              {csvUploadError.warnings && csvUploadError.warnings.length > 0 && (
+                <div style={{ marginTop: 14 }}>
+                  <div style={{
+                    fontSize: 10, fontWeight: 'bold', letterSpacing: 1.2,
+                    color: T.muted, fontFamily: FUTURA, marginBottom: 8,
+                  }}>
+                    IMPORTED, BUT WILL NOT DIAL AS-IS
+                  </div>
+                  {csvUploadError.warnings.map(w => (
+                    <div key={w.reason} style={{
+                      marginBottom: 10, paddingBottom: 10,
+                      borderBottom: `1px solid ${T.border}`,
+                    }}>
+                      <div style={{
+                        fontSize: 11, fontWeight: 'bold', letterSpacing: 0.4,
+                        color: T.text, fontFamily: FUTURA,
+                      }}>
+                        {w.label} — {w.count.toLocaleString()} lead{w.count === 1 ? '' : 's'}
+                      </div>
+                      {w.examples.length > 0 && (
+                        <div style={{
+                          fontSize: 11, lineHeight: 1.65, color: T.muted,
+                          fontFamily: 'monospace', marginTop: 4, wordBreak: 'break-all',
+                        }}>
+                          {w.examples.join('\n')}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  <div style={{
+                    fontSize: 11, lineHeight: 1.6, color: T.muted, fontFamily: FUTURA,
+                  }}>
+                    Adding a state to these leads on the Leads tab makes them dialable.
+                  </div>
                 </div>
               )}
 

@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { requireActive } from '@/lib/subscription'
 import { auth } from '@clerk/nextjs/server'
 import { apiError } from '@/lib/apiError'
+import { isCallableNow } from '@/lib/callingWindow'
 
 /**
  * Parses optional consent fields from a lead row. Returns the four columns
@@ -87,13 +88,49 @@ export async function POST(req: Request) {
     const LEAD_LIMIT_PER_CAMPAIGN = 10000
     const existingCount = campaign.total_leads ?? 0
     if (existingCount + leads.length > LEAD_LIMIT_PER_CAMPAIGN) {
+      // "Limit reached" on its own leaves the user to work out the arithmetic
+      // and guess at a fix. Give them the three numbers and the way out.
+      const room = Math.max(0, LEAD_LIMIT_PER_CAMPAIGN - existingCount)
       return NextResponse.json(
         {
           success: false,
-          error: `This upload would exceed the limit of ${LEAD_LIMIT_PER_CAMPAIGN.toLocaleString()} leads per campaign.`,
+          error:
+            `This upload would put the campaign over the ${LEAD_LIMIT_PER_CAMPAIGN.toLocaleString()}-lead limit. ` +
+            `It already holds ${existingCount.toLocaleString()} leads, you are adding ${leads.length.toLocaleString()}, ` +
+            (room === 0
+              ? `and there is no room left.`
+              : `and there is room for ${room.toLocaleString()} more.`),
+          detail:
+            room === 0
+              ? 'Create a second campaign for these leads, or delete called leads from this one to free up space.'
+              : `Upload the first ${room.toLocaleString()} rows here and put the rest in a second campaign.`,
+          limit: LEAD_LIMIT_PER_CAMPAIGN,
+          existing: existingCount,
+          attempted: leads.length,
+          room,
         },
         { status: 400 }
       )
+    }
+
+    // ── PHONES ALREADY IN THIS CAMPAIGN ───────────────────────────────────
+    // Dedupe only ran within the uploaded file, so re-uploading a list — the
+    // single most common thing a user does after adding a few rows — silently
+    // doubled every lead. The agent then dials the same person twice, which is
+    // both a wasted call and a compliance problem.
+    //
+    // One column across at most 10k rows; cheap enough to always do.
+    const existingPhones = new Set<string>()
+    {
+      const { data: priorLeads } = await supabaseAdmin
+        .from('leads')
+        .select('phone')
+        .eq('campaign_id', campaign_id)
+        .limit(LEAD_LIMIT_PER_CAMPAIGN)
+      for (const row of priorLeads ?? []) {
+        const d = String(row.phone ?? '').replace(/\D/g, '')
+        if (d) existingPhones.add(d)
+      }
     }
 
     // ── ROW-BY-ROW VALIDATION WITH REASONS ────────────────────────────────
@@ -111,6 +148,7 @@ export async function POST(req: Request) {
       | 'phone_too_short'
       | 'phone_too_long'
       | 'duplicate_in_file'
+      | 'already_in_campaign'
       | 'malformed_row'
 
     const REJECT_LABELS: Record<RejectReason, string> = {
@@ -118,6 +156,7 @@ export async function POST(req: Request) {
       phone_too_short:   'Phone number has fewer than 10 digits',
       phone_too_long:    'Phone number has more digits than a valid US number',
       duplicate_in_file: 'Duplicate phone number within this file',
+      already_in_campaign: 'This number is already a lead in this campaign',
       malformed_row:     'Row could not be read (not a record or a list of values)',
     }
 
@@ -126,6 +165,7 @@ export async function POST(req: Request) {
       phone_too_short:   { count: 0, examples: [] },
       phone_too_long:    { count: 0, examples: [] },
       duplicate_in_file: { count: 0, examples: [] },
+      already_in_campaign: { count: 0, examples: [] },
       malformed_row:     { count: 0, examples: [] },
     }
 
@@ -233,10 +273,78 @@ export async function POST(req: Request) {
         reject('duplicate_in_file', i, raw)
         return
       }
+      if (existingPhones.has(digits)) {
+        reject('already_in_campaign', i, raw)
+        return
+      }
 
       seenPhones.add(digits)
       leadsToInsert.push(built)
     })
+
+    // ── WARNINGS: IMPORTED, BUT NOT DIALABLE ──────────────────────────────
+    // A row can pass every check above and still never ring a phone. The
+    // calling window is enforced per lead, and a lead whose state cannot be
+    // established fails CLOSED — so a well-formed 10-digit number with an area
+    // code we do not recognise imports cleanly, sits in the queue, and is
+    // skipped forever. From the user's side the upload succeeded and the
+    // dialer just says there is nothing to call.
+    //
+    // These are warnings, not rejections: the data is real and the fix (adding
+    // a state column) is theirs to make, so the leads still import.
+    type WarnReason =
+      | 'undialable_no_state'
+      | 'impossible_number'
+      | 'sunday_state'
+      | 'international'
+
+    const WARN_LABELS: Record<WarnReason, string> = {
+      undialable_no_state:
+        'Area code not recognised and no state given — these will never be dialed until a state is added',
+      impossible_number:
+        'Not routable US numbers — the right number of digits, but an area code or exchange no carrier can route',
+      sunday_state:
+        'In states that prohibit Sunday calls — these are skipped on Sundays only',
+      international:
+        'Not US numbers — dialed under their own country\'s rules',
+    }
+
+    const warns: Record<WarnReason, { count: number; examples: string[] }> = {
+      undialable_no_state: { count: 0, examples: [] },
+      impossible_number:   { count: 0, examples: [] },
+      sunday_state:        { count: 0, examples: [] },
+      international:       { count: 0, examples: [] },
+    }
+
+    for (const l of leadsToInsert) {
+      const verdict = isCallableNow({ phone: l.phone, state: String(l.state ?? '') })
+      if (verdict.allowed) continue
+      let bucket: WarnReason | null = null
+      // Time-of-day refusals are not warnings — those leads dial fine tomorrow
+      // morning. Only permanent conditions belong here.
+      if (verdict.code === 'impossible_number') {
+        bucket = 'impossible_number'
+      } else if (verdict.code === 'unknown_area' || verdict.code === 'invalid_number') {
+        bucket = 'undialable_no_state'
+      } else if (verdict.code === 'sunday') {
+        bucket = 'sunday_state'
+      } else if (verdict.code === 'international') {
+        bucket = 'international'
+      }
+      if (!bucket) continue
+      const w = warns[bucket]
+      w.count++
+      if (w.examples.length < EXAMPLES_PER_REASON) w.examples.push(l.phone)
+    }
+
+    const warnSummary = (Object.keys(warns) as WarnReason[])
+      .filter(k => warns[k].count > 0)
+      .map(k => ({
+        reason: k,
+        label: WARN_LABELS[k],
+        count: warns[k].count,
+        examples: warns[k].examples,
+      }))
 
     // A human-readable summary, built once and reused for both the failure
     // response and the partial-success one.
@@ -299,6 +407,9 @@ export async function POST(req: Request) {
       // imports 100, and finds out days later while dialing.
       rejected: rejectedTotal,
       rejections: rejectSummary,
+      // Imported, but will not dial. Separate from rejections because the rows
+      // ARE in the campaign — the user needs to fix them, not re-upload them.
+      warnings: warnSummary,
     })
   } catch (error: any) {
     return apiError(error, { route: 'leads/upload' })
