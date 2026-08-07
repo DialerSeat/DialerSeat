@@ -31,7 +31,7 @@ const FAQS = [
   {
     question: 'How many phone numbers do I need for an outbound dialer?',
     answer:
-      'Divide your daily call volume by a per-number daily cap, then add headroom for numbers resting or retired. DialerSeat caps each number at 125 calls a day by default, so a single agent making 250 calls needs at least two numbers and comfortably runs on three. A five-agent floor at 250 calls each is 1,250 calls a day, which needs ten numbers at the cap and closer to thirteen with headroom.',
+      'Divide your daily call volume by a per-number daily cap, then add headroom for numbers resting or retired. DialerSeat caps each number at 200 calls a day by default, so a single agent making 250 calls needs at least two numbers and comfortably runs on three. A five-agent floor at 250 calls each is 1,250 calls a day, which needs seven numbers at the cap and closer to nine with headroom.',
   },
   {
     question: 'Why not just use one number for everything?',
@@ -41,7 +41,7 @@ const FAQS = [
   {
     question: 'What is a sensible daily cap per number?',
     answer:
-      'DialerSeat defaults to 125 calls per number per day. There is no universal correct figure — carrier scoring is opaque and changes — but a cap in the low hundreds keeps any one number well below the volume that draws attention, and spreading across a pool means no single number carries the whole day.',
+      'DialerSeat defaults to 200 calls per number per day. There is no universal correct figure — carrier scoring is opaque and changes — but a cap in the low hundreds keeps any one number well below the volume that draws attention, and spreading across a pool means no single number carries the whole day.',
   },
   {
     question: 'Do more numbers mean better answer rates?',
@@ -62,10 +62,10 @@ const FAQS = [
 
 const EXAMPLES = [
   { agents: '1 agent', calls: '250 calls/day', min: '2 numbers', rec: '3 numbers' },
-  { agents: '3 agents', calls: '750 calls/day', min: '6 numbers', rec: '8 numbers' },
-  { agents: '5 agents', calls: '1,250 calls/day', min: '10 numbers', rec: '13 numbers' },
-  { agents: '10 agents', calls: '2,500 calls/day', min: '20 numbers', rec: '25 numbers' },
-  { agents: '20 agents', calls: '5,000 calls/day', min: '40 numbers', rec: '50 numbers' },
+  { agents: '3 agents', calls: '750 calls/day', min: '4 numbers', rec: '5 numbers' },
+  { agents: '5 agents', calls: '1,250 calls/day', min: '7 numbers', rec: '9 numbers' },
+  { agents: '10 agents', calls: '2,500 calls/day', min: '13 numbers', rec: '17 numbers' },
+  { agents: '20 agents', calls: '5,000 calls/day', min: '25 numbers', rec: '32 numbers' },
 ]
 
 export default function Page() {
@@ -99,7 +99,7 @@ export default function Page() {
           <p>
             Start with your real daily volume — agents multiplied by calls each
             per day. Divide by the cap you are willing to put on any single
-            number. DialerSeat defaults that cap to <strong>125 calls per number
+            number. DialerSeat defaults that cap to <strong>200 calls per number
             per day</strong>. Then add roughly 25% headroom so retiring a number
             mid-week does not cost you capacity.
           </p>

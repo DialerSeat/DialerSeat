@@ -27,7 +27,11 @@ const supabase = createClient(
  * single number places per day, the faster carriers flag it as spam. Raising
  * it increases capacity per number and increases that risk together.
  */
-export const DEFAULT_DAILY_CAP = 125
+// Raised 125 -> 200 on 2026-08-07 by account-owner decision. The tradeoff is
+// unchanged: 200 is 60% more capacity per number and 60% more volume for a
+// carrier to score. Watch health_answer_rate per number after the change --
+// that is the signal that says whether the extra headroom cost anything.
+export const DEFAULT_DAILY_CAP = 200
 
 export interface PoolNumber {
   id: string

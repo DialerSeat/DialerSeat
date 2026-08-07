@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/requireAdmin'
 import { getServiceClient } from '@/lib/supabase'
 import { getAreaCodeInfo, extractAreaCode } from '@/lib/areaCode'
+import { DEFAULT_DAILY_CAP } from '@/lib/numberPool'
 import { apiError } from '@/lib/apiError'
 
 const supabase = getServiceClient('admin/pool/import-existing')
@@ -109,7 +110,7 @@ export async function POST(req: Request) {
         provider_number_id: telnyxNumber.id,
         status: 'active',
         daily_call_count: 0,
-        daily_cap: 125,
+        daily_cap: DEFAULT_DAILY_CAP,
         lifetime_call_count: 0,
         monthly_cost_cents: 100,
         acquired_at: telnyxNumber.created_at
