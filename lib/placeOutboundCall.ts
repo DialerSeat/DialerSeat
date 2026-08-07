@@ -511,11 +511,23 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
     // voicemail greeting does not END two seconds in — "you've reached...
     // leave a message" runs 8-15s. Those were live people.
     //
-    // THE FIX IS TUNING, NOT A MORE EXPENSIVE DETECTOR. Telnyx's default
-    // total analysis time is around 3.5s, which forces a verdict while a
-    // human is still deciding whether to say more than "hello". Giving the
-    // standard detector more time costs nothing; premium costs ~2.5x per leg
-    // to solve the same problem with a different algorithm.
+    // TUNING DID NOT FIX IT — recorded here so nobody retries it. After
+    // raising after_greeting_silence to 4500ms, 12 of 12 answered calls still
+    // returned 'machine', with verdict timing unchanged. Either the config
+    // block below is being ignored, or greeting_end cannot classify on this
+    // path at all.
+    //
+    // THE LEADING SUSPICION IS THE BRIDGE. A user_dial sets link_to +
+    // bridge_on_answer on this same request, so the agent is joined the
+    // instant the lead answers and the detector is then asked to analyse a
+    // call that has already been bridged. The conventional pattern is the
+    // reverse — detect first, bridge only on 'human' — which is exactly why
+    // predictive fan-out, where nothing is bridged until a human is
+    // confirmed, is the mode AMD was designed around.
+    //
+    // The logging below exists to settle it: one test call shows whether
+    // Telnyx echoes the config back, which tells us whether we are debugging
+    // our parameters or their detector.
     //
     // Timing out returns 'not_sure', which does NOT hang up (see
     // handleAmdResult in app/api/calls/events/route.ts — only 'machine' and
@@ -540,6 +552,21 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
         after_greeting_silence_millis: amdCfg.amd_after_greeting_silence_ms,
       }
     }
+
+    // ── DIAGNOSTIC ────────────────────────────────────────────────────────
+    // Telnyx silently DROPS request fields it does not recognise rather than
+    // rejecting the call, so a mistyped parameter looks identical to a working
+    // one from our side — which is precisely the ambiguity that has made the
+    // last three attempts at this unfalsifiable. Logging what we send, next to
+    // what comes back, ends the guessing on the next test call.
+    console.log(
+      `[placeOutboundCall:${p.source}] AMD request →`,
+      JSON.stringify({
+        detector: dialBody.answering_machine_detection,
+        config: dialBody.answering_machine_detection_config ?? '(none)',
+        bridgedOnAnswer: !!dialBody.bridge_on_answer,
+      })
+    )
   }
 
   const dialLeadLeg = () =>
@@ -654,6 +681,23 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
 
   const leadCallControlId = leadData.data.call_control_id
   const leadCallLegId = leadData.data.call_leg_id
+
+  // The other half of the diagnostic above. If Telnyx echoes the detector and
+  // config back, our parameters are accepted and the problem is the detector
+  // or the bridge. If they are absent, it silently dropped them and we have
+  // been tuning a field it never read.
+  if (p.amdEnabled) {
+    console.log(
+      `[placeOutboundCall:${p.source}] AMD response ←`,
+      JSON.stringify({
+        // Cast: the typed shape only declares the four fields we normally
+        // read. Telnyx returns more, and whether these two are among them is
+        // exactly the question.
+        detector: (leadData.data as Record<string, unknown>).answering_machine_detection ?? '(not echoed)',
+        config: (leadData.data as Record<string, unknown>).answering_machine_detection_config ?? '(not echoed)',
+      })
+    )
+  }
 
   // ── INSERT calls ROW ─────────────────────────────────────────────────────
   // NOTE the error check below. supabase-js does NOT throw on a failed
