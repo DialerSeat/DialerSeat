@@ -1,4 +1,4 @@
-import { getAreaCodeInfo, extractAreaCode } from './areaCode'
+import { getAreaCodeInfo, extractAreaCode, classifyAreaCode } from './areaCode'
 import { STATE_TIMEZONES, getCallingRule } from './timezones'
 import { normalizeState } from './normalizeState'
 import { detectInternationalRegion, isCallableNowInternational } from './internationalCallingWindow'
@@ -30,6 +30,8 @@ export type CallabilityCode =
   | 'invalid_number'   // wrong number of digits to be a US number
   | 'impossible_number' // right length, but not a number the NANP can route
   | 'unknown_area'     // well-formed, but the area code is not one we know
+  | 'toll_free'        // 800/833/844/855/866/877/888 — not a person's line
+  | 'non_geographic'   // 900 premium, N11 service, government, personal-comms
   | 'too_early'        // before the lead's local window opens
   | 'too_late'         // after it closes
   | 'sunday'           // state prohibits Sunday telemarketing
@@ -237,15 +239,58 @@ function evaluateCallability(lead: LeadInput): CallabilityResult {
       }
     }
 
-    // A well-formed number whose area code we do not recognise. Genuinely
-    // different from a malformed one: the number may be fine and our area-code
-    // table may simply be behind, so name the area code so it can be checked.
-    const areaCode = digits.length === 11 ? digits.slice(1, 4) : digits.slice(0, 3)
+    // ── NAME THE ACTUAL PROBLEM ──────────────────────────────────────────
+    // These all used to collapse into one message: "unrecognised area code —
+    // add a state to this lead to dial it." For a toll-free or premium number
+    // that advice is simply false; no state makes an 800 number a person's
+    // phone, and following it wastes the user's time on data entry that cannot
+    // work. Each class gets the sentence that is true of it.
+    const areaCodeStr = digits.length === 11 ? digits.slice(1, 4) : digits.slice(0, 3)
+    const klass = classifyAreaCode(areaCodeStr)
+
+    if (klass.kind === 'toll_free') {
+      return {
+        allowed: false,
+        code: 'toll_free',
+        reason:
+          `${areaCodeStr} is a toll-free number, not a personal line — there is ` +
+          `nobody at a fixed location to call, and no state will change that.`,
+      }
+    }
+
+    if (klass.kind === 'non_geographic') {
+      return {
+        allowed: false,
+        code: 'non_geographic',
+        reason:
+          `${areaCodeStr} is not a geographic area code (premium-rate, service ` +
+          `or government), so it has no local time and cannot be dialed as a lead.`,
+      }
+    }
+
+    if (klass.kind === 'canada' || klass.kind === 'other_nanp') {
+      // Same numbering plan, different country. Says so plainly rather than
+      // pretending a US state is missing.
+      return {
+        allowed: false,
+        code: 'international',
+        reason:
+          klass.kind === 'canada'
+            ? `${areaCodeStr} is a Canadian area code. Canadian calling rules are ` +
+              `not enforced by this dialer, so it is held back rather than dialed blind.`
+            : `${areaCodeStr} is outside the US and Canada. Its local rules are not ` +
+              `enforced by this dialer, so it is held back rather than dialed blind.`,
+      }
+    }
+
+    // A well-formed number whose area code we genuinely do not hold. It may be
+    // a real number and the table may simply be behind — name the code so it
+    // can be checked and added.
     return {
       allowed: false,
       code: 'unknown_area',
       reason:
-        `Unrecognised area code ${areaCode} — cannot confirm the lead's state, ` +
+        `Unrecognised area code ${areaCodeStr} — cannot confirm the lead's state, ` +
         `so the calling window cannot be checked. Add a state to this lead to dial it.`,
     }
   }

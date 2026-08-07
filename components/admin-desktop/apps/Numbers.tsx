@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState, useMemo, useCallback } from 'react'
+import { overlayDismiss } from '@/lib/overlayDismiss'
 
 
 
@@ -241,7 +242,19 @@ export default function NumbersApp() {
   const [buyOpen, setBuyOpen] = useState(false)
   const [buyMode, setBuyMode] = useState<'single' | 'random' | 'states'>('single')
   const [buyAreaCode, setBuyAreaCode] = useState('')
-  const [buyQty, setBuyQty] = useState(5)
+  // ── WHY THIS IS TEXT AND NOT A NUMBER ─────────────────────────────────
+  // The input was bound to a number and coerced on every keystroke with
+  // `parseInt(value) || 1`. Deleting the last character makes value '',
+  // parseInt('') is NaN, and `NaN || 1` snapped the field straight back to 1 —
+  // so it could never be empty, and the only way to enter 3 was to type 13 and
+  // delete the 1.
+  //
+  // The raw text is the source of truth while editing; buyQty below stays a
+  // clamped number so every read site is unchanged. Clamping at submit already
+  // happens in the buy handler, so nothing depends on the field being valid
+  // mid-keystroke.
+  const [buyQtyText, setBuyQtyText] = useState('5')
+  const buyQty = Math.max(1, Math.min(parseInt(buyQtyText, 10) || 1, 100))
   const [buySelectedStates, setBuySelectedStates] = useState<Set<string>>(new Set())
   const [buying, setBuying] = useState(false)
   const [buyMessage, setBuyMessage] = useState<string | null>(null)
@@ -252,6 +265,12 @@ export default function NumbersApp() {
 
   const [configOpen, setConfigOpen] = useState(false)
   const [configEdits, setConfigEdits] = useState<Partial<PoolConfig>>({})
+  // Raw text per field while the config modal is open. Same reason as
+  // buyQtyText above: `parseInt(value) || 0` made the field impossible to
+  // clear, so changing 10 to 3 meant typing 103 and deleting two digits.
+  // configEdits still holds real numbers — only fields that currently parse
+  // are written into it, so an empty box is never saved as 0.
+  const [configText, setConfigText] = useState<Record<string, string>>({})
   const [savingConfig, setSavingConfig] = useState(false)
   const [configMessage, setConfigMessage] = useState<string | null>(null)
 
@@ -323,7 +342,7 @@ export default function NumbersApp() {
   const buyForState = useCallback((stateCode: string) => {
     setBuyMode('states')
     setBuySelectedStates(new Set([stateCode]))
-    setBuyQty(5)
+    setBuyQtyText('5')
     setBuyMessage(null)
     setBuyOpen(true)
   }, [])
@@ -366,7 +385,7 @@ export default function NumbersApp() {
     setBuyOpen(false)
     setBuyMessage(null)
     setBuyAreaCode('')
-    setBuyQty(5)
+    setBuyQtyText('5')
     setBuySelectedStates(new Set())
     setBuyMode('single')
     setBuyProgress(null)
@@ -548,6 +567,7 @@ export default function NumbersApp() {
   const handleConfigSave = async () => {
     if (Object.keys(configEdits).length === 0) {
       setConfigOpen(false)
+      setConfigText({})
       return
     }
     setSavingConfig(true)
@@ -562,6 +582,7 @@ export default function NumbersApp() {
       if (d.success) {
         setConfigEdits({})
         setConfigOpen(false)
+      setConfigText({})
         await load(false)
       } else {
         setConfigMessage(`Failed: ${d.error}`)
@@ -1639,7 +1660,7 @@ export default function NumbersApp() {
 
       {/* Buy Modal */}
       {buyOpen && (
-        <div className="pool-modal-bg" onClick={() => !buying && resetBuyModal()}>
+        <div className="pool-modal-bg" {...overlayDismiss(buying ? undefined : resetBuyModal)}>
           <div className="pool-modal" onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: 11, letterSpacing: 3, fontWeight: 'bold', marginBottom: 12 }}>
               BUY NUMBERS
@@ -1690,8 +1711,9 @@ export default function NumbersApp() {
                 <input
                   className="pool-input"
                   type="number"
-                  value={buyQty}
-                  onChange={e => setBuyQty(Math.max(1, Math.min(100, parseInt(e.target.value, 10) || 1)))}
+                  value={buyQtyText}
+                  onChange={e => setBuyQtyText(e.target.value)}
+                  onBlur={() => setBuyQtyText(String(buyQty))}
                   min={1}
                   max={100}
                   disabled={buying}
@@ -1747,8 +1769,9 @@ export default function NumbersApp() {
                 <input
                   className="pool-input"
                   type="number"
-                  value={buyQty}
-                  onChange={e => setBuyQty(Math.max(1, Math.min(100, parseInt(e.target.value, 10) || 1)))}
+                  value={buyQtyText}
+                  onChange={e => setBuyQtyText(e.target.value)}
+                  onBlur={() => setBuyQtyText(String(buyQty))}
                   min={1}
                   max={100}
                   disabled={buying}
@@ -1814,7 +1837,7 @@ export default function NumbersApp() {
 
       {/* Register All Modal */}
       {registerAllOpen && (
-        <div className="pool-modal-bg" onClick={() => !registerAllInFlight && setRegisterAllOpen(false)}>
+        <div className="pool-modal-bg" {...overlayDismiss(registerAllInFlight ? undefined : () => setRegisterAllOpen(false))}>
           <div className="pool-modal" onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: 11, letterSpacing: 3, fontWeight: 'bold', marginBottom: 12 }}>
               MARK ALL AS REGISTERED
@@ -1860,7 +1883,7 @@ export default function NumbersApp() {
 
       {/* Seed Modal */}
       {seedOpen && (
-        <div className="pool-modal-bg" onClick={() => !seeding && setSeedOpen(false)}>
+        <div className="pool-modal-bg" {...overlayDismiss(seeding ? undefined : () => setSeedOpen(false))}>
           <div className="pool-modal" onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: 11, letterSpacing: 3, fontWeight: 'bold', marginBottom: 12 }}>
               SEED INITIAL POOL
@@ -1896,7 +1919,7 @@ export default function NumbersApp() {
 
       {/* Config Modal */}
       {configOpen && (
-        <div className="pool-modal-bg" onClick={() => !savingConfig && setConfigOpen(false)}>
+        <div className="pool-modal-bg" {...overlayDismiss(savingConfig ? undefined : () => setConfigOpen(false))}>
           <div className="pool-modal" onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: 11, letterSpacing: 3, fontWeight: 'bold', marginBottom: 12 }}>
               POOL CONFIGURATION
@@ -1922,11 +1945,28 @@ export default function NumbersApp() {
                   <input
                     className="pool-input"
                     type="number"
-                    value={currentValue}
-                    onChange={e => setConfigEdits(prev => ({
-                      ...prev,
-                      [key]: parseInt(e.target.value, 10) || 0,
-                    }))}
+                    value={configText[key] ?? String(currentValue)}
+                    onChange={e => {
+                      const raw = e.target.value
+                      setConfigText(prev => ({ ...prev, [key]: raw }))
+                      const parsed = parseInt(raw, 10)
+                      if (Number.isFinite(parsed)) {
+                        setConfigEdits(prev => ({ ...prev, [key]: parsed }))
+                      } else {
+                        // Empty or mid-edit ('-', ''). Drop the pending edit so
+                        // a half-typed field is never saved as 0.
+                        setConfigEdits(prev => {
+                          const next = { ...prev }
+                          delete next[key]
+                          return next
+                        })
+                      }
+                    }}
+                    onBlur={() => setConfigText(prev => {
+                      const next = { ...prev }
+                      delete next[key]
+                      return next
+                    })}
                     disabled={savingConfig}
                   />
                 </div>
@@ -1943,7 +1983,7 @@ export default function NumbersApp() {
               <button className="pool-btn pool-btn-primary" disabled={savingConfig} onClick={handleConfigSave}>
                 {savingConfig ? 'SAVING...' : 'SAVE'}
               </button>
-              <button className="pool-btn" disabled={savingConfig} onClick={() => { setConfigOpen(false); setConfigEdits({}); setConfigMessage(null) }}>
+              <button className="pool-btn" disabled={savingConfig} onClick={() => { setConfigOpen(false); setConfigEdits({}); setConfigText({}); setConfigMessage(null) }}>
                 CANCEL
               </button>
             </div>

@@ -4,6 +4,7 @@ import useTouchReorder from '@/lib/useTouchReorder'
 import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
 import { parseLeadsFile, inspectFile, isAcceptedLeadsFile, ACCEPTED_LEADS_ACCEPT_ATTR } from '@/lib/parseLeadsFile'
+import { overlayDismiss } from '@/lib/overlayDismiss'
 
 const T = {
   bg: 'var(--brand-page-bg)',
@@ -3668,7 +3669,7 @@ export default function CampaignsPage() {
         const c = campaigns.find(c => c.id === deleteConfirm)
         if (!c) return null
         return (
-          <div className="modal-overlay" onClick={() => { setDeleteConfirm(null); setDeleteTyped('') }}>
+          <div className="modal-overlay" {...overlayDismiss(() => { setDeleteConfirm(null); setDeleteTyped('') })}>
             <div className="settings-modal" style={{ maxWidth: 440 }} onClick={e => e.stopPropagation()}>
               <div className="settings-head" style={{ borderBottomColor: T.red }}>
                 <div style={{
@@ -3738,7 +3739,7 @@ export default function CampaignsPage() {
 
       {/* ─── CSV UPLOAD REJECTED ─────────────────────────────────────── */}
       {csvUploadError && (
-        <div className="modal-overlay" onClick={() => setCsvUploadError(null)}>
+        <div className="modal-overlay" {...overlayDismiss(() => setCsvUploadError(null))}>
           <div className="settings-modal" style={{ maxWidth: 440 }} onClick={e => e.stopPropagation()}>
             <div className="settings-head">
               <div style={{
@@ -3864,7 +3865,7 @@ export default function CampaignsPage() {
       )}
 
       {fileTypeError && (
-        <div className="modal-overlay" onClick={() => setFileTypeError('')}>
+        <div className="modal-overlay" {...overlayDismiss(() => setFileTypeError(''))}>
           <div className="settings-modal" style={{ maxWidth: 440 }} onClick={e => e.stopPropagation()}>
             <div className="settings-head">
               <div style={{
@@ -3897,7 +3898,7 @@ export default function CampaignsPage() {
       )}
 
       {sheetPicker && (
-        <div className="modal-overlay" onClick={() => setSheetPicker(null)}>
+        <div className="modal-overlay" {...overlayDismiss(() => setSheetPicker(null))}>
           <div className="settings-modal" style={{ maxWidth: 440 }} onClick={e => e.stopPropagation()}>
             <div className="settings-head">
               <div style={{

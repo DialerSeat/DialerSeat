@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { normalizeState } from '@/lib/normalizeState'
 import { isDialableLead } from '@/lib/dialableLead'
 import type { QueueDiagnosis } from '@/lib/queueDiagnosis'
+import { phoneToState } from '@/lib/areaCode'
 
 /**
  * Whole seconds since a start timestamp, 0 when never started.
@@ -4887,10 +4888,17 @@ function DialerPageInner() {
                             </div>
                             {/* Location · live timer — matches /welcome page 1 layout */}
                             <div style={{ fontSize: '10px', fontFamily: 'monospace', color: terminalMuted, letterSpacing: '1px', marginTop: '4px' }}>
-                              {[displayLead.city, displayLead.state].filter(Boolean).join(', ')}
+                              {(() => {
+                                const st = displayState(displayLead)
+                                const loc = [displayLead.city, st.text === '—' ? null : st.text]
+                                  .filter(Boolean).join(', ')
+                                return st.inferred
+                                  ? <span style={{ opacity: 0.75, fontStyle: 'italic' }}>{loc}</span>
+                                  : loc
+                              })()}
                               {status === 'connected' && (
                                 <>
-                                  {(displayLead.city || displayLead.state) ? ' · ' : ''}
+                                  {(displayLead.city || displayLead.state || phoneToState(displayLead.phone)) ? ' · ' : ''}
                                   {formatTime(seconds)}
                                 </>
                               )}
@@ -5325,11 +5333,48 @@ function resolveAudioContextCtor(): typeof AudioContext | undefined {
  * The server sentence is prose and reads as one thought; these have to be
  * scannable in a stack of four, so they are clipped rather than reused.
  */
+/**
+ * What to show in the STATE column for a lead that has no state of its own.
+ *
+ * The calling window is enforced against a state derived from the area code
+ * when the lead's own column is blank, so the dialer was already ACTING on a
+ * state it never displayed. Showing a bare dash there is worse than unhelpful:
+ * the agent sees "no state", the system quietly times the call as North
+ * Carolina, and nothing on screen explains why a lead is being held until 9am.
+ *
+ * "Maybe: NC" says both things at once — here is the state we are using, and
+ * here is the fact that we inferred it. An agent who knows the lead is really
+ * in California can then correct the record instead of wondering.
+ *
+ * Deliberately only for the ABSENT case. A lead that carries its own state
+ * renders exactly as before, with no hedge on data the customer supplied.
+ *
+ * Used ONLY on the live-call profile, not in the queue list. In a dense list of
+ * rows a per-row "Maybe:" is noise — the agent is scanning, not deciding. On
+ * the profile of the person currently ringing it is the opposite: that is the
+ * moment the distinction between known and guessed can actually change what
+ * the agent says.
+ */
+function displayState(lead: { state?: string | null; phone?: string | null }): {
+  text: string
+  inferred: boolean
+} {
+  const own = (lead.state || '').trim()
+  if (own) return { text: own, inferred: false }
+
+  const guessed = phoneToState(lead.phone)
+  if (guessed) return { text: `Maybe: ${guessed}`, inferred: true }
+
+  return { text: '—', inferred: false }
+}
+
 const QUEUE_REASON_LABELS: Record<string, string> = {
   no_number: 'no phone number',
   invalid_number: 'invalid phone number',
   impossible_number: 'not a routable US number',
   unknown_area: 'area code not recognised, no state set',
+  toll_free: 'toll-free number, not a personal line',
+  non_geographic: 'premium/service number, not a personal line',
   too_early: 'before their local calling window',
   too_late: 'past their local calling window',
   sunday: 'state prohibits Sunday calls',

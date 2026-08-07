@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState, useMemo } from 'react'
+import { overlayDismiss } from '@/lib/overlayDismiss'
 
 const T = {
   bg: '#f0f1f4',
@@ -620,7 +621,7 @@ export default function AdminNumbersPage() {
 
       {/* Buy Modal */}
       {buyOpen && (
-        <div className="pool-modal-bg" onClick={() => !buying && setBuyOpen(false)}>
+        <div className="pool-modal-bg" {...overlayDismiss(buying ? undefined : () => setBuyOpen(false))}>
           <div className="pool-modal" onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: 11, letterSpacing: 3, fontWeight: 'bold', marginBottom: 12 }}>
               MANUAL BUY
@@ -657,7 +658,7 @@ export default function AdminNumbersPage() {
 
       {/* Config Modal */}
       {configOpen && (
-        <div className="pool-modal-bg" onClick={() => !savingConfig && setConfigOpen(false)}>
+        <div className="pool-modal-bg" {...overlayDismiss(savingConfig ? undefined : () => setConfigOpen(false))}>
           <div className="pool-modal" onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: 11, letterSpacing: 3, fontWeight: 'bold', marginBottom: 12 }}>
               POOL CONFIGURATION

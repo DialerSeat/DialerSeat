@@ -47,6 +47,8 @@ const LABELS: Record<CallabilityCode, string> = {
   invalid_number: 'have an invalid phone number',
   impossible_number: 'are not dialable US numbers and no carrier can route them',
   unknown_area: 'have an area code we cannot place, so their calling window is unknown',
+  toll_free: 'are toll-free numbers, not personal lines',
+  non_geographic: 'are premium-rate, service or government numbers, not personal lines',
   too_early: 'are before their local calling window opens',
   too_late: 'are past their local calling window',
   sunday: 'are in states that prohibit Sunday calls',

@@ -58,6 +58,18 @@ export const STATE_TIMEZONES: Record<string, string> = {
   WV: 'America/New_York',
   WI: 'America/Chicago',
   WY: 'America/Denver',
+
+  // ── US TERRITORIES ──────────────────────────────────────────────────────
+  // Dialed under US rules, so they belong here rather than in the
+  // international path. Both are Atlantic Standard Time year-round with no
+  // DST, which means their local time drifts an hour relative to the East
+  // Coast every spring — the whole reason a named zone is used rather than a
+  // fixed offset.
+  //
+  // Without these, area codes 787/939/340 resolve to a state the timezone map
+  // does not hold, isCallableNow fails closed, and the leads are never dialed.
+  PR: 'America/Puerto_Rico',
+  VI: 'America/St_Thomas',
 }
 
 
