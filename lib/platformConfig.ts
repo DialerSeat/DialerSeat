@@ -68,6 +68,12 @@ export interface PlatformConfig {
   amd_hangup_when_bridged: boolean
   /** A machine verdict sooner than this after answer is ignored. 0 disables. */
   amd_min_seconds_before_hangup: number
+  /** Telnyx greeting_duration_millis — a greeting longer than this is a machine. */
+  amd_greeting_duration_ms: number
+  /** Telnyx maximum_number_of_words — more words than this is a machine. */
+  amd_max_words: number
+  /** Telnyx initial_silence_millis — silence before speech longer than this is a machine. */
+  amd_initial_silence_ms: number
 }
 
 export const PLATFORM_CONFIG_DEFAULTS: PlatformConfig = {
@@ -96,6 +102,13 @@ export const PLATFORM_CONFIG_DEFAULTS: PlatformConfig = {
   // A real voicemail greeting ends at 8-15s. Anything faster is a human who
   // paused after "hello".
   amd_min_seconds_before_hangup: 6,
+  // Telnyx defaults are 3500 / 5 / 3500, and the first two are what produced
+  // a 100% false-positive rate: five words is fewer than most people say when
+  // they answer, and 3.5s is shorter than a normal sentence. A real voicemail
+  // greeting runs 8-15s and 25+ words, so these still separate the two.
+  amd_greeting_duration_ms: 7000,
+  amd_max_words: 15,
+  amd_initial_silence_ms: 4000,
 }
 
 const CONFIG_COLUMNS =
@@ -104,7 +117,8 @@ const CONFIG_COLUMNS =
   'pool_capacity_alert_pct, webhook_silence_minutes, agent_leg_refusal_alert_count, ' +
   'concurrency_budget, amd_detector, amd_tuning_enabled, ' +
   'amd_total_analysis_ms, amd_after_greeting_silence_ms, ' +
-  'amd_in_preview, amd_hangup_when_bridged, amd_min_seconds_before_hangup'
+  'amd_in_preview, amd_hangup_when_bridged, amd_min_seconds_before_hangup, ' +
+  'amd_greeting_duration_ms, amd_max_words, amd_initial_silence_ms'
 
 // Cached per process. These are read on hot paths (every dial consults the AMD
 // and recording overrides), and the values change by human action at most a few

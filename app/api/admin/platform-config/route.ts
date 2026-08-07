@@ -64,6 +64,11 @@ const FIELDS: Record<keyof PlatformConfig, Validator> = {
   amd_in_preview:            v => typeof v === 'boolean' ? v : null,
   amd_hangup_when_bridged:   v => typeof v === 'boolean' ? v : null,
   amd_min_seconds_before_hangup: v => intInRange(v, 0, 60),
+  amd_greeting_duration_ms:  v => intInRange(v, 1000, 30000),
+  // Below ~6 and ordinary greetings trip it; above ~40 and a real voicemail
+  // greeting stops tripping it.
+  amd_max_words:             v => intInRange(v, 3, 40),
+  amd_initial_silence_ms:    v => intInRange(v, 1000, 20000),
 }
 
 function intInRange(v: unknown, min: number, max: number): number | null {

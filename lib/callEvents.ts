@@ -10,6 +10,10 @@ export type CallEventType =
   | 'ringing'
   | 'answered'
   | 'amd_result'
+  // Telnyx's call.machine.greeting.ended — the greeting finished. Nothing
+  // acts on it today; it is recorded because it is the timing signal a
+  // voicemail-drop feature would be built on.
+  | 'amd_greeting_ended'
   | 'bridged'
   | 'completed'
   | 'failed'

@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { verifyTelnyxWebhook } from '@/lib/verifyTelnyxWebhook'
 import {
@@ -8,7 +8,7 @@ import {
 } from '@/lib/telnyxIdempotency'
 import { recordAmdResult, markCallAbandoned } from '@/lib/dialerPacing'
 import { logCallEvent } from '@/lib/callEvents'
-import { hangupCallControlId } from '@/lib/placeOutboundCall'
+import { hangupCallControlId, bridgeCallControlIds } from '@/lib/placeOutboundCall'
 import { handleOverflowAnsweredCall } from '@/lib/teamOverflow'
 import { resolveTelnyxConfigOrLog } from '@/lib/telnyxConfig'
 import { agentSipUriForUserId } from '@/lib/agentSipCredentials'
@@ -158,6 +158,25 @@ export async function POST(req: Request) {
         }
         break
 
+      // Premium emits a DIFFERENT event name. Handled here so switching
+      // amd_detector to 'premium' cannot silently stop AMD working — without
+      // this the verdict would never reach handleAmdResult and every machine
+      // would go straight through to an agent.
+      // greeting_end and detect_words also emit this once the greeting
+      // finishes. Nothing acts on it, but it is the signal a voicemail-drop
+      // feature would need, and logging it means the timing is on record when
+      // someone comes to build one.
+      case 'call.machine.greeting.ended':
+      case 'call.machine.premium.greeting.ended':
+        void logCallEvent({
+          event_type: 'amd_greeting_ended',
+          call_control_id: callControlId,
+          status: payload.result ?? null,
+          source: 'webhook',
+        })
+        break
+
+      case 'call.machine.premium.detection.ended':
       case 'call.machine.detection.ended':
         await handleAmdResult(callControlId, payload.result || 'not_sure')
         break
@@ -199,6 +218,52 @@ export async function POST(req: Request) {
   return NextResponse.json({ ok: true })
 }
 
+/**
+ * Join the agent to the lead, exactly once.
+ *
+ * Bridging used to be Telnyx's job via bridge_on_answer. It is now ours,
+ * because the detector cannot classify a call that has already been joined —
+ * so two different things can call this for the same lead:
+ *
+ *   1. the AMD verdict, on 'human'/'not_sure'
+ *   2. the safety net below, if that verdict never turns up
+ *
+ * The conditional update is what makes that safe: `.is('bridged_at', null)`
+ * means only the first caller gets rows back, and only that caller issues the
+ * bridge command. A slow webhook arriving after the timer has already
+ * connected the call is a no-op rather than a second bridge.
+ */
+async function bridgeAgentOntoLead(
+  leadCallControlId: string,
+  reason: string
+): Promise<'bridged' | 'already' | 'no-agent' | 'failed'> {
+  const { data: claimed } = await supabaseAdmin
+    .from('calls')
+    .update({ bridged_at: new Date().toISOString() })
+    .eq('call_control_id', leadCallControlId)
+    .is('bridged_at', null)
+    .select('agent_call_control_id')
+
+  if (!claimed || claimed.length === 0) return 'already'
+
+  const agentLeg = claimed[0]?.agent_call_control_id
+  if (!agentLeg) return 'no-agent'
+
+  const ok = await bridgeCallControlIds(leadCallControlId, agentLeg)
+  if (!ok) {
+    // Put it back so the safety net or a later verdict can retry rather than
+    // the call being permanently marked as bridged when it is not.
+    await supabaseAdmin
+      .from('calls')
+      .update({ bridged_at: null })
+      .eq('call_control_id', leadCallControlId)
+    return 'failed'
+  }
+
+  console.log(`[calls/events] bridged agent onto ${leadCallControlId} (${reason})`)
+  return 'bridged'
+}
+
 async function handleCallAnswered(callControlId: string): Promise<void> {
   void logCallEvent({
     event_type: 'answered',
@@ -228,6 +293,55 @@ async function handleCallAnswered(callControlId: string): Promise<void> {
       .is('answered_at', null)
   } catch (err) {
     console.error(`[calls/events] failed to record answered_at for ${callControlId}:`, err)
+  }
+
+  // ── SAFETY NET: BRIDGE EVEN IF THE VERDICT NEVER ARRIVES ────────────────
+  // The failure mode this closes is one the detect-then-bridge change
+  // introduced, and it is the worst kind: silent.
+  //
+  // With bridge_on_answer, Telnyx joined the legs and a lost webhook cost us
+  // only a missing analytics row. Now the bridge DEPENDS on
+  // call.machine.detection.ended arriving. If it is delayed, dropped, or the
+  // detector simply never reports, the prospect sits listening to silence
+  // with an agent on the other side of a bridge that never happens — and
+  // nothing in the system notices.
+  //
+  // So: wait past the detector's own analysis ceiling, then connect them
+  // regardless. Failing toward "the agent is talking to someone" is right;
+  // the alternative is a real person hearing nothing until they hang up.
+  //
+  // Only for calls actually waiting on a verdict. When AMD is off the dial
+  // still carries bridge_on_answer, bridged_at is never set, and arming this
+  // would double-bridge — hence the amdEnabled check via the row itself.
+  const { data: pending } = await supabaseAdmin
+    .from('calls')
+    .select('agent_call_control_id, bridged_at, dial_source')
+    .eq('call_control_id', callControlId)
+    .maybeSingle()
+
+  const waitingOnVerdict =
+    pending?.dial_source === 'user_dial' &&
+    !!pending?.agent_call_control_id &&
+    !pending?.bridged_at
+
+  if (waitingOnVerdict) {
+    const cfg = await getPlatformConfig()
+    // Telnyx returns 'not_sure' at total_analysis_time_millis, so a verdict
+    // should always beat this. The margin is for webhook latency, not for the
+    // detector.
+    const graceMs = cfg.amd_total_analysis_ms + 3000
+
+    after(async () => {
+      await new Promise(r => setTimeout(r, graceMs))
+      const outcome = await bridgeAgentOntoLead(callControlId, 'safety net — no AMD verdict')
+      if (outcome === 'bridged') {
+        console.warn(
+          `[calls/events] NO AMD verdict for ${callControlId} within ${graceMs}ms — ` +
+          `bridged the agent anyway rather than leave the prospect in silence. ` +
+          `If this is frequent, detection is not reporting and AMD is costing without earning.`
+        )
+      }
+    })
   }
 
   // Bridging itself needs no action here: user_dial was already bridged by
@@ -436,7 +550,7 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
   // complaint this change exists to fix.
   const { data: callRow } = await supabaseAdmin
     .from('calls')
-    .select('id, dial_group_id, campaign_id, team_id, user_id')
+    .select('id, dial_group_id, campaign_id, team_id, user_id, agent_call_control_id, dial_source')
     .eq('call_control_id', callControlId)
     .maybeSingle()
 
@@ -446,7 +560,32 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
   }
 
   if (!callRow.dial_group_id) {
-    // user_dial — already bridged at answer time. Nothing to do.
+    // ── user_dial: BRIDGE NOW ────────────────────────────────────────────
+    // This used to be "already bridged at answer time, nothing to do", which
+    // was true while the dial carried bridge_on_answer. It no longer does
+    // when AMD is enabled: Telnyx's guidance is to bridge AFTER detection
+    // completes, because a detector asked to classify an already-joined call
+    // returns nonsense — 12 of 12 humans came back 'machine' under the old
+    // arrangement.
+    //
+    // So on a human verdict this is the moment the agent gets connected. The
+    // agent's leg has been up and waiting since before the lead was dialed,
+    // so the bridge is a single command with no setup.
+    //
+    // When AMD is OFF the dial still uses bridge_on_answer and no detection
+    // webhook ever arrives, so this path simply never runs for those calls.
+    if (callRow.agent_call_control_id) {
+      const outcome = await bridgeAgentOntoLead(callControlId, `AMD '${result}'`)
+      if (outcome === 'failed') {
+        // The agent leg is gone — they hung up, or it never came up. Do not
+        // leave the prospect holding a line with nobody on it.
+        console.error(
+          `[calls/events] AMD said '${result}' but bridging the agent onto ` +
+          `${callControlId} FAILED — hanging up rather than leaving the lead on a dead line.`
+        )
+        await hangupCallControlId(callControlId)
+      }
+    }
     return
   }
 

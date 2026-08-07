@@ -478,7 +478,33 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
     dialBody.record_channels = 'dual'
   }
 
-  if (agentCallControlId) {
+  // ── BRIDGE TIMING DEPENDS ON WHETHER AMD IS RUNNING ─────────────────────
+  // Telnyx's own guidance: "Bridge AFTER detection completes... avoid using
+  // bridge_on_answer during AMD analysis — wait for your detection webhook
+  // before bridging."
+  //   https://developers.telnyx.com/docs/voice/programmable-voice/answering-machine-detection
+  //
+  // We were doing exactly the thing it warns against: setting AMD and
+  // bridge_on_answer on the SAME request, so the detector was asked to
+  // classify a call that had already been joined to the agent. The result was
+  // a 100% false-positive rate — 12 of 12 answered calls returned 'machine',
+  // every one of them a human picking up.
+  //
+  // So the two cases are now genuinely different flows:
+  //
+  //   AMD OFF → link_to + bridge_on_answer, exactly as before. Instant
+  //             connect, zero dead air. This is preview, and any campaign
+  //             with detection turned off.
+  //
+  //   AMD ON  → dial the lead ALONE. The agent leg is already up and waiting.
+  //             When call.machine.detection.ended arrives, bridge on a human
+  //             verdict or hang up on a machine — see handleAmdResult in
+  //             app/api/calls/events/route.ts.
+  //
+  // The cost of the second path is real and worth naming: the prospect hears
+  // silence for however long detection takes. That is the price of a verdict
+  // that means something, and it is why AMD is a toggle rather than always-on.
+  if (agentCallControlId && !p.amdEnabled) {
     dialBody.link_to = agentCallControlId
     dialBody.bridge_on_answer = true
   }
@@ -547,9 +573,48 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
     // mistuning detection. That risk is why an earlier tuning attempt was
     // reverted. It can now be turned off from the admin app in seconds.
     if (amdCfg.amd_tuning_enabled) {
+      // ── WHAT EACH OF THESE ACTUALLY MEASURES ───────────────────────────
+      // Taken from Telnyx's field descriptions, not inferred — inferring them
+      // is how this was tuned in the wrong direction twice.
+      //
+      //   maximum_number_of_words       "If number of detected words is
+      //                                 greater than this value, consider it a
+      //                                 machine." DEFAULT 5. Anyone who
+      //                                 answers with a sentence — "hi, you've
+      //                                 reached Josh, how can I help" is eight
+      //                                 words — is a machine at the default.
+      //
+      //   greeting_duration_millis      "Maximum threshold of a human
+      //                                 greeting. If greeting longer than this
+      //                                 value, considered machine." DEFAULT
+      //                                 3500, i.e. shorter than one sentence.
+      //
+      //   initial_silence_millis        "If initial silence duration is
+      //                                 greater than this value, consider it a
+      //                                 machine."
+      //
+      //   after_greeting_silence_millis "Silence duration threshold after a
+      //                                 greeting message or voice for it to be
+      //                                 considered HUMAN." Note the direction:
+      //                                 this is how long we wait to CONFIRM a
+      //                                 human, not grace before judging one.
+      //                                 Raising it delays the human verdict
+      //                                 and lets the two rules above fire
+      //                                 first — which is exactly the mistake
+      //                                 made earlier tonight.
+      //
+      //   total_analysis_time_millis    Overall cap. On timeout the result is
+      //                                 'not_sure', which bridges rather than
+      //                                 hangs up, so this fails safe.
+      //
+      // A real voicemail greeting runs 8-15 seconds and 25+ words, so the
+      // raised thresholds still separate the two cases.
       dialBody.answering_machine_detection_config = {
         total_analysis_time_millis: amdCfg.amd_total_analysis_ms,
         after_greeting_silence_millis: amdCfg.amd_after_greeting_silence_ms,
+        greeting_duration_millis: amdCfg.amd_greeting_duration_ms,
+        maximum_number_of_words: amdCfg.amd_max_words,
+        initial_silence_millis: amdCfg.amd_initial_silence_ms,
       }
     }
 
