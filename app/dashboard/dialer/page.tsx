@@ -3166,6 +3166,43 @@ function DialerPageInner() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [manualNumber, status, dialZoomed, isActive])
 
+  /**
+   * Write a mode onto a campaign and reflect it locally.
+   *
+   * Split out of handleModeChange because two paths now need it: an ordinary
+   * switch on the selected campaign, and the auto-select below that moves the
+   * agent onto a campaign so predictive can actually run.
+   */
+  const persistModeToCampaign = async (
+    campaignId: string,
+    newMode: DialerMode
+  ): Promise<boolean> => {
+    // Preview never runs detection — the agent chose this lead and is
+    // watching it answer. Power is single-line and connects instantly, so a
+    // detector has nothing useful to add either. Progressive and predictive
+    // are the modes where the dialer is moving faster than the agent can
+    // watch, which is where AMD earns its place.
+    const amd = newMode === 'progressive' || newMode === 'predictive'
+    const res = await fetch('/api/campaigns/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: campaignId, dialer_mode: newMode, amd_enabled: amd }),
+    })
+    const data = await res.json()
+    if (!data.success) {
+      console.error('[dialer] mode change rejected:', data.error)
+      setAmdActivity(prev => [
+        `MODE CHANGE FAILED — STILL ${dialerMode.toUpperCase()}${data.error ? ` (${String(data.error).toUpperCase()})` : ''}`,
+        ...prev,
+      ].slice(0, 5))
+      return false
+    }
+    setCampaigns(prev => prev.map(c =>
+      c.id === campaignId ? { ...c, dialer_mode: newMode, amd_enabled: amd } : c
+    ))
+    return true
+  }
+
   const handleModeChange = async (newMode: DialerMode) => {
     if (newMode === dialerMode) {
       setModeDropdownOpen(false)
@@ -3173,60 +3210,81 @@ function DialerPageInner() {
     }
 
     if (isAllActive) {
-      // Predictive cannot run across All Active, and offering it here was a
-      // dead end: the heartbeat sends campaign_id: null in this scope, and the
-      // server-side controller requires a single campaign — it fans out
-      // multiple lines WITHIN one campaign's lead pool and enforces that
-      // campaign's own line cap and abandon rate. So the engine would arm, the
-      // UI would say it started, and nothing would ever dial.
+      // ── PREDICTIVE FROM "ALL ACTIVE" ─────────────────────────────────────
+      // Predictive genuinely cannot run across every campaign at once: the
+      // controller fans out within ONE campaign's lead pool and enforces that
+      // campaign's line cap and abandon rate, and the heartbeat sends
+      // campaign_id: null in this scope — so it declines on every beat.
       //
-      // Refused with an explanation rather than silently accepted.
+      // Refusing was correct and useless. The agent picked predictive, was
+      // told no, and the only way forward was to leave the dialer, open
+      // Campaigns, change the mode there and come back. So: if the choice is
+      // unambiguous, make it for them.
       if (newMode === 'predictive') {
+        const activeCampaigns = campaigns.filter(c => c.status === 'active')
+
+        if (activeCampaigns.length === 1) {
+          const only = activeCampaigns[0]
+          setModeSaving(true)
+          try {
+            const ok = await persistModeToCampaign(only.id, 'predictive')
+            if (ok) {
+              // Move the agent onto it as well — predictive on a campaign
+              // they are not looking at would be its own kind of confusing.
+              setSelectedCampaign(only.id)
+              setAmdActivity(prev => [
+                `PREDICTIVE ON "${only.name.toUpperCase()}" — SWITCHED FROM ALL ACTIVE`,
+                ...prev,
+              ].slice(0, 5))
+            }
+          } finally {
+            setModeSaving(false)
+            setModeDropdownOpen(false)
+          }
+          return
+        }
+
+        // More than one active campaign, so there is nothing to infer — but
+        // say which ones rather than just refusing.
         setModeDropdownOpen(false)
         setAmdActivity(prev => [
-          'PREDICTIVE NEEDS ONE CAMPAIGN — PICK A CAMPAIGN, NOT "ALL ACTIVE"',
+          activeCampaigns.length === 0
+            ? 'PREDICTIVE NEEDS AN ACTIVE CAMPAIGN — NONE ARE ACTIVE'
+            : `PREDICTIVE NEEDS ONE CAMPAIGN — PICK ONE OF ${activeCampaigns.length} ABOVE`,
           ...prev,
         ].slice(0, 5))
         return
       }
+
+      // The other three modes run fine across All Active, and this override is
+      // client-side by design: writing the mode onto every active campaign
+      // because someone changed it once in this scope would silently rewrite
+      // settings they never opened.
       setAllActiveOverrideMode(newMode)
       setModeDropdownOpen(false)
+      setAmdActivity(prev => [
+        `MODE SET TO ${newMode.toUpperCase()} FOR ALL ACTIVE (THIS SESSION)`,
+        ...prev,
+      ].slice(0, 5))
       return
     }
 
     if (!currentCampaign) {
+      // No campaign at all — previously this closed the dropdown and said
+      // nothing, which looks identical to the click not registering.
       setModeDropdownOpen(false)
+      setAmdActivity(prev => [
+        'PICK A CAMPAIGN BEFORE CHANGING MODE',
+        ...prev,
+      ].slice(0, 5))
       return
     }
 
     setModeSaving(true)
     try {
-      const amd = newMode === 'progressive' || newMode === 'predictive'
-      const res = await fetch('/api/campaigns/update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: currentCampaign.id,
-          dialer_mode: newMode,
-          amd_enabled: amd,
-        }),
-      })
-      const data = await res.json()
-      if (data.success) {
-        setCampaigns(prev => prev.map(c =>
-          c.id === currentCampaign.id ? { ...c, dialer_mode: newMode, amd_enabled: amd } : c
-        ))
+      const ok = await persistModeToCampaign(currentCampaign.id, newMode)
+      if (ok) {
         setAmdActivity(prev => [`MODE SET TO ${newMode.toUpperCase()}`, ...prev].slice(0, 5))
-      } else {
-        // Previously there was no else at all. A rejected save looked exactly
-        // like nothing happening: no error, no message, the dropdown just
-        // closed and the mode quietly stayed as it was. If you were switching
-        // to predictive and it didn't take, there was no way to tell.
-        console.error('[dialer] mode change rejected:', data.error)
-        setAmdActivity(prev => [
-          `MODE CHANGE FAILED — STILL ${dialerMode.toUpperCase()}${data.error ? ` (${String(data.error).toUpperCase()})` : ''}`,
-          ...prev,
-        ].slice(0, 5))
       }
     } catch (err) {
       console.error('Mode change failed:', err)
