@@ -102,26 +102,50 @@ export const PLATFORM_CONFIG_DEFAULTS: PlatformConfig = {
   // Premium is 2.5x the per-leg cost and is not in use.
   amd_detector: 'detect',
   amd_tuning_enabled: true,
-  // No longer gates the bridge, so this is purely an accuracy/cost dial now.
-  amd_total_analysis_ms: 3500,
+  // No longer gates the bridge, so this is purely an accuracy dial — but it is
+  // also the CEILING on every other threshold below. A rule that triggers later
+  // than this never fires at all, because analysis has already stopped.
+  //
+  // 6000 rather than something longer because 6000 is proven against this
+  // Telnyx account; the documented maximum is not published, and an
+  // out-of-range value in this block makes Telnyx reject the entire dial
+  // request, which fails every call rather than merely mistuning one.
+  amd_total_analysis_ms: 6000,
   amd_after_greeting_silence_ms: 800,
   // Preview is the one mode where the agent deliberately chose this lead and
   // is watching it answer. A wrong verdict there costs more than it saves.
   amd_in_preview: false,
   // Voicemail skipping is why AMD exists; keep it, now that preview is out.
   amd_hangup_when_bridged: true,
-  // Five seconds covers every machine verdict actually observed in production
-  // (1.76s to 3.95s across thirteen real voicemails) with room to spare, while
-  // still refusing to hang up on a call that has been live long enough for
-  // someone to be mid-sentence.
-  amd_max_seconds_after_answer: 5,
-  // Telnyx defaults are 3500 / 5 / 3500, and the first two are what produced
-  // a 100% false-positive rate: five words is fewer than most people say when
-  // they answer, and 3.5s is shorter than a normal sentence. A real voicemail
-  // greeting runs 8-15s and 25+ words, so these still separate the two.
-  amd_greeting_duration_ms: 7000,
-  amd_max_words: 15,
-  amd_initial_silence_ms: 4000,
+  // A floor, not the final value: handleAmdResult raises this to at least
+  // total_analysis_time + 3s so a verdict is never thrown away for arriving
+  // exactly when the detector was told to produce it.
+  amd_max_seconds_after_answer: 10,
+  // ── THE THREE RULES THAT CONCLUDE 'MACHINE' ─────────────────────────────
+  // All three must stay UNDER amd_total_analysis_ms or they never fire and the
+  // detector can only ever answer human/not_sure. placeOutboundCall clamps them
+  // if they drift above it; these values are chosen to sit below it honestly.
+  //
+  //   greeting_duration_millis  A greeting longer than this is a machine.
+  //                             Someone answering their own phone says "hello"
+  //                             or "hello, this is Josh" — under two seconds.
+  //                             A voicemail greeting is still going. 4000
+  //                             separates them with margin either side.
+  //
+  //   maximum_number_of_words   More words than this is a machine. Telnyx's
+  //                             default of 5 is fewer than most people say when
+  //                             they answer, which is what produced a 100%
+  //                             false-positive rate. In the six seconds we
+  //                             listen, a voicemail greeting runs past 10 while
+  //                             a full human sentence — "hi this is Josh how
+  //                             can I help you" — is nine.
+  //
+  //   initial_silence_millis    Silence before any speech this long is a
+  //                             machine. Kept generous; a slow handset or a
+  //                             quiet room should not be a robot.
+  amd_greeting_duration_ms: 4000,
+  amd_max_words: 10,
+  amd_initial_silence_ms: 4500,
 }
 
 const CONFIG_COLUMNS =

@@ -421,8 +421,21 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
     // where a wrong verdict hurts most, no longer runs AMD at all.
     const {
       amd_hangup_when_bridged: hangupWhenBridged,
-      amd_max_seconds_after_answer: maxSeconds,
+      amd_max_seconds_after_answer: configuredWindow,
+      amd_total_analysis_ms: analysisMs,
     } = await getPlatformConfig()
+
+    // ── THE WINDOW CANNOT BE SHORTER THAN THE ANALYSIS IT JUDGES ──────────
+    // Telnyx will happily use the full total_analysis_time_millis before
+    // reporting, and the webhook then has to reach us. A window narrower than
+    // that discards verdicts for arriving "too late" when they arrived exactly
+    // when they were supposed to.
+    //
+    // That precise contradiction has already broken this once — a 6s floor
+    // against a 6000ms analysis cap silently suppressed every voicemail skip
+    // in production. Deriving the minimum here means the two numbers cannot be
+    // set against each other again, whatever anyone puts in the config.
+    const maxSeconds = Math.max(configuredWindow, analysisMs / 1000 + 3)
 
     // ── IS THIS VERDICT STILL ABOUT THE LEAD? ─────────────────────────────
     // Every agent-attended call is bridged at pickup now, so by the time a
@@ -443,6 +456,7 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
     // suppressed on all of them. Production data, machine verdicts, seconds
     // after answer: 1.76, 2.01, 2.06, 2.07, 2.22, 2.36, 2.47, 2.52, 2.62, 2.70,
     // 3.03, 3.07, 3.95. Thirteen real voicemails, every one silently ignored.
+    // The derivation above is what stops that recurring.
     //
     // The floor's original purpose — stopping 'greeting_end' from firing on a
     // human pause — is handled at the detector instead, which is now 'detect'.

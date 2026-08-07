@@ -597,12 +597,40 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
       //                                 the bridge, so shortening it costs
       //                                 accuracy rather than responsiveness —
       //                                 the two used to be the same dial.
+      // ── THRESHOLDS PAST THE ANALYSIS CEILING NEVER FIRE ─────────────────
+      // greeting_duration_millis and initial_silence_millis are the two rules
+      // that CONCLUDE machine. Both are durations measured from answer, so if
+      // either is longer than total_analysis_time_millis, analysis ends before
+      // the rule can trigger and the detector can only ever return human or
+      // not_sure. Detection looks enabled, costs money, and cannot say no.
+      //
+      // This is not hypothetical: total_analysis was set to 3500 while these
+      // sat at 7000 and 4000, and every voicemail came back 'human' or
+      // 'not_sure' — the machine was still talking when we stopped listening.
+      //
+      // Clamped rather than merely warned about, because the failure is silent
+      // and the correct value is obvious. Anything at or above the ceiling is
+      // pulled below it with enough room to actually fire.
+      const ceiling = amdCfg.amd_total_analysis_ms
+      const clampToCeiling = (ms: number, label: string): number => {
+        if (ms < ceiling) return ms
+        const clamped = Math.max(500, ceiling - 1000)
+        console.warn(
+          `[placeOutboundCall] AMD ${label}=${ms}ms is at or past ` +
+          `total_analysis_time_millis=${ceiling}ms, so it could never fire. ` +
+          `Using ${clamped}ms. Raise total analysis time to honour the setting.`
+        )
+        return clamped
+      }
+
       dialBody.answering_machine_detection_config = {
-        total_analysis_time_millis: amdCfg.amd_total_analysis_ms,
+        total_analysis_time_millis: ceiling,
         after_greeting_silence_millis: amdCfg.amd_after_greeting_silence_ms,
-        greeting_duration_millis: amdCfg.amd_greeting_duration_ms,
+        greeting_duration_millis: clampToCeiling(
+          amdCfg.amd_greeting_duration_ms, 'greeting_duration_millis'),
         maximum_number_of_words: amdCfg.amd_max_words,
-        initial_silence_millis: amdCfg.amd_initial_silence_ms,
+        initial_silence_millis: clampToCeiling(
+          amdCfg.amd_initial_silence_ms, 'initial_silence_millis'),
       }
     }
 
