@@ -195,11 +195,18 @@ async function ensureAgentConnectionIsDialable(
         `Set to "internal".`
       )
     } else if (outcome === 'failed') {
-      console.error(
-        `[agentSipCredentials] could not verify SIP URI calling on connection ${bareId}. If agent ` +
-        `legs are hanging up ~100ms after dial with cause 'user_busy' and the browser never sees ` +
-        `an INVITE, set "Receive SIP URI calls" to "Only from my Connections" on this connection ` +
-        `in Telnyx Mission Control.`
+      // WARN, not ERROR. The read endpoint returns 401 for us, so this fires
+      // even when the setting is already correct — which it is, verified in
+      // Mission Control. An unverifiable setting is not the same as a broken
+      // one, and logging it at error level sends people hunting a fault that
+      // is not there. It stays as a hint because if agent legs DO start
+      // failing, this is the first thing to check.
+      console.warn(
+        `[agentSipCredentials] could not verify SIP URI calling on connection ${bareId} ` +
+        `(the read endpoint rejects our token). Harmless if it is already set. Only worth ` +
+        `acting on if agent legs hang up ~100ms after dial with cause 'user_busy' and the ` +
+        `browser never sees an INVITE — then set "Receive SIP URI calls" to ` +
+        `"Only from my Connections" on this connection in Telnyx Mission Control.`
       )
     }
   } catch (err) {
