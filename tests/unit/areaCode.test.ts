@@ -77,6 +77,38 @@ describe('AREA_CODES integrity — the checks a human cannot do by dialing', () 
     expect(invalid).toEqual([])
   })
 
+  it('holds the codes verified against regulator notices', () => {
+    // Researched individually rather than inferred. Each was confirmed in
+    // service before being added; the comment in areaCode.ts carries the dates.
+    const verified: Array<[string, string]> = [
+      ['839', 'SC'],  // overlay of 803, in service May 2020
+      ['948', 'VA'],  // overlay of 757, in service May 2022
+      ['436', 'OH'],  // overlay of 440, in service March 2024
+      ['686', 'VA'],  // overlay of 804, in service February 2024
+      ['821', 'SC'],  // overlay of 864, Upstate
+      ['483', 'AL'],  // overlay of 334
+      ['729', 'TN'],  // overlay of 423
+      ['748', 'CO'],
+    ]
+    for (const [npa, state] of verified) {
+      expect(getAreaCodeInfo(npa), `${npa} should be present`).not.toBeNull()
+      expect(getAreaCodeInfo(npa)?.state, `${npa} should be ${state}`).toBe(state)
+    }
+  })
+
+  it('still refuses the codes that are genuinely unassigned', () => {
+    // These were each checked against NANP records and left out on purpose.
+    // Lookup sites will happily invent a state for an unassigned code, and a
+    // wrong state here means calling someone outside their legal window — so
+    // this test exists to make filling them in a deliberate act rather than a
+    // tidy-up. If one of them is genuinely assigned later, update the comment
+    // in areaCode.ts and move it in the same commit.
+    for (const npa of ['485', '489', '632', '723', '823', '846', '974']) {
+      expect(getAreaCodeInfo(npa), `${npa} is unassigned`).toBeNull()
+      expect(classifyAreaCode(npa)).toEqual({ kind: 'unknown' })
+    }
+  })
+
   it('has not silently shrunk', () => {
     // A refactor that drops half the table would otherwise pass every other
     // test in this file.

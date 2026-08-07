@@ -33,10 +33,6 @@ const AREA_CODES: Record<string, AreaCodeInfo> = {
   // were being refused as "unrecognised area code — add a state" because the
   // table only ever held the 50 states. lib/timezones.ts carries the matching
   // zones; without an entry there these would still fail closed.
-  '787': { state: 'PR', region: 'southeast' },
-  '939': { state: 'PR', region: 'southeast' },
-  '340': { state: 'VI', region: 'southeast' },
-
   '201': { state: 'NJ', region: 'northeast' },
   '202': { state: 'DC', region: 'southeast' },
   '203': { state: 'CT', region: 'northeast' },
@@ -114,6 +110,7 @@ const AREA_CODES: Record<string, AreaCodeInfo> = {
   '337': { state: 'LA', region: 'southeast' },
   '338': { state: 'CA', region: 'pacific' },
   '339': { state: 'MA', region: 'northeast' },
+  '340': { state: 'VI', region: 'southeast' },
   '341': { state: 'OH', region: 'midwest' },
   '346': { state: 'TX', region: 'south_central' },
   '347': { state: 'NY', region: 'northeast' },
@@ -152,6 +149,7 @@ const AREA_CODES: Record<string, AreaCodeInfo> = {
   '432': { state: 'TX', region: 'south_central' },
   '434': { state: 'VA', region: 'southeast' },
   '435': { state: 'UT', region: 'mountain' },
+  '436': { state: 'OH', region: 'midwest' },
   '440': { state: 'OH', region: 'midwest' },
   '442': { state: 'CA', region: 'pacific' },
   '443': { state: 'MD', region: 'northeast' },
@@ -170,6 +168,7 @@ const AREA_CODES: Record<string, AreaCodeInfo> = {
   '478': { state: 'GA', region: 'southeast' },
   '479': { state: 'AR', region: 'south_central' },
   '480': { state: 'AZ', region: 'mountain' },
+  '483': { state: 'AL', region: 'southeast' },
   '484': { state: 'PA', region: 'northeast' },
   '501': { state: 'AR', region: 'south_central' },
   '502': { state: 'KY', region: 'southeast' },
@@ -255,6 +254,7 @@ const AREA_CODES: Record<string, AreaCodeInfo> = {
   '680': { state: 'NY', region: 'northeast' },
   '681': { state: 'WV', region: 'southeast' },
   '682': { state: 'TX', region: 'south_central' },
+  '686': { state: 'VA', region: 'southeast' },
   '689': { state: 'FL', region: 'southeast' },
   '701': { state: 'ND', region: 'midwest' },
   '702': { state: 'NV', region: 'mountain' },
@@ -276,6 +276,7 @@ const AREA_CODES: Record<string, AreaCodeInfo> = {
   '725': { state: 'NV', region: 'mountain' },
   '726': { state: 'TX', region: 'south_central' },
   '727': { state: 'FL', region: 'southeast' },
+  '729': { state: 'TN', region: 'southeast' },
   '730': { state: 'IL', region: 'midwest' },
   '731': { state: 'TN', region: 'southeast' },
   '732': { state: 'NJ', region: 'northeast' },
@@ -285,6 +286,7 @@ const AREA_CODES: Record<string, AreaCodeInfo> = {
   '743': { state: 'NC', region: 'southeast' },
   '746': { state: 'VA', region: 'southeast' },
   '747': { state: 'CA', region: 'pacific' },
+  '748': { state: 'CO', region: 'mountain' },
   '754': { state: 'FL', region: 'southeast' },
   '757': { state: 'VA', region: 'southeast' },
   '760': { state: 'CA', region: 'pacific' },
@@ -303,6 +305,7 @@ const AREA_CODES: Record<string, AreaCodeInfo> = {
   '781': { state: 'MA', region: 'northeast' },
   '785': { state: 'KS', region: 'midwest' },
   '786': { state: 'FL', region: 'southeast' },
+  '787': { state: 'PR', region: 'southeast' },
   '801': { state: 'UT', region: 'mountain' },
   '802': { state: 'VT', region: 'northeast' },
   '803': { state: 'SC', region: 'southeast' },
@@ -319,12 +322,14 @@ const AREA_CODES: Record<string, AreaCodeInfo> = {
   '817': { state: 'TX', region: 'south_central' },
   '818': { state: 'CA', region: 'pacific' },
   '820': { state: 'CA', region: 'pacific' },
+  '821': { state: 'SC', region: 'southeast' },
   '826': { state: 'VA', region: 'southeast' },
   '828': { state: 'NC', region: 'southeast' },
   '830': { state: 'TX', region: 'south_central' },
   '831': { state: 'CA', region: 'pacific' },
   '832': { state: 'TX', region: 'south_central' },
   '838': { state: 'NY', region: 'northeast' },
+  '839': { state: 'SC', region: 'southeast' },
   '840': { state: 'CA', region: 'pacific' },
   '843': { state: 'SC', region: 'southeast' },
   '845': { state: 'NY', region: 'northeast' },
@@ -374,11 +379,13 @@ const AREA_CODES: Record<string, AreaCodeInfo> = {
   '936': { state: 'TX', region: 'south_central' },
   '937': { state: 'OH', region: 'midwest' },
   '938': { state: 'AL', region: 'southeast' },
+  '939': { state: 'PR', region: 'southeast' },
   '940': { state: 'TX', region: 'south_central' },
   '941': { state: 'FL', region: 'southeast' },
   '943': { state: 'GA', region: 'southeast' },
   '945': { state: 'TX', region: 'south_central' },
   '947': { state: 'MI', region: 'midwest' },
+  '948': { state: 'VA', region: 'southeast' },
   '949': { state: 'CA', region: 'pacific' },
   '951': { state: 'CA', region: 'pacific' },
   '952': { state: 'MN', region: 'midwest' },
@@ -421,6 +428,19 @@ export function getAreaCodeInfo(areaCode: string | null | undefined): AreaCodeIn
 // So the null is split into the cases that need different handling.
 // =============================================================================
 
+/**
+ * Checked against NANP records and regulator notices, and deliberately NOT in
+ * the table above: 485, 489, 632, 723, 823, 846, 974.
+ *
+ * Every one is unassigned or reserved — 823 is listed as "not in use, available
+ * for geographic assignment", the rest are held for future relief. Leads
+ * carrying them exist (two each in production) and are almost certainly typos
+ * or spoofed caller ID. They stay undialable on purpose.
+ *
+ * Do not fill these in from a lookup site. Several such sites invent a
+ * plausible state for unassigned codes, and a wrong state here is a wrong
+ * calling window.
+ */
 export type AreaCodeClass =
   /** A US state or territory we can place, and therefore time correctly. */
   | { kind: 'us'; state: string; region: Region }
