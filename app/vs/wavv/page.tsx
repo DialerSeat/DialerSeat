@@ -22,6 +22,11 @@ export const metadata: Metadata = {
     url: 'https://dialerseat.com/vs/wavv',
     type: 'article',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'DialerSeat vs WAVV',
+    description: 'WAVV charges more the harder you dial — $59 to $149/month depending on the mode. DialerSeat is $35 a week, flat, every mode included. Weekly billing, cancel any time.',
+  },
 }
 
 const FAQS = [

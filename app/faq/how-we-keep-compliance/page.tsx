@@ -23,6 +23,11 @@ export const metadata: Metadata = {
     url: 'https://dialerseat.com/faq/how-we-keep-compliance',
     type: 'article',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'How We Keep Compliance',
+    description: 'The compliance enforcement layer of DialerSeat, explained without marketing fluff. What runs in software, what falls on the seller, and how the auto-degrade controller actually works.',
+  },
 }
 
 export default function Page() {

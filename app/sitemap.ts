@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next'
 import { headers } from 'next/headers'
-import { crossShoppedPairs, matchupSlug } from '@/lib/competitors'
+import { COMPETITORS, crossShoppedPairs, matchupSlug } from '@/lib/competitors'
 
 
 
@@ -69,10 +69,21 @@ function apexSitemap(now: Date): MetadataRoute.Sitemap {
     
     e('/vs', 0.9, 'monthly'),
     e('/vs/everyone', 0.9, 'monthly'),
-    e('/vs/readymode', 0.8, 'monthly'),
-    e('/vs/batchdialer', 0.8, 'monthly'),
-    e('/vs/mojo', 0.8, 'monthly'),
-    e('/vs/phoneburner', 0.8, 'monthly'),
+
+    // ── COMPETITOR PAGES, FROM THE REGISTRY ─────────────────────────────
+    // These were hand-listed, and the list had gone stale exactly the way
+    // hand-maintained lists do: five of the sixteen published competitor pages
+    // were in here. The other eleven existed, rendered, and were absent from
+    // the sitemap — pages doing no work at all.
+    //
+    // The head-to-head block below was already generated from the registry for
+    // this reason. The individual pages now are too, so adding a competitor
+    // cannot silently produce an unindexed page.
+    //
+    // hookedcrm is listed separately: it has a page but is not in the registry,
+    // because we could not source the pricing detail the registry requires.
+    ...COMPETITORS.map(c => e(`/vs/${c.slug}`, 0.8, 'monthly')),
+    e('/vs/hookedcrm', 0.8, 'monthly'),
     
     e('/faq', 0.8, 'monthly'),
     e('/faq/why-dialerseat', 0.85, 'monthly'),
@@ -96,6 +107,9 @@ function apexSitemap(now: Date): MetadataRoute.Sitemap {
     e('/faq/compliance-export', 0.75, 'monthly'),
     e('/faq/billing', 0.75, 'monthly'),
     e('/faq/data-and-recordings', 0.7, 'monthly'),
+    e('/faq/calling-hours', 0.85, 'monthly'),
+    e('/faq/10dlc-and-outbound-calling', 0.75, 'monthly'),
+    e('/faq/how-many-numbers-do-i-need', 0.75, 'monthly'),
     
     e('/faq/managers', 0.7, 'monthly'),
     e('/faq/white-label', 0.7, 'monthly'),

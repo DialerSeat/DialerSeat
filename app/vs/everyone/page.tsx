@@ -22,6 +22,11 @@ export const metadata: Metadata = {
     url: 'https://dialerseat.com/vs/everyone',
     type: 'article',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'DialerSeat vs Every Legacy Dialer',
+    description: 'Side-by-side feature matrix vs ReadyMode, Mojo, PhoneBurner, and Five9, plus a look at Convoso and the wider industry. $35/week per seat, cancel anytime. No annual contract. Modern UI. Every device.',
+  },
 }
 
 const FAQS = [

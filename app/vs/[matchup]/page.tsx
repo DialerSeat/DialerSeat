@@ -1,11 +1,12 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
 import JsonLd from '@/components/json-ld'
 import { organizationSchema, breadcrumbSchema, faqPageSchema } from '@/lib/schema'
 import {
   COMPETITORS,
   DIALERSEAT,
+  competitorBySlug,
   crossShoppedPairs,
   matchupSlug,
   type Competitor,
@@ -46,6 +47,25 @@ function resolveMatchup(slug: string): Matchup | null {
   return null
 }
 
+/**
+ * Does this slug name two real competitors, even if we no longer publish the
+ * pair?
+ *
+ * The published set shrank when pairing was gated by segment — combinations
+ * like "mojo vs five9" were being generated because both tools were flagged
+ * cross-shopped, not because anyone was choosing between a real-estate dialer
+ * and an enterprise contact centre. Roughly thirty such pages went away.
+ *
+ * Those URLs existed and may be linked or indexed, so they get a 301 to the
+ * comparison index rather than a 404. A slug naming tools we have never heard
+ * of is a different thing entirely and still 404s — redirecting genuine
+ * nonsense to a real page is how soft-404 problems start.
+ */
+function namesTwoRealCompetitors(slug: string): boolean {
+  const parts = slug.split('-vs-')
+  return parts.length === 2 && parts.every(p => !!competitorBySlug(p))
+}
+
 export function generateStaticParams() {
   return crossShoppedPairs().map(([a, b]) => ({ matchup: matchupSlug(a, b) }))
 }
@@ -74,6 +94,16 @@ export async function generateMetadata(
       description,
       url: `${SITE}/vs/${matchup}`,
       type: 'article',
+    },
+    // Next.js merges metadata field-by-field rather than deeply, so a page
+    // that sets openGraph and omits twitter inherits the ROOT LAYOUT's card
+    // wholesale. Without this, every one of these comparisons previewed on X
+    // as "DialerSeat — Dial Smarter. Close Faster." — the homepage, not the
+    // page being shared.
+    twitter: {
+      card: 'summary_large_image',
+      title: `${m.a.name} vs ${m.b.name}`,
+      description,
     },
   }
 }
@@ -137,7 +167,12 @@ export default async function MatchupPage(
 ) {
   const { matchup } = await params
   const m = resolveMatchup(matchup)
-  if (!m) notFound()
+  if (!m) {
+    // A pair we used to publish and no longer do: send the link equity to the
+    // index instead of dropping it on the floor.
+    if (namesTwoRealCompetitors(matchup)) permanentRedirect('/vs')
+    notFound()
+  }
 
   const { a, b } = m
 

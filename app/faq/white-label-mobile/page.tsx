@@ -30,6 +30,11 @@ export const metadata: Metadata = {
     url: 'https://dialerseat.com/faq/white-label-mobile',
     type: 'article',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'White-Label on Mobile — DialerSeat',
+    description: 'Your branded dialer, installed to the home screen like a native app \u2014 no App Store review, no native app store fees, no separate codebase to maintain.',
+  },
 }
 
 export default function WhiteLabelMobileFaqPage() {

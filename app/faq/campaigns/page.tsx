@@ -30,6 +30,11 @@ export const metadata: Metadata = {
     url: 'https://dialerseat.com/faq/campaigns',
     type: 'article',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Setting Up a Campaign — DialerSeat',
+    description: 'Mode, AMD, predictive pacing, voicemail drop — the settings a campaign actually has, and what each one does.',
+  },
 }
 
 export default function CampaignsFaqPage() {

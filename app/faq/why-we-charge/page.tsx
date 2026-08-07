@@ -23,6 +23,11 @@ export const metadata: Metadata = {
     url: 'https://dialerseat.com/faq/why-we-charge',
     type: 'article',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Why we charge what we charge.',
+    description: 'The breakdown on $35/week per seat — what\'s included, what competitors charge extra for, and why we can keep it flat.',
+  },
 }
 
 export default function Page() {

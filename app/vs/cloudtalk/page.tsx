@@ -22,6 +22,11 @@ export const metadata: Metadata = {
     url: 'https://dialerseat.com/vs/cloudtalk',
     type: 'article',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'DialerSeat vs CloudTalk',
+    description: 'Every dialer mode included at a flat $35/week per seat \u2014 not a $15 or $39 add-on stacked on top of a cheap phone-system seat.',
+  },
 }
 
 const FAQS = [

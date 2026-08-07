@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import Link from "next/link"
@@ -6,10 +7,27 @@ import SiteHeader from '@/components/site-header'
 import LandingAuthSync from '@/components/LandingAuthSync'
 import HashScrollFix from '@/components/HashScrollFix'
 import DialerShowcase from '@/components/DialerShowcase'
+import JsonLd from '@/components/json-ld'
+import { organizationSchema, softwareApplicationSchema } from '@/lib/schema'
 import LeadQueueShowcase from '@/components/LeadQueueShowcase'
 
 interface PageProps {
   searchParams: Promise<{ view?: string; tenant?: string }>
+}
+
+// ── THE HOMEPAGE HAD NO CANONICAL ──────────────────────────────────
+// Title, description, Open Graph and the Twitter card all come from the root
+// layout, so this page was never bare. What it lacked is the one tag a layout
+// cannot supply for you: a self-referencing canonical.
+//
+// That matters more here than anywhere else on the site. This route reads
+// searchParams and is force-dynamic, so /?view=landing and /?tenant=x are
+// distinct URLs serving the same page — and every UTM-tagged link anyone has
+// ever shared is another one. Without a canonical those are all separately
+// crawlable copies of the most important page on the domain, splitting its
+// ranking signals across variants that should be consolidating into one.
+export const metadata: Metadata = {
+  alternates: { canonical: 'https://dialerseat.com' },
 }
 
 export const dynamic = 'force-dynamic'
@@ -35,7 +53,17 @@ export default async function Home({ searchParams }: PageProps) {
   const wlCtaLabel = 'GET MANAGER+'
 
   return (
+
     <>
+
+      {/* Present on every other page, and until now absent from the one
+
+          a search engine is most likely to render as a rich result. */}
+
+      <JsonLd data={organizationSchema()} />
+
+      <JsonLd data={softwareApplicationSchema()} />
+
       <LandingAuthSync serverThoughtLoggedIn={isLoggedIn} />
       <HashScrollFix />
 

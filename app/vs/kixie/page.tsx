@@ -22,6 +22,11 @@ export const metadata: Metadata = {
     url: 'https://dialerseat.com/vs/kixie',
     type: 'article',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'DialerSeat vs Kixie',
+    description: 'Predictive, power, progressive, and preview dialing at one flat $35/week per seat \u2014 not gated behind a $95+/month multi-line tier.',
+  },
 }
 
 const FAQS = [

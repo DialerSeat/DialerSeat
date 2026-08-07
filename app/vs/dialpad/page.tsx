@@ -22,6 +22,11 @@ export const metadata: Metadata = {
     url: 'https://dialerseat.com/vs/dialpad',
     type: 'article',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'DialerSeat vs Dialpad',
+    description: 'The dialer, included at $35/week per seat \u2014 not a separate $39+/month product you have to discover and buy on top.',
+  },
 }
 
 const FAQS = [

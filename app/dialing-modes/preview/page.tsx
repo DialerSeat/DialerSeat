@@ -21,6 +21,11 @@ export const metadata: Metadata = {
     url: 'https://dialerseat.com/dialing-modes/preview',
     type: 'article',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'The Preview Dialer — Origins and Mechanics',
+    description: 'The original semi-automated outbound mode. One lead at a time, agent reviews first, agent clicks dial. Used since the 1970s in B2B, debt collection, and insurance.',
+  },
 }
 
 const MODE_COLOR = '#5a5e6a'

@@ -23,6 +23,11 @@ export const metadata: Metadata = {
     url: 'https://dialerseat.com/faq/how-does-amd-work',
     type: 'article',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'How Does AMD Work?',
+    description: 'Answering Machine Detection — what it is, how accurate it is, and how DialerSeat handles it.',
+  },
 }
 
 export default function Page() {

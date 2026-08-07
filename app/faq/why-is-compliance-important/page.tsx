@@ -23,6 +23,11 @@ export const metadata: Metadata = {
     url: 'https://dialerseat.com/faq/why-is-compliance-important',
     type: 'article',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Why Is Compliance Important?',
+    description: 'A light-hearted look at why telemarketing compliance matters — and why so many dialers can\'t be bothered.',
+  },
 }
 
 export default function Page() {

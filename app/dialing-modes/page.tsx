@@ -23,6 +23,11 @@ export const metadata: Metadata = {
     url: 'https://dialerseat.com/dialing-modes',
     type: 'article',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Dialing Modes — Preview, Power, Progressive, Predictive',
+    description: 'Four dialing modes explained, with the TCPA and FTC TSR rules each one operates under. What DialerSeat enforces in software vs. what falls on the campaign owner.',
+  },
 }
 
 export default function DialingModesPage() {

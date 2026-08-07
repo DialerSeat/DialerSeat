@@ -22,6 +22,11 @@ export const metadata: Metadata = {
     url: 'https://dialerseat.com/vs/readymode',
     type: 'article',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'DialerSeat vs ReadyMode',
+    description: 'Same multi-line predictive at $35/week instead of $165–$249/month. No $2K setup fee. Modern UI built this year. Works on phones and tablets.',
+  },
 }
 
 const FAQS = [

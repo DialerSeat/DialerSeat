@@ -21,6 +21,11 @@ export const metadata: Metadata = {
     url: 'https://dialerseat.com/faq/dialer-modes',
     type: 'article',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Dialer Modes — The Simple Version',
+    description: 'Preview, power, progressive, predictive — all four dialing modes summarized in plain terms.',
+  },
 }
 
 const MODES = [

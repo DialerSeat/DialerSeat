@@ -21,6 +21,11 @@ export const metadata: Metadata = {
     url: 'https://dialerseat.com/dialing-modes/predictive',
     type: 'article',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'The Predictive Dialer — A Brief History',
+    description: 'Invented in the early 1980s, regulated in 2003, still the highest-throughput outbound mode in existence. Mechanism, history, math, and how DialerSeat implements it.',
+  },
 }
 
 const MODE_COLOR = '#8a1a1a'

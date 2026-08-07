@@ -15,6 +15,11 @@ export const metadata: Metadata = {
     url: 'https://dialerseat.com/faq/white-label',
     type: 'article',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'White-Label DialerSeat',
+    description: 'Your brand. Your domain. Your dialer. $75/week, no setup fees, no contracts.',
+  },
 }
 
 export default function Page() {

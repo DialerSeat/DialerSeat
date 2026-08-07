@@ -21,6 +21,11 @@ export const metadata: Metadata = {
     url: 'https://dialerseat.com/dialing-modes/power',
     type: 'article',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'The Power Dialer — Origins and Mechanics',
+    description: 'One line per agent, queue-driven, auto-advancing. The mode that defined inside sales from 1995 onward. Mojo, PhoneBurner, Aspect — they all started here.',
+  },
 }
 
 const MODE_COLOR = '#2a4a8a'

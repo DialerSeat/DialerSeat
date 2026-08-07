@@ -57,10 +57,23 @@ export interface Competitor {
   }
   /**
    * Do buyers actually cross-shop this against other tools on this list?
-   * Only true-for-true pairs get a pairwise page — see the comment in
-   * app/vs/[matchup]/page.tsx on why we do not generate all of them.
+   * Necessary but not sufficient for a pairwise page — see segment below.
    */
   crossShopped: boolean
+  /**
+   * Which shortlist this tool actually appears on.
+   *
+   * crossShopped alone was a blanket flag, and blanket flags do not scale: at
+   * 17 flagged tools it authorises 136 head-to-head pages, most describing a
+   * decision nobody is making. "smrtPhone vs 3CX" is not a shortlist. Pairing
+   * within a segment keeps every generated page a real question.
+   *
+   *   call_center   High-volume predictive floors
+   *   sales_crm     CRM-attached dialers for sales teams
+   *   real_estate   Real-estate and investor-focused tools
+   *   phone_system  PBX / UCaaS platforms that are not really dialers
+   */
+  segment: 'call_center' | 'sales_crm' | 'real_estate' | 'phone_system'
 }
 
 export const DIALERSEAT = {
@@ -118,6 +131,7 @@ export const COMPETITORS: Competitor[] = [
       fiveSeats: 'Quoted, plus a $500–$2,000 setup fee',
     },
     crossShopped: true,
+    segment: 'call_center',
   },
   {
     slug: 'mojo',
@@ -145,6 +159,7 @@ export const COMPETITORS: Competitor[] = [
       fiveSeats: 'Dialer plans plus ~$10/agent, before lead-data add-ons',
     },
     crossShopped: true,
+    segment: 'real_estate',
   },
   {
     slug: 'phoneburner',
@@ -170,6 +185,7 @@ export const COMPETITORS: Competitor[] = [
       fiveSeats: 'Five per-seat monthly licences',
     },
     crossShopped: true,
+    segment: 'sales_crm',
   },
   {
     slug: 'five9',
@@ -195,6 +211,7 @@ export const COMPETITORS: Competitor[] = [
       fiveSeats: 'Not published; quotes commonly land at $175+ per seat per month',
     },
     crossShopped: true,
+    segment: 'call_center',
   },
   {
     slug: 'convoso',
@@ -220,6 +237,7 @@ export const COMPETITORS: Competitor[] = [
       fiveSeats: 'Custom quote, usage-billed',
     },
     crossShopped: true,
+    segment: 'call_center',
   },
   {
     slug: 'batchdialer',
@@ -245,6 +263,7 @@ export const COMPETITORS: Competitor[] = [
       fiveSeats: '~$475 on annual prepay, or roughly $595–$1,245 month to month',
     },
     crossShopped: true,
+    segment: 'real_estate',
   },
   {
     slug: 'wavv',
@@ -270,6 +289,7 @@ export const COMPETITORS: Competitor[] = [
       fiveSeats: '$149/month Multi Line for predictive, plus per-number charges',
     },
     crossShopped: true,
+    segment: 'real_estate',
   },
   {
     slug: 'kixie',
@@ -294,6 +314,7 @@ export const COMPETITORS: Competitor[] = [
       fiveSeats: '$475+/month at the multi-line tier',
     },
     crossShopped: true,
+    segment: 'sales_crm',
   },
   {
     slug: 'orum',
@@ -319,6 +340,7 @@ export const COMPETITORS: Competitor[] = [
       fiveSeats: '~$1,250/month, billed annually',
     },
     crossShopped: true,
+    segment: 'sales_crm',
   },
   {
     slug: 'justcall',
@@ -336,6 +358,7 @@ export const COMPETITORS: Competitor[] = [
       fiveSeats: '$245+/month on the tier that includes dialing',
     },
     crossShopped: true,
+    segment: 'sales_crm',
   },
   {
     slug: 'cloudtalk',
@@ -353,6 +376,7 @@ export const COMPETITORS: Competitor[] = [
       fiveSeats: '$95 in seats plus $75–$195 in dialer add-ons',
     },
     crossShopped: true,
+    segment: 'phone_system',
   },
   {
     slug: 'aircall',
@@ -370,6 +394,7 @@ export const COMPETITORS: Competitor[] = [
       fiveSeats: '$250/month on Professional',
     },
     crossShopped: true,
+    segment: 'phone_system',
   },
   {
     slug: 'dialpad',
@@ -387,6 +412,216 @@ export const COMPETITORS: Competitor[] = [
       fiveSeats: '~$195/month for Sell, on top of Connect',
     },
     crossShopped: false,
+    segment: 'phone_system',
+  },
+  {
+    slug: 'vicidial',
+    name: 'VICIdial',
+    summary:
+      'The open-source predictive dialer that runs a large share of the world’s call-centre floors. Free software, paid everything else.',
+    pricing:
+      'The software is free under the AGPL. Official VICIhost managed hosting is about $400/month per server after a $1,000 setup — roughly $16 per user at 25 agents. Third-party hosts charge $100–$149 per agent per month.',
+    contract:
+      'None for the software itself. Hosting and SIP trunking are separate contracts with separate vendors.',
+    dialing:
+      'Predictive, power, preview and manual, all included. Ratio, drop rate and hopper depth are directly configurable — more control than most commercial products expose.',
+    wins: [
+      'Genuinely free software with no per-seat licence, ever',
+      'The deepest configurability in outbound dialing — nearly every pacing parameter is exposed',
+      'Enormous install base, so almost any problem has already been solved on a forum',
+      'Cheapest per-agent cost in the industry once you are past roughly 100 agents',
+      'No vendor can raise your price, deprecate your setup, or lock your data in',
+    ],
+    friction: [
+      'Free software is not a free system — published TCO lands at $130–$400+ per agent per month once servers, SIP trunking and administration are counted',
+      'A dedicated VICIdial administrator is a real hire; industry salary data puts the median near $97,000 a year',
+      'Below about 30 agents the operational overhead eats the savings entirely',
+      'Compliance is yours to build: calling windows, DNC scrubbing and abandon-rate control are configuration, not guarantees',
+      'You own uptime. A dialer that is down mid-shift is your emergency at 9am',
+    ],
+    bestFor:
+      'Floors of 30+ agents with a competent telephony administrator on staff who want total control and the lowest possible cost at scale.',
+    team: {
+      minimum: 'One server, however many agents it holds',
+      addingASeat:
+        'Free in licence terms — add a user in the admin panel. The real limit is server capacity and trunk concurrency, which you plan and pay for yourself.',
+      fiveSeats:
+        'No licence cost. In practice a server, SIP trunking and someone who can run it — which is why published TCO starts around $130/agent/month.',
+    },
+    crossShopped: true,
+    segment: 'call_center',
+  },
+  {
+    slug: 'calltools',
+    name: 'CallTools',
+    summary:
+      'A predictive-dialing contact-centre platform sold through sales, with setup and integration fees on top of the seat price.',
+    pricing:
+      'Roughly $119.99 per user per month month-to-month, or about $101.99 annually. Quote-based, so the published figure is a starting point.',
+    contract: 'Month-to-month available; annual pricing is materially cheaper.',
+    dialing: 'Predictive and preview dialing are core to the product.',
+    wins: [
+      'Mature predictive engine with real contact-centre reporting',
+      'Built-in CRM and list management',
+      'Month-to-month is genuinely available, not just annual',
+    ],
+    friction: [
+      'Setup fees are commonly $500–$1,500 before the first call',
+      'Complex CRM integrations are quoted separately, reportedly $2,000–$5,000',
+      'Pricing is quote-based, so the real number requires a sales conversation',
+      'SMS is billed separately per message',
+    ],
+    bestFor: 'Established outbound teams that want a full contact-centre platform and will absorb onboarding.',
+    team: {
+      minimum: 'Quoted per deployment',
+      addingASeat: 'Contact the vendor to add a licence',
+      fiveSeats: 'Roughly $510–$600/month in seats at published rates, before setup and integration fees',
+    },
+    crossShopped: true,
+    segment: 'call_center',
+  },
+  {
+    slug: 'dialedin',
+    name: 'DialedIn',
+    summary:
+      'Formerly ChaseData. A long-running cloud contact-centre product covering inbound and outbound in one system.',
+    pricing: 'Published starting price around $89 per user per month.',
+    contract: 'Per-user subscription; terms vary by plan.',
+    dialing: 'Predictive, progressive and preview dialing across its tiers.',
+    wins: [
+      'Publishes a starting price rather than hiding everything behind a demo',
+      'Handles inbound and outbound in one platform',
+      'Long operating history under the ChaseData name',
+    ],
+    friction: [
+      'The entry price is the entry tier — the outbound features most teams want sit higher up',
+      'Feature availability by tier is not obvious until you are in a sales conversation',
+      'Interface is functional rather than modern',
+    ],
+    bestFor: 'Blended inbound/outbound teams that want one vendor for both directions.',
+    team: {
+      minimum: 'One user',
+      addingASeat: 'Add a user licence at the tier you are on',
+      fiveSeats: 'From roughly $445/month at the published entry rate',
+    },
+    crossShopped: true,
+    segment: 'call_center',
+  },
+  {
+    slug: 'ringcentral',
+    name: 'RingCentral',
+    summary:
+      'A large business phone system. Outbound dialing lives in a separate contact-centre product, not in the plan most buyers start on.',
+    pricing:
+      'Core is about $20 per user per month billed annually, or $30 monthly; Advanced $25 and Ultra $35 annually. The RingCX contact-centre product, which is where the dialer lives, starts around $65 per user per month.',
+    contract: 'Annual billing is materially cheaper than monthly. Contract terms apply.',
+    dialing:
+      'Not in the core phone plans — even Ultra requires an add-on. Predictive and progressive dialing come with RingCX, the contact-centre tier.',
+    wins: [
+      'Enormous, stable company with global carrier infrastructure',
+      'Excellent as a business phone system, which is what it actually is',
+      'Deep integration catalogue and enterprise compliance certifications',
+      'Genuinely useful if you need a full UCaaS platform alongside outbound',
+    ],
+    friction: [
+      'The dialer is not in the plans people quote — reaching it means the contact-centre product at roughly triple the price',
+      'Outbound dialer minutes can be metered separately on top of the seat',
+      'Sold and priced for organisations with a procurement process',
+      'Substantial platform for a team that only wants to dial leads',
+    ],
+    bestFor: 'Companies that need a full business phone system first and outbound dialing second.',
+    team: {
+      minimum: 'One user, but the dialer needs the contact-centre product',
+      addingASeat: 'Add a licence; the dialer tier is a different product line from the phone plan',
+      fiveSeats: 'From roughly $325/month on RingCX at the published starting rate, before usage',
+    },
+    crossShopped: false,
+    segment: 'phone_system',
+  },
+  {
+    slug: 'smrtphone',
+    name: 'smrtPhone',
+    summary:
+      'A phone system built for real-estate investors, tightly integrated with Podio and REI CRMs. The dialer is a paid add-on to the subscription.',
+    pricing:
+      'Standard $62/month and Pro $104/month billed monthly. smrtDialer is an add-on on top: about $42/seat/month single-line or $75/seat/month multi-line. Call time is then deducted from pre-paid credits, from around $0.02/minute.',
+    contract: 'Monthly or annual. Usage runs on a pre-paid credit balance.',
+    dialing: 'Single-line and multi-line power dialing, up to four lines.',
+    wins: [
+      'Purpose-built for real-estate investors, with deep Podio and REI CRM integration',
+      'One vendor for calls, texts and CRM plumbing in that niche',
+      'Well understood by the wholesaling community',
+    ],
+    friction: [
+      'Three separate charges stack — subscription, dialer seat, then per-minute credits',
+      'Multi-line power dialing is not predictive; there is no pacing engine',
+      'Usage-based billing makes a heavy dialing day cost more than a light one',
+      'Strongest fit is real-estate investing specifically',
+    ],
+    bestFor: 'Real-estate investors already running Podio or an REI CRM who want calling wired into it.',
+    team: {
+      minimum: 'One subscription plus one dialer seat',
+      addingASeat: 'Add a smrtDialer seat to the subscription, then fund credits for their call time',
+      fiveSeats: 'Subscription plus roughly $210–$375/month in dialer seats, before per-minute credits',
+    },
+    crossShopped: true,
+    segment: 'real_estate',
+  },
+  {
+    slug: 'aloware',
+    name: 'Aloware',
+    summary:
+      'A CRM-attached calling and texting platform aimed at sales teams, priced in tiers with AI features bundled in.',
+    pricing:
+      'iPro + AI about $30 per user per month, uPro + AI about $60, xPro + AI about $85.',
+    contract: 'Monthly per-user subscription.',
+    dialing: 'Power dialing on the lower tiers; higher tiers add more automation.',
+    wins: [
+      'Genuinely low entry price for a CRM-integrated dialer',
+      'Strong HubSpot and Pipedrive integration',
+      'Combined calling and texting in one place',
+    ],
+    friction: [
+      'Ad-hoc charges sit outside the seat price and are documented separately by the vendor',
+      'Dialing capability is tiered — the entry plan is not the outbound plan',
+      'Built around CRM workflows rather than high-volume list dialing',
+    ],
+    bestFor: 'Sales teams living inside HubSpot or Pipedrive who want calling and texting attached to it.',
+    team: {
+      minimum: 'One user',
+      addingASeat: 'Add a user at your tier',
+      fiveSeats: 'From roughly $150/month at the entry tier, more once outbound features are needed',
+    },
+    crossShopped: true,
+    segment: 'sales_crm',
+  },
+  {
+    slug: 'ytel',
+    name: 'Ytel',
+    summary:
+      'A contact-centre and communications-API platform, priced per seat on top of a platform fee.',
+    pricing:
+      'Contact Centre Seat around $99/month, Engagement Platform around $399/month, Trust Center around $499/month. Seats are priced per agent on top of a platform fee.',
+    contract: 'Per-seat subscription with a platform fee.',
+    dialing: 'Predictive and preview dialing in the contact-centre product.',
+    wins: [
+      'Communications APIs alongside the dialer, useful if you are building on top',
+      'Compliance tooling is a named part of the product',
+      'Handles voice and SMS at scale',
+    ],
+    friction: [
+      'Platform fee sits on top of per-seat pricing, so small teams pay a disproportionate share',
+      'Positioned for larger operations — the economics do not favour a handful of agents',
+      'More platform than a team that just wants to dial a list needs',
+    ],
+    bestFor: 'Larger operations that want a dialer and communications APIs from the same vendor.',
+    team: {
+      minimum: 'Platform fee plus at least one seat',
+      addingASeat: 'Add a seat at roughly $99/month on top of the platform fee',
+      fiveSeats: 'Roughly $495/month in seats plus the platform fee',
+    },
+    crossShopped: false,
+    segment: 'call_center',
   },
   {
     slug: '3cx',
@@ -408,6 +643,7 @@ export const COMPETITORS: Competitor[] = [
       fiveSeats: 'Capacity licence — not priced per agent',
     },
     crossShopped: false,
+    segment: 'phone_system',
   },
 ]
 
@@ -418,20 +654,27 @@ export function competitorBySlug(slug: string): Competitor | undefined {
 /**
  * The pairs we publish a head-to-head page for.
  *
- * DELIBERATELY NOT EVERY PAIR. Fourteen competitors is 91 combinations, and
+ * DELIBERATELY NOT EVERY PAIR. Twenty-one competitors is 210 combinations, and
  * most of them describe a decision nobody is actually making — 3CX versus Orum
  * is not a shortlist anyone holds. Generating all of them would be textbook
  * doorway content: near-identical pages built for a crawler rather than a
  * reader, which is exactly what thin-content penalties exist to catch.
  *
- * Restricting to genuinely cross-shopped tools keeps every page a real answer
- * to a real question, which is also the only version that earns links.
+ * TWO GATES, because one was not enough. crossShopped says a tool is compared
+ * at all; segment says which shortlist it appears on. The flag alone allowed
+ * 136 pages the moment the roster grew, including pairs like smrtPhone versus
+ * 3CX — a real-estate CRM dialer against a self-hosted PBX, which is not a
+ * decision any buyer has ever had to make.
+ *
+ * Pairing inside a segment keeps every page a real answer to a real question,
+ * which is also the only version that earns links.
  */
 export function crossShoppedPairs(): Array<[Competitor, Competitor]> {
   const pool = COMPETITORS.filter(c => c.crossShopped)
   const pairs: Array<[Competitor, Competitor]> = []
   for (let i = 0; i < pool.length; i++) {
     for (let j = i + 1; j < pool.length; j++) {
+      if (pool[i].segment !== pool[j].segment) continue
       pairs.push([pool[i], pool[j]])
     }
   }

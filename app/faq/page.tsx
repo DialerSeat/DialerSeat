@@ -30,6 +30,11 @@ export const metadata: Metadata = {
     url: 'https://dialerseat.com/faq',
     type: 'website',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Frequently Asked Questions — DialerSeat',
+    description: 'Pricing, contracts, compliance, team setup, and the bigger question of why we built DialerSeat in the first place.',
+  },
 }
 
 export default function FaqPage() {

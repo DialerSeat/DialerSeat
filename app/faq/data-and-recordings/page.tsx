@@ -30,6 +30,11 @@ export const metadata: Metadata = {
     url: 'https://dialerseat.com/faq/data-and-recordings',
     type: 'article',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Recordings & Your Data — DialerSeat',
+    description: 'Play, download, and delete recordings on your own schedule. Export everything in your account as JSON. Delete your account for real, with a dry run first.',
+  },
 }
 
 export default function DataRecordingsFaqPage() {

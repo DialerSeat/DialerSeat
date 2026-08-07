@@ -17,6 +17,19 @@ export const metadata: Metadata = {
   alternates: {
     canonical: 'https://dialerseat.com/terms',
   },
+  openGraph: {
+    title: 'Terms of Service — DialerSeat',
+    description:
+      'The agreement between DialerSeat and its users: acceptable use, subscription terms, refunds, TCPA compliance, and liability.',
+    url: 'https://dialerseat.com/terms',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Terms of Service — DialerSeat',
+    description:
+      'The agreement between DialerSeat and its users: acceptable use, subscription terms, refunds, TCPA compliance, and liability.',
+  },
   robots: {
     index: true,
     follow: true,

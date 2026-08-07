@@ -27,6 +27,19 @@ export const metadata: Metadata = {
     canonical: 'https://dialerseat.com/status',
     types: { 'text/markdown': 'https://dialerseat.com/md/status' },
   },
+  openGraph: {
+    title: 'System Status — DialerSeat',
+    description:
+      'Live status of the DialerSeat platform. Every indicator is checked at page load rather than published from a static file.',
+    url: 'https://dialerseat.com/status',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'System Status — DialerSeat',
+    description:
+      'Live status of the DialerSeat platform. Every indicator is checked at page load rather than published from a static file.',
+  },
   robots: { index: true, follow: true },
 }
 

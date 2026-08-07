@@ -30,6 +30,11 @@ export const metadata: Metadata = {
     url: 'https://dialerseat.com/faq/compliance-export',
     type: 'article',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Compliance Export — DialerSeat',
+    description: 'Per-campaign, per-date-range export of AMD results, abandon flags, and dispositions \u2014 redacted by default. The receipts behind the compliance claims.',
+  },
 }
 
 export default function ComplianceExportFaqPage() {

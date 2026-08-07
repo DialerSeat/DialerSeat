@@ -22,6 +22,11 @@ export const metadata: Metadata = {
     url: 'https://dialerseat.com/vs/aircall',
     type: 'article',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'DialerSeat vs Aircall',
+    description: 'The power dialer, included at $35/week per seat \u2014 not a $50/month Professional-tier unlock with a 3-license minimum.',
+  },
 }
 
 const FAQS = [

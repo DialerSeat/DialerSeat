@@ -22,6 +22,11 @@ export const metadata: Metadata = {
     url: 'https://dialerseat.com/vs/orum',
     type: 'article',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'DialerSeat vs Orum',
+    description: 'No demo required, no annual contract, no 3-seat minimum. $35/week per seat vs Orum\'s widely-reported $250+/user/month starting price.',
+  },
 }
 
 const FAQS = [

@@ -30,6 +30,11 @@ export const metadata: Metadata = {
     url: 'https://dialerseat.com/faq/manager-plus',
     type: 'article',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Manager+ — The Tier Above Pro',
+    description: '$75/week. Team ownership, full white-labeling, advanced analytics, and priority support. See it running on desktop and as a mobile PWA.',
+  },
 }
 
 export default function ManagerPlusFaqPage() {

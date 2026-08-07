@@ -32,6 +32,11 @@ export const metadata: Metadata = {
     url: 'https://dialerseat.com/vs',
     type: 'website',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'DialerSeat Comparisons — Pick Your Competitor',
+    description: 'Side-by-side breakdowns vs ReadyMode, Mojo Dialer, PhoneBurner, Five9, WAVV, 3CX, and the wider industry. $35/week, weekly billing, modern UI.',
+  },
 }
 
 export default function Page() {

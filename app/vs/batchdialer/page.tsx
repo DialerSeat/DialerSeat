@@ -22,6 +22,11 @@ export const metadata: Metadata = {
     url: 'https://dialerseat.com/vs/batchdialer',
     type: 'article',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'DialerSeat vs BatchDialer',
+    description: 'Automatic number replacement on every plan, not gated behind Pro. No per-number fees. No annual prepay to reach the real price. $35/week per seat.',
+  },
 }
 
 // Answers are written to be defensible against BatchDialer's own published

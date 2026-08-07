@@ -92,6 +92,63 @@ const COMPARISONS: Comparison[] = [
       'Hooked CRM calls itself an all-in-one dialer, but never names a specific dialing mode anywhere on their site. DialerSeat includes Preview, Power, Progressive, and Predictive dialing, named and included, at $35/week — self-serve signup, no demo required.',
   },
   {
+    slug: 'orum',
+    name: 'VS ORUM',
+    tagline: 'Parallel dialing at enterprise pricing',
+    pitch:
+      'Orum dials many lines in parallel with AI navigation and is genuinely fast at it, sold to sales teams with a budget to match. DialerSeat gives you predictive, power, progressive and preview at a published $35/week per seat, no demo required.',
+  },
+  {
+    slug: 'vicidial',
+    name: 'VS VICIDIAL',
+    tagline: 'Free software is not a free dialer',
+    pitch:
+      'VICIdial genuinely costs nothing to licence, and published total cost of ownership still lands at $130–$400+ per agent per month once you count the server, the SIP trunking and the administrator. Worth it past about 30 agents. Below that, $35/week and nothing to run.',
+    badge: 'BIGGEST NAME',
+  },
+  {
+    slug: 'calltools',
+    name: 'VS CALLTOOLS',
+    tagline: 'No setup fee, no sales call',
+    pitch:
+      'CallTools runs about $119.99/user/month with setup fees commonly $500–$1,500 and complex CRM integrations quoted at $2,000–$5,000 on top. DialerSeat is $35/week per seat, self-serve, every dialer mode included, nothing to negotiate.',
+  },
+  {
+    slug: 'dialedin',
+    name: 'VS DIALEDIN',
+    tagline: 'Formerly ChaseData, still tiered',
+    pitch:
+      'DialedIn publishes a starting price around $89/user/month and handles inbound as well as outbound, which DialerSeat does not. The catch is the usual one: the outbound features most teams want sit above the entry tier.',
+  },
+  {
+    slug: 'ringcentral',
+    name: 'VS RINGCENTRAL',
+    tagline: 'A dialer, not a phone system',
+    pitch:
+      'RingCentral plans start around $20/user/month and none of them include an auto dialer — that lives in RingCX, the contact-centre product, from about $65/user/month with dialer minutes metered on top. Excellent phone system. Expensive way to dial a list.',
+  },
+  {
+    slug: 'smrtphone',
+    name: 'VS SMRTPHONE',
+    tagline: 'One weekly number, not three charges',
+    pitch:
+      'smrtPhone stacks a $62–$104/month subscription, a $42–$75/seat/month dialer add-on, and then per-minute credits, so a heavy dialing day costs more than a light one. Real strength if you live in Podio. DialerSeat is $35/week with call time included.',
+  },
+  {
+    slug: 'aloware',
+    name: 'VS ALOWARE',
+    tagline: 'Where the dialing actually lives',
+    pitch:
+      'Aloware starts around $30/user/month and is genuinely good if your team works leads inside HubSpot or Pipedrive. Dialing capability is tiered above the entry plan, and ad-hoc charges sit outside the seat price. DialerSeat includes every mode at $35/week.',
+  },
+  {
+    slug: 'ytel',
+    name: 'VS YTEL',
+    tagline: 'No platform fee on top of seats',
+    pitch:
+      'Ytel prices contact-centre seats around $99/month on top of a platform fee, which a small team absorbs disproportionately. Real communications APIs if you are building on top. DialerSeat is $35/week per seat with no platform charge.',
+  },
+  {
     slug: 'convoso',
     name: 'VS CONVOSO',
     tagline: 'Same dialer modes, no seat minimum',

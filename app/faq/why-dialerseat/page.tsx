@@ -30,6 +30,11 @@ export const metadata: Metadata = {
     url: 'https://dialerseat.com/faq/why-dialerseat',
     type: 'article',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Why DialerSeat? — The Thesis',
+    description: 'Why we built it, who builds it, how we work, what makes us different from the entrenched names, and where we\'re going next.',
+  },
 }
 
 export default function WhyDialerSeatPage() {

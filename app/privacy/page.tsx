@@ -17,6 +17,19 @@ export const metadata: Metadata = {
   alternates: {
     canonical: 'https://dialerseat.com/privacy',
   },
+  openGraph: {
+    title: 'Privacy Policy — DialerSeat',
+    description:
+      'How DialerSeat collects, uses, stores, and protects your data — accounts, lead data, call recordings, payment information, and your rights.',
+    url: 'https://dialerseat.com/privacy',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Privacy Policy — DialerSeat',
+    description:
+      'How DialerSeat collects, uses, stores, and protects your data — accounts, lead data, call recordings, payment information, and your rights.',
+  },
   robots: {
     index: true,
     follow: true,

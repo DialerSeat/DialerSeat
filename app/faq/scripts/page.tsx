@@ -30,6 +30,11 @@ export const metadata: Metadata = {
     url: 'https://dialerseat.com/faq/scripts',
     type: 'article',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Call Scripts — DialerSeat',
+    description: 'Write once, attach to any campaign, reorder any time. The script an agent sees mid-call, without leaving the dialer.',
+  },
 }
 
 export default function ScriptsFaqPage() {

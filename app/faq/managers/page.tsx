@@ -15,6 +15,11 @@ export const metadata: Metadata = {
     url: 'https://dialerseat.com/faq/managers',
     type: 'article',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'For Managers — DialerSeat',
+    description: 'For agency owners and lead vendors. Resell seats at your price. Keep your margins. One view across every agent.',
+  },
 }
 
 export default function Page() {

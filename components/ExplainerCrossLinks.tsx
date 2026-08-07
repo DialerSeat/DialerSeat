@@ -19,6 +19,9 @@ type Explainer =
   | 'amd'
   | 'pricing'
   | 'teams'
+  | 'calling-hours'
+  | 'registration'
+  | 'pool-sizing'
 
 interface Props {
   current: Explainer
@@ -62,6 +65,9 @@ export default function ExplainerCrossLinks({ current }: Props) {
         .exp-xlink.amd .pill { background: #e8eef8; color: #2a4a8a; border: 1px solid #2a4a8a; }
         .exp-xlink.pricing .pill { background: #e8f5e8; color: #1a6a1a; border: 1px solid #1a6a1a; }
         .exp-xlink.teams .pill { background: #f0eafd; color: #5a2a8a; border: 1px solid #5a2a8a; }
+        .exp-xlink.calling-hours .pill { background: #fdf4e8; color: #8a6a1a; border: 1px solid #8a6a1a; }
+        .exp-xlink.registration .pill { background: #e8eef8; color: #2a4a8a; border: 1px solid #2a4a8a; }
+        .exp-xlink.pool-sizing .pill { background: #e8f5e8; color: #1a6a1a; border: 1px solid #1a6a1a; }
 
         @media (max-width: 768px) {
           .exp-xlinks { padding: 40px 20px; }
@@ -108,6 +114,18 @@ export default function ExplainerCrossLinks({ current }: Props) {
             <Link href="/faq/dialerseat-teams" className={`exp-xlink teams ${current === 'teams' ? 'current' : ''}`}>
               <span className="pill">TEAMS</span>
               <div>DialerSeat for teams.</div>
+            </Link>
+            <Link href="/faq/calling-hours" className={`exp-xlink calling-hours ${current === 'calling-hours' ? 'current' : ''}`}>
+              <span className="pill">CALLING HOURS</span>
+              <div>What hours can you legally call?</div>
+            </Link>
+            <Link href="/faq/10dlc-and-outbound-calling" className={`exp-xlink registration ${current === 'registration' ? 'current' : ''}`}>
+              <span className="pill">REGISTRATION</span>
+              <div>Do you need 10DLC to call?</div>
+            </Link>
+            <Link href="/faq/how-many-numbers-do-i-need" className={`exp-xlink pool-sizing ${current === 'pool-sizing' ? 'current' : ''}`}>
+              <span className="pill">NUMBER POOL</span>
+              <div>How many numbers do you need?</div>
             </Link>
           </div>
         </div>

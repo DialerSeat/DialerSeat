@@ -21,6 +21,11 @@ export const metadata: Metadata = {
     url: 'https://dialerseat.com/dialing-modes/progressive',
     type: 'article',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'The Progressive Dialer — Origins and Mechanics',
+    description: 'One line per agent, AMD pre-screens, agent only hears humans. The mode that emerged in the early 2000s as the safe middle ground between power and predictive.',
+  },
 }
 
 const MODE_COLOR = '#1a6a1a'

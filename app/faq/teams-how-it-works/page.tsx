@@ -39,6 +39,11 @@ export const metadata: Metadata = {
     url: `${SITE}/faq/teams-how-it-works`,
     type: 'article',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'How DialerSeat Teams Work',
+    description: 'Lead distribution, seats, billing, and manager visibility — the mechanics of running a floor, stated plainly.',
+  },
   robots: { index: true, follow: true },
 }
 

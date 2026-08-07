@@ -41,6 +41,11 @@ export const metadata: Metadata = {
     url: 'https://dialerseat.com/data/connect-rates',
     type: 'article',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Outbound Connect Rates by State and Hour',
+    description: 'Real platform data on when and where outbound calls actually get answered. Sample sizes shown; nothing published below the reporting threshold.',
+  },
 }
 
 /**

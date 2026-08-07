@@ -40,6 +40,11 @@ export const metadata: Metadata = {
     url: `${SITE}/faq/dialer-for-offshore-agents`,
     type: 'article',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Running a Dialer With Offshore Agents',
+    description: 'Same $35/week seat wherever the agent sits. Calling windows follow the lead, not the agent.',
+  },
   robots: { index: true, follow: true },
 }
 

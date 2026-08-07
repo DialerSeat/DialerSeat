@@ -39,6 +39,11 @@ export const metadata: Metadata = {
     url: `${SITE}/vs/teams`,
     type: 'article',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'What a 5-Agent Dialer Floor Actually Costs',
+    description: 'Seat minimums, contracts, and the real cost of adding one more agent, across every major dialer.',
+  },
 }
 
 const INK = '#1a1c24'

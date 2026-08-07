@@ -22,6 +22,11 @@ export const metadata: Metadata = {
     url: 'https://dialerseat.com/vs/justcall',
     type: 'article',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'DialerSeat vs JustCall',
+    description: 'Predictive and power dialing included at $35/week per seat \u2014 not gated behind a Pro-tier upgrade or a 2-seat minimum.',
+  },
 }
 
 const FAQS = [

@@ -22,6 +22,11 @@ export const metadata: Metadata = {
     url: 'https://dialerseat.com/vs/mojo',
     type: 'article',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'DialerSeat vs Mojo Dialer',
+    description: 'Same triple-line speed across every industry, not just real estate. No $10/mo Agent Access fee. No $25–$49 data add-ons stacking. $35/week per seat.',
+  },
 }
 
 const FAQS = [

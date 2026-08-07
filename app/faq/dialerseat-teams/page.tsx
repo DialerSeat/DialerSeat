@@ -30,6 +30,11 @@ export const metadata: Metadata = {
     url: 'https://dialerseat.com/faq/dialerseat-teams',
     type: 'article',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'DialerSeat Teams — The Deep Dive',
+    description: 'How lead vendors monetize their premium campaigns through seat-based access, agency owners run producer floors with full attribution, and shared pools dial the same list without stepping on each other. Plus all four billing modes including FREE.',
+  },
 }
 
 export default function DialerSeatTeamsFaqPage() {
