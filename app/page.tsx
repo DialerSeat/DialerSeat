@@ -129,7 +129,10 @@ export default async function Home({ searchParams }: PageProps) {
              the whole block ~67px lower than the mockup, which is what dragged
              "BUILT FOR VOLUME" and the headline down with it. */
           .ds-section.ds-volume-section {
-            padding-left: 80px; padding-right: 80px; padding-top: 24px;
+            /* Left inset is deliberately much larger than the right: the panel
+               sits inboard of the page edge while the headline still runs out
+               to the same 80px margin as every other section. */
+            padding-left: 192px; padding-right: 80px; padding-top: 24px;
             /* Tight to the feature cards. The demo and its caption are this
                section's payoff; 90px of trough under them made the cards read
                as an unrelated block rather than the continuation they are. */
@@ -142,7 +145,11 @@ export default async function Home({ searchParams }: PageProps) {
                everything else. A generous gap is what keeps the two halves from
                reading as one crowded row. */
             grid-template-columns: minmax(0, 635px) minmax(0, 1fr);
-            gap: 162px;
+            /* Tightened from 162px alongside the larger left inset below. The
+               inset pushes the whole grid right; pulling the gap in brings the
+               headline back so the PANEL moves a long way and the TEXT barely
+               moves, which is the difference between the two mockups. */
+            gap: 64px;
             text-align: left;
             /* Top-aligned, not centred. In the mockup the eyebrow sits a fixed
                distance below the panel's top edge rather than floating at its
@@ -150,7 +157,11 @@ export default async function Home({ searchParams }: PageProps) {
                grew, which is what put "BUILT FOR VOLUME" too low. */
             align-items: start;
           }
-          .ds-volume-copy { padding-top: 33px; }
+          /* Sets how far the headline sits below the panel's top edge. 33px
+             put its cap-line ~45px down; the mockup has it ~78px down, so the
+             text reads as anchored to the middle of the panel rather than to
+             its top. */
+          .ds-volume-copy { padding-top: 69px; }
           .ds-volume-demo { margin: 0; max-width: none; order: 1; }
           .ds-volume-copy { order: 2; }
           /* The headline is CENTRED in its column — that's what puts "LEADS."
