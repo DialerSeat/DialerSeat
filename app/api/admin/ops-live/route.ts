@@ -126,6 +126,29 @@ export async function GET() {
       }
     }
 
+    // ── WHO IS ACTUALLY DIALING ──────────────────────────────────────────
+    // One extra query rather than a join, because dialer_sessions keys on the
+    // Clerk id and users is a separate table. Only the ids currently on a
+    // session are fetched, which is at most a handful.
+    const sessionUserIds = [...new Set(
+      (sessionsRes.data || []).map(s => s.user_id).filter(Boolean)
+    )]
+    const nameById = new Map<string, string>()
+    if (sessionUserIds.length > 0) {
+      const { data: agentUsers } = await supabase
+        .from('users')
+        .select('clerk_id, first_name, last_name, email, username')
+        .in('clerk_id', sessionUserIds)
+      for (const u of agentUsers || []) {
+        const full = [u.first_name, u.last_name].filter(Boolean).join(' ').trim()
+        // Falls back through the identifiers most likely to be filled in, and
+        // only shows the raw id when the user row is genuinely missing.
+        nameById.set(u.clerk_id, full || u.username || u.email || u.clerk_id)
+      }
+    }
+    const nameFor = (id: string | null) =>
+      (id && nameById.get(id)) || id || 'Unknown'
+
     const amdTotal = [...amd.values()].reduce((a, b) => a + b, 0)
     const amdDistribution = [...amd.entries()]
       .map(([result, count]) => ({
@@ -157,6 +180,10 @@ export async function GET() {
       agents: (sessionsRes.data || []).map(s => ({
         id: s.id,
         userId: s.user_id,
+        // A Clerk id tells you nothing at a glance. Reading
+        // "e060ea9f-433a-4d83..." off a live-ops panel and working out which
+        // customer that is defeats the point of a live-ops panel.
+        name: nameFor(s.user_id),
         campaignId: s.campaign_id,
         mode: s.dialer_mode,
         state: s.state,

@@ -18,6 +18,56 @@ import { QueueDiagnosisBuilder } from '@/lib/queueDiagnosis'
 // logic. Most pools at 50-200 leads, this is plenty.
 const CANDIDATE_LIMIT = 50
 
+// =============================================================================
+// THE ATTEMPT CEILING — ONE PLACE, SERVER SIDE
+// =============================================================================
+// A customer dialed 26 people 224 times in thirty minutes while 282 untouched
+// leads sat in the same campaign. Nine calls to one person inside half an hour.
+//
+// The cause was that "how many times may this lead be dialed" was answered in
+// three different places that could disagree:
+//
+//   - the dialer client, from local state that only syncs when a SPECIFIC
+//     campaign is selected (so All Active never syncs it at all)
+//   - bumpLeadAttemptAndRelease in the webhook, defaulting to 3
+//   - the campaign row itself, which said 1
+//
+// Status filtering alone could not save it. A lead is only marked 'maxed'
+// AFTER the server bumps it, so a client running its own retry loop gets its
+// dials in before the status that would have stopped them exists.
+//
+// So the queue now refuses at source. Whatever the client asks for, and
+// whatever order it asks in, a lead at or over its campaign's cap is not
+// handed out. This is the belt to the client's braces, and it is the one that
+// cannot be bypassed by a stale tab or an unsynced setting.
+// =============================================================================
+
+/** Absolute maximum regardless of configuration. Three in a row is the rule. */
+const HARD_ATTEMPT_CEILING = 3
+
+async function attemptCapFor(campaignId: string | null | undefined): Promise<number> {
+  if (!campaignId) return HARD_ATTEMPT_CEILING
+  const { data } = await supabaseAdmin
+    .from('campaigns')
+    .select('dial_repeat_count')
+    .eq('id', campaignId)
+    .maybeSingle()
+  const n = Number(data?.dial_repeat_count)
+  if (!Number.isFinite(n) || n < 1) return HARD_ATTEMPT_CEILING
+  return Math.min(n, HARD_ATTEMPT_CEILING)
+}
+
+/**
+ * Has this lead already had every dial it is entitled to?
+ *
+ * Deliberately >= rather than >. dial_attempts is incremented AFTER a dial, so
+ * a lead showing 1 attempt against a cap of 1 has had its call.
+ */
+function attemptsExhausted(dialAttempts: unknown, cap: number): boolean {
+  const n = Number(dialAttempts)
+  return Number.isFinite(n) && n >= cap
+}
+
 // Fetch the campaign's dialer mode + AMD setting so the client can drive
 // per-call behavior (especially for ALL_ACTIVE which dials across many
 // campaigns each with its own mode). Falls back to power+AMD-on if not set.
@@ -195,8 +245,30 @@ export async function GET(req: Request) {
       // broken phone numbers came to be described as "outside calling hours".
       const diagnosis = new QueueDiagnosisBuilder()
 
+      // Cache per campaign — a team queue spans several, and this loop can
+      // run over a few hundred candidates.
+      const capCache = new Map<string, number>()
+      const capFor = async (cid: string | null | undefined): Promise<number> => {
+        const key = cid || '-'
+        if (!capCache.has(key)) capCache.set(key, await attemptCapFor(cid))
+        return capCache.get(key)!
+      }
+
       for (const c of orderedCandidates) {
         if (callable) { toRelease.push(c.id); continue }
+
+        // Refuse before the calling-window check, because an over-dialed lead
+        // is not a "try again later" case — it is finished.
+        if (attemptsExhausted((c as { dial_attempts?: number }).dial_attempts,
+                              await capFor((c as { campaign_id?: string }).campaign_id))) {
+          console.warn(
+            `[leads/next] refusing lead ${c.id} — ${(c as { dial_attempts?: number }).dial_attempts} attempts ` +
+            `is at or past its campaign cap. If the client asked for this, the client is out of sync.`
+          )
+          toRelease.push(c.id)
+          continue
+        }
+
         const result = isCallableNow({ phone: c.phone ?? '', state: c.state }, { overrideWindow })
         if (result.allowed) { callable = c; continue }
         if (!blockReason) blockReason = result.reason || null
@@ -346,6 +418,18 @@ export async function GET(req: Request) {
       // built from, so a lead can never be shown as next-up here and
       // rejected there.
       if (!isDialableLead(c)) continue
+
+      // Same ceiling as the team branch. See the comment on attemptCapFor:
+      // status filtering cannot catch a client that re-dials faster than the
+      // webhook can mark the lead maxed.
+      if (attemptsExhausted(c.dial_attempts, await attemptCapFor(c.campaign_id))) {
+        console.warn(
+          `[leads/next] refusing lead ${c.id} — ${c.dial_attempts} attempts is at or ` +
+          `past its campaign cap. If the client asked for this, the client is out of sync.`
+        )
+        continue
+      }
+
       const result = isCallableNow({ phone: c.phone, state: c.state }, { overrideWindow })
       if (result.allowed) { callable = c; break }
       if (!blockReason) blockReason = result.reason || null

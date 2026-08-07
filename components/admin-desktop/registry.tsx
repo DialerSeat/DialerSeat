@@ -70,6 +70,11 @@ const LiveOpsApp = dynamic(() => import('./apps/LiveOps'), {
   loading: () => <AppLoading />,
   ssr: false,
 })
+
+const NotificationsApp = dynamic(() => import('./apps/Notifications'), {
+  loading: () => <AppLoading />,
+  ssr: false,
+})
 const UnitEconomicsApp = dynamic(() => import('./apps/UnitEconomics'), {
   loading: () => <AppLoading />,
   ssr: false,
@@ -194,6 +199,17 @@ export const APPS: AppDefinition[] = [
     visibleTo: ['admin'],
     Component: LiveOpsApp,
     defaultSize: { width: 1180, height: 780 },
+  },
+  {
+    id: 'notifications',
+    name: 'Notifications',
+    shortName: 'Alerts',
+    icon: '🔔',
+    iconBg: 'linear-gradient(135deg, #ff8a5a, #d0501a)',
+    description: 'Every push notification, kept — signups, subscriptions, alerts',
+    visibleTo: ['admin'],
+    Component: NotificationsApp,
+    defaultSize: { width: 780, height: 620 },
   },
   {
     id: 'unit-economics',

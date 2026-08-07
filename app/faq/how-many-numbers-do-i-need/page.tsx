@@ -11,19 +11,19 @@ import ExplainerCrossLinks from '@/components/ExplainerCrossLinks'
 export const metadata: Metadata = {
   title: 'How Many Phone Numbers Does an Outbound Dialer Need? | DialerSeat',
   description:
-    'A caller ID has a daily volume ceiling before answer rates fall. Work back from calls per agent per day, divide by a per-number cap, and add headroom for rotation. The arithmetic, with worked examples.',
+    'A caller ID has a daily volume ceiling before answer rates fall. Why one number never works, how rotation and headroom protect an answer rate, and how to think about pool size without guessing.',
   alternates: { canonical: 'https://dialerseat.com/faq/how-many-numbers-do-i-need' },
   openGraph: {
     title: 'How Many Phone Numbers Does a Dialer Need?',
     description:
-      'Work back from calls per day and a per-number daily cap. The arithmetic, and why one number never works.',
+      'Why one number never works, and how rotation protects your answer rate.',
     url: 'https://dialerseat.com/faq/how-many-numbers-do-i-need',
     type: 'article',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'How Many Phone Numbers Does a Dialer Need?',
-    description: 'Calls per day ÷ per-number daily cap, plus headroom. Worked examples.',
+    description: 'Why one number never works, and how rotation protects your answer rate.',
   },
 }
 
@@ -31,7 +31,7 @@ const FAQS = [
   {
     question: 'How many phone numbers do I need for an outbound dialer?',
     answer:
-      'Divide your daily call volume by a per-number daily cap, then add headroom for numbers resting or retired. DialerSeat caps each number at 200 calls a day by default, so a single agent making 250 calls needs at least two numbers and comfortably runs on three. A five-agent floor at 250 calls each is 1,250 calls a day, which needs seven numbers at the cap and closer to nine with headroom.',
+      'Enough that no single number carries a whole day of calls, plus headroom for numbers resting or retired. DialerSeat applies a per-number daily cap automatically and rotates across the pool, so the practical answer is that you add numbers when the pool tells you it is running hot rather than by working out a figure in advance. A single agent is comfortable on a handful; a floor needs proportionally more.',
   },
   {
     question: 'Why not just use one number for everything?',
@@ -41,7 +41,7 @@ const FAQS = [
   {
     question: 'What is a sensible daily cap per number?',
     answer:
-      'DialerSeat defaults to 200 calls per number per day. There is no universal correct figure — carrier scoring is opaque and changes — but a cap in the low hundreds keeps any one number well below the volume that draws attention, and spreading across a pool means no single number carries the whole day.',
+      'There is no universal correct figure, and anyone who quotes you one with confidence is guessing — carrier scoring is opaque and it changes. DialerSeat sets and enforces the cap for you, tuned against live answer-rate data rather than a number picked once and forgotten. What matters on your side is that the volume is spread across a pool instead of concentrated on one caller ID.',
   },
   {
     question: 'Do more numbers mean better answer rates?',
@@ -58,14 +58,6 @@ const FAQS = [
     answer:
       'DialerSeat tracks answer rate per number over a rolling window. A number whose answer rate has degraded relative to the rest of the pool is flagged and can be retired rather than dialed until it is worthless. That is the reason to hold headroom: retiring a number should not reduce your capacity below what the day needs.',
   },
-]
-
-const EXAMPLES = [
-  { agents: '1 agent', calls: '250 calls/day', min: '2 numbers', rec: '3 numbers' },
-  { agents: '3 agents', calls: '750 calls/day', min: '4 numbers', rec: '5 numbers' },
-  { agents: '5 agents', calls: '1,250 calls/day', min: '7 numbers', rec: '9 numbers' },
-  { agents: '10 agents', calls: '2,500 calls/day', min: '13 numbers', rec: '17 numbers' },
-  { agents: '20 agents', calls: '5,000 calls/day', min: '25 numbers', rec: '32 numbers' },
 ]
 
 export default function Page() {
@@ -94,45 +86,27 @@ export default function Page() {
         </section>
 
         <section className="exp-section">
-          <div className="exp-section-label">▸ THE ARITHMETIC</div>
-          <h2>Calls per day, divided by a per-number cap, plus headroom.</h2>
+          <div className="exp-section-label">▸ HOW TO THINK ABOUT IT</div>
+          <h2>Enough that no one number carries the day.</h2>
           <p>
-            Start with your real daily volume — agents multiplied by calls each
-            per day. Divide by the cap you are willing to put on any single
-            number. DialerSeat defaults that cap to <strong>200 calls per number
-            per day</strong>. Then add roughly 25% headroom so retiring a number
-            mid-week does not cost you capacity.
+            The instinct is to work out an exact figure in advance. Resist it —
+            the honest answer is that the right number depends on your call
+            volume, how long your calls run, and how carriers are scoring
+            traffic that month, and only the first of those is knowable up
+            front.
           </p>
-          <div className="exp-table-wrap" style={{ overflowX: 'auto', margin: '24px 0' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-              <thead>
-                <tr>
-                  {['FLOOR', 'VOLUME', 'MINIMUM', 'WITH HEADROOM'].map(h => (
-                    <th key={h} style={{
-                      textAlign: 'left', padding: '10px 12px',
-                      borderBottom: '2px solid #2a4a8a', color: '#8888aa',
-                      fontSize: 11, letterSpacing: 2,
-                    }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {EXAMPLES.map(r => (
-                  <tr key={r.agents}>
-                    <td style={{ padding: '10px 12px', borderBottom: '1px solid #2a2a4a', fontWeight: 'bold', whiteSpace: 'nowrap' }}>{r.agents}</td>
-                    <td style={{ padding: '10px 12px', borderBottom: '1px solid #2a2a4a', color: '#c4c8d8', whiteSpace: 'nowrap' }}>{r.calls}</td>
-                    <td style={{ padding: '10px 12px', borderBottom: '1px solid #2a2a4a', color: '#c4c8d8', whiteSpace: 'nowrap' }}>{r.min}</td>
-                    <td style={{ padding: '10px 12px', borderBottom: '1px solid #2a2a4a', color: '#4ade80', whiteSpace: 'nowrap' }}>{r.rec}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p style={{ color: '#8888aa', fontSize: 14 }}>
-            Assumes 250 calls per agent per day, which is a realistic figure for
-            power or progressive dialing over a full shift. Predictive pushes that
-            higher, so scale the volume column to what your floor actually does
-            rather than to this table.
+          <p>
+            DialerSeat applies a per-number daily cap and rotates across the
+            pool automatically. You do not set it, and you do not need to
+            calculate against it. What you watch instead is whether the pool is
+            running hot: when numbers are regularly hitting their cap or
+            answer rates start slipping, that is the pool telling you to add a
+            few. It is a feedback loop rather than a formula.
+          </p>
+          <p>
+            Buy in small batches and add as you grow. A number costs about a
+            dollar a month; an agent whose calls stop connecting costs
+            considerably more than that in an afternoon.
           </p>
         </section>
 
@@ -185,10 +159,10 @@ export default function Page() {
             using it — not to keep dialing and hope.
           </p>
           <p>
-            Retiring a number only works if you can afford to lose it. A pool sized
-            exactly to your daily volume cannot retire anything without going over
-            cap on everything else, which is the whole reason for the headroom
-            column above.{' '}
+            Retiring a number only works if you can afford to lose it. A pool
+            sized exactly to your daily volume cannot retire anything without
+            pushing everything else over its cap, which is the whole argument
+            for keeping a few spare.{' '}
             <Link href="/faq/numbers">How the number pool works</Link> covers
             rotation, caps and health monitoring in detail.
           </p>

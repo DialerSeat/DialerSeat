@@ -316,7 +316,12 @@ export default function UserTrackerApp() {
           width: 100%; height: 100%; overflow: hidden; display: flex; flex-direction: column;
           background: ${C.bg}; font-family: ${FONT}; color: ${C.ink}; position: relative;
         }
-        .ut-scroll { flex: 1; overflow-y: auto; }
+        /* min-height:0 is load-bearing. A flex item defaults to min-height:auto,
+           which refuses to shrink below its content, so overflow-y never
+           engages and the parent (overflow:hidden) just clips the bottom off.
+           Invisible on desktop where the content fits; on a phone it means the
+           page simply cannot be scrolled. */
+        .ut-scroll { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
         .ut-header {
           padding: 20px 24px 16px; background: ${C.card}; border-bottom: 1px solid ${C.border};
           display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap;
@@ -411,7 +416,7 @@ export default function UserTrackerApp() {
           background: ${C.borderSoft}; color: ${C.muted}; font-size: 14px; cursor: pointer; display: flex;
           align-items: center; justify-content: center;
         }
-        .ut-drawer-scroll { flex: 1; overflow-y: auto; padding: 18px 20px 28px; }
+        .ut-drawer-scroll { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 18px 20px 28px; }
         .ut-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 22px; }
         .ut-detail-card { background: ${C.card}; border: 1px solid ${C.border}; border-radius: 14px; padding: 14px; }
         .ut-detail-range { font-size: 10px; font-weight: 700; letter-spacing: 0.5px; color: ${C.accent}; text-transform: uppercase; margin-bottom: 8px; }

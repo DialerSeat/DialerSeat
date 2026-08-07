@@ -67,6 +67,7 @@ interface OpsData {
   agents: Array<{
     id: string
     userId: string
+    name: string
     campaignId: string | null
     mode: string | null
     state: string
@@ -351,8 +352,11 @@ export default function LiveOps() {
                     display: 'flex', gap: 8, alignItems: 'center',
                     padding: '5px 0', borderBottom: `1px solid ${T.surface}`, fontSize: 11.5,
                   }}>
-                    <span style={{ fontFamily: 'monospace', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {a.userId}
+                    <span
+                      style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                      title={a.userId}
+                    >
+                      {a.name || a.userId}
                     </span>
                     <span style={{ color: T.muted, fontSize: 10 }}>{a.mode || '—'}</span>
                     <span style={{

@@ -143,14 +143,45 @@ export async function sendAdminPush(
   body: string,
   opts?: { title?: string; url?: string }
 ): Promise<void> {
+  const supabase = getServiceClient('pushNotify:send')
+  const copyForLog = EVENT_COPY[eventType]
+  const title = opts?.title || copyForLog.title
+  const url = opts?.url || '/dashboard/admin/desktop'
+
+  // ── LOG BEFORE SENDING, ALWAYS ──────────────────────────────────────────
+  // A push notification is an interruption, not a record. The OS shows a
+  // banner, you tap it, and every trace of it is gone — which means a signup
+  // that arrived overnight, or a capacity warning dismissed on a phone, left
+  // nothing behind anywhere.
+  //
+  // Writing the row FIRST is deliberate. It means the history survives a
+  // muted preference, a missing VAPID key, and a delivery that fails at every
+  // endpoint. The thing happened; the record should exist regardless of
+  // whether a browser was told about it.
+  let notificationId: string | null = null
+  try {
+    const { data: logged, error: logErr } = await supabase
+      .from('admin_notifications')
+      .insert({ event_type: eventType, title, body, url })
+      .select('id')
+      .maybeSingle()
+    if (logErr) {
+      console.error('[pushNotify] failed to log notification:', logErr)
+    } else {
+      notificationId = logged?.id ?? null
+    }
+  } catch (logErr) {
+    console.error('[pushNotify] unexpected error logging notification:', logErr)
+  }
+
   try {
     const prefs = await getPrefs()
+    // Muted: the row above still exists, so it shows up in the Notifications
+    // app without ever having buzzed a device. That is the point of the split.
     if (!prefs.master_enabled) return
     if (!prefs[eventType]) return
 
     ensureVapidConfigured()
-
-    const supabase = getServiceClient('pushNotify:send')
     const { data: subs, error } = await supabase
       .from('push_subscriptions')
       .select('id, endpoint, p256dh, auth')
@@ -160,14 +191,14 @@ export async function sendAdminPush(
     }
     if (!subs || subs.length === 0) return
 
-    const copy = EVENT_COPY[eventType]
     const payload = JSON.stringify({
-      title: opts?.title || copy.title,
+      title,
       body,
-      tag: copy.tag,
-      url: opts?.url || '/dashboard/admin/desktop',
+      tag: copyForLog.tag,
+      url,
     })
 
+    let delivered = 0
     await Promise.all(
       subs.map(async (sub) => {
         try {
@@ -178,6 +209,7 @@ export async function sendAdminPush(
             },
             payload
           )
+          delivered++
           await supabase
             .from('push_subscriptions')
             .update({ last_used_at: new Date().toISOString() })
@@ -193,6 +225,16 @@ export async function sendAdminPush(
         }
       })
     )
+
+    // Record what actually reached a device. delivered_to = 0 alongside
+    // pushed = true is the signature of "we tried and every endpoint failed",
+    // which is a different problem from "we never tried".
+    if (notificationId) {
+      await supabase
+        .from('admin_notifications')
+        .update({ pushed: true, delivered_to: delivered })
+        .eq('id', notificationId)
+    }
   } catch (err) {
     console.error('[pushNotify] unexpected error in sendAdminPush:', err)
   }
