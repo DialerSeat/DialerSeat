@@ -62,6 +62,10 @@ export interface PlatformConfig {
   amd_total_analysis_ms: number
   /** Silence after speech before the greeting counts as ended. */
   amd_after_greeting_silence_ms: number
+  /** Run AMD on preview dials at all. Off by default. */
+  amd_in_preview: boolean
+  /** Whether a machine verdict ends a call the agent is already bridged into. */
+  amd_hangup_when_bridged: boolean
 }
 
 export const PLATFORM_CONFIG_DEFAULTS: PlatformConfig = {
@@ -82,6 +86,11 @@ export const PLATFORM_CONFIG_DEFAULTS: PlatformConfig = {
   amd_tuning_enabled: true,
   amd_total_analysis_ms: 6000,
   amd_after_greeting_silence_ms: 1600,
+  // Preview is the one mode where the agent deliberately chose this lead and
+  // is watching it answer. A wrong verdict there costs more than it saves.
+  amd_in_preview: false,
+  // Voicemail skipping is why AMD exists; keep it, now that preview is out.
+  amd_hangup_when_bridged: true,
 }
 
 const CONFIG_COLUMNS =
@@ -89,7 +98,8 @@ const CONFIG_COLUMNS =
   'predictive_line_ceiling, poll_interval_ms, hangup_poll_interval_ms, ' +
   'pool_capacity_alert_pct, webhook_silence_minutes, agent_leg_refusal_alert_count, ' +
   'concurrency_budget, amd_detector, amd_tuning_enabled, ' +
-  'amd_total_analysis_ms, amd_after_greeting_silence_ms'
+  'amd_total_analysis_ms, amd_after_greeting_silence_ms, ' +
+  'amd_in_preview, amd_hangup_when_bridged'
 
 // Cached per process. These are read on hot paths (every dial consults the AMD
 // and recording overrides), and the values change by human action at most a few

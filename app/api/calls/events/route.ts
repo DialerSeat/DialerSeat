@@ -12,6 +12,7 @@ import { hangupCallControlId } from '@/lib/placeOutboundCall'
 import { handleOverflowAnsweredCall } from '@/lib/teamOverflow'
 import { resolveTelnyxConfigOrLog } from '@/lib/telnyxConfig'
 import { agentSipUriForUserId } from '@/lib/agentSipCredentials'
+import { getPlatformConfig } from '@/lib/platformConfig'
 
 // =============================================================================
 // UNIFIED CALL CONTROL EVENTS WEBHOOK — replaces status + amd-result
@@ -370,7 +371,14 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
     const agentAlreadyBridged =
       callRow?.dial_source === 'user_dial' && !!callRow?.agent_call_control_id
 
-    if (agentAlreadyBridged) {
+    // Whether that protection applies is a setting, because it is a genuine
+    // trade rather than a bug with a right answer: honouring the verdict skips
+    // real voicemails, ignoring it protects real people. Default is to honour
+    // it — skipping voicemail is the whole point — now that preview, the mode
+    // where a wrong verdict hurts most, no longer runs AMD at all.
+    const { amd_hangup_when_bridged: hangupWhenBridged } = await getPlatformConfig()
+
+    if (agentAlreadyBridged && !hangupWhenBridged) {
       console.warn(
         `[calls/events] AMD said '${result}' for ${callControlId}, but the agent ` +
         `is already bridged in — NOT hanging up. Leaving the call to the human.`

@@ -234,6 +234,17 @@ export async function placeOutboundCall(
   // unreadable.
   const platform = await getPlatformConfig()
   amdEnabled = resolveWithGlobal(amdEnabled, platform.amd_enabled_global)
+
+  // ── PREVIEW OPTS OUT ──────────────────────────────────────────────────
+  // In preview the agent picked this lead on purpose and is watching the
+  // screen when it answers. A detector adds nothing they cannot do better
+  // themselves, and the downside is asymmetric: hanging up on a hand-picked
+  // prospect is the most expensive mistake the dialer can make.
+  //
+  // Opt-in rather than opt-out, via platform_config.amd_in_preview.
+  if (dialerMode === 'preview' && !platform.amd_in_preview) {
+    amdEnabled = false
+  }
   recordingEnabled = resolveWithGlobal(recordingEnabled, platform.recording_enabled_global)
 
   const poolNumber = await pickNumberForLead(toFormatted, dialerMode)
