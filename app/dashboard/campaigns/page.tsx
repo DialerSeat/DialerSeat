@@ -311,7 +311,18 @@ export default function CampaignsPage() {
   const [campaignName, setCampaignName] = useState('')
   const [createMode, setCreateMode] = useState<DialerMode>('progressive')
   const [createAmd, setCreateAmd] = useState<boolean>(true) // tracks mode default + user override — true matches AMD_DEFAULT_BY_MODE.progressive
-  const [createRecording, setCreateRecording] = useState<boolean>(true) // recording defaults on regardless of mode
+  // ── RECORDING IS OFF ON A NEW CAMPAIGN ────────────────────────────────
+  // Was true, described as "defaults on regardless of mode". That predates the
+  // decision to default recording off, and the create form was the one place
+  // still turning it on — /api/campaigns/create already defaults to false when
+  // the field is absent, so this toggle was overriding a correct server
+  // default with an old one.
+  //
+  // Off is the right default for a recorded phone call. Two-party consent
+  // states make it a legal question rather than a preference, and a customer
+  // who wants recordings will find the toggle. One who does not should never
+  // discover they have been capturing audio because a checkbox was pre-ticked.
+  const [createRecording, setCreateRecording] = useState<boolean>(false)
   const [createApptSub, setCreateApptSub] = useState(false)
   const [createNotIntSub, setCreateNotIntSub] = useState(false)
   const [createSubOpen, setCreateSubOpen] = useState(false)

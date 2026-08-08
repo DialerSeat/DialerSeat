@@ -203,7 +203,32 @@ export async function runPredictiveController(
     lead_id: string | null
   }>
 
-  const inFlight = inFlightCalls.length
+  // ── PACE OFF CLAIMS, NOT CALL ROWS ──────────────────────────────────────
+  // This paced entirely off rows in `calls`, and a real dial runaway proved
+  // why that is not safe: calls reached the carrier and rang a phone, no row
+  // appeared, so inFlight stayed 0 and shouldDial stayed at full on every
+  // heartbeat. The controller fired again, and again, for as long as the
+  // engine was armed — the only thing that stopped it was pressing abort.
+  //
+  // The problem is not that the insert failed; it is that pacing depended on
+  // the insert succeeding. A safety limit must not be downstream of the thing
+  // it limits.
+  //
+  // leads.claimed_at is written by claim_next_leads_for_campaign itself, in the
+  // same atomic statement that hands the lead over, and it is proven working.
+  // A lead claimed by this session and not yet released IS a line in flight,
+  // whether or not anything else about that call got recorded.
+  //
+  // The higher of the two is used, so a genuinely missing claim cannot make the
+  // controller more aggressive than the call-row count already allowed.
+  const { count: claimedInFlight } = await supabase
+    .from('leads')
+    .select('id', { count: 'exact', head: true })
+    .eq('campaign_id', campaignId)
+    .eq('claimed_by_session_id', sessionId)
+    .gte('claimed_at', ninetySecondsAgo)
+
+  const inFlight = Math.max(inFlightCalls.length, claimedInFlight ?? 0)
   // Real, live phone numbers currently in flight — genuinely still ringing
   // or connected right now, not just "were dialed on the last tick that
   // fired." Previously the frontend only learned about dialed numbers on
@@ -233,7 +258,34 @@ export async function runPredictiveController(
     .filter((id): id is string => !!id)
   const desired = effectiveLines
 
-  const shouldDial = Math.max(0, desired - inFlight)
+  // ── WHOLE LINES ONLY ────────────────────────────────────────────────────
+  // predictive_lines_per_agent is numeric and defaults to 1.5, so this came out
+  // fractional and was passed to claim_next_leads_for_campaign, whose p_count is
+  // an integer. PostgREST will not coerce a decimal into it, the claim failed on
+  // every tick, and predictive placed nothing at all.
+  //
+  // Floored, not rounded: 1.5 becomes 1, which is progressive-equivalent and
+  // cannot abandon a call. Rounding up to 2 would add abandon-rate exposure off
+  // a default nobody chose.
+  const shouldDial = Math.max(0, Math.floor(desired - inFlight))
+
+  // ── THE PACE, IN PLAIN ARITHMETIC ───────────────────────────────────────
+  // inFlight above now counts live CLAIMS as well as call rows, and that is
+  // what bounds this. A claim lives 30 seconds (release_stale_lead_claims) and
+  // a predictive line rings for at most 20 (ringTimeoutSecs under the TSR), so
+  // for an unanswered call — the majority — the claim outlives the call and the
+  // line is counted for its whole life.
+  //
+  // That caps the pace at `desired` lines per 30 seconds. At 3 lines: 6 dials a
+  // minute, 360 an hour. A progressive agent does roughly 120 an hour, and three
+  // lines should be about three times that, so 360 is the correct number rather
+  // than a compromise.
+  //
+  // What it replaces: pacing that read ONLY the calls table. Calls reached the
+  // carrier and rang a phone with no row written, so inFlight stayed 0,
+  // shouldDial stayed at full, and the controller fired a fresh batch on every
+  // 5-second heartbeat until someone pressed abort. A limit must never sit
+  // downstream of the thing it is limiting.
 
   if (shouldDial === 0) {
     return {

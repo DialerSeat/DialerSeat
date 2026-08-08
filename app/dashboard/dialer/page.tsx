@@ -127,6 +127,10 @@ interface HeartbeatControllerSummary {
   /** Lead ids in flight — what row highlighting keys off. Phone numbers are
    *  not unique per lead, so they can't identify a row. */
   inFlightLeadIds?: string[]
+  /** Lead ids placed on THIS tick only. Drives queue rotation. Distinct from
+   *  inFlightLeadIds, which is cumulative and would re-stamp a lead on every
+   *  beat it stayed up. */
+  dialedLeadIds?: string[]
   skipped?: number
   released?: number
   dedupedPhones?: number
@@ -1512,6 +1516,24 @@ function DialerPageInner() {
           setActiveDialingLeadIds(summary.inFlightLeadIds || [])
 
           if (summary.fired > 0) {
+            // ── SINK WHAT WAS JUST FIRED ─────────────────────────────────
+            // Three lines takes the top three, stamps them so they drop to the
+            // bottom, and the next tick highlights the new top three. Without
+            // this the dialed rows stayed at the top and the panel never
+            // appeared to advance.
+            //
+            // Stamped inline rather than via markLeadDialedLocally, which is
+            // declared below this effect and would be in its temporal dead
+            // zone. Same write either way: last_called_at is the sort key.
+            const justFired = summary.dialedLeadIds || []
+            if (justFired.length > 0) {
+              const stamp = nowIso()
+              const firedSet = new Set(justFired)
+              setQueuedLeads(prev =>
+                prev.map(l => (firedSet.has(l.id) ? { ...l, last_called_at: stamp } : l))
+              )
+            }
+
             // Predictive places its lines SERVER-side, so it never passes
             // through handleDial and never reached the dial tone there. The
             // agent got no audible signal that a batch had gone out — the one
@@ -3140,6 +3162,53 @@ function DialerPageInner() {
     } else {
       scheduleDial(400)
     }
+  }
+
+  /**
+   * CONTINUE — dial this same lead again, right now, without losing its place.
+   *
+   * Skip and "try again" were the same button, which is only coherent in a mode
+   * that has AMD. Preview and power do not run detection, so nothing ever
+   * redials automatically there — and Skip became the only way to have another
+   * go at a lead, while also being the thing that gives up on it. One control,
+   * two opposite meanings.
+   *
+   * So they are separate now:
+   *   CONTINUE  redial this lead, position unchanged
+   *   SKIP      abandon remaining attempts, sink to the bottom, next lead up
+   *
+   * Deliberately NOT bounded by dialRepeatCount. That cap governs the
+   * AUTOMATIC sequence, where nobody is watching each attempt. This is a person
+   * clicking a button about a specific lead, once per click, and overruling
+   * their explicit intent because a config number says 1x would be the tool
+   * arguing with its operator. The bound that matters is that it takes a click.
+   */
+  const handleContinue = async () => {
+    const ld = currentLeadRef.current
+    if (!ld) return
+
+    // Stop the outcome poll first, exactly as Skip does. Otherwise its
+    // callbacks fire on a call we are deliberately replacing and race the
+    // redial — the same class of double-dial the queue churn caused.
+    if (activePollRef.current) {
+      clearInterval(activePollRef.current)
+      activePollRef.current = null
+    }
+    if (activeCallSid) await hangupCall(activeCallSid)
+
+    // Counted, so the activity feed and the automatic sequence stay coherent —
+    // just not gated on it.
+    leadAttemptCountRef.current = leadAttemptCountRef.current + 1
+    setAmdActivity(prev => [
+      `CONTINUE — REDIALING ${ld.phone}`, ...prev,
+    ].slice(0, 5))
+    showQueueOutcome(ld.id, 'Redialing…')
+
+    setActiveCallSid(null)
+    setStatus('idle')
+    disarmDialing()
+    // No markLeadDialedLocally: the whole point is that the row stays put.
+    await dialLeadCall(ld)
   }
 
   const handleSkip = async () => {
@@ -5168,14 +5237,24 @@ function DialerPageInner() {
               )}
 
               {status === 'connected' && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, flexShrink: 0 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, flexShrink: 0 }}>
+                  {/* CONTINUE redials this lead in place; SKIP gives up on it
+                      and moves on. Two words for two opposite actions that used
+                      to share one button — see handleContinue. */}
+                  <button onClick={handleContinue} style={{
+                    padding: '14px', borderRadius: '4px',
+                    background: '#e8eef8', border: `1px solid ${terminalAccent}`,
+                    borderTop: `3px solid ${terminalAccent}`, color: terminalAccent,
+                    fontSize: '11px', fontWeight: 'bold', letterSpacing: '3px',
+                    cursor: 'pointer', fontFamily: FUTURA,
+                  }}>↻ CONTINUE</button>
                   <button onClick={handleSkip} style={{
                     padding: '14px', borderRadius: '4px',
                     background: '#f8f4e8', border: `1px solid #8a6a1a`,
                     borderTop: `3px solid #8a6a1a`, color: '#8a6a1a',
                     fontSize: '11px', fontWeight: 'bold', letterSpacing: '3px',
                     cursor: 'pointer', fontFamily: FUTURA,
-                  }}>SKIP / NEXT LEAD</button>
+                  }}>SKIP / NEXT</button>
                   <button onClick={() => { terminateCall() }} style={{
                     padding: '14px', borderRadius: '4px', border: 'none',
                     background: '#f8e8e8', borderTop: `3px solid ${terminalRed}`,
@@ -5244,13 +5323,21 @@ function DialerPageInner() {
               )}
               {status === 'connected' && (
                 <>
+                  {/* Same pair as the grid layout above. See handleContinue. */}
+                  <button onClick={handleContinue} style={{
+                    padding: '14px', borderRadius: '4px',
+                    background: '#e8eef8', border: `1px solid ${terminalAccent}`,
+                    borderTop: `3px solid ${terminalAccent}`, color: terminalAccent,
+                    fontSize: '11px', fontWeight: 'bold', letterSpacing: '3px',
+                    cursor: 'pointer', fontFamily: FUTURA,
+                  }}>↻ CONTINUE</button>
                   <button onClick={handleSkip} style={{
                     padding: '14px', borderRadius: '4px',
                     background: '#f8f4e8', border: `1px solid #8a6a1a`,
                     borderTop: `3px solid #8a6a1a`, color: '#8a6a1a',
                     fontSize: '11px', fontWeight: 'bold', letterSpacing: '3px',
                     cursor: 'pointer', fontFamily: FUTURA,
-                  }}>SKIP / NEXT LEAD</button>
+                  }}>SKIP / NEXT</button>
                   <button onClick={() => { terminateCall() }} style={{
                     padding: '14px', borderRadius: '4px', border: 'none',
                     background: '#f8e8e8', borderTop: `3px solid ${terminalRed}`,
