@@ -1853,6 +1853,15 @@ export default function SettingsApp() {
         const rowDefs: { icon: string; iconBg: string; title: string; subtitle: string; onClick: () => void }[] = [
           { icon: '⚙️', iconBg: 'linear-gradient(135deg, #8E8E93, #636366)', title: 'General', subtitle: 'Account, sign out', onClick: () => setPane('general') },
           { icon: '🔔', iconBg: `linear-gradient(135deg, ${IOS_RED}, #C41E1E)`, title: 'Notifications', subtitle: ddEnabled ? '🔴 Dialer Down banner is live' : pbEnabled ? '📣 Promo banner is live' : (prefs.master_enabled ? `${enabledCount} of ${NOTIF_ROWS.length} on` : 'Off'), onClick: () => setPane('notifications') },
+          // Dialer & Calling was in the desktop sidebar's items[] and missing
+          // from this list, so the global AMD, recording and number-buying kill
+          // switches were unreachable on a phone. groupB below filters for the
+          // title, found nothing, and rendered an empty group -- which looks
+          // identical to a group that is supposed to be empty.
+          //
+          // Two hand-maintained lists describing one menu. The desktop one was
+          // right and this one silently was not.
+          { icon: '📞', iconBg: `linear-gradient(135deg, ${IOS_GREEN}, #248A3D)`, title: 'Dialer & Calling', subtitle: 'Global kill switches', onClick: () => setPane('dialer') },
           ...EMPTY_PANES.map(def => ({
             icon: def.icon,
             iconBg: def.iconBg,
