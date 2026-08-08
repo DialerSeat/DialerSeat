@@ -44,6 +44,27 @@ function parseConsent(row: Record<string, any>) {
   }
 }
 
+// ── DUPLICATE-CHECK EXEMPTION, FOR TESTING ONLY ─────────────────────────────
+// A test list is deliberately the same number repeated forty times, because
+// that is how you get a predictable queue to watch pacing, rotation and line
+// counts against. Deduping it leaves one lead and nothing to observe.
+//
+// Keyed on the account rather than a flag on the request, on purpose. A
+// customer must not be able to switch this off for themselves — deduping a
+// real list stops the same person being called twice, which is a protection
+// nobody should be able to waive by accident or by crafting a request.
+//
+// is_admin was the obvious hook and is the wrong one twice over: the admin
+// account is an overseer that does not dial, and the account this is actually
+// needed for is not flagged admin at all. Keying on the flag would have looked
+// correct and silently done nothing.
+//
+// One id, the product-test account. Not a role, not a tier — adding anyone
+// else here should require deciding to.
+const DEDUPE_EXEMPT_CLERK_IDS = new Set([
+  'user_3DJJGeuXcG0KuKWBMX8KuR85X4M', // joshuacribbffl@gmail.com — product testing
+])
+
 export async function POST(req: Request) {
   try {
     const gate = await requireActive()
@@ -53,6 +74,8 @@ export async function POST(req: Request) {
     if (!userId) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
+
+    const skipDedupe = DEDUPE_EXEMPT_CLERK_IDS.has(userId)
 
     const body = await req.json()
     const { campaign_id, leads } = body
@@ -121,7 +144,7 @@ export async function POST(req: Request) {
     //
     // One column across at most 10k rows; cheap enough to always do.
     const existingPhones = new Set<string>()
-    {
+    if (!skipDedupe) {
       const { data: priorLeads } = await supabaseAdmin
         .from('leads')
         .select('phone')
@@ -269,13 +292,18 @@ export async function POST(req: Request) {
         reject('phone_too_long', i, `${raw} (${digits.length} digits)`)
         return
       }
-      if (seenPhones.has(digits)) {
-        reject('duplicate_in_file', i, raw)
-        return
-      }
-      if (existingPhones.has(digits)) {
-        reject('already_in_campaign', i, raw)
-        return
+      // Both dedupe checks are skipped wholesale for the testing accounts —
+      // see DEDUPE_EXEMPT_CLERK_IDS. existingPhones is already empty in that
+      // case; seenPhones still fills below so nothing downstream changes.
+      if (!skipDedupe) {
+        if (seenPhones.has(digits)) {
+          reject('duplicate_in_file', i, raw)
+          return
+        }
+        if (existingPhones.has(digits)) {
+          reject('already_in_campaign', i, raw)
+          return
+        }
       }
 
       seenPhones.add(digits)
