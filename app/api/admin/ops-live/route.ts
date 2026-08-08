@@ -127,23 +127,34 @@ export async function GET() {
     }
 
     // ── WHO IS ACTUALLY DIALING ──────────────────────────────────────────
-    // One extra query rather than a join, because dialer_sessions keys on the
-    // Clerk id and users is a separate table. Only the ids currently on a
-    // session are fetched, which is at most a handful.
+    // One extra query rather than a join, because users is a separate table.
+    // Only the ids currently on a session are fetched, which is a handful.
+    //
+    // MATCHED ON BOTH KEYS DELIBERATELY. agent_sessions.user_id holds the
+    // INTERNAL users.id, while dialer_sessions.user_id holds the Clerk id —
+    // two tables with the same column name meaning different things. A first
+    // attempt at this matched only clerk_id, found nothing, and silently fell
+    // back to printing the raw uuid, which looked exactly like the bug it was
+    // supposed to fix. Querying both costs one extra filter and cannot be
+    // wrong whichever table a future caller reads from.
     const sessionUserIds = [...new Set(
       (sessionsRes.data || []).map(s => s.user_id).filter(Boolean)
     )]
     const nameById = new Map<string, string>()
     if (sessionUserIds.length > 0) {
+      const idList = sessionUserIds.map(id => `"${id}"`).join(',')
       const { data: agentUsers } = await supabase
         .from('users')
-        .select('clerk_id, first_name, last_name, email, username')
-        .in('clerk_id', sessionUserIds)
+        .select('id, clerk_id, first_name, last_name, email, username')
+        .or(`id.in.(${idList}),clerk_id.in.(${idList})`)
       for (const u of agentUsers || []) {
         const full = [u.first_name, u.last_name].filter(Boolean).join(' ').trim()
-        // Falls back through the identifiers most likely to be filled in, and
-        // only shows the raw id when the user row is genuinely missing.
-        nameById.set(u.clerk_id, full || u.username || u.email || u.clerk_id)
+        // Falls back through the identifiers most likely to be filled in.
+        const label = full || u.username || u.email || u.clerk_id
+        // Keyed under both so the lookup hits regardless of which id the
+        // session table stored.
+        if (u.id) nameById.set(String(u.id), label)
+        if (u.clerk_id) nameById.set(u.clerk_id, label)
       }
     }
     const nameFor = (id: string | null) =>

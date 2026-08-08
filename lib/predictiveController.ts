@@ -50,6 +50,17 @@ export interface ControllerResult {
   /** Lead ids currently in flight. THIS is what row highlighting must use —
    *  phone numbers are not unique per lead. Refreshed every heartbeat. */
   inFlightLeadIds: string[]
+  /**
+   * Lead ids placed on THIS tick only.
+   *
+   * Distinct from inFlightLeadIds, which is a cumulative snapshot. The client
+   * rotates these to the bottom of the queue panel the moment they are fired,
+   * so a 3-line tick takes the top three, drops them to the end, and the next
+   * tick starts from the new top three. Without it the dialed rows stay at the
+   * top, the panel never appears to advance, and once the 30-second claim
+   * lapses the same three are simply re-dialed.
+   */
+  dialedLeadIds: string[]
 }
 
 interface RunControllerInput {
@@ -228,17 +239,32 @@ export async function runPredictiveController(
     return {
       fired: 0, desired, inFlight, effectiveLines, degraded,
       reason: `at target: ${inFlight}/${desired} in flight`,
-      callSids: [], skipped: 0, released, dedupedPhones: 0, dialedPhones: [], inFlightPhones, inFlightLeadIds,
+      callSids: [], skipped: 0, released, dedupedPhones: 0, dialedPhones: [], dialedLeadIds: [], inFlightPhones, inFlightLeadIds,
     }
   }
 
   
+  // ── DIAL THE PANEL'S ORDER, TOP DOWN ────────────────────────────────────
+  // leadIdAllowlist is the queue panel's displayed order, sent on every
+  // heartbeat. It arrived here and was then dropped on the floor: the RPC had
+  // no parameter for it, so predictive claimed by the database's own priority
+  // (dial_attempts ASC, created_at ASC) while every other mode dialed the list
+  // as shown.
+  //
+  // That is the same "bouncing around" the queue panel showed elsewhere, in
+  // the one mode where it is hardest to notice — nobody watches an individual
+  // predictive call, so the order was wrong invisibly.
+  //
+  // The RPC now takes p_lead_ids and uses array_position as its sort key, so
+  // the top row is claimed first. Passing null keeps the old behaviour for any
+  // caller without a panel order.
   const { data: claimedLeads, error: claimErr } = await supabase.rpc(
     'claim_next_leads_for_campaign',
     {
       p_campaign_id: campaignId,
       p_session_id: sessionId,
       p_count: shouldDial,
+      p_lead_ids: leadIdAllowlist && leadIdAllowlist.length > 0 ? leadIdAllowlist : null,
     }
   )
 
@@ -247,7 +273,7 @@ export async function runPredictiveController(
     return {
       fired: 0, desired, inFlight, effectiveLines, degraded,
       reason: `claim failed: ${claimErr.message}`,
-      callSids: [], skipped: 0, released, dedupedPhones: 0, dialedPhones: [], inFlightPhones, inFlightLeadIds,
+      callSids: [], skipped: 0, released, dedupedPhones: 0, dialedPhones: [], dialedLeadIds: [], inFlightPhones, inFlightLeadIds,
     }
   }
 
@@ -261,7 +287,7 @@ export async function runPredictiveController(
     return {
       fired: 0, desired, inFlight, effectiveLines, degraded,
       reason: 'no claimable leads',
-      callSids: [], skipped: 0, released, dedupedPhones: 0, dialedPhones: [], inFlightPhones, inFlightLeadIds,
+      callSids: [], skipped: 0, released, dedupedPhones: 0, dialedPhones: [], dialedLeadIds: [], inFlightPhones, inFlightLeadIds,
     }
   }
 
@@ -350,7 +376,7 @@ export async function runPredictiveController(
       reason: filteredOutCount > 0
         ? `claimed ${leads.length} leads but none matched the active filter/shuffle`
         : `claimed ${leads.length} leads but all were dupes/invalid`,
-      callSids: [], skipped: 0, released, dedupedPhones: dupeLeadIds.length, dialedPhones: [], inFlightPhones, inFlightLeadIds,
+      callSids: [], skipped: 0, released, dedupedPhones: dupeLeadIds.length, dialedPhones: [], dialedLeadIds: [], inFlightPhones, inFlightLeadIds,
     }
   }
 
@@ -415,6 +441,7 @@ export async function runPredictiveController(
     released,
     dedupedPhones: dupeLeadIds.length,
     dialedPhones,
+    dialedLeadIds,
     // inFlightPhones was snapshotted BEFORE this tick's calls were placed —
     // the numbers just dialed this tick are also genuinely in flight now,
     // so combine both rather than report only the pre-dial snapshot (which
@@ -432,6 +459,6 @@ function zeroResult(reason: string, released: number): ControllerResult {
   return {
     fired: 0, desired: 0, inFlight: 0, effectiveLines: 0,
     degraded: false, reason,
-    callSids: [], skipped: 0, released, dedupedPhones: 0, dialedPhones: [], inFlightPhones: [], inFlightLeadIds: [],
+    callSids: [], skipped: 0, released, dedupedPhones: 0, dialedPhones: [], dialedLeadIds: [], inFlightPhones: [], inFlightLeadIds: [],
   }
 }
