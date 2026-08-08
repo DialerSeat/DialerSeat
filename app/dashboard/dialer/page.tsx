@@ -717,6 +717,23 @@ function DialerPageInner() {
   const isPreview = dialerMode === 'preview'
   const isPower = dialerMode === 'power'
 
+  // ── THE MODE AS IT IS NOW, NOT WHEN THE TIMER WAS SET ───────────────────
+  // handleDial and scheduleDial are plain render-closure functions, and the
+  // auto-chain runs through setTimeout. So a chain that STARTED in power or
+  // progressive keeps running in that mode after the agent switches to
+  // predictive: nothing in the chain re-reads it.
+  //
+  // The consequence was on a predictive campaign, dialing single-line
+  // user_dial calls in a continuous auto-chain — 25 of them to the same
+  // number, 10-19 seconds apart, until abort was pressed. It looked like a
+  // predictive runaway and was the exact opposite: the controller never fired
+  // at all, and every call came from the path predictive is supposed to skip.
+  //
+  // Read at call time, so a mode switch takes effect on the very next link of
+  // the chain instead of the next full remount.
+  const dialerModeRef = useRef<DialerMode>(dialerMode)
+  useEffect(() => { dialerModeRef.current = dialerMode }, [dialerMode])
+
   // Continuous-dialing modes auto-advance to the next lead when a call ends
   // WITHOUT a human (machine drop, no-answer, busy, failed). Power and
   // progressive both keep the agent moving; preview is one-at-a-time by design
@@ -2967,6 +2984,15 @@ function DialerPageInner() {
       // Final live checks: abort latch (TERMINATE pressed) or went offline.
       if (abortDialingRef.current) return
       if (!availableRef.current) return
+      // ── AND: ARE WE STILL IN A MODE THAT AUTO-CHAINS? ──────────────────
+      // Read from the ref, because this closure predates any mode switch since
+      // the timer was set. A chain begun in power or progressive would
+      // otherwise keep dialing single-line calls after the agent moved to
+      // predictive — which is exactly what produced 25 user_dial calls on a
+      // predictive campaign, spaced 10-19 seconds apart, until abort.
+      //
+      // Predictive fans out server-side and must never be fed by this chain.
+      if (dialerModeRef.current === 'predictive') return
       handleDial()
     }, delayMs)
     dialChainTimeoutsRef.current.add(id)
@@ -2994,7 +3020,11 @@ function DialerPageInner() {
       return
     }
 
-    if (isPredictive) {
+    // Ref, not the captured isPredictive: handleDial is reached through
+    // setTimeout, so the value baked into this closure can be a mode the agent
+    // has already left. Getting this wrong sends a predictive campaign down the
+    // single-line path and starts an auto-chain that nothing stops.
+    if (dialerModeRef.current === 'predictive') {
       setPredictiveEngineStarted(true)
       armDialing() // predictive engine running — incoming-route may bridge a human to us
       lastIncomingCallSidRef.current = null
