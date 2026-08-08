@@ -127,10 +127,6 @@ interface HeartbeatControllerSummary {
   /** Lead ids in flight — what row highlighting keys off. Phone numbers are
    *  not unique per lead, so they can't identify a row. */
   inFlightLeadIds?: string[]
-  /** Lead ids placed on THIS tick only. Drives queue rotation — see the
-   *  stamping block in the heartbeat. Distinct from inFlightLeadIds, which is
-   *  cumulative and would re-stamp a lead on every beat it stayed up. */
-  dialedLeadIds?: string[]
   skipped?: number
   released?: number
   dedupedPhones?: number
@@ -1516,27 +1512,6 @@ function DialerPageInner() {
           setActiveDialingLeadIds(summary.inFlightLeadIds || [])
 
           if (summary.fired > 0) {
-            // ── ROTATE WHAT WAS JUST FIRED ───────────────────────────────
-            // Predictive had the claim order fixed but never rotated, so the
-            // leads it dialed stayed at the top of the panel. Two consequences:
-            // the list never appeared to advance, and once the RPC's 30-second
-            // claim window lapsed the same top N were eligible to be claimed
-            // again — before the server's own last_called_at stamp had made it
-            // back into the panel via a refresh.
-            //
-            // Stamped inline rather than through markLeadDialedLocally, which
-            // is declared below this effect and would be in its temporal dead
-            // zone here. Same write: last_called_at is the sort key the panel
-            // rotates on.
-            const justFired = summary.dialedLeadIds || []
-            if (justFired.length > 0) {
-              const stamp = nowIso()
-              const firedSet = new Set(justFired)
-              setQueuedLeads(prev =>
-                prev.map(l => (firedSet.has(l.id) ? { ...l, last_called_at: stamp } : l))
-              )
-            }
-
             // Predictive places its lines SERVER-side, so it never passes
             // through handleDial and never reached the dial tone there. The
             // agent got no audible signal that a batch had gone out — the one

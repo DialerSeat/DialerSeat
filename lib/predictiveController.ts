@@ -233,19 +233,7 @@ export async function runPredictiveController(
     .filter((id): id is string => !!id)
   const desired = effectiveLines
 
-  // ── p_count MUST BE A WHOLE NUMBER ──────────────────────────────────────
-  // predictive_lines_per_agent is a numeric column and its default is 1.5, so
-  // effectiveLines is fractional and shouldDial came out as 1.5. That was then
-  // passed to claim_next_leads_for_campaign, whose p_count is declared integer
-  // — a type PostgREST will not coerce a decimal into. The claim failed on
-  // every tick and the controller reported fired: 0 with a claim error.
-  //
-  // Floored, not rounded. 1.5 lines with one agent becomes 1, which is
-  // progressive-equivalent and cannot abandon a call; rounding up to 2 would
-  // add abandon-rate exposure off the back of a config default nobody chose
-  // deliberately. A 1.5 multiplier only earns its extra line once inFlight
-  // math puts desired above 2, which is the behaviour you want anyway.
-  const shouldDial = Math.max(0, Math.floor(desired - inFlight))
+  const shouldDial = Math.max(0, desired - inFlight)
 
   if (shouldDial === 0) {
     return {
