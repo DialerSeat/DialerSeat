@@ -452,6 +452,10 @@ function DialerPageInner() {
   // /api/leads/next (which walks this same order and skips undialable rows)
   // lands on it. Stable within each group, so the created_at order and any
   // active shuffle are preserved inside the groups.
+  // Populated immediately below the computation. See the comment there for
+  // why the dial path must read this rather than a captured value.
+  const visibleQueuedLeadsRef = useRef<typeof orderedQueuedLeads>([])
+
   const visibleQueuedLeads = (() => {
     const dialable: typeof orderedQueuedLeads = []
     const exhausted: typeof orderedQueuedLeads = []
@@ -492,6 +496,25 @@ function DialerPageInner() {
 
     return rotated.concat(exhausted)
   })()
+
+  // ── THE ORDER AS IT IS *NOW*, NOT AS IT WAS WHEN THE TIMER WAS SET ──────
+  // fetchNextLead sends this list to the server as an ordered allowlist, and
+  // the server dials the first dialable entry in it. But fetchNextLead is
+  // reached through scheduleDial -> setTimeout -> handleDial, all of which are
+  // plain functions closing over the render that scheduled them. That render
+  // happened BEFORE the just-dialed lead sank to the bottom.
+  //
+  // So the timer fired with the pre-rotation order, the server was told the
+  // lead it had only just finished was still top of the list, and dialed it
+  // again. On the next pass state had caught up and it dialed the real top —
+  // producing the observed top, bottom, top, bottom alternation, and on 1x
+  // dialing every lead twice.
+  //
+  // A ref is read at call time rather than capture time, which is the whole
+  // point. Synced in an effect rather than during render: the dial chain waits
+  // 600-800ms before firing and effects run within a frame, so the margin is
+  // roughly forty-fold — and updating a ref mid-render is a genuine
+  // correctness hazard under concurrent rendering, not just a lint preference.
 
   const isQueueFiltered = !!(queueSearch.trim() || queueStateFilter.trim())
 
@@ -617,6 +640,9 @@ function DialerPageInner() {
 
   useEffect(() => setMounted(true), [])
   useEffect(() => { currentLeadRef.current = currentLead }, [currentLead])
+  // See the block comment above visibleQueuedLeads — the dial chain must read
+  // the CURRENT order, not the one captured when its timer was scheduled.
+  useEffect(() => { visibleQueuedLeadsRef.current = visibleQueuedLeads })
   useEffect(() => { activeCallSidRef.current = activeCallSid }, [activeCallSid])
   // Keep availableRef in lock-step with the available state.
   useEffect(() => { availableRef.current = available }, [available])
@@ -1446,8 +1472,13 @@ function DialerPageInner() {
             // mode, not just when a filter/shuffle is explicitly active.
             // Same load-race guard as fetchNextLead: skip only while the
             // queue's first load hasn't produced any leads yet.
-            lead_ids: !(queuedLeadsLoading && visibleQueuedLeads.length === 0)
-              ? visibleQueuedLeads.map(l => l.id).join(',')
+            // Through the ref for the same reason fetchNextLead does: this
+            // runs on an interval, so the closure predates whatever rotation
+            // has happened since the effect was created. Predictive would
+            // otherwise claim against a stale order and re-dial leads it had
+            // just finished, exactly as the single-line path did.
+            lead_ids: !(queuedLeadsLoading && visibleQueuedLeadsRef.current.length === 0)
+              ? visibleQueuedLeadsRef.current.map(l => l.id).join(',')
               : undefined,
           }),
         })
@@ -2290,9 +2321,14 @@ function DialerPageInner() {
     // setting queuedLeads in the first place — by the time visibleQueuedLeads
     // is non-empty, it already reflects the FULL dialable set for the
     // current scope, not a partial page.
-    const queueReadyForOrderedDial = !(queuedLeadsLoading && visibleQueuedLeads.length === 0)
+    // Read through the ref, NOT the captured value. This function is reached
+    // via scheduleDial -> setTimeout, so the closure it was created in predates
+    // the rotation that just happened — sending that stale order told the
+    // server the lead we had only just finished was still top of the list.
+    const currentOrder = visibleQueuedLeadsRef.current
+    const queueReadyForOrderedDial = !(queuedLeadsLoading && currentOrder.length === 0)
     if (queueReadyForOrderedDial) {
-      params.append('lead_ids', visibleQueuedLeads.map(l => l.id).join(','))
+      params.append('lead_ids', currentOrder.map(l => l.id).join(','))
     }
     const res = await fetch(`/api/leads/next?${params}`)
     const data = await res.json()
@@ -2704,19 +2740,59 @@ function DialerPageInner() {
           // demonstrably correct — and leaving the call up just meant the
           // agent read a script at a voicemail greeting and hung up by hand.
           if (isNotHuman(statusData.amd_result)) {
+            const ld = currentLeadRef.current
+            // ── A VOICEMAIL IS AN ATTEMPT, NOT AN EJECTION ────────────────
+            // This branch rotated the lead away immediately, which quietly
+            // overrode the 1x/2x/3x setting for the single most common
+            // no-connect outcome there is. On 3x a lead that hit voicemail
+            // got ONE dial and sank, while a lead that simply rang out got
+            // three — the same rule producing opposite behaviour depending on
+            // who was at the other end.
+            //
+            // The hangup-poll path further down already handles this
+            // correctly. Same rule applied here: count the attempt, redial in
+            // place while attempts remain, and only rotate once they are
+            // spent. Position must not move mid-sequence.
+            const effectiveMax = isPreview ? 1 : Math.min(dialRepeatCount, 3)
+            const attemptsSoFar = leadAttemptCountRef.current
+
+            if (ld && attemptsSoFar < effectiveMax) {
+              leadAttemptCountRef.current = attemptsSoFar + 1
+              setAmdActivity(prev =>
+                [`VOICEMAIL — REDIALING (${attemptsSoFar + 1} of ${effectiveMax})`, ...prev].slice(0, 5)
+              )
+              showQueueOutcome(
+                ld.id,
+                `Voicemail — redialing (attempt ${attemptsSoFar + 1} of ${effectiveMax})…`
+              )
+              setActiveCallSid(null)
+              disarmDialing()
+              setStatus('idle')
+              // Same lead, same position. No rotation until attempts are gone.
+              const redialId = setTimeout(() => {
+                dialChainTimeoutsRef.current.delete(redialId)
+                if (abortDialingRef.current) return
+                if (!availableRef.current) return
+                dialLeadCall(ld)
+              }, 800)
+              dialChainTimeoutsRef.current.add(redialId)
+              return
+            }
+
             setAmdActivity(prev =>
               [`VOICEMAIL FILTERED — ${statusData.amd_result}`, ...prev].slice(0, 5)
             )
-            showQueueOutcome(currentLeadRef.current?.id, 'Voicemail detected…')
+            showQueueOutcome(ld?.id, 'Voicemail detected…')
             // AMD skip writes NO disposition, so it never reaches
             // disposeLead — and therefore never rotated the lead out of the
             // way. The next dial 600ms later would resend the same order and
             // get the same lead back. Rotate it explicitly.
-            markLeadDialedLocally(currentLeadRef.current?.id)
+            markLeadDialedLocally(ld?.id)
             setActiveCallSid(null)
             disarmDialing() // machine — drop the browser leg; next dial re-arms
             setStatus('idle')
             setCurrentLead(null)
+            leadAttemptCountRef.current = 1 // next lead starts its own count
             scheduleDial(600)
             return
           }
