@@ -1664,14 +1664,10 @@ function DialerPageInner() {
       disarmDialing({ force: true })
       try { registererRef.current?.unregister?.() } catch {}
       try { swClientRef.current?.stop?.() } catch {}
-      const sid = sessionIdRef.current
-      if (sid && navigator.sendBeacon) {
-        const blob = new Blob(
-          [JSON.stringify({ sessionId: sid })],
-          { type: 'application/json' }
-        )
-        navigator.sendBeacon('/api/dialer/session-end', blob)
-      }
+      // /api/dialer/session-end was removed along with the session writes
+      // nobody read, but this beacon was left pointing at it — 404ing on every
+      // unload since. The heartbeat below is what actually marks the agent
+      // gone, and it is the one Live Ops reads.
       if (navigator.sendBeacon) {
         try {
           const blob = new Blob(

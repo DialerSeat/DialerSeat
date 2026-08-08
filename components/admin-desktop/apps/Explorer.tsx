@@ -689,7 +689,7 @@ export default function ExplorerApp() {
                             <audio
                               controls
                               autoPlay
-                              src={`/api/admin/recordings/play?call_id=${r.id}`}
+                              src={`/api/admin/user-data/recordings/play?call_id=${r.id}`}
                               style={{ height: 28, width: 200 }}
                               onEnded={() => setNowPlaying(null)}
                             />
@@ -701,7 +701,7 @@ export default function ExplorerApp() {
                         </td>
                         <td style={tdStyle}>
                           <a
-                            href={`/api/admin/recordings/play?call_id=${r.id}&download=1`}
+                            href={`/api/admin/user-data/recordings/play?call_id=${r.id}&download=1`}
                             style={{ ...crumbBtnStyle(false), fontSize: 10, textDecoration: 'none', display: 'inline-block' }}
                           >
                             ⬇ DOWNLOAD
