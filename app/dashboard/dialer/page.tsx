@@ -4134,17 +4134,17 @@ function DialerPageInner() {
                       gap: 10,
                       alignItems: 'center', fontFamily: FUTURA, fontSize: 13,
                     }}>
-                      <span className="dq-cell-name" style={{ gridArea: 'name', color: terminalText, fontWeight: 'bold', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span className="dq-cell-name" style={{ gridArea: 'name', color: terminalText, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {(lead.first_name || lead.last_name) ? `${lead.first_name || ''} ${lead.last_name || ''}`.trim() : '—'}
                       </span>
-                      <span className="dq-cell-phone" style={{ gridArea: 'phone', color: terminalAccent, fontWeight: 'bold', fontVariantNumeric: 'tabular-nums', overflowWrap: 'anywhere' }}>
+                      <span className="dq-cell-phone" style={{ gridArea: 'phone', color: terminalAccent, fontVariantNumeric: 'tabular-nums', overflowWrap: 'anywhere' }}>
                         {lead.phone}
                       </span>
                       <span className="dq-cell-state" style={{ gridArea: 'state', color: terminalMuted, fontSize: 12 }}>
                         {lead.state || '—'}
                       </span>
                       <span className="dq-cell-badge" style={{ gridArea: 'badge', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 6 }}>
-                        <span style={{ fontSize: 11, fontFamily: 'monospace', fontWeight: 'bold', color: attempts > 0 ? terminalAccent : terminalMuted }}>
+                        <span style={{ fontSize: 11, fontFamily: 'monospace', color: attempts > 0 ? terminalAccent : terminalMuted }}>
                           {attempts}x
                         </span>
                         {isRowActive ? (
