@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
+import VoicemailMessages from '@/components/VoicemailMessages'
 
 
 
@@ -230,6 +231,7 @@ export default function RecordingsPage() {
   const [loading, setLoading] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [syncMessage, setSyncMessage] = useState<string | null>(null)
+  const [voicemailOpen, setVoicemailOpen] = useState(false)
   const [playingId, setPlayingId] = useState<string | null>(null)
   // Per-recording playback failure, so a dead one says so instead of showing
   // a scrubber stuck at 0:00 / 0:00 with no explanation.
@@ -793,6 +795,26 @@ export default function RecordingsPage() {
             {total.toLocaleString()} TOTAL · {recordings.length} LOADED
           </span>
         </div>
+        {/* Deliberately the FILLED button next to a bordered Sync. Voicemail
+            drop is the feature most likely to change someone's answer-back
+            rate, and it is opt-in, so it has to be visible rather than
+            discoverable. */}
+        <button
+          onClick={() => setVoicemailOpen(true)}
+          style={{
+            padding: '6px 14px',
+            background: T.blue,
+            border: `1px solid ${T.blue}`,
+            borderRadius: 3,
+            color: '#fff',
+            fontSize: 10,
+            letterSpacing: 2,
+            fontWeight: 'bold',
+            cursor: 'pointer',
+            marginRight: 8,
+            fontFamily: 'Futura PT, Futura, sans-serif',
+          }}
+        >✉ MY VOICEMAIL MESSAGES</button>
         <button
           onClick={handleSync}
           disabled={syncing}
@@ -1261,6 +1283,16 @@ export default function RecordingsPage() {
           </div>
         )}
       </div>
+
+      {voicemailOpen && (
+        <VoicemailMessages
+          theme={{
+            surface: T.surface, border: T.border, text: T.text,
+            muted: T.muted, blue: T.blue, green: T.green, red: T.red,
+          }}
+          onClose={() => setVoicemailOpen(false)}
+        />
+      )}
     </div>
   )
 }

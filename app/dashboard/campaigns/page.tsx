@@ -41,6 +41,7 @@ interface Campaign {
   dialer_mode?: DialerMode
   amd_enabled?: boolean
   recording_enabled?: boolean
+  voicemail_message_id?: string | null
   predictive_lines_per_agent?: number
   enable_appointments_sub?: boolean
   enable_not_interested_sub?: boolean
@@ -389,11 +390,25 @@ export default function CampaignsPage() {
     dialer_mode: DialerMode
     amd_enabled: boolean
     recording_enabled: boolean
+    // Which saved voicemail message this campaign drops on an answering
+    // machine. null is off, and off is the default — selecting a message IS
+    // the toggle, so there is no separate flag to disagree with it.
+    voicemail_message_id: string | null
     enable_appointments_sub: boolean
     enable_not_interested_sub: boolean
     enabledScriptIds: Set<string>   // which library scripts are on for this campaign
     scriptOrder: string[]           // ordered enabled script ids (drag order)
   }
+  // The user's saved voicemail recordings, for the campaign picker. Loaded once
+  // rather than per settings-panel open — a handful of rows that rarely change.
+  const [voicemailMessages, setVoicemailMessages] = useState<{ id: string; name: string }[]>([])
+  useEffect(() => {
+    fetch('/api/voicemail-messages')
+      .then(r => r.json())
+      .then(d => { if (d?.success) setVoicemailMessages(d.messages || []) })
+      .catch(() => {})
+  }, [])
+
   const [editDraft, setEditDraft] = useState<EditDraft | null>(null)
   const [editSaving, setEditSaving] = useState(false)
   
@@ -1397,6 +1412,8 @@ export default function CampaignsPage() {
       if (editDraft.amd_enabled !== editBaseline.amd_enabled) corePatch.amd_enabled = editDraft.amd_enabled
       if (editDraft.recording_enabled !== editBaseline.recording_enabled)
         corePatch.recording_enabled = editDraft.recording_enabled
+      if (editDraft.voicemail_message_id !== editBaseline.voicemail_message_id)
+        corePatch.voicemail_message_id = editDraft.voicemail_message_id
       if (editDraft.enable_appointments_sub !== editBaseline.enable_appointments_sub)
         corePatch.enable_appointments_sub = editDraft.enable_appointments_sub
       if (editDraft.enable_not_interested_sub !== editBaseline.enable_not_interested_sub)
@@ -1464,6 +1481,7 @@ export default function CampaignsPage() {
       // recording ON, and saving the panel would then make it true for real.
       // The column is NOT NULL, so a plain boolean coercion is correct.
       recording_enabled: !!campaign.recording_enabled,
+      voicemail_message_id: campaign.voicemail_message_id ?? null,
       enable_appointments_sub: !!campaign.enable_appointments_sub,
       enable_not_interested_sub: !!campaign.enable_not_interested_sub,
       enabledScriptIds: new Set<string>(),
@@ -3449,6 +3467,43 @@ export default function CampaignsPage() {
                     onClick={() => !isLapsed && patchDraft({ recording_enabled: !editDraft?.recording_enabled })}
                   ><div className="knob" /></div>
                 </div>
+
+                {/* ── VOICEMAIL DROP ─────────────────────────────────────────
+                    A picker rather than a toggle plus a picker: the selected
+                    message IS the on switch, so the two can never disagree
+                    about whether the feature is on. */}
+                <div className="settings-row" style={{ alignItems: 'flex-start' }}>
+                  <div className="settings-row-label">
+                    VOICEMAIL DROP
+                    <small>
+                      Leave your own recorded message when the dialer reaches an
+                      answering machine. You move straight to the next lead — each
+                      lead gets it once, so they can call you back when they&apos;re free.
+                    </small>
+                  </div>
+                  <select
+                    value={editDraft?.voicemail_message_id ?? ''}
+                    disabled={isLapsed}
+                    onChange={e => patchDraft({ voicemail_message_id: e.target.value || null })}
+                    style={{
+                      minWidth: 190, maxWidth: 220, padding: '8px 10px',
+                      borderRadius: 8, border: '1px solid var(--brand-card-border)',
+                      background: 'var(--brand-card-surface)',
+                      color: 'var(--brand-on-page-bg)', fontSize: 12,
+                    }}
+                  >
+                    <option value="">Off — no voicemail left</option>
+                    {voicemailMessages.map(v => (
+                      <option key={v.id} value={v.id}>{v.name}</option>
+                    ))}
+                  </select>
+                </div>
+                {voicemailMessages.length === 0 && (
+                  <p className="cmp-helper" style={{ marginTop: -4 }}>
+                    You haven&apos;t recorded a voicemail message yet — record one under
+                    Recordings → My Voicemail Messages, then pick it here.
+                  </p>
+                )}
 
                 <p className="cmp-helper" style={{ marginTop: 10 }}>
                   Not sure on the mode? Start with POWER.{' '}

@@ -95,22 +95,30 @@ Voicemail drop would satisfy both — detect fast, release the agent, and let
 the lead leg stay up delivering a message, so the call that created the
 short-duration risk becomes a 25-second delivery instead.
 
-**DECIDED 2026-08-13: NO. DialerSeat does not leave recorded messages.**
+**DECIDED 2026-08-13: BUILT, opt-in per campaign.**
 
-This is settled product direction, not an open question. A prerecorded message
-left on a mobile for telemarketing requires prior express written consent
-under the TCPA and the FCC treats ringless voicemail as a call; the product
-does not go there. Do not propose it again.
+An earlier decision the same day was "no recorded messages", and it was
+reversed once the economics were measured properly: the surcharge is
+~$0.00165 per dial, which is over half a $0.003 target cost per dial. That is
+not a rounding error, it is the unit economics.
 
-The consequence is accepted deliberately: **there is no path under Telnyx's
-15% short-duration threshold.** Even eliminating the machine bucket entirely
-only reaches ~53%, and the machine bucket cannot be eliminated — voicemail is
-most of what cold outbound reaches.
+How it is built, and why each part:
 
-So the short-call surcharge is treated as a cost of doing business rather than
-a defect to engineer around. At $0.01 per short call it is roughly $7/month at
-current volume and ~$170/month at 200,000 dials — small enough that gaming the
-metric would cost more in carrier trust than the surcharge costs in cash.
+- **The message is the USER'S**, recorded or uploaded by them, never generated
+  by us. FCC rules require a prerecorded telemarketing message to identify the
+  business and give a callback number — so a generic "someone tried to call
+  you" clip carries MORE exposure than a real one, not less.
+- **Opt-in per campaign, off by default.** Selecting a message IS the toggle;
+  there is no separate flag that could disagree with it.
+- **Once per lead**, enforced by `leads.voicemail_dropped_at`. Three dials must
+  not leave three identical voicemails — useless to the lead, and exactly the
+  behaviour that gets a number reported, which would undo the point.
+- **Capped at 20 saved messages per user**, enforced before upload so a
+  rejection cannot orphan a file in storage.
+- **`detect_beep` for these campaigns only.** Plain `detect` never reports when
+  the greeting ended, so a message played on the verdict would record over the
+  outgoing greeting. Campaigns that did not opt in keep the configured
+  detector and are unaffected.
 
 What is still worth doing, and is not about the ratio:
 
@@ -121,7 +129,12 @@ What is still worth doing, and is not about the ratio:
   and caller-ID-health problem, not an AMD one.
 - **Never pad call duration to clear the threshold.** A duration histogram
   that cliffs just past 6 seconds is the most visible thing there is to a
-  carrier analytics team, and it reads as deliberate evasion.
+  carrier analytics team, and it reads as deliberate evasion. Voicemail drop
+  is not padding: the call is longer because something is genuinely being
+  delivered, and the lead can act on it.
+- **Negotiate the rate card.** An AMD dialer is inherently short-call heavy;
+  that is a traffic type, not abuse. With a 25% answer rate and a measured
+  profile, asking Telnyx to price the traffic type is a normal conversation.
 
 ---
 
