@@ -3205,52 +3205,12 @@ function DialerPageInner() {
     }
   }
 
-  /**
-   * CONTINUE — dial this same lead again, right now, without losing its place.
-   *
-   * Skip and "try again" were the same button, which is only coherent in a mode
-   * that has AMD. Preview and power do not run detection, so nothing ever
-   * redials automatically there — and Skip became the only way to have another
-   * go at a lead, while also being the thing that gives up on it. One control,
-   * two opposite meanings.
-   *
-   * So they are separate now:
-   *   CONTINUE  redial this lead, position unchanged
-   *   SKIP      abandon remaining attempts, sink to the bottom, next lead up
-   *
-   * Deliberately NOT bounded by dialRepeatCount. That cap governs the
-   * AUTOMATIC sequence, where nobody is watching each attempt. This is a person
-   * clicking a button about a specific lead, once per click, and overruling
-   * their explicit intent because a config number says 1x would be the tool
-   * arguing with its operator. The bound that matters is that it takes a click.
-   */
-  const handleContinue = async () => {
-    const ld = currentLeadRef.current
-    if (!ld) return
-
-    // Stop the outcome poll first, exactly as Skip does. Otherwise its
-    // callbacks fire on a call we are deliberately replacing and race the
-    // redial — the same class of double-dial the queue churn caused.
-    if (activePollRef.current) {
-      clearInterval(activePollRef.current)
-      activePollRef.current = null
-    }
-    if (activeCallSid) await hangupCall(activeCallSid)
-
-    // Counted, so the activity feed and the automatic sequence stay coherent —
-    // just not gated on it.
-    leadAttemptCountRef.current = leadAttemptCountRef.current + 1
-    setAmdActivity(prev => [
-      `CONTINUE — REDIALING ${ld.phone}`, ...prev,
-    ].slice(0, 5))
-    showQueueOutcome(ld.id, 'Redialing…')
-
-    setActiveCallSid(null)
-    setStatus('idle')
-    disarmDialing()
-    // No markLeadDialedLocally: the whole point is that the row stays put.
-    await dialLeadCall(ld)
-  }
+  // CONTINUE was removed entirely. It was built as a companion to the 1x/2x/3x
+  // repeat control — a manual "dial this lead again in place" — and both are
+  // gone: the repeat count never worked outside a specific campaign, and the
+  // button was shipped without being asked for. A lead that does not connect
+  // comes back around when the queue rotates, which is what people wanted from
+  // it. SKIP remains the single, unambiguous "give up on this one, next".
 
   const handleSkip = async () => {
     if (activePollRef.current) clearInterval(activePollRef.current)
@@ -4045,32 +4005,13 @@ function DialerPageInner() {
 
         {/* ── CONTROLS ROW — FILTER (far right), outline-style to match the rest of dialerseat (leads page filter bar, etc.) ────── */}
         <div className="dialer-queue-controls" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', padding: '14px 16px 12px', flexShrink: 0, borderBottom: `1px solid ${terminalBorder}` }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            {([1, 2, 3] as const).map(n => {
-              const active = isPreview ? n === 1 : dialRepeatCount === n
-              return (
-                <button
-                  key={n}
-                  className="dialer-repeat-btn"
-                  disabled={isPreview}
-                  onClick={() => !isPreview && handleDialRepeatChange(n)}
-                  style={{
-                    border: `1px solid ${active ? terminalAccent : terminalBorder}`,
-                    background: active ? 'rgba(42, 74, 138, 0.14)' : 'transparent',
-                    color: active ? terminalAccent : terminalText,
-                  }}
-                >
-                  {n}x
-                </button>
-              )
-            })}
-            <span className="dialer-repeat-help">
-              ?
-              <span className="dialer-repeat-tooltip">
-                Dials the same lead this many times in a row (max 3) before moving to the next one if it doesn't connect. {isPreview ? 'Preview mode always dials once — the agent reviews each lead manually.' : ''}
-              </span>
-            </span>
-          </div>
+          {/* The 1x/2x/3x repeat selector and its ? tooltip lived here and were
+              removed. They never worked correctly — the count only synced when
+              a specific campaign was selected, so All Active silently sat at 1
+              — and a control that claims to do something it does not is worse
+              than no control. Leads that do not connect come back around when
+              the queue rotates, which is the behaviour people actually wanted
+              from it. */}
 
           {isQueueDialingArmed && (
             <span style={{
