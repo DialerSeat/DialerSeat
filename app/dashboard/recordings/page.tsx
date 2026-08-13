@@ -795,26 +795,28 @@ export default function RecordingsPage() {
             {total.toLocaleString()} TOTAL · {recordings.length} LOADED
           </span>
         </div>
-        {/* Deliberately the FILLED button next to a bordered Sync. Voicemail
-            drop is the feature most likely to change someone's answer-back
-            rate, and it is opt-in, so it has to be visible rather than
-            discoverable. */}
+        {/* Same outline treatment as SYNC and every other control on this
+            page. It was a filled blue block, which made it shout next to
+            everything around it rather than belong. Centred in the header
+            with auto margins so it reads as its own thing between the title
+            and Sync. */}
         <button
           onClick={() => setVoicemailOpen(true)}
           style={{
             padding: '6px 14px',
-            background: T.blue,
+            background: 'transparent',
             border: `1px solid ${T.blue}`,
             borderRadius: 3,
-            color: '#fff',
+            color: T.blue,
             fontSize: 10,
             letterSpacing: 2,
             fontWeight: 'bold',
             cursor: 'pointer',
-            marginRight: 8,
+            marginLeft: 'auto',
+            marginRight: 'auto',
             fontFamily: 'Futura PT, Futura, sans-serif',
           }}
-        >✉ MY VOICEMAIL MESSAGES</button>
+        >CUSTOM VOICEMAILS</button>
         <button
           onClick={handleSync}
           disabled={syncing}

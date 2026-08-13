@@ -18,6 +18,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 const MAX_MESSAGES = 20
 
+// The face of every control in DialerSeat.
+const FUTURA = 'Futura PT, Futura, sans-serif'
+
 const EXAMPLE_SCRIPT =
   '"Hey, this is John Doe with Blue Check, just giving a call back about the ' +
   'inspection status. Reach out any time between 9am and 7pm — my number is ' +
@@ -192,16 +195,20 @@ export default function VoicemailMessages({ theme, onClose }: { theme: Theme; on
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
         }}>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 1.5, color: T.text }}>
-              VOICEMAIL MESSAGES
+            <div style={{
+              fontSize: 11, fontWeight: 'bold', letterSpacing: 4,
+              color: T.blue, fontFamily: FUTURA,
+            }}>
+              CUSTOM VOICEMAILS
             </div>
             <div style={{ fontSize: 11, color: T.muted, marginTop: 3 }}>
               {messages.length} of {MAX_MESSAGES} saved
             </div>
           </div>
           <button onClick={onClose} style={{
-            background: 'transparent', border: `1px solid ${T.border}`, borderRadius: 8,
-            color: T.muted, cursor: 'pointer', padding: '6px 12px', fontSize: 11, letterSpacing: 1,
+            background: 'transparent', border: `1px solid ${T.border}`, borderRadius: 3,
+            color: T.muted, cursor: 'pointer', padding: '6px 14px',
+            fontSize: 10, letterSpacing: 2, fontWeight: 'bold', fontFamily: FUTURA,
           }}>CLOSE</button>
         </div>
 
@@ -284,36 +291,47 @@ export default function VoicemailMessages({ theme, onClose }: { theme: Theme; on
                       disabled={busy}
                       onClick={() => save(preview.blob, preview.seconds, 'voicemail.webm')}
                       style={{
-                        flex: 1, minWidth: 120, padding: '10px 14px', borderRadius: 8,
-                        border: 'none', background: T.green, color: '#fff',
-                        fontSize: 12, letterSpacing: 1, cursor: busy ? 'wait' : 'pointer',
+                        flex: 1, minWidth: 120, padding: '10px 14px', borderRadius: 3,
+                        background: 'transparent', border: `1px solid ${T.green}`,
+                        color: T.green, fontSize: 10, letterSpacing: 2, fontWeight: 'bold',
+                        cursor: busy ? 'wait' : 'pointer', fontFamily: FUTURA,
                       }}
                     >{busy ? 'SAVING…' : 'SAVE MESSAGE'}</button>
                     <button
                       disabled={busy}
                       onClick={() => { URL.revokeObjectURL(preview.url); setPreview(null); setElapsed(0) }}
                       style={{
-                        padding: '10px 14px', borderRadius: 8,
+                        padding: '10px 14px', borderRadius: 3,
                         border: `1px solid ${T.border}`, background: 'transparent',
-                        color: T.muted, fontSize: 12, letterSpacing: 1, cursor: 'pointer',
+                        color: T.muted, fontSize: 10, letterSpacing: 2, fontWeight: 'bold',
+                        cursor: 'pointer', fontFamily: FUTURA,
                       }}
                     >DISCARD</button>
                   </div>
                 </div>
               ) : (
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                  {/* Outline treatment, matching every other control in
+                      DialerSeat — transparent fill, coloured border and text,
+                      Futura, wide letter spacing. These were solid blocks of
+                      colour and looked like they belonged to a different app. */}
                   <button
                     onClick={recording ? stopRecording : startRecording}
                     style={{
-                      flex: 1, minWidth: 140, padding: '10px 14px', borderRadius: 8,
-                      border: 'none', background: recording ? T.red : T.blue, color: '#fff',
-                      fontSize: 12, letterSpacing: 1, cursor: 'pointer',
+                      flex: 1, minWidth: 140, padding: '10px 14px', borderRadius: 3,
+                      background: 'transparent',
+                      border: `1px solid ${recording ? T.red : T.blue}`,
+                      color: recording ? T.red : T.blue,
+                      fontSize: 10, letterSpacing: 2, fontWeight: 'bold',
+                      cursor: 'pointer', fontFamily: FUTURA,
                     }}
-                  >{recording ? `STOP — ${mmss(elapsed)}` : 'RECORD MESSAGE'}</button>
+                  >{recording ? `■ STOP — ${mmss(elapsed)}` : 'RECORD MESSAGE'}</button>
 
                   <label style={{
-                    padding: '10px 14px', borderRadius: 8, border: `1px solid ${T.border}`,
-                    color: T.text, fontSize: 12, letterSpacing: 1, cursor: 'pointer',
+                    padding: '10px 14px', borderRadius: 3,
+                    border: `1px solid ${T.border}`, background: 'transparent',
+                    color: T.muted, fontSize: 10, letterSpacing: 2, fontWeight: 'bold',
+                    cursor: 'pointer', fontFamily: FUTURA,
                   }}>
                     UPLOAD FILE
                     <input
@@ -356,9 +374,10 @@ export default function VoicemailMessages({ theme, onClose }: { theme: Theme; on
                       disabled={busy}
                       onClick={() => remove(m.id)}
                       style={{
-                        background: 'transparent', border: `1px solid ${T.border}`,
-                        borderRadius: 6, color: T.red, cursor: 'pointer',
-                        padding: '4px 10px', fontSize: 10, letterSpacing: 1,
+                        background: 'transparent', border: `1px solid ${T.red}`,
+                        borderRadius: 3, color: T.red, cursor: 'pointer',
+                        padding: '4px 10px', fontSize: 10, letterSpacing: 2,
+                        fontWeight: 'bold', fontFamily: FUTURA,
                       }}
                     >DELETE</button>
                   </div>
