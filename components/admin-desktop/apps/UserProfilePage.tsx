@@ -58,7 +58,12 @@ export default function UserProfilePage({
     // The sticky header below stays sticky: it now sticks to THIS element,
     // which is what a sticky position needs — a scrolling ancestor.
     <div style={{
-      height: '100%',
+      // flex:1 rather than height:100%. The parent is a flex column, and
+      // height:100% only resolves when the parent has a definite height —
+      // which it did not, because the class that was supposed to give it one
+      // was defined in a branch that never rendered. flex:1 takes whatever the
+      // parent actually has, whatever that turns out to be.
+      flex: 1,
       minHeight: 0,
       overflowY: 'auto',
       WebkitOverflowScrolling: 'touch',

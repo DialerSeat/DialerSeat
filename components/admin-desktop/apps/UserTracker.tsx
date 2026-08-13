@@ -303,7 +303,29 @@ export default function UserTrackerApp() {
     // copy), so it carries that page's own range controls — no separate date
     // filter is threaded through from here.
     return (
-      <div className="ut-root">
+      // ── SIZED INLINE, NOT VIA .ut-root ──────────────────────────────────
+      // This branch carries the class but NOT the <style> block that defines
+      // it — that lives in the other return below, which never renders while a
+      // user is selected. So .ut-root was an empty class here: no height, no
+      // flex, no overflow, and therefore nothing for the child's height:100%
+      // to resolve against. The profile page simply grew past the window and
+      // was clipped, on desktop and mobile alike.
+      //
+      // Sized inline so it cannot depend on a stylesheet that is conditionally
+      // rendered. min-height:0 is the load-bearing part, as everywhere else in
+      // this file: a flex child defaults to min-height:auto and refuses to
+      // shrink below its content, so the child's overflow-y never engages.
+      <div style={{
+        width: '100%',
+        height: '100%',
+        minHeight: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        background: C.bg,
+        fontFamily: FONT,
+        color: C.ink,
+      }}>
         <UserProfilePage user={selected} onBack={() => setSelectedId(null)} />
       </div>
     )

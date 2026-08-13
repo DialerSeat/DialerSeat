@@ -462,6 +462,16 @@ export default function CampaignsPage() {
 
   const isLapsed = tier === 'lapsed' || tier === 'new'
 
+  // Voicemail drop is triggered BY answering-machine detection — the message
+  // plays on a machine verdict. So a mode that runs no detection can never
+  // fire one. Preview is deliberately detection-free (a wrong verdict hurts
+  // most where the agent chose the lead by hand), and a campaign with AMD
+  // switched off produces no verdict either. In both cases the picker would
+  // accept a setting that silently does nothing, which is worse than not
+  // offering it.
+  const voicemailDropAvailable =
+    !!editDraft && editDraft.amd_enabled && editDraft.dialer_mode !== 'preview'
+
   useEffect(() => {
     if (!user) return
     fetchCampaigns()
@@ -3481,9 +3491,16 @@ export default function CampaignsPage() {
                       lead gets it once, so they can call you back when they&apos;re free.
                     </small>
                   </div>
+                  {/* ── REQUIRES AMD, BECAUSE IT IS TRIGGERED BY AMD ────────
+                      The drop fires on a machine verdict. Preview mode runs no
+                      detection at all by design, and a campaign with AMD off
+                      never produces a verdict either — so in both cases the
+                      message could be selected and would simply never play.
+                      Disabled and explained, rather than accepting a setting
+                      that silently does nothing. */}
                   <select
                     value={editDraft?.voicemail_message_id ?? ''}
-                    disabled={isLapsed}
+                    disabled={isLapsed || !voicemailDropAvailable}
                     onChange={e => patchDraft({ voicemail_message_id: e.target.value || null })}
                     style={{
                       minWidth: 190, maxWidth: 220, padding: '8px 10px',
@@ -3498,12 +3515,18 @@ export default function CampaignsPage() {
                     ))}
                   </select>
                 </div>
-                {voicemailMessages.length === 0 && (
+                {!voicemailDropAvailable ? (
+                  <p className="cmp-helper" style={{ marginTop: -4 }}>
+                    {editDraft?.dialer_mode === 'preview'
+                      ? 'Preview mode doesn’t run answering-machine detection, so there’s nothing to trigger a voicemail. Switch to Power, Progressive or Predictive to use this.'
+                      : 'Voicemail drop runs off answering-machine detection. Turn AMD on above to use it.'}
+                  </p>
+                ) : voicemailMessages.length === 0 ? (
                   <p className="cmp-helper" style={{ marginTop: -4 }}>
                     You haven&apos;t recorded a voicemail message yet — record one under
                     Recordings → My Voicemail Messages, then pick it here.
                   </p>
-                )}
+                ) : null}
 
                 <p className="cmp-helper" style={{ marginTop: 10 }}>
                   Not sure on the mode? Start with POWER.{' '}
