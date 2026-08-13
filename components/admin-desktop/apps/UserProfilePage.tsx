@@ -43,7 +43,26 @@ export default function UserProfilePage({
   onBack: () => void
 }) {
   return (
-    <div>
+    // ── OWN SCROLL CONTAINER ────────────────────────────────────────────────
+    // This was a bare <div>, which meant it had no scrolling of its own and
+    // relied on an ancestor to provide it. The ancestor is the app window,
+    // which is overflow:hidden — so everything below the fold was clipped with
+    // no way to reach it. Invisible on a desktop monitor where the whole page
+    // happens to fit, and total on a phone, where almost none of it does.
+    //
+    // min-height:0 is the load-bearing half. A flex child defaults to
+    // min-height:auto and refuses to shrink below its content, so overflow-y
+    // never engages and the parent just clips. Same fix as .ut-scroll in
+    // UserTracker, which is why that one already scrolled and this didn't.
+    //
+    // The sticky header below stays sticky: it now sticks to THIS element,
+    // which is what a sticky position needs — a scrolling ancestor.
+    <div style={{
+      height: '100%',
+      minHeight: 0,
+      overflowY: 'auto',
+      WebkitOverflowScrolling: 'touch',
+    }}>
       {/* The only chrome added on top of their dashboard. Sticky so it stays
           reachable — the analytics page is long, and an admin who scrolls to
           the campaign table shouldn't have to scroll back up to leave. */}
