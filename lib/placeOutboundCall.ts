@@ -810,6 +810,14 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
       // same role SignalWire's CallSid did. Revisit naming only at actual
       // cutover time.
       call_control_id: leadCallControlId,
+      // Did THIS call ask for answering-machine detection? Recorded because
+      // amd_result IS NULL is otherwise ambiguous: it means both "AMD ran and
+      // never returned a verdict" (a real defect) and "AMD was never requested"
+      // (preview mode by design, or AMD switched off globally / per campaign).
+      // A third of answered calls sit in that bucket and there was no way to
+      // tell the two apart, so the same investigation kept restarting. It is
+      // also the denominator for AMD spend, which is billed per requesting leg.
+      amd_requested: p.amdEnabled,
       duration: 0,
       disposition: null,
       dial_source: p.source,

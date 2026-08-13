@@ -645,17 +645,22 @@ async function handleHangup(
     detail: { hangup_cause: hangupCause, hangup_source: hangupSource },
   })
 
-  // Mark the call as actually over using EXISTING columns only (no schema
-  // changes) — duration is the one column that reliably distinguishes
-  // "still in flight" from "finished" elsewhere in this codebase already
-  // (dialerPacing.ts's abandon-rate math treats duration=0 as in-flight).
-  // We compute a real duration from created_at -> now rather than leaving
-  // it at its 0 default, which is what makes /api/calls/check able to
-  // tell the frontend a call has ended without any new schema.
+  // Mark the call as actually over. `duration` is the column that
+  // distinguishes "still in flight" from "finished" elsewhere in this codebase
+  // (dialerPacing.ts's abandon-rate math treats duration=0 as in-flight), so it
+  // is measured from created_at -> now and is deliberately WALL CLOCK.
+  //
+  // `talk_seconds` is the different number: answer -> hangup. Keep both, and
+  // keep them separate. Conflating them hid a serious problem for weeks —
+  // ring averages ~10s on our traffic, so a call showing "18s" in our own
+  // dashboards was frequently 10s of ringing and 8s of conversation, while
+  // Telnyx, which bills from answer, was counting that same call as short
+  // duration. Two thirds of our answered calls were under their 6s threshold
+  // and nothing we displayed could show it.
   try {
     const { data: callRow } = await supabaseAdmin
       .from('calls')
-      .select('id, created_at, duration, disposition')
+      .select('id, created_at, duration, disposition, answered_at, talk_seconds')
       .eq('call_control_id', callControlId)
       .maybeSingle()
 
@@ -692,6 +697,22 @@ async function handleHangup(
           ? Math.max(1, Math.round((Date.now() - startedMs) / 1000))
           : 1 // never write 0 here — 0 is the "still in flight" sentinel elsewhere
         updates.duration = elapsedSeconds
+      }
+
+      // ── ACTUAL CONVERSATION TIME ────────────────────────────────────────
+      // Only for calls that were genuinely answered. An unanswered call has no
+      // talk time, and writing 0 would drag every average down and make a
+      // ring-out indistinguishable from an instant hangup — the exact
+      // ambiguity that let a 66% short-call rate hide behind a healthy-looking
+      // duration. NULL stays NULL.
+      //
+      // Written once, like duration, so a retried hangup webhook can't
+      // recompute it against a later clock.
+      if (callRow.answered_at && callRow.talk_seconds == null) {
+        const answeredMs = new Date(callRow.answered_at).getTime()
+        if (Number.isFinite(answeredMs)) {
+          updates.talk_seconds = Math.max(0, Math.round((Date.now() - answeredMs) / 1000))
+        }
       }
       if (Object.keys(updates).length > 0) {
         await supabaseAdmin.from('calls').update(updates).eq('id', callRow.id)

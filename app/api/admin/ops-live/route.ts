@@ -31,6 +31,14 @@ export const runtime = 'nodejs'
 const IN_FLIGHT_MAX_AGE_MS = 10 * 60_000
 const AGENT_ONLINE_WINDOW_MS = 60_000
 
+// Telnyx's own definition: a call whose BILLED duration — measured from answer,
+// not from dial — is 6 seconds or less. Above 15% of connected calls in a month
+// they may surcharge every short call on the account. Both numbers are the
+// carrier's, not ours, which is why they live here as named constants rather
+// than as magic numbers inside the loop.
+const SHORT_CALL_SECONDS = 6
+const SHORT_CALL_THRESHOLD_PCT = 15
+
 export async function GET() {
   try {
     await requireAdmin()
@@ -68,7 +76,7 @@ export async function GET() {
       // 7d signal window: AMD outcomes and recording capture.
       supabase
         .from('calls')
-        .select('amd_result, answered_at, recording_id, recording_url, recording_status')
+        .select('amd_result, answered_at, talk_seconds, recording_id, recording_url, recording_status')
         .gte('created_at', week)
         .limit(50000),
 
@@ -115,6 +123,20 @@ export async function GET() {
     let answeredWithRecordingId = 0
     let answeredWithAnyRecording = 0
 
+    // ── SHORT-DURATION EXPOSURE ──────────────────────────────────────────
+    // The carrier's rule, computed the carrier's way. Telnyx charges extra
+    // when more than 15% of connected calls last 6 seconds or less, and they
+    // measure from ANSWER, not from dial.
+    //
+    // This panel exists because nothing showed it. Our own displays read
+    // `duration`, which counts ring time too — roughly ten seconds of it —
+    // so a call that was 8s of ringing and 4s of talk displayed as a
+    // healthy 12s while the carrier counted it as short. Two thirds of
+    // answered calls were over the line and every dashboard looked fine.
+    let talkKnown = 0
+    let talkTotal = 0
+    let shortCalls = 0
+
     for (const c of weekRes.data || []) {
       const key = c.amd_result || 'none'
       amd.set(key, (amd.get(key) || 0) + 1)
@@ -124,7 +146,18 @@ export async function GET() {
         if (c.recording_id) answeredWithRecordingId++
         if (c.recording_id || c.recording_url) answeredWithAnyRecording++
       }
+
+      // Only answered calls have talk time at all. NULL is "unknown", never
+      // zero — a call that was never answered is not a zero-second call, and
+      // averaging it in as one would hide the very problem this measures.
+      if (c.talk_seconds != null) {
+        talkKnown++
+        talkTotal += c.talk_seconds
+        if (c.talk_seconds <= SHORT_CALL_SECONDS) shortCalls++
+      }
     }
+
+    const shortCallPct = talkKnown > 0 ? (shortCalls / talkKnown) * 100 : null
 
     // ── WHO IS ACTUALLY DIALING ──────────────────────────────────────────
     // One extra query rather than a join, because users is a separate table.
@@ -180,6 +213,16 @@ export async function GET() {
       amd: {
         distribution: amdDistribution,
         total: amdTotal,
+      },
+      shortCalls: {
+        // Sample size is stated so a scary-looking percentage on nine calls
+        // reads as what it is.
+        measured: talkKnown,
+        short: shortCalls,
+        pct: shortCallPct,
+        avgTalkSeconds: talkKnown > 0 ? talkTotal / talkKnown : null,
+        thresholdPct: SHORT_CALL_THRESHOLD_PCT,
+        overThreshold: shortCallPct !== null && shortCallPct > SHORT_CALL_THRESHOLD_PCT,
       },
       recordings: {
         answered,
