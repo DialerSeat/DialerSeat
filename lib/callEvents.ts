@@ -26,6 +26,8 @@ export type CallEventType =
   // was a console warning. As an event it becomes a rate you can query
   // instead of a symptom a user has to report.
   | 'hangup_failed'
+  // A voicemail drop was played into a lead's answering machine at the beep.
+  | 'voicemail_dropped'
   | 'recording_ready'
   // Agent used the mid-call recording toggle. Distinct from
   // 'recording_ready', which is Telnyx telling us a finished recording is

@@ -162,10 +162,9 @@ export async function POST(req: Request) {
       // amd_detector to 'premium' cannot silently stop AMD working — without
       // this the verdict would never reach handleAmdResult and every machine
       // would go straight through to an agent.
-      // greeting_end and detect_words also emit this once the greeting
-      // finishes. Nothing acts on it, but it is the signal a voicemail-drop
-      // feature would need, and logging it means the timing is on record when
-      // someone comes to build one.
+      // The greeting finished — the beep. This is the moment a voicemail drop
+      // has to start: earlier and the message records over the outgoing
+      // greeting or gets cut off entirely.
       case 'call.machine.greeting.ended':
       case 'call.machine.premium.greeting.ended':
         void logCallEvent({
@@ -174,6 +173,7 @@ export async function POST(req: Request) {
           status: payload.result ?? null,
           source: 'webhook',
         })
+        await handleGreetingEnded(callControlId)
         break
 
       case 'call.machine.premium.detection.ended':
@@ -384,6 +384,119 @@ async function handleInboundCallAnswered(callControlId: string): Promise<void> {
 // deliberately absent: those are all people.
 const ROBOT_RESULTS = new Set(['machine', 'fax_detected'])
 
+/**
+ * Resolve the voicemail message this call should drop, if any.
+ *
+ * Returns null when voicemail drop does not apply, which is the common case:
+ * the campaign has no message selected (the default — it is opt-in), the lead
+ * has already had one, or this is not a campaign call at all.
+ */
+async function resolveVoicemailDrop(callControlId: string): Promise<{
+  callId: string
+  leadId: string | null
+  audioUrl: string
+} | null> {
+  const { data: call } = await supabaseAdmin
+    .from('calls')
+    .select('id, campaign_id, lead_id, amd_result, voicemail_dropped')
+    .eq('call_control_id', callControlId)
+    .maybeSingle()
+
+  if (!call || !call.campaign_id) return null
+
+  // Only ever on a confirmed machine. A greeting-ended event on a human call
+  // would otherwise play a voicemail message at a live person.
+  if (!call.amd_result || !ROBOT_RESULTS.has(call.amd_result)) return null
+
+  // Already dropped on this call — a duplicate greeting event must not play
+  // the message twice.
+  if (call.voicemail_dropped) return null
+
+  const { data: campaign } = await supabaseAdmin
+    .from('campaigns')
+    .select('voicemail_message_id')
+    .eq('id', call.campaign_id)
+    .maybeSingle()
+
+  if (!campaign?.voicemail_message_id) return null
+
+  // ── ONCE PER LEAD ──────────────────────────────────────────────────────
+  // A lead dialed three times must not collect three identical voicemails.
+  // That is useless to them and is exactly the behaviour that gets a number
+  // reported, which would undo the reason this feature exists.
+  if (call.lead_id) {
+    const { data: lead } = await supabaseAdmin
+      .from('leads')
+      .select('voicemail_dropped_at')
+      .eq('id', call.lead_id)
+      .maybeSingle()
+    if (lead?.voicemail_dropped_at) return null
+  }
+
+  const { data: message } = await supabaseAdmin
+    .from('voicemail_messages')
+    .select('audio_url')
+    .eq('id', campaign.voicemail_message_id)
+    .maybeSingle()
+
+  if (!message?.audio_url) return null
+
+  return { callId: call.id, leadId: call.lead_id, audioUrl: message.audio_url }
+}
+
+/**
+ * The greeting finished — this is the beep, and the moment to leave a message.
+ *
+ * Nothing is waiting on this path: the agent was released back at the machine
+ * verdict and is already on their next lead. The lead's leg is alone on the
+ * line, so it can take as long as the message takes.
+ */
+async function handleGreetingEnded(callControlId: string): Promise<void> {
+  const drop = await resolveVoicemailDrop(callControlId)
+  if (!drop) return
+
+  // Marked BEFORE playing. Telnyx can deliver a duplicate greeting event, and
+  // two playback_start commands on one call would talk over themselves. Losing
+  // a drop to a failed playback is recoverable; playing two is not.
+  await supabaseAdmin
+    .from('calls')
+    .update({ voicemail_dropped: true })
+    .eq('id', drop.callId)
+
+  const started = await callControlAction(callControlId, 'playback_start', {
+    audio_url: drop.audioUrl,
+  })
+
+  if (!started) {
+    console.error(
+      `[calls/events] voicemail playback failed to start for ${callControlId} — hanging up rather ` +
+      `than leaving a silent line open on the lead's voicemail.`
+    )
+    await hangupCallControlId(callControlId)
+    return
+  }
+
+  // Queued behind the playback, exactly like the inbound speak-then-hangup
+  // path: Telnyx executes commands on a call in order, so this runs when the
+  // message finishes rather than cutting it off.
+  await callControlAction(callControlId, 'hangup')
+
+  // Stamped after a successful start so a lead whose drop never played stays
+  // eligible for one on a later attempt.
+  if (drop.leadId) {
+    await supabaseAdmin
+      .from('leads')
+      .update({ voicemail_dropped_at: new Date().toISOString() })
+      .eq('id', drop.leadId)
+  }
+
+  void logCallEvent({
+    event_type: 'voicemail_dropped',
+    call_control_id: callControlId,
+    source: 'webhook',
+  })
+}
+
 async function handleAmdResult(callControlId: string, result: string): Promise<void> {
   // ── EVERYTHING BEFORE THE HANGUP IS LATENCY THE LEAD HEARS ───────────────
   // Measured across 128 production machine detections: Telnyx took 3.31s to
@@ -534,6 +647,31 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
     // up ends the recording anyway, and handleRecordingSaved deletes it on the
     // same verdict, so the extra Telnyx round trip bought nothing and cost the
     // one thing this path cannot spare.
+
+    // ── THE AGENT COMES OFF FIRST, ALWAYS ─────────────────────────────────
+    // Releasing the agent is the only latency the agent can feel, and it is
+    // correct in both branches below — whether the lead's leg ends now or
+    // stays up to take a voicemail message, the agent is done with this call
+    // either way. Doing it first means the voicemail-drop lookup underneath
+    // costs them nothing.
+    if (agentAlreadyBridged && callRow?.agent_call_control_id) {
+      await hangupCallControlId(callRow.agent_call_control_id)
+    }
+
+    // ── VOICEMAIL DROP: LEAVE THE LEAD'S LEG UP ───────────────────────────
+    // When the campaign has a message selected and this lead has not had one,
+    // the lead's leg deliberately stays connected. handleGreetingEnded plays
+    // the message at the beep and hangs up afterwards.
+    //
+    // This is also what fixes the Telnyx short-duration ratio, and it does it
+    // honestly: the call is genuinely longer because something is genuinely
+    // being delivered, rather than padded to clear a threshold.
+    const pendingDrop = await resolveVoicemailDrop(callControlId)
+    if (pendingDrop) {
+      await autoAdvanceLeadNoDisposition(callControlId)
+      return
+    }
+
     const leadHungUp = await hangupCallControlId(callControlId)
 
     // ── WHEN THE HANGUP DOES NOT TAKE ─────────────────────────────────────
@@ -557,23 +695,11 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
       })
     }
 
-    // ── AND THE AGENT'S LEG ───────────────────────────────────────────────
-    // Hanging up the lead alone leaves the agent's SIP leg up with nothing on
-    // the other side: their softphone still shows a call in progress, they hear
-    // silence, and the dialer never advances — the exact opposite of a skip.
-    //
-    // Safe to end because the agent leg is per-dial, not per-session. Step 1 of
-    // placeOutboundCall dials the agent's SIP endpoint fresh for every
-    // user_dial, so ending this one costs nothing; the next dial places
-    // another. What it buys is a clean call-ended event in the browser, which
-    // is what actually moves the queue on.
-    //
-    // Not gated on whether Telnyx propagates hangup across a linked pair. If it
-    // already did, this is a no-op against a leg that is gone; if it did not,
-    // this is the difference between skipping and stalling.
-    if (agentAlreadyBridged && callRow?.agent_call_control_id) {
-      await hangupCallControlId(callRow.agent_call_control_id)
-    }
+    // The agent's leg was already released above, before the voicemail-drop
+    // decision — it is correct in both branches and is the only part of this
+    // the agent can feel. Hanging up the lead alone would leave their softphone
+    // showing a call in progress against silence, with the dialer never
+    // advancing: the exact opposite of a skip.
 
     await autoAdvanceLeadNoDisposition(callControlId)
     return

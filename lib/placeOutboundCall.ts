@@ -206,10 +206,11 @@ export async function placeOutboundCall(
   let amdEnabled = true
   let recordingEnabled = false
   let dialerMode = 'power'
+  let voicemailDropEnabled = false
   if (campaignId) {
     const { data: campaign } = await supabase
       .from('campaigns')
-      .select('dialer_mode, amd_enabled, recording_enabled')
+      .select('dialer_mode, amd_enabled, recording_enabled, voicemail_message_id')
       .eq('id', campaignId)
       .maybeSingle()
     if (campaign) {
@@ -217,6 +218,9 @@ export async function placeOutboundCall(
       amdEnabled = campaign.amd_enabled !== false
       // Strict equality: null/undefined means "not opted in", not "on".
       recordingEnabled = campaign.recording_enabled === true
+      // A selected message IS the toggle — there is no separate on/off flag to
+      // fall out of sync with it.
+      voicemailDropEnabled = !!campaign.voicemail_message_id
     }
   }
 
@@ -278,6 +282,7 @@ export async function placeOutboundCall(
     teamId: teamId || null,
     amdEnabled,
     recordingEnabled,
+    voicemailDropEnabled,
     dialerMode,
     source,
     agentSessionId: agentSessionId || null,
@@ -295,6 +300,7 @@ interface DoPlaceCallParams {
   teamId: string | null
   amdEnabled: boolean
   recordingEnabled: boolean
+  voicemailDropEnabled: boolean
   dialerMode: string
   source: 'user_dial' | 'controller_fanout'
   agentSessionId: string | null
@@ -557,7 +563,24 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
     // 30s by getPlatformConfig, so this is a memo read rather than a query on
     // the dial path.
     const amdCfg = await getPlatformConfig()
-    dialBody.answering_machine_detection = amdCfg.amd_detector || 'detect'
+
+    // ── THE DETECTOR HAS TO REPORT THE BEEP TO DROP A VOICEMAIL ───────────
+    // Plain 'detect' answers one question — human or machine — and stops. It
+    // never emits call.machine.greeting.ended, so there is no signal for WHEN
+    // the greeting finished, and a message played on the verdict would record
+    // over the outgoing greeting or be cut off by it.
+    //
+    // 'detect_beep' answers both: the same machine verdict at the same moment,
+    // plus a greeting-ended event at the beep. The machine verdict still fires
+    // first and still releases the agent at the same speed — the beep event
+    // arrives later on a leg nobody is waiting on.
+    //
+    // Only for campaigns that actually drop voicemail. Everyone else keeps the
+    // configured detector, so this cannot slow down or alter a campaign that
+    // never opted in.
+    dialBody.answering_machine_detection = p.voicemailDropEnabled
+      ? 'detect_beep'
+      : (amdCfg.amd_detector || 'detect')
 
     // Guarded by its own switch: an unrecognised parameter name makes Telnyx
     // reject the WHOLE dial request, failing every call rather than merely

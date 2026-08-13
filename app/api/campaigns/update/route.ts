@@ -15,6 +15,7 @@ const ALLOWED_FIELDS = [
   'predictive_lines_per_agent',
   'dial_repeat_count',
   'voicemail_drop_url',
+  'voicemail_message_id',
   'enable_appointments_sub',
   'enable_not_interested_sub',
 ] as const
@@ -101,6 +102,16 @@ export async function POST(req: Request) {
           updates.voicemail_drop_url = v || null
           break
         }
+        // Which saved voicemail message this campaign drops. null turns the
+        // feature off for the campaign, which is the default state.
+        //
+        // Ownership is enforced below rather than here: a user must not be
+        // able to point their campaign at someone else's recording.
+        case 'voicemail_message_id': {
+          if (v !== null && typeof v !== 'string') continue
+          updates.voicemail_message_id = v || null
+          break
+        }
         case 'enable_appointments_sub': {
           if (typeof v !== 'boolean') continue
           updates.enable_appointments_sub = v
@@ -116,6 +127,25 @@ export async function POST(req: Request) {
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ success: false, error: 'No valid fields to update' }, { status: 400 })
+    }
+
+    // ── A CAMPAIGN MAY ONLY DROP ITS OWNER'S OWN RECORDING ────────────────
+    // Without this an id from another account could be pasted in and that
+    // person's voice would be left on this account's leads. The id is opaque
+    // and comes from the client, so it has to be proved rather than trusted.
+    if (typeof updates.voicemail_message_id === 'string') {
+      const { data: owned } = await supabaseAdmin
+        .from('voicemail_messages')
+        .select('id')
+        .eq('id', updates.voicemail_message_id)
+        .eq('user_id', userId)
+        .maybeSingle()
+      if (!owned) {
+        return NextResponse.json(
+          { success: false, error: 'That voicemail message does not exist on your account.' },
+          { status: 403 }
+        )
+      }
     }
 
     let { data, error } = await supabaseAdmin
