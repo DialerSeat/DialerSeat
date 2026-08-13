@@ -2366,10 +2366,21 @@ function DialerPageInner() {
     // server the lead we had only just finished was still top of the list.
     const currentOrder = visibleQueuedLeadsRef.current
     const queueReadyForOrderedDial = !(queuedLeadsLoading && currentOrder.length === 0)
-    if (queueReadyForOrderedDial) {
-      params.append('lead_ids', currentOrder.map(l => l.id).join(','))
-    }
-    const res = await fetch(`/api/leads/next?${params}`)
+
+    // POSTed, not appended to the query string. The whole visible queue goes
+    // to the server — every lead, in the exact displayed order — and a few
+    // thousand UUIDs do not fit in a URL. The query-string version had to
+    // truncate to 200 ids, which silently stalled dialing whenever the top of
+    // a region-grouped list was outside its calling window: the server found
+    // nothing dialable in the 200 it could see and reported an empty queue
+    // while thousands of dialable leads sat below the cut.
+    const res = await fetch(`/api/leads/next?${params}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        lead_ids: queueReadyForOrderedDial ? currentOrder.map(l => l.id) : undefined,
+      }),
+    })
     const data = await res.json()
     if (data.success) {
       setNoLeads(false)

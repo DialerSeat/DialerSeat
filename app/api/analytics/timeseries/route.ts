@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 import { resolveAnalyticsScope } from '@/lib/analyticsScope'
+import { fetchAllRows } from '@/lib/fetchAllRows'
 
 const CONVERSION_DISPS = ['CLOSED', 'APPOINTMENT']
 
@@ -19,17 +20,29 @@ export async function GET(req: NextRequest) {
 
   const bucket = searchParams.get('bucket') || 'day'
 
-  let query = supabaseAdmin.from('calls').select('created_at, disposition, duration').eq('user_id', userId)
-  if (start) query = query.gte('created_at', start)
-  if (end) query = query.lte('created_at', end)
-  query = query.order('created_at', { ascending: true })
-
-  const { data, error } = await query
+  // Paged. A bare select is capped at 1000 rows by Supabase and returns 200 OK
+  // with no indication, which on a time series is especially misleading: the
+  // rows come back ordered by created_at, so the cap silently lopped off the
+  // most recent end of every chart once a user passed 1000 calls in range. The
+  // graph did not look broken — it looked like the user stopped dialing.
+  const { rows: calls, error, truncated } = await fetchAllRows<{
+    created_at: string
+    disposition: string
+    duration: number
+  }>((from, to) => {
+    let q = supabaseAdmin
+      .from('calls')
+      .select('created_at, disposition, duration')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true })
+      .range(from, to)
+    if (start) q = q.gte('created_at', start)
+    if (end) q = q.lte('created_at', end)
+    return q
+  })
   if (error) {
     return apiError(error, { route: 'analytics/timeseries' })
   }
-
-  const calls = data || []
   const buckets: Record<string, { total: number; converted: number; talkTime: number }> = {}
 
   for (const c of calls) {
@@ -56,5 +69,5 @@ export async function GET(req: NextRequest) {
       talkTime: t.talkTime,
     }))
 
-  return NextResponse.json({ success: true, series })
+  return NextResponse.json({ success: true, series, partial: truncated })
 }

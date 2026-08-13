@@ -105,7 +105,8 @@ async function resolveAgentSessionId(clerkId: string): Promise<string> {
   return crypto.randomUUID()
 }
 
-export async function GET(req: Request) {
+// Served over BOTH verbs — see the exports at the bottom of this file for why.
+async function handleNextLead(req: Request) {
   try {
     const gate = await requireUser()
     if (!gate.ok) return gate.response
@@ -117,17 +118,53 @@ export async function GET(req: Request) {
     const overrideWindow = await hasCallingWindowOverride(user_id)
 
     const { searchParams } = new URL(req.url)
-    const campaign_id = searchParams.get('campaign_id')
-    const team_id = searchParams.get('team_id')
-    // Optional allowlist of lead ids — set by the dialer's queue panel when
-    // the agent has an active FILTER (name/phone/state) applied. When
-    // present, dialing is restricted to exactly these leads, so what's
-    // actually dialed matches what the filtered queue is showing, not the
-    // full unfiltered pool. Comma-separated; capped so a pathological huge
-    // list can't blow up the query.
+    let campaign_id = searchParams.get('campaign_id')
+    let team_id = searchParams.get('team_id')
+
+    // ── THE ORDERED ALLOWLIST ────────────────────────────────────────────
+    // The dialer's queue panel sends its ENTIRE displayed order here, and the
+    // server dials the first entry in it that is actually dialable right now.
+    // That is what makes "what gets dialed" match "what is shown", including
+    // the panel's search, sort and rotation — none of which the server can
+    // reconstruct on its own.
+    //
+    // THIS USED TO BE TRUNCATED TO THE FIRST 200 IDS. That looked harmless,
+    // because dialing only ever wants the top of the list. It is not: if every
+    // one of the top 200 is outside its own calling window — which is normal
+    // for a list grouped by region early in the morning, and uploads are
+    // usually grouped by region — the server correctly finds nothing among the
+    // 200 it was given and reports "no leads", while thousands of dialable
+    // leads sit at position 201 and beyond. A silent stall that looks exactly
+    // like an empty queue.
+    //
+    // The truncation existed because the ids travelled in a query string and
+    // a few thousand UUIDs overflow it. So the list now comes in a POST body
+    // instead, and nothing is dropped.
+    let leadIdsRaw: string[] | null = null
     const leadIdsParam = searchParams.get('lead_ids')
-    const leadIdAllowlist = leadIdsParam !== null
-      ? leadIdsParam.split(',').map(s => s.trim()).filter(Boolean).slice(0, 200)
+    if (leadIdsParam !== null) leadIdsRaw = leadIdsParam.split(',')
+
+    if (req.method === 'POST') {
+      const body = await req.json().catch(() => null)
+      if (body && typeof body === 'object') {
+        if (typeof body.campaign_id === 'string') campaign_id = body.campaign_id
+        if (typeof body.team_id === 'string') team_id = body.team_id
+        // Accepts an array (what the dialer sends) or the same comma-joined
+        // string the query-string form used, so a caller can move to POST
+        // without also changing how it encodes the list.
+        if (Array.isArray(body.lead_ids)) leadIdsRaw = body.lead_ids.map(String)
+        else if (typeof body.lead_ids === 'string') leadIdsRaw = body.lead_ids.split(',')
+      }
+    }
+
+    // A circuit breaker, NOT a product limit. Nothing on this path should ever
+    // approach it — it exists so a malformed caller cannot hand Postgres an
+    // unbounded array to run array_position against, which is O(n) per row.
+    // If a real queue ever gets near this, the ordering strategy needs
+    // rethinking, not a bigger number.
+    const ALLOWLIST_CIRCUIT_BREAKER = 25_000
+    const leadIdAllowlist = leadIdsRaw !== null
+      ? leadIdsRaw.map(s => String(s).trim()).filter(Boolean).slice(0, ALLOWLIST_CIRCUIT_BREAKER)
       : null
 
     // ── TEAM SCOPE ──
@@ -400,4 +437,21 @@ export async function GET(req: Request) {
   } catch (error: any) {
     return apiError(error, { route: 'leads/next' })
   }
+}
+
+// ── BOTH VERBS, ONE HANDLER ─────────────────────────────────────────────────
+// POST is the one the dialer uses: the ordered allowlist is the agent's whole
+// visible queue, and a few thousand UUIDs do not fit in a URL. Sending them in
+// a body is what let the 200-id truncation go away.
+//
+// GET stays because it was the only form for the life of this route, it is
+// harmless, and a read with no body is a perfectly reasonable way to ask for
+// the next lead. Removing it would break any caller still using it for no
+// benefit — the handler is identical either way.
+export async function GET(req: Request) {
+  return handleNextLead(req)
+}
+
+export async function POST(req: Request) {
+  return handleNextLead(req)
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 import { resolveAnalyticsScope } from '@/lib/analyticsScope'
+import { fetchAllRows } from '@/lib/fetchAllRows'
 
 const supabase = getServiceClient('analytics/summary')
 
@@ -24,27 +25,47 @@ export async function GET(req: NextRequest) {
   const start = searchParams.get('start')
   const end = searchParams.get('end')
 
-  let callsQuery = supabase.from('calls').select('*').eq('user_id', userId)
-  if (start) callsQuery = callsQuery.gte('created_at', start)
-  if (end) callsQuery = callsQuery.lte('created_at', end)
-  const { data: callsData, error: callsErr } = await callsQuery
+  // Paged, not a bare select. Supabase caps an unbounded select at 1000 rows
+  // and returns 200 OK, so this used to compute every headline number on this
+  // page — total calls, talk time, conversion rate — from an arbitrary
+  // thousand-row slice of the user's history, with nothing indicating it. The
+  // "all time" range was the worst case: the more history a user had, the more
+  // wrong the totals became.
+  const { rows: calls, error: callsErr, truncated: callsTruncated } =
+    await fetchAllRows<any>((from, to) => {
+      let q = supabase
+        .from('calls')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: true })
+        .range(from, to)
+      if (start) q = q.gte('created_at', start)
+      if (end) q = q.lte('created_at', end)
+      return q
+    })
   if (callsErr) {
     return apiError(callsErr, { route: 'analytics/summary' })
   }
-  const calls = callsData || []
 
   const totalCalls = calls.length
   const totalDuration = calls.reduce((sum, c) => sum + (c.duration || 0), 0)
 
-  let leadsQuery = supabase
-    .from('leads')
-    .select('disposition, last_called_at')
-    .eq('user_id', userId)
-    .not('disposition', 'is', null)
-  if (start) leadsQuery = leadsQuery.gte('last_called_at', start)
-  if (end) leadsQuery = leadsQuery.lte('last_called_at', end)
-  const { data: leadsData } = await leadsQuery
-  const leads = leadsData || []
+  // Same cap, same consequence: every disposition count below (contacts,
+  // conversions, closed, appointments, DNC) is derived from this set, so a
+  // truncated read understates all of them at once.
+  const { rows: leads, truncated: leadsTruncated } =
+    await fetchAllRows<any>((from, to) => {
+      let q = supabase
+        .from('leads')
+        .select('disposition, last_called_at')
+        .eq('user_id', userId)
+        .not('disposition', 'is', null)
+        .order('last_called_at', { ascending: true })
+        .range(from, to)
+      if (start) q = q.gte('last_called_at', start)
+      if (end) q = q.lte('last_called_at', end)
+      return q
+    })
 
   const contactsReached = leads.filter(l => CONTACT_DISPS.includes(l.disposition)).length
   const conversions = leads.filter(l => CONVERSION_DISPS.includes(l.disposition)).length
@@ -104,5 +125,9 @@ export async function GET(req: NextRequest) {
       bestCampaign: bestCampaignName,
       bestCampaignRate: Number((bestRate * 100).toFixed(1)),
     },
+    // Only ever true if a user exceeds the runaway ceiling in lib/fetchAllRows.
+    // Surfaced rather than swallowed: the entire point of this change is that
+    // partial totals must never again be presented as complete ones.
+    partial: callsTruncated || leadsTruncated,
   })
 }
