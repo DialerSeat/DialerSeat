@@ -100,12 +100,11 @@ const AI_BOTS = [
   'WhatsApp',
   'TelegramBot',
   'Pinterestbot',
-  'Applebot-Extended',
-  'cohere-ai',
-  'Diffbot',
-  'YouBot',
-  'Amazonbot',
-  'MistralAI-User',
+  // Applebot-Extended, cohere-ai, Diffbot, YouBot, Amazonbot and
+  // MistralAI-User were repeated here, having already been listed above. Each
+  // duplicate emitted a second identical group for the same user-agent, which
+  // is harmless but makes the file look sloppy to anyone reading it — and a
+  // robots.txt is read by people deciding whether to trust a site.
 ]
 
 
@@ -169,13 +168,26 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
 
   return {
     rules: [
-      
-      ...SEARCH_BOTS.map((userAgent) => ({ userAgent, allow: '/' })),
-      ...AI_BOTS.map((userAgent) => ({ userAgent, allow: '/' })),
-      
-      
-      
-      
+      // ── EVERY NAMED GROUP CARRIES THE DISALLOW LIST ─────────────────────
+      // These used to be `allow: '/'` and nothing else, which quietly undid
+      // DISALLOW_PRIVATE for exactly the crawlers it mattered for.
+      //
+      // A robots.txt group is not additive. A bot that finds a group matching
+      // its own name obeys THAT GROUP ONLY and ignores the `*` group
+      // completely. So Googlebot, Bingbot, GPTBot, ClaudeBot and the rest were
+      // each reading a group that said "allow everything" with no exclusions,
+      // and the private list below was protecting only the anonymous crawlers
+      // nobody was worried about.
+      //
+      // The named groups exist to be explicit about who is welcome, not to
+      // hand them the dashboard, the API and the sign-in pages.
+      ...SEARCH_BOTS.map((userAgent) => ({
+        userAgent, allow: '/', disallow: DISALLOW_PRIVATE,
+      })),
+      ...AI_BOTS.map((userAgent) => ({
+        userAgent, allow: '/', disallow: DISALLOW_PRIVATE,
+      })),
+
       { userAgent: '*', allow: '/', disallow: DISALLOW_PRIVATE },
     ],
     sitemap,
