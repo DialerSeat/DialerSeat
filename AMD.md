@@ -112,7 +112,7 @@ anything else, and change ONE value at a time:
     amd_initial_silence_ms         2500
     amd_greeting_duration_ms       2200
     amd_after_greeting_silence_ms  800
-    amd_max_words                  8
+    amd_max_words                  5
     amd_max_seconds_after_answer   10
 
 Two separate attempts to speed this up broke it in one afternoon, both by
@@ -120,6 +120,22 @@ changing several values at once and reasoning about which mattered instead of
 measuring. Detection timing is recorded per call — `answered_at` to the
 `amd_result` event in `call_events` — so the honest way to tune is one
 variable, one batch of live calls, then read the numbers.
+
+Doing exactly that then worked: `max_words` 8 → 7 → 5, one step at a time,
+each confirmed on live calls. That is the whole tuning history worth copying —
+the two failures changed three values at once, the success changed one.
+
+**Where the risk now sits.** At 5, a machine is declared once six words are
+heard, which a voicemail greeting reaches almost immediately. Humans are
+mostly clear — "Hello?" and "Hello, this is Dave" are well under — but
+"Hello, thanks for calling, this is Dave" is seven and WILL be cut off. 5 is
+near the floor; 7 is the conservative setting to return to if real people
+start losing calls.
+
+That failure is invisible from a voicemail test. It shows up only as a
+prospect who answered and got hung up on, which reads as a call that vanished
+rather than a bug. The human/machine ratio is the alarm: if the machine share
+climbs while dial volume is flat, the detector is eating people.
 
 ---
 
