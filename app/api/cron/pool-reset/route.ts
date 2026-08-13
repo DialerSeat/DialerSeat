@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
+import { HEALTH_WINDOW_DAYS } from '@/lib/dialerConstants'
 
 // =============================================================================
 // POOL RESET — daily caller-ID counter reset
@@ -57,7 +58,21 @@ export async function GET(req: Request) {
     // revived to re-test them, because carrier labels do decay and a number
     // is an asset we already pay for. If it's still bad, number-health rests
     // it again the same day at no cost beyond one day of its capacity.
-    const healthRestDays = 7
+    // ── WHY THIS NUMBER IS NOT ARBITRARY ─────────────────────────────────
+    // It was 7 days, which was a guess on the cautious side. The floor is set
+    // by cron/number-health's rolling sample: it judges a number on
+    // WINDOW_DAYS of calls, and a resting number places none. So the bad
+    // sample only ages out once the rest has outlasted that window.
+    //
+    // Revive earlier and the old calls are still inside it, so the next health
+    // run re-rests the number immediately on the same evidence — the loop the
+    // comment above warns about, just on a slower clock. WINDOW_DAYS + 1 is
+    // the first day the number comes back with a genuinely empty sample and
+    // gets a real re-test.
+    //
+    // Derived rather than written down, so changing the health window cannot
+    // silently put the two back in contradiction.
+    const healthRestDays = HEALTH_WINDOW_DAYS + 1
     const retestCutoff = new Date(Date.now() - healthRestDays * 24 * 60 * 60_000).toISOString()
 
     const { data: capRevived, error: capErr } = await supabase

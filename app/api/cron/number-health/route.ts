@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 import { sendAdminPush } from '@/lib/pushNotify'
+import { HEALTH_WINDOW_DAYS } from '@/lib/dialerConstants'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -44,8 +45,14 @@ export const runtime = 'nodejs'
 
 const supabase = getServiceClient('cron/number-health')
 
-/** Rolling window for the answer-rate sample. */
-const WINDOW_DAYS = 3
+/**
+ * Rolling window for the answer-rate sample.
+ *
+ * Lives in dialerConstants because cron/pool-reset derives its cooling-off
+ * period from it — a resting number's bad sample only ages out once the rest
+ * outlasts this window.
+ */
+const WINDOW_DAYS = HEALTH_WINDOW_DAYS
 
 /** Below this many calls in the window, there isn't enough signal to judge. */
 const MIN_CALLS_FOR_JUDGEMENT = 40

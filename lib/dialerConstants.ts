@@ -87,6 +87,17 @@ export const STALE_HEARTBEAT_MS = 15_000
 export const STALE_HEARTBEAT_SECONDS = STALE_HEARTBEAT_MS / 1000
 
 
+/**
+ * Rolling window cron/number-health judges a number's answer rate over.
+ *
+ * Shared because cron/pool-reset derives its cooling-off period from it: a
+ * resting number places no calls, so its bad sample only ages out once the
+ * rest has outlasted this window. Reviving sooner re-rests the number on the
+ * same evidence. Two files holding this number separately is how they end up
+ * contradicting each other, which has already happened once in AMD.
+ */
+export const HEALTH_WINDOW_DAYS = 3
+
 export const ABANDON_WINDOW_DAYS = 30
 export const ABANDON_WINDOW_MS = ABANDON_WINDOW_DAYS * 24 * 60 * 60 * 1000
 
