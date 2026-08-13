@@ -5277,18 +5277,12 @@ function DialerPageInner() {
                 </div>
               )}
 
+              {/* CONTINUE is deliberately NOT in these live-call controls. It
+                  redials the current lead, which is meaningless while that call
+                  is still up — you are already talking to them. It belongs on
+                  the after-call controls, not the live ones. */}
               {status === 'connected' && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, flexShrink: 0 }}>
-                  {/* CONTINUE redials this lead in place; SKIP gives up on it
-                      and moves on. Two words for two opposite actions that used
-                      to share one button — see handleContinue. */}
-                  <button onClick={handleContinue} style={{
-                    padding: '14px', borderRadius: '4px',
-                    background: '#e8eef8', border: `1px solid ${terminalAccent}`,
-                    borderTop: `3px solid ${terminalAccent}`, color: terminalAccent,
-                    fontSize: '11px', fontWeight: 'bold', letterSpacing: '3px',
-                    cursor: 'pointer', fontFamily: FUTURA,
-                  }}>↻ CONTINUE</button>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, flexShrink: 0 }}>
                   <button onClick={handleSkip} style={{
                     padding: '14px', borderRadius: '4px',
                     background: '#f8f4e8', border: `1px solid #8a6a1a`,
@@ -5364,14 +5358,9 @@ function DialerPageInner() {
               )}
               {status === 'connected' && (
                 <>
-                  {/* Same pair as the grid layout above. See handleContinue. */}
-                  <button onClick={handleContinue} style={{
-                    padding: '14px', borderRadius: '4px',
-                    background: '#e8eef8', border: `1px solid ${terminalAccent}`,
-                    borderTop: `3px solid ${terminalAccent}`, color: terminalAccent,
-                    fontSize: '11px', fontWeight: 'bold', letterSpacing: '3px',
-                    cursor: 'pointer', fontFamily: FUTURA,
-                  }}>↻ CONTINUE</button>
+                  {/* CONTINUE removed here too — same reason as the grid
+                      layout above: redialing the lead you are currently
+                      speaking to is not an action anyone wants mid-call. */}
                   <button onClick={handleSkip} style={{
                     padding: '14px', borderRadius: '4px',
                     background: '#f8f4e8', border: `1px solid #8a6a1a`,

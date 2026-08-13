@@ -88,7 +88,10 @@ export default function Notifications() {
   const [items, setItems] = useState<Notification[]>([])
   const [unread, setUnread] = useState(0)
   const [error, setError] = useState<string | null>(null)
-  const [filter, setFilter] = useState<'all' | 'unread'>('all')
+  // Opens on UNREAD. Opening on "all" meant the thing you came to see was
+  // buried under everything you had already read — the app answered "what has
+  // ever happened" when the question is always "what have I not seen yet".
+  const [filter, setFilter] = useState<'all' | 'unread'>('unread')
   const [busy, setBusy] = useState(false)
 
   const load = useCallback(async (mode: 'all' | 'unread') => {
