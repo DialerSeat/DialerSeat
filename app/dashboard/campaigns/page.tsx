@@ -3482,6 +3482,14 @@ export default function CampaignsPage() {
                     A picker rather than a toggle plus a picker: the selected
                     message IS the on switch, so the two can never disagree
                     about whether the feature is on. */}
+                {/* Hidden outright when AMD is off or the mode is preview,
+                    rather than shown greyed out. A disabled control still
+                    advertises a feature and invites the question "why can't I
+                    use this" — and voicemail drop is triggered BY detection,
+                    so without detection there is genuinely nothing to offer.
+                    Turning AMD on makes it reappear. */}
+                {voicemailDropAvailable && (
+                <>
                 <div className="settings-row" style={{ alignItems: 'flex-start' }}>
                   <div className="settings-row-label">
                     VOICEMAIL DROP
@@ -3515,18 +3523,14 @@ export default function CampaignsPage() {
                     ))}
                   </select>
                 </div>
-                {!voicemailDropAvailable ? (
-                  <p className="cmp-helper" style={{ marginTop: -4 }}>
-                    {editDraft?.dialer_mode === 'preview'
-                      ? 'Preview mode doesn’t run answering-machine detection, so there’s nothing to trigger a voicemail. Switch to Power, Progressive or Predictive to use this.'
-                      : 'Voicemail drop runs off answering-machine detection. Turn AMD on above to use it.'}
-                  </p>
-                ) : voicemailMessages.length === 0 ? (
+                {voicemailMessages.length === 0 && (
                   <p className="cmp-helper" style={{ marginTop: -4 }}>
                     You haven&apos;t recorded a voicemail message yet — record one under
-                    Recordings → My Voicemail Messages, then pick it here.
+                    Recordings → Custom Voicemails, then pick it here.
                   </p>
-                ) : null}
+                )}
+                </>
+                )}
 
                 <p className="cmp-helper" style={{ marginTop: 10 }}>
                   Not sure on the mode? Start with POWER.{' '}

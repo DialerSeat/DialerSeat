@@ -152,6 +152,31 @@ export default function VoicemailMessages({ theme, onClose }: { theme: Theme; on
     await save(file, 0, file.name)
   }
 
+  const rename = async (id: string, next: string, previous: string) => {
+    const name = next.trim()
+    // Nothing to do, and an empty name would leave an unlabelled row in the
+    // campaign picker that nobody can identify.
+    if (!name || name === previous) return
+    // Optimistic: the input already shows the new text, so re-rendering it
+    // from state would only make it flicker.
+    setMessages(m => m.map(x => (x.id === id ? { ...x, name } : x)))
+    try {
+      const res = await fetch('/api/voicemail-messages', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, name }),
+      })
+      const data = await res.json()
+      if (!data.success) {
+        setMessages(m => m.map(x => (x.id === id ? { ...x, name: previous } : x)))
+        setError(data.error || 'Could not rename that message.')
+      }
+    } catch {
+      setMessages(m => m.map(x => (x.id === id ? { ...x, name: previous } : x)))
+      setError('Could not rename that message.')
+    }
+  }
+
   const remove = async (id: string) => {
     setBusy(true)
     try {
@@ -219,11 +244,16 @@ export default function VoicemailMessages({ theme, onClose }: { theme: Theme; on
             borderRadius: 10, padding: 14, marginBottom: 18, fontSize: 12,
             lineHeight: 1.7, color: T.text,
           }}>
-            <strong>Add one of these to a campaign and every lead who doesn&apos;t pick up
-            gets a voicemail from you.</strong> Your dialer moves straight to the next
-            lead — you never wait through it — while the message finishes on its own.
-            Leads then call you back on your own phone when they&apos;re free, which is
-            where a lot of conversions actually come from.
+            {/* Its own block, not a lead-in sentence. The claim and the
+                explanation are two different thoughts and ran together. */}
+            <div style={{ marginBottom: 8 }}>
+              <strong>Add one of these to a campaign and every lead who doesn&apos;t
+              pick up gets a voicemail from you.</strong>
+            </div>
+            Your dialer moves straight to the next lead — you never wait through it —
+            while the message finishes on its own. Leads then call you back on your own
+            phone when they&apos;re free, which is where a lot of conversions actually
+            come from.
             <div style={{ marginTop: 10, color: T.muted, fontStyle: 'italic' }}>
               Example: {EXAMPLE_SCRIPT}
             </div>
@@ -369,7 +399,29 @@ export default function VoicemailMessages({ theme, onClose }: { theme: Theme; on
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     gap: 10, marginBottom: 8,
                   }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: T.text }}>{m.name}</div>
+                    {/* Editable in place. A name chosen while recording is a
+                        guess at what the message will be for; being stuck with
+                        it forever means the campaign picker fills up with
+                        "Voicemail 3" and nobody can tell them apart. Saves on
+                        blur or Enter, reverts on Escape. */}
+                    <input
+                      defaultValue={m.name}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                        if (e.key === 'Escape') {
+                          ;(e.target as HTMLInputElement).value = m.name
+                          ;(e.target as HTMLInputElement).blur()
+                        }
+                      }}
+                      onBlur={e => rename(m.id, e.target.value, m.name)}
+                      style={{
+                        flex: 1, minWidth: 0, fontSize: 13, fontWeight: 600,
+                        color: T.text, background: 'transparent',
+                        border: '1px solid transparent', borderRadius: 3,
+                        padding: '3px 6px', fontFamily: 'inherit',
+                      }}
+                      onFocus={e => { e.target.style.borderColor = T.border }}
+                    />
                     <button
                       disabled={busy}
                       onClick={() => remove(m.id)}

@@ -190,6 +190,53 @@ export async function POST(req: Request) {
   }
 }
 
+/**
+ * Rename a saved message.
+ *
+ * The name chosen while recording is a guess at what the message will be used
+ * for. Without this the campaign picker fills with "Voicemail 3" and nobody
+ * can tell which is which — the only way to relabel would be to delete the
+ * audio and record it again.
+ */
+export async function PATCH(req: Request) {
+  try {
+    const gate = await requireUser()
+    if (!gate.ok) return gate.response
+
+    const body = await req.json().catch(() => ({}))
+    const id = typeof body?.id === 'string' ? body.id : null
+    const rawName = typeof body?.name === 'string' ? body.name.trim() : ''
+
+    if (!id) {
+      return NextResponse.json({ success: false, error: 'No id given' }, { status: 400 })
+    }
+    if (!rawName) {
+      return NextResponse.json(
+        { success: false, error: 'A voicemail needs a name so you can find it in the campaign picker.' },
+        { status: 400 }
+      )
+    }
+
+    // Scoped to the caller, so an id from another account cannot be renamed.
+    const { data, error } = await supabase
+      .from('voicemail_messages')
+      .update({ name: rawName.slice(0, 80), updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('user_id', gate.userId)
+      .select('id, name')
+      .maybeSingle()
+
+    if (error) throw error
+    if (!data) {
+      return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 })
+    }
+
+    return NextResponse.json({ success: true, message: data })
+  } catch (err) {
+    return apiError(err, { route: 'voicemail-messages:PATCH' })
+  }
+}
+
 export async function DELETE(req: Request) {
   try {
     const gate = await requireUser()

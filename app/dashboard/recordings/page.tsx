@@ -475,6 +475,8 @@ export default function RecordingsPage() {
           justify-content: space-between;
           gap: 16px;
           flex-wrap: wrap;
+          /* Anchor for .rec-vm-btn below. */
+          position: relative;
         }
         .rec-disclosure {
           background: #fff8e8;
@@ -782,6 +784,23 @@ export default function RecordingsPage() {
           .rec-list { padding: 8px 12px; }
           .rec-expand { grid-template-columns: 1fr; }
         }
+
+        /* TRUE centre on desktop. Auto margins only centre within whatever
+           space the siblings leave over, so with a wide title on the left and
+           SYNC on the right the button sat noticeably right of centre.
+           Absolute positioning centres it against the header itself,
+           independent of how wide its neighbours happen to be.
+           Mobile keeps it in normal flow, where the header wraps and an
+           absolutely positioned element would overlap the row above it. */
+        .rec-vm-btn { margin-left: auto; margin-right: auto; }
+        @media (min-width: 769px) {
+          .rec-vm-btn {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            margin: 0;
+          }
+        }
       `}</style>
 
       <div className="rec-header">
@@ -801,6 +820,7 @@ export default function RecordingsPage() {
             with auto margins so it reads as its own thing between the title
             and Sync. */}
         <button
+          className="rec-vm-btn"
           onClick={() => setVoicemailOpen(true)}
           style={{
             padding: '6px 14px',
@@ -812,8 +832,6 @@ export default function RecordingsPage() {
             letterSpacing: 2,
             fontWeight: 'bold',
             cursor: 'pointer',
-            marginLeft: 'auto',
-            marginRight: 'auto',
             fontFamily: 'Futura PT, Futura, sans-serif',
           }}
         >CUSTOM VOICEMAILS</button>
