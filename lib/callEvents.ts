@@ -20,6 +20,12 @@ export type CallEventType =
   | 'abandoned'
   | 'disposition_set'
   | 'hangup_requested'
+  // A hangup we issued did NOT take, after retries. Recorded because this
+  // failure was invisible for its whole existence: 18 of 128 machine
+  // detections kept running — 17.8s average, once 122s — and the only trace
+  // was a console warning. As an event it becomes a rate you can query
+  // instead of a symptom a user has to report.
+  | 'hangup_failed'
   | 'recording_ready'
   // Agent used the mid-call recording toggle. Distinct from
   // 'recording_ready', which is Telnyx telling us a finished recording is

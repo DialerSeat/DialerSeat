@@ -534,7 +534,28 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
     // up ends the recording anyway, and handleRecordingSaved deletes it on the
     // same verdict, so the extra Telnyx round trip bought nothing and cost the
     // one thing this path cannot spare.
-    await hangupCallControlId(callControlId)
+    const leadHungUp = await hangupCallControlId(callControlId)
+
+    // ── WHEN THE HANGUP DOES NOT TAKE ─────────────────────────────────────
+    // Recorded as an event, not just a console line, because this failure was
+    // invisible for its entire existence: 18 of 128 machine detections kept
+    // running — 17.8s average, once 122s — and the only trace was a warning in
+    // a runtime log. Writing it here makes the rate queryable alongside every
+    // other call event, so "AMD worked and then it didn't" becomes a number
+    // instead of a report.
+    if (!leadHungUp) {
+      console.error(
+        `[calls/events] AMD said '${result}' for ${callControlId} but the hangup FAILED ` +
+        `after retries. The lead leg is probably still up with a voicemail playing.`
+      )
+      void logCallEvent({
+        event_type: 'hangup_failed',
+        call_control_id: callControlId,
+        status: result,
+        source: 'webhook',
+        detail: { after: 'amd_machine_verdict' },
+      })
+    }
 
     // ── AND THE AGENT'S LEG ───────────────────────────────────────────────
     // Hanging up the lead alone leaves the agent's SIP leg up with nothing on

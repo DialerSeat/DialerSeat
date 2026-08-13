@@ -933,30 +933,72 @@ export async function listActiveCallControlIdsForUser(
   return ids
 }
 
+// ── HANGING UP IS NOT BEST-EFFORT ───────────────────────────────────────────
+// This used to return void and swallow every failure: one POST, and if it came
+// back 500 or the socket died, it logged a warning nobody reads and returned as
+// though the call had ended. The caller had no way to know.
+//
+// That is measurably expensive. Of 128 production machine detections, 18 kept
+// running after a correct and fast verdict (2.89s average) — averaging 17.8
+// seconds of voicemail and once reaching 122 seconds. Detection was never the
+// problem; the single unretried hangup was.
+//
+// So: retried, and the outcome is returned so callers can act on it.
 export async function hangupCallControlId(
   callControlId: string,
   apiKey?: string
-): Promise<void> {
+): Promise<boolean> {
   const key = apiKey || process.env.TELNYX_API_KEY
   if (!key) {
     console.error('[hangupCallControlId] missing TELNYX_API_KEY, cannot hang up')
-    return
+    return false
   }
-  const res = await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/hangup`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${key}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({}),
-  })
-  if (!res.ok) {
+
+  const ATTEMPTS = 3
+  for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
+    let res: Response
+    try {
+      res = await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/hangup`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${key}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({}),
+      })
+    } catch (err) {
+      // A thrown fetch is exactly the case the old single-shot version turned
+      // into a live call nobody was on. Retry it.
+      console.warn(
+        `[hangupCallControlId] attempt ${attempt}/${ATTEMPTS} for ${callControlId} threw:`,
+        err
+      )
+      if (attempt < ATTEMPTS) await new Promise(r => setTimeout(r, 250))
+      continue
+    }
+
+    if (res.ok) return true
+
+    // 404/422 mean the call is already gone — the callee hung up first, or a
+    // previous attempt landed. That IS the desired end state, so it counts as
+    // success and must NOT be retried; retrying would only produce more 404s.
+    if (res.status === 404 || res.status === 422) return true
+
     const text = await res.text()
-    // A 422/404 here often just means the call already ended on its own
-    // (callee hung up first) — log but don't throw, matching the
-    // idempotent-release pattern used elsewhere (e.g. releaseNumber).
-    console.warn(`[hangupCallControlId] hangup for ${callControlId} returned ${res.status}: ${text}`)
+    console.warn(
+      `[hangupCallControlId] attempt ${attempt}/${ATTEMPTS} for ${callControlId} ` +
+      `returned ${res.status}: ${text}`
+    )
+    if (attempt < ATTEMPTS) await new Promise(r => setTimeout(r, 250))
   }
+
+  // Loud, because the consequence is a live call with a voicemail playing and
+  // possibly an agent still attached to it, billed the whole way.
+  console.error(
+    `[hangupCallControlId] HANGUP FAILED for ${callControlId} after ${ATTEMPTS} attempts. ` +
+    `This call is probably still up.`
+  )
+  return false
 }
 
 /**
