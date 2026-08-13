@@ -385,7 +385,17 @@ async function handleInboundCallAnswered(callControlId: string): Promise<void> {
 const ROBOT_RESULTS = new Set(['machine', 'fax_detected'])
 
 async function handleAmdResult(callControlId: string, result: string): Promise<void> {
-  await recordAmdResult(callControlId, result)
+  // ── EVERYTHING BEFORE THE HANGUP IS LATENCY THE LEAD HEARS ───────────────
+  // Measured across 128 production machine detections: Telnyx took 3.31s to
+  // reach a verdict, and this handler then took a further 1.71s to hang up —
+  // a third of the total. That 1.71s was four serial round trips, none of
+  // which the hangup decision depends on being finished first.
+  //
+  // So the verdict write is STARTED here and awaited after the call is
+  // already ending. It must still be awaited — dropping it would lose the
+  // amd_result that the recording-discard path and every AMD metric read —
+  // but nothing needs it to complete before the line drops.
+  const amdWrite = recordAmdResult(callControlId, result)
   void logCallEvent({
     event_type: 'amd_result',
     call_control_id: callControlId,
@@ -414,11 +424,27 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
     // is now something we do TO a live call rather than instead of starting
     // one. Two guards below decide whether that is safe: how long the call has
     // been up, and the hangup_when_bridged setting.
-    const { data: callRow } = await supabaseAdmin
-      .from('calls')
-      .select('dial_source, agent_call_control_id, answered_at')
-      .eq('call_control_id', callControlId)
-      .maybeSingle()
+    //
+    // Fetched together, not one after the other. Both are required before the
+    // hangup decision and neither depends on the other, so running them in
+    // series simply added one round trip of voicemail to what the lead hears.
+    //
+    // amdWrite rides along as the third entry. It is not destructured because
+    // nothing here reads its value — it is in the list so it is GUARANTEED
+    // COMPLETE before any return below, at zero added latency since it runs
+    // concurrently with two reads we were waiting on anyway. Leaving it
+    // dangling would risk the serverless function being torn down at response
+    // time with amd_result never written, and the recording-discard path plus
+    // every AMD metric read that column.
+    const [{ data: callRow }, platformConfig] = await Promise.all([
+      supabaseAdmin
+        .from('calls')
+        .select('dial_source, agent_call_control_id, answered_at')
+        .eq('call_control_id', callControlId)
+        .maybeSingle(),
+      getPlatformConfig(),
+      amdWrite,
+    ])
 
     const agentAlreadyBridged =
       callRow?.dial_source === 'user_dial' && !!callRow?.agent_call_control_id
@@ -432,7 +458,7 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
       amd_hangup_when_bridged: hangupWhenBridged,
       amd_max_seconds_after_answer: configuredWindow,
       amd_total_analysis_ms: analysisMs,
-    } = await getPlatformConfig()
+    } = platformConfig
 
     // ── THE WINDOW CANNOT BE SHORTER THAN THE ANALYSIS IT JUDGES ──────────
     // Telnyx will happily use the full total_analysis_time_millis before
@@ -500,18 +526,14 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
     // is the intended behaviour, and it is the trade that buys instant audio on
     // every call that turns out to be a person.
     //
-    // ── STOP RECORDING FIRST ──────────────────────────────────────────────
-    // Recording is requested at dial time with record-from-answer, so it has
-    // been running since pickup — several seconds before this verdict existed.
-    // On a voicemail that means recording the outgoing greeting of a machine,
-    // which is worth nothing to anyone and costs per-minute recording charges
-    // plus storage on every one.
+    // NOTHING GOES ABOVE THIS LINE that the lead has to wait through. Every
+    // await before the hangup is another fraction of a voicemail greeting
+    // playing to an agent who has already been told to move on.
     //
-    // Stopping here is only half of it, because Telnyx still saves whatever it
-    // already captured. handleRecordingSaved discards it on the same verdict.
-    // Both together mean the recorder is released at once AND nothing is kept.
-    await callControlAction(callControlId, 'record_stop')
-
+    // An awaited record_stop used to sit right here. It was removed: hanging
+    // up ends the recording anyway, and handleRecordingSaved deletes it on the
+    // same verdict, so the extra Telnyx round trip bought nothing and cost the
+    // one thing this path cannot spare.
     await hangupCallControlId(callControlId)
 
     // ── AND THE AGENT'S LEG ───────────────────────────────────────────────
@@ -543,11 +565,18 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
   // which is a person who hasn't spoken, a slow handset, or a moment of dead
   // air — none of which are a robot. Ending the call on silence is the exact
   // complaint this change exists to fix.
-  const { data: callRow } = await supabaseAdmin
-    .from('calls')
-    .select('id, dial_group_id, campaign_id, team_id, user_id, agent_call_control_id, dial_source')
-    .eq('call_control_id', callControlId)
-    .maybeSingle()
+  // Same guarantee as the robot branch, same zero cost: the verdict write
+  // finishes alongside a read this path was already waiting on. Nothing here
+  // is latency-critical — a human verdict keeps the call up rather than ending
+  // it — but the write must not be left dangling into teardown.
+  const [{ data: callRow }] = await Promise.all([
+    supabaseAdmin
+      .from('calls')
+      .select('id, dial_group_id, campaign_id, team_id, user_id, agent_call_control_id, dial_source')
+      .eq('call_control_id', callControlId)
+      .maybeSingle(),
+    amdWrite,
+  ])
 
   if (!callRow) {
     console.warn(`[calls/events] no calls row for ${callControlId} on human AMD result`)
