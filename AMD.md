@@ -75,6 +75,20 @@ answered costs the deal.
 before and after.** The ratio of `human` to `machine` verdicts is the alarm.
 If `machine` climbs while dial volume is flat, the detector is eating people.
 
+**Rule: `total_analysis_time_millis` is a CEILING, not a target. Lowering it
+does not speed detection up — it truncates the analysis and produces NO
+verdict at all.**
+
+This was learned the expensive way on 2026-08-13. Chasing a 3.5s skip, it was
+cut 6000 → 4000 while `initial_silence` was 2000 and `greeting_duration` 1600.
+That is 3600ms of budget inside a 4000ms cap: almost no slack, and AMD simply
+stopped returning verdicts on a live test round. Working detection was traded
+for nothing.
+
+What actually controls speed is `greeting_duration_millis` — a machine is
+declared once its greeting runs past that. Lower THAT, and leave the ceiling
+with room to spare above the sum of the windows underneath it.
+
 ---
 
 ## The conflict nobody expects
