@@ -374,6 +374,16 @@ async function handleInboundCallAnswered(callControlId: string): Promise<void> {
   }
 }
 
+// ── WHAT COUNTS AS A ROBOT ─────────────────────────────────────────────────
+// Module scope on purpose. Two handlers need this answer — the one that ends
+// the call and the one that decides whether to keep its recording — and a
+// second copy of the list is exactly how they drift apart. Adding a verdict
+// here changes both at once.
+//
+// The premium vocabulary (human_residence / human_business / silence) is
+// deliberately absent: those are all people.
+const ROBOT_RESULTS = new Set(['machine', 'fax_detected'])
+
 async function handleAmdResult(callControlId: string, result: string): Promise<void> {
   await recordAmdResult(callControlId, result)
   void logCallEvent({
@@ -397,7 +407,6 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
   // The verdict no longer decides whether to CONNECT the call — it is already
   // connected, from the instant of pickup. It decides only whether to end one.
   // See the bridge comment in lib/placeOutboundCall.ts for why.
-  const ROBOT_RESULTS = new Set(['machine', 'fax_detected'])
 
   if (ROBOT_RESULTS.has(result)) {
     // EVERY agent-attended call is bridged at pickup, so 'the agent is already
@@ -490,6 +499,19 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
     // voicemail greeting, then the line drops and the next lead comes up. That
     // is the intended behaviour, and it is the trade that buys instant audio on
     // every call that turns out to be a person.
+    //
+    // ── STOP RECORDING FIRST ──────────────────────────────────────────────
+    // Recording is requested at dial time with record-from-answer, so it has
+    // been running since pickup — several seconds before this verdict existed.
+    // On a voicemail that means recording the outgoing greeting of a machine,
+    // which is worth nothing to anyone and costs per-minute recording charges
+    // plus storage on every one.
+    //
+    // Stopping here is only half of it, because Telnyx still saves whatever it
+    // already captured. handleRecordingSaved discards it on the same verdict.
+    // Both together mean the recorder is released at once AND nothing is kept.
+    await callControlAction(callControlId, 'record_stop')
+
     await hangupCallControlId(callControlId)
 
     // ── AND THE AGENT'S LEG ───────────────────────────────────────────────
@@ -805,7 +827,7 @@ async function handleRecordingSaved(
   // cannot stop the recording from being MADE — so say so loudly.
   const { data: ownerRow } = await supabaseAdmin
     .from('calls')
-    .select('id, campaign_id, recording_status')
+    .select('id, campaign_id, recording_status, amd_result')
     .eq('call_control_id', callControlId)
     .maybeSingle()
 
@@ -815,6 +837,29 @@ async function handleRecordingSaved(
   // delete the recording moments after the agent deliberately started it —
   // the toggle would appear to work and then quietly destroy its own output.
   const manuallyRequested = ownerRow?.recording_status === 'manual'
+
+  // ── NEVER KEEP A RECORDING OF A VOICEMAIL GREETING ───────────────────────
+  // Recording starts at answer; the machine verdict lands ~6s later. Those six
+  // seconds are an answering machine's outgoing message — no agent was ever on
+  // the call, nobody will play it back, and it is the single largest source of
+  // junk in the recordings list.
+  //
+  // Keeping them is not free. Telnyx bills recording per minute and charges
+  // storage, so every voicemail we hit was being paid for twice: once as a
+  // short call, once as a recording of nothing. On traffic that is 44% machine
+  // detections, that is most of what we were storing.
+  //
+  // The manual exception still wins — an agent who hit record deliberately
+  // asked for this audio, and a late AMD verdict must not delete what they
+  // explicitly started.
+  if (!manuallyRequested && ownerRow?.amd_result && ROBOT_RESULTS.has(ownerRow.amd_result)) {
+    console.log(
+      `[calls/events] discarding recording for ${callControlId} — AMD verdict ` +
+      `'${ownerRow.amd_result}'. This is an answering machine greeting, not a conversation.`
+    )
+    await deleteTelnyxRecordingForCall(callControlId)
+    return
+  }
 
   if (ownerRow?.campaign_id && !manuallyRequested) {
     const { data: campaign } = await supabaseAdmin
