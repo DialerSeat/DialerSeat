@@ -37,6 +37,8 @@ type NotifKey =
   | 'cancel'
   | 'sub_paused'
   | 'sub_resumed'
+  | 'payment_failed'
+  | 'agent_online'
   // Operational events — see NOTIF_ROWS below
   | 'agent_leg_refused'
   | 'pool_capacity'
@@ -59,6 +61,15 @@ const NOTIF_ROWS: NotifRow[] = [
   // haven't left yet and their data is intact.
   { key: 'sub_paused', label: 'Subscriptions Paused', description: 'A customer pauses billing instead of cancelling — reach out before they decide' },
   { key: 'sub_resumed', label: 'Subscriptions Resumed', description: 'A paused customer starts paying again' },
+  // The only revenue event you can still fix on the day it happens. This was
+  // silent: a card declined, the subscription sat past due while the customer
+  // kept dialing, and the first anyone knew was a cancellation weeks later or
+  // an email asking why they had been cut off.
+  { key: 'payment_failed', label: 'Payment Failed', description: 'A card was declined — the subscription is past due and still recoverable' },
+  // Not an alert. With few enough customers to care about each one, knowing
+  // somebody is actually dialing right now is the most useful thing you can
+  // be told.
+  { key: 'agent_online', label: 'Agent Started Dialing', description: 'Someone came online and started a dialing session' },
 
   // ── OPERATIONAL ALERTS ────────────────────────────────────────────────
   // Everything above is revenue. These are "the product is broken", and each
@@ -79,6 +90,8 @@ interface PrefsResponse {
   cancel: boolean
   sub_paused: boolean
   sub_resumed: boolean
+  payment_failed: boolean
+  agent_online: boolean
   agent_leg_refused: boolean
   pool_capacity: boolean
   webhook_silence: boolean
@@ -94,6 +107,8 @@ const DEFAULT_PREFS: PrefsResponse = {
   cancel: true,
   sub_paused: true,
   sub_resumed: true,
+  payment_failed: true,
+  agent_online: true,
   agent_leg_refused: true,
   pool_capacity: true,
   webhook_silence: true,
@@ -1629,6 +1644,8 @@ export default function SettingsApp() {
     resub: prefs.resub,
     renewal: prefs.renewal,
     cancel: prefs.cancel,
+    payment_failed: prefs.payment_failed,
+    agent_online: prefs.agent_online,
     sub_paused: prefs.sub_paused,
     sub_resumed: prefs.sub_resumed,
     agent_leg_refused: prefs.agent_leg_refused,

@@ -14,6 +14,8 @@ interface Prefs {
   cancel: boolean
   sub_paused: boolean
   sub_resumed: boolean
+  payment_failed: boolean
+  agent_online: boolean
   agent_leg_refused: boolean
   pool_capacity: boolean
   webhook_silence: boolean
@@ -29,6 +31,8 @@ const DEFAULT_PREFS: Prefs = {
   cancel: true,
   sub_paused: true,
   sub_resumed: true,
+  payment_failed: true,
+  agent_online: true,
   agent_leg_refused: true,
   pool_capacity: true,
   webhook_silence: true,
@@ -43,7 +47,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('admin_notification_prefs')
-    .select('master_enabled, signup, account_deleted, new_sub, resub, renewal, cancel, sub_paused, sub_resumed, agent_leg_refused, pool_capacity, webhook_silence')
+    .select('master_enabled, signup, account_deleted, new_sub, resub, renewal, cancel, sub_paused, sub_resumed, payment_failed, agent_online, agent_leg_refused, pool_capacity, webhook_silence')
     .eq('id', 1)
     .maybeSingle()
 
@@ -74,7 +78,7 @@ export async function POST(req: NextRequest) {
   const patch: Partial<Prefs> = {}
   // Operational alert keys are included here or the new Notifications
   // switches would render, appear to toggle, and silently fail to persist.
-  const boolKeys: (keyof Prefs)[] = ['master_enabled', 'signup', 'account_deleted', 'new_sub', 'resub', 'renewal', 'cancel', 'sub_paused', 'sub_resumed', 'agent_leg_refused', 'pool_capacity', 'webhook_silence']
+  const boolKeys: (keyof Prefs)[] = ['master_enabled', 'signup', 'account_deleted', 'new_sub', 'resub', 'renewal', 'cancel', 'sub_paused', 'sub_resumed', 'payment_failed', 'agent_online', 'agent_leg_refused', 'pool_capacity', 'webhook_silence']
   for (const key of boolKeys) {
     if (typeof body[key] === 'boolean') patch[key] = body[key]
   }
@@ -95,7 +99,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase
     .from('admin_notification_prefs')
     .upsert({ id: 1, ...patch, updated_at: new Date().toISOString() }, { onConflict: 'id' })
-    .select('master_enabled, signup, account_deleted, new_sub, resub, renewal, cancel, sub_paused, sub_resumed, agent_leg_refused, pool_capacity, webhook_silence')
+    .select('master_enabled, signup, account_deleted, new_sub, resub, renewal, cancel, sub_paused, sub_resumed, payment_failed, agent_online, agent_leg_refused, pool_capacity, webhook_silence')
     .maybeSingle()
 
   if (error) {

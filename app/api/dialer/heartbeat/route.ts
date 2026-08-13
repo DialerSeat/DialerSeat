@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server'
 import { getServiceClient } from '@/lib/supabase'
 import { runPredictiveController } from '@/lib/predictiveController'
 import { STALE_HEARTBEAT_SECONDS, ABANDON_YIELD_PCT } from '@/lib/dialerConstants'
+import { sendAdminPush } from '@/lib/pushNotify'
 
 const supabase = getServiceClient('dialer/heartbeat')
 
@@ -59,6 +60,12 @@ const CONTROLLER_TRIGGER_STATES = new Set(['ready', 'on_call', 'wrapping', 'dial
 // per-warm-instance memory (serverless), which is exactly where the repeated
 // beats land.
 const RESOLVE_TTL_MS = 5 * 60 * 1000 // 5 minutes
+
+// How long a gap in heartbeats counts as the agent having gone away, so that
+// coming back is worth announcing again. Beats are 5s apart, so this is 60
+// missed beats — long enough that a redeploy, a tab reload or a phone locking
+// briefly does not read as a new arrival and re-notify.
+const AGENT_ONLINE_GAP_MS = 5 * 60 * 1000
 type ResolvedIdentity = { userId: string; teamId: string | null }
 const identityCache = new Map<string, { value: ResolvedIdentity; expires: number }>()
 
@@ -203,6 +210,50 @@ export async function POST(req: NextRequest) {
     // Uses (user_id) as conflict target so each user has exactly one session
     // row. Updates state/campaign/mode/heartbeat on every tick.
     const now = new Date().toISOString()
+
+    // ── "SOMEONE IS DIALING" ───────────────────────────────────────────────
+    // A heartbeat every 5 seconds has no edge to notify on — every beat looks
+    // exactly like the last one. This creates the edge, and claims it
+    // atomically: the UPDATE only matches when the agent has never been
+    // notified, or when their previous heartbeat is old enough that they had
+    // clearly gone away and come back. Whichever concurrent request matches
+    // first takes the row, so N serverless instances still send exactly one
+    // notification.
+    //
+    // Deliberately BEFORE the upsert, because the upsert overwrites
+    // last_heartbeat — after it, every agent looks like they just arrived.
+    //
+    // A brand-new session row does not match here (no row exists yet); it is
+    // inserted with online_notified_at NULL and picked up by the null branch
+    // on the next beat five seconds later, which is soon enough.
+    const onlineGapCutoff = new Date(Date.now() - AGENT_ONLINE_GAP_MS).toISOString()
+    const { data: cameOnline } = await supabase
+      .from('agent_sessions')
+      .update({ online_notified_at: now })
+      .eq('user_id', userInternalId)
+      .or(`online_notified_at.is.null,last_heartbeat.lt.${onlineGapCutoff}`)
+      .select('id')
+
+    if (cameOnline && cameOnline.length > 0) {
+      // Name resolved only on the rare beat that actually notifies, never on
+      // the steady-state ones. "e060ea9f-433a-4d83…" on a lock screen tells
+      // you nothing about who started dialing.
+      void (async () => {
+        try {
+          const { data: u } = await supabase
+            .from('users')
+            .select('first_name, last_name, email, username')
+            .eq('id', userInternalId)
+            .maybeSingle()
+          const label =
+            [u?.first_name, u?.last_name].filter(Boolean).join(' ').trim() ||
+            u?.username || u?.email || 'An agent'
+          await sendAdminPush('agent_online', `${label} is online and dialing.`)
+        } catch (e) {
+          console.error('[heartbeat] agent-online notification failed', e)
+        }
+      })()
+    }
 
     const { data: upserted, error: upsertErr } = await supabase
       .from('agent_sessions')

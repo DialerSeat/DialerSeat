@@ -43,6 +43,8 @@ export type NotifEventType =
   | 'cancel'
   | 'sub_paused'
   | 'sub_resumed'
+  | 'agent_online'
+  | 'payment_failed'
   | 'agent_leg_refused'
   | 'pool_capacity'
   | 'webhook_silence'
@@ -78,6 +80,15 @@ const EVENT_COPY: Record<NotifEventType, { title: string; tag: string }> = {
   // collapse into one another in the notification tray.
   sub_paused:      { title: 'Subscription Paused', tag: 'ds-sub-paused' },
   sub_resumed:     { title: 'Subscription Resumed', tag: 'ds-sub-resumed' },
+  // Someone started dialing. Not an alert — it is the one event that says the
+  // product is being used right now, which is what you actually want to know
+  // while there are few enough customers to care about each one individually.
+  agent_online:    { title: 'Agent Online',       tag: 'ds-agent-online' },
+  // A declined card was completely silent until now. The subscription goes
+  // past_due, the customer keeps using the product, and the first anyone knew
+  // was a cancellation weeks later — or an email from a customer who thought
+  // they had been cut off. This is the one revenue event you can still act on.
+  payment_failed:  { title: 'Payment Failed',     tag: 'ds-payment-failed' },
   // Operational alerts get a marker in the title so they are distinguishable
   // from revenue notifications at a glance on a lock screen — these mean
   // "go look now", not "nice, money".
@@ -96,6 +107,8 @@ interface AdminNotificationPrefs {
   cancel: boolean
   sub_paused: boolean
   sub_resumed: boolean
+  agent_online: boolean
+  payment_failed: boolean
   agent_leg_refused: boolean
   pool_capacity: boolean
   webhook_silence: boolean
@@ -105,7 +118,7 @@ async function getPrefs(): Promise<AdminNotificationPrefs> {
   const supabase = getServiceClient('pushNotify:getPrefs')
   const { data, error } = await supabase
     .from('admin_notification_prefs')
-    .select('master_enabled, signup, account_deleted, new_sub, resub, renewal, cancel, sub_paused, sub_resumed, agent_leg_refused, pool_capacity, webhook_silence')
+    .select('master_enabled, signup, account_deleted, new_sub, resub, renewal, cancel, sub_paused, sub_resumed, agent_online, payment_failed, agent_leg_refused, pool_capacity, webhook_silence')
     .eq('id', 1)
     .maybeSingle()
   if (error) {
@@ -113,7 +126,7 @@ async function getPrefs(): Promise<AdminNotificationPrefs> {
     // A genuine query error (bad connection, RLS issue, etc.) — don't
     // guess, just don't send. Distinct from the "no row" case below,
     // which is a setup gap, not a real signal to suppress everything.
-    return { master_enabled: false, signup: false, account_deleted: false, new_sub: false, resub: false, renewal: false, cancel: false, sub_paused: false, sub_resumed: false, agent_leg_refused: false, pool_capacity: false, webhook_silence: false }
+    return { master_enabled: false, signup: false, account_deleted: false, new_sub: false, resub: false, renewal: false, cancel: false, sub_paused: false, sub_resumed: false, agent_online: false, payment_failed: false, agent_leg_refused: false, pool_capacity: false, webhook_silence: false }
   }
   if (!data) {
     // The seed row (migrations/PUSH_NOTIFICATIONS_2026-07-17.sql) never
@@ -126,7 +139,7 @@ async function getPrefs(): Promise<AdminNotificationPrefs> {
     // (see the CREATE TABLE — every boolean defaults to true), and let
     // the admin explicitly turn things off if they actually want that.
     console.warn('[pushNotify] admin_notification_prefs has no row with id=1 — defaulting to all notifications ON.')
-    return { master_enabled: true, signup: true, account_deleted: true, new_sub: true, resub: true, renewal: true, cancel: true, sub_paused: true, sub_resumed: true, agent_leg_refused: true, pool_capacity: true, webhook_silence: true }
+    return { master_enabled: true, signup: true, account_deleted: true, new_sub: true, resub: true, renewal: true, cancel: true, sub_paused: true, sub_resumed: true, agent_online: true, payment_failed: true, agent_leg_refused: true, pool_capacity: true, webhook_silence: true }
   }
   return data as AdminNotificationPrefs
 }

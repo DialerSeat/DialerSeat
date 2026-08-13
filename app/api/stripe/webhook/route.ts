@@ -109,6 +109,38 @@ export async function POST(req: Request) {
         if (subscriptionId) {
           const subscription = await stripe.subscriptions.retrieve(subscriptionId)
           await routeSubscription(subscription, event.type, invoice.billing_reason ?? undefined, event.created)
+
+          // ── A DECLINED CARD USED TO BE COMPLETELY SILENT ─────────────────
+          // routeSubscription records the failure (chargeStatus 'failed' for
+          // past_due) but nothing told anyone. The subscription would sit
+          // past_due while the customer kept dialing, and the first signal was
+          // a cancellation weeks later — or the customer emailing to ask why
+          // they had been cut off. By then the relationship is the problem,
+          // not the payment.
+          //
+          // This is the last revenue event that is still recoverable: a card
+          // that declined today can be fixed today with one message.
+          if (event.type === 'invoice.payment_failed') {
+            try {
+              const { data: subRow } = await supabase
+                .from('subscriptions')
+                .select('user_id')
+                .eq('stripe_subscription_id', subscriptionId)
+                .maybeSingle()
+              if (subRow?.user_id) {
+                const { name } = await lookupNameAndEmail(subRow.user_id)
+                const amount = ((invoice.amount_due ?? 0) / 100).toFixed(2)
+                await sendAdminPush(
+                  'payment_failed',
+                  `${name}'s payment of $${amount} failed. Subscription is past due — recoverable if you reach them.`
+                )
+              }
+            } catch (e) {
+              // Never let a notification failure fail the webhook: Stripe would
+              // retry the whole event and re-run everything above it.
+              console.error('[stripe/webhook] payment_failed notification failed', e)
+            }
+          }
         }
         break
       }
