@@ -85,9 +85,41 @@ That is 3600ms of budget inside a 4000ms cap: almost no slack, and AMD simply
 stopped returning verdicts on a live test round. Working detection was traded
 for nothing.
 
-What actually controls speed is `greeting_duration_millis` — a machine is
-declared once its greeting runs past that. Lower THAT, and leave the ceiling
-with room to spare above the sum of the windows underneath it.
+**Rule: `max_words` is the trigger that actually catches machines. Raising it
+breaks detection.**
+
+Learned the same day, immediately after the above. `max_words` went 8 → 10 as
+a supposed safety margin for talkative humans, alongside a `greeting_duration`
+cut. Machine detection stopped working. Pickups were unaffected.
+
+That asymmetry is the whole answer. A voicemail greeting crosses eight words
+almost at once — "Hi, you've reached John, please leave a message after the
+tone" is twelve — while a human "Hello?" never approaches it. So the word
+count was doing the detecting, and the duration window was rarely the binding
+condition at all. Raising the word limit removed the working trigger; humans
+never noticed because it never applied to them.
+
+The implication is the opposite of the instinct: to detect FASTER, lower
+`max_words`, not `greeting_duration`.
+
+## KNOWN-GOOD CONFIG
+
+Verified working in production 2026-08-13. Return here before debugging
+anything else, and change ONE value at a time:
+
+    amd_detector                   detect
+    amd_total_analysis_ms          6000
+    amd_initial_silence_ms         2500
+    amd_greeting_duration_ms       2200
+    amd_after_greeting_silence_ms  800
+    amd_max_words                  8
+    amd_max_seconds_after_answer   10
+
+Two separate attempts to speed this up broke it in one afternoon, both by
+changing several values at once and reasoning about which mattered instead of
+measuring. Detection timing is recorded per call — `answered_at` to the
+`amd_result` event in `call_events` — so the honest way to tune is one
+variable, one batch of live calls, then read the numbers.
 
 ---
 
