@@ -911,9 +911,17 @@ export default function RecordingsPage() {
             {recordings.length > 0 && timeFilter !== 'all' ? (
               <>NO RECORDINGS IN THIS TIME RANGE</>
             ) : (
+              /* Recording is opt-in per campaign and defaults to OFF, so the
+                 overwhelmingly likely reason this page is empty is not a sync
+                 problem — it is that no campaign has the toggle on. Saying
+                 "make a call then hit sync" first sends people to re-dial and
+                 re-sync for something that was never going to appear. Name
+                 the setting, and where it lives, before the sync advice. */
               <>NO RECORDINGS YET<br />
-              <span style={{ fontSize: 10, marginTop: 8, display: 'inline-block' }}>
-                MAKE A CALL — THEN HIT SYNC IF IT DOESN'T APPEAR.
+              <span style={{ fontSize: 10, marginTop: 8, display: 'inline-block', lineHeight: 1.7 }}>
+                RECORDING IS OFF BY DEFAULT ON EVERY CAMPAIGN.<br />
+                TURN IT ON IN CAMPAIGNS → SETTINGS → CALL RECORDING,<br />
+                THEN MAKE A CALL. HIT SYNC IF IT STILL DOESN&apos;T APPEAR.
               </span></>
             )}
           </div>

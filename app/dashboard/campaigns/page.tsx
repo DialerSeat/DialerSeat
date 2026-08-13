@@ -605,7 +605,15 @@ export default function CampaignsPage() {
     // against as new campaigns get created during Telnyx validation).
     setCreateMode('progressive')
     setCreateAmd(AMD_DEFAULT_BY_MODE.progressive)
-    setCreateRecording(true)
+    // FALSE, matching the useState default and the reasoning above it.
+    // This said true, so the form opened clean on a first campaign and
+    // pre-ticked recording on every campaign created after one in the same
+    // session — the exact "I made a campaign and recording was already on"
+    // report. A reset must return the form to its initial state, not to a
+    // different one; recording is opt-in because two-party-consent states
+    // make it a legal question, and nobody should discover they have been
+    // capturing audio because a checkbox re-ticked itself.
+    setCreateRecording(false)
     setCreateApptSub(false)
     setCreateNotIntSub(false)
     setCreateFirstScriptName('')
@@ -1448,11 +1456,14 @@ export default function CampaignsPage() {
       status: campaign.status || 'active',
       dialer_mode: (campaign.dialer_mode || 'power') as DialerMode,
       amd_enabled: !!campaign.amd_enabled,
-      // Defaults to true (not !!campaign.recording_enabled, which would
-      // coerce an unset/pre-migration value to false) — recording was
-      // always-on before this toggle existed, so an absent value should
-      // still read as "on", matching the column's own DEFAULT true.
-      recording_enabled: campaign.recording_enabled !== false,
+      // The comment that used to sit here justified defaulting this to TRUE
+      // "matching the column's own DEFAULT true". The column's default is
+      // false and has been since recording became opt-in, so that reasoning
+      // was stale and inverted: any campaign whose recording_enabled failed
+      // to come back in the payload would open the settings panel showing
+      // recording ON, and saving the panel would then make it true for real.
+      // The column is NOT NULL, so a plain boolean coercion is correct.
+      recording_enabled: !!campaign.recording_enabled,
       enable_appointments_sub: !!campaign.enable_appointments_sub,
       enable_not_interested_sub: !!campaign.enable_not_interested_sub,
       enabledScriptIds: new Set<string>(),
