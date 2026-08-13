@@ -67,21 +67,19 @@ export default function Taskbar({
       aria-label="Taskbar"
       style={{
         position: 'fixed',
-        // Sits ON the bottom edge. This was bottom:-100 with height:148 — a
-        // 100px overhang meant to be off-screen, which on an installed PWA
-        // lands squarely in the iOS safe area instead and paints it near-black
-        // under the taskbar. The result was a thick dark band between the
-        // taskbar and the home indicator.
+        // The shell is the strip and nothing else. It used to be 148px tall
+        // anchored at bottom:-100 — a 100px overhang painted #0a1020, which is
+        // what the dark band under the taskbar on an installed PWA actually
+        // was. Not the safe area, not the manifest background: the taskbar's
+        // own shell colour, hanging below its own visible strip.
         //
-        // The safe area still has to be filled — leaving it unpainted shows
-        // through to whatever is behind — so it is filled with padding in the
-        // taskbar's own colour rather than with a fixed overhang that has no
-        // relationship to the device's actual inset.
+        // Filling that band with taskbar colour instead just turns a black bar
+        // into a blue one. The band should not exist, so the overhang is gone
+        // and the strip sits on the bottom edge.
         bottom: 0,
         left: 0,
         right: 0,
-        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-        background: '#1a2540',
+        background: 'transparent',
         boxShadow: '0 -1px 0 rgba(255,255,255,0.08) inset, 0 -8px 24px rgba(0,0,0,0.3)',
         zIndex: 10000,
         display: 'flex',
