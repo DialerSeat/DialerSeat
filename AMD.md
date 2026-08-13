@@ -91,15 +91,37 @@ So the two goals pull opposite ways:
 - **A sharp product** wants the agent off a voicemail as fast as possible.
 - **The carrier** wants calls that are not trivially short.
 
-**Voicemail drop is the only thing that satisfies both.** Detect fast, release
-the *agent* immediately, and let the *lead leg* stay up delivering a recorded
-message. The agent is already dialing the next lead while the call that
-generated the short-duration risk is now a 25-second message delivery.
+Voicemail drop would satisfy both — detect fast, release the agent, and let
+the lead leg stay up delivering a message, so the call that created the
+short-duration risk becomes a 25-second delivery instead.
 
-Note that voicemail drop carries TCPA exposure — a prerecorded message to a
-mobile number for telemarketing requires prior express written consent, and
-the FCC treats ringless voicemail as a call. If built: per campaign, off by
-default, user supplies the message, consent requirement stated in the UI.
+**DECIDED 2026-08-13: NO. DialerSeat does not leave recorded messages.**
+
+This is settled product direction, not an open question. A prerecorded message
+left on a mobile for telemarketing requires prior express written consent
+under the TCPA and the FCC treats ringless voicemail as a call; the product
+does not go there. Do not propose it again.
+
+The consequence is accepted deliberately: **there is no path under Telnyx's
+15% short-duration threshold.** Even eliminating the machine bucket entirely
+only reaches ~53%, and the machine bucket cannot be eliminated — voicemail is
+most of what cold outbound reaches.
+
+So the short-call surcharge is treated as a cost of doing business rather than
+a defect to engineer around. At $0.01 per short call it is roughly $7/month at
+current volume and ~$170/month at 200,000 dials — small enough that gaming the
+metric would cost more in carrier trust than the surcharge costs in cash.
+
+What is still worth doing, and is not about the ratio:
+
+- **Do not redial numbers that always reach voicemail.** Fewer wasted dials,
+  better answer rate, less spam signal. Real value regardless of the
+  threshold.
+- **Answer rate** is what Telnyx actually asked for, and it is a list-quality
+  and caller-ID-health problem, not an AMD one.
+- **Never pad call duration to clear the threshold.** A duration histogram
+  that cliffs just past 6 seconds is the most visible thing there is to a
+  carrier analytics team, and it reads as deliberate evasion.
 
 ---
 
