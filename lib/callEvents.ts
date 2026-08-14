@@ -28,6 +28,11 @@ export type CallEventType =
   | 'hangup_failed'
   // A voicemail drop was played into a lead's answering machine at the beep.
   | 'voicemail_dropped'
+  // Any Telnyx event the dispatcher has no case for. The raw event type goes
+  // in `status`. Recorded rather than discarded because silently dropping
+  // these is what made detect_beep impossible to diagnose — the events that
+  // would have explained the failure were the ones being thrown away.
+  | 'unhandled'
   | 'recording_ready'
   // Agent used the mid-call recording toggle. Distinct from
   // 'recording_ready', which is Telnyx telling us a finished recording is

@@ -596,7 +596,21 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
     // machine verdict at all until after the greeting, which is far too late
     // for the skip. Either way it is not a configuration problem and cannot be
     // fixed by guessing at parameters.
-    dialBody.answering_machine_detection = amdCfg.amd_detector || 'detect'
+    //
+    // ── DIAGNOSTIC ROUND, NOT A THIRD ATTEMPT ─────────────────────────────
+    // detect_beep is back on for voicemail-drop campaigns ONLY — not to make
+    // the feature work, but to capture what it emits. The dispatcher now
+    // records every unhandled Telnyx event type, so ONE test call to a
+    // voicemail answers what two rounds of guessing could not: which events
+    // detect_beep actually sends, in what order, and whether a machine verdict
+    // arrives at all.
+    //
+    // AMD is EXPECTED to misbehave on that one campaign while this is on.
+    // That is the cost of the measurement, and it is confined to it: every
+    // other campaign runs 'detect' with the tuned thresholds, untouched.
+    dialBody.answering_machine_detection = p.voicemailDropEnabled
+      ? 'detect_beep'
+      : (amdCfg.amd_detector || 'detect')
 
     // Guarded by its own switch: an unrecognised parameter name makes Telnyx
     // reject the WHOLE dial request, failing every call rather than merely

@@ -196,8 +196,26 @@ export async function POST(req: Request) {
         break
 
       default:
-        // Other event types (call.bridged, streaming.*, etc.) — no action
-        // needed today, but we don't want to log noise for every one.
+        // ── RECORDED, NOT DISCARDED ──────────────────────────────────────
+        // These used to vanish silently, and that blindness is exactly why
+        // detect_beep could not be diagnosed: two live tests showed detection
+        // failing, and the events that would have said WHY were dropped here
+        // without trace.
+        //
+        // Writing the raw Telnyx type into `status` makes one test call
+        // answer the question outright — which events a detector actually
+        // emits, in what order, and whether a machine verdict arrives at all.
+        //
+        // Cheap: a handful of rows per call, and `detail` carries the result
+        // field when the event has one, which is the payload that matters for
+        // any detection event.
+        void logCallEvent({
+          event_type: 'unhandled',
+          call_control_id: callControlId,
+          status: eventType,
+          source: 'webhook',
+          detail: payload.result ? { result: payload.result } : null,
+        })
         break
     }
     // Marked processed only after the dispatch completed without throwing, so
