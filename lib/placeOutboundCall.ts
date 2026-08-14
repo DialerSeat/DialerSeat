@@ -581,13 +581,31 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
     // Until that exists and is proven on real calls, detection wins: an agent
     // sitting through voicemails is a worse product than one that cannot leave
     // messages.
-    dialBody.answering_machine_detection = amdCfg.amd_detector || 'detect'
+    //
+    // SECOND ATTEMPT, with a specific hypothesis rather than an assumption.
+    // The note right below says an unrecognised parameter makes Telnyx reject
+    // the WHOLE dial request. The tuned config we send — greeting_duration,
+    // initial_silence, maximum_number_of_words — is documented for 'detect'.
+    // If any of it is invalid under detect_beep, the request is rejected and
+    // detection silently does nothing, which is exactly what was observed.
+    //
+    // So detect_beep now goes out BARE, with no config block at all (see the
+    // guard below). Telnyx's own defaults apply. This is deliberately scoped
+    // to campaigns that have a voicemail message selected — every other
+    // campaign keeps 'detect' plus the tuning, untouched.
+    dialBody.answering_machine_detection = p.voicemailDropEnabled
+      ? 'detect_beep'
+      : (amdCfg.amd_detector || 'detect')
 
     // Guarded by its own switch: an unrecognised parameter name makes Telnyx
     // reject the WHOLE dial request, failing every call rather than merely
     // mistuning detection. That risk is why an earlier tuning attempt was
     // reverted. It can now be turned off from the admin app in seconds.
-    if (amdCfg.amd_tuning_enabled) {
+    //
+    // Skipped entirely for detect_beep — see above. Sending thresholds
+    // documented for a different detector is the leading suspect for why the
+    // first attempt at voicemail drop killed detection.
+    if (amdCfg.amd_tuning_enabled && !p.voicemailDropEnabled) {
       // ── WHAT EACH OF THESE ACTUALLY MEASURES ───────────────────────────
       // Taken from Telnyx's field descriptions, not inferred — inferring them
       // is how this was tuned in the wrong direction twice.

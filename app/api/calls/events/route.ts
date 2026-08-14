@@ -658,21 +658,22 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
       await hangupCallControlId(callRow.agent_call_control_id)
     }
 
-    // ── VOICEMAIL DROP IS DISABLED HERE, DELIBERATELY ─────────────────────
-    // This branch used to keep the lead's leg up on a machine verdict so that
-    // handleGreetingEnded could play a message at the beep. It is off because
-    // it cannot work with the detector we actually run.
+    // ── VOICEMAIL DROP: LEAVE THE LEAD'S LEG UP ───────────────────────────
+    // Only ever true when the campaign has a message selected, which also
+    // means the dial went out as detect_beep and a greeting-ended event is
+    // expected. Every other campaign falls straight through to the hangup
+    // below, exactly as before — this cannot affect a campaign that did not
+    // opt in.
     //
-    // The beep signal (call.machine.greeting.ended) is only emitted by
-    // detect_beep. Switching the dial to that detector broke machine detection
-    // in production — voicemails stopped being skipped AND no message was ever
-    // played — so the detector was reverted to 'detect'. With 'detect' there is
-    // no greeting event, which means keeping the leg up here would leave every
-    // detected voicemail running to the end with nobody on it and no message.
-    //
-    // Detection wins over delivery: an agent sitting through voicemails is a
-    // worse product than one that cannot leave them. Re-enabling this needs a
-    // beep signal proven on live calls not to disturb detection — see AMD.md.
+    // If the beep never arrives the leg stays up until the answering machine
+    // itself hangs up. That is the known risk of this path and the reason it
+    // is scoped to one opted-in campaign rather than switched on globally.
+    const pendingDrop = await resolveVoicemailDrop(callControlId)
+    if (pendingDrop) {
+      await autoAdvanceLeadNoDisposition(callControlId)
+      return
+    }
+
     const leadHungUp = await hangupCallControlId(callControlId)
 
     // ── WHEN THE HANGUP DOES NOT TAKE ─────────────────────────────────────
