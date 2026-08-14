@@ -35,7 +35,19 @@ export async function GET(req: NextRequest) {
     await fetchAllRows<any>((from, to) => {
       let q = supabase
         .from('calls')
-        .select('*')
+        // ── ONLY THE FOUR COLUMNS THIS ROUTE READS ────────────────────────
+        // This was select('*'), which was survivable while an unbounded
+        // select was silently capped at 1000 rows. Now that it correctly
+        // pages through the FULL history, '*' means every column of every
+        // call a user has ever made — recording urls, control ids, phone
+        // numbers, timestamps — serialised, sent, and parsed on the main
+        // thread. On the analytics page that parse is long enough to block
+        // input, which is why the hamburger there needed several taps while
+        // other pages were fine.
+        //
+        // The aggregates below use exactly these: duration, disposition,
+        // campaign_id, created_at. Nothing else is read.
+        .select('duration, disposition, campaign_id, created_at')
         .eq('user_id', userId)
         .order('created_at', { ascending: true })
         .range(from, to)
