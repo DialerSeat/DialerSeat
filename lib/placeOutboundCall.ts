@@ -605,12 +605,26 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
     // detect_beep actually sends, in what order, and whether a machine verdict
     // arrives at all.
     //
-    // AMD is EXPECTED to misbehave on that one campaign while this is on.
-    // That is the cost of the measurement, and it is confined to it: every
-    // other campaign runs 'detect' with the tuned thresholds, untouched.
-    dialBody.answering_machine_detection = p.voicemailDropEnabled
-      ? 'detect_beep'
-      : (amdCfg.amd_detector || 'detect')
+    // ── MEASURED, ANSWERED, REVERTED ──────────────────────────────────────
+    // The diagnostic round settled it with real data. On a live call
+    // (v3:TOXiAZp…, 2026-08-14) detect_beep produced:
+    //
+    //   13:53:39.443  answered
+    //   13:53:59.502  call.machine.greeting.ended   result: beep_detected
+    //   (no call.machine.detection.ended, ever)
+    //
+    // detect_beep emits NO MACHINE VERDICT AT ALL. That is why AMD stopped
+    // skipping: there was nothing to act on. And the beep it does emit lands
+    // 20 SECONDS after answer, because 20 seconds is how long the greeting
+    // ran — so it is useless for a fast skip even if we handled it.
+    //
+    // The two detectors are mutually exclusive:
+    //   detect       fast verdict, no beep
+    //   detect_beep  beep, no verdict
+    //
+    // Voicemail drop needs both, and only 'premium' provides both. That is a
+    // cost decision, not an engineering one — see AMD.md.
+    dialBody.answering_machine_detection = amdCfg.amd_detector || 'detect'
 
     // Guarded by its own switch: an unrecognised parameter name makes Telnyx
     // reject the WHOLE dial request, failing every call rather than merely

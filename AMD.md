@@ -102,9 +102,55 @@ never noticed because it never applied to them.
 The implication is the opposite of the instinct: to detect FASTER, lower
 `max_words`, not `greeting_duration`.
 
-## Voicemail drop — attempted twice, off
+## Voicemail drop — DIAGNOSED. Blocked on a cost decision, not code.
 
-**Do not attempt `detect_beep` again without new information from Telnyx.**
+**`detect_beep` emits no machine verdict. Never try it for skipping again.**
+
+Settled by measurement, not inference. A live call on 2026-08-14
+(`v3:TOXiAZp…7Mp6A`) with `detect_beep`, every webhook recorded:
+
+    13:53:39.443  answered
+    13:53:59.502  call.machine.greeting.ended    result: beep_detected
+                  (call.machine.detection.ended NEVER arrived)
+
+Two findings, and together they close the question:
+
+1. **No verdict.** `detect_beep` does not emit `call.machine.detection.ended`
+   at all. That is why AMD stopped skipping voicemails under it — there was
+   nothing to act on. Not a rejected request, not a bad parameter.
+2. **The beep is 20 seconds late**, because 20 seconds is how long the
+   greeting ran. Useless for a fast skip even if handled.
+
+A third consequence explains why no message played even though the beep did
+arrive: `resolveVoicemailDrop` gates on `amd_result = machine`, which under
+`detect_beep` is never set.
+
+### The detectors are mutually exclusive
+
+| Detector | Machine verdict | Beep |
+|---|---|---|
+| `detect` | yes, ~2–3s | no |
+| `detect_beep` | **no** | yes, after the greeting |
+| `premium` | yes | yes |
+
+Voicemail drop needs **both** — a fast verdict to release the agent, and a
+beep to start the message. Only `premium` provides both.
+
+**So this is a pricing decision, not an engineering one.** Premium AMD costs
+more per leg, and the standing instruction is not to enable it without an
+explicit decision. Everything else for the feature is already built: the
+recordings library, storage, endpoints, campaign picker, the once-per-lead
+guard, and the playback handler. Switching detector to `premium` for
+voicemail-drop campaigns and handling `call.machine.premium.detection.ended`
+plus `call.machine.premium.greeting.ended` — both of which the dispatcher
+already has cases for — is the remaining work.
+
+Before that: confirm the premium per-leg price against the Telnyx invoice, and
+weigh it against the short-duration surcharge it would avoid.
+
+---
+
+**Historical, superseded by the measurement above.**
 
 Voicemail drop needs to know when the greeting ends, and
 `call.machine.greeting.ended` is only emitted by `detect_beep`. Switching the
