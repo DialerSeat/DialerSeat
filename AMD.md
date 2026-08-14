@@ -185,6 +185,78 @@ the trigger cannot be obtained without breaking detection.
 **Detection wins over delivery.** An agent sitting through voicemails is a
 worse product than one that cannot leave them.
 
+## COMPLIANCE — the 9-second hold
+
+Telnyx counts a connected call of **6 seconds or less** as short duration, and
+surcharges the account when those exceed **15% of connected calls**. Measured
+here: ~57–66%, against their own figure of 47.76% for 2026-08-01→10.
+
+A machine detection ends at ~3.8s by construction — detection plus hangup — so
+essentially every voicemail lands under their line. The dialer is not doing
+anything wrong; being fast is the product. But fast *is* short.
+
+### The rule
+
+**When a call would otherwise end under 9 seconds, the lead's line stays
+connected in the background until it reaches 9 seconds, then hangs up.**
+
+Two triggers, and they behave identically:
+
+1. **AMD returns a machine verdict.** The agent's leg is released at the
+   verdict, exactly as it is today. The lead's line holds.
+2. **The agent presses SKIP on a call under 9 seconds.** The agent advances to
+   the next lead immediately. The lead's line holds.
+
+**The skip trigger applies in EVERY MODE** — preview, power, progressive and
+predictive. It is not a preview-only rule. Preview happens to depend on it
+entirely, because preview runs no AMD and therefore never fires trigger 1, but
+an agent skipping a short call in power or progressive holds the line the same
+way.
+
+If a call is already past 9 seconds when it ends, it hangs up immediately.
+There is nothing to correct — it was never a short call.
+
+### The three constraints
+
+- **9 seconds.** Six is the line; nine clears it with margin. Longer buys
+  nothing, because a 20-second call and a 7-second call count the same to
+  Telnyx.
+- **Hang up before the beep.** Greetings run 15–25s and an answering machine
+  records after the beep. Overrunning it records silence and leaves a blank
+  voicemail on every lead — the most-reported robocall pattern there is, and it
+  would cost far more in carrier reputation than the surcharge saves. This is
+  the ceiling that matters; do not raise the hold without re-checking it.
+- **Aborted dials are untouched.** A call nobody answered has no billed
+  duration and never enters the ratio. Instant abort stays instant.
+
+### What the agent experiences
+
+Nothing. Their leg is cut at the same moment it is now, on both triggers. The
+held line has nobody on it and no audio flowing in either direction.
+
+### Coverage
+
+| Mode | AMD trigger | Skip trigger |
+|---|---|---|
+| Preview | never (runs no AMD) | yes — the only trigger it has |
+| Power | yes | yes |
+| Progressive | yes | yes |
+| Predictive | yes | yes |
+
+Predictive already transfers a call to an agent only when AMD does *not* say
+machine — fan-out lines carry no agent until a human verdict. That needed no
+change.
+
+### Cost and what to watch
+
+Every held second is also a concurrency slot, and Telnyx confirmed on-net SIP
+legs count toward the cap. At current volume this is negligible. On a
+predictive floor running several lines per agent it is worth watching against
+the 100 limit.
+
+Config lives in `platform_config.amd_hold_seconds_after_machine`. **0 disables
+it**, which is the default, so it can be turned off instantly without a deploy.
+
 ## KNOWN-GOOD CONFIG
 
 Verified working in production 2026-08-13. Return here before debugging
