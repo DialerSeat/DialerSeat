@@ -384,7 +384,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               // Navigation itself still rides the anchor's own click, which
               // keeps middle-click, ctrl-click and long-press-open-in-new-tab
               // behaving correctly.
-              onPointerDown={() => handleNavClick(item.href)}
+              // TOUCH ONLY. Firing this on a mouse pointerdown re-renders the
+              // row mid-gesture, between mousedown and mouseup, which is
+              // enough to lose the click on desktop and make a tab need
+              // clicking twice. A mouse has no 100-300ms click delay to
+              // reclaim anyway — the early fire is purely a touch win, so it
+              // is taken only where it pays.
+              onPointerDown={e => {
+                if (e.pointerType !== 'mouse') handleNavClick(item.href)
+              }}
+              // The path a mouse takes, and the fallback for any pointer type
+              // the branch above skips. Calling it twice on touch is harmless:
+              // it sets the same href and closes an already-closed drawer.
+              onClick={() => handleNavClick(item.href)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -522,14 +534,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
            thread happens to be busy with — which, during a page load, is
            everything. */
         .ds-nav-link {
-          transition: background 90ms ease, transform 90ms ease;
+          transition: background 90ms ease;
         }
         .ds-nav-link:active {
           background: var(--brand-primary-soft) !important;
-          transform: scale(0.985);
+        }
+        /* The press SCALE is touch-only, and that is a correctness rule
+           rather than a taste one. Shrinking the row under a mouse cursor on
+           mousedown moves its edge inward, so mouseup can land outside the
+           element — no click fires and the tab needs clicking twice. A finger
+           has no such precision problem because the contact patch is far
+           larger than the 1.5% inset. */
+        @media (hover: none) and (pointer: coarse) {
+          .ds-nav-link { transition: background 90ms ease, transform 90ms ease; }
+          .ds-nav-link:active { transform: scale(0.985); }
         }
         @media (prefers-reduced-motion: reduce) {
-          .ds-nav-link { transition: background 90ms ease; }
           .ds-nav-link:active { transform: none; }
         }
 
