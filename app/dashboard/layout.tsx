@@ -72,6 +72,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const o = document.getElementById('ds-menu-overlay')
     if (d) d.classList.toggle('open', open)
     if (o) o.classList.toggle('open', open)
+    // The checkbox is what CSS reads, and it is uncontrolled so that the
+    // browser can toggle it before React exists. Anything that opens or
+    // closes the drawer in code — a nav tap, a route change — has to write it
+    // back, or the :checked rule would hold the drawer open against everything
+    // else saying it is shut.
+    const t = document.getElementById('ds-drawer-toggle') as HTMLInputElement | null
+    if (t && t.checked !== open) t.checked = open
     document.body.style.overflow = open ? 'hidden' : ''
   }
 
@@ -583,6 +590,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             z-index: 60;
             transform: translateX(-100%); transition: transform 0.25s ease;
           }
+          /* ── THE DRAWER OPENS WITHOUT JAVASCRIPT ────────────────────────
+             A React onClick does not exist until hydration finishes, so the
+             hamburger was genuinely INERT while a page loaded — not slow,
+             not laggy, attached to nothing. Hence three taps.
+
+             The hamburger is now a <label> for a hidden checkbox, and these
+             two rules open the drawer from the checkbox state alone. That is
+             the browser's own behaviour, live the instant the HTML paints,
+             with no bundle, no hydration and no React involved.
+
+             The .open class stays alongside it so React remains in charge
+             once it has booted; the two are kept in agreement by an effect
+             that writes the checkbox from state. */
+          .ds-drawer-checkbox:checked ~ .ds-sidebar-mobile { transform: translateX(0); }
+          .ds-drawer-checkbox:checked ~ .ds-mobile-overlay { opacity: 1; pointer-events: auto; }
           .ds-sidebar-mobile.open { transform: translateX(0); }
           .ds-mobile-overlay {
             display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.55);
@@ -599,10 +621,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <Sidebar />
       </div>
 
-      <div
+      {/* Hidden, and deliberately the FIRST of the three siblings — the CSS
+          rules above reach the drawer and overlay through `~`, which only
+          looks forward. Uncontrolled on purpose: the browser must be free to
+          toggle it before React exists. */}
+      <input
+        type="checkbox"
+        id="ds-drawer-toggle"
+        className="ds-drawer-checkbox"
+        defaultChecked={false}
+        onChange={e => setDrawer(e.target.checked)}
+        aria-label="Open menu"
+        style={{ position: 'absolute', opacity: 0, width: 0, height: 0, pointerEvents: 'none' }}
+      />
+
+      {/* A label, not a div with onClick, so tapping away closes the drawer
+          pre-hydration too. */}
+      <label
         id="ds-menu-overlay"
+        htmlFor="ds-drawer-toggle"
         className="ds-mobile-overlay"
-        onClick={() => setDrawer(false)}
         aria-hidden="true"
       />
 
@@ -612,10 +650,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       <div className="ds-mobile-content" style={{ flex: 1, minWidth: 0 }}>
         <div className="ds-mobile-topbar">
-          <button
+          {/* A <label>, not a <button>. This is the whole fix: a label's
+              association with its checkbox is browser behaviour, so it works
+              the moment the HTML paints. A button's onClick does not exist
+              until React hydrates, which is exactly the window in which the
+              taps were being swallowed. */}
+          <label
             id="ds-menu-btn"
-            onClick={() => setDrawer(true)}
+            htmlFor="ds-drawer-toggle"
+            role="button"
             aria-label="Open menu"
+            aria-controls="ds-menu-drawer"
             style={{
               width: 40, height: 40, border: '1px solid var(--brand-sidebar-active-bg)',
               background: 'var(--brand-header-bg)', borderRadius: 8,
@@ -638,7 +683,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <span style={{ width: 18, height: 2, background: 'var(--brand-on-header)', borderRadius: 1 }} />
             <span style={{ width: 18, height: 2, background: 'var(--brand-on-header)', borderRadius: 1 }} />
             <span style={{ width: 18, height: 2, background: 'var(--brand-on-header)', borderRadius: 1 }} />
-          </button>
+          </label>
 
           <Link href={logoHref} style={{
             display: 'flex',
