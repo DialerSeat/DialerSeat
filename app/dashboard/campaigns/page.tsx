@@ -1400,6 +1400,14 @@ export default function CampaignsPage() {
     if (a.status !== b.status) return true
     if (a.dialer_mode !== b.dialer_mode) return true
     if (a.amd_enabled !== b.amd_enabled) return true
+    // ── THIS LIST MUST MATCH THE ONE IN THE SAVE HANDLER ─────────────────
+    // Two lists that have to agree, and they had drifted. recording_enabled
+    // and voicemail_message_id were both built into the save handler but
+    // never added here, so changing either left SAVE greyed out — the setting
+    // could be picked and simply never committed, with nothing explaining why.
+    // Anything added to EditDraft has to be added in BOTH places.
+    if (a.recording_enabled !== b.recording_enabled) return true
+    if (a.voicemail_message_id !== b.voicemail_message_id) return true
     if (a.enable_appointments_sub !== b.enable_appointments_sub) return true
     if (a.enable_not_interested_sub !== b.enable_not_interested_sub) return true
     if (a.enabledScriptIds.size !== b.enabledScriptIds.size) return true
