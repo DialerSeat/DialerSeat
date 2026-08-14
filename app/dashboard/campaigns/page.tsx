@@ -41,7 +41,6 @@ interface Campaign {
   dialer_mode?: DialerMode
   amd_enabled?: boolean
   recording_enabled?: boolean
-  voicemail_message_id?: string | null
   predictive_lines_per_agent?: number
   enable_appointments_sub?: boolean
   enable_not_interested_sub?: boolean
@@ -390,25 +389,11 @@ export default function CampaignsPage() {
     dialer_mode: DialerMode
     amd_enabled: boolean
     recording_enabled: boolean
-    // Which saved voicemail message this campaign drops on an answering
-    // machine. null is off, and off is the default — selecting a message IS
-    // the toggle, so there is no separate flag to disagree with it.
-    voicemail_message_id: string | null
     enable_appointments_sub: boolean
     enable_not_interested_sub: boolean
     enabledScriptIds: Set<string>   // which library scripts are on for this campaign
     scriptOrder: string[]           // ordered enabled script ids (drag order)
   }
-  // The user's saved voicemail recordings, for the campaign picker. Loaded once
-  // rather than per settings-panel open — a handful of rows that rarely change.
-  const [voicemailMessages, setVoicemailMessages] = useState<{ id: string; name: string }[]>([])
-  useEffect(() => {
-    fetch('/api/voicemail-messages')
-      .then(r => r.json())
-      .then(d => { if (d?.success) setVoicemailMessages(d.messages || []) })
-      .catch(() => {})
-  }, [])
-
   const [editDraft, setEditDraft] = useState<EditDraft | null>(null)
   const [editSaving, setEditSaving] = useState(false)
   
@@ -462,15 +447,6 @@ export default function CampaignsPage() {
 
   const isLapsed = tier === 'lapsed' || tier === 'new'
 
-  // Voicemail drop is triggered BY answering-machine detection — the message
-  // plays on a machine verdict. So a mode that runs no detection can never
-  // fire one. Preview is deliberately detection-free (a wrong verdict hurts
-  // most where the agent chose the lead by hand), and a campaign with AMD
-  // switched off produces no verdict either. In both cases the picker would
-  // accept a setting that silently does nothing, which is worse than not
-  // offering it.
-  const voicemailDropAvailable =
-    !!editDraft && editDraft.amd_enabled && editDraft.dialer_mode !== 'preview'
 
   useEffect(() => {
     if (!user) return
@@ -1402,12 +1378,11 @@ export default function CampaignsPage() {
     if (a.amd_enabled !== b.amd_enabled) return true
     // ── THIS LIST MUST MATCH THE ONE IN THE SAVE HANDLER ─────────────────
     // Two lists that have to agree, and they had drifted. recording_enabled
-    // and voicemail_message_id were both built into the save handler but
-    // never added here, so changing either left SAVE greyed out — the setting
-    // could be picked and simply never committed, with nothing explaining why.
-    // Anything added to EditDraft has to be added in BOTH places.
+    // was built into the save handler but never added here, so toggling it
+    // left SAVE greyed out — the setting could be picked and simply never
+    // committed, with nothing explaining why. Anything added to EditDraft has
+    // to be added in BOTH places.
     if (a.recording_enabled !== b.recording_enabled) return true
-    if (a.voicemail_message_id !== b.voicemail_message_id) return true
     if (a.enable_appointments_sub !== b.enable_appointments_sub) return true
     if (a.enable_not_interested_sub !== b.enable_not_interested_sub) return true
     if (a.enabledScriptIds.size !== b.enabledScriptIds.size) return true
@@ -1430,8 +1405,6 @@ export default function CampaignsPage() {
       if (editDraft.amd_enabled !== editBaseline.amd_enabled) corePatch.amd_enabled = editDraft.amd_enabled
       if (editDraft.recording_enabled !== editBaseline.recording_enabled)
         corePatch.recording_enabled = editDraft.recording_enabled
-      if (editDraft.voicemail_message_id !== editBaseline.voicemail_message_id)
-        corePatch.voicemail_message_id = editDraft.voicemail_message_id
       if (editDraft.enable_appointments_sub !== editBaseline.enable_appointments_sub)
         corePatch.enable_appointments_sub = editDraft.enable_appointments_sub
       if (editDraft.enable_not_interested_sub !== editBaseline.enable_not_interested_sub)
@@ -1499,7 +1472,6 @@ export default function CampaignsPage() {
       // recording ON, and saving the panel would then make it true for real.
       // The column is NOT NULL, so a plain boolean coercion is correct.
       recording_enabled: !!campaign.recording_enabled,
-      voicemail_message_id: campaign.voicemail_message_id ?? null,
       enable_appointments_sub: !!campaign.enable_appointments_sub,
       enable_not_interested_sub: !!campaign.enable_not_interested_sub,
       enabledScriptIds: new Set<string>(),
@@ -3486,65 +3458,6 @@ export default function CampaignsPage() {
                   ><div className="knob" /></div>
                 </div>
 
-                {/* ── VOICEMAIL DROP ─────────────────────────────────────────
-                    A picker rather than a toggle plus a picker: the selected
-                    message IS the on switch, so the two can never disagree
-                    about whether the feature is on. */}
-                {/* Hidden outright when AMD is off or the mode is preview,
-                    rather than shown greyed out. A disabled control still
-                    advertises a feature and invites the question "why can't I
-                    use this" — and voicemail drop is triggered BY detection,
-                    so without detection there is genuinely nothing to offer.
-                    Turning AMD on makes it reappear. */}
-                {voicemailDropAvailable && (
-                <>
-                {/* Label and control only. The explanation goes BELOW as a
-                    full-width helper, not inside the label column: a
-                    settings-row is two columns, so a paragraph in the left one
-                    wraps to about a word per line and strands the select at the
-                    top of a tall empty space. Every other long explanation on
-                    this panel is a cmp-helper underneath for the same reason. */}
-                <div className="settings-row">
-                  <div className="settings-row-label">
-                    VOICEMAIL DROP
-                  </div>
-                  {/* ── REQUIRES AMD, BECAUSE IT IS TRIGGERED BY AMD ────────
-                      The drop fires on a machine verdict. Preview mode runs no
-                      detection at all by design, and a campaign with AMD off
-                      never produces a verdict either — so in both cases the
-                      message could be selected and would simply never play.
-                      Disabled and explained, rather than accepting a setting
-                      that silently does nothing. */}
-                  <select
-                    value={editDraft?.voicemail_message_id ?? ''}
-                    disabled={isLapsed || !voicemailDropAvailable}
-                    onChange={e => patchDraft({ voicemail_message_id: e.target.value || null })}
-                    style={{
-                      minWidth: 190, maxWidth: 220, padding: '8px 10px',
-                      borderRadius: 8, border: '1px solid var(--brand-card-border)',
-                      background: 'var(--brand-card-surface)',
-                      color: 'var(--brand-on-page-bg)', fontSize: 12,
-                    }}
-                  >
-                    <option value="">Off — no voicemail left</option>
-                    {voicemailMessages.map(v => (
-                      <option key={v.id} value={v.id}>{v.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <p className="cmp-helper" style={{ marginTop: -4 }}>
-                  Leave your own recorded message when the dialer reaches an answering
-                  machine. You move straight to the next lead — each lead gets it once,
-                  so they can call you back when they&apos;re free.
-                  {voicemailMessages.length === 0 && (
-                    <>
-                      {' '}You haven&apos;t recorded one yet — record it under
-                      Recordings → Custom Voicemails, then pick it here.
-                    </>
-                  )}
-                </p>
-                </>
-                )}
 
                 <p className="cmp-helper" style={{ marginTop: 10 }}>
                   Not sure on the mode? Start with POWER.{' '}

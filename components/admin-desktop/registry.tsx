@@ -71,6 +71,11 @@ const LiveOpsApp = dynamic(() => import('./apps/LiveOps'), {
   ssr: false,
 })
 
+const ComplianceApp = dynamic(() => import('./apps/Compliance'), {
+  loading: () => <AppLoading />,
+  ssr: false,
+})
+
 const NotificationsApp = dynamic(() => import('./apps/Notifications'), {
   loading: () => <AppLoading />,
   ssr: false,
@@ -199,6 +204,17 @@ export const APPS: AppDefinition[] = [
     visibleTo: ['admin'],
     Component: LiveOpsApp,
     defaultSize: { width: 1180, height: 780 },
+  },
+  {
+    id: 'compliance',
+    name: 'Compliance',
+    shortName: 'Comply',
+    icon: '⚖️',
+    iconBg: 'linear-gradient(135deg, #f0b45a, #b8801a)',
+    description: 'What Telnyx expects vs where we are — this calendar month, resets on the 1st',
+    visibleTo: ['admin'],
+    Component: ComplianceApp,
+    defaultSize: { width: 900, height: 780 },
   },
   {
     id: 'notifications',

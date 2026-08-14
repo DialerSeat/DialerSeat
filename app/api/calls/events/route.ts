@@ -162,9 +162,11 @@ export async function POST(req: Request) {
       // amd_detector to 'premium' cannot silently stop AMD working — without
       // this the verdict would never reach handleAmdResult and every machine
       // would go straight through to an agent.
-      // The greeting finished — the beep. This is the moment a voicemail drop
-      // has to start: earlier and the message records over the outgoing
-      // greeting or gets cut off entirely.
+      // The greeting finished — the beep. Only detect_beep and the premium
+      // detectors emit this, and we run 'detect', so in practice it never
+      // arrives. Logged rather than acted on: it is the timing signal any
+      // future voicemail feature would need, and having it on record is what
+      // let the detect_beep question be settled with data rather than guesses.
       case 'call.machine.greeting.ended':
       case 'call.machine.premium.greeting.ended':
         void logCallEvent({
@@ -173,7 +175,6 @@ export async function POST(req: Request) {
           status: payload.result ?? null,
           source: 'webhook',
         })
-        await handleGreetingEnded(callControlId)
         break
 
       case 'call.machine.premium.detection.ended':
@@ -401,119 +402,6 @@ async function handleInboundCallAnswered(callControlId: string): Promise<void> {
 // The premium vocabulary (human_residence / human_business / silence) is
 // deliberately absent: those are all people.
 const ROBOT_RESULTS = new Set(['machine', 'fax_detected'])
-
-/**
- * Resolve the voicemail message this call should drop, if any.
- *
- * Returns null when voicemail drop does not apply, which is the common case:
- * the campaign has no message selected (the default — it is opt-in), the lead
- * has already had one, or this is not a campaign call at all.
- */
-async function resolveVoicemailDrop(callControlId: string): Promise<{
-  callId: string
-  leadId: string | null
-  audioUrl: string
-} | null> {
-  const { data: call } = await supabaseAdmin
-    .from('calls')
-    .select('id, campaign_id, lead_id, amd_result, voicemail_dropped')
-    .eq('call_control_id', callControlId)
-    .maybeSingle()
-
-  if (!call || !call.campaign_id) return null
-
-  // Only ever on a confirmed machine. A greeting-ended event on a human call
-  // would otherwise play a voicemail message at a live person.
-  if (!call.amd_result || !ROBOT_RESULTS.has(call.amd_result)) return null
-
-  // Already dropped on this call — a duplicate greeting event must not play
-  // the message twice.
-  if (call.voicemail_dropped) return null
-
-  const { data: campaign } = await supabaseAdmin
-    .from('campaigns')
-    .select('voicemail_message_id')
-    .eq('id', call.campaign_id)
-    .maybeSingle()
-
-  if (!campaign?.voicemail_message_id) return null
-
-  // ── ONCE PER LEAD ──────────────────────────────────────────────────────
-  // A lead dialed three times must not collect three identical voicemails.
-  // That is useless to them and is exactly the behaviour that gets a number
-  // reported, which would undo the reason this feature exists.
-  if (call.lead_id) {
-    const { data: lead } = await supabaseAdmin
-      .from('leads')
-      .select('voicemail_dropped_at')
-      .eq('id', call.lead_id)
-      .maybeSingle()
-    if (lead?.voicemail_dropped_at) return null
-  }
-
-  const { data: message } = await supabaseAdmin
-    .from('voicemail_messages')
-    .select('audio_url')
-    .eq('id', campaign.voicemail_message_id)
-    .maybeSingle()
-
-  if (!message?.audio_url) return null
-
-  return { callId: call.id, leadId: call.lead_id, audioUrl: message.audio_url }
-}
-
-/**
- * The greeting finished — this is the beep, and the moment to leave a message.
- *
- * Nothing is waiting on this path: the agent was released back at the machine
- * verdict and is already on their next lead. The lead's leg is alone on the
- * line, so it can take as long as the message takes.
- */
-async function handleGreetingEnded(callControlId: string): Promise<void> {
-  const drop = await resolveVoicemailDrop(callControlId)
-  if (!drop) return
-
-  // Marked BEFORE playing. Telnyx can deliver a duplicate greeting event, and
-  // two playback_start commands on one call would talk over themselves. Losing
-  // a drop to a failed playback is recoverable; playing two is not.
-  await supabaseAdmin
-    .from('calls')
-    .update({ voicemail_dropped: true })
-    .eq('id', drop.callId)
-
-  const started = await callControlAction(callControlId, 'playback_start', {
-    audio_url: drop.audioUrl,
-  })
-
-  if (!started) {
-    console.error(
-      `[calls/events] voicemail playback failed to start for ${callControlId} — hanging up rather ` +
-      `than leaving a silent line open on the lead's voicemail.`
-    )
-    await hangupCallControlId(callControlId)
-    return
-  }
-
-  // Queued behind the playback, exactly like the inbound speak-then-hangup
-  // path: Telnyx executes commands on a call in order, so this runs when the
-  // message finishes rather than cutting it off.
-  await callControlAction(callControlId, 'hangup')
-
-  // Stamped after a successful start so a lead whose drop never played stays
-  // eligible for one on a later attempt.
-  if (drop.leadId) {
-    await supabaseAdmin
-      .from('leads')
-      .update({ voicemail_dropped_at: new Date().toISOString() })
-      .eq('id', drop.leadId)
-  }
-
-  void logCallEvent({
-    event_type: 'voicemail_dropped',
-    call_control_id: callControlId,
-    source: 'webhook',
-  })
-}
 
 async function handleAmdResult(callControlId: string, result: string): Promise<void> {
   // ── EVERYTHING BEFORE THE HANGUP IS LATENCY THE LEAD HEARS ───────────────

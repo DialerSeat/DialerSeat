@@ -44,6 +44,7 @@ export type AppId =
   | 'live-ops'
   | 'unit-economics'
   | 'notifications'
+  | 'compliance'
 
 
 

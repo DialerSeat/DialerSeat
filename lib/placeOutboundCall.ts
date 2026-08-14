@@ -206,11 +206,10 @@ export async function placeOutboundCall(
   let amdEnabled = true
   let recordingEnabled = false
   let dialerMode = 'power'
-  let voicemailDropEnabled = false
   if (campaignId) {
     const { data: campaign } = await supabase
       .from('campaigns')
-      .select('dialer_mode, amd_enabled, recording_enabled, voicemail_message_id')
+      .select('dialer_mode, amd_enabled, recording_enabled')
       .eq('id', campaignId)
       .maybeSingle()
     if (campaign) {
@@ -218,9 +217,6 @@ export async function placeOutboundCall(
       amdEnabled = campaign.amd_enabled !== false
       // Strict equality: null/undefined means "not opted in", not "on".
       recordingEnabled = campaign.recording_enabled === true
-      // A selected message IS the toggle — there is no separate on/off flag to
-      // fall out of sync with it.
-      voicemailDropEnabled = !!campaign.voicemail_message_id
     }
   }
 
@@ -282,7 +278,6 @@ export async function placeOutboundCall(
     teamId: teamId || null,
     amdEnabled,
     recordingEnabled,
-    voicemailDropEnabled,
     dialerMode,
     source,
     agentSessionId: agentSessionId || null,
@@ -300,7 +295,6 @@ interface DoPlaceCallParams {
   teamId: string | null
   amdEnabled: boolean
   recordingEnabled: boolean
-  voicemailDropEnabled: boolean
   dialerMode: string
   source: 'user_dial' | 'controller_fanout'
   agentSessionId: string | null
