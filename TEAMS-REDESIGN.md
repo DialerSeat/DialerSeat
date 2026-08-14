@@ -1,108 +1,147 @@
 # Teams — rebuild spec
 
 Replacing `components/teams/TeamsManager.tsx` (1,452 lines) and
-`components/teams/TeamOverview.tsx` (320) with a Stripe-dashboard-shaped
-surface. The 22 routes under `app/api/teams/` stay; this is a front-end
-rebuild, not a data-model one.
+`components/teams/TeamOverview.tsx` (320). The 22 routes under
+`app/api/teams/` stay; this is a front-end rebuild.
 
-The admin desktop's own `apps/Teams.tsx` is a **different surface** and is out
-of scope — it deliberately wears the OS-chrome look of that desktop.
-
----
-
-## What makes Stripe feel like Stripe
-
-Not the blue. Copying the colour without the structure is how dashboards end
-up looking like a Stripe tribute act. The things actually doing the work:
-
-1. **One number, enormous, top left.** Stripe opens on gross volume — the
-   number you came for — at 32–40px, with a small muted delta beneath it. Not
-   a grid of six equally-weighted tiles. Ours is **active agents right now**.
-2. **Everything else is secondary and admits it.** 11–13px labels in muted
-   grey, uppercase only for column heads, generous line-height. The hierarchy
-   does the explaining, not borders.
-3. **Whitespace instead of boxes.** Stripe separates with space and one hairline
-   rule. Our current Teams page separates with cards inside cards.
-4. **Tables are the primary object, not a footnote.** Dense rows, 40–44px,
-   hairline dividers, no zebra striping, no card wrapper. The row is clickable
-   and the whole row highlights on hover.
-5. **Status is a quiet pill, never a colour-filled row.** Small caps, 10–11px,
-   tinted background at ~8% opacity, coloured text. Green = active, grey =
-   pending/paused, red = failed only.
-6. **Numbers are tabular.** `font-variant-numeric: tabular-nums` so columns of
-   figures line up. Stripe does this everywhere; it is most of why their
-   tables look engineered rather than typed.
-7. **Actions are text buttons, not filled blocks.** Filled is reserved for the
-   single primary action on a screen.
-
-## What we are NOT copying
-
-- Their exact palette. DialerSeat has `--brand-*` tokens and white-label
-  tenants override them; hard-coding Stripe indigo breaks every tenant.
-- Their nav. We already have a sidebar.
+`components/admin-desktop/apps/Teams.tsx` is a **different surface** and out of
+scope — it deliberately wears that desktop's OS chrome.
 
 ---
 
-## Information architecture
+## The form follows the job
 
-The current page tries to be a manager and an overview at once. Split it:
+Stripe was the wrong reference and is deliberately abandoned here. Stripe is a
+**billing** dashboard: centered, calm, max-width 1100, read once a week to
+answer "how did we do". Teams answers a different question, continuously:
+**who is on the floor right now and is it going well.**
 
-**Header** — team name, plan, and one primary action (Invite). Nothing else.
+That is a control room, not a report. Control rooms are full-bleed, dense,
+and they move.
 
-**The number** — `AGENTS ONLINE` as the hero, with `dialing / on call / ready`
-as a muted breakdown beneath it. This is the question a floor manager actually
-opens the page to answer, and `teams/[id]/overview` already returns all four
-under `live`.
+### Non-negotiables
 
-**A four-stat strip** — connect rate, calls, talk time, weekly spend. 11px
-muted labels, 20px tabular values. Secondary by construction.
-
-**ACTIVE USERS — the centrepiece.** One row per member, always visible, no
-accordion:
-
-| Column | Source |
-|---|---|
-| Name + email | `team_members` joined to `users` |
-| Status pill | active / pending / paused |
-| Live state | ready / on call / dialing / offline, from `agent_sessions` |
-| Calls today | `calls` scoped to team + member |
-| Connect rate | answered / placed |
-| Talk time | **`talk_seconds`**, not `duration` — see below |
-| Seat | who pays, and the pause/cancel control |
-
-Row click opens a detail panel. Live state gets a small dot, coloured, so the
-floor reads at a glance.
-
-**Below the fold** — join codes, attached campaigns, billing history. Present,
-not competing.
+1. **Edge to edge. No centered column, no max-width, no page card.** The
+   content owns the full viewport width. A 27" monitor should show more
+   agents, not more grey margin.
+2. **Nothing is centered-and-constrained.** Vertical rhythm comes from a
+   sticky header plus scrolling content, not from a stack of boxes down the
+   middle.
+3. **The floor is the page.** Not a widget on it.
 
 ---
 
-## Two data corrections to make while rebuilding
+## Layout
 
-1. **`teams/[id]/overview` computes `talkMinutes` from `duration`.** That is
-   dial→hangup wall clock and includes ring time, which averages ~10s on our
-   traffic. It overstates talk time by roughly 2x. Use `talk_seconds`, which
-   now exists on `calls` and is the real answer→hangup figure.
-2. **Any per-member call count must exclude disposition rows.** 1,462 rows in
-   `calls` have no `call_control_id` — they are dispositions written into the
-   calls table, not calls. They inflate every denominator; filter
-   `call_control_id IS NOT NULL`.
+A three-region app shell using CSS grid, full height, no outer padding:
+
+    ┌───────────────────────────────────────────────────────────┐
+    │  BAR   team · plan · live pulse · invite            56px   │
+    ├──────────────────────────────────┬────────────────────────┤
+    │                                  │                        │
+    │   FLOOR                          │   INSPECTOR            │
+    │   agent grid, then roster table  │   slides in on select  │
+    │   scrolls independently          │   420px, collapsible   │
+    │                                  │                        │
+    └──────────────────────────────────┴────────────────────────┘
+
+`grid-template-columns: 1fr auto` — the inspector is a real grid column, so
+opening it **reflows** the floor rather than covering it. No modal, no
+accordion, nothing pushing rows apart.
+
+### The bar
+
+56px, sticky, full width. Team name, plan, and a **live pulse strip** — a
+horizontal row of tiny bars, one per agent, coloured by state. At a glance,
+across the whole width: how much of the floor is green. This is the ambient
+signal; you should be able to read the room without focusing on anything.
+
+Primary action (Invite) sits far right, and is the only filled control on the
+screen.
+
+### The floor — agent cards, not a table first
+
+The top region is a **responsive auto-fill grid of agent cards**:
+
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+
+so the count per row is driven by viewport width, not a breakpoint list. Each
+card carries:
+
+- Name, and a **state dot that actually animates** — a CSS `@keyframes` ring
+  pulse while on a call, static when ready, hollow when offline. Motion is
+  reserved for live state and used nowhere else, so movement always means
+  something.
+- **A sparkline of their last 20 calls** — inline SVG, connect/no-connect as
+  height. Shows shape, not numbers.
+- Three figures in `tabular-nums`: calls, connect %, talk time.
+- Current lead if on a call.
+
+Cards are the *live* view. Below them, the same people as a **dense roster
+table** for the administrative work — seat, who pays, pause, remove. Two
+views of one dataset, each shaped for its job, both always visible. No tabs.
+
+### The inspector
+
+Selecting an agent slides in the right column. Their detail, their recent
+calls, their seat controls. Uses `view-transition-name` on the selected card
+so the card visually becomes the panel header where supported, and degrades
+to a plain slide where not.
 
 ---
+
+## Techniques to actually use
+
+Not decoration — each earns its place:
+
+- **CSS container queries** on the agent card, so a card in the narrow
+  inspector renders compact and the same component in the wide floor renders
+  full. One component, no prop-drilled `size`.
+- **`grid-template-columns: subgrid`** on the roster rows so every row's
+  internal columns align to the table grid even when cells wrap.
+- **Inline SVG sparklines**, generated from the call array. No chart library —
+  it is a polyline, and Recharts here would be 40kb for a squiggle.
+- **`content-visibility: auto`** on off-screen roster rows. A 200-agent floor
+  should not paint what nobody is looking at.
+- **A single `@keyframes pulse`** bound to live state only.
+- **`tabular-nums`** on every figure.
+- **Colour carries state, never decoration.** Green on call, amber ready,
+  grey offline, red failed. Everything else is ink and surface.
+
+## What NOT to do
+
+- No hard-coded palette. White-label tenants override `--brand-*`; the whole
+  surface reads from tokens.
+- No modal for the inspector. It is a column.
+- No accordion anywhere.
+- No card wrapping the entire page.
+- No chart library for a sparkline.
+
+---
+
+## Data corrections to make during the rebuild
+
+1. **`teams/[id]/overview` computes `talkMinutes` from `duration`** — wall
+   clock including ~10s average ring, overstating talk time by roughly 2x.
+   Use `talk_seconds`.
+2. **Per-member call counts must filter `call_control_id IS NOT NULL`.** 1,462
+   rows in `calls` are disposition rows, not calls, and inflate every
+   denominator.
+3. One new endpoint: `teams/[id]/members` returning the full per-member row —
+   identity, live state, today's calls, connect rate, talk time, seat — in one
+   query. The current page would need N+1.
 
 ## Build order
 
-1. Design primitives — `Stat`, `StatStrip`, `DataTable`, `StatusPill`,
-   `LiveDot`. Built against `--brand-*` tokens so white-label still works.
-2. The shell: header, hero number, stat strip.
-3. ACTIVE USERS table, wired to a new `teams/[id]/members` endpoint returning
-   the per-member row in one query rather than N.
-4. Row detail panel.
-5. Move join codes / campaigns / billing under the fold.
-6. Delete `TeamsManager.tsx` and `TeamOverview.tsx` only once every capability
-   they hold has a home. List them out first — that file has 1,452 lines and
-   some of it is load-bearing.
+1. `teams/[id]/members` endpoint.
+2. Shell: grid regions, sticky bar, live pulse strip.
+3. `AgentCard` with container queries, state dot, sparkline.
+4. The floor grid.
+5. Roster table with subgrid.
+6. Inspector column and view transitions.
+7. Only then delete the old files — enumerate every capability in
+   `TeamsManager.tsx` first and confirm each has a home. 1,452 lines hide
+   things.
 
-Mobile is not a port. The table becomes stacked cards; the hero number and
-live states stay.
+Mobile: the inspector becomes a bottom sheet, the floor grid goes single
+column, the roster table becomes the card list. The bar and pulse strip stay.
