@@ -373,12 +373,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               key={item.label}
               href={item.href}
               prefetch={true}
-              onClick={() => handleNavClick(item.href)}
+              className="ds-nav-link"
+              // POINTERDOWN, not click. On touch, `click` fires 100-300ms
+              // after the finger lands — the browser waits to see if it is a
+              // double tap or a scroll. Everything this handler does is local
+              // (move the highlight, close the drawer), so there is nothing to
+              // undo if the gesture turns into a scroll, and firing early is
+              // the single largest perceived-latency win available here.
+              //
+              // Navigation itself still rides the anchor's own click, which
+              // keeps middle-click, ctrl-click and long-press-open-in-new-tab
+              // behaving correctly.
+              onPointerDown={() => handleNavClick(item.href)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 padding: '12px 18px',
                 cursor: 'pointer',
+                // Kills the legacy 300ms double-tap delay outright.
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'transparent',
+                userSelect: 'none',
                 background: active
                   ? 'var(--brand-primary-soft)'
                   : 'transparent',
@@ -494,6 +509,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <main style={{ minHeight: '100vh', background: 'var(--brand-page-bg)', display: 'flex' }}>
       <style>{`
+        /* ── PRESS FEEDBACK ─────────────────────────────────────────────
+           The largest remaining source of "it feels slow" is not the
+           navigation — it is the gap between a finger landing and anything
+           on screen acknowledging it. This paints on the compositor the
+           instant the touch registers, with no JS, no React render and no
+           hydration required, so it responds even while the current page is
+           still loading.
+
+           transform rather than a colour change on purpose: it is
+           compositor-only, so it cannot be delayed by whatever the main
+           thread happens to be busy with — which, during a page load, is
+           everything. */
+        .ds-nav-link {
+          transition: background 90ms ease, transform 90ms ease;
+        }
+        .ds-nav-link:active {
+          background: var(--brand-primary-soft) !important;
+          transform: scale(0.985);
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .ds-nav-link { transition: background 90ms ease; }
+          .ds-nav-link:active { transform: none; }
+        }
+
         .ds-sidebar-desktop {
           width: 260px; height: 100vh; position: sticky; top: 0;
           background: var(--brand-sidebar-bg); border-right: 1px solid var(--brand-sidebar-active-bg);
