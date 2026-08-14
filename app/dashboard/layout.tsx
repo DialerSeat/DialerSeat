@@ -384,18 +384,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               // Navigation itself still rides the anchor's own click, which
               // keeps middle-click, ctrl-click and long-press-open-in-new-tab
               // behaving correctly.
-              // TOUCH ONLY. Firing this on a mouse pointerdown re-renders the
-              // row mid-gesture, between mousedown and mouseup, which is
-              // enough to lose the click on desktop and make a tab need
-              // clicking twice. A mouse has no 100-300ms click delay to
-              // reclaim anyway — the early fire is purely a touch win, so it
-              // is taken only where it pays.
-              onPointerDown={e => {
-                if (e.pointerType !== 'mouse') handleNavClick(item.href)
-              }}
-              // The path a mouse takes, and the fallback for any pointer type
-              // the branch above skips. Calling it twice on touch is harmless:
-              // it sets the same href and closes an already-closed drawer.
+              // onClick, and ONLY onClick. Running this on pointerdown
+              // re-renders the row mid-gesture, between press and release,
+              // which loses the click on mouse and touch alike and makes a tab
+              // need pressing twice.
+              //
+              // Nothing is lost by waiting for the click: the press feedback
+              // is pure CSS (:active), so the row acknowledges the finger
+              // immediately without React involved at all, and
+              // touch-action: manipulation removes the delay that made
+              // firing early look worth it in the first place.
               onClick={() => handleNavClick(item.href)}
               style={{
                 display: 'flex',
@@ -533,24 +531,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
            compositor-only, so it cannot be delayed by whatever the main
            thread happens to be busy with — which, during a page load, is
            everything. */
+        /* ── PRESS FEEDBACK: COLOUR ONLY, NEVER GEOMETRY ────────────────
+           A background change is instant, needs no JS or hydration, and —
+           the part that matters — does not move anything.
+
+           There WAS a scale(0.985) here. It broke tab navigation on both
+           mouse and touch: shrinking the row on press pulls its edges inward,
+           and the browser resolves the release against the element's CURRENT
+           geometry, so the pointer-up can land outside and no click is
+           generated at all. The tab then needs pressing twice.
+
+           I first assumed a finger was immune because its contact patch is
+           large. It is not — the target moves regardless of what is pressing
+           it. Nothing in a press state may change layout or transform. */
         .ds-nav-link {
           transition: background 90ms ease;
         }
         .ds-nav-link:active {
           background: var(--brand-primary-soft) !important;
-        }
-        /* The press SCALE is touch-only, and that is a correctness rule
-           rather than a taste one. Shrinking the row under a mouse cursor on
-           mousedown moves its edge inward, so mouseup can land outside the
-           element — no click fires and the tab needs clicking twice. A finger
-           has no such precision problem because the contact patch is far
-           larger than the 1.5% inset. */
-        @media (hover: none) and (pointer: coarse) {
-          .ds-nav-link { transition: background 90ms ease, transform 90ms ease; }
-          .ds-nav-link:active { transform: scale(0.985); }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .ds-nav-link:active { transform: none; }
         }
 
         .ds-sidebar-desktop {
