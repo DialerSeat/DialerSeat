@@ -69,6 +69,16 @@ const FIELDS: Record<keyof PlatformConfig, Validator> = {
   // greeting stops tripping it.
   amd_max_words:             v => intInRange(v, 3, 40),
   amd_initial_silence_ms:    v => intInRange(v, 1000, 20000),
+  // ── HOLD AFTER AN EARLY END ────────────────────────────────────────────
+  // 0 disables. The ceiling is 15, not because longer is unsupported but
+  // because it is unsafe: voicemail greetings run 15-25s, and holding past
+  // the beep records silence into the lead's mailbox — a blank voicemail on
+  // every call, which is the most-reported robocall pattern there is.
+  //
+  // 9 is the working value and clears Telnyx's 6s line with margin. Anything
+  // above ~12 is buying nothing, because a 20s call and a 7s call count
+  // identically to them, while getting closer to the beep every second.
+  amd_hold_seconds_after_machine: v => intInRange(v, 0, 15),
 }
 
 function intInRange(v: unknown, min: number, max: number): number | null {

@@ -4,6 +4,7 @@ import { getServiceClient } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 import { logCallEvent } from '@/lib/callEvents'
 import { hangupCallControlId } from '@/lib/placeOutboundCall'
+import { getPlatformConfig } from '@/lib/platformConfig'
 
 const supabase = getServiceClient('calls/hangup')
 
@@ -37,6 +38,10 @@ export async function POST(req: Request) {
 
     const body = await req.json()
     const { sid } = body
+    // Only SKIP holds the line. Terminate and abort must stay instant — those
+    // mean "get me off this call now", and delaying them would be a bug the
+    // agent could feel.
+    const isSkip = body?.reason === 'skip'
 
     if (!sid) {
       return NextResponse.json({ success: false, error: 'No SID' }, { status: 400 })
@@ -45,12 +50,35 @@ export async function POST(req: Request) {
     // Verify the caller owns this call before hanging it up.
     const { data: callRow } = await supabase
       .from('calls')
-      .select('user_id')
+      .select('user_id, answered_at')
       .eq('call_control_id', sid)
       .maybeSingle()
 
     if (!callRow || callRow.user_id !== userId) {
       return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 })
+    }
+
+    // ── THE COMPLIANCE HOLD, SKIP PATH ────────────────────────────────────
+    // The agent has already advanced — the browser tore down its own audio and
+    // moved to the next lead before this request was even sent. This holds a
+    // line nobody is on.
+    //
+    // This is the trigger that covers PREVIEW, which runs no AMD and so never
+    // fires the machine-verdict hold in calls/events. It applies in every mode
+    // though, not just preview: an agent skipping a short call in power or
+    // progressive holds the line the same way.
+    //
+    // Only extends calls that would otherwise be short. Skip after the
+    // threshold and this does nothing — the call was never a problem.
+    if (isSkip && callRow.answered_at) {
+      const { amd_hold_seconds_after_machine: holdSeconds } = await getPlatformConfig()
+      if (holdSeconds > 0) {
+        const elapsedMs = Date.now() - new Date(callRow.answered_at).getTime()
+        const remainingMs = holdSeconds * 1000 - elapsedMs
+        if (remainingMs > 0) {
+          await new Promise(resolve => setTimeout(resolve, remainingMs))
+        }
+      }
     }
 
     await hangupCallControlId(sid)

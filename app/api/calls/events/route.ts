@@ -688,6 +688,35 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
     //
     // Detection wins over delivery. See AMD.md for what would need to be true
     // before this is attempted a third time.
+
+    // ── THE 9-SECOND COMPLIANCE HOLD ──────────────────────────────────────
+    // Telnyx counts a connected call of 6s or less as short duration and
+    // surcharges above 15% of connected calls. A machine verdict lands at
+    // ~3.8s, so nearly every voicemail falls under their line purely because
+    // detection is fast.
+    //
+    // The agent is ALREADY GONE — released a few lines above — so this holds a
+    // line nobody is on. No audio flows either way. From the agent's side
+    // nothing about this exists.
+    //
+    // The ceiling is what matters: greetings run 15-25s and an answering
+    // machine records after the beep, so overrunning it would leave a blank
+    // voicemail on every lead. That is the most-reported robocall pattern
+    // there is and would cost far more in carrier reputation than the
+    // surcharge saves. Nine seconds is deep inside a greeting.
+    //
+    // 0 disables, and 0 is the default. Full rule in AMD.md.
+    const holdSeconds = platformConfig.amd_hold_seconds_after_machine ?? 0
+    if (holdSeconds > 0 && callRow?.answered_at) {
+      const elapsedMs = Date.now() - new Date(callRow.answered_at).getTime()
+      const remainingMs = holdSeconds * 1000 - elapsedMs
+      // Only ever extends a call that would otherwise be short. A call already
+      // past the threshold is left alone — there is nothing to correct.
+      if (remainingMs > 0) {
+        await new Promise(resolve => setTimeout(resolve, remainingMs))
+      }
+    }
+
     const leadHungUp = await hangupCallControlId(callControlId)
 
     // ── WHEN THE HANGUP DOES NOT TAKE ─────────────────────────────────────

@@ -2040,7 +2040,10 @@ function DialerPageInner() {
     }
   }
 
-  const hangupCall = async (sid: string | null) => {
+  // `reason` decides whether the server holds the lead's line briefly after
+  // the agent has gone. Only 'skip' does; terminate and abort stay instant,
+  // because those mean "get me off this now" and a delay would be felt.
+  const hangupCall = async (sid: string | null, reason?: 'skip') => {
     // Any hangup means the user is no longer on a call they initiated — disarm
     // so a follow-on INVITE can't reconnect audio behind their back.
     disarmDialing()
@@ -2054,11 +2057,17 @@ function DialerPageInner() {
       } catch {}
       swCallRef.current = null
     }
-    await fetch('/api/calls/hangup', {
+    // NOT awaited when skipping. The server may hold the lead's line for a few
+    // seconds to clear the short-duration threshold, and the agent must not
+    // wait on that — they are already meant to be on the next lead. The
+    // browser's own audio is torn down above, so nothing here is user-visible.
+    const hangupRequest = fetch('/api/calls/hangup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sid }),
+      body: JSON.stringify({ sid, reason }),
     })
+    if (reason !== 'skip') await hangupRequest
+    else hangupRequest.catch(() => {})
     setActiveCallSid(null)
   }
 
@@ -3214,7 +3223,9 @@ function DialerPageInner() {
 
   const handleSkip = async () => {
     if (activePollRef.current) clearInterval(activePollRef.current)
-    if (activeCallSid) await hangupCall(activeCallSid)
+    // 'skip' lets the server hold the lead's line to clear the short-duration
+    // threshold. The agent does not wait for it — see hangupCall.
+    if (activeCallSid) await hangupCall(activeCallSid, 'skip')
     if (currentLead) {
       await disposeLead({
         lead_id: currentLead.id,

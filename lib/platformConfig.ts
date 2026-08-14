@@ -67,6 +67,20 @@ export interface PlatformConfig {
   /** Whether a machine verdict ends a call the agent is already bridged into. */
   amd_hangup_when_bridged: boolean
   /**
+   * Seconds the LEAD's leg stays up after a call would otherwise end early —
+   * an AMD machine verdict, or an agent skipping under the threshold — once
+   * the agent has already advanced to the next lead.
+   *
+   * Exists because Telnyx surcharges connected calls of 6s or less above 15%
+   * of connected calls, and a machine verdict lands at ~3.8s, so being fast
+   * is what puts nearly every voicemail under their line.
+   *
+   * Must stay well under a typical 15-25s greeting: overrunning the beep
+   * records silence and leaves a blank voicemail on every lead. 0 disables.
+   * Full rule in AMD.md.
+   */
+  amd_hold_seconds_after_machine: number
+  /**
    * How long after answer a machine verdict is still believed, in seconds.
    *
    * The call is bridged at pickup, so a late verdict is describing a live
@@ -117,6 +131,9 @@ export const PLATFORM_CONFIG_DEFAULTS: PlatformConfig = {
   amd_in_preview: false,
   // Voicemail skipping is why AMD exists; keep it, now that preview is out.
   amd_hangup_when_bridged: true,
+  // OFF unless deliberately set. A fallback that silently held live calls open
+  // would be the worst possible default for this particular feature.
+  amd_hold_seconds_after_machine: 0,
   // A floor, not the final value: handleAmdResult raises this to at least
   // total_analysis_time + 3s so a verdict is never thrown away for arriving
   // exactly when the detector was told to produce it.
@@ -162,7 +179,8 @@ const CONFIG_COLUMNS =
   'concurrency_budget, amd_detector, amd_tuning_enabled, ' +
   'amd_total_analysis_ms, amd_after_greeting_silence_ms, ' +
   'amd_in_preview, amd_hangup_when_bridged, amd_max_seconds_after_answer, ' +
-  'amd_greeting_duration_ms, amd_max_words, amd_initial_silence_ms'
+  'amd_greeting_duration_ms, amd_max_words, amd_initial_silence_ms, ' +
+  'amd_hold_seconds_after_machine'
 
 // Cached per process. These are read on hot paths (every dial consults the AMD
 // and recording overrides), and the values change by human action at most a few
