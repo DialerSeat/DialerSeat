@@ -658,20 +658,21 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
       await hangupCallControlId(callRow.agent_call_control_id)
     }
 
-    // ── VOICEMAIL DROP: LEAVE THE LEAD'S LEG UP ───────────────────────────
-    // When the campaign has a message selected and this lead has not had one,
-    // the lead's leg deliberately stays connected. handleGreetingEnded plays
-    // the message at the beep and hangs up afterwards.
+    // ── VOICEMAIL DROP IS DISABLED HERE, DELIBERATELY ─────────────────────
+    // This branch used to keep the lead's leg up on a machine verdict so that
+    // handleGreetingEnded could play a message at the beep. It is off because
+    // it cannot work with the detector we actually run.
     //
-    // This is also what fixes the Telnyx short-duration ratio, and it does it
-    // honestly: the call is genuinely longer because something is genuinely
-    // being delivered, rather than padded to clear a threshold.
-    const pendingDrop = await resolveVoicemailDrop(callControlId)
-    if (pendingDrop) {
-      await autoAdvanceLeadNoDisposition(callControlId)
-      return
-    }
-
+    // The beep signal (call.machine.greeting.ended) is only emitted by
+    // detect_beep. Switching the dial to that detector broke machine detection
+    // in production — voicemails stopped being skipped AND no message was ever
+    // played — so the detector was reverted to 'detect'. With 'detect' there is
+    // no greeting event, which means keeping the leg up here would leave every
+    // detected voicemail running to the end with nobody on it and no message.
+    //
+    // Detection wins over delivery: an agent sitting through voicemails is a
+    // worse product than one that cannot leave them. Re-enabling this needs a
+    // beep signal proven on live calls not to disturb detection — see AMD.md.
     const leadHungUp = await hangupCallControlId(callControlId)
 
     // ── WHEN THE HANGUP DOES NOT TAKE ─────────────────────────────────────

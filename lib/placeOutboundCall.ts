@@ -564,23 +564,24 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
     // the dial path.
     const amdCfg = await getPlatformConfig()
 
-    // ── THE DETECTOR HAS TO REPORT THE BEEP TO DROP A VOICEMAIL ───────────
-    // Plain 'detect' answers one question — human or machine — and stops. It
-    // never emits call.machine.greeting.ended, so there is no signal for WHEN
-    // the greeting finished, and a message played on the verdict would record
-    // over the outgoing greeting or be cut off by it.
+    // ── ALWAYS THE CONFIGURED DETECTOR. DO NOT SWITCH IT PER CAMPAIGN. ────
+    // This briefly read `p.voicemailDropEnabled ? 'detect_beep' : ...` so that
+    // voicemail drop could learn when the greeting ended. It broke AMD in
+    // production: machine detection stopped skipping voicemails, AND no
+    // message was ever played, so the change cost working detection and
+    // delivered nothing.
     //
-    // 'detect_beep' answers both: the same machine verdict at the same moment,
-    // plus a greeting-ended event at the beep. The machine verdict still fires
-    // first and still releases the agent at the same speed — the beep event
-    // arrives later on a leg nobody is waiting on.
+    // The assumption behind it — that detect_beep returns the same machine
+    // verdict at the same moment, just with a beep event added — was never
+    // verified against live calls. It does not hold, and the tuned
+    // greeting/silence/word thresholds in platform_config were tuned against
+    // 'detect' specifically.
     //
-    // Only for campaigns that actually drop voicemail. Everyone else keeps the
-    // configured detector, so this cannot slow down or alter a campaign that
-    // never opted in.
-    dialBody.answering_machine_detection = p.voicemailDropEnabled
-      ? 'detect_beep'
-      : (amdCfg.amd_detector || 'detect')
+    // Voicemail drop needs a beep signal that does not disturb detection.
+    // Until that exists and is proven on real calls, detection wins: an agent
+    // sitting through voicemails is a worse product than one that cannot leave
+    // messages.
+    dialBody.answering_machine_detection = amdCfg.amd_detector || 'detect'
 
     // Guarded by its own switch: an unrecognised parameter name makes Telnyx
     // reject the WHOLE dial request, failing every call rather than merely
