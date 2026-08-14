@@ -3490,14 +3490,15 @@ export default function CampaignsPage() {
                     Turning AMD on makes it reappear. */}
                 {voicemailDropAvailable && (
                 <>
-                <div className="settings-row" style={{ alignItems: 'flex-start' }}>
+                {/* Label and control only. The explanation goes BELOW as a
+                    full-width helper, not inside the label column: a
+                    settings-row is two columns, so a paragraph in the left one
+                    wraps to about a word per line and strands the select at the
+                    top of a tall empty space. Every other long explanation on
+                    this panel is a cmp-helper underneath for the same reason. */}
+                <div className="settings-row">
                   <div className="settings-row-label">
                     VOICEMAIL DROP
-                    <small>
-                      Leave your own recorded message when the dialer reaches an
-                      answering machine. You move straight to the next lead — each
-                      lead gets it once, so they can call you back when they&apos;re free.
-                    </small>
                   </div>
                   {/* ── REQUIRES AMD, BECAUSE IT IS TRIGGERED BY AMD ────────
                       The drop fires on a machine verdict. Preview mode runs no
@@ -3523,12 +3524,17 @@ export default function CampaignsPage() {
                     ))}
                   </select>
                 </div>
-                {voicemailMessages.length === 0 && (
-                  <p className="cmp-helper" style={{ marginTop: -4 }}>
-                    You haven&apos;t recorded a voicemail message yet — record one under
-                    Recordings → Custom Voicemails, then pick it here.
-                  </p>
-                )}
+                <p className="cmp-helper" style={{ marginTop: -4 }}>
+                  Leave your own recorded message when the dialer reaches an answering
+                  machine. You move straight to the next lead — each lead gets it once,
+                  so they can call you back when they&apos;re free.
+                  {voicemailMessages.length === 0 && (
+                    <>
+                      {' '}You haven&apos;t recorded one yet — record it under
+                      Recordings → Custom Voicemails, then pick it here.
+                    </>
+                  )}
+                </p>
                 </>
                 )}
 
