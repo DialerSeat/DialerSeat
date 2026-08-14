@@ -102,6 +102,43 @@ never noticed because it never applied to them.
 The implication is the opposite of the instinct: to detect FASTER, lower
 `max_words`, not `greeting_duration`.
 
+## Voicemail drop — attempted twice, off
+
+**Do not attempt `detect_beep` again without new information from Telnyx.**
+
+Voicemail drop needs to know when the greeting ends, and
+`call.machine.greeting.ended` is only emitted by `detect_beep`. Switching the
+dial to it was tried twice on live calls, 2026-08-13:
+
+| Attempt | Config sent | Result |
+|---|---|---|
+| 1 | detect_beep + tuned thresholds | detection dead, no message |
+| 2 | detect_beep bare, Telnyx defaults | detection dead, no message |
+
+The second attempt eliminates our configuration as the cause. Something about
+`detect_beep` itself is incompatible with this dial path — most likely it
+reports through an event we do not handle, or withholds the machine verdict
+until after the greeting, which is far too late for the skip this product is
+built around.
+
+That is not a parameter problem and cannot be solved by guessing. What would
+be needed before a third attempt:
+
+- The raw Telnyx webhook stream for one `detect_beep` call, to see which
+  events actually arrive and with what payload. We log `amd_result` but not
+  the unhandled event types, so we are currently blind to exactly the thing
+  that matters.
+- Confirmation from Telnyx of when the machine verdict fires under
+  `detect_beep` relative to the greeting.
+
+Everything else for the feature is built and dormant: the recordings UI, the
+20-message library, storage, the endpoints, `campaigns.voicemail_message_id`,
+`leads.voicemail_dropped_at`, and the playback handler. Nothing plays, because
+the trigger cannot be obtained without breaking detection.
+
+**Detection wins over delivery.** An agent sitting through voicemails is a
+worse product than one that cannot leave them.
+
 ## KNOWN-GOOD CONFIG
 
 Verified working in production 2026-08-13. Return here before debugging

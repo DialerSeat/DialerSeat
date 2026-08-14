@@ -658,22 +658,18 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
       await hangupCallControlId(callRow.agent_call_control_id)
     }
 
-    // ── VOICEMAIL DROP: LEAVE THE LEAD'S LEG UP ───────────────────────────
-    // Only ever true when the campaign has a message selected, which also
-    // means the dial went out as detect_beep and a greeting-ended event is
-    // expected. Every other campaign falls straight through to the hangup
-    // below, exactly as before — this cannot affect a campaign that did not
-    // opt in.
+    // ── VOICEMAIL DROP IS OFF. TESTED TWICE, FAILED TWICE. ────────────────
+    // This branch kept the lead's leg up on a machine verdict so a message
+    // could be played at the beep. It requires call.machine.greeting.ended,
+    // which only detect_beep emits — and detect_beep killed detection on live
+    // calls both with and without the tuned config block.
     //
-    // If the beep never arrives the leg stays up until the answering machine
-    // itself hangs up. That is the known risk of this path and the reason it
-    // is scoped to one opted-in campaign rather than switched on globally.
-    const pendingDrop = await resolveVoicemailDrop(callControlId)
-    if (pendingDrop) {
-      await autoAdvanceLeadNoDisposition(callControlId)
-      return
-    }
-
+    // With 'detect' restored there is no beep event, so keeping the leg up
+    // here would leave every detected voicemail running with nobody on it and
+    // no message played. The hangup is unconditional again.
+    //
+    // Detection wins over delivery. See AMD.md for what would need to be true
+    // before this is attempted a third time.
     const leadHungUp = await hangupCallControlId(callControlId)
 
     // ── WHEN THE HANGUP DOES NOT TAKE ─────────────────────────────────────
