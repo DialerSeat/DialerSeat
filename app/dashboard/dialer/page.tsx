@@ -187,6 +187,23 @@ const INCOMING_POLL_INTERVAL_MS = 2_000
 
 const LINES_OPTIONS = [1, 2, 3, 4, 5]
 
+// ── HOW MUCH OF THE PANEL'S ORDER THE SERVER ACTUALLY NEEDS ─────────────────
+// The dial path is told the queue panel's displayed order so it dials top-down
+// through any filter or shuffle. That order used to be sent in FULL, on every
+// heartbeat — every five seconds, forever.
+//
+// A uuid costs 37 characters. At 848 leads that is a ~31KB request, which is
+// what took production down: PostgREST rejected the resulting query string with
+// a bare 400 and every mode stopped dialing. At 10,000 leads it is ~370KB every
+// five seconds per agent, and lists run larger than that.
+//
+// Nothing needs the whole list. The server picks the NEXT lead to dial, and
+// predictive claims at most five lines — so the top of the order is the only
+// part that can ever be selected from. The window is re-sent on every beat and
+// the panel rotates dialed rows to the bottom, so it always describes the rows
+// that are actually next up.
+const DIAL_ORDER_WINDOW = 300
+
 const FUTURA = `'Futura PT', Futura, 'Helvetica Neue', Helvetica, Arial, sans-serif`
 
 function todayKey(): string {
@@ -1498,8 +1515,11 @@ function DialerPageInner() {
             // has happened since the effect was created. Predictive would
             // otherwise claim against a stale order and re-dial leads it had
             // just finished, exactly as the single-line path did.
+            // Windowed — see DIAL_ORDER_WINDOW. Sending the full order here is
+            // what broke dialing on an 848-lead import, and does not survive a
+            // 100,000-lead All Active book at all.
             lead_ids: !(queuedLeadsLoading && visibleQueuedLeadsRef.current.length === 0)
-              ? visibleQueuedLeadsRef.current.map(l => l.id).join(',')
+              ? visibleQueuedLeadsRef.current.slice(0, DIAL_ORDER_WINDOW).map(l => l.id).join(',')
               : undefined,
           }),
         })
@@ -2404,7 +2424,15 @@ function DialerPageInner() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        lead_ids: queueReadyForOrderedDial ? currentOrder.map(l => l.id) : undefined,
+        // Windowed to the top of the order — see DIAL_ORDER_WINDOW. The PANEL
+        // still holds and displays every lead; this bounds only what is sent to
+        // pick the next dial from. If nothing in the window is dialable right
+        // now (a whole region outside its calling window, say), the server
+        // falls back to an unconstrained query rather than reporting an empty
+        // queue — see app/api/leads/next/route.ts.
+        lead_ids: queueReadyForOrderedDial
+          ? currentOrder.slice(0, DIAL_ORDER_WINDOW).map(l => l.id)
+          : undefined,
       }),
     })
     const data = await res.json()

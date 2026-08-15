@@ -349,38 +349,98 @@ async function handleNextLead(req: Request) {
     // CANDIDATE_LIMIT when an allowlist is present.
     const effectiveLimit = leadIdAllowlist ? Math.max(CANDIDATE_LIMIT, leadIdAllowlist.length) : CANDIDATE_LIMIT
 
-    let query = supabaseAdmin
-      .from('leads')
-      .select('*, extra_data')
-      .eq('user_id', user_id)
-      // Dialable statuses come from lib/dialableLead.ts, the same definition
-      // /api/leads/list?disposition=queue uses to build the panel — so the
-      // displayed queue and the dial order describe the same set of leads.
-      // They used to be maintained separately here and there, and drifted.
-      .in('status', DIALABLE_STATUSES as unknown as string[])
-      .not('phone', 'is', null)
-      .neq('phone', '')
-      .order('dial_attempts', { ascending: true })
-      .order('created_at', { ascending: true })
-      .limit(effectiveLimit)
+    // ── THE ALLOWLIST GOES IN THE URL, AND URLS RUN OUT ─────────────────────
+    // supabase-js sends `.in('id', [...])` as a query string — `id=in.(uuid,
+    // uuid, ...)`. Each uuid costs 37 characters, so a panel showing 848 leads
+    // built a ~31KB request line and PostgREST rejected the whole thing with a
+    // bare 400 Bad Request. The dialer surfaced that as "dialing isn't
+    // working", with nothing naming a length limit anywhere.
+    //
+    // This is not a predictive problem. /api/leads/next is the shared dial path
+    // for every mode, so importing a few hundred leads broke preview, power,
+    // progressive and predictive at once — the failure had nothing to do with
+    // whichever mode happened to be selected. It appeared the moment the old
+    // 200-id cap was lifted, which had been hiding the limit rather than
+    // respecting it.
+    //
+    // Chunked, and walked IN PANEL ORDER, which also makes it cheaper than what
+    // it replaces: the previous version raised the row limit to the size of the
+    // whole allowlist and pulled every matching lead back just to reorder them
+    // in memory. The panel's earliest rows live in the first chunk, so the
+    // common case now answers from one small query and stops.
+    const ID_CHUNK_SIZE = 150
 
-    if (campaign_id && campaign_id !== 'all') {
-      query = query.eq('campaign_id', campaign_id)
-    } else {
-      query = query.in('campaign_id', activeCampaignIds)
+    const buildQuery = (idChunk: string[] | null) => {
+      let q = supabaseAdmin
+        .from('leads')
+        .select('*, extra_data')
+        .eq('user_id', user_id)
+        // Dialable statuses come from lib/dialableLead.ts, the same definition
+        // /api/leads/list?disposition=queue uses to build the panel — so the
+        // displayed queue and the dial order describe the same set of leads.
+        // They used to be maintained separately here and there, and drifted.
+        .in('status', DIALABLE_STATUSES as unknown as string[])
+        .not('phone', 'is', null)
+        .neq('phone', '')
+        .order('dial_attempts', { ascending: true })
+        .order('created_at', { ascending: true })
+        .limit(CANDIDATE_LIMIT)
+
+      if (campaign_id && campaign_id !== 'all') {
+        q = q.eq('campaign_id', campaign_id)
+      } else {
+        q = q.in('campaign_id', activeCampaignIds)
+      }
+
+      if (idChunk) q = q.in('id', idChunk)
+      return q
     }
+
+    let candidates: any[] = []
 
     if (leadIdAllowlist) {
       if (leadIdAllowlist.length === 0) {
         return NextResponse.json({ success: false, error: 'No leads match the current filter', tcpaBlocked: false }, { status: 404 })
       }
-      query = query.in('id', leadIdAllowlist)
-    }
 
-    const { data: candidates, error } = await query
+      for (let i = 0; i < leadIdAllowlist.length; i += ID_CHUNK_SIZE) {
+        const chunk = leadIdAllowlist.slice(i, i + ID_CHUNK_SIZE)
+        const { data, error } = await buildQuery(chunk)
+        if (error) {
+          return apiError(error, { route: 'leads/next' })
+        }
+        candidates.push(...(data || []))
+        // Chunks are in panel order, so anything found here outranks anything
+        // in a later chunk. Once there are enough to choose from, stop asking.
+        if (candidates.length >= CANDIDATE_LIMIT) break
+      }
 
-    if (error) {
-      return apiError(error, { route: 'leads/next' })
+      // ── THE WINDOW MUST NEVER BE ABLE TO STALL DIALING ──────────────────
+      // The client now sends only the top of the panel's order rather than all
+      // of it, because a 100,000-lead All Active book cannot be shipped every
+      // five seconds. That reintroduces the exact hazard the old 200-id cap
+      // had: on a region-grouped list the entire window can be outside its
+      // calling window, and reporting "no leads" while thousands of dialable
+      // ones sit below the cut is the worst possible answer.
+      //
+      // So an empty result from the allowlist is treated as "the window was
+      // not representative" rather than as an answer. Falling back to the
+      // unconstrained query gives up panel ORDER for this one dial — the
+      // server's own dial_attempts/created_at ordering takes over — which is a
+      // far better failure than a dialer that stops.
+      if (candidates.length === 0) {
+        const { data, error } = await buildQuery(null)
+        if (error) {
+          return apiError(error, { route: 'leads/next' })
+        }
+        candidates = data || []
+      }
+    } else {
+      const { data, error } = await buildQuery(null)
+      if (error) {
+        return apiError(error, { route: 'leads/next' })
+      }
+      candidates = data || []
     }
 
     // Same reordering as the team-scope branch above — when lead_ids came
