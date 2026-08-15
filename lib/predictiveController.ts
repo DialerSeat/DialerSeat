@@ -217,7 +217,16 @@ export async function runPredictiveController(
   const result = await runPredictiveControllerInner(input)
 
   if (result.fired === 0 && !result.reason.startsWith('at target')) {
-    void logCallEvent({
+    // AWAITED, not fire-and-forget. The heartbeat returns its response
+    // immediately after this resolves, and on a serverless runtime a promise
+    // still pending at that moment is frozen with the invocation — so a `void`
+    // here produces an insert that never lands. That is not a theoretical
+    // risk: it is why the first round of this instrumentation recorded nothing
+    // at all while the controller was demonstrably running and claiming leads
+    // every five seconds.
+    //
+    // One insert, and nothing the agent can feel is waiting on it.
+    await logCallEvent({
       event_type: 'fanout_idle',
       user_id: input.clerkId,
       campaign_id: input.campaignId,
@@ -779,7 +788,9 @@ async function runPredictiveControllerInner(
         console.error(`[controller] placement threw for lead ${lead.id}:`, result.reason)
       }
 
-      void logCallEvent({
+      // Awaited for the same reason as the idle event above — a `void` here
+      // is an insert the serverless runtime is free to discard.
+      await logCallEvent({
         event_type: 'fanout_placement_failed',
         user_id: clerkId,
         campaign_id: lead.campaign_id,
