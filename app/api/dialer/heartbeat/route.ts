@@ -570,7 +570,36 @@ export async function POST(req: NextRequest) {
     // Read from the SESSION ROW, not the client's value. For predictive the
     // client has no call id — the assignment only exists server-side, which is
     // the whole reason this field had to be added.
-    const assignedCallId = upserted.current_call_id ?? effectiveCallId
+    let assignedCallId = upserted.current_call_id ?? effectiveCallId
+
+    // ── THE SCREEN OPENS BECAUSE SOMEBODY ANSWERED ─────────────────────────
+    // Progressive shows the lead profile the instant the LEAD answers —
+    // /api/calls/check reports in-progress as soon as answered_at is set, and
+    // AMD decides afterwards whether the call survives. The bridge is a
+    // separate concern entirely.
+    //
+    // Predictive's view was gated on current_call_id, which is only written
+    // once a fan-out line has claimed the agent AND the agent leg has been
+    // dialed. Five guards sit in front of that, any of which leaves the agent
+    // staring at the queue panel through a live answered call. That is the
+    // wrong dependency: answering is what opens the screen.
+    //
+    // So if this session has a live answered fan-out line and nothing else is
+    // assigned, that is the call — same trigger progressive uses, same
+    // ordering, and AMD still decides what happens next.
+    if (!assignedCallId && dialerMode === 'predictive') {
+      const { data: answeredLine } = await supabase
+        .from('calls')
+        .select('id')
+        .eq('dial_group_id', sessionId)
+        .not('answered_at', 'is', null)
+        .eq('duration', 0)
+        .is('disposition', null)
+        .order('answered_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (answeredLine) assignedCallId = answeredLine.id
+    }
 
     if (assignedCallId) {
       const { data: liveCall } = await supabase
