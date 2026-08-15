@@ -38,9 +38,12 @@ export async function POST(req: Request) {
 
     const body = await req.json()
     const { sid } = body
-    // Only SKIP holds the line. Terminate and abort must stay instant — those
-    // mean "get me off this call now", and delaying them would be a bug the
-    // agent could feel.
+    // Both SKIP and TERMINATE send this. They mean different things to the
+    // LEAD — give up on it, versus end this particular call — but identical
+    // things to the agent, who is leaving either way and waits on neither.
+    //
+    // ABORT does not come through here at all. It cancels a dial that was
+    // never answered, so there is no billed duration and nothing to hold.
     const isSkip = body?.reason === 'skip'
 
     if (!sid) {

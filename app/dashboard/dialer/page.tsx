@@ -3188,7 +3188,13 @@ function DialerPageInner() {
     // the session — terminate ends the call, not the shift.
     // Live call first and alone — see the note in abortDialing. Running these
     // together puts the audible hangup in a queue behind the sweep's requests.
-    if (sid) await hangupCall(sid).catch(() => {})
+    //
+    // 'skip' here means "the agent is done — hold the lead's line if it would
+    // otherwise be short", the same treatment SKIP gets. Terminate and skip
+    // differ in what they mean for the LEAD, not in how the agent leaves, and
+    // the agent waits on neither: the browser tears down its own audio first
+    // and this request is not awaited for that reason.
+    if (sid) await hangupCall(sid, 'skip').catch(() => {})
 
     void fetch('/api/dialer/abort', {
       method: 'POST',
@@ -5234,6 +5240,11 @@ function DialerPageInner() {
                   is still up — you are already talking to them. It belongs on
                   the after-call controls, not the live ones. */}
               {status === 'connected' && (
+                {/* SKIP and TERMINATE stay distinct — they mean different
+                    things to the LEAD (give up on it vs end this call) — but
+                    both now leave the same way: the agent moves on at once,
+                    and the lead's line is parked in the background until it
+                    clears the threshold. Neither makes the agent wait. */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, flexShrink: 0 }}>
                   <button onClick={handleSkip} style={{
                     padding: '14px', borderRadius: '4px',
