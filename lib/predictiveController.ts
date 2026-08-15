@@ -506,7 +506,61 @@ async function runPredictiveControllerInner(
     .eq('claimed_by_session_id', sessionId)
     .gte('claimed_at', ninetySecondsAgo)
 
-  const inFlight = Math.max(inFlightCalls.length, claimedInFlight ?? 0)
+  // ── AN ORPHANED CLAIM IS NOT A LINE ─────────────────────────────────────
+  // Pacing counts live claims as well as call rows, deliberately: a dial that
+  // reaches the carrier without writing a row must still count against the
+  // limit, or the engine runs away. But that makes a claim with NO call behind
+  // it indistinguishable from a real line — and those claims cannot expire,
+  // because the heartbeat re-stamps claimed_at every five seconds for every
+  // lead this session holds.
+  //
+  // The first tick this controller ever ran said "at target: 3/3 in flight"
+  // with zero fan-out calls in existence. Three claims left behind by earlier
+  // progressive dialing pinned the engine at its own line limit permanently:
+  // shouldDial 3 - 3 = 0, forever, on an idle dialer.
+  //
+  // So claims older than the grace period with no live call row behind them are
+  // released here rather than counted. The grace period matters — a claim taken
+  // moments ago is legitimately waiting for its call row to be written, and
+  // releasing that would reintroduce the runaway this counting exists to stop.
+  const ORPHAN_CLAIM_GRACE_MS = 25_000
+  const liveCallLeadIds = new Set(
+    inFlightCalls.map(c => c.lead_id).filter((id): id is string => !!id)
+  )
+
+  const { data: heldLeads } = await supabase
+    .from('leads')
+    .select('id, claimed_at')
+    .in('campaign_id', campaignIds)
+    .eq('claimed_by_session_id', sessionId)
+    .not('claimed_at', 'is', null)
+
+  const orphanIds = (heldLeads || [])
+    .filter(l => !liveCallLeadIds.has(l.id))
+    .filter(l => {
+      const age = Date.now() - new Date(l.claimed_at as string).getTime()
+      return Number.isFinite(age) && age > ORPHAN_CLAIM_GRACE_MS
+    })
+    .map(l => l.id)
+
+  if (orphanIds.length > 0) {
+    const { error: orphanErr } = await supabase
+      .from('leads')
+      .update({ claimed_at: null, claimed_by_session_id: null })
+      .in('id', orphanIds)
+    if (orphanErr) {
+      console.error('[controller] orphan claim release failed', orphanErr)
+    } else {
+      console.warn(
+        `[controller] released ${orphanIds.length} orphaned claim(s) — held by this ` +
+        `session with no live call behind them`
+      )
+      released += orphanIds.length
+    }
+  }
+
+  const liveClaims = Math.max(0, (claimedInFlight ?? 0) - orphanIds.length)
+  const inFlight = Math.max(inFlightCalls.length, liveClaims)
   // Real, live phone numbers currently in flight — genuinely still ringing
   // or connected right now, not just "were dialed on the last tick that
   // fired." Previously the frontend only learned about dialed numbers on
