@@ -686,6 +686,33 @@ function DialerPageInner() {
   // Keep availableRef in lock-step with the available state.
   useEffect(() => { availableRef.current = available }, [available])
   const predictiveEngineStartedRef = useRef(false)
+
+  /**
+   * Tell the SERVER the predictive sequence started or stopped.
+   *
+   * This is now the only thing that gates fan-out. The armed flag used to be
+   * recomputed in the browser on every heartbeat and was wrong in three
+   * different ways before anyone could see it — see app/api/dialer/arm.
+   *
+   * Disarming is fire-and-forget and must never block the UI: the client stops
+   * dialing on its own and /api/dialer/abort sweeps the lines regardless.
+   * Arming is awaited, because nothing should show as started until the server
+   * agrees it is.
+   */
+  const setServerArmed = async (armed: boolean): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/dialer/arm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ armed }),
+      })
+      const data = await res.json().catch(() => null)
+      return data?.ok === true
+    } catch (err) {
+      console.error('[arm] failed to set armed =', armed, err)
+      return false
+    }
+  }
   // Diagnostic counters for the arming path — see startDialSequence.
   const armClicksRef = useRef(0)
   const armReachedRef = useRef(0)
@@ -1007,11 +1034,13 @@ function DialerPageInner() {
     setSelectedCampaign('')
     setPredictiveEngineStarted(false)
     predictiveEngineStartedRef.current = false
+    void setServerArmed(false)
   }, [selectedScope])
 
   useEffect(() => {
     setPredictiveEngineStarted(false)
     predictiveEngineStartedRef.current = false
+    void setServerArmed(false)
     // Reset script tab state when switching campaigns — a previous campaign's
     // custom order keys don't apply here and could otherwise hide tabs.
     setScriptOrder([])
@@ -1900,6 +1929,11 @@ function DialerPageInner() {
       setSeconds(0)
       setPredictiveEngineStarted(false)
       predictiveEngineStartedRef.current = false
+      // Clocking off must disarm on the SERVER too. The abort sweep below
+      // pauses the session, but leaving the row armed means the engine is
+      // still armed the moment the agent comes back — before they have asked
+      // for it. That is the ghost dialing this flag exists to prevent.
+      void setServerArmed(false)
       lastIncomingCallSidRef.current = null
     }
 
@@ -3223,6 +3257,9 @@ function DialerPageInner() {
       armSetRef.current++
       predictiveEngineStartedRef.current = true
       setPredictiveEngineStarted(true)
+      // The one that actually matters — the server gate. Awaited, so the
+      // engine is not shown as started until the row says it is.
+      void setServerArmed(true)
       armDialing() // predictive engine running — incoming-route may bridge a human to us
       lastIncomingCallSidRef.current = null
       setAmdActivity(prev => [
@@ -3332,6 +3369,7 @@ function DialerPageInner() {
 
     setPredictiveEngineStarted(false)
     predictiveEngineStartedRef.current = false
+    void setServerArmed(false)
     lastIncomingCallSidRef.current = null
 
     disarmDialing({ force: true })

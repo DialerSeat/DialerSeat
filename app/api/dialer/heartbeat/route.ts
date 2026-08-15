@@ -149,7 +149,9 @@ export async function POST(req: NextRequest) {
     // calls) must only run when the client has EXPLICITLY armed the engine via
     // the INITIATE button — never merely because the agent toggled Available.
     // The client sends predictive_armed=true only while the engine is started.
-    const predictiveArmed: boolean = body.predictive_armed === true
+    // Kept only as a diagnostic now — see below. The value that GATES fan-out
+    // is read from the session row, not from this.
+    const clientClaimsArmed: boolean = body.predictive_armed === true
     // Ordered lead ids from the dialer's queue panel (always sent now, not
     // just when filtered/shuffled — see page.tsx). Sent as a comma-separated
     // string (consistent with how /api/leads/next already accepts lead_ids
@@ -276,7 +278,12 @@ export async function POST(req: NextRequest) {
         },
         { onConflict: 'user_id' }
       )
-      .select('id, state, campaign_id, dialer_mode')
+      // predictive_armed is READ here and never written by the upsert — it is
+      // owned entirely by POST /api/dialer/arm. Including it in the upsert
+      // payload would let every heartbeat overwrite the agent's own decision
+      // with whatever the browser last computed, which is the whole class of
+      // bug this replaces.
+      .select('id, state, campaign_id, dialer_mode, predictive_armed')
       .single()
 
     // ── RENEW THIS AGENT'S LEAD CLAIMS ────────────────────────────────────
@@ -314,6 +321,13 @@ export async function POST(req: NextRequest) {
     }
 
     const sessionId = upserted.id
+
+    // ── THE GATE READS THE ROW, NOT THE WIRE ──────────────────────────────
+    // Written once by POST /api/dialer/arm when the agent starts the sequence.
+    // Nothing between that click and this line can lose it: no render, no
+    // effect, no interval closure. See app/api/dialer/arm/route.ts for the
+    // three separate ways the browser-computed version managed to be wrong.
+    const predictiveArmed: boolean = upserted.predictive_armed === true
 
     // ── Compute should_yield (FTC throttle) ────────────────────────────────
     let shouldYield = false
@@ -433,6 +447,9 @@ export async function POST(req: NextRequest) {
               // fired" from "a guard returned early" from "it armed and
               // something cleared it", which two rounds of reading the code
               // could not.
+              // Kept so a disagreement between what the browser believes and
+              // what the row says is visible rather than inferred.
+              client_claims_armed: clientClaimsArmed,
               arm_clicks: body.arm_clicks ?? null,
               arm_reached: body.arm_reached ?? null,
               arm_set: body.arm_set ?? null,
