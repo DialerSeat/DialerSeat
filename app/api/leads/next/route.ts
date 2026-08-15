@@ -370,7 +370,19 @@ async function handleNextLead(req: Request) {
     // common case now answers from one small query and stops.
     const ID_CHUNK_SIZE = 150
 
-    const buildQuery = (idChunk: string[] | null) => {
+    // ── THE CHUNK COMES BACK WHOLE, OR THE ORDER IS A LIE ───────────────────
+    // A chunk is queried with a row limit, and the database applies that limit
+    // using ITS OWN ordering (dial_attempts, then created_at) — not the panel's.
+    // With a 150-id chunk and a limit of 50, it discarded 100 rows before the
+    // panel order was ever applied, so on a newest-first or shuffled panel it
+    // handed back the OLDEST rows of the top 150. The reorder below then picked
+    // the best of an already-wrong subset, and dialing started in the middle of
+    // the list and walked down correctly from there — which is exactly what it
+    // looked like.
+    //
+    // A chunk is 150 rows. Fetching all of them costs nothing and is the only
+    // way the panel-position sort below can see the true top row.
+    const buildQuery = (idChunk: string[] | null, rowLimit: number) => {
       let q = supabaseAdmin
         .from('leads')
         .select('*, extra_data')
@@ -384,7 +396,7 @@ async function handleNextLead(req: Request) {
         .neq('phone', '')
         .order('dial_attempts', { ascending: true })
         .order('created_at', { ascending: true })
-        .limit(CANDIDATE_LIMIT)
+        .limit(rowLimit)
 
       if (campaign_id && campaign_id !== 'all') {
         q = q.eq('campaign_id', campaign_id)
@@ -405,14 +417,17 @@ async function handleNextLead(req: Request) {
 
       for (let i = 0; i < leadIdAllowlist.length; i += ID_CHUNK_SIZE) {
         const chunk = leadIdAllowlist.slice(i, i + ID_CHUNK_SIZE)
-        const { data, error } = await buildQuery(chunk)
+        // Whole chunk, never a slice of it — see buildQuery.
+        const { data, error } = await buildQuery(chunk, chunk.length)
         if (error) {
           return apiError(error, { route: 'leads/next' })
         }
         candidates.push(...(data || []))
-        // Chunks are in panel order, so anything found here outranks anything
-        // in a later chunk. Once there are enough to choose from, stop asking.
-        if (candidates.length >= CANDIDATE_LIMIT) break
+        // Chunks are walked in panel order, so ANY dialable lead in this chunk
+        // outranks everything in every later chunk. Stop at the first chunk
+        // that yields something — going further could only add rows that sort
+        // below what we already have.
+        if (candidates.length > 0) break
       }
 
       // ── THE WINDOW MUST NEVER BE ABLE TO STALL DIALING ──────────────────
@@ -429,14 +444,14 @@ async function handleNextLead(req: Request) {
       // server's own dial_attempts/created_at ordering takes over — which is a
       // far better failure than a dialer that stops.
       if (candidates.length === 0) {
-        const { data, error } = await buildQuery(null)
+        const { data, error } = await buildQuery(null, CANDIDATE_LIMIT)
         if (error) {
           return apiError(error, { route: 'leads/next' })
         }
         candidates = data || []
       }
     } else {
-      const { data, error } = await buildQuery(null)
+      const { data, error } = await buildQuery(null, CANDIDATE_LIMIT)
       if (error) {
         return apiError(error, { route: 'leads/next' })
       }
