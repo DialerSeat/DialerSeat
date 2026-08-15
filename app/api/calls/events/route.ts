@@ -834,6 +834,27 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
     return
   }
 
+  // ── ALREADY CONNECTED AT PICKUP — THIS IS ONLY THE CONFIRMATION ─────────
+  // The agent is bridged when the prospect answers now, not here. So by the
+  // time a human verdict lands the line is already up, and everything below —
+  // claiming a session, dialing an agent leg — would be doing it a second
+  // time. That would ring the agent again on a call they are already talking
+  // on and leave a stray leg behind.
+  //
+  // What the verdict still decides is the SIBLINGS. A human is confirmed, so
+  // every other line this session has ringing ends here. That is the whole of
+  // "if human, in-route calls abort" — and it deliberately still fires from
+  // the verdict rather than from the pickup, so a machine never kills the
+  // other lines on a false alarm.
+  if (callRow.agent_call_control_id) {
+    await abortSiblingFanoutLines({
+      sessionId: callRow.dial_group_id,
+      keepCallControlId: callControlId,
+    })
+    await recordingStart
+    return
+  }
+
   // ── CONTROLLER FANOUT — claim the originating agent, or overflow ──────
   const sessionId = callRow.dial_group_id
   const { data: session } = await supabaseAdmin
