@@ -69,6 +69,32 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}))
     const scope: 'all' | 'calls' = body?.scope === 'calls' ? 'calls' : 'all'
 
+    // ── DISARM FIRST, BEFORE ANYTHING ELSE ────────────────────────────────
+    // Hanging up the live lines is pointless while the engine is still armed:
+    // the next heartbeat is at most five seconds away and will simply fan out
+    // a fresh batch. Pressing STOP and watching the phone keep ringing is
+    // exactly that race.
+    //
+    // The client also calls /api/dialer/arm, but that is a separate
+    // fire-and-forget request that can land after the next beat — or not at
+    // all. The kill switch must not depend on a second request succeeding, so
+    // it clears the flag itself, first, and awaits it.
+    try {
+      const { data: userRow } = await supabase
+        .from('users')
+        .select('id')
+        .eq('clerk_id', userId)
+        .maybeSingle()
+      if (userRow) {
+        await supabase
+          .from('agent_sessions')
+          .update({ predictive_armed: false })
+          .eq('user_id', userRow.id)
+      }
+    } catch (disarmErr) {
+      console.error('[abort] failed to clear predictive_armed:', disarmErr)
+    }
+
     let hungUp = 0
     let claimsReleased = 0
 

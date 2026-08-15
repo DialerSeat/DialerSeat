@@ -272,7 +272,21 @@ export async function POST(req: NextRequest) {
           campaign_id: campaignId,
           dialer_mode: dialerMode,
           state,
-          current_call_id: effectiveCallId,
+          // ── NEVER NULL A SERVER-ASSIGNED CALL ────────────────────────────
+          // In every client-dialed mode this column mirrors what the browser
+          // is on. Predictive is the opposite: the fan-out bridge assigns the
+          // agent a call SERVER-side and writes it here, and the client has no
+          // id at all — so it sends null, and this upsert erased the
+          // assignment five seconds after it was made, every time.
+          //
+          // That is why answering a predictive call never opened the lead
+          // profile: the row that says "you are on this call" was being
+          // cleared by the very request that reports the agent is alive.
+          //
+          // Undefined omits the column from the upsert, leaving whatever the
+          // server assigned intact. Only a client that actually has a call id
+          // writes this now.
+          ...(currentCallId !== null ? { current_call_id: effectiveCallId } : {}),
           last_heartbeat: now,
           updated_at: now,
         },
@@ -283,7 +297,7 @@ export async function POST(req: NextRequest) {
       // payload would let every heartbeat overwrite the agent's own decision
       // with whatever the browser last computed, which is the whole class of
       // bug this replaces.
-      .select('id, state, campaign_id, dialer_mode, predictive_armed')
+      .select('id, state, campaign_id, dialer_mode, predictive_armed, current_call_id')
       .single()
 
     // ── RENEW THIS AGENT'S LEAD CLAIMS ────────────────────────────────────
@@ -542,11 +556,16 @@ export async function POST(req: NextRequest) {
       lead: Record<string, unknown> | null
     } | null = null
 
-    if (effectiveCallId) {
+    // Read from the SESSION ROW, not the client's value. For predictive the
+    // client has no call id — the assignment only exists server-side, which is
+    // the whole reason this field had to be added.
+    const assignedCallId = upserted.current_call_id ?? effectiveCallId
+
+    if (assignedCallId) {
       const { data: liveCall } = await supabase
         .from('calls')
         .select('id, call_control_id, lead_id, dial_source')
-        .eq('id', effectiveCallId)
+        .eq('id', assignedCallId)
         .maybeSingle()
 
       if (liveCall) {
