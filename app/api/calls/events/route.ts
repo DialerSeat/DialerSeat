@@ -361,6 +361,33 @@ async function handleCallAnswered(callControlId: string): Promise<void> {
         ? Date.now() - new Date(session.last_heartbeat).getTime() <= 15_000
         : false
 
+      // ── EVERY WAY THIS CAN DECLINE, ON THE RECORD ─────────────────────────
+      // This path had five guards and every one of them exited silently. A
+      // prospect answered, no agent was ever attached, and nothing anywhere
+      // said which condition refused — the calls row showed agent_leg false
+      // and that was the entire story available.
+      //
+      // One row per fan-out answer. That is a handful an hour, and it is the
+      // difference between knowing and guessing.
+      await logCallEvent({
+        event_type: 'fanout_placement_failed',
+        call_control_id: callControlId,
+        source: 'webhook',
+        status: session && beatFresh ? 'pickup_bridge_attempt' : 'pickup_bridge_declined',
+        detail: {
+          reason: !session
+            ? 'no agent_sessions row for this dial_group_id'
+            : !beatFresh
+              ? 'agent heartbeat older than 15s'
+              : 'proceeding to claim',
+          session_found: !!session,
+          beat_fresh: beatFresh,
+          session_state: session?.state ?? null,
+          session_current_call: session?.current_call_id ?? null,
+          this_call_row: row.id,
+        },
+      })
+
       if (session && beatFresh) {
         // Same atomic claim the verdict path uses: only one answered line can
         // take a given agent, so a second simultaneous pickup loses the race
@@ -372,6 +399,23 @@ async function handleCallAnswered(callControlId: string): Promise<void> {
           .or(`current_call_id.is.null,current_call_id.eq.${row.id}`)
           .select('id')
           .maybeSingle()
+
+        if (!claim.data) {
+          // Lost the claim — another answered line already took this agent, or
+          // the session was pinned to a call that never cleared. Silent until
+          // now, and indistinguishable from the bridge simply not running.
+          await logCallEvent({
+            event_type: 'fanout_placement_failed',
+            call_control_id: callControlId,
+            source: 'webhook',
+            status: 'pickup_claim_lost',
+            detail: {
+              reason: 'agent already pinned to another call',
+              session_current_call: session.current_call_id,
+              this_call_row: row.id,
+            },
+          })
+        }
 
         if (claim.data) {
           const dialed = await dialAndBridgeAgentForFanout(callControlId, session.user_id)
