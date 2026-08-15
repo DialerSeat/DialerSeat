@@ -4504,7 +4504,7 @@ function DialerPageInner() {
                   </button>
                 ) : (
                   <div style={{ color: terminalMuted }}>
-                    ■ THAT'S ALL {visibleQueuedLeads.length.toLocaleString()} OF YOUR LEADS
+                    ■ THAT'S ALL {visibleQueuedLeads.length.toLocaleString()} OF YOUR LEADS ■
                   </div>
                 )}
               </div>
