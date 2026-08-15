@@ -319,9 +319,76 @@ async function handleCallAnswered(callControlId: string): Promise<void> {
     console.error(`[calls/events] failed to record answered_at for ${callControlId}:`, err)
   }
 
-  // Bridging itself needs no action here: user_dial was already bridged by
-  // bridge_on_answer, and controller_fanout waits for AMD before deciding
-  // routing — see the module header.
+  // ── FAN-OUT CONNECTS AT PICKUP, NOT AT THE VERDICT ────────────────────────
+  // Deliberate product decision, made with the tradeoff understood.
+  //
+  // Fan-out used to wait for AMD before bridging anyone. That is better for
+  // detection — a detector classifying an already-joined call is unreliable,
+  // which is why this codebase moved AMD ahead of the bridge in the first
+  // place — but it means a prospect who answers hears roughly four seconds of
+  // silence before anyone arrives, and hears nothing at all if the verdict
+  // comes back 'machine'. Live testing produced exactly that: answered, dead
+  // air, no connection.
+  //
+  // Connecting at pickup inverts the priority. The agent is on the line the
+  // moment the prospect says hello, and AMD becomes an after-the-fact filter:
+  // a 'machine' verdict still fires the existing machine branch, which
+  // releases the agent, returns them to the queue, and holds the lead's leg
+  // for the compliance window as before.
+  //
+  // The cost is real and accepted: standard AMD is less reliable once bridged,
+  // so more voicemails will reach agents on predictive. Premium detection
+  // would give both, and is deliberately NOT used here.
+  //
+  // Only fan-out lines reach this. user_dial is already bridged by
+  // bridge_on_answer, and re-bridging a live call would drop the audio the
+  // agent is using.
+  try {
+    const { data: row } = await supabaseAdmin
+      .from('calls')
+      .select('id, dial_source, dial_group_id, agent_call_control_id')
+      .eq('call_control_id', callControlId)
+      .maybeSingle()
+
+    if (row?.dial_source === 'controller_fanout' && row.dial_group_id && !row.agent_call_control_id) {
+      const { data: session } = await supabaseAdmin
+        .from('agent_sessions')
+        .select('id, user_id, state, current_call_id, last_heartbeat')
+        .eq('id', row.dial_group_id)
+        .maybeSingle()
+
+      const beatFresh = session
+        ? Date.now() - new Date(session.last_heartbeat).getTime() <= 15_000
+        : false
+
+      if (session && beatFresh) {
+        // Same atomic claim the verdict path uses: only one answered line can
+        // take a given agent, so a second simultaneous pickup loses the race
+        // and falls through to overflow routing on its own verdict.
+        const claim = await supabaseAdmin
+          .from('agent_sessions')
+          .update({ current_call_id: row.id, state: 'on_call', updated_at: new Date().toISOString() })
+          .eq('id', session.id)
+          .or(`current_call_id.is.null,current_call_id.eq.${row.id}`)
+          .select('id')
+          .maybeSingle()
+
+        if (claim.data) {
+          const dialed = await dialAndBridgeAgentForFanout(callControlId, session.user_id)
+          if (!dialed) {
+            // Could not reach the agent — give the session back rather than
+            // pinning it to a call nobody is on.
+            await supabaseAdmin
+              .from('agent_sessions')
+              .update({ current_call_id: null, state: 'ready' })
+              .eq('id', session.id)
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error(`[calls/events] pickup bridge failed for ${callControlId}:`, err)
+  }
 }
 
 // =============================================================================
