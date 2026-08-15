@@ -1484,6 +1484,22 @@ async function dialAndBridgeAgentForFanout(
         Authorization: `Bearer ${env.apiKey}`,
         'Content-Type': 'application/json',
       },
+      // NOTE — DIFFERS FROM PROGRESSIVE, AND THAT DIFFERENCE IS UNVERIFIED.
+      // placeOutboundCall dials its agent leg PLAIN (connection_id,
+      // client_state, to, from, webhook_url, timeout_secs) and puts link_to +
+      // bridge_on_answer on the LEAD leg, which is dialled second. Here both
+      // are on the AGENT leg, pointing at a lead call that has already
+      // answered — a different operation, and a candidate for why no agent leg
+      // is ever attached on fan-out while progressive works.
+      //
+      // Also missing client_state, which stamps a leg with its owning agent
+      // and is how /api/dialer/abort finds legs to hang up. A fan-out agent leg
+      // is currently invisible to the kill switch.
+      //
+      // Left as-is deliberately: changing it also changes WHEN the bridge
+      // happens (Telnyx bridging on answer, versus an explicit
+      // bridgeCallControlIds once the agent's device picks up), and that needs
+      // checking against Telnyx's docs before it goes near live audio.
       body: JSON.stringify({
         connection_id: env.connectionId,
         to: agentSipUri,
