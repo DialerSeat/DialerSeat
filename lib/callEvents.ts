@@ -41,6 +41,12 @@ export type CallEventType =
   | 'recording_started'
   | 'recording_stopped'
   | 'reaped'
+  // The predictive controller claimed a lead and then failed to place its
+  // call. Recorded rather than logged to the console because a tick that
+  // claims and places nothing is otherwise indistinguishable, from every table
+  // in the database, from a tick that was never asked to dial — which is what
+  // made "predictive has never placed a call" so slow to pin down.
+  | 'fanout_placement_failed'
 
 interface CallEventInput {
   event_type: CallEventType

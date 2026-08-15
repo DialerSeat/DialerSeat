@@ -858,7 +858,7 @@ async function handleHangup(
   try {
     const { data: callRow } = await supabaseAdmin
       .from('calls')
-      .select('id, created_at, duration, disposition, answered_at, talk_seconds')
+      .select('id, created_at, duration, disposition, answered_at, talk_seconds, lead_id, dial_group_id, dial_source')
       .eq('call_control_id', callControlId)
       .maybeSingle()
 
@@ -920,6 +920,32 @@ async function handleHangup(
         .from('agent_sessions')
         .update({ current_call_id: null })
         .eq('current_call_id', callRow.id)
+
+      // ── A FINISHED FAN-OUT LINE MUST GIVE ITS LEAD BACK ──────────────────
+      // This is why predictive dialed once and then sat at "2/2 lines" forever.
+      //
+      // The controller paces off live CLAIMS as well as call rows, precisely so
+      // that a dial which reaches the carrier without writing a row still counts
+      // against the line limit. But nothing released a claim when the call
+      // ENDED, and the heartbeat re-stamps claimed_at on every lead this session
+      // holds every five seconds — so the 30-second stale sweep could never
+      // reach them either. Two calls' worth of claims were therefore renewed
+      // indefinitely, inFlight stayed pinned at the line count, shouldDial
+      // stayed 0, and the engine reported itself permanently at target.
+      //
+      // Deliberately scoped to fan-out calls only. In preview/power/progressive
+      // the agent is still looking at that lead to disposition it, and dropping
+      // the claim out from under them would let a teammate dial someone they are
+      // mid-wrap-up on. Those modes are tuned; this touches none of them.
+      if (callRow.dial_source === 'controller_fanout' && callRow.lead_id) {
+        const { error: relErr } = await supabaseAdmin
+          .from('leads')
+          .update({ claimed_at: null, claimed_by_session_id: null })
+          .eq('id', callRow.lead_id)
+        if (relErr) {
+          console.error('[calls/events] fan-out claim release failed', relErr)
+        }
+      }
     }
   } catch (err) {
     console.error('[calls/events] hangup cleanup failed:', err)

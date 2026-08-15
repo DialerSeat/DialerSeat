@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { placeOutboundCall, hangupCallControlId } from '@/lib/placeOutboundCall'
+import { logCallEvent } from '@/lib/callEvents'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -585,7 +586,16 @@ export async function runPredictiveController(
   
   
   
-  const phoneSeen = new Set<string>()
+  // ── NEVER RING THE SAME PHONE TWICE AT ONCE ─────────────────────────────
+  // Seeded with the numbers already in flight, not just emptied per tick.
+  //
+  // Deduping only within a single batch stopped one tick dialing a number
+  // twice, and did nothing about the NEXT tick dialing the number the previous
+  // one is still ringing. On a list with a repeated number — a test list, or a
+  // real one with a shared household or business line — that is the common
+  // case, not the edge case: the same handset gets called again while the first
+  // call is still up.
+  const phoneSeen = new Set<string>(inFlightPhones.map(normalizePhone).filter(Boolean))
   const leadsToCall: typeof leads = []
   const dupeLeadIds: string[] = []
 
@@ -705,6 +715,20 @@ export async function runPredictiveController(
         console.error('[controller] release_lead_claim failed', relErr)
       }
 
+      // ── A FAILED FAN-OUT MUST LEAVE A TRACE ─────────────────────────────
+      // These failures were console-only, which makes them invisible: a
+      // predictive tick that claims leads and then places nothing looks
+      // identical, from every table in the database, to a tick that was never
+      // asked to dial. That ambiguity is exactly what made "predictive has
+      // never placed a call" take this long to pin down — there was no row
+      // anywhere that said WHY.
+      //
+      // Written to call_events with no call_control_id (there is no call — that
+      // is the point), so the reason is queryable next to every other event.
+      const reason = result.status === 'fulfilled'
+        ? `${result.value.error}${result.value.detail ? ` — ${result.value.detail}` : ''}`
+        : `threw: ${String(result.reason)}`
+
       if (result.status === 'fulfilled') {
         console.warn(
           `[controller] placement failed for lead ${lead.id}:`,
@@ -713,6 +737,16 @@ export async function runPredictiveController(
       } else {
         console.error(`[controller] placement threw for lead ${lead.id}:`, result.reason)
       }
+
+      void logCallEvent({
+        event_type: 'fanout_placement_failed',
+        user_id: clerkId,
+        campaign_id: lead.campaign_id,
+        lead_id: lead.id,
+        source: 'system',
+        status: result.status === 'fulfilled' ? String(result.value.httpStatus ?? '') : 'threw',
+        detail: { phone: lead.phone, reason },
+      })
     }
   }
 
