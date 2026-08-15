@@ -98,9 +98,24 @@ export async function pickNumberForLead(
   dialerMode?: string,
   leadState?: string | null
 ): Promise<PoolNumber | null> {
-  // Predictive fans out across many leads at once, so matching the caller ID
-  // to any single lead's geography is meaningless — take whatever is freshest.
-  const useLocality = dialerMode !== 'predictive'
+  // ── PREDICTIVE MATCHES GEOGRAPHY LIKE EVERYTHING ELSE ────────────────────
+  // This used to exclude predictive, on the reasoning that fanning out across
+  // many leads at once makes matching a caller ID to "any single lead's
+  // geography" meaningless. That reasoning does not hold: the fan-out places a
+  // separate call per lead, each with its own destination, and this function is
+  // called once per those calls with that lead's own number and state. There is
+  // nothing shared to compromise between them.
+  //
+  // The cost of the exception was real. Predictive — the mode that places the
+  // most calls, and the one whose answer rate matters most — was the only mode
+  // dialing every prospect from whatever number happened to be freshest, while
+  // preview, power and progressive all matched locally.
+  //
+  // Falls through the same ladder as every other mode: the lead's state first
+  // when it contradicts their area code, then the area code, then the region,
+  // then whatever has capacity.
+  const useLocality = true
+  void dialerMode
 
   let areaCode: string | null = null
   let state: string | null = null
