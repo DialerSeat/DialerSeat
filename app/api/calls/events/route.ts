@@ -594,6 +594,16 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
     // surcharge saves. Nine seconds is deep inside a greeting.
     //
     // 0 disables, and 0 is the default. Full rule in AMD.md.
+    // ── ADVANCE THE QUEUE BEFORE HOLDING, NOT AFTER ───────────────────────
+    // This ran after the hold, which meant the lead was only released back
+    // into rotation once the hold expired — so the agent sat on a muted line
+    // for the full nine seconds and the next lead came up only when it ended.
+    //
+    // Nothing about advancing depends on the lead's leg being down. The agent
+    // was released at the verdict; the parked leg is billing housekeeping
+    // running behind them.
+    await autoAdvanceLeadNoDisposition(callControlId)
+
     const holdSeconds = platformConfig.amd_hold_seconds_after_machine ?? 0
     if (holdSeconds > 0) {
       // ── A MISSING TIMESTAMP MUST NOT DISABLE THE FEATURE ────────────────
@@ -666,13 +676,10 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
       })
     }
 
-    // The agent's leg was already released above, before the voicemail-drop
-    // decision — it is correct in both branches and is the only part of this
-    // the agent can feel. Hanging up the lead alone would leave their softphone
-    // showing a call in progress against silence, with the dialer never
-    // advancing: the exact opposite of a skip.
-
-    await autoAdvanceLeadNoDisposition(callControlId)
+    // The agent's leg was released, and the queue advanced, BEFORE the hold —
+    // both are the parts the agent can feel, and neither depends on the lead's
+    // leg being down. Everything after the verdict is housekeeping running
+    // behind them.
     return
   }
 

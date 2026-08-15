@@ -72,7 +72,19 @@ export async function GET(req: Request) {
     // real signal that someone is on the line. 'ringing' is deliberately a
     // status the client does nothing with — it neither connects nor treats
     // the call as over — so it just keeps polling, which is correct.
-    const isOver = !!callRow.duration && callRow.duration > 0
+    // ── A MACHINE VERDICT ENDS THE CALL *FOR THE AGENT* ──────────────────
+    // duration is only written when the LEAD's leg hangs up, and that leg now
+    // outlives the agent deliberately: it is parked and held to clear the
+    // short-duration threshold. Keying "over" on duration alone made the agent
+    // sit on a muted line for the whole hold and only advance when it expired.
+    //
+    // Their leg was released at the verdict. From their side the call IS over
+    // at that moment, and this is what tells the dialer so. What happens to
+    // the lead's parked leg afterwards is billing housekeeping and no longer
+    // the agent's business.
+    const machineSkipped =
+      callRow.amd_result === 'machine' || callRow.amd_result === 'fax_detected'
+    const isOver = (!!callRow.duration && callRow.duration > 0) || machineSkipped
     const status = isOver
       ? 'completed'
       : callRow.answered_at
