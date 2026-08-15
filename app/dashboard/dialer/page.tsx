@@ -5239,12 +5239,12 @@ function DialerPageInner() {
                   redials the current lead, which is meaningless while that call
                   is still up — you are already talking to them. It belongs on
                   the after-call controls, not the live ones. */}
+              {/* SKIP and TERMINATE stay distinct — they mean different things
+                  to the LEAD (give up on it vs end this call) — but both now
+                  leave the same way: the agent moves on at once, and the lead's
+                  line is parked in the background until it clears the
+                  threshold. Neither makes the agent wait. */}
               {status === 'connected' && (
-                {/* SKIP and TERMINATE stay distinct — they mean different
-                    things to the LEAD (give up on it vs end this call) — but
-                    both now leave the same way: the agent moves on at once,
-                    and the lead's line is parked in the background until it
-                    clears the threshold. Neither makes the agent wait. */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, flexShrink: 0 }}>
                   <button onClick={handleSkip} style={{
                     padding: '14px', borderRadius: '4px',
