@@ -595,13 +595,51 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
     //
     // 0 disables, and 0 is the default. Full rule in AMD.md.
     const holdSeconds = platformConfig.amd_hold_seconds_after_machine ?? 0
-    if (holdSeconds > 0 && callRow?.answered_at) {
-      const elapsedMs = Date.now() - new Date(callRow.answered_at).getTime()
+    if (holdSeconds > 0) {
+      // ── A MISSING TIMESTAMP MUST NOT DISABLE THE FEATURE ────────────────
+      // This used to require callRow.answered_at and silently do nothing
+      // without it. That is a real gap, not a theoretical one: call.answered
+      // and the AMD verdict are separate webhooks about three seconds apart,
+      // so there is a genuine window where the row has not been stamped yet
+      // and the hold would skip with no trace.
+      //
+      // Re-read first — it may well have landed in the time this handler spent
+      // on the guards above — and fall back to a measured estimate if not.
+      let answeredAt: number | null = callRow?.answered_at
+        ? new Date(callRow.answered_at).getTime()
+        : null
+
+      if (answeredAt === null) {
+        const { data: fresh } = await supabaseAdmin
+          .from('calls')
+          .select('answered_at')
+          .eq('call_control_id', callControlId)
+          .maybeSingle()
+        if (fresh?.answered_at) answeredAt = new Date(fresh.answered_at).getTime()
+      }
+
+      // Still nothing: assume the verdict arrived at the measured average of
+      // ~4s after answer. Holding slightly too long is recoverable — it stays
+      // far inside a 15-25s greeting. Not holding at all is the bug.
+      const elapsedMs = answeredAt !== null
+        ? Date.now() - answeredAt
+        : 4000
+
       const remainingMs = holdSeconds * 1000 - elapsedMs
       // Only ever extends a call that would otherwise be short. A call already
       // past the threshold is left alone — there is nothing to correct.
       if (remainingMs > 0) {
+        console.log(
+          `[calls/events] holding ${callControlId} a further ${Math.round(remainingMs)}ms ` +
+          `(target ${holdSeconds}s, elapsed ${Math.round(elapsedMs)}ms, ` +
+          `answered_at ${answeredAt === null ? 'MISSING — estimated' : 'known'})`
+        )
         await new Promise(resolve => setTimeout(resolve, remainingMs))
+      } else {
+        console.log(
+          `[calls/events] no hold for ${callControlId} — already ${Math.round(elapsedMs)}ms ` +
+          `past answer, over the ${holdSeconds}s target`
+        )
       }
     }
 
