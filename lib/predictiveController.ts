@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import { placeOutboundCall } from '@/lib/placeOutboundCall'
+import { placeOutboundCall, hangupCallControlId } from '@/lib/placeOutboundCall'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -65,7 +65,9 @@ export interface ControllerResult {
 
 interface RunControllerInput {
   sessionId: string
-  campaignId: string
+  /** null means All Active — the campaign set is derived from the queue
+   *  panel's own lead ids. See campaignIds resolution in the body. */
+  campaignId: string | null
   clerkId: string
   internalUserId: string
   teamId: string | null
@@ -91,6 +93,111 @@ function normalizePhone(raw: string): string {
   return digits
 }
 
+// =============================================================================
+// PICKUP ABORTS THE REST
+// =============================================================================
+// The defining behaviour of this dialer's predictive mode, and the reason it
+// carries far less abandonment risk than a textbook one.
+//
+// A textbook predictive dialer does the opposite of this: surplus answered
+// calls are routed to whoever is free, and when nobody is free the prospect is
+// abandoned — dead air, then a drop. That is the behaviour the FTC's 3% rule
+// exists to bound, and every vendor in this category lives inside it.
+//
+// Here, the moment a human is committed to the agent, every OTHER line this
+// session still has ringing is hung up. A line that never got answered cannot
+// be abandoned, so for a solo agent the surplus simply stops existing.
+//
+// WHAT THIS DELIBERATELY DOES NOT TOUCH — and it is the whole of the team
+// behaviour in one clause: only lines with answered_at IS NULL are aborted. A
+// sibling that has ALREADY been answered is left completely alone to finish its
+// own AMD verdict and route itself — to the originating agent if somehow free,
+// otherwise through handleOverflowAnsweredCall, which hands it to the next
+// available agent on a team campaign and drops it on a solo one. "A pickup
+// aborts all active dials, and if two are picked up the next available user
+// gets the pickup" is exactly that distinction: kill what is still ringing,
+// never take a call away from someone who already said hello.
+//
+// WHY THE CLAIM RELEASE IS NOT OPTIONAL. handleHangup writes duration and
+// clears the session pin, but it does not release the lead's claim — nothing
+// does, short of the 30-second stale sweep. The controller paces off live
+// claims (see inFlight below), so without this the aborted lines would keep
+// counting as in flight for a further 30 seconds and the engine would sit at
+// target, refusing to refill, immediately after the one moment it most needs
+// to. The abort would visibly stall the dialer it was meant to sharpen.
+//
+// dial_attempts is deliberately NOT incremented. These leads were hung up by
+// us, typically inside a second or two of ringing, because somebody else
+// answered — that is our decision, not their non-answer. Counting it would let
+// a lead exhaust its retry cap and be set aside as 'maxed' without ever having
+// been genuinely dialed, quietly eating the customer's list. They go back to
+// the pool untouched; the panel's own rotation is what stops them being the
+// very next thing dialed.
+const ABORT_LOOKBACK_MS = 90_000
+
+export async function abortSiblingFanoutLines(params: {
+  sessionId: string
+  keepCallControlId: string
+}): Promise<number> {
+  const { sessionId, keepCallControlId } = params
+
+  const { data: siblings, error } = await supabase
+    .from('calls')
+    .select('call_control_id, lead_id')
+    .eq('dial_group_id', sessionId)
+    .eq('dial_source', 'controller_fanout')
+    .eq('duration', 0)
+    .is('answered_at', null)
+    .is('disposition', null)
+    .gte('created_at', new Date(Date.now() - ABORT_LOOKBACK_MS).toISOString())
+    .neq('call_control_id', keepCallControlId)
+
+  if (error) {
+    console.error('[controller] sibling lookup failed', error)
+    return 0
+  }
+  if (!siblings || siblings.length === 0) return 0
+
+  // Bounded, for the same reason /api/dialer/abort is bounded: an unbounded
+  // burst of Call Control requests gets rate-limited by Telnyx, and the
+  // request that actually matters — the bridge putting the agent on the live
+  // call — ends up queued behind it. Five at a time covers the hard line cap
+  // in a single pass anyway.
+  let aborted = 0
+  const CONCURRENCY = 5
+  for (let i = 0; i < siblings.length; i += CONCURRENCY) {
+    await Promise.all(
+      siblings.slice(i, i + CONCURRENCY).map(async (s) => {
+        if (!s.call_control_id) return
+        try {
+          await hangupCallControlId(s.call_control_id)
+          aborted++
+        } catch (e) {
+          console.error('[controller] sibling abort hangup failed', s.call_control_id, e)
+        }
+      })
+    )
+  }
+
+  // One statement rather than a release_lead_claim RPC per lead — this runs
+  // while a human is waiting on the other line, so it stays off the critical
+  // path in both latency and round trips.
+  const leadIds = siblings.map(s => s.lead_id).filter((id): id is string => !!id)
+  if (leadIds.length > 0) {
+    const { error: relErr } = await supabase
+      .from('leads')
+      .update({ claimed_at: null, claimed_by_session_id: null })
+      .in('id', leadIds)
+    if (relErr) console.error('[controller] sibling claim release failed', relErr)
+  }
+
+  console.log(
+    `[controller] pickup on ${keepCallControlId} aborted ${aborted} still-ringing ` +
+    `line(s) and released ${leadIds.length} claim(s)`
+  )
+  return aborted
+}
+
 export async function runPredictiveController(
   input: RunControllerInput
 ): Promise<ControllerResult> {
@@ -105,32 +212,114 @@ export async function runPredictiveController(
     console.error('[controller] stale claim sweep failed', sweepErr)
   }
 
-  
-  const { data: campaign } = await supabase
+  // ── WHICH CAMPAIGNS THIS TICK MAY DIAL ──────────────────────────────────
+  // Two changes here, and between them they are why predictive had never
+  // placed a single call in this product's lifetime.
+  //
+  // 1. THE MODE BELONGS TO THE AGENT, NOT THE CAMPAIGN. This used to refuse
+  //    outright unless campaigns.dialer_mode was itself 'predictive'. But the
+  //    agent picks their mode in the dialer, on whatever list they are working;
+  //    the column is the campaign's DEFAULT, not a permission. An agent who
+  //    selected predictive on a campaign saved as progressive got a controller
+  //    that returned zero on every heartbeat while the UI happily said the
+  //    engine was running — and the dialer fell back to placing one user_dial
+  //    at a time, which looks exactly like a working dialer that is simply slow.
+  //
+  // 2. ALL ACTIVE IS A REAL CASE. Predictive fans out across lines, and nothing
+  //    about a line requires every lead on it to belong to one campaign. When
+  //    no single campaign is selected the queue panel's own order — already
+  //    sent on every heartbeat as leadIdAllowlist — defines both the leads AND
+  //    the campaigns, so predictive dials the list exactly as displayed,
+  //    spanning campaigns, the same way every other mode already does.
+  let campaignIds: string[] = []
+
+  if (campaignId) {
+    campaignIds = [campaignId]
+  } else if (leadIdAllowlist && leadIdAllowlist.length > 0) {
+    // Derive the campaign set from the panel itself, preserving the order the
+    // rows are displayed in so the top of the list is dialed first.
+    const { data: allowRows } = await supabase
+      .from('leads')
+      .select('id, campaign_id')
+      .in('id', leadIdAllowlist)
+    const byId = new Map((allowRows || []).map(r => [r.id, r.campaign_id]))
+    const seen = new Set<string>()
+    for (const id of leadIdAllowlist) {
+      const cid = byId.get(id)
+      if (cid && !seen.has(cid)) {
+        seen.add(cid)
+        campaignIds.push(cid)
+      }
+    }
+  }
+
+  if (campaignIds.length === 0) {
+    return zeroResult(
+      'no campaign selected and the queue panel sent no leads — nothing to dial',
+      released
+    )
+  }
+
+  const { data: campaignRows } = await supabase
     .from('campaigns')
     .select('id, dialer_mode, predictive_lines_per_agent, predictive_lines_max')
-    .eq('id', campaignId)
-    .maybeSingle()
+    .in('id', campaignIds)
 
-  if (!campaign) {
-    return zeroResult(`campaign ${campaignId} not found`, released)
+  const campaignsById = new Map((campaignRows || []).map(c => [c.id, c]))
+  // Drop any id that didn't resolve, keeping panel order.
+  campaignIds = campaignIds.filter(id => campaignsById.has(id))
+  if (campaignIds.length === 0) {
+    return zeroResult('none of the selected campaigns could be loaded', released)
   }
-  if (campaign.dialer_mode !== 'predictive') {
-    return zeroResult(`campaign mode is ${campaign.dialer_mode}, not predictive`, released)
-  }
+
+  // Line settings come from the FIRST campaign in panel order — the one the
+  // agent is effectively working. Lines are an agent-level idea ("how many at
+  // once am I comfortable with"), not a property of whichever list a given row
+  // happens to belong to, so mixing per-campaign values across one All Active
+  // run would make the pace depend on scroll position.
+  const campaign = campaignsById.get(campaignIds[0])!
 
   
-  const campaignDefault = campaign.predictive_lines_per_agent || 3
+  // ── A LINE IS A WHOLE THING ─────────────────────────────────────────────
+  // predictive_lines_per_agent is a numeric column whose DEFAULT IS 1.5, and
+  // the create/update routes clamped it to a fractional [1.0, 3.0]. Nothing in
+  // the product ever asked for one and a half telephone calls — the agent picks
+  // a number of lines and watches that many rows light up.
+  //
+  // What the fraction actually did: shouldDial floors, so 1.5 lines became one
+  // line and predictive placed exactly as many calls as progressive. Combined
+  // with the controller never having been reached at all (see the heartbeat's
+  // skip conditions), predictive has never in this product's lifetime dialed
+  // more than one line at a time.
+  //
+  // Rounded rather than floored so the stored 1.5 becomes 2 rather than
+  // silently staying at progressive parity, and the value is a real integer
+  // from here down — claim_next_leads_for_campaign's p_count is an integer
+  // parameter and PostgREST will not coerce a decimal into it.
+  const rawDefault = Number(campaign.predictive_lines_per_agent)
+  const campaignDefault = Number.isFinite(rawDefault) && rawDefault > 0
+    ? Math.round(rawDefault)
+    : 3
   const campaignMax = Math.min(campaign.predictive_lines_max || 5, HARD_LINE_CAP)
 
+  // ── THE LINE COUNT IS THE AGENT'S, WHICHEVER LIST THEY SET IT ON ────────
+  // agent_predictive_prefs is keyed per campaign, which is fine for a single
+  // selected campaign and ambiguous across an All Active run. Rather than have
+  // the client and the controller each independently nominate a "primary"
+  // campaign to key on — two lists that must agree, and eventually won't — this
+  // reads the agent's preference across every involved campaign and takes the
+  // most recently set one. Wherever the agent moved the LINES selector, that is
+  // the number this dials, and no ordering assumption has to hold.
   let agentPref: number | null = null
   try {
-    const { data: pref } = await supabase
+    const { data: prefs } = await supabase
       .from('agent_predictive_prefs')
-      .select('preferred_lines')
+      .select('preferred_lines, updated_at')
       .eq('user_id', internalUserId)
-      .eq('campaign_id', campaignId)
-      .maybeSingle()
+      .in('campaign_id', campaignIds)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+    const pref = prefs?.[0]
     if (pref && typeof pref.preferred_lines === 'number') {
       agentPref = pref.preferred_lines
     }
@@ -142,17 +331,38 @@ export async function runPredictiveController(
   effectiveLines = Math.max(1, Math.min(effectiveLines, campaignMax))
 
   
+  // ── THE ABANDON THROTTLE IS PER CAMPAIGN, BECAUSE THE RULE IS ───────────
+  // The FTC's 3% ceiling is measured per campaign over a rolling 30 days, so
+  // one unhealthy list must not throttle a healthy one, and a healthy one must
+  // not launder an unhealthy one. Across an All Active run:
+  //
+  //   - campaigns at or over the trigger are simply not claimed from this tick;
+  //     the healthy ones absorb the lines instead
+  //   - if EVERY involved campaign is degraded there is nothing healthy left to
+  //     shift to, so the whole tick drops to a single line — progressive parity,
+  //     which cannot abandon anyone
   let degraded = false
+  let dialableCampaignIds = campaignIds
   try {
-    const { data: rateRow } = await supabase
+    const { data: rateRows } = await supabase
       .from('campaign_abandon_rate_30d')
-      .select('abandon_rate_pct')
-      .eq('campaign_id', campaignId)
-      .maybeSingle()
+      .select('campaign_id, abandon_rate_pct')
+      .in('campaign_id', campaignIds)
 
-    if (rateRow && rateRow.abandon_rate_pct >= ABANDON_AUTO_DEGRADE_PCT) {
+    const degradedIds = new Set(
+      (rateRows || [])
+        .filter(r => typeof r.abandon_rate_pct === 'number' && r.abandon_rate_pct >= ABANDON_AUTO_DEGRADE_PCT)
+        .map(r => r.campaign_id)
+    )
+
+    if (degradedIds.size > 0) {
       degraded = true
-      effectiveLines = 1
+      const healthy = campaignIds.filter(id => !degradedIds.has(id))
+      if (healthy.length > 0) {
+        dialableCampaignIds = healthy
+      } else {
+        effectiveLines = 1
+      }
     }
   } catch (rateErr) {
     console.error('[controller] abandon rate lookup failed', rateErr)
@@ -191,7 +401,7 @@ export async function runPredictiveController(
   const { data: inFlightCallsRaw } = await supabase
     .from('calls')
     .select('id, phone_number, lead_id')
-    .eq('campaign_id', campaignId)
+    .in('campaign_id', campaignIds)
     .eq('dial_group_id', sessionId)
     .gte('created_at', ninetySecondsAgo)
     .is('disposition', null)
@@ -224,7 +434,7 @@ export async function runPredictiveController(
   const { count: claimedInFlight } = await supabase
     .from('leads')
     .select('id', { count: 'exact', head: true })
-    .eq('campaign_id', campaignId)
+    .in('campaign_id', campaignIds)
     .eq('claimed_by_session_id', sessionId)
     .gte('claimed_at', ninetySecondsAgo)
 
@@ -310,35 +520,62 @@ export async function runPredictiveController(
   // The RPC now takes p_lead_ids and uses array_position as its sort key, so
   // the top row is claimed first. Passing null keeps the old behaviour for any
   // caller without a panel order.
-  const { data: claimedLeads, error: claimErr } = await supabase.rpc(
-    'claim_next_leads_for_campaign',
-    {
-      p_campaign_id: campaignId,
-      p_session_id: sessionId,
-      p_count: shouldDial,
-      p_lead_ids: leadIdAllowlist && leadIdAllowlist.length > 0 ? leadIdAllowlist : null,
-    }
-  )
+  //
+  // ACROSS CAMPAIGNS, IN PANEL ORDER. The RPC claims within one campaign, which
+  // is correct — the atomic FOR UPDATE SKIP LOCKED claim is what makes
+  // concurrent agents safe, and that is worth keeping exactly as it is. So for
+  // an All Active run this walks the campaigns in the order they first appear
+  // in the panel, taking as many lines as each can still fill, and stops as
+  // soon as the tick is full. A three-line tick whose top rows are all one
+  // campaign therefore makes one RPC call, same as before; it only reaches for
+  // a second campaign when the first cannot fill the tick.
+  const leads: Array<{ id: string; phone: string; campaign_id: string }> = []
+  let claimFailure: string | null = null
 
-  if (claimErr) {
-    console.error('[controller] claim failed', claimErr)
-    return {
-      fired: 0, desired, inFlight, effectiveLines, degraded,
-      reason: `claim failed: ${claimErr.message}`,
-      callSids: [], skipped: 0, released, dedupedPhones: 0, dialedPhones: [], dialedLeadIds: [], inFlightPhones, inFlightLeadIds,
+  for (const cid of dialableCampaignIds) {
+    const remaining = shouldDial - leads.length
+    if (remaining <= 0) break
+
+    // The whole panel order is passed, not a per-campaign slice. The RPC
+    // already intersects it with `campaign_id = p_campaign_id`, so ids
+    // belonging to other campaigns simply don't match — and passing the full
+    // list keeps array_position ranking rows by their true position in the
+    // panel rather than their position within one campaign's subset.
+    const panelOrder = leadIdAllowlist && leadIdAllowlist.length > 0
+      ? leadIdAllowlist
+      : null
+
+    const { data: claimedLeads, error: claimErr } = await supabase.rpc(
+      'claim_next_leads_for_campaign',
+      {
+        p_campaign_id: cid,
+        p_session_id: sessionId,
+        p_count: remaining,
+        p_lead_ids: panelOrder,
+      }
+    )
+
+    if (claimErr) {
+      // One campaign failing must not abort the tick — the others can still
+      // fill it. Remember the first error for the reason string.
+      console.error(`[controller] claim failed for campaign ${cid}`, claimErr)
+      if (!claimFailure) claimFailure = claimErr.message
+      continue
     }
+
+    leads.push(...((claimedLeads || []) as Array<{
+      id: string
+      phone: string
+      campaign_id: string
+    }>))
   }
-
-  const leads = (claimedLeads || []) as Array<{
-    id: string
-    phone: string
-    campaign_id: string
-  }>
 
   if (leads.length === 0) {
     return {
       fired: 0, desired, inFlight, effectiveLines, degraded,
-      reason: 'no claimable leads',
+      reason: claimFailure
+        ? `claim failed: ${claimFailure}`
+        : `no claimable leads across ${dialableCampaignIds.length} campaign(s)`,
       callSids: [], skipped: 0, released, dedupedPhones: 0, dialedPhones: [], dialedLeadIds: [], inFlightPhones, inFlightLeadIds,
     }
   }

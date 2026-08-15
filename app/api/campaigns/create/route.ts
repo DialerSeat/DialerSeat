@@ -54,9 +54,13 @@ export async function POST(req: Request) {
     // Only an explicit true turns it on.
     const recordingEnabled = typeof recording_enabled === 'boolean' ? recording_enabled : false
 
-    let lines = 1.5
+    // Whole lines only — see lib/predictiveController.ts. A fractional value
+    // gets floored downstream, so 1.5 was silently one line and predictive
+    // dialed at progressive's rate. 3 is the default an agent would expect
+    // from a mode whose entire purpose is dialing more than one at a time.
+    let lines = 3
     if (typeof predictive_lines_per_agent === 'number') {
-      lines = Math.max(1.0, Math.min(3.0, predictive_lines_per_agent))
+      lines = Math.max(1, Math.min(5, Math.round(predictive_lines_per_agent)))
     }
 
     // How many times a lead should be dialed in a row before being set

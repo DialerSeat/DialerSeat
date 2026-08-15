@@ -365,11 +365,21 @@ export async function POST(req: NextRequest) {
     //
     // Only computed when the agent has actually armed predictive, so this adds
     // nothing to the hot path for every other mode.
+    // ── ALL ACTIVE IS NO LONGER A SKIP ────────────────────────────────────
+    // This used to refuse outright without a single selected campaign, on the
+    // grounds that predictive "fans out within ONE campaign". It doesn't have
+    // to: the queue panel already sends its displayed lead ids on every beat,
+    // and those ids carry their own campaigns. The controller resolves the
+    // campaign set from them and claims per campaign in panel order.
+    //
+    // What remains a skip is having no leads to work from at all — an armed
+    // engine on an empty panel — which is a genuinely different condition and
+    // now says so.
     let controllerSkippedReason: string | null = null
     if (predictiveArmed && dialerMode === 'predictive') {
-      if (!campaignId) {
+      if (!campaignId && (!leadIdAllowlist || leadIdAllowlist.length === 0)) {
         controllerSkippedReason =
-          'no campaign selected — predictive fans out within ONE campaign, so it cannot run on "All Active"'
+          'no campaign selected and the queue panel is empty — nothing to fan out across'
       } else if (shouldYield) {
         controllerSkippedReason = 'abandon rate at or above the FTC threshold — throttling'
       } else if (!CONTROLLER_TRIGGER_STATES.has(state)) {
@@ -383,7 +393,7 @@ export async function POST(req: NextRequest) {
     if (
       dialerMode === 'predictive' &&
       predictiveArmed &&
-      campaignId &&
+      (campaignId || (leadIdAllowlist && leadIdAllowlist.length > 0)) &&
       !shouldYield &&
       CONTROLLER_TRIGGER_STATES.has(state)
     ) {

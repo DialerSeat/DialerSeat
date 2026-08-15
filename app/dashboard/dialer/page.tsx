@@ -1677,55 +1677,10 @@ function DialerPageInner() {
     }
   }, [isActive, isPredictive, predictiveView, predictiveEngineStarted])
 
-  useEffect(() => {
-    if (!isActive || !isPredictive || !isSpecificCampaign) {
-      setLinesPref(null)
-      return
-    }
-
-    let cancelled = false
-    fetch(`/api/predictive/prefs?campaign_id=${selectedCampaign}`)
-      .then(r => r.json())
-      .then(d => {
-        if (cancelled) return
-        if (d.error) {
-          setLinesPref(null)
-          return
-        }
-        setLinesPref(d as LinesPrefInfo)
-      })
-      .catch(() => {
-        if (!cancelled) setLinesPref(null)
-      })
-    return () => { cancelled = true }
-  }, [isActive, isPredictive, isSpecificCampaign, selectedCampaign])
-
-  const handleLinesChange = async (newLines: number) => {
-    if (!selectedCampaign || !isPredictive) return
-    setLinesPrefSaving(true)
-    try {
-      const res = await fetch('/api/predictive/prefs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          campaign_id: selectedCampaign,
-          preferred_lines: newLines,
-        }),
-      })
-      const data = await res.json()
-      if (!data.error) {
-        setLinesPref(data as LinesPrefInfo)
-        setAmdActivity(prev => [
-          `LINES PREFERENCE → ${data.effective_lines}`,
-          ...prev,
-        ].slice(0, 5))
-      }
-    } catch (err) {
-      console.error('lines pref save failed:', err)
-    } finally {
-      setLinesPrefSaving(false)
-    }
-  }
+  // The LINES preference effect and its save handler used to live here. They
+  // moved below activeScopeCampaigns' declaration — they now resolve a primary
+  // campaign for the ALL ACTIVE case, and reading that list during render from
+  // above its own `const` is a temporal-dead-zone error.
 
   useEffect(() => {
     const handleUnload = () => {
@@ -2096,6 +2051,68 @@ function DialerPageInner() {
 
   const activeScopeCampaigns = scopeCampaigns.filter(c => c.status === 'active')
   const activeCampaignsCount = activeScopeCampaigns.length
+
+  // ── HOW MANY LINES THIS AGENT DIALS ──────────────────────────────────────
+  // On ALL ACTIVE there is no single selected campaign, so the preference is
+  // stored against the first campaign in scope. The controller reads this
+  // preference across EVERY campaign it is dialing and takes the most recently
+  // set one, so it does not matter which of them holds the row — deliberately,
+  // so the client and the server never have to agree on which campaign is
+  // "primary". Lives here rather than with the other predictive effects
+  // because it reads activeScopeCampaigns, declared just above.
+  const linesPrefCampaignId = isSpecificCampaign
+    ? selectedCampaign
+    : activeScopeCampaigns[0]?.id
+
+  useEffect(() => {
+    if (!isActive || !isPredictive || !linesPrefCampaignId) {
+      setLinesPref(null)
+      return
+    }
+
+    let cancelled = false
+    fetch(`/api/predictive/prefs?campaign_id=${linesPrefCampaignId}`)
+      .then(r => r.json())
+      .then(d => {
+        if (cancelled) return
+        if (d.error) {
+          setLinesPref(null)
+          return
+        }
+        setLinesPref(d as LinesPrefInfo)
+      })
+      .catch(() => {
+        if (!cancelled) setLinesPref(null)
+      })
+    return () => { cancelled = true }
+  }, [isActive, isPredictive, linesPrefCampaignId])
+
+  const handleLinesChange = async (newLines: number) => {
+    if (!linesPrefCampaignId || !isPredictive) return
+    setLinesPrefSaving(true)
+    try {
+      const res = await fetch('/api/predictive/prefs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          campaign_id: linesPrefCampaignId,
+          preferred_lines: newLines,
+        }),
+      })
+      const data = await res.json()
+      if (!data.error) {
+        setLinesPref(data as LinesPrefInfo)
+        setAmdActivity(prev => [
+          `LINES PREFERENCE → ${data.effective_lines}`,
+          ...prev,
+        ].slice(0, 5))
+      }
+    } catch (err) {
+      console.error('lines pref save failed:', err)
+    } finally {
+      setLinesPrefSaving(false)
+    }
+  }
 
   // ── QUEUED LEADS LIST — fetched the moment the agent goes available ─────
   // Shows "what's about to be worked" before Initiate Dial Sequence is
@@ -5179,7 +5196,14 @@ function DialerPageInner() {
 
           {isPredictive ? (
             <>
-              {predictiveView === 'offline' && isSpecificCampaign && (
+              {/* Predictive can start on ALL ACTIVE as well as on one campaign.
+                  It used to require a single selected campaign, which left the
+                  All Active view showing nothing but the dead placard below —
+                  there was no way to even arm the engine. The controller now
+                  resolves its campaign set from the queue panel's own rows, so
+                  the only real requirement is having something to dial, which
+                  is the same condition the non-predictive flows already use. */}
+              {predictiveView === 'offline' && (isSpecificCampaign || activeScopeCampaigns.length > 0) && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', flexShrink: 0 }}>
                   <button onClick={handleSetAvailable} style={{
                     padding: '14px', borderRadius: '4px', border: 'none',
@@ -5191,13 +5215,13 @@ function DialerPageInner() {
                 </div>
               )}
 
-              {predictiveView === 'offline' && !isSpecificCampaign && (
+              {predictiveView === 'offline' && !isSpecificCampaign && activeScopeCampaigns.length === 0 && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', flexShrink: 0 }}>
                   <div style={{
                     padding: '14px', borderRadius: '4px', background: terminalSurface, color: terminalMuted,
                     fontSize: '12px', fontWeight: 'bold', letterSpacing: '4px',
                     textAlign: 'center', borderTop: `3px solid ${terminalBorder}`,
-                  }}>[ SELECT A CAMPAIGN TO BEGIN ]</div>
+                  }}>[ NO ACTIVE CAMPAIGNS TO DIAL ]</div>
                 </div>
               )}
 

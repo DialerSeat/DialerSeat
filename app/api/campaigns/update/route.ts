@@ -88,7 +88,10 @@ export async function POST(req: Request) {
         }
         case 'predictive_lines_per_agent': {
           if (typeof v !== 'number') continue
-          updates.predictive_lines_per_agent = Math.max(1.0, Math.min(3.0, v))
+          // Whole lines only, capped at the same 5 the claim RPC enforces.
+          // See lib/predictiveController.ts for why a fraction here meant
+          // predictive quietly ran at one line.
+          updates.predictive_lines_per_agent = Math.max(1, Math.min(5, Math.round(v)))
           break
         }
         case 'dial_repeat_count': {

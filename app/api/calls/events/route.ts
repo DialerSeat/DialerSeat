@@ -10,6 +10,7 @@ import { recordAmdResult, markCallAbandoned } from '@/lib/dialerPacing'
 import { logCallEvent } from '@/lib/callEvents'
 import { hangupCallControlId, bridgeCallControlIds } from '@/lib/placeOutboundCall'
 import { handleOverflowAnsweredCall } from '@/lib/teamOverflow'
+import { abortSiblingFanoutLines } from '@/lib/predictiveController'
 import { resolveTelnyxConfigOrLog } from '@/lib/telnyxConfig'
 import { agentSipUriForUserId } from '@/lib/agentSipCredentials'
 import { getPlatformConfig } from '@/lib/platformConfig'
@@ -776,7 +777,20 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
 
     if (claim.data) {
       const dialed = await dialAndBridgeAgentForFanout(callControlId, session!.user_id)
-      if (dialed) return
+      if (dialed) {
+        // ── THE PICKUP THAT ENDS THE OTHER LINES ──────────────────────────
+        // This agent now has a human. Every other line this session still has
+        // RINGING is hung up here — see abortSiblingFanoutLines for why an
+        // already-answered sibling is deliberately left to route itself.
+        //
+        // Awaited rather than fired and forgotten. The agent is already
+        // bridged and talking, so nothing they can feel is waiting on it, and
+        // on a serverless runtime un-awaited work can be torn down with the
+        // response — which would leave the prospects' phones ringing for a
+        // call that no longer exists.
+        await abortSiblingFanoutLines({ sessionId, keepCallControlId: callControlId })
+        return
+      }
       // Failed to actually connect the agent leg — release the claim and
       // fall through to overflow handling below.
       await supabaseAdmin
@@ -797,6 +811,14 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
     teamId: callRow.team_id,
     excludeSessionId: sessionId,
   })
+
+  if (outcome === 'bridged') {
+    // A second human answered and a DIFFERENT agent on the team took them —
+    // "if two are picked up the next available user gets the pickup". That is
+    // still a pickup, so the lines that are merely ringing end here too.
+    await abortSiblingFanoutLines({ sessionId, keepCallControlId: callControlId })
+    return
+  }
 
   if (outcome === 'dropped') {
     await markCallAbandoned(callControlId)
