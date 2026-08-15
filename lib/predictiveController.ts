@@ -559,8 +559,33 @@ async function runPredictiveControllerInner(
     }
   }
 
-  const liveClaims = Math.max(0, (claimedInFlight ?? 0) - orphanIds.length)
-  const inFlight = Math.max(inFlightCalls.length, liveClaims)
+  // ── ONLY THIS ENGINE'S OWN LINES COUNT AS LINES ─────────────────────────
+  // Claims were counted as in-flight to stop a dial runaway: a call that
+  // reaches the carrier without writing a row must still hold its line. That
+  // is right, but the session's claims are not all this engine's.
+  // /api/leads/next-batch claims leads for the QUEUE PANEL under the same
+  // session id, and those were being counted as live predictive lines.
+  //
+  // The effect was total: three panel claims filled a three-line budget, the
+  // controller reported "at target: 3/3 in flight" forever, and predictive
+  // could never dial a single call while the UI cheerfully listed three
+  // numbers it was supposedly dialing.
+  //
+  // A claim only stands in for a line during the brief window between claiming
+  // a lead and its call row appearing — a second or two. After that the call
+  // row itself does the counting, and any claim still outstanding belongs to
+  // something else. Bounding the substitution to that window keeps the runaway
+  // guard intact and stops it swallowing the line budget.
+  const CLAIM_COUNTS_AS_LINE_MS = 20_000
+  const claimWindowStart = Date.now() - CLAIM_COUNTS_AS_LINE_MS
+  const recentUnbackedClaims = (heldLeads || []).filter(l => {
+    if (liveCallLeadIds.has(l.id)) return false      // the call row counts it
+    if (orphanIds.includes(l.id)) return false       // just released
+    const claimedMs = new Date(l.claimed_at as string).getTime()
+    return Number.isFinite(claimedMs) && claimedMs >= claimWindowStart
+  }).length
+
+  const inFlight = inFlightCalls.length + recentUnbackedClaims
   // Real, live phone numbers currently in flight — genuinely still ringing
   // or connected right now, not just "were dialed on the last tick that
   // fired." Previously the frontend only learned about dialed numbers on
