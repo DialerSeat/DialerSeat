@@ -295,13 +295,50 @@ export async function POST(req: NextRequest) {
     //
     // Renewing here turns the claim into a lease held for exactly as long as
     // the agent is alive: the moment heartbeats stop, the lead frees itself.
+    // ── RENEW ONLY WHAT IS ACTUALLY ON A CALL ─────────────────────────────
+    // This renewed EVERY lead the session held, unconditionally, every five
+    // seconds. A claim left behind by a call that already ended was therefore
+    // kept permanently young — the stale sweep could never reach it, and no
+    // age-based check anywhere could either, because its claimed_at was always
+    // seconds old.
+    //
+    // That is what pinned predictive at "at target: 3/3 in flight" with zero
+    // fan-out calls in existence: three dead claims, renewed forever, holding
+    // every line against an idle dialer.
+    //
+    // A lease should be held by the thing it protects. Renewing is now limited
+    // to leads with a live call row behind them — duration 0 and no
+    // disposition, this codebase's in-flight sentinel. A lead genuinely on a
+    // three-minute conversation still gets renewed for as long as it lasts,
+    // which is the whole reason renewal exists; a lead whose call is over gets
+    // let go by the 30-second sweep as designed.
     if (upserted?.id) {
-      void supabase
-        .from('leads')
-        .update({ claimed_at: now })
-        .eq('claimed_by_session_id', upserted.id)
-        .not('claimed_at', 'is', null)
-        .then(undefined, (e: unknown) => console.error('[heartbeat] claim renewal failed', e))
+      void (async () => {
+        try {
+          const { data: liveCalls } = await supabase
+            .from('calls')
+            .select('lead_id')
+            .eq('user_id', clerkId)
+            .eq('duration', 0)
+            .is('disposition', null)
+            .gte('created_at', new Date(Date.now() - 90_000).toISOString())
+
+          const liveLeadIds = (liveCalls || [])
+            .map(c => c.lead_id)
+            .filter((id): id is string => !!id)
+
+          if (liveLeadIds.length === 0) return
+
+          await supabase
+            .from('leads')
+            .update({ claimed_at: now })
+            .eq('claimed_by_session_id', upserted.id)
+            .in('id', liveLeadIds)
+            .not('claimed_at', 'is', null)
+        } catch (e) {
+          console.error('[heartbeat] claim renewal failed', e)
+        }
+      })()
     }
 
     if (upsertErr || !upserted) {
