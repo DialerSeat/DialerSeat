@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { placeOutboundCall, hangupCallControlId } from '@/lib/placeOutboundCall'
 import { logCallEvent } from '@/lib/callEvents'
+import { hasCallingWindowOverride } from '@/lib/callingWindowOverride'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -752,12 +753,22 @@ async function runPredictiveControllerInner(
   // Nobody should be rung twice inside a minute by the same engine. The window
   // is deliberately longer than a ring timeout so a number that just rang out
   // cannot come straight back round.
+  //
+  // TESTERS ARE EXEMPT. A test campaign is usually a handful of numbers, often
+  // the tester's own, and a 60-second cooldown makes it impossible to exercise
+  // the engine at all — the pool empties after one pass and the controller
+  // sits idle. The same email allowlist that already grants the calling-window
+  // override grants this, so there is one list of testers rather than two.
+  const isTester = await hasCallingWindowOverride(clerkId)
+
   const RECENTLY_DIALED_MS = 60_000
-  const { data: recentCalls } = await supabase
-    .from('calls')
-    .select('phone_number')
-    .eq('dial_group_id', sessionId)
-    .gte('created_at', new Date(Date.now() - RECENTLY_DIALED_MS).toISOString())
+  const { data: recentCalls } = isTester
+    ? { data: [] as Array<{ phone_number: string | null }> }
+    : await supabase
+        .from('calls')
+        .select('phone_number')
+        .eq('dial_group_id', sessionId)
+        .gte('created_at', new Date(Date.now() - RECENTLY_DIALED_MS).toISOString())
 
   const phoneSeen = new Set<string>(
     [

@@ -231,6 +231,12 @@ function DialerPageInner() {
   const [clockTick, setClockTick] = useState(0)
 
   const [status, setStatus] = useState<CallStatus>('idle')
+  // The heartbeat runs on an interval, so reading `status` from its closure
+  // gives whatever the value was when that interval was created. That exact
+  // staleness is what made predictive_armed report false for two days. Any
+  // heartbeat-side decision reads this instead.
+  const statusRef = useRef<CallStatus>('idle')
+  useEffect(() => { statusRef.current = status }, [status])
   const [manualNumber, setManualNumber] = useState('')
   const [seconds, setSeconds] = useState(0)
   const [available, setAvailable] = useState(false)
@@ -1654,6 +1660,51 @@ function DialerPageInner() {
         const data = await res.json()
         if (typeof data.should_yield === 'boolean') {
           setShouldYield(data.should_yield)
+        }
+
+        // ── PREDICTIVE: THE SERVER SAYS YOU ARE ON A CALL ────────────────────
+        // Every other mode dials from the client, keeps the call id, polls it
+        // and flips to the lead profile itself. Predictive's lines are placed
+        // SERVER-side, so the browser has no id to poll and nothing ever told
+        // it that a prospect had answered — the agent sat on the queue panel
+        // through a live, bridged, talking call.
+        //
+        // active_call is the session's own current_call_id with the lead
+        // attached, so this renders the profile immediately rather than making
+        // another round trip while someone is already on the line.
+        //
+        // Deliberately switches at PICKUP, before any AMD verdict — a
+        // voicemail opens the profile exactly like a human does, and the
+        // verdict decides what happens next. A machine verdict clears
+        // current_call_id server-side, active_call goes null, and the else
+        // branch puts the agent back on the queue panel as though nothing had
+        // happened.
+        //
+        // Predictive only: every other mode owns its own call state and must
+        // not have it written from here.
+        if (isPredictive) {
+          const ac = data.active_call
+          if (ac?.call_id && statusRef.current !== 'connected') {
+            if (ac.lead) setCurrentLead(ac.lead as Lead)
+            setActiveCallSid(ac.call_control_id || null)
+            activeCallSidRef.current = ac.call_control_id || null
+            setStatus('connected')
+            setShowDisposition(false)
+            if (!callStartRef.current) callStartRef.current = Date.now()
+            setAmdActivity(prev => {
+              const line = 'LINE CONNECTED — AWAITING AMD VERDICT'
+              return prev[0] === line ? prev : [line, ...prev].slice(0, 5)
+            })
+          } else if (!ac?.call_id && statusRef.current === 'connected' && !showDisposition) {
+            // Released — machine verdict, or the call ended. Back to the queue
+            // exactly as it was.
+            setStatus('idle')
+            setCurrentLead(null)
+            setActiveCallSid(null)
+            activeCallSidRef.current = null
+            callStartRef.current = 0
+            setSeconds(0)
+          }
         }
         // The engine is armed but the server declined to fan out. Say so.
         // This was silent, and silence is why predictive could sit "started"
