@@ -1538,7 +1538,20 @@ function DialerPageInner() {
             // the agent has explicitly started the predictive engine.
             // Read from the ref — see the arming site in handleDial for why
             // the state version could not be trusted here.
-            predictive_armed: isPredictive && predictiveEngineStartedRef.current,
+            // ── BOTH HALVES FROM REFS ─────────────────────────────────────
+            // This read `isPredictive`, a value captured by the heartbeat
+            // interval's closure. The instrumentation caught it red-handed: a
+            // single payload reported arm_set 1 and arm_mode_ref 'predictive'
+            // — both from refs, both correct — while predictive_armed came out
+            // false, because the closure still held isPredictive from before
+            // the campaign finished loading and the mode was still 'power'.
+            //
+            // dialerModeRef is the same value read through a ref, and it was
+            // reporting correctly on every beat. Refs cannot go stale in an
+            // interval; captured values can and did.
+            predictive_armed:
+              dialerModeRef.current === 'predictive' &&
+              predictiveEngineStartedRef.current,
             // Diagnostic only — see startDialSequence.
             arm_clicks: armClicksRef.current,
             arm_reached: armReachedRef.current,
