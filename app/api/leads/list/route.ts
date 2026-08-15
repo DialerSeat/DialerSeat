@@ -134,7 +134,20 @@ export async function GET(req: NextRequest) {
   // Add a stable secondary sort so pagination is deterministic
   query = query.order('id', { ascending: false })
 
-  query = query.range(cursor, cursor + PAGE_SIZE - 1)
+  // ── CALLERS THAT NEED THE WHOLE BOOK CAN ASK FOR BIGGER PAGES ────────────
+  // The dialer's queue panel holds every lead in the campaign, so at the
+  // default 50 an 831-lead list took 17 sequential round-trips to assemble and
+  // a 10,000-lead one would take 200. Every one of those is a chance to fail
+  // partway and leave the panel silently short.
+  //
+  // Optional and clamped, so existing callers are unaffected and nobody can ask
+  // for a page big enough to hit PostgREST's own 1000-row ceiling.
+  const requestedPageSize = Number(searchParams.get('page_size'))
+  const pageSize = Number.isFinite(requestedPageSize) && requestedPageSize > 0
+    ? Math.min(Math.floor(requestedPageSize), 500)
+    : PAGE_SIZE
+
+  query = query.range(cursor, cursor + pageSize - 1)
 
   const { data, error, count } = await query
 
@@ -158,6 +171,6 @@ export async function GET(req: NextRequest) {
     // array shorter than PAGE_SIZE even though more rows genuinely exist
     // past this window, and cursor advancement needs to reflect the real
     // window, not how many of those rows happened to survive the filter.
-    nextCursor: (rawLeads.length === PAGE_SIZE) ? cursor + PAGE_SIZE : null,
+    nextCursor: (rawLeads.length === pageSize) ? cursor + pageSize : null,
   })
 }

@@ -2198,18 +2198,43 @@ function DialerPageInner() {
           disposition: 'dialable',
           sort: queueSortDesc ? 'created_desc' : 'created_asc',
           cursor: String(cursorValue),
+          // 500 a page instead of the default 50. An 831-lead campaign was 17
+          // sequential round-trips to assemble and a 10,000-lead one is 200 —
+          // every one a chance to fail partway and leave the panel silently
+          // short. At 500 the same lists are 2 and 20.
+          page_size: '500',
         }
         if (queueSearch.trim()) paramEntries.search = queueSearch.trim()
         const params = new URLSearchParams(paramEntries)
         try {
-          const res = await fetch(`/api/leads/list?${params.toString()}`)
-          const data = await res.json()
-          if (data.success && Array.isArray(data.leads)) {
+          // ── RETRY, DON'T SILENTLY TRUNCATE ──────────────────────────────
+          // A failed page used to break the loop and return whatever had
+          // arrived so far. That is a queue panel quietly missing leads with
+          // nothing on screen saying so — the agent believes they are working
+          // the whole book and they are not.
+          //
+          // One retry covers the transient case, which is nearly all of them.
+          let data: any = null
+          for (let attempt = 0; attempt < 2; attempt++) {
+            try {
+              const res = await fetch(`/api/leads/list?${params.toString()}`)
+              data = await res.json()
+              if (data?.success) break
+            } catch {
+              if (attempt === 1) throw new Error('page fetch failed')
+            }
+          }
+          if (!data?.success) throw new Error('page fetch failed')
+          if (Array.isArray(data.leads)) {
             all.push(...(data.leads as QueuedLead[]))
           }
           cursor = typeof data.nextCursor === 'number' ? data.nextCursor : null
         } catch {
-          break // network hiccup mid-pagination — return what we have so far rather than lose everything
+          console.error(
+            `[queue] pagination failed for campaign ${campaignId} after ${all.length} leads — ` +
+            `the panel is SHORT of the full list`
+          )
+          break // return what we have rather than lose everything
         }
         pages++
       }
