@@ -283,6 +283,10 @@ function DialerPageInner() {
   // Lead ids currently in flight, straight from the controller. Row
   // highlighting keys off THIS, not phone numbers — see activeQueueLeadIds.
   const [activeDialingLeadIds, setActiveDialingLeadIds] = useState<string[]>([])
+  // The previous heartbeat's in-flight lead ids. Diffing against the current
+  // set is what tells us which predictive lines FINISHED, which is when a row
+  // should sink — see the heartbeat handler.
+  const prevInFlightLeadIdsRef = useRef<string[]>([])
   // Leads queued for this campaign, fetched once the agent goes available
   // (predictiveView transitions to 'available') and shown in the lead
   // profile slot so they can see what's about to be worked, before they
@@ -1673,7 +1677,34 @@ function DialerPageInner() {
           // calls are still very much active — so highlighting was going
           // stale/blank almost immediately during real operation.
           setActiveDialingNumbers(summary.inFlightPhones || [])
-          setActiveDialingLeadIds(summary.inFlightLeadIds || [])
+          const liveIds = summary.inFlightLeadIds || []
+          setActiveDialingLeadIds(liveIds)
+
+          // ── SINK A LINE WHEN IT FINISHES, NOT WHEN IT STARTS ─────────────
+          // A lead that has LEFT the in-flight set is a line that is over —
+          // rang out, hit voicemail and got skipped, or was talked to and hung
+          // up. That is the moment it has been "tried", and the moment it
+          // should drop to the bottom.
+          //
+          // This replaces stamping the leads the tick just FIRED, which sank
+          // all three the instant they lit up: the rows highlighted correctly
+          // and were immediately moved away from the top, so the top three
+          // never appeared to be the ones dialing. Exactly the same mistake as
+          // the single-line path earlier — rotating on dial rather than on
+          // outcome — and it looks identical from the agent's seat.
+          const previouslyLive = prevInFlightLeadIdsRef.current
+          if (previouslyLive.length > 0) {
+            const stillLive = new Set(liveIds)
+            const finished = previouslyLive.filter(id => !stillLive.has(id))
+            if (finished.length > 0) {
+              const stamp = nowIso()
+              const finishedSet = new Set(finished)
+              setQueuedLeads(prev =>
+                prev.map(l => (finishedSet.has(l.id) ? { ...l, last_called_at: stamp } : l))
+              )
+            }
+          }
+          prevInFlightLeadIdsRef.current = liveIds
 
           if (summary.fired > 0) {
             // ── SINK WHAT WAS JUST FIRED ─────────────────────────────────
@@ -1685,14 +1716,9 @@ function DialerPageInner() {
             // Stamped inline rather than via markLeadDialedLocally, which is
             // declared below this effect and would be in its temporal dead
             // zone. Same write either way: last_called_at is the sort key.
-            const justFired = summary.dialedLeadIds || []
-            if (justFired.length > 0) {
-              const stamp = nowIso()
-              const firedSet = new Set(justFired)
-              setQueuedLeads(prev =>
-                prev.map(l => (firedSet.has(l.id) ? { ...l, last_called_at: stamp } : l))
-              )
-            }
+            // Rotation happens when a line LEAVES the in-flight set, above —
+            // not here. Stamping on fire sank every row the instant it started
+            // ringing.
 
             // Predictive places its lines SERVER-side, so it never passes
             // through handleDial and never reached the dial tone there. The
