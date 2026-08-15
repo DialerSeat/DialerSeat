@@ -686,6 +686,10 @@ function DialerPageInner() {
   // Keep availableRef in lock-step with the available state.
   useEffect(() => { availableRef.current = available }, [available])
   const predictiveEngineStartedRef = useRef(false)
+  // Diagnostic counters for the arming path — see startDialSequence.
+  const armClicksRef = useRef(0)
+  const armReachedRef = useRef(0)
+  const armSetRef = useRef(0)
   // ── DELIBERATELY NOT MIRRORED FROM STATE ──────────────────────────────────
   // This used to be `ref.current = predictiveEngineStarted` on every change of
   // that state, which quietly re-created the bug the ref exists to avoid: the
@@ -1535,6 +1539,11 @@ function DialerPageInner() {
             // Read from the ref — see the arming site in handleDial for why
             // the state version could not be trusted here.
             predictive_armed: isPredictive && predictiveEngineStartedRef.current,
+            // Diagnostic only — see startDialSequence.
+            arm_clicks: armClicksRef.current,
+            arm_reached: armReachedRef.current,
+            arm_set: armSetRef.current,
+            arm_mode_ref: dialerModeRef.current,
             // Always send the current displayed order to the predictive
             // controller too, matching fetchNextLead's behavior — dialing
             // must always follow the queue panel's top-down order in every
@@ -3177,6 +3186,9 @@ function DialerPageInner() {
       return
     }
 
+    // Past every guard — see startDialSequence for what these separate.
+    armReachedRef.current++
+
     // Ref, not the captured isPredictive: handleDial is reached through
     // setTimeout, so the value baked into this closure can be a mode the agent
     // has already left. Getting this wrong sends a predictive campaign down the
@@ -3195,6 +3207,7 @@ function DialerPageInner() {
       // click produced. Nothing can re-order it and no closure can capture it
       // stale. The state is still set for rendering; the ref is what the
       // heartbeat sends.
+      armSetRef.current++
       predictiveEngineStartedRef.current = true
       setPredictiveEngineStarted(true)
       armDialing() // predictive engine running — incoming-route may bridge a human to us
@@ -3330,6 +3343,18 @@ function DialerPageInner() {
    * human asked to dial.
    */
   const startDialSequence = async () => {
+    // ── COUNTERS, BECAUSE INFERENCE HAS RUN OUT ─────────────────────────────
+    // predictive_armed has stayed false across two fixes. Everything upstream
+    // of the arming line has been read and looks correct, which means reading
+    // it again is not going to answer this. These three counters ride along on
+    // the heartbeat and separate the possibilities outright:
+    //
+    //   clicks 0                     -> the button is not invoking this at all
+    //   clicks > 0, reached 0        -> a guard in handleDial returns first
+    //   reached > 0, armed 0         -> the predictive branch is not taken
+    //   armed > 0, predictive_armed  -> something clears it after the fact
+    //     still false
+    armClicksRef.current++
     abortDialingRef.current = false
     await handleDial()
   }

@@ -429,6 +429,14 @@ export async function POST(req: NextRequest) {
               dialer_mode: dialerMode,
               state,
               allowlist_size: leadIdAllowlist?.length ?? null,
+              // Client-side arming counters — these separate "the button never
+              // fired" from "a guard returned early" from "it armed and
+              // something cleared it", which two rounds of reading the code
+              // could not.
+              arm_clicks: body.arm_clicks ?? null,
+              arm_reached: body.arm_reached ?? null,
+              arm_set: body.arm_set ?? null,
+              arm_mode_ref: body.arm_mode_ref ?? null,
             },
           })
         }
