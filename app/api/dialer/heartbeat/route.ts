@@ -520,6 +520,53 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // ── TELL THE BROWSER IT IS ON A CALL ──────────────────────────────────
+    // In every other mode the client dials, holds the call id, polls it, and
+    // flips to the lead profile when it connects. Predictive places its lines
+    // SERVER-side, so the client has no id to poll and was never informed at
+    // all: a prospect could answer, the agent leg could bridge, audio could be
+    // flowing, and the dialer sat on the queue panel as though nothing had
+    // happened.
+    //
+    // The server has always known — agent_sessions.current_call_id is set the
+    // moment a fan-out line claims the agent, and this route reads that row on
+    // every beat. It simply never returned it.
+    //
+    // Returned with the lead attached so the client can render the profile
+    // immediately rather than making another round trip while someone is
+    // already talking. Null when the agent is not on a call, which is what
+    // takes them back to the queue panel when a machine verdict releases them.
+    let activeCall: {
+      call_id: string
+      call_control_id: string | null
+      lead: Record<string, unknown> | null
+    } | null = null
+
+    if (effectiveCallId) {
+      const { data: liveCall } = await supabase
+        .from('calls')
+        .select('id, call_control_id, lead_id, dial_source')
+        .eq('id', effectiveCallId)
+        .maybeSingle()
+
+      if (liveCall) {
+        let lead: Record<string, unknown> | null = null
+        if (liveCall.lead_id) {
+          const { data: leadRow } = await supabase
+            .from('leads')
+            .select('*')
+            .eq('id', liveCall.lead_id)
+            .maybeSingle()
+          lead = leadRow ?? null
+        }
+        activeCall = {
+          call_id: liveCall.id,
+          call_control_id: liveCall.call_control_id,
+          lead,
+        }
+      }
+    }
+
     return NextResponse.json({
       ok: true,
       session_id: sessionId,
@@ -529,6 +576,11 @@ export async function POST(req: NextRequest) {
       controller_invoked: controllerInvoked,
       controller: controllerSummary,
       controller_skipped_reason: controllerSkippedReason,
+      // Null unless this agent is currently pinned to a live call. Only
+      // predictive needs it — every other mode already knows its own call id —
+      // but it is returned unconditionally because it describes the session,
+      // not the mode.
+      active_call: activeCall,
     })
   } catch (err: unknown) {
     console.error('[heartbeat] unhandled', err)
