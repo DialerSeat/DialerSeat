@@ -4,6 +4,7 @@ import { getServiceClient } from '@/lib/supabase'
 import { runPredictiveController } from '@/lib/predictiveController'
 import { STALE_HEARTBEAT_SECONDS, ABANDON_YIELD_PCT } from '@/lib/dialerConstants'
 import { sendAdminPush } from '@/lib/pushNotify'
+import { logCallEvent } from '@/lib/callEvents'
 
 const supabase = getServiceClient('dialer/heartbeat')
 
@@ -60,6 +61,11 @@ const CONTROLLER_TRIGGER_STATES = new Set(['ready', 'on_call', 'wrapping', 'dial
 // per-warm-instance memory (serverless), which is exactly where the repeated
 // beats land.
 const RESOLVE_TTL_MS = 5 * 60 * 1000 // 5 minutes
+
+// Last time each session's predictive skip reason was written to call_events.
+// Per-warm-instance, which is fine: the worst case is a few extra rows after a
+// cold start, and the alternative is twelve rows a minute per idle agent.
+const skipLogCache = new Map<string, number>()
 
 // How long a gap in heartbeats counts as the agent having gone away, so that
 // coming back is worth announcing again. Beats are 5s apart, so this is 60
@@ -398,7 +404,34 @@ export async function POST(req: NextRequest) {
         controllerSkippedReason = `agent state "${state}" is not a dialing state`
       }
       if (controllerSkippedReason) {
-        console.warn(`[heartbeat] predictive armed but skipped: ${controllerSkippedReason}`)
+        console.warn(`[heartbeat] predictive skipped: ${controllerSkippedReason}`)
+        // ── RECORDED, NOT JUST RETURNED ────────────────────────────────────
+        // This reason is already sent to the client and shown in the activity
+        // feed, but a reason that only exists on someone's screen cannot be
+        // read back later or correlated with the call rows. Predictive has now
+        // spent two days failing for a cause that was visible only in a place
+        // nobody could query.
+        //
+        // Rate-limited to one row per session per 30s so an armed engine
+        // sitting idle doesn't write twelve rows a minute forever.
+        const lastLogged = skipLogCache.get(sessionId) ?? 0
+        if (Date.now() - lastLogged > 30_000) {
+          skipLogCache.set(sessionId, Date.now())
+          await logCallEvent({
+            event_type: 'fanout_idle',
+            user_id: clerkId,
+            campaign_id: campaignId,
+            source: 'system',
+            status: 'skipped',
+            detail: {
+              reason: controllerSkippedReason,
+              predictive_armed: predictiveArmed,
+              dialer_mode: dialerMode,
+              state,
+              allowlist_size: leadIdAllowlist?.length ?? null,
+            },
+          })
+        }
       }
     }
 
