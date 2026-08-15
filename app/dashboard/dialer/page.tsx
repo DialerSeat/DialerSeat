@@ -1521,7 +1521,9 @@ function DialerPageInner() {
             current_call_id: activeCallSid || null,
             // Server-side ghost guard: the controller only fans out lines when
             // the agent has explicitly started the predictive engine.
-            predictive_armed: isPredictive && predictiveEngineStarted,
+            // Read from the ref — see the arming site in handleDial for why
+            // the state version could not be trusted here.
+            predictive_armed: isPredictive && predictiveEngineStartedRef.current,
             // Always send the current displayed order to the predictive
             // controller too, matching fetchNextLead's behavior — dialing
             // must always follow the queue panel's top-down order in every
@@ -3168,6 +3170,20 @@ function DialerPageInner() {
     // has already left. Getting this wrong sends a predictive campaign down the
     // single-line path and starts an auto-chain that nothing stops.
     if (dialerModeRef.current === 'predictive') {
+      // ── ARM THE REF, NOT JUST THE STATE ─────────────────────────────────
+      // predictive_armed is what the server gates fan-out on, and it was read
+      // from React state through the heartbeat's interval closure. That state
+      // is cleared by three separate effects — campaign change, scope change,
+      // going offline — so between the render that armed it and the beat that
+      // reports it, any of them can win. Production showed the result plainly:
+      // mode predictive, state ready, allowlist 300, and predictive_armed
+      // false on every single beat.
+      //
+      // The ref is set here, synchronously, in the same statement the agent's
+      // click produced. Nothing can re-order it and no closure can capture it
+      // stale. The state is still set for rendering; the ref is what the
+      // heartbeat sends.
+      predictiveEngineStartedRef.current = true
       setPredictiveEngineStarted(true)
       armDialing() // predictive engine running — incoming-route may bridge a human to us
       lastIncomingCallSidRef.current = null
