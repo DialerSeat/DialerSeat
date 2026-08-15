@@ -13,7 +13,8 @@ import { handleOverflowAnsweredCall } from '@/lib/teamOverflow'
 import { abortSiblingFanoutLines } from '@/lib/predictiveController'
 import { startTelnyxRecording } from '@/lib/telnyxRecording'
 import { resolveTelnyxConfigOrLog } from '@/lib/telnyxConfig'
-import { agentSipUriForUserId } from '@/lib/agentSipCredentials'
+import { agentSipUriForUserId, resolveCredentialConnectionId } from '@/lib/agentSipCredentials'
+import { ensureSipUriCallingEnabled, isSipUriRejection } from '@/lib/telnyxSipUriCalling'
 import { getPlatformConfig } from '@/lib/platformConfig'
 
 // =============================================================================
@@ -1344,22 +1345,57 @@ async function dialAndBridgeAgentForFanout(
   // one agent, then dials a URI that rings every registered browser.
   const agentSipUri = await agentSipUriForUserId(agentUserId, env)
 
-  const res = await fetch('https://api.telnyx.com/v2/calls', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${env.apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      connection_id: env.connectionId,
-      to: agentSipUri,
-      from: fromNumber,
-      webhook_url: env.webhookUrl,
-      timeout_secs: 30,
-      link_to: leadCallControlId,
-      bridge_on_answer: true,
-    }),
-  })
+  const dialAgentLeg = () =>
+    fetch('https://api.telnyx.com/v2/calls', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${env.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        connection_id: env.connectionId,
+        to: agentSipUri,
+        from: fromNumber,
+        webhook_url: env.webhookUrl,
+        timeout_secs: 30,
+        link_to: leadCallControlId,
+        bridge_on_answer: true,
+      }),
+    })
+
+  let res = await dialAgentLeg()
+
+  // ── SIP URI CALLING DISABLED — THE DEAD-AIR BUG ────────────────────────────
+  // Telnyx rejects a call to a SIP URI when "Receive SIP URI calls" is off on
+  // the credential connection. placeOutboundCall has detected and repaired this
+  // for the user_dial agent leg since it was written; this path never did.
+  //
+  // The consequence is the worst outcome the dialer can produce. A prospect
+  // answers, this bridge fails, and they sit listening to silence — and because
+  // abortSiblingFanoutLines only runs after a SUCCESSFUL bridge, the other
+  // lines keep ringing other people while nobody is connected to anyone. That
+  // is exactly what a live test produced: answered, dead air, dialing never
+  // stopped.
+  //
+  // Same repair the user_dial path performs: flip the setting on the connection
+  // that actually rejected, then retry once. If the retry still fails, the
+  // caller hangs up the lead rather than leaving them on a dead line.
+  if (!res.ok) {
+    const firstBody = await res.clone().json().catch(() => null)
+    if (firstBody && isSipUriRejection(firstBody.errors)) {
+      const targetConnection =
+        (await resolveCredentialConnectionId(env).catch(() => null)) ||
+        env.connectionId
+      console.warn(
+        `[calls/events] fanout agent leg rejected — SIP URI calling appears disabled on ` +
+        `connection ${targetConnection}. Enabling and retrying once.`
+      )
+      const outcome = await ensureSipUriCallingEnabled(targetConnection, env.apiKey)
+      if (outcome !== 'failed') {
+        res = await dialAgentLeg()
+      }
+    }
+  }
 
   if (!res.ok) {
     const text = await res.text()
@@ -1367,6 +1403,18 @@ async function dialAndBridgeAgentForFanout(
       `[calls/events] fanout agent dial failed (${res.status}): ${text}`,
       { agentSipUri, agentUserId, configWarnings: env.warnings }
     )
+    void logCallEvent({
+      event_type: 'fanout_placement_failed',
+      call_control_id: leadCallControlId,
+      source: 'webhook',
+      status: 'agent_bridge_failed',
+      detail: {
+        reason: text.slice(0, 400),
+        http_status: res.status,
+        agent_user_id: agentUserId,
+        note: 'prospect answered and could not be connected to an agent',
+      },
+    })
     return false
   }
 
