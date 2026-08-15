@@ -2775,6 +2775,19 @@ function DialerPageInner() {
           // / the disposition sheet. An auto-chained next dial re-arms itself.
           disarmDialing()
 
+          // ── NOW IT HAS BEEN TRIED ──────────────────────────────────────
+          // This is the one place every ending converges: rang out, skipped,
+          // terminated, or a real conversation that hung up. Rotating here
+          // means the row stays at the top and highlighted for the whole life
+          // of the call, and only sinks once it is genuinely done with.
+          //
+          // Rotating at dial time instead — which is what this replaced — made
+          // the top lead drop to the bottom the instant it was chosen, so the
+          // agent never saw the row being called. disposeLead and the AMD
+          // machine-skip still stamp their own paths; those end the call
+          // earlier than this poll notices, and a second stamp is harmless.
+          markLeadDialedLocally(currentLeadRef.current?.id)
+
           // AMD 'machine' ALWAYS auto-advances, even if the UI had already
           // flipped to connected.
           //
@@ -3109,16 +3122,11 @@ function DialerPageInner() {
     if (!lead) return
     leadAttemptCountRef.current = 1
     setCurrentLead(lead)
-    // ── ROTATE ON USE, NOT ON OUTCOME ─────────────────────────────────────
-    // Stamping here covers every way a call can end with one call site. It was
-    // previously stamped only by disposeLead and by the AMD machine-skip, so a
-    // plain no-answer — the most common outcome there is — rotated nothing:
-    // the lead stayed at the top of the panel after being dialed, and only
-    // moved once the server wrote last_called_at and the panel refetched.
-    //
-    // "Used" means dialed, regardless of what happened next. The debounced
-    // refetch still confirms it against the server a moment later.
-    markLeadDialedLocally(lead.id)
+    // Deliberately NOT rotated here. A lead that is about to be dialed must
+    // stay exactly where it is, at the top, highlighted, for as long as the
+    // call is up — rotating at dial time made the top row drop to the bottom
+    // instantly and the agent never saw the row they were calling. Rotation
+    // happens when the call ENDS; see startHangupPolling.
     await dialLeadCall(lead)
   }
 
