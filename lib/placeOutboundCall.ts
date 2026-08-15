@@ -9,6 +9,7 @@ import { syncNumberPoolOnce, isUnverifiedOriginationError } from '@/lib/telnyxNu
 import { getPlatformConfig, resolveWithGlobal } from '@/lib/platformConfig'
 import { normalizeToE164 } from '@/lib/phoneNormalize'
 import { checkSuppression } from '@/lib/suppression'
+import { logCallEvent } from '@/lib/callEvents'
 
 // Re-exported so existing importers (and anything reaching for it here out of
 // habit) keep working. The implementation moved to lib/phoneNormalize.ts
@@ -939,9 +940,42 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
         `this call is live and untracked; abort will still reach it via client_state:`,
         insertErr
       )
+      // ── A LIVE CALL WITH NO ROW IS THE WORST STATE THIS CODE HAS ────────
+      // Console-only was not enough. Predictive reported "DIALING 3 LINES"
+      // with three real numbers while the calls table held nothing at all:
+      // three calls placed at the carrier, no record, no highlighting (which
+      // reads call rows), and pacing blind to lines that were genuinely up.
+      //
+      // Every downstream mechanism keys off this row — pacing, the abort
+      // sweep's database backstop, the compliance hold, billing, analytics.
+      // When it fails, that has to be visible somewhere queryable rather than
+      // in a runtime log nobody can reach after the fact.
+      await logCallEvent({
+        event_type: 'fanout_placement_failed',
+        call_control_id: leadCallControlId,
+        user_id: p.userId,
+        campaign_id: p.campaignId,
+        lead_id: p.leadId,
+        source: 'system',
+        status: 'row_insert_failed',
+        detail: {
+          reason: insertErr.message || String(insertErr),
+          code: (insertErr as { code?: string }).code ?? null,
+          dial_source: p.source,
+          phone: p.toFormatted,
+        },
+      })
     }
   } catch (thrown) {
     console.error(`[placeOutboundCall:${p.source}] calls row insert threw:`, thrown)
+    await logCallEvent({
+      event_type: 'fanout_placement_failed',
+      call_control_id: leadCallControlId,
+      user_id: p.userId,
+      source: 'system',
+      status: 'row_insert_threw',
+      detail: { reason: String(thrown), dial_source: p.source },
+    }).catch(() => {})
   }
 
   // Usage is no longer recorded here. claim_pool_number counts the call in the
