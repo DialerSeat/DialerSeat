@@ -153,8 +153,14 @@ export async function placeOutboundCall(
   // ── MANUAL DIAL BYPASS (unchanged from prior version) ───────────────────
   const isManualDial = !leadId && !campaignId
 
+  // Declared out here because it is now used twice: the TCPA calling-window
+  // check below, and the caller-ID choice further down. The lead's own state
+  // is what decides which of our numbers reads as local to them — see
+  // pickNumberForLead, where it outranks their area code when the two
+  // disagree.
+  let leadStateForTcpa: string | null = null
+
   if (!isManualDial) {
-    let leadStateForTcpa: string | null = null
     if (leadId) {
       const { data: lead } = await supabase
         .from('leads')
@@ -253,7 +259,7 @@ export async function placeOutboundCall(
   }
   recordingEnabled = resolveWithGlobal(recordingEnabled, platform.recording_enabled_global)
 
-  const poolNumber = await pickNumberForLead(toFormatted, dialerMode)
+  const poolNumber = await pickNumberForLead(toFormatted, dialerMode, leadStateForTcpa)
   const fromNumber = poolNumber?.phone_number || process.env.TELNYX_PHONE_NUMBER
 
   if (!fromNumber) {

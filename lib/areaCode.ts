@@ -416,6 +416,35 @@ export function getAreaCodeInfo(areaCode: string | null | undefined): AreaCodeIn
 }
 
 // =============================================================================
+// STATE -> REGION
+// =============================================================================
+// Derived from the table above rather than written out a second time, so a
+// state can never end up in two different regions depending on which lookup
+// you happened to use. Every area code in a state agrees on its region, so the
+// first one seen wins and the rest confirm it.
+//
+// This exists for caller-ID selection: when a lead's recorded state disagrees
+// with their phone's area code — someone who moved and kept their number — the
+// area code's region is misleading, and the region we still want to fall back
+// to is the one their STATE belongs to. Without this, that fallback tier was
+// simply lost and such leads dropped straight to "any number with capacity".
+const STATE_TO_REGION: Record<string, Region> = (() => {
+  const map: Record<string, Region> = {}
+  for (const info of Object.values(AREA_CODES)) {
+    if (info.region !== 'unknown' && !map[info.state]) {
+      map[info.state] = info.region
+    }
+  }
+  return map
+})()
+
+/** Broad region for a 2-letter state code, or null if it isn't one we place. */
+export function stateToRegion(state: string | null | undefined): Region | null {
+  if (!state) return null
+  return STATE_TO_REGION[state.toUpperCase()] ?? null
+}
+
+// =============================================================================
 // CLASSIFICATION
 // =============================================================================
 // getAreaCodeInfo answers one question — "which state?" — and returns null for

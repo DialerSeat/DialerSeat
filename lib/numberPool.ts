@@ -2,8 +2,10 @@ import { createClient } from '@supabase/supabase-js'
 import {
   extractAreaCode,
   getAreaCodeInfo,
+  stateToRegion,
   type Region,
 } from './areaCode'
+import { normalizeState } from './normalizeState'
 import {
   acquireNumberByAreaCode,
   releaseNumber as telnyxReleaseNumber,
@@ -93,7 +95,8 @@ export interface PoolNumber {
  */
 export async function pickNumberForLead(
   leadPhone: string,
-  dialerMode?: string
+  dialerMode?: string,
+  leadState?: string | null
 ): Promise<PoolNumber | null> {
   // Predictive fans out across many leads at once, so matching the caller ID
   // to any single lead's geography is meaningless — take whatever is freshest.
@@ -106,8 +109,45 @@ export async function pickNumberForLead(
   if (useLocality) {
     areaCode = extractAreaCode(leadPhone)
     const info = areaCode ? getAreaCodeInfo(areaCode) : null
-    state = info?.state ?? null
+    const areaCodeState = info?.state ?? null
     region = info?.region && info.region !== 'unknown' ? info.region : null
+
+    // ── WHERE THEY LIVE BEATS WHERE THEY GOT THEIR NUMBER ─────────────────
+    // The lead's own state column used to be ignored entirely here: `state`
+    // was derived from the area code, so it could never disagree with it and
+    // the RPC's state tier was decorative.
+    //
+    // Mobile numbers do not move when people do. Someone who moved New York to
+    // Florida keeps their 212 number for years, and calling that person from a
+    // New York caller ID is the wrong call — they live in Florida now, and a
+    // Florida number is the one that reads as local to them.
+    //
+    // So when the lead's recorded state CONTRADICTS their area code, the area
+    // code is dropped from the match entirely rather than merely outranked.
+    // claim_pool_number ranks area code above state, so leaving it in would
+    // keep handing back the New York number; passing null removes that tier
+    // and lets the state tier decide. When the two agree, or the lead's state
+    // is unknown, nothing changes — the area code is still the sharpest signal
+    // available, since it pins a city rather than a whole state.
+    // normalizeState returns null for anything it cannot resolve to a real
+    // two-letter code — a blank, a typo, "N/A", a country, a mangled import.
+    // Every one of those falls through to the area-code path below, which is
+    // the correct fallback: a bad state field must never make the caller ID
+    // WORSE than having no state field at all.
+    const declaredState = normalizeState(leadState)
+    if (declaredState && areaCodeState && declaredState !== areaCodeState) {
+      areaCode = null
+      state = declaredState
+      // The region tier is re-derived from the lead's STATE, not left as the
+      // area code's. Our pool will not always hold a number in every state, and
+      // when it doesn't, the next best caller ID is one from the right part of
+      // the country — Florida falling back to the southeast, not to whatever
+      // region the number they moved away from happens to sit in, and not to
+      // nothing at all.
+      region = stateToRegion(declaredState)
+    } else {
+      state = declaredState ?? areaCodeState
+    }
   }
 
   const { data, error } = await supabase.rpc('claim_pool_number', {
