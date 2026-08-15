@@ -348,12 +348,28 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
   // leg has to already exist (with a real call_control_id) before we can
   // reference it as link_to on the lead leg.
   //
-  // For controller_fanout, no agent leg is placed here at all — the
-  // controller decides which ready agent to route to once AMD confirms
-  // human (or, for team-shared campaigns, offers it to the next ready
-  // agent on overflow — see lib/teamOverflow.ts and the events webhook).
+  // ── FAN-OUT NOW DOES THE SAME, FOR THE SAME REASON ──────────────────────
+  // controller_fanout used to place no agent leg here at all, and instead
+  // dialled one reactively from the webhook once a lead answered. That path
+  // never once attached an agent leg in production: the prospect answered and
+  // got silence, every time, while this one worked perfectly in every
+  // client-dialed mode.
+  //
+  // The difference is ORDER, and it is the whole trick. Bridging needs a leg
+  // that already exists to point link_to at. Dialling the agent first means
+  // their browser has answered and is waiting before the lead ever picks up,
+  // so bridge_on_answer connects two live legs the instant the prospect says
+  // hello. Doing it the other way round asks Telnyx to attach an agent to a
+  // call that is already up, through a webhook, against a browser that may not
+  // be ready — five moving parts instead of none.
+  //
+  // TRADEOFF, ACCEPTED: this places one agent leg per LINE, so three lines
+  // means three legs ringing the same browser. They carry no audio until a
+  // lead answers and Telnyx bridges — an unbridged leg is silent — and
+  // abort-on-pickup tears the surplus down as soon as a human is confirmed.
+  // The alternative is the reactive bridge, which does not work at all.
   let agentCallControlId: string | undefined
-  if (p.source === 'user_dial') {
+  if (p.source === 'user_dial' || p.source === 'controller_fanout') {
     // THIS agent's own SIP endpoint — not a shared one. p.userId is the
     // Clerk id of the person who clicked dial, and agentSipUriForClerkId
     // resolves it to the credential their browser registered with, so the
