@@ -3109,6 +3109,16 @@ function DialerPageInner() {
     if (!lead) return
     leadAttemptCountRef.current = 1
     setCurrentLead(lead)
+    // ── ROTATE ON USE, NOT ON OUTCOME ─────────────────────────────────────
+    // Stamping here covers every way a call can end with one call site. It was
+    // previously stamped only by disposeLead and by the AMD machine-skip, so a
+    // plain no-answer — the most common outcome there is — rotated nothing:
+    // the lead stayed at the top of the panel after being dialed, and only
+    // moved once the server wrote last_called_at and the panel refetched.
+    //
+    // "Used" means dialed, regardless of what happened next. The debounced
+    // refetch still confirms it against the server a moment later.
+    markLeadDialedLocally(lead.id)
     await dialLeadCall(lead)
   }
 
