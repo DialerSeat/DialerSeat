@@ -741,7 +741,32 @@ async function runPredictiveControllerInner(
   // real one with a shared household or business line — that is the common
   // case, not the edge case: the same handset gets called again while the first
   // call is still up.
-  const phoneSeen = new Set<string>(inFlightPhones.map(normalizePhone).filter(Boolean))
+  // ── AND NOT ONE WE JUST RANG ────────────────────────────────────────────
+  // Seeding from in-flight calls alone only stops dialing a number that is
+  // still up. The moment a short call ends — a ring-out, a two-second reject —
+  // that number is eligible again, and with a five-second heartbeat it gets
+  // redialed almost immediately. Live traffic showed +1657... dialed twice
+  // within four seconds, and the same pair of leads fired on consecutive
+  // ticks, which is also what turned the dial blip into a beep every second.
+  //
+  // Nobody should be rung twice inside a minute by the same engine. The window
+  // is deliberately longer than a ring timeout so a number that just rang out
+  // cannot come straight back round.
+  const RECENTLY_DIALED_MS = 60_000
+  const { data: recentCalls } = await supabase
+    .from('calls')
+    .select('phone_number')
+    .eq('dial_group_id', sessionId)
+    .gte('created_at', new Date(Date.now() - RECENTLY_DIALED_MS).toISOString())
+
+  const phoneSeen = new Set<string>(
+    [
+      ...inFlightPhones,
+      ...(recentCalls || []).map(c => c.phone_number).filter((p): p is string => !!p),
+    ]
+      .map(normalizePhone)
+      .filter(Boolean)
+  )
   const leadsToCall: typeof leads = []
   const dupeLeadIds: string[] = []
 
