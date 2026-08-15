@@ -204,6 +204,17 @@ const LINES_OPTIONS = [1, 2, 3, 4, 5]
 // that are actually next up.
 const DIAL_ORDER_WINDOW = 300
 
+// ── HOW MANY LEADS THE PANEL HOLDS AT ONCE ──────────────────────────────────
+// The panel used to load every lead in the campaign, always. At 831 that was 17
+// sequential requests; at 100,000 it is a tab that never finishes.
+//
+// So it loads a large first slab and then doubles on demand: 2,000 → 4,000 →
+// 8,000, each time the agent asks for more at the bottom of the list. Doubling
+// rather than a fixed page because the agent who wants more than 2,000 rows on
+// screen usually wants far more, and making them click eleven times to reach
+// 24,000 is its own kind of broken.
+const QUEUE_INITIAL_LOAD = 2000
+
 const FUTURA = `'Futura PT', Futura, 'Helvetica Neue', Helvetica, Arial, sans-serif`
 
 function todayKey(): string {
@@ -301,6 +312,13 @@ function DialerPageInner() {
   }
   const [queuedLeads, setQueuedLeads] = useState<QueuedLead[]>([])
   const [queuedLeadsLoading, setQueuedLeadsLoading] = useState(false)
+  // How many leads the panel is currently willing to hold. Doubles each time
+  // the agent asks for more at the bottom of the list — see QUEUE_INITIAL_LOAD.
+  const [queueLoadCap, setQueueLoadCap] = useState(QUEUE_INITIAL_LOAD)
+  // True when the server still had pages left after the cap was reached, i.e.
+  // there genuinely are more leads to show. False means the panel is holding
+  // the entire book and the list can say so.
+  const [queueHasMore, setQueueHasMore] = useState(false)
   // FILTER control on the queue panel — a real, server-backed name/phone
   // search (reuses /api/leads/list's existing `search` param) plus a sort
   // toggle (existing `sort` param: created_asc/created_desc). No client-side
@@ -2181,6 +2199,15 @@ function DialerPageInner() {
     // expected to finish long before that.
     const SAFETY_PAGE_CEILING = 1000
 
+    // Per-campaign share of the cap. On All Active the cap is the whole panel's
+    // budget, so splitting it keeps one enormous campaign from crowding every
+    // other one out of the list entirely.
+    const loadCap = Math.max(
+      500,
+      Math.ceil(queueLoadCap / Math.max(1, campaignIds.length))
+    )
+    let sawMore = false
+
     const fetchAllPagesFor = async (campaignId: string): Promise<QueuedLead[]> => {
       const all: QueuedLead[] = []
       let cursor: number | null = 0
@@ -2229,6 +2256,16 @@ function DialerPageInner() {
             all.push(...(data.leads as QueuedLead[]))
           }
           cursor = typeof data.nextCursor === 'number' ? data.nextCursor : null
+
+          // ── STOP AT THE CAP, AND REMEMBER THERE WAS MORE ──────────────────
+          // The cap is what keeps a 100,000-lead book from being pulled into a
+          // browser tab. Reaching it with a cursor still outstanding is the
+          // signal the panel uses to offer LOAD MORE; running out of cursor
+          // first means this IS the whole list.
+          if (all.length >= loadCap) {
+            if (cursor !== null) sawMore = true
+            break
+          }
         } catch {
           console.error(
             `[queue] pagination failed for campaign ${campaignId} after ${all.length} leads — ` +
@@ -2242,8 +2279,11 @@ function DialerPageInner() {
     }
 
     const results = await Promise.all(campaignIds.map(fetchAllPagesFor))
+    // Reported after every campaign has been walked, so LOAD MORE appears when
+    // ANY campaign in scope still has leads behind the cap.
+    setQueueHasMore(sawMore)
     return results.flat()
-  }, [queueSearch, queueSortDesc])
+  }, [queueSearch, queueSortDesc, queueLoadCap])
 
   const fetchQueuedLeads = useCallback((opts?: { silent?: boolean }) => {
     const myGeneration = ++queueFetchGenerationRef.current
@@ -4435,6 +4475,39 @@ function DialerPageInner() {
                   </div>
                 )
               })}
+
+              {/* ── THE BOTTOM OF THE LIST ALWAYS SAYS WHERE YOU ARE ──────
+                  Either there is more and you can ask for it, or there is not
+                  and it says so. A list that simply stops leaves the agent
+                  guessing whether they are seeing their whole book. */}
+              <div style={{
+                padding: '14px 10px 18px', textAlign: 'center',
+                fontFamily: FUTURA, fontSize: 9, letterSpacing: 2,
+              }}>
+                {queueHasMore ? (
+                  <button
+                    onClick={() => setQueueLoadCap(c => c * 2)}
+                    disabled={queuedLeadsLoading}
+                    style={{
+                      width: '100%', padding: '12px', borderRadius: 4,
+                      border: `1px solid ${terminalBorder}`,
+                      background: terminalSurface,
+                      color: queuedLeadsLoading ? terminalMuted : 'var(--brand-primary)',
+                      fontFamily: FUTURA, fontSize: 10, fontWeight: 'bold',
+                      letterSpacing: 3, cursor: queuedLeadsLoading ? 'default' : 'pointer',
+                      touchAction: 'manipulation',
+                    }}
+                  >
+                    {queuedLeadsLoading
+                      ? 'LOADING…'
+                      : `LOAD MORE LEADS (${visibleQueuedLeads.length.toLocaleString()} SHOWN)`}
+                  </button>
+                ) : (
+                  <div style={{ color: terminalMuted }}>
+                    ■ THAT'S ALL {visibleQueuedLeads.length.toLocaleString()} OF YOUR LEADS
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
