@@ -45,7 +45,22 @@ const supabase = getServiceClient('dialer/heartbeat')
 
 // Heartbeat-derived states that should trigger the controller to refill lines.
 // 'paused' is intentionally absent — paused agents don't get fanout.
-const CONTROLLER_TRIGGER_STATES = new Set(['ready', 'on_call', 'wrapping', 'dialing'])
+// ── ONLY DIAL WHILE THE AGENT IS ON THE QUEUE PANEL ─────────────────────────
+// This used to include 'on_call' and 'wrapping', on the reasoning that dialling
+// ahead while the agent talks is predictive's whole speed advantage. In theory
+// yes; in practice it produced a dialer that kept calling people through a live
+// conversation and through the disposition screen, so a prospect could answer
+// while the agent was mid-sentence with someone else and had nowhere to go —
+// dropped, and counted against the abandon rate.
+//
+// A human pickup aborts the other lines. Wrap-up is the same situation a moment
+// later: the agent is not available, so nothing should be ringing on their
+// behalf. Dialling resumes when they are back on the queue panel and 'ready',
+// exactly as progressive behaves.
+//
+// 'dialing' stays — it is a transition state on the way to ready, not a state
+// where the agent is occupied with a person.
+const CONTROLLER_TRIGGER_STATES = new Set(['ready', 'dialing'])
 
 // ── USER + TEAM RESOLUTION CACHE ──────────────────────────────────────────
 // The heartbeat fires every 5s per agent. The agent's internal user id and
