@@ -287,6 +287,17 @@ export async function POST(req: NextRequest) {
           // server assigned intact. Only a client that actually has a call id
           // writes this now.
           ...(currentCallId !== null ? { current_call_id: effectiveCallId } : {}),
+          // ── A PAUSED SESSION CANNOT BE ARMED ─────────────────────────────
+          // Server-side invariant, independent of the client. predictive_armed
+          // is durable now, so a flag left set by a session that ended badly
+          // survives everything — and the agent merely going Available again
+          // satisfied every controller condition and started dialing before
+          // they pressed anything.
+          //
+          // Paused is the one state where arming is meaningless, so it is
+          // cleared here unconditionally. Coming back always requires an
+          // explicit INITIATE, whatever happened last time.
+          ...(state === 'paused' ? { predictive_armed: false } : {}),
           last_heartbeat: now,
           updated_at: now,
         },

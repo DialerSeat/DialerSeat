@@ -1992,6 +1992,20 @@ function DialerPageInner() {
   }, [isActive, isPredictive, available, isSpecificCampaign, selectedCampaign, currentCampaign, linesPref])
 
   const handleSetAvailable = async () => {
+    // ── GOING AVAILABLE IS NOT ARMING ──────────────────────────────────────
+    // Now that predictive_armed lives in the database it survives everything —
+    // a reload, a closed tab, a session that ended badly. So a flag left set
+    // by an earlier session meant that merely going Available satisfied every
+    // controller condition and the engine started dialing before the agent had
+    // pressed anything. That is the ghost dialing the flag exists to prevent,
+    // reintroduced by making it durable.
+    //
+    // Clearing it here makes the two actions mean what they say: Available
+    // means reachable, INITIATE means dialing. Nothing else can arm.
+    predictiveEngineStartedRef.current = false
+    armedAgainstRef.current = null
+    void setServerArmed(false)
+
     let granted = micGranted
     if (!granted) {
       try {
