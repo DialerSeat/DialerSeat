@@ -32,6 +32,11 @@ const supabase = createClient(
 
 
 
+// Last time each session's tick decision was recorded. Per-warm-instance; the
+// worst case after a cold start is a few extra rows, which is the right way
+// round for something whose whole job is to not be silent.
+const tickLogCache = new Map<string, number>()
+
 const HARD_LINE_CAP = 5
 const ABANDON_AUTO_DEGRADE_PCT = 2.5
 
@@ -216,7 +221,19 @@ export async function runPredictiveController(
 ): Promise<ControllerResult> {
   const result = await runPredictiveControllerInner(input)
 
-  if (result.fired === 0 && !result.reason.startsWith('at target')) {
+  // ── EVERY TICK REPORTS, INCLUDING THE BORING ONE ────────────────────────
+  // This used to exclude "at target", on the grounds that it is the correct
+  // steady state while lines are busy. That reasoning put the single most
+  // likely silent failure — a controller that believes it is at target because
+  // stale claims inflate inFlight — into the one bucket nothing recorded.
+  //
+  // Rate-limited per session instead of filtered by reason, so a busy engine
+  // does not write twelve rows a minute while a stuck one still shows up.
+  const lastLogged = tickLogCache.get(input.sessionId) ?? 0
+  const dueForLog = Date.now() - lastLogged > 20_000
+
+  if (result.fired === 0 && dueForLog) {
+    tickLogCache.set(input.sessionId, Date.now())
     // AWAITED, not fire-and-forget. The heartbeat returns its response
     // immediately after this resolves, and on a serverless runtime a promise
     // still pending at that moment is frozen with the invocation — so a `void`
