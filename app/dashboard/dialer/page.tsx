@@ -699,6 +699,38 @@ function DialerPageInner() {
    * Arming is awaited, because nothing should show as started until the server
    * agrees it is.
    */
+  /**
+   * The campaign/scope this session was armed against.
+   *
+   * The disarm-on-change effects fire on mount and whenever their dependency
+   * is reassigned — including when an async campaign refresh sets the SAME id
+   * again. Production caught the consequence exactly: armed at 15:30:16.903,
+   * disarmed at 15:30:19.328, with nobody pressing stop. Two and a half
+   * seconds, every time, which is why every earlier fix appeared to do
+   * nothing.
+   *
+   * Recording what we armed against turns "this effect ran" into "the agent
+   * actually moved to a different campaign", which is the only version of that
+   * event worth disarming for.
+   */
+  const armedAgainstRef = useRef<string | null>(null)
+
+  /**
+   * Disarm ONLY if the engine is armed against a different campaign than the
+   * one now selected. A re-render, a mount, or an async campaign refresh that
+   * reassigns the same id must not touch a running engine.
+   *
+   * Passing null means "no campaign selected", which genuinely does invalidate
+   * an armed engine — predictive fans out against a resolved lead set.
+   */
+  const disarmIfArmedElsewhere = (nowSelected: string | null) => {
+    const armedAgainst = armedAgainstRef.current
+    if (armedAgainst === null) return          // not armed — nothing to undo
+    if (armedAgainst === nowSelected) return   // same campaign — leave it running
+    armedAgainstRef.current = null
+    void setServerArmed(false)
+  }
+
   const setServerArmed = async (armed: boolean): Promise<boolean> => {
     try {
       const res = await fetch('/api/dialer/arm', {
@@ -1034,13 +1066,22 @@ function DialerPageInner() {
     setSelectedCampaign('')
     setPredictiveEngineStarted(false)
     predictiveEngineStartedRef.current = false
-    void setServerArmed(false)
+    disarmIfArmedElsewhere(null)
   }, [selectedScope])
 
   useEffect(() => {
     setPredictiveEngineStarted(false)
     predictiveEngineStartedRef.current = false
-    void setServerArmed(false)
+    // ── ONLY DISARM FOR A REAL MOVE ─────────────────────────────────────────
+    // This used to call setServerArmed(false) unconditionally. The effect runs
+    // on mount, and again whenever selectedCampaign is reassigned — including
+    // by the scope effect above, which clears it to '' on every one of its own
+    // spurious runs. Production showed the result precisely: armed at
+    // 15:30:16.903, disarmed at 15:30:19.328, with nobody touching stop.
+    //
+    // Two and a half seconds after every arm, every time. That is why arming
+    // "never worked" — it worked, and was immediately undone.
+    disarmIfArmedElsewhere(selectedCampaign || null)
     // Reset script tab state when switching campaigns — a previous campaign's
     // custom order keys don't apply here and could otherwise hide tabs.
     setScriptOrder([])
@@ -3257,8 +3298,8 @@ function DialerPageInner() {
       armSetRef.current++
       predictiveEngineStartedRef.current = true
       setPredictiveEngineStarted(true)
-      // The one that actually matters — the server gate. Awaited, so the
-      // engine is not shown as started until the row says it is.
+      // The one that actually matters — the server gate.
+      armedAgainstRef.current = selectedCampaign || null
       void setServerArmed(true)
       armDialing() // predictive engine running — incoming-route may bridge a human to us
       lastIncomingCallSidRef.current = null
@@ -3369,6 +3410,8 @@ function DialerPageInner() {
 
     setPredictiveEngineStarted(false)
     predictiveEngineStartedRef.current = false
+    // Explicit stop by the agent — always disarms, no guard.
+    armedAgainstRef.current = null
     void setServerArmed(false)
     lastIncomingCallSidRef.current = null
 
