@@ -3189,7 +3189,16 @@ function DialerPageInner() {
     //
     // Sequential, live call first. It is a single request and returns in
     // milliseconds.
-    if (sid) await hangupCall(sid).catch(() => {})
+    // 'skip' is the reason that triggers the compliance hold — see
+    // app/api/calls/hangup/route.ts. TERMINATE sent no reason at all, so a call
+    // the agent ended after two seconds was hung up at two seconds and counted
+    // against the short-duration ratio, while the identical action via SKIP was
+    // held to the threshold in the background.
+    //
+    // To the LEAD the two are the same event: the agent is leaving and is not
+    // coming back. The distinction only ever meant something to the agent's own
+    // UI, and it must not decide whether the line is held.
+    if (sid) await hangupCall(sid, 'skip').catch(() => {})
 
     // Then the server sweep, NOT awaited. Predictive places lines the client
     // holds no ids for, so this still has to run — but nothing on screen
