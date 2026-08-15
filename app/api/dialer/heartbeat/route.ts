@@ -588,6 +588,18 @@ export async function POST(req: NextRequest) {
     // assigned, that is the call — same trigger progressive uses, same
     // ordering, and AMD still decides what happens next.
     if (!assignedCallId && dialerMode === 'predictive') {
+      // ── A MACHINE VERDICT ENDS THE CALL *FOR THE AGENT* ──────────────────
+      // The lead's leg deliberately outlives the agent on a machine: it is
+      // held to clear the carrier's short-duration threshold, which is the
+      // whole point of the compliance hold. But the agent was released the
+      // moment the verdict landed and must go straight back to the queue
+      // panel — leaving them on the lead profile for the full nine seconds is
+      // exactly the "stuck watching a voicemail" this is meant to avoid.
+      //
+      // Same rule /api/calls/check already applies for every other mode:
+      // machine or fax means over, regardless of what duration says. The hold
+      // continues in the background either way; it is billing housekeeping and
+      // no longer the agent's business.
       const { data: answeredLine } = await supabase
         .from('calls')
         .select('id')
@@ -595,6 +607,11 @@ export async function POST(req: NextRequest) {
         .not('answered_at', 'is', null)
         .eq('duration', 0)
         .is('disposition', null)
+        // NULL-safe on purpose. `not.in` would drop rows where amd_result is
+        // still NULL — which is every call in the first few seconds after
+        // pickup, the exact window this has to fire in. A verdict that has not
+        // arrived yet is not a machine.
+        .or('amd_result.is.null,and(amd_result.neq.machine,amd_result.neq.fax_detected)')
         .order('answered_at', { ascending: false })
         .limit(1)
         .maybeSingle()
