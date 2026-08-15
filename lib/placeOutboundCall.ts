@@ -513,6 +513,21 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
   if (agentCallControlId) {
     dialBody.link_to = agentCallControlId
     dialBody.bridge_on_answer = true
+
+    // ── SURVIVE THE AGENT LEAVING ──────────────────────────────────────────
+    // Without this, releasing the agent on a machine verdict tore down THIS
+    // leg too — bridged legs die together — and the compliance hold then slept
+    // on a call that was already gone. It showed up as machine calls ending at
+    // 3-4s with the hold apparently doing nothing, because the call it meant
+    // to extend no longer existed.
+    //
+    // Telnyx: "If supplied with the value self, the current leg will be parked
+    // after unbridge. If not set, the default behavior is to hang up the leg."
+    // So the lead's leg is now PARKED when the agent drops rather than hung
+    // up, and handleAmdResult hangs it up itself once the hold expires.
+    //
+    // link_to is required for this and is set immediately above.
+    dialBody.park_after_unbridge = 'self'
   }
 
   if (p.amdEnabled) {
