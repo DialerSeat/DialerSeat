@@ -686,7 +686,16 @@ function DialerPageInner() {
   // Keep availableRef in lock-step with the available state.
   useEffect(() => { availableRef.current = available }, [available])
   const predictiveEngineStartedRef = useRef(false)
-  useEffect(() => { predictiveEngineStartedRef.current = predictiveEngineStarted }, [predictiveEngineStarted])
+  // ── DELIBERATELY NOT MIRRORED FROM STATE ──────────────────────────────────
+  // This used to be `ref.current = predictiveEngineStarted` on every change of
+  // that state, which quietly re-created the bug the ref exists to avoid: the
+  // state is cleared by effects on campaign change, scope change and going
+  // offline, so any of them would wipe arming a beat after the agent set it —
+  // and the ref would faithfully copy the wipe.
+  //
+  // The ref is now owned by the two events that genuinely mean something:
+  // handleDial sets it true when the agent starts the sequence, and the
+  // explicit disarm sites below set it false. Nothing else touches it.
   // On unmount (navigating away from the dialer), cancel any pending auto-chain
   // dials so a queued timer can't fire a call after you've left the page.
   useEffect(() => {
@@ -993,10 +1002,12 @@ function DialerPageInner() {
     if (!lsRestoredRef.current) return
     setSelectedCampaign('')
     setPredictiveEngineStarted(false)
+    predictiveEngineStartedRef.current = false
   }, [selectedScope])
 
   useEffect(() => {
     setPredictiveEngineStarted(false)
+    predictiveEngineStartedRef.current = false
     // Reset script tab state when switching campaigns — a previous campaign's
     // custom order keys don't apply here and could otherwise hide tabs.
     setScriptOrder([])
@@ -1866,6 +1877,7 @@ function DialerPageInner() {
       setDisposition('')
       setSeconds(0)
       setPredictiveEngineStarted(false)
+      predictiveEngineStartedRef.current = false
       lastIncomingCallSidRef.current = null
     }
 
