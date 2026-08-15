@@ -485,7 +485,19 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
   // turned on. Omitting these entirely (not just setting record: 'false')
   // matches the same pattern used for the AMD toggle above — Telnyx only
   // records/bills for recording when these params are present at all.
-  if (p.recordingEnabled) {
+  //
+  // ── AND ONLY WHEN NOBODY IS GOING TO TELL US IT'S A MACHINE ─────────────
+  // Recording from answer starts several seconds before AMD reaches a verdict.
+  // On traffic that is ~44% machines, most of what we recorded and paid for
+  // was a voicemail greeting with no agent on the call. handleRecordingSaved
+  // deleted those afterwards, which keeps the list clean but does not undo the
+  // recording charge, and still means we briefly held audio of a stranger's
+  // answering machine.
+  //
+  // So when AMD is on, recording waits for the human verdict and is started by
+  // the webhook (see startTelnyxRecording). When AMD is OFF no verdict is ever
+  // coming, so this is the only chance to start — record from answer as before.
+  if (p.recordingEnabled && !p.amdEnabled) {
     dialBody.record = 'record-from-answer'
     dialBody.record_channels = 'dual'
   }
@@ -901,6 +913,19 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
       // tell the two apart, so the same investigation kept restarting. It is
       // also the denominator for AMD spend, which is billed per requesting leg.
       amd_requested: p.amdEnabled,
+      // ── RECORDING IS OWED, NOT YET STARTED ────────────────────────────────
+      // Set when the campaign wants recording but AMD is going to decide first.
+      // The webhook reads this on a human verdict and starts the recording
+      // then; a machine verdict simply never does, and no audio is ever
+      // captured or billed.
+      //
+      // Stored on the call rather than re-read from the campaign at verdict
+      // time on purpose: the campaign toggle or the global kill switch can
+      // change mid-call, and what matters is what was true when this call was
+      // placed.
+      ...(p.recordingEnabled && p.amdEnabled
+        ? { recording_status: 'pending_amd' }
+        : {}),
       duration: 0,
       disposition: null,
       dial_source: p.source,

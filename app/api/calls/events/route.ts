@@ -11,6 +11,7 @@ import { logCallEvent } from '@/lib/callEvents'
 import { hangupCallControlId, bridgeCallControlIds } from '@/lib/placeOutboundCall'
 import { handleOverflowAnsweredCall } from '@/lib/teamOverflow'
 import { abortSiblingFanoutLines } from '@/lib/predictiveController'
+import { startTelnyxRecording } from '@/lib/telnyxRecording'
 import { resolveTelnyxConfigOrLog } from '@/lib/telnyxConfig'
 import { agentSipUriForUserId } from '@/lib/agentSipCredentials'
 import { getPlatformConfig } from '@/lib/platformConfig'
@@ -698,7 +699,7 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
   const [{ data: callRow }] = await Promise.all([
     supabaseAdmin
       .from('calls')
-      .select('id, dial_group_id, campaign_id, team_id, user_id, agent_call_control_id, dial_source')
+      .select('id, dial_group_id, campaign_id, team_id, user_id, agent_call_control_id, dial_source, recording_status')
       .eq('call_control_id', callControlId)
       .maybeSingle(),
     amdWrite,
@@ -708,6 +709,22 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
     console.warn(`[calls/events] no calls row for ${callControlId} on human AMD result`)
     return
   }
+
+  // ── A HUMAN ANSWERED — NOW IT IS WORTH RECORDING ──────────────────────────
+  // The dial deliberately did not carry `record` when AMD was enabled, so
+  // nothing has been captured or billed up to this point. This is the moment a
+  // recording becomes worth having, and a machine verdict never reaches here —
+  // it returns further up — so a voicemail greeting is never recorded at all
+  // rather than recorded and deleted afterwards.
+  //
+  // Deliberately NOT awaited before the bridge below: connecting the agent is
+  // the latency-critical thing on this path and must not wait on a recording
+  // command. Held as a promise and settled before returning instead, because a
+  // dangling promise on a serverless runtime is frozen with the response.
+  const recordingStart =
+    callRow.recording_status === 'pending_amd'
+      ? startRecordingForCall(callControlId, callRow.id)
+      : Promise.resolve()
 
   if (!callRow.dial_group_id) {
     // ── user_dial: BRIDGE NOW ────────────────────────────────────────────
@@ -740,6 +757,7 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
         await hangupCallControlId(callControlId)
       }
     }
+    await recordingStart
     return
   }
 
@@ -789,6 +807,7 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
         // response — which would leave the prospects' phones ringing for a
         // call that no longer exists.
         await abortSiblingFanoutLines({ sessionId, keepCallControlId: callControlId })
+        await recordingStart
         return
       }
       // Failed to actually connect the agent leg — release the claim and
@@ -817,10 +836,15 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
     // "if two are picked up the next available user gets the pickup". That is
     // still a pickup, so the lines that are merely ringing end here too.
     await abortSiblingFanoutLines({ sessionId, keepCallControlId: callControlId })
+    await recordingStart
     return
   }
 
   if (outcome === 'dropped') {
+    // Nobody took this call, so there is nothing worth recording. The command
+    // may already be in flight; settle it and stop the recording rather than
+    // leave a few seconds of an abandoned call on disk.
+    await recordingStart
     await markCallAbandoned(callControlId)
     await supabaseAdmin
       .from('calls')
@@ -828,6 +852,49 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
       .eq('call_control_id', callControlId)
     await bumpLeadAttemptAndRelease(callRow.id)
   }
+}
+
+/**
+ * Start recording a call that AMD has just confirmed is a human, and record
+ * that we did. Never called on a machine verdict — that path returns before
+ * this one is reached — which is the whole point: a voicemail greeting is now
+ * never captured rather than captured and deleted afterwards.
+ *
+ * Best-effort. A recording that fails to start must never take down a live
+ * call the agent is already talking on.
+ */
+async function startRecordingForCall(
+  callControlId: string,
+  callRowId: string
+): Promise<void> {
+  const env = resolveTelnyxConfigOrLog('calls/events:record')
+  if (!env) return
+
+  const started = await startTelnyxRecording(callControlId, env.apiKey)
+  if (!started) {
+    // Left as 'pending_amd' deliberately — it is an accurate description of
+    // what happened (recording was owed and never began) and distinguishes
+    // this from a call that was never meant to be recorded at all.
+    void logCallEvent({
+      event_type: 'recording_started',
+      call_control_id: callControlId,
+      status: 'failed',
+      source: 'webhook',
+    })
+    return
+  }
+
+  await supabaseAdmin
+    .from('calls')
+    .update({ recording_status: 'recording' })
+    .eq('id', callRowId)
+
+  void logCallEvent({
+    event_type: 'recording_started',
+    call_control_id: callControlId,
+    status: 'amd_human',
+    source: 'webhook',
+  })
 }
 
 async function handleHangup(

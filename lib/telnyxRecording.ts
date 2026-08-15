@@ -74,6 +74,61 @@ async function findRecordingIdByCall(
  *
  * Returns true when the recording is gone (404 counts — it's already gone).
  */
+/**
+ * Start recording a call that is already up.
+ *
+ * WHY RECORDING NO LONGER STARTS AT ANSWER. The dial used to carry
+ * `record: 'record-from-answer'`, so Telnyx began recording the moment the
+ * line was picked up — several seconds before AMD had any verdict. On traffic
+ * that is ~44% answering machines, that meant most recordings we paid for were
+ * voicemail greetings with no agent on the call. The cleanup was after the
+ * fact: handleRecordingSaved deleted them once the verdict came in, which
+ * stops them piling up in storage but does not undo the recording charge, and
+ * still puts a stranger's voicemail greeting briefly on disk.
+ *
+ * Not recording it in the first place is both cheaper and the better answer to
+ * "why do you have audio of my answering machine".
+ *
+ * Telnyx requires format and channels on this command — they are not optional,
+ * and it errors with "Call recording cannot be started until audio has
+ * commenced on the call", which is why this is only ever called after a human
+ * verdict on an answered call. See
+ * https://developers.telnyx.com/api-reference/call-commands/recording-start
+ *
+ * Returns true when Telnyx accepted the command.
+ */
+export async function startTelnyxRecording(
+  callControlId: string,
+  apiKey: string
+): Promise<boolean> {
+  try {
+    const res = await fetch(
+      `${TELNYX_API}/calls/${encodeURIComponent(callControlId)}/actions/record_start`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        // dual keeps the lead on channel A and the agent on channel B, matching
+        // what record_channels did on the dial so existing playback is unchanged.
+        body: JSON.stringify({ format: 'mp3', channels: 'dual' }),
+      }
+    )
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      console.error(
+        `[telnyxRecording] record_start failed for ${callControlId} (${res.status}): ${text}`
+      )
+      return false
+    }
+    return true
+  } catch (err) {
+    console.error(`[telnyxRecording] record_start threw for ${callControlId}`, err)
+    return false
+  }
+}
+
 export async function deleteTelnyxRecording(
   call: RecordingRow,
   apiKey: string
