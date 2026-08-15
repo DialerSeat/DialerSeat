@@ -131,9 +131,26 @@ export const PLATFORM_CONFIG_DEFAULTS: PlatformConfig = {
   amd_in_preview: false,
   // Voicemail skipping is why AMD exists; keep it, now that preview is out.
   amd_hangup_when_bridged: true,
-  // OFF unless deliberately set. A fallback that silently held live calls open
-  // would be the worst possible default for this particular feature.
-  amd_hold_seconds_after_machine: 0,
+  // ── FAILS TOWARD COMPLIANCE, NOT AWAY FROM IT ────────────────────────────
+  // This was 0, on the reasoning that a fallback which silently held live calls
+  // open would be the worst possible default. That reasoning was backwards for
+  // this particular value, and the traffic showed it.
+  //
+  // getPlatformConfig is cached and falls back to these shipped defaults
+  // whenever the read fails. Every time that happened, holdSeconds came back 0,
+  // the `if (holdSeconds > 0)` guard skipped the hold entirely, and the lead's
+  // leg was torn down the instant the verdict landed — producing calls that end
+  // at exactly amd_total_analysis_ms. Machine calls came back in two clean
+  // buckets, 6s and 9-10s, with nothing in between: the hold either ran or was
+  // silently disabled by a failed config read.
+  //
+  // The two failure modes are not symmetric. A missed hold is a short-duration
+  // call billed against the carrier ratio at $0.01 each. An unwanted hold is
+  // nine seconds of a line nobody is on. Defaulting to the value the platform
+  // actually runs means a config blip can no longer quietly switch compliance
+  // off. Setting it to 0 in platform_config still disables the feature — this
+  // changes only what happens when the setting cannot be read.
+  amd_hold_seconds_after_machine: 9,
   // A floor, not the final value: handleAmdResult raises this to at least
   // total_analysis_time + 3s so a verdict is never thrown away for arriving
   // exactly when the detector was told to produce it.

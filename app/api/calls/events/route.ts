@@ -606,7 +606,12 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
     // running behind them.
     await autoAdvanceLeadNoDisposition(callControlId)
 
-    const holdSeconds = platformConfig.amd_hold_seconds_after_machine ?? 0
+    // `?? 9`, not `?? 0` — the second of two fail-open paths that could switch
+    // the compliance hold off without anything saying so. The shipped default
+    // in lib/platformConfig.ts is the first; see the note there for why this
+    // value has to fail toward holding rather than away from it. An explicit 0
+    // in platform_config still disables the feature, because 0 is not nullish.
+    const holdSeconds = platformConfig.amd_hold_seconds_after_machine ?? 9
     if (holdSeconds > 0) {
       // ── A MISSING TIMESTAMP MUST NOT DISABLE THE FEATURE ────────────────
       // This used to require callRow.answered_at and silently do nothing
