@@ -78,7 +78,7 @@ export default function Compliance() {
   const headline = checks.find(c => c.key === 'short_calls')
 
   return (
-    <div style={{
+    <div className="cmp-report" style={{
       height: '100%', overflowY: 'auto', padding: 20,
       background: 'var(--brand-page-bg)', color: 'var(--brand-on-page-bg)',
       fontFamily: FONT, fontVariantNumeric: 'tabular-nums',
@@ -87,9 +87,51 @@ export default function Compliance() {
         <div style={{ fontSize: 11, fontWeight: 'bold', letterSpacing: 4, color: 'var(--brand-primary)' }}>
           TELNYX COMPLIANCE
         </div>
-        <div style={{ fontSize: 10, letterSpacing: 1.5, color: 'var(--brand-muted-text)' }}>
-          {period.label.toUpperCase()} · RESETS IN {period.daysRemaining} DAY{period.daysRemaining === 1 ? '' : 'S'}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ fontSize: 10, letterSpacing: 1.5, color: 'var(--brand-muted-text)' }}>
+            {period.label.toUpperCase()} · RESETS IN {period.daysRemaining} DAY{period.daysRemaining === 1 ? '' : 'S'}
+          </div>
+          {/* Print-to-PDF rather than a generated file. The report is already
+              laid out; asking the browser to print it produces a real PDF on
+              every platform with no dependency, no server round trip, and no
+              second copy of the layout to keep in sync with this one. */}
+          <button
+            className="cmp-noprint"
+            onClick={() => window.print()}
+            style={{
+              padding: '5px 12px', background: 'transparent',
+              border: '1px solid var(--brand-primary)', borderRadius: 3,
+              color: 'var(--brand-primary)', fontSize: 9.5, letterSpacing: 1.8,
+              fontWeight: 'bold', cursor: 'pointer', fontFamily: FONT,
+            }}
+          >DOWNLOAD PDF</button>
         </div>
+      </div>
+
+      <style>{`
+        /* The month is stamped into the printed copy because a saved report
+           with no period on it is worthless six weeks later — and these are
+           kept precisely to show what a given month looked like. */
+        @media print {
+          .cmp-noprint { display: none !important; }
+          .cmp-print-only { display: block !important; }
+          body * { visibility: hidden; }
+          .cmp-report, .cmp-report * { visibility: visible; }
+          .cmp-report {
+            position: absolute; left: 0; top: 0; width: 100%;
+            padding: 0; overflow: visible; height: auto;
+            background: #fff; color: #111;
+          }
+          /* Never split a check across a page break — a threshold on one page
+             and its value on the next is worse than a shorter page. */
+          .cmp-check { break-inside: avoid; page-break-inside: avoid; }
+        }
+        .cmp-print-only { display: none; }
+      `}</style>
+
+      <div className="cmp-print-only" style={{ fontSize: 11, marginTop: 6 }}>
+        DialerSeat — Telnyx compliance report · {period.label} · generated{' '}
+        {new Date().toLocaleString('en-US')}
       </div>
 
       {/* The headline number, because one of these four decides whether you get
@@ -140,7 +182,7 @@ export default function Compliance() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {checks.map(c => (
-          <div key={c.key} style={{
+          <div key={c.key} className="cmp-check" style={{
             border: '1px solid var(--brand-card-border)', borderRadius: 10,
             background: 'var(--brand-card-surface)', padding: 14,
           }}>
