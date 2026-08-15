@@ -47,6 +47,9 @@ export type CallEventType =
   // in the database, from a tick that was never asked to dial — which is what
   // made "predictive has never placed a call" so slow to pin down.
   | 'fanout_placement_failed'
+  // A predictive tick that fired no calls, with the controller's own reason.
+  // Excludes the "at target" steady state — see runPredictiveController.
+  | 'fanout_idle'
 
 interface CallEventInput {
   event_type: CallEventType

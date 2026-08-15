@@ -199,7 +199,48 @@ export async function abortSiblingFanoutLines(params: {
   return aborted
 }
 
+// ── WHY A TICK DIALED NOTHING ───────────────────────────────────────────────
+// Every early return in the controller carries a human-readable `reason`, and
+// every one of them was returned to the client and then dropped. So a tick that
+// claimed two leads and dialed none looked, from every table in the database,
+// exactly like a tick that was never asked to dial — the same ambiguity that
+// hid "predictive has never placed a call" for the product's whole lifetime,
+// one layer further in.
+//
+// This wraps the controller and records the reason whenever a tick fires
+// nothing. "At target" is excluded: that is the correct steady state while
+// lines are busy and would otherwise write an event every five seconds for
+// every dialing agent.
 export async function runPredictiveController(
+  input: RunControllerInput
+): Promise<ControllerResult> {
+  const result = await runPredictiveControllerInner(input)
+
+  if (result.fired === 0 && !result.reason.startsWith('at target')) {
+    void logCallEvent({
+      event_type: 'fanout_idle',
+      user_id: input.clerkId,
+      campaign_id: input.campaignId,
+      source: 'system',
+      status: String(result.desired),
+      detail: {
+        reason: result.reason,
+        desired: result.desired,
+        in_flight: result.inFlight,
+        effective_lines: result.effectiveLines,
+        deduped: result.dedupedPhones,
+        skipped: result.skipped,
+        released: result.released,
+        allowlist_size: input.leadIdAllowlist?.length ?? null,
+        in_flight_lead_ids: result.inFlightLeadIds.length,
+      },
+    })
+  }
+
+  return result
+}
+
+async function runPredictiveControllerInner(
   input: RunControllerInput
 ): Promise<ControllerResult> {
   const { sessionId, campaignId, clerkId, internalUserId, teamId, leadIdAllowlist } = input
