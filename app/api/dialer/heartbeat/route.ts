@@ -376,8 +376,20 @@ export async function POST(req: NextRequest) {
     // engine on an empty panel — which is a genuinely different condition and
     // now says so.
     let controllerSkippedReason: string | null = null
-    if (predictiveArmed && dialerMode === 'predictive') {
-      if (!campaignId && (!leadIdAllowlist || leadIdAllowlist.length === 0)) {
+    if (dialerMode === 'predictive') {
+      // ── AN UNARMED ENGINE MUST SAY SO ─────────────────────────────────────
+      // This whole block used to be gated on predictiveArmed, so the ONE state
+      // that produces no dialing and no explanation — the client never telling
+      // the server the engine was started — was also the one state that
+      // reported nothing at all. The agent sees a started engine, the server
+      // sees an idle one, and neither says a word about the disagreement.
+      //
+      // Reported first, and unconditionally, because it is the only reason
+      // that describes the client rather than the data.
+      if (!predictiveArmed) {
+        controllerSkippedReason =
+          'engine not armed — the dialer has not told the server the sequence is running'
+      } else if (!campaignId && (!leadIdAllowlist || leadIdAllowlist.length === 0)) {
         controllerSkippedReason =
           'no campaign selected and the queue panel is empty — nothing to fan out across'
       } else if (shouldYield) {
