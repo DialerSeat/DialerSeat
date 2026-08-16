@@ -572,7 +572,7 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
     const [{ data: callRow }, platformConfig] = await Promise.all([
       supabaseAdmin
         .from('calls')
-        .select('dial_source, agent_call_control_id, answered_at')
+        .select('id, dial_source, agent_call_control_id, answered_at')
         .eq('call_control_id', callControlId)
         .maybeSingle(),
       getPlatformConfig(),
