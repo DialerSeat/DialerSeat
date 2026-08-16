@@ -182,6 +182,10 @@ const MODE_OPTIONS: { value: DialerMode; label: string; color: string }[] = [
 ]
 
 const HEARTBEAT_INTERVAL_MS = 5_000
+// Predictive's heartbeat is not presence, it is the engine — see the interval
+// setup. 1.5s is close enough to the ~1s poll every other mode uses that the
+// dialer feels the same, without tripling load for agents who are not dialing.
+const PREDICTIVE_HEARTBEAT_INTERVAL_MS = 1_500
 const PACING_POLL_INTERVAL_MS = 10_000
 const INCOMING_POLL_INTERVAL_MS = 2_000
 
@@ -1830,7 +1834,24 @@ function DialerPageInner() {
     }
 
     sendHeartbeat()
-    heartbeatRef.current = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL_MS)
+    // ── PREDICTIVE BEATS FASTER, BECAUSE THE BEAT IS THE ENGINE ───────────
+    // For every other mode the heartbeat is presence: a slow tick costs
+    // nothing because the client drives its own dialing. For predictive it is
+    // the engine — the controller fires on it, the connected view opens on it,
+    // and the agent returning to 'ready' is only noticed on it.
+    //
+    // At five seconds that showed up as three separate complaints which are
+    // all the same one: ten seconds before the first dial, a delay before the
+    // lead profile appeared on pickup, and five to ten seconds of silence
+    // between a call ending and the next batch going out. Every one of them is
+    // the engine waiting for a clock rather than doing anything.
+    //
+    // Only while predictive is actually armed — an idle or non-predictive
+    // agent keeps the five-second beat and the load that goes with it.
+    const beatMs = isPredictive && predictiveEngineStartedRef.current
+      ? PREDICTIVE_HEARTBEAT_INTERVAL_MS
+      : HEARTBEAT_INTERVAL_MS
+    heartbeatRef.current = setInterval(sendHeartbeat, beatMs)
 
     return () => {
       if (heartbeatRef.current) {
@@ -4429,6 +4450,20 @@ function DialerPageInner() {
 
         {/* ── CONTROLS ROW — FILTER (far right), outline-style to match the rest of dialerseat (leads page filter bar, etc.) ────── */}
         <div className="dialer-queue-controls" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', padding: '14px 16px 12px', flexShrink: 0, borderBottom: `1px solid ${terminalBorder}` }}>
+          {/* Predictive is the newest mode and the only one still being proven
+              on live traffic. Saying so where the agent is actually looking
+              sets the expectation honestly rather than letting a rough edge
+              read as the whole product being unreliable. */}
+          {isPredictive && (
+            <span style={{
+              fontSize: 9, fontWeight: 'bold', letterSpacing: 1.5, fontFamily: FUTURA,
+              color: terminalMuted, textTransform: 'uppercase',
+              border: `1px solid ${terminalBorder}`, borderRadius: 3,
+              padding: '3px 7px', whiteSpace: 'nowrap',
+            }}>
+              PredictiveSeat Beta
+            </span>
+          )}
           {/* The 1x/2x/3x repeat selector and its ? tooltip lived here and were
               removed. They never worked correctly — the count only synced when
               a specific campaign was selected, so All Active silently sat at 1
