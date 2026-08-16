@@ -69,6 +69,7 @@ interface Props {
   /** Count for the REQUESTS row. Hidden when zero — a badge showing 0 is noise. */
   pendingRequests?: number
   onCreateTeam?: () => void
+  onCreateCampaign?: () => void
   onOpenTeamMenu?: (teamId: string) => void
   onJoinWithCode?: (code: string) => void
   joining?: boolean
@@ -107,6 +108,7 @@ export default function TeamsSidebar({
   onScopeChange,
   pendingRequests = 0,
   onCreateTeam,
+  onCreateCampaign,
   onOpenTeamMenu,
   onJoinWithCode,
   joining = false,
@@ -117,6 +119,7 @@ export default function TeamsSidebar({
   const [collapsedTeams, setCollapsedTeams] = useState<Set<string>>(new Set())
   const [collapsedCampaigns, setCollapsedCampaigns] = useState<Set<string>>(new Set())
   const [codeInput, setCodeInput] = useState('')
+  const [addMenuOpen, setAddMenuOpen] = useState(false)
 
   const toggle = (set: Set<string>, id: string, apply: (s: Set<string>) => void) => {
     const next = new Set(set)
@@ -199,6 +202,24 @@ export default function TeamsSidebar({
         }
         .ts-icon-btn:hover { background: ${SURFACE_RAISED}; color: ${TEXT}; }
 
+        .ts-menu {
+          position: absolute; top: calc(100% + 6px); right: 0; z-index: 21;
+          min-width: 210px; padding: 6px;
+          background: #111214; border: 1px solid ${HAIRLINE};
+          border-radius: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+          display: flex; flex-direction: column; gap: 2px;
+        }
+        .ts-menu-item {
+          display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+          width: 100%; border: 0; background: transparent; cursor: pointer;
+          padding: 8px 10px; border-radius: 4px; text-align: left;
+          color: ${TEXT}; font-size: 13.5px; font-family: inherit; font-weight: 500;
+          transition: background 0.1s ease;
+        }
+        .ts-menu-item:hover { background: ${ACCENT}; }
+        .ts-menu-hint { font-size: 11px; color: ${TEXT_DIM}; font-weight: 400; }
+        .ts-menu-item:hover .ts-menu-hint { color: rgba(255,255,255,0.75); }
+
         .ts-live-dot {
           width: 8px; height: 8px; border-radius: 50%;
           background: #23a55a; flex-shrink: 0;
@@ -267,12 +288,46 @@ export default function TeamsSidebar({
             title="Team settings"
             aria-label="Team settings"
           >⋮</button>
-          <button
-            className="ts-icon-btn"
-            onClick={onCreateTeam}
-            title="Create a team"
-            aria-label="Create a team"
-          >+</button>
+          {/* ── + IS A CHOICE, NOT AN ACTION ─────────────────────────────
+              It creates a team OR a campaign, and those are different enough
+              that guessing which one was meant is worse than one extra click.
+              Anchored to the button and dismissed by clicking anywhere, so it
+              never strands the agent with an open menu. */}
+          <div style={{ position: 'relative' }}>
+            <button
+              className="ts-icon-btn"
+              onClick={() => setAddMenuOpen(o => !o)}
+              title="Create"
+              aria-label="Create a team or campaign"
+              aria-expanded={addMenuOpen}
+            >+</button>
+            {addMenuOpen && (
+              <>
+                <div
+                  onClick={() => setAddMenuOpen(false)}
+                  style={{ position: 'fixed', inset: 0, zIndex: 20 }}
+                />
+                <div className="ts-menu" role="menu">
+                  <button
+                    className="ts-menu-item"
+                    role="menuitem"
+                    onClick={() => { setAddMenuOpen(false); onCreateTeam?.() }}
+                  >
+                    Create New Team
+                    <span className="ts-menu-hint">A new agency or floor</span>
+                  </button>
+                  <button
+                    className="ts-menu-item"
+                    role="menuitem"
+                    onClick={() => { setAddMenuOpen(false); onCreateCampaign?.() }}
+                  >
+                    Create New Campaign
+                    <span className="ts-menu-hint">A lead list inside a team</span>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
