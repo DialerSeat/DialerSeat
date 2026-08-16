@@ -678,6 +678,27 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
       await hangupCallControlId(callRow.agent_call_control_id)
     }
 
+    // ── AND GIVE THE AGENT BACK ─────────────────────────────────────────────
+    // Dropping the agent's leg ends the audio; it does not end the ASSIGNMENT.
+    // agent_sessions.current_call_id stayed pointing at the voicemail, with two
+    // consequences that together look exactly like "predictive got stuck":
+    //
+    //   - the heartbeat reports that call as active_call, so the agent sits on
+    //     the lead profile watching a machine for the whole compliance hold
+    //   - the controller only fires while the agent is 'ready', and the next
+    //     answered line cannot claim a session already pinned, so nothing
+    //     starts again
+    //
+    // A machine verdict means the agent is free. The lead's leg carries on
+    // behind them to clear the nine seconds — that part is untouched — but the
+    // session is theirs again immediately.
+    if (callRow?.id) {
+      await supabaseAdmin
+        .from('agent_sessions')
+        .update({ current_call_id: null, state: 'ready', updated_at: new Date().toISOString() })
+        .eq('current_call_id', callRow.id)
+    }
+
     // ── VOICEMAIL DROP IS OFF. TESTED TWICE, FAILED TWICE. ────────────────
     // This branch kept the lead's leg up on a machine verdict so a message
     // could be played at the beep. It requires call.machine.greeting.ended,
