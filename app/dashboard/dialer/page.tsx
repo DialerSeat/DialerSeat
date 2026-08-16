@@ -4461,7 +4461,7 @@ function DialerPageInner() {
               border: `1px solid ${terminalBorder}`, borderRadius: 3,
               padding: '3px 7px', whiteSpace: 'nowrap',
             }}>
-              PredictiveSeat Beta
+              Beta
             </span>
           )}
           {/* The 1x/2x/3x repeat selector and its ? tooltip lived here and were
