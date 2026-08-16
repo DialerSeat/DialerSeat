@@ -1691,11 +1691,43 @@ function DialerPageInner() {
             setStatus('connected')
             setShowDisposition(false)
             if (!callStartRef.current) callStartRef.current = Date.now()
+
+            // ── POLL IT THE WAY PROGRESSIVE DOES ─────────────────────────
+            // The heartbeat is every five seconds, so relying on it to notice
+            // a machine verdict means up to five seconds of voicemail in the
+            // agent's ear before anything reacts. Progressive feels instant
+            // because it polls /api/calls/check roughly every second, and that
+            // route already treats a machine verdict as 'completed' — the call
+            // is over FOR THE AGENT the moment AMD decides, whatever the
+            // lead's leg is still doing.
+            //
+            // Predictive could never use it before because it had no call id
+            // of its own. It does now, so it gets the same poller, the same
+            // teardown and the same speed instead of a slower parallel path.
+            if (ac.call_control_id && !activePollRef.current) {
+              startHangupPolling(ac.call_control_id)
+            }
             setAmdActivity(prev => {
               const line = 'LINE CONNECTED — AWAITING AMD VERDICT'
               return prev[0] === line ? prev : [line, ...prev].slice(0, 5)
             })
           } else if (!ac?.call_id && statusRef.current === 'connected' && !showDisposition) {
+            // ── TEAR DOWN THE LOCAL AUDIO, NOT JUST THE VIEW ─────────────
+            // The server drops the agent's leg the instant AMD says machine,
+            // before the compliance hold even starts. But the BROWSER's own
+            // SIP session does not end because the far end hung up — it ends
+            // when something calls bye() on it, and in every other mode that
+            // is startHangupPolling. Predictive never polls, so nothing tore
+            // it down: the agent went back to the queue panel and carried on
+            // hearing the voicemail underneath while the next lines dialled.
+            //
+            // Same call progressive makes, at the same point in the flow.
+            if (swCallRef.current) {
+              try { swCallRef.current.bye() } catch {}
+              swCallRef.current = null
+            }
+            disarmDialing()
+
             // Released — machine verdict, or the call ended. Back to the queue
             // exactly as it was.
             setStatus('idle')
