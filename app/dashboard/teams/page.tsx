@@ -5,6 +5,8 @@ import TeamsSidebar, {
   type SidebarTeam,
   type TeamsScope,
 } from '@/components/teams/TeamsSidebar'
+import TeamDetail, { type TeamDetailData } from '@/components/teams/TeamDetail'
+import { CreateTeamModal, CreateCampaignModal } from '@/components/teams/TeamModals'
 
 // =============================================================================
 // TEAMS — OVERVIEW, ALL USERS, REQUESTS
@@ -50,7 +52,7 @@ interface ApiTeam {
 }
 
 type RangeKey = 'today' | 'week' | 'month' | 'all' | 'custom'
-type PanelView = 'overview' | 'all_users' | 'requests'
+type PanelView = 'overview' | 'all_users' | 'requests' | 'team'
 
 /** What the tiles and charts are measuring. Scope answers WHO, range answers
  *  WHEN, and this answers WHICH NUMBERS — three independent questions that
@@ -179,6 +181,9 @@ export default function TeamsPage() {
   const [metric, setMetric] = useState<MetricView>('activity')
   const [metricOpen, setMetricOpen] = useState(false)
   const [view, setView] = useState<PanelView>('overview')
+  const [showTeamModal, setShowTeamModal] = useState(false)
+  const [showCampaignModal, setShowCampaignModal] = useState(false)
+  const [campaignTeamId, setCampaignTeamId] = useState<string | undefined>()
 
   useEffect(() => {
     let cancelled = false
@@ -237,12 +242,58 @@ export default function TeamsPage() {
   // ALL USERS and REQUESTS are sidebar scopes AND full views. Selecting either
   // swaps the panel; the back arrow returns to the overview without disturbing
   // the range or the tree.
+  // ── PUSH BUTTONS, NOT A PERMANENT SELECTION ────────────────────────────
+  // All Users and Requests toggle: pressing the one you are already in returns
+  // you to the overview. Nothing in this footer is a mode you get stuck in,
+  // which is what "highlighted at all times" was.
   const handleScope = (next: TeamsScope) => {
+    if (next.kind === 'all') {
+      const leaving = view === 'all_users'
+      setView(leaving ? 'overview' : 'all_users')
+      setScope(next)
+      return
+    }
+    if (next.kind === 'requests') {
+      const leaving = view === 'requests'
+      setView(leaving ? 'overview' : 'requests')
+      setScope(next)
+      return
+    }
     setScope(next)
-    if (next.kind === 'all') setView('all_users')
-    else if (next.kind === 'requests') setView('requests')
-    else setView('overview')
+    // Clicking a team opens the team itself — its stats, campaigns and people.
+    // A campaign or agent scopes the overview instead.
+    setView(next.kind === 'team' ? 'team' : 'overview')
   }
+
+  const openTeam: TeamDetailData | null = useMemo(() => {
+    if (view !== 'team' || scope.kind !== 'team') return null
+    const raw = rawTeams.find(t => t.id === scope.teamId)
+    const side = teams.find(t => t.id === scope.teamId)
+    if (!raw || !side) return null
+    return {
+      id: raw.id,
+      name: raw.name,
+      isOwner: raw.isOwner,
+      code: (raw as any).code ?? (raw as any).joinCode ?? null,
+      campaigns: side.campaigns.map(c => {
+        const rc = (raw.campaigns || []).find(x => x.campaignId === c.id)
+        return {
+          id: c.id,
+          name: c.name,
+          openToTeam: c.openToTeam,
+          agentCount: c.agents.length,
+          totalLeads: (rc?.campaign as any)?.total_leads,
+          calledLeads: (rc?.campaign as any)?.called_leads,
+        }
+      }),
+      members: (raw.members || []).map(m => ({
+        id: m.userId || m.id,
+        name: displayName(m),
+        email: m.user?.email ?? null,
+        campaignCount: (m.campaignAccess || []).length,
+      })),
+    }
+  }, [view, scope, rawTeams, teams])
 
   return (
     <div style={{ display: 'flex', height: '100vh', minHeight: 0, background: BG, color: TEXT }}>
@@ -417,16 +468,16 @@ export default function TeamsPage() {
                 <ChartCard title="Campaign Performance" />
               </div>
 
-              <div style={{
-                marginTop: 24, padding: '12px 14px', borderRadius: 4,
-                border: `1px dashed ${RAISED}`, color: DIM, fontSize: 12, lineHeight: 1.7,
-              }}>
-                Layout only — tiles and charts are not wired to data yet. Scope, range and
-                metric are live and compose:
-                <code style={{ marginLeft: 6, color: MUTED }}>
-                  {metric} · {range} · {JSON.stringify(scope)}
-                </code>
-              </div>
+            </>
+          )}
+
+          {view === 'team' && openTeam && (
+            <>
+              <ViewHeader title={openTeam.name} onBack={() => setView('overview')} />
+              <TeamDetail
+                team={openTeam}
+                onNewCampaign={id => { setCampaignTeamId(id); setShowCampaignModal(true) }}
+              />
             </>
           )}
         </div>
@@ -438,8 +489,25 @@ export default function TeamsPage() {
           scope={scope}
           onScopeChange={handleScope}
           pendingRequests={pending}
+          onCreateTeam={() => setShowTeamModal(true)}
+          onCreateCampaign={() => { setCampaignTeamId(undefined); setShowCampaignModal(true) }}
         />
       </div>
+
+      {showTeamModal && (
+        <CreateTeamModal
+          onClose={() => setShowTeamModal(false)}
+          onCreate={() => setShowTeamModal(false)}
+        />
+      )}
+      {showCampaignModal && (
+        <CreateCampaignModal
+          teams={teams.map(t => ({ id: t.id, name: t.name }))}
+          defaultTeamId={campaignTeamId}
+          onClose={() => setShowCampaignModal(false)}
+          onCreate={() => setShowCampaignModal(false)}
+        />
+      )}
     </div>
   )
 }
