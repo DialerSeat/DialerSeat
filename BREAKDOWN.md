@@ -51,6 +51,18 @@ usage, weekly/quarterly/annual billing statements, and site traffic analytics.
 
 **White label.** An owner's own brand, colours and subdomain.
 
+**Fully mobile.** Everything an agent or owner touches works on a phone —
+dialing, the queue, lead profiles and dispositions, teams, campaigns,
+recordings, analytics and billing statements. This is a first-class path, not a
+shrunken desktop: the dialer and the Teams sidebar use the same drawer pattern
+and the same edge tab, layouts respect device safe areas, and wide tables scroll
+inside themselves so the page never pans sideways. An agent can work a full
+shift from a phone anywhere, provided they are calling US leads.
+
+The one exception is deliberate: the **admin desktop** is a windowed desktop
+metaphor built for operating the platform, not for using it. It is an internal
+tool and is not expected to work on a phone.
+
 ---
 
 ## The payment model, and why it is shaped this way
@@ -100,6 +112,16 @@ per-jurisdiction calling windows and consent rules, non-US number formats, and
 statements that do not assume one revenue authority. None of that is built.
 When it is designed, it should be designed as *regions* rather than as
 exceptions bolted onto the US path — the US is a region, not the default.
+
+**A household name in the space.** The ambition is not to be a cheaper option
+that people use quietly — it is for DialerSeat to be the dialer people in this
+industry name first, and respect. That is earned in a specific way and not
+another: by the invoice being right, by the numbers on screen being true, by a
+declined card never cutting somebody off mid-shift, and by a vendor's lead list
+never leaking to a closer they do not employ. Reputation in a market this small
+travels by word of mouth between operators who all know each other, which means
+one wrong statement or one leaked list costs more than any feature gains. Build
+accordingly.
 
 **Partnerships over self-serve.** A lead vendor bringing fifteen closers is
 worth more than fifteen individual signups and costs less to acquire. This is
