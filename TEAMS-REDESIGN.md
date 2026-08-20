@@ -183,7 +183,16 @@ Implementation notes for whoever picks this up:
   leaving /api/leads/export open protects nothing. On a masked campaign, an
   agent's export must omit the phone column outright; the owner's own export
   keeps it, since it is their list.
-- Same for the leads page and any bulk view an agent can reach.
+- Same for the leads page and any bulk view an agent can reach — INCLUDING the
+  campaign view page. An agent who opens a masked campaign from Teams must see
+  the same masking there as in the queue panel. A rule enforced in one surface
+  and forgotten in another is not a rule, it is an inconvenience with a
+  workaround, and the campaign page is the obvious place to look for exactly
+  the thing being withheld.
+- The cleanest way to guarantee that is to mask at the source: one helper that
+  decides "may this viewer see phone numbers on this campaign", called by every
+  read path — queue, leads list, campaign view, export — rather than each
+  surface remembering on its own.
 
 
 ### A member's team view is not the owner's

@@ -91,9 +91,14 @@ export default function JoinRedeemClient({ code }: { code: string }) {
 
       if (data.nextStep === 'redirect_to_billing') {
         setMessage(`Joined ${data.team?.name || 'the team'}. Taking you to billing…`)
+        // Carry the code through. They are paying for their own seat, so the
+        // code that brought them here is what the promo field wants — and
+        // asking them to dig it back out of an email would be the product
+        // losing something it was already holding.
+        const promoParam = `promo=${encodeURIComponent(code)}`
         const billingUrl = data.member?.id
-          ? `/billing?teamMemberId=${encodeURIComponent(data.member.id)}`
-          : '/billing'
+          ? `/billing?teamMemberId=${encodeURIComponent(data.member.id)}&${promoParam}`
+          : `/billing?${promoParam}`
         setTimeout(() => router.push(billingUrl), 1000)
       } else if (data.nextStep === 'awaiting_owner_approval') {
         setPhase('pending')

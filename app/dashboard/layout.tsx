@@ -53,6 +53,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
   const [tier, setTier] = useState<AccessTier>(null)
+  // Teams this person has been admitted to but not yet approved for. They can
+  // be in the product; they cannot dial that team's campaigns yet.
+  const [awaitingApproval, setAwaitingApproval] =
+    useState<Array<{ teamId: string; teamName: string }>>([])
   const [plan, setPlan] = useState<Plan>(null)
   const [seats, setSeats] = useState<SubsSummary | null>(null)
   const [pendingLogo, setPendingLogo] = useState<{ publicUrl: string; dataUrl: string } | null>(null)
@@ -135,11 +139,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           if (cancelled) return
           setTier(d.tier || null)
           setPlan((d.plan as Plan) ?? null)
+          setAwaitingApproval(d.awaitingApproval || [])
         })
         .catch(() => {
           if (cancelled) return
           setTier(null)
           setPlan(null)
+          setAwaitingApproval([])
         })
     }
     const loadSeats = () => {
@@ -701,6 +707,33 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
 
         <DashboardBanners />
+
+        {/* ── ADMITTED, NOT YET APPROVED ────────────────────────────────────
+            Someone who redeemed an owner-paid invite that needs approval is
+            inside DialerSeat and cannot dial that team's campaigns yet. With
+            nothing said anywhere, that is indistinguishable from the product
+            being broken: they were told the seat was covered, they got in, and
+            nothing works.
+            Amber rather than red — this is a normal step in joining a team,
+            not a fault, and it clears itself when the owner accepts. */}
+        {awaitingApproval.length > 0 && (
+          <div style={{
+            padding: '10px 16px', background: '#2a1a05',
+            borderBottom: '1px solid #78350f', color: '#fbbf24',
+            fontSize: 13, lineHeight: 1.5,
+          }}>
+            Waiting on {awaitingApproval.map(t => t.teamName).join(', ')} to approve you.
+            {' '}You will be able to dial their campaigns as soon as they do — nothing
+            to pay, the seat is on them.
+            {/* The only person who can resolve this is whoever sent the code,
+                and DialerSeat cannot chase them. Saying so turns an open-ended
+                wait into a next step the person can actually take. */}
+            <span style={{ display: 'block', marginTop: 4, color: '#a1731a', fontSize: 12 }}>
+              If access does not arrive, contact whoever sent you the invite code —
+              only they can approve it.
+            </span>
+          </div>
+        )}
         {children}
       </div>
 

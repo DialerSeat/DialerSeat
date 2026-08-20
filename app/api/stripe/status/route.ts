@@ -59,6 +59,41 @@ export async function GET() {
 
     const tier = await getAccessTier(userId)
 
+    // ── WAITING, AND TOLD SO ─────────────────────────────────────────────
+    // Someone admitted on an owner-paid invite that needs approval is inside
+    // DialerSeat but cannot dial anything yet. Without a word anywhere, that
+    // is indistinguishable from the product being broken — they were told a
+    // seat was covered, they got in, and nothing works.
+    //
+    // Returned from here because the layout already calls this on every page,
+    // so the notice follows them wherever they land rather than only appearing
+    // on Teams.
+    let awaitingApproval: Array<{ teamId: string; teamName: string }> = []
+    try {
+      const { data: pendingRows } = await supabase
+        .from('team_members')
+        .select('team_id')
+        .eq('user_id', userId)
+        .eq('status', 'pending')
+        .is('seat_suspended_at', null)
+        .limit(10)
+
+      const teamIds = Array.from(new Set((pendingRows || []).map((r: any) => r.team_id)))
+      if (teamIds.length > 0) {
+        const { data: teamRows } = await supabase
+          .from('teams')
+          .select('id, name')
+          .in('id', teamIds)
+        awaitingApproval = (teamRows || []).map((t: any) => ({
+          teamId: t.id,
+          teamName: t.name,
+        }))
+      }
+    } catch (e) {
+      // A notice failing must never take down the access check it rides on.
+      console.error('[stripe/status] awaiting-approval lookup failed', e)
+    }
+
     if (!sub) {
       return NextResponse.json({
         hasSubscription: wlActive || wlOnboardingPending,
@@ -72,6 +107,7 @@ export async function GET() {
         wlActive,
         wlOnboardingPending,
         weeklyPrice,
+        awaitingApproval,
       })
     }
 
@@ -89,6 +125,7 @@ export async function GET() {
       wlActive,
       wlOnboardingPending,
       weeklyPrice,
+      awaitingApproval,
     })
   } catch (err: any) {
     console.error('status error:', err)

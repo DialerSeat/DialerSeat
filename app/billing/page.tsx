@@ -133,7 +133,15 @@ export default function BillingPage() {
   const [error, setError] = useState<string | null>(null)
   const [checkingStatus, setCheckingStatus] = useState(true)
   const [retryingBilling, setRetryingBilling] = useState(false)
-  const [promoCode, setPromoCode] = useState('')
+  // ── THE CODE THEY ARRIVED WITH IS ALREADY THE ANSWER ──────────────────
+  // An agent sent here from a team invite is paying for their own seat, and the
+  // code that brought them is exactly what belongs in this box. Making them
+  // find it again — in an email, a text, whatever they were sent — to retype it
+  // into a field they were redirected to is asking them to solve a problem the
+  // product created.
+  const [promoCode, setPromoCode] = useState(
+    (searchParams.get('promo') || '').trim().toUpperCase()
+  )
   const [showPromo, setShowPromo] = useState(false)
   const [promoAction, setPromoAction] = useState<'applying' | 'removing' | null>(null)
   const [promoApplied, setPromoApplied] = useState<string | null>(null)
