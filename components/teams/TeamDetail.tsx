@@ -100,7 +100,7 @@ function Section({ title, action, children }: {
 
 export default function TeamDetail({
   team, onNewCampaign, onNewCode, onRegenerateCode, onManageUser, onToggleCampaign,
-  seatTier,
+  seatTier, onOpenCampaign,
 }: {
   team: TeamDetailData
   /** Volume standing, counted across every team this owner runs — see
@@ -126,6 +126,8 @@ export default function TeamDetail({
   /** Takes the CODE id, not the team id — a team has several. */
   onRegenerateCode?: (codeId: string) => void
   onManageUser?: (userId: string) => void
+  /** Open the campaign control page. Owner-only — an agent gets the queue. */
+  onOpenCampaign?: (campaignId: string) => void
 }) {
   const [copied, setCopied] = useState<string | null>(null)
 
@@ -400,6 +402,12 @@ export default function TeamDetail({
                   <button style={btn} onClick={() => onNewCode?.(team.id, c.id)}>
                     + Code
                   </button>
+                )}
+                {/* Everything else on this row is a shortcut. This is the way
+                    into the campaign itself — its agents, its settings, its
+                    remaining leads. */}
+                {team.isOwner && (
+                  <button style={btn} onClick={() => onOpenCampaign?.(c.id)}>Open</button>
                 )}
               </div>
             ))}

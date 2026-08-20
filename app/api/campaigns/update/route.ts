@@ -17,6 +17,9 @@ const ALLOWED_FIELDS = [
   'voicemail_drop_url',
   'enable_appointments_sub',
   'enable_not_interested_sub',
+  // A vendor handing a list to closers they do not employ needs the numbers to
+  // stay put. Owner-settable per campaign; enforced on every read path.
+  'mask_lead_numbers',
 ] as const
 
 export async function POST(req: Request) {

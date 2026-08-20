@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { requireActive } from '@/lib/subscription'
 import { auth } from '@clerk/nextjs/server'
+import { shouldMaskCampaign } from '@/lib/leadMasking'
+import { supabaseAdmin } from '@/lib/supabase'
 import { placeOutboundCall } from '@/lib/placeOutboundCall'
 import { apiError } from '@/lib/apiError'
 import { logCallEvent } from '@/lib/callEvents'
@@ -26,7 +28,37 @@ export async function POST(req: Request) {
     const body = await req.json()
     const { to, leadId, campaignId, teamId } = body
 
-    if (!to) {
+    // ── ON A MASKED CAMPAIGN THE CLIENT DOES NOT KNOW THE NUMBER ────────
+    // The queue sends back "(•••) •••-4821" instead of the real thing, so the
+    // number has to be resolved here from the lead id. Which is the safer
+    // arrangement regardless: a dialer that places calls to whatever
+    // destination a browser hands it is trusting the wrong end of the wire.
+    let destination = to
+    if (leadId && (await shouldMaskCampaign(campaignId, userId))) {
+      const { data: lead } = await supabaseAdmin
+        .from('leads')
+        .select('phone, campaign_id')
+        .eq('id', leadId)
+        .maybeSingle()
+
+      if (!lead?.phone) {
+        return NextResponse.json(
+          { success: false, error: 'Lead not found' },
+          { status: 404 }
+        )
+      }
+      // The lead must actually belong to the campaign it was claimed under —
+      // otherwise a masked campaign becomes a way to dial any lead by id.
+      if (campaignId && lead.campaign_id && lead.campaign_id !== campaignId) {
+        return NextResponse.json(
+          { success: false, error: 'Lead is not on this campaign' },
+          { status: 403 }
+        )
+      }
+      destination = lead.phone
+    }
+
+    if (!destination) {
       return NextResponse.json(
         { success: false, error: 'Missing destination' },
         { status: 400 }
@@ -34,7 +66,7 @@ export async function POST(req: Request) {
     }
 
     const result = await placeOutboundCall({
-      to,
+      to: destination,
       userId,
       leadId,
       campaignId,

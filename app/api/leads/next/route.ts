@@ -4,6 +4,7 @@ import { isCallableNow } from '@/lib/callingWindow'
 import { hasCallingWindowOverride } from '@/lib/callingWindowOverride'
 import { requireUser } from '@/lib/requireUser'
 import { apiError } from '@/lib/apiError'
+import { shouldMaskCampaign, maskLeadRow } from '@/lib/leadMasking'
 import { DIALABLE_STATUSES, isDialableLead } from '@/lib/dialableLead'
 import { QueueDiagnosisBuilder } from '@/lib/queueDiagnosis'
 
@@ -304,7 +305,19 @@ async function handleNextLead(req: Request) {
       }
 
       const campaign = await fetchCampaignMode(callable.campaign_id)
-      return NextResponse.json({ success: true, lead: callable, campaign })
+
+      // ── THE NUMBER STAYS ON THE SERVER ──────────────────────────────────
+      // On a campaign set to hide numbers, the real one never leaves here —
+      // not even alongside a masked copy, because a value in the network
+      // response is a value anyone who opens devtools can read, and that is
+      // precisely the person this exists to stop. /api/calls/outbound resolves
+      // the number from the lead id instead, so dialing is unaffected.
+      const maskThis = await shouldMaskCampaign(callable.campaign_id, user_id)
+      return NextResponse.json({
+        success: true,
+        lead: maskThis ? maskLeadRow(callable) : callable,
+        campaign,
+      })
     }
 
     // ── PERSONAL SCOPE ──

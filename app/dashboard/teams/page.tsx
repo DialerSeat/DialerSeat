@@ -6,6 +6,7 @@ import TeamsSidebar, {
   type TeamsScope,
 } from '@/components/teams/TeamsSidebar'
 import TeamDetail, { type TeamDetailData } from '@/components/teams/TeamDetail'
+import CampaignDetail from '@/components/teams/CampaignDetail'
 import {
   CreateTeamModal,
   CreateCampaignModal,
@@ -65,7 +66,7 @@ interface ApiTeam {
 }
 
 type RangeKey = 'today' | 'week' | 'month' | 'all' | 'custom'
-type PanelView = 'overview' | 'all_users' | 'requests' | 'team'
+type PanelView = 'overview' | 'all_users' | 'requests' | 'team' | 'campaign'
 
 /** What the tiles and charts are measuring. Scope answers WHO, range answers
  *  WHEN, and this answers WHICH NUMBERS — three independent questions that
@@ -674,9 +675,15 @@ export default function TeamsPage() {
       return
     }
     setScope(next)
-    // Clicking a team opens the team itself — its stats, campaigns and people.
-    // A campaign or agent scopes the overview instead.
-    setView(next.kind === 'team' ? 'team' : 'overview')
+    // A campaign in the tree now opens the campaign, for the same reason a team
+    // opens the team: it is a thing you manage, not a filter you apply. It used
+    // to quietly re-scope the overview, which looked identical to nothing
+    // happening.
+    setView(
+      next.kind === 'team' ? 'team'
+      : next.kind === 'campaign' ? 'campaign'
+      : 'overview'
+    )
   }
 
   const openTeam: TeamDetailData | null = useMemo(() => {
@@ -837,6 +844,14 @@ export default function TeamsPage() {
         )}
 
         <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '24px 28px 40px' }}>
+          {view === 'campaign' && scope.kind === 'campaign' && (
+            <CampaignDetail
+              campaignId={scope.campaignId}
+              onBack={goOverview}
+              onChanged={() => { void refresh() }}
+            />
+          )}
+
           {view === 'all_users' && (
             <>
               <ViewHeader title="All Users" onBack={goOverview} />
@@ -1177,6 +1192,10 @@ export default function TeamsPage() {
               <ViewHeader title={openTeam.name} onBack={goOverview} />
               <TeamDetail
                 seatTier={seatTier}
+                onOpenCampaign={campaignId => {
+                  setScope({ kind: 'campaign', teamId: openTeam.id, campaignId })
+                  setView('campaign')
+                }}
                 team={openTeam}
                 onNewCampaign={id => { setCampaignTeamId(id); setShowCampaignModal(true) }}
                 onToggleCampaign={async (campaignId, nextStatus) => {
