@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import TeamsSidebar, {
   type SidebarTeam,
   type TeamsScope,
@@ -8,6 +8,7 @@ import TeamsSidebar, {
 import TeamDetail, { type TeamDetailData } from '@/components/teams/TeamDetail'
 import CampaignDetail from '@/components/teams/CampaignDetail'
 import FloorView from '@/components/teams/FloorView'
+import DataTable, { type Column } from '@/components/DataTable'
 import {
   VolumeChart, ConversionChart, DispositionChart, CampaignChart,
 } from '@/components/teams/AnalyticsCharts'
@@ -353,6 +354,18 @@ export default function TeamsPage() {
   const [teams, setTeams] = useState<SidebarTeam[]>([])
   const [rawTeams, setRawTeams] = useState<ApiTeam[]>([])
   const [pending, setPending] = useState(0)
+  // ── THE ROSTER COMES FROM THE SERVER, A PAGE AT A TIME ────────────────
+  // It used to be derived from the same payload that builds the sidebar, which
+  // caps out silently: Supabase truncates a select at 1,000 rows without
+  // erroring, so past that an owner's roster simply lost people with nothing
+  // anywhere saying so. Now it is paged, searched and counted server-side.
+  const [roster, setRoster] = useState<any[]>([])
+  const [rosterTotal, setRosterTotal] = useState(0)
+  const [rosterPage, setRosterPage] = useState(0)
+  const [rosterSearch, setRosterSearch] = useState('')
+  const [rosterLoading, setRosterLoading] = useState(false)
+  const ROSTER_PAGE_SIZE = 50
+
   const [helpOpen, setHelpOpen] = useState(false)
   const [myDecisions, setMyDecisions] = useState<Array<{
     id: string; teamId: string; teamName: string
@@ -494,14 +507,7 @@ export default function TeamsPage() {
   // Paused while the tab is hidden. Polling a page nobody is looking at is
   // spend with no reader, and a laptop left open on Teams overnight would
   // otherwise make seventeen thousand requests.
-  useEffect(() => {
-    const tick = () => {
-      if (typeof document !== 'undefined' && document.hidden) return
-      void refresh(true)
-    }
-    const id = setInterval(tick, 5000)
-    return () => clearInterval(id)
-  }, [refresh])
+
 
   // ── ONE REQUEST PER (SCOPE, RANGE) ─────────────────────────────────────
   // Both are questions the endpoint already answers, so changing either
@@ -525,6 +531,67 @@ export default function TeamsPage() {
   }, [range, scope])
 
   useEffect(() => { void loadStats() }, [loadStats])
+
+  const loadRoster = useCallback(async () => {
+    setRosterLoading(true)
+    try {
+      const params = new URLSearchParams({
+        page: String(rosterPage),
+        pageSize: String(ROSTER_PAGE_SIZE),
+      })
+      if (rosterSearch.trim()) params.set('search', rosterSearch.trim())
+      const r = await fetch(`/api/teams/members/list?${params}`).then(x => x.json())
+      if (r.success) {
+        setRoster(r.rows || [])
+        setRosterTotal(r.total || 0)
+      }
+    } catch {
+      // Leave the last good page up rather than blanking a roster somebody is
+      // mid-way through reading.
+    } finally {
+      setRosterLoading(false)
+    }
+  }, [rosterPage, rosterSearch])
+
+  // Debounced, because a request per keystroke against a table of ten thousand
+  // is a request per keystroke against a table of ten thousand.
+  // Loaded on mount as well as on opening the view, because the seat-count tile
+  // and the sidebar both read the counted total — waiting until somebody visits
+  // All Users would leave those showing a number derived from a payload that
+  // truncates.
+  useEffect(() => {
+    const t = setTimeout(() => { void loadRoster() }, rosterSearch ? 300 : 0)
+    return () => clearTimeout(t)
+  }, [loadRoster, rosterSearch])
+
+  // Typing resets to the first page — staying on page 12 of a new search shows
+  // an empty table and looks like the search found nothing.
+  useEffect(() => { setRosterPage(0) }, [rosterSearch])
+
+  const pulseRef = useRef<string | null>(null)
+  useEffect(() => {
+    const tick = async () => {
+      if (typeof document !== 'undefined' && document.hidden) return
+      try {
+        // Counts only. The full tree is re-read exactly when one of them moves,
+        // which on a quiet screen is never — an owner watching an unchanged
+        // page costs three head-counts every five seconds instead of every
+        // member, access row and code they own.
+        const p = await fetch('/api/teams/pulse').then(x => x.json())
+        if (!p?.success) return
+        if (pulseRef.current === null) { pulseRef.current = p.stamp; return }
+        if (p.stamp !== pulseRef.current) {
+          pulseRef.current = p.stamp
+          void refresh(true)
+          void loadRoster()
+        }
+      } catch {
+        // A failed tick is a tick. Nothing is shown and nothing is cleared.
+      }
+    }
+    const id = setInterval(tick, 5000)
+    return () => clearInterval(id)
+  }, [refresh, loadRoster])
 
   // The owner's own campaigns, so one can be attached to a team instead of
   // creating a duplicate. Loaded once and after any create — this is a short
@@ -628,6 +695,11 @@ export default function TeamsPage() {
     [allMembers]
   )
 
+  // rosterTotal is counted by the database; distinctUserCount is derived from
+  // the sidebar payload, which stops being true past 1,000 rows. Prefer the
+  // counted one and fall back only before the first roster load answers.
+  const seatCountForDisplay = rosterTotal || distinctUserCount
+
   // ── SELECT PEOPLE, PUT THEM ON A CAMPAIGN ──────────────────────────────
   // An owner with a floor of agents and a new list should not be opening fifty
   // member panels. Nothing here charges anybody: the seat is the billable unit
@@ -652,8 +724,12 @@ export default function TeamsPage() {
   // is actually represented in the selection — offering a campaign that would
   // silently skip everyone selected is worse than not offering it.
   const assignableCampaigns = useMemo(() => {
+    // Read from the ROSTER, which is what the table renders and what the
+    // selection is keyed to. allMembers comes from the sidebar payload and
+    // truncates at scale — deriving a selection from it would quietly stop
+    // matching the rows on screen.
     const selectedTeamIds = new Set(
-      allMembers.filter(m => selectedMembers.has(m.id)).map(m => m.teamId)
+      roster.filter((m: any) => selectedMembers.has(m.memberId)).map((m: any) => m.teamId)
     )
     const out: Array<{ id: string; name: string; team: string }> = []
     for (const t of rawTeams) {
@@ -667,16 +743,16 @@ export default function TeamsPage() {
       }
     }
     return out
-  }, [rawTeams, allMembers, selectedMembers])
+  }, [rawTeams, roster, selectedMembers])
 
   const assignSelectedToCampaign = async () => {
     if (!assignTo || selectedMembers.size === 0 || assigning) return
     setAssigning(true)
     setAssignResult(null)
     try {
-      const memberIds = allMembers
-        .filter(m => selectedMembers.has(m.id))
-        .map(m => m.memberId)
+      // The set already holds membership ids. Round-tripping them through
+      // another list is how the two fell out of step in the first place.
+      const memberIds = Array.from(selectedMembers)
       const res = await fetch('/api/teams/access/grant-bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -694,6 +770,7 @@ export default function TeamsPage() {
         setSelectedMembers(new Set())
         setAssignTo('')
         void refresh()
+        void loadRoster()
       }
     } catch (e: any) {
       setAssignResult(e?.message || 'Something went wrong.')
@@ -992,124 +1069,156 @@ export default function TeamsPage() {
           {view === 'all_users' && (
             <>
               <ViewHeader title="All Users" onBack={goOverview} />
-              {allMembers.length === 0 ? (
-                <div style={{ color: DIM, fontSize: 13 }}>
-                  {loading ? 'Loading…' : 'No members yet.'}
+
+              {/* ── ACTION BAR ────────────────────────────────────────────
+                  Appears only once something is selected. An owner just reading
+                  the roster should not be looking at controls for an action they
+                  have not started. */}
+              {selectedMembers.size > 0 && (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+                  background: '#12141a', border: `1px solid ${HAIRLINE}`,
+                  borderRadius: 4, padding: '10px 12px', marginBottom: 12,
+                }}>
+                  <span style={{ fontSize: 12, color: TEXT }}>
+                    {selectedMembers.size} selected
+                  </span>
+                  <select
+                    value={assignTo}
+                    onChange={e => setAssignTo(e.target.value)}
+                    style={{
+                      background: '#0d0f13', color: TEXT, fontSize: 12,
+                      border: `1px solid ${HAIRLINE}`, borderRadius: 3,
+                      padding: '6px 8px', fontFamily: 'inherit',
+                    }}
+                  >
+                    <option value="">Add to campaign…</option>
+                    {assignableCampaigns.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={assignSelectedToCampaign}
+                    disabled={!assignTo || assigning}
+                    style={{
+                      background: !assignTo || assigning ? '#1b1e25' : '#4a9eff',
+                      color: !assignTo || assigning ? DIM : '#06080c',
+                      border: 'none', borderRadius: 3, padding: '7px 14px',
+                      fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
+                      cursor: !assignTo || assigning ? 'not-allowed' : 'pointer',
+                    }}
+                  >{assigning ? 'Adding…' : 'Add'}</button>
+                  <button
+                    onClick={() => { setSelectedMembers(new Set()); setAssignTo(''); setAssignResult(null) }}
+                    style={{
+                      background: 'transparent', color: DIM, border: 'none',
+                      fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
+                    }}
+                  >Clear</button>
+                  <span style={{ fontSize: 11, color: DIM, width: '100%' }}>
+                    No extra charge — these seats are already paid for.
+                  </span>
                 </div>
-              ) : (
-                <>
-                  {/* ── ACTION BAR ────────────────────────────────────────
-                      Appears only once something is selected. An owner just
-                      reading the roster should not be looking at controls for
-                      an action they have not started. */}
-                  {selectedMembers.size > 0 && (
-                    <div style={{
-                      display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
-                      background: '#12141a', border: `1px solid ${HAIRLINE}`,
-                      borderRadius: 4, padding: '10px 12px', marginBottom: 12,
-                    }}>
-                      <span style={{ fontSize: 12, color: TEXT }}>
-                        {selectedMembers.size} selected
-                      </span>
-                      <select
-                        value={assignTo}
-                        onChange={e => setAssignTo(e.target.value)}
-                        style={{
-                          background: '#0d0f13', color: TEXT, fontSize: 12,
-                          border: `1px solid ${HAIRLINE}`, borderRadius: 3,
-                          padding: '6px 8px', fontFamily: 'inherit',
-                        }}
-                      >
-                        <option value="">Add to campaign…</option>
-                        {assignableCampaigns.map(c => (
-                          <option key={c.id} value={c.id}>{c.name}</option>
-                        ))}
-                      </select>
-                      <button
-                        onClick={assignSelectedToCampaign}
-                        disabled={!assignTo || assigning}
-                        style={{
-                          background: !assignTo || assigning ? '#1b1e25' : '#4a9eff',
-                          color: !assignTo || assigning ? DIM : '#06080c',
-                          border: 'none', borderRadius: 3, padding: '7px 14px',
-                          fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
-                          cursor: !assignTo || assigning ? 'not-allowed' : 'pointer',
-                        }}
-                      >
-                        {assigning ? 'Adding…' : 'Add'}
-                      </button>
-                      <button
-                        onClick={() => { setSelectedMembers(new Set()); setAssignTo(''); setAssignResult(null) }}
-                        style={{
-                          background: 'transparent', color: DIM, border: 'none',
-                          fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
-                        }}
-                      >
-                        Clear
-                      </button>
-                      {/* Said plainly, and before the click rather than after:
-                          an owner about to add forty agents to a list needs to
-                          know this is not forty new seats. */}
-                      <span style={{ fontSize: 11, color: DIM, width: '100%' }}>
-                        No extra charge — these seats are already paid for.
-                      </span>
-                    </div>
-                  )}
-
-                  {assignResult && (
-                    <div style={{ fontSize: 12, color: DIM, marginBottom: 10 }}>{assignResult}</div>
-                  )}
-
-                  <div style={{ display: 'grid', gap: 8 }}>
-                    {allMembers.map(m => {
-                      const checked = selectedMembers.has(m.id)
-                      return (
-                        <div key={m.id} style={{
-                          display: 'flex', alignItems: 'center', gap: 12,
-                          background: PANEL,
-                          border: `1px solid ${checked ? '#4a9eff' : HAIRLINE}`,
-                          borderRadius: 4, padding: '12px 14px',
-                          opacity: m.suspended ? 0.55 : 1,
-                        }}>
-                          {/* Only an owner can put someone on a campaign, so
-                              only an owner gets a checkbox. */}
-                          {m.isOwner && (
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={() => toggleMember(m.id)}
-                              disabled={m.suspended}
-                              style={{ accentColor: '#4a9eff', cursor: m.suspended ? 'not-allowed' : 'pointer' }}
-                            />
-                          )}
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 14, fontWeight: 500 }}>{m.name}</div>
-                            <div style={{ fontSize: 11.5, color: DIM, marginTop: 2 }}>{m.team}</div>
-                          </div>
-                          <span style={{ fontSize: 11, color: DIM, textAlign: 'right' }}>
-                            {m.suspended
-                              ? 'Seat paused'
-                              : m.pickedUp
-                              ? 'You picked this seat up'
-                              : m.payer === 'owner'
-                              ? 'You pay this seat'
-                              : m.payer === 'agent'
-                              ? 'Pays their own seat'
-                              : 'Seat active'}
-                            <span style={{ display: 'block', color: '#5a6070' }}>
-                              {m.campaignCount === 0
-                                ? 'No campaigns yet'
-                                : m.campaignCount === 1
-                                ? '1 campaign'
-                                : `${m.campaignCount} campaigns`}
-                            </span>
-                          </span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </>
               )}
+
+              {assignResult && (
+                <div style={{ fontSize: 12, color: DIM, marginBottom: 10 }}>{assignResult}</div>
+              )}
+
+              {/* Selection is scoped to the page in view. Ticking a box on page
+                  one and paging to page nine keeps both — the set is keyed by
+                  membership id, not by row position — but "select all" only ever
+                  means the rows actually on screen, because an owner cannot
+                  review people they have not seen. */}
+              <DataTable
+                rows={roster}
+                total={rosterTotal}
+                page={rosterPage}
+                pageSize={ROSTER_PAGE_SIZE}
+                loading={rosterLoading}
+                search={rosterSearch}
+                onSearch={setRosterSearch}
+                onPage={setRosterPage}
+                rowKey={(r: any) => r.memberId}
+                searchPlaceholder="Search by name or email…"
+                emptyMessage={rosterSearch ? `Nobody matches “${rosterSearch}”.` : 'No members yet.'}
+                theme={{ panel: PANEL, hairline: HAIRLINE, text: TEXT, muted: MUTED, dim: DIM }}
+                actions={
+                  roster.length > 0 ? (
+                    <button
+                      onClick={() => {
+                        const ids = roster.filter((r: any) => !r.suspended).map((r: any) => r.memberId)
+                        const allOn = ids.every((id: string) => selectedMembers.has(id))
+                        setSelectedMembers(prev => {
+                          const next = new Set(prev)
+                          for (const id of ids) allOn ? next.delete(id) : next.add(id)
+                          return next
+                        })
+                      }}
+                      style={{
+                        background: 'transparent', border: `1px solid ${HAIRLINE}`,
+                        color: MUTED, borderRadius: 3, padding: '7px 12px',
+                        fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
+                      }}
+                    >Select page</button>
+                  ) : undefined
+                }
+                columns={[
+                  {
+                    key: 'pick',
+                    header: '',
+                    width: 40,
+                    render: (r: any) => (
+                      <input
+                        type="checkbox"
+                        checked={selectedMembers.has(r.memberId)}
+                        disabled={r.suspended}
+                        onChange={() => toggleMember(r.memberId)}
+                        style={{ accentColor: '#4a9eff', cursor: r.suspended ? 'not-allowed' : 'pointer' }}
+                      />
+                    ),
+                  },
+                  {
+                    key: 'name',
+                    header: 'Name',
+                    width: 220,
+                    render: (r: any) => (
+                      <span style={{ opacity: r.suspended ? 0.55 : 1 }}>
+                        {r.name}
+                        {r.email && r.email !== r.name && (
+                          <span style={{ display: 'block', fontSize: 11, color: DIM }}>{r.email}</span>
+                        )}
+                      </span>
+                    ),
+                  },
+                  { key: 'team', header: 'Team', width: 160, render: (r: any) => r.teamName },
+                  {
+                    key: 'seat',
+                    header: 'Seat',
+                    width: 170,
+                    render: (r: any) => (
+                      <span style={{ color: r.suspended ? '#fbbf24' : DIM, fontSize: 12 }}>
+                        {r.suspended
+                          ? 'Paused'
+                          : r.pickedUp
+                          ? 'You picked this up'
+                          : r.billingOverride === 'owner'
+                          ? 'You pay'
+                          : r.billingOverride === 'agent'
+                          ? 'Pays their own'
+                          : 'Active'}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: 'campaigns',
+                    header: 'Campaigns',
+                    numeric: true,
+                    width: 110,
+                    render: (r: any) => r.campaignCount || '—',
+                  },
+                ] as Array<Column<any>>}
+              />
             </>
           )}
 
@@ -1370,7 +1479,7 @@ export default function TeamsPage() {
                 />
                 <StatTile
                   label="Active Seats"
-                  value={String(distinctUserCount || 0)}
+                  value={String(seatCountForDisplay || 0)}
                   sub={seatTier?.percentOff > 0 ? `${seatTier.percentOff}% off weekly` : 'across your teams'}
                   accent="#b45309"
                 />
@@ -1457,7 +1566,7 @@ export default function TeamsPage() {
           onCreateCampaign={() => { setCampaignTeamId(undefined); setShowCampaignModal(true) }}
           joining={joining}
           joinMessage={joinMessage}
-          activeUserCount={distinctUserCount}
+          activeUserCount={seatCountForDisplay}
           onDeleteSelection={async sel => {
             setBusy(true)
             const failures: string[] = []

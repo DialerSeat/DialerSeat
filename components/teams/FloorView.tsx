@@ -66,6 +66,7 @@ export default function FloorView({ onBack }: { onBack: () => void }) {
 
   const live = data?.live || []
   const usage = data?.usage || []
+  const total = data?.usageTotal ?? usage.length
 
   // The threshold that makes this actionable rather than just a table. Below
   // this many calls in the range, a seat is being paid for and not used.
@@ -160,12 +161,21 @@ export default function FloorView({ onBack }: { onBack: () => void }) {
         color: MUTED, fontWeight: 600, margin: '30px 0 6px',
       }}>Seat usage</div>
       <div style={{ fontSize: 12, color: DIM, marginBottom: 10, lineHeight: 1.7 }}>
+        {/* Says which slice this is. A capped list presented as the whole roster
+            is the same lie as a truncated one — an owner counting eight idle
+            seats needs to know whether that is eight in total or eight in the
+            first page. */}
         {quiet.length > 0 ? (
           <>
-            <strong style={{ color: AMBER }}>{quiet.length}</strong> of {usage.length}{' '}
-            {usage.length === 1 ? 'seat' : 'seats'} made fewer than {QUIET_THRESHOLD} calls
-            this {range === 'today' ? 'day' : range}. You are paying for those.
-            Pausing a seat stops the billing and is reversible.
+            <strong style={{ color: AMBER }}>{quiet.length}</strong> of the{' '}
+            {usage.length} quietest {usage.length === 1 ? 'seat' : 'seats'} made fewer
+            than {QUIET_THRESHOLD} calls this {range === 'today' ? 'day' : range}. You are
+            paying for those. Pausing a seat stops the billing and is reversible.
+            {total > usage.length && (
+              <span style={{ display: 'block', marginTop: 3 }}>
+                Showing the {usage.length} quietest of {total.toLocaleString()} seats.
+              </span>
+            )}
           </>
         ) : (
           <>Every seat is being used.</>

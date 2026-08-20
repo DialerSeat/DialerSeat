@@ -5,12 +5,30 @@ import { apiError } from '@/lib/apiError'
 import { loadScriptsByCampaign } from '@/lib/campaignScriptLinks'
 import { summariseSeatTier } from '@/lib/seatTiers'
 
+// ── EXPLICIT, SO TRUNCATION STOPS BEING SILENT ──────────────────────────
+// Supabase caps a select at 1,000 rows and returns them without erroring, so an
+// unbounded query on a big account quietly loses data and nothing says so —
+// agents missing from campaigns they can dial fine, with no error to chase.
+//
+// These caps are deliberately ABOVE that default so the limit reached is ours
+// and we can tell when it was hit. The sidebar tree is a navigation aid, not a
+// roster: /api/teams/members/list is the paged, counted source for the actual
+// list of people, and this response now says when the tree is a partial view.
+const TREE_MEMBER_CAP = 2000
+const TREE_ACCESS_CAP = 5000
+const TREE_CODE_CAP = 500
+
 export async function GET(req: NextRequest) {
   try {
     const { userId } = await auth()
     if (!userId) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
+
+    // True when the tree is showing a partial view. Surfaced rather than
+    // hidden: a sidebar that is quietly incomplete is worse than one that says
+    // so and points at the full list.
+    let treeTruncated = false
 
     const { searchParams } = new URL(req.url)
     const detail = searchParams.get('detail') === 'owned'
@@ -28,6 +46,10 @@ export async function GET(req: NextRequest) {
       .select('team_id, status, accepted_at, joined_via_code')
       .eq('user_id', userId)
       .eq('status', 'active')
+      // One person is not on hundreds of teams, but an unbounded select is an
+      // unbounded select — every one of them in this file now names its ceiling
+      // so none can quietly become the next silent truncation.
+      .limit(200)
 
     if (memberErr) throw memberErr
 
@@ -139,22 +161,28 @@ export async function GET(req: NextRequest) {
           .select('id, team_id, user_id, status, accepted_at, removed_at, joined_via_code, created_at, billing_override, seat_price_override_cents, seat_suspended_at, seat_suspend_reason, billing_takeover_at')
           .in('team_id', ownedIds)
           .in('status', ['active', 'pending'])
-          .order('created_at', { ascending: false }),
+          .order('created_at', { ascending: false })
+          .limit(TREE_MEMBER_CAP),
         supabaseAdmin
           .from('team_codes')
           .select('*')
           .in('team_id', ownedIds)
           .eq('is_active', true)
-          .order('created_at', { ascending: false }),
+          .order('created_at', { ascending: false })
+          .limit(TREE_CODE_CAP),
         supabaseAdmin
           .from('team_campaigns')
           .select('team_id, campaign_id, access_mode, created_at, campaigns(id, name, total_leads, called_leads, status, dialer_mode)')
-          .in('team_id', ownedIds),
+          .in('team_id', ownedIds)
+          .limit(TREE_CODE_CAP),
         supabaseAdmin
           .from('team_campaign_access')
           .select('id, team_id, team_member_id, campaign_id, payer, is_active, access_source, granted_at')
           .in('team_id', ownedIds)
-          .eq('is_active', true),
+          .eq('is_active', true)
+          // Agents times campaigns — the cross product hits the cap long before
+          // the roster does, which is why this was the first thing to break.
+          .limit(TREE_ACCESS_CAP),
       ])
 
       const memberClerkIds = Array.from(new Set((allMembers || []).map((m: any) => m.user_id)))
@@ -225,6 +253,10 @@ export async function GET(req: NextRequest) {
         })
       }
 
+      treeTruncated =
+        (allMembers || []).length >= TREE_MEMBER_CAP ||
+        (allAccess || []).length >= TREE_ACCESS_CAP
+
       owned = owned.map((t: any) => ({
         ...t,
         members: membersByTeam[t.id] || [],
@@ -251,17 +283,20 @@ export async function GET(req: NextRequest) {
         supabaseAdmin
           .from('team_campaigns')
           .select('team_id, campaign_id, access_mode, created_at, campaigns(id, name, total_leads, called_leads, status, dialer_mode)')
-          .in('team_id', memberIds),
+          .in('team_id', memberIds)
+          .limit(TREE_CODE_CAP),
         supabaseAdmin
           .from('team_members')
           .select('id, team_id, user_id, status')
           .in('team_id', memberIds)
-          .eq('status', 'active'),
+          .eq('status', 'active')
+          .limit(TREE_MEMBER_CAP),
         supabaseAdmin
           .from('team_campaign_access')
           .select('id, team_id, team_member_id, campaign_id, payer, is_active, access_source, granted_at')
           .in('team_id', memberIds)
-          .eq('is_active', true),
+          .eq('is_active', true)
+          .limit(TREE_ACCESS_CAP),
       ])
 
       const userIds = Array.from(new Set((mMembers || []).map((m: any) => m.user_id)))
@@ -402,6 +437,7 @@ export async function GET(req: NextRequest) {
       // Decisions made about them that they have not seen yet.
       myDecisions,
       seatTier,
+      treeTruncated,
     })
   } catch (error: any) {
     console.error('Team list error:', error)

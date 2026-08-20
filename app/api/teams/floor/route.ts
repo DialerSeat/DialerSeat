@@ -23,6 +23,20 @@ export const dynamic = 'force-dynamic'
 
 const LIVE_HEARTBEAT_SECONDS = 90
 
+// ── WHY THESE ARE NOT `.in(everyAgentId)` ────────────────────────────────
+// A PostgREST filter travels in the URL. Ten thousand Clerk ids in an `.in()`
+// is roughly 350KB of query string against a limit around 31KB — the request
+// does not slow down, it 414s and the page shows an empty floor. So both of the
+// big lookups below are scoped by something small (a heartbeat cutoff, a list
+// of campaign ids) and narrowed in memory afterwards.
+const MEMBER_CAP = 10000
+const LIVE_SESSION_CAP = 5000
+const CALL_CAP = 200000
+// The roster is shown quietest-first, which is the only part anybody acts on.
+// Returning ten thousand rows so a browser can render the bottom two hundred is
+// ten thousand rows nobody reads.
+const USAGE_ROWS = 250
+
 export async function GET(req: NextRequest) {
   try {
     const { userId } = await auth()
@@ -44,7 +58,10 @@ export async function GET(req: NextRequest) {
 
     const teamIds = (teams || []).map((t: any) => t.id)
     if (teamIds.length === 0) {
-      return NextResponse.json({ success: true, live: [], usage: [], teams: [] })
+      return NextResponse.json({
+        success: true, live: [], usage: [], usageTotal: 0, usageShown: 0,
+        liveCount: 0, teams: [],
+      })
     }
     const teamNameById = new Map((teams || []).map((t: any) => [t.id, t.name]))
 
@@ -53,10 +70,14 @@ export async function GET(req: NextRequest) {
       .select('id, team_id, user_id, seat_suspended_at, billing_override, joined_via_code')
       .in('team_id', teamIds)
       .eq('status', 'active')
+      .limit(MEMBER_CAP)
 
     const memberRows = members || []
     if (memberRows.length === 0) {
-      return NextResponse.json({ success: true, live: [], usage: [], teams: teams || [] })
+      return NextResponse.json({
+        success: true, live: [], usage: [], usageTotal: 0, usageShown: 0,
+        liveCount: 0, teams: teams || [],
+      })
     }
 
     const clerkIds = Array.from(new Set(memberRows.map((m: any) => m.user_id)))
@@ -80,11 +101,18 @@ export async function GET(req: NextRequest) {
 
     let live: any[] = []
     if (userUuids.length > 0) {
-      const { data: sessions } = await supabaseAdmin
+      // Every session that is live ANYWHERE, then narrowed to this owner's
+      // people in memory. Bounded by how many agents are simultaneously dialing
+      // on the whole platform, which is a far smaller number than how many
+      // agents exist — and it keeps the agent ids out of the URL.
+      const mine = new Set(userUuids)
+      const { data: allSessions } = await supabaseAdmin
         .from('agent_sessions')
         .select('user_id, team_id, campaign_id, state, dialer_mode, last_heartbeat, session_started_at, current_call_id')
-        .in('user_id', userUuids)
         .gte('last_heartbeat', liveCutoff)
+        .limit(LIVE_SESSION_CAP)
+
+      const sessions = (allSessions || []).filter((sn: any) => mine.has(sn.user_id))
 
       const campaignIds = Array.from(
         new Set((sessions || []).map((s: any) => s.campaign_id).filter(Boolean))
@@ -118,15 +146,34 @@ export async function GET(req: NextRequest) {
     // Counted per agent from their own call rows. An agent on two of this
     // owner's teams is one person with one usage figure, which is why this is
     // keyed by clerk id rather than by membership.
-    const { data: calls } = await supabaseAdmin
-      .from('calls')
-      .select('user_id, talk_seconds, disposition, created_at')
-      .in('user_id', clerkIds)
-      .gte('created_at', since.toISOString())
-      .limit(50000)
+    // Scoped by the team's campaigns — a handful of ids — rather than by every
+    // agent. Same rows, a query string that fits, and it stays correct however
+    // many agents the owner has.
+    const { data: teamCampaignRows } = await supabaseAdmin
+      .from('team_campaigns')
+      .select('campaign_id')
+      .in('team_id', teamIds)
+
+    const scopedCampaignIds = Array.from(
+      new Set((teamCampaignRows || []).map((r: any) => r.campaign_id).filter(Boolean))
+    )
+
+    const memberSet = new Set(clerkIds)
+    let calls: any[] = []
+    if (scopedCampaignIds.length > 0) {
+      const { data: callRows } = await supabaseAdmin
+        .from('calls')
+        .select('user_id, talk_seconds, created_at')
+        .in('campaign_id', scopedCampaignIds)
+        .gte('created_at', since.toISOString())
+        .limit(CALL_CAP)
+      // A campaign can also be dialed by its owner outside any team, so the
+      // rows are narrowed to actual members rather than assumed to be theirs.
+      calls = (callRows || []).filter((c: any) => memberSet.has(c.user_id))
+    }
 
     const stats = new Map<string, { calls: number; talk: number; today: number; last: string | null }>()
-    for (const c of calls || []) {
+    for (const c of calls) {
       const cur = stats.get(c.user_id) || { calls: 0, talk: 0, today: 0, last: null }
       cur.calls++
       cur.talk += typeof c.talk_seconds === 'number' ? c.talk_seconds : 0
@@ -154,13 +201,21 @@ export async function GET(req: NextRequest) {
       }
     }).sort((a, b) => a.calls - b.calls)
 
+    // Quietest first, capped. The count of everybody is still reported, so the
+    // page can say "showing the 250 quietest of 8,431" rather than implying the
+    // list is the whole roster.
+    const usageShown = usage.slice(0, USAGE_ROWS)
+
     return NextResponse.json({
       success: true,
       range,
       days,
       liveWindowSeconds: LIVE_HEARTBEAT_SECONDS,
       live: live.sort((a, b) => (b.onCall ? 1 : 0) - (a.onCall ? 1 : 0)),
-      usage,
+      usage: usageShown,
+      usageTotal: usage.length,
+      usageShown: usageShown.length,
+      liveCount: live.length,
       teams: teams || [],
     })
   } catch (error: any) {
