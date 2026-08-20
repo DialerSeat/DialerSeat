@@ -273,12 +273,25 @@ async function handleNextLead(req: Request) {
       // Hand back everything we claimed and aren't dialing, immediately —
       // otherwise a single request would lock up to CANDIDATE_LIMIT leads for
       // the full 30-second TTL and starve every other agent on the floor.
+      //
+      // AWAITED, not fired and forgotten. This was `void`, which on Vercel means
+      // the instance may freeze the moment the response returns and the update
+      // never reaches Postgres — producing exactly the starvation the paragraph
+      // above says it prevents, and only under load, because that is when there
+      // are enough concurrent requests for the leaked claims to add up.
+      //
+      // The cost is one indexed UPDATE on the hot path. That is worth paying:
+      // a few milliseconds per request against a floor of agents watching an
+      // empty queue while the leads sit claimed by nobody.
       if (toRelease.length > 0) {
-        void supabaseAdmin
+        const { error: releaseErr } = await supabaseAdmin
           .from('leads')
           .update({ claimed_at: null, claimed_by_session_id: null })
           .in('id', toRelease)
-          .then(undefined, (e: unknown) => console.error('[leads/next] claim release failed', e))
+        // Not fatal — the 30-second TTL reclaims them anyway. Logged because a
+        // persistent failure here shows up as a queue that mysteriously thins
+        // out under load, which is near-impossible to diagnose from the outside.
+        if (releaseErr) console.error('[leads/next] claim release failed', releaseErr)
       }
 
       if (!callable) {

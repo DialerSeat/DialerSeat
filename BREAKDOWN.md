@@ -174,6 +174,15 @@ would have to fail together.
 Add a table, add a policy row. `select * from unclassified_tables()` should
 always return nothing.
 
+**A SECURITY DEFINER function is a hole unless its EXECUTE is revoked.** These
+bypass RLS by design, and the API route in front of them is what does the
+authorising — so if PostgREST can reach one directly at `/rest/v1/rpc/<name>`,
+that authorisation is simply skipped, along with lead masking and team
+membership. Postgres grants EXECUTE to PUBLIC by default, and Supabase adds anon
+and authenticated on top. Every such function must end up with
+`postgres | service_role` and nothing else. `select proname, proacl from pg_proc
+where prosecdef` is the check.
+
 **Never fabricate a number.** A dash means no data. A plausible invented figure
 is worse than an obvious gap: the gap gets fixed, the invention gets trusted.
 This applies hardest to billing statements and analytics.
@@ -184,7 +193,15 @@ is the clerk id. Joining on the wrong one returns an empty result rather than an
 error.
 
 **Serverless discards dangling promises.** `void somePromise()` before a
-response returns will not complete. Await anything that matters.
+response returns will not complete — Vercel may freeze the instance the moment
+the response is flushed. This is not theoretical: it was silently dropping call
+events and leaking lead claims under load, in both cases producing exactly the
+failure the surrounding comment claimed to prevent, and only when busy.
+
+Await anything that matters. When the work must not block the response — logging,
+telemetry, a cache write — use `after()` from `next/server`, which defers it
+until after the response is sent and still guarantees it runs. `after()` throws
+outside a request scope, so a background tick needs a plain `await` fallback.
 
 **Preview, power and progressive are tuned and fragile.** Predictive work must
 be additive and must not touch the shared claim path.
@@ -205,3 +222,11 @@ doubt, the stricter behaviour is the correct one.
 - The campaign view cannot yet upload or replace leads in place.
 - AMD is editable from two screens and can drift between them.
 - Everything is US-only (see Globalization above).
+- **`TELNYX_PUBLIC_KEY` may not be set in Vercel.** Webhook verification is
+  written and correct, but fails OPEN when the key is missing — every call event
+  is then accepted unauthenticated. The unconfigured state now raises an admin
+  push once an hour instead of a console warning nobody reads, but the fix is to
+  set the key and then flip `FAIL_OPEN_WHEN_UNSET` to false in
+  `lib/verifyTelnyxWebhook.ts`.
+- Lead ingest has no rate limit. The token is 192-bit and owner-gated, so this
+  is a flooding concern rather than a disclosure one.

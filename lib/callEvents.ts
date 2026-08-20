@@ -1,3 +1,4 @@
+import { after } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 
 // Append-only call event logger. This is a forensic trail, NOT a control path —
@@ -63,7 +64,25 @@ interface CallEventInput {
   detail?: Record<string, unknown> | null
 }
 
-export async function logCallEvent(input: CallEventInput): Promise<void> {
+// ── THE FORENSIC TRAIL WAS BEING DROPPED ───────────────────────────────────
+// Every caller in the webhook and dialer path invokes this as
+// `void logCallEvent(...)`, usually on the line before the response returns.
+// That is correct in intent — logging must never block a live call — but on
+// Vercel a promise nobody awaits is not a promise that finishes. The instance
+// is free to freeze the moment the response is sent, and the insert dies with
+// it.
+//
+// So the trail was lossy in exactly the situation it was built for: under load,
+// on the hot path, during the failures the event types above were added to
+// explain. Several of those comments describe how hard something was to
+// diagnose. This is part of why.
+//
+// `after()` is the fix rather than `await`: it hands the work to the runtime to
+// finish AFTER the response is flushed, so the caller still does not wait and
+// the insert still happens. Doing it here rather than at the ~15 call sites
+// keeps the change out of the call-path files entirely — every existing
+// `void logCallEvent(...)` becomes correct without being touched.
+async function insertEvent(input: CallEventInput): Promise<void> {
   try {
     const db = getServiceClient('call-events')
     const { error } = await db.from('call_events').insert({
@@ -83,5 +102,19 @@ export async function logCallEvent(input: CallEventInput): Promise<void> {
   } catch (err) {
     // Never let logging break the call path.
     console.error('[call-events] unexpected error (non-fatal):', err)
+  }
+}
+
+export async function logCallEvent(input: CallEventInput): Promise<void> {
+  try {
+    // A callback, not a promise: passing a promise would start the insert
+    // immediately, and if after() then rejected for being outside a request
+    // scope the fallback below would insert the same row a second time.
+    after(() => insertEvent(input))
+  } catch {
+    // Outside a request scope — a background tick or a script — after() throws
+    // and there is no response to come after. Nothing is holding the process
+    // open on our behalf, so await it here instead.
+    await insertEvent(input)
   }
 }

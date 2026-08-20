@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import nacl from 'tweetnacl'
+import { sendAdminPush } from '@/lib/pushNotify'
 
 // =============================================================================
 // TELNYX WEBHOOK AUTHENTICITY — Ed25519 signature verification
@@ -38,6 +39,45 @@ import nacl from 'tweetnacl'
 
 const FAIL_OPEN_WHEN_UNSET = true
 
+// ── AN UNVERIFIED WEBHOOK MUST NOT BE ABLE TO GO UNNOTICED ─────────────────
+// The fail-open above is a migration convenience: it let the handler ship
+// before the key was wired into Vercel. That was the right call then. The
+// hazard is that it is INVISIBLE — a console.warn in a serverless log nobody
+// reads, on a state where every call event this platform receives is
+// unauthenticated and anyone who knows the URL can post whatever they like.
+//
+// The comment at the top of this file names the consequence precisely: forged
+// "completed" events inflating counters, forged "abandoned" events corrupting
+// the FTC abandon-rate math. That is a compliance number, and it would be wrong
+// with no indication anything had happened.
+//
+// So the unconfigured state alarms. Once an hour, not per webhook — this fires
+// on a path that runs on every event of every call, and the point is to be
+// noticed, not to become the noise it is warning about.
+let lastUnsetAlarmMs = 0
+const UNSET_ALARM_INTERVAL_MS = 60 * 60 * 1000
+
+function alarmUnverified() {
+  const now = Date.now()
+  if (now - lastUnsetAlarmMs < UNSET_ALARM_INTERVAL_MS) return
+  lastUnsetAlarmMs = now
+  try {
+    // after(), so a live call never waits on a push notification, and never
+    // fails because of one.
+    after(() =>
+      sendAdminPush(
+        'webhook_silence',
+        'TELNYX_PUBLIC_KEY is not set, so call webhooks are being accepted ' +
+        'WITHOUT signature verification. Anyone who knows the URL can post ' +
+        'call events. Set it in Vercel, then redeploy.',
+        { title: 'Call webhooks unverified' }
+      ).catch(() => {})
+    )
+  } catch {
+    // Outside a request scope, or push unavailable. The warn below still runs.
+  }
+}
+
 // Replay-attack guard: reject webhooks whose timestamp is further from now
 // than this, even if the signature is otherwise valid. 5 minutes matches
 // Telnyx's own documented recommendation.
@@ -67,6 +107,7 @@ export function verifyTelnyxWebhook(req: Request, rawBody: string): NextResponse
 
   if (!publicKeyB64) {
     if (FAIL_OPEN_WHEN_UNSET) {
+      alarmUnverified()
       console.warn(
         '[verifyTelnyxWebhook] TELNYX_PUBLIC_KEY is not set — allowing webhook ' +
         'WITHOUT verification. Set the env var to enable enforcement.'
