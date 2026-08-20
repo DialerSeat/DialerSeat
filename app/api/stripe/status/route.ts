@@ -132,6 +132,66 @@ export async function GET() {
       console.error('[stripe/status] seat-lapsed lookup failed', e)
     }
 
+    // ── SEATS YOU PICKED UP WITHOUT CLICKING ANYTHING ────────────────────
+    // When an agent on a self-funded seat cancels their own plan, the owner
+    // absorbs the seat so the agent keeps dialing. That is the right default —
+    // a floor should not lose a chair mid-shift — but it spends the owner's
+    // money without them agreeing to that specific seat, so it must never be
+    // something they discover on a statement.
+    //
+    // Surfaced here because the layout calls this on every page, so the notice
+    // reaches them wherever they are rather than waiting for them to open
+    // Teams. It clears itself once they acknowledge it by acting: pausing the
+    // seat, removing the person, or leaving it in place and dismissing.
+    let seatsTakenOver: Array<{ teamId: string; teamName: string; agentName: string }> = []
+    try {
+      const { data: myTeams } = await supabase
+        .from('teams')
+        .select('id, name')
+        .eq('owner_id', userId)
+
+      const teamIds = (myTeams || []).map((t: any) => t.id)
+      if (teamIds.length > 0) {
+        const { data: takenRows } = await supabase
+          .from('team_members')
+          .select('id, team_id, user_id, billing_takeover_at')
+          .in('team_id', teamIds)
+          .eq('status', 'active')
+          .is('seat_suspended_at', null)
+          .not('billing_takeover_at', 'is', null)
+          // Dismissed notices stay dismissed. The timestamp is kept so Teams
+          // can still show which seats were picked up automatically — only the
+          // banner stops asking.
+          .neq('billing_takeover_reason', 'acknowledged')
+          .limit(25)
+
+        const rows = takenRows || []
+        if (rows.length > 0) {
+          const nameByTeam: Record<string, string> = {}
+          for (const t of myTeams || []) nameByTeam[t.id] = t.name
+
+          const { data: agentRows } = await supabase
+            .from('users')
+            .select('clerk_id, email, first_name, last_name')
+            .in('clerk_id', Array.from(new Set(rows.map((r: any) => r.user_id))))
+
+          const agentById: Record<string, string> = {}
+          for (const u of agentRows || []) {
+            const full = [u.first_name, u.last_name].filter(Boolean).join(' ').trim()
+            agentById[u.clerk_id] = full || u.email || 'An agent'
+          }
+
+          seatsTakenOver = rows.map((r: any) => ({
+            teamId: r.team_id,
+            teamName: nameByTeam[r.team_id] || 'your team',
+            agentName: agentById[r.user_id] || 'An agent',
+          }))
+        }
+      }
+    } catch (e) {
+      console.error('[stripe/status] seat takeover lookup failed', e)
+    }
+
     if (!sub) {
       return NextResponse.json({
         hasSubscription: wlActive || wlOnboardingPending,
@@ -147,6 +207,7 @@ export async function GET() {
         weeklyPrice,
         awaitingApproval,
         seatLapsed,
+        seatsTakenOver,
       })
     }
 
@@ -166,6 +227,7 @@ export async function GET() {
       weeklyPrice,
       awaitingApproval,
       seatLapsed,
+      seatsTakenOver,
     })
   } catch (err: any) {
     console.error('status error:', err)

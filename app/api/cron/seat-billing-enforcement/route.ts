@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
+import { createSeatSubscription, isSeatBillingError, agentPaysForThemselves } from '@/lib/teamBilling'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -46,6 +47,18 @@ export async function GET(req: Request) {
   }
 
   try {
+    // ── RETRY BEFORE ENFORCING ───────────────────────────────────────────
+    // A seat charge that failed because the owner had no card should keep
+    // trying, every day, until they attach one. Nothing about that owner's
+    // intention changed — they agreed to the seat; their billing was simply not
+    // ready. Making them find and re-approve every affected member by hand
+    // would be the product punishing them for its own timing.
+    //
+    // Runs before the suspension pass on purpose: a card added this morning
+    // should rescue the seat today, not have it suspended an hour before the
+    // retry that would have saved it.
+    const retried = await retryFailedSeatCharges()
+
     const cutoff = new Date(Date.now() - GRACE_DAYS * 24 * 60 * 60 * 1000).toISOString()
 
     // Charges that failed and whose period ended more than a week ago. Reading
@@ -63,7 +76,7 @@ export async function GET(req: Request) {
 
     const candidates = staleFailed || []
     if (candidates.length === 0) {
-      return NextResponse.json({ success: true, checked: 0, suspended: 0 })
+      return NextResponse.json({ success: true, checked: 0, suspended: 0, retried })
     }
 
     const memberIds = Array.from(
@@ -112,7 +125,7 @@ export async function GET(req: Request) {
     }
 
     if (toSuspend.length === 0) {
-      return NextResponse.json({ success: true, checked: candidates.length, suspended: 0 })
+      return NextResponse.json({ success: true, checked: candidates.length, suspended: 0, retried })
     }
 
     const now = new Date().toISOString()
@@ -145,10 +158,120 @@ export async function GET(req: Request) {
       success: true,
       checked: candidates.length,
       suspended: toSuspend.length,
+      retried,
       graceDays: GRACE_DAYS,
     })
   } catch (error: any) {
     console.error('seat-billing-enforcement error:', error)
     return apiError(error, { route: 'cron/seat-billing-enforcement' })
   }
+}
+
+
+interface RetrySummary {
+  attempted: number
+  recovered: number
+  stillFailing: number
+  voidedSelfFunded: number
+}
+
+/**
+ * Re-attempt every seat charge that failed, once a day, until it sticks.
+ *
+ * Only charges still inside the grace window are retried — past that the seat
+ * suspends and the charge is no longer something to chase. A charge whose agent
+ * has since started paying for DialerSeat themselves is voided rather than
+ * retried: there is no seat to buy for somebody who already has access.
+ */
+async function retryFailedSeatCharges(): Promise<RetrySummary> {
+  const summary: RetrySummary = {
+    attempted: 0,
+    recovered: 0,
+    stillFailing: 0,
+    voidedSelfFunded: 0,
+  }
+
+  const windowStart = new Date(Date.now() - GRACE_DAYS * 24 * 60 * 60 * 1000).toISOString()
+
+  const { data: failed } = await supabase
+    .from('team_seat_charges')
+    .select('id, team_id, owner_id, agent_id, team_member_id, amount_cents, period_end')
+    .eq('status', 'failed')
+    .not('team_member_id', 'is', null)
+    .gte('period_end', windowStart)
+    .limit(BATCH_LIMIT)
+
+  const rows = failed || []
+  if (rows.length === 0) return summary
+
+  // Only chase seats that are still live. A member who has been removed or
+  // suspended in the meantime is not owed another attempt on the owner's card.
+  const { data: liveMembers } = await supabase
+    .from('team_members')
+    .select('id')
+    .in('id', rows.map((r: any) => r.team_member_id))
+    .eq('status', 'active')
+    .is('seat_suspended_at', null)
+
+  const live = new Set((liveMembers || []).map((m: any) => m.id))
+
+  const teamIds = Array.from(new Set(rows.map((r: any) => r.team_id).filter(Boolean)))
+  const { data: teams } = await supabase
+    .from('teams')
+    .select('id, name')
+    .in('id', teamIds)
+  const teamName = new Map((teams || []).map((t: any) => [t.id, t.name]))
+
+  const { data: agentRows } = await supabase
+    .from('users')
+    .select('clerk_id, email')
+    .in('clerk_id', Array.from(new Set(rows.map((r: any) => r.agent_id))))
+  const emailByAgent = new Map((agentRows || []).map((u: any) => [u.clerk_id, u.email]))
+
+  for (const c of rows) {
+    if (!live.has(c.team_member_id)) continue
+
+    if (await agentPaysForThemselves(c.agent_id)) {
+      await supabase.from('team_seat_charges').update({ status: 'voided' }).eq('id', c.id)
+      await supabase
+        .from('team_members')
+        .update({ billing_override: 'free' })
+        .eq('id', c.team_member_id)
+      summary.voidedSelfFunded++
+      continue
+    }
+
+    summary.attempted++
+    try {
+      const sub = await createSeatSubscription({
+        ownerId: c.owner_id,
+        agentId: c.agent_id,
+        agentEmail: emailByAgent.get(c.agent_id) || c.agent_id,
+        teamId: c.team_id,
+        teamName: teamName.get(c.team_id) || 'Team',
+        seatChargeId: c.id,
+        teamMemberId: c.team_member_id,
+      })
+
+      await supabase
+        .from('team_seat_charges')
+        .update({
+          stripe_subscription_item_id: sub.stripeSubscriptionId,
+          status: 'paid',
+          period_start: sub.currentPeriodStart,
+          period_end: sub.currentPeriodEnd,
+        })
+        .eq('id', c.id)
+      summary.recovered++
+    } catch (err: any) {
+      const reason = isSeatBillingError(err) ? err.code : (err?.message || 'unknown')
+      console.log(`[seat-enforcement] retry still failing for charge ${c.id}: ${reason}`)
+      summary.stillFailing++
+    }
+  }
+
+  if (summary.recovered > 0) {
+    console.log(`[seat-enforcement] recovered ${summary.recovered} seat charge(s) on retry`)
+  }
+  return summary
 }

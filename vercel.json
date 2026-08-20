@@ -27,6 +27,10 @@
     {
       "path": "/api/cron/seat-billing-enforcement",
       "schedule": "0 13 * * *"
+    },
+    {
+      "path": "/api/cron/billing-retry",
+      "schedule": "0 14 * * *"
     }
   ]
 }

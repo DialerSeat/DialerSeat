@@ -44,6 +44,10 @@ interface ApiMember {
   campaignAccess?: Array<{ campaignId: string; payer?: string | null }>
   billing_override?: string | null
   seat_suspended_at?: string | null
+  /** Set when the owner absorbed this seat automatically because the agent
+   *  stopped paying for it. Shown so a seat the owner does not remember
+   *  agreeing to is never a mystery line on a statement. */
+  billing_takeover_at?: string | null
   seat_suspend_reason?: string | null
 }
 interface ApiTeamCampaign {
@@ -190,13 +194,16 @@ function ViewHeader({ title, onBack }: { title: string; onBack: () => void }) {
 // ─────────────────────────────────────────────────────────────────────────
 // THINGS YOU SHOULD KNOW
 //
-// Teams carries a pile of rules that stay invisible until one of them
-// surprises somebody — who pays for a seat, what a team code actually grants,
-// why a seat survives a declined card. Every one of those has been a support
-// question, and every one is cheaper to answer here than in an email after an
-// owner has already been caught out by it.
+// Written for the people actually using this: lead vendors and agencies who
+// sell or share seats, not hobbyists poking at settings. It opens by naming
+// them, because someone who has just sold twenty-five seats needs to recognise
+// themselves in the first sentence or they will close it.
 //
-// Written as plain statements of what the product does, not as marketing.
+// Deliberately short on mechanics. Explaining that regenerating a code changes
+// the code, or that members cannot see the owner's billing, buries the three
+// things that genuinely surprise people: how campaigns are shared without being
+// given away, what happens when somebody stops paying, and what volume earns.
+//
 // Anything involving money says weekly, because seats bill weekly.
 // ─────────────────────────────────────────────────────────────────────────
 function HelpModal({ onClose }: { onClose: () => void }) {
@@ -234,7 +241,7 @@ function HelpModal({ onClose }: { onClose: () => void }) {
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 22, fontWeight: 600 }}>Things you should know</div>
             <div style={{ fontSize: 12.5, color: DIM, marginTop: 4 }}>
-              How seats, codes and campaigns actually behave.
+              Running a floor, selling seats, and what you earn at volume.
             </div>
           </div>
           <button
@@ -248,92 +255,66 @@ function HelpModal({ onClose }: { onClose: () => void }) {
           >×</button>
         </div>
 
-        <H>Seats</H>
         <P>
-          A <B>seat</B> is the billable unit, not a campaign. Once somebody holds an
-          active seat, putting them on more of your campaigns costs nothing extra —
-          not to you, not to them. Select people under All Users and use{' '}
-          <B>Add to campaign</B>.
-        </P>
-        <P>
-          Seats bill <B>weekly</B> and can be cancelled at any time.
-        </P>
-        <P>
-          A declined card does <B>not</B> throw your agent out. The charge is marked
-          failed and you are told about it; they keep working while you sort it out.
-          Pausing the seat is the lever, and it cuts access immediately. If a seat
-          stays unpaid for a full week it suspends on its own.
-        </P>
-        <P>
-          When a seat stops being paid for, the person keeps their account, their
-          leads, their recordings and their dispositions. None of that was yours to
-          take — the seat paid for access, not for their work. They are shown how to
-          subscribe on their own plan.
+          Teams is for running a floor. Whether you have sold twenty-five seats to
+          an agency, staffed one room yourself, or you are a vendor handing lists
+          to closers you do not employ — this is where you decide who dials what,
+          and who pays for the privilege.
         </P>
 
-        <H>Codes</H>
+        <H>Sharing or selling your campaigns</H>
         <P>
-          A <B>team code</B> puts someone on the roster and stops there. It grants no
-          campaign on its own until you add them to one.
+          Your leads stay yours. Putting a campaign on a team does not give it
+          away — it lets people you choose dial it, and you can pull that back at
+          any time.
         </P>
         <P>
-          A <B>campaign code</B> puts them on that campaign and into the team at the
-          same time.
+          You hand out access with a code. A <B>team code</B> puts someone on your
+          roster and nothing more, so you can vet them before pointing them at a
+          list. A <B>campaign code</B> puts them on the roster and straight onto
+          that one campaign, which is what you want when you are staffing a
+          specific list.
         </P>
         <P>
-          Every code says who pays. <B>You pay</B> means the seat is on your card and
-          they are let straight in. <B>They pay</B> means they finish their own
-          checkout first — nobody gets a seat nobody has bought.
+          Every code says who pays for the seat: <B>you</B>, or <B>them</B>. That is
+          how you sell a seat — hand out a code set to &quot;they pay&quot;, and
+          their own checkout covers it. Set it to &quot;you pay&quot; when the seat
+          is part of what you are providing.
         </P>
         <P>
-          Joining is <B>instant by default</B>. Switch a code to approval if you want
-          to vet people first; they will wait, be told they are waiting, and be told
-          to contact you.
-        </P>
-        <P>
-          <B>Regenerating</B> a code changes the string and nothing else. The old one
-          stops working immediately. Anyone who already joined with it stays.
-        </P>
-
-        <H>Volume</H>
-        <P>
-          Seats are counted across <B>every team you own</B>, not per team. Three
-          teams of eight is a twenty-four seat account.
-        </P>
-        <P>
-          The discount is earned and applied on <B>seats you pay for</B>. It reduces
-          your bill, so a seat an agent funds themselves cannot move it — that seat
-          costs you nothing to begin with.
-        </P>
-        <P>
-          Ten seats you pay for earns <B>5% off your weekly seat cost</B>.
-          Twenty-five earns <B>10%</B>. Your standing is counted when each
-          seat&apos;s weekly charge is raised and holds for that week, so your bill
-          does not move around as people come and go.
-        </P>
-        <P>
-          Badges follow your whole roster, funded either way. If most of your agents
-          pay their own seats you will not see a discount — but a large roster is
-          worth a direct conversation, so email <B>sales@dialerseat.com</B>.
-        </P>
-        <P>
-          Past fifty seats the rate is set individually. Email{' '}
-          <B>sales@dialerseat.com</B> and we will put together a partnership that fits
-          how you actually run.
-        </P>
-        <P>
-          Suspended seats do not count — a paused seat is not being billed, so it
-          cannot earn a discount on the bill.
+          Once somebody has a seat, adding them to more of your campaigns is{' '}
+          <B>free</B> — to you and to them. The seat is what gets billed, not the
+          list. Select people under All Users and use Add to campaign; forty agents
+          onto a new list is one click, not forty seats.
         </P>
 
-        <H>Access</H>
+        <H>When somebody stops paying</H>
         <P>
-          Someone can only be on a campaign if a seat is being paid for, by you or by
-          them. Joining a campaign through a code adds them to the team as well.
+          If an agent who was paying for their own seat cancels, <B>you pick it up
+          automatically</B> and they keep dialing. Your floor does not lose a chair
+          mid-shift because somebody&apos;s card expired. We tell you it happened,
+          and you decide when to stop — pause or remove them, and the billing stops
+          with it.
         </P>
         <P>
-          Members see the campaigns they have been given. They do not see your join
-          codes, your requests, or your performance data.
+          If your card is the one that fails, nobody gets thrown out. You have a
+          week to sort it out while your people keep working.
+        </P>
+
+        <H>What you earn at volume</H>
+        <P>
+          Seats bill weekly and cancel anytime. Ten seats <B>you pay for</B> earns
+          5% off your weekly seat cost, twenty-five earns 10% — counted across
+          every team you own, not per team.
+        </P>
+        <P>
+          It only counts seats you fund, because it is a reduction of your bill —
+          a seat an agent pays for themselves costs you nothing to begin with.
+        </P>
+        <P>
+          Once you are past fifty people, rates stop being a formula: email{' '}
+          <B>sales@dialerseat.com</B> and we will build something around how you
+          actually run.
         </P>
       </div>
     </div>
@@ -417,12 +398,19 @@ export default function TeamsPage() {
       const mine = data.myPending || []
       setMyPending(mine)
       setSeatTier(data.seatTier || null)
-      // The badge counts BOTH directions: requests an owner has to decide, and
-      // requests this agent is waiting on. One number, because to the person
-      // looking at it the question is the same — is there something in
-      // Requests for me.
+      // ── ONLY COUNT WHAT SOMEBODY HAS TO ACT ON ───────────────────────
+      // The badge used to include the viewer's OWN pending requests, so an
+      // agent who joined with an approval code carried a permanent red dot for
+      // something they could do nothing about. A badge that cannot be cleared
+      // by any action is not a notification, it is decoration, and it teaches
+      // people to ignore the real ones.
+      //
+      // An owner's incoming requests are different: those are decisions waiting
+      // on them, and the count goes away when they decide. The agent's own
+      // request still shows inside the Requests view — they can go and look at
+      // it — it just does not shout.
       const incoming = all.reduce((n, t) => n + (t.pendingMembers?.length || 0), 0)
-      setPending(incoming + mine.length)
+      setPending(incoming)
     } catch {
       setTeams([])
     } finally {
@@ -494,6 +482,7 @@ export default function TeamsPage() {
       payer: 'owner' | 'agent' | 'free' | null
       campaignCount: number
       suspended: boolean
+      pickedUp: boolean
     }> = []
     const seen = new Set<string>()
     for (const t of rawTeams) {
@@ -521,6 +510,7 @@ export default function TeamsPage() {
           payer,
           campaignCount: access.length,
           suspended: !!m.seat_suspended_at,
+          pickedUp: !!m.billing_takeover_at,
         })
       }
     }
@@ -947,6 +937,8 @@ export default function TeamsPage() {
                           <span style={{ fontSize: 11, color: DIM, textAlign: 'right' }}>
                             {m.suspended
                               ? 'Seat paused'
+                              : m.pickedUp
+                              ? 'You picked this seat up'
                               : m.payer === 'owner'
                               ? 'You pay this seat'
                               : m.payer === 'agent'

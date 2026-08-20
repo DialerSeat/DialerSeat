@@ -196,6 +196,37 @@ export async function ownerCanBeCharged(
 }
 
 
+/**
+ * Does this agent already pay for DialerSeat themselves?
+ *
+ * A seat exists to give platform access to somebody who is not paying for it.
+ * Someone with their own active subscription already has that access, so there
+ * is nothing for an owner to buy on their behalf — charging for it would bill
+ * an owner for something the agent is already funding, and refusing to admit
+ * them because the OWNER has no card on file is refusing over a bill that
+ * should never have been raised.
+ *
+ * That was the live failure: approving an already-subscribed agent returned 402
+ * "Owner has no payment method on file" and the join simply did not happen.
+ */
+export async function agentPaysForThemselves(agentClerkId: string): Promise<boolean> {
+  const { data, error } = await supabaseAdmin
+    .from('subscriptions')
+    .select('status')
+    .eq('user_id', agentClerkId)
+    .eq('status', 'active')
+    .limit(1)
+
+  if (error) {
+    // Fail toward charging. Wrongly skipping the charge would give a seat away
+    // for free and nothing would ever notice; wrongly raising one is visible
+    // and refundable.
+    console.error('[teamBilling] self-sub lookup failed', error)
+    return false
+  }
+  return !!data && data.length > 0
+}
+
 export function isSeatBillingError(err: any): err is SeatBillingError {
   return err && typeof err === 'object' && 'code' in err && 'message' in err
 }

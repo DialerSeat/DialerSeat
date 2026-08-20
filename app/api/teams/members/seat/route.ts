@@ -89,7 +89,7 @@ export async function POST(req: Request) {
     // fine — suspension still applies, there is just no billing to stop.
     const { data: charges } = await supabaseAdmin
       .from('team_seat_charges')
-      .select('id, stripe_subscription_id')
+      .select('id, stripe_subscription_item_id')
       .eq('team_member_id', memberId)
       .eq('status', 'paid')
 
@@ -111,7 +111,7 @@ export async function POST(req: Request) {
 
       for (const c of charges || []) {
         try {
-          await stripe.subscriptions.update(c.stripe_subscription_id, { pause_collection: null })
+          await stripe.subscriptions.update(c.stripe_subscription_item_id, { pause_collection: null })
           billing.push({ chargeId: c.id, ok: true })
         } catch (err) {
           billing.push({ chargeId: c.id, ok: false, detail: err instanceof Error ? err.message : String(err) })
@@ -141,11 +141,11 @@ export async function POST(req: Request) {
         if (action === 'pause') {
           // void, not 'keep_as_draft': nobody should return from a pause to a
           // stack of accrued invoices for time they didn't use.
-          await stripe.subscriptions.update(c.stripe_subscription_id, {
+          await stripe.subscriptions.update(c.stripe_subscription_item_id, {
             pause_collection: { behavior: 'void' },
           })
         } else {
-          await cancelSeatSubscription(c.stripe_subscription_id)
+          await cancelSeatSubscription(c.stripe_subscription_item_id)
           await supabaseAdmin
             .from('team_seat_charges')
             .update({ status: 'voided' })

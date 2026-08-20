@@ -6,6 +6,7 @@ import { apiError } from '@/lib/apiError'
 import { stripe } from '@/lib/stripe'
 import { activatePendingTeamMember, deactivateTeamMember } from '@/lib/teamMembership'
 import { sendAdminPush } from '@/lib/pushNotify'
+import { takeOverAgentPaidSeats } from '@/lib/seatTakeover'
 import { logBillingEvent } from '@/lib/billingEvents'
 import {
   claimStripeEvent,
@@ -846,6 +847,22 @@ async function markPersonalSubCanceled(subscription: Stripe.Subscription) {
 
   const clerkId = await lookupClerkIdByCustomer(subscription)
   if (clerkId) {
+    // ── THE FLOOR DOES NOT STOP BECAUSE ONE CARD DID ────────────────────
+    // If this person held self-funded seats on somebody else's teams, those
+    // seats would otherwise evaporate: access cut, dialing stopped, and the
+    // owner finding out from an empty chair mid-shift. The owner picks them
+    // up instead, and decides for themselves when to let them go.
+    //
+    // Awaited, not fired and forgotten: a promise left dangling when a
+    // serverless response returns is simply discarded, and this one moves
+    // money. Failures inside are caught and recorded per seat, so a billing
+    // problem on one team cannot stop the cancellation being processed.
+    try {
+      await takeOverAgentPaidSeats(clerkId)
+    } catch (e) {
+      console.error('[stripe/webhook] seat takeover failed for', clerkId, e)
+    }
+
     const { name, email } = await lookupNameAndEmail(clerkId)
     await sendAdminPush('cancel', `${name} cancelled Pro subscription.`)
 

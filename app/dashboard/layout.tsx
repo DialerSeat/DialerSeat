@@ -55,6 +55,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [tier, setTier] = useState<AccessTier>(null)
   // Teams this person has been admitted to but not yet approved for. They can
   // be in the product; they cannot dial that team's campaigns yet.
+  const [seatsTakenOver, setSeatsTakenOver] =
+    useState<Array<{ teamId: string; teamName: string; agentName: string }>>([])
   const [seatLapsed, setSeatLapsed] =
     useState<Array<{ teamId: string; teamName: string; reason: string }>>([])
   const [awaitingApproval, setAwaitingApproval] =
@@ -143,6 +145,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           setPlan((d.plan as Plan) ?? null)
           setAwaitingApproval(d.awaitingApproval || [])
           setSeatLapsed(d.seatLapsed || [])
+          setSeatsTakenOver(d.seatsTakenOver || [])
         })
         .catch(() => {
           if (cancelled) return
@@ -150,6 +153,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           setPlan(null)
           setAwaitingApproval([])
           setSeatLapsed([])
+          setSeatsTakenOver([])
         })
     }
     const loadSeats = () => {
@@ -238,6 +242,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   let primaryWeight: 'bold' | 'normal'
   let secondaryText: string | null = null
 
+  // ── THE PROFILE ROW SAYS WHAT PLAN YOU ARE ON, AND STOPS ────────────────
+  // Seat counts and team names used to hang off this row: "+ 3 TEAM SEATS",
+  // "via Acme". It is a nameplate in the corner of the sidebar, not a billing
+  // summary — team seats belong on the Teams page where they can actually be
+  // acted on, and stacking them here made the row about administration for
+  // somebody who was only trying to find their own name.
   if (isAdmin) {
     primaryLabel = 'ADMIN'
     primaryColor = brandPrimary
@@ -246,14 +256,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     primaryLabel = plan === 'both' ? 'PRO + MANAGER+' : 'MANAGER+'
     primaryColor = brandPrimary
     primaryWeight = 'bold'
-    if (hasAnySeat) {
-      secondaryText = `+ ${totalSeats} TEAM SEAT${totalSeats === 1 ? '' : 'S'}`
-    }
-  } else if (hasActivePersonal && hasAnySeat) {
-    primaryLabel = 'PRO PLAN'
-    primaryColor = 'var(--brand-on-sidebar-muted)'
-    primaryWeight = 'normal'
-    secondaryText = `+ ${totalSeats} TEAM SEAT${totalSeats === 1 ? '' : 'S'}`
   } else if (hasActivePersonal) {
     primaryLabel = 'PRO PLAN'
     primaryColor = 'var(--brand-on-sidebar-muted)'
@@ -262,12 +264,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     primaryLabel = 'TEAM SEAT'
     primaryColor = brandPrimary
     primaryWeight = 'bold'
-    const firstTeam = (seats?.ownerPaidSeats[0] || seats?.agentPaidSeats[0])
-    if (firstTeam) {
-      secondaryText = totalSeats === 1
-        ? `via ${firstTeam.teamName}`
-        : `${totalSeats} teams`
-    }
   } else if (tier === 'lapsed') {
     primaryLabel = 'UNSUBSCRIBED'
     primaryColor = '#ffaa3e'
@@ -721,6 +717,48 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
 
         <DashboardBanners />
+
+        {/* ── YOU ARE NOW PAYING FOR A SEAT YOU DID NOT AGREE TO ───────────
+            An agent who was funding their own seat cancelled, so the seat was
+            picked up automatically rather than letting them stop dialing
+            mid-shift. That is the right default, but it moves the owner's money
+            without their click — so it is said plainly, on every page, with the
+            lever named. Blue rather than amber: nothing is broken, and their
+            agent is still working. */}
+        {seatsTakenOver.length > 0 && (
+          <div style={{
+            padding: '10px 16px', background: '#0b1a2e',
+            borderBottom: '1px solid #1e3a5f', color: '#7cc0ff',
+            fontSize: 13, lineHeight: 1.5,
+          }}>
+            {seatsTakenOver.length === 1
+              ? `${seatsTakenOver[0].agentName} stopped paying for their own seat on ${seatsTakenOver[0].teamName}, so you are covering it now.`
+              : `${seatsTakenOver.length} agents stopped paying for their own seats, so you are covering them now.`}
+            {' '}They keep dialing until you say otherwise.
+            <span style={{ display: 'block', marginTop: 4, color: '#4a86c4', fontSize: 12 }}>
+              To stop paying for a seat, pause or remove that member in{' '}
+              <Link href="/dashboard/teams" style={{ color: '#7cc0ff', textDecoration: 'underline' }}>
+                Teams
+              </Link>.
+              {/* Dismiss is not "stop paying" — that is pausing the member,
+                  a different button with a different consequence. This only
+                  says the owner has seen it. */}
+              <button
+                onClick={async () => {
+                  setSeatsTakenOver([])
+                  try {
+                    await fetch('/api/teams/members/acknowledge-takeover', { method: 'POST' })
+                  } catch {}
+                }}
+                style={{
+                  marginLeft: 10, background: 'transparent', border: '1px solid #1e3a5f',
+                  color: '#7cc0ff', borderRadius: 4, padding: '2px 10px',
+                  fontSize: 11, cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >Got it</button>
+            </span>
+          </div>
+        )}
 
         {/* ── THE SEAT STOPPED BEING PAID FOR ──────────────────────────────
             The owner suspended this seat or their card stopped covering it.

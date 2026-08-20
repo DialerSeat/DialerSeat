@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import { createSeatSubscription, isSeatBillingError } from '@/lib/teamBilling'
+import { createSeatSubscription, isSeatBillingError, agentPaysForThemselves } from '@/lib/teamBilling'
 import { assignOwnerTenantIfWhitelabeled } from '@/lib/teamMembership'
 import { apiError } from '@/lib/apiError'
 
@@ -213,7 +213,16 @@ export async function POST(req: Request) {
       }
     }
 
-    if (codeRow.payer === 'owner') {
+    // Nothing to bill for somebody who already pays for DialerSeat. Their
+    // access does not depend on this seat, so neither should their join.
+    const joinerPaysForThemselves = await agentPaysForThemselves(userId)
+
+    if (codeRow.payer === 'owner' && joinerPaysForThemselves) {
+      await supabaseAdmin
+        .from('team_members')
+        .update({ billing_override: 'free' })
+        .eq('id', memberRow.id)
+    } else if (codeRow.payer === 'owner') {
       const amount = resolveSeatCents({
         memberOverride: memberRow.seat_price_override_cents,
         codeOverride: codeRow.seat_price_override_cents,

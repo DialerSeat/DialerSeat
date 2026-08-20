@@ -106,7 +106,7 @@ export async function GET(req: NextRequest) {
           // Seat state comes back too: an owner managing a member needs to
           // know who is paying and whether the seat is suspended before they
           // can sensibly do anything about either.
-          .select('id, team_id, user_id, status, accepted_at, removed_at, joined_via_code, created_at, billing_override, seat_price_override_cents, seat_suspended_at, seat_suspend_reason')
+          .select('id, team_id, user_id, status, accepted_at, removed_at, joined_via_code, created_at, billing_override, seat_price_override_cents, seat_suspended_at, seat_suspend_reason, billing_takeover_at')
           .in('team_id', ownedIds)
           .in('status', ['active', 'pending'])
           .order('created_at', { ascending: false }),

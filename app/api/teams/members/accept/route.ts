@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import { createSeatSubscription, isSeatBillingError } from '@/lib/teamBilling'
+import { createSeatSubscription, isSeatBillingError, agentPaysForThemselves } from '@/lib/teamBilling'
 import { activatePendingTeamMember } from '@/lib/teamMembership'
 import { apiError } from '@/lib/apiError'
 
@@ -51,7 +51,8 @@ export async function POST(req: Request) {
       .eq('status', 'paid')
       .maybeSingle()
 
-    let stripeSubId: string | null = null
+    let billingIssue: string | null = null
+  let stripeSubId: string | null = null
 
     if (existingPaid?.stripe_subscription_id) {
       stripeSubId = existingPaid.stripe_subscription_id
@@ -65,7 +66,23 @@ export async function POST(req: Request) {
         .limit(1)
         .maybeSingle()
 
-      if (pendingCharge) {
+      // Already paying for DialerSeat? Then there is no seat to buy. Raising a
+      // charge here would bill the owner for access the agent already funds,
+      // and failing that charge would then block an approval that has nothing
+      // to do with money.
+      const selfFunded = await agentPaysForThemselves(member.user_id)
+      if (selfFunded && pendingCharge) {
+        await supabaseAdmin
+          .from('team_seat_charges')
+          .update({ status: 'voided' })
+          .eq('id', pendingCharge.id)
+        await supabaseAdmin
+          .from('team_members')
+          .update({ billing_override: 'free' })
+          .eq('id', memberId)
+      }
+
+      if (pendingCharge && !selfFunded) {
         const { data: agentUser } = await supabaseAdmin
           .from('users')
           .select('email')
@@ -90,26 +107,32 @@ export async function POST(req: Request) {
           await supabaseAdmin
             .from('team_seat_charges')
             .update({
-              stripe_subscription_id: result.stripeSubscriptionId,
+              stripe_subscription_item_id: result.stripeSubscriptionId,
               status: 'paid',
               period_start: result.currentPeriodStart,
               period_end: result.currentPeriodEnd,
             })
             .eq('id', pendingCharge.id)
         } catch (err: any) {
-          if (isSeatBillingError(err)) {
-            if (err.code === 'no_card' || err.code === 'no_customer') {
-              return NextResponse.json(
-                { success: false, error: err.message, code: err.code },
-                { status: 402 }
-              )
-            }
-          }
-          console.error('Stripe seat sub creation failed:', err)
-          return NextResponse.json(
-            { success: false, error: err.message || 'Stripe charge failed' },
-            { status: 502 }
-          )
+          // ── A BILLING PROBLEM IS NOT A REASON TO REFUSE SOMEBODY ────────
+          // This returned 402 and abandoned the approval, so an owner without a
+          // card on file could not accept anyone at all — and the agent sat
+          // waiting, told to contact the very person who was stuck.
+          //
+          // The charge is marked failed and the approval goes through. The
+          // daily enforcement job retries it every day, and if it still has not
+          // settled after the grace period the seat suspends on its own. That
+          // is the same rule already applied everywhere else here: a card
+          // problem is chased, not used to lock people out.
+          const reason = isSeatBillingError(err)
+            ? `${err.code}: ${err.message}`
+            : (err?.message || 'unknown')
+          console.error(`[teams/accept] seat charge failed for member ${memberId}: ${reason}`)
+          await supabaseAdmin
+            .from('team_seat_charges')
+            .update({ status: 'failed' })
+            .eq('id', pendingCharge.id)
+          billingIssue = reason
         }
       }
     }
