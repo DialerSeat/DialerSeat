@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 import { loadScriptsByCampaign } from '@/lib/campaignScriptLinks'
+import { summariseSeatTier } from '@/lib/seatTiers'
 
 export async function GET(req: NextRequest) {
   try {
@@ -286,11 +287,31 @@ export async function GET(req: NextRequest) {
       }))
     }
 
+    // ── VOLUME TIER, COUNTED ACROSS EVERY TEAM THEY OWN ──────────────────
+    // The owner is the billing entity, so a vendor running three teams of eight
+    // is a twenty-four-seat customer — not three small ones. Counting per team
+    // would punish exactly the structure the tiers exist to reward.
+    //
+    // Suspended seats are excluded: a paused seat is not being billed, so it
+    // cannot count toward a discount on the bill.
+    let seatTier = null
+    if (owned.length > 0) {
+      const { count: activeSeatCount } = await supabaseAdmin
+        .from('team_members')
+        .select('id', { count: 'exact', head: true })
+        .in('team_id', owned.map((t: any) => t.id))
+        .eq('status', 'active')
+        .is('seat_suspended_at', null)
+
+      seatTier = summariseSeatTier(activeSeatCount || 0)
+    }
+
     return NextResponse.json({
       success: true,
       teams: { owned, member: memberWithCampaigns },
       // Join requests this viewer is waiting on. Empty for most people.
       myPending,
+      seatTier,
     })
   } catch (error: any) {
     console.error('Team list error:', error)

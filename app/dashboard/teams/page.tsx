@@ -186,10 +186,159 @@ function ViewHeader({ title, onBack }: { title: string; onBack: () => void }) {
   )
 }
 
+
+// ─────────────────────────────────────────────────────────────────────────
+// THINGS YOU SHOULD KNOW
+//
+// Teams carries a pile of rules that stay invisible until one of them
+// surprises somebody — who pays for a seat, what a team code actually grants,
+// why a seat survives a declined card. Every one of those has been a support
+// question, and every one is cheaper to answer here than in an email after an
+// owner has already been caught out by it.
+//
+// Written as plain statements of what the product does, not as marketing.
+// Anything involving money says weekly, because seats bill weekly.
+// ─────────────────────────────────────────────────────────────────────────
+function HelpModal({ onClose }: { onClose: () => void }) {
+  const H = ({ children }: { children: React.ReactNode }) => (
+    <div style={{
+      fontSize: 12, letterSpacing: 1.2, textTransform: 'uppercase',
+      color: MUTED, fontWeight: 700, marginTop: 22, marginBottom: 8,
+    }}>{children}</div>
+  )
+  const P = ({ children }: { children: React.ReactNode }) => (
+    <p style={{ fontSize: 13.5, color: DIM, lineHeight: 1.75, margin: '0 0 10px' }}>{children}</p>
+  )
+  const B = ({ children }: { children: React.ReactNode }) => (
+    <strong style={{ color: TEXT, fontWeight: 600 }}>{children}</strong>
+  )
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 200,
+        background: 'rgba(0,0,0,0.62)', display: 'flex',
+        alignItems: 'center', justifyContent: 'center', padding: 20,
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: '100%', maxWidth: 620, maxHeight: '86vh', overflowY: 'auto',
+          background: BG, border: `1px solid ${HAIRLINE}`, borderRadius: 6,
+          padding: '26px 30px 34px', color: TEXT,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 22, fontWeight: 600 }}>Things you should know</div>
+            <div style={{ fontSize: 12.5, color: DIM, marginTop: 4 }}>
+              How seats, codes and campaigns actually behave.
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            style={{
+              background: 'transparent', border: `1px solid ${HAIRLINE}`,
+              color: MUTED, borderRadius: 4, width: 28, height: 28,
+              cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, lineHeight: 1,
+            }}
+          >×</button>
+        </div>
+
+        <H>Seats</H>
+        <P>
+          A <B>seat</B> is the billable unit, not a campaign. Once somebody holds an
+          active seat, putting them on more of your campaigns costs nothing extra —
+          not to you, not to them. Select people under All Users and use{' '}
+          <B>Add to campaign</B>.
+        </P>
+        <P>
+          Seats bill <B>weekly</B> and can be cancelled at any time.
+        </P>
+        <P>
+          A declined card does <B>not</B> throw your agent out. The charge is marked
+          failed and you are told about it; they keep working while you sort it out.
+          Pausing the seat is the lever, and it cuts access immediately. If a seat
+          stays unpaid for a full week it suspends on its own.
+        </P>
+        <P>
+          When a seat stops being paid for, the person keeps their account, their
+          leads, their recordings and their dispositions. None of that was yours to
+          take — the seat paid for access, not for their work. They are shown how to
+          subscribe on their own plan.
+        </P>
+
+        <H>Codes</H>
+        <P>
+          A <B>team code</B> puts someone on the roster and stops there. It grants no
+          campaign on its own until you add them to one.
+        </P>
+        <P>
+          A <B>campaign code</B> puts them on that campaign and into the team at the
+          same time.
+        </P>
+        <P>
+          Every code says who pays. <B>You pay</B> means the seat is on your card and
+          they are let straight in. <B>They pay</B> means they finish their own
+          checkout first — nobody gets a seat nobody has bought.
+        </P>
+        <P>
+          Joining is <B>instant by default</B>. Switch a code to approval if you want
+          to vet people first; they will wait, be told they are waiting, and be told
+          to contact you.
+        </P>
+        <P>
+          <B>Regenerating</B> a code changes the string and nothing else. The old one
+          stops working immediately. Anyone who already joined with it stays.
+        </P>
+
+        <H>Volume</H>
+        <P>
+          Active seats are counted across <B>every team you own</B>, not per team.
+          Three teams of eight is a twenty-four seat account.
+        </P>
+        <P>
+          Ten seats earns <B>5% off your weekly seat cost</B>. Twenty-five earns{' '}
+          <B>10%</B>. Your standing is counted when each seat&apos;s weekly charge is
+          raised and holds for that week, so your bill does not move around as people
+          come and go.
+        </P>
+        <P>
+          Past fifty seats the rate is set individually. Email{' '}
+          <B>sales@dialerseat.com</B> and we will put together a partnership that fits
+          how you actually run.
+        </P>
+        <P>
+          Suspended seats do not count — a paused seat is not being billed, so it
+          cannot earn a discount on the bill.
+        </P>
+
+        <H>Access</H>
+        <P>
+          Someone can only be on a campaign if a seat is being paid for, by you or by
+          them. Joining a campaign through a code adds them to the team as well.
+        </P>
+        <P>
+          Members see the campaigns they have been given. They do not see your join
+          codes, your requests, or your performance data.
+        </P>
+      </div>
+    </div>
+  )
+}
+
 export default function TeamsPage() {
   const [teams, setTeams] = useState<SidebarTeam[]>([])
   const [rawTeams, setRawTeams] = useState<ApiTeam[]>([])
   const [pending, setPending] = useState(0)
+  const [helpOpen, setHelpOpen] = useState(false)
+
+  // Volume standing across every team this person owns. Null for anyone who
+  // owns none — they have no bill, so there is no tier to be on.
+  const [seatTier, setSeatTier] = useState<any>(null)
   const [myPending, setMyPending] = useState<Array<{
     id: string; teamId: string; teamName: string; requestedAt?: string
   }>>([])
@@ -257,6 +406,7 @@ export default function TeamsPage() {
       setTeams(toSidebarTeams(all))
       const mine = data.myPending || []
       setMyPending(mine)
+      setSeatTier(data.seatTier || null)
       // The badge counts BOTH directions: requests an owner has to decide, and
       // requests this agent is waiting on. One number, because to the person
       // looking at it the question is the same — is there something in
@@ -964,6 +1114,27 @@ export default function TeamsPage() {
                     </>
                   )}
                 </div>
+
+                {/* ── THINGS YOU SHOULD KNOW ────────────────────────────────
+                    Far right, out of the way of the controls. Teams carries a
+                    lot of rules that are invisible until one of them surprises
+                    you — who pays for a seat, what a team code actually grants,
+                    why a discount is counted the way it is. An owner should be
+                    able to look them up without asking, rather than learning
+                    each one from a bill or a locked-out agent. */}
+                <div style={{ marginLeft: 'auto', position: 'relative' }}>
+                  <button
+                    onClick={() => setHelpOpen(true)}
+                    aria-label="Things you should know"
+                    title="Things you should know"
+                    style={{
+                      width: 30, height: 30, borderRadius: '50%',
+                      background: '#111214', border: `1px solid ${HAIRLINE}`,
+                      color: MUTED, fontSize: 15, fontWeight: 700,
+                      cursor: 'pointer', fontFamily: 'inherit', lineHeight: 1,
+                    }}
+                  >?</button>
+                </div>
               </div>
 
               <div style={{
@@ -1000,6 +1171,7 @@ export default function TeamsPage() {
             <>
               <ViewHeader title={openTeam.name} onBack={goOverview} />
               <TeamDetail
+                seatTier={seatTier}
                 team={openTeam}
                 onNewCampaign={id => { setCampaignTeamId(id); setShowCampaignModal(true) }}
                 onToggleCampaign={async (campaignId, nextStatus) => {
@@ -1040,6 +1212,8 @@ export default function TeamsPage() {
           )}
         </div>
       </main>
+
+      {helpOpen && <HelpModal onClose={() => setHelpOpen(false)} />}
 
       <div className="ts-side" id="ts-side">
         <TeamsSidebar

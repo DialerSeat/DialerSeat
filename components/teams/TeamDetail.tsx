@@ -96,8 +96,19 @@ function Section({ title, action, children }: {
 
 export default function TeamDetail({
   team, onNewCampaign, onNewCode, onRegenerateCode, onManageUser, onToggleCampaign,
+  seatTier,
 }: {
   team: TeamDetailData
+  /** Volume standing, counted across every team this owner runs — see
+   *  lib/seatTiers. Absent for a member viewing somebody else's team, who has
+   *  no bill and no business seeing one. */
+  seatTier?: {
+    activeSeats: number
+    percentOff: number
+    tier: { key: string; label: string; badge: string | null; salesHandoff: boolean }
+    next: { tier: { label: string; minSeats: number; percentOff: number | null }; seatsAway: number } | null
+    badges: string[]
+  } | null
   onNewCampaign?: (teamId: string) => void
   /** campaignId set means "a code for this campaign", which joins the team and
    *  that campaign at once. Omitted means a team-only code. */
@@ -302,6 +313,59 @@ export default function TeamDetail({
       </Section>
 
       <Section title="Members">
+        {/* ── VOLUME STANDING ──────────────────────────────────────────────
+            Owner-only, and only once there is something true to say. A team
+            with three seats does not need a discount ladder in their face —
+            that reads as an upsell. Once they are within reach of a rung it
+            becomes information they can act on, so that is when it appears.
+
+            Counted across every team they own, and it says so: an owner
+            running three teams would otherwise read this as a per-team number
+            and conclude the discount is broken.
+
+            Weekly, never monthly — seats bill weekly and cancel anytime. */}
+        {team.isOwner && seatTier && (seatTier.percentOff > 0 || (seatTier.next && seatTier.next.seatsAway <= 5)) && (
+          <div style={{
+            background: PANEL, border: `1px solid ${HAIRLINE}`, borderRadius: 4,
+            padding: '10px 14px', marginBottom: 10,
+            fontSize: 11.5, color: DIM, lineHeight: 1.7,
+          }}>
+            {seatTier.badges.length > 0 && (
+              <span style={{ display: 'inline-flex', gap: 6, marginRight: 8, verticalAlign: 'middle' }}>
+                {seatTier.badges.map(b => (
+                  <span key={b} style={{
+                    fontSize: 9, letterSpacing: 1, fontWeight: 700, color: ACCENT,
+                    border: `1px solid ${ACCENT}`, borderRadius: 3, padding: '2px 6px',
+                  }}>{b}</span>
+                ))}
+              </span>
+            )}
+            <strong style={{ color: TEXT }}>
+              {seatTier.activeSeats} active {seatTier.activeSeats === 1 ? 'seat' : 'seats'}
+            </strong>
+            {' across your teams'}
+            {seatTier.percentOff > 0 && (
+              <> · <span style={{ color: '#32ff7e' }}>{seatTier.percentOff}% off your weekly seat cost</span></>
+            )}
+            {seatTier.tier.salesHandoff ? (
+              <div style={{ marginTop: 4 }}>
+                You are past fifty seats — rates at this size are set individually.
+                Email <strong style={{ color: TEXT }}>sales@dialerseat.com</strong> and
+                we will put together a partnership that fits how you actually run.
+              </div>
+            ) : seatTier.next ? (
+              <div style={{ marginTop: 4 }}>
+                {seatTier.next.seatsAway} more{' '}
+                {seatTier.next.seatsAway === 1 ? 'seat' : 'seats'} reaches{' '}
+                <strong style={{ color: TEXT }}>{seatTier.next.tier.label}</strong>
+                {typeof seatTier.next.tier.percentOff === 'number'
+                  ? ` — ${seatTier.next.tier.percentOff}% off weekly.`
+                  : ' — a rate we set with you directly. Email sales@dialerseat.com.'}
+              </div>
+            ) : null}
+          </div>
+        )}
+
         {team.members.length === 0 ? (
           <div style={{ color: DIM, fontSize: 13 }}>No members yet.</div>
         ) : (
