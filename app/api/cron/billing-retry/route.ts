@@ -5,6 +5,10 @@ import Stripe from 'stripe'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
+// This walks every past_due and unpaid subscription and spends a Stripe round
+// trip on each. At the ten-second default it was being killed partway through,
+// which is the failure that matters here — see the note on ordering below.
+export const maxDuration = 60
 
 // ─────────────────────────────────────────────────────────────────────────
 // KEEP TRYING THE CARD — EVERY DAY, EVERY SUBSCRIPTION
@@ -32,7 +36,24 @@ export const runtime = 'nodejs'
 // customer should be chased and another written off.
 // ─────────────────────────────────────────────────────────────────────────
 
+// Stripe's maximum page size, and the auto-paginating iterator below walks
+// every page — so this bounds a round trip, not the number of subscriptions
+// retried. Nothing to raise.
 const PAGE_LIMIT = 100
+
+// ── WHY A CLOCK, AND WHY IT IS REPORTED ────────────────────────────────────
+// The iterator is unbounded, so on a large enough backlog this job runs until
+// the platform kills it. That alone would only make it slow — what makes it
+// unfair is that Stripe returns subscriptions newest-first and offers no sort
+// order for them. Truncation therefore always falls on the OLDEST past-due
+// accounts: precisely the ones that have been failing longest and are closest
+// to having their seats suspended by the enforcement job.
+//
+// Stopping cleanly and saying how many were missed turns that from a silent
+// bias into a number. If notReached is ever persistently above zero, the fix is
+// a stored cursor so each run resumes where the last stopped, rather than a
+// bigger timeout.
+const TIME_BUDGET_MS = 45_000
 
 interface RetryOutcome {
   scanned: number
@@ -40,17 +61,28 @@ interface RetryOutcome {
   paid: number
   failed: number
   skippedCancelling: number
+  /** Statuses abandoned partway because the time budget ran out. */
+  notReached: string[]
 }
 
 async function retryStatus(
   status: 'past_due' | 'unpaid',
-  out: RetryOutcome
+  out: RetryOutcome,
+  outOfTime: () => boolean
 ): Promise<void> {
   for await (const sub of stripe.subscriptions.list({
     status,
     limit: PAGE_LIMIT,
     expand: ['data.latest_invoice'],
   })) {
+    if (outOfTime()) {
+      out.notReached.push(status)
+      console.warn(
+        `[billing-retry] time budget spent partway through '${status}' after ` +
+        `${out.scanned} subscription(s); the oldest were not reached`
+      )
+      return
+    }
     out.scanned++
 
     // They asked to stop. Chasing somebody who has already cancelled is how you
@@ -96,10 +128,17 @@ export async function GET(req: Request) {
       paid: 0,
       failed: 0,
       skippedCancelling: 0,
+      notReached: [],
     }
 
-    await retryStatus('past_due', out)
-    await retryStatus('unpaid', out)
+    const startedAt = Date.now()
+    const outOfTime = () => Date.now() - startedAt > TIME_BUDGET_MS
+
+    // past_due first: those subscriptions are still inside Stripe's own retry
+    // window, so a recovery here prevents the seat suspension that would
+    // otherwise follow. 'unpaid' has already exhausted it.
+    await retryStatus('past_due', out, outOfTime)
+    await retryStatus('unpaid', out, outOfTime)
 
     if (out.paid > 0) {
       console.log(`[billing-retry] recovered ${out.paid} of ${out.attempted} attempted`)

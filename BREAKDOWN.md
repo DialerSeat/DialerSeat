@@ -183,6 +183,32 @@ and authenticated on top. Every such function must end up with
 `postgres | service_role` and nothing else. `select proname, proacl from pg_proc
 where prosecdef` is the check.
 
+**A batch limit is safe only if processing drains the selection set.** This is
+the difference between a job that is merely slow and one with a permanent blind
+spot, and the number itself tells you nothing about which you have. If a run
+removes what it touched from the filter, `LIMIT 500` is pagination across time —
+3,000 items take six days. If it does not, the same rows return forever and
+everything past the limit is never seen. The stale-call reaper and the seat
+enforcement job had the identical `LIMIT 500`; reaping un-wedges a session, so
+one was fine, while suspending a member never changed the charge's status, so
+the other was a wall. When a pass cannot drain naturally, give it a marker
+column — `team_seat_charges.enforced_at` is the worked example.
+
+Two rules follow. **Order the selection**, always, so a backlog too large for one
+run is worked in a defined sequence instead of whatever the planner returns —
+unordered truncation silently starves the oldest rows, which are usually the
+ones that matter most. And **budget against time, not row count**, wherever a
+row costs an external round trip: a fixed batch of 500 Stripe calls cannot
+finish in a serverless invocation, so the limit that actually binds is the
+timeout, and a job killed mid-pass loses the record of where it stopped.
+
+**A bound that binds silently is indistinguishable from a bug.** Where a limit
+genuinely must exist, it has to say so when it is reached — `truncated: true`,
+`pendingAfterRun`, `notReached`, an alert. That is what turns it from a wrong
+answer nobody questions into a known limitation somebody can act on. The same
+reasoning is why the retention job reports unclassified tables instead of
+quietly keeping them.
+
 **Never fabricate a number.** A dash means no data. A plausible invented figure
 is worse than an obvious gap: the gap gets fixed, the invention gets trusted.
 This applies hardest to billing statements and analytics.
