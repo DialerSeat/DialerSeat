@@ -25,6 +25,8 @@ export interface TeamDetailCampaign {
   agentCount: number
   totalLeads?: number
   calledLeads?: number
+  /** 'active' or 'inactive'. An inactive campaign is dialable by nobody. */
+  status?: string
 }
 
 export interface TeamDetailMember {
@@ -93,13 +95,15 @@ function Section({ title, action, children }: {
 }
 
 export default function TeamDetail({
-  team, onNewCampaign, onNewCode, onRegenerateCode, onManageUser,
+  team, onNewCampaign, onNewCode, onRegenerateCode, onManageUser, onToggleCampaign,
 }: {
   team: TeamDetailData
   onNewCampaign?: (teamId: string) => void
   /** campaignId set means "a code for this campaign", which joins the team and
    *  that campaign at once. Omitted means a team-only code. */
   onNewCode?: (teamId: string, campaignId?: string) => void
+  /** Flip a campaign between active and inactive. */
+  onToggleCampaign?: (campaignId: string, nextStatus: 'active' | 'inactive') => void
   /** Takes the CODE id, not the team id — a team has several. */
   onRegenerateCode?: (codeId: string) => void
   onManageUser?: (userId: string) => void
@@ -235,7 +239,15 @@ export default function TeamDetail({
                 borderRadius: 4, padding: '12px 14px',
               }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 500 }}>{c.name}</div>
+                  <div style={{
+                    fontSize: 14, fontWeight: 500,
+                    color: c.status === 'inactive' ? DIM : TEXT,
+                  }}>
+                    {c.name}
+                    {c.status === 'inactive' && (
+                      <span style={{ color: '#fbbf24', fontSize: 11, marginLeft: 8 }}>paused</span>
+                    )}
+                  </div>
                   <div style={{ fontSize: 11.5, color: DIM, marginTop: 2 }}>
                     {c.agentCount} {c.agentCount === 1 ? 'agent' : 'agents'}
                     {c.totalLeads ? ` · ${c.totalLeads.toLocaleString()} leads` : ''}
@@ -253,6 +265,23 @@ export default function TeamDetail({
                     the common case when a vendor is staffing one specific list
                     — asking them to make a team code and then grant access
                     separately is two jobs for one intention. */}
+                {/* One click, no dialog. Pausing a campaign is something an
+                    owner does between calls — a list runs dry, a compliance
+                    question comes up, a client asks them to stop for the day —
+                    and it is fully reversible, so asking "are you sure" would
+                    cost more than the mistake. The label states what will
+                    happen, not what is true now. */}
+                {team.isOwner && (
+                  <button
+                    style={{
+                      ...btn,
+                      color: c.status === 'inactive' ? '#4ade80' : '#fbbf24',
+                    }}
+                    onClick={() => onToggleCampaign?.(
+                      c.id, c.status === 'inactive' ? 'active' : 'inactive'
+                    )}
+                  >{c.status === 'inactive' ? 'Activate' : 'Pause'}</button>
+                )}
                 {team.isOwner && (
                   <button style={btn} onClick={() => onNewCode?.(team.id, c.id)}>
                     + Code

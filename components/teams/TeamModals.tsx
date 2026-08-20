@@ -334,6 +334,7 @@ export function CreateCodeModal({
     codeType: 'recruit' | 'seat'
     campaignId?: string
     payer: 'owner' | 'agent'
+    joinMode: 'instant' | 'approval'
     maxUses?: number
   }) => void
   busy?: boolean
@@ -343,6 +344,7 @@ export function CreateCodeModal({
   )
   const [campaignId, setCampaignId] = useState(defaultCampaignId || campaigns[0]?.id || '')
   const [payer, setPayer] = useState<'owner' | 'agent'>('owner')
+  const [joinMode, setJoinMode] = useState<'instant' | 'approval'>('approval')
   const [limited, setLimited] = useState(false)
   const [maxUses, setMaxUses] = useState('1')
 
@@ -364,6 +366,7 @@ export function CreateCodeModal({
               codeType,
               campaignId: needsCampaign ? campaignId : undefined,
               payer,
+              joinMode,
               maxUses: limited ? Math.max(1, parseInt(maxUses, 10) || 1) : undefined,
             })}
           >{busy ? 'Creating…' : 'Create Code'}</button>
@@ -414,6 +417,26 @@ export function CreateCodeModal({
         </select>
         <p style={{ margin: '8px 0 0', fontSize: 11.5, color: DIM, lineHeight: 1.6 }}>
           Nobody can dial without a paid seat, whichever way round it is.
+        </p>
+      </div>
+
+      {/* Decides admission AND when the seat is charged, which is why it is one
+          control rather than two: an owner letting someone in immediately is
+          agreeing to pay for them immediately. */}
+      <div style={{ marginBottom: 16 }}>
+        <label style={label}>Joining</label>
+        <select
+          style={field}
+          value={joinMode}
+          onChange={e => setJoinMode(e.target.value as 'instant' | 'approval')}
+        >
+          <option value="approval">Hold for my approval</option>
+          <option value="instant">Let them straight in</option>
+        </select>
+        <p style={{ margin: '8px 0 0', fontSize: 11.5, color: DIM, lineHeight: 1.6 }}>
+          {joinMode === 'instant'
+            ? 'They can dial as soon as they redeem it, and the seat is charged then.'
+            : 'They land in Requests and can look around read-only until you accept them. The seat is charged on approval.'}
         </p>
       </div>
 

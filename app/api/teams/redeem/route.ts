@@ -34,7 +34,7 @@ export async function POST(req: Request) {
 
     const { data: codeRow } = await supabaseAdmin
       .from('team_codes')
-      .select('id, team_id, code_type, campaign_id, payer, is_active, max_uses, use_count, seat_price_override_cents')
+      .select('id, team_id, code_type, campaign_id, payer, is_active, max_uses, use_count, seat_price_override_cents, join_mode')
       .eq('code', code)
       .eq('is_active', true)
       .maybeSingle()
@@ -72,18 +72,25 @@ export async function POST(req: Request) {
       codeRow.code_type === 'seat' &&
       codeRow.payer === 'owner'
 
-    // Free/public-access codes turn on immediately — nobody's paying, so
-    // there's nothing to wait for. Owner-pays codes need the owner's
-    // approval (or are instant for the single-use partner-seat case,
-    // handled below). Agent-pays codes used to also go straight to
-    // 'active' here with zero payment ever collected or enforced — this
-    // is the fix: they now stay pending until the agent's own checkout
-    // actually succeeds (see /api/stripe/create-subscription and the
-    // webhook's pending_team_member_id handling).
+    // ── THE CODE DECIDES, NOT THE PAYER ──────────────────────────────────
+    // This inferred admission from `payer` alone, so every owner-paid invite
+    // behaved as "wait for approval" — an owner handing a link to someone they
+    // had just hired had no way to say "let them straight in", and the joiner
+    // sat waiting on a seat already agreed to.
+    //
+    // join_mode is now an explicit property of the code:
+    //   instant  — admitted on redemption, and charged then
+    //   approval — held pending, charged when the owner accepts in Requests
+    //
+    // Agent-pays is unaffected by join_mode and stays pending regardless: that
+    // seat is not paid for until the agent's own checkout succeeds, and
+    // admitting them first would be giving away a seat nobody has bought.
+    const joinMode = codeRow.join_mode === 'instant' ? 'instant' : 'approval'
+
     const targetStatus =
       isSingleUsePartnerSeat ? 'active'
-      : codeRow.payer === 'owner' ? 'pending'
       : codeRow.payer === 'agent' ? 'pending'
+      : codeRow.payer === 'owner' ? (joinMode === 'instant' ? 'active' : 'pending')
       : 'active'
 
     const { data: existingActive } = await supabaseAdmin
@@ -208,7 +215,19 @@ export async function POST(req: Request) {
         codeOverride: codeRow.seat_price_override_cents,
       })
 
-      if (isSingleUsePartnerSeat && memberRow.status === 'active') {
+      // Admitted straight away — so bill straight away. This is the same path
+      // the single-use partner seat already used: raise the charge, attempt it
+      // against the owner's card, mark it paid or failed. Reused rather than
+      // rewritten, because it is the only seat-billing code that has ever run.
+      //
+      // A declined card does NOT eject them. The charge lands 'failed', the
+      // owner is told, and they keep working until the owner decides
+      // otherwise — pausing the seat is the lever, and it cuts access at once.
+      // Throwing a new hire out over a payment problem they cannot see or fix
+      // is the wrong end to apply pressure to.
+      const chargeNow = isSingleUsePartnerSeat || joinMode === 'instant'
+
+      if (chargeNow && memberRow.status === 'active') {
 
         const { data: chargeRow, error: chargeErr } = await supabaseAdmin
           .from('team_seat_charges')

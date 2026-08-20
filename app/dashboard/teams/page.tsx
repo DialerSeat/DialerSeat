@@ -426,6 +426,7 @@ export default function TeamsPage() {
           agentCount: c.agents.length,
           totalLeads: (rc?.campaign as any)?.total_leads,
           calledLeads: (rc?.campaign as any)?.called_leads,
+          status: (rc?.campaign as any)?.status,
         }
       }),
       members: (raw.members || []).map(m => ({
@@ -784,6 +785,20 @@ export default function TeamsPage() {
               <TeamDetail
                 team={openTeam}
                 onNewCampaign={id => { setCampaignTeamId(id); setShowCampaignModal(true) }}
+                onToggleCampaign={async (campaignId, nextStatus) => {
+                  setBusy(true)
+                  try {
+                    const r = await fetch('/api/campaigns/update', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ id: campaignId, status: nextStatus }),
+                    }).then(x => x.json())
+                    if (!r.success) throw new Error(r.error || 'Could not change the campaign')
+                    await refresh()
+                  } catch (e: any) {
+                    setError(e.message || 'Could not change the campaign')
+                  } finally { setBusy(false) }
+                }}
                 onNewCode={(id, campaignId) => {
                   setCodeTeamId(id)
                   setCodeCampaignId(campaignId)
@@ -997,7 +1012,7 @@ export default function TeamsPage() {
           campaigns={(teams.find(t => t.id === codeTeamId)?.campaigns || [])
             .map(c => ({ id: c.id, name: c.name }))}
           onClose={() => setShowCodeModal(false)}
-          onCreate={async ({ codeType, campaignId, payer, maxUses }) => {
+          onCreate={async ({ codeType, campaignId, payer, joinMode, maxUses }) => {
             setBusy(true)
             try {
               const r = await fetch('/api/teams/codes/create', {
@@ -1008,6 +1023,7 @@ export default function TeamsPage() {
                   codeType,
                   campaignId,
                   payer,
+                  joinMode,
                   maxUses,
                   singleUse: maxUses === 1,
                 }),

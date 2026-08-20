@@ -29,6 +29,7 @@ export async function POST(req: Request) {
       codeType,
       campaignId,
       payer,
+      joinMode,
       singleUse,
       maxUses,
       seatPriceOverrideCents,
@@ -177,6 +178,11 @@ export async function POST(req: Request) {
         team_id: teamId,
         code,
         code_type: codeType,
+        // instant admits and charges on redeem; approval holds them for the
+        // owner and charges on acceptance. Defaults to approval — the safer
+        // of the two, since it never bills for somebody the owner has not
+        // knowingly let in.
+        join_mode: joinMode === 'instant' ? 'instant' : 'approval',
         campaign_id: codeType === 'seat' ? campaignId : null,
         payer,
         is_active: true,

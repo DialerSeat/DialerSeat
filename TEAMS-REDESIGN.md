@@ -184,3 +184,43 @@ Implementation notes for whoever picks this up:
   agent's export must omit the phone column outright; the owner's own export
   keeps it, since it is their list.
 - Same for the leads page and any bulk view an agent can reach.
+
+
+### A member's team view is not the owner's
+
+Clicking a team shows the same panel to everyone right now: stats, campaigns,
+members, join codes. That is the owner's view and only the owner's.
+
+A member opening their own team should see **what they can work** — the
+campaigns available to them, and how to get into one — not aggregate
+performance for a team they do not run. Total leads and dialed counts across
+everyone else's work is somebody else's business, and codes and the roster are
+administration they have no part in.
+
+So: same route, two panels. Owner keeps stats + campaigns + members + codes.
+Member gets available campaigns, each with a way to start dialing it, and
+nothing else.
+
+
+### A campaign view page
+
+Clicking a campaign should open it the way clicking a team opens a team, rather
+than only scoping the overview. What belongs there:
+
+- **Its numbers** — leads, dialed, contact and conversion rate, for this
+  campaign alone.
+- **Who works it** — the agents with access, and a way to add or remove one
+  without going through the team roster.
+- **Its settings, editable in place** — dialer mode, AMD, recording, access
+  mode, repeat count. These are set once at creation today and cannot be
+  changed afterwards from anywhere in Teams.
+- **Leads** — upload more, or replace the list entirely. Replacing is the
+  common one for a vendor rotating a stale file, and it is currently a trip to
+  the Leads page with no campaign context.
+- **Pause / activate**, the same toggle now on the team view.
+
+The pieces mostly exist: /api/campaigns/update takes every setting,
+/api/teams/access/{grant,revoke} moves agents on and off, and lead upload is on
+the Leads page. This is assembly plus one view, not new capability — the value
+is that an owner stops having to know which of four pages holds the control
+they want.
