@@ -231,14 +231,22 @@ export default function TeamsPage() {
       // two empty arrays — which is why the sidebar stayed empty, creating a
       // team looked like it did nothing, and the campaign dialog reported no
       // teams to attach to. One wrong key, three symptoms.
-      const owned: ApiTeam[] = (data.teams?.owned || []).map((t: any) => ({
+      // ── NORMALISE THE SHAPE ONCE, HERE ──────────────────────────────────
+      // The endpoint calls an owned team's campaigns `teamCampaigns` and the
+      // member branch calls them `campaigns`. Reading one name meant attached
+      // campaigns never appeared — the third time this response's naming has
+      // silently produced an empty list rather than an error.
+      //
+      // Both are accepted at the boundary so nothing downstream has to know or
+      // care which branch a team came from.
+      const normalise = (t: any, isOwner: boolean): ApiTeam => ({
         ...t,
-        isOwner: true,
-      }))
-      const member: ApiTeam[] = (data.teams?.member || []).map((t: any) => ({
-        ...t,
-        isOwner: t.viewerRole === 'owner',
-      }))
+        isOwner,
+        campaigns: t.teamCampaigns ?? t.campaigns ?? [],
+      })
+      const owned: ApiTeam[] = (data.teams?.owned || []).map((t: any) => normalise(t, true))
+      const member: ApiTeam[] = (data.teams?.member || [])
+        .map((t: any) => normalise(t, t.viewerRole === 'owner'))
       const all: ApiTeam[] = [...owned, ...member]
       setRawTeams(all)
       setTeams(toSidebarTeams(all))
@@ -363,6 +371,19 @@ export default function TeamsPage() {
   // ALL USERS and REQUESTS are sidebar scopes AND full views. Selecting either
   // swaps the panel; the back arrow returns to the overview without disturbing
   // the range or the tree.
+  /**
+   * Leave a full-panel view.
+   *
+   * Clears the scope as well as the view. The sidebar marks a row as selected
+   * from `scope`, so returning from a team while scope still pointed at it left
+   * that row lit up as though you were still inside — the highlight outlived
+   * the thing it described.
+   */
+  const goOverview = useCallback(() => {
+    setView('overview')
+    setScope({ kind: 'all' })
+  }, [])
+
   // ── PUSH BUTTONS, NOT A PERMANENT SELECTION ────────────────────────────
   // All Users and Requests toggle: pressing the one you are already in returns
   // you to the overview. Nothing in this footer is a mode you get stuck in,
@@ -542,7 +563,7 @@ export default function TeamsPage() {
         <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '24px 28px 40px' }}>
           {view === 'all_users' && (
             <>
-              <ViewHeader title="All Users" onBack={() => setView('overview')} />
+              <ViewHeader title="All Users" onBack={goOverview} />
               {allMembers.length === 0 ? (
                 <div style={{ color: DIM, fontSize: 13 }}>
                   {loading ? 'Loading…' : 'No members yet.'}
@@ -569,7 +590,7 @@ export default function TeamsPage() {
 
           {view === 'requests' && (
             <>
-              <ViewHeader title="Requests" onBack={() => setView('overview')} />
+              <ViewHeader title="Requests" onBack={goOverview} />
 
               {/* ── WHAT YOU ARE WAITING ON ──────────────────────────────────
                   An agent who joined with a review code previously saw nothing
@@ -759,7 +780,7 @@ export default function TeamsPage() {
 
           {view === 'team' && openTeam && (
             <>
-              <ViewHeader title={openTeam.name} onBack={() => setView('overview')} />
+              <ViewHeader title={openTeam.name} onBack={goOverview} />
               <TeamDetail
                 team={openTeam}
                 onNewCampaign={id => { setCampaignTeamId(id); setShowCampaignModal(true) }}

@@ -190,10 +190,6 @@ export default function TeamDetail({
                       <button style={btn} onClick={() => copy(link, `l-${c.id}`)}>
                         {copied === `l-${c.id}` ? 'Copied' : 'Copy Link'}
                       </button>
-                      <a
-                        style={{ ...btn, textDecoration: 'none', display: 'inline-block' }}
-                        href={`mailto:?subject=${encodeURIComponent(`Join ${team.name} on DialerSeat`)}&body=${encodeURIComponent(`Use this link to join:\n\n${link || c.code}`)}`}
-                      >Email</a>
                       <button style={btn} onClick={() => onRegenerateCode?.(c.id)}>Regenerate</button>
                     </div>
                     {/* Terms in one line, because an owner handing out three

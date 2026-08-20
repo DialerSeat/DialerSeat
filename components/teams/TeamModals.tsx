@@ -442,3 +442,118 @@ export function CreateCodeModal({
     </Shell>
   )
 }
+
+// =============================================================================
+// MANAGE A MEMBER
+// =============================================================================
+// Everything an owner can do to one person's place in a team, in one place:
+// see who pays, pause or resume the seat, or remove them entirely.
+//
+// Pausing and removing are different acts and are presented as such. A pause
+// stops the billing and the access while keeping the person — they come back
+// with one click. Removing ends the membership. Conflating them behind one
+// "deactivate" is how owners accidentally destroy a relationship they only
+// meant to interrupt.
+// =============================================================================
+export function ManageMemberModal({
+  member, teamName, onClose, onSeatAction, onRemove, busy,
+}: {
+  member: {
+    memberId: string
+    name: string
+    email?: string | null
+    seatPaidBy?: 'owner' | 'agent'
+    seatSuspendedAt?: string | null
+    campaignCount: number
+  }
+  teamName: string
+  onClose: () => void
+  onSeatAction: (memberId: string, action: 'pause' | 'resume') => void
+  onRemove: (memberId: string) => void
+  busy?: boolean
+}) {
+  const [confirmRemove, setConfirmRemove] = useState(false)
+  const suspended = !!member.seatSuspendedAt
+
+  return (
+    <Shell
+      title={member.name}
+      subtitle={`${member.email || 'No email on file'} · ${teamName}`}
+      onClose={onClose}
+      footer={<button style={btn} onClick={onClose}>Close</button>}
+    >
+      <div style={{
+        display: 'grid', gap: 10, marginBottom: 18,
+        gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+      }}>
+        <div style={{ background: '#111214', borderRadius: 4, padding: '10px 12px' }}>
+          <div style={{ ...label, marginBottom: 4 }}>Seat</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: suspended ? '#fbbf24' : '#4ade80' }}>
+            {suspended ? 'Paused' : 'Active'}
+          </div>
+        </div>
+        <div style={{ background: '#111214', borderRadius: 4, padding: '10px 12px' }}>
+          <div style={{ ...label, marginBottom: 4 }}>Paid By</div>
+          <div style={{ fontSize: 14, fontWeight: 600 }}>
+            {member.seatPaidBy === 'agent' ? 'Them' : 'You'}
+          </div>
+        </div>
+        <div style={{ background: '#111214', borderRadius: 4, padding: '10px 12px' }}>
+          <div style={{ ...label, marginBottom: 4 }}>Campaigns</div>
+          <div style={{ fontSize: 14, fontWeight: 600 }}>{member.campaignCount}</div>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gap: 8 }}>
+        <button
+          style={{ ...btn, textAlign: 'left', opacity: busy ? 0.5 : 1 }}
+          disabled={busy}
+          onClick={() => onSeatAction(member.memberId, suspended ? 'resume' : 'pause')}
+        >
+          <div style={{ fontWeight: 600 }}>{suspended ? 'Resume seat' : 'Pause seat'}</div>
+          <div style={{ fontSize: 11.5, color: DIM, marginTop: 2 }}>
+            {suspended
+              ? 'They can dial again and billing restarts.'
+              : 'They keep their place but cannot dial, and the seat stops being billed.'}
+          </div>
+        </button>
+
+        {!confirmRemove ? (
+          <button
+            style={{ ...btn, textAlign: 'left', borderColor: '#7f1d1d', opacity: busy ? 0.5 : 1 }}
+            disabled={busy}
+            onClick={() => setConfirmRemove(true)}
+          >
+            <div style={{ fontWeight: 600, color: '#fca5a5' }}>Remove from team</div>
+            <div style={{ fontSize: 11.5, color: DIM, marginTop: 2 }}>
+              Ends the membership and every campaign grant that came with it.
+            </div>
+          </button>
+        ) : (
+          <div style={{
+            border: '1px solid #7f1d1d', background: '#2a1113',
+            borderRadius: 4, padding: '12px 14px',
+          }}>
+            <div style={{ fontSize: 13, color: '#fecaca', lineHeight: 1.6, marginBottom: 10 }}>
+              Remove <strong>{member.name}</strong> from {teamName}? Their call history
+              stays; their access does not.
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button style={btn} disabled={busy} onClick={() => setConfirmRemove(false)}>
+                Cancel
+              </button>
+              <button
+                style={{
+                  ...btn, background: '#da373c', borderColor: '#da373c',
+                  color: '#fff', fontWeight: 600, opacity: busy ? 0.5 : 1,
+                }}
+                disabled={busy}
+                onClick={() => onRemove(member.memberId)}
+              >{busy ? 'Removing…' : 'Remove'}</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </Shell>
+  )
+}
