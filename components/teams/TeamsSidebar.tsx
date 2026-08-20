@@ -73,6 +73,8 @@ interface Props {
   onOpenTeamMenu?: (teamId: string) => void
   onJoinWithCode?: (code: string) => void
   joining?: boolean
+  /** Result of the last join attempt, shown under the code field. */
+  joinMessage?: { kind: 'error' | 'success'; text: string } | null
 }
 
 const SURFACE = '#2b2d31'
@@ -112,6 +114,7 @@ export default function TeamsSidebar({
   onOpenTeamMenu,
   onJoinWithCode,
   joining = false,
+  joinMessage = null,
 }: Props) {
   // Everything starts open. An agency with two teams should see its whole
   // shape on load; collapsing is for when the list has outgrown the screen,
@@ -252,27 +255,28 @@ export default function TeamsSidebar({
            announcing what they do. Pressed state is inset rather than merely
            tinted, so an active view is legible without the button looking
            permanently stuck on. */
+        /* ── PLAIN BUTTONS, NO SELECTED STATE ────────────────────────────────
+           These open a view; they are not a mode you are in. Marking one as
+           selected meant All Users sat lit up permanently, because it is the
+           default scope — so the highlight said nothing and just added noise.
+           Stacked full width as they were, with a button's face so they read
+           as actions rather than as two more branches of the tree above. */
         .ts-foot { flex-shrink: 0; border-top: 1px solid ${HAIRLINE}; padding: 10px 12px 0; }
-        .ts-foot-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .ts-foot-buttons { display: flex; flex-direction: column; gap: 6px; }
         .ts-foot-btn {
-          display: flex; align-items: center; justify-content: center; gap: 7px;
+          display: flex; align-items: center; gap: 8px;
           border: 1px solid ${HAIRLINE}; border-radius: 5px;
           background: ${SURFACE_RAISED}; color: ${TEXT_MUTED};
-          cursor: pointer; padding: 10px 8px;
+          cursor: pointer; padding: 10px 12px; width: 100%;
           font-family: inherit; font-size: 11px; font-weight: 700;
           letter-spacing: 1.1px; text-transform: uppercase;
           box-shadow: 0 1px 0 rgba(0,0,0,0.35);
-          transition: background 0.1s ease, color 0.1s ease,
-                      box-shadow 0.1s ease, transform 0.06s ease;
+          transition: background 0.1s ease, color 0.1s ease, box-shadow 0.1s ease;
         }
         .ts-foot-btn:hover { background: #3a3c42; color: ${TEXT}; }
         /* Press moves the shadow, never the element — a button that shifts
            under the cursor loses the click. */
         .ts-foot-btn:active { box-shadow: inset 0 2px 4px rgba(0,0,0,0.45); }
-        .ts-foot-btn.is-on {
-          background: ${ACCENT}; border-color: ${ACCENT}; color: #fff;
-          box-shadow: inset 0 2px 5px rgba(0,0,0,0.35);
-        }
 
         .ts-join { padding: 10px 14px 14px; }
         .ts-join-label { font-size: 12px; color: ${TEXT_MUTED}; margin-bottom: 6px; }
@@ -425,19 +429,17 @@ export default function TeamsSidebar({
       <div className="ts-foot">
         <div className="ts-foot-buttons">
           <button
-            className={`ts-foot-btn${scope.kind === 'all' ? ' is-on' : ''}`}
+            className="ts-foot-btn"
             onClick={() => onScopeChange({ kind: 'all' })}
-            aria-pressed={scope.kind === 'all'}
           >
-            All Users
+            <span style={{ flex: 1, textAlign: 'left' }}>All Users</span>
           </button>
 
           <button
-            className={`ts-foot-btn${scope.kind === 'requests' ? ' is-on' : ''}`}
+            className="ts-foot-btn"
             onClick={() => onScopeChange({ kind: 'requests' })}
-            aria-pressed={scope.kind === 'requests'}
           >
-            Requests
+            <span style={{ flex: 1, textAlign: 'left' }}>Requests</span>
             {pendingRequests > 0 && <span className="ts-badge">{pendingRequests}</span>}
           </button>
         </div>
@@ -448,16 +450,29 @@ export default function TeamsSidebar({
             so it must not be hidden inside team-owner tooling. */}
         <div className="ts-join">
           <div className="ts-join-label">Have a Code? Join a Team:</div>
+          {/* Enter submits. Blur does NOT — it used to, which meant clicking
+              anywhere after typing fired a join attempt nobody asked for. */}
           <input
             className="ts-join-input"
             value={codeInput}
             onChange={e => setCodeInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') submitCode() }}
-            onBlur={submitCode}
             disabled={joining}
             placeholder={joining ? 'Joining…' : 'Enter Team Code Here'}
             aria-label="Team or campaign join code"
           />
+          {joinMessage && (
+            <div
+              role="status"
+              style={{
+                marginTop: 7, padding: '7px 9px', borderRadius: 4,
+                fontSize: 11.5, lineHeight: 1.5,
+                background: joinMessage.kind === 'error' ? '#3b1416' : '#12301d',
+                border: `1px solid ${joinMessage.kind === 'error' ? '#7f1d1d' : '#1f6b3f'}`,
+                color: joinMessage.kind === 'error' ? '#fca5a5' : '#86efac',
+              }}
+            >{joinMessage.text}</div>
+          )}
         </div>
       </div>
     </aside>

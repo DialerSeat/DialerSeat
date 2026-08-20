@@ -192,6 +192,9 @@ export default function TeamsPage() {
   const [codeTeamId, setCodeTeamId] = useState<string | undefined>()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [joining, setJoining] = useState(false)
+  const [joinMessage, setJoinMessage] =
+    useState<{ kind: 'error' | 'success'; text: string } | null>(null)
 
   // One loader, called on mount and after every mutation. Anything that
   // changes teams, campaigns or codes re-reads the same source rather than
@@ -201,7 +204,20 @@ export default function TeamsPage() {
     try {
       const res = await fetch('/api/teams/list')
       const data = await res.json()
-      const all: ApiTeam[] = [...(data.owned || []), ...(data.joined || [])]
+      // The endpoint nests these under `teams` and calls the second list
+      // `member`, not `joined`. Reading data.owned/data.joined silently gave
+      // two empty arrays — which is why the sidebar stayed empty, creating a
+      // team looked like it did nothing, and the campaign dialog reported no
+      // teams to attach to. One wrong key, three symptoms.
+      const owned: ApiTeam[] = (data.teams?.owned || []).map((t: any) => ({
+        ...t,
+        isOwner: true,
+      }))
+      const member: ApiTeam[] = (data.teams?.member || []).map((t: any) => ({
+        ...t,
+        isOwner: t.viewerRole === 'owner',
+      }))
+      const all: ApiTeam[] = [...owned, ...member]
       setRawTeams(all)
       setTeams(toSidebarTeams(all))
       setPending(all.reduce((n, t) => n + (t.pendingMembers?.length || 0), 0))
@@ -515,6 +531,49 @@ export default function TeamsPage() {
           pendingRequests={pending}
           onCreateTeam={() => setShowTeamModal(true)}
           onCreateCampaign={() => { setCampaignTeamId(undefined); setShowCampaignModal(true) }}
+          joining={joining}
+          joinMessage={joinMessage}
+          onJoinWithCode={async code => {
+            setJoining(true)
+            setJoinMessage(null)
+            try {
+              const r = await fetch('/api/teams/redeem', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code }),
+              }).then(x => x.json())
+
+              if (!r.success) {
+                setJoinMessage({ kind: 'error', text: r.error || 'That code did not work.' })
+                return
+              }
+
+              // Refresh BEFORE reporting success, so the team is already in the
+              // tree by the time the message appears. Saying "joined" while the
+              // sidebar still looks empty reads as a failure.
+              await refresh()
+
+              // The endpoint reports pending on the member row, not at the top
+              // level. A code that needs approval has not granted anything yet,
+              // and saying "joined" would be a lie the agent discovers later.
+              const teamName = r.team?.name || 'the team'
+              const isPending = r.member?.status === 'pending'
+              const grants = Number(r.newAccessGrants || 0)
+
+              setJoinMessage({
+                kind: 'success',
+                text: isPending
+                  ? `Request sent to ${teamName}. You get access once the owner approves.`
+                  : grants > 0
+                    ? `Joined ${teamName} — ${grants} campaign${grants === 1 ? '' : 's'} unlocked.`
+                    : `Joined ${teamName}.`,
+              })
+            } catch {
+              setJoinMessage({ kind: 'error', text: 'Could not reach the server. Try again.' })
+            } finally {
+              setJoining(false)
+            }
+          }}
         />
       </div>
 
