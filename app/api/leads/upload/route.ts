@@ -5,6 +5,27 @@ import { auth } from '@clerk/nextjs/server'
 import { apiError } from '@/lib/apiError'
 import { isCallableNow } from '@/lib/callingWindow'
 
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+// Vercel's documented default and Hobby maximum with fluid compute. A large
+// upload is many round trips — dedupe lookups, then chunked inserts — and the
+// bound that matters is time, not rows.
+export const maxDuration = 300
+
+// ── THE REQUEST BODY IS CAPPED BY THE PLATFORM, NOT BY US ──────────────────
+// Vercel rejects any request body over 4.5MB with a 413 before this handler is
+// ever entered, so no amount of server code makes a single enormous upload
+// work. At roughly 250 bytes of JSON per lead that is somewhere around 15,000
+// rows, and it varies with how much extra_data each row carries — which means a
+// row-count limit here would be a guess that is sometimes wrong in both
+// directions.
+//
+// The client therefore splits large files and posts them in sequence
+// (lib/uploadLeadsInChunks.ts). This handler stays a single-batch endpoint and
+// is safe to call repeatedly: dedupe runs per call against what is already in
+// the campaign, so a chunk that overlaps a previous one rejects the duplicates
+// rather than doubling them.
+
 /**
  * Parses optional consent fields from a lead row. Returns the four columns
  * if they're present and parseable, all null otherwise.
@@ -423,11 +444,37 @@ export async function POST(req: Request) {
       }, { status: 400 })
     }
 
-    const { error: insertError } = await supabaseAdmin
-      .from('leads')
-      .insert(leadsToInsert)
+    // ── INSERTED IN CHUNKS, AND A FAILURE SAYS WHAT LANDED ────────────────
+    // This was one insert() of every row. A single statement carrying tens of
+    // thousands of rows is a different thing from a few hundred: it can exceed
+    // the statement timeout, and when it fails it fails ENTIRELY, so a user who
+    // waited two minutes is told only "upload failed" with nothing to say
+    // whether any of it took.
+    //
+    // Chunked, so each statement stays small and predictable. Partial success
+    // is reported honestly rather than being converted into a total failure —
+    // the rows that landed are really there, and telling somebody otherwise
+    // would have them upload again and rely on dedupe to sort it out.
+    const INSERT_CHUNK = 1000
+    let inserted = 0
+    let insertFailedAt: string | null = null
 
-    if (insertError) throw insertError
+    for (let i = 0; i < leadsToInsert.length; i += INSERT_CHUNK) {
+      const slice = leadsToInsert.slice(i, i + INSERT_CHUNK)
+      const { error: insertError } = await supabaseAdmin
+        .from('leads')
+        .insert(slice)
+
+      if (insertError) {
+        // The first chunk failing means nothing landed, which is a plain
+        // failure and should read as one.
+        if (inserted === 0) throw insertError
+        console.error('[leads/upload] insert failed after', inserted, 'rows', insertError)
+        insertFailedAt = insertError.message
+        break
+      }
+      inserted += slice.length
+    }
 
     const { count: actualCount } = await supabaseAdmin
       .from('leads')
@@ -441,11 +488,31 @@ export async function POST(req: Request) {
 
     // Count how many leads in this batch actually carried consent metadata.
     // Useful for showing "uploaded 1,000 leads (823 with consent)" in the UI.
-    const consentCount = leadsToInsert.filter((l: any) => l && l.consent_date).length
+    const consentCount = leadsToInsert
+      .slice(0, inserted)
+      .filter((l: any) => l && l.consent_date).length
+
+    // A partial insert is not a success. Saying so, with the real number and
+    // the way forward, is the difference between a user who knows what to do
+    // and one who has to guess whether re-uploading will duplicate everything.
+    if (insertFailedAt) {
+      return NextResponse.json({
+        success: false,
+        error:
+          `Saved ${inserted.toLocaleString()} of ${leadsToInsert.length.toLocaleString()} leads, ` +
+          `then the upload stopped.`,
+        detail:
+          'Upload the same file again — the leads already saved will be detected as ' +
+          'duplicates and skipped, so nothing will be added twice.',
+        count: inserted,
+        attempted: leadsToInsert.length,
+        partial: true,
+      }, { status: 207 })
+    }
 
     return NextResponse.json({
       success: true,
-      count: leadsToInsert.length,
+      count: inserted,
       total: actualCount,
       withConsent: consentCount,
       // A PARTIAL import is still a problem the user needs to know about.

@@ -270,6 +270,59 @@ async function checkSecurityInvariants(): Promise<AlertResult> {
   }
 }
 
+// ── THE PLATFORM LIMIT THAT STOPS THE DIALER ───────────────────────────────
+// Supabase puts a Free Plan project into READ-ONLY mode when the database
+// exceeds 500 MB. Read-only is not degraded service: no lead uploads, no call
+// rows, no dispositions, no heartbeats. The dialer stops, mid-shift, and the
+// cause is invisible from inside the app — every write simply fails.
+//
+// It is also completely predictable, which is the point. Roughly 1,400 bytes
+// per lead including indexes means the ceiling arrives at a few hundred
+// thousand leads, and it arrives on an ordinary Tuesday when somebody uploads a
+// list. Nothing else in this codebase can see it coming, so this does.
+//
+// Warns at 70% and again at 85% — early enough to upgrade deliberately rather
+// than discovering it from an agent saying the dialer stopped saving.
+const DB_LIMIT_BYTES = 500 * 1024 * 1024
+const DB_WARN_FRACTION = 0.70
+const DB_URGENT_FRACTION = 0.85
+
+async function checkDatabaseCapacity(): Promise<AlertResult> {
+  const { data, error } = await supabase.rpc('database_size_bytes')
+  if (error) {
+    return { key: 'db_capacity', fired: false, reason: `rpc failed: ${error.message}` }
+  }
+
+  const bytes = Number(data) || 0
+  const used = bytes / DB_LIMIT_BYTES
+  const mb = Math.round(bytes / 1024 / 1024)
+  const pct = Math.round(used * 100)
+
+  if (used < DB_WARN_FRACTION) {
+    return { key: 'db_capacity', fired: false, reason: `${mb}MB used (${pct}%)` }
+  }
+
+  const urgent = used >= DB_URGENT_FRACTION
+  // Distinct keys so crossing into urgent alerts immediately rather than being
+  // swallowed by the earlier warning's cooldown.
+  const fired = await fireOnce(
+    urgent ? 'db_capacity_urgent' : 'db_capacity',
+    'webhook_silence',
+    urgent
+      ? `Database is ${pct}% of the 500MB Free Plan limit (${mb}MB). At 100% Supabase ` +
+        `switches the project to READ-ONLY — uploads, calls and dispositions all stop. ` +
+        `Upgrade to Pro before that happens.`
+      : `Database is ${pct}% of the 500MB Free Plan limit (${mb}MB). Read-only mode ` +
+        `starts at 100%. Plan the Pro upgrade now rather than mid-shift.`
+  )
+
+  return {
+    key: 'db_capacity',
+    fired,
+    reason: `${mb}MB used (${pct}%)${urgent ? ' — URGENT' : ''}`,
+  }
+}
+
 export async function GET(req: Request) {
   const authHeader = req.headers.get('authorization')
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -294,6 +347,9 @@ export async function GET(req: Request) {
       })),
       checkSecurityInvariants().catch(err => ({
         key: 'security_invariants', fired: false, reason: `threw: ${err?.message ?? err}`,
+      })),
+      checkDatabaseCapacity().catch(err => ({
+        key: 'db_capacity', fired: false, reason: `threw: ${err?.message ?? err}`,
       })),
     ])
 

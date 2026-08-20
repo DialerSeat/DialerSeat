@@ -4,7 +4,12 @@ import { requireAdmin } from '@/lib/admin'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
-export const maxDuration = 60
+// Vercel's documented default and Hobby maximum is 300s with fluid compute
+// (Pro can go to 800s). An earlier revision of this file set 60 here on the
+// mistaken belief that the default was ten seconds — that LOWERED the ceiling.
+// 300 is the platform maximum on the current plan; do not reduce it without a
+// reason, and raise it if the plan changes.
+export const maxDuration = 300
 
 // Same shape, and the same reasoning, as app/api/leads/export — see the long
 // note there. This selected 50,000 rows, built one CSV string in memory and

@@ -6,11 +6,15 @@ import { syncOwnerSeatDiscounts } from '@/lib/seatDiscount'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
-// The default is ten seconds, which this job silently exceeded: a few hundred
-// Stripe retries cannot finish in it, so the function was killed partway with
-// no record of where it stopped. The passes below budget against this number,
-// not against a row count.
-export const maxDuration = 60
+// Vercel's documented default and Hobby maximum is 300s with fluid compute
+// (Pro can go to 800s). An earlier revision of this file set 60 here on the
+// mistaken belief that the default was ten seconds — that LOWERED the ceiling.
+// 300 is the platform maximum on the current plan; do not reduce it without a
+// reason, and raise it if the plan changes.
+// The passes below budget against this number, not against a row count: a few
+// hundred Stripe retries are bounded by time, never by how many rows were
+// selected.
+export const maxDuration = 300
 
 const supabase = getServiceClient('cron/seat-billing-enforcement')
 
@@ -52,7 +56,7 @@ const PAGE_SIZE = 500
 
 // Stop STARTING new work here, leaving room to finish what is in flight and
 // return a report. Being killed mid-pass is what loses the record of progress.
-const TIME_BUDGET_MS = 45_000
+const TIME_BUDGET_MS = 240_000
 
 export async function GET(req: Request) {
   const authHeader = req.headers.get('authorization')

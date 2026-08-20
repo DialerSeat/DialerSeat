@@ -5,10 +5,14 @@ import Stripe from 'stripe'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
+// Vercel's documented default and Hobby maximum is 300s with fluid compute
+// (Pro can go to 800s). An earlier revision of this file set 60 here on the
+// mistaken belief that the default was ten seconds — that LOWERED the ceiling.
+// 300 is the platform maximum on the current plan; do not reduce it without a
+// reason, and raise it if the plan changes.
 // This walks every past_due and unpaid subscription and spends a Stripe round
-// trip on each. At the ten-second default it was being killed partway through,
-// which is the failure that matters here — see the note on ordering below.
-export const maxDuration = 60
+// trip on each, so time is the real bound — see the note on ordering below.
+export const maxDuration = 300
 
 // ─────────────────────────────────────────────────────────────────────────
 // KEEP TRYING THE CARD — EVERY DAY, EVERY SUBSCRIPTION
@@ -53,7 +57,7 @@ const PAGE_LIMIT = 100
 // bias into a number. If notReached is ever persistently above zero, the fix is
 // a stored cursor so each run resumes where the last stopped, rather than a
 // bigger timeout.
-const TIME_BUDGET_MS = 45_000
+const TIME_BUDGET_MS = 240_000
 
 interface RetryOutcome {
   scanned: number

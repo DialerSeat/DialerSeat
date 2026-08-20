@@ -5,8 +5,13 @@ import { requireUser } from '@/lib/requireUser'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 // Streams, so it holds one page in memory rather than the whole export. The
-// budget still matters because a very large export is many round trips.
-export const maxDuration = 60
+// duration still matters because a very large export is many round trips.
+// Vercel's documented default and Hobby maximum is 300s with fluid compute
+// (Pro can go to 800s). An earlier revision of this file set 60 here on the
+// mistaken belief that the default was ten seconds — that LOWERED the ceiling.
+// 300 is the platform maximum on the current plan; do not reduce it without a
+// reason, and raise it if the plan changes.
+export const maxDuration = 300
 
 // SECURITY (was IDOR): this route exported up to 50,000 lead rows (PII) scoped
 // ONLY by a client-supplied ?user_id, with no auth check. Any signed-in user

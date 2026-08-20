@@ -5,6 +5,7 @@ import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
 import { parseLeadsFile, inspectFile, isAcceptedLeadsFile, ACCEPTED_LEADS_ACCEPT_ATTR } from '@/lib/parseLeadsFile'
 import { overlayDismiss } from '@/lib/overlayDismiss'
+import { uploadLeadsInChunks, type UploadProgress } from '@/lib/uploadLeadsInChunks'
 
 const T = {
   bg: 'var(--brand-page-bg)',
@@ -452,6 +453,10 @@ export default function CampaignsPage() {
   // failure — so a file with malformed phone numbers reported a quota problem
   // the user did not have, and there was nothing to act on.
   const [csvUploadError, setCsvUploadError] = useState<UploadFailure | null>(null)
+  // Only set while a file is large enough to be split across several requests.
+  // A single-chunk upload leaves this null so nothing flickers for small files,
+  // which are the overwhelming majority.
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null)
 
   const isLapsed = tier === 'lapsed' || tier === 'new'
 
@@ -787,22 +792,29 @@ export default function CampaignsPage() {
       let csvFailed: UploadFailure | null = null
       if (csvData.length > 0) {
         try {
-          const uploadRes = await fetch('/api/leads/upload', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ campaign_id: newId, leads: csvData }),
+          // Chunked: Vercel refuses a request body over 4.5MB before this ever
+          // reaches our handler, so a large file has to go up in pieces. See
+          // lib/uploadLeadsInChunks.ts — safe to retry, because each chunk
+          // dedupes against what the earlier ones wrote.
+          const up = await uploadLeadsInChunks(newId, csvData, pr => {
+            setUploadProgress(pr.chunks > 1 ? pr : null)
           })
-          if (uploadRes.status === 403) {
+          setUploadProgress(null)
+          if (up.lapsed) {
             setTier('lapsed')
           } else {
-            let uploadData: any = null
-            try {
-              uploadData = await uploadRes.json()
-            } catch {
-              
-              uploadData = null
+            const uploadData: any = {
+              success: up.ok,
+              count: up.saved,
+              total: up.total,
+              withConsent: up.withConsent,
+              rejected: up.rejectedTotal,
+              rejections: up.rejections,
+              warnings: up.warnings,
+              error: up.failure?.error,
+              detail: up.failure?.detail,
             }
-            if (!uploadRes.ok || !uploadData?.success) {
+            if (!up.ok) {
               csvFailed = {
                 error: typeof uploadData?.error === 'string'
                   ? uploadData.error
@@ -958,23 +970,26 @@ export default function CampaignsPage() {
     let isLapsedError = false
     let failure: UploadFailure | null = null
     try {
-      const res = await fetch('/api/leads/upload', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ campaign_id: campaignId, leads: parsed }),
+      const up = await uploadLeadsInChunks(campaignId, parsed, pr => {
+        setUploadProgress(pr.chunks > 1 ? pr : null)
       })
-      if (res.status === 403) {
+      setUploadProgress(null)
+      if (up.lapsed) {
         setTier('lapsed')
         isLapsedError = true
       }
-      let data: any = null
-      try {
-        data = await res.json()
-      } catch {
-        
-        data = null
+      const data: any = {
+        success: up.ok,
+        count: up.saved,
+        total: up.total,
+        withConsent: up.withConsent,
+        rejected: up.rejectedTotal,
+        rejections: up.rejections,
+        warnings: up.warnings,
+        error: up.failure?.error,
+        detail: up.failure?.detail,
       }
-      ok = res.ok && !!data?.success
+      ok = up.ok
       if (!ok && !isLapsedError) {
         failure = {
           error: typeof data?.error === 'string'
