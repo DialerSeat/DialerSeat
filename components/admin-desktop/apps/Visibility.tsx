@@ -161,23 +161,47 @@ function TrafficChart({ series }: { series: Array<{ label: string; views: number
   )
 }
 
-function BarRow({ label, value, max, sub }: {
-  label: string; value: number; max: number; sub?: string
+/**
+ * A ranked table where the bar is the row's background.
+ *
+ * A bar list reads magnitude well but truncates a long path to uselessness on
+ * a phone — "/dashboard/campaig…" tells you nothing about which page it was.
+ * A table keeps the full path, scrolls sideways when it has to, and lines the
+ * numbers up so two rows can actually be compared. Putting the bar behind the
+ * text keeps the at-a-glance shape without spending a column on it.
+ */
+function RankTable({ rows, labelHead, withVisitors }: {
+  rows: Array<{ label: string; value: number; visitors?: number }>
+  labelHead: string
+  withVisitors?: boolean
 }) {
+  if (rows.length === 0) return null
+  const max = Math.max(...rows.map(r => r.value), 1)
   return (
-    <div style={{ marginBottom: 9 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 11.5, marginBottom: 3 }}>
-        <span style={{
-          color: TEXT, overflow: 'hidden', textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap', fontFamily: 'monospace',
-        }}>{label}</span>
-        <span style={{ color: DIM, flexShrink: 0 }}>
-          {n(value)}{sub ? ` · ${sub}` : ''}
-        </span>
-      </div>
-      <div style={{ height: 5, background: HAIRLINE, borderRadius: 3, overflow: 'hidden' }}>
-        <div style={{ width: `${(value / max) * 100}%`, height: '100%', background: LINE, borderRadius: 3 }} />
-      </div>
+    <div className="vz-wrap">
+      <table className="vz-t">
+        <thead>
+          <tr>
+            <th>{labelHead}</th>
+            <th className="num">Views</th>
+            {withVisitors && <th className="num">Visitors</th>}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(r => (
+            <tr
+              key={r.label}
+              style={{
+                background: `linear-gradient(to right, ${LINE}22 ${(r.value / max) * 100}%, transparent ${(r.value / max) * 100}%)`,
+              }}
+            >
+              <td className="vz-path" title={r.label}>{r.label}</td>
+              <td className="num">{n(r.value)}</td>
+              {withVisitors && <td className="num" style={{ color: DIM }}>{n(r.visitors)}</td>}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   )
 }
@@ -203,15 +227,44 @@ export default function Visibility() {
 
   const t = data?.totals
   const topPages = data?.topPages || []
-  const maxPage = Math.max(...topPages.map((p: any) => p.views), 1)
   const referrers = data?.referrers || []
-  const maxRef = Math.max(...referrers.map((r: any) => r.views), 1)
 
   return (
+    // AppWindow is overflow:hidden by design — every app manages its own
+    // scroll. This one did not, so on a phone the tables below simply had
+    // nowhere to go and the bottom of the app was unreachable.
     <div style={{
-      background: BG, color: TEXT, minHeight: '100%', padding: 16,
+      background: BG, color: TEXT, height: '100%', overflow: 'auto',
+      WebkitOverflowScrolling: 'touch',
+      padding: 16, boxSizing: 'border-box',
       fontFamily: "'Futura PT', Futura, 'Helvetica Neue', Helvetica, Arial, sans-serif",
     }}>
+      <style>{`
+        .vz-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .vz-t { width: 100%; border-collapse: collapse; min-width: 340px; }
+        .vz-t th {
+          text-align: left; font-size: 9px; letter-spacing: 1px;
+          text-transform: uppercase; color: ${MUTED}; font-weight: 700;
+          padding: 0 8px 6px; border-bottom: 1px solid ${HAIRLINE};
+          white-space: nowrap;
+        }
+        .vz-t td {
+          font-size: 11.5px; padding: 7px 8px; color: ${TEXT};
+          border-bottom: 1px solid ${HAIRLINE};
+        }
+        .vz-t td.num, .vz-t th.num {
+          text-align: right; font-variant-numeric: tabular-nums;
+          white-space: nowrap;
+        }
+        /* The bar lives BEHIND the path rather than beside it. A separate bar
+           column costs width that a long URL needs, and magnitude at a glance
+           is exactly what a bar is for — so it becomes the row's background
+           and the path keeps the whole cell. */
+        .vz-path {
+          font-family: monospace; white-space: nowrap;
+          max-width: 460px; overflow: hidden; text-overflow: ellipsis;
+        }
+      `}</style>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 16, fontWeight: 700 }}>Visibility</div>
@@ -287,15 +340,13 @@ export default function Visibility() {
               {topPages.length === 0 ? (
                 <div style={{ color: DIM, fontSize: 12 }}>Nothing yet.</div>
               ) : (
-                topPages.map((p: any) => (
-                  <BarRow
-                    key={p.path}
-                    label={p.path}
-                    value={p.views}
-                    max={maxPage}
-                    sub={`${n(p.visitors)} visitors`}
-                  />
-                ))
+                <RankTable
+                  labelHead="Page"
+                  withVisitors
+                  rows={topPages.map((p: any) => ({
+                    label: p.path, value: p.views, visitors: p.visitors,
+                  }))}
+                />
               )}
             </div>
 
@@ -313,23 +364,20 @@ export default function Visibility() {
                   with the referrer stripped.
                 </div>
               ) : (
-                referrers.map((r: any) => (
-                  <BarRow key={r.host} label={r.host} value={r.views} max={maxRef} />
-                ))
+                <RankTable
+                  labelHead="Source"
+                  rows={referrers.map((r: any) => ({ label: r.host, value: r.views }))}
+                />
               )}
 
               <div style={{
                 fontSize: 9.5, letterSpacing: 1.2, textTransform: 'uppercase',
                 color: MUTED, margin: '18px 0 10px',
               }}>Devices</div>
-              {(data.devices || []).map((d: any) => (
-                <BarRow
-                  key={d.device}
-                  label={d.device}
-                  value={d.views}
-                  max={Math.max(...(data.devices || []).map((x: any) => x.views), 1)}
-                />
-              ))}
+              <RankTable
+                labelHead="Device"
+                rows={(data.devices || []).map((d: any) => ({ label: d.device, value: d.views }))}
+              />
             </div>
           </div>
 
