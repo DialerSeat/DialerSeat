@@ -259,6 +259,19 @@ export default function Visibility() {
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
+  // Split from load() so the poll never blanks the page. Same request, without
+  // the loading state — a tick that empties the screen for a moment is worse
+  // than the staleness it exists to fix.
+  const loadQuiet = useCallback(async () => {
+    try {
+      const r = await fetch(`/api/admin/visibility?range=${range}&audience=${audience}`)
+        .then(x => x.json())
+      if (r.success) setData(r)
+    } catch {
+      // A failed tick leaves the last good picture up.
+    }
+  }, [range, audience])
+
   const load = useCallback(async () => {
     setLoading(true)
     try {
@@ -273,6 +286,27 @@ export default function Visibility() {
   }, [range, audience])
 
   useEffect(() => { void load() }, [load])
+
+  // ── KEEPS ITSELF CURRENT ───────────────────────────────────────────────
+  // Traffic is a live number, and a dashboard you have to reload is a
+  // screenshot. Quiet by design: no spinner and no flash, because the refresh
+  // is not something the reader asked for and should not take the page away
+  // from them mid-sentence.
+  //
+  // Cheap enough to do this at any volume — every figure is grouped in
+  // Postgres, so a tick costs the same handful of aggregate queries whether the
+  // site did a thousand views or ten million, and the response never grows.
+  //
+  // Paused while the tab is hidden. Polling a page nobody is looking at is
+  // spend with no reader, and a laptop left open overnight would otherwise make
+  // seventeen thousand requests before morning.
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return
+      void loadQuiet()
+    }, 5000)
+    return () => clearInterval(id)
+  }, [loadQuiet])
 
   const t = data?.totals
   const topPages = data?.topPages || []

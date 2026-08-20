@@ -158,6 +158,35 @@ async function getPrefs(): Promise<AdminNotificationPrefs> {
  * logged and swallowed, since a notification miss should never break the
  * caller's actual business logic (e.g. a Stripe webhook).
  */
+// ── A BURST OF ONE EVENT IS ONE THING HAPPENING ─────────────────────────────
+// agent_online is deduplicated per session, which was enough at three agents
+// and is useless at fifty: a floor starting its shift produces fifty separate
+// banners in ten minutes. The same is true of team_join the morning a partner
+// onboards — the events are all real, all correct, and collectively unreadable.
+//
+// A phone that buzzes fifty times gets silenced, and then the ONE alert that
+// mattered — a pool exhausting, a webhook gone quiet — arrives in a muted app.
+// Noise does not just annoy; it disables the channel.
+//
+// So a burst collapses. The first few still buzz individually because the first
+// few are informative. At the threshold, one message says the rest are coming
+// and goes quiet. Everything after that is silent for the window.
+//
+// THE LOG IS NEVER COLLAPSED. Every event still writes its row, so the
+// Notifications app shows all fifty. This suppresses the INTERRUPTION, not the
+// record — which is the same split this file already draws between a push and
+// a notification.
+const BURST_WINDOW_MINUTES = 15
+const BURST_THRESHOLD = 5
+
+// Events where a burst is normal and expected. An operational alert firing five
+// times is five separate problems and must never be quietened.
+const COALESCE: ReadonlySet<NotifEventType> = new Set([
+  'agent_online',
+  'team_join',
+  'signup',
+])
+
 export async function sendAdminPush(
   eventType: NotifEventType,
   body: string,
@@ -201,6 +230,35 @@ export async function sendAdminPush(
     if (!prefs.master_enabled) return
     if (!prefs[eventType]) return
 
+    // How many of this event have already buzzed inside the window. Counted
+    // from the log rather than from memory, because a serverless function does
+    // not have a memory between invocations — two requests on two instances
+    // would each think they were the first.
+    let burstBody: string | null = null
+    if (COALESCE.has(eventType)) {
+      const windowStart = new Date(
+        Date.now() - BURST_WINDOW_MINUTES * 60 * 1000
+      ).toISOString()
+
+      const { count } = await supabase
+        .from('admin_notifications')
+        .select('id', { count: 'exact', head: true })
+        .eq('event_type', eventType)
+        .eq('pushed', true)
+        .gte('created_at', windowStart)
+
+      const already = count ?? 0
+      if (already > BURST_THRESHOLD) {
+        // Silent. The row is written, the app will show it, the phone will not.
+        return
+      }
+      if (already === BURST_THRESHOLD) {
+        burstBody =
+          `${already} of these in the last ${BURST_WINDOW_MINUTES} minutes. ` +
+          `Muting this one for a bit — open Notifications to see them all.`
+      }
+    }
+
     ensureVapidConfigured()
     const { data: subs, error } = await supabase
       .from('push_subscriptions')
@@ -213,7 +271,7 @@ export async function sendAdminPush(
 
     const payload = JSON.stringify({
       title,
-      body,
+      body: burstBody ?? body,
       tag: copyForLog.tag,
       url,
     })

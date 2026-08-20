@@ -36,12 +36,24 @@ export async function GET(req: Request) {
     const unreadOnly = url.searchParams.get('unread') === '1'
     const limit = Math.min(Number(url.searchParams.get('limit')) || PAGE_SIZE, 300)
 
+    // ── PAGES BACKWARDS FOREVER ───────────────────────────────────────────
+    // This was a plain limit, which is not pagination — it is "the newest 100,
+    // and nothing else exists". At ten thousand agents that is one morning of
+    // history, with every notification before lunch unreachable.
+    //
+    // A keyset cursor rather than an offset: paging by timestamp reads the same
+    // number of rows on page four thousand as on page one, where an offset
+    // makes the database walk and discard everything before it. The index
+    // admin_notifications_page_idx is what makes that constant-time.
+    const before = url.searchParams.get('before')
+
     let q = supabase
       .from('admin_notifications')
       .select('id, event_type, title, body, url, pushed, delivered_to, read_at, created_at')
       .order('created_at', { ascending: false })
       .limit(limit)
 
+    if (before) q = q.lt('created_at', before)
     if (unreadOnly) q = q.is('read_at', null)
 
     const [listRes, unreadRes] = await Promise.all([
@@ -56,6 +68,12 @@ export async function GET(req: Request) {
 
     return NextResponse.json({
       success: true,
+      // The cursor for the next page, or null when the end has been reached.
+      // Null rather than absent so a caller can tell "no more" apart from
+      // "the field was not sent".
+      nextBefore: (listRes.data && listRes.data.length === limit)
+        ? listRes.data[listRes.data.length - 1].created_at
+        : null,
       notifications: listRes.data ?? [],
       unreadCount: unreadRes.count ?? 0,
     })
