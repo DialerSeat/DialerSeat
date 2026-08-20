@@ -196,9 +196,92 @@ export async function GET(req: NextRequest) {
       }))
     }
 
+    // ── A MEMBER NEEDS TO SEE THE CAMPAIGNS TOO ───────────────────────────
+    // The enrichment above is owned-only, so a team someone JOINED came back
+    // as a bare name: no campaigns under it in the sidebar, nothing to select,
+    // no sign of what they had been given access to. From the agent's side,
+    // being approved onto a team looked identical to not being on one.
+    //
+    // Deliberately narrower than the owner's view. An agent gets the campaigns
+    // and who else is on them, which is what they need to work; they do not
+    // get join codes or pending requests, which are the owner's business.
+    let memberWithCampaigns = member
+    if (member.length > 0) {
+      const memberIds = member.map((t: any) => t.id)
+
+      const [{ data: mCampaigns }, { data: mMembers }, { data: mAccess }] = await Promise.all([
+        supabaseAdmin
+          .from('team_campaigns')
+          .select('team_id, campaign_id, access_mode, created_at, campaigns(id, name, total_leads, called_leads, status, dialer_mode)')
+          .in('team_id', memberIds),
+        supabaseAdmin
+          .from('team_members')
+          .select('id, team_id, user_id, status')
+          .in('team_id', memberIds)
+          .eq('status', 'active'),
+        supabaseAdmin
+          .from('team_campaign_access')
+          .select('id, team_id, team_member_id, campaign_id, payer, is_active, access_source, created_at')
+          .in('team_id', memberIds)
+          .eq('is_active', true),
+      ])
+
+      const userIds = Array.from(new Set((mMembers || []).map((m: any) => m.user_id)))
+      const userById: Record<string, any> = {}
+      if (userIds.length > 0) {
+        const { data: userRows } = await supabaseAdmin
+          .from('users')
+          .select('clerk_id, email, first_name, last_name')
+          .in('clerk_id', userIds)
+        for (const u of userRows || []) userById[u.clerk_id] = u
+      }
+
+      const accessByMember: Record<string, any[]> = {}
+      for (const a of mAccess || []) {
+        if (!accessByMember[a.team_member_id]) accessByMember[a.team_member_id] = []
+        accessByMember[a.team_member_id].push(a)
+      }
+
+      const membersByTeamId: Record<string, any[]> = {}
+      for (const m of mMembers || []) {
+        if (!membersByTeamId[m.team_id]) membersByTeamId[m.team_id] = []
+        membersByTeamId[m.team_id].push({
+          ...m,
+          userId: m.user_id,
+          user: userById[m.user_id] || { email: null, first_name: null, last_name: null },
+          campaignAccess: (accessByMember[m.id] || []).map((a: any) => ({
+            id: a.id,
+            campaignId: a.campaign_id,
+            payer: a.payer,
+            accessSource: a.access_source,
+            createdAt: a.created_at,
+          })),
+        })
+      }
+
+      const campsByTeamId: Record<string, any[]> = {}
+      for (const tc of mCampaigns || []) {
+        if (!campsByTeamId[tc.team_id]) campsByTeamId[tc.team_id] = []
+        campsByTeamId[tc.team_id].push({
+          campaignId: tc.campaign_id,
+          accessMode: tc.access_mode,
+          createdAt: tc.created_at,
+          campaign: tc.campaigns || null,
+        })
+      }
+
+      memberWithCampaigns = member.map((t: any) => ({
+        ...t,
+        campaigns: campsByTeamId[t.id] || [],
+        members: membersByTeamId[t.id] || [],
+        pendingMembers: [],
+        codes: [],
+      }))
+    }
+
     return NextResponse.json({
       success: true,
-      teams: { owned, member },
+      teams: { owned, member: memberWithCampaigns },
       // Join requests this viewer is waiting on. Empty for most people.
       myPending,
     })

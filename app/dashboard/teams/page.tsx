@@ -214,7 +214,14 @@ export default function TeamsPage() {
   // two code paths building the same tree is how they drift apart.
   const refresh = useCallback(async () => {
     try {
-      const res = await fetch('/api/teams/list')
+      // ── detail=owned IS NOT OPTIONAL HERE ────────────────────────────────
+      // Without it the endpoint returns teams and nothing else: no campaigns,
+      // no members, no codes, no pending requests. Every one of those is
+      // loaded inside `if (detail && owned.length > 0)`, so omitting the param
+      // gave a sidebar of bare team names — which is why an attached campaign
+      // never showed up, the roster was always empty, and the codes list in a
+      // team looked like it had none.
+      const res = await fetch('/api/teams/list?detail=owned')
       const data = await res.json()
       // The endpoint nests these under `teams` and calls the second list
       // `member`, not `joined`. Reading data.owned/data.joined silently gave
