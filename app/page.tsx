@@ -152,7 +152,33 @@ export default async function Home({ searchParams }: PageProps) {
            later .ds-section padding shorthand outranks a single-class
            longhand on source order and silently wins. */
         .ds-volume-section { max-width: none; }
-        @media (min-width: 1000px) {
+
+        /* ── WHY 1240px AND NOT 1000px ───────────────────────────────────────
+           The two-column layout below has fixed costs that do not shrink:
+
+               192px  left inset
+             + 635px  demo column
+             +  64px  gap
+             +  80px  right inset
+             ───────
+               971px  before the headline gets a single pixel
+
+           The headline column is minmax(0, 1fr), so it absorbs whatever is
+           left — including nothing. At 1000px that left it 29px wide, and at
+           1024px (an iPad held vertically, the common case) 47px, against a
+           longest word needing 238px at 48px type. The words overflowed the
+           column and overflow-x: hidden on <main> sliced them off mid-letter.
+
+           Engaging a layout below the width it can physically occupy is the
+           bug; the breakpoint is now set above the fixed costs plus a headline
+           column wide enough to read as deliberate. Everything under it uses
+           the stacked layout, which was already designed for narrow viewports
+           and needs no changes.
+
+           IF YOU CHANGE THE INSETS, THE DEMO WIDTH OR THE GAP, REDO THIS SUM
+           AND MOVE THIS BREAKPOINT WITH IT. 1240px is not a device width — it
+           is 971px of fixed cost plus ~270px of headline. */
+        @media (min-width: 1240px) {
           /* Tight to the section divider. The default 90px top padding pushed
              the whole block ~67px lower than the mockup, which is what dragged
              "BUILT FOR VOLUME" and the headline down with it. */
@@ -167,7 +193,7 @@ export default async function Home({ searchParams }: PageProps) {
             padding-bottom: 24px;
           }
         }
-        @media (min-width: 1000px) {
+        @media (min-width: 1240px) {
           .ds-volume-grid {
             /* Demo holds a fixed readable width on the left; the headline takes
                everything else. A generous gap is what keeps the two halves from
@@ -195,6 +221,18 @@ export default async function Home({ searchParams }: PageProps) {
           /* The headline is CENTRED in its column — that's what puts "LEADS."
              on its own centred line rather than ragged-left. */
           .ds-volume-copy { text-align: center; }
+        }
+
+        /* ── TABLET NAV ──────────────────────────────────────────────────────
+           The full link row is shown from 769px up, but it is spaced for a
+           desktop: 60px of side padding and 40px between five links needs
+           829px on an 820px iPad, so "GET STARTED" hung off the right edge.
+           Only the spacing is reduced here — no link is hidden, because the
+           links are the navigation and a tablet is not a phone. Above 1200px
+           nothing changes. */
+        @media (min-width: 769px) and (max-width: 1199px) {
+          .ds-nav { padding-left: 28px; padding-right: 28px; }
+          .ds-nav-links { gap: 22px; }
         }
 
         .ds-stats { flex-direction: row; padding: 16px 12px; gap: 8px; }
