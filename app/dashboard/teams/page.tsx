@@ -717,6 +717,9 @@ export default function TeamsPage() {
         email: m.user?.email ?? null,
         campaignCount: (m.campaignAccess || []).length,
       })),
+      // Only meaningful for a team this person joined rather than owns. An
+      // owner reaches every campaign on their own team by definition.
+      myCampaignIds: (raw as any).myCampaignIds || [],
     }
   }, [view, scope, rawTeams, teams])
 

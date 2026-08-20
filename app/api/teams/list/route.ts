@@ -278,13 +278,29 @@ export async function GET(req: NextRequest) {
         })
       }
 
-      memberWithCampaigns = member.map((t: any) => ({
-        ...t,
-        campaigns: campsByTeamId[t.id] || [],
-        members: membersByTeamId[t.id] || [],
-        pendingMembers: [],
-        codes: [],
-      }))
+      memberWithCampaigns = member.map((t: any) => {
+        // Which campaigns THIS viewer may actually dial on this team. Two
+        // sources, because access has two shapes: a grant made to them
+        // specifically, and a campaign the owner opened to the whole team.
+        const roster = membersByTeamId[t.id] || []
+        const mine = roster.find((m: any) => m.user_id === userId)
+        const granted = new Set(
+          (mine?.campaignAccess || []).map((a: any) => a.campaignId)
+        )
+        const openToTeam = (campsByTeamId[t.id] || [])
+          .filter((c: any) => c.accessMode === 'free' || c.accessMode === 'public')
+          .map((c: any) => c.campaignId)
+        for (const cid of openToTeam) granted.add(cid)
+
+        return {
+          ...t,
+          campaigns: campsByTeamId[t.id] || [],
+          members: roster,
+          pendingMembers: [],
+          codes: [],
+          myCampaignIds: Array.from(granted),
+        }
+      })
     }
 
     // ── VOLUME TIER, COUNTED ACROSS EVERY TEAM THEY OWN ──────────────────

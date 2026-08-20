@@ -57,6 +57,10 @@ export interface TeamDetailData {
   codes: TeamDetailCode[]
   campaigns: TeamDetailCampaign[]
   members: TeamDetailMember[]
+  /** Campaigns this viewer may dial on this team — a grant made to them, plus
+   *  anything the owner opened to the whole team. Only meaningful when they do
+   *  not own it; an owner reaches everything by definition. */
+  myCampaignIds?: string[]
 }
 
 function Stat({ label, value }: { label: string; value: string }) {
@@ -149,6 +153,93 @@ export default function TeamDetail({
 
   const totalLeads = team.campaigns.reduce((n, c) => n + (c.totalLeads || 0), 0)
   const calledLeads = team.campaigns.reduce((n, c) => n + (c.calledLeads || 0), 0)
+
+  // ── A MEMBER IS NOT A SMALL OWNER ───────────────────────────────────────
+  // Showing an agent the owner's panel with the buttons removed answers a
+  // question they did not ask. They do not run this team: total leads, dialed
+  // counts and headcount are the owner's operating numbers, and an agent
+  // reading them learns nothing they can act on — while the one thing they
+  // actually came for, "what am I allowed to dial", was buried under all of it.
+  //
+  // So this is its own view. Campaigns first, each one a way in, and the ones
+  // they cannot reach yet named as such rather than hidden — an agent who knows
+  // a campaign exists needs to be told to ask the owner for it, not left
+  // wondering whether the page is broken.
+  if (!team.isOwner) {
+    const mine = new Set(team.myCampaignIds || [])
+    const available = team.campaigns.filter(c => mine.has(c.id))
+    const locked = team.campaigns.filter(c => !mine.has(c.id))
+
+    return (
+      <div>
+        <Section title="Your Campaigns">
+          {available.length === 0 ? (
+            <div style={{ color: DIM, fontSize: 13, lineHeight: 1.7 }}>
+              You are on this team, but no campaigns have been opened to you yet.
+              The team owner assigns those — reach out to whoever sent you your
+              join code.
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gap: 8 }}>
+              {available.map(c => {
+                const paused = c.status === 'inactive'
+                return (
+                  <div key={c.id} style={{
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    background: PANEL, border: `1px solid ${HAIRLINE}`,
+                    borderRadius: 4, padding: '12px 14px',
+                  }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 500, color: paused ? DIM : TEXT }}>
+                        {c.name}
+                        {paused && (
+                          <span style={{ color: '#fbbf24', fontSize: 11, marginLeft: 8 }}>paused</span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 11.5, color: DIM, marginTop: 2 }}>
+                        {paused
+                          ? 'The owner has paused this campaign'
+                          : 'Ready to dial'}
+                      </div>
+                    </div>
+                    {/* Straight to the queue with this campaign selected. The
+                        point of this page for an agent is to get off it. */}
+                    {!paused && (
+                      <a
+                        href={`/dashboard/dialer?campaign=${encodeURIComponent(c.id)}`}
+                        style={{
+                          ...btn, textDecoration: 'none',
+                          borderColor: ACCENT, color: '#fff', background: ACCENT,
+                        }}
+                      >Dial</a>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </Section>
+
+        {locked.length > 0 && (
+          <Section title="Also On This Team">
+            <div style={{ color: DIM, fontSize: 12.5, lineHeight: 1.7, marginBottom: 8 }}>
+              You do not have access to these yet. The owner can add you to any of
+              them without it costing you anything — your seat is already paid for.
+            </div>
+            <div style={{ display: 'grid', gap: 6 }}>
+              {locked.map(c => (
+                <div key={c.id} style={{
+                  background: PANEL, border: `1px solid ${HAIRLINE}`,
+                  borderRadius: 4, padding: '10px 14px',
+                  fontSize: 13, color: DIM,
+                }}>{c.name}</div>
+              ))}
+            </div>
+          </Section>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div>

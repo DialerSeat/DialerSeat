@@ -28,7 +28,37 @@ export interface SeatBillingSuccess {
 }
 
 
-async function resolveOwnerCustomer(ownerId: string): Promise<Stripe.Customer> {
+interface ResolvedOwner {
+  customer: Stripe.Customer
+  /** The card to bill this seat to. Passed explicitly on the subscription
+   *  because the customer-level default is frequently absent — see below. */
+  paymentMethodId: string
+}
+
+// ── FINDING THE CARD AN OWNER ACTUALLY PAYS WITH ─────────────────────────
+// This checked customer.invoice_settings.default_payment_method and threw
+// "no payment method on file" when it was empty. For most paying owners it IS
+// empty, and they were being told to fix billing that was already working.
+//
+// Our own checkout creates subscriptions with
+// payment_settings.save_default_payment_method: 'on_subscription', which saves
+// the card to the SUBSCRIPTION, not to the customer. Stripe's documented
+// resolution order for a subscription invoice is:
+//
+//   subscription.default_payment_method
+//   -> subscription.default_source
+//   -> customer.invoice_settings.default_payment_method
+//   -> customer.default_source
+//
+// So an owner paying weekly has a perfectly good card sitting at level one,
+// while this function was only ever looking at level three.
+//
+// A payment method used by a subscription is necessarily attached to the
+// customer, so listing the customer's cards finds it. The customer default is
+// still preferred when set — that is the card they deliberately nominated —
+// and the card found here is passed explicitly on the seat subscription,
+// because there is no customer-level default for it to fall back to.
+async function resolveOwnerCustomer(ownerId: string): Promise<ResolvedOwner> {
   const { data: user } = await supabaseAdmin
     .from('users')
     .select('stripe_customer_id, email')
@@ -55,7 +85,19 @@ async function resolveOwnerCustomer(ownerId: string): Promise<Stripe.Customer> {
 
   
   const defaultPm = (customer as Stripe.Customer).invoice_settings?.default_payment_method
-  if (!defaultPm) {
+  let paymentMethodId =
+    typeof defaultPm === 'string' ? defaultPm : defaultPm?.id ?? null
+
+  if (!paymentMethodId) {
+    const cards = await stripe.paymentMethods.list({
+      customer: customer.id,
+      type: 'card',
+      limit: 1,
+    })
+    paymentMethodId = cards.data[0]?.id ?? null
+  }
+
+  if (!paymentMethodId) {
     const err: SeatBillingError = {
       code: 'no_card',
       message: 'Owner has no payment method on file. Update billing before accepting team members.',
@@ -63,20 +105,24 @@ async function resolveOwnerCustomer(ownerId: string): Promise<Stripe.Customer> {
     throw err
   }
 
-  return customer as Stripe.Customer
+  return { customer: customer as Stripe.Customer, paymentMethodId }
 }
 
 
 export async function createSeatSubscription(
   params: CreateSeatParams
 ): Promise<SeatBillingSuccess> {
-  const customer = await resolveOwnerCustomer(params.ownerId)
+  const { customer, paymentMethodId } = await resolveOwnerCustomer(params.ownerId)
 
   const description = `Seat: ${params.agentEmail} on ${params.teamName}`
 
   const subscription = await stripe.subscriptions.create({
     customer: customer.id,
     items: [{ price: SEAT_PRICE_ID }],
+    // Named explicitly rather than left to the customer default, which is very
+    // often unset — see resolveOwnerCustomer. Without this the first invoice
+    // has no card to charge and the seat fails the moment it is created.
+    default_payment_method: paymentMethodId,
     description,
     metadata: {
       seat_charge_id: params.seatChargeId,

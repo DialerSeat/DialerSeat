@@ -23,12 +23,6 @@ interface Preview {
   seatCents?: number | null
 }
 
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean)
-  if (parts.length === 0) return '?'
-  return parts.length >= 2 ? (parts[0][0] + parts[1][0]).toUpperCase() : name.slice(0, 2).toUpperCase()
-}
-
 
 
 
@@ -166,16 +160,20 @@ export default function JoinRedeemClient({ code }: { code: string }) {
 
         {phase === 'confirm' && preview && (
           <>
-            <div style={{
-              width: 64, height: 64, borderRadius: 16, margin: '0 auto 20px',
-              background: C.primary, color: C.onPrimary,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 22, fontWeight: 800, overflow: 'hidden',
-            }}>
-              {preview.brand?.logoUrl
-                ? <img src={preview.brand.logoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                : initials(brandName)}
-            </div>
+            {/* A real uploaded logo still shows — that is the tenant's brand and
+                the reason this block exists. The initials square that stood in
+                when there was no logo does not: two letters on a coloured tile
+                is not branding, it is a placeholder pretending to be one, and
+                the team name is already spelled out in full directly below it. */}
+            {preview.brand?.logoUrl && (
+              <div style={{
+                width: 64, height: 64, borderRadius: 16, margin: '0 auto 20px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                overflow: 'hidden',
+              }}>
+                <img src={preview.brand.logoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
+            )}
 
             <div style={{ fontSize: 11, letterSpacing: 3, fontWeight: 'bold', color: C.primary, marginBottom: 8 }}>
               YOU&apos;VE BEEN INVITED

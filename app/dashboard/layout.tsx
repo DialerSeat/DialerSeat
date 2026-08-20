@@ -223,6 +223,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const hasAnySeat = totalSeats > 0
   const hasManagerPlus = plan === 'manager_plus' || plan === 'both'
 
+  // ── DOES THIS PERSON PAY FOR THEMSELVES? ────────────────────────────────
+  // Not the same question as tier === 'active', which is deliberately TRUE for
+  // someone waiting on an owner-funded seat — that is how they get in the door
+  // at all. Using it to decide whether to show a banner about that wait would
+  // hide the banner from exactly the people it is for.
+  //
+  // `plan` is derived server-side from a real active subscription row, so it is
+  // the honest answer to "do they have their own plan".
+  const hasOwnPlan = plan !== null
+
   let primaryLabel: string
   let primaryColor: string
   let primaryWeight: 'bold' | 'normal'
@@ -721,7 +731,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             about restoring dialing, not about recovering an account.
             Suppressed when they already have their own plan, because then
             there is nothing to restore. */}
-        {seatLapsed.length > 0 && !hasActivePersonal && (
+        {seatLapsed.length > 0 && !hasOwnPlan && (
           <div style={{
             padding: '10px 16px', background: '#2a1a05',
             borderBottom: '1px solid #78350f', color: '#ffaa3e',
@@ -746,8 +756,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             being broken: they were told the seat was covered, they got in, and
             nothing works.
             Amber rather than red — this is a normal step in joining a team,
-            not a fault, and it clears itself when the owner accepts. */}
-        {awaitingApproval.length > 0 && (
+            not a fault, and it clears itself when the owner accepts.
+
+            Shown only to someone with no plan of their own. If they already pay
+            for DialerSeat, nothing is gated from them and nothing is owed — they
+            are simply waiting on one team's campaigns, which does not warrant a
+            banner on every page telling them a seat is on somebody else. */}
+        {awaitingApproval.length > 0 && !hasOwnPlan && (
           <div style={{
             padding: '10px 16px', background: '#2a1a05',
             borderBottom: '1px solid #78350f', color: '#fbbf24',
