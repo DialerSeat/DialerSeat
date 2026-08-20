@@ -374,6 +374,14 @@ export default function CampaignsPage() {
   }, [createMode])
 
   
+  // ── IS THIS A TEAM CAMPAIGN? ──────────────────────────────────────────
+  // Loaded when the settings panel opens rather than on every page load. Most
+  // people who open a campaign are not thinking about teams, and a list of
+  // teams fetched for all of them is a request nobody asked for.
+  const [myTeams, setMyTeams] = useState<Array<{ id: string; name: string }>>([])
+  const [campaignTeamId, setCampaignTeamId] = useState<string | null>(null)
+  const [teamBusy, setTeamBusy] = useState(false)
+
   const [settingsId, setSettingsId] = useState<string | null>(null)
   const settingsCampaign = campaigns.find(c => c.id === settingsId) || null
   const [savingScript, setSavingScript] = useState(false)
@@ -1479,8 +1487,58 @@ export default function CampaignsPage() {
     }
   }
 
+  const loadTeamAttachment = async (campaignId: string) => {
+    try {
+      const d = await fetch('/api/teams/list?detail=owned').then(r => r.json())
+      const owned = d?.teams?.owned || []
+      setMyTeams(owned.map((t: any) => ({ id: t.id, name: t.name })))
+      const holder = owned.find((t: any) =>
+        (t.teamCampaigns || t.campaigns || []).some((tc: any) => tc.campaignId === campaignId)
+      )
+      setCampaignTeamId(holder?.id ?? null)
+    } catch {
+      setMyTeams([])
+      setCampaignTeamId(null)
+    }
+  }
+
+  const setCampaignTeam = async (campaignId: string, nextTeamId: string) => {
+    if (teamBusy) return
+    setTeamBusy(true)
+    try {
+      if (!nextTeamId) {
+        if (campaignTeamId) {
+          await fetch('/api/teams/campaigns/detach', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ teamId: campaignTeamId, campaignId, confirm: true }),
+          })
+        }
+      } else {
+        // Moving between teams detaches the old one first, or the campaign ends
+        // up on two teams and two owners can each change how it dials.
+        if (campaignTeamId && campaignTeamId !== nextTeamId) {
+          await fetch('/api/teams/campaigns/detach', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ teamId: campaignTeamId, campaignId, confirm: true }),
+          })
+        }
+        await fetch('/api/teams/campaigns/attach', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ teamId: nextTeamId, campaignId, accessMode: 'owner_pays' }),
+        })
+      }
+      await loadTeamAttachment(campaignId)
+    } finally {
+      setTeamBusy(false)
+    }
+  }
+
   const openSettings = async (campaign: Campaign) => {
     setSettingsId(campaign.id)
+    void loadTeamAttachment(campaign.id)
 
     const baseDraft: EditDraft = {
       name: campaign.name || '',
@@ -3423,25 +3481,76 @@ export default function CampaignsPage() {
                   ><div className="knob" /></div>
                 </div>
 
-                <div className="settings-row">
-                  <div className="settings-row-label">
-                    DIALER MODE
-                    <small>How this campaign dials. Affects future calls only.</small>
+                {myTeams.length > 0 && (
+                  <div className="settings-row">
+                    <div className="settings-row-label">
+                      TEAM CAMPAIGN
+                      <small>
+                        Put this on a team and your agents can dial it. How it
+                        dials is then set on the team&apos;s campaign page.
+                      </small>
+                    </div>
+                    <select
+                      className="settings-mode-select"
+                      value={campaignTeamId || ''}
+                      onChange={e => settingsId && setCampaignTeam(settingsId, e.target.value)}
+                      disabled={isLapsed || teamBusy}
+                    >
+                      <option value="">Not on a team</option>
+                      {myTeams.map(t => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
+                    </select>
                   </div>
-                  <select
-                    className="settings-mode-select"
-                    value={editDraft?.dialer_mode || 'power'}
-                    onChange={e => {
-                      const m = e.target.value as DialerMode
-                      patchDraft({ dialer_mode: m, amd_enabled: AMD_DEFAULT_BY_MODE[m] })
-                    }}
-                    disabled={isLapsed}
-                  >
-                    {(Object.keys(MODE_LABELS) as DialerMode[]).map(m => (
-                      <option key={m} value={m}>{MODE_LABELS[m]}</option>
-                    ))}
-                  </select>
-                </div>
+                )}
+
+                {/* ── ONE PLACE SETS THE MODE ──────────────────────────────
+                    A team campaign's mode belongs on the team's campaign page,
+                    where the owner also decides who dials it and whether agents
+                    may pick their own mode. Leaving a second selector here would
+                    give the same setting two homes that disagree — change it in
+                    one and the other still shows the old value, and neither
+                    screen tells you which one won. */}
+                {campaignTeamId ? (
+                  <div className="settings-row">
+                    <div className="settings-row-label">
+                      DIALER MODE
+                      <small>
+                        Set on the team campaign page, along with who can dial it
+                        and whether agents may choose their own mode.
+                      </small>
+                    </div>
+                    <a
+                      href="/dashboard/teams"
+                      style={{
+                        fontSize: 12, color: '#4a9eff', textDecoration: 'none',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {MODE_LABELS[(editDraft?.dialer_mode || 'power') as DialerMode]} ↗
+                    </a>
+                  </div>
+                ) : (
+                  <div className="settings-row">
+                    <div className="settings-row-label">
+                      DIALER MODE
+                      <small>How this campaign dials. Affects future calls only.</small>
+                    </div>
+                    <select
+                      className="settings-mode-select"
+                      value={editDraft?.dialer_mode || 'power'}
+                      onChange={e => {
+                        const m = e.target.value as DialerMode
+                        patchDraft({ dialer_mode: m, amd_enabled: AMD_DEFAULT_BY_MODE[m] })
+                      }}
+                      disabled={isLapsed}
+                    >
+                      {(Object.keys(MODE_LABELS) as DialerMode[]).map(m => (
+                        <option key={m} value={m}>{MODE_LABELS[m]}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 <div className="settings-row">
                   <div className="settings-row-label">

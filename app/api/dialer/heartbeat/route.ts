@@ -5,6 +5,7 @@ import { runPredictiveController } from '@/lib/predictiveController'
 import { STALE_HEARTBEAT_SECONDS, ABANDON_YIELD_PCT } from '@/lib/dialerConstants'
 import { sendAdminPush } from '@/lib/pushNotify'
 import { logCallEvent } from '@/lib/callEvents'
+import { shouldMaskCampaign, maskLeadRow } from '@/lib/leadMasking'
 
 const supabase = getServiceClient('dialer/heartbeat')
 
@@ -648,7 +649,21 @@ export async function POST(req: NextRequest) {
             .select('*')
             .eq('id', liveCall.lead_id)
             .maybeSingle()
-          lead = leadRow ?? null
+          // ── THE PREDICTIVE HOLE IN LEAD MASKING ──────────────────────
+          // /api/leads/next masks the number, and /api/calls/outbound
+          // resolves it server-side — but predictive places its calls on the
+          // server, so the agent never asks for a lead. It arrives HERE
+          // instead, on the heartbeat, and this returned select('*') straight
+          // to the browser.
+          //
+          // Every other path being sealed made no difference: a masked
+          // campaign leaked its numbers in full the moment anybody ran it on
+          // predictive, which is the mode a lead vendor is most likely to use.
+          if (leadRow && await shouldMaskCampaign(leadRow.campaign_id, clerkId)) {
+            lead = maskLeadRow(leadRow)
+          } else {
+            lead = leadRow ?? null
+          }
         }
         activeCall = {
           call_id: liveCall.id,

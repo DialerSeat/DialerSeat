@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { auth } from '@clerk/nextjs/server'
 import { apiError } from '@/lib/apiError'
+import { maskedCampaignIds, maskPhone } from '@/lib/leadMasking'
 
 const supabase = getServiceClient('recordings/list')
 
@@ -75,6 +76,39 @@ export async function GET(req: NextRequest) {
         (lead.phone || '').includes(s)
       )
     })
+  }
+
+  // ── THE SLOW WAY TO STEAL A LIST ──────────────────────────────────────
+  // Masking the queue stops somebody copying down a list they were handed. It
+  // does nothing about the list they BUILD: an agent dialing two hundred a day
+  // has a thousand numbers in their own call history by Friday, and this route
+  // was handing over both calls.phone_number and the joined leads.phone.
+  //
+  // Their own recordings stay theirs — they made those calls and need to find
+  // them. The numbers do not, on a campaign whose owner asked for them to be
+  // hidden. Last four is enough to locate a call you remember making.
+  //
+  // Owner-owned campaigns are unaffected; maskedCampaignIds excludes anything
+  // the viewer owns.
+  try {
+    const masked = await maskedCampaignIds(
+      recordings.map((r: any) => r.campaign_id).filter(Boolean),
+      userId
+    )
+    if (masked.size > 0) {
+      recordings = recordings.map((r: any) => {
+        if (!masked.has(r.campaign_id)) return r
+        return {
+          ...r,
+          phone_number: maskPhone(r.phone_number),
+          leads: r.leads ? { ...r.leads, phone: maskPhone(r.leads.phone) } : r.leads,
+          phone_masked: true,
+        }
+      })
+    }
+  } catch {
+    // Fails open, exactly as the queue does — a settings read that times out
+    // must not take somebody's recordings away from them.
   }
 
   return NextResponse.json({
