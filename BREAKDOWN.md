@@ -286,6 +286,30 @@ chunked client-side), and `maxDuration` defaults to 300s with fluid compute, whi
 is also the Hobby maximum. Pro allows 800s. Do not set a lower `maxDuration`
 believing the default is small; it is not.
 
+**Functions run in `cle1` (Cleveland), not the `iad1` default,** because Supabase
+is in us-east-2 and `cle1` is us-east-2. Every query otherwise paid a
+cross-region round trip of roughly 10-15ms, and a predictive tick makes about
+fifteen of them — 150-225ms of pure network latency inside a 1.5s budget, spent
+holding a database connection. Single-region selection is a Hobby feature; this
+did not need Pro. If the database ever moves, move this with it.
+
+**What changes when Vercel goes Pro.** Hobby caps cron jobs at once per day with
+±59 minutes of scheduling slop; Pro allows once per minute. Two jobs are badly
+served by daily and should be changed at that point, and NOT before — a
+sub-daily cron expression fails the *deployment* on Hobby:
+
+- `stale-call-reaper` is `0 4 * * *`, so a wedged call or session can sit for up
+  to ~25 hours. It wants `*/10 * * * *`.
+- `ops-health` is `0 12 * * *`. It carries the webhook-silence detector, the
+  thing that catches "calls connect but every metric reads zero", so a daily
+  cadence means learning about it a day late. It wants hourly or `*/15`.
+
+The rest are daily by design — grace periods measured in days — and stay.
+`maxDuration` can go to 800s on Pro, with the cron `TIME_BUDGET_MS` raised to
+match, but only bother if `pendingAfterRun` or `notReached` ever report non-zero.
+The invocation guideline simply becomes a bill: at $0.60 per million, a
+full-time predictive agent is about $0.70/month.
+
 **Sentry, GitHub and Cloudflare are not near anything.** Exceeding Sentry's free
 quota drops events, costing visibility rather than uptime.
 
