@@ -658,10 +658,27 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // ── HAS ANYTHING BEEN DRIPPED IN? ────────────────────────────────────
+    // One timestamp, carried on a heartbeat that already runs every few
+    // seconds. The dialer compares it to what it last saw and refreshes its
+    // queue panel when it moves — which is the entire mid-session mechanism.
+    // Nothing here touches claiming: a dripped lead is an ordinary row and the
+    // claim path finds it on its next pass regardless.
+    let lastLeadAddedAt: string | null = null
+    if (campaignId) {
+      const { data: camp } = await supabase
+        .from('campaigns')
+        .select('last_lead_added_at')
+        .eq('id', campaignId)
+        .maybeSingle()
+      lastLeadAddedAt = camp?.last_lead_added_at ?? null
+    }
+
     return NextResponse.json({
       ok: true,
       session_id: sessionId,
       state: upserted.state,
+      last_lead_added_at: lastLeadAddedAt,
       should_yield: shouldYield,
       stale_window_seconds: STALE_HEARTBEAT_SECONDS,
       controller_invoked: controllerInvoked,

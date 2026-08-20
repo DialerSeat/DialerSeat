@@ -862,6 +862,13 @@ function DialerPageInner() {
   //
   // Read at call time, so a mode switch takes effect on the very next link of
   // the chain instead of the next full remount.
+  // Undefined until the first heartbeat answers, which is how "first sighting"
+  // is told apart from "a drip just landed".
+  const lastLeadAddedSeenRef = useRef<string | null | undefined>(undefined)
+  // Through a ref for the same reason every other value the heartbeat reads is:
+  // the interval closure predates whatever campaign the agent has switched to
+  // since, and a stale copy would refresh the panel for the wrong list.
+  const fetchQueuedLeadsRef = useRef<((opts?: { silent?: boolean }) => void) | null>(null)
   const dialerModeRef = useRef<DialerMode>(dialerMode)
   useEffect(() => { dialerModeRef.current = dialerMode }, [dialerMode])
 
@@ -1683,6 +1690,26 @@ function DialerPageInner() {
         const data = await res.json()
         if (typeof data.should_yield === 'boolean') {
           setShouldYield(data.should_yield)
+        }
+
+        // ── LEADS DRIPPED IN WHILE THIS SESSION WAS RUNNING ─────────────────
+        // The claim path already finds new rows on its own — a dripped lead is
+        // an ordinary lead and nothing about claiming had to change. What could
+        // not know is the queue PANEL, which was loaded once and would sit there
+        // showing a list that quietly stopped being true.
+        //
+        // Silent refresh: the agent did not ask for this and should not have the
+        // panel flash a loading state at them mid-call. The first value seen is
+        // recorded without refetching, so arriving at a campaign that was
+        // dripped into yesterday does not trigger a pointless reload.
+        if (data.last_lead_added_at !== undefined) {
+          const seen = lastLeadAddedSeenRef.current
+          if (seen === undefined) {
+            lastLeadAddedSeenRef.current = data.last_lead_added_at
+          } else if (data.last_lead_added_at && data.last_lead_added_at !== seen) {
+            lastLeadAddedSeenRef.current = data.last_lead_added_at
+            fetchQueuedLeadsRef.current?.({ silent: true })
+          }
         }
 
         // ── PREDICTIVE: THE SERVER SAYS YOU ARE ON A CALL ────────────────────
@@ -2644,6 +2671,8 @@ function DialerPageInner() {
         if (myGeneration === queueFetchGenerationRef.current) setQueuedLeadsLoading(false)
       })
   }, [isSpecificCampaign, selectedCampaign, activeScopeCampaigns, fetchQueuedLeadsFor, queueSortDesc])
+
+  useEffect(() => { fetchQueuedLeadsRef.current = fetchQueuedLeads }, [fetchQueuedLeads])
 
   // Refetch campaigns AND the queue whenever this tab/page becomes visible
   // again — Next.js's client-side navigation can keep this page's

@@ -35,6 +35,9 @@ interface CampaignDetailData {
   predictiveLines: number | null
   maskLeadNumbers: boolean
   agentPicksMode: boolean
+  ingestEnabled: boolean
+  ingestToken: string | null
+  lastLeadAddedAt: string | null
   createdAt: string
 }
 
@@ -143,6 +146,9 @@ export default function CampaignDetail({
   const [team, setTeam] = useState<{ id: string; name: string; accessMode: string | null } | null>(null)
   const [agents, setAgents] = useState<AgentRow[]>([])
   const [available, setAvailable] = useState<CandidateRow[]>([])
+  const [ingestLog, setIngestLog] = useState<any[]>([])
+  const [origin, setOrigin] = useState('')
+  const [copied, setCopied] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [picked, setPicked] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
@@ -159,6 +165,7 @@ export default function CampaignDetail({
       setTeam(r.team)
       setAgents(r.agents || [])
       setAvailable(r.availableMembers || [])
+      setIngestLog(r.ingestLog || [])
       setError(null)
     } catch (e: any) {
       setError(e.message || 'Could not load campaign')
@@ -169,6 +176,9 @@ export default function CampaignDetail({
   }, [campaignId])
 
   useEffect(() => { void load() }, [load])
+
+  // Read on the client — touching window during render breaks SSR.
+  useEffect(() => { setOrigin(window.location.origin) }, [])
 
   // Errors clear themselves. A stale failure sitting over the panel long after
   // it stopped being true is worse than no message at all.
@@ -244,6 +254,24 @@ export default function CampaignDetail({
       onChanged?.()
     } catch (e: any) {
       setError(e.message || 'Could not change access')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const setIngest = async (action: 'enable' | 'disable' | 'rotate') => {
+    if (busy) return
+    setBusy(true)
+    try {
+      const r = await fetch('/api/teams/campaigns/ingest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ campaignId, action }),
+      }).then(x => x.json())
+      if (!r.success) throw new Error(r.error || 'Could not change lead drip')
+      await load()
+    } catch (e: any) {
+      setError(e.message || 'Could not change lead drip')
     } finally {
       setBusy(false)
     }
@@ -426,6 +454,156 @@ export default function CampaignDetail({
             onChange={v => patch({ recording_enabled: v })}
           />
         </div>
+      </Section>
+
+      {/* ── LEAD DRIP ─────────────────────────────────────────────────────
+          A webhook rather than a connector per CRM. Every CRM, every lead
+          vendor and every automation tool already speaks "POST some JSON to a
+          URL" — building a GoHighLevel connector, then a HubSpot one, then a
+          Salesforce one is three integrations that each break on somebody
+          else's release schedule. */}
+      <Section title="Lead Drip">
+        {!data.ingestEnabled ? (
+          <div>
+            <div style={{ fontSize: 12.5, color: DIM, lineHeight: 1.75, marginBottom: 10 }}>
+              Give your lead source a URL and leads land here as they come in —
+              including in the middle of a live session. Agents already dialing
+              this campaign will reach them without restarting anything.
+              <br />
+              Works with any CRM, Zapier, Make, a Google Sheet, or a script.
+            </div>
+            <button
+              style={{ ...btn, borderColor: ACCENT, color: '#fff', background: ACCENT }}
+              disabled={busy}
+              onClick={() => setIngest('enable')}
+            >Turn on lead drip</button>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gap: 10 }}>
+            <div style={{
+              background: PANEL, border: `1px solid ${HAIRLINE}`,
+              borderRadius: 4, padding: '12px 14px',
+            }}>
+              <div style={{
+                fontSize: 10, letterSpacing: 1, textTransform: 'uppercase',
+                color: MUTED, marginBottom: 6,
+              }}>Send leads here</div>
+              {data.ingestToken ? (
+                <>
+                  <code style={{
+                    display: 'block', fontSize: 11.5, color: TEXT,
+                    background: '#111214', padding: '9px 11px', borderRadius: 3,
+                    wordBreak: 'break-all', lineHeight: 1.6,
+                  }}>{origin}/api/ingest/leads/{data.ingestToken}</code>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                    <button
+                      style={btn}
+                      onClick={() => {
+                        navigator.clipboard?.writeText(`${origin}/api/ingest/leads/${data.ingestToken}`)
+                        setCopied(true)
+                        setTimeout(() => setCopied(false), 1600)
+                      }}
+                    >{copied ? 'Copied' : 'Copy URL'}</button>
+                    {/* Rotating is how you cut off a vendor you have stopped
+                        working with. Named for what it does to them, not for
+                        what it does to the string. */}
+                    <button style={btn} disabled={busy} onClick={() => setIngest('rotate')}>
+                      New URL
+                    </button>
+                    <button style={btn} disabled={busy} onClick={() => setIngest('disable')}>
+                      Turn off
+                    </button>
+                  </div>
+                  <div style={{ fontSize: 11, color: DIM, marginTop: 9, lineHeight: 1.7 }}>
+                    Treat this URL as a password — anyone holding it can add leads
+                    to this campaign. <strong style={{ color: MUTED }}>New URL</strong>{' '}
+                    stops the old one working immediately, which is how you cut off
+                    a source you have finished with.
+                  </div>
+                </>
+              ) : (
+                <div style={{ fontSize: 12.5, color: DIM, lineHeight: 1.7 }}>
+                  Lead drip is on for this campaign. Only the person who created
+                  the campaign can see the URL.
+                </div>
+              )}
+            </div>
+
+            {data.ingestToken && (
+              <div style={{
+                background: PANEL, border: `1px solid ${HAIRLINE}`,
+                borderRadius: 4, padding: '12px 14px',
+                fontSize: 11.5, color: DIM, lineHeight: 1.75,
+              }}>
+                <div style={{
+                  fontSize: 10, letterSpacing: 1, textTransform: 'uppercase',
+                  color: MUTED, marginBottom: 6,
+                }}>What to send</div>
+                <code style={{
+                  display: 'block', fontSize: 11, color: TEXT,
+                  background: '#111214', padding: '9px 11px', borderRadius: 3,
+                  whiteSpace: 'pre', overflowX: 'auto', lineHeight: 1.7,
+                }}>{`{ "phone": "5551234567",
+  "first_name": "Jane",
+  "last_name": "Doe",
+  "state": "TX" }`}</code>
+                {/* Said plainly because it is the thing that stops setup
+                    failing: most senders assume our field names must match
+                    theirs exactly, and give up on the second rejection. */}
+                <div style={{ marginTop: 8 }}>
+                  Only the phone number is required. Field names are matched
+                  loosely — <code>Phone Number</code>, <code>mobile</code> and{' '}
+                  <code>cell</code> all work, as do <code>firstName</code> and{' '}
+                  <code>First Name</code>. Anything we do not recognise is kept
+                  on the lead rather than dropped. Send one lead, an array, or{' '}
+                  <code>{'{"leads":[...]}'}</code> — up to 500 at a time.
+                </div>
+                <div style={{ marginTop: 6 }}>
+                  Repeat numbers already on this campaign are ignored, so a source
+                  that resends will not call anyone twice.
+                </div>
+              </div>
+            )}
+
+            {ingestLog.length > 0 && (
+              <div>
+                <div style={{
+                  fontSize: 10, letterSpacing: 1, textTransform: 'uppercase',
+                  color: MUTED, margin: '4px 0 6px',
+                }}>Recent deliveries</div>
+                <div style={{ display: 'grid', gap: 5 }}>
+                  {ingestLog.map((e: any) => (
+                    <div key={e.id} style={{
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      background: PANEL,
+                      border: `1px solid ${e.ok ? HAIRLINE : '#b45309'}`,
+                      borderRadius: 4, padding: '8px 12px', fontSize: 11.5,
+                    }}>
+                      <span style={{ color: e.ok ? '#4ade80' : '#fbbf24' }}>
+                        {e.ok ? '✓' : '!'}
+                      </span>
+                      <span style={{ flex: 1, minWidth: 0, color: TEXT }}>
+                        {e.message}
+                        {e.duplicates > 0 && (
+                          <span style={{ color: DIM }}> · {e.duplicates} already here</span>
+                        )}
+                        {e.rejected > 0 && (
+                          <span style={{ color: DIM }}> · {e.rejected} unusable</span>
+                        )}
+                      </span>
+                      <span style={{ color: DIM, flexShrink: 0 }}>
+                        {new Date(e.created_at).toLocaleString('en-US', {
+                          month: 'short', day: 'numeric',
+                          hour: 'numeric', minute: '2-digit',
+                        })}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </Section>
 
       <Section title="Protecting The List">

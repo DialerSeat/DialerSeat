@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
 
     const { data: campaign } = await supabaseAdmin
       .from('campaigns')
-      .select('id, name, status, dialer_mode, total_leads, called_leads, amd_enabled, recording_enabled, predictive_lines_per_agent, mask_lead_numbers, agent_picks_mode, user_id, created_at')
+      .select('id, name, status, dialer_mode, total_leads, called_leads, amd_enabled, recording_enabled, predictive_lines_per_agent, mask_lead_numbers, agent_picks_mode, ingest_token, ingest_enabled, last_lead_added_at, user_id, created_at')
       .eq('id', campaignId)
       .maybeSingle()
 
@@ -149,6 +149,17 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    let ingestLog: any[] = []
+    if (campaign.user_id === userId) {
+      const { data: events } = await supabaseAdmin
+        .from('lead_ingest_events')
+        .select('id, ok, received, accepted, duplicates, rejected, message, created_at')
+        .eq('campaign_id', campaignId)
+        .order('created_at', { ascending: false })
+        .limit(8)
+      ingestLog = events || []
+    }
+
     const total = campaign.total_leads || 0
     const called = campaign.called_leads || 0
 
@@ -169,8 +180,19 @@ export async function GET(req: NextRequest) {
         predictiveLines: campaign.predictive_lines_per_agent,
         maskLeadNumbers: !!campaign.mask_lead_numbers,
         agentPicksMode: !!campaign.agent_picks_mode,
+        ingestEnabled: !!campaign.ingest_enabled,
+        // The token only goes to the campaign's OWNER. A team owner who did not
+        // create the campaign can see that drip is on; they cannot read the
+        // secret that lets anybody push leads into it.
+        ingestToken: campaign.user_id === userId ? (campaign.ingest_token || null) : null,
+        lastLeadAddedAt: campaign.last_lead_added_at || null,
         createdAt: campaign.created_at,
       },
+      // The last few deliveries, accepted or not. A vendor whose CRM is sending
+      // malformed JSON otherwise has no way to find out except by noticing that
+      // leads never arrive — and "it is not working" with no evidence is what
+      // turns an integration into a support ticket.
+      ingestLog: ingestLog,
       team: ownedTeam ? { id: ownedTeam.id, name: ownedTeam.name, accessMode } : null,
       agents,
       availableMembers,
