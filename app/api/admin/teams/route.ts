@@ -18,7 +18,7 @@ export async function GET() {
     ] = await Promise.all([
       supabaseAdmin.from('teams').select('id, name, description, owner_id, tenant_id, created_at').order('created_at', { ascending: false }),
       supabaseAdmin.from('team_members').select('id, team_id, user_id, status, accepted_at, removed_at').in('status', ['active', 'pending', 'removed']),
-      supabaseAdmin.from('team_seat_charges').select('id, team_id, owner_id, agent_id, amount_cents, status, period_start, period_end, stripe_subscription_id'),
+      supabaseAdmin.from('team_seat_charges').select('id, team_id, owner_id, agent_id, amount_cents, status, period_start, period_end, stripe_subscription_item_id'),
       supabaseAdmin.from('team_campaigns').select('team_id, campaign_id, access_mode'),
       supabaseAdmin.from('team_codes').select('team_id, code'),
       supabaseAdmin.from('subscriptions').select('user_id, discount_coupon'),
@@ -197,7 +197,7 @@ export async function GET() {
             status: s.status,
             periodStart: s.period_start,
             periodEnd: s.period_end,
-            stripeSubscriptionId: s.stripe_subscription_id,
+            stripeSubscriptionId: s.stripe_subscription_item_id,
           }
         }),
       }

@@ -40,7 +40,7 @@ export async function GET() {
     { data: allSubs },
   ] = await Promise.all([
     supabase.from('team_members').select('id, team_id, user_id, status, accepted_at, removed_at').in('team_id', teamIds),
-    supabase.from('team_seat_charges').select('id, team_id, owner_id, agent_id, amount_cents, status, period_start, period_end, stripe_subscription_id').in('team_id', teamIds),
+    supabase.from('team_seat_charges').select('id, team_id, owner_id, agent_id, amount_cents, status, period_start, period_end, stripe_subscription_item_id').in('team_id', teamIds),
     supabase.from('team_campaigns').select('team_id, campaign_id, access_mode').in('team_id', teamIds),
     supabase.from('team_codes').select('team_id, code').in('team_id', teamIds),
     supabase.from('subscriptions').select('user_id, discount_coupon'),
@@ -117,7 +117,7 @@ export async function GET() {
       seats: seats.map((s: any) => {
         const u = userById[s.agent_id]
         const agentName = u ? [u.first_name, u.last_name].filter(Boolean).join(' ').trim() || u.email : s.agent_id.slice(0, 12)
-        return { id: s.id, agentId: s.agent_id, agentName, agentEmail: u?.email || null, amountCents: s.amount_cents, status: s.status, periodStart: s.period_start, periodEnd: s.period_end, stripeSubscriptionId: s.stripe_subscription_id }
+        return { id: s.id, agentId: s.agent_id, agentName, agentEmail: u?.email || null, amountCents: s.amount_cents, status: s.status, periodStart: s.period_start, periodEnd: s.period_end, stripeSubscriptionId: s.stripe_subscription_item_id }
       }),
     }
   })

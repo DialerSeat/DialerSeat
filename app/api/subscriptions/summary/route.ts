@@ -41,7 +41,6 @@ export async function GET() {
         status,
         period_start,
         period_end,
-        stripe_subscription_id,
         teams(id, name, owner_id)
       `)
       .eq('agent_id', userId)
