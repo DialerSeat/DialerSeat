@@ -63,7 +63,38 @@ export async function GET(req: Request) {
       }, { status: 500 })
     }
 
-    // ── 2. PRUNE, ACCORDING TO WHAT EACH TABLE DECLARED ───────────────────
+    // ── 2. CHECK THE THINGS THAT MUST STAY TRUE ───────────────────────────
+    // Auditing once proves today is fine. It does nothing about the migration
+    // somebody writes next month adding a CASCADE from a prunable table into a
+    // protected one — a back door where a prune destroys customer data without
+    // any policy row ever saying so.
+    //
+    // A CRITICAL violation stops the prune outright. Deleting nothing for a day
+    // costs storage; deleting something nobody declared destroyable cannot be
+    // undone.
+    const { data: invariants } = await supabase.rpc('retention_invariants')
+    const violations = (invariants || []) as Array<{
+      severity: string; invariant: string; detail: string
+    }>
+    const critical = violations.filter(v => v.severity === 'CRITICAL')
+
+    if (critical.length > 0) {
+      console.error('[data-retention] CRITICAL invariant violated, refusing to prune:',
+        JSON.stringify(critical))
+      await sendAdminPush(
+        'webhook_silence',
+        `Retention halted: ${critical.length} critical issue(s). ` +
+        `${critical[0].invariant} (${critical[0].detail}). Nothing was deleted.`,
+        { title: 'Retention halted' }
+      ).catch(() => {})
+      return NextResponse.json({
+        success: false,
+        error: 'Critical retention invariant violated. Nothing was deleted.',
+        critical,
+      }, { status: 500 })
+    }
+
+    // ── 3. PRUNE, ACCORDING TO WHAT EACH TABLE DECLARED ───────────────────
     const { data: pruned, error: pruneErr } = await supabase.rpc('run_retention', {
       p_dry_run: false,
     })
@@ -73,7 +104,7 @@ export async function GET(req: Request) {
     const deletedTotal = rows.reduce((n, r) => n + (Number(r.deleted) || 0), 0)
     const failures = rows.filter(r => (r.note || '').startsWith('FAILED') || (r.note || '').startsWith('SKIPPED'))
 
-    // ── 3. ANYTHING NOBODY HAS CLASSIFIED ────────────────────────────────
+    // ── 4. ANYTHING NOBODY HAS CLASSIFIED ────────────────────────────────
     const { data: unclassified } = await supabase.rpc('unclassified_tables')
     const unknown = (unclassified || []) as Array<{ table_name: string; approx_rows: number }>
 
@@ -102,6 +133,11 @@ export async function GET(req: Request) {
         .map(r => ({ table: r.table_name, deleted: Number(r.deleted) })),
       problems: failures.map(r => ({ table: r.table_name, note: r.note })),
       unclassified: unknown.map(u => u.table_name),
+      // Non-critical findings, surfaced rather than swallowed — a policy naming
+      // a column that no longer exists would otherwise let a table grow while
+      // appearing managed.
+      warnings: violations.filter(v => v.severity === 'WARN')
+        .map(v => `${v.invariant}: ${v.detail}`),
     }
 
     console.log('[data-retention]', JSON.stringify(summary))
