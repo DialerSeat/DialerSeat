@@ -30,6 +30,39 @@ export async function GET(req: NextRequest) {
 
     if (memberErr) throw memberErr
 
+    // ── THE VIEWER'S OWN PENDING REQUESTS ─────────────────────────────────
+    // The query above is active-only, which is right for "teams I can work" —
+    // but it meant an agent who joined with a review code saw nothing at all
+    // afterwards. No team in the sidebar, no request anywhere, no indication
+    // the code had even been accepted. From their side the join silently
+    // failed.
+    //
+    // Returned separately rather than mixed into `member`, because a pending
+    // request is not a team you belong to: it must not appear in the tree or
+    // grant anything. It exists so the agent can see they are waiting, and on
+    // whom.
+    const { data: myPendingRows } = await supabaseAdmin
+      .from('team_members')
+      .select('id, team_id, status, created_at')
+      .eq('user_id', userId)
+      .eq('status', 'pending')
+
+    let myPending: any[] = []
+    if (myPendingRows && myPendingRows.length > 0) {
+      const { data: pendingTeams } = await supabaseAdmin
+        .from('teams')
+        .select('id, name')
+        .in('id', myPendingRows.map((r: any) => r.team_id))
+      const nameById: Record<string, string> = {}
+      for (const t of pendingTeams || []) nameById[t.id] = t.name
+      myPending = myPendingRows.map((r: any) => ({
+        id: r.id,
+        teamId: r.team_id,
+        teamName: nameById[r.team_id] || 'Team',
+        requestedAt: r.created_at,
+      }))
+    }
+
     const memberTeamIds = (memberRows || []).map((m: any) => m.team_id)
 
     let memberTeams: any[] = []
@@ -166,6 +199,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       teams: { owned, member },
+      // Join requests this viewer is waiting on. Empty for most people.
+      myPending,
     })
   } catch (error: any) {
     console.error('Team list error:', error)

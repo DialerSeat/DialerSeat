@@ -185,6 +185,9 @@ export default function TeamsPage() {
   const [teams, setTeams] = useState<SidebarTeam[]>([])
   const [rawTeams, setRawTeams] = useState<ApiTeam[]>([])
   const [pending, setPending] = useState(0)
+  const [myPending, setMyPending] = useState<Array<{
+    id: string; teamId: string; teamName: string; requestedAt?: string
+  }>>([])
   const [loading, setLoading] = useState(true)
 
   const [scope, setScope] = useState<TeamsScope>({ kind: 'all' })
@@ -229,7 +232,14 @@ export default function TeamsPage() {
       const all: ApiTeam[] = [...owned, ...member]
       setRawTeams(all)
       setTeams(toSidebarTeams(all))
-      setPending(all.reduce((n, t) => n + (t.pendingMembers?.length || 0), 0))
+      const mine = data.myPending || []
+      setMyPending(mine)
+      // The badge counts BOTH directions: requests an owner has to decide, and
+      // requests this agent is waiting on. One number, because to the person
+      // looking at it the question is the same — is there something in
+      // Requests for me.
+      const incoming = all.reduce((n, t) => n + (t.pendingMembers?.length || 0), 0)
+      setPending(incoming + mine.length)
     } catch {
       setTeams([])
     } finally {
@@ -297,14 +307,48 @@ export default function TeamsPage() {
   }, [rawTeams])
 
   const pendingList = useMemo(() => {
-    const out: Array<{ id: string; name: string; team: string }> = []
+    // memberId, not user id: accept and reject both address the team_members
+    // row, because a decision is about this person's place in THIS team.
+    const out: Array<{ id: string; memberId: string; name: string; team: string }> = []
     for (const t of rawTeams) {
       for (const m of t.pendingMembers || []) {
-        out.push({ id: m.userId || m.id, name: displayName(m), team: t.name })
+        out.push({
+          id: m.userId || m.id,
+          memberId: m.id,
+          name: displayName(m),
+          team: t.name,
+        })
       }
     }
     return out
   }, [rawTeams])
+
+  /**
+   * Approve or decline one join request.
+   *
+   * Approving is the expensive direction — it activates the membership and, on
+   * an owner-paid code, starts a seat charge. So the result is surfaced rather
+   * than assumed: a failure says so instead of the row silently staying put.
+   */
+  const decideRequest = useCallback(async (memberId: string, action: 'accept' | 'reject') => {
+    setBusy(true)
+    try {
+      const res = await fetch(`/api/teams/members/${action}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memberId }),
+      }).then(r => r.json()).catch(() => null)
+
+      if (!res?.success) {
+        throw new Error(res?.error || `Could not ${action === 'accept' ? 'approve' : 'decline'} that request`)
+      }
+      await refresh()
+    } catch (e: any) {
+      setError(e.message || 'Could not update that request')
+    } finally {
+      setBusy(false)
+    }
+  }, [refresh])
 
   // ALL USERS and REQUESTS are sidebar scopes AND full views. Selecting either
   // swaps the panel; the back arrow returns to the overview without disturbing
@@ -423,10 +467,57 @@ export default function TeamsPage() {
           {view === 'requests' && (
             <>
               <ViewHeader title="Requests" onBack={() => setView('overview')} />
-              {pendingList.length === 0 ? (
-                <div style={{ color: DIM, fontSize: 13 }}>
-                  {loading ? 'Loading…' : 'No pending requests.'}
+
+              {/* ── WHAT YOU ARE WAITING ON ──────────────────────────────────
+                  An agent who joined with a review code previously saw nothing
+                  at all afterwards — no team, no request, no sign the code had
+                  worked. From their side the join had silently failed. This is
+                  the only place that tells them otherwise, so it comes first:
+                  their own status matters more to them than anyone else's. */}
+              {myPending.length > 0 && (
+                <div style={{ marginBottom: 26 }}>
+                  <h3 style={{
+                    margin: '0 0 10px', fontSize: 11, letterSpacing: 1.4,
+                    textTransform: 'uppercase', color: MUTED, fontWeight: 600,
+                  }}>Waiting On Approval</h3>
+                  <div style={{ display: 'grid', gap: 8 }}>
+                    {myPending.map(p => (
+                      <div key={p.id} style={{
+                        display: 'flex', alignItems: 'center', gap: 12,
+                        background: PANEL, border: `1px solid ${HAIRLINE}`,
+                        borderLeft: '3px solid #b45309',
+                        borderRadius: 4, padding: '12px 14px',
+                      }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 14, fontWeight: 500 }}>{p.teamName}</div>
+                          <div style={{ fontSize: 11.5, color: DIM, marginTop: 2 }}>
+                            Your request is with the team owner
+                          </div>
+                        </div>
+                        <span style={{
+                          fontSize: 10, letterSpacing: 0.8, textTransform: 'uppercase',
+                          color: '#fbbf24', border: '1px solid #78350f',
+                          background: '#2a1a05', borderRadius: 3, padding: '3px 8px',
+                        }}>Pending</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
+              )}
+
+              {pendingList.length > 0 && (
+                <h3 style={{
+                  margin: '0 0 10px', fontSize: 11, letterSpacing: 1.4,
+                  textTransform: 'uppercase', color: MUTED, fontWeight: 600,
+                }}>Awaiting Your Decision</h3>
+              )}
+
+              {pendingList.length === 0 ? (
+                myPending.length === 0 && (
+                  <div style={{ color: DIM, fontSize: 13 }}>
+                    {loading ? 'Loading…' : 'No pending requests.'}
+                  </div>
+                )
               ) : (
                 <div style={{ display: 'grid', gap: 8 }}>
                   {pendingList.map(r => (
@@ -441,7 +532,28 @@ export default function TeamsPage() {
                           wants to join {r.team}
                         </div>
                       </div>
-                      <span style={{ fontSize: 11, color: DIM }}>Approve / decline to come</span>
+                      {/* Decline first, Approve last and emphasised. Approve is
+                          the one that costs money — it starts a seat charge —
+                          so it gets the deliberate position rather than the one
+                          the cursor lands on by accident. */}
+                      <button
+                        disabled={busy}
+                        onClick={() => decideRequest(r.memberId, 'reject')}
+                        style={{
+                          padding: '7px 12px', borderRadius: 4, cursor: 'pointer',
+                          border: `1px solid ${HAIRLINE}`, background: RAISED,
+                          color: MUTED, fontSize: 12, fontFamily: 'inherit',
+                        }}
+                      >Decline</button>
+                      <button
+                        disabled={busy}
+                        onClick={() => decideRequest(r.memberId, 'accept')}
+                        style={{
+                          padding: '7px 14px', borderRadius: 4, cursor: 'pointer',
+                          border: '1px solid #16a34a', background: '#16a34a',
+                          color: '#fff', fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
+                        }}
+                      >Approve</button>
                     </div>
                   ))}
                 </div>
@@ -469,7 +581,11 @@ export default function TeamsPage() {
                       fontFamily: 'inherit', letterSpacing: 0.5,
                     }}
                   >
-                    {scopeLabel}
+                    {/* The METRIC, not the sidebar selection. A team or
+                        campaign picked in the tree opens its own view, so
+                        naming it here as well said the same thing twice and
+                        implied the dropdown could change it, which it cannot. */}
+                    {(METRIC_VIEWS.find(m => m.key === metric)?.label || 'All Users').toUpperCase()}
                     <span style={{ fontSize: 12, color: MUTED }}>▾</span>
                   </button>
                   {metricOpen && (

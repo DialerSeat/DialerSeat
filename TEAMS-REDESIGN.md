@@ -145,3 +145,42 @@ Not decoration — each earns its place:
 
 Mobile: the inspector becomes a bottom sheet, the floor grid goes single
 column, the roster table becomes the card list. The bar and pulse strip stay.
+
+---
+
+## Backlog
+
+### Hide lead numbers until a human answers
+
+A campaign setting, available in New Campaign and editable later from the team
+view, applying to **all four dialer modes**.
+
+While it is on, the queue panel does not show a lead's phone number. The number
+appears only once AMD has confirmed a human pickup on that specific lead —
+everything before that (upcoming rows, ringing, machine verdicts, no-answers)
+stays masked.
+
+**Why it matters commercially.** A lead vendor selling seats on their own list
+is currently handing every agent a readable copy of the whole stash. One export,
+one screenshot of a scrolled panel, and the asset they sell is gone. Masking
+until connection means an agent can work the list without ever being able to
+take it — they get the conversations, not the inventory.
+
+Implementation notes for whoever picks this up:
+- The panel already knows which lead is live (`activeDialingLeadIds`) and the
+  verdict already lands in `calls.amd_result`, so the reveal condition is
+  `amd_result = 'human'` on the current call for that lead id. No new detection
+  work.
+- Mask in the API response, not just the UI. A number that reaches the browser
+  and is merely hidden by CSS is not protected — it is one devtools panel away.
+  `/api/leads/list` and the queue fetch have to omit it.
+- Search must keep working on the masked list, which means matching
+  server-side rather than filtering a client array of numbers.
+- The dial path itself is unaffected: `placeOutboundCall` reads the lead from
+  the database, so the browser never needs the number to make the call.
+- Exports are the biggest hole and must be closed in the same change. CSV
+  download hands over the entire list in one click — masking the panel while
+  leaving /api/leads/export open protects nothing. On a masked campaign, an
+  agent's export must omit the phone column outright; the owner's own export
+  keeps it, since it is their list.
+- Same for the leads page and any bulk view an agent can reach.
