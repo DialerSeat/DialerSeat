@@ -46,6 +46,10 @@ export async function POST(req: Request) {
       .update({
         status: 'removed',
         removed_at: new Date().toISOString(),
+        // A refusal is still an answer, and somebody waiting on one deserves to
+        // hear it rather than being left to work it out from the request
+        // quietly disappearing.
+        decision_seen_at: null,
       })
       .eq('id', memberId)
 

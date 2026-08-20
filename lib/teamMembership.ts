@@ -79,7 +79,14 @@ export async function activatePendingTeamMember(memberId: string): Promise<{
 
   await supabaseAdmin
     .from('team_members')
-    .update({ status: 'active', accepted_at: new Date().toISOString() })
+    // decision_seen_at back to null is what raises the agent's notification.
+    // The decision is news to them exactly once — they asked, somebody answered
+    // — and it stops being news the moment they look at it.
+    .update({
+      status: 'active',
+      accepted_at: new Date().toISOString(),
+      decision_seen_at: null,
+    })
     .eq('id', memberId)
 
   const { data: activated } = await supabaseAdmin

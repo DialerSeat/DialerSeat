@@ -7,6 +7,7 @@ import TeamsSidebar, {
 } from '@/components/teams/TeamsSidebar'
 import TeamDetail, { type TeamDetailData } from '@/components/teams/TeamDetail'
 import CampaignDetail from '@/components/teams/CampaignDetail'
+import FloorView from '@/components/teams/FloorView'
 import {
   VolumeChart, ConversionChart, DispositionChart, CampaignChart,
 } from '@/components/teams/AnalyticsCharts'
@@ -69,7 +70,7 @@ interface ApiTeam {
 }
 
 type RangeKey = 'today' | 'week' | 'month' | 'all' | 'custom'
-type PanelView = 'overview' | 'all_users' | 'requests' | 'team' | 'campaign'
+type PanelView = 'overview' | 'all_users' | 'requests' | 'team' | 'campaign' | 'floor'
 
 /** What the tiles and charts are measuring. Scope answers WHO, range answers
  *  WHEN, and this answers WHICH NUMBERS — three independent questions that
@@ -353,6 +354,10 @@ export default function TeamsPage() {
   const [rawTeams, setRawTeams] = useState<ApiTeam[]>([])
   const [pending, setPending] = useState(0)
   const [helpOpen, setHelpOpen] = useState(false)
+  const [myDecisions, setMyDecisions] = useState<Array<{
+    id: string; teamId: string; teamName: string
+    outcome: 'accepted' | 'declined'; decidedAt: string | null
+  }>>([])
 
   // Real numbers, counted from call rows. Null until the first load finishes so
   // the tiles show a dash rather than a zero — "0 calls" and "not loaded yet"
@@ -438,6 +443,8 @@ export default function TeamsPage() {
       setTeams(toSidebarTeams(all))
       const mine = data.myPending || []
       setMyPending(mine)
+      const decisions = data.myDecisions || []
+      setMyDecisions(decisions)
       setSeatTier(data.seatTier || null)
       // ── ONLY COUNT WHAT SOMEBODY HAS TO ACT ON ───────────────────────
       // The badge used to include the viewer's OWN pending requests, so an
@@ -451,7 +458,11 @@ export default function TeamsPage() {
       // request still shows inside the Requests view — they can go and look at
       // it — it just does not shout.
       const incoming = all.reduce((n, t) => n + (t.pendingMembers?.length || 0), 0)
-      setPending(incoming)
+      // Two things badge, and both clear by acting: an owner's incoming
+      // requests clear when they decide, and an agent's unseen decision clears
+      // when they read it. The agent's own PENDING request still does not
+      // badge — nothing has happened and there is nothing they can do.
+      setPending(incoming + decisions.length)
     } catch {
       // A failed background tick must not wipe the page. Blanking the tree
       // because one poll hit a blip would be the sync making things worse than
@@ -766,6 +777,15 @@ export default function TeamsPage() {
       const leaving = view === 'requests'
       setView(leaving ? 'overview' : 'requests')
       setScope(next)
+      // Opening the view IS reading the decision. Marked on the way in rather
+      // than behind a dismiss button, because asking somebody to acknowledge
+      // that they have been told something they can already see is a click
+      // that buys nothing.
+      if (!leaving && myDecisions.length > 0) {
+        void fetch('/api/teams/members/seen-decision', { method: 'POST' })
+          .then(() => { setMyDecisions([]); void refresh(true) })
+          .catch(() => {})
+      }
       return
     }
     setScope(next)
@@ -959,6 +979,8 @@ export default function TeamsPage() {
         )}
 
         <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '24px 28px 40px' }}>
+          {view === 'floor' && <FloorView onBack={goOverview} />}
+
           {view === 'campaign' && scope.kind === 'campaign' && (
             <CampaignDetail
               campaignId={scope.campaignId}
@@ -1094,6 +1116,40 @@ export default function TeamsPage() {
           {view === 'requests' && (
             <>
               <ViewHeader title="Requests" onBack={goOverview} />
+
+              {/* ── WHAT CAME BACK ───────────────────────────────────────────
+                  Above everything, because an answer to a question you asked
+                  outranks a list of questions other people asked you. Declines
+                  are stated plainly rather than softened — somebody who was
+                  turned down needs to know that, not to be left wondering
+                  whether the request is still in flight. */}
+              {myDecisions.length > 0 && (
+                <div style={{ display: 'grid', gap: 8, marginBottom: 18 }}>
+                  {myDecisions.map(d => {
+                    const ok = d.outcome === 'accepted'
+                    return (
+                      <div key={d.id} style={{
+                        background: PANEL,
+                        border: `1px solid ${ok ? '#16a34a' : '#b45309'}`,
+                        borderRadius: 4, padding: '12px 14px',
+                      }}>
+                        <div style={{ fontSize: 13.5, color: TEXT }}>
+                          {ok ? (
+                            <>You were accepted onto <strong>{d.teamName}</strong>.</>
+                          ) : (
+                            <><strong>{d.teamName}</strong> declined your request.</>
+                          )}
+                        </div>
+                        <div style={{ fontSize: 11.5, color: DIM, marginTop: 3 }}>
+                          {ok
+                            ? 'Their campaigns are in your sidebar now.'
+                            : 'Ask whoever sent you the code if you think this was a mistake.'}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
 
               {/* ── WHAT YOU ARE WAITING ON ──────────────────────────────────
                   An agent who joined with a review code previously saw nothing
@@ -1392,6 +1448,7 @@ export default function TeamsPage() {
 
       <div className="ts-side" id="ts-side">
         <TeamsSidebar
+          onOpenFloor={() => { setScope({ kind: 'all' }); setView('floor') }}
           teams={teams}
           scope={scope}
           onScopeChange={handleScope}

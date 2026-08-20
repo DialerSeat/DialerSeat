@@ -64,6 +64,36 @@ export async function GET(req: NextRequest) {
       }))
     }
 
+    // ── AN ANSWER THEY HAVE NOT SEEN YET ─────────────────────────────────
+    // A pending request is not news — nothing has happened and the agent can do
+    // nothing about it, which is why it no longer badges. A DECISION is news
+    // exactly once. Accepted or declined, somebody answered them, and they
+    // should not have to notice a team quietly appearing in a tree to find out.
+    const { data: decidedRows } = await supabaseAdmin
+      .from('team_members')
+      .select('id, team_id, status, accepted_at, removed_at')
+      .eq('user_id', userId)
+      .in('status', ['active', 'removed'])
+      .is('decision_seen_at', null)
+      .limit(25)
+
+    let myDecisions: any[] = []
+    if (decidedRows && decidedRows.length > 0) {
+      const { data: decidedTeams } = await supabaseAdmin
+        .from('teams')
+        .select('id, name')
+        .in('id', decidedRows.map((r: any) => r.team_id))
+      const nameById: Record<string, string> = {}
+      for (const t of decidedTeams || []) nameById[t.id] = t.name
+      myDecisions = decidedRows.map((r: any) => ({
+        id: r.id,
+        teamId: r.team_id,
+        teamName: nameById[r.team_id] || 'Team',
+        outcome: r.status === 'active' ? 'accepted' : 'declined',
+        decidedAt: r.accepted_at || r.removed_at,
+      }))
+    }
+
     const memberTeamIds = (memberRows || []).map((m: any) => m.team_id)
 
     let memberTeams: any[] = []
@@ -369,6 +399,8 @@ export async function GET(req: NextRequest) {
       teams: { owned, member: memberWithCampaigns },
       // Join requests this viewer is waiting on. Empty for most people.
       myPending,
+      // Decisions made about them that they have not seen yet.
+      myDecisions,
       seatTier,
     })
   } catch (error: any) {

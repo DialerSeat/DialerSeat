@@ -72,6 +72,7 @@ interface Props {
   /** Count for the REQUESTS row. Hidden when zero — a badge showing 0 is noise. */
   pendingRequests?: number
   onCreateTeam?: () => void
+  onOpenFloor?: () => void
   onCreateCampaign?: () => void
   onOpenTeamMenu?: (teamId: string) => void
   onJoinWithCode?: (code: string) => void
@@ -129,6 +130,7 @@ export default function TeamsSidebar({
   onScopeChange,
   pendingRequests = 0,
   onCreateTeam,
+  onOpenFloor,
   onCreateCampaign,
   onOpenTeamMenu,
   onJoinWithCode,
@@ -475,6 +477,17 @@ export default function TeamsSidebar({
                   {/* Statements live behind the ⋮ rather than in the tree: they
                       are not a thing you browse, they are a thing you go and
                       fetch when an accountant asks. */}
+                  {/* The live floor sits beside statements because both are
+                      things you go and look at rather than things you browse
+                      to — one during a shift, one at the end of a quarter. */}
+                  <button
+                    className="ts-menu-item"
+                    role="menuitem"
+                    onClick={() => { setMoreMenuOpen(false); onOpenFloor?.() }}
+                  >
+                    The Floor
+                    <span className="ts-menu-hint">Who is dialing now, and which seats are idle</span>
+                  </button>
                   <a
                     className="ts-menu-item"
                     role="menuitem"
