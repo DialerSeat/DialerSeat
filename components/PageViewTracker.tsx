@@ -18,6 +18,8 @@ import { usePathname } from 'next/navigation'
 export default function PageViewTracker() {
   const pathname = usePathname()
   const lastSent = useRef<string | null>(null)
+  const viewIdRef = useRef<string | null>(null)
+  const reportedRef = useRef(false)
 
   useEffect(() => {
     if (!pathname) return
@@ -26,29 +28,72 @@ export default function PageViewTracker() {
     // a way nobody notices until they stop matching reality.
     if (lastSent.current === pathname) return
     lastSent.current = pathname
+    viewIdRef.current = null
+    reportedRef.current = false
+
+    // Campaign parameters, read by name. The query string itself is never sent
+    // — it can carry search terms, tokens and ids, and only these three are
+    // about where the visit came from.
+    const q = typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search)
+      : new URLSearchParams()
 
     const payload = JSON.stringify({
       path: pathname,
       referrer: typeof document !== 'undefined' ? document.referrer : '',
       authed: typeof document !== 'undefined' && document.cookie.includes('__session'),
+      utm_source: q.get('utm_source') || undefined,
+      utm_medium: q.get('utm_medium') || undefined,
+      utm_campaign: q.get('utm_campaign') || undefined,
     })
 
-    // sendBeacon survives the page being closed mid-navigation, which a normal
-    // fetch does not — the last view of a session is exactly the one a plain
-    // fetch tends to lose. fetch with keepalive is the fallback.
-    try {
-      if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
-        navigator.sendBeacon('/api/analytics/pageview', new Blob([payload], { type: 'application/json' }))
-        return
-      }
-    } catch { /* fall through */ }
-
+    // ── THE ENTRY BEACON ──────────────────────────────────────────────────
+    // fetch rather than sendBeacon here, because this one needs the row id back
+    // so the exit beacon can update it. The exit beacon, which cannot wait for
+    // anything, still uses sendBeacon.
+    let cancelled = false
+    const started = Date.now()
     fetch('/api/analytics/pageview', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: payload,
       keepalive: true,
-    }).catch(() => {})
+    })
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { if (!cancelled) viewIdRef.current = d?.id ?? null })
+      .catch(() => {})
+
+    // ── HOW LONG THEY STAYED ──────────────────────────────────────────────
+    // Sent when the page is left, which is the only moment the answer exists.
+    // sendBeacon because a normal fetch is abandoned when the tab closes, and
+    // the longest, most interesting visits are exactly the ones that end that
+    // way. visibilitychange rather than unload: iOS never fires unload, so on
+    // a phone this would otherwise report nothing at all.
+    const report = () => {
+      const id = viewIdRef.current
+      if (!id || reportedRef.current) return
+      reportedRef.current = true
+      const ms = Date.now() - started
+      try {
+        navigator.sendBeacon?.(
+          '/api/analytics/pageview',
+          new Blob([JSON.stringify({ path: pathname, viewId: id, dwellMs: ms })], {
+            type: 'application/json',
+          })
+        )
+      } catch { /* a missing dwell figure is not worth an error */ }
+    }
+
+    const onHide = () => { if (document.visibilityState === 'hidden') report() }
+    document.addEventListener('visibilitychange', onHide)
+
+    return () => {
+      cancelled = true
+      // Also on route change — a client-side navigation ends this view just as
+      // surely as closing the tab does, and nothing else would notice.
+      report()
+      document.removeEventListener('visibilitychange', onHide)
+    }
   }, [pathname])
 
   return null

@@ -23,6 +23,53 @@ function n(v: number | null | undefined): string {
   return v.toLocaleString()
 }
 
+function ms(v: number | null | undefined): string {
+  if (!v) return '—'
+  const sec = Math.round(v / 1000)
+  if (sec < 60) return `${sec}s`
+  const m = Math.floor(sec / 60)
+  return `${m}m ${sec % 60}s`
+}
+
+const COUNTRY_NAMES: Record<string, string> = {
+  US: 'United States', CA: 'Canada', GB: 'United Kingdom', AU: 'Australia',
+  IN: 'India', PH: 'Philippines', MX: 'Mexico', DE: 'Germany', FR: 'France',
+  NL: 'Netherlands', BR: 'Brazil', PK: 'Pakistan', NG: 'Nigeria', ES: 'Spain',
+}
+
+/** A small histogram — hours of the day, days of the week. Not a line, because
+ *  these are buckets rather than a series over time, and a line implies a
+ *  continuity between 23:00 and 00:00 that does not exist. */
+function Histogram({ rows, highlight }: {
+  rows: Array<{ label: string; views: number }>
+  highlight?: string
+}) {
+  const max = Math.max(...rows.map(r => r.views), 1)
+  return (
+    <div style={{ display: 'flex', gap: 2, alignItems: 'flex-end', height: 90 }}>
+      {rows.map(r => (
+        <div
+          key={r.label}
+          title={`${r.label} — ${r.views.toLocaleString()} views`}
+          style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, minWidth: 0 }}
+        >
+          <div style={{
+            width: '100%',
+            height: Math.max(2, (r.views / max) * 68),
+            background: r.label === highlight ? LINE2 : LINE,
+            opacity: r.views === 0 ? 0.18 : 1,
+            borderRadius: '2px 2px 0 0',
+          }} />
+          <span style={{
+            fontSize: 8, color: DIM, whiteSpace: 'nowrap',
+            overflow: 'hidden', textOverflow: 'clip',
+          }}>{r.label.length > 3 ? r.label.slice(0, 2) : r.label}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function Tile({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div style={{
@@ -307,6 +354,36 @@ export default function Visibility() {
               value={t.views > 0 ? `${Math.round((t.authedViews / t.views) * 100)}%` : '—'}
               sub={`${n(t.anonViews)} anonymous`}
             />
+            <Tile
+              label="Pages per visit"
+              value={t.pagesPerVisit === null || t.pagesPerVisit === undefined ? '—' : String(t.pagesPerVisit)}
+              sub={
+                t.singlePageRate === null || t.singlePageRate === undefined
+                  ? undefined
+                  : `${t.singlePageRate}% saw one page`
+              }
+            />
+            <Tile
+              label="Time on page"
+              value={ms(t.avgDwellMs)}
+              // Coverage stated beside the average, because a figure built on
+              // 8% of views is a different claim from one built on 90% — and a
+              // reader deciding whether to act on it needs to know which.
+              sub={
+                t.dwellCoverage === null || t.dwellCoverage === undefined
+                  ? 'no timings yet'
+                  : `measured on ${t.dwellCoverage}% of views`
+              }
+            />
+            <Tile
+              label="vs previous"
+              value={
+                t.changePct === null || t.changePct === undefined
+                  ? '—'
+                  : `${t.changePct >= 0 ? '+' : ''}${t.changePct}%`
+              }
+              sub={`${n(t.previousViews)} before`}
+            />
           </div>
 
           {data.truncated && (
@@ -381,10 +458,186 @@ export default function Visibility() {
             </div>
           </div>
 
+          {/* ── HOW THEY ARRIVED ─────────────────────────────────────────
+              Entry pages are a different question from most-viewed, and the
+              more useful one for anything marketing: the busiest page is often
+              somewhere people land AFTER arriving elsewhere. */}
+          <div style={{
+            display: 'grid', gap: 12, marginTop: 12,
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+          }}>
+            <div style={{
+              background: PANEL, border: `1px solid ${HAIRLINE}`, borderRadius: 6,
+              padding: '12px 14px 14px',
+            }}>
+              <div style={{
+                fontSize: 9.5, letterSpacing: 1.2, textTransform: 'uppercase',
+                color: MUTED, marginBottom: 4,
+              }}>Landed on first</div>
+              <div style={{ fontSize: 10.5, color: DIM, marginBottom: 10 }}>
+                The page each visitor arrived on, per day
+              </div>
+              {(data.entryPages || []).length === 0 ? (
+                <div style={{ color: DIM, fontSize: 12 }}>Nothing yet.</div>
+              ) : (
+                <RankTable
+                  labelHead="Entry page"
+                  rows={(data.entryPages || []).map((p: any) => ({
+                    label: p.path, value: p.visits,
+                  }))}
+                />
+              )}
+            </div>
+
+            <div style={{
+              background: PANEL, border: `1px solid ${HAIRLINE}`, borderRadius: 6,
+              padding: '12px 14px 14px',
+            }}>
+              <div style={{
+                fontSize: 9.5, letterSpacing: 1.2, textTransform: 'uppercase',
+                color: MUTED, marginBottom: 4,
+              }}>Held attention longest</div>
+              <div style={{ fontSize: 10.5, color: DIM, marginBottom: 10 }}>
+                Average time open · three or more timed views
+              </div>
+              {(data.dwellPages || []).length === 0 ? (
+                <div style={{ color: DIM, fontSize: 12, lineHeight: 1.7 }}>
+                  No timings yet. These appear once pages have been opened and
+                  left a few times.
+                </div>
+              ) : (
+                <div className="vz-wrap">
+                  <table className="vz-t">
+                    <thead>
+                      <tr>
+                        <th>Page</th>
+                        <th className="num">Avg time</th>
+                        <th className="num">Views</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(data.dwellPages || []).map((p: any) => (
+                        <tr key={p.path}>
+                          <td className="vz-path" title={p.path}>{p.path}</td>
+                          <td className="num">{ms(p.avgMs)}</td>
+                          <td className="num" style={{ color: DIM }}>{n(p.samples)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ── WHEN ─────────────────────────────────────────────────────── */}
+          <div style={{
+            display: 'grid', gap: 12, marginTop: 12,
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+          }}>
+            <div style={{
+              background: PANEL, border: `1px solid ${HAIRLINE}`, borderRadius: 6,
+              padding: '12px 14px 14px',
+            }}>
+              <div style={{
+                fontSize: 9.5, letterSpacing: 1.2, textTransform: 'uppercase',
+                color: MUTED, marginBottom: 10,
+              }}>Hour of day</div>
+              <Histogram rows={data.byHour || []} />
+            </div>
+
+            <div style={{
+              background: PANEL, border: `1px solid ${HAIRLINE}`, borderRadius: 6,
+              padding: '12px 14px 14px',
+            }}>
+              <div style={{
+                fontSize: 9.5, letterSpacing: 1.2, textTransform: 'uppercase',
+                color: MUTED, marginBottom: 10,
+              }}>Day of week</div>
+              <Histogram rows={data.byWeekday || []} />
+            </div>
+          </div>
+
+          {/* ── WHO AND FROM WHERE ───────────────────────────────────────── */}
+          <div style={{
+            display: 'grid', gap: 12, marginTop: 12,
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+          }}>
+            <div style={{
+              background: PANEL, border: `1px solid ${HAIRLINE}`, borderRadius: 6,
+              padding: '12px 14px 14px',
+            }}>
+              <div style={{
+                fontSize: 9.5, letterSpacing: 1.2, textTransform: 'uppercase',
+                color: MUTED, marginBottom: 10,
+              }}>Countries</div>
+              {(data.countries || []).length === 0 ? (
+                <div style={{ color: DIM, fontSize: 12, lineHeight: 1.7 }}>
+                  No country data. This appears on deployed traffic — local
+                  requests carry no location.
+                </div>
+              ) : (
+                <RankTable
+                  labelHead="Country"
+                  rows={(data.countries || []).map((c: any) => ({
+                    label: COUNTRY_NAMES[c.country] || c.country,
+                    value: c.views,
+                  }))}
+                />
+              )}
+            </div>
+
+            <div style={{
+              background: PANEL, border: `1px solid ${HAIRLINE}`, borderRadius: 6,
+              padding: '12px 14px 14px',
+            }}>
+              <div style={{
+                fontSize: 9.5, letterSpacing: 1.2, textTransform: 'uppercase',
+                color: MUTED, marginBottom: 4,
+              }}>Campaigns</div>
+              <div style={{ fontSize: 10.5, color: DIM, marginBottom: 10 }}>
+                Traffic tagged with utm parameters
+              </div>
+              {(data.utmSources || []).length === 0 ? (
+                <div style={{ color: DIM, fontSize: 12, lineHeight: 1.7 }}>
+                  Nothing tagged yet. Add{' '}
+                  <code style={{ color: MUTED }}>?utm_source=…&amp;utm_medium=…</code>{' '}
+                  to a link and it shows up here.
+                </div>
+              ) : (
+                <>
+                  <RankTable
+                    labelHead="Source / medium"
+                    rows={(data.utmSources || []).map((u: any) => ({
+                      label: u.label, value: u.views,
+                    }))}
+                  />
+                  {(data.utmCampaigns || []).length > 0 && (
+                    <div style={{ marginTop: 14 }}>
+                      <div style={{
+                        fontSize: 9.5, letterSpacing: 1.2, textTransform: 'uppercase',
+                        color: MUTED, marginBottom: 10,
+                      }}>By campaign</div>
+                      <RankTable
+                        labelHead="Campaign"
+                        rows={(data.utmCampaigns || []).map((u: any) => ({
+                          label: u.label, value: u.views,
+                        }))}
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+
           <div style={{ fontSize: 10.5, color: DIM, marginTop: 14, lineHeight: 1.7 }}>
             Counted without storing IP addresses, user agents or user ids. A
             visitor is identified by a hash that rotates daily, so uniques are
-            per-day and cannot be linked across days — including by us.
+            per-day and cannot be linked across days — including by us. Location
+            is country and region only; campaign tags are read by name rather
+            than by keeping the query string, which can carry search terms and
+            tokens.
           </div>
         </>
       )}

@@ -76,15 +76,59 @@ export async function POST(req: NextRequest) {
       .digest('hex')
       .slice(0, 32)
 
-    await supabase.from('page_views').insert({
-      path,
-      referrer_host: referrerHost,
-      is_authed: !!body?.authed,
-      visitor_hash: visitorHash,
-      device: deviceFrom(ua),
-    })
+    // ── DWELL COMES BACK LATER ────────────────────────────────────────
+    // A second beacon fires when the page is left, carrying how long it was
+    // open. It updates the row the first beacon wrote rather than inserting a
+    // new one — two rows per view would double every count on the page.
+    if (body?.dwellMs && body?.viewId) {
+      const ms = Math.min(Math.max(0, Math.round(Number(body.dwellMs))), 6 * 60 * 60 * 1000)
+      if (Number.isFinite(ms) && ms > 0) {
+        await supabase
+          .from('page_views')
+          .update({ dwell_ms: ms })
+          .eq('id', body.viewId)
+      }
+      return new NextResponse(null, { status: 204 })
+    }
 
-    return new NextResponse(null, { status: 204 })
+    // ── WHERE FROM, WITHOUT FOLLOWING ANYBODY ─────────────────────────
+    // Vercel's edge adds these on every request at no cost and with no extra
+    // tracking. Country and region only: city and postcode narrow a person far
+    // more than a traffic graph ever needs, and collecting them would mean
+    // holding data we have no use for.
+    const country = req.headers.get('x-vercel-ip-country')?.slice(0, 4) || null
+    const region = req.headers.get('x-vercel-ip-country-region')?.slice(0, 8) || null
+
+    // The standard campaign trio, extracted by name rather than keeping the
+    // query string. A raw query carries search terms, tokens and ids — none of
+    // which belong in an analytics table, and all of which would end up here.
+    const utm = (k: string): string | null => {
+      const v = body?.[k]
+      if (typeof v !== 'string' || !v.trim()) return null
+      return v.trim().slice(0, 120)
+    }
+
+    const { data: inserted } = await supabase
+      .from('page_views')
+      .insert({
+        path,
+        referrer_host: referrerHost,
+        is_authed: !!body?.authed,
+        visitor_hash: visitorHash,
+        device: deviceFrom(ua),
+        country,
+        region,
+        utm_source: utm('utm_source'),
+        utm_medium: utm('utm_medium'),
+        utm_campaign: utm('utm_campaign'),
+      })
+      .select('id')
+      .single()
+
+    // The id goes back so the exit beacon can find its own row. Returned as
+    // JSON rather than 204 only on the insert path — the dwell path above stays
+    // empty because nothing needs to come back from it.
+    return NextResponse.json({ id: inserted?.id ?? null })
   } catch {
     // Deliberately silent. A tally mark is not worth an error in anybody's
     // console, and certainly not worth a failed request on a marketing page.
