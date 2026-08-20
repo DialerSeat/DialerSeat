@@ -254,6 +254,48 @@ doubt, the stricter behaviour is the correct one.
 
 ---
 
+## Hosting capacity, and where it stops
+
+Deliberately on free tiers. At the current size that is the right call and not a
+gap — the numbers below exist so the ceiling arrives as a decision rather than an
+outage.
+
+**Measured, not estimated:** a lead costs about **1,436 bytes** including
+indexes. The database was 42 MB when this was written, roughly 8.5% of the free
+limit, leaving about **334,000 leads** of headroom.
+
+**Supabase Free enters READ-ONLY at 500 MB of database size.** Read-only is not
+slow, it is stopped: no lead uploads, no call rows, no dispositions, no
+heartbeats, every write failing invisibly from inside the app. The daily
+`ops-health` cron now warns at 70% and 85% so this cannot arrive unannounced.
+The trigger to upgrade is a seat count, not a date — at 50 seats dialing 1,000
+leads a day the database grows about **69 MB/day**, which is under a week of
+runway.
+
+**Vercel Hobby is non-commercial only.** Their fair-use policy defines commercial
+as including "any method of requesting or processing payment from visitors of the
+site", which is what Stripe checkout is. This one has no usage gauge because it
+is a policy matter, and enforcement is pausing the deployment — so it must be
+handled before real payment volume rather than when some number goes red. Usage
+points the same way: about **6.3M function invocations a month at 50 seats**
+against Hobby's 1M guideline, tripled again under predictive's 1.5s heartbeat.
+
+**Vercel function limits worth knowing:** request bodies are capped at **4.5 MB**
+(a 413 raised before the handler runs — this is why large lead uploads are
+chunked client-side), and `maxDuration` defaults to 300s with fluid compute, which
+is also the Hobby maximum. Pro allows 800s. Do not set a lower `maxDuration`
+believing the default is small; it is not.
+
+**Sentry, GitHub and Cloudflare are not near anything.** Exceeding Sentry's free
+quota drops events, costing visibility rather than uptime.
+
+**The heartbeat is what will actually bind first at scale.** Every agent posts
+every 5 seconds, or every 1.5 seconds on predictive. That is presence traffic
+proportional to seats and independent of call volume: 2,900 seats is ~580
+requests/second before anybody dials. The compute upgrade buys room, but the
+architectural answer is that presence should not be a database write per agent
+per five seconds.
+
 ## Known gaps
 
 - No seat charge has completed end to end. Everything in billing is reasoned,
