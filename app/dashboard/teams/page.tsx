@@ -1,12 +1,16 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import TeamsSidebar, {
   type SidebarTeam,
   type TeamsScope,
 } from '@/components/teams/TeamsSidebar'
 import TeamDetail, { type TeamDetailData } from '@/components/teams/TeamDetail'
-import { CreateTeamModal, CreateCampaignModal } from '@/components/teams/TeamModals'
+import {
+  CreateTeamModal,
+  CreateCampaignModal,
+  CreateCodeModal,
+} from '@/components/teams/TeamModals'
 
 // =============================================================================
 // TEAMS — OVERVIEW, ALL USERS, REQUESTS
@@ -184,26 +188,31 @@ export default function TeamsPage() {
   const [showTeamModal, setShowTeamModal] = useState(false)
   const [showCampaignModal, setShowCampaignModal] = useState(false)
   const [campaignTeamId, setCampaignTeamId] = useState<string | undefined>()
+  const [showCodeModal, setShowCodeModal] = useState(false)
+  const [codeTeamId, setCodeTeamId] = useState<string | undefined>()
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      try {
-        const res = await fetch('/api/teams/list')
-        const data = await res.json()
-        if (cancelled) return
-        const all: ApiTeam[] = [...(data.owned || []), ...(data.joined || [])]
-        setRawTeams(all)
-        setTeams(toSidebarTeams(all))
-        setPending(all.reduce((n, t) => n + (t.pendingMembers?.length || 0), 0))
-      } catch {
-        if (!cancelled) setTeams([])
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    })()
-    return () => { cancelled = true }
+  // One loader, called on mount and after every mutation. Anything that
+  // changes teams, campaigns or codes re-reads the same source rather than
+  // patching local state — the list endpoint already assembles the joins, and
+  // two code paths building the same tree is how they drift apart.
+  const refresh = useCallback(async () => {
+    try {
+      const res = await fetch('/api/teams/list')
+      const data = await res.json()
+      const all: ApiTeam[] = [...(data.owned || []), ...(data.joined || [])]
+      setRawTeams(all)
+      setTeams(toSidebarTeams(all))
+      setPending(all.reduce((n, t) => n + (t.pendingMembers?.length || 0), 0))
+    } catch {
+      setTeams([])
+    } finally {
+      setLoading(false)
+    }
   }, [])
+
+  useEffect(() => { void refresh() }, [refresh])
 
   // The header names the scope in the same words the sidebar used to select
   // it. The sidebar and the panel must never disagree about where you are.
@@ -274,7 +283,7 @@ export default function TeamsPage() {
       id: raw.id,
       name: raw.name,
       isOwner: raw.isOwner,
-      code: (raw as any).code ?? (raw as any).joinCode ?? null,
+      codes: ((raw as any).codes || []) as any[],
       campaigns: side.campaigns.map(c => {
         const rc = (raw.campaigns || []).find(x => x.campaignId === c.id)
         return {
@@ -477,6 +486,21 @@ export default function TeamsPage() {
               <TeamDetail
                 team={openTeam}
                 onNewCampaign={id => { setCampaignTeamId(id); setShowCampaignModal(true) }}
+                onNewCode={id => { setCodeTeamId(id); setShowCodeModal(true) }}
+                onRegenerateCode={async codeId => {
+                  setBusy(true)
+                  try {
+                    const r = await fetch('/api/teams/codes/regenerate', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ codeId }),
+                    }).then(x => x.json())
+                    if (!r.success) throw new Error(r.error || 'Could not regenerate')
+                    await refresh()
+                  } catch (e: any) {
+                    setError(e.message || 'Could not regenerate code')
+                  } finally { setBusy(false) }
+                }}
               />
             </>
           )}
@@ -496,17 +520,120 @@ export default function TeamsPage() {
 
       {showTeamModal && (
         <CreateTeamModal
+          busy={busy}
           onClose={() => setShowTeamModal(false)}
-          onCreate={() => setShowTeamModal(false)}
+          onCreate={async (name, description) => {
+            setBusy(true)
+            try {
+              const res = await fetch('/api/teams/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, description }),
+              })
+              const data = await res.json()
+              if (!data.success) throw new Error(data.error || 'Could not create team')
+              setShowTeamModal(false)
+              await refresh()
+            } catch (e: any) {
+              setError(e.message || 'Could not create team')
+            } finally {
+              setBusy(false)
+            }
+          }}
         />
       )}
       {showCampaignModal && (
         <CreateCampaignModal
+          busy={busy}
           teams={teams.map(t => ({ id: t.id, name: t.name }))}
           defaultTeamId={campaignTeamId}
           onClose={() => setShowCampaignModal(false)}
-          onCreate={() => setShowCampaignModal(false)}
+          onCreate={async ({ teamId, name, dialerMode, accessMode }) => {
+            setBusy(true)
+            try {
+              // Two steps, because a campaign exists on its own before it
+              // belongs to a team: create it, then attach it with the access
+              // and billing mode the owner picked. Attach is what writes
+              // access_mode, so a failure there leaves an unattached campaign
+              // rather than a half-configured one — recoverable, and visible.
+              const created = await fetch('/api/campaigns/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  name,
+                  // 'agent_choice' is a UI concept: the campaign simply keeps
+                  // the platform default and the agent picks per session.
+                  dialer_mode: dialerMode === 'agent_choice' ? 'progressive' : dialerMode,
+                }),
+              }).then(r => r.json())
+              if (!created.success || !created.campaign?.id) {
+                throw new Error(created.error || 'Could not create campaign')
+              }
+
+              const attached = await fetch('/api/teams/campaigns/attach', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ teamId, campaignId: created.campaign.id, accessMode }),
+              }).then(r => r.json())
+              if (!attached.success) {
+                throw new Error(attached.error || 'Campaign created but not attached to the team')
+              }
+
+              setShowCampaignModal(false)
+              await refresh()
+            } catch (e: any) {
+              setError(e.message || 'Could not create campaign')
+            } finally {
+              setBusy(false)
+            }
+          }}
         />
+      )}
+
+      {showCodeModal && codeTeamId && (
+        <CreateCodeModal
+          busy={busy}
+          teamName={teams.find(t => t.id === codeTeamId)?.name || 'this team'}
+          campaigns={(teams.find(t => t.id === codeTeamId)?.campaigns || [])
+            .map(c => ({ id: c.id, name: c.name }))}
+          onClose={() => setShowCodeModal(false)}
+          onCreate={async ({ codeType, campaignId, payer, maxUses }) => {
+            setBusy(true)
+            try {
+              const r = await fetch('/api/teams/codes/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  teamId: codeTeamId,
+                  codeType,
+                  campaignId,
+                  payer,
+                  maxUses,
+                  singleUse: maxUses === 1,
+                }),
+              }).then(x => x.json())
+              if (!r.success) throw new Error(r.error || 'Could not create code')
+              setShowCodeModal(false)
+              await refresh()
+            } catch (e: any) {
+              setError(e.message || 'Could not create code')
+            } finally { setBusy(false) }
+          }}
+        />
+      )}
+
+      {/* Failures surface here rather than in a console. Dismissed by clicking,
+          because an error you cannot get rid of is its own problem. */}
+      {error && (
+        <div
+          onClick={() => setError(null)}
+          style={{
+            position: 'fixed', bottom: 18, left: 18, zIndex: 70, cursor: 'pointer',
+            background: '#7f1d1d', border: '1px solid #b91c1c', color: '#fee2e2',
+            padding: '11px 15px', borderRadius: 5, fontSize: 13, maxWidth: 420,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+          }}
+        >{error}</div>
       )}
     </div>
   )

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 // =============================================================================
 // TEAM DETAIL — what a team looks like when you click it
@@ -35,11 +35,24 @@ export interface TeamDetailMember {
   campaignCount: number
 }
 
+export interface TeamDetailCode {
+  id: string
+  code: string
+  /** 'recruit' admits to the TEAM only. 'seat' admits to the team AND the
+   *  campaign it names, in one step. */
+  code_type: 'recruit' | 'seat' | string
+  campaign_id?: string | null
+  payer?: 'owner' | 'agent' | string | null
+  max_uses?: number | null
+  use_count?: number | null
+  is_active?: boolean | null
+}
+
 export interface TeamDetailData {
   id: string
   name: string
   isOwner?: boolean
-  code?: string | null
+  codes: TeamDetailCode[]
   campaigns: TeamDetailCampaign[]
   members: TeamDetailMember[]
 }
@@ -80,19 +93,20 @@ function Section({ title, action, children }: {
 }
 
 export default function TeamDetail({
-  team, onNewCampaign, onRegenerateCode, onManageUser,
+  team, onNewCampaign, onNewCode, onRegenerateCode, onManageUser,
 }: {
   team: TeamDetailData
   onNewCampaign?: (teamId: string) => void
-  onRegenerateCode?: (teamId: string) => void
+  onNewCode?: (teamId: string) => void
+  /** Takes the CODE id, not the team id — a team has several. */
+  onRegenerateCode?: (codeId: string) => void
   onManageUser?: (userId: string) => void
 }) {
   const [copied, setCopied] = useState<string | null>(null)
 
-  const code = team.code || '—'
-  const signupLink = typeof window !== 'undefined' && team.code
-    ? `${window.location.origin}/join/${team.code}`
-    : ''
+  // Read once on the client. Touching window during render would break SSR.
+  const [origin, setOrigin] = useState('')
+  useEffect(() => { setOrigin(window.location.origin) }, [])
 
   // Copy confirms in place rather than by toast. The button is where the eye
   // already is, and a notification for something this small is a bigger
@@ -129,37 +143,74 @@ export default function TeamDetail({
 
       {team.isOwner && (
         <Section
-          title="Invite"
+          title="Join Codes"
           action={
-            <button style={btn} onClick={() => onRegenerateCode?.(team.id)}>
-              Regenerate
-            </button>
+            <button
+              style={{ ...btn, borderColor: ACCENT, color: '#fff', background: ACCENT }}
+              onClick={() => onNewCode?.(team.id)}
+            >+ New Code</button>
           }
         >
-          <div style={{
-            background: PANEL, border: `1px solid ${HAIRLINE}`, borderRadius: 4,
-            padding: '14px 16px', display: 'flex', alignItems: 'center',
-            gap: 10, flexWrap: 'wrap',
-          }}>
-            <code style={{
-              fontSize: 18, letterSpacing: 2, color: TEXT,
-              background: '#111214', padding: '6px 12px', borderRadius: 3,
-            }}>{code}</code>
-            <div style={{ flex: 1 }} />
-            <button style={btn} onClick={() => copy(code, 'code')}>
-              {copied === 'code' ? 'Copied' : 'Copy Code'}
-            </button>
-            <button style={btn} onClick={() => copy(signupLink, 'link')}>
-              {copied === 'link' ? 'Copied' : 'Copy Signup Link'}
-            </button>
-            <a
-              style={{ ...btn, textDecoration: 'none', display: 'inline-block' }}
-              href={`mailto:?subject=${encodeURIComponent(`Join ${team.name} on DialerSeat`)}&body=${encodeURIComponent(`Use this link to join:\n\n${signupLink || code}`)}`}
-            >Email Invite</a>
-          </div>
-          <div style={{ fontSize: 11.5, color: DIM, marginTop: 8, lineHeight: 1.6 }}>
-            Anyone with this code joins the team. Regenerating it stops the old one
-            working immediately and does not remove anyone already in.
+          {team.codes.length === 0 ? (
+            <div style={{ color: DIM, fontSize: 13, lineHeight: 1.7 }}>
+              No codes yet. A <strong style={{ color: MUTED }}>team code</strong> lets
+              someone join the team; a <strong style={{ color: MUTED }}>campaign code</strong> puts
+              them straight onto one campaign and into the team at the same time.
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gap: 8 }}>
+              {team.codes.map(c => {
+                const isTeamCode = c.code_type === 'recruit'
+                const link = origin ? `${origin}/join/${c.code}` : ''
+                const campaignName = c.campaign_id
+                  ? team.campaigns.find(x => x.id === c.campaign_id)?.name
+                  : null
+                const uses = typeof c.use_count === 'number' ? c.use_count : 0
+                return (
+                  <div key={c.id} style={{
+                    background: PANEL, border: `1px solid ${HAIRLINE}`, borderRadius: 4,
+                    padding: '12px 14px', opacity: c.is_active === false ? 0.5 : 1,
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                      <code style={{
+                        fontSize: 16, letterSpacing: 2, color: TEXT,
+                        background: '#111214', padding: '5px 11px', borderRadius: 3,
+                      }}>{c.code}</code>
+                      <span style={{
+                        fontSize: 9, letterSpacing: 0.6, textTransform: 'uppercase',
+                        color: DIM, border: `1px solid ${HAIRLINE}`,
+                        borderRadius: 3, padding: '2px 6px',
+                      }}>{isTeamCode ? 'Team' : 'Campaign'}</span>
+                      <div style={{ flex: 1 }} />
+                      <button style={btn} onClick={() => copy(c.code, `c-${c.id}`)}>
+                        {copied === `c-${c.id}` ? 'Copied' : 'Copy Code'}
+                      </button>
+                      <button style={btn} onClick={() => copy(link, `l-${c.id}`)}>
+                        {copied === `l-${c.id}` ? 'Copied' : 'Copy Link'}
+                      </button>
+                      <a
+                        style={{ ...btn, textDecoration: 'none', display: 'inline-block' }}
+                        href={`mailto:?subject=${encodeURIComponent(`Join ${team.name} on DialerSeat`)}&body=${encodeURIComponent(`Use this link to join:\n\n${link || c.code}`)}`}
+                      >Email</a>
+                      <button style={btn} onClick={() => onRegenerateCode?.(c.id)}>Regenerate</button>
+                    </div>
+                    {/* Terms in one line, because an owner handing out three
+                        codes needs to tell them apart at a glance. */}
+                    <div style={{ fontSize: 11.5, color: DIM, marginTop: 8 }}>
+                      {campaignName ? `${campaignName} · ` : 'Team only · '}
+                      {c.payer === 'agent' ? 'agent pays their seat' : 'you pay the seat'}
+                      {' · '}
+                      {c.max_uses ? `${uses}/${c.max_uses} used` : `${uses} used`}
+                      {c.is_active === false ? ' · inactive' : ''}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+          <div style={{ fontSize: 11.5, color: DIM, marginTop: 10, lineHeight: 1.6 }}>
+            Regenerating a code stops the old one working immediately and does not
+            remove anyone who already joined with it.
           </div>
         </Section>
       )}

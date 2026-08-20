@@ -244,17 +244,35 @@ export default function TeamsSidebar({
 
         .ts-empty { padding: 6px 10px 10px 44px; font-size: 12.5px; color: ${TEXT_DIM}; font-style: italic; }
 
-        .ts-foot { flex-shrink: 0; border-top: 1px solid ${HAIRLINE}; }
-        .ts-foot-row {
-          display: flex; align-items: center; gap: 8px;
-          width: 100%; border: 0; background: transparent;
-          color: ${TEXT_MUTED}; cursor: pointer;
-          padding: 9px 14px; font-size: 12px;
-          letter-spacing: 1.2px; text-transform: uppercase; font-weight: 600;
-          transition: background 0.1s ease, color 0.1s ease;
+        /* ── THESE ARE BUTTONS, AND THEY LOOK LIKE BUTTONS ──────────────────
+           They were rows in the same visual language as the tree above, which
+           made them read as two more branches rather than as two actions that
+           replace the whole panel. Given a face — raised surface, border,
+           centred label — they stop competing with the tree and start
+           announcing what they do. Pressed state is inset rather than merely
+           tinted, so an active view is legible without the button looking
+           permanently stuck on. */
+        .ts-foot { flex-shrink: 0; border-top: 1px solid ${HAIRLINE}; padding: 10px 12px 0; }
+        .ts-foot-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .ts-foot-btn {
+          display: flex; align-items: center; justify-content: center; gap: 7px;
+          border: 1px solid ${HAIRLINE}; border-radius: 5px;
+          background: ${SURFACE_RAISED}; color: ${TEXT_MUTED};
+          cursor: pointer; padding: 10px 8px;
+          font-family: inherit; font-size: 11px; font-weight: 700;
+          letter-spacing: 1.1px; text-transform: uppercase;
+          box-shadow: 0 1px 0 rgba(0,0,0,0.35);
+          transition: background 0.1s ease, color 0.1s ease,
+                      box-shadow 0.1s ease, transform 0.06s ease;
         }
-        .ts-foot-row:hover { background: ${SURFACE_RAISED}; color: ${TEXT}; }
-        .ts-foot-row.is-selected { background: ${SURFACE_RAISED}; color: ${TEXT}; }
+        .ts-foot-btn:hover { background: #3a3c42; color: ${TEXT}; }
+        /* Press moves the shadow, never the element — a button that shifts
+           under the cursor loses the click. */
+        .ts-foot-btn:active { box-shadow: inset 0 2px 4px rgba(0,0,0,0.45); }
+        .ts-foot-btn.is-on {
+          background: ${ACCENT}; border-color: ${ACCENT}; color: #fff;
+          box-shadow: inset 0 2px 5px rgba(0,0,0,0.35);
+        }
 
         .ts-join { padding: 10px 14px 14px; }
         .ts-join-label { font-size: 12px; color: ${TEXT_MUTED}; margin-bottom: 6px; }
@@ -405,20 +423,24 @@ export default function TeamsSidebar({
 
       {/* ── FOOT — SCOPES THAT ARE NOT PART OF THE TREE ──────────────────── */}
       <div className="ts-foot">
-        <button
-          className={`ts-foot-row${scope.kind === 'all' ? ' is-selected' : ''}`}
-          onClick={() => onScopeChange({ kind: 'all' })}
-        >
-          <span style={{ flex: 1 }}>All Users</span>
-        </button>
+        <div className="ts-foot-buttons">
+          <button
+            className={`ts-foot-btn${scope.kind === 'all' ? ' is-on' : ''}`}
+            onClick={() => onScopeChange({ kind: 'all' })}
+            aria-pressed={scope.kind === 'all'}
+          >
+            All Users
+          </button>
 
-        <button
-          className={`ts-foot-row${scope.kind === 'requests' ? ' is-selected' : ''}`}
-          onClick={() => onScopeChange({ kind: 'requests' })}
-        >
-          <span style={{ flex: 1 }}>Requests</span>
-          {pendingRequests > 0 && <span className="ts-badge">{pendingRequests}</span>}
-        </button>
+          <button
+            className={`ts-foot-btn${scope.kind === 'requests' ? ' is-on' : ''}`}
+            onClick={() => onScopeChange({ kind: 'requests' })}
+            aria-pressed={scope.kind === 'requests'}
+          >
+            Requests
+            {pendingRequests > 0 && <span className="ts-badge">{pendingRequests}</span>}
+          </button>
+        </div>
 
         {/* Joining is deliberately the last thing, and deliberately always
             visible rather than behind the + menu: the person who needs it is

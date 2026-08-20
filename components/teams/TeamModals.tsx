@@ -143,8 +143,8 @@ export function CreateCampaignModal({ teams, defaultTeamId, onClose, onCreate, b
 }) {
   const [teamId, setTeamId] = useState(defaultTeamId || teams[0]?.id || '')
   const [name, setName] = useState('')
-  const [dialerMode, setDialerMode] = useState('progressive')
-  const [accessMode, setAccessMode] = useState('restricted')
+  const [dialerMode, setDialerMode] = useState('agent_choice')
+  const [accessMode, setAccessMode] = useState('owner_pays')
 
   // No teams, no campaign. Saying so plainly beats a disabled form that gives
   // no reason.
@@ -212,16 +212,25 @@ export function CreateCampaignModal({ teams, defaultTeamId, onClose, onCreate, b
         </select>
       </div>
 
+      {/* The four values the attach endpoint actually accepts. Each one decides
+          both who may dial and who is billed, because on this platform those
+          are the same decision — a seat is what makes dialing possible. */}
       <div>
-        <label style={label}>Who Can Work It</label>
+        <label style={label}>Access &amp; Seats</label>
         <select style={field} value={accessMode} onChange={e => setAccessMode(e.target.value)}>
-          <option value="free">Everyone in the team</option>
-          <option value="restricted">Whitelisted agents only</option>
+          <option value="free">Free to the whole team — no seat charged</option>
+          <option value="owner_pays">Whitelisted agents — you pay their seats</option>
+          <option value="agent_pays">Whitelisted agents — they pay their own</option>
+          <option value="public">Public — anyone in the team, seat still required</option>
         </select>
         <p style={{ margin: '8px 0 0', fontSize: 11.5, color: DIM, lineHeight: 1.6 }}>
           {accessMode === 'free'
-            ? 'Every member of the team can dial this — no per-agent setup.'
-            : 'Only agents you add to the whitelist can dial this.'}
+            ? 'Every member dials it, nobody is billed for it.'
+            : accessMode === 'owner_pays'
+              ? 'You add agents one by one and cover their seats.'
+              : accessMode === 'agent_pays'
+                ? 'You add agents one by one; each pays for their own seat.'
+                : 'Open to the team, but each agent still needs a paid seat.'}
         </p>
         {/* The rule that overrides both settings, said once and plainly. Access
             is permission to dial; a seat is what makes dialing possible. An
@@ -235,6 +244,130 @@ export function CreateCampaignModal({ teams, defaultTeamId, onClose, onCreate, b
           Either way, an agent can only dial if their seat is paid — by you or by
           them. Access without a seat does nothing.
         </p>
+      </div>
+    </Shell>
+  )
+}
+
+// =============================================================================
+// CREATE JOIN CODE
+// =============================================================================
+// The two choices an owner is really making here are what the code admits you
+// to and who pays for the seat, so those lead and everything else follows. Each
+// is explained in a line, because picking between them is a business decision
+// rather than a setting — an owner running a recruiting drive and one adding a
+// known agent to one campaign want opposite answers.
+// =============================================================================
+export function CreateCodeModal({ teamName, campaigns, onClose, onCreate, busy }: {
+  teamName: string
+  campaigns: Array<{ id: string; name: string }>
+  onClose: () => void
+  onCreate: (input: {
+    codeType: 'recruit' | 'seat'
+    campaignId?: string
+    payer: 'owner' | 'agent'
+    maxUses?: number
+  }) => void
+  busy?: boolean
+}) {
+  const [codeType, setCodeType] = useState<'recruit' | 'seat'>('recruit')
+  const [campaignId, setCampaignId] = useState(campaigns[0]?.id || '')
+  const [payer, setPayer] = useState<'owner' | 'agent'>('owner')
+  const [limited, setLimited] = useState(false)
+  const [maxUses, setMaxUses] = useState('1')
+
+  const needsCampaign = codeType === 'seat'
+  const blocked = needsCampaign && !campaignId
+
+  return (
+    <Shell
+      title="New Join Code"
+      subtitle={`Anyone with this code joins ${teamName}. You can regenerate it later without removing whoever already used it.`}
+      onClose={onClose}
+      footer={
+        <>
+          <button style={btn} onClick={onClose}>Cancel</button>
+          <button
+            style={{ ...btnPrimary, opacity: blocked || busy ? 0.5 : 1 }}
+            disabled={blocked || busy}
+            onClick={() => onCreate({
+              codeType,
+              campaignId: needsCampaign ? campaignId : undefined,
+              payer,
+              maxUses: limited ? Math.max(1, parseInt(maxUses, 10) || 1) : undefined,
+            })}
+          >{busy ? 'Creating…' : 'Create Code'}</button>
+        </>
+      }
+    >
+      <div style={{ marginBottom: 16 }}>
+        <label style={label}>What It Admits To</label>
+        <select
+          style={field}
+          value={codeType}
+          onChange={e => setCodeType(e.target.value as 'recruit' | 'seat')}
+        >
+          <option value="recruit">Team only — add them to campaigns yourself</option>
+          <option value="seat">A campaign — joins the team and that campaign at once</option>
+        </select>
+        <p style={{ margin: '8px 0 0', fontSize: 11.5, color: DIM, lineHeight: 1.6 }}>
+          {codeType === 'recruit'
+            ? 'They land in the team with access to nothing until you grant it, or to any campaign already open to everyone.'
+            : 'Fastest route for someone you already know is working one list.'}
+        </p>
+      </div>
+
+      {needsCampaign && (
+        <div style={{ marginBottom: 16 }}>
+          <label style={label}>Campaign</label>
+          {campaigns.length === 0 ? (
+            <p style={{ margin: 0, fontSize: 12.5, color: MUTED, lineHeight: 1.6 }}>
+              This team has no campaigns yet. Create one first, or make a team-only code.
+            </p>
+          ) : (
+            <select style={field} value={campaignId} onChange={e => setCampaignId(e.target.value)}>
+              {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          )}
+        </div>
+      )}
+
+      <div style={{ marginBottom: 16 }}>
+        <label style={label}>Who Pays The Seat</label>
+        <select
+          style={field}
+          value={payer}
+          onChange={e => setPayer(e.target.value as 'owner' | 'agent')}
+        >
+          <option value="owner">You pay for their seat</option>
+          <option value="agent">They pay for their own seat</option>
+        </select>
+        <p style={{ margin: '8px 0 0', fontSize: 11.5, color: DIM, lineHeight: 1.6 }}>
+          Nobody can dial without a paid seat, whichever way round it is.
+        </p>
+      </div>
+
+      {/* A limit is what makes a leaked code survivable, so it is offered here
+          rather than buried in an edit screen afterwards. */}
+      <div>
+        <label style={{ ...label, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={limited}
+            onChange={e => setLimited(e.target.checked)}
+            style={{ accentColor: ACCENT }}
+          />
+          Limit how many times it can be used
+        </label>
+        {limited && (
+          <input
+            style={{ ...field, marginTop: 6 }}
+            type="number"
+            min={1}
+            value={maxUses}
+            onChange={e => setMaxUses(e.target.value)}
+          />
+        )}
       </div>
     </Shell>
   )
