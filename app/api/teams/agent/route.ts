@@ -42,10 +42,41 @@ export async function GET(req: NextRequest) {
     const days = range === 'today' ? 1 : range === 'month' ? 30 : 7
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
 
-    const { data: teams } = await supabaseAdmin
-      .from('teams')
-      .select('id, name')
-      .eq('owner_id', userId)
+    // ── TWO WAYS TO BE ENTITLED TO THIS PAGE ─────────────────────────────
+    // You own a team they are on, or it is you. An agent has every right to see
+    // their own numbers — it is their work — and building a second endpoint for
+    // it would be two implementations of one query drifting apart.
+    //
+    // The SCOPE differs, though: an owner sees this person across the teams the
+    // owner runs, and an agent sees themselves across the teams they belong to.
+    // Neither ever sees a team they have nothing to do with.
+    const isSelf = agentId === userId
+
+    let teams: any[] = []
+    if (isSelf) {
+      const { data: myMemberships } = await supabaseAdmin
+        .from('team_members')
+        .select('team_id')
+        .eq('user_id', userId)
+        .eq('status', 'active')
+        .limit(200)
+      const myTeamIds = Array.from(
+        new Set((myMemberships || []).map((m: any) => m.team_id).filter(Boolean))
+      )
+      if (myTeamIds.length > 0) {
+        const { data } = await supabaseAdmin
+          .from('teams')
+          .select('id, name')
+          .in('id', myTeamIds)
+        teams = data || []
+      }
+    } else {
+      const { data } = await supabaseAdmin
+        .from('teams')
+        .select('id, name')
+        .eq('owner_id', userId)
+      teams = data || []
+    }
 
     const teamIds = (teams || []).map((t: any) => t.id)
     if (teamIds.length === 0) {
@@ -244,9 +275,11 @@ export async function GET(req: NextRequest) {
         talkSeconds: talk,
         avgTalkSeconds: talkCalls > 0 ? Math.round(talk / talkCalls) : null,
         lastCallAt: calls.length > 0 ? calls[0].created_at : null,
-        // Named so nobody mistakes this for everything the person did. It is
-        // what they did on campaigns this owner provided.
-        scope: 'Your team campaigns only',
+        // Named so nobody mistakes this for everything the person did.
+        scope: isSelf
+          ? 'Your team campaigns only'
+          : 'Your team campaigns only',
+        isSelf,
       },
       series,
     })

@@ -279,58 +279,68 @@ export async function GET(req: NextRequest) {
     if (member.length > 0) {
       const memberIds = member.map((t: any) => t.id)
 
-      const [{ data: mCampaigns }, { data: mMembers }, { data: mAccess }] = await Promise.all([
-        supabaseAdmin
-          .from('team_campaigns')
-          .select('team_id, campaign_id, access_mode, created_at, campaigns(id, name, total_leads, called_leads, status, dialer_mode)')
-          .in('team_id', memberIds)
-          .limit(TREE_CODE_CAP),
-        supabaseAdmin
-          .from('team_members')
-          .select('id, team_id, user_id, status')
-          .in('team_id', memberIds)
-          .eq('status', 'active')
-          .limit(TREE_MEMBER_CAP),
-        supabaseAdmin
-          .from('team_campaign_access')
-          .select('id, team_id, team_member_id, campaign_id, payer, is_active, access_source, granted_at')
-          .in('team_id', memberIds)
-          .eq('is_active', true)
-          .limit(TREE_ACCESS_CAP),
-      ])
+      // ── AN AGENT SEES THEIR OWN WORK, NOT THE ROSTER ──────────────────────
+      // This used to return every member of every team the viewer belongs to,
+      // with names and email addresses attached. On a lead vendor's floor that
+      // is a poaching list: the closers you hired can read off everybody else
+      // you hired, and so can anybody who joins with a code for an afternoon.
+      //
+      // Nothing about dialing needs it. An agent needs to know which campaigns
+      // they can work; who else works them is the owner's business, and the
+      // owner keeps their own full view because they own the team.
+      //
+      // Only the VIEWER'S membership is fetched now — not filtered afterwards,
+      // fetched. Data that never leaves the database cannot leak from a payload
+      // somebody opens devtools to read.
+      const { data: myMemberships } = await supabaseAdmin
+        .from('team_members')
+        .select('id, team_id, user_id, status, seat_suspended_at, billing_override, joined_via_code, accepted_at')
+        .in('team_id', memberIds)
+        .eq('user_id', userId)
+        .eq('status', 'active')
+        .limit(200)
 
-      const userIds = Array.from(new Set((mMembers || []).map((m: any) => m.user_id)))
-      const userById: Record<string, any> = {}
-      if (userIds.length > 0) {
-        const { data: userRows } = await supabaseAdmin
-          .from('users')
-          .select('clerk_id, email, first_name, last_name')
-          .in('clerk_id', userIds)
-        for (const u of userRows || []) userById[u.clerk_id] = u
+      const myMemberIds = (myMemberships || []).map((m: any) => m.id)
+
+      const [{ data: mCampaigns }, { data: myAccess }, { data: memberCounts }] =
+        await Promise.all([
+          supabaseAdmin
+            .from('team_campaigns')
+            // Deliberately no total_leads or called_leads. Those are the
+            // owner's operating numbers — how much list they bought and how
+            // hard it has been worked — and an agent reading them learns
+            // nothing they can act on while learning quite a lot about the
+            // business paying them.
+            .select('team_id, campaign_id, access_mode, created_at, campaigns(id, name, status, dialer_mode)')
+            .in('team_id', memberIds)
+            .limit(TREE_CODE_CAP),
+          myMemberIds.length > 0
+            ? supabaseAdmin
+                .from('team_campaign_access')
+                .select('id, team_id, team_member_id, campaign_id, payer, is_active, access_source, granted_at')
+                .in('team_member_id', myMemberIds)
+                .eq('is_active', true)
+                .limit(500)
+            : Promise.resolve({ data: [] } as any),
+          // A COUNT, not a list. "You are one of nine" is useful context and
+          // gives away nobody.
+          supabaseAdmin
+            .from('team_members')
+            .select('team_id')
+            .in('team_id', memberIds)
+            .eq('status', 'active')
+            .limit(TREE_MEMBER_CAP),
+        ])
+
+      const headcount: Record<string, number> = {}
+      for (const m of memberCounts || []) {
+        headcount[m.team_id] = (headcount[m.team_id] || 0) + 1
       }
 
-      const accessByMember: Record<string, any[]> = {}
-      for (const a of mAccess || []) {
-        if (!accessByMember[a.team_member_id]) accessByMember[a.team_member_id] = []
-        accessByMember[a.team_member_id].push(a)
-      }
+      const myMembershipByTeam: Record<string, any> = {}
+      for (const m of myMemberships || []) myMembershipByTeam[m.team_id] = m
 
-      const membersByTeamId: Record<string, any[]> = {}
-      for (const m of mMembers || []) {
-        if (!membersByTeamId[m.team_id]) membersByTeamId[m.team_id] = []
-        membersByTeamId[m.team_id].push({
-          ...m,
-          userId: m.user_id,
-          user: userById[m.user_id] || { email: null, first_name: null, last_name: null },
-          campaignAccess: (accessByMember[m.id] || []).map((a: any) => ({
-            id: a.id,
-            campaignId: a.campaign_id,
-            payer: a.payer,
-            accessSource: a.access_source,
-            grantedAt: a.granted_at,
-          })),
-        })
-      }
+      const myAccessRows = (myAccess || []) as any[]
 
       const campsByTeamId: Record<string, any[]> = {}
       for (const tc of mCampaigns || []) {
@@ -344,42 +354,50 @@ export async function GET(req: NextRequest) {
       }
 
       memberWithCampaigns = member.map((t: any) => {
-        // Which campaigns THIS viewer may actually dial on this team. Two
-        // sources, because access has two shapes: a grant made to them
-        // specifically, and a campaign the owner opened to the whole team.
-        const roster = membersByTeamId[t.id] || []
-        const mine = roster.find((m: any) => m.user_id === userId)
+        const mine = myMembershipByTeam[t.id]
         const granted = new Set(
-          (mine?.campaignAccess || []).map((a: any) => a.campaignId)
+          myAccessRows
+            .filter((a: any) => a.team_id === t.id)
+            .map((a: any) => a.campaign_id)
         )
-        const openToTeam = (campsByTeamId[t.id] || [])
-          .filter((c: any) => c.accessMode === 'free' || c.accessMode === 'public')
-          .map((c: any) => c.campaignId)
-        for (const cid of openToTeam) granted.add(cid)
+        // A campaign the owner opened to the whole team is theirs to dial too,
+        // without anybody having granted it row by row.
+        for (const c of campsByTeamId[t.id] || []) {
+          if (c.accessMode === 'free' || c.accessMode === 'public') granted.add(c.campaignId)
+        }
 
         return {
           ...t,
           campaigns: campsByTeamId[t.id] || [],
-          members: roster,
+          // Empty on purpose. The sidebar renders whatever is here under each
+          // campaign, so anything in this array is a name on somebody's screen.
+          members: [],
+          memberCount: headcount[t.id] || 0,
           pendingMembers: [],
           codes: [],
           myCampaignIds: Array.from(granted),
+          mySeat: mine
+            ? {
+                memberId: mine.id,
+                suspended: !!mine.seat_suspended_at,
+                billingOverride: mine.billing_override || null,
+                joinedViaCode: mine.joined_via_code || null,
+                joinedAt: mine.accepted_at || null,
+              }
+            : null,
         }
       })
     }
 
     // ── VOLUME TIER, COUNTED ACROSS EVERY TEAM THEY OWN ──────────────────
     // The owner is the billing entity, so a vendor running three teams of eight
-    // is a twenty-four-seat customer — not three small ones. Counting per team
-    // would punish exactly the structure the tiers exist to reward.
-    //
-    // Suspended seats are excluded: a paused seat is not being billed, so it
-    // cannot count toward a discount on the bill.
+    // is a twenty-four-seat customer — not three small ones. Suspended seats are
+    // excluded: a paused seat is not being billed, so it cannot earn a discount
+    // on the bill.
     let seatTier = null
     if (owned.length > 0) {
       const ownedIdsForSeats = owned.map((t: any) => t.id)
 
-      // The whole roster — earns badges and the sales handoff.
       const { count: totalSeatCount } = await supabaseAdmin
         .from('team_members')
         .select('id', { count: 'exact', head: true })
@@ -388,9 +406,9 @@ export async function GET(req: NextRequest) {
         .is('seat_suspended_at', null)
 
       // Seats this owner is actually billed for — the only ones a discount can
-      // reduce. Counted from intent (the override, or the code they joined
-      // with) rather than from settled charges: charge rows have been
-      // unreliable, and under-counting here would quietly withhold a discount
+      // reduce. Counted from intent (the override, or the payer on the code they
+      // joined with) rather than from settled charges: charge rows have been
+      // unreliable, and under-counting would quietly withhold a discount
       // somebody has earned.
       const { count: overrideOwnerCount } = await supabaseAdmin
         .from('team_members')
@@ -405,6 +423,7 @@ export async function GET(req: NextRequest) {
         .select('code')
         .in('team_id', ownedIdsForSeats)
         .eq('payer', 'owner')
+        .limit(TREE_CODE_CAP)
 
       let viaCodeCount = 0
       const codeStrings = (ownerPayCodes || []).map((c: any) => c.code).filter(Boolean)
@@ -421,11 +440,7 @@ export async function GET(req: NextRequest) {
       }
 
       const total = totalSeatCount || 0
-      // Capped at the roster: the two queries are disjoint by construction
-      // (one requires the override set, the other requires it null), but a
-      // count that exceeded the roster would be nonsense on the page.
       const ownerPaid = Math.min((overrideOwnerCount || 0) + viaCodeCount, total)
-
       seatTier = summariseSeatTier(ownerPaid, total)
     }
 

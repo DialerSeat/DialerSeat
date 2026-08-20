@@ -61,6 +61,17 @@ export interface TeamDetailData {
    *  anything the owner opened to the whole team. Only meaningful when they do
    *  not own it; an owner reaches everything by definition. */
   myCampaignIds?: string[]
+  /** How many people are on the team. A count, never a list — see the member
+   *  branch of /api/teams/list for why. */
+  memberCount?: number
+  /** The viewer's own seat here. Theirs to see; nobody else's is sent. */
+  mySeat?: {
+    memberId: string
+    suspended: boolean
+    billingOverride: string | null
+    joinedViaCode: string | null
+    joinedAt: string | null
+  } | null
 }
 
 function Stat({ label, value }: { label: string; value: string }) {
@@ -171,9 +182,44 @@ export default function TeamDetail({
     const mine = new Set(team.myCampaignIds || [])
     const available = team.campaigns.filter(c => mine.has(c.id))
     const locked = team.campaigns.filter(c => !mine.has(c.id))
+    const seat = team.mySeat
 
     return (
       <div>
+        {/* ── YOUR SEAT ────────────────────────────────────────────────────
+            An agent should be able to answer "am I paid up, and by whom"
+            without asking anybody. It is the question behind most of the
+            support messages a team owner gets, and the answer is one line. */}
+        {seat && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+            background: PANEL,
+            border: `1px solid ${seat.suspended ? '#fbbf24' : HAIRLINE}`,
+            borderRadius: 4, padding: '12px 14px', marginBottom: 4,
+          }}>
+            <span style={{
+              width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+              background: seat.suspended ? '#fbbf24' : '#4ade80',
+            }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13.5, color: TEXT }}>
+                {seat.suspended
+                  ? 'Your seat on this team is paused'
+                  : seat.billingOverride === 'agent'
+                  ? 'You pay for this seat'
+                  : 'Your seat is covered by the team'}
+              </div>
+              <div style={{ fontSize: 11.5, color: DIM, marginTop: 2 }}>
+                {seat.suspended
+                  ? 'Contact whoever runs this team — only they can resume it.'
+                  : team.memberCount
+                  ? `One of ${team.memberCount} on this team`
+                  : 'Active'}
+              </div>
+            </div>
+          </div>
+        )}
+
         <Section title="Your Campaigns">
           {available.length === 0 ? (
             <div style={{ color: DIM, fontSize: 13, lineHeight: 1.7 }}>
@@ -225,8 +271,9 @@ export default function TeamDetail({
         {locked.length > 0 && (
           <Section title="Also On This Team">
             <div style={{ color: DIM, fontSize: 12.5, lineHeight: 1.7, marginBottom: 8 }}>
-              You do not have access to these yet. The owner can add you to any of
-              them without it costing you anything — your seat is already paid for.
+              You do not have access to these yet. Whoever runs this team can add
+              you to any of them without it costing you anything — your seat is
+              already paid for. Ask them.
             </div>
             <div style={{ display: 'grid', gap: 6 }}>
               {locked.map(c => (

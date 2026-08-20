@@ -920,6 +920,8 @@ export default function TeamsPage() {
       // Only meaningful for a team this person joined rather than owns. An
       // owner reaches every campaign on their own team by definition.
       myCampaignIds: (raw as any).myCampaignIds || [],
+      memberCount: (raw as any).memberCount ?? undefined,
+      mySeat: (raw as any).mySeat ?? null,
     }
   }, [view, scope, rawTeams, teams])
 
