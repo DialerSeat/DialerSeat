@@ -26,6 +26,7 @@ import type { ComponentType } from 'react'
 
 export type AppId =
   | 'dashboard'
+  | 'visibility'
   | 'analytics'
   | 'overview'
   | 'user-tracker'

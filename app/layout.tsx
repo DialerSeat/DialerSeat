@@ -6,6 +6,7 @@ import "./globals.css";
 import StructuredData from './components/StructuredData';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { getTenantBranding, getActiveTenantForUser } from '@/lib/tenant';
+import PageViewTracker from '@/components/PageViewTracker'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://dialerseat.com'),
@@ -220,6 +221,10 @@ export default async function RootLayout({
           <ThemeProvider initialBranding={branding}>
             {children}
           </ThemeProvider>
+          {/* Sitewide, mounted once. Renders nothing — it exists to record that
+              a page was looked at, on marketing pages and inside the dashboard
+              alike, without each new route having to remember to opt in. */}
+          <PageViewTracker />
           <script
             dangerouslySetInnerHTML={{
               __html:

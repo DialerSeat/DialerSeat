@@ -84,6 +84,10 @@ const UnitEconomicsApp = dynamic(() => import('./apps/UnitEconomics'), {
   loading: () => <AppLoading />,
   ssr: false,
 })
+const VisibilityApp = dynamic(() => import('./apps/Visibility'), {
+  loading: () => <AppLoading />,
+  ssr: false,
+})
 const NumbersApp = dynamic(() => import('./apps/Numbers'), {
   loading: () => <AppLoading />,
   ssr: false,
@@ -237,6 +241,17 @@ export const APPS: AppDefinition[] = [
     visibleTo: ['admin'],
     Component: UnitEconomicsApp,
     defaultSize: { width: 1120, height: 720 },
+  },
+  {
+    id: 'visibility',
+    name: 'Visibility',
+    shortName: 'Views',
+    icon: '📈',
+    iconBg: 'linear-gradient(135deg, #4a9eff, #2a6eff)',
+    description: 'Site traffic — views, visitors and which pages get read',
+    visibleTo: ['admin'],
+    Component: VisibilityApp,
+    defaultSize: { width: 1120, height: 760 },
   },
   {
     id: 'numbers',
