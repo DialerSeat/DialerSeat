@@ -391,12 +391,14 @@ export default function TeamDetail({
                   <button
                     style={{
                       ...btn,
-                      color: c.status === 'inactive' ? '#4ade80' : '#fbbf24',
+                      color: c.status === 'inactive' ? '#fbbf24' : '#4ade80',
+                      borderColor: c.status === 'inactive' ? '#fbbf24' : '#4ade80',
+                      letterSpacing: 0.6,
                     }}
                     onClick={() => onToggleCampaign?.(
                       c.id, c.status === 'inactive' ? 'active' : 'inactive'
                     )}
-                  >{c.status === 'inactive' ? 'Activate' : 'Pause'}</button>
+                  >{c.status === 'inactive' ? 'Inactive' : 'Active'}</button>
                 )}
                 {team.isOwner && (
                   <button style={btn} onClick={() => onNewCode?.(team.id, c.id)}>

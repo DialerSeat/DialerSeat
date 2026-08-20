@@ -38,6 +38,13 @@ interface CampaignDetailData {
   createdAt: string
 }
 
+interface CandidateRow {
+  memberId: string
+  userId: string
+  name: string
+  email: string | null
+}
+
 interface AgentRow {
   accessId: string
   memberId: string
@@ -135,6 +142,9 @@ export default function CampaignDetail({
   const [data, setData] = useState<CampaignDetailData | null>(null)
   const [team, setTeam] = useState<{ id: string; name: string; accessMode: string | null } | null>(null)
   const [agents, setAgents] = useState<AgentRow[]>([])
+  const [available, setAvailable] = useState<CandidateRow[]>([])
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [picked, setPicked] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -148,6 +158,7 @@ export default function CampaignDetail({
       setData(r.campaign)
       setTeam(r.team)
       setAgents(r.agents || [])
+      setAvailable(r.availableMembers || [])
       setError(null)
     } catch (e: any) {
       setError(e.message || 'Could not load campaign')
@@ -181,6 +192,58 @@ export default function CampaignDetail({
       onChanged?.()
     } catch (e: any) {
       setError(e.message || 'Could not save')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const addPicked = async () => {
+    if (picked.size === 0 || busy) return
+    setBusy(true)
+    try {
+      const r = await fetch('/api/teams/access/grant-bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ campaignId, memberIds: Array.from(picked) }),
+      }).then(x => x.json())
+      if (!r.success) throw new Error(r.error || 'Could not add those people')
+      setPicked(new Set())
+      setPickerOpen(false)
+      await load()
+      onChanged?.()
+    } catch (e: any) {
+      setError(e.message || 'Could not add those people')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  /**
+   * Open the campaign to the whole team.
+   *
+   * Different in kind from ticking every name: this is a standing rule, so
+   * somebody who joins the team tomorrow gets it too. Picking everyone by hand
+   * only covers the people who exist right now, and the difference matters most
+   * to exactly the person using it — a vendor onboarding a floor over weeks.
+   */
+  const setOpenToTeam = async (open: boolean) => {
+    if (!team || busy) return
+    setBusy(true)
+    try {
+      const r = await fetch('/api/teams/campaigns/attach', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          teamId: team.id,
+          campaignId,
+          accessMode: open ? 'free' : 'owner_pays',
+        }),
+      }).then(x => x.json())
+      if (!r.success) throw new Error(r.error || 'Could not change access')
+      await load()
+      onChanged?.()
+    } catch (e: any) {
+      setError(e.message || 'Could not change access')
     } finally {
       setBusy(false)
     }
@@ -240,14 +303,23 @@ export default function CampaignDetail({
             <div style={{ fontSize: 12, color: DIM, marginTop: 2 }}>on {team.name}</div>
           )}
         </div>
-        {/* One click, no dialog — pausing is reversible and something an owner
-            does between calls. The label states what will happen, not what is
-            true now. */}
+        {/* ── STATE, NOT INSTRUCTION ──────────────────────────────────────
+            This read "Pause" / "Activate" — what the click would DO. Every
+            other status chip in the product names what IS, so the same word in
+            the same place meant two opposite things depending on which screen
+            you were on. Now it reports the state and clicking flips it: green
+            ACTIVE, amber INACTIVE. One click, no dialog — reversible, and
+            something an owner does between calls. */}
         <button
-          style={{ ...btn, color: paused ? '#4ade80' : '#fbbf24' }}
+          style={{
+            ...btn,
+            color: paused ? '#fbbf24' : '#4ade80',
+            borderColor: paused ? '#fbbf24' : '#4ade80',
+            letterSpacing: 0.6,
+          }}
           disabled={busy}
           onClick={() => patch({ status: paused ? 'active' : 'inactive' })}
-        >{paused ? 'Activate' : 'Pause'}</button>
+        >{paused ? 'Inactive' : 'Active'}</button>
         <a
           href={`/dashboard/dialer?campaign=${encodeURIComponent(data.id)}`}
           style={{ ...btn, textDecoration: 'none', borderColor: ACCENT, color: '#fff', background: ACCENT }}
@@ -370,7 +442,15 @@ export default function CampaignDetail({
         />
       </Section>
 
-      <Section title="Who Can Dial It">
+      <Section
+        title="Who Can Dial It"
+        action={team ? (
+          <button
+            style={{ ...btn, borderColor: ACCENT, color: '#fff', background: ACCENT }}
+            onClick={() => setPickerOpen(true)}
+          >+ Add People</button>
+        ) : undefined}
+      >
         {agents.length === 0 ? (
           <div style={{ color: DIM, fontSize: 13, lineHeight: 1.7 }}>
             Nobody yet. Select people under All Users and use Add to campaign — it
@@ -408,6 +488,142 @@ export default function CampaignDetail({
         )}
       </Section>
 
+      {pickerOpen && team && (
+        <div
+          onClick={() => setPickerOpen(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 200,
+            background: 'rgba(0,0,0,0.62)', display: 'flex',
+            alignItems: 'center', justifyContent: 'center', padding: 20,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: '100%', maxWidth: 460, maxHeight: '80vh', display: 'flex',
+              flexDirection: 'column',
+              background: '#1e1f22', border: `1px solid ${HAIRLINE}`,
+              borderRadius: 6, padding: '20px 22px',
+            }}
+          >
+            <div style={{ fontSize: 17, fontWeight: 600, color: TEXT }}>Add people</div>
+            <div style={{ fontSize: 12, color: DIM, marginTop: 3, marginBottom: 14 }}>
+              Adding somebody costs nothing — their seat is already paid for.
+            </div>
+
+            {/* The standing rule sits above the name list, because if it is what
+                they want then the list below is beside the point. */}
+            <label style={{
+              display: 'flex', alignItems: 'flex-start', gap: 10,
+              background: PANEL, border: `1px solid ${HAIRLINE}`, borderRadius: 4,
+              padding: '11px 13px', marginBottom: 12, cursor: busy ? 'wait' : 'pointer',
+            }}>
+              <input
+                type="checkbox"
+                checked={team.accessMode === 'free'}
+                disabled={busy}
+                onChange={e => setOpenToTeam(e.target.checked)}
+                style={{ accentColor: ACCENT, marginTop: 2 }}
+              />
+              <span>
+                <span style={{ display: 'block', fontSize: 13, color: TEXT }}>
+                  Anyone who joins {team.name} can use it
+                </span>
+                <span style={{ display: 'block', fontSize: 11.5, color: DIM, marginTop: 3, lineHeight: 1.6 }}>
+                  A standing rule, not a one-off — people who join later get it
+                  automatically. Ticking every name below only covers the people
+                  who are here today.
+                </span>
+              </span>
+            </label>
+
+            {team.accessMode === 'free' ? (
+              <div style={{ fontSize: 12.5, color: DIM, lineHeight: 1.7 }}>
+                This campaign is open to the whole team, so there is nobody left
+                to add individually.
+              </div>
+            ) : available.length === 0 ? (
+              <div style={{ fontSize: 12.5, color: DIM, lineHeight: 1.7 }}>
+                Everyone on {team.name} is already on this campaign.
+              </div>
+            ) : (
+              <>
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  fontSize: 11.5, color: DIM, marginBottom: 6,
+                }}>
+                  <span>{available.length} on {team.name}</span>
+                  <button
+                    onClick={() => setPicked(
+                      picked.size === available.length
+                        ? new Set()
+                        : new Set(available.map(m => m.memberId))
+                    )}
+                    style={{
+                      background: 'transparent', border: 'none', color: ACCENT,
+                      fontSize: 11.5, cursor: 'pointer', fontFamily: 'inherit',
+                    }}
+                  >{picked.size === available.length ? 'Clear all' : 'Select all'}</button>
+                </div>
+
+                <div style={{ overflowY: 'auto', display: 'grid', gap: 5, minHeight: 0 }}>
+                  {available.map(m => {
+                    const on = picked.has(m.memberId)
+                    return (
+                      <label
+                        key={m.memberId}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 10,
+                          background: PANEL,
+                          border: `1px solid ${on ? ACCENT : HAIRLINE}`,
+                          borderRadius: 4, padding: '9px 12px', cursor: 'pointer',
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={on}
+                          onChange={() => setPicked(prev => {
+                            const next = new Set(prev)
+                            if (next.has(m.memberId)) next.delete(m.memberId)
+                            else next.add(m.memberId)
+                            return next
+                          })}
+                          style={{ accentColor: ACCENT }}
+                        />
+                        <span style={{ flex: 1, minWidth: 0 }}>
+                          <span style={{ display: 'block', fontSize: 13, color: TEXT }}>{m.name}</span>
+                          {m.email && m.email !== m.name && (
+                            <span style={{ display: 'block', fontSize: 11, color: DIM }}>{m.email}</span>
+                          )}
+                        </span>
+                      </label>
+                    )
+                  })}
+                </div>
+              </>
+            )}
+
+            <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
+              <button style={btn} onClick={() => { setPickerOpen(false); setPicked(new Set()) }}>
+                Close
+              </button>
+              {team.accessMode !== 'free' && available.length > 0 && (
+                <button
+                  onClick={addPicked}
+                  disabled={picked.size === 0 || busy}
+                  style={{
+                    ...btn,
+                    borderColor: picked.size === 0 || busy ? HAIRLINE : ACCENT,
+                    background: picked.size === 0 || busy ? 'transparent' : ACCENT,
+                    color: picked.size === 0 || busy ? DIM : '#fff',
+                    cursor: picked.size === 0 || busy ? 'not-allowed' : 'pointer',
+                  }}
+                >{busy ? 'Adding…' : `Add ${picked.size || ''}`.trim()}</button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -115,6 +115,40 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // Everyone on the team who is NOT already on this campaign. Returned with
+    // the campaign rather than fetched separately, because "who can dial it"
+    // and "who could" are two halves of one question and splitting them across
+    // two requests is how the two lists end up disagreeing.
+    let availableMembers: any[] = []
+    if (ownedTeam) {
+      const alreadyOn = new Set(agents.map((a: any) => a.memberId))
+      const { data: roster } = await supabaseAdmin
+        .from('team_members')
+        .select('id, user_id, seat_suspended_at')
+        .eq('team_id', ownedTeam.id)
+        .eq('status', 'active')
+        .is('seat_suspended_at', null)
+
+      const candidates = (roster || []).filter((m: any) => !alreadyOn.has(m.id))
+      if (candidates.length > 0) {
+        const { data: users } = await supabaseAdmin
+          .from('users')
+          .select('clerk_id, email, first_name, last_name')
+          .in('clerk_id', Array.from(new Set(candidates.map((m: any) => m.user_id))))
+
+        const byId: Record<string, any> = {}
+        for (const u of users || []) byId[u.clerk_id] = u
+
+        availableMembers = candidates.map((m: any) => {
+          const u = byId[m.user_id]
+          const name = u
+            ? ([u.first_name, u.last_name].filter(Boolean).join(' ').trim() || u.email)
+            : 'Unknown'
+          return { memberId: m.id, userId: m.user_id, name, email: u?.email ?? null }
+        }).sort((a: any, b: any) => a.name.localeCompare(b.name))
+      }
+    }
+
     const total = campaign.total_leads || 0
     const called = campaign.called_leads || 0
 
@@ -139,6 +173,7 @@ export async function GET(req: NextRequest) {
       },
       team: ownedTeam ? { id: ownedTeam.id, name: ownedTeam.name, accessMode } : null,
       agents,
+      availableMembers,
       isCampaignOwner,
     })
   } catch (error: any) {
