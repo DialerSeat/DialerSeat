@@ -217,16 +217,11 @@ export default function TeamsSidebar({
           position: relative;
           transition: background 0.1s ease, color 0.1s ease;
         }
-        .ts-row:hover { background: ${SURFACE_RAISED}; color: ${TEXT}; }
-        .ts-row.is-selected { background: ${SURFACE_RAISED}; color: ${TEXT}; }
-        /* The selection rail. A left bar rather than a border or an outline —
-           it marks the row without changing its geometry, so nothing shifts
-           when selection moves. */
-        .ts-row.is-selected::before {
-          content: ''; position: absolute; left: 0; top: 50%;
-          transform: translateY(-50%);
-          width: 3px; height: 60%; border-radius: 0 3px 3px 0;
-          background: ${ACCENT};
+        /* Hover brightens the text and nothing else. The fill and the accent
+           rail that used to live here are gone: selection is carried by the
+           wrapper now, and having both meant the row was marked twice. */
+        @media (hover: hover) and (pointer: fine) {
+          .ts-row:hover { color: ${TEXT}; }
         }
         .ts-row-label {
           flex: 1; min-width: 0;
@@ -275,16 +270,30 @@ export default function TeamsSidebar({
           display: flex; align-items: center; gap: 2px;
           border-radius: 4px; position: relative;
         }
-        .ts-row-wrap:hover { background: ${SURFACE_RAISED}; }
+        /* ── A ROW IS TEXT UNTIL IT IS CHOSEN ───────────────────────────────
+           No hover fill and no accent rail. The rail marked the same thing the
+           background already marked, and a fill on hover meant every row the
+           cursor crossed looked momentarily chosen — in a tree this dense that
+           is most of them. Hovering now only brightens the text, which is
+           enough to show what is targetable.
+           A row looks like a button only once it IS the selection. */
         .ts-row-wrap.is-selected { background: ${SURFACE_RAISED}; }
-        .ts-row-wrap.is-selected::before {
-          content: ''; position: absolute; left: 0; top: 50%;
-          transform: translateY(-50%);
-          width: 3px; height: 60%; border-radius: 0 3px 3px 0;
-          background: ${ACCENT};
-        }
         .ts-row-wrap .ts-row { background: transparent; }
-        .ts-row-wrap .ts-row:hover { background: transparent; color: ${TEXT}; }
+        /* Hover styles only for real pointers. On a touch screen :hover latches
+           after a tap and does not clear until you tap elsewhere — which is
+           exactly the "row stays highlighted after I hit the arrow" symptom.
+           A finger has no hover state, so it should not get hover styling. */
+        @media (hover: hover) and (pointer: fine) {
+          .ts-row-wrap:hover .ts-row { color: ${TEXT}; }
+        }
+        /* Nothing about the row reacts to being pressed or focused. Selection
+           is the only thing that changes its appearance, and expanding a
+           branch is not a selection. */
+        .ts-row-wrap .ts-row:hover,
+        .ts-row-wrap .ts-row:active,
+        .ts-row-wrap .ts-row:focus { background: transparent; }
+        .ts-row:focus { outline: none; }
+        .ts-row:focus-visible { outline: 1px solid ${TEXT_DIM}; outline-offset: -2px; }
         .ts-indent-1 { padding-left: 16px; }
         .ts-indent-2 { padding-left: 38px; }
         /* Levels below the team no longer need their own text indent — the
@@ -297,7 +306,15 @@ export default function TeamsSidebar({
           border: 0; background: transparent; color: ${TEXT_MUTED};
           cursor: pointer; padding: 0; border-radius: 3px;
         }
-        .ts-caret-btn:hover { color: ${TEXT}; background: rgba(255,255,255,0.06); }
+        /* The caret gets no surface of its own, hovered or pressed. It opens a
+           branch; it does not select anything, so it must not flash like
+           something that did. Colour is the only feedback it needs. */
+        @media (hover: hover) and (pointer: fine) {
+          .ts-caret-btn:hover { color: ${TEXT}; }
+        }
+        .ts-caret-btn:active,
+        .ts-caret-btn:focus { background: transparent; outline: none; }
+        .ts-caret-btn:focus-visible { outline: 1px solid ${TEXT_DIM}; outline-offset: -1px; }
 
         .ts-bubble {
           width: 14px; height: 14px; flex-shrink: 0; margin: 0 4px 0 2px;

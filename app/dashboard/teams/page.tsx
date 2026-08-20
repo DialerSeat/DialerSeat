@@ -418,7 +418,100 @@ export default function TeamsPage() {
 
   return (
     <div style={{ display: 'flex', height: '100vh', minHeight: 0, background: BG, color: TEXT }}>
-      <main style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+      <style>{`
+        /* ── DESKTOP: A COLUMN. MOBILE: A DRAWER. ─────────────────────────────
+           The sidebar is 300px of permanent furniture on a wide screen and the
+           whole screen on a phone, so on mobile it slides in over the panel
+           rather than competing with it for width.
+
+           Driven by a checkbox and a label, exactly as the dashboard's own
+           drawer is, and for the same reason: a label's association with its
+           checkbox is browser behaviour, so it works the instant the HTML
+           paints. A button's onClick does not exist until React hydrates, and
+           that gap is precisely when taps get swallowed on a slow phone. */
+        .ts-drawer-checkbox { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
+        .ts-side { width: 300px; flex-shrink: 0; }
+        .ts-fab, .ts-overlay { display: none; }
+
+        @media (max-width: 900px) {
+          .ts-side {
+            position: fixed; top: 0; right: 0; bottom: 0;
+            width: min(88vw, 340px); z-index: 60;
+            transform: translateX(100%);
+            transition: transform 0.22s ease;
+            box-shadow: -8px 0 28px rgba(0,0,0,0.45);
+          }
+          .ts-drawer-checkbox:checked ~ .ts-side { transform: translateX(0); }
+
+          .ts-overlay {
+            display: block; position: fixed; inset: 0; z-index: 55;
+            background: rgba(0,0,0,0.5);
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.22s ease;
+          }
+          .ts-drawer-checkbox:checked ~ .ts-overlay { opacity: 1; pointer-events: auto; }
+
+          /* Mirrors the dashboard hamburger — same 40x40, same border and
+             surface tokens, same three bars — but on the right, because it
+             opens the right-hand drawer. Putting it top-left would sit on top
+             of the nav hamburger and open the wrong thing. */
+          .ts-fab {
+            display: flex; position: fixed; z-index: 65;
+            top: max(14px, env(safe-area-inset-top, 14px));
+            right: max(14px, env(safe-area-inset-right, 14px));
+            width: 40px; height: 40px; border-radius: 8px;
+            border: 1px solid var(--brand-sidebar-active-bg, #35373c);
+            background: var(--brand-header-bg, #111214);
+            flex-direction: column; align-items: center; justify-content: center;
+            gap: 4px; cursor: pointer; padding: 0;
+          }
+          .ts-fab span {
+            width: 18px; height: 2px; border-radius: 1px;
+            background: var(--brand-on-header, #f2f3f5);
+          }
+          /* Once the drawer is open the button is under the overlay, so it
+             moves with the drawer instead of being stranded behind it. */
+          .ts-drawer-checkbox:checked ~ .ts-fab { opacity: 0; pointer-events: none; }
+
+          /* The panel keeps the full width — the drawer floats over it rather
+             than squeezing it, so nothing reflows when it opens. */
+          .ts-main { padding-right: 0 !important; }
+        }
+      `}</style>
+
+      {/* Uncontrolled on purpose: the browser must be free to toggle this
+          before React exists. Placed first so the `~` rules above can reach
+          the drawer, overlay and button, since that selector only looks
+          forward. */}
+      <input
+        type="checkbox"
+        id="ts-drawer-toggle"
+        className="ts-drawer-checkbox"
+        defaultChecked={false}
+        aria-label="Open teams menu"
+      />
+
+      <label
+        className="ts-fab"
+        htmlFor="ts-drawer-toggle"
+        role="button"
+        aria-label="Open teams menu"
+        aria-controls="ts-side"
+      >
+        <span aria-hidden />
+        <span aria-hidden />
+        <span aria-hidden />
+      </label>
+
+      {/* A label, not a div with onClick, so tapping away closes the drawer
+          pre-hydration too. */}
+      <label
+        className="ts-overlay"
+        htmlFor="ts-drawer-toggle"
+        aria-hidden="true"
+      />
+
+      <main className="ts-main" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
         {view === 'overview' && (
           <div style={{
             display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
@@ -695,7 +788,7 @@ export default function TeamsPage() {
         </div>
       </main>
 
-      <div style={{ width: 300, flexShrink: 0 }}>
+      <div className="ts-side" id="ts-side">
         <TeamsSidebar
           teams={teams}
           scope={scope}
