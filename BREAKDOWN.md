@@ -147,14 +147,22 @@ for it; run it after any migration.
 erroring.** Never aggregate by pulling rows into JavaScript. Group in Postgres,
 or paginate and print the true total beside the page.
 
-**Compress before deleting, and only delete what is not evidence.** A daily
-retention job rolls page views into permanent daily totals and then prunes the
-raw rows, prunes idempotency keys and delivery receipts, and drops
-"somebody came online" notifications after a few weeks. It deliberately never
-touches calls, leads, seat charges, subscriptions, billing events, team
-memberships or lead notes — if a human could plausibly need to answer a question
-from a row, the row stays. The prune is gated on the rollup succeeding, so
-nothing is deleted before its numbers exist somewhere else.
+**Compression is the default; keeping is declared.** Every table classifies
+itself in the `retention_policy` table as either **evidence** (kept, because
+somebody could need to answer a question from a row — money, the customer'''s
+data, compliance records, work product) or **ephemeral** (compressed, then
+pruned, because its only contribution was a number on a chart). A daily job
+reads that policy rather than a list in code.
+
+Two properties make it safe. The rollup runs first and the prune is **gated on
+it succeeding**, so nothing is deleted before its numbers exist elsewhere. And
+an unclassified table is **kept and reported**, never auto-pruned — defaulting
+an unknown table to deletion would mean the next one somebody adds starts
+destroying itself on day one. The daily report is what stops anything
+accumulating unnoticed.
+
+Add a table, add a policy row. `select * from unclassified_tables()` should
+always return nothing.
 
 **Never fabricate a number.** A dash means no data. A plausible invented figure
 is worse than an obvious gap: the gap gets fixed, the invention gets trusted.
