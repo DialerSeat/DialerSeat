@@ -344,7 +344,7 @@ export function CreateCodeModal({
   )
   const [campaignId, setCampaignId] = useState(defaultCampaignId || campaigns[0]?.id || '')
   const [payer, setPayer] = useState<'owner' | 'agent'>('owner')
-  const [joinMode, setJoinMode] = useState<'instant' | 'approval'>('approval')
+  const [joinMode, setJoinMode] = useState<'instant' | 'approval'>('instant')
   const [limited, setLimited] = useState(false)
   const [maxUses, setMaxUses] = useState('1')
 

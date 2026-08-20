@@ -79,23 +79,10 @@ export async function POST(req: Request) {
       }
     }
 
-    const { error: delErr } = await supabaseAdmin
-      .from('team_codes')
-      .delete()
-      .eq('id', codeId)
-
-    if (delErr) throw delErr
-
     const { data: newRow, error: insErr } = await supabaseAdmin
       .from('team_codes')
-      .insert({
-        team_id: existing.team_id,
-        code,
-        code_type: existing.code_type,
-        campaign_id: existing.campaign_id,
-        payer: existing.payer,
-        is_active: true,
-      })
+      .update({ code, is_active: true })
+      .eq('id', codeId)
       .select()
       .single()
 

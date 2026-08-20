@@ -182,7 +182,8 @@ export async function POST(req: Request) {
         // owner and charges on acceptance. Defaults to approval — the safer
         // of the two, since it never bills for somebody the owner has not
         // knowingly let in.
-        join_mode: joinMode === 'instant' ? 'instant' : 'approval',
+        // Default in, not out — see the note in /api/teams/redeem.
+        join_mode: joinMode === 'approval' ? 'approval' : 'instant',
         campaign_id: codeType === 'seat' ? campaignId : null,
         payer,
         is_active: true,

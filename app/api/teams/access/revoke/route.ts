@@ -76,7 +76,7 @@ export async function POST(req: Request) {
 
         const { data: charge } = await supabaseAdmin
           .from('team_seat_charges')
-          .select('id, stripe_subscription_id')
+          .select('id, stripe_subscription_item_id')
           .eq('team_member_id', access.team_member_id)
           .eq('status', 'paid')
           .order('created_at', { ascending: false })
@@ -85,7 +85,7 @@ export async function POST(req: Request) {
 
         if (charge) {
           try {
-            const result = await cancelSeatSubscription(charge.stripe_subscription_id)
+            const result = await cancelSeatSubscription(charge.stripe_subscription_item_id)
             stripeCanceled = result.canceled
             stripeReason = result.reason
 

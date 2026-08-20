@@ -85,7 +85,11 @@ export async function POST(req: Request) {
     // Agent-pays is unaffected by join_mode and stays pending regardless: that
     // seat is not paid for until the agent's own checkout succeeds, and
     // admitting them first would be giving away a seat nobody has bought.
-    const joinMode = codeRow.join_mode === 'instant' ? 'instant' : 'approval'
+    // Straight in unless the owner asked otherwise. Approval is the
+    // exception a cautious owner opts into, not the toll everybody pays:
+    // most codes are handed to someone already hired, and making that
+    // person wait on a click adds a delay with nothing behind it.
+    const joinMode = codeRow.join_mode === 'approval' ? 'approval' : 'instant'
 
     const targetStatus =
       isSingleUsePartnerSeat ? 'active'
@@ -267,7 +271,7 @@ export async function POST(req: Request) {
           await supabaseAdmin
             .from('team_seat_charges')
             .update({
-              stripe_subscription_id: result.stripeSubscriptionId,
+              stripe_subscription_item_id: result.stripeSubscriptionId,
               status: 'paid',
               period_start: result.currentPeriodStart,
               period_end: result.currentPeriodEnd,

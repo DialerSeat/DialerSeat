@@ -141,7 +141,7 @@ export async function POST(req: Request) {
         status: 'pending',
         period_start: new Date().toISOString(),
         period_end: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-        stripe_subscription_id: null,
+        stripe_subscription_item_id: null,
       })
       .select()
       .single()
@@ -166,7 +166,7 @@ export async function POST(req: Request) {
       await supabaseAdmin
         .from('team_seat_charges')
         .update({
-          stripe_subscription_id: sub.stripeSubscriptionId,
+          stripe_subscription_item_id: sub.stripeSubscriptionId,
           period_start: sub.currentPeriodStart,
           period_end: sub.currentPeriodEnd,
           status: 'paid', // webhook will refine to 'paid'/'failed'/etc but mark as paid optimistically
