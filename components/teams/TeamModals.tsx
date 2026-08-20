@@ -322,9 +322,13 @@ export function CreateCampaignModal({
 // rather than a setting — an owner running a recruiting drive and one adding a
 // known agent to one campaign want opposite answers.
 // =============================================================================
-export function CreateCodeModal({ teamName, campaigns, onClose, onCreate, busy }: {
+export function CreateCodeModal({
+  teamName, campaigns, defaultCampaignId, onClose, onCreate, busy,
+}: {
   teamName: string
   campaigns: Array<{ id: string; name: string }>
+  /** Minting from a campaign row: the dialog opens as a campaign code for it. */
+  defaultCampaignId?: string
   onClose: () => void
   onCreate: (input: {
     codeType: 'recruit' | 'seat'
@@ -334,8 +338,10 @@ export function CreateCodeModal({ teamName, campaigns, onClose, onCreate, busy }
   }) => void
   busy?: boolean
 }) {
-  const [codeType, setCodeType] = useState<'recruit' | 'seat'>('recruit')
-  const [campaignId, setCampaignId] = useState(campaigns[0]?.id || '')
+  const [codeType, setCodeType] = useState<'recruit' | 'seat'>(
+    defaultCampaignId ? 'seat' : 'recruit'
+  )
+  const [campaignId, setCampaignId] = useState(defaultCampaignId || campaigns[0]?.id || '')
   const [payer, setPayer] = useState<'owner' | 'agent'>('owner')
   const [limited, setLimited] = useState(false)
   const [maxUses, setMaxUses] = useState('1')

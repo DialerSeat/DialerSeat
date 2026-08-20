@@ -97,7 +97,9 @@ export default function TeamDetail({
 }: {
   team: TeamDetailData
   onNewCampaign?: (teamId: string) => void
-  onNewCode?: (teamId: string) => void
+  /** campaignId set means "a code for this campaign", which joins the team and
+   *  that campaign at once. Omitted means a team-only code. */
+  onNewCode?: (teamId: string, campaignId?: string) => void
   /** Takes the CODE id, not the team id — a team has several. */
   onRegenerateCode?: (codeId: string) => void
   onManageUser?: (userId: string) => void
@@ -249,6 +251,16 @@ export default function TeamDetail({
                     color: DIM, border: `1px solid ${HAIRLINE}`,
                     borderRadius: 3, padding: '2px 6px',
                   }}>Open to team</span>
+                )}
+                {/* Each campaign can mint its own code. Someone joining with it
+                    lands in the team AND on this campaign in one step, which is
+                    the common case when a vendor is staffing one specific list
+                    — asking them to make a team code and then grant access
+                    separately is two jobs for one intention. */}
+                {team.isOwner && (
+                  <button style={btn} onClick={() => onNewCode?.(team.id, c.id)}>
+                    + Code
+                  </button>
                 )}
               </div>
             ))}

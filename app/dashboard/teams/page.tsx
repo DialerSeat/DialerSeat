@@ -200,6 +200,9 @@ export default function TeamsPage() {
   const [campaignTeamId, setCampaignTeamId] = useState<string | undefined>()
   const [showCodeModal, setShowCodeModal] = useState(false)
   const [codeTeamId, setCodeTeamId] = useState<string | undefined>()
+  // Set when the code is being minted from a specific campaign row, so the
+  // dialog opens already answering "which campaign".
+  const [codeCampaignId, setCodeCampaignId] = useState<string | undefined>()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [myCampaigns, setMyCampaigns] =
@@ -667,7 +670,11 @@ export default function TeamsPage() {
               <TeamDetail
                 team={openTeam}
                 onNewCampaign={id => { setCampaignTeamId(id); setShowCampaignModal(true) }}
-                onNewCode={id => { setCodeTeamId(id); setShowCodeModal(true) }}
+                onNewCode={(id, campaignId) => {
+                  setCodeTeamId(id)
+                  setCodeCampaignId(campaignId)
+                  setShowCodeModal(true)
+                }}
                 onRegenerateCode={async codeId => {
                   setBusy(true)
                   try {
@@ -872,6 +879,7 @@ export default function TeamsPage() {
         <CreateCodeModal
           busy={busy}
           teamName={teams.find(t => t.id === codeTeamId)?.name || 'this team'}
+          defaultCampaignId={codeCampaignId}
           campaigns={(teams.find(t => t.id === codeTeamId)?.campaigns || [])
             .map(c => ({ id: c.id, name: c.name }))}
           onClose={() => setShowCodeModal(false)}
