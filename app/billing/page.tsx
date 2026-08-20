@@ -143,6 +143,25 @@ export default function BillingPage() {
     (searchParams.get('promo') || '').trim().toUpperCase()
   )
   const [showPromo, setShowPromo] = useState(false)
+  // ── TWO KINDS OF CODE, ONE BOX ────────────────────────────────────────
+  // A person holding a code has no reason to know whether it is a Stripe
+  // promo or a DialerSeat team invite, so both are typed into the same
+  // field and this page works out which it is.
+  //
+  // They behave differently, and the difference is real rather than
+  // cosmetic: a price code changes what this order costs, so only one can
+  // apply at a time and a second replaces the first. A team code joins a
+  // team or a campaign — those stack without limit, because an agent
+  // brought onto three campaigns by three different vendors is an ordinary
+  // situation and there is no sane reason to make them do it three times.
+  const [teamCodes, setTeamCodes] = useState<Array<{
+    code: string
+    teamName: string
+    payer: 'owner' | 'agent'
+    status: string | null
+  }>>([])
+  const [seatCovered, setSeatCovered] = useState<{ teamName: string; pending: boolean } | null>(null)
+  const [codeError, setCodeError] = useState<string | null>(null)
   const [promoAction, setPromoAction] = useState<'applying' | 'removing' | null>(null)
   const [promoApplied, setPromoApplied] = useState<string | null>(null)
   const [freeWithCoupon, setFreeWithCoupon] = useState(false)
@@ -287,10 +306,96 @@ export default function BillingPage() {
   }
 
   const handleApplyPromo = async () => {
-    if (!promoCode.trim()) return
+    const raw = promoCode.trim().toUpperCase()
+    if (!raw) return
+    setCodeError(null)
+
+    if (promoApplied?.toUpperCase() === raw || teamCodes.some(c => c.code === raw)) {
+      setCodeError('That code is already applied.')
+      return
+    }
+
     setPromoAction('applying')
-    setClientSecret(null)
-    await initSubscription(promoCode.trim())
+    try {
+      // Ask whether this is one of ours before charging anything to it. The
+      // preview endpoint is read-only and 404s on anything that is not a
+      // live team code, which makes it a clean classifier: found means team
+      // code, not found means hand it to Stripe as a promo.
+      const pv = await fetch(`/api/teams/redeem/preview?code=${encodeURIComponent(raw)}`)
+      const pvData = await pv.json().catch(() => ({}))
+
+      if (pv.ok && pvData?.success) {
+        if (pvData.isOwnTeam) {
+          setCodeError('That is a code for your own team.')
+          setPromoAction(null)
+          return
+        }
+        if (pvData.alreadyMember) {
+          setCodeError(`You are already on ${pvData.team?.name || 'that team'}.`)
+          setPromoAction(null)
+          return
+        }
+
+        const res = await fetch('/api/teams/redeem', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: raw }),
+        })
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok || !data?.success) {
+          setCodeError(data?.error || 'That code could not be applied.')
+          setPromoAction(null)
+          return
+        }
+
+        const payer: 'owner' | 'agent' = data.code?.payer === 'agent' ? 'agent' : 'owner'
+        setTeamCodes(prev => [
+          ...prev,
+          {
+            code: raw,
+            teamName: data.team?.name || 'Team',
+            payer,
+            status: data.member?.status ?? null,
+          },
+        ])
+        setPromoCode('')
+        setShowPromo(false)
+        setPromoAction(null)
+
+        if (payer === 'owner') {
+          // ── NOTHING TO COLLECT ───────────────────────────────────────
+          // Somebody else has agreed to pay for this seat. Holding them on
+          // a checkout page for a bill that is not theirs is the product
+          // contradicting the invite they just redeemed — so the balance
+          // goes to zero and they go in.
+          //
+          // This works whether the code admitted them outright or left them
+          // pending: an owner-funded pending seat already grants entry to
+          // DialerSeat (it just does not open that team's campaigns yet),
+          // and the banner in the dashboard explains the wait.
+          setSeatCovered({
+            teamName: data.team?.name || 'your team',
+            pending: data.member?.status !== 'active',
+          })
+          setTimeout(
+            () => router.push(data.firstCampaignId ? '/dashboard/dialer' : '/dashboard'),
+            1800
+          )
+        }
+        // Agent-pays: the join is recorded and the seat opens when this
+        // checkout succeeds. The price stands, so the order is untouched.
+        return
+      }
+
+      // Not a team code — treat it as a price code. Only one of these can be
+      // live at a time, so this replaces whatever discount was already on the
+      // order rather than stacking with it.
+      setClientSecret(null)
+      await initSubscription(raw)
+    } catch (err: any) {
+      setCodeError(err?.message || 'Something went wrong applying that code.')
+      setPromoAction(null)
+    }
   }
 
   const handleRemovePromo = async () => {
@@ -326,6 +431,26 @@ export default function BillingPage() {
             <div style={{ ...statusTitleStyle, color: '#32ff7e' }}>Subscription active</div>
             <div style={mutedTextStyle}>
               Promo code applied. Redirecting{plan === 'wl' ? ' to white-label setup' : ' to your dashboard'}...
+            </div>
+          </div>
+        </div>
+      </main>
+    )
+  }
+
+  if (seatCovered) {
+    return (
+      <main style={pageStyle}>
+        <div style={narrowShellStyle}>
+          <div style={{ padding: '48px 32px', textAlign: 'center' }}>
+            <BrandMark />
+            <div style={{ ...statusTitleStyle, color: '#32ff7e' }}>$0.00 owed</div>
+            <div style={mutedTextStyle}>
+              Your seat on <strong style={{ color: '#e0e2ea' }}>{seatCovered.teamName}</strong> is
+              covered by the team owner — there&apos;s nothing to pay here.{' '}
+              {seatCovered.pending
+                ? 'Taking you in now. The owner still needs to approve you before their campaigns open up.'
+                : 'Taking you in now.'}
             </div>
           </div>
         </div>
@@ -478,8 +603,24 @@ export default function BillingPage() {
             <div style={payHeaderStyle} className="billing-pay-header">Payment details</div>
 
             <div style={promoBoxStyle} className="billing-promo-box">
-              {promoApplied ? (
-                <div style={promoAppliedStyle}>
+              {/* Team codes stack. No remove button: leaving a team is a
+                  decision made on the Teams page, not a line item struck off
+                  an order — pretending otherwise here would imply this undoes
+                  a membership, which it does not. */}
+              {teamCodes.map(c => (
+                <div key={c.code} style={{ ...promoAppliedStyle, marginBottom: 6 }}>
+                  <span>
+                    ✓ <strong style={{ color: '#32ff7e' }}>{c.code}</strong> — joined{' '}
+                    {c.teamName.toUpperCase()}
+                  </span>
+                  <span style={{ fontSize: 10, letterSpacing: '0.08em', color: c.payer === 'owner' ? '#32ff7e' : '#8a8f9e' }}>
+                    {c.payer === 'owner' ? 'SEAT COVERED' : 'YOU PAY THIS SEAT'}
+                  </span>
+                </div>
+              ))}
+
+              {promoApplied && (
+                <div style={{ ...promoAppliedStyle, marginBottom: 6 }}>
                   <span>
                     ✓ CODE <strong style={{ color: '#32ff7e' }}>{promoApplied.toUpperCase()}</strong> APPLIED
                   </span>
@@ -491,12 +632,20 @@ export default function BillingPage() {
                     REMOVE
                   </button>
                 </div>
-              ) : !showPromo ? (
+              )}
+
+              {codeError && (
+                <div style={{ fontSize: 11, color: '#ff6464', letterSpacing: '0.04em', margin: '6px 0 2px' }}>
+                  {codeError}
+                </div>
+              )}
+
+              {!showPromo ? (
                 <button
                   onClick={() => setShowPromo(true)}
                   style={promoToggleStyle}
                 >
-                  + Have a code?
+                  + {teamCodes.length > 0 || promoApplied ? 'Add another code' : 'Have a code?'}
                 </button>
               ) : (
                 <div style={promoFormStyle}>

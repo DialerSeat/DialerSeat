@@ -27,6 +27,22 @@ interface AdminUser {
   recording_count: number
   team_member_count: number
   is_active_subscription: boolean
+  /** The seats this person holds — which team, the code they redeemed, and
+   *  who is paying. An agent on an owner-paid seat has no subscription of
+   *  their own, so without this the row reads INACTIVE for somebody who is
+   *  dialing perfectly well. */
+  seats?: Array<{
+    team_id: string
+    team_name: string
+    status: string
+    joined_via_code: string | null
+    code_type: string | null
+    payer: 'owner' | 'agent' | null
+    suspended: boolean
+    suspend_reason: string | null
+    joined_at: string | null
+  }>
+  owner_funded_seat?: boolean
 }
 
 interface PreviewLead {
@@ -502,15 +518,66 @@ export default function ExplorerApp() {
                         ? u.recording_count.toLocaleString()
                         : <span style={{ color: T.muted }}>—</span>}
                     </td>
-                    <td style={tdStyle}>{u.team_member_count > 0 ? u.team_member_count : '—'}</td>
                     <td style={tdStyle}>
-                      <span style={{
-                        ...badgeStyle,
-                        color: u.is_active_subscription ? T.green : T.muted,
-                        borderColor: u.is_active_subscription ? T.green : T.border,
-                      }}>
-                        {u.is_active_subscription ? '● ACTIVE' : '○ INACTIVE'}
-                      </span>
+                      {(() => {
+                        const seats = u.seats || []
+                        if (seats.length === 0) return <span style={{ color: T.muted }}>—</span>
+                        const first = seats[0]
+                        return (
+                          <div style={{ lineHeight: 1.35 }}>
+                            <div>
+                              {first.team_name}
+                              {seats.length > 1 && (
+                                <span style={{ color: T.muted }}> +{seats.length - 1}</span>
+                              )}
+                            </div>
+                            <div style={{ fontSize: 9, color: T.muted, letterSpacing: '0.06em' }}>
+                              {first.joined_via_code
+                                ? `VIA ${first.joined_via_code}`
+                                : 'ADDED DIRECTLY'}
+                              {first.payer === 'owner'
+                                ? ' · OWNER PAYS'
+                                : first.payer === 'agent'
+                                ? ' · SELF PAYS'
+                                : ''}
+                            </div>
+                          </div>
+                        )
+                      })()}
+                    </td>
+                    <td style={tdStyle}>
+                      {(() => {
+                        // Three states, not two. A suspended owner-paid seat is
+                        // its own case: the owner stopped covering them, so they
+                        // are locked out and the reason is not "never paid".
+                        const suspended = (u.seats || []).some(sm => sm.payer === 'owner' && sm.suspended)
+                        if (u.is_active_subscription) {
+                          return (
+                            <span style={{ ...badgeStyle, color: T.green, borderColor: T.green }}>
+                              ● ACTIVE
+                            </span>
+                          )
+                        }
+                        if (u.owner_funded_seat) {
+                          return (
+                            <span style={{ ...badgeStyle, color: '#4a9eff', borderColor: '#4a9eff' }}>
+                              ● SEAT · OWNER PAID
+                            </span>
+                          )
+                        }
+                        if (suspended) {
+                          return (
+                            <span style={{ ...badgeStyle, color: '#ffaa3e', borderColor: '#ffaa3e' }}>
+                              ○ SEAT SUSPENDED
+                            </span>
+                          )
+                        }
+                        return (
+                          <span style={{ ...badgeStyle, color: T.muted, borderColor: T.border }}>
+                            ○ INACTIVE
+                          </span>
+                        )
+                      })()}
                     </td>
                     <td style={{ ...tdStyle, color: T.muted }}>{fmtDate(u.created_at)}</td>
                     {/* The separate "▶ RECORDINGS" button that used to live

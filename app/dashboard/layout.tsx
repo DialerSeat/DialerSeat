@@ -55,6 +55,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [tier, setTier] = useState<AccessTier>(null)
   // Teams this person has been admitted to but not yet approved for. They can
   // be in the product; they cannot dial that team's campaigns yet.
+  const [seatLapsed, setSeatLapsed] =
+    useState<Array<{ teamId: string; teamName: string; reason: string }>>([])
   const [awaitingApproval, setAwaitingApproval] =
     useState<Array<{ teamId: string; teamName: string }>>([])
   const [plan, setPlan] = useState<Plan>(null)
@@ -140,12 +142,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           setTier(d.tier || null)
           setPlan((d.plan as Plan) ?? null)
           setAwaitingApproval(d.awaitingApproval || [])
+          setSeatLapsed(d.seatLapsed || [])
         })
         .catch(() => {
           if (cancelled) return
           setTier(null)
           setPlan(null)
           setAwaitingApproval([])
+          setSeatLapsed([])
         })
     }
     const loadSeats = () => {
@@ -440,7 +444,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         })}
       </nav>
 
-      {!isAdmin && tier === 'lapsed' && !hasAnySeat && !hasManagerPlus && (
+      {!isAdmin && (tier === 'lapsed' || seatLapsed.length > 0) && !hasAnySeat && !hasManagerPlus && (
         <Link
           href="/billing"
           style={{
@@ -707,6 +711,33 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
 
         <DashboardBanners />
+
+        {/* ── THE SEAT STOPPED BEING PAID FOR ──────────────────────────────
+            The owner suspended this seat or their card stopped covering it.
+            Deliberately the plain unsubscribed message and nothing more: this
+            person did nothing wrong, they are not in an error state, and the
+            only thing that changed is who is paying. Their account, leads,
+            recordings and dispositions are all untouched — so the message is
+            about restoring dialing, not about recovering an account.
+            Suppressed when they already have their own plan, because then
+            there is nothing to restore. */}
+        {seatLapsed.length > 0 && !hasActivePersonal && (
+          <div style={{
+            padding: '10px 16px', background: '#2a1a05',
+            borderBottom: '1px solid #78350f', color: '#ffaa3e',
+            fontSize: 13, lineHeight: 1.5,
+          }}>
+            {seatLapsed.map(t => t.teamName).join(', ')} is no longer paying for your seat.
+            {' '}Your account and all your data are still here — subscribe on your own plan
+            to keep dialing.
+            <Link
+              href="/billing"
+              style={{ color: '#ffd96a', marginLeft: 8, textDecoration: 'underline' }}
+            >
+              Subscribe
+            </Link>
+          </div>
+        )}
 
         {/* ── ADMITTED, NOT YET APPROVED ────────────────────────────────────
             Someone who redeemed an owner-paid invite that needs approval is

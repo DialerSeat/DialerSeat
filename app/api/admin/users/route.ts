@@ -98,7 +98,80 @@ export async function GET(req: NextRequest) {
     })
   )
 
+  // ── HOW THEY GOT IN, AND WHO IS PAYING ──────────────────────────────────
+  // The SUBSCRIPTION column answers "do they have their own plan", which is
+  // not the same question as "can this person dial" — an agent on an
+  // owner-paid seat has no subscription of their own and was showing as a
+  // flat INACTIVE, indistinguishable from someone who never paid and cannot
+  // work. That is the single most misread row in the admin table.
+  //
+  // So the seat itself comes back: which team, the code they redeemed, who
+  // is on the hook for it, and whether the owner has since suspended it.
   const teamMemberCounts = new Map<string, number>()
+  const seatsByUser = new Map<string, any[]>()
+  {
+    const { data: memberRows } = await supabase
+      .from('team_members')
+      .select('user_id, team_id, status, joined_via_code, billing_override, seat_suspended_at, seat_suspend_reason, created_at, accepted_at')
+      .in('user_id', userIds)
+      .in('status', ['active', 'pending'])
+
+    const rows = memberRows || []
+    const teamIds = Array.from(new Set(rows.map((m: any) => m.team_id).filter(Boolean)))
+    const codes = Array.from(
+      new Set(rows.map((m: any) => m.joined_via_code).filter((c: any): c is string => !!c))
+    )
+
+    const teamNameById = new Map<string, string>()
+    if (teamIds.length > 0) {
+      const { data: teamRows } = await supabase
+        .from('teams')
+        .select('id, name')
+        .in('id', teamIds)
+      for (const t of teamRows || []) teamNameById.set(t.id, t.name)
+    }
+
+    // joined_via_code stores the code TEXT, not a foreign key, so the payer
+    // has to be looked up rather than embedded.
+    const codeMeta = new Map<string, { payer: string | null; codeType: string | null }>()
+    if (codes.length > 0) {
+      const { data: codeRows } = await supabase
+        .from('team_codes')
+        .select('code, payer, code_type')
+        .in('code', codes)
+      for (const c of codeRows || []) {
+        codeMeta.set(c.code, { payer: c.payer ?? null, codeType: c.code_type ?? null })
+      }
+    }
+
+    for (const m of rows) {
+      teamMemberCounts.set(m.user_id, (teamMemberCounts.get(m.user_id) || 0) + 1)
+      const meta = m.joined_via_code ? codeMeta.get(m.joined_via_code) : undefined
+      // An explicit override on the membership beats the code it came from —
+      // that is the whole point of an override.
+      const payer: 'owner' | 'agent' | null =
+        m.billing_override === 'owner' || m.billing_override === 'agent'
+          ? m.billing_override
+          : meta?.payer === 'agent'
+          ? 'agent'
+          : meta?.payer === 'owner'
+          ? 'owner'
+          : null
+      const list = seatsByUser.get(m.user_id) || []
+      list.push({
+        team_id: m.team_id,
+        team_name: teamNameById.get(m.team_id) || 'Unknown team',
+        status: m.status,
+        joined_via_code: m.joined_via_code || null,
+        code_type: meta?.codeType ?? null,
+        payer,
+        suspended: !!m.seat_suspended_at,
+        suspend_reason: m.seat_suspend_reason || null,
+        joined_at: m.accepted_at || m.created_at,
+      })
+      seatsByUser.set(m.user_id, list)
+    }
+  }
 
   const rows = users.map(u => {
     const sub = subByUser.get(u.clerk_id)
@@ -126,6 +199,13 @@ export async function GET(req: NextRequest) {
       recording_count: recordingCounts.get(u.clerk_id) || 0,
       last_active_at: lastActivity.get(u.clerk_id) || null,
       team_member_count: teamMemberCounts.get(u.clerk_id) || 0,
+      seats: seatsByUser.get(u.clerk_id) || [],
+      // Access without a subscription of their own: somebody else is paying.
+      // Kept as its own flag so the table can say that plainly instead of
+      // leaving an working agent labelled INACTIVE.
+      owner_funded_seat: (seatsByUser.get(u.clerk_id) || []).some(
+        (sm: any) => sm.payer === 'owner' && !sm.suspended
+      ),
       subscription: sub
         ? {
             status: sub.status,

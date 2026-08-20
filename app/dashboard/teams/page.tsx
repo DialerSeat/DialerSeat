@@ -39,7 +39,12 @@ interface ApiMember {
   id: string
   userId?: string
   user?: { email?: string | null; first_name?: string | null; last_name?: string | null }
-  campaignAccess?: Array<{ campaignId: string }>
+  // payer travels with each grant, not with the membership: one person can
+  // hold an owner-paid seat on one campaign and a self-paid one elsewhere.
+  campaignAccess?: Array<{ campaignId: string; payer?: string | null }>
+  billing_override?: string | null
+  seat_suspended_at?: string | null
+  seat_suspend_reason?: string | null
 }
 interface ApiTeamCampaign {
   campaignId: string
@@ -313,16 +318,133 @@ export default function TeamsPage() {
     return (agent?.name || 'Agent').toUpperCase()
   }, [scope, teams])
 
+  // One row per MEMBERSHIP, not per person. Somebody on two of your teams
+  // appears twice, named by team — which is right, because everything an owner
+  // does from this list (add to a campaign, pause a seat) is a decision about
+  // one place on one team, not about the human in general.
   const allMembers = useMemo(() => {
-    const seen = new Map<string, { id: string; name: string; team: string }>()
+    const out: Array<{
+      id: string
+      memberId: string
+      userId: string
+      name: string
+      team: string
+      teamId: string
+      isOwner: boolean
+      payer: 'owner' | 'agent' | 'free' | null
+      campaignCount: number
+      suspended: boolean
+    }> = []
+    const seen = new Set<string>()
     for (const t of rawTeams) {
       for (const m of t.members || []) {
-        const id = m.userId || m.id
-        if (!seen.has(id)) seen.set(id, { id, name: displayName(m), team: t.name })
+        const key = `${t.id}:${m.id}`
+        if (seen.has(key)) continue
+        seen.add(key)
+        const access: any[] = m.campaignAccess || []
+        const payer: 'owner' | 'agent' | 'free' | null =
+          m.billing_override === 'owner' || m.billing_override === 'agent'
+            ? m.billing_override
+            : access.some((a: any) => a.payer === 'owner')
+            ? 'owner'
+            : access.some((a: any) => a.payer === 'agent')
+            ? 'agent'
+            : null
+        out.push({
+          id: `${t.id}:${m.id}`,
+          memberId: m.id,
+          userId: m.userId || m.id,
+          name: displayName(m),
+          team: t.name,
+          teamId: t.id,
+          isOwner: !!t.isOwner,
+          payer,
+          campaignCount: access.length,
+          suspended: !!m.seat_suspended_at,
+        })
       }
     }
-    return Array.from(seen.values())
+    return out
   }, [rawTeams])
+
+  const distinctUserCount = useMemo(
+    () => new Set(allMembers.map(m => m.userId)).size,
+    [allMembers]
+  )
+
+  // ── SELECT PEOPLE, PUT THEM ON A CAMPAIGN ──────────────────────────────
+  // An owner with a floor of agents and a new list should not be opening fifty
+  // member panels. Nothing here charges anybody: the seat is the billable unit
+  // and these people already hold one, so another campaign on the same seat is
+  // free to the owner and free to the agent.
+  const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set())
+  const [assigning, setAssigning] = useState(false)
+  const [assignTo, setAssignTo] = useState('')
+  const [assignResult, setAssignResult] = useState<string | null>(null)
+
+  const toggleMember = (id: string) => {
+    setAssignResult(null)
+    setSelectedMembers(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  // Only campaigns on teams you OWN, and only those belonging to a team that
+  // is actually represented in the selection — offering a campaign that would
+  // silently skip everyone selected is worse than not offering it.
+  const assignableCampaigns = useMemo(() => {
+    const selectedTeamIds = new Set(
+      allMembers.filter(m => selectedMembers.has(m.id)).map(m => m.teamId)
+    )
+    const out: Array<{ id: string; name: string; team: string }> = []
+    for (const t of rawTeams) {
+      if (!t.isOwner) continue
+      if (selectedTeamIds.size > 0 && !selectedTeamIds.has(t.id)) continue
+      for (const tc of t.campaigns || []) {
+        const c = (tc as any).campaign || tc
+        const cid = (tc as any).campaignId || c?.id
+        if (!cid) continue
+        out.push({ id: cid, name: c?.name || 'Campaign', team: t.name })
+      }
+    }
+    return out
+  }, [rawTeams, allMembers, selectedMembers])
+
+  const assignSelectedToCampaign = async () => {
+    if (!assignTo || selectedMembers.size === 0 || assigning) return
+    setAssigning(true)
+    setAssignResult(null)
+    try {
+      const memberIds = allMembers
+        .filter(m => selectedMembers.has(m.id))
+        .map(m => m.memberId)
+      const res = await fetch('/api/teams/access/grant-bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ campaignId: assignTo, memberIds }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data?.success) {
+        setAssignResult(data?.error || 'Could not add those members.')
+      } else {
+        const parts: string[] = []
+        if (data.granted) parts.push(`${data.granted} added`)
+        if (data.alreadyHad) parts.push(`${data.alreadyHad} already had access`)
+        if (data.skipped?.length) parts.push(`${data.skipped.length} skipped`)
+        setAssignResult(parts.join(' · ') || 'Nothing to do.')
+        setSelectedMembers(new Set())
+        setAssignTo('')
+        void refresh()
+      }
+    } catch (e: any) {
+      setAssignResult(e?.message || 'Something went wrong.')
+    } finally {
+      setAssigning(false)
+    }
+  }
 
   const pendingList = useMemo(() => {
     // memberId, not user id: accept and reject both address the team_members
@@ -570,21 +692,116 @@ export default function TeamsPage() {
                   {loading ? 'Loading…' : 'No members yet.'}
                 </div>
               ) : (
-                <div style={{ display: 'grid', gap: 8 }}>
-                  {allMembers.map(m => (
-                    <div key={m.id} style={{
-                      display: 'flex', alignItems: 'center', gap: 12,
-                      background: PANEL, border: `1px solid ${HAIRLINE}`,
-                      borderRadius: 4, padding: '12px 14px',
+                <>
+                  {/* ── ACTION BAR ────────────────────────────────────────
+                      Appears only once something is selected. An owner just
+                      reading the roster should not be looking at controls for
+                      an action they have not started. */}
+                  {selectedMembers.size > 0 && (
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+                      background: '#12141a', border: `1px solid ${HAIRLINE}`,
+                      borderRadius: 4, padding: '10px 12px', marginBottom: 12,
                     }}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 14, fontWeight: 500 }}>{m.name}</div>
-                        <div style={{ fontSize: 11.5, color: DIM, marginTop: 2 }}>{m.team}</div>
-                      </div>
-                      <span style={{ fontSize: 11, color: DIM }}>Seat details to come</span>
+                      <span style={{ fontSize: 12, color: TEXT }}>
+                        {selectedMembers.size} selected
+                      </span>
+                      <select
+                        value={assignTo}
+                        onChange={e => setAssignTo(e.target.value)}
+                        style={{
+                          background: '#0d0f13', color: TEXT, fontSize: 12,
+                          border: `1px solid ${HAIRLINE}`, borderRadius: 3,
+                          padding: '6px 8px', fontFamily: 'inherit',
+                        }}
+                      >
+                        <option value="">Add to campaign…</option>
+                        {assignableCampaigns.map(c => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={assignSelectedToCampaign}
+                        disabled={!assignTo || assigning}
+                        style={{
+                          background: !assignTo || assigning ? '#1b1e25' : '#4a9eff',
+                          color: !assignTo || assigning ? DIM : '#06080c',
+                          border: 'none', borderRadius: 3, padding: '7px 14px',
+                          fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
+                          cursor: !assignTo || assigning ? 'not-allowed' : 'pointer',
+                        }}
+                      >
+                        {assigning ? 'Adding…' : 'Add'}
+                      </button>
+                      <button
+                        onClick={() => { setSelectedMembers(new Set()); setAssignTo(''); setAssignResult(null) }}
+                        style={{
+                          background: 'transparent', color: DIM, border: 'none',
+                          fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
+                        }}
+                      >
+                        Clear
+                      </button>
+                      {/* Said plainly, and before the click rather than after:
+                          an owner about to add forty agents to a list needs to
+                          know this is not forty new seats. */}
+                      <span style={{ fontSize: 11, color: DIM, width: '100%' }}>
+                        No extra charge — these seats are already paid for.
+                      </span>
                     </div>
-                  ))}
-                </div>
+                  )}
+
+                  {assignResult && (
+                    <div style={{ fontSize: 12, color: DIM, marginBottom: 10 }}>{assignResult}</div>
+                  )}
+
+                  <div style={{ display: 'grid', gap: 8 }}>
+                    {allMembers.map(m => {
+                      const checked = selectedMembers.has(m.id)
+                      return (
+                        <div key={m.id} style={{
+                          display: 'flex', alignItems: 'center', gap: 12,
+                          background: PANEL,
+                          border: `1px solid ${checked ? '#4a9eff' : HAIRLINE}`,
+                          borderRadius: 4, padding: '12px 14px',
+                          opacity: m.suspended ? 0.55 : 1,
+                        }}>
+                          {/* Only an owner can put someone on a campaign, so
+                              only an owner gets a checkbox. */}
+                          {m.isOwner && (
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleMember(m.id)}
+                              disabled={m.suspended}
+                              style={{ accentColor: '#4a9eff', cursor: m.suspended ? 'not-allowed' : 'pointer' }}
+                            />
+                          )}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 14, fontWeight: 500 }}>{m.name}</div>
+                            <div style={{ fontSize: 11.5, color: DIM, marginTop: 2 }}>{m.team}</div>
+                          </div>
+                          <span style={{ fontSize: 11, color: DIM, textAlign: 'right' }}>
+                            {m.suspended
+                              ? 'Seat paused'
+                              : m.payer === 'owner'
+                              ? 'You pay this seat'
+                              : m.payer === 'agent'
+                              ? 'Pays their own seat'
+                              : 'Seat active'}
+                            <span style={{ display: 'block', color: '#5a6070' }}>
+                              {m.campaignCount === 0
+                                ? 'No campaigns yet'
+                                : m.campaignCount === 1
+                                ? '1 campaign'
+                                : `${m.campaignCount} campaigns`}
+                            </span>
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </>
               )}
             </>
           )}
@@ -834,7 +1051,7 @@ export default function TeamsPage() {
           onCreateCampaign={() => { setCampaignTeamId(undefined); setShowCampaignModal(true) }}
           joining={joining}
           joinMessage={joinMessage}
-          activeUserCount={allMembers.length}
+          activeUserCount={distinctUserCount}
           onDeleteSelection={async sel => {
             setBusy(true)
             const failures: string[] = []

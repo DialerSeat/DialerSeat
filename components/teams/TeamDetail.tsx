@@ -199,7 +199,15 @@ export default function TeamDetail({
                     {/* Terms in one line, because an owner handing out three
                         codes needs to tell them apart at a glance. */}
                     <div style={{ fontSize: 11.5, color: DIM, marginTop: 8 }}>
-                      {campaignName ? `${campaignName} · ` : 'Team only · '}
+                      {/* A team code grants no campaign on its own — it puts
+                          someone on the roster and stops there. Saying only
+                          "Team only" left owners expecting a joiner to be able
+                          to dial, then reading an empty campaign list as a
+                          bug. It is not a bug; it is the next step, so the
+                          code says so. */}
+                      {campaignName
+                        ? `${campaignName} · `
+                        : 'Team code — joins the team only, until you add them to a campaign · '}
                       {c.payer === 'agent' ? 'agent pays their seat' : 'you pay the seat'}
                       {' · '}
                       {c.max_uses ? `${uses}/${c.max_uses} used` : `${uses} used`}

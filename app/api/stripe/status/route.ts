@@ -94,6 +94,44 @@ export async function GET() {
       console.error('[stripe/status] awaiting-approval lookup failed', e)
     }
 
+    // ── THE SEAT STOPPED, THE ACCOUNT DID NOT ────────────────────────────
+    // When an owner suspends a seat or their card stops covering it, the agent
+    // loses team access — but they keep their account, their leads, their
+    // recordings and their dispositions. Nothing is deleted, because none of
+    // it was the owner's to take: the seat paid for access, not for the work.
+    //
+    // What they need told is narrow and factual: the seat is no longer being
+    // paid for, and a subscription of their own restores dialing. Not an
+    // error, not a lecture about billing — the same unsubscribed wording
+    // anyone else sees, because that is now exactly their situation.
+    let seatLapsed: Array<{ teamId: string; teamName: string; reason: string }> = []
+    try {
+      const { data: suspendedRows } = await supabase
+        .from('team_members')
+        .select('team_id, seat_suspended_at, seat_suspend_reason')
+        .eq('user_id', userId)
+        .eq('status', 'active')
+        .not('seat_suspended_at', 'is', null)
+        .limit(10)
+
+      const rows = suspendedRows || []
+      if (rows.length > 0) {
+        const { data: teamRows } = await supabase
+          .from('teams')
+          .select('id, name')
+          .in('id', rows.map((r: any) => r.team_id))
+        const nameById: Record<string, string> = {}
+        for (const t of teamRows || []) nameById[t.id] = t.name
+        seatLapsed = rows.map((r: any) => ({
+          teamId: r.team_id,
+          teamName: nameById[r.team_id] || 'your team',
+          reason: r.seat_suspend_reason || 'owner_stopped_paying',
+        }))
+      }
+    } catch (e) {
+      console.error('[stripe/status] seat-lapsed lookup failed', e)
+    }
+
     if (!sub) {
       return NextResponse.json({
         hasSubscription: wlActive || wlOnboardingPending,
@@ -108,6 +146,7 @@ export async function GET() {
         wlOnboardingPending,
         weeklyPrice,
         awaitingApproval,
+        seatLapsed,
       })
     }
 
@@ -126,6 +165,7 @@ export async function GET() {
       wlOnboardingPending,
       weeklyPrice,
       awaitingApproval,
+      seatLapsed,
     })
   } catch (err: any) {
     console.error('status error:', err)

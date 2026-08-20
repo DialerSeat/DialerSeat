@@ -67,9 +67,18 @@ export async function POST(req: Request) {
       )
     }
 
-    if (payer === 'free' && tc.access_mode !== 'free') {
+    // 'free' used to require the campaign itself to be in free mode. That read
+    // the situation backwards: the billable unit is the SEAT, and this member
+    // already holds an active one — somebody is already paying for them. Adding
+    // another of the team's campaigns to a seat that is already paid for costs
+    // nobody anything, so refusing it was inventing a charge that does not exist.
+    //
+    // The gate that remains is the one that means something: an active seat.
+    // Without that there is nothing for the access to ride on. (member.status
+    // is checked above, so reaching here with 'free' means the seat is real.)
+    if (payer === 'free' && tc.access_mode !== 'free' && member.status !== 'active') {
       return NextResponse.json(
-        { success: false, error: 'Free payer is only valid on campaigns in free mode' },
+        { success: false, error: 'Free access requires an active seat on this team' },
         { status: 400 }
       )
     }
