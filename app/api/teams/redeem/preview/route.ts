@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
 
     const { data: codeRow } = await supabaseAdmin
       .from('team_codes')
-      .select('id, team_id, code_type, campaign_id, payer, is_active, max_uses, use_count, seat_price_override_cents')
+      .select('id, team_id, code_type, campaign_id, payer, is_active, max_uses, use_count, seat_price_override_cents, join_mode')
       .eq('code', code)
       .eq('is_active', true)
       .maybeSingle()
@@ -97,6 +97,10 @@ export async function GET(req: NextRequest) {
     const isSingleUsePartnerSeat =
       codeRow.max_uses === 1 && codeRow.code_type === 'seat' && codeRow.payer === 'owner'
 
+    // Same default as the redeem route: straight in unless the owner asked for
+    // approval. These two must agree or the card lies about the outcome.
+    const joinMode = codeRow.join_mode === 'approval' ? 'approval' : 'instant'
+
     const seatCents =
       typeof codeRow.seat_price_override_cents === 'number'
         ? codeRow.seat_price_override_cents
@@ -120,8 +124,14 @@ export async function GET(req: NextRequest) {
       codeType: codeRow.code_type,
       payer: codeRow.payer,
       campaignNames,
-      instant: isSingleUsePartnerSeat,
-      requiresApproval: codeRow.payer === 'owner' && !isSingleUsePartnerSeat,
+      // ── SAY WHAT REDEEM WILL ACTUALLY DO ──────────────────────────────
+      // This inferred approval from payer alone and never read join_mode, so
+      // the confirmation card promised a wait that the redeem route no longer
+      // imposes. A preview whose whole job is 'what happens if I click this'
+      // must read the same field the real thing reads.
+      instant: isSingleUsePartnerSeat || (codeRow.payer === 'owner' && joinMode === 'instant'),
+      requiresApproval:
+        codeRow.payer === 'owner' && !isSingleUsePartnerSeat && joinMode === 'approval',
       requiresPayment: codeRow.payer === 'agent',
       seatCents: codeRow.payer === 'agent' ? seatCents : null,
     })
