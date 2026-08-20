@@ -134,14 +134,27 @@ export function CreateTeamModal({ onClose, onCreate, busy }: {
   )
 }
 
-export function CreateCampaignModal({ teams, defaultTeamId, onClose, onCreate, busy }: {
+export function CreateCampaignModal({
+  teams, defaultTeamId, existingCampaigns = [], onClose, onCreate, busy,
+}: {
   teams: Array<{ id: string; name: string }>
   defaultTeamId?: string
+  /** Campaigns the owner already has, so one can be attached instead of made. */
+  existingCampaigns?: Array<{ id: string; name: string }>
   onClose: () => void
-  onCreate: (input: { teamId: string; name: string; dialerMode: string; accessMode: string }) => void
+  onCreate: (input: {
+    teamId: string
+    name: string
+    dialerMode: string
+    accessMode: string
+    /** Set when attaching rather than creating. */
+    existingCampaignId?: string
+  }) => void
   busy?: boolean
 }) {
   const [teamId, setTeamId] = useState(defaultTeamId || teams[0]?.id || '')
+  const [mode, setMode] = useState<'new' | 'existing'>('new')
+  const [existingId, setExistingId] = useState('')
   const [name, setName] = useState('')
   const [dialerMode, setDialerMode] = useState('agent_choice')
   const [accessMode, setAccessMode] = useState('owner_pays')
@@ -163,6 +176,8 @@ export function CreateCampaignModal({ teams, defaultTeamId, onClose, onCreate, b
     )
   }
 
+  const blockedSubmit = !teamId || (mode === 'new' ? !name.trim() : !existingId)
+
   return (
     <Shell
       title="Create New Campaign"
@@ -172,10 +187,16 @@ export function CreateCampaignModal({ teams, defaultTeamId, onClose, onCreate, b
         <>
           <button style={btn} onClick={onClose}>Cancel</button>
           <button
-            style={{ ...btnPrimary, opacity: !name.trim() || !teamId || busy ? 0.5 : 1 }}
-            disabled={!name.trim() || !teamId || busy}
-            onClick={() => onCreate({ teamId, name: name.trim(), dialerMode, accessMode })}
-          >{busy ? 'Creating…' : 'Create Campaign'}</button>
+            style={{ ...btnPrimary, opacity: blockedSubmit || busy ? 0.5 : 1 }}
+            disabled={blockedSubmit || busy}
+            onClick={() => onCreate({
+              teamId,
+              name: mode === 'new' ? name.trim() : '',
+              dialerMode,
+              accessMode,
+              existingCampaignId: mode === 'existing' ? existingId : undefined,
+            })}
+          >{busy ? 'Saving…' : mode === 'new' ? 'Create Campaign' : 'Add To Team'}</button>
         </>
       }
     >
@@ -187,16 +208,59 @@ export function CreateCampaignModal({ teams, defaultTeamId, onClose, onCreate, b
         </select>
       </div>
 
+      {/* ── BUILD ONE, OR BRING ONE IN ─────────────────────────────────────
+          Most campaigns already exist on the Campaigns page. Forcing a new one
+          every time would mean duplicate lists and split history, so attaching
+          an existing campaign is offered first-class rather than as a separate
+          screen somewhere else. */}
       <div style={{ marginBottom: 16 }}>
-        <label style={label}>Campaign Name</label>
-        <input
-          autoFocus
+        <label style={label}>Campaign</label>
+        <select
           style={field}
-          value={name}
-          onChange={e => setName(e.target.value)}
-          placeholder="Fresh Lead Campaign"
-        />
+          value={mode}
+          onChange={e => setMode(e.target.value as 'new' | 'existing')}
+        >
+          <option value="new">Create a new campaign</option>
+          <option value="existing">Add one of my existing campaigns</option>
+        </select>
       </div>
+
+      {mode === 'new' ? (
+        <div style={{ marginBottom: 16 }}>
+          <label style={label}>Campaign Name</label>
+          <input
+            autoFocus
+            style={field}
+            value={name}
+            onChange={e => setName(e.target.value)}
+            placeholder="Fresh Lead Campaign"
+          />
+        </div>
+      ) : (
+        <div style={{ marginBottom: 16 }}>
+          <label style={label}>Which Campaign</label>
+          {existingCampaigns.length === 0 ? (
+            <p style={{ margin: 0, fontSize: 12.5, color: MUTED, lineHeight: 1.6 }}>
+              You have no campaigns yet. Create one here or on the Campaigns page.
+            </p>
+          ) : (
+            <select
+              style={field}
+              value={existingId}
+              onChange={e => setExistingId(e.target.value)}
+            >
+              <option value="">Choose a campaign…</option>
+              {existingCampaigns.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          )}
+          <p style={{ margin: '8px 0 0', fontSize: 11.5, color: DIM, lineHeight: 1.6 }}>
+            Its leads and history come with it. Adding it to a team does not move
+            it — it stays on your Campaigns page.
+          </p>
+        </div>
+      )}
 
       {/* Two ways to run a campaign: let the agent pick how they dial, or fix
           it. Fixing it is what an owner does when the script, the list or the
@@ -241,8 +305,8 @@ export function CreateCampaignModal({ teams, defaultTeamId, onClose, onCreate, b
           background: '#111214', border: `1px solid ${HAIRLINE}`,
           fontSize: 11.5, color: MUTED, lineHeight: 1.6,
         }}>
-          Either way, an agent can only dial if their seat is paid — by you or by
-          them. Access without a seat does nothing.
+          Access without a seat offers no campaign usage. An agent can only dial
+          once their seat is paid — by you or by them.
         </p>
       </div>
     </Shell>

@@ -40,19 +40,29 @@ export async function POST(req: Request) {
       )
     }
 
+    // ── ATTACH MEANS ATTACH ─────────────────────────────────────────────────
+    // This only ever UPDATEd, so it could change the access mode of a campaign
+    // already linked to the team and could not link a new one. Creating a
+    // campaign and attaching it therefore always failed with "Campaign is not
+    // attached to this team" — an error describing the precondition it was
+    // supposed to establish.
+    //
+    // Upsert on the primary key (team_id, campaign_id) does both jobs with the
+    // same call: first attach inserts, every later call updates the mode.
     const { data, error } = await supabaseAdmin
       .from('team_campaigns')
-      .update({ access_mode: accessMode })
-      .eq('team_id', teamId)
-      .eq('campaign_id', campaignId)
+      .upsert(
+        { team_id: teamId, campaign_id: campaignId, access_mode: accessMode },
+        { onConflict: 'team_id,campaign_id' }
+      )
       .select()
       .maybeSingle()
 
     if (error) throw error
     if (!data) {
       return NextResponse.json(
-        { success: false, error: 'Campaign is not attached to this team' },
-        { status: 404 }
+        { success: false, error: 'Could not attach the campaign to this team' },
+        { status: 500 }
       )
     }
 

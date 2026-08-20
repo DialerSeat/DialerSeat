@@ -71,11 +71,10 @@ const RANGES: Array<{ key: RangeKey; label: string }> = [
   { key: 'custom', label: 'Custom' },
 ]
 
+// Only one view exists so far. The others were listed before they were built,
+// which promises reports that are not there — worse than a short menu.
 const METRIC_VIEWS: Array<{ key: MetricView; label: string; hint: string }> = [
-  { key: 'activity', label: 'Activity', hint: 'Calls, hours, talk time' },
-  { key: 'conversion', label: 'Conversion', hint: 'Contacts, closes, rate' },
-  { key: 'talk_time', label: 'Talk Time', hint: 'Time on the phone per agent' },
-  { key: 'seats', label: 'Seats & Billing', hint: 'Who is paying for whom' },
+  { key: 'activity', label: 'All Users', hint: 'Everyone across every team' },
 ]
 
 const BG = '#1e1f22'
@@ -109,7 +108,15 @@ function toSidebarTeams(teams: ApiTeam[]): SidebarTeam[] {
           id: tc.campaignId,
           name: tc.campaign?.name || 'Untitled campaign',
           openToTeam,
-          agents: eligible.map(m => ({ id: m.userId || m.id, name: displayName(m) })),
+          // memberId is the team_members ROW id, which is what
+          // /api/teams/members/remove addresses. The user id identifies a
+          // person; the member id identifies their place in this team, and
+          // those are not the same thing.
+          agents: eligible.map(m => ({
+            id: m.userId || m.id,
+            memberId: m.id,
+            name: displayName(m),
+          })),
         }
       }),
     }
@@ -192,6 +199,8 @@ export default function TeamsPage() {
   const [codeTeamId, setCodeTeamId] = useState<string | undefined>()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [myCampaigns, setMyCampaigns] =
+    useState<Array<{ id: string; name: string }>>([])
   const [joining, setJoining] = useState(false)
   const [joinMessage, setJoinMessage] =
     useState<{ kind: 'error' | 'success'; text: string } | null>(null)
@@ -229,6 +238,39 @@ export default function TeamsPage() {
   }, [])
 
   useEffect(() => { void refresh() }, [refresh])
+
+  // The owner's own campaigns, so one can be attached to a team instead of
+  // creating a duplicate. Loaded once and after any create — this is a short
+  // list per account, not something worth re-fetching on every render.
+  const loadMyCampaigns = useCallback(async () => {
+    try {
+      const data = await fetch('/api/campaigns/list').then(r => r.json())
+      const rows = (data.campaigns || []).map((c: any) => ({
+        id: c.id, name: c.name || 'Untitled campaign',
+      }))
+      setMyCampaigns(rows)
+    } catch {
+      setMyCampaigns([])
+    }
+  }, [])
+
+  useEffect(() => { void loadMyCampaigns() }, [loadMyCampaigns])
+
+  // Errors retire on their own. Requiring a click to clear one means a stale
+  // failure sits over the UI long after the thing it described stopped being
+  // true — which is exactly what happened with the attach error.
+  useEffect(() => {
+    if (!error) return
+    const t = setTimeout(() => setError(null), 7000)
+    return () => clearTimeout(t)
+  }, [error])
+
+  // Same for the join result under the code field.
+  useEffect(() => {
+    if (!joinMessage) return
+    const t = setTimeout(() => setJoinMessage(null), 8000)
+    return () => clearTimeout(t)
+  }, [joinMessage])
 
   // The header names the scope in the same words the sidebar used to select
   // it. The sidebar and the panel must never disagree about where you are.
@@ -533,6 +575,54 @@ export default function TeamsPage() {
           onCreateCampaign={() => { setCampaignTeamId(undefined); setShowCampaignModal(true) }}
           joining={joining}
           joinMessage={joinMessage}
+          activeUserCount={allMembers.length}
+          onDeleteSelection={async sel => {
+            setBusy(true)
+            const failures: string[] = []
+            try {
+              // Sequential rather than parallel: these hit different endpoints
+              // with different side effects (billing, access revocation), and a
+              // burst of them failing halfway leaves a state nobody can read.
+              for (const item of sel) {
+                let res: any = null
+                // Every one of these endpoints requires confirm: 'remove'.
+                // The dialog already made the agent type DELETE; this is the
+                // server's own guard against an unconfirmed call, not a second
+                // question for the user.
+                if (item.kind === 'team') {
+                  res = await fetch(`/api/teams/${item.teamId}/delete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ confirm: 'remove' }),
+                  }).then(r => r.json()).catch(() => null)
+                } else if (item.kind === 'campaign') {
+                  // Detach from the team, not delete the campaign itself — the
+                  // leads and history belong to the campaign and outlive its
+                  // membership of any one team.
+                  res = await fetch('/api/teams/campaigns/detach', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      teamId: item.teamId, campaignId: item.campaignId, confirm: 'remove',
+                    }),
+                  }).then(r => r.json()).catch(() => null)
+                } else {
+                  res = await fetch('/api/teams/members/remove', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ memberId: item.memberId, confirm: 'remove' }),
+                  }).then(r => r.json()).catch(() => null)
+                }
+                if (!res?.success) failures.push(item.label)
+              }
+              await refresh()
+              if (failures.length > 0) {
+                setError(`Could not remove: ${failures.join(', ')}`)
+              }
+            } finally {
+              setBusy(false)
+            }
+          }}
           onJoinWithCode={async code => {
             setJoining(true)
             setJoinMessage(null)
@@ -607,39 +697,45 @@ export default function TeamsPage() {
           teams={teams.map(t => ({ id: t.id, name: t.name }))}
           defaultTeamId={campaignTeamId}
           onClose={() => setShowCampaignModal(false)}
-          onCreate={async ({ teamId, name, dialerMode, accessMode }) => {
+          existingCampaigns={myCampaigns}
+          onCreate={async ({ teamId, name, dialerMode, accessMode, existingCampaignId }) => {
             setBusy(true)
             try {
-              // Two steps, because a campaign exists on its own before it
-              // belongs to a team: create it, then attach it with the access
-              // and billing mode the owner picked. Attach is what writes
-              // access_mode, so a failure there leaves an unattached campaign
-              // rather than a half-configured one — recoverable, and visible.
-              const created = await fetch('/api/campaigns/create', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  name,
-                  // 'agent_choice' is a UI concept: the campaign simply keeps
-                  // the platform default and the agent picks per session.
-                  dialer_mode: dialerMode === 'agent_choice' ? 'progressive' : dialerMode,
-                }),
-              }).then(r => r.json())
-              if (!created.success || !created.campaign?.id) {
-                throw new Error(created.error || 'Could not create campaign')
+              // Either bring an existing campaign in, or make one first. Both
+              // end at the same place: attach, which is what writes access_mode
+              // and is now an upsert so a first attach actually creates the
+              // link rather than failing to update a row that was never there.
+              let campaignId = existingCampaignId
+
+              if (!campaignId) {
+                const created = await fetch('/api/campaigns/create', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    name,
+                    // 'agent_choice' is a UI concept: the campaign keeps the
+                    // platform default and the agent picks per session.
+                    dialer_mode: dialerMode === 'agent_choice' ? 'progressive' : dialerMode,
+                  }),
+                }).then(r => r.json())
+                if (!created.success || !created.campaign?.id) {
+                  throw new Error(created.error || 'Could not create campaign')
+                }
+                campaignId = created.campaign.id
               }
 
               const attached = await fetch('/api/teams/campaigns/attach', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ teamId, campaignId: created.campaign.id, accessMode }),
+                body: JSON.stringify({ teamId, campaignId, accessMode }),
               }).then(r => r.json())
               if (!attached.success) {
-                throw new Error(attached.error || 'Campaign created but not attached to the team')
+                throw new Error(attached.error || 'Could not add the campaign to this team')
               }
 
               setShowCampaignModal(false)
               await refresh()
+              await loadMyCampaigns()
             } catch (e: any) {
               setError(e.message || 'Could not create campaign')
             } finally {
@@ -681,15 +777,21 @@ export default function TeamsPage() {
         />
       )}
 
-      {/* Failures surface here rather than in a console. Dismissed by clicking,
-          because an error you cannot get rid of is its own problem. */}
+      {/* ── ERRORS CLEAR THEMSELVES, AND SIT CLEAR OF THE PROFILE ───────────
+          This was pinned to bottom-left with no timeout, so it landed on top
+          of the Clerk profile widget and stayed there until clicked — an error
+          you have to dismiss by hand, covering a control, is worse than the
+          failure it reports.
+          Raised above the profile rather than over it, and it retires on its
+          own after a few seconds. Clicking still dismisses it early. */}
       {error && (
         <div
           onClick={() => setError(null)}
+          role="alert"
           style={{
-            position: 'fixed', bottom: 18, left: 18, zIndex: 70, cursor: 'pointer',
+            position: 'fixed', bottom: 96, left: 18, zIndex: 70, cursor: 'pointer',
             background: '#7f1d1d', border: '1px solid #b91c1c', color: '#fee2e2',
-            padding: '11px 15px', borderRadius: 5, fontSize: 13, maxWidth: 420,
+            padding: '11px 15px', borderRadius: 5, fontSize: 13, maxWidth: 380,
             boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
           }}
         >{error}</div>

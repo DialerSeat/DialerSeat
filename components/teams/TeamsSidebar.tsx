@@ -32,6 +32,9 @@ import { useState } from 'react'
 
 export interface SidebarAgent {
   id: string
+  /** The team_members row id. Removing someone addresses their MEMBERSHIP,
+   *  not the person, so this travels alongside the user id. */
+  memberId?: string
   name: string
   /** Dialing right now — rendered as a live dot, the one thing that pulls focus. */
   isLive?: boolean
@@ -75,6 +78,22 @@ interface Props {
   joining?: boolean
   /** Result of the last join attempt, shown under the code field. */
   joinMessage?: { kind: 'error' | 'success'; text: string } | null
+  /** Active agents right now, shown as a count inside the All Users button. */
+  activeUserCount?: number
+  /** Called with everything ticked when the agent confirms a delete. */
+  onDeleteSelection?: (sel: SidebarSelection[]) => Promise<void> | void
+}
+
+/** One ticked thing. Kind decides which endpoint the delete has to call, so it
+ *  travels with the id rather than being re-derived from the tree later. */
+export interface SidebarSelection {
+  kind: 'team' | 'campaign' | 'agent'
+  id: string
+  teamId: string
+  campaignId?: string
+  /** Present for agents — the team_members row to remove. */
+  memberId?: string
+  label: string
 }
 
 const SURFACE = '#2b2d31'
@@ -115,6 +134,8 @@ export default function TeamsSidebar({
   onJoinWithCode,
   joining = false,
   joinMessage = null,
+  activeUserCount = 0,
+  onDeleteSelection,
 }: Props) {
   // Everything starts open. An agency with two teams should see its whole
   // shape on load; collapsing is for when the list has outgrown the screen,
@@ -123,6 +144,30 @@ export default function TeamsSidebar({
   const [collapsedCampaigns, setCollapsedCampaigns] = useState<Set<string>>(new Set())
   const [codeInput, setCodeInput] = useState('')
   const [addMenuOpen, setAddMenuOpen] = useState(false)
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false)
+  const [selectMode, setSelectMode] = useState(false)
+  const [selected, setSelected] = useState<Record<string, SidebarSelection>>({})
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [confirmText, setConfirmText] = useState('')
+  const [deleting, setDeleting] = useState(false)
+
+  const selectedList = Object.values(selected)
+
+  const toggleSelected = (item: SidebarSelection) => {
+    setSelected(prev => {
+      const next = { ...prev }
+      if (next[item.id]) delete next[item.id]
+      else next[item.id] = item
+      return next
+    })
+  }
+
+  const leaveSelectMode = () => {
+    setSelectMode(false)
+    setSelected({})
+    setConfirmOpen(false)
+    setConfirmText('')
+  }
 
   const toggle = (set: Set<string>, id: string, apply: (s: Set<string>) => void) => {
     const next = new Set(set)
@@ -223,6 +268,78 @@ export default function TeamsSidebar({
         .ts-menu-hint { font-size: 11px; color: ${TEXT_DIM}; font-weight: 400; }
         .ts-menu-item:hover .ts-menu-hint { color: rgba(255,255,255,0.75); }
 
+        /* The row is a flex strip now: caret, optional bubble, then the label
+           button which takes the rest. Indent lives on the WRAPPER so the
+           caret of a nested level lines up under the one above it. */
+        .ts-row-wrap {
+          display: flex; align-items: center; gap: 2px;
+          border-radius: 4px; position: relative;
+        }
+        .ts-row-wrap:hover { background: ${SURFACE_RAISED}; }
+        .ts-row-wrap.is-selected { background: ${SURFACE_RAISED}; }
+        .ts-row-wrap.is-selected::before {
+          content: ''; position: absolute; left: 0; top: 50%;
+          transform: translateY(-50%);
+          width: 3px; height: 60%; border-radius: 0 3px 3px 0;
+          background: ${ACCENT};
+        }
+        .ts-row-wrap .ts-row { background: transparent; }
+        .ts-row-wrap .ts-row:hover { background: transparent; color: ${TEXT}; }
+        .ts-indent-1 { padding-left: 16px; }
+        .ts-indent-2 { padding-left: 38px; }
+        /* Levels below the team no longer need their own text indent — the
+           wrapper supplies it — or the two would compound. */
+        .ts-campaign-row, .ts-agent-row { padding-left: 4px; }
+
+        .ts-caret-btn {
+          display: grid; place-items: center;
+          width: 20px; height: 24px; flex-shrink: 0;
+          border: 0; background: transparent; color: ${TEXT_MUTED};
+          cursor: pointer; padding: 0; border-radius: 3px;
+        }
+        .ts-caret-btn:hover { color: ${TEXT}; background: rgba(255,255,255,0.06); }
+
+        .ts-bubble {
+          width: 14px; height: 14px; flex-shrink: 0; margin: 0 4px 0 2px;
+          border-radius: 50%; cursor: pointer; padding: 0;
+          border: 2px solid ${TEXT_DIM}; background: transparent;
+          transition: background 0.1s ease, border-color 0.1s ease;
+        }
+        .ts-bubble:hover { border-color: ${TEXT}; }
+        .ts-bubble.is-on { background: #da373c; border-color: #da373c; }
+
+        .ts-select-bar {
+          display: flex; align-items: center; gap: 6px;
+          padding: 8px 12px; flex-shrink: 0;
+          background: ${SURFACE_RAISED}; border-top: 1px solid ${HAIRLINE};
+          border-bottom: 1px solid ${HAIRLINE};
+        }
+        .ts-mini-btn {
+          border: 1px solid ${HAIRLINE}; background: ${SURFACE};
+          color: ${TEXT_MUTED}; border-radius: 4px; cursor: pointer;
+          padding: 5px 10px; font-size: 11px; font-family: inherit; font-weight: 600;
+          letter-spacing: 0.6px; text-transform: uppercase;
+        }
+        .ts-mini-btn:hover { color: ${TEXT}; }
+        .ts-mini-btn.is-danger { background: #da373c; border-color: #da373c; color: #fff; }
+        .ts-mini-btn:disabled { cursor: default; }
+
+        /* Pending work reads as stuck ON the button; a roster count reads as a
+           field within it. Different jobs, different treatment. */
+        .ts-badge-corner {
+          position: absolute; top: -6px; right: -6px;
+          min-width: 18px; height: 18px; padding: 0 5px;
+          border-radius: 9px; background: #da373c; color: #fff;
+          font-size: 10px; font-weight: 700; letter-spacing: 0;
+          display: grid; place-items: center;
+          border: 2px solid ${SURFACE};
+        }
+        .ts-count {
+          font-size: 11px; font-weight: 700; color: ${TEXT_DIM};
+          letter-spacing: 0; flex-shrink: 0;
+        }
+        .ts-foot-btn { position: relative; }
+
         .ts-live-dot {
           width: 8px; height: 8px; border-radius: 50%;
           background: #23a55a; flex-shrink: 0;
@@ -304,12 +421,35 @@ export default function TeamsSidebar({
           My Teams
         </h2>
         <div className="ts-head-actions">
-          <button
-            className="ts-icon-btn"
-            onClick={() => onOpenTeamMenu?.(teams[0]?.id ?? '')}
-            title="Team settings"
-            aria-label="Team settings"
-          >⋮</button>
+          <div style={{ position: 'relative' }}>
+            <button
+              className="ts-icon-btn"
+              onClick={() => setMoreMenuOpen(o => !o)}
+              title="More"
+              aria-label="More actions"
+              aria-expanded={moreMenuOpen}
+            >⋮</button>
+            {moreMenuOpen && (
+              <>
+                <div onClick={() => setMoreMenuOpen(false)}
+                  style={{ position: 'fixed', inset: 0, zIndex: 20 }} />
+                <div className="ts-menu" role="menu">
+                  {/* Select turns the tree into a pick-list rather than opening
+                      a separate management screen. Deleting is something you do
+                      TO things you can see, so it belongs where you can see
+                      them. */}
+                  <button
+                    className="ts-menu-item"
+                    role="menuitem"
+                    onClick={() => { setMoreMenuOpen(false); setSelectMode(true) }}
+                  >
+                    Select
+                    <span className="ts-menu-hint">Tick teams, campaigns or agents</span>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
           {/* ── + IS A CHOICE, NOT AN ACTION ─────────────────────────────
               It creates a team OR a campaign, and those are different enough
               that guessing which one was meant is worse than one extra click.
@@ -364,57 +504,108 @@ export default function TeamsSidebar({
           const teamOpen = !collapsedTeams.has(team.id)
           return (
             <div key={team.id} style={{ marginBottom: 2 }}>
-              <button
-                className={`ts-row ts-team-row${isSelected({ kind: 'team', teamId: team.id }) ? ' is-selected' : ''}`}
-                onClick={() => {
-                  // One click does both: reveals the level below and scopes the
-                  // page to it. Making disclosure and selection separate targets
-                  // in a list this dense means missing one of them constantly.
-                  toggle(collapsedTeams, team.id, setCollapsedTeams)
-                  onScopeChange({ kind: 'team', teamId: team.id })
-                }}
-              >
-                <Caret open={teamOpen} />
-                <span className="ts-row-label">{team.name}</span>
-                {team.isOwner && <span className="ts-tag">Owner</span>}
-              </button>
+              {/* ── DISCLOSURE IS NOT NAVIGATION ─────────────────────────
+                  The caret used to be inside the row, so expanding a team also
+                  opened it. Two intentions on one target: you could not look
+                  inside without leaving where you were. The arrow is its own
+                  button now — it opens the branch and nothing else. */}
+              <div className={`ts-row-wrap${isSelected({ kind: 'team', teamId: team.id }) ? ' is-selected' : ''}`}>
+                <button
+                  className="ts-caret-btn"
+                  onClick={() => toggle(collapsedTeams, team.id, setCollapsedTeams)}
+                  aria-label={teamOpen ? 'Collapse' : 'Expand'}
+                  aria-expanded={teamOpen}
+                >
+                  <Caret open={teamOpen} />
+                </button>
+                {selectMode && (
+                  <button
+                    className={`ts-bubble${selected[team.id] ? ' is-on' : ''}`}
+                    onClick={() => toggleSelected({
+                      kind: 'team', id: team.id, teamId: team.id, label: team.name,
+                    })}
+                    aria-pressed={!!selected[team.id]}
+                    aria-label={`Select ${team.name}`}
+                  />
+                )}
+                <button
+                  className="ts-row ts-team-row"
+                  onClick={() => onScopeChange({ kind: 'team', teamId: team.id })}
+                >
+                  <span className="ts-row-label">{team.name}</span>
+                  {team.isOwner && <span className="ts-tag">Owner</span>}
+                </button>
+              </div>
 
               {teamOpen && team.campaigns.map(campaign => {
                 const key = `${team.id}:${campaign.id}`
                 const campaignOpen = !collapsedCampaigns.has(key)
                 return (
                   <div key={campaign.id}>
-                    <button
-                      className={`ts-row ts-campaign-row${isSelected({ kind: 'campaign', teamId: team.id, campaignId: campaign.id }) ? ' is-selected' : ''}`}
-                      onClick={() => {
-                        toggle(collapsedCampaigns, key, setCollapsedCampaigns)
-                        onScopeChange({ kind: 'campaign', teamId: team.id, campaignId: campaign.id })
-                      }}
-                    >
-                      <Caret open={campaignOpen} />
-                      <span className="ts-row-label">{campaign.name}</span>
-                      {/* An open campaign needs no per-agent grants, which
-                          changes how the owner reads the roster under it. */}
-                      {campaign.openToTeam && <span className="ts-tag">Open</span>}
-                    </button>
+                    <div className={`ts-row-wrap ts-indent-1${isSelected({ kind: 'campaign', teamId: team.id, campaignId: campaign.id }) ? ' is-selected' : ''}`}>
+                      <button
+                        className="ts-caret-btn"
+                        onClick={() => toggle(collapsedCampaigns, key, setCollapsedCampaigns)}
+                        aria-label={campaignOpen ? 'Collapse' : 'Expand'}
+                        aria-expanded={campaignOpen}
+                      >
+                        <Caret open={campaignOpen} />
+                      </button>
+                      {selectMode && (
+                        <button
+                          className={`ts-bubble${selected[campaign.id] ? ' is-on' : ''}`}
+                          onClick={() => toggleSelected({
+                            kind: 'campaign', id: campaign.id, teamId: team.id,
+                            campaignId: campaign.id, label: campaign.name,
+                          })}
+                          aria-pressed={!!selected[campaign.id]}
+                          aria-label={`Select ${campaign.name}`}
+                        />
+                      )}
+                      <button
+                        className="ts-row ts-campaign-row"
+                        onClick={() => onScopeChange({ kind: 'campaign', teamId: team.id, campaignId: campaign.id })}
+                      >
+                        <span className="ts-row-label">{campaign.name}</span>
+                        {/* An open campaign needs no per-agent grants, which
+                            changes how the owner reads the roster under it. */}
+                        {campaign.openToTeam && <span className="ts-tag">Open</span>}
+                      </button>
+                    </div>
 
                     {campaignOpen && (
                       campaign.agents.length === 0 ? (
                         <div className="ts-empty">No agents assigned</div>
                       ) : campaign.agents.map(agent => (
-                        <button
+                        <div
                           key={agent.id}
-                          className={`ts-row ts-agent-row${isSelected({ kind: 'agent', teamId: team.id, campaignId: campaign.id, userId: agent.id }) ? ' is-selected' : ''}`}
-                          onClick={() => onScopeChange({
-                            kind: 'agent',
-                            teamId: team.id,
-                            campaignId: campaign.id,
-                            userId: agent.id,
-                          })}
+                          className={`ts-row-wrap ts-indent-2${isSelected({ kind: 'agent', teamId: team.id, campaignId: campaign.id, userId: agent.id }) ? ' is-selected' : ''}`}
                         >
-                          {agent.isLive && <span className="ts-live-dot" />}
-                          <span className="ts-row-label">{agent.name}</span>
-                        </button>
+                          {selectMode && (
+                            <button
+                              className={`ts-bubble${selected[`${campaign.id}:${agent.id}`] ? ' is-on' : ''}`}
+                              onClick={() => toggleSelected({
+                                kind: 'agent', id: `${campaign.id}:${agent.id}`,
+                                teamId: team.id, campaignId: campaign.id,
+                                memberId: agent.memberId, label: agent.name,
+                              })}
+                              aria-pressed={!!selected[`${campaign.id}:${agent.id}`]}
+                              aria-label={`Select ${agent.name}`}
+                            />
+                          )}
+                          <button
+                            className="ts-row ts-agent-row"
+                            onClick={() => onScopeChange({
+                              kind: 'agent',
+                              teamId: team.id,
+                              campaignId: campaign.id,
+                              userId: agent.id,
+                            })}
+                          >
+                            {agent.isLive && <span className="ts-live-dot" />}
+                            <span className="ts-row-label">{agent.name}</span>
+                          </button>
+                        </div>
                       ))
                     )}
                   </div>
@@ -425,22 +616,134 @@ export default function TeamsSidebar({
         })}
       </div>
 
+      {/* ── SELECT MODE BAR ─────────────────────────────────────────────────
+          Appears only while selecting, directly above the tree it acts on, and
+          says how many are ticked so Delete can never be a surprise. */}
+      {selectMode && (
+        <div className="ts-select-bar">
+          <span style={{ flex: 1, fontSize: 11.5, color: TEXT_MUTED }}>
+            {selectedList.length === 0
+              ? 'Tick what you want to remove'
+              : `${selectedList.length} selected`}
+          </span>
+          <button className="ts-mini-btn" onClick={leaveSelectMode}>Cancel</button>
+          {selectedList.length > 0 && (
+            <button
+              className="ts-mini-btn is-danger"
+              onClick={() => { setConfirmText(''); setConfirmOpen(true) }}
+            >Delete</button>
+          )}
+        </div>
+      )}
+
+      {/* ── TYPE DELETE ─────────────────────────────────────────────────────
+          A confirm button alone is muscle memory. Typing the word is the only
+          confirmation that cannot be clicked through by accident, and the
+          things listed are named so the agent checks the list rather than the
+          count. */}
+      {confirmOpen && (
+        <div
+          onClick={() => !deleting && setConfirmOpen(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 80,
+            background: 'rgba(0,0,0,0.6)', display: 'grid', placeItems: 'center', padding: 20,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: '100%', maxWidth: 420, background: '#1e1f22',
+              border: `1px solid ${HAIRLINE}`, borderRadius: 8, color: TEXT,
+              boxShadow: '0 16px 48px rgba(0,0,0,0.5)', padding: 20,
+            }}
+          >
+            <h3 style={{ margin: '0 0 8px', fontSize: 17, fontWeight: 600 }}>
+              Delete {selectedList.length} item{selectedList.length === 1 ? '' : 's'}?
+            </h3>
+            <p style={{ margin: '0 0 12px', fontSize: 12.5, color: TEXT_DIM, lineHeight: 1.6 }}>
+              This cannot be undone.
+            </p>
+            <ul style={{
+              margin: '0 0 14px', padding: '10px 12px 10px 26px', maxHeight: 150,
+              overflowY: 'auto', background: '#111214', borderRadius: 4,
+              fontSize: 12.5, color: TEXT_MUTED, lineHeight: 1.7,
+            }}>
+              {selectedList.map(s => (
+                <li key={s.id}>{s.label} <span style={{ color: TEXT_DIM }}>({s.kind})</span></li>
+              ))}
+            </ul>
+            <label style={{ display: 'block', fontSize: 11.5, color: TEXT_MUTED, marginBottom: 6 }}>
+              Type <strong style={{ color: TEXT }}>DELETE</strong> to confirm
+            </label>
+            <input
+              autoFocus
+              value={confirmText}
+              onChange={e => setConfirmText(e.target.value)}
+              disabled={deleting}
+              style={{
+                width: '100%', boxSizing: 'border-box', padding: '9px 11px',
+                borderRadius: 4, border: `1px solid ${HAIRLINE}`, background: '#111214',
+                color: TEXT, fontSize: 13.5, fontFamily: 'inherit', letterSpacing: 1,
+              }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
+              <button
+                className="ts-mini-btn"
+                disabled={deleting}
+                onClick={() => setConfirmOpen(false)}
+              >Cancel</button>
+              <button
+                className="ts-mini-btn is-danger"
+                disabled={confirmText !== 'DELETE' || deleting}
+                style={{ opacity: confirmText !== 'DELETE' || deleting ? 0.45 : 1 }}
+                onClick={async () => {
+                  setDeleting(true)
+                  try {
+                    await onDeleteSelection?.(selectedList)
+                    leaveSelectMode()
+                  } finally {
+                    setDeleting(false)
+                  }
+                }}
+              >{deleting ? 'Deleting…' : 'Delete'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── FOOT — SCOPES THAT ARE NOT PART OF THE TREE ──────────────────── */}
       <div className="ts-foot">
         <div className="ts-foot-buttons">
-          <button
-            className="ts-foot-btn"
-            onClick={() => onScopeChange({ kind: 'all' })}
-          >
-            <span style={{ flex: 1, textAlign: 'left' }}>All Users</span>
-          </button>
-
+          {/* Requests sits above All Users: it is the one with something
+              waiting on a decision, and a queue you must action outranks a
+              roster you merely read. */}
           <button
             className="ts-foot-btn"
             onClick={() => onScopeChange({ kind: 'requests' })}
           >
             <span style={{ flex: 1, textAlign: 'left' }}>Requests</span>
-            {pendingRequests > 0 && <span className="ts-badge">{pendingRequests}</span>}
+            {/* Corner badge, because pending work is an interruption — it
+                should read as something stuck to the button rather than a
+                field within it. Caps at 99+; past that the exact figure stops
+                changing what you do about it. */}
+            {pendingRequests > 0 && (
+              <span className="ts-badge-corner">
+                {pendingRequests > 99 ? '99+' : pendingRequests}
+              </span>
+            )}
+          </button>
+
+          <button
+            className="ts-foot-btn"
+            onClick={() => onScopeChange({ kind: 'all' })}
+          >
+            <span style={{ flex: 1, textAlign: 'left' }}>All Users</span>
+            {/* Inline count, not a badge: this is a fact about the roster, not
+                a task. Blank at zero — "0" is the same information as no
+                number, spent on more ink. */}
+            {activeUserCount > 0 && (
+              <span className="ts-count">{activeUserCount}</span>
+            )}
           </button>
         </div>
 
