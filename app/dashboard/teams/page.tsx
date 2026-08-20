@@ -838,6 +838,23 @@ export default function TeamsPage() {
             transform: translateX(100%);
             transition: transform 0.22s ease;
             box-shadow: -8px 0 28px rgba(0,0,0,0.45);
+
+            /* ── FIT THE ACTUAL VIEWPORT ─────────────────────────────────
+               100vh on iOS is the height of the screen WITHOUT the browser
+               chrome, so a drawer sized to it runs underneath the address bar
+               and the home indicator — which is why the join-code field at the
+               bottom was half off the screen. 100dvh is the space actually
+               visible right now.
+
+               The insets go on this element and not on a child: it is the
+               position:fixed one, and a child's padding cannot move a fixed
+               parent out from under the notch. "My Teams" and the ⋮ / + buttons
+               were sitting under the status bar for exactly that reason. */
+            height: 100dvh;
+            box-sizing: border-box;
+            padding-top: env(safe-area-inset-top, 0px);
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+            overflow: hidden;
           }
           .ts-drawer-checkbox:checked ~ .ts-side { transform: translateX(0); }
 
@@ -849,23 +866,31 @@ export default function TeamsPage() {
           }
           .ts-drawer-checkbox:checked ~ .ts-overlay { opacity: 1; pointer-events: auto; }
 
-          /* Mirrors the dashboard hamburger — same 40x40, same border and
-             surface tokens, same three bars — but on the right, because it
-             opens the right-hand drawer. Putting it top-left would sit on top
-             of the nav hamburger and open the wrong thing. */
+          /* ── THE SAME TAB AS THE DIALER ──────────────────────────────
+             A hamburger in the top-right competed with the nav hamburger in the
+             top-left: two identical controls, inches apart, opening different
+             things. The dialer already solved this with an arrow tab on the
+             right edge, and a right-hand drawer should be opened by a control
+             attached to the right-hand edge — the gesture and the result point
+             the same way.
+
+             Geometry copied from .dialer-right-toggle so the two pages feel
+             like one product: 22x64, hinged at the edge, sitting at 73% down
+             the screen where a thumb rests rather than where the eye starts. */
           .ts-fab {
             display: flex; position: fixed; z-index: 65;
-            top: max(14px, env(safe-area-inset-top, 14px));
-            right: max(14px, env(safe-area-inset-right, 14px));
-            width: 40px; height: 40px; border-radius: 8px;
+            right: 0;
+            top: 73%;
+            transform: translateY(-50%);
+            width: 22px; height: 64px;
+            border-radius: 8px 0 0 8px;
             border: 1px solid var(--brand-sidebar-active-bg, #35373c);
+            border-right: none;
             background: var(--brand-header-bg, #111214);
-            flex-direction: column; align-items: center; justify-content: center;
-            gap: 4px; cursor: pointer; padding: 0;
-          }
-          .ts-fab span {
-            width: 18px; height: 2px; border-radius: 1px;
-            background: var(--brand-on-header, #f2f3f5);
+            color: var(--brand-primary, #4a9eff);
+            align-items: center; justify-content: center;
+            cursor: pointer; padding: 0;
+            font-size: 18px; font-weight: bold; line-height: 1;
           }
           /* Once the drawer is open the button is under the overlay, so it
              moves with the drawer instead of being stranded behind it. */
@@ -895,11 +920,7 @@ export default function TeamsPage() {
         role="button"
         aria-label="Open teams menu"
         aria-controls="ts-side"
-      >
-        <span aria-hidden />
-        <span aria-hidden />
-        <span aria-hidden />
-      </label>
+      >‹</label>
 
       {/* A label, not a div with onClick, so tapping away closes the drawer
           pre-hydration too. */}

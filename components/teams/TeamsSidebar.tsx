@@ -395,7 +395,12 @@ export default function TeamsSidebar({
            default scope — so the highlight said nothing and just added noise.
            Stacked full width as they were, with a button's face so they read
            as actions rather than as two more branches of the tree above. */
-        .ts-foot { flex-shrink: 0; border-top: 1px solid ${HAIRLINE}; padding: 10px 12px 0; }
+        /* Bottom padding, not zero: the join-code field is the last thing in
+           the drawer and it was sitting flush against the home indicator, which
+           on a phone means the swipe-up gesture and the tap target overlap. The
+           drawer itself carries the safe-area inset; this is the breathing room
+           on top of it. */
+        .ts-foot { flex-shrink: 0; border-top: 1px solid ${HAIRLINE}; padding: 10px 12px 12px; }
         .ts-foot-buttons { display: flex; flex-direction: column; gap: 6px; }
         .ts-foot-btn {
           display: flex; align-items: center; gap: 8px;
@@ -426,7 +431,11 @@ export default function TeamsSidebar({
         .ts-join-input:disabled { opacity: 0.6; cursor: progress; }
       `}</style>
 
-      {/* ── HEADER ───────────────────────────────────────────────────────── */}
+      {/* ── HEADER ───────────────────────────────────────────────────────
+          flexShrink 0 on all three bands (header, tree, footer) with the tree
+          taking the slack. Without it, a long team list pushed the join-code
+          field off the bottom of a phone — the footer is the part somebody
+          actually came here to use, so it is the part that must never move. */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 8,
         padding: '16px 10px 12px 14px', flexShrink: 0,
@@ -463,6 +472,19 @@ export default function TeamsSidebar({
                     Select
                     <span className="ts-menu-hint">Tick teams, campaigns or agents</span>
                   </button>
+                  {/* Statements live behind the ⋮ rather than in the tree: they
+                      are not a thing you browse, they are a thing you go and
+                      fetch when an accountant asks. */}
+                  <a
+                    className="ts-menu-item"
+                    role="menuitem"
+                    href="/dashboard/reports"
+                    onClick={() => setMoreMenuOpen(false)}
+                    style={{ textDecoration: 'none', display: 'block' }}
+                  >
+                    Seat Reports
+                    <span className="ts-menu-hint">Billing statements for your records</span>
+                  </a>
                 </div>
               </>
             )}
