@@ -1009,15 +1009,24 @@ function DialerPageInner() {
       } catch {}
     }
 
-    if (campaignIdParam && campaigns.find(c => c.id === campaignIdParam && c.status === 'active')) {
+    // ── A TEAM CAMPAIGN IS STILL A CAMPAIGN ─────────────────────────────
+    // These checks looked only at `campaigns`, the agent's personal ones. That
+    // was correct while a team's campaigns lived behind the SOURCE selector
+    // and were reached separately. Now that everything shares one dropdown, a
+    // team campaign deep-linked from the Teams page — or simply the one the
+    // agent used last — would fail this test and silently restore nothing.
+    const isSelectable = (id: string) =>
+      campaigns.some(c => c.id === id && c.status === 'active') ||
+      teamScopes.some(sc =>
+        sc.teamCampaigns.some(tc => tc.campaign?.id === id && tc.campaign?.status === 'active')
+      )
+
+    if (campaignIdParam && isSelectable(campaignIdParam)) {
       setSelectedCampaign(campaignIdParam)
     } else {
       try {
         const lastCampaign = localStorage.getItem(`${LS_LAST_CAMPAIGN}:${user.id}`)
-        if (
-          lastCampaign === ALL_ACTIVE ||
-          (lastCampaign && campaigns.find(c => c.id === lastCampaign && c.status === 'active'))
-        ) {
+        if (lastCampaign === ALL_ACTIVE || (lastCampaign && isSelectable(lastCampaign))) {
           setSelectedCampaign(lastCampaign)
         }
       } catch {}
@@ -2331,19 +2340,66 @@ function DialerPageInner() {
   const isPersonalScope = selectedScope === PERSONAL_SCOPE
   const currentScope = teamScopes.find(s => s.id === selectedScope) || null
 
-  const scopeCampaigns: { id: string; name: string; total_leads: number; status: string }[] = isPersonalScope
-    ? campaigns.map(c => ({ id: c.id, name: c.name, total_leads: c.total_leads, status: c.status }))
-    : (currentScope?.teamCampaigns
+  // ── ONE LIST, NOT TWO PLACES TO LOOK ────────────────────────────────────
+  // There used to be a SOURCE selector above this: pick personal or a team,
+  // then pick a campaign from whichever you picked. That made choosing a
+  // campaign a two-step act, and worse, it hid campaigns — an agent looking at
+  // the campaign dropdown could not see a team's list at all until they
+  // realised there was another control above deciding what the dropdown
+  // contained.
+  //
+  // Everything the agent can dial now appears in the campaign dropdown
+  // together, with the owning team named in parentheses. The team is a fact
+  // ABOUT a campaign, not a mode you have to enter first.
+  //
+  // teamId travels on each entry, because the dial path still needs to know
+  // which team a campaign belongs to — that requirement did not go away, it
+  // just stopped being the agent's problem.
+  const scopeCampaigns: Array<{
+    id: string
+    name: string
+    total_leads: number
+    status: string
+    teamId?: string
+    teamName?: string
+  }> = [
+    ...campaigns.map(c => ({
+      id: c.id, name: c.name, total_leads: c.total_leads, status: c.status,
+    })),
+    ...teamScopes.flatMap(scope =>
+      scope.teamCampaigns
         .filter(tc => tc.campaign)
+        // A campaign the agent already owns personally does not need listing
+        // twice just because it is also shared with a team.
+        .filter(tc => !campaigns.some(c => c.id === tc.campaign!.id))
         .map(tc => ({
           id: tc.campaign!.id,
           name: tc.campaign!.name,
           total_leads: tc.campaign!.total_leads,
           status: tc.campaign!.status,
-        })) || [])
+          teamId: scope.id,
+          teamName: scope.name,
+        }))
+    ),
+  ]
 
   const activeScopeCampaigns = scopeCampaigns.filter(c => c.status === 'active')
   const activeCampaignsCount = activeScopeCampaigns.length
+
+  // ── THE SCOPE FOLLOWS THE CAMPAIGN ──────────────────────────────────────
+  // Removing the SOURCE control removed the agent's job of picking a scope; it
+  // did not remove the scope itself. Several places still need to know which
+  // team a call belongs to — the team_id on a dial, on the queue fetch, on the
+  // session — and the answer is simply a property of the campaign they chose.
+  //
+  // So it is derived rather than asked for. Picking a team's campaign puts the
+  // dialer in that team's scope; picking a personal one, or ALL ACTIVE, puts it
+  // back to personal.
+  const selectedCampaignTeamId = scopeCampaigns.find(c => c.id === selectedCampaign)?.teamId
+  useEffect(() => {
+    const next = selectedCampaignTeamId || PERSONAL_SCOPE
+    setSelectedScope(prev => (prev === next ? prev : next))
+  }, [selectedCampaignTeamId])
 
   // ── HOW MANY LINES THIS AGENT DIALS ──────────────────────────────────────
   // On ALL ACTIVE there is no single selected campaign, so the preference is
@@ -5237,32 +5293,6 @@ function DialerPageInner() {
             </div>
           )}
 
-          {teamScopes.length > 0 && (
-            <div style={{
-              padding: '10px 14px', background: terminalSurface,
-              border: `1px solid ${terminalBorder}`, borderRadius: '4px', flexShrink: 0,
-            }}>
-              <div style={{ fontSize: '9px', letterSpacing: '3px', color: terminalMuted, marginBottom: '6px' }}>▸ SOURCE</div>
-              <select
-                value={selectedScope}
-                onChange={(e) => setSelectedScope(e.target.value)}
-                style={{
-                  width: '100%', padding: '6px 10px', borderRadius: '4px',
-                  background: terminalBg, border: `1px solid ${terminalBorder}`,
-                  color: terminalText, fontSize: '12px', outline: 'none',
-                  fontFamily: 'monospace', cursor: 'pointer',
-                }}
-              >
-                <option value={PERSONAL_SCOPE}>MY LEADS (PERSONAL)</option>
-                {teamScopes.map(s => (
-                  <option key={s.id} value={s.id}>
-                    {s.viewerRole === 'owner' ? 'TEAM (OWNER): ' : 'TEAM: '}{s.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
           <div className="dialer-collapse-on-fs" style={{ padding: '10px 14px', background: terminalSurface, border: `1px solid ${terminalBorder}`, borderRadius: '4px', flexShrink: 0 }}>
             <div style={{ fontSize: '9px', letterSpacing: '3px', color: terminalMuted, marginBottom: '6px' }}>▸ SELECT CAMPAIGN</div>
             <select value={selectedCampaign} onChange={(e) => setSelectedCampaign(e.target.value)} style={{
@@ -5278,7 +5308,7 @@ function DialerPageInner() {
               )}
               {activeScopeCampaigns.map(c => (
                 <option key={c.id} value={c.id}>
-                  {c.name} — {c.total_leads} leads
+                  {c.name}{c.teamName ? ` (${c.teamName})` : ''} — {c.total_leads} leads
                 </option>
               ))}
             </select>
