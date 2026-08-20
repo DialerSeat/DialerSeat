@@ -147,6 +147,15 @@ for it; run it after any migration.
 erroring.** Never aggregate by pulling rows into JavaScript. Group in Postgres,
 or paginate and print the true total beside the page.
 
+**Compress before deleting, and only delete what is not evidence.** A daily
+retention job rolls page views into permanent daily totals and then prunes the
+raw rows, prunes idempotency keys and delivery receipts, and drops
+"somebody came online" notifications after a few weeks. It deliberately never
+touches calls, leads, seat charges, subscriptions, billing events, team
+memberships or lead notes — if a human could plausibly need to answer a question
+from a row, the row stays. The prune is gated on the rollup succeeding, so
+nothing is deleted before its numbers exist somewhere else.
+
 **Never fabricate a number.** A dash means no data. A plausible invented figure
 is worse than an obvious gap: the gap gets fixed, the invention gets trusted.
 This applies hardest to billing statements and analytics.
