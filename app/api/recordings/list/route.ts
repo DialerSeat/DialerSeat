@@ -20,11 +20,52 @@ export async function GET(req: NextRequest) {
   const search = searchParams.get('search')?.trim() || ''
   const cursor = parseInt(searchParams.get('cursor') || '0', 10)
 
+  // ── A TEAM CAMPAIGN'S RECORDINGS BELONG TO THE TEAM ──────────────────────
+  // This was strictly the caller's own calls, so a vendor paying for fifteen
+  // seats could not listen to a single one of them. Reviewing calls is most of
+  // what an owner does with a floor — it is how you catch a closer going off
+  // script, and how you settle a dispute about what was said.
+  //
+  // The widening is DELIBERATELY NARROW: it applies only when a specific
+  // campaign is requested and that campaign is attached to a team the caller
+  // owns. Everything else stays exactly as it was — their own calls, nobody
+  // else's. There is no view here that mixes an owner's personal calls with
+  // their agents', because "whose call was this" would stop being answerable.
+  let ownsThisTeamCampaign = false
+  if (campaignId !== 'all') {
+    const { data: myTeams } = await supabase
+      .from('teams')
+      .select('id')
+      .eq('owner_id', userId)
+
+    const teamIds = (myTeams || []).map((t: any) => t.id)
+    if (teamIds.length > 0) {
+      const { data: attached } = await supabase
+        .from('team_campaigns')
+        .select('campaign_id')
+        .eq('campaign_id', campaignId)
+        .in('team_id', teamIds)
+        .limit(1)
+      ownsThisTeamCampaign = (attached || []).length > 0
+    }
+  }
+
+  // Narrow to one agent within that campaign. Only meaningful on a team
+  // campaign — asking for somebody else's calls anywhere else returns nothing,
+  // because the user_id filter below still applies.
+  const agentFilter = searchParams.get('agent_id')
+
   let query = supabase
     .from('calls')
     .select('*, leads(first_name, last_name, phone, notes), campaigns(name)', { count: 'exact' })
-    .eq('user_id', userId)
     .or('recording_url.not.is.null,recording_id.not.is.null')
+
+  if (ownsThisTeamCampaign) {
+    query = query.eq('campaign_id', campaignId)
+    if (agentFilter) query = query.eq('user_id', agentFilter)
+  } else {
+    query = query.eq('user_id', userId)
+  }
 
     // ── WHY THIS IS NOT JUST "amd_result = human" ──────────────────────────
     // This used to be `amd_result.is.null,amd_result.eq.human`, which hid
@@ -45,7 +86,7 @@ export async function GET(req: NextRequest) {
     // as human. And any call that was ANSWERED is included regardless of what
     // AMD guessed, because a recording of an answered call is real audio by
     // definition — AMD's opinion doesn't change that.
-    .or('amd_result.is.null,amd_result.eq.human,amd_result.eq.not_sure,answered_at.not.is.null')
+  query = query.or('amd_result.is.null,amd_result.eq.human,amd_result.eq.not_sure,answered_at.not.is.null')
 
   if (campaignId !== 'all') {
     query = query.eq('campaign_id', campaignId)
@@ -111,8 +152,52 @@ export async function GET(req: NextRequest) {
     // must not take somebody's recordings away from them.
   }
 
+  // ── WHOSE CALL WAS THIS ──────────────────────────────────────────────
+  // A list of an owner's whole floor is unusable without names on it, and the
+  // agent roster is what lets the page offer a filter at all. Only assembled on
+  // the team path — on somebody's own recordings every row is theirs and a name
+  // column would be the same word repeated down the page.
+  let agents: Array<{ userId: string; name: string; recordings: number }> = []
+  if (ownsThisTeamCampaign) {
+    const counts = new Map<string, number>()
+    for (const r of recordings) {
+      if (r.user_id) counts.set(r.user_id, (counts.get(r.user_id) || 0) + 1)
+    }
+    const ids = Array.from(counts.keys())
+    if (ids.length > 0) {
+      const { data: users } = await supabase
+        .from('users')
+        .select('clerk_id, email, first_name, last_name')
+        .in('clerk_id', ids)
+
+      const nameById = new Map<string, string>()
+      for (const u of users || []) {
+        nameById.set(
+          u.clerk_id,
+          [u.first_name, u.last_name].filter(Boolean).join(' ').trim() || u.email || 'Agent'
+        )
+      }
+      agents = ids
+        .map(id => ({
+          userId: id,
+          name: nameById.get(id) || 'Agent',
+          recordings: counts.get(id) || 0,
+        }))
+        .sort((a, b) => b.recordings - a.recordings)
+
+      recordings = recordings.map((r: any) => ({
+        ...r,
+        agentName: r.user_id ? (nameById.get(r.user_id) || 'Agent') : null,
+      }))
+    }
+  }
+
   return NextResponse.json({
     success: true,
+    // True when this is a team campaign the caller owns, so the page knows it
+    // is looking at a floor rather than at one person.
+    teamView: ownsThisTeamCampaign,
+    agents,
     recordings,
     total: count || 0,
     nextCursor: (data && data.length === PAGE_SIZE) ? cursor + PAGE_SIZE : null,

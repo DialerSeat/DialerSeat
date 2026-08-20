@@ -147,6 +147,10 @@ export default function CampaignDetail({
   const [agents, setAgents] = useState<AgentRow[]>([])
   const [available, setAvailable] = useState<CandidateRow[]>([])
   const [ingestLog, setIngestLog] = useState<any[]>([])
+  // Only the campaign's creator may change its settings — /api/campaigns/update
+  // enforces that server-side. Showing the controls to a team owner who did not
+  // create it means offering a switch that answers 403 when flipped.
+  const [isCampaignOwner, setIsCampaignOwner] = useState(true)
   const [origin, setOrigin] = useState('')
   const [copied, setCopied] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -166,6 +170,7 @@ export default function CampaignDetail({
       setAgents(r.agents || [])
       setAvailable(r.availableMembers || [])
       setIngestLog(r.ingestLog || [])
+      setIsCampaignOwner(r.isCampaignOwner !== false)
       setError(null)
     } catch (e: any) {
       setError(e.message || 'Could not load campaign')
@@ -402,6 +407,23 @@ export default function CampaignDetail({
         </div>
       </Section>
 
+      {!isCampaignOwner && (
+        // Said once, at the top of the settings, rather than repeated on every
+        // disabled control — and rather than silently hiding them, which makes
+        // a page look like it is missing features instead of scoped to you.
+        <div style={{
+          background: PANEL, border: `1px solid ${HAIRLINE}`, borderRadius: 4,
+          padding: '11px 14px', marginTop: 26,
+          fontSize: 12.5, color: DIM, lineHeight: 1.7,
+        }}>
+          This campaign belongs to whoever created it, so its settings are theirs
+          to change. You can still manage who on your team dials it.
+        </div>
+      )}
+
+      {/* Three sections share this gate, so it needs a fragment — a bare
+          conditional can only wrap one element. */}
+      {isCampaignOwner && (<>
       <Section title="How It Dials">
         <div style={{ display: 'grid', gap: 8 }}>
           <div style={{
@@ -619,6 +641,7 @@ export default function CampaignDetail({
           onChange={v => patch({ mask_lead_numbers: v })}
         />
       </Section>
+      </>)}
 
       <Section
         title="Who Can Dial It"

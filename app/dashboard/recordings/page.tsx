@@ -173,6 +173,13 @@ const RECORDINGS_TIME_FILTER_VALUES = ['all', 'today', '7d', '30d', '90d', 'year
 export default function RecordingsPage() {
   const { user } = useUser()
   const [recordings, setRecordings] = useState<Recording[]>([])
+  // ── ONLY MEANINGFUL ON A TEAM CAMPAIGN YOU OWN ────────────────────────
+  // The server decides whether this is a floor or one person's calls, and says
+  // so. The page does not guess — guessing would mean showing an agent filter
+  // to somebody whose recordings are all their own.
+  const [teamView, setTeamView] = useState(false)
+  const [agents, setAgents] = useState<Array<{ userId: string; name: string; recordings: number }>>([])
+  const [agentFilter, setAgentFilter] = useState('')
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [campaignFilter, setCampaignFilter] = useState('all')
   const [dispositionFilter, setDispositionFilter] = useState('all')
@@ -267,7 +274,13 @@ export default function RecordingsPage() {
     setCursor(0)
     setPlayingId(null)
     setExpandedId(null)
-  }, [campaignFilter, dispositionFilter, debouncedSearch, user])
+  }, [campaignFilter, dispositionFilter, debouncedSearch, agentFilter, user])
+
+  // A different campaign is a different floor, so an agent filter must not
+  // survive the switch — it would silently show an empty list for somebody who
+  // is not on the new one. Kept separate from the reset above so that changing
+  // the AGENT does not clear itself the instant it is set.
+  useEffect(() => { setAgentFilter('') }, [campaignFilter])
 
   const fetchMore = useCallback(async () => {
     if (!user || cursor === null || loading) return
@@ -280,6 +293,7 @@ export default function RecordingsPage() {
         search: debouncedSearch,
         cursor: String(cursor),
       })
+      if (agentFilter) params.set('agent_id', agentFilter)
       const res = await fetch(`/api/recordings/list?${params}`)
       const data = await res.json()
       if (data.success) {
@@ -295,11 +309,16 @@ export default function RecordingsPage() {
         setRecordings(prev => cursor === 0 ? incoming : [...prev, ...incoming])
         setTotal(data.total)
         setCursor(data.nextCursor)
+        setTeamView(!!data.teamView)
+        // Only replace the roster on the first page. Later pages carry whoever
+        // happens to appear in them, and letting those overwrite it would make
+        // the filter list shrink as somebody scrolls.
+        if (cursor === 0) setAgents(data.agents || [])
       }
     } finally {
       setLoading(false)
     }
-  }, [user, cursor, loading, campaignFilter, dispositionFilter, debouncedSearch])
+  }, [user, cursor, loading, campaignFilter, dispositionFilter, debouncedSearch, agentFilter])
 
   useEffect(() => {
     if (cursor === 0) fetchMore()
@@ -878,6 +897,23 @@ export default function RecordingsPage() {
             {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
+        {/* ── ONLY ON A TEAM CAMPAIGN YOU OWN ──────────────────────────────
+            Rendered from what the server said this view is, not guessed. On
+            somebody's own recordings every row is theirs, and an agent filter
+            offering one name is a control that cannot do anything. */}
+        {teamView && agents.length > 0 && (
+          <div className="field">
+            <label>AGENT</label>
+            <select value={agentFilter} onChange={e => setAgentFilter(e.target.value)}>
+              <option value="">[ EVERYONE ]</option>
+              {agents.map(a => (
+                <option key={a.userId} value={a.userId}>
+                  {a.name} ({a.recordings})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <div className="field">
           <label>DISPOSITION</label>
           <select value={dispositionFilter} onChange={e => setDispositionFilter(e.target.value)}>
