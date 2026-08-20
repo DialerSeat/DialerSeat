@@ -39,7 +39,10 @@ export async function POST(req: Request) {
 
     const [{ count: memberCount }, { count: campaignCount }, { count: activeSeatCount }] = await Promise.all([
       supabaseAdmin.from('team_members').select('id', { count: 'exact', head: true }).eq('team_id', teamId),
-      supabaseAdmin.from('team_campaigns').select('id', { count: 'exact', head: true }).eq('team_id', teamId),
+      // team_campaigns is keyed on (team_id, campaign_id) and has no id column.
+      // Counting one made PostgREST reject the query, so this came back null and
+      // the confirmation told an admin the team had no campaigns attached.
+      supabaseAdmin.from('team_campaigns').select('campaign_id', { count: 'exact', head: true }).eq('team_id', teamId),
       supabaseAdmin.from('team_seat_charges').select('id', { count: 'exact', head: true }).eq('team_id', teamId).eq('status', 'paid'),
     ])
 

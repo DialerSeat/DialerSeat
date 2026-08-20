@@ -311,7 +311,11 @@ export async function GET(req: NextRequest) {
     // seats are, and leaving it off would understate the deduction.
     const { data: subs } = await supabaseAdmin
       .from('subscriptions')
-      .select('stripe_subscription_id, plan, status, amount_cents, created_at, current_period_end')
+      // No amount_cents on subscriptions — asking for it made PostgREST reject
+      // the whole query, so the owner's OWN plan was missing from every
+      // statement. On a tax document that is an understated expense, which is
+      // the error that costs somebody money rather than merely confusing them.
+      .select('stripe_subscription_id, plan, status, stripe_price_id, created_at, current_period_end')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(5)
@@ -514,7 +518,9 @@ export async function GET(req: NextRequest) {
       subscriptions: (subs || []).map((s: any) => ({
         plan: s.plan,
         status: s.status,
-        amountCents: s.amount_cents,
+        // The price is on Stripe, not on our row. Named rather than guessed at:
+        // printing a plausible figure on a statement is worse than printing none.
+        priceId: s.stripe_price_id ?? null,
         startedAt: s.created_at,
       })),
       paymentMethods,

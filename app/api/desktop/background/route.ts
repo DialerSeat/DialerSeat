@@ -39,9 +39,14 @@ export async function GET() {
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
     }
 
+    // ── IT WAS NEVER ON `users` ────────────────────────────────────────
+    // desktop_prefs.background_id is where a chosen background actually lives.
+    // Selecting a column users does not have made PostgREST reject the query,
+    // so this returned null every time and everybody got the default background
+    // no matter what they picked — a setting that saved and never came back.
     const { data, error } = await supabase
-      .from('users')
-      .select('desktop_background')
+      .from('desktop_prefs')
+      .select('background_id')
       .eq('clerk_id', userId)
       .maybeSingle()
 
@@ -50,7 +55,7 @@ export async function GET() {
       return NextResponse.json({ error: 'lookup_failed' }, { status: 500 })
     }
 
-    return NextResponse.json({ background: data?.desktop_background ?? null })
+    return NextResponse.json({ background: data?.background_id ?? null })
   } catch (err) {
     console.error('[desktop/background GET] unexpected:', err)
     return NextResponse.json({ error: 'unexpected' }, { status: 500 })
