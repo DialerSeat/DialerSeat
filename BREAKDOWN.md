@@ -43,6 +43,14 @@ more campaigns costs nothing.
 **Lead drip.** One webhook URL per campaign accepts JSON from any CRM, sheet or
 automation tool, and leads land in a running queue without agents restarting.
 
+**No cap on campaign size.** A campaign holds as many leads as somebody wants to
+put in it. There was a 10,000 ceiling, and it existed because the duplicate
+check read every phone in the campaign into memory on each upload — the dedupe,
+not the dialer, was the thing that could not scale. It now asks which of the
+UPLOADED numbers already exist, so the cost follows the upload and is
+independent of what the campaign already holds. Exports stream and page for the
+same reason.
+
 **Lead masking.** A campaign can hide phone numbers from agents until the lead
 picks up. The number never leaves the server.
 
@@ -254,6 +262,10 @@ doubt, the stricter behaviour is the correct one.
 - Lead masking has never been tested with a real second account.
 - Predictive AMD catch rate on bridged fan-out calls is unverified.
 - The campaign view cannot yet upload or replace leads in place.
+- Statement lines are reconciled against Stripe only for the first 250 invoices
+  in a period; beyond that they are marked unverified rather than silently
+  trusted, but a large annual statement is mostly unverified.
+- Neither export has been run against a campaign large enough to need paging.
 - AMD is editable from two screens and can drift between them.
 - Everything is US-only (see Globalization above).
 - Lead ingest has no rate limit. The token is 192-bit and owner-gated, so this

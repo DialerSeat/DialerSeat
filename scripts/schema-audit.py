@@ -68,7 +68,7 @@ SCHEMA = {
  'team_join_requests': 'campaign_id,code_id,created_at,decided_at,decided_by,id,status,team_id,user_id',
  'team_member_status_logs': 'duration_seconds,ended_at,id,started_at,state,team_id,team_member_id',
  'team_members': 'accepted_at,billing_override,billing_takeover_at,billing_takeover_reason,created_at,decision_seen_at,id,joined_via_code,removed_at,seat_price_override_cents,seat_suspend_reason,seat_suspended_at,status,team_id,user_id',
- 'team_seat_charges': 'agent_id,amount_cents,created_at,id,owner_id,period_end,period_start,refunded_amount_cents,status,stripe_invoice_id,stripe_subscription_item_id,team_id,team_member_id',
+ 'team_seat_charges': 'agent_id,amount_cents,created_at,enforced_at,id,owner_id,period_end,period_start,refunded_amount_cents,status,stripe_invoice_id,stripe_subscription_item_id,team_id,team_member_id',
  'teams': 'created_at,description,id,name,owner_id,tenant_id,updated_at',
  'telephony_events': 'attempts,call_sid,error_message,event_key,processed_at,processing_status,received_at,sequence_no,status,webhook',
  'telnyx_events': 'attempts,created_at,error_message,event_id,event_type,processed_at,processing_status',

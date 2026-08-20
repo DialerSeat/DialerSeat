@@ -202,19 +202,35 @@ export async function GET(req: NextRequest) {
     // Derived from real charges rather than from a calendar. A month only
     // appears once a seat was actually billed in it.
     if (!period) {
-      const { data: allCharges } = await supabaseAdmin
-        .from('team_seat_charges')
-        .select('created_at, status')
-        .eq('owner_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(5000)
+      // ── ASKED AS A DISTINCT-VALUES QUESTION ──────────────────────────
+      // This used to select 5,000 charge rows and reduce them here. Fifty seats
+      // billed weekly is roughly 2,600 charges a year, so inside two years the
+      // oldest periods would drop off the end of that limit and a statement
+      // that exists would stop being reachable — against the rule that every
+      // statement stays available for as long as the records must be kept.
+      //
+      // seat_charge_periods() groups in Postgres, so the cost is one row per
+      // period no matter how many charges sit behind it. There is no depth at
+      // which history starts disappearing.
+      const { data: periodRows, error: periodErr } = await supabaseAdmin
+        .rpc('seat_charge_periods', { p_owner_id: userId })
+
+      if (periodErr) {
+        // Never guess at this. An incomplete period list looks identical to an
+        // account with less history, and the reader has no way to tell that
+        // something is missing — which is precisely the failure being fixed.
+        console.error('[seat-report] period list failed', periodErr)
+        return NextResponse.json(
+          { success: false, error: 'Could not load your statement periods. Please try again.' },
+          { status: 503 }
+        )
+      }
 
       const months = new Set<string>()
       const years = new Set<string>()
-      for (const c of allCharges || []) {
-        const d = new Date(c.created_at)
-        months.add(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`)
-        years.add(String(d.getUTCFullYear()))
+      for (const r of (periodRows || []) as Array<{ period: string; kind: string }>) {
+        if (r.kind === 'month') months.add(r.period)
+        else if (r.kind === 'year') years.add(r.period)
       }
 
       // This year is always offered, even before the first seat is billed — an
