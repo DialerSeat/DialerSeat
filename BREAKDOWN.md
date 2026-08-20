@@ -161,6 +161,16 @@ an unknown table to deletion would mean the next one somebody adds starts
 destroying itself on day one. The daily report is what stops anything
 accumulating unnoticed.
 
+**Sensitive tables cannot be armed for deletion at all.** People, teams,
+campaigns, money and credentials are marked `protected` — 34 tables. A protected
+table cannot be made ephemeral, cannot be given a retention window, cannot have
+its policy row deleted, and its protection cannot be turned off by an update. A
+database trigger rejects all four, so there is no sequence of updates that
+points the retention job at customer data. Lifting protection requires a
+migration written by a person who has thought about it, which is the bar it
+should meet. The executor independently skips anything protected, so two things
+would have to fail together.
+
 Add a table, add a policy row. `select * from unclassified_tables()` should
 always return nothing.
 
