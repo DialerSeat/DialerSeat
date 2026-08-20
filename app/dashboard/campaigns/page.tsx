@@ -3485,9 +3485,25 @@ export default function CampaignsPage() {
                   <div className="settings-row">
                     <div className="settings-row-label">
                       TEAM CAMPAIGN
+                      {/* With the mode selector gone, this line is the only
+                          thing telling somebody where the setting went. It has
+                          to name the destination, not just imply one. */}
                       <small>
-                        Put this on a team and your agents can dial it. How it
-                        dials is then set on the team&apos;s campaign page.
+                        {campaignTeamId ? (
+                          <>
+                            Dialer mode, answering-machine detection and who can
+                            dial this are set on{' '}
+                            <a
+                              href="/dashboard/teams"
+                              style={{ color: '#4a9eff', textDecoration: 'underline' }}
+                            >the team&apos;s campaign page</a>.
+                          </>
+                        ) : (
+                          <>
+                            Put this on a team and your agents can dial it. How it
+                            dials is then set on the team&apos;s campaign page.
+                          </>
+                        )}
                       </small>
                     </div>
                     <select
@@ -3505,32 +3521,17 @@ export default function CampaignsPage() {
                 )}
 
                 {/* ── ONE PLACE SETS THE MODE ──────────────────────────────
-                    A team campaign's mode belongs on the team's campaign page,
-                    where the owner also decides who dials it and whether agents
-                    may pick their own mode. Leaving a second selector here would
-                    give the same setting two homes that disagree — change it in
-                    one and the other still shows the old value, and neither
-                    screen tells you which one won. */}
-                {campaignTeamId ? (
-                  <div className="settings-row">
-                    <div className="settings-row-label">
-                      DIALER MODE
-                      <small>
-                        Set on the team campaign page, along with who can dial it
-                        and whether agents may choose their own mode.
-                      </small>
-                    </div>
-                    <a
-                      href="/dashboard/teams"
-                      style={{
-                        fontSize: 12, color: '#4a9eff', textDecoration: 'none',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {MODE_LABELS[(editDraft?.dialer_mode || 'power') as DialerMode]} ↗
-                    </a>
-                  </div>
-                ) : (
+                    Gone entirely once the campaign is on a team, rather than
+                    shown read-only. A greyed-out control still reads as a
+                    control — people click it, nothing happens, and they conclude
+                    the page is broken rather than that the setting lives
+                    somewhere else. The row above already says where it lives.
+
+                    Two live selectors would be worse still: the same setting in
+                    two homes that disagree, where changing it in one leaves the
+                    other showing the old value and neither screen tells you
+                    which won. */}
+                {!campaignTeamId && (
                   <div className="settings-row">
                     <div className="settings-row-label">
                       DIALER MODE
