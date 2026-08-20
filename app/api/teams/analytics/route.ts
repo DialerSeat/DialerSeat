@@ -84,24 +84,26 @@ export async function GET(req: NextRequest) {
     const ownedTeamIds = (ownedTeams || []).map((t: any) => t.id)
     const teamNameById = new Map((ownedTeams || []).map((t: any) => [t.id, t.name]))
 
-    // Campaigns in play: the owner's own, plus anything attached to their teams.
-    const { data: ownCampaigns } = await supabaseAdmin
-      .from('campaigns')
-      .select('id, name, conversion_dispositions')
-      .eq('user_id', userId)
-
+    // ── TEAM CAMPAIGNS ONLY ──────────────────────────────────────────────
+    // This used to merge in every campaign the owner personally owns, attached
+    // to a team or not — so a vendor who dials their own book on the side saw
+    // that work inflating their team's numbers, and "how is my floor doing"
+    // came back answered partly with their own calls.
+    //
+    // A campaign counts here only once it is attached to a team. The owner's
+    // personal dialing is theirs and belongs on their own analytics page, not
+    // in a report about people they are paying seats for.
     let attachedCampaignIds: string[] = []
     if (ownedTeamIds.length > 0) {
       const { data: tc } = await supabaseAdmin
         .from('team_campaigns')
         .select('campaign_id')
         .in('team_id', ownedTeamIds)
-      attachedCampaignIds = (tc || []).map((r: any) => r.campaign_id)
+        .limit(2000)
+      attachedCampaignIds = (tc || []).map((r: any) => r.campaign_id).filter(Boolean)
     }
 
-    const campaignIds = Array.from(
-      new Set([...(ownCampaigns || []).map((c: any) => c.id), ...attachedCampaignIds])
-    )
+    const campaignIds = Array.from(new Set(attachedCampaignIds))
 
     if (campaignIds.length === 0) {
       return NextResponse.json({ success: true, empty: true, tiles: null, charts: null })

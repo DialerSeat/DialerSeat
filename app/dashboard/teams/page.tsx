@@ -8,6 +8,7 @@ import TeamsSidebar, {
 import TeamDetail, { type TeamDetailData } from '@/components/teams/TeamDetail'
 import CampaignDetail from '@/components/teams/CampaignDetail'
 import FloorView from '@/components/teams/FloorView'
+import AgentDetail from '@/components/teams/AgentDetail'
 import DataTable, { type Column } from '@/components/DataTable'
 import {
   VolumeChart, ConversionChart, DispositionChart, CampaignChart,
@@ -71,7 +72,7 @@ interface ApiTeam {
 }
 
 type RangeKey = 'today' | 'week' | 'month' | 'all' | 'custom'
-type PanelView = 'overview' | 'all_users' | 'requests' | 'team' | 'campaign' | 'floor'
+type PanelView = 'overview' | 'all_users' | 'requests' | 'team' | 'campaign' | 'floor' | 'agent'
 
 /** What the tiles and charts are measuring. Scope answers WHO, range answers
  *  WHEN, and this answers WHICH NUMBERS — three independent questions that
@@ -635,9 +636,20 @@ export default function TeamsPage() {
     if (scope.kind === 'team') return (team?.name || 'Team').toUpperCase()
     const campaign = team?.campaigns.find(c => c.id === (scope as any).campaignId)
     if (scope.kind === 'campaign') return (campaign?.name || 'Campaign').toUpperCase()
-    const agent = campaign?.agents.find(a => a.id === (scope as any).userId)
-    return (agent?.name || 'Agent').toUpperCase()
-  }, [scope, teams])
+    // Three places may know this person's name, and only one of them is the
+    // tree. Somebody opened from All Users has no campaign in scope, so the
+    // tree lookup finds nothing and the header would read "AGENT" — the one
+    // word it must not say when you just clicked a name.
+    const wantedId = (scope as any).userId
+    const agent = campaign?.agents.find(a => a.id === wantedId)
+    if (agent?.name) return agent.name.toUpperCase()
+    const fromRoster = roster.find((r: any) => r.userId === wantedId)
+    if (fromRoster?.name) return String(fromRoster.name).toUpperCase()
+    const anywhere = teams
+      .flatMap(t => t.campaigns.flatMap(c => c.agents))
+      .find(x => x.id === wantedId)
+    return (anywhere?.name || 'Agent').toUpperCase()
+  }, [scope, teams, roster])
 
   // One row per MEMBERSHIP, not per person. Somebody on two of your teams
   // appears twice, named by team — which is right, because everything an owner
@@ -866,13 +878,13 @@ export default function TeamsPage() {
       return
     }
     setScope(next)
-    // A campaign in the tree now opens the campaign, for the same reason a team
-    // opens the team: it is a thing you manage, not a filter you apply. It used
-    // to quietly re-scope the overview, which looked identical to nothing
-    // happening.
+    // Team, campaign and agent all open themselves. Each is a thing you manage,
+    // not a filter you apply — and an agent quietly re-scoping the overview
+    // looked identical to the click not registering.
     setView(
       next.kind === 'team' ? 'team'
       : next.kind === 'campaign' ? 'campaign'
+      : next.kind === 'agent' ? 'agent'
       : 'overview'
     )
   }
@@ -1058,6 +1070,13 @@ export default function TeamsPage() {
         <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '24px 28px 40px' }}>
           {view === 'floor' && <FloorView onBack={goOverview} />}
 
+          {view === 'agent' && scope.kind === 'agent' && (
+            <AgentDetail
+              userId={scope.userId}
+              onBack={goOverview}
+            />
+          )}
+
           {view === 'campaign' && scope.kind === 'campaign' && (
             <CampaignDetail
               campaignId={scope.campaignId}
@@ -1140,6 +1159,10 @@ export default function TeamsPage() {
                 onSearch={setRosterSearch}
                 onPage={setRosterPage}
                 rowKey={(r: any) => r.memberId}
+                onRowClick={(r: any) => {
+                  setScope({ kind: 'agent', teamId: r.teamId, campaignId: '', userId: r.userId })
+                  setView('agent')
+                }}
                 searchPlaceholder="Search by name or email…"
                 emptyMessage={rosterSearch ? `Nobody matches “${rosterSearch}”.` : 'No members yet.'}
                 theme={{ panel: PANEL, hairline: HAIRLINE, text: TEXT, muted: MUTED, dim: DIM }}
@@ -1173,6 +1196,7 @@ export default function TeamsPage() {
                         type="checkbox"
                         checked={selectedMembers.has(r.memberId)}
                         disabled={r.suspended}
+                        onClick={e => e.stopPropagation()}
                         onChange={() => toggleMember(r.memberId)}
                         style={{ accentColor: '#4a9eff', cursor: r.suspended ? 'not-allowed' : 'pointer' }}
                       />
@@ -1377,7 +1401,13 @@ export default function TeamsPage() {
                         campaign picked in the tree opens its own view, so
                         naming it here as well said the same thing twice and
                         implied the dropdown could change it, which it cannot. */}
-                    {(METRIC_VIEWS.find(m => m.key === metric)?.label || 'All Users').toUpperCase()}
+                    {/* Names the selection when there IS one. The dropdown
+                        picks the metric, but reading "ALL USERS" after clicking
+                        one person's name is the header contradicting the click
+                        that got you here. */}
+                    {scope.kind === 'all' || scope.kind === 'requests'
+                      ? (METRIC_VIEWS.find(m => m.key === metric)?.label || 'All Users').toUpperCase()
+                      : scopeLabel}
                     <span style={{ fontSize: 12, color: MUTED }}>▾</span>
                   </button>
                   {metricOpen && (
