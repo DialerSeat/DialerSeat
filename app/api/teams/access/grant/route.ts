@@ -130,6 +130,41 @@ export async function POST(req: Request) {
       })
     }
 
+    // ── ONE PERSON, ONE SEAT ──────────────────────────────────────────────
+    // This raised a charge and opened a Stripe subscription every time it ran,
+    // with no check for one already existing. So an agent admitted on an
+    // owner-paid code and then granted a second campaign came out with TWO live
+    // seat subscriptions — the owner billed $35 a week twice for one person,
+    // and the second one invisible until it appeared on a statement.
+    //
+    // The seat is the billable unit, not the campaign. That rule is already
+    // what /access/grant-bulk is built on; this path never got it. If a live
+    // seat exists, the extra campaign rides on it and costs nothing.
+    const { data: liveSeat } = await supabaseAdmin
+      .from('team_seat_charges')
+      .select('id')
+      .eq('team_member_id', memberId)
+      .eq('status', 'paid')
+      .not('stripe_subscription_item_id', 'is', null)
+      .limit(1)
+      .maybeSingle()
+
+    if (liveSeat) {
+      // Recorded as 'free' because that is what it is — no second charge was
+      // raised, and labelling it 'owner' would imply a second one exists.
+      await supabaseAdmin
+        .from('team_campaign_access')
+        .update({ payer: 'free' })
+        .eq('id', granted.id)
+
+      return NextResponse.json({
+        success: true,
+        access: { ...granted, payer: 'free' },
+        stripeChargeCreated: false,
+        note: 'Added to an existing seat — no additional charge.',
+      })
+    }
+
     const { data: seatCharge, error: seatErr } = await supabaseAdmin
       .from('team_seat_charges')
       .insert({

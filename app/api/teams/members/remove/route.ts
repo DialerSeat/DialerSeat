@@ -53,7 +53,16 @@ export async function POST(req: Request) {
 
     const { data: activeCharges } = await supabaseAdmin
       .from('team_seat_charges')
-      .select('id, stripe_subscription_id')
+      // ── THE COLUMN IS stripe_subscription_item_id ──────────────────────
+      // Selecting a column that does not exist makes PostgREST reject the whole
+      // query, so `charges` came back null, the cancel loop never ran, and the
+      // Stripe subscription outlived the membership.
+      //
+      // Removing somebody therefore took away their access and kept billing the
+      // owner $35 a week for them — silently, indefinitely, and in the owner's
+      // disfavour. On a floor with normal churn that is an owner paying for
+      // people who left months ago.
+      .select('id, stripe_subscription_item_id')
       .eq('team_member_id', memberId)
       .eq('status', 'paid')
 
@@ -61,7 +70,7 @@ export async function POST(req: Request) {
 
     for (const charge of activeCharges || []) {
       try {
-        const result = await cancelSeatSubscription(charge.stripe_subscription_id)
+        const result = await cancelSeatSubscription(charge.stripe_subscription_item_id)
         stripeCancelResults.push({ chargeId: charge.id, ...result })
 
         await supabaseAdmin

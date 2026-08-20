@@ -47,7 +47,11 @@ export async function POST(req: Request) {
 
     const { data: existingPaid } = await supabaseAdmin
       .from('team_seat_charges')
-      .select('id, stripe_subscription_id')
+      // Same wrong column. Here the failure ran the other way: the lookup for
+      // an existing paid seat always came back empty, so approving somebody who
+      // already had one opened a SECOND subscription and billed the owner twice
+      // for one person.
+      .select('id, stripe_subscription_item_id')
       .eq('team_member_id', memberId)
       .eq('status', 'paid')
       .maybeSingle()
@@ -55,8 +59,8 @@ export async function POST(req: Request) {
     let billingIssue: string | null = null
   let stripeSubId: string | null = null
 
-    if (existingPaid?.stripe_subscription_id) {
-      stripeSubId = existingPaid.stripe_subscription_id
+    if (existingPaid?.stripe_subscription_item_id) {
+      stripeSubId = existingPaid.stripe_subscription_item_id
     } else {
       const { data: pendingCharge } = await supabaseAdmin
         .from('team_seat_charges')
