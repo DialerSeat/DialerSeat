@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
 
     const { data: campaign } = await supabaseAdmin
       .from('campaigns')
-      .select('id, name, status, dialer_mode, total_leads, called_leads, amd_enabled, recording_enabled, predictive_lines_per_agent, mask_lead_numbers, user_id, created_at')
+      .select('id, name, status, dialer_mode, total_leads, called_leads, amd_enabled, recording_enabled, predictive_lines_per_agent, mask_lead_numbers, agent_picks_mode, user_id, created_at')
       .eq('id', campaignId)
       .maybeSingle()
 
@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
     if (ownedTeam) {
       const { data: accessRows } = await supabaseAdmin
         .from('team_campaign_access')
-        .select('id, team_member_id, payer, access_source, created_at')
+        .select('id, team_member_id, payer, access_source, granted_at')
         .eq('campaign_id', campaignId)
         .eq('team_id', ownedTeam.id)
         .eq('is_active', true)
@@ -134,6 +134,7 @@ export async function GET(req: NextRequest) {
         recordingEnabled: campaign.recording_enabled,
         predictiveLines: campaign.predictive_lines_per_agent,
         maskLeadNumbers: !!campaign.mask_lead_numbers,
+        agentPicksMode: !!campaign.agent_picks_mode,
         createdAt: campaign.created_at,
       },
       team: ownedTeam ? { id: ownedTeam.id, name: ownedTeam.name, accessMode } : null,

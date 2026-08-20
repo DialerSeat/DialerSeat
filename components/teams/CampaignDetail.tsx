@@ -34,6 +34,7 @@ interface CampaignDetailData {
   recordingEnabled: boolean
   predictiveLines: number | null
   maskLeadNumbers: boolean
+  agentPicksMode: boolean
   createdAt: string
 }
 
@@ -289,9 +290,9 @@ export default function CampaignDetail({
         title="Leads"
         action={
           <a
-            href={`/dashboard/campaigns?campaign=${encodeURIComponent(data.id)}`}
+            href={`/dashboard/campaigns?edit=${encodeURIComponent(data.id)}`}
             style={{ ...btn, textDecoration: 'none' }}
-          >Add or replace leads</a>
+          >Manage campaign</a>
         }
       >
         <div style={{ color: DIM, fontSize: 12.5, lineHeight: 1.7 }}>
@@ -299,6 +300,74 @@ export default function CampaignDetail({
             ? 'Every lead here has been dialed. Adding a fresh list starts the queue again without touching call history.'
             : `${data.remainingLeads.toLocaleString()} left to dial.`}
         </div>
+      </Section>
+
+      <Section title="How It Dials">
+        <div style={{ display: 'grid', gap: 8 }}>
+          <div style={{
+            background: PANEL, border: `1px solid ${HAIRLINE}`, borderRadius: 4,
+            padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12,
+          }}>
+            <span style={{ flex: 1, fontSize: 13.5, color: TEXT }}>Dialer mode</span>
+            <select
+              value={data.dialerMode}
+              disabled={busy}
+              onChange={e => patch({ dialer_mode: e.target.value })}
+              style={{
+                background: '#0d0f13', color: TEXT, fontSize: 12,
+                border: `1px solid ${HAIRLINE}`, borderRadius: 3,
+                padding: '6px 8px', fontFamily: 'inherit',
+              }}
+            >
+              {DIALER_MODES.map(m => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* A separate flag rather than a fifth mode. The stored mode drives
+              AMD, number pooling and the abandonment rules on the call path —
+              a value meaning "ask the browser" would hand a compliance decision
+              to the client. This lets the agent pick their own workflow on top
+              of a mode that still governs the call. */}
+          <Toggle
+            label="Let the agent choose their own mode"
+            hint={`Agents can switch between preview, power, progressive and predictive on this campaign. ${data.dialerMode} stays the default they start on, and still governs answering-machine detection and compliance.`}
+            on={data.agentPicksMode}
+            busy={busy}
+            onChange={v => patch({ agent_picks_mode: v })}
+          />
+
+          <Toggle
+            label="Answering machine detection"
+            hint="Holds the line briefly to work out whether a person or a machine picked up, then drops voicemails back into the queue instead of burning an agent on them."
+            on={data.amdEnabled}
+            busy={busy}
+            onChange={v => patch({ amd_enabled: v })}
+          />
+
+          <Toggle
+            label="Record calls"
+            hint="Stores audio for every connected call on this campaign. Check your own obligations before turning this on — consent rules vary by state."
+            on={data.recordingEnabled}
+            busy={busy}
+            onChange={v => patch({ recording_enabled: v })}
+          />
+        </div>
+      </Section>
+
+      <Section title="Protecting The List">
+        {/* The reason a lead vendor asks for this is specific and worth naming:
+            they are handing a list to closers they do not employ, and a visible
+            phone number is a list that can walk out the door. Saying so is the
+            difference between a setting people find and one they never trust. */}
+        <Toggle
+          label="Hide phone numbers until the lead answers"
+          hint="Agents see the lead's name and details but not the number, and it only appears once the lead answers. Blocks CSV export for everyone except you. Use this when you are handing a list to people you do not employ."
+          on={data.maskLeadNumbers}
+          busy={busy}
+          onChange={v => patch({ mask_lead_numbers: v })}
+        />
       </Section>
 
       <Section title="Who Can Dial It">
@@ -339,60 +408,6 @@ export default function CampaignDetail({
         )}
       </Section>
 
-      <Section title="How It Dials">
-        <div style={{ display: 'grid', gap: 8 }}>
-          <div style={{
-            background: PANEL, border: `1px solid ${HAIRLINE}`, borderRadius: 4,
-            padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12,
-          }}>
-            <span style={{ flex: 1, fontSize: 13.5, color: TEXT }}>Dialer mode</span>
-            <select
-              value={data.dialerMode}
-              disabled={busy}
-              onChange={e => patch({ dialer_mode: e.target.value })}
-              style={{
-                background: '#0d0f13', color: TEXT, fontSize: 12,
-                border: `1px solid ${HAIRLINE}`, borderRadius: 3,
-                padding: '6px 8px', fontFamily: 'inherit',
-              }}
-            >
-              {DIALER_MODES.map(m => (
-                <option key={m} value={m}>{m}</option>
-              ))}
-            </select>
-          </div>
-
-          <Toggle
-            label="Answering machine detection"
-            hint="Holds the line briefly to work out whether a person or a machine picked up, then drops voicemails back into the queue instead of burning an agent on them."
-            on={data.amdEnabled}
-            busy={busy}
-            onChange={v => patch({ amd_enabled: v })}
-          />
-
-          <Toggle
-            label="Record calls"
-            hint="Stores audio for every connected call on this campaign. Check your own obligations before turning this on — consent rules vary by state."
-            on={data.recordingEnabled}
-            busy={busy}
-            onChange={v => patch({ recording_enabled: v })}
-          />
-        </div>
-      </Section>
-
-      <Section title="Protecting The List">
-        {/* The reason a lead vendor asks for this is specific and worth naming:
-            they are handing a list to closers they do not employ, and a visible
-            phone number is a list that can walk out the door. Saying so is the
-            difference between a setting people find and one they never trust. */}
-        <Toggle
-          label="Hide phone numbers until a human answers"
-          hint="Agents see the lead's name and details but not the number, and it only appears once a real person picks up. Blocks CSV export for everyone except you. Use this when you are handing a list to people you do not employ."
-          on={data.maskLeadNumbers}
-          busy={busy}
-          onChange={v => patch({ mask_lead_numbers: v })}
-        />
-      </Section>
     </div>
   )
 }

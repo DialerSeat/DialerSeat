@@ -493,7 +493,30 @@ export default function CampaignsPage() {
       
       const res = await fetch(`/api/campaigns/list?user_id=${user?.id}`)
       const data = await res.json()
-      if (data.success) setCampaigns(data.campaigns)
+      if (data.success) {
+        setCampaigns(data.campaigns)
+
+        // ── ARRIVING WITH A CAMPAIGN ALREADY IN MIND ──────────────────────
+        // "Manage campaign" on the Teams campaign view sends people here to do
+        // one specific thing to one specific campaign. Landing them on the full
+        // list and asking them to find it again is making them repeat a choice
+        // they already made one click ago.
+        //
+        // Done here rather than in an effect because the modal needs the loaded
+        // campaign object, and only this function knows when that exists.
+        if (typeof window !== 'undefined') {
+          const wanted = new URLSearchParams(window.location.search).get('edit')
+          if (wanted) {
+            const match = (data.campaigns || []).find((c: any) => c.id === wanted)
+            if (match) {
+              void openSettings(match)
+              // Strip the parameter so a refresh, or a back-navigation later,
+              // does not reopen a panel the person already closed.
+              window.history.replaceState({}, '', window.location.pathname)
+            }
+          }
+        }
+      }
     } finally {
       setFetching(false)
     }

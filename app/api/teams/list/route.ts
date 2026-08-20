@@ -122,7 +122,7 @@ export async function GET(req: NextRequest) {
           .in('team_id', ownedIds),
         supabaseAdmin
           .from('team_campaign_access')
-          .select('id, team_id, team_member_id, campaign_id, payer, is_active, access_source, created_at')
+          .select('id, team_id, team_member_id, campaign_id, payer, is_active, access_source, granted_at')
           .in('team_id', ownedIds)
           .eq('is_active', true),
       ])
@@ -164,7 +164,7 @@ export async function GET(req: NextRequest) {
             campaignId: a.campaign_id,
             payer: a.payer,
             accessSource: a.access_source,
-            createdAt: a.created_at,
+            grantedAt: a.granted_at,
           })),
         }
         const bucket = m.status === 'active' ? membersByTeam : pendingByTeam
@@ -229,7 +229,7 @@ export async function GET(req: NextRequest) {
           .eq('status', 'active'),
         supabaseAdmin
           .from('team_campaign_access')
-          .select('id, team_id, team_member_id, campaign_id, payer, is_active, access_source, created_at')
+          .select('id, team_id, team_member_id, campaign_id, payer, is_active, access_source, granted_at')
           .in('team_id', memberIds)
           .eq('is_active', true),
       ])
@@ -262,7 +262,7 @@ export async function GET(req: NextRequest) {
             campaignId: a.campaign_id,
             payer: a.payer,
             accessSource: a.access_source,
-            createdAt: a.created_at,
+            grantedAt: a.granted_at,
           })),
         })
       }

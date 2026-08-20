@@ -806,9 +806,19 @@ function DialerPageInner() {
       ? campaigns.find(c => c.id === selectedCampaign)
       : undefined
 
+  // ── WHOSE CHOICE IS THE MODE? ──────────────────────────────────────────
+  // The campaign's stored mode, unless its owner has said agents may pick for
+  // themselves — in which case the session override applies, exactly as it
+  // already does under All Active. Nothing is written to the campaign either
+  // way: an agent's workflow preference is not a change to somebody else's
+  // campaign settings.
+  const agentMayPickMode = !!(currentCampaign as any)?.agent_picks_mode
+
   const dialerMode: DialerMode =
     isSpecificCampaign
-      ? ((currentCampaign?.dialer_mode as DialerMode) || 'power')
+      ? (agentMayPickMode
+          ? allActiveOverrideMode
+          : ((currentCampaign?.dialer_mode as DialerMode) || 'power'))
       : isAllActive
         ? allActiveOverrideMode
         : 'power'
@@ -3948,6 +3958,37 @@ function DialerPageInner() {
       setModeDropdownOpen(false)
       setAmdActivity(prev => [
         'PICK A CAMPAIGN BEFORE CHANGING MODE',
+        ...prev,
+      ].slice(0, 5))
+      return
+    }
+
+    // ── AN AGENT'S PICK IS NOT AN EDIT TO SOMEBODY ELSE'S CAMPAIGN ───────
+    // This always persisted the new mode onto the campaign row, so a team agent
+    // switching to preview for their own comfort silently rewrote the owner's
+    // setting for every other agent on that list — and the owner never saw it
+    // happen.
+    //
+    // When the owner has allowed agents to choose, the choice is session-local,
+    // the same way All Active already works. When they have not, the campaign's
+    // mode stands and the agent is told why rather than being left wondering
+    // whether the click registered.
+    // A team campaign carries the team it came from; a personal one does not.
+    // That is the marker for "is this mine to change".
+    const viewerOwnsCampaign = !(currentCampaign as any).teamName
+    if (agentMayPickMode || (!viewerOwnsCampaign && !agentMayPickMode)) {
+      if (!agentMayPickMode) {
+        setModeDropdownOpen(false)
+        setAmdActivity(prev => [
+          `MODE IS SET BY THE CAMPAIGN OWNER — STILL ${dialerMode.toUpperCase()}`,
+          ...prev,
+        ].slice(0, 5))
+        return
+      }
+      setAllActiveOverrideMode(newMode)
+      setModeDropdownOpen(false)
+      setAmdActivity(prev => [
+        `MODE SET TO ${newMode.toUpperCase()} (THIS SESSION)`,
         ...prev,
       ].slice(0, 5))
       return

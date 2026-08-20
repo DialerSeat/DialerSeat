@@ -8,6 +8,9 @@ import TeamsSidebar, {
 import TeamDetail, { type TeamDetailData } from '@/components/teams/TeamDetail'
 import CampaignDetail from '@/components/teams/CampaignDetail'
 import {
+  VolumeChart, ConversionChart, DispositionChart, CampaignChart,
+} from '@/components/teams/AnalyticsCharts'
+import {
   CreateTeamModal,
   CreateCampaignModal,
   CreateCodeModal,
@@ -155,6 +158,29 @@ function StatTile({ label, value, sub, accent }: {
 
 /** Holds its own height so the grid does not reflow when real data lands —
  *  a placeholder that resizes on load makes the whole page jump. */
+/** A dash, not a zero, when there is nothing to report. They are different
+ *  facts and a reader who cannot tell them apart will trust the wrong one. */
+function fmtNum(n: number | null | undefined): string {
+  if (n === null || n === undefined) return '—'
+  return n.toLocaleString()
+}
+
+function fmtPct(n: number | null | undefined): string {
+  if (n === null || n === undefined) return '—'
+  return `${n}%`
+}
+
+/** Hours only once there are hours. "0h 4m" reads as a rounding error. */
+function fmtDuration(seconds: number | null | undefined): string {
+  if (!seconds) return '—'
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const sec = seconds % 60
+  if (h > 0) return `${h}h ${m}m`
+  if (m > 0) return `${m}m ${sec}s`
+  return `${sec}s`
+}
+
 function ChartCard({ title }: { title: string }) {
   return (
     <div style={{
@@ -328,6 +354,12 @@ export default function TeamsPage() {
   const [pending, setPending] = useState(0)
   const [helpOpen, setHelpOpen] = useState(false)
 
+  // Real numbers, counted from call rows. Null until the first load finishes so
+  // the tiles show a dash rather than a zero — "0 calls" and "not loaded yet"
+  // are different facts and must not look the same.
+  const [stats, setStats] = useState<any>(null)
+  const [statsLoading, setStatsLoading] = useState(true)
+
   // Volume standing across every team this person owns. Null for anyone who
   // owns none — they have no bill, so there is no tier to be on.
   const [seatTier, setSeatTier] = useState<any>(null)
@@ -361,7 +393,15 @@ export default function TeamsPage() {
   // changes teams, campaigns or codes re-reads the same source rather than
   // patching local state — the list endpoint already assembles the joins, and
   // two code paths building the same tree is how they drift apart.
-  const refresh = useCallback(async () => {
+  /**
+   * Reload everything this page shows.
+   *
+   * `quiet` exists for the background poll. Without it every tick would set
+   * loading true and blank the panel to "Loading…" for a moment, which is a
+   * far worse experience than the stale data the poll exists to fix.
+   */
+  const refresh = useCallback(async (quiet = false) => {
+    if (!quiet) setLoading(true)
     try {
       // ── detail=owned IS NOT OPTIONAL HERE ────────────────────────────────
       // Without it the endpoint returns teams and nothing else: no campaigns,
@@ -413,13 +453,67 @@ export default function TeamsPage() {
       const incoming = all.reduce((n, t) => n + (t.pendingMembers?.length || 0), 0)
       setPending(incoming)
     } catch {
-      setTeams([])
+      // A failed background tick must not wipe the page. Blanking the tree
+      // because one poll hit a blip would be the sync making things worse than
+      // the staleness it exists to fix.
+      if (!quiet) setTeams([])
     } finally {
-      setLoading(false)
+      if (!quiet) setLoading(false)
     }
   }, [])
 
   useEffect(() => { void refresh() }, [refresh])
+
+  // ── QUIET BACKGROUND SYNC ──────────────────────────────────────────────
+  // Requests and notifications arrive while somebody is looking at this page,
+  // and until now the only way to see one was to reload. An owner watching for
+  // a join request should not have to keep pressing refresh to find out
+  // whether anybody knocked.
+  //
+  // Deliberately invisible: no spinner, no flash, no "syncing" text. A silent
+  // poll that quietly keeps the page true is useful; one that announces itself
+  // every five seconds is a distraction wearing the costume of a feature.
+  // refresh() replaces state wholesale, and React will not re-render rows whose
+  // props are unchanged, so a tick where nothing happened costs nothing visible.
+  //
+  // Scoped to this page only — mounted with the Teams route and torn down when
+  // it unmounts. A sitewide five-second poll would be a permanent load on every
+  // page for a benefit only this one has.
+  //
+  // Paused while the tab is hidden. Polling a page nobody is looking at is
+  // spend with no reader, and a laptop left open on Teams overnight would
+  // otherwise make seventeen thousand requests.
+  useEffect(() => {
+    const tick = () => {
+      if (typeof document !== 'undefined' && document.hidden) return
+      void refresh(true)
+    }
+    const id = setInterval(tick, 5000)
+    return () => clearInterval(id)
+  }, [refresh])
+
+  // ── ONE REQUEST PER (SCOPE, RANGE) ─────────────────────────────────────
+  // Both are questions the endpoint already answers, so changing either
+  // re-asks rather than re-deriving anything on the client. Nothing here is
+  // computed from a cached payload, which is how two views of the same period
+  // end up disagreeing.
+  const loadStats = useCallback(async () => {
+    setStatsLoading(true)
+    try {
+      const params = new URLSearchParams({ range })
+      if (scope.kind === 'team') { params.set('scope', 'team'); params.set('scopeId', scope.teamId) }
+      else if (scope.kind === 'campaign') { params.set('scope', 'campaign'); params.set('scopeId', scope.campaignId) }
+      else if (scope.kind === 'agent') { params.set('scope', 'agent'); params.set('scopeId', scope.userId) }
+      const r = await fetch(`/api/teams/analytics?${params}`).then(x => x.json())
+      setStats(r.success ? r : null)
+    } catch {
+      setStats(null)
+    } finally {
+      setStatsLoading(false)
+    }
+  }, [range, scope])
+
+  useEffect(() => { void loadStats() }, [loadStats])
 
   // The owner's own campaigns, so one can be attached to a team instead of
   // creating a duplicate. Loaded once and after any create — this is a short
@@ -1161,27 +1255,63 @@ export default function TeamsPage() {
                 display: 'grid', gap: 12, marginBottom: 20,
                 gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
               }}>
-                <StatTile label="Total Calls" value="—" sub="Today —" accent="#2563eb" />
-                <StatTile label="Hours Dialed" value="—" sub="Today —" accent="#2563eb" />
-                <StatTile label="Conversions" value="—" sub="Today —" accent="#16a34a" />
-                <StatTile label="Closed" value="—" sub="Today —" accent="#16a34a" />
-                <StatTile label="Talk Time" value="—" sub="avg — /call" accent="#2563eb" />
-                <StatTile label="Best Campaign" value="—" sub="need 5+ calls" accent="#b45309" />
+                {/* A dash means no data, never a stand-in for a number we did
+                    not fetch. Every value below is counted from call rows. */}
+                <StatTile
+                  label="Total Calls"
+                  value={statsLoading ? '—' : fmtNum(stats?.tiles?.totalCalls)}
+                  sub={RANGES.find(r => r.key === range)?.label || ''}
+                  accent="#2563eb"
+                />
+                <StatTile
+                  label="Contact Rate"
+                  value={statsLoading ? '—' : fmtPct(stats?.tiles?.contactRate)}
+                  sub="reached a person"
+                  accent="#2563eb"
+                />
+                <StatTile
+                  label="Conversions"
+                  value={statsLoading ? '—' : fmtNum(stats?.tiles?.conversions)}
+                  sub={fmtPct(stats?.tiles?.conversionRate) + ' of calls'}
+                  accent="#16a34a"
+                />
+                <StatTile
+                  label="Talk Time"
+                  value={statsLoading ? '—' : fmtDuration(stats?.tiles?.talkSecondsTotal)}
+                  sub={stats?.tiles?.avgTalkSeconds
+                    ? `avg ${fmtDuration(stats.tiles.avgTalkSeconds)} /call`
+                    : 'avg — /call'}
+                  accent="#2563eb"
+                />
+                <StatTile
+                  label="Best Campaign"
+                  value={statsLoading ? '—' : (stats?.tiles?.bestCampaign?.name || '—')}
+                  sub={stats?.tiles?.bestCampaign
+                    ? `${stats.tiles.bestCampaign.rate}% of ${stats.tiles.bestCampaign.calls} calls`
+                    : `need ${stats?.tiles?.minCallsToRank ?? 5}+ calls`}
+                  accent="#b45309"
+                />
+                <StatTile
+                  label="Active Seats"
+                  value={String(distinctUserCount || 0)}
+                  sub={seatTier?.percentOff > 0 ? `${seatTier.percentOff}% off weekly` : 'across your teams'}
+                  accent="#b45309"
+                />
               </div>
 
               <div style={{
                 display: 'grid', gap: 14, marginBottom: 14,
                 gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
               }}>
-                <ChartCard title="Call Volume Over Time" />
-                <ChartCard title="Conversion Rate Over Time" />
+                <VolumeChart points={stats?.charts?.volume || []} />
+                <ConversionChart points={stats?.charts?.conversionRate || []} />
               </div>
               <div style={{
                 display: 'grid', gap: 14,
                 gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
               }}>
-                <ChartCard title="Disposition Breakdown" />
-                <ChartCard title="Campaign Performance" />
+                <DispositionChart points={stats?.charts?.dispositions || []} />
+                <CampaignChart points={stats?.charts?.byCampaign || []} />
               </div>
 
             </>

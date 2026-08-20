@@ -68,7 +68,7 @@ export async function GET(
           .order('created_at', { ascending: false }),
         supabaseAdmin
           .from('team_campaign_access')
-          .select('id, team_member_id, campaign_id, payer, is_active, access_source, created_at')
+          .select('id, team_member_id, campaign_id, payer, is_active, access_source, granted_at')
           .eq('team_id', teamId)
           .eq('is_active', true),
       ])
@@ -103,7 +103,7 @@ export async function GET(
           campaignId: a.campaign_id,
           payer: a.payer,
           accessSource: a.access_source,
-          createdAt: a.created_at,
+          grantedAt: a.granted_at,
         })),
       })
 

@@ -20,6 +20,9 @@ const ALLOWED_FIELDS = [
   // A vendor handing a list to closers they do not employ needs the numbers to
   // stay put. Owner-settable per campaign; enforced on every read path.
   'mask_lead_numbers',
+  // Workflow only — the stored dialer_mode still governs the call path.
+  'agent_picks_mode',
+  'conversion_dispositions',
 ] as const
 
 export async function POST(req: Request) {
