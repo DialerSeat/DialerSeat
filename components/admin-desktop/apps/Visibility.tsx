@@ -255,20 +255,22 @@ function RankTable({ rows, labelHead, withVisitors }: {
 
 export default function Visibility() {
   const [range, setRange] = useState('30d')
+  const [audience, setAudience] = useState<'all' | 'anon' | 'authed'>('all')
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const r = await fetch(`/api/admin/visibility?range=${range}`).then(x => x.json())
+      const r = await fetch(`/api/admin/visibility?range=${range}&audience=${audience}`)
+        .then(x => x.json())
       setData(r.success ? r : null)
     } catch {
       setData(null)
     } finally {
       setLoading(false)
     }
-  }, [range])
+  }, [range, audience])
 
   useEffect(() => { void load() }, [load])
 
@@ -319,6 +321,31 @@ export default function Visibility() {
             Site traffic across every page
           </div>
         </div>
+        {/* ── AUDIENCE ──────────────────────────────────────────────────
+            Its own control rather than a filter buried in the tables, because
+            it changes what every number on the page MEANS. Anonymous is the
+            marketing question; signed-in is the product-usage question, and
+            reading one while thinking about the other is how a site convinces
+            itself a page is popular when it is really one agent refreshing. */}
+        <div style={{ display: 'flex', gap: 4, marginRight: 8 }}>
+          {([
+            { key: 'all', label: 'Everyone' },
+            { key: 'anon', label: 'Logged out' },
+            { key: 'authed', label: 'Logged in' },
+          ] as const).map(a => (
+            <button
+              key={a.key}
+              onClick={() => setAudience(a.key)}
+              style={{
+                background: audience === a.key ? LINE2 : 'transparent',
+                border: `1px solid ${audience === a.key ? LINE2 : HAIRLINE}`,
+                color: audience === a.key ? '#06080c' : MUTED,
+                borderRadius: 4, padding: '6px 12px', fontSize: 11,
+                cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600,
+              }}
+            >{a.label}</button>
+          ))}
+        </div>
         <div style={{ display: 'flex', gap: 4 }}>
           {RANGES.map(r => (
             <button
@@ -349,11 +376,22 @@ export default function Visibility() {
             <Tile label="Views today" value={n(t.viewsToday)} sub={`${n(t.visitorsToday)} visitors`} />
             <Tile label={`Views · ${range}`} value={n(t.views)} />
             <Tile label={`Visitors · ${range}`} value={n(t.visitors)} sub="unique per day" />
-            <Tile
-              label="Signed in"
-              value={t.views > 0 ? `${Math.round((t.authedViews / t.views) * 100)}%` : '—'}
-              sub={`${n(t.anonViews)} anonymous`}
-            />
+            {/* Only means something when both audiences are in view. Filtered
+                to one, it would read 0% or 100% every time — a tile whose
+                answer is fixed by the tab above it. */}
+            {audience === 'all' ? (
+              <Tile
+                label="Signed in"
+                value={t.views > 0 ? `${Math.round((t.authedViews / t.views) * 100)}%` : '—'}
+                sub={`${n(t.anonViews)} anonymous`}
+              />
+            ) : (
+              <Tile
+                label="Audience"
+                value={audience === 'anon' ? 'Logged out' : 'Logged in'}
+                sub={audience === 'anon' ? 'visitors only' : 'agents and owners'}
+              />
+            )}
             <Tile
               label="Pages per visit"
               value={t.pagesPerVisit === null || t.pagesPerVisit === undefined ? '—' : String(t.pagesPerVisit)}

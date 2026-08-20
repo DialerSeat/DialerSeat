@@ -34,6 +34,16 @@ export async function GET(req: NextRequest) {
 
   try {
     const range = req.nextUrl.searchParams.get('range') || '30d'
+
+    // ── WHICH AUDIENCE ────────────────────────────────────────────────────
+    // Mixed together the two hide each other. Signed-in traffic is dominated by
+    // the dialer — one agent reloading a queue all day buries every marketing
+    // page under thousands of views — so "which pages do visitors read" was
+    // unanswerable from the combined number, which is the question the site
+    // actually needs answered.
+    const audienceParam = req.nextUrl.searchParams.get('audience') || 'all'
+    const audience: boolean | null =
+      audienceParam === 'anon' ? false : audienceParam === 'authed' ? true : null
     const days = range === '24h' ? 1 : range === '7d' ? 7 : range === '90d' ? 90 : 30
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
     const sinceIso = since.toISOString()
@@ -52,18 +62,27 @@ export async function GET(req: NextRequest) {
     const [
       totalsRes, seriesRes, pathsRes, entryRes, breakdownRes, histRes, todayRes, prevRes,
     ] = await Promise.all([
-      supabase.rpc('pv_totals', { p_since: sinceIso, p_until: null }),
-      supabase.rpc('pv_series', { p_since: sinceIso, p_until: null, p_by_hour: byHour }),
-      supabase.rpc('pv_paths', { p_since: sinceIso, p_until: null, p_limit: TOP_N }),
-      supabase.rpc('pv_entry_pages', { p_since: sinceIso, p_until: null, p_limit: 15 }),
-      supabase.rpc('pv_breakdowns', { p_since: sinceIso, p_until: null, p_limit: 15 }),
-      supabase.rpc('pv_histograms', { p_since: sinceIso, p_until: null }),
-      supabase.rpc('pv_totals', { p_since: todayStart.toISOString(), p_until: null }),
-      supabase
-        .from('page_views')
-        .select('id', { count: 'exact', head: true })
-        .gte('created_at', prevStart.toISOString())
-        .lt('created_at', sinceIso),
+      supabase.rpc('pv_totals', { p_since: sinceIso, p_until: null, p_authed: audience }),
+      supabase.rpc('pv_series', { p_since: sinceIso, p_until: null, p_by_hour: byHour, p_authed: audience }),
+      supabase.rpc('pv_paths', { p_since: sinceIso, p_until: null, p_limit: TOP_N, p_authed: audience }),
+      supabase.rpc('pv_entry_pages', { p_since: sinceIso, p_until: null, p_limit: 15, p_authed: audience }),
+      supabase.rpc('pv_breakdowns', { p_since: sinceIso, p_until: null, p_limit: 15, p_authed: audience }),
+      supabase.rpc('pv_histograms', { p_since: sinceIso, p_until: null, p_authed: audience }),
+      supabase.rpc('pv_totals', { p_since: todayStart.toISOString(), p_until: null, p_authed: audience }),
+      // Same audience as everything else — comparing anonymous traffic against
+      // everybody's would be a percentage between two different populations.
+      (audience === null
+        ? supabase
+            .from('page_views')
+            .select('id', { count: 'exact', head: true })
+            .gte('created_at', prevStart.toISOString())
+            .lt('created_at', sinceIso)
+        : supabase
+            .from('page_views')
+            .select('id', { count: 'exact', head: true })
+            .gte('created_at', prevStart.toISOString())
+            .lt('created_at', sinceIso)
+            .eq('is_authed', audience)),
     ])
 
     if (totalsRes.error) throw totalsRes.error
@@ -131,6 +150,7 @@ export async function GET(req: NextRequest) {
       success: true,
       range,
       days,
+      audience: audienceParam,
       // Kept so the page keeps its shape, and permanently false: there is no
       // cap left to hit.
       truncated: false,

@@ -202,9 +202,67 @@ export async function GET() {
       }))
       .sort((a, b) => b.count - a.count)
 
+    // ── WHO JOINED WITH A CODE TODAY ──────────────────────────────────────
+    // LiveOps answers "is the product working right now". A partner's floor
+    // arriving is part of that: fifteen people redeeming a code in an hour is
+    // the single most useful thing to see live, both because it is good news
+    // and because it is the moment something is most likely to break.
+    //
+    // Read from memberships rather than from the notification log, so it stays
+    // true even if a push failed to send.
+    let recentJoins: any[] = []
+    try {
+      const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+      const { data: joinRows } = await supabase
+        .from('team_members')
+        .select('id, team_id, user_id, status, joined_via_code, created_at')
+        .not('joined_via_code', 'is', null)
+        .gte('created_at', dayAgo)
+        .order('created_at', { ascending: false })
+        .limit(100)
+
+      const rows = joinRows || []
+      if (rows.length > 0) {
+        const [{ data: teamRows }, { data: userRows }, { data: codeRows }] = await Promise.all([
+          supabase.from('teams').select('id, name')
+            .in('id', Array.from(new Set(rows.map((r: any) => r.team_id).filter(Boolean)))),
+          supabase.from('users').select('clerk_id, email, first_name, last_name')
+            .in('clerk_id', Array.from(new Set(rows.map((r: any) => r.user_id)))),
+          supabase.from('team_codes').select('code, code_type, payer')
+            .in('code', Array.from(new Set(rows.map((r: any) => r.joined_via_code)))),
+        ])
+
+        const teamName = new Map((teamRows || []).map((t: any) => [t.id, t.name]))
+        const userById = new Map((userRows || []).map((u: any) => [u.clerk_id, u]))
+        const codeMeta = new Map((codeRows || []).map((c: any) => [c.code, c]))
+
+        recentJoins = rows.map((r: any) => {
+          const u = userById.get(r.user_id)
+          const c = codeMeta.get(r.joined_via_code)
+          return {
+            id: r.id,
+            name: u
+              ? ([u.first_name, u.last_name].filter(Boolean).join(' ').trim() || u.email || 'Someone')
+              : 'Someone',
+            teamName: teamName.get(r.team_id) || 'Team',
+            code: r.joined_via_code,
+            kind: c?.code_type === 'seat' ? 'campaign' : 'team',
+            payer: c?.payer || null,
+            status: r.status,
+            at: r.created_at,
+          }
+        })
+      }
+    } catch (e) {
+      // A panel failing must never take down the ops view it sits in.
+      console.error('[ops-live] recent joins lookup failed', e)
+    }
+
     return NextResponse.json({
       success: true,
       generatedAt: new Date().toISOString(),
+      recentJoins,
+      recentJoinCount: recentJoins.length,
       concurrency,
       inFlight,
       inFlightCount: inFlight.length,

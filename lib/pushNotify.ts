@@ -45,6 +45,7 @@ export type NotifEventType =
   | 'sub_resumed'
   | 'agent_online'
   | 'payment_failed'
+  | 'team_join'
   | 'agent_leg_refused'
   | 'pool_capacity'
   | 'webhook_silence'
@@ -89,6 +90,11 @@ const EVENT_COPY: Record<NotifEventType, { title: string; tag: string }> = {
   // was a cancellation weeks later — or an email from a customer who thought
   // they had been cut off. This is the one revenue event you can still act on.
   payment_failed:  { title: 'Payment Failed',     tag: 'ds-payment-failed' },
+  // Somebody joined through a partner's code rather than finding the site.
+  // Distinct from signup on purpose: a self-serve signup tells you marketing is
+  // working, and this tells you a PARTNERSHIP is — which is the number that
+  // decides whether to chase more of them.
+  team_join:       { title: 'Joined With A Code', tag: 'ds-team-join' },
   // Operational alerts get a marker in the title so they are distinguishable
   // from revenue notifications at a glance on a lock screen — these mean
   // "go look now", not "nice, money".
@@ -109,6 +115,7 @@ interface AdminNotificationPrefs {
   sub_resumed: boolean
   agent_online: boolean
   payment_failed: boolean
+  team_join: boolean
   agent_leg_refused: boolean
   pool_capacity: boolean
   webhook_silence: boolean
@@ -126,7 +133,7 @@ async function getPrefs(): Promise<AdminNotificationPrefs> {
     // A genuine query error (bad connection, RLS issue, etc.) — don't
     // guess, just don't send. Distinct from the "no row" case below,
     // which is a setup gap, not a real signal to suppress everything.
-    return { master_enabled: false, signup: false, account_deleted: false, new_sub: false, resub: false, renewal: false, cancel: false, sub_paused: false, sub_resumed: false, agent_online: false, payment_failed: false, agent_leg_refused: false, pool_capacity: false, webhook_silence: false }
+    return { master_enabled: false, signup: false, account_deleted: false, new_sub: false, resub: false, renewal: false, cancel: false, sub_paused: false, sub_resumed: false, agent_online: false, payment_failed: false, team_join: false, agent_leg_refused: false, pool_capacity: false, webhook_silence: false }
   }
   if (!data) {
     // The seed row (migrations/PUSH_NOTIFICATIONS_2026-07-17.sql) never
@@ -139,7 +146,7 @@ async function getPrefs(): Promise<AdminNotificationPrefs> {
     // (see the CREATE TABLE — every boolean defaults to true), and let
     // the admin explicitly turn things off if they actually want that.
     console.warn('[pushNotify] admin_notification_prefs has no row with id=1 — defaulting to all notifications ON.')
-    return { master_enabled: true, signup: true, account_deleted: true, new_sub: true, resub: true, renewal: true, cancel: true, sub_paused: true, sub_resumed: true, agent_online: true, payment_failed: true, agent_leg_refused: true, pool_capacity: true, webhook_silence: true }
+    return { master_enabled: true, signup: true, account_deleted: true, new_sub: true, resub: true, renewal: true, cancel: true, sub_paused: true, sub_resumed: true, agent_online: true, payment_failed: true, team_join: true, agent_leg_refused: true, pool_capacity: true, webhook_silence: true }
   }
   return data as AdminNotificationPrefs
 }

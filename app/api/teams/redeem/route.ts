@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { createSeatSubscription, isSeatBillingError, agentPaysForThemselves } from '@/lib/teamBilling'
 import { assignOwnerTenantIfWhitelabeled } from '@/lib/teamMembership'
 import { apiError } from '@/lib/apiError'
+import { sendAdminPush } from '@/lib/pushNotify'
 import { syncIfTierChanged } from '@/lib/seatDiscount'
 
 const DEFAULT_SEAT_CENTS = 3500
@@ -329,6 +330,35 @@ export async function POST(req: Request) {
           }))
         )
       }
+    }
+
+    // ── A PARTNER'S CODE WAS USED ────────────────────────────────────────
+    // Distinct from a signup notification on purpose. A self-serve signup says
+    // marketing is working; this says a PARTNERSHIP is, which is the number
+    // that decides whether to go and find more of them. It also tells an admin
+    // a floor is arriving before the seats show up on a statement.
+    //
+    // Awaited rather than fired and forgotten: a promise left dangling when a
+    // serverless response returns is simply discarded, and this one is the only
+    // record that the code was used at all.
+    try {
+      const { data: joiner } = await supabaseAdmin
+        .from('users')
+        .select('email, first_name, last_name')
+        .eq('clerk_id', userId)
+        .maybeSingle()
+      const who =
+        [joiner?.first_name, joiner?.last_name].filter(Boolean).join(' ').trim() ||
+        joiner?.email ||
+        'Someone'
+      const what = codeRow.code_type === 'seat' ? 'campaign code' : 'team code'
+      const payerLabel = codeRow.payer === 'agent' ? 'they pay' : 'owner pays'
+      await sendAdminPush(
+        'team_join',
+        `${who} joined ${team.name} with a ${what} (${code} · ${payerLabel}).`
+      )
+    } catch (e) {
+      console.error('[redeem] join notification failed', e)
     }
 
     // ── DID THIS SEAT CROSS A TIER? ──────────────────────────────────────
