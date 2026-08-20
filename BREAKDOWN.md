@@ -206,6 +206,14 @@ outside a request scope, so a background tick needs a plain `await` fallback.
 **Preview, power and progressive are tuned and fragile.** Predictive work must
 be additive and must not touch the shared claim path.
 
+**Telnyx webhooks are signature-verified, and production fails closed.**
+`TELNYX_PUBLIC_KEY` is set in Vercel and Ed25519 verification is enforced, with
+a five-minute replay window. A missing key in production is a 503, not a
+pass-through — the fail-open path survives only outside production so the
+handler can be exercised locally. Do not reintroduce a key-presence check as the
+enforcement condition; it removes the protection in precisely the case it exists
+for.
+
 **Compliance is not optional.** Calling windows, the abandonment hold, consent
 records and recording rules are product requirements, not nice-to-haves. When in
 doubt, the stricter behaviour is the correct one.
@@ -222,11 +230,5 @@ doubt, the stricter behaviour is the correct one.
 - The campaign view cannot yet upload or replace leads in place.
 - AMD is editable from two screens and can drift between them.
 - Everything is US-only (see Globalization above).
-- **`TELNYX_PUBLIC_KEY` may not be set in Vercel.** Webhook verification is
-  written and correct, but fails OPEN when the key is missing — every call event
-  is then accepted unauthenticated. The unconfigured state now raises an admin
-  push once an hour instead of a console warning nobody reads, but the fix is to
-  set the key and then flip `FAIL_OPEN_WHEN_UNSET` to false in
-  `lib/verifyTelnyxWebhook.ts`.
 - Lead ingest has no rate limit. The token is 192-bit and owner-gated, so this
   is a flooding concern rather than a disclosure one.

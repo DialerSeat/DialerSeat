@@ -28,32 +28,44 @@ import { sendAdminPush } from '@/lib/pushNotify'
 //   Cryptographic signing closes that door outright, instead of relying on
 //   a string nobody can prove wasn't leaked.
 //
-// SAFE ROLLOUT (same fail-open-until-configured shape as verifyWebhook.ts):
-//   If TELNYX_PUBLIC_KEY is unset, verifyTelnyxWebhook() ALLOWS the request
-//   and logs a warning, so handler code can ship before the key is wired up
-//   in Vercel. Once the env var is set, an invalid/missing signature is
-//   REJECTED with 403. Unlike the old shared-secret scheme there's no
-//   "registration side" to keep in sync — Telnyx signs unconditionally on
-//   their end the moment the key exists in their portal, independent of us.
+// ENFORCEMENT: production never fails open. The key is set in Vercel, so the
+//   rollout window this file was written during is over. An invalid or missing
+//   signature is REJECTED with 403, and a MISSING KEY in production is rejected
+//   with 503 rather than waved through — see below. Unlike the old
+//   shared-secret scheme there's no "registration side" to keep in sync —
+//   Telnyx signs unconditionally on their end the moment the key exists in
+//   their portal, independent of us.
 // =============================================================================
 
-const FAIL_OPEN_WHEN_UNSET = true
+// ── PRODUCTION NEVER ACCEPTS AN UNVERIFIED CALL EVENT ──────────────────────
+// This used to be a flat `FAIL_OPEN_WHEN_UNSET = true`: a missing key meant
+// every webhook was waved through unverified. That was a deliberate migration
+// convenience, and it was the right call while the key was still being wired
+// up. It is the wrong call now that the key is set, because the state it
+// permits is indistinguishable from a successful attack — forged "completed"
+// events inflating counters, forged "abandoned" events corrupting the FTC
+// abandon-rate math, which is a compliance number that would simply be wrong
+// with nothing to indicate why.
+//
+// The condition is the ENVIRONMENT, not the key's presence. Keying it on the
+// key means the protection disappears in exactly the scenario it exists for —
+// the variable getting dropped, renamed, or lost in a project migration. Keying
+// it on the environment means production rejects, loudly, and somebody finds
+// out in minutes.
+//
+// Outside production it still fails open, so local development and preview
+// deployments can exercise the handler without the key. Those environments do
+// not receive real traffic; if you point Telnyx at a preview URL, give that
+// environment the key.
+const FAIL_OPEN_WHEN_UNSET = process.env.NODE_ENV !== 'production'
 
-// ── AN UNVERIFIED WEBHOOK MUST NOT BE ABLE TO GO UNNOTICED ─────────────────
-// The fail-open above is a migration convenience: it let the handler ship
-// before the key was wired into Vercel. That was the right call then. The
-// hazard is that it is INVISIBLE — a console.warn in a serverless log nobody
-// reads, on a state where every call event this platform receives is
-// unauthenticated and anyone who knows the URL can post whatever they like.
+// The missing-key state alarms either way. In production it is now also a hard
+// failure, but an alert still matters: a 503'd webhook shows up as calls that
+// connect while every metric reads zero, which is a confusing thing to debug
+// from the symptom end.
 //
-// The comment at the top of this file names the consequence precisely: forged
-// "completed" events inflating counters, forged "abandoned" events corrupting
-// the FTC abandon-rate math. That is a compliance number, and it would be wrong
-// with no indication anything had happened.
-//
-// So the unconfigured state alarms. Once an hour, not per webhook — this fires
-// on a path that runs on every event of every call, and the point is to be
-// noticed, not to become the noise it is warning about.
+// Once an hour, not per webhook — this runs on every event of every call, and
+// the point is to be noticed rather than to become the noise it warns about.
 let lastUnsetAlarmMs = 0
 const UNSET_ALARM_INTERVAL_MS = 60 * 60 * 1000
 
@@ -67,9 +79,9 @@ function alarmUnverified() {
     after(() =>
       sendAdminPush(
         'webhook_silence',
-        'TELNYX_PUBLIC_KEY is not set, so call webhooks are being accepted ' +
-        'WITHOUT signature verification. Anyone who knows the URL can post ' +
-        'call events. Set it in Vercel, then redeploy.',
+        'TELNYX_PUBLIC_KEY is not set. In production every call webhook is ' +
+        'being REJECTED (503) — calls will connect but talk time, AMD and ' +
+        'recordings will all read zero. Set it in Vercel, then redeploy.',
         { title: 'Call webhooks unverified' }
       ).catch(() => {})
     )
@@ -99,8 +111,10 @@ function base64ToUint8Array(b64: string): Uint8Array {
  *   if (bad) return bad
  *   const body = JSON.parse(rawBody)
  *
- * Returns null if authentic (or fail-open with no key configured).
- * Returns a 403 NextResponse if the signature is configured and invalid.
+ * Returns null if authentic. Returns 403 if the signature is missing, invalid,
+ * or replayed. Returns 503 if the key is unset in production. Outside
+ * production a missing key returns null (fail-open) so the handler can be
+ * exercised without it.
  */
 export function verifyTelnyxWebhook(req: Request, rawBody: string): NextResponse | null {
   const publicKeyB64 = process.env.TELNYX_PUBLIC_KEY
@@ -114,7 +128,8 @@ export function verifyTelnyxWebhook(req: Request, rawBody: string): NextResponse
       )
       return null
     }
-    console.error('[verifyTelnyxWebhook] TELNYX_PUBLIC_KEY not set and fail-closed mode on. Rejecting.')
+    alarmUnverified()
+    console.error('[verifyTelnyxWebhook] TELNYX_PUBLIC_KEY not set in production. Rejecting webhook.')
     return NextResponse.json({ error: 'Webhook auth not configured' }, { status: 503 })
   }
 
