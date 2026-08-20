@@ -134,6 +134,12 @@ interface ChargeRow {
   stripe_invoice_id: string | null
 }
 
+// Paged rather than capped. MAX_PAGES is a circuit breaker against a malformed
+// cursor, not a limit on how much somebody may have been billed — at 1,000 a
+// page it allows a hundred thousand charges, which is far past any real account.
+const PAGE = 1000
+const MAX_PAGES = 100
+
 async function totalsFor(
   ownerId: string,
   start: Date,
@@ -146,9 +152,34 @@ async function totalsFor(
     .gte('created_at', start.toISOString())
     .lt('created_at', end.toISOString())
     .order('created_at', { ascending: true })
-    .limit(5000)
+    // ── A STATEMENT MUST NOT TRUNCATE ──────────────────────────────────────
+    // 5,000 sounded generous until the arithmetic: fifty seats billed weekly is
+    // 2,600 charges a year, so an annual statement was one growth year from
+    // silently dropping December — on the one document somebody files with
+    // their accounts.
+    //
+    // Paged to completion instead. A statement that is slow to build is a
+    // statement; a statement that is missing rows is a liability with our logo
+    // on it.
+    .range(0, PAGE - 1)
 
-  const rows = (data || []) as ChargeRow[]
+  let rows = (data || []) as ChargeRow[]
+  if (rows.length === PAGE) {
+    for (let page = 1; page < MAX_PAGES; page++) {
+      const { data: more } = await supabaseAdmin
+        .from('team_seat_charges')
+        .select('id, team_id, agent_id, amount_cents, status, period_start, period_end, created_at, stripe_invoice_id')
+        .eq('owner_id', ownerId)
+        .gte('created_at', start.toISOString())
+        .lt('created_at', end.toISOString())
+        .order('created_at', { ascending: true })
+        .range(page * PAGE, page * PAGE + PAGE - 1)
+      const batch = (more || []) as ChargeRow[]
+      if (batch.length === 0) break
+      rows = rows.concat(batch)
+      if (batch.length < PAGE) break
+    }
+  }
   const paid = rows.filter(r => r.status === 'paid')
   return {
     paidCents: paid.reduce((n, r) => n + (r.amount_cents || 0), 0),
