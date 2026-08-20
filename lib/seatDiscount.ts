@@ -58,6 +58,35 @@ export async function ensureSeatCoupon(percentOff: number): Promise<string | nul
   }
 }
 
+// ── NOTHING HERE MAY BE TRUNCATED ──────────────────────────────────────────
+// Every read in this file feeds a billing decision, so a row that goes missing
+// does not degrade the answer — it produces a different, wrong price. Three
+// separate reads below could truncate: an unbounded select (Supabase stops at
+// 1,000 and reports success), .limit(500) on codes, and .limit(2000) on
+// charges. All three fail in the same direction, under-counting seats and so
+// under-applying the discount the owner earned, and all three only begin to
+// misbehave at exactly the scale the discount tiers exist to reward.
+//
+// Pages until the source is exhausted. There is no ceiling.
+async function readAll<T>(
+  build: (from: number, to: number) => any,
+  label: string,
+): Promise<T[]> {
+  const PAGE = 1000
+  const out: T[] = []
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await build(from, from + PAGE - 1)
+    if (error) {
+      // Louder than returning what we have: a partial read here silently
+      // changes what the customer is charged.
+      throw new Error(`[seatDiscount] ${label} read failed: ${error.message}`)
+    }
+    const rows = (data || []) as T[]
+    out.push(...rows)
+    if (rows.length < PAGE) return out
+  }
+}
+
 /**
  * How many seats is this owner actually billed for, and what does that earn?
  *
@@ -71,12 +100,16 @@ export async function ownerSeatDiscount(ownerId: string): Promise<{
   ownerPaidSeats: number
   totalSeats: number
 }> {
-  const { data: teams } = await supabaseAdmin
-    .from('teams')
-    .select('id')
-    .eq('owner_id', ownerId)
+  const teams = await readAll<{ id: string }>(
+    (from, to) => supabaseAdmin
+      .from('teams')
+      .select('id')
+      .eq('owner_id', ownerId)
+      .range(from, to),
+    'teams',
+  )
 
-  const teamIds = (teams || []).map((t: any) => t.id)
+  const teamIds = teams.map((t: any) => t.id)
   if (teamIds.length === 0) return { percentOff: 0, ownerPaidSeats: 0, totalSeats: 0 }
 
   const { count: totalSeats } = await supabaseAdmin
@@ -94,25 +127,33 @@ export async function ownerSeatDiscount(ownerId: string): Promise<{
     .is('seat_suspended_at', null)
     .eq('billing_override', 'owner')
 
-  const { data: ownerCodes } = await supabaseAdmin
-    .from('team_codes')
-    .select('code')
-    .in('team_id', teamIds)
-    .eq('payer', 'owner')
-    .limit(500)
+  const ownerCodes = await readAll<{ code: string }>(
+    (from, to) => supabaseAdmin
+      .from('team_codes')
+      .select('code')
+      .in('team_id', teamIds)
+      .eq('payer', 'owner')
+      .range(from, to),
+    'owner-pays codes',
+  )
 
   let viaCode = 0
-  const codes = (ownerCodes || []).map((c: any) => c.code).filter(Boolean)
-  if (codes.length > 0) {
-    const { count } = await supabaseAdmin
+  const codes = ownerCodes.map((c: any) => c.code).filter(Boolean)
+  // Chunked because .in() travels in the URL: a long enough list is rejected
+  // outright rather than merely being slow. Summing counts across chunks is
+  // exact — a member joined with one code, so no member is counted twice.
+  const CODE_CHUNK = 200
+  for (let i = 0; i < codes.length; i += CODE_CHUNK) {
+    const { count, error } = await supabaseAdmin
       .from('team_members')
       .select('id', { count: 'exact', head: true })
       .in('team_id', teamIds)
       .eq('status', 'active')
       .is('seat_suspended_at', null)
       .is('billing_override', null)
-      .in('joined_via_code', codes)
-    viaCode = count || 0
+      .in('joined_via_code', codes.slice(i, i + CODE_CHUNK))
+    if (error) throw new Error(`[seatDiscount] code seat count failed: ${error.message}`)
+    viaCode += count || 0
   }
 
   const total = totalSeats || 0
@@ -155,16 +196,19 @@ export async function syncOwnerSeatDiscounts(ownerId: string): Promise<DiscountS
 
   // Live seat subscriptions, from our own records — the id column is named
   // stripe_subscription_item_id but holds a SUBSCRIPTION id.
-  const { data: charges } = await supabaseAdmin
-    .from('team_seat_charges')
-    .select('id, stripe_subscription_item_id')
-    .eq('owner_id', ownerId)
-    .eq('status', 'paid')
-    .not('stripe_subscription_item_id', 'is', null)
-    .limit(2000)
+  const charges = await readAll<{ id: string; stripe_subscription_item_id: string }>(
+    (from, to) => supabaseAdmin
+      .from('team_seat_charges')
+      .select('id, stripe_subscription_item_id')
+      .eq('owner_id', ownerId)
+      .eq('status', 'paid')
+      .not('stripe_subscription_item_id', 'is', null)
+      .range(from, to),
+    'seat charges',
+  )
 
   const subIds = Array.from(
-    new Set((charges || []).map((c: any) => c.stripe_subscription_item_id).filter(Boolean))
+    new Set(charges.map((c: any) => c.stripe_subscription_item_id).filter(Boolean))
   )
   if (subIds.length === 0) return result
 

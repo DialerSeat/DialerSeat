@@ -81,9 +81,9 @@ export async function claimNextReadyAgentForOverflow(
   // query because Supabase's REST client here doesn't give us a stored
   // procedure to do that in one round trip — so we do optimistic-claim-
   // with-retry across a short candidate list instead. Candidate lists are
-  // small (a handful of agents per team in practice), so this is cheap
-  // and safe: the WHERE state='ready' guard on the UPDATE is what
-  // actually prevents double-claiming, not the ordering of this loop.
+  // safe regardless of length: the WHERE state='ready' guard on the UPDATE
+  // is what actually prevents double-claiming, not the ordering of this
+  // loop, and the loop exits on the first agent that accepts.
   const { data: candidates, error } = await supabaseAdmin
     .from('agent_sessions')
     .select('id, user_id')
@@ -92,7 +92,21 @@ export async function claimNextReadyAgentForOverflow(
     .eq('state', 'ready')
     .neq('id', excludeSessionId || '00000000-0000-0000-0000-000000000000')
     .order('last_heartbeat', { ascending: true }) // prefer the agent who's been idle longest
-    .limit(10)
+    // ── HOW MANY AGENTS WE ARE WILLING TO TRY, NOT HOW MANY CAN RECEIVE ────
+    // This was 10, on the reasoning quoted above that "candidate lists are
+    // small (a handful of agents per team in practice)". That stopped being
+    // true the moment a team ran a real floor. With fifty agents ready, ten
+    // candidates means that if those ten all get claimed in the instant
+    // between the read and the update, the call is DROPPED — an abandoned
+    // call, which is an FTC-countable event — while forty idle agents sit
+    // there able to take it.
+    //
+    // Raised well past any realistic simultaneously-ready count. This bounds
+    // the size of one query, not the size of a floor: the loop below exits on
+    // the first successful claim, so in the ordinary case it still tries
+    // exactly one agent. The extra candidates cost nothing until there is
+    // contention, which is precisely when they are needed.
+    .limit(500)
 
   if (error) {
     console.error('[teamOverflow] candidate lookup failed:', error)

@@ -229,6 +229,47 @@ async function checkWebhookSilence(silenceMinutes: number): Promise<AlertResult>
   return { key, fired, reason: `${callCount} calls, 0 events` }
 }
 
+// ── IS ANYTHING REACHABLE WITH THE PUBLIC ANON KEY? ────────────────────────
+// Two exposures were found by hand rather than by any tool: SECURITY DEFINER
+// functions that kept Postgres's default EXECUTE-to-PUBLIC grant, and an anon
+// SELECT policy on a table holding Stripe identifiers. Both were reachable by
+// anyone who read the browser bundle, and both had been that way a long time.
+//
+// A one-off audit proves that day was fine and says nothing about the next
+// migration. security_invariants() states the rules as queries; running it here
+// turns "somebody should check" into something that announces itself.
+//
+// This alert is not rate-limited by severity for a reason: it fires only when a
+// hole is actually open, so it should keep firing until it is closed.
+async function checkSecurityInvariants(): Promise<AlertResult> {
+  const { data, error } = await supabase.rpc('security_invariants')
+  if (error) {
+    return { key: 'security_invariants', fired: false, reason: `rpc failed: ${error.message}` }
+  }
+
+  const rows = (data || []) as Array<{ severity: string; invariant: string; detail: string }>
+  const critical = rows.filter(r => r.severity === 'CRITICAL')
+  if (critical.length === 0) {
+    return {
+      key: 'security_invariants',
+      fired: false,
+      reason: rows.length === 0 ? 'clean' : `${rows.length} warning(s), no critical`,
+    }
+  }
+
+  const fired = await fireOnce(
+    'security_invariants',
+    'webhook_silence',
+    `${critical.length} security invariant(s) broken — data may be reachable with the ` +
+    `public anon key. ${critical[0].detail}`
+  )
+  return {
+    key: 'security_invariants',
+    fired,
+    reason: `${critical.length} critical: ${critical.map(c => c.invariant).join(', ')}`,
+  }
+}
+
 export async function GET(req: Request) {
   const authHeader = req.headers.get('authorization')
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -250,6 +291,9 @@ export async function GET(req: Request) {
       })),
       checkWebhookSilence(config.webhook_silence_minutes).catch(err => ({
         key: 'webhook_silence', fired: false, reason: `threw: ${err?.message ?? err}`,
+      })),
+      checkSecurityInvariants().catch(err => ({
+        key: 'security_invariants', fired: false, reason: `threw: ${err?.message ?? err}`,
       })),
     ])
 

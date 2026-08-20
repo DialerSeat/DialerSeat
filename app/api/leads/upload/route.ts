@@ -108,51 +108,69 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
     }
 
-    const LEAD_LIMIT_PER_CAMPAIGN = 10000
-    const existingCount = campaign.total_leads ?? 0
-    if (existingCount + leads.length > LEAD_LIMIT_PER_CAMPAIGN) {
-      // "Limit reached" on its own leaves the user to work out the arithmetic
-      // and guess at a fix. Give them the three numbers and the way out.
-      const room = Math.max(0, LEAD_LIMIT_PER_CAMPAIGN - existingCount)
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            `This upload would put the campaign over the ${LEAD_LIMIT_PER_CAMPAIGN.toLocaleString()}-lead limit. ` +
-            `It already holds ${existingCount.toLocaleString()} leads, you are adding ${leads.length.toLocaleString()}, ` +
-            (room === 0
-              ? `and there is no room left.`
-              : `and there is room for ${room.toLocaleString()} more.`),
-          detail:
-            room === 0
-              ? 'Create a second campaign for these leads, or delete called leads from this one to free up space.'
-              : `Upload the first ${room.toLocaleString()} rows here and put the rest in a second campaign.`,
-          limit: LEAD_LIMIT_PER_CAMPAIGN,
-          existing: existingCount,
-          attempted: leads.length,
-          room,
-        },
-        { status: 400 }
-      )
-    }
-
     // ── PHONES ALREADY IN THIS CAMPAIGN ───────────────────────────────────
     // Dedupe only ran within the uploaded file, so re-uploading a list — the
     // single most common thing a user does after adding a few rows — silently
     // doubled every lead. The agent then dials the same person twice, which is
     // both a wasted call and a compliance problem.
     //
-    // One column across at most 10k rows; cheap enough to always do.
+    // ASKS ABOUT THE UPLOAD, NOT ABOUT THE CAMPAIGN. This used to select every
+    // phone in the campaign and hold them in a Set, which is why a 10,000-lead
+    // ceiling existed at all: the dedupe, not the dialer, was what could not
+    // scale. Reading a million-lead campaign into memory on every upload is the
+    // real limit, and it is removed by inverting the question — instead of
+    // "what is already here", ask "which of THESE numbers are already here".
+    //
+    // Cost is now proportional to what is being uploaded and completely
+    // independent of how large the campaign already is. A campaign may hold any
+    // number of leads.
+    //
+    // The pre-pass is deliberately over-inclusive: it takes every value in every
+    // row that could be a US phone number, rather than duplicating the column
+    // detection that runs in the validation loop below. Over-inclusion is free
+    // here — the set is only ever consulted with an exact `digits` value that
+    // the loop itself produced, so extra candidates can add rows to the query
+    // but can never change an answer.
     const existingPhones = new Set<string>()
     if (!skipDedupe) {
-      const { data: priorLeads } = await supabaseAdmin
-        .from('leads')
-        .select('phone')
-        .eq('campaign_id', campaign_id)
-        .limit(LEAD_LIMIT_PER_CAMPAIGN)
-      for (const row of priorLeads ?? []) {
-        const d = String(row.phone ?? '').replace(/\D/g, '')
-        if (d) existingPhones.add(d)
+      const candidates = new Set<string>()
+      for (const lead of leads) {
+        if (!lead || typeof lead !== 'object') continue
+        for (const v of Object.values(lead as Record<string, unknown>)) {
+          if (v === null || v === undefined) continue
+          const d = String(v).replace(/\D/g, '')
+          if (d.length === 10 || (d.length === 11 && d.startsWith('1'))) {
+            candidates.add(d)
+          }
+        }
+      }
+
+      // Chunked because PostgREST puts .in() values in the URL, and a long
+      // enough list is rejected outright rather than merely being slow.
+      const CANDIDATE_CHUNK = 1000
+      const all = [...candidates]
+      for (let i = 0; i < all.length; i += CANDIDATE_CHUNK) {
+        const chunk = all.slice(i, i + CANDIDATE_CHUNK)
+        const { data: priorLeads, error: dedupeErr } = await supabaseAdmin
+          .from('leads')
+          .select('phone')
+          .eq('campaign_id', campaign_id)
+          .in('phone', chunk)
+        if (dedupeErr) {
+          // Failing the upload beats silently importing duplicates: a double
+          // entry means the same person is dialed twice, which is the
+          // compliance problem this check exists to prevent.
+          console.error('[leads/upload] dedupe lookup failed', dedupeErr)
+          return NextResponse.json({
+            success: false,
+            error: 'Could not check this campaign for duplicate numbers, so the upload was stopped.',
+            detail: 'Nothing was imported. Try again in a moment.',
+          }, { status: 503 })
+        }
+        for (const row of priorLeads ?? []) {
+          const d = String(row.phone ?? '').replace(/\D/g, '')
+          if (d) existingPhones.add(d)
+        }
       }
     }
 
