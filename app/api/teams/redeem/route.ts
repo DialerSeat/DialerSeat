@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { createSeatSubscription, isSeatBillingError, agentPaysForThemselves } from '@/lib/teamBilling'
 import { assignOwnerTenantIfWhitelabeled } from '@/lib/teamMembership'
 import { apiError } from '@/lib/apiError'
+import { syncIfTierChanged } from '@/lib/seatDiscount'
 
 const DEFAULT_SEAT_CENTS = 3500
 
@@ -328,6 +329,15 @@ export async function POST(req: Request) {
           }))
         )
       }
+    }
+
+    // ── DID THIS SEAT CROSS A TIER? ──────────────────────────────────────
+    // Seat ten has to discount the nine already open, and it has to happen now
+    // rather than on tomorrow's reconcile — somebody onboarding a floor in an
+    // afternoon should see the right price the same afternoon. Only fires on an
+    // actual boundary, so fifteen redemptions do not trigger fifteen syncs.
+    if (memberRow.status === 'active') {
+      await syncIfTierChanged(team.owner_id)
     }
 
     // Whitelabel branding should follow the agent the moment they're

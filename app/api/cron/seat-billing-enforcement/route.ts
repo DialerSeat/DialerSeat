@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 import { createSeatSubscription, isSeatBillingError, agentPaysForThemselves } from '@/lib/teamBilling'
+import { syncOwnerSeatDiscounts } from '@/lib/seatDiscount'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -59,6 +60,15 @@ export async function GET(req: Request) {
     // retry that would have saved it.
     const retried = await retryFailedSeatCharges()
 
+    // ── DISCOUNTS FOLLOW THE SEAT COUNT ──────────────────────────────────
+    // Crossing ten seats has to discount the nine already open, or the tier
+    // silently means "every seat you buy AFTER the tenth" — which is not what
+    // the page says and not what anybody would read it as. Removal matters
+    // equally: an owner who drops back below a tier has stopped earning it, and
+    // a coupon left attached is a billing system that has lost track of what it
+    // charges.
+    const discounts = await reconcileDiscounts()
+
     const cutoff = new Date(Date.now() - GRACE_DAYS * 24 * 60 * 60 * 1000).toISOString()
 
     // Charges that failed and whose period ended more than a week ago. Reading
@@ -76,7 +86,7 @@ export async function GET(req: Request) {
 
     const candidates = staleFailed || []
     if (candidates.length === 0) {
-      return NextResponse.json({ success: true, checked: 0, suspended: 0, retried })
+      return NextResponse.json({ success: true, checked: 0, suspended: 0, retried, discounts })
     }
 
     const memberIds = Array.from(
@@ -125,7 +135,7 @@ export async function GET(req: Request) {
     }
 
     if (toSuspend.length === 0) {
-      return NextResponse.json({ success: true, checked: candidates.length, suspended: 0, retried })
+      return NextResponse.json({ success: true, checked: candidates.length, suspended: 0, retried, discounts })
     }
 
     const now = new Date().toISOString()
@@ -159,6 +169,7 @@ export async function GET(req: Request) {
       checked: candidates.length,
       suspended: toSuspend.length,
       retried,
+      discounts,
       graceDays: GRACE_DAYS,
     })
   } catch (error: any) {
@@ -274,4 +285,40 @@ async function retryFailedSeatCharges(): Promise<RetrySummary> {
     console.log(`[seat-enforcement] recovered ${summary.recovered} seat charge(s) on retry`)
   }
   return summary
+}
+
+
+/**
+ * Re-evaluate every owner who has live seat charges.
+ *
+ * Scoped to owners with real seat subscriptions rather than every account —
+ * somebody who has never opened a seat has nothing to reconcile, and walking
+ * the whole user table daily to discover that would be work with no possible
+ * result.
+ */
+async function reconcileDiscounts(): Promise<{
+  owners: number; updated: number; failed: number
+}> {
+  const out = { owners: 0, updated: 0, failed: 0 }
+
+  const { data: rows } = await supabase
+    .from('team_seat_charges')
+    .select('owner_id')
+    .eq('status', 'paid')
+    .not('stripe_subscription_item_id', 'is', null)
+    .limit(BATCH_LIMIT)
+
+  const owners = Array.from(new Set((rows || []).map((r: any) => r.owner_id).filter(Boolean)))
+  for (const ownerId of owners) {
+    out.owners++
+    try {
+      const r = await syncOwnerSeatDiscounts(ownerId)
+      out.updated += r.updated
+      out.failed += r.failed
+    } catch (err: any) {
+      out.failed++
+      console.error(`[seat-enforcement] discount sync failed for ${ownerId}: ${err?.message || err}`)
+    }
+  }
+  return out
 }

@@ -1,6 +1,7 @@
 import { stripe } from '@/lib/stripe'
 import { supabaseAdmin } from '@/lib/supabase'
 import Stripe from 'stripe'
+import { ensureSeatCoupon, ownerSeatDiscount } from '@/lib/seatDiscount'
 
 
 
@@ -116,9 +117,27 @@ export async function createSeatSubscription(
 
   const description = `Seat: ${params.agentEmail} on ${params.teamName}`
 
+  // ── THE VOLUME DISCOUNT, ON THE ACTUAL CHARGE ─────────────────────────
+  // Computed from the same rule the Teams page prints, so what an owner is
+  // quoted and what leaves their card come from one place. A new seat is
+  // correct from its first invoice; the daily reconcile is what moves the
+  // seats they already had when they cross a tier.
+  //
+  // Never fatal. A coupon lookup failing must not stop a seat being opened —
+  // an agent locked out because a discount could not be applied is a far worse
+  // outcome than a week at full price, and the reconcile fixes it tomorrow.
+  let couponId: string | null = null
+  try {
+    const { percentOff } = await ownerSeatDiscount(params.ownerId)
+    if (percentOff > 0) couponId = await ensureSeatCoupon(percentOff)
+  } catch (err: any) {
+    console.error('[teamBilling] discount lookup failed, opening seat at full price', err?.message || err)
+  }
+
   const subscription = await stripe.subscriptions.create({
     customer: customer.id,
     items: [{ price: SEAT_PRICE_ID }],
+    ...(couponId ? { discounts: [{ coupon: couponId }] } : {}),
     // Named explicitly rather than left to the customer default, which is very
     // often unset — see resolveOwnerCustomer. Without this the first invoice
     // has no card to charge and the seat fails the moment it is created.

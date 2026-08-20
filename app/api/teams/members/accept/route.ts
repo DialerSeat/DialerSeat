@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { createSeatSubscription, isSeatBillingError, agentPaysForThemselves } from '@/lib/teamBilling'
 import { activatePendingTeamMember } from '@/lib/teamMembership'
 import { apiError } from '@/lib/apiError'
+import { syncIfTierChanged } from '@/lib/seatDiscount'
 
 export async function POST(req: Request) {
   try {
@@ -138,6 +139,10 @@ export async function POST(req: Request) {
     }
 
     const { activatedAccessGrants, defaultedToTenantId } = await activatePendingTeamMember(memberId)
+
+    // Approving somebody is how a seat opens on the approval path, so it is
+    // also where an owner can cross a tier. Only fires on an actual boundary.
+    await syncIfTierChanged(userId)
 
     const { data: updated } = await supabaseAdmin
       .from('team_members')
