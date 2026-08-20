@@ -137,10 +137,10 @@ export default function TeamDetail({
         display: 'grid', gap: 12, marginBottom: 4,
         gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
       }}>
-        <Stat label="Campaigns" value={String(team.campaigns.length)} />
         <Stat label="Members" value={String(team.members.length)} />
+        <Stat label="Campaigns" value={String(team.campaigns.length)} />
         <Stat label="Total Leads" value={totalLeads ? totalLeads.toLocaleString() : '—'} />
-        <Stat label="Called" value={calledLeads ? calledLeads.toLocaleString() : '—'} />
+        <Stat label="Dialed" value={calledLeads ? calledLeads.toLocaleString() : '—'} />
       </div>
 
       {team.isOwner && (
