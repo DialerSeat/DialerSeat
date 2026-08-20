@@ -9,6 +9,7 @@ import TeamDetail, { type TeamDetailData } from '@/components/teams/TeamDetail'
 import CampaignDetail from '@/components/teams/CampaignDetail'
 import FloorView from '@/components/teams/FloorView'
 import AgentDetail from '@/components/teams/AgentDetail'
+import { ManageMemberModal } from '@/components/teams/TeamModals'
 import DataTable, { type Column } from '@/components/DataTable'
 import {
   VolumeChart, ConversionChart, DispositionChart, CampaignChart,
@@ -367,6 +368,14 @@ export default function TeamsPage() {
   const [rosterLoading, setRosterLoading] = useState(false)
   const ROSTER_PAGE_SIZE = 50
 
+  // ── PAUSING A SEAT IS THE OWNER'S ONE REAL LEVER ──────────────────────
+  // The modal existed and was never mounted, so every Manage button in the
+  // product pointed at nothing. Pausing is how an owner stops paying for
+  // somebody without removing them, and it is the action the billing copy
+  // keeps telling them to take.
+  const [manageMember, setManageMember] = useState<any>(null)
+  const [manageBusy, setManageBusy] = useState(false)
+
   const [helpOpen, setHelpOpen] = useState(false)
   const [myDecisions, setMyDecisions] = useState<Array<{
     id: string; teamId: string; teamName: string
@@ -721,6 +730,46 @@ export default function TeamsPage() {
   const [assigning, setAssigning] = useState(false)
   const [assignTo, setAssignTo] = useState('')
   const [assignResult, setAssignResult] = useState<string | null>(null)
+
+  const seatAction = async (memberId: string, action: 'pause' | 'resume') => {
+    if (manageBusy) return
+    setManageBusy(true)
+    try {
+      const r = await fetch('/api/teams/members/seat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memberId, action }),
+      }).then(x => x.json())
+      if (!r.success) throw new Error(r.error || 'Could not change the seat')
+      setManageMember(null)
+      void refresh(true)
+      void loadRoster()
+    } catch (e: any) {
+      setError(e.message || 'Could not change the seat')
+    } finally {
+      setManageBusy(false)
+    }
+  }
+
+  const removeMember = async (memberId: string) => {
+    if (manageBusy) return
+    setManageBusy(true)
+    try {
+      const r = await fetch('/api/teams/members/remove', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memberId }),
+      }).then(x => x.json())
+      if (!r.success) throw new Error(r.error || 'Could not remove them')
+      setManageMember(null)
+      void refresh(true)
+      void loadRoster()
+    } catch (e: any) {
+      setError(e.message || 'Could not remove them')
+    } finally {
+      setManageBusy(false)
+    }
+  }
 
   const toggleMember = (id: string) => {
     setAssignResult(null)
@@ -1243,6 +1292,34 @@ export default function TeamsPage() {
                     width: 110,
                     render: (r: any) => r.campaignCount || '—',
                   },
+                  {
+                    key: 'manage',
+                    header: '',
+                    width: 90,
+                    render: (r: any) => (
+                      <button
+                        onClick={e => {
+                          // The row opens the person; this opens their seat.
+                          // Without stopping here, Manage would do both.
+                          e.stopPropagation()
+                          setManageMember({
+                            memberId: r.memberId,
+                            name: r.name,
+                            email: r.email,
+                            teamName: r.teamName,
+                            seatPaidBy: r.billingOverride === 'agent' ? 'agent' : 'owner',
+                            seatSuspendedAt: r.suspended ? 'suspended' : null,
+                            campaignCount: r.campaignCount || 0,
+                          })
+                        }}
+                        style={{
+                          background: 'transparent', border: `1px solid ${HAIRLINE}`,
+                          color: MUTED, borderRadius: 3, padding: '4px 10px',
+                          fontSize: 11.5, cursor: 'pointer', fontFamily: 'inherit',
+                        }}
+                      >Manage</button>
+                    ),
+                  },
                 ] as Array<Column<any>>}
               />
             </>
@@ -1586,6 +1663,17 @@ export default function TeamsPage() {
       </main>
 
       {helpOpen && <HelpModal onClose={() => setHelpOpen(false)} />}
+
+      {manageMember && (
+        <ManageMemberModal
+          member={manageMember}
+          teamName={manageMember.teamName || 'this team'}
+          busy={manageBusy}
+          onClose={() => setManageMember(null)}
+          onSeatAction={seatAction}
+          onRemove={removeMember}
+        />
+      )}
 
       <div className="ts-side" id="ts-side">
         <TeamsSidebar

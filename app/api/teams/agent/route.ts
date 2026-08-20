@@ -148,48 +148,65 @@ export async function GET(req: NextRequest) {
     }
 
     // ── DIALING, ON THIS OWNER'S CAMPAIGNS ONLY ──────────────────────────
-    let calls: any[] = []
-    if (ownerCampaignIds.length > 0) {
-      const { data: callRows } = await supabaseAdmin
-        .from('calls')
-        .select('id, campaign_id, disposition, talk_seconds, created_at')
-        .eq('user_id', agentId)
-        .in('campaign_id', ownerCampaignIds)
-        .gte('created_at', since.toISOString())
-        .order('created_at', { ascending: false })
-        .limit(20000)
-      calls = callRows || []
-    }
-
+    // Aggregated in Postgres. One agent at a thousand calls a day passes the
+    // old 20,000-row cap inside a month, and a capped month reports three
+    // weeks as though it were four.
+    let totalCalls = 0
     let conversions = 0
     let contacted = 0
     let talk = 0
     let talkCalls = 0
+    let lastCallAt: string | null = null
     const byDay = new Map<string, number>()
     const byCampaign = new Map<string, { calls: number; conversions: number }>()
 
-    for (const c of calls) {
-      const disp = (c.disposition || '').toUpperCase()
-      const meta = campaignMeta.get(c.campaign_id)
-      const convSet = new Set<string>(
-        (Array.isArray(meta?.conversion_dispositions) && meta.conversion_dispositions.length > 0
-          ? meta.conversion_dispositions
-          : DEFAULT_CONVERSIONS
-        ).map((d: string) => d.toUpperCase())
-      )
-      const isConv = !!disp && convSet.has(disp)
-      if (isConv) conversions++
-      if (disp && CONTACT_DISPOSITIONS.has(c.disposition)) contacted++
-      const t = typeof c.talk_seconds === 'number' ? c.talk_seconds : 0
-      if (t > 0) { talk += t; talkCalls++ }
+    if (ownerCampaignIds.length > 0) {
+      const { data: agg } = await supabaseAdmin.rpc('call_agg_by_day_campaign', {
+        p_campaign_ids: ownerCampaignIds,
+        p_since: since.toISOString(),
+        p_until: null,
+        p_agent: agentId,
+      })
 
-      const day = c.created_at.slice(0, 10)
-      byDay.set(day, (byDay.get(day) || 0) + 1)
+      for (const r of agg || []) {
+        const n = Number(r.calls) || 0
+        const t = Number(r.talk_seconds) || 0
+        const disp = (r.disposition || '').toUpperCase()
+        const meta = campaignMeta.get(r.campaign_id)
+        const convSet = new Set<string>(
+          (Array.isArray(meta?.conversion_dispositions) && meta.conversion_dispositions.length > 0
+            ? meta.conversion_dispositions
+            : DEFAULT_CONVERSIONS
+          ).map((d: string) => d.toUpperCase())
+        )
+        const isConv = !!disp && convSet.has(disp)
 
-      const bc = byCampaign.get(c.campaign_id) || { calls: 0, conversions: 0 }
-      bc.calls++
-      if (isConv) bc.conversions++
-      byCampaign.set(c.campaign_id, bc)
+        totalCalls += n
+        if (isConv) conversions += n
+        if (r.disposition && CONTACT_DISPOSITIONS.has(r.disposition)) contacted += n
+        talk += t
+        if (t > 0) talkCalls += n
+
+        byDay.set(r.day, (byDay.get(r.day) || 0) + n)
+
+        const bc = byCampaign.get(r.campaign_id) || { calls: 0, conversions: 0 }
+        bc.calls += n
+        if (isConv) bc.conversions += n
+        byCampaign.set(r.campaign_id, bc)
+      }
+
+      // The grouping loses exact timestamps, so "last call" comes from its own
+      // one-row query rather than being inferred from the newest day — a day
+      // bucket cannot tell you whether they stopped at nine or at five.
+      const { data: lastRow } = await supabaseAdmin
+        .from('calls')
+        .select('created_at')
+        .eq('user_id', agentId)
+        .in('campaign_id', ownerCampaignIds)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      lastCallAt = lastRow?.created_at ?? null
     }
 
     // Empty days included, so a gap reads as a day off rather than vanishing
@@ -264,17 +281,17 @@ export async function GET(req: NextRequest) {
         }
       }).sort((a: any, b: any) => b.calls - a.calls),
       stats: {
-        calls: calls.length,
+        calls: totalCalls,
         conversions,
-        conversionRate: calls.length > 0
-          ? Math.round((conversions / calls.length) * 1000) / 10
+        conversionRate: totalCalls > 0
+          ? Math.round((conversions / totalCalls) * 1000) / 10
           : null,
-        contactRate: calls.length > 0
-          ? Math.round((contacted / calls.length) * 1000) / 10
+        contactRate: totalCalls > 0
+          ? Math.round((contacted / totalCalls) * 1000) / 10
           : null,
         talkSeconds: talk,
         avgTalkSeconds: talkCalls > 0 ? Math.round(talk / talkCalls) : null,
-        lastCallAt: calls.length > 0 ? calls[0].created_at : null,
+        lastCallAt,
         // Named so nobody mistakes this for everything the person did.
         scope: isSelf
           ? 'Your team campaigns only'

@@ -31,7 +31,6 @@ const LIVE_HEARTBEAT_SECONDS = 90
 // of campaign ids) and narrowed in memory afterwards.
 const MEMBER_CAP = 10000
 const LIVE_SESSION_CAP = 5000
-const CALL_CAP = 200000
 // The roster is shown quietest-first, which is the only part anybody acts on.
 // Returning ten thousand rows so a browser can render the bottom two hundred is
 // ten thousand rows nobody reads.
@@ -158,28 +157,35 @@ export async function GET(req: NextRequest) {
       new Set((teamCampaignRows || []).map((r: any) => r.campaign_id).filter(Boolean))
     )
 
+    // ── ONE ROW PER AGENT, NOT ONE PER CALL ───────────────────────────────
+    // This pulled every call row for the range and counted them in JavaScript.
+    // Fifty seats at a thousand leads a day is 350,000 rows across a week —
+    // past any cap, and a cap here means an owner's usage figures quietly
+    // describe a fraction of the week while looking like the whole of it.
+    //
+    // Grouped in Postgres, a floor of fifty is fifty rows however hard they
+    // dial.
     const memberSet = new Set(clerkIds)
-    let calls: any[] = []
-    if (scopedCampaignIds.length > 0) {
-      const { data: callRows } = await supabaseAdmin
-        .from('calls')
-        .select('user_id, talk_seconds, created_at')
-        .in('campaign_id', scopedCampaignIds)
-        .gte('created_at', since.toISOString())
-        .limit(CALL_CAP)
-      // A campaign can also be dialed by its owner outside any team, so the
-      // rows are narrowed to actual members rather than assumed to be theirs.
-      calls = (callRows || []).filter((c: any) => memberSet.has(c.user_id))
-    }
-
     const stats = new Map<string, { calls: number; talk: number; today: number; last: string | null }>()
-    for (const c of calls) {
-      const cur = stats.get(c.user_id) || { calls: 0, talk: 0, today: 0, last: null }
-      cur.calls++
-      cur.talk += typeof c.talk_seconds === 'number' ? c.talk_seconds : 0
-      if (new Date(c.created_at) >= todayStart) cur.today++
-      if (!cur.last || c.created_at > cur.last) cur.last = c.created_at
-      stats.set(c.user_id, cur)
+
+    if (scopedCampaignIds.length > 0) {
+      const { data: agg } = await supabaseAdmin.rpc('call_agg_by_agent', {
+        p_campaign_ids: scopedCampaignIds,
+        p_since: since.toISOString(),
+        p_today: todayStart.toISOString(),
+      })
+
+      for (const r of agg || []) {
+        // A campaign can also be dialed by its owner outside any team, so rows
+        // are narrowed to actual members rather than assumed to be theirs.
+        if (!memberSet.has(r.user_id)) continue
+        stats.set(r.user_id, {
+          calls: Number(r.calls) || 0,
+          talk: Number(r.talk_seconds) || 0,
+          today: Number(r.calls_today) || 0,
+          last: r.last_call_at || null,
+        })
+      }
     }
 
     // One row per membership: the same person on two teams is two seats, and
