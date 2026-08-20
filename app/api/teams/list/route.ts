@@ -296,14 +296,56 @@ export async function GET(req: NextRequest) {
     // cannot count toward a discount on the bill.
     let seatTier = null
     if (owned.length > 0) {
-      const { count: activeSeatCount } = await supabaseAdmin
+      const ownedIdsForSeats = owned.map((t: any) => t.id)
+
+      // The whole roster — earns badges and the sales handoff.
+      const { count: totalSeatCount } = await supabaseAdmin
         .from('team_members')
         .select('id', { count: 'exact', head: true })
-        .in('team_id', owned.map((t: any) => t.id))
+        .in('team_id', ownedIdsForSeats)
         .eq('status', 'active')
         .is('seat_suspended_at', null)
 
-      seatTier = summariseSeatTier(activeSeatCount || 0)
+      // Seats this owner is actually billed for — the only ones a discount can
+      // reduce. Counted from intent (the override, or the code they joined
+      // with) rather than from settled charges: charge rows have been
+      // unreliable, and under-counting here would quietly withhold a discount
+      // somebody has earned.
+      const { count: overrideOwnerCount } = await supabaseAdmin
+        .from('team_members')
+        .select('id', { count: 'exact', head: true })
+        .in('team_id', ownedIdsForSeats)
+        .eq('status', 'active')
+        .is('seat_suspended_at', null)
+        .eq('billing_override', 'owner')
+
+      const { data: ownerPayCodes } = await supabaseAdmin
+        .from('team_codes')
+        .select('code')
+        .in('team_id', ownedIdsForSeats)
+        .eq('payer', 'owner')
+
+      let viaCodeCount = 0
+      const codeStrings = (ownerPayCodes || []).map((c: any) => c.code).filter(Boolean)
+      if (codeStrings.length > 0) {
+        const { count } = await supabaseAdmin
+          .from('team_members')
+          .select('id', { count: 'exact', head: true })
+          .in('team_id', ownedIdsForSeats)
+          .eq('status', 'active')
+          .is('seat_suspended_at', null)
+          .is('billing_override', null)
+          .in('joined_via_code', codeStrings)
+        viaCodeCount = count || 0
+      }
+
+      const total = totalSeatCount || 0
+      // Capped at the roster: the two queries are disjoint by construction
+      // (one requires the override set, the other requires it null), but a
+      // count that exceeded the roster would be nonsense on the page.
+      const ownerPaid = Math.min((overrideOwnerCount || 0) + viaCodeCount, total)
+
+      seatTier = summariseSeatTier(ownerPaid, total)
     }
 
     return NextResponse.json({

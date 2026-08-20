@@ -103,8 +103,12 @@ export default function TeamDetail({
    *  lib/seatTiers. Absent for a member viewing somebody else's team, who has
    *  no bill and no business seeing one. */
   seatTier?: {
-    activeSeats: number
+    /** Whole roster, however funded — badges and the sales handoff. */
+    totalSeats: number
+    /** Seats the owner is billed for — the discount, and only the discount. */
+    ownerPaidSeats: number
     percentOff: number
+    salesHandoff: boolean
     tier: { key: string; label: string; badge: string | null; salesHandoff: boolean }
     next: { tier: { label: string; minSeats: number; percentOff: number | null }; seatsAway: number } | null
     badges: string[]
@@ -324,7 +328,7 @@ export default function TeamDetail({
             and conclude the discount is broken.
 
             Weekly, never monthly — seats bill weekly and cancel anytime. */}
-        {team.isOwner && seatTier && (seatTier.percentOff > 0 || (seatTier.next && seatTier.next.seatsAway <= 5)) && (
+        {team.isOwner && seatTier && (seatTier.percentOff > 0 || seatTier.salesHandoff || (seatTier.next && seatTier.next.seatsAway <= 5)) && (
           <div style={{
             background: PANEL, border: `1px solid ${HAIRLINE}`, borderRadius: 4,
             padding: '10px 14px', marginBottom: 10,
@@ -340,14 +344,24 @@ export default function TeamDetail({
                 ))}
               </span>
             )}
+            {/* Both numbers, always, when they differ. An owner shown "18
+                seats" beside "5% off" would reasonably expect the discount to
+                track 18, and seeing it track 6 later reads as a billing bug.
+                Naming the funded count up front is cheaper than that email. */}
             <strong style={{ color: TEXT }}>
-              {seatTier.activeSeats} active {seatTier.activeSeats === 1 ? 'seat' : 'seats'}
+              {seatTier.totalSeats} active {seatTier.totalSeats === 1 ? 'seat' : 'seats'}
             </strong>
             {' across your teams'}
-            {seatTier.percentOff > 0 && (
-              <> · <span style={{ color: '#32ff7e' }}>{seatTier.percentOff}% off your weekly seat cost</span></>
+            {seatTier.ownerPaidSeats !== seatTier.totalSeats && (
+              <> · <strong style={{ color: TEXT }}>{seatTier.ownerPaidSeats}</strong> you pay for</>
             )}
-            {seatTier.tier.salesHandoff ? (
+            {seatTier.percentOff > 0 && (
+              <> · <span style={{ color: '#32ff7e' }}>
+                {seatTier.percentOff}% off your weekly seat cost
+              </span></>
+            )}
+
+            {seatTier.salesHandoff ? (
               <div style={{ marginTop: 4 }}>
                 You are past fifty seats — rates at this size are set individually.
                 Email <strong style={{ color: TEXT }}>sales@dialerseat.com</strong> and
@@ -355,14 +369,34 @@ export default function TeamDetail({
               </div>
             ) : seatTier.next ? (
               <div style={{ marginTop: 4 }}>
+                {/* Deliberately says "seats you pay for". The rung only moves on
+                    funded seats, so counting self-funded ones toward it would be
+                    the panel promising a discount billing will not apply. */}
                 {seatTier.next.seatsAway} more{' '}
-                {seatTier.next.seatsAway === 1 ? 'seat' : 'seats'} reaches{' '}
+                {seatTier.next.seatsAway === 1 ? 'seat' : 'seats'} you pay for reaches{' '}
                 <strong style={{ color: TEXT }}>{seatTier.next.tier.label}</strong>
                 {typeof seatTier.next.tier.percentOff === 'number'
                   ? ` — ${seatTier.next.tier.percentOff}% off weekly.`
                   : ' — a rate we set with you directly. Email sales@dialerseat.com.'}
               </div>
             ) : null}
+
+            {/* A vendor whose agents all self-fund earns no discount by design,
+                and would otherwise see nothing here but a threshold they have
+                no reason to chase. What they have built is still worth saying
+                out loud, and the reward for it is a conversation. */}
+            {!seatTier.salesHandoff
+              && seatTier.percentOff === 0
+              && seatTier.totalSeats >= 10
+              && seatTier.ownerPaidSeats < 10 && (
+              <div style={{ marginTop: 4 }}>
+                Most of your seats are paid for by the agents themselves, so the
+                weekly discount does not apply — it only reduces what{' '}
+                <em style={{ color: MUTED }}>you</em> are billed. A roster this size is
+                worth talking about directly: email{' '}
+                <strong style={{ color: TEXT }}>sales@dialerseat.com</strong>.
+              </div>
+            )}
           </div>
         )}
 

@@ -6,10 +6,25 @@
 // discount quoted in the UI and a discount applied to a card are the two lists
 // that must never disagree.
 //
-// WHAT COUNTS: seats in `active` status that are not suspended, counted across
-// every team the OWNER runs. The owner is the billing entity, so a vendor with
-// three teams of eight is a twenty-four-seat customer, not three small ones.
-// Counting per team would punish exactly the structure this is meant to reward.
+// WHAT COUNTS: two different numbers, because they answer two different
+// questions and conflating them makes the discount incoherent.
+//
+//   ownerPaidSeats — seats the owner is actually billed for. This is what earns
+//   and receives the discount. A rebate is a reduction of what you spend; an
+//   agent-pays seat costs the owner nothing, so discounting it is five percent
+//   of nothing, and counting it toward the threshold would hand an owner a
+//   volume rebate on volume they do not fund.
+//
+//   totalSeats — the whole roster, however each seat is funded. This earns the
+//   badges and triggers the sales handoff, because somebody who has put fifty
+//   agents on the platform has built something worth a conversation even when
+//   every one of them pays their own way. The reward for that is a partnership,
+//   not a discount that mathematically cannot reward them.
+//
+// Both are counted across every team the OWNER runs. The owner is the billing
+// entity, so a vendor with three teams of eight is one twenty-four-seat
+// customer, not three small ones — counting per team would punish exactly the
+// structure this is meant to reward.
 //
 // WHEN IT IS COUNTED: at the moment a seat's weekly charge is raised, holding
 // for that week. Not continuously — recomputing as agents come and go means an
@@ -121,19 +136,37 @@ export function discountedSeatCents(baseCents: number, activeSeats: number): num
 }
 
 export interface SeatTierSummary {
-  activeSeats: number
+  /** The whole roster, however funded. Drives badges and the sales handoff. */
+  totalSeats: number
+  /** Seats the owner is billed for. Drives the discount, and only this. */
+  ownerPaidSeats: number
+  /** Tier earned by the seats the owner pays for. */
   tier: SeatTier
   next: { tier: SeatTier; seatsAway: number } | null
   badges: string[]
   percentOff: number
+  /** True when the roster is big enough to be worth a conversation, even if
+   *  the owner funds few of those seats themselves. */
+  salesHandoff: boolean
 }
 
-export function summariseSeatTier(activeSeats: number): SeatTierSummary {
+export function summariseSeatTier(
+  ownerPaidSeats: number,
+  totalSeats: number = ownerPaidSeats
+): SeatTierSummary {
+  const tier = tierForSeats(ownerPaidSeats)
   return {
-    activeSeats,
-    tier: tierForSeats(activeSeats),
-    next: nextTierForSeats(activeSeats),
-    badges: badgesForSeats(activeSeats),
-    percentOff: automaticPercentOff(activeSeats),
+    totalSeats,
+    ownerPaidSeats,
+    tier,
+    // The rung being chased is the next one up in OWNER-PAID seats, since that
+    // is the only number that moves the discount. Telling someone they are
+    // three seats from 5% off when those three seats would be self-funded
+    // would be the panel promising something the billing cannot deliver.
+    next: nextTierForSeats(ownerPaidSeats),
+    // Recognition follows the roster, not the invoice.
+    badges: badgesForSeats(totalSeats),
+    percentOff: automaticPercentOff(ownerPaidSeats),
+    salesHandoff: tier.salesHandoff || tierForSeats(totalSeats).salesHandoff,
   }
 }

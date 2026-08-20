@@ -297,14 +297,24 @@ function HelpModal({ onClose }: { onClose: () => void }) {
 
         <H>Volume</H>
         <P>
-          Active seats are counted across <B>every team you own</B>, not per team.
-          Three teams of eight is a twenty-four seat account.
+          Seats are counted across <B>every team you own</B>, not per team. Three
+          teams of eight is a twenty-four seat account.
         </P>
         <P>
-          Ten seats earns <B>5% off your weekly seat cost</B>. Twenty-five earns{' '}
-          <B>10%</B>. Your standing is counted when each seat&apos;s weekly charge is
-          raised and holds for that week, so your bill does not move around as people
-          come and go.
+          The discount is earned and applied on <B>seats you pay for</B>. It reduces
+          your bill, so a seat an agent funds themselves cannot move it — that seat
+          costs you nothing to begin with.
+        </P>
+        <P>
+          Ten seats you pay for earns <B>5% off your weekly seat cost</B>.
+          Twenty-five earns <B>10%</B>. Your standing is counted when each
+          seat&apos;s weekly charge is raised and holds for that week, so your bill
+          does not move around as people come and go.
+        </P>
+        <P>
+          Badges follow your whole roster, funded either way. If most of your agents
+          pay their own seats you will not see a discount — but a large roster is
+          worth a direct conversation, so email <B>sales@dialerseat.com</B>.
         </P>
         <P>
           Past fifty seats the rate is set individually. Email{' '}
