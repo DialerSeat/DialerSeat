@@ -517,7 +517,24 @@ async function syncSeatCharge(subscription: Stripe.Subscription) {
     .update(updates)
     .eq('id', seatChargeId)
 
-  if (chargeStatus === 'failed' || chargeStatus === 'voided') {
+  // ── A DECLINE IS NOT AN EVICTION ────────────────────────────────────────
+  // This revoked campaign access the instant Stripe said past_due — the FIRST
+  // failed attempt. Every other part of the billing path assumes the opposite:
+  // the grace period gives seven days, the daily job retries until a card is
+  // attached, and the rule throughout is that a payment problem an agent cannot
+  // see or fix must not stop them working.
+  //
+  // None of that could ever run. Access was already gone before the first retry,
+  // so on a floor of fifty one expired card cut off fifty agents mid-shift.
+  //
+  // Only a TERMINAL state revokes now. past_due and unpaid are states we are
+  // actively chasing, and cron/seat-billing-enforcement is what decides — after
+  // the grace period, and by suspending the seat, which is visible and
+  // reversible rather than silent.
+  const terminal =
+    subscription.status === 'canceled' || subscription.status === 'incomplete_expired'
+
+  if (terminal) {
     const teamMemberId = subscription.metadata?.team_member_id
     if (teamMemberId) {
       await supabase
