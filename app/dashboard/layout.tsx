@@ -287,7 +287,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     primaryWeight = 'normal'
   }
 
-  const TenantBrandDesktop = () => (
+  // Plain JSX values, not components declared mid-render — same reason as
+  // `sidebar` below. Declared inside this function they would get a fresh
+  // identity on every render, and React would throw away and rebuild their
+  // DOM instead of diffing it. Two of these live inside the sidebar, so they
+  // were being destroyed alongside it.
+  const tenantBrandDesktop = (
     <span style={{
       position: 'relative',
       display: 'block',
@@ -307,7 +312,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     </span>
   )
 
-  const TenantBrandMobileTopbar = () => (
+  const tenantBrandMobileTopbar = (
     <span style={{
       position: 'relative',
       display: 'block',
@@ -327,7 +332,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     </span>
   )
 
-  const DefaultBrandDesktop = () => (
+  const defaultBrandDesktop = (
     <>
       <div style={{
         width: '32px',
@@ -361,7 +366,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     </>
   )
 
-  const DefaultBrandMobileTopbar = () => (
+  const defaultBrandMobileTopbar = (
     <>
       <div style={{
         width: 26, height: 26, borderRadius: 6,
@@ -376,7 +381,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     </>
   )
 
-  const Sidebar = () => (
+  // ── PLAIN JSX, NOT A COMPONENT DEFINED MID-RENDER ─────────────────────
+  // This was `const Sidebar = () => (...)`, declared inside DashboardLayout's
+  // body. That creates a NEW function identity on every render, and React
+  // compares component types by identity — so every render of this layout
+  // unmounted the entire sidebar and mounted a fresh one rather than diffing
+  // it. Including the Clerk <UserButton />, which then had to tear down and
+  // rebuild its own DOM each time.
+  //
+  // This layout re-renders a lot: tier, seats, awaiting-approval, lapsed
+  // seats, taken-over seats and the drawer state all land as separate
+  // updates. Each one was destroying and recreating the sidebar, which is
+  // what was being seen — it was worst on the account with the most of those
+  // fetches resolving, which is why it looked like it belonged to one user.
+  //
+  // As a plain JSX value there is no component type to compare, so React
+  // diffs it like any other markup and the DOM survives.
+  const sidebar = (
     <>
       <Link href={logoHref} style={{
         display: 'flex',
@@ -390,7 +411,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         height: tenantLogoUrl ? 74 : 64,
         background: 'transparent',
       }}>
-        {tenantLogoUrl ? <TenantBrandDesktop /> : <DefaultBrandDesktop />}
+        {tenantLogoUrl ? tenantBrandDesktop : defaultBrandDesktop}
       </Link>
 
       <nav style={{
@@ -598,7 +619,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       />
 
       <aside id="ds-menu-drawer" className="ds-sidebar">
-        <Sidebar />
+        {sidebar}
       </aside>
 
       <div className="ds-mobile-content" style={{ flex: 1, minWidth: 0 }}>
@@ -647,7 +668,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             left: '50%',
             transform: 'translateX(-50%)',
           }}>
-            {tenantLogoUrl ? <TenantBrandMobileTopbar /> : <DefaultBrandMobileTopbar />}
+            {tenantLogoUrl ? tenantBrandMobileTopbar : defaultBrandMobileTopbar}
           </Link>
 
           {/* No UserButton here. The one in the sidebar is the only Clerk
