@@ -62,14 +62,53 @@ export async function POST(req: Request) {
     if (existingPaid?.stripe_subscription_item_id) {
       stripeSubId = existingPaid.stripe_subscription_item_id
     } else {
-      const { data: pendingCharge } = await supabaseAdmin
+      // ── A FAILED CHARGE IS A RETRY, NOT AN ABSENCE ──────────────────────
+      // This looked for 'pending' only. The first accept marks a charge
+      // 'failed' when the card is declined, so on the SECOND accept there was
+      // no pending row, the whole billing block below was skipped,
+      // billingIssue stayed null, and the member was activated — with nobody
+      // charged and nothing recording that.
+      //
+      // It looked like the retry had worked. It had only stopped trying.
+      //
+      // 'failed' is included, and reset to 'pending' before the attempt so a
+      // charge is never left claiming to have failed while it is in flight.
+      const { data: retryCharge } = await supabaseAdmin
         .from('team_seat_charges')
-        .select('id')
+        .select('id, status')
         .eq('team_member_id', memberId)
-        .eq('status', 'pending')
+        .in('status', ['pending', 'failed'])
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle()
+
+      // No row at all — an approval-mode join always writes one at redeem, so
+      // this is a member who arrived some other way. Raise it now rather than
+      // letting them through unbilled, which is the same hole in a different
+      // shape.
+      let pendingCharge = retryCharge
+      if (!pendingCharge) {
+        const { data: created } = await supabaseAdmin
+          .from('team_seat_charges')
+          .insert({
+            team_id: team.id,
+            owner_id: userId,
+            agent_id: member.user_id,
+            team_member_id: memberId,
+            amount_cents: 3500,
+            status: 'pending',
+            period_start: new Date().toISOString(),
+            period_end: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          })
+          .select('id, status')
+          .single()
+        pendingCharge = created ?? null
+      } else if (pendingCharge.status === 'failed') {
+        await supabaseAdmin
+          .from('team_seat_charges')
+          .update({ status: 'pending', last_attempt_at: new Date().toISOString() })
+          .eq('id', pendingCharge.id)
+      }
 
       // Already paying for DialerSeat? Then there is no seat to buy. Raising a
       // charge here would bill the owner for access the agent already funds,
@@ -135,7 +174,11 @@ export async function POST(req: Request) {
           console.error(`[teams/accept] seat charge failed for member ${memberId}: ${reason}`)
           await supabaseAdmin
             .from('team_seat_charges')
-            .update({ status: 'failed' })
+            .update({
+              status: 'failed',
+              failure_reason: reason,
+              last_attempt_at: new Date().toISOString(),
+            })
             .eq('id', pendingCharge.id)
           billingIssue = reason
         }
@@ -153,13 +196,32 @@ export async function POST(req: Request) {
     // fixes their card and accepts again, and the awaiting-approval banner
     // keeps telling the agent exactly where things stand in the meantime.
     if (billingIssue) {
+      // ── SAY WHICH KIND OF FAILURE, AND WHAT TO DO ABOUT IT ──────────────
+      // "This seat could not be billed" told an owner nothing they could act
+      // on. The two situations behind it need opposite responses: a card
+      // problem needs a new card, and a transient Stripe or network failure
+      // needs the same button pressed again.
+      //
+      // isSeatBillingError already distinguishes them — no_card and
+      // no_customer mean there is nothing to charge, everything else is the
+      // attempt itself failing.
+      const noCardOnFile = /^(no_card|no_customer):/.test(billingIssue)
+
       return NextResponse.json({
         success: false,
-        error: 'This seat could not be billed, so the member has not been accepted.',
-        detail:
-          'Update the payment method on your account and accept them again. ' +
-          'They stay in Requests until then, and nothing about their invite has been lost.',
+        error: noCardOnFile
+          ? 'There is no working payment method on your account, so this seat could not be billed.'
+          : 'The payment for this seat did not go through, so the member has not been accepted yet.',
+        detail: noCardOnFile
+          ? 'Add or update your card in Billing, then accept them again. They stay ' +
+            'in Requests until you do, and their invite is not lost.'
+          : 'Try accepting again — this is often temporary. If it keeps failing, ' +
+            'check the card on file in Billing. They stay in Requests either way, ' +
+            'and their invite is not lost.',
+        // The raw Stripe message, for the owner who wants to know exactly what
+        // their bank said rather than a paraphrase of it.
         billingIssue,
+        canRetry: !noCardOnFile,
         memberStatus: 'pending',
       }, { status: 402 })
     }

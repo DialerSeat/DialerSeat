@@ -298,6 +298,31 @@ export default function SettingsPage() {
   // the existing Stripe subscription. A genuinely lapsed subscription has
   // no live Stripe subscription left to resume, so that case still needs to
   // go through /billing to start a fresh one.
+  // ── MANAGE THE CARD, NOT JUST SPEND WITH IT ───────────────────────────
+  // Opens Stripe's hosted portal: add a card, replace an expired one, keep
+  // several on file, read past invoices. Hosted rather than built here so no
+  // card number ever touches this application.
+  const [portalBusy, setPortalBusy] = useState(false)
+  const [portalError, setPortalError] = useState<string | null>(null)
+
+  const openBillingPortal = async () => {
+    if (portalBusy) return
+    setPortalBusy(true)
+    setPortalError(null)
+    try {
+      const r = await fetch('/api/stripe/portal', { method: 'POST' }).then(x => x.json())
+      if (r.success && r.url) {
+        window.location.href = r.url
+        return
+      }
+      setPortalError([r.error, r.detail].filter(Boolean).join(' '))
+    } catch {
+      setPortalError('Could not reach Stripe. Try again in a moment.')
+    } finally {
+      setPortalBusy(false)
+    }
+  }
+
   const handleResubscribe = async () => {
     if (sub?.tier === 'lapsed') {
       window.location.href = '/billing'
@@ -687,6 +712,38 @@ export default function SettingsPage() {
 
         {message && <div style={successStyle}>{message}</div>}
         {error && <div style={errorStyle}>{error}</div>}
+
+        {/* Always available, not only when something has gone wrong. The card
+            on file is worth being able to see and change on an ordinary day —
+            and when a seat charge fails, the instruction to update it finally
+            has somewhere to point. */}
+        {!isAdmin && (
+          <div style={{ marginBottom: 18 }}>
+            <button
+              onClick={openBillingPortal}
+              disabled={portalBusy}
+              style={{
+                background: 'transparent',
+                border: '1px solid var(--brand-primary)',
+                color: 'var(--brand-primary)',
+                borderRadius: 6, padding: '10px 16px',
+                fontSize: 12, letterSpacing: 1, fontWeight: 600,
+                cursor: portalBusy ? 'default' : 'pointer',
+                opacity: portalBusy ? 0.6 : 1,
+                fontFamily: 'inherit',
+              }}
+            >{portalBusy ? 'Opening Stripe…' : 'Manage payment methods & invoices'}</button>
+            <div style={{ fontSize: 11.5, color: '#80848e', marginTop: 6, lineHeight: 1.6 }}>
+              Add or replace a card, keep more than one on file, and download past invoices.
+              Handled by Stripe — card details never reach DialerSeat.
+            </div>
+            {portalError && (
+              <div style={{ fontSize: 12, color: '#ff6464', marginTop: 8, lineHeight: 1.6 }}>
+                {portalError}
+              </div>
+            )}
+          </div>
+        )}
 
         {showResubscribe && (
           <div style={resubscribeBoxStyle}>
