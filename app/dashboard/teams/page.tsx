@@ -7,6 +7,7 @@ import TeamsSidebar, {
 } from '@/components/teams/TeamsSidebar'
 import TeamDetail, { type TeamDetailData } from '@/components/teams/TeamDetail'
 import CampaignDetail from '@/components/teams/CampaignDetail'
+import { isOpenAccessMode } from '@/lib/campaignAccess'
 import FloorView from '@/components/teams/FloorView'
 import AgentDetail from '@/components/teams/AgentDetail'
 import { ManageMemberModal } from '@/components/teams/TeamModals'
@@ -118,7 +119,9 @@ function toSidebarTeams(teams: ApiTeam[]): SidebarTeam[] {
       campaigns: (team.campaigns || []).map(tc => {
         // accessMode 'free' opens a campaign to the whole team, so every member
         // may work it. Anything else means the roster is a grant list.
-        const openToTeam = tc.accessMode === 'free'
+        // 'public' is open too — see lib/campaignAccess. Reading 'free' only
+        // is what made a public campaign show "No agents assigned".
+        const openToTeam = isOpenAccessMode(tc.accessMode)
         const eligible = openToTeam
           ? members
           : members.filter(m => (m.campaignAccess || []).some(a => a.campaignId === tc.campaignId))

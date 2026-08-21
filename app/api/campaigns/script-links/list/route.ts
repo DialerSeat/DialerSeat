@@ -56,6 +56,11 @@ export async function GET(req: Request) {
       .from('scripts')
       .select('id, user_id, team_id, name, body, sort_order')
       .eq('user_id', userId)
+      // Personal campaign scripts are not library scripts. They belong to one
+      // agent on one campaign and have no business in a picker for attaching
+      // scripts to campaigns — including the owner's own, which would
+      // otherwise let them attach a private note to a shared campaign.
+      .is('campaign_id', null)
 
     let teamScripts: any[] = []
     if (teamIds.length > 0) {
@@ -64,6 +69,11 @@ export async function GET(req: Request) {
         .select('id, user_id, team_id, name, body, sort_order')
         .in('team_id', teamIds)
         .neq('user_id', userId)
+        // Belt and braces. A personal script leaves team_id null so it cannot
+        // reach this branch anyway, but this is the query that would leak an
+        // agent's private script to their owner if that ever stopped being
+        // true, so it says so explicitly.
+        .is('campaign_id', null)
       teamScripts = ts || []
     }
 

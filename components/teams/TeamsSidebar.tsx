@@ -45,8 +45,9 @@ export interface SidebarAgent {
 export interface SidebarCampaign {
   id: string
   name: string
-  /** Open to every member (team_campaigns.access_mode = 'free'), so no
-   *  per-agent grant is needed. Marked, because it changes who can work it. */
+  /** Open to every member — access_mode 'free' OR 'public', see
+   *  lib/campaignAccess. No per-agent grant is needed. This docstring used to
+   *  say 'free' alone, and two callers were written from it. */
   openToTeam?: boolean
   agents: SidebarAgent[]
 }

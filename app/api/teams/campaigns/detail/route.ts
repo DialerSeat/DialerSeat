@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
+import { isOpenAccessMode } from '@/lib/campaignAccess'
 
 // ─────────────────────────────────────────────────────────────────────────
 // ONE CAMPAIGN, EVERYTHING ABOUT IT
@@ -322,7 +323,7 @@ async function resolveMemberAccess(
     .eq('campaign_id', campaignId)
 
   const openTeams = new Set(
-    (attach || []).filter((a: any) => a.access_mode === 'free').map((a: any) => a.team_id)
+    (attach || []).filter((a: any) => isOpenAccessMode(a.access_mode)).map((a: any) => a.team_id)
   )
 
   // Two different questions, deliberately separated. Membership decides

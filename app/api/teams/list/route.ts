@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 import { loadScriptsByCampaign } from '@/lib/campaignScriptLinks'
 import { summariseSeatTier } from '@/lib/seatTiers'
+import { isOpenAccessMode } from '@/lib/campaignAccess'
 
 // ── EXPLICIT, SO TRUNCATION STOPS BEING SILENT ──────────────────────────
 // Supabase caps a select at 1,000 rows and returns them without erroring, so an
@@ -363,7 +364,7 @@ export async function GET(req: NextRequest) {
         // A campaign the owner opened to the whole team is theirs to dial too,
         // without anybody having granted it row by row.
         for (const c of campsByTeamId[t.id] || []) {
-          if (c.accessMode === 'free' || c.accessMode === 'public') granted.add(c.campaignId)
+          if (isOpenAccessMode(c.accessMode)) granted.add(c.campaignId)
         }
 
         return {

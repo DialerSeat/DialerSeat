@@ -177,6 +177,13 @@ export default function CampaignDetail({
   const [myDaily, setMyDaily] = useState<Array<{ day: string; calls: number }>>([])
   const [memberRecording, setMemberRecording] = useState(false)
   const [openScript, setOpenScript] = useState<string | null>(null)
+  // The viewer's own scripts on this campaign. Nobody else can read these —
+  // not other agents, not the campaign owner. See /api/scripts/personal.
+  const [myScriptsPersonal, setMyScriptsPersonal] = useState<Array<{
+    id: string; name: string; body: string
+  }>>([])
+  const [editingScript, setEditingScript] = useState<{ id?: string; name: string; body: string } | null>(null)
+  const [scriptBusy, setScriptBusy] = useState(false)
   const [origin, setOrigin] = useState('')
   const [copied, setCopied] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -204,6 +211,7 @@ export default function CampaignDetail({
       setMyDaily(Array.isArray(r.myDailyCalls) ? r.myDailyCalls : [])
       setMemberRecording(!!r.recordingEnabled)
       setCanDial(r.canDial !== false)
+      if (r.viewerRole === 'member') void loadPersonalScripts()
       setError(null)
     } catch (e: any) {
       setError(e.message || 'Could not load campaign')
@@ -353,6 +361,54 @@ export default function CampaignDetail({
   const pct = data.totalLeads > 0
     ? Math.round((data.calledLeads / data.totalLeads) * 100)
     : 0
+
+  const loadPersonalScripts = async () => {
+    try {
+      const r = await fetch(
+        `/api/scripts/personal?campaign_id=${encodeURIComponent(campaignId)}`
+      ).then(x => x.json())
+      if (r.success) setMyScriptsPersonal(r.scripts || [])
+    } catch {
+      // A private note failing to load must not take the page down with it.
+    }
+  }
+
+  const savePersonalScript = async () => {
+    if (!editingScript || scriptBusy) return
+    const name = editingScript.name.trim()
+    if (!name) return
+    setScriptBusy(true)
+    try {
+      const isEdit = !!editingScript.id
+      const r = await fetch('/api/scripts/personal', {
+        method: isEdit ? 'PATCH' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(
+          isEdit
+            ? { id: editingScript.id, name, body: editingScript.body }
+            : { campaignId, name, body: editingScript.body }
+        ),
+      }).then(x => x.json())
+      if (!r.success) throw new Error(r.error || 'Could not save that script')
+      setEditingScript(null)
+      await loadPersonalScripts()
+    } catch (e: any) {
+      setError(e?.message || 'Could not save that script')
+    } finally {
+      setScriptBusy(false)
+    }
+  }
+
+  const deletePersonalScript = async (id: string) => {
+    if (scriptBusy) return
+    setScriptBusy(true)
+    try {
+      await fetch(`/api/scripts/personal?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+      await loadPersonalScripts()
+    } finally {
+      setScriptBusy(false)
+    }
+  }
 
   // ── WHAT A CAMPAIGN LOOKS LIKE TO SOMEBODY WHO DIALS IT ────────────────
   // Previously this screen answered an agent with red text saying the campaign
@@ -545,6 +601,136 @@ export default function CampaignDetail({
           How this campaign dials, what it records, and who else is on it are set
           by whoever runs it. If something here looks wrong, they are the ones
           who can change it.
+        </div>
+
+        {/* ── THEIR OWN SCRIPTS ────────────────────────────────────────────
+            Separate from the campaign's scripts above, and deliberately so.
+            Those belong to whoever runs the campaign; these belong to the
+            person reading the page. Nobody else can see them — not the other
+            agents on the campaign, not the owner.
+
+            Said out loud on screen rather than left to be inferred. An agent
+            who suspects their manager can read their notes will not write
+            anything worth keeping in them. */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          marginBottom: 10,
+        }}>
+          <span style={{ fontSize: 11, letterSpacing: 2, color: DIM }}>
+            YOUR OWN SCRIPTS
+          </span>
+          {!editingScript && (
+            <button
+              style={{ ...btn, padding: '5px 10px', fontSize: 11.5 }}
+              onClick={() => setEditingScript({ name: '', body: '' })}
+            >+ Add</button>
+          )}
+        </div>
+
+        <div style={{ marginBottom: 22 }}>
+          <div style={{ fontSize: 11.5, color: DIM, lineHeight: 1.6, marginBottom: 10 }}>
+            Only you can see these. Not the other agents on this campaign, and
+            not whoever runs it.
+          </div>
+
+          {editingScript && (
+            <div style={{
+              background: PANEL, border: `1px solid ${HAIRLINE}`,
+              borderRadius: 4, padding: 12, marginBottom: 8,
+            }}>
+              <input
+                autoFocus
+                value={editingScript.name}
+                onChange={e => setEditingScript({ ...editingScript, name: e.target.value })}
+                placeholder="What is this for? e.g. Gatekeeper"
+                maxLength={100}
+                style={{
+                  width: '100%', boxSizing: 'border-box', marginBottom: 8,
+                  background: '#0d0f13', color: TEXT, fontSize: 13,
+                  border: `1px solid ${HAIRLINE}`, borderRadius: 3,
+                  padding: '8px 10px', fontFamily: 'inherit',
+                }}
+              />
+              <textarea
+                value={editingScript.body}
+                onChange={e => setEditingScript({ ...editingScript, body: e.target.value })}
+                placeholder="Write it how you would say it."
+                rows={6}
+                style={{
+                  width: '100%', boxSizing: 'border-box', resize: 'vertical',
+                  background: '#0d0f13', color: TEXT, fontSize: 13, lineHeight: 1.6,
+                  border: `1px solid ${HAIRLINE}`, borderRadius: 3,
+                  padding: '8px 10px', fontFamily: 'inherit',
+                }}
+              />
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <button
+                  style={{
+                    ...btn, borderColor: ACCENT, color: '#fff', background: ACCENT,
+                    opacity: !editingScript.name.trim() || scriptBusy ? 0.5 : 1,
+                  }}
+                  disabled={!editingScript.name.trim() || scriptBusy}
+                  onClick={savePersonalScript}
+                >{scriptBusy ? 'Saving…' : 'Save'}</button>
+                <button style={btn} onClick={() => setEditingScript(null)}>Cancel</button>
+                {editingScript.id && (
+                  <button
+                    style={{ ...btn, marginLeft: 'auto', borderColor: '#7f1d1d', color: '#ff6464' }}
+                    disabled={scriptBusy}
+                    onClick={async () => {
+                      const id = editingScript.id!
+                      setEditingScript(null)
+                      await deletePersonalScript(id)
+                    }}
+                  >Delete</button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {myScriptsPersonal.length === 0 && !editingScript ? (
+            <div style={{
+              background: PANEL, border: `1px dashed ${HAIRLINE}`, borderRadius: 4,
+              padding: 14, fontSize: 12.5, color: DIM, lineHeight: 1.7,
+            }}>
+              Nothing here yet. Keep your own opener, a rebuttal that keeps
+              working, or a note about this list — whatever you want in front of
+              you when the call connects.
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gap: 6 }}>
+              {myScriptsPersonal.map(sc => (
+                <div key={sc.id} style={{
+                  background: PANEL, border: `1px solid ${HAIRLINE}`, borderRadius: 4,
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <button
+                      onClick={() => setOpenScript(openScript === sc.id ? null : sc.id)}
+                      style={{
+                        flex: 1, textAlign: 'left', background: 'transparent',
+                        border: 0, color: TEXT, fontSize: 13.5, padding: '12px 14px',
+                        cursor: 'pointer', fontFamily: 'inherit',
+                      }}
+                    >{openScript === sc.id ? '▾' : '▸'} {sc.name}</button>
+                    <button
+                      onClick={() => setEditingScript({ id: sc.id, name: sc.name, body: sc.body })}
+                      style={{
+                        background: 'transparent', border: 0, color: DIM,
+                        fontSize: 11.5, padding: '12px 14px', cursor: 'pointer',
+                        fontFamily: 'inherit',
+                      }}
+                    >Edit</button>
+                  </div>
+                  {openScript === sc.id && (
+                    <div style={{
+                      padding: '0 14px 14px', fontSize: 13, lineHeight: 1.7,
+                      color: DIM, whiteSpace: 'pre-wrap',
+                    }}>{sc.body || <span style={{ opacity: 0.6 }}>Empty</span>}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* ── EVERYTHING THEY HAVE DONE HERE ───────────────────────────────

@@ -54,7 +54,7 @@ SCHEMA = {
  'predictive_dial_groups': 'campaign_id,created_at,id,lines_attempted,lines_lookup,resolved_at,routed_at,status,triggering_agent_id,winning_agent_id,winning_call_id',
  'promo_banner_status': 'bg_color,enabled,id,message,text_color,updated_at,updated_by',
  'push_subscriptions': 'auth,clerk_id,created_at,endpoint,id,last_used_at,p256dh,user_agent',
- 'scripts': 'body,created_at,id,name,sort_order,team_id,updated_at,user_id',
+ 'scripts': 'body,campaign_id,created_at,id,name,sort_order,team_id,updated_at,user_id',
  'stripe_events': 'attempts,error_message,event_id,event_type,livemode,processed_at,processing_status,received_at',
  'subdomain_history': 'created_at,id,new_slug,old_slug,redirects_until,tenant_id',
  'subscriptions': 'cancel_at_period_end,canceled_at,created_at,current_period_end,current_period_start,discount_coupon,id,last_event_at,paused_at,plan,status,stripe_customer_id,stripe_price_id,stripe_subscription_id,trial_end,trial_start,updated_at,user_id',
