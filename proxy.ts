@@ -47,6 +47,22 @@ const isBillingOrOnboardingRoute = createRouteMatcher([
   '/billing(.*)',
   '/onboarding(.*)',
   '/api/stripe/(.*)',
+  // ── THE INVITED AGENT HAS NO SUBSCRIPTION YET. THAT IS THE POINT. ─────
+  // Without these, the catch-all at the bottom of this file 307s every
+  // request from a user with no active plan to /welcome — including the
+  // fetches the billing page makes to check and redeem a team code. The
+  // browser follows the redirect, gets HTML back with a 200, JSON parsing
+  // fails, and the page concludes the code is bad.
+  //
+  // That is what produced "promo code not found or expired" for a code that
+  // was perfectly valid: the endpoint that would have recognised it was never
+  // reached. The failure was in the gate, and every error message downstream
+  // was describing a code that had never actually been looked at.
+  //
+  // A person with no subscription redeeming an invite is not an edge case
+  // here — it is the entire onboarding path for a team.
+  '/api/teams/redeem(.*)',
+  '/api/teams/activate-existing-subscriber',
 ])
 
 const isActiveOnlyRoute = createRouteMatcher([

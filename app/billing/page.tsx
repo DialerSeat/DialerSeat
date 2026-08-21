@@ -419,7 +419,19 @@ export default function BillingPage() {
         return
       }
       if (pv.status !== 404) {
-        setCodeError(pvData?.error || 'That code could not be checked right now. Try again in a moment.')
+        // Anything else is our fault, not the code's, and the message should
+        // say so rather than implying the user typed something wrong.
+        //
+        // The specific case worth naming: a redirect served HTML instead of
+        // JSON, so pvData is empty and the status looks like a success. That
+        // used to surface as "not found or expired" — a confident verdict on a
+        // code that had never been looked at.
+        console.error('[billing] code check failed', pv.status, pvData)
+        setCodeError(
+          pvData?.error ||
+          `We could not reach the invite service to check that code (error ${pv.status}). ` +
+          `The code itself may be fine — this is on our end. Try again in a moment.`
+        )
         setPromoAction(null)
         return
       }
