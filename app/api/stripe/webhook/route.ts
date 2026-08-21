@@ -8,6 +8,7 @@ import { activatePendingTeamMember, deactivateTeamMember } from '@/lib/teamMembe
 import { sendAdminPush } from '@/lib/pushNotify'
 import { takeOverAgentPaidSeats } from '@/lib/seatTakeover'
 import { logBillingEvent } from '@/lib/billingEvents'
+import { assembleAndSaveDisputeEvidence, recordDisputeClosed } from '@/lib/disputeEvidence'
 import {
   claimStripeEvent,
   markStripeEventProcessed,
@@ -142,6 +143,51 @@ export async function POST(req: Request) {
               console.error('[stripe/webhook] payment_failed notification failed', e)
             }
           }
+        }
+        break
+      }
+
+      // ── A DISPUTE WAS PREVIOUSLY LOST BY DEFAULT ────────────────────────
+      // Nothing listened for this. A dispute arrived as an email from Stripe
+      // and, if nobody assembled evidence before the deadline, it was lost on
+      // silence rather than on merit — while the evidence that would have won
+      // it (the customer's own call records) sat in our database.
+      //
+      // The evidence is assembled and SAVED to Stripe, deliberately not
+      // submitted: Stripe accepts evidence once and it cannot be amended
+      // afterwards. A script filing unreviewed evidence at 3am converts a
+      // recoverable situation into an unrecoverable one. What was actually
+      // missing was never the typing — it was knowing in time.
+      case 'charge.dispute.created': {
+        const dispute = event.data.object as Stripe.Dispute
+        const result = await assembleAndSaveDisputeEvidence(dispute)
+        try {
+          await sendAdminPush('payment_failed', result.summary, {
+            title: result.ok ? 'Dispute opened — evidence drafted' : 'Dispute opened — ACTION NEEDED',
+            url: '/dashboard/admin/desktop',
+          })
+        } catch (e) {
+          console.error('[stripe/webhook] dispute notification failed', e)
+        }
+        break
+      }
+
+      // Funds already moved when the dispute opened; this is the verdict.
+      // Recorded so the dispute RATE is answerable from our own data — that
+      // ratio, not any single loss, is what puts a merchant into Stripe's
+      // monitoring programs.
+      case 'charge.dispute.closed': {
+        const dispute = event.data.object as Stripe.Dispute
+        await recordDisputeClosed(dispute)
+        try {
+          const amount = ((dispute.amount ?? 0) / 100).toFixed(2)
+          await sendAdminPush(
+            'payment_failed',
+            `Dispute for $${amount} closed: ${dispute.status}.`,
+            { title: `Dispute ${dispute.status}`, url: '/dashboard/admin/desktop' }
+          )
+        } catch (e) {
+          console.error('[stripe/webhook] dispute close notification failed', e)
         }
         break
       }
