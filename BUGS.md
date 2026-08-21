@@ -8,54 +8,46 @@ Nothing here is fixed unless it says FIXED.
 
 ---
 
-## 1. Dead air until AMD says human — CAUSE NOT FOUND IN CODE
+## 1. Seconds of dead air before audio. FIXED.
 
-**Reported:** zero audio until the call is verified human. Wanted: audio the
-instant the line connects, even if that means a sliver of voicemail. AMD's
-behaviour must not change.
+Confirmed fixed on a live call. Three separate causes stacked, which is why the
+first two fixes each only moved part of it and it kept looking like AMD.
 
-**The first diagnosis in this file was wrong and has been replaced.** It said
-fan-out waits for the verdict before bridging. That was true once; it is not now,
-and worse, a stale comment in the code still said so, which is what the diagnosis
-was built on.
+**It was never AMD, and never the bridge.** Once `bridged_at` started being
+recorded, the server was connecting the legs **0.09s and 0.06s** after the
+prospect answered. That measurement is what turned this from an argument into a
+search.
 
-**What the code actually does today:**
+**Cause 1 — the audio attach retry ladder.** `attachSIPAudio` retried at 500ms,
+1500ms and 3000ms. `tryAttach` fails while the peer connection is still being
+built, which right after `accept()` is most of the time, so audio commonly
+attached on the 3000ms rung. It compounded: `pc.ontrack` is registered INSIDE
+`tryAttach`, so until one attempt succeeded nothing was even listening for the
+track. Now polls every 60ms.
 
-- `lib/placeOutboundCall.ts` sets `bridge_on_answer` **unconditionally** whenever
-  there is an agent leg — see its ALWAYS BRIDGE ON ANSWER block, which reversed
-  the bridge-after-detection arrangement on measured grounds: the bridge tracked
-  the verdict to within ten milliseconds, because it WAS the verdict.
-- `app/api/calls/events/route.ts` explicitly does **not** re-bridge `user_dial`
-  on a verdict; its guard excludes it, precisely because re-bridging a live call
-  can drop the audio the agent is using.
-- Fan-out gained a pickup bridge too (`c8995257`, `f8769239`).
+**Cause 2 — sip.js waited for ICE gathering with no timeout at all.** This was
+the big one. sip.js does not send its SDP answer until ICE gathering is
+COMPLETE, and from the installed v0.21.2:
 
-**What the live data says:**
+    waitForIceGatheringComplete(restart = false, timeout = 0)
+    ...
+    if (timeout > 0) { ...arm the timer... }
 
-- Every call since 18 Aug is `user_dial`, not predictive — so this is the
-  agent-attended path, and fan-out is not involved at all.
-- All three calls today had an agent leg, meaning `bridge_on_answer` was set.
-- The last `fanout_placement_failed` event is 15 Aug.
+Its own type says *"If zero, no timeout"*, and zero is what an unset
+`iceGatheringTimeout` resolves to. The default is not a five second cap — it is
+an UNBOUNDED wait for every STUN server in the list. No answer means no media.
+Now capped at 500ms; ICE keeps gathering afterwards and late candidates still
+arrive by trickle.
 
-So the code already does the thing being asked for, and there is no evidence in
-the database of the bridge being withheld. Telnyx's own docs do not say that
-`answering_machine_detection` delays `bridge_on_answer`, so that cannot be
-asserted either.
+**Cause 3 — a stale comment that sent the search the wrong way.** The events
+route claimed the dial stops carrying `bridge_on_answer` once AMD is enabled.
+That had been reversed long before, but the prose survived, and it is the first
+thing anyone debugging this reads. It cost real time here.
 
-**Fixed here:** the stale comment, which was a live hazard rather than untidiness
-— anyone debugging this reads it, believes the bridge is gated on AMD, and goes
-to work on a mechanism that was removed.
-
-**To settle it needs one live call watched in real time**, since neither the code
-nor the stored rows can distinguish "audio started late" from "audio started on
-time". Worth capturing when it happens: the exact call, whether the agent leg was
-up before the lead answered, and how long after `answered_at` the audio arrived.
-
-One thing worth ruling out first: AMD is on for every recent call, and a
-`machine` verdict releases the agent within a few seconds. Two of today's three
-calls came back `human` and one `machine` — if what is being heard is the machine
-path releasing the agent, that is AMD working as designed rather than an audio
-bug, and it would feel identical from the agent's chair.
+**The lesson worth keeping:** the fix only arrived after something was measured
+rather than reasoned about. `bridged_at` was null on every user_dial row because
+nothing recorded it, so "audio started late" and "audio started on time" were
+indistinguishable after the fact. Recording it ended the guessing in one call.
 
 ---
 
