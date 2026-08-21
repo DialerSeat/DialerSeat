@@ -318,42 +318,38 @@ a member reads zeroes rather than somebody else's floor.
 
 ---
 
-## 10. "The sidebar duplicates every time I click a tab". FIXED (third attempt).
+## 10. Sidebar glitching on every navigation. FIXED — confirmed working.
 
-It was never duplicating. The layout renders the sidebar **twice on purpose** —
-once as the desktop rail, once as the mobile drawer — and CSS hides whichever
-does not apply.
+**Cause:** `const Sidebar = () => (...)` was declared inside `DashboardLayout`'s
+render body. A component defined in a render body gets a new function identity
+every render, and React compares component types by identity — so it never
+diffed the sidebar. It unmounted the whole subtree and mounted a fresh one, every
+render, including the Clerk `<UserButton />`, which then rebuilt its own DOM.
 
-Those rules lived inside `app/dashboard/layout.tsx` as an inline `<style>`, so
-they were re-inserted on client navigation. For that instant both sidebars were
-unstyled: no `display: none`, no `position: fixed` on the drawer. Two full
-sidebars in normal flow, stacked. Then the style landed and one vanished.
+Not a duplicate. A teardown and rebuild.
 
-The reporter's own details are what identified it, and neither was incidental:
-it **vanished after a moment**, and it happened **on a tab click or when the
-drawer opened** — the two moments the layout re-renders. A real duplicate would
-persist. This was a flash of unstyled content in a convincing disguise, and the
-"only on the new account" detail was a red herring: the banner simply changes the
-subtree enough to make the re-insertion visible.
+The same mistake sat four lines above: `TenantBrandDesktop`,
+`TenantBrandMobileTopbar`, `DefaultBrandDesktop`, `DefaultBrandMobileTopbar` —
+two of which render inside the sidebar. All five are now plain JSX values.
 
-Moved to `app/globals.css`, where the rules exist before anything renders and are
-never re-inserted. Moving them back into the component brings it back.
+**Why it took four attempts.** The first three were CSS: inline `<style>`
+re-insertion, then moving rules to `globals.css`, then an `!important`
+invariant. Each was a real improvement and none could have worked, because the
+problem was never styling.
 
-**The actual cause, after two wrong fixes.** The layout rendered `<Sidebar />`
-twice — a desktop rail and a mobile drawer — and hid one with CSS. React mounts
-both whatever CSS does with them, and the sidebar contains a Clerk
-`<UserButton />`. That is not a plain element: it owns and moves its own DOM.
-Two of them alive at once, plus a third in the mobile topbar, meant three Clerk
-widgets competing over the same rendering.
+Two details led me wrong, and both were true:
 
-Both earlier fixes were CSS, and both were reasonable — the inline `<style>`
-really was being re-inserted, and the rules really did belong in a stylesheet.
-Neither could have worked, because the element COUNT was the problem, not their
-styling. The pointer was the user's: *"it was working before you added team seat
-to the clerk profile at the bottom of it"* — which named the component nobody
-had been looking at.
+- *"vanishes after a moment"* — I read this as a paint/FOUC signature. It is
+  equally the signature of a remount, and I never considered the second reading.
+- *"only on the new awaiting-approval account"* — the account was never the
+  variable. That account has the most async fetches resolving (tier, seats,
+  awaiting, lapsed, taken-over), so it re-rendered most and glitched most.
 
-Now one `<aside class="ds-sidebar">`, one `Sidebar`, one `UserButton`. The media
-query restyles that same node into a sticky rail above 768px and a fixed
-off-canvas drawer below it, which is what media queries are for. The drawer id
-is unchanged so the no-JavaScript open/close bridge still works.
+**The lesson worth keeping:** three fixes were written for a component nobody had
+read. Grepping for symptoms found evidence for whatever theory was current;
+reading the file top to bottom found the bug in one pass. When a report names a
+component — *"something in the sidebar is breaking"* — read that component first.
+
+Side effects of the earlier attempts, deliberately kept: the sidebar is now a
+single element restyled by media query rather than two copies, and the mobile
+topbar no longer carries its own `UserButton`.
