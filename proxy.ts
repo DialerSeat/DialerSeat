@@ -347,7 +347,20 @@ export default clerkMiddleware(async (auth, request) => {
     const { userId: rootUserId } = await auth()
     if (rootUserId) {
       const brandAccess = await lookupUserBrandAccess(rootUserId)
-      const targetSlug = brandAccess.selectedSlug || Array.from(brandAccess.accessibleSlugs)[0] || null
+      // ── A CHOSEN STANDARD VIEW IS A CHOICE, NOT AN ABSENCE ─────────────
+      // selectedSlug is null when somebody has picked DialerSeat Pro. Falling
+      // back to "their first tenant" treats that as having chosen nothing, so
+      // an owner who switched to standard was thrown onto a branded subdomain
+      // every time they typed dialerseat.com — with the setting saved and
+      // apparently ignored.
+      //
+      // Only fall back for somebody who has no standard product to land on:
+      // a member of somebody else's tenant, with no subscription of their
+      // own, genuinely does belong on that subdomain.
+      const targetSlug =
+        brandAccess.selectedSlug ||
+        (brandAccess.canSeeStandard ? null : Array.from(brandAccess.accessibleSlugs)[0]) ||
+        null
       if (targetSlug) {
         const dashUrl = new URL('/dashboard', `https://${targetSlug}.dialerseat.com`)
         return NextResponse.redirect(dashUrl, 307)
@@ -497,6 +510,12 @@ function pickRedirectDestination(
 ): URL {
   if (brandAccess.selectedSlug && brandAccess.accessibleSlugs.has(brandAccess.selectedSlug)) {
     return new URL(pathAndQuery, `https://${brandAccess.selectedSlug}.dialerseat.com`)
+  }
+  // Same rule as the apex-root redirect above: no selected slug means
+  // standard was chosen, and somebody entitled to standard stays on the apex
+  // rather than being pushed onto whichever tenant happened to sort first.
+  if (brandAccess.canSeeStandard) {
+    return new URL(pathAndQuery, 'https://dialerseat.com')
   }
   const firstSlug = Array.from(brandAccess.accessibleSlugs)[0]
   if (firstSlug) {
