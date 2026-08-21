@@ -111,9 +111,12 @@ function Section({ title, action, children }: {
 
 export default function TeamDetail({
   team, onNewCampaign, onNewCode, onRegenerateCode, onManageUser, onToggleCampaign,
-  seatTier, onOpenCampaign,
+  seatTier, onOpenCampaign, onRename,
 }: {
   team: TeamDetailData
+  /** Rename this team, or one of its campaigns. Owner-only; the page decides
+   *  whether to pass it. */
+  onRename?: (kind: 'team' | 'campaign', id: string, currentName: string) => void
   /** Volume standing, counted across every team this owner runs — see
    *  lib/seatTiers. Absent for a member viewing somebody else's team, who has
    *  no bill and no business seeing one. */
@@ -302,6 +305,20 @@ export default function TeamDetail({
         <Stat label="Total Leads" value={totalLeads ? totalLeads.toLocaleString() : '—'} />
         <Stat label="Dialed" value={calledLeads ? calledLeads.toLocaleString() : '—'} />
       </div>
+
+      {/* ── RENAME, WHERE THE NAME IS ─────────────────────────────────────
+          The ⋮ in the sidebar can do this too, but somebody who has already
+          opened the team is looking at the name they want to change — asking
+          them to go back out to a menu to change it is the product making
+          them navigate to reach something already on screen. */}
+      {team.isOwner && onRename && (
+        <div style={{ marginBottom: 18 }}>
+          <button
+            style={btn}
+            onClick={() => onRename('team', team.id, team.name)}
+          >Rename team</button>
+        </div>
+      )}
 
       {team.isOwner && (
         <Section

@@ -18,6 +18,7 @@ import {
   CreateTeamModal,
   CreateCampaignModal,
   CreateCodeModal,
+  RenameModal,
 } from '@/components/teams/TeamModals'
 
 // =============================================================================
@@ -405,6 +406,9 @@ export default function TeamsPage() {
   const [showCampaignModal, setShowCampaignModal] = useState(false)
   const [campaignTeamId, setCampaignTeamId] = useState<string | undefined>()
   const [showCodeModal, setShowCodeModal] = useState(false)
+  const [renaming, setRenaming] =
+    useState<{ kind: 'team' | 'campaign'; id: string; name: string } | null>(null)
+  const [renameBusy, setRenameBusy] = useState(false)
   const [codeTeamId, setCodeTeamId] = useState<string | undefined>()
   // Set when the code is being minted from a specific campaign row, so the
   // dialog opens already answering "which campaign".
@@ -805,6 +809,42 @@ export default function TeamsPage() {
     }
     return out
   }, [rawTeams, roster, selectedMembers])
+
+  // ── RENAME ─────────────────────────────────────────────────────────────
+  // Two nouns, two endpoints, one handler. Both already existed and both
+  // already refuse anybody who does not own the thing, so this only has to
+  // pick the right URL and refresh the tree afterwards.
+  const submitRename = async (name: string) => {
+    if (!renaming || renameBusy) return
+    setRenameBusy(true)
+    try {
+      const url = renaming.kind === 'team'
+        ? `/api/teams/${encodeURIComponent(renaming.id)}/update`
+        : '/api/campaigns/update'
+      // `id`, not `campaignId` — /api/campaigns/update destructures `id`, and
+      // an unknown key would have been dropped silently, leaving the endpoint
+      // to report "nothing to update" for a rename that looked correct.
+      const body = renaming.kind === 'team'
+        ? { name }
+        : { id: renaming.id, name }
+
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }).then(x => x.json())
+
+      if (!r.success) throw new Error(r.error || 'Rename failed')
+      setRenaming(null)
+      await refresh(true)
+    } catch (e: any) {
+      // Left open with the typed name still in it. Closing the dialog on
+      // failure would throw away what they wrote and tell them nothing.
+      alert(e?.message || 'Could not rename that.')
+    } finally {
+      setRenameBusy(false)
+    }
+  }
 
   const assignSelectedToCampaign = async () => {
     if (!assignTo || selectedMembers.size === 0 || assigning) return
@@ -1622,6 +1662,7 @@ export default function TeamsPage() {
                   setView('campaign')
                 }}
                 team={openTeam}
+                onRename={(kind, id, name) => setRenaming({ kind, id, name })}
                 onNewCampaign={id => { setCampaignTeamId(id); setShowCampaignModal(true) }}
                 onToggleCampaign={async (campaignId, nextStatus) => {
                   setBusy(true)
@@ -1662,6 +1703,16 @@ export default function TeamsPage() {
         </div>
       </main>
 
+      {renaming && (
+        <RenameModal
+          kind={renaming.kind}
+          currentName={renaming.name}
+          busy={renameBusy}
+          onClose={() => setRenaming(null)}
+          onSave={submitRename}
+        />
+      )}
+
       {helpOpen && <HelpModal onClose={() => setHelpOpen(false)} />}
 
       {manageMember && (
@@ -1687,6 +1738,7 @@ export default function TeamsPage() {
           joining={joining}
           joinMessage={joinMessage}
           activeUserCount={seatCountForDisplay}
+          onRename={(kind, id, name) => setRenaming({ kind, id, name })}
           onDeleteSelection={async sel => {
             setBusy(true)
             const failures: string[] = []

@@ -601,6 +601,14 @@ export default function CampaignDetail({
     )
   }
 
+  const renameThisCampaign = async () => {
+    const next = window.prompt('Rename campaign', data.name)
+    if (next === null) return
+    const trimmed = next.trim()
+    if (!trimmed || trimmed === data.name) return
+    await patch({ name: trimmed })
+  }
+
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
@@ -703,6 +711,18 @@ export default function CampaignDetail({
 
       {/* Three sections share this gate, so it needs a fragment — a bare
           conditional can only wrap one element. */}
+      {/* Renaming sits with the other things only the campaign's creator may
+          change. A prompt rather than a modal here: this panel has no modal
+          host of its own, and adding one for a single text field would be
+          more machinery than the job needs. */}
+      {isCampaignOwner && (
+        <div style={{ marginBottom: 18 }}>
+          <button style={btn} onClick={renameThisCampaign} disabled={busy}>
+            Rename campaign
+          </button>
+        </div>
+      )}
+
       {isCampaignOwner && (<>
       <Section title="How It Dials">
         <div style={{ display: 'grid', gap: 8 }}>

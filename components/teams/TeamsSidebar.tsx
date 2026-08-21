@@ -75,6 +75,10 @@ interface Props {
   onOpenFloor?: () => void
   onCreateCampaign?: () => void
   onOpenTeamMenu?: (teamId: string) => void
+  /** Rename whatever is currently selected. Only offered for things the
+   *  viewer owns — the endpoints enforce that too, but offering an action
+   *  that will be refused is its own kind of broken. */
+  onRename?: (kind: 'team' | 'campaign', id: string, currentName: string) => void
   onJoinWithCode?: (code: string) => void
   joining?: boolean
   /** Result of the last join attempt, shown under the code field. */
@@ -133,6 +137,7 @@ export default function TeamsSidebar({
   onOpenFloor,
   onCreateCampaign,
   onOpenTeamMenu,
+  onRename,
   onJoinWithCode,
   joining = false,
   joinMessage = null,
@@ -177,6 +182,23 @@ export default function TeamsSidebar({
     else next.add(id)
     apply(next)
   }
+
+  // What the ⋮ can rename right now, derived from the selection. Null when
+  // nothing renameable is selected or the viewer does not own it, which is
+  // what hides the row rather than disabling it.
+  const renameTarget: { kind: 'team' | 'campaign'; id: string; name: string } | null = (() => {
+    if (scope.kind === 'team') {
+      const t = teams.find(x => x.id === scope.teamId)
+      return t?.isOwner ? { kind: 'team', id: t.id, name: t.name } : null
+    }
+    if (scope.kind === 'campaign') {
+      const t = teams.find(x => x.id === scope.teamId)
+      if (!t?.isOwner) return null
+      const c = t.campaigns.find(x => x.id === scope.campaignId)
+      return c ? { kind: 'campaign', id: c.id, name: c.name } : null
+    }
+    return null
+  })()
 
   const isSelected = (s: TeamsScope) => {
     if (s.kind !== scope.kind) return false
@@ -466,6 +488,28 @@ export default function TeamsSidebar({
                       a separate management screen. Deleting is something you do
                       TO things you can see, so it belongs where you can see
                       them. */}
+                  {/* ── RENAME WHAT IS SELECTED ────────────────────────
+                      Scoped to the current selection rather than opening a
+                      picker: the thing you want to rename is the thing you
+                      just clicked, and asking again which one would be the
+                      product forgetting what it already knows.
+
+                      Hidden entirely when nothing renameable is selected, or
+                      when the viewer does not own it. A disabled row here
+                      would raise the question of why. */}
+                  {renameTarget && (
+                    <button
+                      className="ts-menu-item"
+                      role="menuitem"
+                      onClick={() => {
+                        setMoreMenuOpen(false)
+                        onRename?.(renameTarget.kind, renameTarget.id, renameTarget.name)
+                      }}
+                    >
+                      Rename {renameTarget.kind}
+                      <span className="ts-menu-hint">{renameTarget.name}</span>
+                    </button>
+                  )}
                   <button
                     className="ts-menu-item"
                     role="menuitem"
