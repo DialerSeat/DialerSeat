@@ -107,6 +107,9 @@ interface AccessState {
 
   hasActiveWlSub: boolean
   hasActiveTeamAccess: boolean
+  // An owner-funded seat that the owner has not accepted yet. Not full
+  // access, but not "no account" either — see the branch that uses it.
+  hasPendingOwnerFundedSeat: boolean
 }
 
 interface UserBrandAccess {
@@ -366,7 +369,7 @@ export default clerkMiddleware(async (auth, request) => {
     return withTenantHeader(NextResponse.next())
   }
 
-  const { tier, isAdmin, isPreserved, wlOnboardingPending, hasActiveWlSub } = await getAccessState(userId)
+  const { tier, isAdmin, isPreserved, wlOnboardingPending, hasActiveWlSub, hasPendingOwnerFundedSeat } = await getAccessState(userId)
 
   if (wlOnboardingPending && !isAdmin) {
     if (!isOnboardingAllowedRoute(request)) {
@@ -445,6 +448,41 @@ export default clerkMiddleware(async (auth, request) => {
     return withTenantHeader(res)
   }
 
+  // ── A PENDING OWNER-FUNDED SEAT IS AN ACCOUNT, NOT A STRANGER ──────────
+  // They redeemed a real invite and the owner pays when they accept, so they
+  // will never hold a subscription of their own. Judged on subscriptions alone
+  // they read as brand new, and the catch-all below sent them to /welcome,
+  // which sent them to /billing, which told them they owe $0.00 and pushed
+  // them at the dashboard, which sent them back to /welcome. No exit.
+  //
+  // Read-only, on the same terms as a preserved account: they can look around
+  // while they wait, and the sitewide awaiting-approval banner says why. The
+  // team's campaigns stay shut regardless — that is enforced by the access
+  // grants, not by this.
+  if (hasPendingOwnerFundedSeat) {
+    const method = request.method.toUpperCase()
+    const isMutating = method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE'
+    const isApi = request.nextUrl.pathname.startsWith('/api/')
+    const readOnlyAllowed =
+      request.nextUrl.pathname.startsWith('/api/teams/redeem') ||
+      request.nextUrl.pathname.startsWith('/api/stripe/') ||
+      request.nextUrl.pathname.startsWith('/api/auth/') ||
+      request.nextUrl.pathname.startsWith('/api/users/me')
+
+    if (isApi && isMutating && !readOnlyAllowed) {
+      return NextResponse.json(
+        { error: 'Your seat is awaiting approval from the team owner.', tier, readOnly: true },
+        { status: 403 }
+      )
+    }
+
+    const res = NextResponse.next()
+    res.headers.set('x-access-tier', tier)
+    res.headers.set('x-read-only', '1')
+    res.headers.set('x-awaiting-approval', '1')
+    return withTenantHeader(res)
+  }
+
   if (url.pathname.startsWith('/welcome')) {
     return withTenantHeader(NextResponse.next())
   }
@@ -486,6 +524,7 @@ async function getAccessState(clerkId: string): Promise<AccessState> {
       { data: userRow },
       { data: preservedRow },
       { data: activeMembership },
+      { data: pendingRows },
     ] = await Promise.all([
       supabase
         .from('subscriptions')
@@ -521,11 +560,52 @@ async function getAccessState(clerkId: string): Promise<AccessState> {
         .is('seat_suspended_at', null)
         .limit(1)
         .maybeSingle(),
+
+      // ── PENDING IS NOT THE SAME AS SHUT OUT ─────────────────────────────
+      // An approval-mode owner-funded code admits somebody as PENDING: the
+      // owner pays when they accept, so the agent never has a subscription of
+      // their own and never will. Judged on subscriptions alone they look
+      // brand new, which sent them to /welcome, which sent them to /billing,
+      // which told them they owe $0.00 and pushed them at the dashboard,
+      // which sent them back to /welcome. A loop with no exit.
+      //
+      // Only owner-funded pending seats. An agent-pays seat is pending
+      // precisely BECAUSE they have not paid, and belongs on billing until
+      // they do — granting it access here would hand out the product for free.
+      // No embed: joined_via_code carries the code STRING and has no foreign
+      // key to team_codes, so a PostgREST join would return null rather than
+      // erroring and this seat would never be found. The payer is resolved in
+      // a second lookup below, and only when there is a pending row to resolve.
+      supabase
+        .from('team_members')
+        .select('joined_via_code')
+        .eq('user_id', clerkId)
+        .eq('status', 'pending')
+        .not('joined_via_code', 'is', null)
+        .limit(5),
     ])
 
     const isAdmin = !!userRow?.is_admin
     const isPreserved = !!preservedRow
     const hasActiveTeamAccess = !!activeMembership
+
+    // Second hop, skipped entirely when there is nothing pending — which is
+    // the overwhelming majority of requests.
+    let hasPendingOwnerFundedSeat = false
+    if (!hasActiveTeamAccess && pendingRows && pendingRows.length > 0) {
+      const codes = (pendingRows as any[])
+        .map(r => r.joined_via_code)
+        .filter((c): c is string => typeof c === 'string' && c.length > 0)
+      if (codes.length > 0) {
+        const { data: ownerCodes } = await supabase
+          .from('team_codes')
+          .select('code')
+          .in('code', codes)
+          .eq('payer', 'owner')
+          .limit(1)
+        hasPendingOwnerFundedSeat = !!(ownerCodes && ownerCodes.length > 0)
+      }
+    }
 
     const now = Date.now()
     let hasActiveWlSub = false
@@ -590,7 +670,7 @@ async function getAccessState(clerkId: string): Promise<AccessState> {
       tier = 'active'
     }
 
-    const state: AccessState = { tier, isAdmin, isPreserved, wlOnboardingPending, hasActiveWlSub, hasActiveTeamAccess }
+    const state: AccessState = { tier, isAdmin, isPreserved, wlOnboardingPending, hasActiveWlSub, hasActiveTeamAccess, hasPendingOwnerFundedSeat }
 
     // Only cache a result that's safe to serve stale for the next minute.
     // "active" (and admin) status rarely flips moment-to-moment, so caching
@@ -612,7 +692,7 @@ async function getAccessState(clerkId: string): Promise<AccessState> {
     return state
   } catch (err) {
     console.error('[proxy] access state lookup failed:', err)
-    return { tier: 'active', isAdmin: false, isPreserved: true, wlOnboardingPending: false, hasActiveWlSub: false, hasActiveTeamAccess: false }
+    return { tier: 'active', isAdmin: false, isPreserved: true, wlOnboardingPending: false, hasActiveWlSub: false, hasActiveTeamAccess: false, hasPendingOwnerFundedSeat: false }
   }
 }
 
