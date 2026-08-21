@@ -2,11 +2,24 @@
 
 import { useId, useState } from 'react'
 
-const PANEL = '#232428'
-const HAIRLINE = '#1a1b1e'
-const TEXT = '#f2f3f5'
-const MUTED = '#949ba4'
-const DIM = '#80848e'
+// ── COLOURS COME FROM THE TENANT, VIA STYLE NOT ATTRIBUTES ───────────────
+// The rest of the teams area reads --brand-* variables. These charts could
+// not, because their colours were handed to SVG PRESENTATION ATTRIBUTES
+// (stroke=, fill=) — and var() is a CSS value, not an attribute value, so
+// stroke="var(--x)" is simply an invalid colour in most browsers. The chart
+// would have rendered black, or not at all.
+//
+// The same declarations work fine as CSS, so the ones carrying brand colours
+// moved into style objects. `color` stays an attribute: it is a real hex the
+// caller passes in, and an attribute is the simpler form where it works.
+//
+// Fallbacks are the previous hex values, so an install with no tenant
+// branding draws exactly the chart it drew before.
+const PANEL = 'var(--brand-card-surface, #232428)'
+const HAIRLINE = 'var(--brand-card-border, #1a1b1e)'
+const TEXT = 'var(--brand-on-page-bg, #f2f3f5)'
+const MUTED = 'var(--brand-muted-text, #949ba4)'
+const DIM = 'var(--brand-muted-text, #80848e)'
 
 // ── PALETTE ──────────────────────────────────────────────────────────────
 // Categorical hues assigned in fixed order and never cycled, so a series keeps
@@ -14,7 +27,7 @@ const DIM = '#80848e'
 // entity, never its rank — a chart where the survivors get repainted after a
 // filter is a chart nobody can compare against the one they saw a second ago.
 const SERIES = ['#4a9eff', '#32c48d', '#c4884a', '#a37bd8', '#d86a8a', '#4ac0c4']
-const GRID = '#2a2c31'
+const GRID = 'var(--brand-card-border, #2a2c31)'
 
 export interface Point { label: string; value: number }
 export interface CampaignPoint extends Point { conversions: number }
@@ -101,8 +114,8 @@ export function LineChart({ points, unit = '', color = SERIES[0] }: {
 
         {ticks.map((t, i) => (
           <g key={i}>
-            <line x1={PAD_L} y1={y(t)} x2={W - 8} y2={y(t)} stroke={GRID} strokeWidth="1" />
-            <text x={PAD_L - 6} y={y(t) + 3} textAnchor="end" fontSize="9" fill={DIM}>
+            <line x1={PAD_L} y1={y(t)} x2={W - 8} y2={y(t)} style={{ stroke: GRID }} strokeWidth="1" />
+            <text x={PAD_L - 6} y={y(t) + 3} textAnchor="end" fontSize="9" style={{ fill: DIM }}>
               {Math.round(t)}
             </text>
           </g>
@@ -118,7 +131,7 @@ export function LineChart({ points, unit = '', color = SERIES[0] }: {
             cy={y(p.value)}
             r={hover === i ? 4 : 0}
             fill={color}
-            stroke={PANEL}
+            style={{ stroke: PANEL }}
             strokeWidth="2"
           />
         ))}
@@ -144,9 +157,9 @@ export function LineChart({ points, unit = '', color = SERIES[0] }: {
           />
         ))}
 
-        <text x={PAD_L} y={H - 6} fontSize="9" fill={DIM}>{points[0].label}</text>
+        <text x={PAD_L} y={H - 6} fontSize="9" style={{ fill: DIM }}>{points[0].label}</text>
         {points.length > 1 && (
-          <text x={W - 8} y={H - 6} fontSize="9" fill={DIM} textAnchor="end">
+          <text x={W - 8} y={H - 6} fontSize="9" style={{ fill: DIM }} textAnchor="end">
             {points[points.length - 1].label}
           </text>
         )}
