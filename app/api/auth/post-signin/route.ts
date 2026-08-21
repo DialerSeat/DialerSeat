@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { auth, currentUser } from '@clerk/nextjs/server'
 import { headers, cookies } from 'next/headers'
 import { JOIN_CODE_COOKIE } from '@/app/api/join/start/route'
 import { createClient } from '@supabase/supabase-js'
@@ -274,6 +274,54 @@ export async function GET(req: NextRequest) {
     const { userId } = await auth()
     if (!userId) {
       return NextResponse.redirect(new URL('/sign-in', req.url))
+    }
+
+    // ── KEEP OUR COPY OF THE PROFILE HONEST ───────────────────────────────
+    // The Clerk webhook syncs user.updated, but only if somebody remembered to
+    // subscribe to that event in the Clerk dashboard — and a name that silently
+    // never updates is indistinguishable from a name nobody changed. This is
+    // the guarantee behind that optimisation: every sign-in re-reads the
+    // profile and corrects our copy.
+    //
+    // Cheap, because it only writes when something actually differs. Wrapped
+    // because nothing here is worth failing a sign-in over: the worst case of
+    // it throwing is the stale name that was there already.
+    try {
+      const profile = await currentUser()
+      if (profile) {
+        const email =
+          profile.emailAddresses?.find(e => e.id === profile.primaryEmailAddressId)?.emailAddress ||
+          profile.emailAddresses?.[0]?.emailAddress ||
+          null
+
+        const { data: existing } = await supabase
+          .from('users')
+          .select('first_name, last_name, username, email')
+          .eq('clerk_id', userId)
+          .maybeSingle()
+
+        const changed =
+          existing &&
+          (existing.first_name !== (profile.firstName || null) ||
+           existing.last_name !== (profile.lastName || null) ||
+           existing.username !== (profile.username || null) ||
+           (email !== null && existing.email !== email))
+
+        if (changed) {
+          await supabase
+            .from('users')
+            .update({
+              first_name: profile.firstName || null,
+              last_name: profile.lastName || null,
+              username: profile.username || null,
+              ...(email ? { email } : {}),
+            })
+            .eq('clerk_id', userId)
+          console.log('[post-signin] refreshed profile for', userId)
+        }
+      }
+    } catch (err) {
+      console.error('[post-signin] profile refresh failed', err)
     }
 
     // ── A PENDING INVITE OUTRANKS EVERYTHING BELOW ────────────────────────

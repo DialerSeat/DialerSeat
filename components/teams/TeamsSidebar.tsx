@@ -701,7 +701,19 @@ export default function TeamsSidebar({
                     </div>
 
                     {campaignOpen && (
-                      campaign.agents.length === 0 ? (
+                      // ── AN OPEN CAMPAIGN HAS NO ROSTER TO READ ────────
+                      // When a campaign is open to the team, the "agents" on
+                      // it are just the team roster restated once per
+                      // campaign. Listing them suggests a per-agent grant
+                      // list that could be edited, when there is nothing
+                      // there to edit — access comes from being on the team.
+                      //
+                      // One line of text says the same thing and says it
+                      // accurately, and keeps the tree short on a team with
+                      // thirty agents and six open campaigns.
+                      campaign.openToTeam ? (
+                        <div className="ts-empty">Whole team has access</div>
+                      ) : campaign.agents.length === 0 ? (
                         // ── AN EMPTY LIST MEANS TWO DIFFERENT THINGS ──────
                         // On a campaign open to the whole team there are no
                         // per-agent grants to list, because none are needed —
@@ -710,11 +722,7 @@ export default function TeamsSidebar({
                         // than the situation, and reads as a warning that
                         // nobody can dial the campaign when the opposite is
                         // true.
-                        <div className="ts-empty">
-                          {campaign.openToTeam
-                            ? 'All team has access'
-                            : 'No agents assigned'}
-                        </div>
+                        <div className="ts-empty">No agents assigned</div>
                       ) : campaign.agents.map(agent => (
                         <div
                           key={agent.id}
