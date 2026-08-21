@@ -96,13 +96,13 @@ const METRIC_VIEWS: Array<{ key: MetricView; label: string; hint: string }> = [
   { key: 'activity', label: 'All Users', hint: 'Everyone across every team' },
 ]
 
-const BG = 'var(--brand-page-bg, #1e1f22)'
-const PANEL = 'var(--brand-card-surface, #232428)'
-const RAISED = 'var(--brand-sidebar-hover-bg, #2b2d31)'
-const HAIRLINE = 'var(--brand-card-border, #1a1b1e)'
-const TEXT = 'var(--brand-on-page-bg, #f2f3f5)'
-const MUTED = 'var(--brand-muted-text, #949ba4)'
-const DIM = 'var(--brand-muted-text, #80848e)'
+const BG = 'var(--teams-page-bg, #1e1f22)'
+const PANEL = 'var(--teams-panel, #232428)'
+const RAISED = 'var(--teams-surface, #2b2d31)'
+const HAIRLINE = 'var(--teams-border, #1a1b1e)'
+const TEXT = 'var(--teams-text, #f2f3f5)'
+const MUTED = 'var(--teams-muted, #949ba4)'
+const DIM = 'var(--teams-muted, #80848e)'
 
 function displayName(m: ApiMember): string {
   const full = `${m.user?.first_name?.trim() || ''} ${m.user?.last_name?.trim() || ''}`.trim()

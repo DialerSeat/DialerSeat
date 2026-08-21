@@ -187,7 +187,27 @@ export function ThemeProvider({
   --brand-card-surface: ${cardSurfaceExpr};
   --brand-card-border: ${cardBorderExpr};
   --brand-muted-text: ${mutedTextExpr};
-}`
+}${hasBranding ? `
+/* ── THE TEAMS AREA, ONLY ON A BRANDED TENANT ──────────────────────────────
+   Teams was built with its own darker palette and that is the DEFAULT
+   DialerSeat look, not an accident to be normalised away. Pointing it
+   straight at --brand-* repainted it for everybody, because those variables
+   are always defined — they simply hold DialerSeat's own values when there is
+   no tenant.
+   So the teams variables are emitted ONLY when a tenant's branding is
+   actually in play. With no branding they are absent, the fallbacks in the
+   components apply, and the area renders exactly as it always has. */
+:root {
+  --teams-page-bg: var(--brand-page-bg);
+  --teams-panel: var(--brand-card-surface);
+  --teams-raised: var(--brand-sidebar-hover-bg);
+  --teams-border: var(--brand-card-border);
+  --teams-text: var(--brand-on-page-bg);
+  --teams-muted: var(--brand-muted-text);
+  --teams-accent: var(--brand-primary);
+  --teams-surface: var(--brand-sidebar-hover-bg);
+  --teams-surface-raised: var(--brand-sidebar-active-bg);
+}` : ''}`
   }, [
     branding?.primary_color,
     branding?.sidebar_color,

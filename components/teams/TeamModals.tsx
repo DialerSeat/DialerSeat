@@ -12,12 +12,12 @@ import { useEffect, useState, useRef } from 'react'
 // known and re-asking is just a chance to get it wrong.
 // =============================================================================
 
-const PANEL = 'var(--brand-card-surface, #232428)'
-const HAIRLINE = 'var(--brand-card-border, #1a1b1e)'
-const TEXT = 'var(--brand-on-page-bg, #f2f3f5)'
-const MUTED = 'var(--brand-muted-text, #949ba4)'
-const DIM = 'var(--brand-muted-text, #80848e)'
-const ACCENT = 'var(--brand-primary, #2563eb)'
+const PANEL = 'var(--teams-panel, #232428)'
+const HAIRLINE = 'var(--teams-border, #1a1b1e)'
+const TEXT = 'var(--teams-text, #f2f3f5)'
+const MUTED = 'var(--teams-muted, #949ba4)'
+const DIM = 'var(--teams-muted, #80848e)'
+const ACCENT = 'var(--teams-accent, #2563eb)'
 
 function Shell({ title, subtitle, onClose, children, footer }: {
   title: string

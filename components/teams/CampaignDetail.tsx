@@ -2,12 +2,12 @@
 
 import { useEffect, useState, useCallback } from 'react'
 
-const PANEL = 'var(--brand-card-surface, #232428)'
-const HAIRLINE = 'var(--brand-card-border, #1a1b1e)'
-const TEXT = 'var(--brand-on-page-bg, #f2f3f5)'
-const MUTED = 'var(--brand-muted-text, #949ba4)'
-const DIM = 'var(--brand-muted-text, #80848e)'
-const ACCENT = 'var(--brand-primary, #2563eb)'
+const PANEL = 'var(--teams-panel, #232428)'
+const HAIRLINE = 'var(--teams-border, #1a1b1e)'
+const TEXT = 'var(--teams-text, #f2f3f5)'
+const MUTED = 'var(--teams-muted, #949ba4)'
+const DIM = 'var(--teams-muted, #80848e)'
+const ACCENT = 'var(--teams-accent, #2563eb)'
 
 const btn: React.CSSProperties = {
   background: 'transparent',
