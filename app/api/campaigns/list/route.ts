@@ -3,17 +3,12 @@ import { NextResponse } from 'next/server'
 import { requireUser } from '@/lib/requireUser'
 import { apiError } from '@/lib/apiError'
 
-const SUB_DISPOSITIONS = {
-  appointments: 'APPOINTMENT',
-  not_interested: 'NOT_INTERESTED',
-} as const
-
-type SubType = keyof typeof SUB_DISPOSITIONS
-
-const SUB_LABELS: Record<SubType, string> = {
-  appointments: 'Appointments',
-  not_interested: 'Not Interested',
-}
+import {
+  SUB_DISPOSITION_FORMS,
+  SUB_DISPOSITION_CANONICAL,
+  SUB_LABELS,
+  type SubType,
+} from '@/lib/subDispositions'
 
 export async function GET(req: Request) {
   try {
@@ -95,14 +90,14 @@ export async function GET(req: Request) {
         virtualPlans.push({
           parent: c,
           subType: 'appointments',
-          disposition: SUB_DISPOSITIONS.appointments,
+          disposition: SUB_DISPOSITION_CANONICAL.appointments,
         })
       }
       if (c.enable_not_interested_sub) {
         virtualPlans.push({
           parent: c,
           subType: 'not_interested',
-          disposition: SUB_DISPOSITIONS.not_interested,
+          disposition: SUB_DISPOSITION_CANONICAL.not_interested,
         })
       }
     }
@@ -118,7 +113,9 @@ export async function GET(req: Request) {
         .select('id', { count: 'exact', head: true })
         .eq('user_id', user_id)
         .eq('campaign_id', plan.parent.id)
-        .eq('disposition', plan.disposition)
+        // .in, not .eq: a queue must hold every spelling that means the same
+        // thing, or the count disagrees with the list the user then opens.
+        .in('disposition', SUB_DISPOSITION_FORMS[plan.subType])
       countMap.set(`${plan.parent.id}:${plan.disposition}`, count || 0)
     }))
 

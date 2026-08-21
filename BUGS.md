@@ -201,3 +201,30 @@ Worth doing in one sitting, in this order, since each step gates the next:
 Also still unverified: the `DeadInvite` page body (this machine has no Supabase
 env, so it 500s locally — route resolution was confirmed, the render was not),
 and the whitelabel subdomain redirect after joining (no tenant to test against).
+
+---
+
+## 7. The Not Interested sub-queue matched nothing. FIXED.
+
+Found by chasing the disposition mismatch caught while building the member
+campaign view, on the theory that it would not be the only one. It was not.
+
+A campaign can expose two virtual sub-queues, Appointments and Not Interested,
+which are the parent's leads filtered by disposition. Both
+`/api/campaigns/list` and `/api/leads/list` declared their own copy of those
+strings as `'APPOINTMENT'` and `'NOT_INTERESTED'`, each carrying a comment
+warning that the two files must be kept in step.
+
+They were in step. They were also both wrong: the dialer writes
+`NOT INTERESTED` with a SPACE. Verified against the live table — the old filter
+matched **0** leads, the new one matches **1**. Appointments was correct and is
+unaffected.
+
+So that sub-queue has shown an empty list and a count of zero for its entire
+existence, with no error anywhere, because an empty result is not a failure.
+
+Both files now read from `lib/subDispositions.ts`, and match with `.in()`
+against every spelling rather than `.eq()` against one. The shared constant is
+the actual fix: the previous arrangement proves a comment does not work — it was
+followed exactly, and the bug survived, because keeping two wrong values in sync
+is still wrong.

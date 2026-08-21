@@ -3,19 +3,16 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { requireUser } from '@/lib/requireUser'
 import { apiError } from '@/lib/apiError'
 import { EXCLUDED_DIALABLE_DISPOSITIONS } from '@/lib/dialableLead'
+// Shared with /api/campaigns/list so a sub-queue's count and the rows inside
+// it cannot disagree. They previously held separate copies of these strings,
+// kept faithfully in sync with each other and both wrong.
+import { SUB_DISPOSITION_FORMS, isSubType } from '@/lib/subDispositions'
 
 // SECURITY (was IDOR): scoped only by client-supplied ?user_id with no auth.
 // Identity now comes from the Clerk session.
 
 const PAGE_SIZE = 50
 
-// Disposition strings for virtual sub-campaigns. These MUST match the ones
-// declared in /api/campaigns/list/route.ts. If the dialer writes different
-// disposition values, update both files together.
-const SUB_DISPOSITIONS: Record<string, string> = {
-  appointments: 'APPOINTMENT',
-  not_interested: 'NOT_INTERESTED',
-}
 
 export async function GET(req: NextRequest) {
   const gate = await requireUser()
@@ -58,12 +55,12 @@ export async function GET(req: NextRequest) {
   // filter. The colon split is safe: real campaign IDs are UUIDs which contain
   // dashes but no colons.
   let campaignId = rawCampaignId
-  let virtualDispositionFilter: string | null = null
+  let virtualDispositionFilter: string[] | null = null
   if (campaignId !== 'all' && campaignId.includes(':')) {
     const [parentId, subType] = campaignId.split(':')
-    if (parentId && subType && SUB_DISPOSITIONS[subType]) {
+    if (parentId && isSubType(subType)) {
       campaignId = parentId
-      virtualDispositionFilter = SUB_DISPOSITIONS[subType]
+      virtualDispositionFilter = SUB_DISPOSITION_FORMS[subType]
     } else {
       // Malformed virtual id — return empty rather than 400 so the dialer
       // doesn't error out on a stale URL.
@@ -88,7 +85,7 @@ export async function GET(req: NextRequest) {
   // The virtual sub-campaign filter takes precedence over the disposition
   // query param. A virtual sub is by definition pinned to one disposition.
   if (virtualDispositionFilter) {
-    query = query.eq('disposition', virtualDispositionFilter)
+    query = query.in('disposition', virtualDispositionFilter)
   } else if (disposition === 'dialable') {
     // No DB-level filter here on purpose — see EXCLUDED_DIALABLE_DISPOSITIONS
     // above and the post-fetch filter below. A DB-level "disposition IS NULL
