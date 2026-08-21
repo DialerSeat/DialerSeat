@@ -284,13 +284,20 @@ export async function POST(req: Request) {
               }
             } else {
               return NextResponse.json(
-                { error: `Promo code "${promoCode}" is not valid.` },
+                { error: `"${promoCode}" is not a valid discount code or team invite code.` },
                 { status: 400 }
               )
             }
           } catch {
             return NextResponse.json(
-              { error: `Promo code "${promoCode}" not found or expired.` },
+              // ── NAME BOTH NAMESPACES ────────────────────────────────
+              // This box takes a Stripe discount code OR a DialerSeat team
+              // invite, and the billing page only reaches Stripe after the
+              // team-code lookup has already returned 404. So by the time
+              // this fires, the code is genuinely neither — and saying
+              // "promo code not found" sent people hunting through Stripe
+              // for a team code that was mistyped, or vice versa.
+              { error: `"${promoCode}" is not a valid discount code or team invite code. Check it for typos and try again.` },
               { status: 400 }
             )
           }
