@@ -280,3 +280,31 @@ input[type='button'] {
             flex: 1; min-width: 0; display: flex; flex-direction: column;
           }
         }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   ONE SIDEBAR AT A TIME, ENFORCED
+
+   The rules above already intend this: the desktop rail is hidden below
+   769px, the mobile drawer is hidden above 768px. They were still being seen
+   TOGETHER, stacked, on at least one account — and moving them out of the
+   component's inline <style> did not stop it.
+
+   So this states it as an invariant rather than as a consequence. Whatever
+   else is on the page — a late-injected style block, a theme provider
+   rewriting variables, a stale node during reconciliation — these two
+   elements can never both occupy layout at the same viewport width.
+
+   !important is deliberate and is the point. Everything that could have
+   overridden the earlier rules loses to this, and there is no legitimate
+   state in which both should be visible, so there is nothing for it to
+   break.
+   ───────────────────────────────────────────────────────────────────────── */
+@media (min-width: 769px) {
+  .ds-sidebar-mobile,
+  .ds-mobile-overlay,
+  .ds-mobile-topbar { display: none !important; }
+}
+
+@media (max-width: 768px) {
+  .ds-sidebar-desktop { display: none !important; }
+}
