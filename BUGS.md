@@ -51,7 +51,7 @@ indistinguishable after the fact. Recording it ended the guessing in one call.
 
 ---
 
-## 2. A seat can go active before the money does
+## 2. A seat can go active before the money does. FIXED.
 
 **Reported:** John Doe invited Test 2 with an owner-pays code. Test 2 became
 active without the seat charge succeeding. Two separate faults.
