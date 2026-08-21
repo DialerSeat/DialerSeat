@@ -346,9 +346,52 @@ async function handleCallAnswered(callControlId: string): Promise<void> {
   try {
     const { data: row } = await supabaseAdmin
       .from('calls')
-      .select('id, dial_source, dial_group_id, agent_call_control_id')
+      .select('id, dial_source, dial_group_id, agent_call_control_id, bridged_at')
       .eq('call_control_id', callControlId)
       .maybeSingle()
+
+    // ── CONNECT THE LEGS AT ANSWER, NOT AT THE VERDICT ──────────────────────
+    // The dial already asks for this: bridge_on_answer is set whenever there
+    // is an agent leg. This does not replace that — it makes sure of it.
+    //
+    // The requirement is that the agent hears the prospect the moment they
+    // pick up, before AMD has decided human or machine, accepting a sliver of
+    // voicemail as the price. Whether bridge_on_answer alone delivers that
+    // while answering_machine_detection is running is not something Telnyx
+    // documents either way, and the stored rows cannot tell "audio arrived
+    // late" from "audio arrived on time" after the fact.
+    //
+    // So the bridge is also issued here, explicitly, at answer. Two properties
+    // make that safe rather than reckless:
+    //
+    //   It runs at most once. bridgeAgentOntoLead claims the row with a
+    //   conditional `.is('bridged_at', null)` update, so a duplicate webhook
+    //   or a later verdict-path call finds nothing to do.
+    //
+    //   It cannot make things worse. If Telnyx already bridged at answer, the
+    //   command is refused or is a no-op; the failure is swallowed and the
+    //   call carries on. Unlike the fan-out path, a failure here never hangs
+    //   up — the agent is already on this call.
+    //
+    // It also leaves evidence. bridged_at was null on every user_dial row
+    // because nothing recorded it; from now on it is stamped at answer, so the
+    // gap between answered_at and bridged_at is measurable instead of
+    // argued about.
+    if (row?.dial_source === 'user_dial' && row.agent_call_control_id && !row.bridged_at) {
+      try {
+        const outcome = await bridgeAgentOntoLead(callControlId, 'pickup (user_dial)')
+        void logCallEvent({
+          event_type: 'bridged',
+          call_control_id: callControlId,
+          source: 'webhook',
+          status: outcome,
+          detail: { dial_source: row.dial_source, call_row: row.id, at: 'answer' },
+        })
+      } catch (err) {
+        // Never let this take down a live call the agent is already talking on.
+        console.error(`[calls/events] pickup bridge for ${callControlId} threw`, err)
+      }
+    }
 
     if (row?.dial_source === 'controller_fanout' && row.dial_group_id && !row.agent_call_control_id) {
       const { data: session } = await supabaseAdmin
