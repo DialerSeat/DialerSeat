@@ -372,7 +372,15 @@ export async function GET(req: NextRequest) {
           // Empty on purpose. The sidebar renders whatever is here under each
           // campaign, so anything in this array is a name on somebody's screen.
           members: [],
-          memberCount: headcount[t.id] || 0,
+          // Zero on purpose, for the same reason the array above is empty. The
+          // names were stripped and then the NUMBER was sent anyway, which
+          // gives away most of what the list would have: how big the floor is,
+          // whether it is growing, how the agent compares to it. None of that
+          // is theirs, and none of it is actionable by them.
+          //
+          // It is what fed "One of N on this team" on the team view, and
+          // removing that message left the data still crossing the wire.
+          memberCount: 0,
           pendingMembers: [],
           codes: [],
           myCampaignIds: Array.from(granted),

@@ -407,22 +407,6 @@ export default function CampaignDetail({
           {stat('Not interested', myStats ? myStats.notInterested : '—')}
         </div>
 
-        <div style={{ fontSize: 11, letterSpacing: 2, color: DIM, marginBottom: 10 }}>
-          THE LIST
-        </div>
-        <div style={{
-          background: PANEL, border: `1px solid ${HAIRLINE}`,
-          borderRadius: 4, padding: '14px 16px', marginBottom: 20,
-        }}>
-          <div style={{ fontSize: 14, color: TEXT }}>
-            {data.remainingLeads.toLocaleString()} left to call
-          </div>
-          <div style={{ fontSize: 12, color: DIM, marginTop: 4 }}>
-            {data.calledLeads.toLocaleString()} of {data.totalLeads.toLocaleString()} worked
-            {data.totalLeads > 0 ? ` · ${pct}%` : ''}
-          </div>
-        </div>
-
         {/* ── THE WEEK, THEIR OWN ─────────────────────────────────────
             Empty days are drawn, not skipped. A sparse list of only the
             days they worked reads as missing data; a day off is a real

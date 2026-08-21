@@ -279,3 +279,39 @@ an accident, so that case is silent; it would otherwise fire on every seat a
 comped owner opens. What still alerts is a discount we could not compare — a
 fixed-amount coupon, say — because that changes what a seat earns without anyone
 choosing it.
+
+---
+
+## 9. Headcount and list size were still reaching members. FIXED.
+
+**`/api/teams/list`** stripped the member NAMES out of the payload for a
+non-owner — `members: []`, with a comment explaining that anything in that array
+is a name on somebody's screen — and then sent `memberCount` anyway. The names
+were protected and the number was not, which gives away most of what the list
+would have: how big the floor is, whether it is growing, how the agent compares
+to it.
+
+It is also what fed "One of N on this team" on the team view. Removing that
+message (item 4) took it off the screen and left it crossing the wire.
+
+**`/api/teams/campaigns/detail`** was mine, from an hour earlier. I gave the
+member view the campaign's list size — total, called, remaining — and said in
+the commit that it was a judgment call worth flagging. It was already decided,
+the other way, in `/api/teams/list`:
+
+> "Deliberately no total_leads or called_leads. Those are the owner's operating
+> numbers — how much list they bought and how hard it has been worked — and an
+> agent reading them learns nothing they can act on while learning quite a lot
+> about the business paying them."
+
+That reasoning holds. Both endpoints now agree, and the THE LIST panel is gone
+from the member view rather than rendering zeroes — a zero is a claim, and this
+is an absence.
+
+Two endpoints disagreeing about what a member may see is worse than either
+answer on its own, because the stricter one stops being a rule and becomes a gap
+nobody has found yet.
+
+**Checked and already correct:** `/api/teams/[id]/overview` 403s a non-owner
+outright, and `/api/teams/pulse` scopes every count to teams the caller OWNS, so
+a member reads zeroes rather than somebody else's floor.

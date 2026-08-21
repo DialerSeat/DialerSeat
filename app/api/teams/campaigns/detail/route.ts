@@ -96,11 +96,22 @@ export async function GET(req: NextRequest) {
           name: campaign.name,
           status: campaign.status,
           dialerMode: campaign.dialer_mode,
-          // How much of the list is left is legitimately theirs to know: it is
-          // the difference between settling in and expecting to run dry.
-          totalLeads: campaign.total_leads ?? 0,
-          calledLeads: campaign.called_leads ?? 0,
-          remainingLeads: Math.max((campaign.total_leads ?? 0) - (campaign.called_leads ?? 0), 0),
+          // ── NO LIST SIZE ──────────────────────────────────────────────
+          // I argued the opposite when this view was first built — that
+          // knowing how much list is left is the difference between settling
+          // in and expecting to run dry. /api/teams/list had already decided
+          // it the other way, in writing: "those are the owner's operating
+          // numbers — how much list they bought and how hard it has been
+          // worked — and an agent reading them learns nothing they can act on
+          // while learning quite a lot about the business paying them."
+          //
+          // That reasoning holds and this now matches it. Two endpoints
+          // disagreeing about what a member may see is worse than either
+          // answer, because the stricter one stops being a rule and becomes a
+          // gap somebody has not found yet.
+          totalLeads: 0,
+          calledLeads: 0,
+          remainingLeads: 0,
         },
         myStats: mine,
         // The scripts they dial with. Not a new disclosure — these are already
