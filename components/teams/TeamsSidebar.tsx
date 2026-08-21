@@ -286,7 +286,7 @@ export default function TeamsSidebar({
         .ts-menu {
           position: absolute; top: calc(100% + 6px); right: 0; z-index: 21;
           min-width: 210px; padding: 6px;
-          background: #111214; border: 1px solid ${HAIRLINE};
+          background: var(--teams-inset, #111214); border: 1px solid ${HAIRLINE};
           border-radius: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.45);
           display: flex; flex-direction: column; gap: 2px;
         }
@@ -460,7 +460,7 @@ export default function TeamsSidebar({
         .ts-join-input {
           width: 100%; box-sizing: border-box;
           padding: 7px 10px; border-radius: 4px;
-          border: 1px solid ${HAIRLINE}; background: #1e1f22;
+          border: 1px solid ${HAIRLINE}; background: var(--teams-page-bg, #1e1f22);
           color: ${TEXT}; font-size: 12.5px; text-align: center;
           font-family: inherit; letter-spacing: 0.5px;
         }
@@ -835,7 +835,7 @@ export default function TeamsSidebar({
           <div
             onClick={e => e.stopPropagation()}
             style={{
-              width: '100%', maxWidth: 420, background: '#1e1f22',
+              width: '100%', maxWidth: 420, background: 'var(--teams-page-bg, #1e1f22)',
               border: `1px solid ${HAIRLINE}`, borderRadius: 8, color: TEXT,
               boxShadow: '0 16px 48px rgba(0,0,0,0.5)', padding: 20,
             }}
@@ -848,7 +848,7 @@ export default function TeamsSidebar({
             </p>
             <ul style={{
               margin: '0 0 14px', padding: '10px 12px 10px 26px', maxHeight: 150,
-              overflowY: 'auto', background: '#111214', borderRadius: 4,
+              overflowY: 'auto', background: 'var(--teams-inset, #111214)', borderRadius: 4,
               fontSize: 12.5, color: TEXT_MUTED, lineHeight: 1.7,
             }}>
               {selectedList.map(s => (
@@ -865,7 +865,7 @@ export default function TeamsSidebar({
               disabled={deleting}
               style={{
                 width: '100%', boxSizing: 'border-box', padding: '9px 11px',
-                borderRadius: 4, border: `1px solid ${HAIRLINE}`, background: '#111214',
+                borderRadius: 4, border: `1px solid ${HAIRLINE}`, background: 'var(--teams-inset, #111214)',
                 color: TEXT, fontSize: 13.5, fontFamily: 'inherit', letterSpacing: 1,
               }}
             />

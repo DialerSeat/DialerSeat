@@ -168,7 +168,7 @@ export function LineChart({ points, unit = '', color = SERIES[0] }: {
       {hover !== null && (
         <div style={{
           position: 'absolute', top: 4, right: 8,
-          background: '#0d0f13', border: `1px solid ${HAIRLINE}`,
+          background: 'var(--teams-field, #0d0f13)', border: `1px solid ${HAIRLINE}`,
           borderRadius: 3, padding: '4px 8px', fontSize: 11, color: TEXT,
           pointerEvents: 'none',
         }}>

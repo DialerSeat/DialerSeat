@@ -353,7 +353,7 @@ export default function TeamDetail({
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                       <code style={{
                         fontSize: 16, letterSpacing: 2, color: TEXT,
-                        background: '#111214', padding: '5px 11px', borderRadius: 3,
+                        background: 'var(--teams-inset, #111214)', padding: '5px 11px', borderRadius: 3,
                       }}>{c.code}</code>
                       <span style={{
                         fontSize: 9, letterSpacing: 0.6, textTransform: 'uppercase',

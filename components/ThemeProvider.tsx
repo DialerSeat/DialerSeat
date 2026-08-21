@@ -207,6 +207,14 @@ export function ThemeProvider({
   --teams-accent: var(--brand-primary);
   --teams-surface: var(--brand-sidebar-hover-bg);
   --teams-surface-raised: var(--brand-sidebar-active-bg);
+  /* Insets: form fields, dropdown menus, code boxes. These were hardcoded
+     near-black, which is invisible against a light brand once the TEXT on
+     them follows the tenant. Mixed toward the text colour rather than toward
+     black, so they sit slightly inside the page on a dark brand and slightly
+     inside it on a light one — the relationship holds either way, which a
+     fixed colour cannot. */
+  --teams-field: color-mix(in srgb, var(--brand-page-bg) 88%, var(--brand-on-page-bg) 12%);
+  --teams-inset: color-mix(in srgb, var(--brand-page-bg) 93%, var(--brand-on-page-bg) 7%);
 }` : ''}`
   }, [
     branding?.primary_color,

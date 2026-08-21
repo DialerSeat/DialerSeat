@@ -1165,7 +1165,7 @@ export default function TeamsPage() {
         {view === 'overview' && (
           <div style={{
             display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
-            padding: '10px 20px', background: '#111214',
+            padding: '10px 20px', background: 'var(--teams-inset, #111214)',
             borderBottom: `1px solid ${HAIRLINE}`, flexShrink: 0,
           }}>
             <span style={{
@@ -1230,7 +1230,7 @@ export default function TeamsPage() {
                     value={assignTo}
                     onChange={e => setAssignTo(e.target.value)}
                     style={{
-                      background: '#0d0f13', color: TEXT, fontSize: 12,
+                      background: 'var(--teams-field, #0d0f13)', color: TEXT, fontSize: 12,
                       border: `1px solid ${HAIRLINE}`, borderRadius: 3,
                       padding: '6px 8px', fontFamily: 'inherit',
                     }}
@@ -1544,7 +1544,7 @@ export default function TeamsPage() {
                     style={{
                       display: 'flex', alignItems: 'center', gap: 10,
                       fontSize: 20, fontWeight: 600, color: TEXT,
-                      background: '#111214', border: `1px solid ${HAIRLINE}`,
+                      background: 'var(--teams-inset, #111214)', border: `1px solid ${HAIRLINE}`,
                       padding: '6px 14px', borderRadius: 3, cursor: 'pointer',
                       fontFamily: 'inherit', letterSpacing: 0.5,
                     }}
@@ -1568,7 +1568,7 @@ export default function TeamsPage() {
                         style={{ position: 'fixed', inset: 0, zIndex: 20 }} />
                       <div style={{
                         position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 21,
-                        minWidth: 240, padding: 6, background: '#111214',
+                        minWidth: 240, padding: 6, background: 'var(--teams-inset, #111214)',
                         border: `1px solid ${HAIRLINE}`, borderRadius: 6,
                         boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
                         display: 'flex', flexDirection: 'column', gap: 2,
@@ -1611,7 +1611,7 @@ export default function TeamsPage() {
                     title="Things you should know"
                     style={{
                       width: 30, height: 30, borderRadius: '50%',
-                      background: '#111214', border: `1px solid ${HAIRLINE}`,
+                      background: 'var(--teams-inset, #111214)', border: `1px solid ${HAIRLINE}`,
                       color: MUTED, fontSize: 15, fontWeight: 700,
                       cursor: 'pointer', fontFamily: 'inherit', lineHeight: 1,
                     }}

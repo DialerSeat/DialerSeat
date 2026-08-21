@@ -64,7 +64,7 @@ function Shell({ title, subtitle, onClose, children, footer }: {
         onMouseDown={e => e.stopPropagation()}
         onClick={e => e.stopPropagation()}
         style={{
-          width: '100%', maxWidth: 440, background: '#1e1f22',
+          width: '100%', maxWidth: 440, background: 'var(--teams-page-bg, #1e1f22)',
           border: `1px solid ${HAIRLINE}`, borderRadius: 8,
           boxShadow: '0 16px 48px rgba(0,0,0,0.5)', color: TEXT,
         }}
@@ -93,7 +93,7 @@ const label: React.CSSProperties = {
 }
 const field: React.CSSProperties = {
   width: '100%', boxSizing: 'border-box', padding: '9px 11px',
-  borderRadius: 4, border: `1px solid ${HAIRLINE}`, background: '#111214',
+  borderRadius: 4, border: `1px solid ${HAIRLINE}`, background: 'var(--teams-inset, #111214)',
   color: TEXT, fontSize: 13.5, fontFamily: 'inherit',
 }
 const btn: React.CSSProperties = {
@@ -380,7 +380,7 @@ export function CreateCampaignModal({
             way, so it belongs here rather than as a surprise later. */}
         <p style={{
           margin: '10px 0 0', padding: '9px 11px', borderRadius: 4,
-          background: '#111214', border: `1px solid ${HAIRLINE}`,
+          background: 'var(--teams-inset, #111214)', border: `1px solid ${HAIRLINE}`,
           fontSize: 11.5, color: MUTED, lineHeight: 1.6,
         }}>
           Access without a seat offers no campaign usage. An agent can only dial
@@ -587,19 +587,19 @@ export function ManageMemberModal({
         display: 'grid', gap: 10, marginBottom: 18,
         gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
       }}>
-        <div style={{ background: '#111214', borderRadius: 4, padding: '10px 12px' }}>
+        <div style={{ background: 'var(--teams-inset, #111214)', borderRadius: 4, padding: '10px 12px' }}>
           <div style={{ ...label, marginBottom: 4 }}>Seat</div>
           <div style={{ fontSize: 14, fontWeight: 600, color: suspended ? '#fbbf24' : '#4ade80' }}>
             {suspended ? 'Paused' : 'Active'}
           </div>
         </div>
-        <div style={{ background: '#111214', borderRadius: 4, padding: '10px 12px' }}>
+        <div style={{ background: 'var(--teams-inset, #111214)', borderRadius: 4, padding: '10px 12px' }}>
           <div style={{ ...label, marginBottom: 4 }}>Paid By</div>
           <div style={{ fontSize: 14, fontWeight: 600 }}>
             {member.seatPaidBy === 'agent' ? 'Them' : 'You'}
           </div>
         </div>
-        <div style={{ background: '#111214', borderRadius: 4, padding: '10px 12px' }}>
+        <div style={{ background: 'var(--teams-inset, #111214)', borderRadius: 4, padding: '10px 12px' }}>
           <div style={{ ...label, marginBottom: 4 }}>Campaigns</div>
           <div style={{ fontSize: 14, fontWeight: 600 }}>{member.campaignCount}</div>
         </div>

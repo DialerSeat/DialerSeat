@@ -646,7 +646,7 @@ export default function CampaignDetail({
                 maxLength={100}
                 style={{
                   width: '100%', boxSizing: 'border-box', marginBottom: 8,
-                  background: '#0d0f13', color: TEXT, fontSize: 13,
+                  background: 'var(--teams-field, #0d0f13)', color: TEXT, fontSize: 13,
                   border: `1px solid ${HAIRLINE}`, borderRadius: 3,
                   padding: '8px 10px', fontFamily: 'inherit',
                 }}
@@ -658,7 +658,7 @@ export default function CampaignDetail({
                 rows={6}
                 style={{
                   width: '100%', boxSizing: 'border-box', resize: 'vertical',
-                  background: '#0d0f13', color: TEXT, fontSize: 13, lineHeight: 1.6,
+                  background: 'var(--teams-field, #0d0f13)', color: TEXT, fontSize: 13, lineHeight: 1.6,
                   border: `1px solid ${HAIRLINE}`, borderRadius: 3,
                   padding: '8px 10px', fontFamily: 'inherit',
                 }}
@@ -925,7 +925,7 @@ export default function CampaignDetail({
               disabled={busy}
               onChange={e => patch({ dialer_mode: e.target.value })}
               style={{
-                background: '#0d0f13', color: TEXT, fontSize: 12,
+                background: 'var(--teams-field, #0d0f13)', color: TEXT, fontSize: 12,
                 border: `1px solid ${HAIRLINE}`, borderRadius: 3,
                 padding: '6px 8px', fontFamily: 'inherit',
               }}
@@ -1022,7 +1022,7 @@ export default function CampaignDetail({
                 <>
                   <code style={{
                     display: 'block', fontSize: 11.5, color: TEXT,
-                    background: '#111214', padding: '9px 11px', borderRadius: 3,
+                    background: 'var(--teams-inset, #111214)', padding: '9px 11px', borderRadius: 3,
                     wordBreak: 'break-all', lineHeight: 1.6,
                   }}>{origin}/api/ingest/leads/{data.ingestToken}</code>
                   <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
@@ -1071,7 +1071,7 @@ export default function CampaignDetail({
                 }}>What to send</div>
                 <code style={{
                   display: 'block', fontSize: 11, color: TEXT,
-                  background: '#111214', padding: '9px 11px', borderRadius: 3,
+                  background: 'var(--teams-inset, #111214)', padding: '9px 11px', borderRadius: 3,
                   whiteSpace: 'pre', overflowX: 'auto', lineHeight: 1.7,
                 }}>{`{ "phone": "5551234567",
   "first_name": "Jane",
@@ -1211,7 +1211,7 @@ export default function CampaignDetail({
             style={{
               width: '100%', maxWidth: 460, maxHeight: '80vh', display: 'flex',
               flexDirection: 'column',
-              background: '#1e1f22', border: `1px solid ${HAIRLINE}`,
+              background: 'var(--teams-page-bg, #1e1f22)', border: `1px solid ${HAIRLINE}`,
               borderRadius: 6, padding: '20px 22px',
             }}
           >
