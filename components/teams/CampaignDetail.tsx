@@ -160,7 +160,11 @@ export default function CampaignDetail({
     closed: number; notInterested: number; dnc: number
   } | null>(null)
   const [myScripts, setMyScripts] = useState<Array<{ id: string; name: string; body: string }>>([])
-  const [myRecent, setMyRecent] = useState<Array<{ at: string; disposition: string | null; seconds: number }>>([])
+  const [myRecent, setMyRecent] = useState<Array<{
+    id: string; at: string; disposition: string | null; seconds: number
+    hasRecording: boolean; recordingSeconds: number
+  }>>([])
+  const [canDial, setCanDial] = useState(true)
   const [myDaily, setMyDaily] = useState<Array<{ day: string; calls: number }>>([])
   const [memberRecording, setMemberRecording] = useState(false)
   const [openScript, setOpenScript] = useState<string | null>(null)
@@ -190,6 +194,7 @@ export default function CampaignDetail({
       setMyRecent(Array.isArray(r.myRecentCalls) ? r.myRecentCalls : [])
       setMyDaily(Array.isArray(r.myDailyCalls) ? r.myDailyCalls : [])
       setMemberRecording(!!r.recordingEnabled)
+      setCanDial(r.canDial !== false)
       setError(null)
     } catch (e: any) {
       setError(e.message || 'Could not load campaign')
@@ -377,10 +382,13 @@ export default function CampaignDetail({
               )}
             </div>
             <div style={{ fontSize: 12, color: DIM, marginTop: 2 }}>
-              {team?.name ? `${team.name} · ` : ''}You dial this campaign
+              {team?.name ? `${team.name} · ` : ''}
+              {canDial
+                ? 'You dial this campaign'
+                : 'Not opened to you yet'}
             </div>
           </div>
-          {!paused && (
+          {!paused && canDial && (
             <a
               href={`/dashboard/dialer?campaign=${encodeURIComponent(data.id)}`}
               style={{
@@ -390,6 +398,18 @@ export default function CampaignDetail({
             >Dial</a>
           )}
         </div>
+
+        {!canDial && (
+          <div style={{
+            background: PANEL, border: `1px solid ${HAIRLINE}`,
+            borderLeft: '3px solid #fbbf24',
+            borderRadius: 4, padding: '12px 14px', marginBottom: 20,
+            fontSize: 12.5, color: DIM, lineHeight: 1.7,
+          }}>
+            This campaign belongs to your team, but you have not been added to it
+            yet. Whoever runs the team can open it to you.
+          </div>
+        )}
 
         <div style={{ fontSize: 11, letterSpacing: 2, color: DIM, marginBottom: 10 }}>
           YOUR NUMBERS ON THIS CAMPAIGN
@@ -509,7 +529,7 @@ export default function CampaignDetail({
           </>
         )}
 
-        <div style={{ fontSize: 12.5, color: DIM, lineHeight: 1.7 }}>
+        <div style={{ fontSize: 12.5, color: DIM, lineHeight: 1.7, marginBottom: 22 }}>
           {memberRecording && (
             <>Calls on this campaign are recorded.{' '}</>
           )}
@@ -517,6 +537,66 @@ export default function CampaignDetail({
           by whoever runs it. If something here looks wrong, they are the ones
           who can change it.
         </div>
+
+        {/* ── EVERYTHING THEY HAVE DONE HERE ───────────────────────────────
+            The full log rather than the last handful: an agent checking their
+            own work wants to find a specific call, and "recent" is only useful
+            if the one you want happens to be recent.
+
+            A recording is offered only where audio actually exists.
+            recording_status 'pending' means one was owed and never began,
+            which is a different fact from "not recorded" and must not render
+            as a play button that does nothing. */}
+        <div style={{ fontSize: 11, letterSpacing: 2, color: DIM, marginBottom: 10 }}>
+          YOUR ACTIVITY ON THIS CAMPAIGN
+        </div>
+        {myRecent.length === 0 ? (
+          <div style={{
+            background: PANEL, border: `1px solid ${HAIRLINE}`, borderRadius: 4,
+            padding: '16px', fontSize: 12.5, color: DIM, lineHeight: 1.7,
+          }}>
+            You have not dialed anything on this campaign yet. Calls you make
+            will show up here with their outcome, and the recording where there
+            is one.
+          </div>
+        ) : (
+          <div style={{
+            background: PANEL, border: `1px solid ${HAIRLINE}`,
+            borderRadius: 4, maxHeight: 420, overflowY: 'auto',
+          }}>
+            {myRecent.map((c, i) => (
+              <div key={c.id} style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                gap: 12, padding: '10px 14px',
+                borderTop: i === 0 ? 'none' : `1px solid ${HAIRLINE}`,
+                fontSize: 12.5,
+              }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ color: TEXT }}>{c.disposition || 'No disposition'}</div>
+                  <div style={{ color: DIM, fontSize: 11, marginTop: 2 }}>
+                    {new Date(c.at).toLocaleString(undefined, {
+                      month: 'short', day: 'numeric',
+                      hour: 'numeric', minute: '2-digit',
+                    })}
+                    {' · '}
+                    {Math.floor(c.seconds / 60)}:{String(c.seconds % 60).padStart(2, '0')}
+                  </div>
+                </div>
+                {c.hasRecording ? (
+                  <a
+                    href={`/dashboard/recordings?campaign_id=${encodeURIComponent(data.id)}`}
+                    style={{
+                      fontSize: 11.5, color: ACCENT, textDecoration: 'none',
+                      whiteSpace: 'nowrap', flexShrink: 0,
+                    }}
+                  >▶ Recording</a>
+                ) : (
+                  <span style={{ fontSize: 11, color: DIM, flexShrink: 0 }}>—</span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     )
   }

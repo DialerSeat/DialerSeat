@@ -79,6 +79,12 @@ export async function GET(req: NextRequest) {
       if (!memberAccess) {
         return NextResponse.json({ success: false, error: 'Not your campaign' }, { status: 403 })
       }
+      // Being on the team is not the same as being put on the campaign. The
+      // sidebar lists every campaign the team owns, so a member can click one
+      // they have no grant for — and that used to answer "Not your campaign",
+      // which is both blunt and wrong: it IS their team's campaign, they have
+      // simply not been added to it. They get the same view with the numbers
+      // empty and a line saying so.
 
       const [mine, scripts, recent, daily] = await Promise.all([
         myCampaignStats(userId, campaignId),
@@ -90,6 +96,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({
         success: true,
         viewerRole: 'member',
+        // False when they are on the team but have not been added to this
+        // campaign. The view stays open; the Dial button does not.
+        canDial: memberAccess.canDial,
         team: { id: memberAccess.teamId, name: memberAccess.teamName, accessMode: null },
         campaign: {
           id: campaign.id,
@@ -283,7 +292,7 @@ async function resolveMemberAccess(
   clerkId: string,
   campaignId: string,
   teamIds: string[]
-): Promise<{ teamId: string; teamName: string } | null> {
+): Promise<{ teamId: string; teamName: string; canDial: boolean } | null> {
   if (teamIds.length === 0) return null
 
   const { data: memberships } = await supabaseAdmin
@@ -316,9 +325,14 @@ async function resolveMemberAccess(
     (attach || []).filter((a: any) => a.access_mode === 'free').map((a: any) => a.team_id)
   )
 
-  const hit = memberships.find(
+  // Two different questions, deliberately separated. Membership decides
+  // whether they may SEE the campaign; the grant decides whether they may
+  // DIAL it. Collapsing them into one check is what produced "Not your
+  // campaign" for a campaign belonging to their own team.
+  const dialable = memberships.find(
     (m: any) => granted.has(m.id) || openTeams.has(m.team_id)
   )
+  const hit = dialable || memberships[0]
   if (!hit) return null
 
   const { data: team } = await supabaseAdmin
@@ -327,7 +341,11 @@ async function resolveMemberAccess(
     .eq('id', hit.team_id)
     .maybeSingle()
 
-  return { teamId: hit.team_id, teamName: team?.name || 'Team' }
+  return {
+    teamId: hit.team_id,
+    teamName: team?.name || 'Team',
+    canDial: !!dialable,
+  }
 }
 
 /** The viewer's OWN numbers on this campaign. Never anybody else's. */
@@ -391,20 +409,32 @@ async function campaignScripts(campaignId: string) {
     .map((r: any) => ({ id: r.id, name: r.name, body: r.body }))
 }
 
-/** The viewer's own last calls on this campaign. No lead identity. */
+/** The viewer's own call log on this campaign, newest first, with whether a
+ *  recording exists for each one.
+ *
+ *  Still no lead identity — the log answers "what have I done here", and that
+ *  question does not require handing back the list. A recording they made is a
+ *  different matter: they were on the call, so the audio is theirs to replay.
+ */
 async function myRecentCalls(clerkId: string, campaignId: string) {
   const { data } = await supabaseAdmin
     .from('calls')
-    .select('created_at, disposition, duration')
+    .select('id, created_at, disposition, duration, recording_status, recording_duration')
     .eq('user_id', clerkId)
     .eq('campaign_id', campaignId)
     .order('created_at', { ascending: false })
-    .limit(12)
+    .limit(50)
 
   return (data || []).map((r: any) => ({
+    id: r.id,
     at: r.created_at,
     disposition: r.disposition,
     seconds: Number(r.duration) || 0,
+    // 'completed' is the only status that means audio actually exists. pending
+    // and pending_amd mean a recording was owed and never began, which is not
+    // the same thing and must not render as a play button that does nothing.
+    hasRecording: r.recording_status === 'completed',
+    recordingSeconds: Number(r.recording_duration) || 0,
   }))
 }
 

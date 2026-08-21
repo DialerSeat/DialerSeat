@@ -134,6 +134,66 @@ export function CreateTeamModal({ onClose, onCreate, busy }: {
   )
 }
 
+// ── ONE MODAL FOR BOTH ────────────────────────────────────────────────────
+// Renaming a team and renaming a campaign are the same act on different
+// nouns, and both endpoints already existed and already checked ownership —
+// only the way in was missing. A shared modal keeps the wording and the
+// validation identical, so the two cannot drift into behaving differently
+// for no reason.
+//
+// Seeded with the current name and selected on open, because a rename is
+// almost always an edit of what is there rather than a fresh answer.
+export function RenameModal({ kind, currentName, onClose, onSave, busy }: {
+  kind: 'team' | 'campaign'
+  currentName: string
+  onClose: () => void
+  onSave: (name: string) => void
+  busy?: boolean
+}) {
+  const [name, setName] = useState(currentName)
+  const noun = kind === 'team' ? 'Team' : 'Campaign'
+  const trimmed = name.trim()
+  const unchanged = trimmed === currentName.trim()
+
+  return (
+    <Shell
+      title={`Rename ${noun}`}
+      subtitle={
+        kind === 'team'
+          ? 'Everyone on this team sees the new name, including agents already dialing.'
+          : 'Agents see the new name in the dialer straight away. Nothing about the leads or settings changes.'
+      }
+      onClose={onClose}
+      footer={
+        <>
+          <button style={btn} onClick={onClose}>Cancel</button>
+          <button
+            style={{ ...btnPrimary, opacity: !trimmed || unchanged || busy ? 0.5 : 1 }}
+            disabled={!trimmed || unchanged || busy}
+            onClick={() => onSave(trimmed)}
+          >{busy ? 'Saving…' : 'Save'}</button>
+        </>
+      }
+    >
+      <div>
+        <label style={label}>{noun} Name</label>
+        <input
+          autoFocus
+          style={field}
+          value={name}
+          onChange={e => setName(e.target.value)}
+          onFocus={e => e.currentTarget.select()}
+          onKeyDown={e => {
+            if (e.key === 'Enter' && trimmed && !unchanged && !busy) onSave(trimmed)
+          }}
+          maxLength={100}
+          placeholder={currentName}
+        />
+      </div>
+    </Shell>
+  )
+}
+
 export function CreateCampaignModal({
   teams, defaultTeamId, existingCampaigns = [], onClose, onCreate, busy,
 }: {
