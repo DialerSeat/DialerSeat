@@ -160,6 +160,19 @@ export default function TeamsSidebar({
 
   const selectedList = Object.values(selected)
 
+  // The one ticked thing that can be renamed, or null. Requires exactly one
+  // selection, a renameable kind, and ownership — the same three conditions
+  // the ⋮ uses, so the two entry points can never disagree about whether an
+  // action is available.
+  const renameSelection: { kind: 'team' | 'campaign'; id: string; name: string } | null = (() => {
+    if (selectedList.length !== 1) return null
+    const only = selectedList[0]
+    if (only.kind === 'agent') return null
+    const team = teams.find(t => t.id === only.teamId)
+    if (!team?.isOwner) return null
+    return { kind: only.kind, id: only.id, name: only.label }
+  })()
+
   const toggleSelected = (item: SidebarSelection) => {
     setSelected(prev => {
       const next = { ...prev }
@@ -688,7 +701,19 @@ export default function TeamsSidebar({
 
                     {campaignOpen && (
                       campaign.agents.length === 0 ? (
-                        <div className="ts-empty">No agents assigned</div>
+                        // ── AN EMPTY LIST MEANS TWO DIFFERENT THINGS ──────
+                        // On a campaign open to the whole team there are no
+                        // per-agent grants to list, because none are needed —
+                        // everyone can already work it. Saying "no agents
+                        // assigned" there describes the data structure rather
+                        // than the situation, and reads as a warning that
+                        // nobody can dial the campaign when the opposite is
+                        // true.
+                        <div className="ts-empty">
+                          {campaign.openToTeam
+                            ? 'All team has access'
+                            : 'No agents assigned'}
+                        </div>
                       ) : campaign.agents.map(agent => (
                         <div
                           key={agent.id}
@@ -736,10 +761,29 @@ export default function TeamsSidebar({
         <div className="ts-select-bar">
           <span style={{ flex: 1, fontSize: 11.5, color: TEXT_MUTED }}>
             {selectedList.length === 0
-              ? 'Tick what you want to remove'
+              ? 'Tick what you want to change'
               : `${selectedList.length} selected`}
           </span>
           <button className="ts-mini-btn" onClick={leaveSelectMode}>Cancel</button>
+          {/* ── RENAME LIVES HERE TOO ──────────────────────────────────────
+              Ticking a team and finding only Delete makes select mode read as
+              a delete mode, and sends somebody who wanted to rename back out
+              to look for it elsewhere.
+
+              Exactly one ticked item, and only a team or a campaign: renaming
+              is a single-target act with a single text field, and offering it
+              for three ticked things would raise a question the dialog cannot
+              answer. Agents are not renameable here — their name is their
+              own, not a label on somebody's roster. */}
+          {renameSelection && (
+            <button
+              className="ts-mini-btn"
+              onClick={() => {
+                leaveSelectMode()
+                onRename?.(renameSelection.kind, renameSelection.id, renameSelection.name)
+              }}
+            >Rename</button>
+          )}
           {selectedList.length > 0 && (
             <button
               className="ts-mini-btn is-danger"
