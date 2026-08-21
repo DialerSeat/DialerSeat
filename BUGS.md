@@ -318,7 +318,7 @@ a member reads zeroes rather than somebody else's floor.
 
 ---
 
-## 10. "The sidebar duplicates every time I click a tab". FIXED.
+## 10. "The sidebar duplicates every time I click a tab". FIXED (third attempt).
 
 It was never duplicating. The layout renders the sidebar **twice on purpose** —
 once as the desktop rail, once as the mobile drawer — and CSS hides whichever
@@ -338,3 +338,22 @@ subtree enough to make the re-insertion visible.
 
 Moved to `app/globals.css`, where the rules exist before anything renders and are
 never re-inserted. Moving them back into the component brings it back.
+
+**The actual cause, after two wrong fixes.** The layout rendered `<Sidebar />`
+twice — a desktop rail and a mobile drawer — and hid one with CSS. React mounts
+both whatever CSS does with them, and the sidebar contains a Clerk
+`<UserButton />`. That is not a plain element: it owns and moves its own DOM.
+Two of them alive at once, plus a third in the mobile topbar, meant three Clerk
+widgets competing over the same rendering.
+
+Both earlier fixes were CSS, and both were reasonable — the inline `<style>`
+really was being re-inserted, and the rules really did belong in a stylesheet.
+Neither could have worked, because the element COUNT was the problem, not their
+styling. The pointer was the user's: *"it was working before you added team seat
+to the clerk profile at the bottom of it"* — which named the component nobody
+had been looking at.
+
+Now one `<aside class="ds-sidebar">`, one `Sidebar`, one `UserButton`. The media
+query restyles that same node into a sticky rail above 768px and a fixed
+off-canvas drawer below it, which is what media queries are for. The drawer id
+is unchanged so the no-JavaScript open/close bridge still works.

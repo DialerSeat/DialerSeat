@@ -223,19 +223,17 @@ input[type='button'] {
           background: var(--brand-primary-soft) !important;
         }
 
-        .ds-sidebar-desktop {
+        .ds-sidebar {
           width: 260px; height: 100vh; position: sticky; top: 0;
           background: var(--brand-sidebar-bg); border-right: 1px solid var(--brand-sidebar-active-bg);
           display: flex; flex-direction: column; padding: 20px 0;
           flex-shrink: 0; overflow: hidden;
         }
         .ds-mobile-topbar { display: none; }
-        .ds-sidebar-mobile { display: none; }
         .ds-mobile-overlay { display: none; }
         .ds-profile-row:hover { background: color-mix(in srgb, var(--brand-primary) 6%, transparent); }
 
         @media (max-width: 768px) {
-          .ds-sidebar-desktop { display: none; }
           .ds-mobile-topbar {
             display: flex; position: sticky; top: 0; left: 0; right: 0; z-index: 40;
             align-items: center; justify-content: space-between;
@@ -245,7 +243,7 @@ input[type='button'] {
             padding-right: max(16px, env(safe-area-inset-right, 16px));
             background: var(--brand-header-bg); border-bottom: 1px solid var(--brand-sidebar-active-bg);
           }
-          .ds-sidebar-mobile {
+          .ds-sidebar {
             display: flex; position: fixed; top: 0; left: 0; bottom: 0;
             width: 280px; max-width: 85vw;
             background: var(--brand-sidebar-bg); border-right: 1px solid var(--brand-sidebar-active-bg);
@@ -268,9 +266,9 @@ input[type='button'] {
              The .open class stays alongside it so React remains in charge
              once it has booted; the two are kept in agreement by an effect
              that writes the checkbox from state. */
-          .ds-drawer-checkbox:checked ~ .ds-sidebar-mobile { transform: translateX(0); }
+          .ds-drawer-checkbox:checked ~ .ds-sidebar { transform: translateX(0); }
           .ds-drawer-checkbox:checked ~ .ds-mobile-overlay { opacity: 1; pointer-events: auto; }
-          .ds-sidebar-mobile.open { transform: translateX(0); }
+          .ds-sidebar.open { transform: translateX(0); }
           .ds-mobile-overlay {
             display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.55);
             z-index: 50; opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
@@ -281,30 +279,11 @@ input[type='button'] {
           }
         }
 
-/* ─────────────────────────────────────────────────────────────────────────
-   ONE SIDEBAR AT A TIME, ENFORCED
-
-   The rules above already intend this: the desktop rail is hidden below
-   769px, the mobile drawer is hidden above 768px. They were still being seen
-   TOGETHER, stacked, on at least one account — and moving them out of the
-   component's inline <style> did not stop it.
-
-   So this states it as an invariant rather than as a consequence. Whatever
-   else is on the page — a late-injected style block, a theme provider
-   rewriting variables, a stale node during reconciliation — these two
-   elements can never both occupy layout at the same viewport width.
-
-   !important is deliberate and is the point. Everything that could have
-   overridden the earlier rules loses to this, and there is no legitimate
-   state in which both should be visible, so there is nothing for it to
-   break.
-   ───────────────────────────────────────────────────────────────────────── */
+/* The mobile chrome that is NOT the sidebar still hides above the breakpoint.
+   The sidebar itself no longer needs hiding at any width — there is only one
+   of it now, and the media query below restyles that same node into a drawer
+   rather than swapping in a second copy. */
 @media (min-width: 769px) {
-  .ds-sidebar-mobile,
   .ds-mobile-overlay,
   .ds-mobile-topbar { display: none !important; }
-}
-
-@media (max-width: 768px) {
-  .ds-sidebar-desktop { display: none !important; }
 }

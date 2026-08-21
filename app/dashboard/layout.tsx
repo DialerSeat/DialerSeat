@@ -559,14 +559,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           that gap both sidebars rendered unstyled and stacked — which
           read as the sidebar duplicating itself. See the note there. */}
 
-      <div className="ds-sidebar-desktop">
-        <Sidebar />
-      </div>
+      {/* ── ONE SIDEBAR. NOT TWO. ────────────────────────────────────────
+          This used to render <Sidebar /> twice — a desktop rail and a mobile
+          drawer — with CSS hiding whichever did not apply. React mounts both
+          regardless of what CSS does with them, and the sidebar contains a
+          Clerk <UserButton />, which is not a plain element: it owns and
+          moves its own DOM. Two of them alive at once, plus the one in the
+          mobile topbar, made three Clerk widgets competing over the same
+          rendering, and the visible result was a sidebar appearing to
+          duplicate and then correct itself on every navigation.
 
-      {/* Hidden, and deliberately the FIRST of the three siblings — the CSS
-          rules above reach the drawer and overlay through `~`, which only
-          looks forward. Uncontrolled on purpose: the browser must be free to
-          toggle it before React exists. */}
+          Two rounds of CSS did not fix that, because it was never a styling
+          problem. The element count was the problem.
+
+          Now: one element, one Sidebar, one UserButton. The media queries
+          turn this same node into a sticky rail above 768px and a fixed
+          off-canvas drawer below it, which is what media queries are for.
+
+          Still placed AFTER the checkbox, because the drawer rules reach it
+          through `~`, which only looks forward. */}
       <input
         type="checkbox"
         id="ds-drawer-toggle"
@@ -586,7 +597,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         aria-hidden="true"
       />
 
-      <aside id="ds-menu-drawer" className="ds-sidebar-mobile">
+      <aside id="ds-menu-drawer" className="ds-sidebar">
         <Sidebar />
       </aside>
 
@@ -639,7 +650,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {tenantLogoUrl ? <TenantBrandMobileTopbar /> : <DefaultBrandMobileTopbar />}
           </Link>
 
-          <UserButton />
+          {/* No UserButton here. The one in the sidebar is the only Clerk
+              widget in this layout, and mounting a second put two of them
+              in the tree at once — which is what produced the glitch. The
+              hamburger opens the drawer, and the profile lives there. */}
         </div>
 
         <DashboardBanners />
