@@ -215,6 +215,22 @@ export function ThemeProvider({
      fixed colour cannot. */
   --teams-field: color-mix(in srgb, var(--brand-page-bg) 88%, var(--brand-on-page-bg) 12%);
   --teams-inset: color-mix(in srgb, var(--brand-page-bg) 93%, var(--brand-on-page-bg) 7%);
+
+  /* ── THE TEAMS TREE IS A SIDEBAR, SO IT USES THE SIDEBAR FAMILY ─────────
+     It sits directly against the main nav, and standing two sidebars side by
+     side in two different greys reads as a rendering fault rather than a
+     design. On a tenant it takes the nav's own background.
+
+     Its TEXT comes from the sidebar family too, and that is not optional:
+     every word in that component sits on this background, so colouring it
+     from the page family is the same invisible-text bug in a new place. The
+     field colour is mixed from the sidebar pair for the same reason. */
+  --teams-sidebar-bg: var(--brand-sidebar-bg);
+  --teams-sidebar-text: var(--brand-on-sidebar);
+  --teams-sidebar-muted: var(--brand-on-sidebar-muted);
+  --teams-sidebar-hover: var(--brand-sidebar-hover-bg);
+  --teams-sidebar-active: var(--brand-sidebar-active-bg);
+  --teams-sidebar-field: color-mix(in srgb, var(--brand-sidebar-bg) 86%, var(--brand-on-sidebar) 14%);
 }` : ''}`
   }, [
     branding?.primary_color,

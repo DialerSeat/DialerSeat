@@ -102,13 +102,22 @@ export interface SidebarSelection {
   label: string
 }
 
-const SURFACE = 'var(--teams-surface, #2b2d31)'
-const SURFACE_RAISED = 'var(--teams-surface-raised, #35373c)'
-const TEXT = 'var(--teams-text, #f2f3f5)'
-const TEXT_MUTED = 'var(--teams-muted, #949ba4)'
-const TEXT_DIM = 'var(--teams-muted, #80848e)'
+// ── EVERY COLOUR HERE IS A SIDEBAR COLOUR ────────────────────────────────
+// This component renders one thing: the tree that sits against the main nav.
+// So its palette comes from the SIDEBAR family, not the page family — both so
+// the two sidebars match on a tenant instead of standing side by side in two
+// different greys, and because every word in here sits on the sidebar
+// background. Colouring text from the page pair is how it ends up invisible.
+//
+// Fallbacks are the original hex, and the variables only exist on a branded
+// tenant, so the default look is unchanged.
+const SURFACE = 'var(--teams-sidebar-bg, #2b2d31)'
+const SURFACE_RAISED = 'var(--teams-sidebar-active, #35373c)'
+const TEXT = 'var(--teams-sidebar-text, #f2f3f5)'
+const TEXT_MUTED = 'var(--teams-sidebar-muted, #949ba4)'
+const TEXT_DIM = 'var(--teams-sidebar-muted, #80848e)'
 const ACCENT = 'var(--brand-primary, #5865f2)'
-const HAIRLINE = 'var(--teams-border, #1f2023)'
+const HAIRLINE = 'var(--teams-sidebar-active, #1f2023)'
 
 /** Discord's disclosure caret: rotates rather than swapping glyph, so the
  *  transition reads as the same control moving instead of two states blinking. */
@@ -286,7 +295,7 @@ export default function TeamsSidebar({
         .ts-menu {
           position: absolute; top: calc(100% + 6px); right: 0; z-index: 21;
           min-width: 210px; padding: 6px;
-          background: var(--teams-inset, #111214); border: 1px solid ${HAIRLINE};
+          background: var(--teams-sidebar-field, #111214); border: 1px solid ${HAIRLINE};
           border-radius: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.45);
           display: flex; flex-direction: column; gap: 2px;
         }
@@ -460,7 +469,7 @@ export default function TeamsSidebar({
         .ts-join-input {
           width: 100%; box-sizing: border-box;
           padding: 7px 10px; border-radius: 4px;
-          border: 1px solid ${HAIRLINE}; background: var(--teams-page-bg, #1e1f22);
+          border: 1px solid ${HAIRLINE}; background: var(--teams-sidebar-field, #1e1f22);
           color: ${TEXT}; font-size: 12.5px; text-align: center;
           font-family: inherit; letter-spacing: 0.5px;
         }
