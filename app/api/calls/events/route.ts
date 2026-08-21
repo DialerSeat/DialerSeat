@@ -865,17 +865,24 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
       : Promise.resolve()
 
   if (!callRow.dial_group_id) {
-    // ── user_dial: BRIDGE NOW ────────────────────────────────────────────
-    // This used to be "already bridged at answer time, nothing to do", which
-    // was true while the dial carried bridge_on_answer. It no longer does
-    // when AMD is enabled: Telnyx's guidance is to bridge AFTER detection
-    // completes, because a detector asked to classify an already-joined call
-    // returns nonsense — 12 of 12 humans came back 'machine' under the old
-    // arrangement.
+    // ── user_dial IS ALREADY BRIDGED. NOTHING HAPPENS HERE. ──────────────
+    // A previous version of this comment claimed the opposite — that the dial
+    // stops carrying bridge_on_answer once AMD is enabled, and that a human
+    // verdict is therefore where the agent finally gets connected. That is no
+    // longer true and the prose outlived the code by some margin.
     //
-    // So on a human verdict this is the moment the agent gets connected. The
-    // agent's leg has been up and waiting since before the lead was dialed,
-    // so the bridge is a single command with no setup.
+    // lib/placeOutboundCall.ts now sets bridge_on_answer unconditionally
+    // whenever there is an agent leg — see the ALWAYS BRIDGE ON ANSWER block
+    // there, which reversed the bridge-after-detection arrangement on measured
+    // grounds: the bridge tracked the verdict to within ten milliseconds,
+    // because it WAS the verdict, and every answered call bought detection
+    // accuracy with one to six seconds of silence on both ends.
+    //
+    // Leaving that claim here was a live hazard, not untidiness. Anyone
+    // debugging "no audio until the verdict" reads this block, believes the
+    // bridge is gated on AMD, and goes to work on a mechanism that was removed
+    // — while the real cause sits somewhere else entirely. The guard below
+    // has been correct throughout; only the explanation above it was wrong.
     //
     // When AMD is OFF the dial still uses bridge_on_answer and no detection
     // webhook ever arrives, so this path simply never runs for those calls.

@@ -8,41 +8,54 @@ Nothing here is fixed unless it says FIXED.
 
 ---
 
-## 1. Predictive gives dead air until AMD says human
+## 1. Dead air until AMD says human — CAUSE NOT FOUND IN CODE
 
-**Reported:** the call puts out zero audio until it is verified human. Wanted:
-audio the instant the line connects, even if that means hearing a sliver of
-voicemail. **AMD's behaviour must not change** — only when audio starts.
+**Reported:** zero audio until the call is verified human. Wanted: audio the
+instant the line connects, even if that means a sliver of voicemail. AMD's
+behaviour must not change.
 
-**Traced.** `app/api/calls/events/route.ts`, the `call.answered` branch. Its own
-header comment states the current rule:
+**The first diagnosis in this file was wrong and has been replaced.** It said
+fan-out waits for the verdict before bridging. That was true once; it is not now,
+and worse, a stale comment in the code still said so, which is what the diagnosis
+was built on.
 
-> "controller_fanout calls: ... We don't yet know if it's a human or a machine —
-> AMD is still running. So we do NOT bridge yet here. ... Audio isn't bridged to
-> anyone during that window for fanout calls."
+**What the code actually does today:**
 
-So the dead air is deliberate, and it is **predictive only**: agent-attended
-(`user_dial`) calls are bridged by Telnyx itself via `bridge_on_answer` at
-pickup, which is why every other mode already feels instant.
+- `lib/placeOutboundCall.ts` sets `bridge_on_answer` **unconditionally** whenever
+  there is an agent leg — see its ALWAYS BRIDGE ON ANSWER block, which reversed
+  the bridge-after-detection arrangement on measured grounds: the bridge tracked
+  the verdict to within ten milliseconds, because it WAS the verdict.
+- `app/api/calls/events/route.ts` explicitly does **not** re-bridge `user_dial`
+  on a verdict; its guard excludes it, precisely because re-bridging a live call
+  can drop the audio the agent is using.
+- Fan-out gained a pickup bridge too (`c8995257`, `f8769239`).
 
-It is not the lead-info-reveal change. The dialer already switches at pickup —
-`app/dashboard/dialer/page.tsx` says so directly: *"Deliberately switches at
-PICKUP, before any AMD verdict — a voicemail opens the profile exactly like a
-human does."* The UI was never the thing holding the audio.
+**What the live data says:**
 
-**Fix:** call `bridgeAgentOntoLead` in the `call.answered` branch for
-`controller_fanout`, instead of waiting for `call.machine.detection.ended`.
-Leave the machine branch exactly as it is — it already drops the agent's leg the
-moment AMD says machine, and the client already tears down its own SIP session
-in response.
+- Every call since 18 Aug is `user_dial`, not predictive — so this is the
+  agent-attended path, and fan-out is not involved at all.
+- All three calls today had an agent leg, meaning `bridge_on_answer` was set.
+- The last `fanout_placement_failed` event is 15 Aug.
 
-Low risk because `bridgeAgentOntoLead` is already idempotent: the conditional
-`.is('bridged_at', null)` update means only the first caller issues a bridge, so
-the existing human-verdict call becomes a harmless no-op rather than a second
-bridge.
+So the code already does the thing being asked for, and there is no evidence in
+the database of the bridge being withheld. Telnyx's own docs do not say that
+`answering_machine_detection` delays `bridge_on_answer`, so that cannot be
+asserted either.
 
-**Consequence to accept deliberately:** the agent hears the first moment of a
-voicemail greeting before AMD cuts it. That is the trade being asked for.
+**Fixed here:** the stale comment, which was a live hazard rather than untidiness
+— anyone debugging this reads it, believes the bridge is gated on AMD, and goes
+to work on a mechanism that was removed.
+
+**To settle it needs one live call watched in real time**, since neither the code
+nor the stored rows can distinguish "audio started late" from "audio started on
+time". Worth capturing when it happens: the exact call, whether the agent leg was
+up before the lead answered, and how long after `answered_at` the audio arrived.
+
+One thing worth ruling out first: AMD is on for every recent call, and a
+`machine` verdict releases the agent within a few seconds. Two of today's three
+calls came back `human` and one `machine` — if what is being heard is the machine
+path releasing the agent, that is AMD working as designed rather than an audio
+bug, and it would feel identical from the agent's chair.
 
 ---
 
