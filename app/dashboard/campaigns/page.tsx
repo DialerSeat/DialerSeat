@@ -3527,7 +3527,7 @@ export default function CampaignsPage() {
                       onChange={e => settingsId && setCampaignTeam(settingsId, e.target.value)}
                       disabled={isLapsed || teamBusy}
                     >
-                      <option value="">Not on a team</option>
+                      <option value="">Personal</option>
                       {myTeams.map(t => (
                         <option key={t.id} value={t.id}>{t.name}</option>
                       ))}
@@ -3664,9 +3664,30 @@ export default function CampaignsPage() {
 
               {/* LEADS section */}
               <div className="settings-section-card">
-                <div className="settings-section-title">
-                  ▸ LEADS · {settingsCampaign.total_leads.toLocaleString()} TOTAL
-                  · {settingsCampaign.called_leads.toLocaleString()} CALLED
+                <div className="settings-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span>
+                    ▸ LEADS · {settingsCampaign.total_leads.toLocaleString()} TOTAL
+                    · {settingsCampaign.called_leads.toLocaleString()} CALLED
+                  </span>
+                  {/* ── THE LIST IS THEIRS, AND THEY CAN TAKE IT ────────────
+                      A plain anchor, not a fetch: the route streams a page at
+                      a time and sets Content-Disposition, so the browser
+                      downloads it directly without the whole file ever being
+                      held in the tab's memory. Buffering it into a blob here
+                      would reintroduce exactly the ceiling that streaming
+                      exists to remove.
+
+                      Only shown once there is something to export — a
+                      download button on an empty campaign hands back a file
+                      containing nothing but a header row. */}
+                  {settingsCampaign.total_leads > 0 && (
+                    <a
+                      className="script-manage-link"
+                      href={`/api/leads/export?campaign_id=${encodeURIComponent(settingsCampaign.id)}`}
+                      title="Download every lead in this campaign as a CSV"
+                      style={{ textDecoration: 'none' }}
+                    >DOWNLOAD CSV ↓</a>
+                  )}
                 </div>
                 {!isLapsed && settingsCampaign.total_leads === 0 ? (
                   <>

@@ -150,12 +150,40 @@ export async function GET(req: NextRequest) {
     },
   })
 
+  // ── NAME THE FILE AFTER WHAT IS IN IT ──────────────────────────────────
+  // Every export used to download as dialerseat-leads-<date>.csv, so exporting
+  // three campaigns on one day produced three files with the same name, which
+  // the browser then silently numbered (1), (2), (3). Nothing in the download
+  // said which campaign was which, and the only way to find out was to open
+  // them. Now that a campaign can be exported straight from its own settings
+  // panel, that stops being a nuisance and starts being the normal case.
+  //
+  // The lookup is scoped to this user, so an id belonging to somebody else
+  // yields no name rather than leaking one.
+  let namePart = 'leads'
+  if (campaignId !== 'all') {
+    const { data: c } = await supabaseAdmin
+      .from('campaigns')
+      .select('name')
+      .eq('id', campaignId)
+      .eq('user_id', userId)
+      .maybeSingle()
+    if (c?.name) {
+      const slug = c.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 40)
+      if (slug) namePart = slug
+    }
+  }
+
   const date = new Date().toISOString().slice(0, 10)
   return new Response(stream, {
     status: 200,
     headers: {
       'Content-Type': 'text/csv; charset=utf-8',
-      'Content-Disposition': `attachment; filename="dialerseat-leads-${date}.csv"`,
+      'Content-Disposition': `attachment; filename="dialerseat-${namePart}-${date}.csv"`,
       // Nothing may buffer this into one body on the way out; that would
       // reintroduce the memory profile the streaming exists to avoid.
       'Cache-Control': 'no-store',
