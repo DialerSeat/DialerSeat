@@ -11,12 +11,12 @@ import { useEffect, useState } from 'react'
 // under the thing you read weekly is how admin pages get slow to use.
 // =============================================================================
 
-const PANEL = '#232428'
-const HAIRLINE = '#1a1b1e'
-const TEXT = '#f2f3f5'
-const MUTED = '#949ba4'
-const DIM = '#80848e'
-const ACCENT = '#2563eb'
+const PANEL = 'var(--brand-card-surface, #232428)'
+const HAIRLINE = 'var(--brand-card-border, #1a1b1e)'
+const TEXT = 'var(--brand-on-page-bg, #f2f3f5)'
+const MUTED = 'var(--brand-muted-text, #949ba4)'
+const DIM = 'var(--brand-muted-text, #80848e)'
+const ACCENT = 'var(--brand-primary, #2563eb)'
 
 export interface TeamDetailCampaign {
   id: string

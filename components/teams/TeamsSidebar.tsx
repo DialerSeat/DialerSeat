@@ -102,13 +102,13 @@ export interface SidebarSelection {
   label: string
 }
 
-const SURFACE = '#2b2d31'
-const SURFACE_RAISED = '#35373c'
-const TEXT = '#f2f3f5'
-const TEXT_MUTED = '#949ba4'
-const TEXT_DIM = '#80848e'
+const SURFACE = 'var(--brand-sidebar-hover-bg, #2b2d31)'
+const SURFACE_RAISED = 'var(--brand-sidebar-active-bg, #35373c)'
+const TEXT = 'var(--brand-on-page-bg, #f2f3f5)'
+const TEXT_MUTED = 'var(--brand-muted-text, #949ba4)'
+const TEXT_DIM = 'var(--brand-muted-text, #80848e)'
 const ACCENT = 'var(--brand-primary, #5865f2)'
-const HAIRLINE = '#1f2023'
+const HAIRLINE = 'var(--brand-card-border, #1f2023)'
 
 /** Discord's disclosure caret: rotates rather than swapping glyph, so the
  *  transition reads as the same control moving instead of two states blinking. */
