@@ -107,7 +107,7 @@ behaviour, and catches any future cause too.
 
 ---
 
-## 3. Campaign dropdown shows for campaigns the user does not own
+## 3. Campaign dropdown shows for campaigns the user does not own. FIXED.
 
 **Reported:** a user should not see the dropdown on a campaign they do not own.
 Confirmed to be the per-campaign dropdown in the teams sidebar
@@ -117,9 +117,14 @@ expands to reveal the agent roster underneath.
 `SidebarTeam` already carries `isOwner`, but it is only used to render an
 "Owner" tag (line 588). Nothing gates the caret or the roster it reveals.
 
-To build out rather than just hide: decide what a non-owner should see under a
-campaign — nothing at all, only themselves, or the roster minus other agents'
-names.
+Resolved as: the roster is the owner's to see. Expanding a campaign lists every
+agent on it by name, which is a management view — for somebody who merely dials
+the campaign it is a list of colleagues and how the floor is staffed, which they
+cannot act on and were never meant to have.
+
+The caret is hidden rather than disabled, because a control that does nothing
+reads as broken and invites the click that proves it. A spacer keeps campaign
+names aligned so the tree does not change shape per viewer.
 
 ---
 
@@ -132,7 +137,7 @@ could act on, and framed their own seat as a headcount line. Falls back to
 
 ---
 
-## 5. A member opening a campaign page just gets told off
+## 5. A member opening a campaign page just gets told off. FIXED.
 
 **Reported:** the campaign page for a campaign the user does not own currently
 renders red text saying they do not own it, and nothing else. Needs a real
@@ -144,10 +149,28 @@ see. A member on a campaign has a genuine reason to open it — their own number
 on it, the script, which dispositions they have been recording, how much of the
 list is left.
 
-Worth designing once and applying to both surfaces: what does a campaign look
-like to somebody who dials it but does not run it? Owner-only, at minimum, are
-the lead file, the team assignment, the dialer mode, AMD and recording settings,
-and anything that spends money.
+Answered as: ownership decides what somebody may CHANGE, not whether they may
+see the work they are doing.
+
+`/api/teams/campaigns/detail` now has a member branch returning a deliberately
+narrow payload — the campaign's name and state, how much list is left, and the
+viewer's OWN figures. `CampaignDetail` renders that as a personal scorecard with
+a Dial button.
+
+Absent by design, and worth stating because the temptation is to widen it: no
+other agent's name or figures, no lead data, no settings, no codes, no drip
+token, nothing that spends money. Widening it would turn a personal scorecard
+into a leaderboard nobody asked to be on.
+
+Access is checked properly rather than assumed: active membership on a team the
+campaign is attached to, AND either a live grant on that campaign or the
+campaign being open to the whole team. Anyone else still gets the 403.
+
+**Caught while building it:** the stored dispositions are `NOT INTERESTED` and
+`DO NOT CALL` — with spaces. Matching on `NOT_INTERESTED` and `DNC`, which is
+what a reader would assume and what a comment elsewhere still claims, returns
+zero forever with no error. Both spellings are now accepted. A stat that silently
+reads zero is worse than one that is missing, because it looks like an answer.
 
 ---
 

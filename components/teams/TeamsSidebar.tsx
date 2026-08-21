@@ -591,18 +591,35 @@ export default function TeamsSidebar({
 
               {teamOpen && team.campaigns.map(campaign => {
                 const key = `${team.id}:${campaign.id}`
-                const campaignOpen = !collapsedCampaigns.has(key)
+                // ── THE ROSTER UNDER A CAMPAIGN IS THE OWNER'S TO SEE ──
+                // Expanding a campaign lists every agent on it by name. That
+                // is a management view: for somebody who merely dials the
+                // campaign it is a list of their colleagues and how the floor
+                // is staffed, which they were never meant to have and cannot
+                // act on.
+                //
+                // The caret is hidden rather than disabled. A control that
+                // does nothing reads as broken, and invites the click that
+                // proves it — an absent one says the level simply is not
+                // there. A spacer keeps the campaign names aligned with the
+                // owner's view so the tree does not shift shape per viewer.
+                const canSeeRoster = !!team.isOwner
+                const campaignOpen = canSeeRoster && !collapsedCampaigns.has(key)
                 return (
                   <div key={campaign.id}>
                     <div className={`ts-row-wrap ts-indent-1${isSelected({ kind: 'campaign', teamId: team.id, campaignId: campaign.id }) ? ' is-selected' : ''}`}>
-                      <button
-                        className="ts-caret-btn"
-                        onClick={() => toggle(collapsedCampaigns, key, setCollapsedCampaigns)}
-                        aria-label={campaignOpen ? 'Collapse' : 'Expand'}
-                        aria-expanded={campaignOpen}
-                      >
-                        <Caret open={campaignOpen} />
-                      </button>
+                      {canSeeRoster ? (
+                        <button
+                          className="ts-caret-btn"
+                          onClick={() => toggle(collapsedCampaigns, key, setCollapsedCampaigns)}
+                          aria-label={campaignOpen ? 'Collapse' : 'Expand'}
+                          aria-expanded={campaignOpen}
+                        >
+                          <Caret open={campaignOpen} />
+                        </button>
+                      ) : (
+                        <span className="ts-caret-btn" aria-hidden="true" />
+                      )}
                       {selectMode && (
                         <button
                           className={`ts-bubble${selected[campaign.id] ? ' is-on' : ''}`}

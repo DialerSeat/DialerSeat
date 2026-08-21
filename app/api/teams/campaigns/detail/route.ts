@@ -59,7 +59,50 @@ export async function GET(req: NextRequest) {
 
     const isCampaignOwner = campaign.user_id === userId
     if (!isCampaignOwner && !ownedTeam) {
-      return NextResponse.json({ success: false, error: 'Not your campaign' }, { status: 403 })
+      // ── A DIALER IS NOT A TRESPASSER ────────────────────────────────────
+      // This used to end here with "Not your campaign", so an agent who opened
+      // a campaign they dial every day was told, in red, that it was not
+      // theirs. True in the ownership sense and useless in every other: they
+      // have a real reason to look, and refusing them taught them nothing
+      // except that the page is not for them.
+      //
+      // Ownership decides what somebody may CHANGE. It should not decide
+      // whether they may see the work they are doing. So a member with access
+      // gets a view scoped to exactly that: the campaign's name and state, and
+      // their own numbers on it.
+      //
+      // Deliberately absent, and worth stating because the temptation is to
+      // widen it later: no other agent's name or figures, no lead data, no
+      // settings, no codes, no drip token, nothing that spends money. A
+      // member's view answers "how am I doing on this" and nothing else.
+      const memberAccess = await resolveMemberAccess(userId, campaignId, teamIds)
+      if (!memberAccess) {
+        return NextResponse.json({ success: false, error: 'Not your campaign' }, { status: 403 })
+      }
+
+      const mine = await myCampaignStats(userId, campaignId)
+
+      return NextResponse.json({
+        success: true,
+        viewerRole: 'member',
+        team: { id: memberAccess.teamId, name: memberAccess.teamName, accessMode: null },
+        campaign: {
+          id: campaign.id,
+          name: campaign.name,
+          status: campaign.status,
+          dialerMode: campaign.dialer_mode,
+          // How much of the list is left is legitimately theirs to know: it is
+          // the difference between settling in and expecting to run dry.
+          totalLeads: campaign.total_leads ?? 0,
+          calledLeads: campaign.called_leads ?? 0,
+          remainingLeads: Math.max((campaign.total_leads ?? 0) - (campaign.called_leads ?? 0), 0),
+        },
+        myStats: mine,
+        agents: [],
+        availableMembers: [],
+        ingestLog: [],
+        isCampaignOwner: false,
+      })
     }
 
     const accessMode =
@@ -201,5 +244,93 @@ export async function GET(req: NextRequest) {
   } catch (error: any) {
     console.error('Campaign detail error:', error)
     return apiError(error, { route: 'teams/campaigns/detail' })
+  }
+}
+
+/** Is this user an active member of a team the campaign is attached to, AND
+ *  granted access to it? Both are required: being on the team is not the same
+ *  as being put on the campaign. */
+async function resolveMemberAccess(
+  clerkId: string,
+  campaignId: string,
+  teamIds: string[]
+): Promise<{ teamId: string; teamName: string } | null> {
+  if (teamIds.length === 0) return null
+
+  const { data: memberships } = await supabaseAdmin
+    .from('team_members')
+    .select('id, team_id, status')
+    .eq('user_id', clerkId)
+    .eq('status', 'active')
+    .in('team_id', teamIds)
+
+  if (!memberships || memberships.length === 0) return null
+
+  // An 'free' campaign is open to the whole team; otherwise the grant has to
+  // exist against this specific member.
+  const memberIds = memberships.map((m: any) => m.id)
+  const { data: grants } = await supabaseAdmin
+    .from('team_campaign_access')
+    .select('team_member_id')
+    .eq('campaign_id', campaignId)
+    .in('team_member_id', memberIds)
+    .is('revoked_at', null)
+
+  const granted = new Set((grants || []).map((g: any) => g.team_member_id))
+
+  const { data: attach } = await supabaseAdmin
+    .from('team_campaigns')
+    .select('team_id, access_mode')
+    .eq('campaign_id', campaignId)
+
+  const openTeams = new Set(
+    (attach || []).filter((a: any) => a.access_mode === 'free').map((a: any) => a.team_id)
+  )
+
+  const hit = memberships.find(
+    (m: any) => granted.has(m.id) || openTeams.has(m.team_id)
+  )
+  if (!hit) return null
+
+  const { data: team } = await supabaseAdmin
+    .from('teams')
+    .select('id, name')
+    .eq('id', hit.team_id)
+    .maybeSingle()
+
+  return { teamId: hit.team_id, teamName: team?.name || 'Team' }
+}
+
+/** The viewer's OWN numbers on this campaign. Never anybody else's. */
+async function myCampaignStats(clerkId: string, campaignId: string) {
+  const { data } = await supabaseAdmin
+    .from('calls')
+    .select('disposition, duration')
+    .eq('user_id', clerkId)
+    .eq('campaign_id', campaignId)
+
+  const rows = data || []
+
+  // ── THE STORED VALUES USE SPACES, NOT UNDERSCORES ──────────────────────
+  // Live data holds 'NOT INTERESTED' and 'DO NOT CALL'. Matching on
+  // 'NOT_INTERESTED' and 'DNC' — which is what a reader would reasonably
+  // assume, and what a comment elsewhere in this codebase still says — returns
+  // zero for both, forever, with no error. A stat that silently reads zero is
+  // worse than one that is missing: it looks like an answer.
+  //
+  // Both spellings are accepted so older rows, and any path that writes the
+  // underscored form, still count.
+  const by = (...forms: string[]) => {
+    const set = new Set(forms)
+    return rows.filter((r: any) => set.has(r.disposition)).length
+  }
+
+  return {
+    calls: rows.length,
+    talkSeconds: rows.reduce((n: number, r: any) => n + (Number(r.duration) || 0), 0),
+    appointments: by('APPOINTMENT', 'APPOINTMENT_SET'),
+    closed: by('CLOSED'),
+    notInterested: by('NOT INTERESTED', 'NOT_INTERESTED'),
+    dnc: by('DO NOT CALL', 'DNC'),
   }
 }

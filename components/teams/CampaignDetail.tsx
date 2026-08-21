@@ -151,6 +151,14 @@ export default function CampaignDetail({
   // enforces that server-side. Showing the controls to a team owner who did not
   // create it means offering a switch that answers 403 when flipped.
   const [isCampaignOwner, setIsCampaignOwner] = useState(true)
+  // 'member' means the viewer dials this campaign but does not run it. The
+  // endpoint returns a deliberately narrow payload in that case — their own
+  // figures and nothing about anybody else.
+  const [viewerRole, setViewerRole] = useState<'owner' | 'member'>('owner')
+  const [myStats, setMyStats] = useState<{
+    calls: number; talkSeconds: number; appointments: number
+    closed: number; notInterested: number; dnc: number
+  } | null>(null)
   const [origin, setOrigin] = useState('')
   const [copied, setCopied] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -171,6 +179,8 @@ export default function CampaignDetail({
       setAvailable(r.availableMembers || [])
       setIngestLog(r.ingestLog || [])
       setIsCampaignOwner(r.isCampaignOwner !== false)
+      setViewerRole(r.viewerRole === 'member' ? 'member' : 'owner')
+      setMyStats(r.myStats || null)
       setError(null)
     } catch (e: any) {
       setError(e.message || 'Could not load campaign')
@@ -320,6 +330,98 @@ export default function CampaignDetail({
   const pct = data.totalLeads > 0
     ? Math.round((data.calledLeads / data.totalLeads) * 100)
     : 0
+
+  // ── WHAT A CAMPAIGN LOOKS LIKE TO SOMEBODY WHO DIALS IT ────────────────
+  // Previously this screen answered an agent with red text saying the campaign
+  // was not theirs. Ownership decides what somebody may CHANGE; it should not
+  // decide whether they can see the work they are doing.
+  //
+  // So: their own figures, how much list is left, and a way back to dialling.
+  // No other agent appears here, no lead data, no settings, no codes. The
+  // absence is the design, not an oversight — widening it later would turn a
+  // personal scorecard into a leaderboard nobody asked to be on.
+  if (viewerRole === 'member') {
+    const mins = myStats ? Math.round(myStats.talkSeconds / 60) : 0
+    const stat = (label: string, value: string | number) => (
+      <div key={label} style={{
+        background: PANEL, border: `1px solid ${HAIRLINE}`,
+        borderRadius: 4, padding: '12px 14px',
+      }}>
+        <div style={{ fontSize: 10, letterSpacing: 1.5, color: DIM, marginBottom: 6 }}>
+          {label.toUpperCase()}
+        </div>
+        <div style={{ fontSize: 22, fontWeight: 600, color: TEXT, fontFamily: 'monospace' }}>
+          {value}
+        </div>
+      </div>
+    )
+
+    return (
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
+          <button style={btn} onClick={onBack}>← Back</button>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 22, fontWeight: 600, color: TEXT }}>
+              {data.name}
+              {paused && (
+                <span style={{ color: '#fbbf24', fontSize: 12, marginLeft: 10 }}>paused</span>
+              )}
+            </div>
+            <div style={{ fontSize: 12, color: DIM, marginTop: 2 }}>
+              {team?.name ? `${team.name} · ` : ''}You dial this campaign
+            </div>
+          </div>
+          {!paused && (
+            <a
+              href={`/dashboard/dialer?campaign=${encodeURIComponent(data.id)}`}
+              style={{
+                ...btn, textDecoration: 'none',
+                borderColor: ACCENT, color: '#fff', background: ACCENT,
+              }}
+            >Dial</a>
+          )}
+        </div>
+
+        <div style={{ fontSize: 11, letterSpacing: 2, color: DIM, marginBottom: 10 }}>
+          YOUR NUMBERS ON THIS CAMPAIGN
+        </div>
+        <div style={{
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+          gap: 8, marginBottom: 20,
+        }}>
+          {/* A dash, never a zero invented to fill the box: no calls yet is a
+              different statement from nothing recorded. */}
+          {stat('Calls', myStats ? myStats.calls.toLocaleString() : '—')}
+          {stat('Talk time', myStats ? `${mins}m` : '—')}
+          {stat('Appointments', myStats ? myStats.appointments : '—')}
+          {stat('Closed', myStats ? myStats.closed : '—')}
+          {stat('Not interested', myStats ? myStats.notInterested : '—')}
+        </div>
+
+        <div style={{ fontSize: 11, letterSpacing: 2, color: DIM, marginBottom: 10 }}>
+          THE LIST
+        </div>
+        <div style={{
+          background: PANEL, border: `1px solid ${HAIRLINE}`,
+          borderRadius: 4, padding: '14px 16px', marginBottom: 20,
+        }}>
+          <div style={{ fontSize: 14, color: TEXT }}>
+            {data.remainingLeads.toLocaleString()} left to call
+          </div>
+          <div style={{ fontSize: 12, color: DIM, marginTop: 4 }}>
+            {data.calledLeads.toLocaleString()} of {data.totalLeads.toLocaleString()} worked
+            {data.totalLeads > 0 ? ` · ${pct}%` : ''}
+          </div>
+        </div>
+
+        <div style={{ fontSize: 12.5, color: DIM, lineHeight: 1.7 }}>
+          How this campaign dials, what it records, and who else is on it are set
+          by whoever runs it. If something here looks wrong, they are the ones
+          who can change it.
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div>
