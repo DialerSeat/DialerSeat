@@ -26,6 +26,10 @@ export interface SeatBillingSuccess {
   stripeSubscriptionId: string
   currentPeriodStart: string
   currentPeriodEnd: string
+  /** True when the seat picked up a discount from the OWNER'S Stripe customer
+   *  rather than one we chose. Signals a comp that was attached in the wrong
+   *  place and is now quietly zeroing out seat revenue. */
+  inheritedOwnerDiscount?: boolean
 }
 
 
@@ -134,6 +138,28 @@ export async function createSeatSubscription(
     console.error('[teamBilling] discount lookup failed, opening seat at full price', err?.message || err)
   }
 
+  // ── THE OWNER'S OWN FREE RIDE MUST NOT TRAVEL TO THE SEATS ────────────
+  // Stripe: "When a subscription has no discounts, the customer-level
+  // discount, if any, applies to invoices." Seats are created on the OWNER'S
+  // customer, so an owner holding a customer-level coupon — a 100%-off comp,
+  // say — has that coupon silently applied to every seat they buy. They get
+  // their team for nothing and no error is raised anywhere, because a $0
+  // invoice settles perfectly happily.
+  //
+  // It only bites when no volume coupon is set, since a subscription WITH its
+  // own discounts does not inherit the customer's. So it hides below the first
+  // volume tier and appears to work everywhere it is likely to be tested.
+  //
+  // A subscription-level "0% off" coupon would block the inheritance, but
+  // Stripe requires percent_off to be greater than zero, so there is no
+  // no-op coupon to apply. The comp therefore has to live on the owner's
+  // PERSONAL SUBSCRIPTION, not on their customer — which is what this
+  // codebase's own checkout already does. This detects the bad shape, records
+  // it against the charge, and tells an admin, rather than quietly handing out
+  // free seats.
+  const inheritedDiscount =
+    !couponId && (customer as any).discount ? (customer as any).discount : null
+
   const subscription = await stripe.subscriptions.create({
     customer: customer.id,
     items: [{ price: SEAT_PRICE_ID }],
@@ -168,10 +194,31 @@ export async function createSeatSubscription(
     subscription.items.data[0]?.current_period_end ??
     Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60
 
+  if (inheritedDiscount) {
+    const pct = inheritedDiscount?.coupon?.percent_off ?? null
+    console.error(
+      '[teamBilling] seat inherited the owner customer-level discount',
+      { ownerId: params.ownerId, subscription: subscription.id, percentOff: pct }
+    )
+    try {
+      const { sendAdminPush } = await import('@/lib/pushNotify')
+      await sendAdminPush(
+        'payment_failed',
+        `A seat for ${params.agentEmail} on ${params.teamName} inherited the owner's ` +
+        `account-level discount${pct ? ` (${pct}% off)` : ''}, so this seat may bill at $0. ` +
+        `The comp belongs on the owner's own subscription, not on their Stripe customer.`,
+        { title: 'Seat billed at a discount it should not have' }
+      )
+    } catch (e) {
+      console.error('[teamBilling] inherited-discount alert failed', e)
+    }
+  }
+
   return {
     stripeSubscriptionId: subscription.id,
     currentPeriodStart: new Date(periodStart * 1000).toISOString(),
     currentPeriodEnd: new Date(periodEnd * 1000).toISOString(),
+    inheritedOwnerDiscount: !!inheritedDiscount,
   }
 }
 
