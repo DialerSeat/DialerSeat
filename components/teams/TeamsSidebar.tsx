@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { readTeamsView, writeTeamsView } from '@/lib/rememberTeamsView'
 
 // =============================================================================
 // TEAMS SIDEBAR — the navigation spine of the Teams page
@@ -159,6 +160,30 @@ export default function TeamsSidebar({
   // which is the user's call to make rather than ours to pre-empt.
   const [collapsedTeams, setCollapsedTeams] = useState<Set<string>>(new Set())
   const [collapsedCampaigns, setCollapsedCampaigns] = useState<Set<string>>(new Set())
+
+  // ── RESTORE WHICH BRANCHES WERE OPEN ──────────────────────────────────
+  // In an effect rather than a lazy useState initialiser: the server renders
+  // the default and the client would render the restored value, which is a
+  // hydration mismatch. One frame of the default tree is the cost.
+  const restoredRef = useRef(false)
+  useEffect(() => {
+    if (restoredRef.current) return
+    restoredRef.current = true
+    const saved = readTeamsView()
+    if (!saved) return
+    if (Array.isArray(saved.collapsedTeams)) setCollapsedTeams(new Set(saved.collapsedTeams))
+    if (Array.isArray(saved.collapsedCampaigns)) setCollapsedCampaigns(new Set(saved.collapsedCampaigns))
+  }, [])
+
+  // Written only after the restore has run, so the first render's empty sets
+  // never overwrite what was saved.
+  useEffect(() => {
+    if (!restoredRef.current) return
+    writeTeamsView({
+      collapsedTeams: Array.from(collapsedTeams),
+      collapsedCampaigns: Array.from(collapsedCampaigns),
+    })
+  }, [collapsedTeams, collapsedCampaigns])
   const [codeInput, setCodeInput] = useState('')
   const [addMenuOpen, setAddMenuOpen] = useState(false)
   const [moreMenuOpen, setMoreMenuOpen] = useState(false)

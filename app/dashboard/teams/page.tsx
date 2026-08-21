@@ -7,6 +7,7 @@ import TeamsSidebar, {
 } from '@/components/teams/TeamsSidebar'
 import TeamDetail, { type TeamDetailData } from '@/components/teams/TeamDetail'
 import CampaignDetail from '@/components/teams/CampaignDetail'
+import { readTeamsView, writeTeamsView } from '@/lib/rememberTeamsView'
 import { isOpenAccessMode } from '@/lib/campaignAccess'
 import FloorView from '@/components/teams/FloorView'
 import AgentDetail from '@/components/teams/AgentDetail'
@@ -416,6 +417,48 @@ export default function TeamsPage() {
   const [metric, setMetric] = useState<MetricView>('activity')
   const [metricOpen, setMetricOpen] = useState(false)
   const [view, setView] = useState<PanelView>('overview')
+
+  // ── COME BACK TO WHERE YOU WERE ───────────────────────────────────────
+  // Restored in an effect, not a lazy initialiser, to keep server and client
+  // rendering the same thing on the first pass.
+  //
+  // The scope is only restored alongside a view that needs it. A saved scope
+  // pointing at a team that has since been deleted would otherwise open an
+  // empty panel with a back button, which is worse than opening at the
+  // overview — so anything that does not validate falls back to the default
+  // rather than being trusted.
+  const viewRestoredRef = useRef(false)
+  useEffect(() => {
+    if (viewRestoredRef.current) return
+    viewRestoredRef.current = true
+    const saved = readTeamsView()
+    if (!saved) return
+
+    // 'custom' is excluded: it is meaningless without the two dates that go
+    // with it, and restoring it alone opens a range picker showing nothing.
+    if (saved.range && saved.range !== 'custom' && RANGES.some(r => r.key === saved.range)) {
+      setRange(saved.range as RangeKey)
+    }
+
+    const sc: any = saved.scope
+    const validScope =
+      sc && typeof sc === 'object' && typeof sc.kind === 'string' &&
+      ['all', 'requests', 'team', 'campaign', 'agent'].includes(sc.kind)
+
+    if (validScope) setScope(sc as TeamsScope)
+
+    // Checked against the real list rather than cast. A value saved by an
+    // older build that no longer exists would otherwise render nothing at all.
+    const KNOWN: PanelView[] = ['overview', 'all_users', 'requests', 'team', 'campaign', 'floor', 'agent']
+    const v = KNOWN.includes(saved.view as PanelView) ? (saved.view as PanelView) : undefined
+    const needsScope = v === 'team' || v === 'campaign' || v === 'agent'
+    if (v && (!needsScope || validScope)) setView(v)
+  }, [])
+
+  useEffect(() => {
+    if (!viewRestoredRef.current) return
+    writeTeamsView({ scope, view, range })
+  }, [scope, view, range])
   const [showTeamModal, setShowTeamModal] = useState(false)
   const [showCampaignModal, setShowCampaignModal] = useState(false)
   const [campaignTeamId, setCampaignTeamId] = useState<string | undefined>()
