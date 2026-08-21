@@ -1561,10 +1561,32 @@ function DialerPageInner() {
       }
     }
 
+    // ── POLL FAST, NOT ON A LADDER ────────────────────────────────────────
+    // This retried at 500ms, 1500ms and 3000ms. tryAttach fails whenever the
+    // session description handler or the peer connection is not built yet,
+    // which right after accept() is most of the time — so the audio commonly
+    // attached on the 3000ms rung. That is the four seconds of silence: not
+    // AMD, not the bridge (the server connects the legs ~70ms after answer),
+    // just a retry schedule with nothing between 1.5s and 3s.
+    //
+    // It compounds: pc.ontrack is registered INSIDE tryAttach, so until one
+    // succeeds nothing is even listening for the track to arrive. A missed
+    // early attempt does not merely delay the check, it delays the listener.
+    //
+    // Polling every 60ms closes it to about a frame. The cost is a handful of
+    // no-op property reads on a call that is already up; the saving is the
+    // difference between a dialer that sounds instant and one that does not.
     if (!tryAttach()) {
-      setTimeout(() => tryAttach(), 500)
-      setTimeout(() => tryAttach(), 1500)
-      setTimeout(() => tryAttach(), 3000)
+      const started = Date.now()
+      const poll = setInterval(() => {
+        if (tryAttach() || Date.now() - started > 8000) {
+          clearInterval(poll)
+          // One late pass after a successful attach: a renegotiation can
+          // replace the track, and the element would otherwise hold the old
+          // one. Cheap insurance, unchanged from before.
+          setTimeout(() => tryAttach(), 1000)
+        }
+      }, 60)
     } else {
       setTimeout(() => tryAttach(), 1000)
     }
