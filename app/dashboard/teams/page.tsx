@@ -409,6 +409,10 @@ export default function TeamsPage() {
   const [renaming, setRenaming] =
     useState<{ kind: 'team' | 'campaign'; id: string; name: string } | null>(null)
   const [renameBusy, setRenameBusy] = useState(false)
+  // Bumped after a rename lands. CampaignDetail loads its own copy of the
+  // campaign, so refreshing the tree alone would leave the open panel showing
+  // the name it was opened with.
+  const [renameToken, setRenameToken] = useState(0)
   const [codeTeamId, setCodeTeamId] = useState<string | undefined>()
   // Set when the code is being minted from a specific campaign row, so the
   // dialog opens already answering "which campaign".
@@ -836,6 +840,7 @@ export default function TeamsPage() {
 
       if (!r.success) throw new Error(r.error || 'Rename failed')
       setRenaming(null)
+      setRenameToken(t => t + 1)
       await refresh(true)
     } catch (e: any) {
       // Left open with the typed name still in it. Closing the dialog on
@@ -1173,6 +1178,8 @@ export default function TeamsPage() {
               campaignId={scope.campaignId}
               onBack={goOverview}
               onChanged={() => { void refresh() }}
+              onRename={(kind, id, name) => setRenaming({ kind, id, name })}
+              reloadToken={renameToken}
             />
           )}
 

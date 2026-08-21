@@ -137,10 +137,19 @@ export default function CampaignDetail({
   campaignId,
   onBack,
   onChanged,
+  onRename,
+  reloadToken,
 }: {
   campaignId: string
   onBack: () => void
   onChanged?: () => void
+  /** Opens the shared rename dialog, owned by the page. Passing the handler
+   *  up rather than hosting a second modal here is what keeps renaming a
+   *  campaign identical to renaming a team. */
+  onRename?: (kind: 'team' | 'campaign', id: string, currentName: string) => void
+  /** Bumped by the page after a rename lands, so this panel refetches and
+   *  shows the new name instead of the one it loaded with. */
+  reloadToken?: number
 }) {
   const [data, setData] = useState<CampaignDetailData | null>(null)
   const [team, setTeam] = useState<{ id: string; name: string; accessMode: string | null } | null>(null)
@@ -204,7 +213,7 @@ export default function CampaignDetail({
     }
   }, [campaignId])
 
-  useEffect(() => { void load() }, [load])
+  useEffect(() => { void load() }, [load, reloadToken])
 
   // Read on the client — touching window during render breaks SSR.
   useEffect(() => { setOrigin(window.location.origin) }, [])
@@ -601,14 +610,6 @@ export default function CampaignDetail({
     )
   }
 
-  const renameThisCampaign = async () => {
-    const next = window.prompt('Rename campaign', data.name)
-    if (next === null) return
-    const trimmed = next.trim()
-    if (!trimmed || trimmed === data.name) return
-    await patch({ name: trimmed })
-  }
-
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
@@ -715,11 +716,13 @@ export default function CampaignDetail({
           change. A prompt rather than a modal here: this panel has no modal
           host of its own, and adding one for a single text field would be
           more machinery than the job needs. */}
-      {isCampaignOwner && (
+      {isCampaignOwner && onRename && (
         <div style={{ marginBottom: 18 }}>
-          <button style={btn} onClick={renameThisCampaign} disabled={busy}>
-            Rename campaign
-          </button>
+          <button
+            style={btn}
+            onClick={() => onRename('campaign', data.id, data.name)}
+            disabled={busy}
+          >Rename campaign</button>
         </div>
       )}
 
