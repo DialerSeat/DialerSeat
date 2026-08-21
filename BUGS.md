@@ -123,3 +123,41 @@ Worth designing once and applying to both surfaces: what does a campaign look
 like to somebody who dials it but does not run it? Owner-only, at minimum, are
 the lead file, the team assignment, the dialer mode, AMD and recording settings,
 and anything that spends money.
+
+---
+
+## 6. Untested: the join link paired with a fresh signup
+
+**Not a bug — the verification that is still owed.** Several fixes tonight all
+land on one path, and none of them has been watched end to end by a real person
+creating a real account:
+
+- `/join` made public in `proxy.ts`, so the page runs at all
+- `fallbackRedirectUrl` on sign-up and sign-in, so Clerk stops overriding
+- the `ds_join_code` cookie, scoped to the root domain to survive a whitelabel
+  subdomain
+- `/welcome` carrying the code to `/billing?promo=CODE`
+- billing applying it on arrival instead of only pre-filling the box
+- the redeem endpoints allowed through for a user with no subscription
+- pending owner-funded seats getting read-only access instead of a redirect loop
+
+Every one of those was verified as far as it could be without an account. The
+uncovered leg is the same in all of them: **what happens immediately after
+someone signs up.** That cannot be tested from here — creating accounts is off
+limits — so it needs a real run.
+
+Worth doing in one sitting, in this order, since each step gates the next:
+
+1. Open a join link signed out, in a clean browser profile.
+2. Sign up. Confirm you come back to `/join/CODE` and not to `/welcome` empty
+   handed.
+3. Owner-pays: confirm no redirect loop, and that the amber awaiting-approval
+   banner names the team.
+4. Agent-pays: confirm billing opens with the code already applied, not merely
+   typed into the box.
+5. Accept in Requests, and confirm the seat charge lands `paid` with a non-null
+   `stripe_subscription_item_id`.
+
+Also still unverified: the `DeadInvite` page body (this machine has no Supabase
+env, so it 500s locally — route resolution was confirmed, the render was not),
+and the whitelabel subdomain redirect after joining (no tenant to test against).
