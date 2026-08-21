@@ -101,10 +101,35 @@ export default function JoinRedeemClient({ code }: { code: string }) {
         // redirect_to_dialer — straight to work, not a stats page. Scoped
         // to the team, and to the campaign directly when there's exactly
         // one to dial.
-        setMessage(`You're in. Taking you to the dialer…`)
         const params = new URLSearchParams({ teamId: data.team.id })
         if (data.firstCampaignId) params.set('campaignId', data.firstCampaignId)
-        setTimeout(() => router.push(`/dashboard/dialer?${params.toString()}`), 1000)
+
+        // ── A WHITELABEL AGENT BELONGS ON THE BRAND'S HOST ───────────────
+        // Redeeming set their active tenant, but that only decides which
+        // brand they belong to — the SUBDOMAIN is what they have to be
+        // standing on to actually see it. An agent recruited by a
+        // whitelabel owner signs up through whatever link they were sent
+        // and would otherwise land in a DialerSeat-branded dialer, having
+        // been sold somebody else's product.
+        //
+        // A full document navigation, not router.push: this crosses an
+        // origin, which the client-side router cannot do. Only when the
+        // host actually differs, so the apex case stays a soft navigation.
+        const slug = data.tenantSlug as string | null
+        const rootDomain =
+          process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'dialerseat.com'
+        const targetHost = slug ? `${slug}.${rootDomain}` : null
+
+        if (targetHost && typeof window !== 'undefined' && window.location.host !== targetHost) {
+          setMessage(`You're in. Taking you to your team's dialer…`)
+          setTimeout(() => {
+            window.location.href =
+              `https://${targetHost}/dashboard/dialer?${params.toString()}`
+          }, 1000)
+        } else {
+          setMessage(`You're in. Taking you to the dialer…`)
+          setTimeout(() => router.push(`/dashboard/dialer?${params.toString()}`), 1000)
+        }
       }
     } catch (err: any) {
       setError(err?.message || 'Something went wrong redeeming this link.')

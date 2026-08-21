@@ -8,13 +8,16 @@ import { userCacheTag } from '@/lib/tenant'
 // every other activation path (instant partner seats, agent-pays-after-
 // checkout) needs to call this too, or the agent silently ends up on the
 // wrong brand.
+// Returns the slug as well as the id: setting active_tenant_id decides which
+// brand the agent belongs to, but the SUBDOMAIN is what they actually have to
+// be standing on to see it, and only the slug can build that URL.
 export async function assignOwnerTenantIfWhitelabeled(
   agentClerkId: string,
   ownerId: string
-): Promise<string | null> {
+): Promise<{ id: string; slug: string | null } | null> {
   const { data: ownerTenant } = await supabaseAdmin
     .from('white_label_tenants')
-    .select('id')
+    .select('id, slug')
     .eq('owner_clerk_id', ownerId)
     .eq('status', 'active')
     .eq('is_active', true)
@@ -33,7 +36,7 @@ export async function assignOwnerTenantIfWhitelabeled(
   }
 
   revalidateTag(userCacheTag(agentClerkId), { expire: 0 })
-  return ownerTenant.id
+  return { id: ownerTenant.id, slug: (ownerTenant as any).slug ?? null }
 }
 
 // Symmetric with activatePendingTeamMember — when an agent-pays
@@ -64,6 +67,7 @@ export async function deactivateTeamMember(memberId: string): Promise<void> {
 export async function activatePendingTeamMember(memberId: string): Promise<{
   activatedAccessGrants: number
   defaultedToTenantId: string | null
+  tenantSlug: string | null
 }> {
   const { data: member } = await supabaseAdmin
     .from('team_members')
@@ -72,7 +76,7 @@ export async function activatePendingTeamMember(memberId: string): Promise<{
     .maybeSingle()
 
   if (!member) {
-    return { activatedAccessGrants: 0, defaultedToTenantId: null }
+    return { activatedAccessGrants: 0, defaultedToTenantId: null, tenantSlug: null }
   }
 
   const ownerId = (member as any).teams.owner_id
@@ -97,7 +101,11 @@ export async function activatePendingTeamMember(memberId: string): Promise<{
     .is('revoked_at', null)
     .select('id')
 
-  const defaultedToTenantId = await assignOwnerTenantIfWhitelabeled(member.user_id, ownerId)
+  const assigned = await assignOwnerTenantIfWhitelabeled(member.user_id, ownerId)
 
-  return { activatedAccessGrants: activated?.length || 0, defaultedToTenantId }
+  return {
+    activatedAccessGrants: activated?.length || 0,
+    defaultedToTenantId: assigned?.id ?? null,
+    tenantSlug: assigned?.slug ?? null,
+  }
 }

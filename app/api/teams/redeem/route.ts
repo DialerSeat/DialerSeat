@@ -373,8 +373,11 @@ export async function POST(req: Request) {
     // Whitelabel branding should follow the agent the moment they're
     // actually active — not just on the slow, manually-approved path.
     let defaultedToTenantId: string | null = null
+    let tenantSlug: string | null = null
     if (memberRow.status === 'active') {
-      defaultedToTenantId = await assignOwnerTenantIfWhitelabeled(userId, team.owner_id)
+      const assigned = await assignOwnerTenantIfWhitelabeled(userId, team.owner_id)
+      defaultedToTenantId = assigned?.id ?? null
+      tenantSlug = assigned?.slug ?? null
     }
 
     return NextResponse.json({
@@ -385,6 +388,11 @@ export async function POST(req: Request) {
       newAccessGrants: newAccessGrants.length,
       alreadyHeldAccess: alreadyHeld.length,
       defaultedToTenantId,
+      // The brand's host. An agent who joins a whitelabel team belongs on that
+      // team's subdomain, not on the apex they happened to sign up through —
+      // otherwise they land in a DialerSeat-branded product having been sold
+      // somebody else's.
+      tenantSlug,
       // A freshly-active agent has something to dial right now — send them
       // straight to it, with the campaign pre-selected when there's exactly
       // one, instead of dropping them on a team analytics page they may not
