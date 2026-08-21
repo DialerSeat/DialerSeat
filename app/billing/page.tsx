@@ -217,7 +217,10 @@ export default function BillingPage() {
               body: JSON.stringify({ teamMemberId }),
             })
           } catch {}
-          router.push('/dashboard/dialer')
+          // Same destination as every other completed-billing path. See the
+          // note in billing/success — a seat holder is not a different kind of
+          // user and should not be dropped somewhere different.
+          router.push('/dashboard')
           return
         }
         // Don't blindly send an already-active person to /dashboard — a

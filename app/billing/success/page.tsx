@@ -30,8 +30,18 @@ export default function BillingSuccessPage() {
   const teamMemberId = searchParams.get('teamMemberId')
   const amountParam = searchParams.get('amount')
 
+  // ── EVERYONE LANDS WHERE EVERYONE ELSE LANDS ──────────────────────────
+  // A seat purchase used to end at the dialer, on the reasoning that somebody
+  // who just bought a seat wants to dial. But every other route into the
+  // product ends at /dashboard, which resolves to analytics for an agent and
+  // the desktop for an admin — so a seat buyer was the one person dropped
+  // somewhere different, with no sense of where they actually are.
+  //
+  // /dashboard rather than /dashboard/analytics on purpose: it is the one
+  // place that already knows an admin belongs somewhere else, and hardcoding
+  // the analytics path here would send an admin to the wrong screen.
   const destination = teamMemberId
-    ? '/dashboard/dialer'
+    ? '/dashboard'
     : isWl ? '/onboarding/whitelabel' : '/dashboard'
 
   const price = amountParam
