@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 import { isOpenAccessMode } from '@/lib/campaignAccess'
+import { refreshUserProfiles } from '@/lib/refreshUserProfiles'
 
 // ─────────────────────────────────────────────────────────────────────────
 // ONE CAMPAIGN, EVERYTHING ABOUT IT
@@ -166,6 +167,12 @@ export async function GET(req: NextRequest) {
           .in('id', memberIds)
 
         const userIds = Array.from(new Set((members || []).map((m: any) => m.user_id)))
+
+        // Names on this list belong to other people, so neither the webhook
+        // nor the sign-in refresh can be relied on to have corrected them —
+        // the person reading is the owner, not the agent. Re-checked against
+        // Clerk here, rate limited and non-blocking. See lib/refreshUserProfiles.
+        await refreshUserProfiles(userIds)
         const { data: users } = await supabaseAdmin
           .from('users')
           .select('clerk_id, email, first_name, last_name')

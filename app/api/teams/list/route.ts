@@ -5,6 +5,7 @@ import { apiError } from '@/lib/apiError'
 import { loadScriptsByCampaign } from '@/lib/campaignScriptLinks'
 import { summariseSeatTier } from '@/lib/seatTiers'
 import { isOpenAccessMode } from '@/lib/campaignAccess'
+import { refreshUserProfiles } from '@/lib/refreshUserProfiles'
 
 // ── EXPLICIT, SO TRUNCATION STOPS BEING SILENT ──────────────────────────
 // Supabase caps a select at 1,000 rows and returns them without erroring, so an
@@ -189,6 +190,11 @@ export async function GET(req: NextRequest) {
       const memberClerkIds = Array.from(new Set((allMembers || []).map((m: any) => m.user_id)))
       let userById: Record<string, { email: string; first_name: string | null; last_name: string | null }> = {}
       if (memberClerkIds.length > 0) {
+        // Same reason as the campaign roster: these are other people's names,
+        // so nothing the viewer does can correct them. Rate limited to once
+        // per person per ten minutes and never throws — see
+        // lib/refreshUserProfiles.
+        await refreshUserProfiles(memberClerkIds)
         const { data: userRows } = await supabaseAdmin
           .from('users')
           .select('clerk_id, email, first_name, last_name')
