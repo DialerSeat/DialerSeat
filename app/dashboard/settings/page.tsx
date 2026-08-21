@@ -426,6 +426,35 @@ export default function SettingsPage() {
         setSwitchingBrand(false)
         return
       }
+      // ── A BRAND LIVES ON A HOST, NOT JUST IN A COLUMN ────────────────────
+      // Switching only wrote active_tenant_id and reloaded, which leaves you
+      // standing on whatever host you were already on. Choosing DialerSeat Pro
+      // from brand.dialerseat.com therefore reloaded the SUBDOMAIN — the same
+      // branded URL, now claiming to be the standard product. The setting had
+      // taken; the address had not.
+      //
+      // Standard belongs on the apex, a tenant belongs on its own subdomain,
+      // and a saved theme is a repaint of wherever you already are. Only a
+      // real host change navigates; anything else reloads as before, so this
+      // does not send somebody across the internet to change a colour.
+      const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'dialerseat.com'
+      const isLocal = /^(localhost|127\.0\.0\.1)/.test(window.location.hostname)
+
+      let targetHost: string | null = null
+      if (!isLocal) {
+        if (value === 'standard') {
+          targetHost = rootDomain
+        } else if (!value.startsWith('theme:')) {
+          const chosen = brandOptions?.available?.find(t => t.id === value)
+          if (chosen?.slug) targetHost = `${chosen.slug}.${rootDomain}`
+        }
+      }
+
+      if (targetHost && targetHost !== window.location.host) {
+        window.location.href = `https://${targetHost}/dashboard/settings`
+        return
+      }
+
       window.location.reload()
     } catch (err: any) {
       setError(err.message || 'Failed to switch view')
