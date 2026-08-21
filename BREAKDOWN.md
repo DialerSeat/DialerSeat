@@ -286,6 +286,15 @@ chunked client-side), and `maxDuration` defaults to 300s with fluid compute, whi
 is also the Hobby maximum. Pro allows 800s. Do not set a lower `maxDuration`
 believing the default is small; it is not.
 
+**Fluid compute must be explicitly on for this project.** It defaults to enabled
+only for projects created after 2025-04-23 — this one predates that, so it was
+running classic execution, where Hobby's real ceiling is 60s, not 300s. A
+`maxDuration = 300` route (the two lead exports, the two 300s crons) then fails
+the *build*, not just the runtime: `Builder returned invalid maxDuration value...
+must have a maxDuration between 1 and 60 for plan hobby.` Fixed 2026-08-20 by
+adding `"fluid": true` to `vercel.json`. If a future project reset or a fresh
+`vercel.json` ever drops that key, this exact build failure comes back.
+
 **Functions run in `cle1` (Cleveland), not the `iad1` default,** because Supabase
 is in us-east-2 and `cle1` is us-east-2. Every query otherwise paid a
 cross-region round trip of roughly 10-15ms, and a predictive tick makes about
