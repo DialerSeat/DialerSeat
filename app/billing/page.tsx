@@ -387,6 +387,33 @@ export default function BillingPage() {
         return
       }
 
+      // ── ONLY A 404 MEANS "NOT ONE OF OURS" ──────────────────────────
+      // This used to treat EVERY non-success from the preview as "must be a
+      // Stripe promo", so a real team code that was expired, used up, or
+      // attached to a deleted team was handed to Stripe, which had never
+      // heard of it and said so. The user was then told their invite code
+      // was an invalid promo code — the wrong verdict about the wrong
+      // system, and nothing in it pointed at the actual problem.
+      //
+      // 404 is the only status that genuinely means "no such team code".
+      // Everything else is a real answer about a real code and belongs on
+      // screen as itself.
+      if (pv.status === 410) {
+        setCodeError(pvData?.error || 'That invite has already been used.')
+        setPromoAction(null)
+        return
+      }
+      if (pv.status === 401) {
+        setCodeError('Your session expired. Sign in again to apply this code.')
+        setPromoAction(null)
+        return
+      }
+      if (pv.status !== 404) {
+        setCodeError(pvData?.error || 'That code could not be checked right now. Try again in a moment.')
+        setPromoAction(null)
+        return
+      }
+
       // Not a team code — treat it as a price code. Only one of these can be
       // live at a time, so this replaces whatever discount was already on the
       // order rather than stacking with it.

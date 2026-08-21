@@ -141,8 +141,20 @@ export default function SignInPage() {
           </p>
         )}
       </div>
+      {/* ── THE JOIN CODE USED TO DIE HERE ──────────────────────────────
+          forceRedirectUrl is Clerk's OVERRIDE: it wins over ?redirect_url,
+          so /join/CODE sending someone here to sign up had its return trip
+          discarded at the moment the account was created. The code never
+          reached /api/teams/redeem, which is why an invited agent landed on
+          /welcome and then /billing with no trace of what invited them.
+
+          fallbackRedirectUrl is the prop that YIELDS to redirect_url: it is
+          used when no destination was requested, and stands aside when one
+          was. Skipping post-signin for those users is correct — it is a
+          router, not a provisioner (the users row is created by the Clerk
+          webhook), and /join/CODE does its own routing after redeeming. */}
       <SignIn
-        forceRedirectUrl="/api/auth/post-signin"
+        fallbackRedirectUrl="/api/auth/post-signin"
         appearance={{
           variables: {
             colorPrimary,
