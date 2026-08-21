@@ -67,6 +67,11 @@ export async function GET(req: NextRequest) {
         success: true,
         alreadyMember: true,
         memberStatus: existingMember.status,
+        // Who pays, even on this branch. Billing re-checks a code it applied
+        // itself and lands here; without payer it would default to "someone
+        // else is covering this" and tell an agent-pays joiner their seat was
+        // free — the one thing that page must never get wrong.
+        payer: codeRow.payer,
         team: { id: team.id, name: team.name },
       })
     }

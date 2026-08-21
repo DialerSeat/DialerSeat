@@ -315,7 +315,7 @@ export default function BillingPage() {
     await initSubscription(undefined, newPlan)
   }
 
-  const handleApplyPromo = async () => {
+  const handleApplyPromo = async (opts?: { auto?: boolean }) => {
     const raw = promoCode.trim().toUpperCase()
     if (!raw) return
     setCodeError(null)
@@ -341,6 +341,30 @@ export default function BillingPage() {
           return
         }
         if (pvData.alreadyMember) {
+          // ── ARRIVING WITH IT ALREADY REDEEMED IS THE NORMAL CASE ───────
+          // An agent-pays invite redeems at /join and is THEN sent here to
+          // pay, carrying its code so the box is filled in. Re-applying it
+          // finds the membership that /join just created, which is not a
+          // mistake — it is the same person, one step later.
+          //
+          // Typing a code by hand for a team you are already on is a
+          // different act and still says so. The difference is only whether
+          // the page did it or the person did.
+          if (opts?.auto) {
+            const payer: 'owner' | 'agent' = pvData.payer === 'agent' ? 'agent' : 'owner'
+            setTeamCodes(prev =>
+              prev.some(c => c.code === raw) ? prev : [...prev, {
+                code: raw,
+                teamName: pvData.team?.name || 'Team',
+                payer,
+                status: pvData.memberStatus ?? null,
+              }]
+            )
+            setPromoCode('')
+            setShowPromo(false)
+            setPromoAction(null)
+            return
+          }
           setCodeError(`You are already on ${pvData.team?.name || 'that team'}.`)
           setPromoAction(null)
           return
@@ -469,7 +493,7 @@ export default function BillingPage() {
     if (promoApplied || teamCodes.length > 0) return
 
     autoAppliedRef.current = true
-    handleApplyPromo()
+    handleApplyPromo({ auto: true })
     // handleApplyPromo is recreated every render; depending on it would defeat
     // the ref guard. The ref is what makes this fire once.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -730,7 +754,7 @@ export default function BillingPage() {
                     autoFocus
                   />
                   <button
-                    onClick={handleApplyPromo}
+                    onClick={() => handleApplyPromo()}
                     disabled={!promoCode.trim() || !!promoAction}
                     style={{
                       ...promoApplyStyle,
