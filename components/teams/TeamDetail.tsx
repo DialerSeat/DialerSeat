@@ -210,10 +210,11 @@ export default function TeamDetail({
                   : 'Your seat is covered by the team'}
               </div>
               <div style={{ fontSize: 11.5, color: DIM, marginTop: 2 }}>
+                {/* The roster size was shown here as "One of N on this team".
+                    It told the agent nothing they can act on, and framed their
+                    seat as a headcount line rather than as their own. */}
                 {seat.suspended
                   ? 'Contact whoever runs this team — only they can resume it.'
-                  : team.memberCount
-                  ? `One of ${team.memberCount} on this team`
                   : 'Active'}
               </div>
             </div>
