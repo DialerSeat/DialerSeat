@@ -142,6 +142,28 @@ export async function POST(req: Request) {
       }
     }
 
+    // ── NO SEAT WITHOUT THE MONEY ─────────────────────────────────────────
+    // This used to approve regardless and chase the card afterwards, on the
+    // reasoning that a billing problem should not stop an owner accepting
+    // anyone. The rule is now the opposite, and it is the right way round: a
+    // seat that opens without a charge is a seat nobody is paying for, and the
+    // agent starts dialling on it before anyone notices.
+    //
+    // The member stays pending — not rejected. Nothing is lost: the owner
+    // fixes their card and accepts again, and the awaiting-approval banner
+    // keeps telling the agent exactly where things stand in the meantime.
+    if (billingIssue) {
+      return NextResponse.json({
+        success: false,
+        error: 'This seat could not be billed, so the member has not been accepted.',
+        detail:
+          'Update the payment method on your account and accept them again. ' +
+          'They stay in Requests until then, and nothing about their invite has been lost.',
+        billingIssue,
+        memberStatus: 'pending',
+      }, { status: 402 })
+    }
+
     const { activatedAccessGrants, defaultedToTenantId } = await activatePendingTeamMember(memberId)
 
     // Approving somebody is how a seat opens on the approval path, so it is

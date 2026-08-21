@@ -93,6 +93,10 @@ export async function POST(req: Request) {
     // person wait on a click adds a delay with nothing behind it.
     const joinMode = codeRow.join_mode === 'approval' ? 'approval' : 'instant'
 
+    // Set when an instant seat could not be billed, so the response says so
+    // plainly instead of reporting a success the money did not back.
+    let seatChargeFailedLocal: string | null = null
+
     const targetStatus =
       isSingleUsePartnerSeat ? 'active'
       : codeRow.payer === 'agent' ? 'pending'
@@ -296,6 +300,23 @@ export async function POST(req: Request) {
             .from('team_seat_charges')
             .update({ status: 'failed' })
             .eq('id', chargeRow.id)
+
+          // ── AN INSTANT SEAT IS STILL A PAID SEAT ────────────────────────
+          // The member was set active a moment ago, before the card was tried,
+          // because that is what "instant" means. The charge failing makes that
+          // premature: they would be dialling on a seat nobody paid for.
+          //
+          // Demoted to pending rather than removed. The invite was legitimate
+          // and nothing about it is lost — the owner fixes their card and
+          // accepts from Requests, which is the same place a manual-approval
+          // join would have landed anyway.
+          await supabaseAdmin
+            .from('team_members')
+            .update({ status: 'pending', accepted_at: null })
+            .eq('id', memberRow.id)
+
+          memberRow = { ...memberRow, status: 'pending' } as typeof memberRow
+          seatChargeFailedLocal = reason
         }
       } else if (memberRow.status === 'pending') {
 
@@ -388,6 +409,11 @@ export async function POST(req: Request) {
       newAccessGrants: newAccessGrants.length,
       alreadyHeldAccess: alreadyHeld.length,
       defaultedToTenantId,
+      // Non-null when an instant seat could not be charged. The member has been
+      // put back to pending, so nextStep already reads awaiting_owner_approval;
+      // this is what lets the screen explain WHY rather than implying the owner
+      // simply has not got to it yet.
+      seatChargeFailed: seatChargeFailedLocal,
       // The brand's host. An agent who joins a whitelabel team belongs on that
       // team's subdomain, not on the apex they happened to sign up through —
       // otherwise they land in a DialerSeat-branded product having been sold

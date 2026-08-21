@@ -67,18 +67,30 @@ subscription in Stripe** — that part is a data fix, not a code one. The app's 
 checkout already applies coupons at subscription level; the bad shape comes from
 applying one to a customer by hand in the dashboard.
 
-**2b — a failed charge still approves the member. NOT FIXED.**
+**2b — a failed charge still approves the member. FIXED.**
 `app/api/teams/members/accept/route.ts` catches a seat billing failure, marks the
 charge `failed`, and approves anyway. That is deliberate and commented:
 
 > "A BILLING PROBLEM IS NOT A REASON TO REFUSE SOMEBODY ... an owner without a
 > card on file could not accept anyone at all."
 
-The instruction is now the opposite: no activation until billing goes through.
-Worth deciding explicitly, because the old comment is describing a real cost —
-an owner whose card fails can accept nobody, and the agent waits on someone who
-cannot unblock them. A middle option: keep them pending, tell the OWNER plainly
-that the card failed, and let the daily retry activate them when it settles.
+Decided the other way, and both paths now enforce it. Manual approval returns
+402 and leaves the member pending. Instant approval demotes them back to pending
+if the card fails after they were let in — "instant" sets them active before the
+card is tried, which the failure makes premature.
+
+Nobody is rejected, only held: the owner fixes the card and accepts from
+Requests, and the awaiting-approval banner tells the agent where things stand
+meanwhile.
+
+**Also fixed: the seat now verifies what it actually billed.** Rather than
+trusting that no stray discount reached it, `createSeatSubscription` reads the
+invoice Stripe produced and compares it against itself — if we applied no
+coupon, total must equal subtotal. Anything less means a discount we did not
+choose, the mispriced subscription is cancelled, and the seat is refused as a
+billing failure. A seat billed at zero is a billing failure, not a free seat.
+This catches the inherited comp without depending on any undocumented Stripe
+behaviour, and catches any future cause too.
 
 ---
 
