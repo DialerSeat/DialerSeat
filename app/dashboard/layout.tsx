@@ -554,97 +554,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <main style={{ minHeight: '100vh', background: 'var(--brand-page-bg)', display: 'flex' }}>
-      <style>{`
-        /* ── PRESS FEEDBACK ─────────────────────────────────────────────
-           The largest remaining source of "it feels slow" is not the
-           navigation — it is the gap between a finger landing and anything
-           on screen acknowledging it. This paints on the compositor the
-           instant the touch registers, with no JS, no React render and no
-           hydration required, so it responds even while the current page is
-           still loading.
-
-           transform rather than a colour change on purpose: it is
-           compositor-only, so it cannot be delayed by whatever the main
-           thread happens to be busy with — which, during a page load, is
-           everything. */
-        /* ── PRESS FEEDBACK: COLOUR ONLY, NEVER GEOMETRY ────────────────
-           A background change is instant, needs no JS or hydration, and —
-           the part that matters — does not move anything.
-
-           There WAS a scale(0.985) here. It broke tab navigation on both
-           mouse and touch: shrinking the row on press pulls its edges inward,
-           and the browser resolves the release against the element's CURRENT
-           geometry, so the pointer-up can land outside and no click is
-           generated at all. The tab then needs pressing twice.
-
-           I first assumed a finger was immune because its contact patch is
-           large. It is not — the target moves regardless of what is pressing
-           it. Nothing in a press state may change layout or transform. */
-        .ds-nav-link {
-          transition: background 90ms ease;
-        }
-        .ds-nav-link:active {
-          background: var(--brand-primary-soft) !important;
-        }
-
-        .ds-sidebar-desktop {
-          width: 260px; height: 100vh; position: sticky; top: 0;
-          background: var(--brand-sidebar-bg); border-right: 1px solid var(--brand-sidebar-active-bg);
-          display: flex; flex-direction: column; padding: 20px 0;
-          flex-shrink: 0; overflow: hidden;
-        }
-        .ds-mobile-topbar { display: none; }
-        .ds-sidebar-mobile { display: none; }
-        .ds-mobile-overlay { display: none; }
-        .ds-profile-row:hover { background: color-mix(in srgb, var(--brand-primary) 6%, transparent); }
-
-        @media (max-width: 768px) {
-          .ds-sidebar-desktop { display: none; }
-          .ds-mobile-topbar {
-            display: flex; position: sticky; top: 0; left: 0; right: 0; z-index: 40;
-            align-items: center; justify-content: space-between;
-            padding-top: max(12px, env(safe-area-inset-top, 12px));
-            padding-bottom: 12px;
-            padding-left: max(16px, env(safe-area-inset-left, 16px));
-            padding-right: max(16px, env(safe-area-inset-right, 16px));
-            background: var(--brand-header-bg); border-bottom: 1px solid var(--brand-sidebar-active-bg);
-          }
-          .ds-sidebar-mobile {
-            display: flex; position: fixed; top: 0; left: 0; bottom: 0;
-            width: 280px; max-width: 85vw;
-            background: var(--brand-sidebar-bg); border-right: 1px solid var(--brand-sidebar-active-bg);
-            flex-direction: column;
-            padding-top: max(24px, calc(env(safe-area-inset-top, 0px) + 16px));
-            padding-bottom: 0;
-            z-index: 60;
-            transform: translateX(-100%); transition: transform 0.25s ease;
-          }
-          /* ── THE DRAWER OPENS WITHOUT JAVASCRIPT ────────────────────────
-             A React onClick does not exist until hydration finishes, so the
-             hamburger was genuinely INERT while a page loaded — not slow,
-             not laggy, attached to nothing. Hence three taps.
-
-             The hamburger is now a <label> for a hidden checkbox, and these
-             two rules open the drawer from the checkbox state alone. That is
-             the browser's own behaviour, live the instant the HTML paints,
-             with no bundle, no hydration and no React involved.
-
-             The .open class stays alongside it so React remains in charge
-             once it has booted; the two are kept in agreement by an effect
-             that writes the checkbox from state. */
-          .ds-drawer-checkbox:checked ~ .ds-sidebar-mobile { transform: translateX(0); }
-          .ds-drawer-checkbox:checked ~ .ds-mobile-overlay { opacity: 1; pointer-events: auto; }
-          .ds-sidebar-mobile.open { transform: translateX(0); }
-          .ds-mobile-overlay {
-            display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.55);
-            z-index: 50; opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
-          }
-          .ds-mobile-overlay.open { opacity: 1; pointer-events: auto; }
-          .ds-mobile-content {
-            flex: 1; min-width: 0; display: flex; flex-direction: column;
-          }
-        }
-      `}</style>
+      {/* The dashboard shell CSS lives in app/globals.css, not here.
+          Inline, it was re-inserted on every client navigation, and in
+          that gap both sidebars rendered unstyled and stacked — which
+          read as the sidebar duplicating itself. See the note there. */}
 
       <div className="ds-sidebar-desktop">
         <Sidebar />

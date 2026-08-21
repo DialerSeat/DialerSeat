@@ -315,3 +315,26 @@ nobody has found yet.
 **Checked and already correct:** `/api/teams/[id]/overview` 403s a non-owner
 outright, and `/api/teams/pulse` scopes every count to teams the caller OWNS, so
 a member reads zeroes rather than somebody else's floor.
+
+---
+
+## 10. "The sidebar duplicates every time I click a tab". FIXED.
+
+It was never duplicating. The layout renders the sidebar **twice on purpose** —
+once as the desktop rail, once as the mobile drawer — and CSS hides whichever
+does not apply.
+
+Those rules lived inside `app/dashboard/layout.tsx` as an inline `<style>`, so
+they were re-inserted on client navigation. For that instant both sidebars were
+unstyled: no `display: none`, no `position: fixed` on the drawer. Two full
+sidebars in normal flow, stacked. Then the style landed and one vanished.
+
+The reporter's own details are what identified it, and neither was incidental:
+it **vanished after a moment**, and it happened **on a tab click or when the
+drawer opened** — the two moments the layout re-renders. A real duplicate would
+persist. This was a flash of unstyled content in a convincing disguise, and the
+"only on the new account" detail was a red herring: the banner simply changes the
+subtree enough to make the re-insertion visible.
+
+Moved to `app/globals.css`, where the rules exist before anything renders and are
+never re-inserted. Moving them back into the component brings it back.
