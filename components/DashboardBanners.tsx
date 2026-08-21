@@ -78,6 +78,10 @@ function Ticker({ text, bg, color }: { text: string; bg: string; color: string }
 export default function DashboardBanners() {
   const [promo, setPromo] = useState<PromoState | null>(null)
   const [dialerDown, setDialerDown] = useState<DialerDownState | null>(null)
+  // Pending team membership — see /api/dashboard/pending-approval. Being
+  // pending was previously announced exactly once, by a toast on the Teams
+  // page, which made a normal approval wait look like a missing campaign.
+  const [awaiting, setAwaiting] = useState<string[]>([])
 
   useEffect(() => {
     let cancelled = false
@@ -98,18 +102,37 @@ export default function DashboardBanners() {
       })
       .catch(() => {})
 
+    fetch('/api/dashboard/pending-approval')
+      .then(res => (res.ok ? res.json() : null))
+      .then(data => {
+        if (cancelled || !data?.success) return
+        setAwaiting(Array.isArray(data.teams) ? data.teams : [])
+      })
+      .catch(() => {})
+
     return () => { cancelled = true }
   }, [])
 
   const showPromo = !!promo?.enabled && !!promo.message
   const showDialerDown = !!dialerDown?.enabled && !!dialerDown.message
+  const showAwaiting = awaiting.length > 0
 
-  if (!showPromo && !showDialerDown) return null
+  if (!showPromo && !showDialerDown && !showAwaiting) return null
+
+  // Names the team, because an agent invited by several vendors needs to know
+  // WHICH one they are still waiting on.
+  const awaitingText =
+    awaiting.length === 1
+      ? `AWAITING APPROVAL — ${awaiting[0]} has not accepted you yet. You'll get access to their campaigns as soon as they do.`
+      : `AWAITING APPROVAL — ${awaiting.slice(0, -1).join(', ')} and ${awaiting[awaiting.length - 1]} have not accepted you yet. You'll get access to their campaigns as soon as they do.`
 
   return (
     <div>
       {showPromo && (
         <Ticker text={promo!.message} bg={promo!.bgColor} color={promo!.textColor} />
+      )}
+      {showAwaiting && (
+        <Ticker text={awaitingText} bg="#FF9F0A" color="#1A1A1A" />
       )}
       {showDialerDown && (
         <Ticker text={`⚠ DIALER DOWN — ${dialerDown!.message}  ⚠`} bg="#FF453A" color="#FFFFFF" />
