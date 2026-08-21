@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { createSeatSubscription, isSeatBillingError, agentPaysForThemselves } from '@/lib/teamBilling'
 import { assignOwnerTenantIfWhitelabeled } from '@/lib/teamMembership'
+import { JOIN_CODE_COOKIE } from '@/app/api/join/start/route'
 import { apiError } from '@/lib/apiError'
 import { sendAdminPush } from '@/lib/pushNotify'
 import { syncIfTierChanged } from '@/lib/seatDiscount'
@@ -401,7 +402,12 @@ export async function POST(req: Request) {
       tenantSlug = assigned?.slug ?? null
     }
 
-    return NextResponse.json({
+    // ── THE INVITE HAS BEEN USED; STOP CARRYING IT ────────────────────────
+    // post-signin routes on this cookie, so leaving it set would send them
+    // back to /join on their next sign-in — landing on an "already a member"
+    // screen instead of their dashboard. Harmless but confusing, and easily
+    // avoided by clearing it the moment it has done its job.
+    const res = NextResponse.json({
       success: true,
       team: { id: team.id, name: team.name },
       member: memberRow,
@@ -431,6 +437,8 @@ export async function POST(req: Request) {
           ? 'redirect_to_dialer'       // instant — partner seat or free/public access
           : 'awaiting_owner_approval', // multi-use owner-pays, manual verify
     })
+    res.cookies.set(JOIN_CODE_COOKIE, '', { path: '/', maxAge: 0 })
+    return res
   } catch (error: any) {
     console.error('Redeem error:', error)
     return apiError(error, { route: 'teams/redeem' })

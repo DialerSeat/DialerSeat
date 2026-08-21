@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { headers } from 'next/headers'
+import { headers, cookies } from 'next/headers'
+import { JOIN_CODE_COOKIE } from '@/app/api/join/start/route'
 import { createClient } from '@supabase/supabase-js'
 import { shouldSeeWelcome } from '@/lib/subscription'
 
@@ -273,6 +274,36 @@ export async function GET(req: NextRequest) {
     const { userId } = await auth()
     if (!userId) {
       return NextResponse.redirect(new URL('/sign-in', req.url))
+    }
+
+    // ── A PENDING INVITE OUTRANKS EVERYTHING BELOW ────────────────────────
+    // Somebody who arrived on a join link has told us exactly where they were
+    // going. Clerk was supposed to carry that in ?redirect_url and does not
+    // survive the hosted sign-up flow — a real signup confirmed it: the account
+    // was created, no team_members row was ever written, and the person landed
+    // on /welcome and then /billing having redeemed nothing.
+    //
+    // The cookie was set before they ever left for Clerk (see
+    // /api/join/start), so it is still here regardless of which route Clerk
+    // took to send them back. Reading it here makes the cookie the authority
+    // rather than the fallback, which is the right way round: it is OUR record
+    // of intent, and it cannot be dropped by somebody else's redirect.
+    //
+    // Only the shape is trusted, never the contents as a path. The value is
+    // constrained to a code and rebuilt into a /join/ URL here, so a tampered
+    // cookie cannot become an open redirect.
+    try {
+      const jar = await cookies()
+      const raw = jar.get(JOIN_CODE_COOKIE)?.value || ''
+      const code = raw.trim().toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 32)
+      if (code) {
+        console.log('[post-signin] pending join code found, routing to /join/%s', code)
+        const protocol = isDevHost(host) ? 'http' : 'https'
+        return NextResponse.redirect(`${protocol}://${host}/join/${encodeURIComponent(code)}`, 302)
+      }
+    } catch (err) {
+      // Never block sign-in on this. Worst case is the old behaviour.
+      console.error('[post-signin] join cookie read failed', err)
     }
 
     
