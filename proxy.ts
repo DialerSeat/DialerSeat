@@ -8,6 +8,21 @@ const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/api/auth/(.*)',
+  // ── AN INVITE LINK IS FOR PEOPLE WHO DO NOT HAVE ACCOUNTS YET ────────
+  // /join was protected, so auth.protect() bounced every signed-out visitor
+  // to Clerk's hosted sign-in before app/join/[code]/page.tsx ever ran. That
+  // page is what validates the code, sets the carry-cookie, and shows a dead
+  // link for a regenerated one — none of which could happen, because the
+  // route was never reached.
+  //
+  // It also explains the lost code: the hosted portal has its own after
+  // sign-in destination, so an invitee was handed to post-signin, then
+  // /welcome, then /billing, with the invite dropped somewhere in between.
+  //
+  // The page itself decides what a signed-out visitor gets. It has to run to
+  // do that.
+  '/join/(.*)',
+  '/api/join/(.*)',
   '/terms',
   '/privacy',
   '/faq(.*)',

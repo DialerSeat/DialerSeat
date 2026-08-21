@@ -29,7 +29,13 @@ const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace'
 
 
 
-const BILLING_PATH = '/billing?from=welcome'
+// A joiner continues to billing with their invite attached, so the code is
+// already in the box (and already applied) when they land.
+function billingPath(joinCode: string | null): string {
+  return joinCode
+    ? `/billing?from=welcome&promo=${encodeURIComponent(joinCode)}`
+    : '/billing?from=welcome'
+}
 
 const C = {
   primary: 'var(--brand-primary, #4a9eff)',
@@ -80,11 +86,11 @@ const SCENES: Scene[] = [
   },
 ]
 
-export default function ShowcaseWizard() {
+export default function ShowcaseWizard({ joinCode = null }: { joinCode?: string | null }) {
   const router = useRouter()
   const [scene, setScene] = useState(0)
 
-  const goBilling = useCallback(() => router.push(BILLING_PATH), [router])
+  const goBilling = useCallback(() => router.push(billingPath(joinCode)), [router, joinCode])
   const next = useCallback(() => setScene(s => (s >= SCENES.length - 1 ? s : s + 1)), [])
   const prev = useCallback(() => setScene(s => Math.max(0, s - 1)), [])
 

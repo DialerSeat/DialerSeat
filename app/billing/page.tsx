@@ -143,6 +143,16 @@ export default function BillingPage() {
     (searchParams.get('promo') || '').trim().toUpperCase()
   )
   const [showPromo, setShowPromo] = useState(false)
+  // ── AN ARRIVING CODE APPLIES ITSELF ───────────────────────────────────
+  // Pre-filling the box was half the job: the code sat there looking applied
+  // while nothing had happened, and an agent who clicked straight through paid
+  // for a seat that joined them to nothing. Applying it on arrival is what the
+  // invite already promised.
+  //
+  // Ref, not state: this must fire exactly once per page load. Applying a team
+  // code performs a real redeem, and a re-render firing it a second time would
+  // be a duplicate join attempt.
+  const autoAppliedRef = useRef(false)
   // ── TWO KINDS OF CODE, ONE BOX ────────────────────────────────────────
   // A person holding a code has no reason to know whether it is a Stripe
   // promo or a DialerSeat team invite, so both are typed into the same
@@ -432,6 +442,26 @@ export default function BillingPage() {
     setClientSecret(null)
     await initSubscription()
   }
+
+  // Arrived from an invite (/welcome carries it here, or /join sends them
+  // directly). Apply it without being asked — the user already accepted this
+  // invite by following the link; making them find the box and press a button
+  // is the product asking them to agree to the same thing twice.
+  //
+  // Waits for checkingStatus so the subscription state is settled first,
+  // otherwise the apply races the page's own initialisation.
+  useEffect(() => {
+    if (autoAppliedRef.current) return
+    if (checkingStatus || !isLoaded) return
+    if (!promoCode) return
+    if (promoApplied || teamCodes.length > 0) return
+
+    autoAppliedRef.current = true
+    handleApplyPromo()
+    // handleApplyPromo is recreated every render; depending on it would defeat
+    // the ref guard. The ref is what makes this fire once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkingStatus, isLoaded, promoCode])
 
   if (!isLoaded || checkingStatus) {
     return <LoadingCard text={retryingBilling ? 'Returning to billing…' : 'Preparing secure checkout'} />
