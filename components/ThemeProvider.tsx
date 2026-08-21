@@ -231,6 +231,12 @@ export function ThemeProvider({
   --teams-sidebar-hover: var(--brand-sidebar-hover-bg);
   --teams-sidebar-active: var(--brand-sidebar-active-bg);
   --teams-sidebar-field: color-mix(in srgb, var(--brand-sidebar-bg) 86%, var(--brand-on-sidebar) 14%);
+  /* The nav expresses its own states as translucent overlays of the primary —
+     18% for active, 9% for hover — which is why they sit correctly on any
+     sidebar colour. The Requests and All Users buttons rest on the 18% and so
+     need something ABOVE it to read as a hover; a fixed grey was doing that
+     job and going nearly black against a light brand. */
+  --teams-sidebar-btn-hover: color-mix(in srgb, ${primary} 30%, transparent);
 }` : ''}`
   }, [
     branding?.primary_color,

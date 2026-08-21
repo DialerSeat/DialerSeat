@@ -459,7 +459,7 @@ export default function TeamsSidebar({
           box-shadow: 0 1px 0 rgba(0,0,0,0.35);
           transition: background 0.1s ease, color 0.1s ease, box-shadow 0.1s ease;
         }
-        .ts-foot-btn:hover { background: #3a3c42; color: ${TEXT}; }
+        .ts-foot-btn:hover { background: var(--teams-sidebar-btn-hover, #3a3c42); color: ${TEXT}; }
         /* Press moves the shadow, never the element — a button that shifts
            under the cursor loses the click. */
         .ts-foot-btn:active { box-shadow: inset 0 2px 4px rgba(0,0,0,0.45); }
