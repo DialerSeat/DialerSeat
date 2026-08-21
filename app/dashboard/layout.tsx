@@ -224,6 +224,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const totalSeats = seats?.counts.totalSeats || 0
   const hasActivePersonal = tier === 'active'
+  const isAwaitingApproval = awaitingApproval.length > 0
+
   const hasAnySeat = totalSeats > 0
   const hasManagerPlus = plan === 'manager_plus' || plan === 'both'
 
@@ -263,6 +265,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   } else if (hasAnySeat) {
     primaryLabel = 'TEAM SEAT'
     primaryColor = brandPrimary
+    primaryWeight = 'bold'
+  } else if (isAwaitingApproval) {
+    // Waiting on an owner is not a billing failure. "UNSUBSCRIBED" would be
+    // both wrong and alarming: nothing lapsed, nobody owes anything, and the
+    // person cannot do a single thing about it from here.
+    primaryLabel = 'AWAITING APPROVAL'
+    primaryColor = '#ffaa3e'
     primaryWeight = 'bold'
   } else if (tier === 'lapsed') {
     primaryLabel = 'UNSUBSCRIBED'
@@ -450,7 +459,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         })}
       </nav>
 
-      {!isAdmin && (tier === 'lapsed' || seatLapsed.length > 0) && !hasAnySeat && !hasManagerPlus && (
+      {/* Never while a seat is awaiting approval. Telling somebody to
+          resubscribe when they have not lapsed — and when the thing they are
+          actually waiting on is another person clicking accept — sends them to
+          pay for something they were invited to for free. */}
+      {!isAdmin && !isAwaitingApproval && (tier === 'lapsed' || seatLapsed.length > 0) && !hasAnySeat && !hasManagerPlus && (
         <Link
           href="/billing"
           style={{
@@ -769,7 +782,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             about restoring dialing, not about recovering an account.
             Suppressed when they already have their own plan, because then
             there is nothing to restore. */}
-        {seatLapsed.length > 0 && !hasOwnPlan && (
+        {seatLapsed.length > 0 && !hasOwnPlan && !isAwaitingApproval && (
           <div style={{
             padding: '10px 16px', background: '#2a1a05',
             borderBottom: '1px solid #78350f', color: '#ffaa3e',
