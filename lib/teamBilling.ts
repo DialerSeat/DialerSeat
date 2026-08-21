@@ -1,7 +1,7 @@
 import { stripe } from '@/lib/stripe'
 import { supabaseAdmin } from '@/lib/supabase'
 import Stripe from 'stripe'
-import { ensureSeatCoupon, ownerSeatDiscount } from '@/lib/seatDiscount'
+import { ensureSeatCoupon, resolveSeatDiscount } from '@/lib/seatDiscount'
 
 
 
@@ -130,10 +130,20 @@ export async function createSeatSubscription(
   // Never fatal. A coupon lookup failing must not stop a seat being opened —
   // an agent locked out because a discount could not be applied is a far worse
   // outcome than a week at full price, and the reconcile fixes it tomorrow.
+  // resolveSeatDiscount, not ownerSeatDiscount: an owner may already hold an
+  // account-level comp, and a subscription coupon would DISPLACE it rather
+  // than stack. Applying the volume tier blindly makes a comped owner's seats
+  // jump from free to $33.25 the moment they earn the 5% — punishing them for
+  // crossing the threshold the tier exists to reward. This returns 0 when the
+  // comp is already better, which leaves the inheritance alone.
   let couponId: string | null = null
+  let discountReason = 'unknown'
   try {
-    const { percentOff } = await ownerSeatDiscount(params.ownerId)
-    if (percentOff > 0) couponId = await ensureSeatCoupon(percentOff)
+    const decision = await resolveSeatDiscount(params.ownerId)
+    discountReason = decision.reason
+    if (decision.applyPercentOff > 0) {
+      couponId = await ensureSeatCoupon(decision.applyPercentOff)
+    }
   } catch (err: any) {
     console.error('[teamBilling] discount lookup failed, opening seat at full price', err?.message || err)
   }
@@ -158,7 +168,21 @@ export async function createSeatSubscription(
   // it against the charge, and tells an admin, rather than quietly handing out
   // free seats.
   const inheritedDiscountPeek = (customer as any).discount || null
-  const inheritedDiscount = !couponId && inheritedDiscountPeek ? inheritedDiscountPeek : null
+
+  // A comp reaching the seat is now a DECISION, not an accident: when
+  // resolveSeatDiscount finds the account comp beats the volume tier it
+  // deliberately applies nothing, so the inheritance stands and the owner
+  // keeps the better rate. That case is silent — alerting on it would fire on
+  // every seat a comped owner opens.
+  //
+  // What is still worth saying out loud is a discount arriving that we did NOT
+  // choose and could not read: a fixed-amount comp, for instance, which cannot
+  // be compared against a percentage and so never wins the comparison above.
+  // That one changes what a seat earns without anybody deciding it should.
+  const inheritedDiscount =
+    !couponId && inheritedDiscountPeek && discountReason !== 'comp_is_better'
+      ? inheritedDiscountPeek
+      : null
 
   const subscription = await stripe.subscriptions.create({
     expand: ['latest_invoice'],
@@ -231,9 +255,10 @@ export async function createSeatSubscription(
       await sendAdminPush(
         'payment_failed',
         `Seat for ${params.agentEmail} on ${params.teamName} billed ${billed} instead of ${full}` +
-        `${pct ? ` — the owner's account-level ${pct}% discount applied to it` : ''}. ` +
-        `The seat opened normally; this is a heads-up, not a failure.`,
-        { title: 'Seat billed at the owner account discount' }
+        `${pct ? ` (${pct}% off)` : ''} from a discount on the owner's Stripe customer that ` +
+        `could not be compared against their volume tier — most likely a fixed-amount coupon. ` +
+        `The seat opened normally; worth a look at which rate they should be on.`,
+        { title: 'Seat took an account discount we did not choose' }
       )
     } catch (e) {
       console.error('[teamBilling] inherited-discount alert failed', e)

@@ -236,3 +236,46 @@ against every spelling rather than `.eq()` against one. The shared constant is
 the actual fix: the previous arrangement proves a comment does not work — it was
 followed exactly, and the bug survived, because keeping two wrong values in sync
 is still wrong.
+
+---
+
+## 8. Earning the volume tier made a comped owner's seats cost MORE. FIXED.
+
+Not a reported bug — found by following the consequences of #2 once the comp was
+settled as acceptable.
+
+Stripe lets exactly one discount reach a seat: a subscription-level coupon (our
+volume tier) always beats a customer-level one (an account comp), because "when a
+subscription has no discounts, the customer-level discount, if any, applies to
+invoices".
+
+Applied naively that inverts the incentive. A comped owner pays $0.00 per seat
+until they reach ten, at which point the 5% volume coupon lands on the
+subscription, DISPLACES the comp, and their seats jump to $33.25. Crossing the
+threshold the tier exists to reward makes them worse off — and the 100%-off test
+that worked cleanly only did so because it was under ten seats.
+
+**The fix does not combine coupons.** When the comp is already better, the answer
+is to apply NOTHING at subscription level and let the inheritance stand, which is
+the behaviour already running. Copying a comp onto the subscription would mean
+reproducing its duration, redemption limits and expiry, and getting any of those
+wrong turns a "once" comp into a permanent one.
+
+`resolveSeatDiscount` in `lib/seatDiscount.ts` now returns the decision, and both
+paths that write coupons use it — seat creation and the nightly reconcile. The
+reconcile especially: on the old rule it would have put the volume coupon back on
+a comped owner's seats every night.
+
+    comp%   volume%   applied   seat bills
+    none    0         0         $35.00
+    none    5         5         $33.25
+    100     0         0         $0.00
+    100     5         0         $0.00   <- was $33.25
+    20      5         0         $28.00
+    5       10        10        $31.50
+
+The alert narrowed with it. A comp reaching a seat is now a decision rather than
+an accident, so that case is silent; it would otherwise fire on every seat a
+comped owner opens. What still alerts is a discount we could not compare — a
+fixed-amount coupon, say — because that changes what a seat earns without anyone
+choosing it.

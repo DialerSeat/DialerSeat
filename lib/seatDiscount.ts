@@ -184,8 +184,94 @@ export interface DiscountSyncResult {
  * quietly keep discounting them forever. That is not generosity, it is a
  * billing system that has lost track of what it charges.
  */
+// ─────────────────────────────────────────────────────────────────────────
+// EARNING A DISCOUNT MUST NEVER COST MORE THAN NOT EARNING ONE
+//
+// Two discounts can reach a seat and Stripe lets exactly one of them win:
+// a subscription-level coupon (our volume tier) always beats a customer-level
+// one (an account comp), because "when a subscription has no discounts, the
+// customer-level discount, if any, applies to invoices".
+//
+// Applied naively that inverts the incentive. A comped owner pays nothing per
+// seat until they reach ten, at which point the 5% volume coupon lands on the
+// subscription, DISPLACES the comp, and their seats jump from $0.00 to $33.25.
+// Crossing the threshold the tier exists to reward makes them worse off.
+//
+// The fix does not need coupons to be combined or copied. When the comp is
+// already the better deal, the answer is simply to apply NOTHING at
+// subscription level and let the inheritance stand — which is the behaviour
+// already running in production. Copying the comp onto the subscription would
+// mean reproducing its duration, its redemption limits and its expiry, and
+// getting any of those wrong turns a "once" comp into a permanent one.
+//
+// So the rule is: apply the volume coupon only when volume actually beats the
+// comp. The seat then always receives the better of the two, and no owner is
+// ever punished for growing.
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface SeatDiscountDecision {
+  /** The volume tier this owner has earned, ignoring any comp. */
+  volumePercentOff: number
+  /** Percent off already sitting on the owner's Stripe CUSTOMER, if readable.
+   *  Null when they have none, or when it is a fixed amount rather than a
+   *  percentage (which cannot be compared without knowing the seat price). */
+  compPercentOff: number | null
+  /** Apply this coupon at subscription level, or null to leave the customer
+   *  discount to apply on its own. */
+  applyPercentOff: number
+  ownerPaidSeats: number
+  reason: 'volume' | 'comp_is_better' | 'none'
+}
+
+export async function resolveSeatDiscount(ownerId: string): Promise<SeatDiscountDecision> {
+  const { percentOff: volumePercentOff, ownerPaidSeats } = await ownerSeatDiscount(ownerId)
+
+  let compPercentOff: number | null = null
+  try {
+    const { data: owner } = await supabaseAdmin
+      .from('users')
+      .select('stripe_customer_id')
+      .eq('clerk_id', ownerId)
+      .maybeSingle()
+
+    if (owner?.stripe_customer_id) {
+      const customer = await stripe.customers.retrieve(owner.stripe_customer_id)
+      if (!(customer as any).deleted) {
+        const pct = (customer as any).discount?.coupon?.percent_off
+        compPercentOff = typeof pct === 'number' ? pct : null
+      }
+    }
+  } catch (err: any) {
+    // Never fatal. Failing to read a comp must not stop a seat opening; the
+    // worst case is the volume coupon applies, which is the old behaviour.
+    console.error('[seatDiscount] could not read owner comp:', err?.message || err)
+  }
+
+  if (compPercentOff !== null && compPercentOff >= volumePercentOff) {
+    return {
+      volumePercentOff,
+      compPercentOff,
+      applyPercentOff: 0,
+      ownerPaidSeats,
+      reason: 'comp_is_better',
+    }
+  }
+
+  return {
+    volumePercentOff,
+    compPercentOff,
+    applyPercentOff: volumePercentOff,
+    ownerPaidSeats,
+    reason: volumePercentOff > 0 ? 'volume' : 'none',
+  }
+}
+
 export async function syncOwnerSeatDiscounts(ownerId: string): Promise<DiscountSyncResult> {
-  const { percentOff, ownerPaidSeats } = await ownerSeatDiscount(ownerId)
+  // Same decision the seat was opened with, or the nightly pass would put the
+  // volume coupon back on a comped owner's seats and undo it every night.
+  const decision = await resolveSeatDiscount(ownerId)
+  const percentOff = decision.applyPercentOff
+  const ownerPaidSeats = decision.ownerPaidSeats
   const result: DiscountSyncResult = {
     percentOff,
     ownerPaidSeats,
