@@ -930,7 +930,19 @@ export default function TeamsPage() {
       }).then(r => r.json()).catch(() => null)
 
       if (!res?.success) {
-        throw new Error(res?.error || `Could not ${action === 'accept' ? 'approve' : 'decline'} that request`)
+        // ── CARRY THE INSTRUCTION, NOT JUST THE VERDICT ──────────────────
+        // The accept endpoint answers a failed seat charge with two parts:
+        // `error` says what happened, `detail` says what to do about it —
+        // whether to press the button again or go and fix a card. Showing
+        // only the first half leaves an owner staring at a refusal with no
+        // idea which of those it is, which is the state this whole path was
+        // meant to get them out of.
+        const parts = [res?.error, res?.detail].filter(Boolean)
+        throw new Error(
+          parts.length > 0
+            ? parts.join(' ')
+            : `Could not ${action === 'accept' ? 'approve' : 'decline'} that request`
+        )
       }
       await refresh()
     } catch (e: any) {
