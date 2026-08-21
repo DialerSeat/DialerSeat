@@ -252,9 +252,19 @@ function HelpModal({ onClose }: { onClose: () => void }) {
     <strong style={{ color: TEXT, fontWeight: 600 }}>{children}</strong>
   )
 
+  // Same drag-select guard as the modals in TeamModals: a click lands on the
+  // nearest common ancestor of press and release, so selecting help text and
+  // releasing past the edge would otherwise close the panel mid-copy. The
+  // press has to start on the backdrop to count as a dismissal.
+  const pressStartedOnBackdrop = useRef(false)
+
   return (
     <div
-      onClick={onClose}
+      onMouseDown={e => { pressStartedOnBackdrop.current = e.target === e.currentTarget }}
+      onClick={e => {
+        if (e.target === e.currentTarget && pressStartedOnBackdrop.current) onClose()
+        pressStartedOnBackdrop.current = false
+      }}
       style={{
         position: 'fixed', inset: 0, zIndex: 200,
         background: 'rgba(0,0,0,0.62)', display: 'flex',
@@ -262,6 +272,7 @@ function HelpModal({ onClose }: { onClose: () => void }) {
       }}
     >
       <div
+        onMouseDown={e => e.stopPropagation()}
         onClick={e => e.stopPropagation()}
         style={{
           width: '100%', maxWidth: 620, maxHeight: '86vh', overflowY: 'auto',

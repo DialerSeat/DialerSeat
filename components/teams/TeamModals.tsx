@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 
 // =============================================================================
 // CREATE TEAM / CREATE CAMPAIGN
@@ -34,9 +34,26 @@ function Shell({ title, subtitle, onClose, children, footer }: {
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
+  // ── CLOSING ON THE BACKDROP MUST NOT CATCH A DRAG ─────────────────────
+  // A click fires on the nearest common ancestor of where the press started
+  // and where it ended. So selecting text in a field and releasing past the
+  // edge of the dialog — which is what highlighting a name to replace it
+  // looks like — landed a click on the backdrop and closed the box, throwing
+  // away what had been typed.
+  //
+  // The press has to START on the backdrop for it to count. Tracked on
+  // mousedown, because that is the half of the gesture that says what the
+  // person meant: pressing on the backdrop is dismissing, pressing on a field
+  // and dragging is selecting, and the release position tells you neither.
+  const pressStartedOnBackdrop = useRef(false)
+
   return (
     <div
-      onClick={onClose}
+      onMouseDown={e => { pressStartedOnBackdrop.current = e.target === e.currentTarget }}
+      onClick={e => {
+        if (e.target === e.currentTarget && pressStartedOnBackdrop.current) onClose()
+        pressStartedOnBackdrop.current = false
+      }}
       style={{
         position: 'fixed', inset: 0, zIndex: 60,
         background: 'rgba(0,0,0,0.6)', display: 'grid', placeItems: 'center',
@@ -44,6 +61,7 @@ function Shell({ title, subtitle, onClose, children, footer }: {
       }}
     >
       <div
+        onMouseDown={e => e.stopPropagation()}
         onClick={e => e.stopPropagation()}
         style={{
           width: '100%', maxWidth: 440, background: '#1e1f22',
