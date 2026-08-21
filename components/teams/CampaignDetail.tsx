@@ -159,6 +159,11 @@ export default function CampaignDetail({
     calls: number; talkSeconds: number; appointments: number
     closed: number; notInterested: number; dnc: number
   } | null>(null)
+  const [myScripts, setMyScripts] = useState<Array<{ id: string; name: string; body: string }>>([])
+  const [myRecent, setMyRecent] = useState<Array<{ at: string; disposition: string | null; seconds: number }>>([])
+  const [myDaily, setMyDaily] = useState<Array<{ day: string; calls: number }>>([])
+  const [memberRecording, setMemberRecording] = useState(false)
+  const [openScript, setOpenScript] = useState<string | null>(null)
   const [origin, setOrigin] = useState('')
   const [copied, setCopied] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -181,6 +186,10 @@ export default function CampaignDetail({
       setIsCampaignOwner(r.isCampaignOwner !== false)
       setViewerRole(r.viewerRole === 'member' ? 'member' : 'owner')
       setMyStats(r.myStats || null)
+      setMyScripts(Array.isArray(r.scripts) ? r.scripts : [])
+      setMyRecent(Array.isArray(r.myRecentCalls) ? r.myRecentCalls : [])
+      setMyDaily(Array.isArray(r.myDailyCalls) ? r.myDailyCalls : [])
+      setMemberRecording(!!r.recordingEnabled)
       setError(null)
     } catch (e: any) {
       setError(e.message || 'Could not load campaign')
@@ -414,7 +423,112 @@ export default function CampaignDetail({
           </div>
         </div>
 
+        {/* ── THE WEEK, THEIR OWN ─────────────────────────────────────
+            Empty days are drawn, not skipped. A sparse list of only the
+            days they worked reads as missing data; a day off is a real
+            answer and should look like one. */}
+        {myDaily.length > 0 && (
+          <>
+            <div style={{ fontSize: 11, letterSpacing: 2, color: DIM, marginBottom: 10 }}>
+              YOUR LAST 7 DAYS
+            </div>
+            <div style={{
+              display: 'flex', alignItems: 'flex-end', gap: 6, height: 64,
+              background: PANEL, border: `1px solid ${HAIRLINE}`,
+              borderRadius: 4, padding: '10px 12px', marginBottom: 20,
+            }}>
+              {(() => {
+                const peak = Math.max(...myDaily.map(d => d.calls), 1)
+                return myDaily.map(d => (
+                  <div key={d.day} style={{ flex: 1, textAlign: 'center' }}>
+                    <div
+                      title={`${d.calls} call${d.calls === 1 ? '' : 's'} on ${d.day}`}
+                      style={{
+                        height: `${Math.round((d.calls / peak) * 34)}px`,
+                        minHeight: d.calls > 0 ? 3 : 1,
+                        background: d.calls > 0 ? ACCENT : HAIRLINE,
+                        borderRadius: 2,
+                      }}
+                    />
+                    <div style={{ fontSize: 9, color: DIM, marginTop: 5 }}>
+                      {new Date(d.day + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'narrow' })}
+                    </div>
+                  </div>
+                ))
+              })()}
+            </div>
+          </>
+        )}
+
+        {/* Scripts they already see mid-call, somewhere they can read them
+            before the phone is ringing. */}
+        {myScripts.length > 0 && (
+          <>
+            <div style={{ fontSize: 11, letterSpacing: 2, color: DIM, marginBottom: 10 }}>
+              SCRIPTS
+            </div>
+            <div style={{ display: 'grid', gap: 6, marginBottom: 20 }}>
+              {myScripts.map(sc => (
+                <div key={sc.id} style={{
+                  background: PANEL, border: `1px solid ${HAIRLINE}`, borderRadius: 4,
+                }}>
+                  <button
+                    onClick={() => setOpenScript(openScript === sc.id ? null : sc.id)}
+                    style={{
+                      width: '100%', textAlign: 'left', background: 'transparent',
+                      border: 0, color: TEXT, fontSize: 13.5, padding: '12px 14px',
+                      cursor: 'pointer', fontFamily: 'inherit',
+                    }}
+                  >
+                    {openScript === sc.id ? '▾' : '▸'} {sc.name}
+                  </button>
+                  {openScript === sc.id && (
+                    <div style={{
+                      padding: '0 14px 14px', fontSize: 13, lineHeight: 1.7,
+                      color: DIM, whiteSpace: 'pre-wrap',
+                    }}>{sc.body}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Their own calls. Outcome and duration only — no lead name or
+            number, because a record of your own work does not require
+            handing back the list. */}
+        {myRecent.length > 0 && (
+          <>
+            <div style={{ fontSize: 11, letterSpacing: 2, color: DIM, marginBottom: 10 }}>
+              YOUR RECENT CALLS
+            </div>
+            <div style={{
+              background: PANEL, border: `1px solid ${HAIRLINE}`,
+              borderRadius: 4, marginBottom: 20,
+            }}>
+              {myRecent.map((c, i) => (
+                <div key={i} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '9px 14px',
+                  borderTop: i === 0 ? 'none' : `1px solid ${HAIRLINE}`,
+                  fontSize: 12.5,
+                }}>
+                  <span style={{ color: TEXT }}>{c.disposition || 'No disposition'}</span>
+                  <span style={{ color: DIM, fontFamily: 'monospace', fontSize: 11.5 }}>
+                    {Math.floor(c.seconds / 60)}:{String(c.seconds % 60).padStart(2, '0')}
+                    {'  ·  '}
+                    {new Date(c.at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
         <div style={{ fontSize: 12.5, color: DIM, lineHeight: 1.7 }}>
+          {memberRecording && (
+            <>Calls on this campaign are recorded.{' '}</>
+          )}
           How this campaign dials, what it records, and who else is on it are set
           by whoever runs it. If something here looks wrong, they are the ones
           who can change it.

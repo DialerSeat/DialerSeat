@@ -80,7 +80,12 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ success: false, error: 'Not your campaign' }, { status: 403 })
       }
 
-      const mine = await myCampaignStats(userId, campaignId)
+      const [mine, scripts, recent, daily] = await Promise.all([
+        myCampaignStats(userId, campaignId),
+        campaignScripts(campaignId),
+        myRecentCalls(userId, campaignId),
+        myDailyCalls(userId, campaignId),
+      ])
 
       return NextResponse.json({
         success: true,
@@ -98,6 +103,19 @@ export async function GET(req: NextRequest) {
           remainingLeads: Math.max((campaign.total_leads ?? 0) - (campaign.called_leads ?? 0), 0),
         },
         myStats: mine,
+        // The scripts they dial with. Not a new disclosure — these are already
+        // in front of them on every call; putting them here is the same words
+        // somewhere they can read before the phone is ringing.
+        scripts,
+        // Their own call history on this campaign. Outcome, when, how long.
+        // Deliberately no lead name or number: a member's record of their own
+        // work does not require handing back the list, and this product has a
+        // masking feature precisely because that data is not freely shared.
+        myRecentCalls: recent,
+        myDailyCalls: daily,
+        // Stated rather than hidden. Somebody whose calls are recorded should
+        // be told so by the product, not find out later.
+        recordingEnabled: !!campaign.recording_enabled,
         agents: [],
         availableMembers: [],
         ingestLog: [],
@@ -333,4 +351,77 @@ async function myCampaignStats(clerkId: string, campaignId: string) {
     notInterested: by('NOT INTERESTED', 'NOT_INTERESTED'),
     dnc: by('DO NOT CALL', 'DNC'),
   }
+}
+
+/** Scripts attached to this campaign, in the order the owner arranged them.
+ *  Two queries rather than a PostgREST embed: campaign_script_links has no
+ *  guaranteed foreign key to scripts, and an embed that cannot resolve returns
+ *  null rather than erroring — a silent empty list is exactly the failure this
+ *  codebase keeps producing. */
+async function campaignScripts(campaignId: string) {
+  const { data: links } = await supabaseAdmin
+    .from('campaign_script_links')
+    .select('script_id, sort_order')
+    .eq('campaign_id', campaignId)
+    .order('sort_order', { ascending: true })
+
+  const ids = (links || []).map((l: any) => l.script_id).filter(Boolean)
+  if (ids.length === 0) return []
+
+  const { data: rows } = await supabaseAdmin
+    .from('scripts')
+    .select('id, name, body')
+    .in('id', ids)
+
+  const byId = new Map((rows || []).map((r: any) => [r.id, r]))
+  return (links || [])
+    .map((l: any) => byId.get(l.script_id))
+    .filter(Boolean)
+    .map((r: any) => ({ id: r.id, name: r.name, body: r.body }))
+}
+
+/** The viewer's own last calls on this campaign. No lead identity. */
+async function myRecentCalls(clerkId: string, campaignId: string) {
+  const { data } = await supabaseAdmin
+    .from('calls')
+    .select('created_at, disposition, duration')
+    .eq('user_id', clerkId)
+    .eq('campaign_id', campaignId)
+    .order('created_at', { ascending: false })
+    .limit(12)
+
+  return (data || []).map((r: any) => ({
+    at: r.created_at,
+    disposition: r.disposition,
+    seconds: Number(r.duration) || 0,
+  }))
+}
+
+/** The viewer's own call count per day for the last week, oldest first, with
+ *  empty days included — a gap in a sparse list reads as missing data, and a
+ *  day off is a real answer. */
+async function myDailyCalls(clerkId: string, campaignId: string) {
+  const since = new Date(Date.now() - 6 * 24 * 3600 * 1000)
+  since.setHours(0, 0, 0, 0)
+
+  const { data } = await supabaseAdmin
+    .from('calls')
+    .select('created_at')
+    .eq('user_id', clerkId)
+    .eq('campaign_id', campaignId)
+    .gte('created_at', since.toISOString())
+
+  const counts = new Map<string, number>()
+  for (const r of data || []) {
+    const key = String((r as any).created_at).slice(0, 10)
+    counts.set(key, (counts.get(key) || 0) + 1)
+  }
+
+  const out: Array<{ day: string; calls: number }> = []
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(Date.now() - i * 24 * 3600 * 1000)
+    const key = d.toISOString().slice(0, 10)
+    out.push({ day: key, calls: counts.get(key) || 0 })
+  }
+  return out
 }
