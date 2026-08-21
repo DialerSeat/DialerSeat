@@ -309,14 +309,36 @@ export default function SettingsPage() {
     if (portalBusy) return
     setPortalBusy(true)
     setPortalError(null)
+
+    // ── THE TAB IS OPENED BEFORE THE AWAIT, ON PURPOSE ────────────────────
+    // Stripe's portal URL only exists after a round trip, but a window.open
+    // that happens AFTER an await is no longer inside the click that caused
+    // it, and browsers block exactly that. So the tab is opened empty while
+    // the gesture is still live, and pointed at the URL when it arrives.
+    //
+    // A blocked or refused open returns null, and rather than leaving
+    // somebody staring at a button that did nothing, the same-tab navigation
+    // is kept as the fallback. Losing the page is a worse outcome than a new
+    // tab, and a better one than no outcome.
+    const tab = window.open('', '_blank')
+    if (tab) {
+      // Severed so the portal cannot reach back into this page through
+      // window.opener. rel="noopener" is not available to window.open.
+      try { tab.opener = null } catch {}
+    }
+
     try {
       const r = await fetch('/api/stripe/portal', { method: 'POST' }).then(x => x.json())
       if (r.success && r.url) {
-        window.location.href = r.url
+        if (tab) tab.location.href = r.url
+        else window.location.href = r.url
         return
       }
+      // Nothing to show them — close the blank tab rather than abandoning it.
+      tab?.close()
       setPortalError([r.error, r.detail].filter(Boolean).join(' '))
     } catch {
+      tab?.close()
       setPortalError('Could not reach Stripe. Try again in a moment.')
     } finally {
       setPortalBusy(false)
@@ -735,7 +757,7 @@ export default function SettingsPage() {
             >{portalBusy ? 'Opening Stripe…' : 'Manage payment methods & invoices'}</button>
             <div style={{ fontSize: 11.5, color: '#80848e', marginTop: 6, lineHeight: 1.6 }}>
               Add or replace a card, keep more than one on file, and download past invoices.
-              Handled by Stripe — card details never reach DialerSeat.
+              Opens in a new tab. Handled by Stripe — card details never reach DialerSeat.
             </div>
             {portalError && (
               <div style={{ fontSize: 12, color: '#ff6464', marginTop: 8, lineHeight: 1.6 }}>
