@@ -1315,6 +1315,34 @@ function DialerPageInner() {
           authorizationPassword: sipPassword,
           transportOptions: { server: wssServer },
           sessionDescriptionHandlerFactoryOptions: {
+            // ── DO NOT WAIT FOR EVERY ICE CANDIDATE BEFORE ANSWERING ───────
+            // This is where the remaining seconds of silence lived, and it is
+            // sip.js behaviour rather than anything to do with AMD or the
+            // bridge (the server connects the legs ~70ms after answer).
+            //
+            // sip.js will not send its SDP answer until ICE gathering is
+            // COMPLETE. Read from the installed copy, v0.21.2:
+            //
+            //   waitForIceGatheringComplete(restart = false, timeout = 0)
+            //   ...
+            //   if (timeout > 0) { ...arm the timer... }
+            //
+            // Its own type says "If zero, no timeout" — and zero is exactly
+            // what an unset iceGatheringTimeout resolves to. So the default
+            // is not a five second cap, it is an UNBOUNDED wait: the answer
+            // goes out only once every STUN server in the list has replied or
+            // given up. Two servers, one of them public, on whatever network
+            // the agent happens to be on. No answer means no media, and the
+            // agent hears nothing until gathering finishes.
+            //
+            // 500ms is generous for the candidates that actually matter. Host
+            // candidates are immediate and the server-reflexive one arrives in
+            // a single round trip; iceCandidatePoolSize below already starts
+            // that before the call. Anything still outstanding at 500ms is a
+            // relay candidate that would not have changed whether audio
+            // started — ICE keeps gathering afterwards regardless, and any
+            // late candidate is still used via trickle.
+            iceGatheringTimeout: 500,
             // peerConnectionConfiguration.iceServers is THE audio-path fix.
             // Without STUN/TURN the browser can't find a reachable media path
             // across NAT and you get dead air after the lead picks up. Fall back
