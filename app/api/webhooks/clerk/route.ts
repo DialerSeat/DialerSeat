@@ -93,13 +93,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true })
   }
 
-  if (evt.type !== 'user.created') {
-    // Other event types (user.updated, etc.) are received and acknowledged
-    // but intentionally no-ops for now — add cases here if/when those need
-    // handling.
+  // ── A PROFILE EDITED IN CLERK HAS TO REACH OUR COPY ───────────────────
+  // user.updated was acknowledged and discarded. Clerk holds the profile,
+  // this table holds the copy every screen actually reads — the team sidebar,
+  // the roster, the floor, the recordings agent filter, notification copy —
+  // so changing a name in Clerk changed nothing anyone could see, and the
+  // stale one stayed forever with no way to correct it from inside the
+  // product.
+  //
+  // Created and updated write the same fields; only the announcement differs.
+  // Nobody wants "X created account" again because they fixed a typo in their
+  // surname.
+  // Narrowed on evt.type directly, not through a boolean — the payload union
+  // includes DeletedObjectJSON and others, and only this shape tells the
+  // compiler that email_addresses and the name fields exist.
+  if (evt.type !== 'user.created' && evt.type !== 'user.updated') {
     return NextResponse.json({ ok: true, skipped: evt.type })
   }
 
+  const isCreate = evt.type === 'user.created'
   const data = evt.data
   const clerkId = data.id
   const email =
@@ -128,13 +140,16 @@ export async function POST(req: NextRequest) {
   }
 
   const name = `${data.first_name || ''} ${data.last_name || ''}`.trim() || email?.split('@')[0] || 'Someone'
-  await sendAdminPush('signup', `${name} created account.`)
-  await logBillingEvent({
-    event_type: 'account_created',
-    clerk_id: clerkId,
-    user_name: name,
-    user_email: email,
-  })
 
-  return NextResponse.json({ ok: true })
+  if (isCreate) {
+    await sendAdminPush('signup', `${name} created account.`)
+    await logBillingEvent({
+      event_type: 'account_created',
+      clerk_id: clerkId,
+      user_name: name,
+      user_email: email,
+    })
+  }
+
+  return NextResponse.json({ ok: true, action: isCreate ? 'created' : 'updated' })
 }
