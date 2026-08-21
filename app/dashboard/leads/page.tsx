@@ -166,14 +166,34 @@ export default function LeadsPage() {
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
 
+  // Teams whose owner has not accepted this agent's seat yet.
+  const [awaitingTeams, setAwaitingTeams] = useState<Array<{ teamName: string }>>([])
+
+  // ── LOCKED IS NOT THE SAME AS LAPSED ─────────────────────────────────
+  // isLapsed drives read-only mode, and 'new' belongs in it — somebody with
+  // no plan cannot edit either. But it also drives the COPY, which then told
+  // a first-time visitor their subscription had lapsed and a team agent to
+  // resubscribe to something they never had.
+  //
+  // Same lock, different sentence. And no sentence at all for somebody
+  // waiting on a team owner: their seat is being bought by somebody else,
+  // so there is nothing for them to buy and buying would not unblock them.
   const isLapsed = tier === 'lapsed' || tier === 'new'
+  const hasLapsedPlan = tier === 'lapsed'
+  const awaitingSeat = awaitingTeams.length > 0
 
   useEffect(() => {
     if (!user) return
     fetch('/api/stripe/status')
       .then(r => r.json())
-      .then(d => setTier(d.tier || null))
-      .catch(() => setTier(null))
+      .then(d => {
+        setTier(d.tier || null)
+        setAwaitingTeams(Array.isArray(d.awaitingApproval) ? d.awaitingApproval : [])
+      })
+      .catch(() => {
+        setTier(null)
+        setAwaitingTeams([])
+      })
   }, [user])
 
   useEffect(() => {
@@ -782,7 +802,10 @@ export default function LeadsPage() {
         <div className="leads-lapsed-banner">
           <span>
             <strong style={{ marginRight: 6 }}>▸ READ-ONLY</strong>
-            Your leads are still here. Export anytime. Editing disabled until you resubscribe.
+            Your leads are still here. Export anytime. Editing disabled
+            {awaitingSeat
+              ? ' until the team owner approves your seat.'
+              : hasLapsedPlan ? ' until you resubscribe.' : ' until you subscribe.'}
           </span>
           <Link href="/billing" style={{
             padding: '5px 12px',
@@ -795,7 +818,7 @@ export default function LeadsPage() {
             fontWeight: 'bold',
             textDecoration: 'none',
             fontFamily: FUTURA,
-          }}>↻ RESUBSCRIBE</Link>
+          }}>↻ {hasLapsedPlan ? 'RESUBSCRIBE' : 'SUBSCRIBE'}</Link>
         </div>
       )}
 
@@ -959,7 +982,7 @@ export default function LeadsPage() {
                           fontSize: 11, lineHeight: 1.6, color: T.text,
                           marginBottom: 12,
                         }}>
-                          Resubscribe to update dispositions and notes. Your current data is preserved exactly as it was.
+                          {hasLapsedPlan ? 'Resubscribe' : 'Subscribe'} to update dispositions and notes. Your current data is preserved exactly as it was.
                         </div>
                         <Link href="/billing" style={{
                           display: 'block',
@@ -975,7 +998,7 @@ export default function LeadsPage() {
                           textAlign: 'center',
                           textDecoration: 'none',
                           fontFamily: FUTURA,
-                        }}>RESUBSCRIBE — $35/WEEK</Link>
+                        }}>{hasLapsedPlan ? 'RESUBSCRIBE' : 'SUBSCRIBE'} — $35/WEEK</Link>
                       </div>
                     ) : (
                       <>

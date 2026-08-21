@@ -231,6 +231,9 @@ function DialerPageInner() {
   const [notes, setNotes] = useState('')
   const [tier, setTier] = useState<AccessTier>(null)
   const [tierLoaded, setTierLoaded] = useState(false)
+  // Teams whose owner has not accepted this agent yet. Somebody in that state
+  // has not failed to pay for anything — there is nothing for them to buy.
+  const [awaitingTeams, setAwaitingTeams] = useState<Array<{ teamName: string }>>([])
 
   const [clockTick, setClockTick] = useState(0)
 
@@ -788,10 +791,12 @@ function DialerPageInner() {
       .then(r => r.json())
       .then(d => {
         setTier(d.tier || null)
+        setAwaitingTeams(Array.isArray(d.awaitingApproval) ? d.awaitingApproval : [])
         setTierLoaded(true)
       })
       .catch(() => {
         setTier(null)
+        setAwaitingTeams([])
         setTierLoaded(true)
       })
   }, [user])
@@ -4282,26 +4287,48 @@ function DialerPageInner() {
           borderTop: `3px solid #ffaa3e`, borderRadius: 4, padding: 36,
           color: 'var(--brand-on-sidebar)', textAlign: 'center', boxSizing: 'border-box',
         }}>
-          <div style={{ fontSize: 56, marginBottom: 16, opacity: 0.85 }}>📞</div>
+          {/* ── SAY THE RIGHT THING TO THE RIGHT PERSON ──────────────────
+              Three different people reach this card and only one of them
+              has anything to resubscribe to.
+
+              Somebody waiting on a team owner is not a billing problem at
+              all: their seat is being paid for by somebody else, there is
+              nothing for them to buy, and offering them a $35 checkout is
+              the product asking them to solve a problem that is not theirs
+              and would not fix it if they did.
+
+              Somebody who has never subscribed cannot RE-subscribe. The
+              word quietly tells them they had something and lost it. */}
           <div style={{ fontSize: 16, fontWeight: 700, letterSpacing: 5, color: '#ffaa3e', marginBottom: 12 }}>
-            SUBSCRIBE TO DIAL
+            {awaitingTeams.length > 0
+              ? 'AWAITING APPROVAL'
+              : tier === 'lapsed' ? 'SUBSCRIPTION LAPSED' : 'SUBSCRIBE TO DIAL'}
           </div>
           <div style={{ fontSize: 12, lineHeight: 1.7, color: 'var(--brand-on-sidebar-muted)', letterSpacing: 1, marginBottom: 28 }}>
-            {tier === 'lapsed'
+            {awaitingTeams.length > 0
+              ? `${awaitingTeams.map(t => t.teamName).join(', ')} has not accepted your seat yet. Dialing opens as soon as they do — there is nothing for you to pay.`
+              : tier === 'lapsed'
               ? 'Your subscription has lapsed. Resubscribe to restore dialing access. Your leads, recordings, and campaigns are still here waiting for you.'
               : 'An active subscription is required to make outbound calls.'}
           </div>
-          <Link href="/billing" style={{
-            display: 'block', padding: '16px 28px',
-            background: 'linear-gradient(135deg, var(--brand-primary), color-mix(in srgb, var(--brand-primary) 75%, black))',
-            border: 'none', borderRadius: 4, color: 'var(--brand-on-primary)',
-            fontSize: 13, fontWeight: 700, letterSpacing: 4,
-            textDecoration: 'none', boxShadow: '0 0 20px color-mix(in srgb, var(--brand-primary) 30%, transparent)',
-            marginBottom: 16, fontFamily: FUTURA,
-          }}>RESUBSCRIBE — $35/WEEK</Link>
-          <div style={{ fontSize: 9, letterSpacing: 3, color: 'var(--brand-on-sidebar-muted)', marginBottom: 24 }}>
-            NO CONTRACTS · CANCEL ANYTIME
-          </div>
+          {/* No checkout for somebody whose seat somebody else is buying.
+              A button here would take their money for a second seat and
+              still not open the campaign they are waiting on. */}
+          {awaitingTeams.length === 0 && (
+            <>
+              <Link href="/billing" style={{
+                display: 'block', padding: '16px 28px',
+                background: 'linear-gradient(135deg, var(--brand-primary), color-mix(in srgb, var(--brand-primary) 75%, black))',
+                border: 'none', borderRadius: 4, color: 'var(--brand-on-primary)',
+                fontSize: 13, fontWeight: 700, letterSpacing: 4,
+                textDecoration: 'none', boxShadow: '0 0 20px color-mix(in srgb, var(--brand-primary) 30%, transparent)',
+                marginBottom: 16, fontFamily: FUTURA,
+              }}>{tier === 'lapsed' ? 'RESUBSCRIBE' : 'SUBSCRIBE'} — $35/WEEK</Link>
+              <div style={{ fontSize: 9, letterSpacing: 3, color: 'var(--brand-on-sidebar-muted)', marginBottom: 24 }}>
+                NO CONTRACTS · CANCEL ANYTIME
+              </div>
+            </>
+          )}
           <div style={{
             paddingTop: 20, borderTop: '1px solid var(--brand-sidebar-active-bg)',
             display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap',

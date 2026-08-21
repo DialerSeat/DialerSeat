@@ -458,7 +458,21 @@ export default function CampaignsPage() {
   // which are the overwhelming majority.
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null)
 
+  // Teams whose owner has not accepted this agent's seat yet.
+  const [awaitingTeams, setAwaitingTeams] = useState<Array<{ teamName: string }>>([])
+
+  // ── LOCKED IS NOT THE SAME AS LAPSED ─────────────────────────────────
+  // isLapsed drives read-only mode, and 'new' belongs in it — somebody with
+  // no plan cannot edit either. But it also drives the COPY, which then told
+  // a first-time visitor their subscription had lapsed and a team agent to
+  // resubscribe to something they never had.
+  //
+  // Same lock, different sentence. And no sentence at all for somebody
+  // waiting on a team owner: their seat is being bought by somebody else,
+  // so there is nothing for them to buy and buying would not unblock them.
   const isLapsed = tier === 'lapsed' || tier === 'new'
+  const hasLapsedPlan = tier === 'lapsed'
+  const awaitingSeat = awaitingTeams.length > 0
 
 
   useEffect(() => {
@@ -466,8 +480,14 @@ export default function CampaignsPage() {
     fetchCampaigns()
     fetch('/api/stripe/status')
       .then(r => r.json())
-      .then(d => setTier(d.tier || null))
-      .catch(() => setTier(null))
+      .then(d => {
+        setTier(d.tier || null)
+        setAwaitingTeams(Array.isArray(d.awaitingApproval) ? d.awaitingApproval : [])
+      })
+      .catch(() => {
+        setTier(null)
+        setAwaitingTeams([])
+      })
   }, [user])
 
   
@@ -2951,7 +2971,9 @@ export default function CampaignsPage() {
           <span className="cmp-header-title">CAMPAIGNS</span>
           <span className="cmp-header-sub">
             {isLapsed
-              ? 'READ-ONLY · RESUBSCRIBE TO RESUME'
+              ? (awaitingSeat
+                  ? 'READ-ONLY · AWAITING TEAM APPROVAL'
+                  : hasLapsedPlan ? 'READ-ONLY · RESUBSCRIBE TO RESUME' : 'READ-ONLY · SUBSCRIBE TO START')
               : 'LEAD LISTS · DIALING CAMPAIGNS'}
           </span>
         </div>
@@ -2966,7 +2988,7 @@ export default function CampaignsPage() {
           </div>
         ) : (
           <Link href="/billing" className="cmp-new-btn amber">
-            ↻ RESUBSCRIBE
+            ↻ {hasLapsedPlan ? 'RESUBSCRIBE' : 'SUBSCRIBE'}
           </Link>
         )}
       </div>
@@ -2994,7 +3016,11 @@ export default function CampaignsPage() {
             <div className="cmp-empty-title">NO CAMPAIGNS YET</div>
             <div className="cmp-empty-sub">
               {isLapsed
-                ? 'RESUBSCRIBE TO CREATE YOUR FIRST CAMPAIGN AND UPLOAD LEADS.'
+                ? (awaitingSeat
+                    ? 'YOUR SEAT IS AWAITING APPROVAL FROM THE TEAM OWNER. NOTHING TO PAY.'
+                    : hasLapsedPlan
+                      ? 'RESUBSCRIBE TO CREATE CAMPAIGNS AND UPLOAD LEADS.'
+                      : 'SUBSCRIBE TO CREATE YOUR FIRST CAMPAIGN AND UPLOAD LEADS.')
                 : 'CREATE YOUR FIRST CAMPAIGN, UPLOAD YOUR LEADS, AND START DIALING.'}
             </div>
             {!isLapsed ? (
@@ -3003,7 +3029,7 @@ export default function CampaignsPage() {
               </button>
             ) : (
               <Link href="/billing" className="cmp-new-btn amber">
-                ↻ RESUBSCRIBE — $35/WEEK
+                ↻ {hasLapsedPlan ? 'RESUBSCRIBE' : 'SUBSCRIBE'} — $35/WEEK
               </Link>
             )}
           </div>

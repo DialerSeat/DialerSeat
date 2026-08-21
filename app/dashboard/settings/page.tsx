@@ -79,6 +79,9 @@ interface SubStatus {
   plan?: 'pro' | 'manager_plus' | 'both' | null
   wlActive?: boolean
   weeklyPrice?: number
+  /** Teams whose owner has not accepted this agent's seat yet. Someone in
+   *  this state has no subscription of their own and needs none. */
+  awaitingApproval?: Array<{ teamId: string; teamName: string }>
 }
 
 interface OwnerPaidSeat {
@@ -457,8 +460,18 @@ export default function SettingsPage() {
     )
   }
 
+  // ── NOT WHILE THEY ARE WAITING ON SOMEBODY ELSE ────────────────────────
+  // An agent whose seat is being bought by a team owner has no subscription
+  // of their own and never will. Offering them one is asking them to pay for
+  // something they were invited to, and it would not unblock them either —
+  // what they are waiting on is an owner clicking accept.
+  const awaitingApproval: Array<{ teamName: string }> = Array.isArray(sub?.awaitingApproval)
+    ? sub.awaitingApproval
+    : []
+
   const showResubscribe =
     !isAdmin &&
+    awaitingApproval.length === 0 &&
     (sub?.tier === 'lapsed' || (sub?.cancelAtPeriodEnd && sub?.isActive))
 
   const hasAnySeats = (seats?.counts.totalSeats || 0) > 0
