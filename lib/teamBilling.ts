@@ -18,7 +18,7 @@ export interface CreateSeatParams {
 }
 
 export interface SeatBillingError {
-  code: 'no_customer' | 'no_card' | 'stripe_error' | 'unknown' | 'unexpected_discount'
+  code: 'no_customer' | 'no_card' | 'stripe_error' | 'unknown'
   message: string
 }
 
@@ -195,46 +195,28 @@ export async function createSeatSubscription(
     subscription.items.data[0]?.current_period_end ??
     Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60
 
-  // ── THE SEAT MUST ACTUALLY COST WHAT A SEAT COSTS ─────────────────────
-  // Rather than trust that no stray discount reached this subscription, read
-  // the invoice Stripe actually produced and check it against itself. If we
-  // applied no coupon, the total must equal the subtotal; anything less means
-  // a discount arrived that we did not choose — in practice the owner's own
-  // customer-level comp, which Stripe applies to any subscription lacking a
-  // discount of its own.
+  // ── A DISCOUNTED SEAT IS STILL A BILLED SEAT ──────────────────────────
+  // Seats are created on the owner's Stripe customer, and Stripe applies a
+  // customer-level discount to any subscription that has no discount of its
+  // own. So an owner holding a comp has it reach their seats too.
   //
-  // Comparing the invoice against itself rather than against a hardcoded $35
-  // keeps this correct if the seat price ever changes, and it catches ANY
-  // unexpected discount rather than only the one case already known about.
+  // That is expected Stripe behaviour rather than a defect here, and the
+  // account owner has confirmed it is acceptable: a comp that covers the
+  // owner covering their seats as well is a pricing decision, not a leak.
   //
-  // A seat billed at zero is a billing failure, not a free seat. It is raised
-  // as one so the caller keeps the member pending and tells the owner, instead
-  // of handing out a seat nobody is paying for.
+  // An earlier revision REFUSED such a seat, on the reasoning that a seat
+  // billed at zero is a billing failure. That went further than what was
+  // asked for and would have blocked a comped owner from adding anyone at
+  // all. The actual requirement is narrower and is enforced elsewhere: a
+  // member does not go active until a charge has SUCCEEDED. A $0 invoice on a
+  // deliberately discounted customer succeeds.
+  //
+  // Still surfaced, because "expected" and "intended on this account" are not
+  // the same thing — the next owner to acquire a stray customer-level coupon
+  // should not discover it from a revenue report.
   const inv: any = (subscription as any).latest_invoice
-  if (inv && typeof inv.subtotal === 'number' && typeof inv.total === 'number') {
-    const unexpectedlyDiscounted = !couponId && inv.total < inv.subtotal
-    const freeWhenItShouldNotBe = inv.total === 0 && inv.subtotal > 0
-
-    if (unexpectedlyDiscounted || freeWhenItShouldNotBe) {
-      // Roll it back. Leaving a live $0 subscription behind would keep billing
-      // nothing every week while looking like a paid seat on the roster.
-      try {
-        await stripe.subscriptions.cancel(subscription.id)
-      } catch (e) {
-        console.error('[teamBilling] could not cancel mispriced seat', subscription.id, e)
-      }
-      const pct = (inheritedDiscountPeek as any)?.coupon?.percent_off ?? null
-      throw {
-        code: 'unexpected_discount',
-        message:
-          `This seat billed ${(inv.total / 100).toFixed(2)} instead of ` +
-          `${(inv.subtotal / 100).toFixed(2)}` +
-          (pct ? `, because a ${pct}% discount on the owner's Stripe customer was applied to it` : '') +
-          `. The seat was not opened. Move that discount onto the owner's own ` +
-          `subscription so it stops reaching team seats.`,
-      } as SeatBillingError
-    }
-  }
+  const billedCents = inv && typeof inv.total === 'number' ? inv.total : null
+  const subtotalCents = inv && typeof inv.subtotal === 'number' ? inv.subtotal : null
 
   if (inheritedDiscount) {
     const pct = inheritedDiscount?.coupon?.percent_off ?? null
@@ -244,12 +226,14 @@ export async function createSeatSubscription(
     )
     try {
       const { sendAdminPush } = await import('@/lib/pushNotify')
+      const billed = billedCents !== null ? `$${(billedCents / 100).toFixed(2)}` : 'an unknown amount'
+      const full = subtotalCents !== null ? `$${(subtotalCents / 100).toFixed(2)}` : 'full price'
       await sendAdminPush(
         'payment_failed',
-        `A seat for ${params.agentEmail} on ${params.teamName} inherited the owner's ` +
-        `account-level discount${pct ? ` (${pct}% off)` : ''}, so this seat may bill at $0. ` +
-        `The comp belongs on the owner's own subscription, not on their Stripe customer.`,
-        { title: 'Seat billed at a discount it should not have' }
+        `Seat for ${params.agentEmail} on ${params.teamName} billed ${billed} instead of ${full}` +
+        `${pct ? ` — the owner's account-level ${pct}% discount applied to it` : ''}. ` +
+        `The seat opened normally; this is a heads-up, not a failure.`,
+        { title: 'Seat billed at the owner account discount' }
       )
     } catch (e) {
       console.error('[teamBilling] inherited-discount alert failed', e)

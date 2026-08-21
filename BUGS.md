@@ -88,14 +88,22 @@ Nobody is rejected, only held: the owner fixes the card and accepts from
 Requests, and the awaiting-approval banner tells the agent where things stand
 meanwhile.
 
-**Also fixed: the seat now verifies what it actually billed.** Rather than
-trusting that no stray discount reached it, `createSeatSubscription` reads the
-invoice Stripe produced and compares it against itself — if we applied no
-coupon, total must equal subtotal. Anything less means a discount we did not
-choose, the mispriced subscription is cancelled, and the seat is refused as a
-billing failure. A seat billed at zero is a billing failure, not a free seat.
-This catches the inherited comp without depending on any undocumented Stripe
-behaviour, and catches any future cause too.
+**On the inherited comp — settled as ACCEPTABLE, not a defect.** Stripe applies
+a customer-level discount to any subscription lacking its own, so an owner's comp
+reaches their seats. That is Stripe behaving as documented, and the account owner
+has confirmed it is fine: a comp covering the owner's seats too is a pricing
+decision.
+
+A revision in between briefly REFUSED such a seat, treating a $0 invoice as a
+billing failure. That went beyond what was asked and would have stopped a comped
+owner adding anyone at all. Reverted. The real requirement is narrower and lives
+in the accept and redeem paths: nobody goes active until a charge SUCCEEDS, and a
+$0 invoice on a deliberately discounted customer succeeds.
+
+The discount is still reported — an admin push naming the agent, the team, what
+it billed and what full price was — because "expected" and "intended on this
+account" are different things, and the next owner to pick up a stray
+customer-level coupon should not learn about it from a revenue report.
 
 ---
 
