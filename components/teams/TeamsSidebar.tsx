@@ -643,9 +643,26 @@ export default function TeamsSidebar({
                   onClick={() => onScopeChange({ kind: 'team', teamId: team.id })}
                 >
                   <span className="ts-row-label">{team.name}</span>
-                  {team.isOwner && <span className="ts-tag">Owner</span>}
+                  {/* Every team says which one you are on it. Only owners were
+                      marked before, so a member's teams carried no label at
+                      all — and an absent badge reads as missing information
+                      rather than as the other case. */}
+                  <span className="ts-tag">{team.isOwner ? 'Owner' : 'User'}</span>
                 </button>
               </div>
+
+              {/* An expanded team with nothing under it looked like a tree
+                  that had failed to load. It has not — there is simply
+                  nothing on it yet, which is a normal state for a team that
+                  has just been created or one whose campaigns have not been
+                  shared. */}
+              {teamOpen && team.campaigns.length === 0 && (
+                <div className="ts-empty ts-indent-1">
+                  {team.isOwner
+                    ? 'No campaigns on this team yet'
+                    : 'No campaigns available for this team'}
+                </div>
+              )}
 
               {teamOpen && team.campaigns.map(campaign => {
                 const key = `${team.id}:${campaign.id}`
