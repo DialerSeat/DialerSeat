@@ -182,6 +182,17 @@ export default function RecordingsPage() {
   const [agentFilter, setAgentFilter] = useState('')
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [campaignFilter, setCampaignFilter] = useState('all')
+
+  // ── ARRIVE FILTERED ────────────────────────────────────────────────────
+  // So an owner can be sent straight here from a campaign and land on THAT
+  // campaign's calls rather than the whole floor. Read from location on mount
+  // rather than through useSearchParams, which would drag this page into a
+  // Suspense boundary it does not otherwise need.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const c = new URLSearchParams(window.location.search).get('campaign_id')
+    if (c) setCampaignFilter(c)
+  }, [])
   const [dispositionFilter, setDispositionFilter] = useState('all')
   const [timeFilter, setTimeFilter] = useState('all')
   const [customStart, setCustomStart] = useState('') // yyyy-mm-dd

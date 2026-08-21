@@ -139,6 +139,19 @@ export async function GET(req: NextRequest) {
     if (masked.size > 0) {
       recordings = recordings.map((r: any) => {
         if (!masked.has(r.campaign_id)) return r
+        // ── A CALL YOU MADE IS A NUMBER YOU ALREADY HAVE ────────────────
+        // This masked the agent's OWN recordings too, on the reasoning that
+        // last four is enough to find a call you remember making. Masking
+        // exists to stop a list being copied out before it is worked — but
+        // this lead HAS been worked, by this person, and the number was in
+        // their ear and on their screen while they did it.
+        //
+        // Continuing to hide it protects nothing and costs them calling
+        // somebody back or checking a wrong number. Still scoped tightly:
+        // only rows they placed. Another agent's call on the same campaign
+        // stays masked, because what is being extended is "you worked this",
+        // not "this has been worked".
+        if (r.user_id && r.user_id === userId) return r
         return {
           ...r,
           phone_number: maskPhone(r.phone_number),

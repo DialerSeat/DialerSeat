@@ -97,3 +97,37 @@ export function maskLeadRow<T extends Record<string, any>>(lead: T): T {
     phone_masked: true,
   }
 }
+
+/**
+ * Which of these leads has this viewer already CALLED?
+ *
+ * Masking exists to stop a list being copied out before it is worked. Once an
+ * agent has dialled a lead, the number has been in their ear and on their
+ * screen anyway — continuing to hide it protects nothing and costs them the
+ * ability to call somebody back, check a wrong number, or read their own
+ * history. So the number is theirs from the moment they have used it.
+ *
+ * Scoped to the VIEWER'S own calls. Somebody else having dialled a lead does
+ * not unmask it: what is being extended is "you have worked this", not "this
+ * has been worked".
+ */
+export async function dialedLeadIds(
+  viewerClerkId: string,
+  leadIds: string[]
+): Promise<Set<string>> {
+  const unique = Array.from(new Set(leadIds.filter(Boolean)))
+  if (unique.length === 0) return new Set()
+
+  const { data, error } = await supabaseAdmin
+    .from('calls')
+    .select('lead_id')
+    .eq('user_id', viewerClerkId)
+    .in('lead_id', unique)
+
+  // Fails CLOSED here, unlike shouldMaskCampaign. A lookup failure means we
+  // cannot prove they dialled it, and the safe answer to "may they see this
+  // number" is no. Nothing breaks: dialing does not depend on this.
+  if (error || !data) return new Set()
+
+  return new Set(data.map((r: any) => r.lead_id).filter(Boolean))
+}

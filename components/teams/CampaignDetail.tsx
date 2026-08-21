@@ -675,6 +675,25 @@ export default function CampaignDetail({
             busy={busy}
             onChange={v => patch({ recording_enabled: v })}
           />
+
+          {/* ── AND A WAY TO ACTUALLY HEAR THEM ──────────────────────────
+              Recording was a switch with no destination. An owner could turn
+              it on and had no route from here to the audio it produced —
+              they had to know the Recordings page existed, open it, and find
+              this campaign in a dropdown of all of them.
+
+              Deep-linked to this campaign, so it opens on these calls rather
+              than the whole floor. Shown only once recording is on: a link to
+              an empty page is a worse answer than no link. */}
+          {data.recordingEnabled && (
+            <a
+              href={`/dashboard/recordings?campaign_id=${encodeURIComponent(data.id)}`}
+              style={{
+                display: 'inline-block', marginTop: 10,
+                fontSize: 12.5, color: ACCENT, textDecoration: 'none',
+              }}
+            >Listen to this campaign&apos;s recordings →</a>
+          )}
         </div>
       </Section>
 
