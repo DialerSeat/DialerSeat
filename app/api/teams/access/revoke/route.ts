@@ -12,11 +12,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json().catch(() => ({}))
-    const { accessId, confirm } = body
-
-    if (!accessId) {
-      return NextResponse.json({ success: false, error: 'accessId required' }, { status: 400 })
-    }
+    const { accessId, memberId, campaignId, teamId, confirm } = body
 
     if (confirm !== 'remove') {
       return NextResponse.json(
@@ -25,17 +21,74 @@ export async function POST(req: Request) {
       )
     }
 
-    const { data: access } = await supabaseAdmin
+    // ── NAME THE ROW, OR DESCRIBE IT ──────────────────────────────────────
+    // This took an accessId and nothing else. All three callers sent
+    // something else — the campaign roster sent { memberId, campaignId }, the
+    // team manager sent { teamId, memberId, campaignId }, and Settings sent
+    // { teamId, campaignId } — so every Remove button in the product returned
+    // 400 "accessId required" and appeared to do nothing.
+    //
+    // Fixing the three call sites would leave the same trap set for the
+    // fourth. The row is identifiable from what those callers already know:
+    // a person and a campaign is exactly one access row. So the endpoint
+    // accepts either, and nobody has to know its primary key to use it.
+    let query = supabaseAdmin
       .from('team_campaign_access')
-      .select('id, team_id, team_member_id, is_active, payer, teams!inner(owner_id)')
-      .eq('id', accessId)
-      .maybeSingle()
+      .select('id, team_id, campaign_id, team_member_id, is_active, payer, teams!inner(owner_id)')
+
+    if (accessId) {
+      query = query.eq('id', accessId)
+    } else if (campaignId && (memberId || teamId)) {
+      query = query.eq('campaign_id', campaignId).eq('is_active', true)
+      if (memberId) query = query.eq('team_member_id', memberId)
+      if (teamId) query = query.eq('team_id', teamId)
+    } else {
+      return NextResponse.json(
+        { success: false, error: 'Pass accessId, or campaignId with memberId or teamId' },
+        { status: 400 }
+      )
+    }
+
+    const { data: matches } = await query.limit(2)
+    let access: any = (matches || [])[0] || null
+
+    // Settings sends a campaign and a team but no member, because the person
+    // cancelling is themselves. Narrow it to their own membership rather than
+    // revoking whichever row came back first.
+    if (!memberId && !accessId && (matches || []).length > 1) {
+      const { data: mine } = await supabaseAdmin
+        .from('team_members')
+        .select('id')
+        .eq('team_id', teamId)
+        .eq('user_id', userId)
+        .maybeSingle()
+      access = (matches || []).find((m: any) => m.team_member_id === mine?.id) || null
+    }
 
     if (!access) {
       return NextResponse.json({ success: false, error: 'Access row not found' }, { status: 404 })
     }
 
-    if ((access as any).teams.owner_id !== userId) {
+    // ── THE OWNER, OR THE PERSON GIVING UP THEIR OWN SEAT ─────────────────
+    // Owner-only refused the one caller that is not an owner: Settings, where
+    // an agent cancels their own campaign seat. That screen exists, has a
+    // typed confirmation, and could never have worked.
+    //
+    // Somebody dropping their own access is not a permission to guard — it
+    // costs the owner nothing and takes nothing from anybody else.
+    const isOwner = (access as any).teams.owner_id === userId
+    let isSelf = false
+    if (!isOwner) {
+      const { data: theirMembership } = await supabaseAdmin
+        .from('team_members')
+        .select('id')
+        .eq('id', access.team_member_id)
+        .eq('user_id', userId)
+        .maybeSingle()
+      isSelf = !!theirMembership
+    }
+
+    if (!isOwner && !isSelf) {
       return NextResponse.json(
         { success: false, error: 'Only the team owner can revoke access' },
         { status: 403 }
@@ -54,7 +107,7 @@ export async function POST(req: Request) {
     const { error: revErr } = await supabaseAdmin
       .from('team_campaign_access')
       .update({ is_active: false, revoked_at: now })
-      .eq('id', accessId)
+      .eq('id', access.id)
 
     if (revErr) throw revErr
 

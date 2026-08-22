@@ -323,14 +323,28 @@ export default function CampaignDetail({
     }
   }
 
-  const removeAgent = async (memberId: string) => {
-    if (busy) return
+  // ── REMOVE HAD NEVER WORKED ───────────────────────────────────────────
+  // It posted { memberId, campaignId }. The endpoint takes an accessId and a
+  // confirm token, so every click returned 400 "accessId required" — a member
+  // id is not an access id, and a campaign id is not a substitute for either.
+  //
+  // It read as the button doing nothing because it very nearly did: the error
+  // lands at the top of the panel, which on a phone is well above where the
+  // roster is being read.
+  //
+  // The row already carries its accessId — access is the row's own identity
+  // here, not something to be looked up from the person plus the campaign.
+  const removeAgent = async (accessId: string) => {
+    if (busy || !accessId) return
     setBusy(true)
     try {
       const r = await fetch('/api/teams/access/revoke', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ memberId, campaignId }),
+        // confirm is the server's guard against an unconfirmed call, not a
+        // second question for the owner — taking somebody off a campaign is
+        // reversible from the picker directly above this list.
+        body: JSON.stringify({ accessId, confirm: 'remove' }),
       }).then(x => x.json())
       if (!r.success) throw new Error(r.error || 'Could not remove access')
       await load()
@@ -1210,8 +1224,8 @@ export default function CampaignDetail({
                 )}
                 <button
                   style={btn}
-                  disabled={busy}
-                  onClick={() => removeAgent(a.memberId)}
+                  disabled={busy || !a.accessId}
+                  onClick={() => removeAgent(a.accessId)}
                 >Remove</button>
               </div>
             ))}

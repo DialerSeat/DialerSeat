@@ -394,6 +394,10 @@ export default function TeamsPage() {
   // anywhere saying so. Now it is paged, searched and counted server-side.
   const [roster, setRoster] = useState<any[]>([])
   const [rosterTotal, setRosterTotal] = useState(0)
+  // PEOPLE and SEATS are different numbers now that the roster groups by
+  // person: somebody on two teams is one row and two seats on the bill. The
+  // table pages over the first, the seat tile reports the second.
+  const [rosterSeatTotal, setRosterSeatTotal] = useState(0)
   const [rosterPage, setRosterPage] = useState(0)
   const [rosterSearch, setRosterSearch] = useState('')
   const [rosterLoading, setRosterLoading] = useState(false)
@@ -634,6 +638,7 @@ export default function TeamsPage() {
       if (r.success) {
         setRoster(r.rows || [])
         setRosterTotal(r.total || 0)
+        setRosterSeatTotal(r.seatTotal ?? r.total ?? 0)
       }
     } catch {
       // Leave the last good page up rather than blanking a roster somebody is
@@ -802,17 +807,35 @@ export default function TeamsPage() {
     [allMembers]
   )
 
-  // rosterTotal is counted by the database; distinctUserCount is derived from
-  // the sidebar payload, which stops being true past 1,000 rows. Prefer the
-  // counted one and fall back only before the first roster load answers.
-  const seatCountForDisplay = rosterTotal || distinctUserCount
+  // Counted by the database; distinctUserCount is derived from the sidebar
+  // payload, which stops being true past 1,000 rows. Prefer the counted one
+  // and fall back only before the first roster load answers.
+  //
+  // The SEAT total, not the people total. This drives the seat count, and a
+  // person on two teams costs two seats — reading the grouped row count here
+  // would have quietly started under-reporting the bill the moment All Users
+  // stopped listing memberships.
+  const seatCountForDisplay = rosterSeatTotal || distinctUserCount
 
   // ── SELECT PEOPLE, PUT THEM ON A CAMPAIGN ──────────────────────────────
   // An owner with a floor of agents and a new list should not be opening fifty
   // member panels. Nothing here charges anybody: the seat is the billable unit
   // and these people already hold one, so another campaign on the same seat is
   // free to the owner and free to the agent.
+  // Keyed by USER, not by membership. The roster groups by person, so a row
+  // is a person — and both actions below want people: adding to a campaign
+  // resolves to whichever of their memberships is on that campaign's team,
+  // and adding to a team wants the person outright.
   const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set())
+
+  /** Every membership id behind the current selection, across all teams. */
+  const selectedMemberIds = useMemo(
+    () =>
+      roster
+        .filter((r: any) => selectedMembers.has(r.userId))
+        .flatMap((r: any) => r.memberIds || []),
+    [roster, selectedMembers]
+  )
   const [assigning, setAssigning] = useState(false)
   const [assignTo, setAssignTo] = useState('')
   const [assignResult, setAssignResult] = useState<string | null>(null)
@@ -881,8 +904,13 @@ export default function TeamsPage() {
     // selection is keyed to. allMembers comes from the sidebar payload and
     // truncates at scale — deriving a selection from it would quietly stop
     // matching the rows on screen.
+    // Every team any selected person is on. A person on two teams makes the
+    // campaigns of both offerable, and the grant endpoint sorts out which of
+    // their memberships the chosen campaign actually belongs to.
     const selectedTeamIds = new Set(
-      roster.filter((m: any) => selectedMembers.has(m.memberId)).map((m: any) => m.teamId)
+      roster
+        .filter((m: any) => selectedMembers.has(m.userId))
+        .flatMap((m: any) => (m.memberships || []).map((x: any) => x.teamId))
     )
     const out: Array<{ id: string; name: string; team: string }> = []
     for (const t of rawTeams) {
@@ -950,14 +978,8 @@ export default function TeamsPage() {
   // wrong row's key into a new team and quietly do nothing recognisable.
   const addSelectedToTeam = async () => {
     if (!addToTeamId || selectedMembers.size === 0 || addingToTeam) return
-    const userIds = Array.from(
-      new Set(
-        roster
-          .filter((r: any) => selectedMembers.has(r.memberId))
-          .map((r: any) => r.userId)
-          .filter(Boolean)
-      )
-    )
+    // The selection is already keyed by person, so this is the selection.
+    const userIds = Array.from(selectedMembers)
     if (userIds.length === 0) return
 
     setAddingToTeam(true)
@@ -1020,7 +1042,11 @@ export default function TeamsPage() {
     try {
       // The set already holds membership ids. Round-tripping them through
       // another list is how the two fell out of step in the first place.
-      const memberIds = Array.from(selectedMembers)
+      // Expanded from people back to memberships. A campaign belongs to one
+      // team, so only the membership on THAT team can be granted — the others
+      // come back as skipped, which is the endpoint already knowing more about
+      // this than the client should.
+      const memberIds = selectedMemberIds
       const res = await fetch('/api/teams/access/grant-bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1524,9 +1550,14 @@ export default function TeamsPage() {
                 search={rosterSearch}
                 onSearch={setRosterSearch}
                 onPage={setRosterPage}
-                rowKey={(r: any) => r.memberId}
+                rowKey={(r: any) => r.userId}
                 onRowClick={(r: any) => {
-                  setScope({ kind: 'agent', teamId: r.teamId, campaignId: '', userId: r.userId })
+                  setScope({
+                    kind: 'agent',
+                    teamId: r.primaryTeamId || '',
+                    campaignId: '',
+                    userId: r.userId,
+                  })
                   setView('agent')
                 }}
                 searchPlaceholder="Search by name or email…"
@@ -1536,7 +1567,7 @@ export default function TeamsPage() {
                   roster.length > 0 ? (
                     <button
                       onClick={() => {
-                        const ids = roster.filter((r: any) => !r.suspended).map((r: any) => r.memberId)
+                        const ids = roster.filter((r: any) => !r.suspended).map((r: any) => r.userId)
                         const allOn = ids.every((id: string) => selectedMembers.has(id))
                         setSelectedMembers(prev => {
                           const next = new Set(prev)
@@ -1560,10 +1591,10 @@ export default function TeamsPage() {
                     render: (r: any) => (
                       <input
                         type="checkbox"
-                        checked={selectedMembers.has(r.memberId)}
+                        checked={selectedMembers.has(r.userId)}
                         disabled={r.suspended}
                         onClick={e => e.stopPropagation()}
-                        onChange={() => toggleMember(r.memberId)}
+                        onChange={() => toggleMember(r.userId)}
                         style={{ accentColor: '#4a9eff', cursor: r.suspended ? 'not-allowed' : 'pointer' }}
                       />
                     ),
@@ -1584,22 +1615,51 @@ export default function TeamsPage() {
                       </span>
                     ),
                   },
-                  { key: 'team', header: 'Team', width: 160, render: (r: any) => r.teamName },
+                  {
+                    key: 'team',
+                    header: 'Team',
+                    width: 170,
+                    // Every team, because this is the column that answers why
+                    // somebody with two seats is one row. Listed rather than
+                    // counted: "2 teams" makes an owner click to find out
+                    // which, and the answer is short enough to just say.
+                    render: (r: any) => (
+                      <span style={{ fontSize: 12 }}>
+                        {(r.teamNames || []).map((n: string, i: number) => (
+                          <span key={i} style={{ display: 'block', color: i === 0 ? TEXT : DIM }}>
+                            {n}
+                          </span>
+                        ))}
+                      </span>
+                    ),
+                  },
                   {
                     key: 'seat',
                     header: 'Seat',
                     width: 170,
+                    // One line per seat, in the same order as the teams
+                    // beside it, so the two columns read across. A seat is a
+                    // per-team fact — somebody can be paused on one team and
+                    // dialing on another — and collapsing that to a single
+                    // word would have to lie about one of them.
                     render: (r: any) => (
-                      <span style={{ color: r.suspended ? '#fbbf24' : DIM, fontSize: 12 }}>
-                        {r.suspended
-                          ? 'Paused'
-                          : r.pickedUp
-                          ? 'You picked this up'
-                          : r.billingOverride === 'owner'
-                          ? 'You pay'
-                          : r.billingOverride === 'agent'
-                          ? 'Pays their own'
-                          : 'Active'}
+                      <span style={{ fontSize: 12 }}>
+                        {(r.memberships || []).map((m: any, i: number) => (
+                          <span
+                            key={m.memberId || i}
+                            style={{ display: 'block', color: m.suspended ? '#fbbf24' : DIM }}
+                          >
+                            {m.suspended
+                              ? 'Paused'
+                              : m.pickedUp
+                              ? 'You picked this up'
+                              : m.billingOverride === 'owner'
+                              ? 'You pay'
+                              : m.billingOverride === 'agent'
+                              ? 'Pays their own'
+                              : 'Active'}
+                          </span>
+                        ))}
                       </span>
                     ),
                   },
@@ -1613,29 +1673,45 @@ export default function TeamsPage() {
                   {
                     key: 'manage',
                     header: '',
-                    width: 90,
+                    // Wider than it was: with two teams these buttons carry
+                    // team names rather than the word Manage.
+                    width: 140,
+                    // ── ONE BUTTON PER SEAT ────────────────────────────
+                    // Manage acts on a SEAT — pause it, change who pays,
+                    // remove it — and somebody on two teams has two. A single
+                    // button would have to pick one silently, and pausing the
+                    // wrong team's seat is not a mistake anybody would catch
+                    // from this screen. So each seat gets its own button,
+                    // labelled with its team when there is more than one.
                     render: (r: any) => (
-                      <button
-                        onClick={e => {
-                          // The row opens the person; this opens their seat.
-                          // Without stopping here, Manage would do both.
-                          e.stopPropagation()
-                          setManageMember({
-                            memberId: r.memberId,
-                            name: r.name,
-                            email: r.email,
-                            teamName: r.teamName,
-                            seatPaidBy: r.billingOverride === 'agent' ? 'agent' : 'owner',
-                            seatSuspendedAt: r.suspended ? 'suspended' : null,
-                            campaignCount: r.campaignCount || 0,
-                          })
-                        }}
-                        style={{
-                          background: 'transparent', border: `1px solid ${HAIRLINE}`,
-                          color: MUTED, borderRadius: 3, padding: '4px 10px',
-                          fontSize: 11.5, cursor: 'pointer', fontFamily: 'inherit',
-                        }}
-                      >Manage</button>
+                      <span style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        {(r.memberships || []).map((m: any) => (
+                          <button
+                            key={m.memberId}
+                            onClick={e => {
+                              // The row opens the person; this opens one of
+                              // their seats. Without stopping here, Manage
+                              // would do both.
+                              e.stopPropagation()
+                              setManageMember({
+                                memberId: m.memberId,
+                                name: r.name,
+                                email: r.email,
+                                teamName: m.teamName,
+                                seatPaidBy: m.billingOverride === 'agent' ? 'agent' : 'owner',
+                                seatSuspendedAt: m.suspended ? 'suspended' : null,
+                                campaignCount: m.campaignCount || 0,
+                              })
+                            }}
+                            style={{
+                              background: 'transparent', border: `1px solid ${HAIRLINE}`,
+                              color: MUTED, borderRadius: 3, padding: '4px 10px',
+                              fontSize: 11.5, cursor: 'pointer', fontFamily: 'inherit',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >{(r.memberships || []).length > 1 ? m.teamName : 'Manage'}</button>
+                        ))}
+                      </span>
                     ),
                   },
                 ] as Array<Column<any>>}

@@ -18,14 +18,15 @@ export const dynamic = 'force-dynamic'
 // is a range query rather than 10,000 rows of JSON and 10,000 DOM nodes.
 //
 // Search is server-side for the same reason. Filtering a list the client only
-// half-received finds only what happened to arrive.
+// half-received finds only what happened to arrive. It used to resolve names
+// through `users` first and feed the matching ids back in, which needed its
+// own cap to stop one broad term rebuilding the payload this route exists to
+// avoid; the grouped query does the join itself and pages the result, so the
+// cap went with it.
 // ─────────────────────────────────────────────────────────────────────────
 
 const DEFAULT_PAGE_SIZE = 50
 const MAX_PAGE_SIZE = 200
-// A search matching half the platform is not a search. Capped so one broad
-// term cannot rebuild the very payload this endpoint exists to avoid.
-const SEARCH_MATCH_CAP = 1000
 
 export async function GET(req: NextRequest) {
   try {
@@ -49,125 +50,96 @@ export async function GET(req: NextRequest) {
       .select('id, name')
       .eq('owner_id', userId)
 
-    let teamIds = (teams || []).map((t: any) => t.id)
-    if (teamFilter) {
-      if (!teamIds.includes(teamFilter)) {
-        return NextResponse.json({ success: false, error: 'Not your team' }, { status: 403 })
-      }
-      teamIds = [teamFilter]
+    const teamIds = (teams || []).map((t: any) => t.id)
+    if (teamFilter && !teamIds.includes(teamFilter)) {
+      return NextResponse.json({ success: false, error: 'Not your team' }, { status: 403 })
     }
 
     if (teamIds.length === 0) {
       return NextResponse.json({
-        success: true, rows: [], total: 0, page, pageSize, teams: [],
+        success: true, rows: [], total: 0, seatTotal: 0, page, pageSize, teams: [],
       })
     }
 
-    const teamNameById = new Map((teams || []).map((t: any) => [t.id, t.name]))
-
-    // Search resolves through `users` first because that is where the name and
-    // email live — team_members has only a Clerk id, and there is no foreign
-    // key to embed across.
-    let searchClerkIds: string[] | null = null
-    if (search) {
-      const safe = search.replace(/[%,()]/g, ' ').slice(0, 80)
-      const { data: matched } = await supabaseAdmin
-        .from('users')
-        .select('clerk_id')
-        .or(`email.ilike.%${safe}%,first_name.ilike.%${safe}%,last_name.ilike.%${safe}%`)
-        .limit(SEARCH_MATCH_CAP)
-      searchClerkIds = (matched || []).map((u: any) => u.clerk_id)
-      if (searchClerkIds.length === 0) {
-        return NextResponse.json({
-          success: true, rows: [], total: 0, page, pageSize,
-          teams: teams || [],
-        })
-      }
-    }
-
-    let q = supabaseAdmin
-      .from('team_members')
-      .select(
-        'id, team_id, user_id, status, accepted_at, created_at, joined_via_code, billing_override, seat_suspended_at, seat_suspend_reason, billing_takeover_at',
-        // Exact, because "1–50 of 8,431" is the number that tells somebody how
-        // much they are looking at. An estimate here would drift visibly as
-        // they page.
-        { count: 'exact' }
-      )
-      .in('team_id', teamIds)
-      .order('created_at', { ascending: false })
-      .range(page * pageSize, page * pageSize + pageSize - 1)
-
-    if (statusFilter !== 'all') q = q.eq('status', statusFilter)
-    if (searchClerkIds) q = q.in('user_id', searchClerkIds)
-
-    const { data: members, count, error } = await q
+    // ── ONE ROW PER PERSON ────────────────────────────────────────────────
+    // This paged over team_members, so somebody on two teams came back twice
+    // and read as a duplicate on a screen called All Users.
+    //
+    // Grouping in the client cannot fix that. The list is server-paginated,
+    // and a person's two memberships can land either side of a page boundary
+    // — so the copies would merge on one page and not on the next, which is
+    // worse than consistently showing both.
+    //
+    // So the grouping happens in the database, in owner_roster, along with
+    // the search and both totals. Everything this route used to assemble by
+    // hand — the user lookup, the campaign-access counts, the exact count —
+    // comes back in one round trip, which also removes the three separate
+    // reads that each had their own truncation ceiling.
+    const { data: rowsRaw, error } = await supabaseAdmin.rpc('owner_roster', {
+      p_owner: userId,
+      p_team: teamFilter || null,
+      p_status: statusFilter,
+      p_search: search ? search.replace(/[%_]/g, ' ').slice(0, 80) : null,
+      p_limit: pageSize,
+      p_offset: page * pageSize,
+    })
     if (error) throw error
 
-    const rows = members || []
+    const rows = (rowsRaw || []) as any[]
 
-    // One lookup for the page, never per row.
-    const clerkIds = Array.from(new Set(rows.map((m: any) => m.user_id)))
-    const userById = new Map<string, any>()
-    if (clerkIds.length > 0) {
-      const { data: users } = await supabaseAdmin
-        .from('users')
-        .select('clerk_id, email, first_name, last_name')
-        .in('clerk_id', clerkIds)
-      for (const u of users || []) userById.set(u.clerk_id, u)
-    }
+    const out = rows.map((r: any) => {
+      const memberships = Array.isArray(r.memberships) ? r.memberships : []
+      const realName =
+        [r.first_name, r.last_name].filter(Boolean).join(' ').trim() || r.email || 'Agent'
+      // A nickname belongs to a MEMBERSHIP, so somebody on two teams can carry
+      // two. The first one set wins for the person-level name rather than
+      // inventing a precedence rule nobody asked for; each team's own label is
+      // still on its membership below.
+      const nickname = memberships.find((m: any) => m?.nickname)?.nickname || null
 
-    // Campaign access counts for this page only. Fetching every access row for
-    // the whole account is precisely the cross-product query that breaks first
-    // at scale — agents times campaigns hits the 1,000 cap long before the
-    // roster does.
-    const memberIds = rows.map((m: any) => m.id)
-    const accessCount = new Map<string, number>()
-    if (memberIds.length > 0) {
-      const { data: access } = await supabaseAdmin
-        .from('team_campaign_access')
-        .select('team_member_id')
-        .in('team_member_id', memberIds)
-        .eq('is_active', true)
-        .limit(MAX_PAGE_SIZE * 50)
-      for (const a of access || []) {
-        accessCount.set(a.team_member_id, (accessCount.get(a.team_member_id) || 0) + 1)
-      }
-    }
-
-    const out = rows.map((m: any) => {
-      const u = userById.get(m.user_id)
-      const name = u
-        ? ([u.first_name, u.last_name].filter(Boolean).join(' ').trim() || u.email || 'Agent')
-        : 'Agent'
       return {
-        memberId: m.id,
-        userId: m.user_id,
-        name,
-        email: u?.email ?? null,
-        teamId: m.team_id,
-        teamName: teamNameById.get(m.team_id) || 'Team',
-        status: m.status,
-        suspended: !!m.seat_suspended_at,
-        suspendReason: m.seat_suspend_reason || null,
-        pickedUp: !!m.billing_takeover_at,
-        billingOverride: m.billing_override || null,
-        campaignCount: accessCount.get(m.id) || 0,
-        joinedAt: m.accepted_at || m.created_at,
+        userId: r.user_id,
+        name: nickname || realName,
+        realName,
+        email: r.email ?? null,
+        seatCount: Number(r.seat_count) || memberships.length,
+        joinedAt: r.latest_joined,
+        memberships,
+        // Flattened for the table, which asks one question per column.
+        memberIds: memberships.map((m: any) => m.memberId),
+        teamNames: memberships.map((m: any) => m.teamName),
+        // The row a click opens. First membership rather than a choice —
+        // opening somebody should not start with a question.
+        primaryTeamId: memberships[0]?.teamId ?? null,
+        primaryMemberId: memberships[0]?.memberId ?? null,
+        campaignCount: memberships.reduce(
+          (sum: number, m: any) => sum + (Number(m.campaignCount) || 0), 0
+        ),
+        // Dimmed only when there is nowhere left to dial. Somebody suspended
+        // on one team and working on another is not a suspended agent.
+        suspended: memberships.length > 0 && memberships.every((m: any) => m.suspended),
+        anySuspended: memberships.some((m: any) => m.suspended),
+        pickedUp: memberships.some((m: any) => m.pickedUp),
       }
     })
 
-    const total = count ?? out.length
+    const total = rows.length > 0 ? Number(rows[0].user_total) : 0
+    const seatTotal = rows.length > 0 ? Number(rows[0].seat_total) : 0
+
     return NextResponse.json({
       success: true,
       rows: out,
+      // PEOPLE, which is what is being paged.
       total,
+      // SEATS. A person on two teams is one row here and two seats on the
+      // bill, and the seat tile must not start under-reporting because this
+      // screen started grouping.
+      seatTotal,
       page,
       pageSize,
       pages: Math.max(1, Math.ceil(total / pageSize)),
       hasMore: (page + 1) * pageSize < total,
       teams: teams || [],
-      searchCapped: !!searchClerkIds && searchClerkIds.length >= SEARCH_MATCH_CAP,
     })
   } catch (error: any) {
     console.error('Members list error:', error)
