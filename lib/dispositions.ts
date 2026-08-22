@@ -1,0 +1,104 @@
+// ─────────────────────────────────────────────────────────────────────────
+// WHAT A CALL ENDED AS — ONE LIST
+//
+// Disposition strings were declared independently in a dozen files, in three
+// different shapes, and that has produced real bugs: the Not Interested
+// sub-queue matched nothing for its entire existence because two files agreed
+// on 'NOT_INTERESTED' while the dialer writes 'NOT INTERESTED', and a member's
+// campaign stats read zero for the same reason.
+//
+// WHY THE SPELLINGS DIFFER. Two eras. Underscored values (NO_ANSWER,
+// TCPA_BLOCKED) come from the SignalWire build; spaced ones (NOT INTERESTED,
+// DO NOT CALL) are what the current dialer writes. Neither is wrong, both are
+// in the database, and normalising the stored data would rewrite call history
+// to make a naming choice tidier — which is not worth it. So the canonical
+// form is what the dialer writes TODAY, and every read accepts the older
+// spelling alongside it.
+//
+// AGENT vs SYSTEM. An agent picks from AGENT_DISPOSITIONS. The rest are facts
+// the system records about what happened to the call, and no agent should be
+// offered them: nobody tags a call "abandoned".
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface DispositionDef {
+  /** Stored value written by the current dialer. */
+  value: string
+  /** Older spellings that mean the same thing and must still match on read. */
+  aliases: string[]
+  /** Sentence case for the UI. Screens should never print the raw value. */
+  label: string
+  /** An agent chose this, rather than the system recording it. */
+  agentChosen: boolean
+  /** The lead was actually spoken to by a person. */
+  contact: boolean
+  /** Counts toward conversions. */
+  conversion: boolean
+}
+
+export const DISPOSITIONS: DispositionDef[] = [
+  // ── Agent outcomes ────────────────────────────────────────────────────
+  { value: 'APPOINTMENT', aliases: ['APPOINTMENT_SET'], label: 'Appointment',
+    agentChosen: true, contact: true, conversion: true },
+  { value: 'CLOSED', aliases: [], label: 'Closed',
+    agentChosen: true, contact: true, conversion: true },
+  { value: 'NOT INTERESTED', aliases: ['NOT_INTERESTED'], label: 'Not interested',
+    agentChosen: true, contact: true, conversion: false },
+  { value: 'DO NOT CALL', aliases: ['DNC', 'DO_NOT_CALL'], label: 'Do not call',
+    agentChosen: true, contact: true, conversion: false },
+
+  // ── System outcomes ───────────────────────────────────────────────────
+  // Answering machine. Previously these were written as nothing at all: the
+  // machine path hung up and moved on, so 196 calls sat with a null
+  // disposition and the breakdown read "No disposition · 88%". A voicemail is
+  // a real, useful outcome — it says the number is live and someone may call
+  // back — and it is the single most common thing that happens on a dial.
+  { value: 'VOICEMAIL', aliases: ['NO_ANSWER_AMD', 'MACHINE', 'machine'], label: 'Voicemail',
+    agentChosen: false, contact: false, conversion: false },
+  { value: 'NO_ANSWER', aliases: ['NO ANSWER'], label: 'No answer',
+    agentChosen: false, contact: false, conversion: false },
+  { value: 'SKIPPED', aliases: [], label: 'Skipped',
+    agentChosen: false, contact: false, conversion: false },
+  { value: 'ABANDONED', aliases: [], label: 'Abandoned',
+    agentChosen: false, contact: false, conversion: false },
+  { value: 'TCPA_BLOCKED', aliases: ['TCPA BLOCKED'], label: 'Outside calling hours',
+    agentChosen: false, contact: false, conversion: false },
+]
+
+/** Every spelling that means this disposition — for `.in()` filters. */
+export function formsOf(value: string): string[] {
+  const def = DISPOSITIONS.find(d => d.value === value)
+  return def ? [def.value, ...def.aliases] : [value]
+}
+
+/** Canonical value for anything stored, including legacy spellings. Returns
+ *  the input untouched when it is not one we know, so unexpected data shows
+ *  as itself rather than being silently folded into something else. */
+export function canonical(stored: string | null | undefined): string | null {
+  if (!stored) return null
+  const hit = DISPOSITIONS.find(
+    d => d.value === stored || d.aliases.includes(stored)
+  )
+  return hit ? hit.value : stored
+}
+
+/** Human label. Falls back to the raw value so a legacy or unexpected string
+ *  is still readable rather than blank. */
+export function labelFor(stored: string | null | undefined): string {
+  if (!stored) return 'No disposition'
+  const hit = DISPOSITIONS.find(
+    d => d.value === stored || d.aliases.includes(stored)
+  )
+  return hit ? hit.label : stored
+}
+
+export const AGENT_DISPOSITIONS = DISPOSITIONS.filter(d => d.agentChosen)
+
+/** Values counting as having reached a person — every spelling of each. */
+export const CONTACT_FORMS = DISPOSITIONS
+  .filter(d => d.contact)
+  .flatMap(d => [d.value, ...d.aliases])
+
+/** Values counting as a conversion — every spelling of each. */
+export const CONVERSION_FORMS = DISPOSITIONS
+  .filter(d => d.conversion)
+  .flatMap(d => [d.value, ...d.aliases])

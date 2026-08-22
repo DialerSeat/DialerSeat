@@ -711,6 +711,33 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
     // same verdict, so the extra Telnyx round trip bought nothing and cost the
     // one thing this path cannot spare.
 
+    // ── RECORD WHAT HAPPENED, WITHOUT ASKING THE AGENT ───────────────────
+    // This path wrote no disposition at all, on the reasoning that nobody
+    // should be asked to tag a call they never had. That reasoning is about
+    // the AGENT and it still holds — no sheet is shown, nothing is prompted.
+    //
+    // But it left 196 calls with a null disposition, and "reached a voicemail"
+    // then read identically to "call never finished" everywhere downstream:
+    // the analytics breakdown showed 88% No disposition, which describes our
+    // record-keeping rather than the traffic.
+    //
+    // Reaching an answering machine IS the outcome, and a useful one — the
+    // number is live and somebody may call back. It goes on the CALL only.
+    // The LEAD keeps whatever it had, so it stays dialable and cycles back
+    // into rotation exactly as before: a machine today says nothing about
+    // whether a person answers tomorrow.
+    //
+    // Not awaited. Nothing above the hangup may cost the agent time, and this
+    // is bookkeeping.
+    void supabaseAdmin
+      .from('calls')
+      .update({ disposition: 'VOICEMAIL' })
+      .eq('call_control_id', callControlId)
+      .is('disposition', null)
+      .then(({ error }) => {
+        if (error) console.error('[calls/events] voicemail disposition failed', error)
+      })
+
     // ── THE AGENT COMES OFF FIRST, ALWAYS ─────────────────────────────────
     // Releasing the agent is the only latency the agent can feel, and it is
     // correct in both branches below — whether the lead's leg ends now or

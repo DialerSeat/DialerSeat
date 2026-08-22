@@ -76,6 +76,12 @@ interface Campaign {
   status: string
 }
 
+// The chips an agent can set from this page. Still the four agent outcomes —
+// nobody hand-tags a call as abandoned — plus the two system states that are
+// useful to filter by. VOICEMAIL is deliberately NOT here: it is something the
+// dialer records about a call, not something a person decides about a lead,
+// and offering it would invite marking a lead as voicemail without one having
+// happened. It appears in filters and reports, not on this picker.
 const DISPOSITIONS = [
   { label: 'CLOSED', color: '#16a34a', bg: '#dcfce7' },
   { label: 'APPOINTMENT', color: '#2563eb', bg: '#dbeafe' },
@@ -109,6 +115,7 @@ const dispositionTint = (disp: string | null): string => {
     case 'NOT INTERESTED': return 'rgba(217, 119, 6, 0.12)'
     case 'DO NOT CALL': return 'rgba(220, 38, 38, 0.12)'
     case 'NO_ANSWER': return 'rgba(100, 116, 139, 0.07)'
+    case 'VOICEMAIL': return 'rgba(139, 92, 246, 0.10)'
     case 'SKIPPED': return 'rgba(100, 116, 139, 0.05)'
     default: return T.surface
   }
