@@ -246,6 +246,34 @@ function DialerPageInner() {
   const statusRef = useRef<CallStatus>('idle')
   useEffect(() => { statusRef.current = status }, [status])
   const [manualNumber, setManualNumber] = useState('')
+  // ── RECORD THIS CALL ────────────────────────────────────────────────────
+  // A manual dial carries no campaign, so it had no recording setting to read
+  // and could never be recorded — an agent who needed a record of one call
+  // had no way to get one. This is that switch, and it answers only for the
+  // call being placed from this keypad.
+  //
+  // Remembered between calls: somebody who records every manual dial should
+  // not have to re-arm it each time. Safe to remember because the toggle is
+  // on screen directly above DIAL, so a remembered ON is never a surprise —
+  // it is the last thing read before pressing the button.
+  //
+  // Read in an effect rather than a lazy initialiser: the server renders the
+  // default and a restored value in the initialiser is a hydration mismatch.
+  const [manualRecord, setManualRecord] = useState(false)
+  useEffect(() => {
+    try {
+      setManualRecord(window.localStorage.getItem('ds:manual-record') === '1')
+    } catch {
+      // Disabled or full storage. The toggle still works for this session.
+    }
+  }, [])
+  const toggleManualRecord = () => {
+    setManualRecord(prev => {
+      const next = !prev
+      try { window.localStorage.setItem('ds:manual-record', next ? '1' : '0') } catch {}
+      return next
+    })
+  }
   const [seconds, setSeconds] = useState(0)
   const [available, setAvailable] = useState(false)
 
@@ -3885,7 +3913,7 @@ function DialerPageInner() {
       const res = await fetch('/api/calls/outbound', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: manualNumber }),
+        body: JSON.stringify({ to: manualNumber, record: manualRecord }),
       })
       const data = await res.json()
       if (data.success) {
@@ -4427,6 +4455,50 @@ function DialerPageInner() {
             }}>{key}</button>
           ))}
         </div>
+
+        {/* Directly above DIAL, because that is the moment the answer
+            matters. A recording switch somewhere in settings is a switch
+            nobody remembers the state of at the one second it counts. */}
+        <button
+          onClick={toggleManualRecord}
+          aria-pressed={manualRecord}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            gap: 8, width: '100%', boxSizing: 'border-box',
+            padding: inOverlay ? '12px 14px' : '8px 10px',
+            marginBottom: inOverlay ? 12 : 6,
+            borderRadius: 3, cursor: 'pointer', flexShrink: 0,
+            background: manualRecord ? 'rgba(220, 38, 38, 0.12)' : terminalSurface,
+            border: `1px solid ${manualRecord ? '#dc2626' : terminalBorder}`,
+            color: manualRecord ? '#f87171' : terminalMuted,
+            fontFamily: FUTURA,
+            fontSize: inOverlay ? '11px' : '9px',
+            letterSpacing: '2px', fontWeight: 'bold',
+          }}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {/* The dot is the whole point of it being visual: a solid red
+                circle reads as "armed" across the room, and a hollow one
+                reads as off without having to parse the word beside it. */}
+            <span
+              aria-hidden="true"
+              style={{
+                width: 9, height: 9, borderRadius: '50%', flexShrink: 0,
+                background: manualRecord ? '#dc2626' : 'transparent',
+                border: `1.5px solid ${manualRecord ? '#dc2626' : terminalMuted}`,
+                boxShadow: manualRecord ? '0 0 6px rgba(220, 38, 38, 0.75)' : 'none',
+              }}
+            />
+            RECORD CALL
+          </span>
+          <span style={{
+            fontSize: inOverlay ? '10px' : '8px', letterSpacing: '1.5px',
+            padding: '2px 7px', borderRadius: 2,
+            background: manualRecord ? '#dc2626' : 'transparent',
+            border: `1px solid ${manualRecord ? '#dc2626' : terminalBorder}`,
+            color: manualRecord ? '#fff' : terminalMuted,
+          }}>{manualRecord ? 'ON' : 'OFF'}</span>
+        </button>
 
         <div style={{
           display: 'grid', gridTemplateColumns: '1fr 2fr',

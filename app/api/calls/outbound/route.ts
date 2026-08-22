@@ -26,7 +26,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json()
-    const { to, leadId, campaignId, teamId } = body
+    const { to, leadId, campaignId, teamId, record } = body
 
     // ── ON A MASKED CAMPAIGN THE CLIENT DOES NOT KNOW THE NUMBER ────────
     // The queue sends back "(•••) •••-4821" instead of the real thing, so the
@@ -72,6 +72,9 @@ export async function POST(req: Request) {
       campaignId,
       teamId,
       source: 'user_dial',
+      // The manual dialer's record toggle. Ignored on anything carrying a
+      // campaign — placeOutboundCall enforces that, not this route.
+      recordManual: record === true,
     })
 
     if (!result.success) {

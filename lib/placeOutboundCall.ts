@@ -69,6 +69,10 @@ export interface PlaceCallParams {
   teamId?: string | null
   source: 'user_dial' | 'controller_fanout'
   agentSessionId?: string | null
+  /** The agent asked for THIS call to be recorded, from the manual dialer's
+   *  own toggle. Only honoured on a campaign-less dial — see the block that
+   *  reads it. Undefined everywhere else, which is the same as false. */
+  recordManual?: boolean
 }
 
 export interface PlaceCallResult {
@@ -99,7 +103,7 @@ export interface PlaceCallResult {
 export async function placeOutboundCall(
   params: PlaceCallParams
 ): Promise<PlaceCallResult> {
-  const { to, userId, leadId, campaignId, teamId, source, agentSessionId } = params
+  const { to, userId, leadId, campaignId, teamId, source, agentSessionId, recordManual } = params
 
   if (!to) {
     return { success: false, error: 'Missing destination', httpStatus: 400 }
@@ -227,6 +231,23 @@ export async function placeOutboundCall(
     }
   }
 
+  // ── THE MANUAL DIALER'S OWN RECORD SWITCH ────────────────────────────────
+  // A manual dial has no campaign, so it had no recording setting to read and
+  // could never be recorded at all — an agent who needed a record of one call
+  // had no way to get one short of turning recording on for a whole campaign
+  // they were not even dialing.
+  //
+  // Only on a campaign-less dial. An agent must not be able to overrule a
+  // tenant's campaign recording policy from a toggle on their own screen;
+  // this answers "record this one call I am placing by hand", which is a
+  // different question with a different answer.
+  //
+  // Set BEFORE the global kill switch below, so a platform-wide stop still
+  // wins. That switch exists for legal exposure, and one agent's toggle is
+  // not a reason to keep recording through it.
+  const manualRecordingRequested = !campaignId && recordManual === true
+  if (manualRecordingRequested) recordingEnabled = true
+
   // ── GLOBAL OVERRIDES ─────────────────────────────────────────────────────
   // Applied AFTER the campaign's own values, and only ever to turn something
   // OFF (see resolveWithGlobal). Two reasons this direction matters:
@@ -285,6 +306,9 @@ export async function placeOutboundCall(
     teamId: teamId || null,
     amdEnabled,
     recordingEnabled,
+    // Only true if it survived the global switch — everything downstream
+    // treats this as "the agent asked for it AND it is happening".
+    recordingManual: manualRecordingRequested && recordingEnabled,
     dialerMode,
     source,
     agentSessionId: agentSessionId || null,
@@ -302,6 +326,7 @@ interface DoPlaceCallParams {
   teamId: string | null
   amdEnabled: boolean
   recordingEnabled: boolean
+  recordingManual: boolean
   dialerMode: string
   source: 'user_dial' | 'controller_fanout'
   agentSessionId: string | null
@@ -514,7 +539,15 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
   // So when AMD is on, recording waits for the human verdict and is started by
   // the webhook (see startTelnyxRecording). When AMD is OFF no verdict is ever
   // coming, so this is the only chance to start — record from answer as before.
-  if (p.recordingEnabled && !p.amdEnabled) {
+  //
+  // ── EXCEPT WHEN THE AGENT ASKED FOR THIS ONE ───────────────────────────
+  // The wait-for-AMD rule exists to avoid paying for recordings of voicemail
+  // greetings nobody asked for. A manual dial with the record toggle on is
+  // the opposite case: somebody deliberately pressed record on one specific
+  // call, and if it goes to voicemail the message they leave is very often
+  // the thing they wanted recorded. Waiting for a human verdict would mean
+  // the toggle silently did nothing on exactly those calls.
+  if (p.recordingEnabled && (!p.amdEnabled || p.recordingManual)) {
     dialBody.record = 'record-from-answer'
     dialBody.record_channels = 'dual'
   }
@@ -940,9 +973,16 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
       // time on purpose: the campaign toggle or the global kill switch can
       // change mid-call, and what matters is what was true when this call was
       // placed.
-      ...(p.recordingEnabled && p.amdEnabled
-        ? { recording_status: 'pending_amd' }
-        : {}),
+      // 'manual' rather than 'pending_amd' when the agent asked for it: the
+      // recording is already running, and the webhook reads this status to
+      // know it must NOT be discarded when the AMD verdict comes back a
+      // machine. That exception was written before anything could set the
+      // status — this is what finally does.
+      ...(p.recordingManual
+        ? { recording_status: 'manual' }
+        : p.recordingEnabled && p.amdEnabled
+          ? { recording_status: 'pending_amd' }
+          : {}),
       duration: 0,
       disposition: null,
       dial_source: p.source,
