@@ -162,39 +162,47 @@ export function CreateTeamModal({ onClose, onCreate, busy }: {
 // Seeded with the current name and selected on open, because a rename is
 // almost always an edit of what is there rather than a fresh answer.
 export function RenameModal({ kind, currentName, onClose, onSave, busy }: {
-  kind: 'team' | 'campaign'
+  kind: 'team' | 'campaign' | 'member'
   currentName: string
   onClose: () => void
   onSave: (name: string) => void
   busy?: boolean
 }) {
   const [name, setName] = useState(currentName)
-  const noun = kind === 'team' ? 'Team' : 'Campaign'
+  const isMember = kind === 'member'
+  const noun = kind === 'team' ? 'Team' : kind === 'member' ? 'Nickname' : 'Campaign'
   const trimmed = name.trim()
   const unchanged = trimmed === currentName.trim()
+  // A nickname may be emptied — that is how somebody goes back to their real
+  // name. A team or a campaign with no name at all is just broken, so those
+  // two still require one.
+  const canSave = (isMember || !!trimmed) && !unchanged && !busy
 
   return (
     <Shell
-      title={`Rename ${noun}`}
+      title={isMember ? 'Set Nickname' : `Rename ${noun}`}
       subtitle={
         kind === 'team'
           ? 'Everyone on this team sees the new name, including agents already dialing.'
-          : 'Agents see the new name in the dialer straight away. Nothing about the leads or settings changes.'
+          : kind === 'member'
+            ? 'What you call them on this team. It does not change their account, ' +
+              'and it does not follow them to another team. Clear it to go back to their real name.'
+            : 'Agents see the new name in the dialer straight away. Nothing about the leads or settings changes.'
       }
       onClose={onClose}
       footer={
         <>
           <button style={btn} onClick={onClose}>Cancel</button>
           <button
-            style={{ ...btnPrimary, opacity: !trimmed || unchanged || busy ? 0.5 : 1 }}
-            disabled={!trimmed || unchanged || busy}
+            style={{ ...btnPrimary, opacity: canSave ? 1 : 0.5 }}
+            disabled={!canSave}
             onClick={() => onSave(trimmed)}
           >{busy ? 'Saving…' : 'Save'}</button>
         </>
       }
     >
       <div>
-        <label style={label}>{noun} Name</label>
+        <label style={label}>{isMember ? 'Nickname' : `${noun} Name`}</label>
         <input
           autoFocus
           style={field}
@@ -202,9 +210,9 @@ export function RenameModal({ kind, currentName, onClose, onSave, busy }: {
           onChange={e => setName(e.target.value)}
           onFocus={e => e.currentTarget.select()}
           onKeyDown={e => {
-            if (e.key === 'Enter' && trimmed && !unchanged && !busy) onSave(trimmed)
+            if (e.key === 'Enter' && canSave) onSave(trimmed)
           }}
-          maxLength={100}
+          maxLength={isMember ? 60 : 100}
           placeholder={currentName}
         />
       </div>

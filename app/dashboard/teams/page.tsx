@@ -60,6 +60,8 @@ interface ApiMember {
    *  agreeing to is never a mystery line on a statement. */
   billing_takeover_at?: string | null
   seat_suspend_reason?: string | null
+  /** What the owner calls this person on this team. Null means their own name. */
+  nickname?: string | null
 }
 interface ApiTeamCampaign {
   campaignId: string
@@ -105,7 +107,20 @@ const TEXT = 'var(--teams-text, #f2f3f5)'
 const MUTED = 'var(--teams-muted, #949ba4)'
 const DIM = 'var(--teams-muted, #80848e)'
 
+// One helper, four call sites — the tree, the roster, the requests list and
+// the agent list all name people through here, so a nickname set once shows
+// up everywhere without any of them knowing it exists.
 function displayName(m: ApiMember): string {
+  const nick = m.nickname?.trim()
+  if (nick) return nick
+  const full = `${m.user?.first_name?.trim() || ''} ${m.user?.last_name?.trim() || ''}`.trim()
+  return full || m.user?.email || 'Unknown agent'
+}
+
+/** Their real name, for the places that have to show both — the rename dialog
+ *  needs it as a placeholder, and a roster row shows it under the nickname so
+ *  a nickname never hides who somebody actually is. */
+function realName(m: ApiMember): string {
   const full = `${m.user?.first_name?.trim() || ''} ${m.user?.last_name?.trim() || ''}`.trim()
   return full || m.user?.email || 'Unknown agent'
 }
@@ -464,7 +479,7 @@ export default function TeamsPage() {
   const [campaignTeamId, setCampaignTeamId] = useState<string | undefined>()
   const [showCodeModal, setShowCodeModal] = useState(false)
   const [renaming, setRenaming] =
-    useState<{ kind: 'team' | 'campaign'; id: string; name: string } | null>(null)
+    useState<{ kind: 'team' | 'campaign' | 'member'; id: string; name: string } | null>(null)
   const [renameBusy, setRenameBusy] = useState(false)
   // Bumped after a rename lands. CampaignDetail loads its own copy of the
   // campaign, so refreshing the tree alone would leave the open panel showing
@@ -735,6 +750,7 @@ export default function TeamsPage() {
       memberId: string
       userId: string
       name: string
+      realName: string
       team: string
       teamId: string
       isOwner: boolean
@@ -763,6 +779,11 @@ export default function TeamsPage() {
           memberId: m.id,
           userId: m.userId || m.id,
           name: displayName(m),
+          // Carried alongside so a nickname never hides who somebody is. The
+          // roster is where an owner does something consequential to a person
+          // — suspend a seat, remove them — and doing that to "Big Mike"
+          // without their real name in sight is how the wrong person goes.
+          realName: realName(m),
           team: t.name,
           teamId: t.id,
           isOwner: !!t.isOwner,
@@ -881,13 +902,21 @@ export default function TeamsPage() {
     try {
       const url = renaming.kind === 'team'
         ? `/api/teams/${encodeURIComponent(renaming.id)}/update`
-        : '/api/campaigns/update'
+        : renaming.kind === 'member'
+          ? '/api/teams/members/nickname'
+          : '/api/campaigns/update'
       // `id`, not `campaignId` — /api/campaigns/update destructures `id`, and
       // an unknown key would have been dropped silently, leaving the endpoint
       // to report "nothing to update" for a rename that looked correct.
+      //
+      // A member carries its team_members row id, not a user id: the nickname
+      // belongs to the MEMBERSHIP, so the same person on two teams keeps a
+      // separate name on each.
       const body = renaming.kind === 'team'
         ? { name }
-        : { id: renaming.id, name }
+        : renaming.kind === 'member'
+          ? { memberId: renaming.id, nickname: name }
+          : { id: renaming.id, name }
 
       const r = await fetch(url, {
         method: 'POST',
@@ -1440,6 +1469,9 @@ export default function TeamsPage() {
                     render: (r: any) => (
                       <span style={{ opacity: r.suspended ? 0.55 : 1 }}>
                         {r.name}
+                        {r.realName && r.realName !== r.name && (
+                          <span style={{ display: 'block', fontSize: 11, color: DIM }}>{r.realName}</span>
+                        )}
                         {r.email && r.email !== r.name && (
                           <span style={{ display: 'block', fontSize: 11, color: DIM }}>{r.email}</span>
                         )}

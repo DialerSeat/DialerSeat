@@ -80,7 +80,7 @@ interface Props {
   /** Rename whatever is currently selected. Only offered for things the
    *  viewer owns — the endpoints enforce that too, but offering an action
    *  that will be refused is its own kind of broken. */
-  onRename?: (kind: 'team' | 'campaign', id: string, currentName: string) => void
+  onRename?: (kind: 'team' | 'campaign' | 'member', id: string, currentName: string) => void
   onJoinWithCode?: (code: string) => void
   joining?: boolean
   /** Result of the last join attempt, shown under the code field. */
@@ -234,7 +234,9 @@ export default function TeamsSidebar({
   // What the ⋮ can rename right now, derived from the selection. Null when
   // nothing renameable is selected or the viewer does not own it, which is
   // what hides the row rather than disabling it.
-  const renameTarget: { kind: 'team' | 'campaign'; id: string; name: string } | null = (() => {
+  const renameTarget:
+    | { kind: 'team' | 'campaign' | 'member'; id: string; name: string }
+    | null = (() => {
     if (scope.kind === 'team') {
       const t = teams.find(x => x.id === scope.teamId)
       return t?.isOwner ? { kind: 'team', id: t.id, name: t.name } : null
@@ -244,6 +246,17 @@ export default function TeamsSidebar({
       if (!t?.isOwner) return null
       const c = t.campaigns.find(x => x.id === scope.campaignId)
       return c ? { kind: 'campaign', id: c.id, name: c.name } : null
+    }
+    // A person gets a NICKNAME rather than a rename, and it is addressed by
+    // their memberId — the nickname belongs to their place on this team, not
+    // to their account. Without a memberId there is nothing to write to, so
+    // the row stays hidden rather than opening a dialog that cannot save.
+    if (scope.kind === 'agent') {
+      const t = teams.find(x => x.id === scope.teamId)
+      if (!t?.isOwner) return null
+      const c = t.campaigns.find(x => x.id === scope.campaignId)
+      const a = c?.agents.find(x => x.id === scope.userId)
+      return a?.memberId ? { kind: 'member', id: a.memberId, name: a.name } : null
     }
     return null
   })()
@@ -554,7 +567,9 @@ export default function TeamsSidebar({
                         onRename?.(renameTarget.kind, renameTarget.id, renameTarget.name)
                       }}
                     >
-                      Rename {renameTarget.kind}
+                      {renameTarget.kind === 'member'
+                        ? 'Set nickname'
+                        : `Rename ${renameTarget.kind}`}
                       <span className="ts-menu-hint">{renameTarget.name}</span>
                     </button>
                   )}
