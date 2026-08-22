@@ -1103,6 +1103,28 @@ export default function TeamsPage() {
            would collapse the flex column entirely. */
         .ts-shell { height: 100vh; height: 100dvh; }
 
+        /* ── ON A PHONE, LET THE PAGE SCROLL ──────────────────────────────
+           A viewport-height shell with its own inner scroller is a desktop
+           pattern: it needs the shell to BE the viewport. On mobile it is
+           not. This shell sits below the dashboard's own topbar, so
+           100dvh puts its last stretch a topbar's height past the bottom of
+           the screen — reachable by nothing, no matter which viewport unit
+           is used. Chasing that with calc() means hardcoding the height of
+           another component and re-breaking it every time that changes.
+
+           So the fixed height comes off below 900px and the document scrolls
+           the way the browser already knows how to. Address bars collapsing,
+           safe areas, momentum, scroll-to-top on the status bar — all of it
+           works because nothing is being overridden. */
+        @media (max-width: 900px) {
+          .ts-shell { height: auto; min-height: 100dvh; }
+          .ts-main { min-height: 0; }
+          .ts-panel-scroll {
+            overflow-y: visible !important;
+            flex: none !important;
+          }
+        }
+
         /* ── DESKTOP: A COLUMN. MOBILE: A DRAWER. ─────────────────────────────
            The sidebar is 300px of permanent furniture on a wide screen and the
            whole screen on a phone, so on mobile it slides in over the panel
@@ -1256,7 +1278,7 @@ export default function TeamsPage() {
           </div>
         )}
 
-        <div style={{
+        <div className="ts-panel-scroll" style={{
           flex: 1, minHeight: 0, overflowY: 'auto',
           // The extra bottom padding is the home indicator. Without it the last
           // card ends flush against it and reads as cut off even once the
@@ -1294,7 +1316,11 @@ export default function TeamsPage() {
               {selectedMembers.size > 0 && (
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
-                  background: '#12141a', border: `1px solid ${HAIRLINE}`,
+                  // A shade my earlier sweep missed — it covered #0d0f13,
+                  // #111214 and #1e1f22 but not this one. Same consequence:
+                  // the text on it follows the tenant, so on a light brand
+                  // "1 selected" was dark type on a near-black bar.
+                  background: 'var(--teams-inset, #12141a)', border: `1px solid ${HAIRLINE}`,
                   borderRadius: 4, padding: '10px 12px', marginBottom: 12,
                 }}>
                   <span style={{ fontSize: 12, color: TEXT }}>
