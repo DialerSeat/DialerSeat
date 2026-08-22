@@ -63,6 +63,10 @@ interface Lead {
   state?: string
   city?: string
   disposition: string | null
+  /** How the lead's LAST CALL ended. Separate from disposition on purpose:
+   *  a voicemail is never written to disposition, because that would take the
+   *  lead out of rotation. See lib/subDispositions. */
+  last_call_disposition?: string | null
   notes: string
   dial_attempts: number
   last_called_at: string | null
@@ -863,6 +867,13 @@ export default function LeadsPage() {
             {DISPOSITIONS.map(d => (
               <option key={d.label} value={d.label}>{d.label}</option>
             ))}
+            {/* Below the line, because it is a different question. Everything
+                above asks what an agent decided about the lead; this asks how
+                the lead's last call ended. A lead can sit here AND carry one
+                of the dispositions above, because reaching a machine on
+                Tuesday does not undo a conversation on Monday. */}
+            <option disabled>──────────</option>
+            <option value="reached_voicemail">REACHED VOICEMAIL</option>
           </select>
         </div>
         <div className="field">
@@ -936,6 +947,25 @@ export default function LeadsPage() {
                       color: dispColor(lead.disposition),
                       border: `1px solid ${dispColor(lead.disposition)}`,
                     }}>{lead.disposition}</span>
+                  ) : lead.last_call_disposition === 'VOICEMAIL'
+                    || lead.last_call_disposition === 'NO_ANSWER_AMD' ? (
+                    /* ── NOT NEW, AND NOT DISPOSITIONED EITHER ─────────────
+                       A lead whose last call reached a machine has no
+                       disposition of its own, deliberately — that is what
+                       keeps it in rotation. But showing it as NEW is wrong in
+                       the way that costs someone time: it has been dialled,
+                       possibly several times, and somebody scanning this list
+                       for untouched leads would pick it up believing nobody
+                       had tried.
+
+                       Shown in the muted style rather than as a real
+                       disposition, because it still is not one — it says what
+                       happened on the last attempt, not what anybody decided. */
+                    <span className="disp-badge" style={{
+                      background: 'rgba(139, 92, 246, 0.10)',
+                      color: '#7c3aed',
+                      border: '1px solid rgba(139, 92, 246, 0.45)',
+                    }} title="Last call reached an answering machine">VOICEMAIL</span>
                   ) : (
                     <span className="disp-badge" style={{
                       background: '#e8e8ec', color: T.muted,

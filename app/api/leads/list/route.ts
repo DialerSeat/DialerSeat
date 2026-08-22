@@ -101,6 +101,15 @@ export async function GET(req: NextRequest) {
   } else if (disposition !== 'all') {
     if (disposition === 'uncalled') {
       query = query.is('disposition', null)
+    } else if (disposition === 'reached_voicemail') {
+      // ── THE ONE FILTER THAT READS A DIFFERENT COLUMN ──────────────────
+      // Every other value here asks what an AGENT decided about the lead.
+      // This asks how the lead's last CALL ended, which is deliberately not
+      // written to leads.disposition — doing so would imply somebody judged
+      // the lead and would pull it out of rotation. Filtering it against
+      // disposition would return nothing, forever, with no error: the same
+      // silent-empty failure that hid the Not Interested queue.
+      query = query.in('last_call_disposition', SUB_DISPOSITION_FORMS.voicemail)
     } else {
       query = query.eq('disposition', disposition)
     }
