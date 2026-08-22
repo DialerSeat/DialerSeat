@@ -147,6 +147,17 @@ export default function SignUpPage() {
             colorBackground,
             colorText: '#ffffff',
             colorTextSecondary: '#8888aa',
+            // Clerk derives a lot of small print — the password rules, field
+            // hints, character counters — from colorNeutral by mixing it with
+            // the background at low alpha. The default neutral is BLACK, which
+            // on this dark card produced grey-on-near-black: present, legible
+            // to nobody. White neutral makes every derived shade lighter than
+            // the card instead of darker, which is the whole trick to a dark
+            // Clerk theme and is not obvious from the element list.
+            colorNeutral: '#ffffff',
+            colorSuccess: '#4ade80',
+            colorDanger: '#f87171',
+            colorWarning: '#fbbf24',
             colorInputBackground: 'rgba(255,255,255,0.05)',
             colorInputText: '#ffffff',
             borderRadius: '4px',
@@ -231,6 +242,34 @@ export default function SignUpPage() {
             },
             alertText: {
               color: '#ffffff',
+              fontFamily: FUTURA,
+            },
+            // The password requirement checklist and its siblings. Named
+            // explicitly as well as covered by colorNeutral, because these are
+            // the lines somebody reads while they are stuck — the moment where
+            // unreadable small print costs a signup.
+            formFieldHintText: {
+              color: '#b9bbd4',
+              fontFamily: FUTURA,
+            },
+            formFieldInfoText: {
+              color: '#b9bbd4',
+              fontFamily: FUTURA,
+            },
+            formFieldSuccessText: {
+              color: '#4ade80',
+              fontFamily: FUTURA,
+            },
+            formFieldWarningText: {
+              color: '#fbbf24',
+              fontFamily: FUTURA,
+            },
+            formFieldErrorText: {
+              color: '#f87171',
+              fontFamily: FUTURA,
+            },
+            formFieldAction: {
+              color: 'var(--brand-primary)',
               fontFamily: FUTURA,
             },
             footer: {

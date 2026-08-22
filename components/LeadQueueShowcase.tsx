@@ -13,10 +13,10 @@
  *   1. The queue is worked strictly TOP-DOWN.
  *   2. The lead being dialed holds the top slot and pulses, with a ring timer
  *      running at real speed.
- *   3. It stays there for its full repeat count (1x / 2x / 3x), showing the
- *      attempt counter climb — it does not hand over mid-sequence.
- *   4. Once attempts are exhausted it drops to the BOTTOM of the list with
- *      its outcome, and the next lead rises into the top slot.
+ *   3. It holds that slot until the call resolves — it does not hand over
+ *      mid-call.
+ *   4. Once it resolves it drops to the BOTTOM of the list with its outcome,
+ *      and the next lead rises into the top slot.
  *   5. The STATE filter narrows the queue, and dialing follows the filter —
  *      which is the real panel's rule ("only leads matching this filter will
  *      be dialed"), and the part visitors ask about most.
@@ -81,7 +81,11 @@ const D = {
   idleBg: '#e8e8ec',
 }
 
-type Outcome = 'no-answer' | 'voicemail' | 'connected'
+// No 'no-answer'. A ring-out is the most common thing that happens on a real
+// dial and the least interesting thing to watch: a timer counting up to
+// nothing. The panel is an advertisement for what the queue DOES, and it has
+// a few seconds of a visitor's attention to say it.
+type Outcome = 'voicemail' | 'connected'
 
 interface Row {
   id: number
@@ -143,7 +147,7 @@ const REPEAT = 1
  * pretending they don't happen. A demo where every third call connects would
  * be a nicer animation and a worse advertisement.
  */
-const MISSES_BEFORE_CONNECT = 5
+const MISSES_BEFORE_CONNECT = 2
 
 /** How long a connected call is held before the queue moves on, in seconds. */
 const TALK_SECONDS = 4
@@ -172,7 +176,6 @@ const TALK_SECONDS = 4
 const RING_SECONDS: Record<Outcome, number> = {
   connected: 3,
   voicemail: 3,
-  'no-answer': 3,
 }
 
 /** How long the outcome tag stays up before the queue moves on. */
@@ -182,9 +185,8 @@ const RESULT_MS = 600
 // app/dashboard/dialer/page.tsx) rather than the outline chips this mockup
 // used to draw.
 const OUTCOME_COPY: Record<Outcome, { label: string; color: string; bg: string }> = {
-  'no-answer': { label: 'NO ANSWER', color: D.slate, bg: D.slateBg },
-  voicemail:   { label: 'VOICEMAIL', color: D.amber, bg: D.amberBg },
-  connected:   { label: 'CONNECTED', color: D.green, bg: D.greenBg },
+  voicemail: { label: 'VOICEMAIL', color: D.amber, bg: D.amberBg },
+  connected: { label: 'CONNECTED', color: D.green, bg: D.greenBg },
 }
 
 /**
@@ -192,7 +194,7 @@ const OUTCOME_COPY: Record<Outcome, { label: string; color: string; bg: string }
  * one five times. Which one comes up doesn't matter; that there are five of
  * them before a connect does — see MISSES_BEFORE_CONNECT.
  */
-const MISS_CYCLE: Outcome[] = ['no-answer', 'voicemail']
+const MISS_CYCLE: Outcome[] = ['voicemail']
 
 // 'talking' is a real third beat, not a longer result flash: a connect is the
 // only outcome where the agent is actually on the phone, and showing that as a
@@ -371,7 +373,7 @@ export default function LeadQueueShowcase() {
         }
         .lq-row {
           display: grid;
-          grid-template-columns: 1.6fr 1fr 0.5fr 26px 78px;
+          grid-template-columns: 1.6fr 1fr 0.5fr 78px;
           align-items: center;
           gap: 8px;
           /* Tight rows. The panel has to fit inside the viewport alongside the
@@ -395,10 +397,6 @@ export default function LeadQueueShowcase() {
         .lq-tag {
           font-size: 8.5px; font-weight: 700; letter-spacing: .5px;
           padding: 2px 6px; border-radius: 3px; text-align: center; white-space: nowrap;
-        }
-        .lq-attempts {
-          font-family: ${MONO}; font-size: 9.5px; font-weight: 700;
-          color: ${D.muted}; text-align: right;
         }
         .lq-chip {
           font-size: 9.5px; font-weight: 700; letter-spacing: 1px;
@@ -438,12 +436,12 @@ export default function LeadQueueShowcase() {
             gap: 6px;
             padding: 8px 9px;
           }
-          .lq-state, .lq-help, .lq-attempts { display: none; }
+          .lq-state, .lq-help { display: none; }
           .lq-phone { font-size: 10px; }
           .lq-bar, .lq-strip { padding: 8px 9px; gap: 7px; }
           .lq-list { padding: 8px 9px 11px; }
           .lq-spacer { display: none; }
-          .lq-filter-btn, .lq-filter-tray { display: none; }
+          .lq-filter-tray { display: none; }
         }
       `}</style>
 
@@ -462,23 +460,29 @@ export default function LeadQueueShowcase() {
         <span style={{ fontSize: 9, letterSpacing: 1.2, color: '#8b8fa3', fontFamily: MONO, whiteSpace: 'nowrap' }}>
           {q.dials} DIALS
         </span>
+        {/* Inert on purpose. It shows the real panel has a filter without
+            inviting a click that does nothing useful on a marketing page —
+            and without a visitor stopping the demo by narrowing it to one
+            state and wandering off. aria-hidden so screen readers aren't
+            offered a control that isn't one.
+
+            In the title bar rather than the strip below because the strip
+            hides it on a phone, which is where most of these are seen. */}
+        <span
+          className="lq-filter-btn is-static"
+          aria-hidden="true"
+          style={{
+            fontSize: 8.5, fontWeight: 700, letterSpacing: 1.2,
+            color: '#8b8fa3', border: '1px solid #33364a', borderRadius: 3,
+            padding: '2px 6px', whiteSpace: 'nowrap', marginLeft: 8,
+          }}
+        >
+          ▾ FILTER
+        </span>
       </div>
 
-      {/* ── CONTROLS STRIP — repeat count + the FILTER control ────────── */}
+      {/* ── CONTROLS STRIP — the live line count ───────────────────────── */}
       <div className="lq-strip" style={{ borderBottom: `1px solid ${D.border}` }}>
-        {[1, 2, 3].map(n => (
-          <span
-            key={n}
-            style={{
-              fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 3,
-              border: `1px solid ${n === REPEAT ? D.accent : D.border}`,
-              background: n === REPEAT ? 'rgba(42, 74, 138, 0.12)' : D.row,
-              color: n === REPEAT ? D.accent : D.muted,
-            }}
-          >
-            {n}x
-          </span>
-        ))}
         {/* Where the live line count sits in the real toolbar. */}
         <span
           style={{
@@ -489,18 +493,7 @@ export default function LeadQueueShowcase() {
         >
           ● DIALING 1 LINE
         </span>
-        <span className="lq-help" style={{ fontSize: 9, letterSpacing: 1, color: D.muted, marginLeft: 4 }}>
-          REDIAL BEFORE MOVING ON
-        </span>
         <div className="lq-spacer" style={{ flex: 1 }} />
-        {/* Inert on purpose. It shows the real panel has a filter without
-            inviting a click that does nothing useful on a marketing page —
-            and without a visitor stopping the demo by narrowing it to one
-            state and wandering off. aria-hidden so screen readers aren't
-            offered a control that isn't one. */}
-        <span className="lq-chip lq-filter-btn is-static" aria-hidden="true">
-          ▾ FILTER
-        </span>
       </div>
 
       {/* ── ROWS ──────────────────────────────────────────────────────── */}
@@ -509,12 +502,6 @@ export default function LeadQueueShowcase() {
           const isActive = i === 0
           const showResult = isActive && q.phase === 'result'
 
-          // Which pass this lead is on. The dial in progress COUNTS — a lead
-          // coming back around for its second go reads 2x while it rings, not
-          // 1x. Waiting for the call to finish before crediting it would mean
-          // the number only ever describes the past, which is the opposite of
-          // what someone watching the row wants to know.
-          const passNo = (r.dialed || 0) + (isActive ? 1 : 0)
           const oc = r.outcome ? OUTCOME_COPY[r.outcome] : null
 
           return (
@@ -545,13 +532,12 @@ export default function LeadQueueShowcase() {
                 {r.phone}
               </span>
               <span className="lq-state" style={{ color: D.muted, fontSize: 10 }}>{r.state}</span>
-              <span
-                className="lq-attempts"
-                // Accent once it is non-zero, matching the real column.
-                style={{ color: passNo > 0 ? D.accent : D.muted }}
-              >
-                {passNo}x
-              </span>
+              {/* No Nx column. It existed to show a lead's attempt count
+                  climbing across its repeat cycle, and with the repeat control
+                  gone it read 0x on every row that had not been worked yet —
+                  a number whose most common value means nothing. Rotation is
+                  still visible, and better: a worked lead sits at the bottom
+                  wearing its outcome. */}
 
               {isActive ? (
                 q.phase === 'talking' ? (
@@ -585,10 +571,10 @@ export default function LeadQueueShowcase() {
                       border: `1px solid ${D.accent}`, fontFamily: MONO,
                     }}
                   >
-                    {/* Ring timer plus attempt counter: the timer proves the
-                        call is live, the counter proves the lead holds the slot
-                        across its full repeat count. */}
-                    {mmss(q.ringSec)} &middot; {r.attempts + 1}/{REPEAT}
+                    {/* The timer alone. The attempt counter beside it read
+                        1/1 for every call once the repeat control came out,
+                        which is a number that answers nothing. */}
+                    {mmss(q.ringSec)}
                   </span>
                 )
               ) : oc ? (

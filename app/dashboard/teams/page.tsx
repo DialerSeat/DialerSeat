@@ -1925,11 +1925,22 @@ export default function TeamsPage() {
                 // server's own guard against an unconfirmed call, not a second
                 // question for the user.
                 if (item.kind === 'team') {
-                  res = await fetch(`/api/teams/${item.teamId}/delete`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ confirm: 'remove' }),
-                  }).then(r => r.json()).catch(() => null)
+                  // A team you do not own is LEFT, not deleted. Deleting it
+                  // is not a thing an agent can do, and pressing the only
+                  // button on offer used to return a 403 — so the sidebar
+                  // now says Leave and this sends it somewhere that works.
+                  const owned = rawTeams.find(t => t.id === item.teamId)?.isOwner
+                  res = owned
+                    ? await fetch(`/api/teams/${item.teamId}/delete`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ confirm: 'remove' }),
+                      }).then(r => r.json()).catch(() => null)
+                    : await fetch('/api/teams/leave', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ teamId: item.teamId, confirm: 'leave' }),
+                      }).then(r => r.json()).catch(() => null)
                 } else if (item.kind === 'campaign') {
                   // Detach from the team, not delete the campaign itself — the
                   // leads and history belong to the campaign and outlive its

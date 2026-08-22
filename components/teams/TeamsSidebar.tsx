@@ -195,6 +195,27 @@ export default function TeamsSidebar({
 
   const selectedList = Object.values(selected)
 
+  // ── LEAVING IS NOT DELETING ────────────────────────────────────────────
+  // The only action offered for a selected team was Delete, whoever was
+  // looking. An agent pressing it on somebody else's team got a 403, because
+  // the endpoint behind it refuses anybody but the owner — so the one thing
+  // an agent might actually want to do with a team was the one thing the menu
+  // could not do.
+  //
+  // Every ticked item has to be a team the viewer does not own. A mixed
+  // selection stays a delete: "Leave" cannot describe removing a campaign,
+  // and a confirmation that misdescribes what is about to happen is worse
+  // than a blunt one.
+  const leaveMode =
+    selectedList.length > 0 &&
+    selectedList.every(sel => {
+      if (sel.kind !== 'team') return false
+      const t = teams.find(x => x.id === sel.id)
+      return !!t && !t.isOwner
+    })
+
+  const confirmWord = leaveMode ? 'LEAVE' : 'DELETE'
+
   // The one ticked thing that can be renamed, or null. Requires exactly one
   // selection, a renameable kind, and ownership — the same three conditions
   // the ⋮ uses, so the two entry points can never disagree about whether an
@@ -863,12 +884,12 @@ export default function TeamsSidebar({
             <button
               className="ts-mini-btn is-danger"
               onClick={() => { setConfirmText(''); setConfirmOpen(true) }}
-            >Delete</button>
+            >{leaveMode ? 'Leave' : 'Delete'}</button>
           )}
         </div>
       )}
 
-      {/* ── TYPE DELETE ─────────────────────────────────────────────────────
+      {/* ── TYPE THE WORD ───────────────────────────────────────────────────
           A confirm button alone is muscle memory. Typing the word is the only
           confirmation that cannot be clicked through by accident, and the
           things listed are named so the agent checks the list rather than the
@@ -890,10 +911,16 @@ export default function TeamsSidebar({
             }}
           >
             <h3 style={{ margin: '0 0 8px', fontSize: 17, fontWeight: 600 }}>
-              Delete {selectedList.length} item{selectedList.length === 1 ? '' : 's'}?
+              {leaveMode
+                ? `Leave ${selectedList.length} team${selectedList.length === 1 ? '' : 's'}?`
+                : `Delete ${selectedList.length} item${selectedList.length === 1 ? '' : 's'}?`}
             </h3>
             <p style={{ margin: '0 0 12px', fontSize: 12.5, color: TEXT_DIM, lineHeight: 1.6 }}>
-              This cannot be undone.
+              {leaveMode
+                ? 'You lose access to its campaigns straight away, and any seat the owner ' +
+                  'was paying for you ends. Nothing on the team is deleted. You would need ' +
+                  'a new code to come back.'
+                : 'This cannot be undone.'}
             </p>
             <ul style={{
               margin: '0 0 14px', padding: '10px 12px 10px 26px', maxHeight: 150,
@@ -905,7 +932,7 @@ export default function TeamsSidebar({
               ))}
             </ul>
             <label style={{ display: 'block', fontSize: 11.5, color: TEXT_MUTED, marginBottom: 6 }}>
-              Type <strong style={{ color: TEXT }}>DELETE</strong> to confirm
+              Type <strong style={{ color: TEXT }}>{confirmWord}</strong> to confirm
             </label>
             <input
               autoFocus
@@ -926,8 +953,8 @@ export default function TeamsSidebar({
               >Cancel</button>
               <button
                 className="ts-mini-btn is-danger"
-                disabled={confirmText !== 'DELETE' || deleting}
-                style={{ opacity: confirmText !== 'DELETE' || deleting ? 0.45 : 1 }}
+                disabled={confirmText !== confirmWord || deleting}
+                style={{ opacity: confirmText !== confirmWord || deleting ? 0.45 : 1 }}
                 onClick={async () => {
                   setDeleting(true)
                   try {
@@ -937,7 +964,9 @@ export default function TeamsSidebar({
                     setDeleting(false)
                   }
                 }}
-              >{deleting ? 'Deleting…' : 'Delete'}</button>
+              >{deleting
+                ? (leaveMode ? 'Leaving…' : 'Deleting…')
+                : (leaveMode ? 'Leave' : 'Delete')}</button>
             </div>
           </div>
         </div>

@@ -1044,11 +1044,13 @@ export default function RecordingsPage() {
             >
               {/* DESKTOP */}
               <div className="rec-desktop-row">
+                {/* No "no campaign attached" caption. A manual dial has no
+                    campaign by definition, so the line appeared under every
+                    one of them, described nothing that had gone wrong, and
+                    read like a fault. The campaign column already says
+                    Direct. */}
                 <div>
                   <div className="rec-name">{leadName}</div>
-                  {!hasLead && (
-                    <div className="rec-name-sub">no campaign attached</div>
-                  )}
                 </div>
 
                 <div className="rec-phone">{phone}</div>
@@ -1062,7 +1064,7 @@ export default function RecordingsPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
                   <div className="rec-camp">{campName}</div>
                   {r.disposition ? (
-                    <span className="rec-disp-badge" style={dispBadgeStyle}>{r.disposition}</span>
+                    <span className="rec-disp-badge" style={dispBadgeStyle}>{labelFor(r.disposition).toUpperCase()}</span>
                   ) : (
                     <span className="rec-disp-badge" style={{
                       background: '#e8e8ec', color: T.muted,
@@ -1121,13 +1123,10 @@ export default function RecordingsPage() {
               <div className="rec-mobile-row">
                 <div className="col-name">
                   <div className="rec-name">{leadName}</div>
-                  {!hasLead && (
-                    <div className="rec-name-sub">no campaign attached</div>
-                  )}
                 </div>
                 <div className="col-disp">
                   {r.disposition ? (
-                    <span className="rec-disp-badge" style={dispBadgeStyle}>{r.disposition}</span>
+                    <span className="rec-disp-badge" style={dispBadgeStyle}>{labelFor(r.disposition).toUpperCase()}</span>
                   ) : (
                     <span className="rec-disp-badge" style={{
                       background: '#e8e8ec', color: T.muted,
