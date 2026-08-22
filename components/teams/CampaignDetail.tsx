@@ -138,6 +138,7 @@ export default function CampaignDetail({
   onBack,
   onChanged,
   onRename,
+  onOpenAgent,
   reloadToken,
 }: {
   campaignId: string
@@ -147,6 +148,8 @@ export default function CampaignDetail({
    *  up rather than hosting a second modal here is what keeps renaming a
    *  campaign identical to renaming a team. */
   onRename?: (kind: 'team' | 'campaign', id: string, currentName: string) => void
+  /** Open one of the listed agents. Omitted where there is nowhere to go. */
+  onOpenAgent?: (userId: string) => void
   /** Bumped by the page after a rename lands, so this panel refetches and
    *  shows the new name instead of the one it loaded with. */
   reloadToken?: number
@@ -1189,14 +1192,36 @@ export default function CampaignDetail({
                 opacity: a.suspended ? 0.55 : 1,
               }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 500 }}>{a.name}</div>
+                  {/* ── THE NAME OPENS THE PERSON ────────────────────────
+                      A roster is a list of people, and reading a name here
+                      then having to go back out to All Users and search for
+                      it to see how they are doing is the long way round to
+                      the obvious question. Only a button when there is
+                      somewhere to go — a row we cannot identify stays plain
+                      text rather than looking clickable and doing nothing. */}
+                  {onOpenAgent && a.userId ? (
+                    <button
+                      onClick={() => onOpenAgent(a.userId!)}
+                      style={{
+                        background: 'transparent', border: 'none', padding: 0,
+                        fontSize: 14, fontWeight: 500, color: TEXT,
+                        fontFamily: 'inherit', cursor: 'pointer',
+                        textAlign: 'left', textDecoration: 'underline',
+                        textDecorationColor: HAIRLINE, textUnderlineOffset: 3,
+                        maxWidth: '100%', overflow: 'hidden',
+                        textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      }}
+                    >{a.name}</button>
+                  ) : (
+                    <div style={{ fontSize: 14, fontWeight: 500 }}>{a.name}</div>
+                  )}
                   <div style={{ fontSize: 11.5, color: DIM, marginTop: 2 }}>
                     {a.suspended
                       ? 'Seat paused — cannot dial'
                       : a.payer === 'owner'
                       ? 'You pay this seat'
                       : a.payer === 'agent'
-                      ? 'Pays their own seat'
+                      ? 'Paying for themselves — costs you nothing'
                       : 'Added at no extra cost'}
                   </div>
                 </div>

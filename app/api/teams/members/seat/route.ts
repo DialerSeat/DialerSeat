@@ -100,13 +100,66 @@ export async function POST(req: Request) {
       if (!member.seat_suspended_at) {
         return NextResponse.json({ success: false, error: 'Seat is not suspended' }, { status: 400 })
       }
-      if (member.seat_suspend_reason === 'canceled') {
-        // A cancelled seat has no subscription left to un-pause. Saying so
-        // beats silently restoring access to something nobody is paying for.
-        return NextResponse.json(
-          { success: false, error: 'This seat was cancelled, not paused. Issue a new seat to bring them back.' },
-          { status: 400 }
-        )
+      // ── A CANCELLED OR UNPAID SEAT IS RE-ISSUED, NOT UN-PAUSED ───────
+      // This used to refuse: "issue a new seat to bring them back" — advice
+      // pointing at a button that did not exist anywhere in the product, so
+      // a cancelled seat was a dead end and the only way back was removing
+      // the person and re-inviting them.
+      //
+      // There is nothing to un-pause because the subscription is gone, so a
+      // new one is raised through the same path an approval uses. That means
+      // the same rules apply without restating any of them: no charge if the
+      // agent funds themselves, no second charge if this owner already pays
+      // for them elsewhere, and the seat stays suspended if the card fails.
+      const nothingToUnpause =
+        member.seat_suspend_reason === 'canceled' ||
+        member.seat_suspend_reason === 'unpaid' ||
+        (charges || []).length === 0
+
+      if (nothingToUnpause) {
+        // Cleared first: approvePendingMember settles a seat for a member it
+        // expects to be live, and the enforcement job must see an ordinary
+        // unpaid seat rather than a suspended one if the charge fails.
+        await supabaseAdmin
+          .from('team_members')
+          .update({ seat_suspended_at: null, seat_suspend_reason: null })
+          .eq('id', memberId)
+
+        const { approvePendingMember } = await import('@/lib/approveTeamMember')
+        const outcome = await approvePendingMember({
+          ownerId: userId,
+          memberId,
+          teamId: member.team_id,
+          teamName: team.name,
+          agentClerkId: member.user_id,
+          skipActivation: true,
+        })
+
+        if (!outcome.ok) {
+          // Put it back. A seat that could not be paid for must not sit
+          // active — that is the whole rule this codebase settled on.
+          await supabaseAdmin
+            .from('team_members')
+            .update({ seat_suspended_at: now, seat_suspend_reason: 'unpaid' })
+            .eq('id', memberId)
+
+          return NextResponse.json({
+            success: false,
+            error: outcome.noCardOnFile
+              ? 'There is no working payment method on your account, so this seat could not be restarted.'
+              : 'The payment for this seat did not go through, so it stays paused.',
+            billingIssue: outcome.billingIssue,
+            canRetry: !outcome.noCardOnFile,
+          }, { status: 402 })
+        }
+
+        await notify('resumed', member.user_id, team.name)
+        return NextResponse.json({
+          success: true,
+          action,
+          reissued: true,
+          stripeSubscriptionId: outcome.stripeSubscriptionId,
+        })
       }
 
       for (const c of charges || []) {

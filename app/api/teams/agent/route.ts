@@ -89,12 +89,37 @@ export async function GET(req: NextRequest) {
     // is not proof of anything.
     const { data: memberships } = await supabaseAdmin
       .from('team_members')
-      .select('id, team_id, status, accepted_at, created_at, joined_via_code, billing_override, seat_suspended_at, seat_suspend_reason, billing_takeover_at')
+      .select('id, team_id, status, accepted_at, created_at, joined_via_code, billing_override, seat_suspended_at, seat_suspend_reason, billing_takeover_at, seat_covered_by')
       .eq('user_id', agentId)
       .in('team_id', teamIds)
       .in('status', ['active', 'pending'])
 
     const memberRows = memberships || []
+
+    // Does this person hold their own active DialerSeat subscription? Same
+    // question agentPaysForThemselves asks before raising a seat charge, so
+    // the screen and the billing agree about who is paying.
+    const { data: ownSub } = await supabaseAdmin
+      .from('subscriptions')
+      .select('status')
+      .eq('user_id', agentId)
+      .eq('status', 'active')
+      .limit(1)
+    const selfFunded = (ownSub || []).length > 0
+
+    // Which team each covering membership belongs to, so a covered seat can
+    // name the seat paying for it rather than just saying "no charge".
+    const coveringIds = Array.from(
+      new Set(memberRows.map((m: any) => m.seat_covered_by).filter(Boolean))
+    )
+    const coveringTeamByMember = new Map<string, string>()
+    if (coveringIds.length > 0) {
+      const { data: coveringRows } = await supabaseAdmin
+        .from('team_members')
+        .select('id, team_id')
+        .in('id', coveringIds)
+      for (const c of coveringRows || []) coveringTeamByMember.set(c.id, c.team_id)
+    }
     if (memberRows.length === 0) {
       return NextResponse.json(
         { success: false, error: 'Not on any of your teams' },
@@ -255,6 +280,13 @@ export async function GET(req: NextRequest) {
         joinedPlatformAt: user?.created_at ?? null,
       },
       liveNow,
+      // ── WHO IS ACTUALLY PAYING ──────────────────────────────────────
+      // Read from their subscription rather than inferred from the seat.
+      // billing_override 'free' is set for two unrelated reasons — the agent
+      // funds their own DialerSeat, or this owner already pays for them on
+      // another team — and an owner reading "no charge" deserves to know
+      // which, because only one of the two is theirs to change.
+      selfFunded,
       memberships: memberRows.map((m: any) => ({
         memberId: m.id,
         teamId: m.team_id,
@@ -264,6 +296,10 @@ export async function GET(req: NextRequest) {
         suspendReason: m.seat_suspend_reason || null,
         pickedUp: !!m.billing_takeover_at,
         billingOverride: m.billing_override || null,
+        seatCoveredBy: m.seat_covered_by || null,
+        coveredByTeam: m.seat_covered_by
+          ? (teamNameById.get(coveringTeamByMember.get(m.seat_covered_by) || '') || null)
+          : null,
         joinedViaCode: m.joined_via_code || null,
         joinedAt: m.accepted_at || m.created_at,
       })),

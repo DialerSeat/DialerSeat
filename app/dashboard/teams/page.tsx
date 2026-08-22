@@ -1439,6 +1439,15 @@ export default function TeamsPage() {
               onBack={goOverview}
               onChanged={() => { void refresh() }}
               onRename={(kind, id, name) => setRenaming({ kind, id, name })}
+              onOpenAgent={agentUserId => {
+                setScope({
+                  kind: 'agent',
+                  teamId: scope.teamId,
+                  campaignId: scope.campaignId,
+                  userId: agentUserId,
+                })
+                setView('agent')
+              }}
               reloadToken={renameToken}
             />
           )}

@@ -90,6 +90,47 @@ export default function AgentDetail({
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [seatBusy, setSeatBusy] = useState<string | null>(null)
+  const [seatNote, setSeatNote] = useState<string | null>(null)
+
+  // ── STOPPING AND RESTARTING WHAT AN OWNER PAYS ────────────────────────
+  // Pause and resume already existed as an endpoint and had no button
+  // anywhere, so the only lever an owner had over a seat they were paying
+  // for weekly was removing the person from the team entirely.
+  //
+  // Deactivate stops the billing and the dialing and leaves everything else
+  // alone — they keep their campaigns, their history and their place on the
+  // roster, and one click puts it back. Removing them is still there for
+  // when somebody has actually gone.
+  const seatAction = async (memberId: string, action: 'pause' | 'resume') => {
+    if (seatBusy) return
+    setSeatBusy(memberId)
+    setSeatNote(null)
+    try {
+      const r = await fetch('/api/teams/members/seat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memberId, action }),
+      })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok || !d?.success) {
+        setSeatNote(d?.error || 'That did not go through.')
+      } else {
+        setSeatNote(
+          action === 'pause'
+            ? 'Deactivated. Billing has stopped and they cannot dial.'
+            : d.reissued
+              ? 'Activated. A new weekly seat has been started.'
+              : 'Activated. Weekly billing has restarted.'
+        )
+        await load()
+      }
+    } catch (e: any) {
+      setSeatNote(e?.message || 'That did not go through.')
+    } finally {
+      setSeatBusy(null)
+    }
+  }
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -109,6 +150,19 @@ export default function AgentDetail({
   }, [userId, range])
 
   useEffect(() => { void load() }, [load])
+
+  // Only seats this owner actually funds get a switch. There is nothing to
+  // deactivate on a seat somebody pays for themselves, and nothing to stop on
+  // one already covered by their seat on another of this owner's teams —
+  // offering the button there would promise a saving that does not exist.
+  const billableSeats = ((data?.memberships || []) as any[]).filter(
+    (m: any) =>
+      m.status === 'active' &&
+      !m.seatCoveredBy &&
+      m.billingOverride !== 'agent' &&
+      m.billingOverride !== 'free' &&
+      !data?.selfFunded
+  )
 
   if (loading && !data) {
     return <div style={{ color: DIM, fontSize: 13 }}>Loading…</div>
@@ -234,12 +288,18 @@ export default function AgentDetail({
                     ? 'Waiting on your approval'
                     : m.suspended
                     ? `Seat paused${m.suspendReason ? ` — ${m.suspendReason}` : ''}`
+                    // Before every other case. Somebody funding their own
+                    // DialerSeat is not on a seat this owner bought at all,
+                    // and calling that "Seat active" invited the reasonable
+                    // conclusion that it was on the bill.
+                    : data.selfFunded || m.billingOverride === 'agent'
+                    ? 'Paying for themselves — costs you nothing'
+                    : m.seatCoveredBy
+                    ? `No charge — covered by their seat on ${m.coveredByTeam || 'another of your teams'}`
                     : m.pickedUp
                     ? 'You picked this seat up automatically'
                     : m.billingOverride === 'owner'
                     ? 'You pay this seat'
-                    : m.billingOverride === 'agent'
-                    ? 'Pays their own seat'
                     : 'Seat active'}
                   {m.joinedViaCode && (
                     <span style={{ color: '#5a6070' }}> · joined with {m.joinedViaCode}</span>
@@ -288,6 +348,62 @@ export default function AgentDetail({
           </div>
         )}
       </Section>
+
+      {/* ── WHAT THIS PERSON COSTS, AND THE SWITCH ─────────────────────────
+          Last on the page on purpose. Everything above answers how somebody
+          is doing; this answers whether to keep paying for them, which is the
+          question you arrive at after reading the rest rather than before.
+
+          One row per seat rather than one switch for the person. Somebody can
+          be on two of your teams, and "deactivate their subscription" would
+          have to pick one silently. */}
+      {billableSeats.length > 0 && (
+        <Section title="Weekly billing">
+          <div style={{ display: 'grid', gap: 8 }}>
+            {billableSeats.map((m: any) => (
+              <div key={m.memberId} style={{
+                display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+                background: PANEL,
+                border: `1px solid ${m.suspended ? AMBER : HAIRLINE}`,
+                borderRadius: 4, padding: '12px 14px',
+              }}>
+                <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 500 }}>{m.teamName}</div>
+                  <div style={{ fontSize: 11.5, color: m.suspended ? AMBER : DIM, marginTop: 2 }}>
+                    {m.suspended
+                      ? 'Deactivated — not billed, and they cannot dial'
+                      : 'Active — billed weekly'}
+                  </div>
+                </div>
+                <button
+                  onClick={() => seatAction(m.memberId, m.suspended ? 'resume' : 'pause')}
+                  disabled={seatBusy === m.memberId}
+                  style={{
+                    ...btn,
+                    borderColor: m.suspended ? GREEN : AMBER,
+                    color: m.suspended ? GREEN : AMBER,
+                    opacity: seatBusy === m.memberId ? 0.5 : 1,
+                    cursor: seatBusy === m.memberId ? 'wait' : 'pointer',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {seatBusy === m.memberId
+                    ? 'Working…'
+                    : m.suspended ? 'Activate' : 'Deactivate'}
+                </button>
+              </div>
+            ))}
+          </div>
+          {seatNote && (
+            <div style={{ fontSize: 12, color: DIM, marginTop: 10 }}>{seatNote}</div>
+          )}
+          <div style={{ fontSize: 11.5, color: DIM, marginTop: 10, lineHeight: 1.6 }}>
+            Deactivating stops the weekly charge and stops them dialing. They stay on
+            the team with their campaigns and history intact, and activating starts
+            the billing again.
+          </div>
+        </Section>
+      )}
     </div>
   )
 }
