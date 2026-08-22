@@ -487,7 +487,7 @@ export default function CampaignDetail({
               different statement from nothing recorded. */}
           {stat('Calls', myStats ? myStats.calls.toLocaleString() : '—')}
           {stat('Talk time', myStats ? `${mins}m` : '—')}
-          {stat('Appointments', myStats ? myStats.appointments : '—')}
+          {stat('Call Backs', myStats ? myStats.appointments : '—')}
           {stat('Closed', myStats ? myStats.closed : '—')}
           {stat('Not interested', myStats ? myStats.notInterested : '—')}
         </div>

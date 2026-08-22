@@ -615,7 +615,7 @@ export default function ExplorerApp() {
                       </span>
                       {(c.enable_appointments_sub || c.enable_not_interested_sub) && (
                         <div className="dx-card-sub-pins">
-                          {c.enable_appointments_sub && <span className="dx-card-sub-pin">+ APPTS</span>}
+                          {c.enable_appointments_sub && <span className="dx-card-sub-pin">+ CALL BACKS</span>}
                           {c.enable_not_interested_sub && <span className="dx-card-sub-pin">+ NOT INT</span>}
                         </div>
                       )}

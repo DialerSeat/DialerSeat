@@ -3204,11 +3204,11 @@ export default function CampaignsPage() {
                 {createSubOpen && (<>
                 <div className="settings-row">
                   <div className="settings-row-label">
-                    APPOINTMENTS SUB
+                    CALL BACKS SUB
                     <small>
-                      When ON, a virtual "{campaignName.trim() || 'Campaign'} Appointments"
+                      When ON, a virtual "{campaignName.trim() || 'Campaign'} Call Backs"
                       campaign appears in the dialer. It auto-shows only leads
-                      that have been dispositioned APPOINTMENT.
+                      dispositioned as a call back.
                     </small>
                   </div>
                   <div
@@ -3694,11 +3694,11 @@ export default function CampaignsPage() {
                 {settingsSubOpen && (<>
                 <div className="settings-row">
                   <div className="settings-row-label">
-                    APPOINTMENTS SUB
+                    CALL BACKS SUB
                     <small>
-                      When ON, "{settingsCampaign.name} Appointments" shows up in
+                      When ON, "{settingsCampaign.name} Call Backs" shows up in
                       the dialer's campaign selector. Auto-filtered to leads
-                      with disposition = APPOINTMENT. No data duplication —
+                      dispositioned as a call back. No data duplication —
                       it's a live filtered view of this campaign.
                     </small>
                   </div>

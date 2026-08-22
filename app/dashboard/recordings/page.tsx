@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
+import { labelFor } from '@/lib/dispositions'
 
 
 
@@ -111,12 +112,12 @@ const dispositionTint = (disp: string | null): string => {
 // looks identical and both write the same values to the same
 // leads.disposition column.
 const EDIT_DISPOSITIONS = [
-  { label: 'CLOSED', color: '#16a34a', bg: '#dcfce7' },
-  { label: 'APPOINTMENT', color: '#2563eb', bg: '#dbeafe' },
-  { label: 'NOT INTERESTED', color: '#d97706', bg: '#fef3c7' },
-  { label: 'DO NOT CALL', color: '#dc2626', bg: '#fee2e2' },
-  { label: 'SKIPPED', color: '#64748b', bg: '#f1f5f9' },
-  { label: 'NO_ANSWER', color: '#64748b', bg: '#f1f5f9' },
+  { value: 'CLOSED', color: '#16a34a', bg: '#dcfce7' },
+  { value: 'APPOINTMENT', color: '#2563eb', bg: '#dbeafe' },
+  { value: 'NOT INTERESTED', color: '#d97706', bg: '#fef3c7' },
+  { value: 'DO NOT CALL', color: '#dc2626', bg: '#fee2e2' },
+  { value: 'SKIPPED', color: '#64748b', bg: '#f1f5f9' },
+  { value: 'NO_ANSWER', color: '#64748b', bg: '#f1f5f9' },
 ]
 
 interface Recording {
@@ -941,7 +942,9 @@ export default function RecordingsPage() {
           <label>DISPOSITION</label>
           <select value={dispositionFilter} onChange={e => setDispositionFilter(e.target.value)}>
             <option value="all">[ ALL ]</option>
-            {DISPOSITIONS.map(d => <option key={d} value={d}>{d}</option>)}
+            {DISPOSITIONS.map(d => (
+              <option key={d} value={d}>{labelFor(d).toUpperCase()}</option>
+            ))}
           </select>
         </div>
         <div className="field">
@@ -1230,17 +1233,17 @@ export default function RecordingsPage() {
                         EDIT DISPOSITION — SYNCED WITH LEADS PAGE
                       </div>
                       <div className="disp-grid">
-                        {EDIT_DISPOSITIONS.filter(d => d.label !== 'NO_ANSWER').map(d => (
+                        {EDIT_DISPOSITIONS.filter(d => d.value !== 'NO_ANSWER').map(d => (
                           <button
-                            key={d.label}
+                            key={d.value}
                             className="disp-btn"
-                            onClick={(e) => { e.stopPropagation(); setEditDisposition(d.label) }}
+                            onClick={(e) => { e.stopPropagation(); setEditDisposition(d.value) }}
                             style={{
-                              background: editDisposition === d.label ? d.color : d.bg,
-                              color: editDisposition === d.label ? 'white' : d.color,
+                              background: editDisposition === d.value ? d.color : d.bg,
+                              color: editDisposition === d.value ? 'white' : d.color,
                               borderColor: d.color,
                             }}
-                          >{d.label}</button>
+                          >{labelFor(d.value).toUpperCase()}</button>
                         ))}
                         <button
                           className="disp-btn"

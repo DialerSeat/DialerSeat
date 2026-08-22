@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { canonical, labelFor } from '@/lib/dispositions'
 
 
 
@@ -86,14 +87,24 @@ interface Campaign {
 // dialer records about a call, not something a person decides about a lead,
 // and offering it would invite marking a lead as voicemail without one having
 // happened. It appears in filters and reports, not on this picker.
+// VALUE, not label. These used to be one field, which is how this page came
+// to print NO_ANSWER at somebody: the stored string was being rendered as if
+// it were English. The value is what gets written and matched; the words come
+// from labelFor, so this page says the same thing as every other screen and a
+// disposition renamed once is renamed everywhere.
 const DISPOSITIONS = [
-  { label: 'CLOSED', color: '#16a34a', bg: '#dcfce7' },
-  { label: 'APPOINTMENT', color: '#2563eb', bg: '#dbeafe' },
-  { label: 'NOT INTERESTED', color: '#d97706', bg: '#fef3c7' },
-  { label: 'DO NOT CALL', color: '#dc2626', bg: '#fee2e2' },
-  { label: 'SKIPPED', color: '#64748b', bg: '#f1f5f9' },
-  { label: 'NO_ANSWER', color: '#64748b', bg: '#f1f5f9' },
+  { value: 'CLOSED', color: '#16a34a', bg: '#dcfce7' },
+  { value: 'APPOINTMENT', color: '#2563eb', bg: '#dbeafe' },
+  { value: 'NOT INTERESTED', color: '#d97706', bg: '#fef3c7' },
+  { value: 'DO NOT CALL', color: '#dc2626', bg: '#fee2e2' },
+  { value: 'SKIPPED', color: '#64748b', bg: '#f1f5f9' },
+  { value: 'NO_ANSWER', color: '#64748b', bg: '#f1f5f9' },
 ]
+
+/** Upper case for this page's terminal styling, but from the canonical label
+ *  rather than the raw value — so it reads CALL BACK and NO ANSWER, never
+ *  APPOINTMENT or NO_ANSWER. */
+const dispText = (stored: string | null | undefined) => labelFor(stored).toUpperCase()
 
 const T = {
   bg: 'var(--brand-page-bg)',
@@ -112,7 +123,11 @@ const T = {
 
 const FUTURA = `'Futura PT', Futura, 'Helvetica Neue', Helvetica, Arial, sans-serif`
 
-const dispositionTint = (disp: string | null): string => {
+const dispositionTint = (stored: string | null): string => {
+  // Through canonical() so an older spelling tints the same as the current
+  // one — a row written as NOT_INTERESTED is the same outcome as one written
+  // as NOT INTERESTED and should not fall through to the default.
+  const disp = canonical(stored)
   switch (disp) {
     case 'CLOSED': return 'rgba(22, 163, 74, 0.12)'
     case 'APPOINTMENT': return 'rgba(37, 99, 235, 0.12)'
@@ -472,11 +487,13 @@ export default function LeadsPage() {
 
   const dispColor = (disp: string | null) => {
     if (!disp) return T.muted
-    return DISPOSITIONS.find(d => d.label === disp)?.color || T.muted
+    const v = canonical(disp)
+    return DISPOSITIONS.find(d => d.value === v)?.color || T.muted
   }
   const dispBg = (disp: string | null) => {
     if (!disp) return '#e8e8ec'
-    return DISPOSITIONS.find(d => d.label === disp)?.bg || '#e8e8ec'
+    const v = canonical(disp)
+    return DISPOSITIONS.find(d => d.value === v)?.bg || '#e8e8ec'
   }
 
   const campaignName = (id: string) =>
@@ -865,7 +882,7 @@ export default function LeadsPage() {
             <option value="all">[ ALL ]</option>
             <option value="uncalled">UNCALLED</option>
             {DISPOSITIONS.map(d => (
-              <option key={d.label} value={d.label}>{d.label}</option>
+              <option key={d.value} value={d.value}>{dispText(d.value)}</option>
             ))}
             {/* Below the line, because it is a different question. Everything
                 above asks what an agent decided about the lead; this asks how
@@ -946,7 +963,7 @@ export default function LeadsPage() {
                       background: dispBg(lead.disposition),
                       color: dispColor(lead.disposition),
                       border: `1px solid ${dispColor(lead.disposition)}`,
-                    }}>{lead.disposition}</span>
+                    }}>{dispText(lead.disposition)}</span>
                   ) : lead.last_call_disposition === 'VOICEMAIL'
                     || lead.last_call_disposition === 'NO_ANSWER_AMD' ? (
                     /* ── NOT NEW, AND NOT DISPOSITIONED EITHER ─────────────
@@ -1044,17 +1061,17 @@ export default function LeadsPage() {
                             fontSize: 9, letterSpacing: 2, color: T.muted, marginBottom: 6, fontWeight: 'bold',
                           }}>SET DISPOSITION</div>
                           <div className="disp-grid">
-                            {DISPOSITIONS.filter(d => d.label !== 'NO_ANSWER').map(d => (
+                            {DISPOSITIONS.filter(d => d.value !== 'NO_ANSWER').map(d => (
                               <button
-                                key={d.label}
+                                key={d.value}
                                 className="disp-btn"
-                                onClick={() => setEditDisposition(d.label)}
+                                onClick={() => setEditDisposition(d.value)}
                                 style={{
-                                  background: editDisposition === d.label ? d.color : d.bg,
-                                  color: editDisposition === d.label ? 'white' : d.color,
+                                  background: editDisposition === d.value ? d.color : d.bg,
+                                  color: editDisposition === d.value ? 'white' : d.color,
                                   borderColor: d.color,
                                 }}
-                              >{d.label}</button>
+                              >{dispText(d.value)}</button>
                             ))}
                             <button
                               className="disp-btn"

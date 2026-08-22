@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────────────────
 // THE DISPOSITION STRINGS THE SUB-CAMPAIGNS FILTER ON
 //
-// A campaign can expose two virtual sub-queues — Appointments and Not
+// A campaign can expose two virtual sub-queues — Call Backs and Not
 // Interested — which are just the parent's leads filtered by disposition.
 //
 // Both were declared as 'APPOINTMENT' and 'NOT_INTERESTED', in two separate
@@ -55,7 +55,9 @@ export const SUB_DISPOSITION_CANONICAL: Record<SubType, string> = {
 }
 
 export const SUB_LABELS: Record<SubType, string> = {
-  appointments: 'Appointments',
+  // 'appointments' is the stored sub_type and the column name; 'Call Backs'
+  // is what it is called. Same split as the disposition itself.
+  appointments: 'Call Backs',
   not_interested: 'Not Interested',
   voicemail: 'Reached Voicemail',
 }

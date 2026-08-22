@@ -4,6 +4,7 @@ import { useUser } from '@clerk/nextjs'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { normalizeState } from '@/lib/normalizeState'
+import { labelFor } from '@/lib/dispositions'
 import { isDialableLead } from '@/lib/dialableLead'
 import type { QueueDiagnosis } from '@/lib/queueDiagnosis'
 import { phoneToState } from '@/lib/areaCode'
@@ -4142,12 +4143,15 @@ function DialerPageInner() {
     )
   }
 
+  // VALUE, not label — what gets written and matched. The words on the
+  // buttons come from labelFor, so this reads CALL BACK without the stored
+  // string changing under a hundred thousand existing rows.
   const dispositions = [
-    { label: 'CLOSED', color: '#16a34a', bg: '#dcfce7' },
-    { label: 'APPOINTMENT', color: '#2563eb', bg: '#dbeafe' },
-    { label: 'NOT INTERESTED', color: '#d97706', bg: '#fef3c7' },
-    { label: 'DO NOT CALL', color: '#dc2626', bg: '#fee2e2' },
-    { label: 'SKIP', color: '#64748b', bg: '#f1f5f9' },
+    { value: 'CLOSED', color: '#16a34a', bg: '#dcfce7' },
+    { value: 'APPOINTMENT', color: '#2563eb', bg: '#dbeafe' },
+    { value: 'NOT INTERESTED', color: '#d97706', bg: '#fef3c7' },
+    { value: 'DO NOT CALL', color: '#dc2626', bg: '#fee2e2' },
+    { value: 'SKIP', color: '#64748b', bg: '#f1f5f9' },
   ]
 
   // Build the raw set of script tabs from each campaign's enabled scripts
@@ -4899,7 +4903,7 @@ function DialerPageInner() {
                 // to how it appears on the leads tab.
                 const dispInfo: { label: string; color: string; bg: string; tint: string } | null =
                   lead.disposition === 'CLOSED' ? { label: 'CLOSED', color: '#16a34a', bg: '#dcfce7', tint: 'rgba(22, 163, 74, 0.08)' }
-                  : lead.disposition === 'APPOINTMENT' ? { label: 'APPOINTMENT', color: '#2563eb', bg: '#dbeafe', tint: 'rgba(37, 99, 235, 0.08)' }
+                  : lead.disposition === 'APPOINTMENT' ? { label: 'CALL BACK', color: '#2563eb', bg: '#dbeafe', tint: 'rgba(37, 99, 235, 0.08)' }
                   : lead.disposition === 'NOT INTERESTED' ? { label: 'NOT INTERESTED', color: '#d97706', bg: '#fef3c7', tint: 'rgba(217, 119, 6, 0.08)' }
                   : lead.disposition === 'DO NOT CALL' ? { label: 'DO NOT CALL', color: '#dc2626', bg: '#fee2e2', tint: 'rgba(220, 38, 38, 0.08)' }
                   : lead.disposition === 'SKIPPED' ? { label: 'SKIPPED', color: '#64748b', bg: '#f1f5f9', tint: 'rgba(100, 116, 139, 0.05)' }
@@ -5817,14 +5821,14 @@ function DialerPageInner() {
               <div style={{ fontSize: '9px', letterSpacing: '3px', color: terminalMuted, marginBottom: '8px' }}>▸ SELECT DISPOSITION</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: '6px' }}>
                 {dispositions.map((d) => (
-                  <button key={d.label} onClick={() => handleDisposition(d.label)} style={{
+                  <button key={d.value} onClick={() => handleDisposition(d.value)} style={{
                     padding: '10px 4px', borderRadius: '3px',
-                    background: disposition === d.label ? d.color : d.bg,
+                    background: disposition === d.value ? d.color : d.bg,
                     border: `1px solid ${d.color}`,
-                    color: disposition === d.label ? 'white' : d.color,
+                    color: disposition === d.value ? 'white' : d.color,
                     fontSize: '8px', fontWeight: 'bold', letterSpacing: '1px',
                     cursor: 'pointer', fontFamily: FUTURA,
-                  }}>{d.label}</button>
+                  }}>{labelFor(d.value).toUpperCase()}</button>
                 ))}
               </div>
             </div>
@@ -6029,7 +6033,7 @@ function DialerPageInner() {
             {[
               { label: 'CONNECTED', value: sessionStats.connected, color: 'var(--brand-primary)' },
               { label: 'CLOSED', value: sessionStats.closed, color: '#16a34a' },
-              { label: 'APPOINTMENTS', value: sessionStats.appointments, color: '#2563eb' },
+              { label: 'CALL BACKS', value: sessionStats.appointments, color: '#2563eb' },
               { label: 'NOT INTERESTED', value: sessionStats.notInterested, color: '#d97706' },
               { label: 'DO NOT CALL', value: sessionStats.dnc, color: '#dc2626' },
             ].map((stat) => (

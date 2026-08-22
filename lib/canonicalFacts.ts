@@ -49,7 +49,7 @@ export const FACTS = {
     'Multiple scripts per campaign, reorderable, with live mid-call switching.',
     'Inbound reception alongside outbound.',
     'Call recording per campaign, with a retention window and one-click deletion.',
-    'Dispositions and notes that persist across sessions and seats. The six dispositions are Closed, Appointment, Not Interested, Do Not Call, Skipped, and No Answer.',
+    'Dispositions and notes that persist across sessions and seats. The six dispositions are Closed, Call Back, Not Interested, Do Not Call, Skipped, and No Answer.',
     'Multi-seat teams with per-agent logins, campaigns, and call data under one owner.',
     'White-label reseller mode on Manager+: own subdomain or custom domain, own branding.',
     'CSV lead import with column auto-detection and a 3-attempt retry cycle.',

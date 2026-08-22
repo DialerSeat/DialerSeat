@@ -42,7 +42,12 @@ export interface DispositionDef {
 
 export const DISPOSITIONS: DispositionDef[] = [
   // ── Agent outcomes ────────────────────────────────────────────────────
-  { value: 'APPOINTMENT', aliases: ['APPOINTMENT_SET'], label: 'Appointment',
+  // Called a CALL BACK on every screen. The stored value stays 'APPOINTMENT'
+  // deliberately: it is written on hundreds of existing rows, matched by the
+  // sub-queue filters and counted by the analytics, and renaming it would
+  // rewrite call history to change a word people read. The label is the only
+  // part anybody sees, so the label is the part that changes.
+  { value: 'APPOINTMENT', aliases: ['APPOINTMENT_SET'], label: 'Call Back',
     agentChosen: true, contact: true, conversion: true },
   { value: 'CLOSED', aliases: [], label: 'Closed',
     agentChosen: true, contact: true, conversion: true },
