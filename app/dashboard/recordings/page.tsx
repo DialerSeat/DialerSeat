@@ -190,8 +190,13 @@ export default function RecordingsPage() {
   // Suspense boundary it does not otherwise need.
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const c = new URLSearchParams(window.location.search).get('campaign_id')
+    const q = new URLSearchParams(window.location.search)
+    const c = q.get('campaign_id')
+    const a = q.get('agent_id')
     if (c) setCampaignFilter(c)
+    // Set after the campaign, and protected from the reset below, so arriving
+    // from a roster lands on that agent rather than the whole campaign.
+    if (a) setAgentFilter(a)
   }, [])
   const [dispositionFilter, setDispositionFilter] = useState('all')
   const [timeFilter, setTimeFilter] = useState('all')
@@ -291,7 +296,14 @@ export default function RecordingsPage() {
   // survive the switch — it would silently show an empty list for somebody who
   // is not on the new one. Kept separate from the reset above so that changing
   // the AGENT does not clear itself the instant it is set.
-  useEffect(() => { setAgentFilter('') }, [campaignFilter])
+  // Changing campaign clears the agent, because an agent id means nothing on
+  // a different campaign. Skipped once on mount: the seeding effect above sets
+  // both together, and this would otherwise wipe the agent it just set.
+  const agentResetArmed = useRef(false)
+  useEffect(() => {
+    if (!agentResetArmed.current) { agentResetArmed.current = true; return }
+    setAgentFilter('')
+  }, [campaignFilter])
 
   const fetchMore = useCallback(async () => {
     if (!user || cursor === null || loading) return

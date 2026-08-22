@@ -1186,6 +1186,28 @@ export default function CampaignDetail({
                       : 'Added at no extra cost'}
                   </div>
                 </div>
+                {/* ── STRAIGHT TO THIS AGENT'S CALLS ────────────────────
+                    The campaign-wide link lower down answers "how did this
+                    campaign sound"; this answers "how does this person
+                    sound", which is the question an owner opens a roster
+                    with. Deep-linked to both filters so it lands on their
+                    calls rather than the whole floor's.
+
+                    Only when recording is on, and only for a row we can
+                    identify — a link that arrives at an empty list teaches
+                    the wrong thing about whether the recordings exist. */}
+                {data.recordingEnabled && a.userId && (
+                  <a
+                    href={
+                      `/dashboard/recordings?campaign_id=${encodeURIComponent(data.id)}` +
+                      `&agent_id=${encodeURIComponent(a.userId)}`
+                    }
+                    style={{
+                      ...btn, textDecoration: 'none',
+                      whiteSpace: 'nowrap', flexShrink: 0,
+                    }}
+                  >Recordings</a>
+                )}
                 <button
                   style={btn}
                   disabled={busy}
