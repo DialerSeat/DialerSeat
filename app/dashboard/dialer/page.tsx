@@ -4277,8 +4277,11 @@ function DialerPageInner() {
     return (
       <div style={{
         flex: 1, background: terminalBg,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: 24, minHeight: 'calc(100vh - 64px)',
+        // Top-aligned rather than centred. Vertically centring put the card
+        // halfway down a tall screen, so on a phone the message an agent needs
+        // to read first sat below the fold and looked like an empty dialer.
+        display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+        padding: '32px 24px 24px', minHeight: 'calc(100vh - 64px)',
         fontFamily: FUTURA,
       }}>
         <div style={{
