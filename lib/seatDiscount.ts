@@ -46,7 +46,7 @@ export async function ensureSeatCoupon(percentOff: number): Promise<string | nul
       id,
       percent_off: percentOff,
       duration: 'forever',
-      name: `DialerSeat volume ${percentOff}%`,
+      name: `DialerSeat seat ${percentOff}% off`,
     })
     return created.id
   } catch (err: any) {
@@ -197,48 +197,73 @@ export interface DiscountSyncResult {
 // subscription, DISPLACES the comp, and their seats jump from $0.00 to $33.25.
 // Crossing the threshold the tier exists to reward makes them worse off.
 //
-// The fix does not need coupons to be combined or copied. When the comp is
-// already the better deal, the answer is simply to apply NOTHING at
-// subscription level and let the inheritance stand — which is the behaviour
-// already running in production. Copying the comp onto the subscription would
-// mean reproducing its duration, its redemption limits and its expiry, and
-// getting any of those wrong turns a "once" comp into a permanent one.
+// The fix does not need coupons to be combined. When the comp is already the
+// better deal, the answer is simply to apply NOTHING at subscription level
+// and let the inheritance stand.
 //
-// So the rule is: apply the volume coupon only when volume actually beats the
-// comp. The seat then always receives the better of the two, and no owner is
-// ever punished for growing.
+// ── WHERE THE OWNER'S DISCOUNT CAN LIVE, AND WHICH ONES TRAVEL ──────────
+// A discount on the owner's Stripe CUSTOMER reaches their seats by itself,
+// because seats are subscriptions on that customer with no discount of their
+// own. A discount on the owner's OWN PLAN does not reach anything else: it is
+// a subscription-level coupon, and a coupon on one subscription has never
+// applied to another. Both look like "100% off" in the Stripe dashboard, on
+// different objects, and nothing in the product distinguishes them — which is
+// exactly how an owner ends up certain their comp covers their team while
+// every seat quietly bills at full price.
+//
+// The owner's rate is now read from BOTH and the seats get whichever is best,
+// including the volume tier. When the winner is the plan-level one it has to
+// be copied onto each seat, because inheritance will not do it.
+//
+// An earlier revision refused to copy, on the grounds that reproducing a
+// comp's duration and expiry incorrectly turns a "once" comp into a permanent
+// one. That objection is answered by the nightly reconcile rather than by
+// getting the duration right: syncOwnerSeatDiscounts re-derives this decision
+// for every owner every night and REMOVES a coupon that is no longer earned.
+// So the copy is deliberately a plain forever coupon and never outlives the
+// original by more than a day — and seats invoice weekly, so in practice the
+// correction lands several days before the next charge.
 // ─────────────────────────────────────────────────────────────────────────
 
 export interface SeatDiscountDecision {
   /** The volume tier this owner has earned, ignoring any comp. */
   volumePercentOff: number
-  /** Percent off already sitting on the owner's Stripe CUSTOMER, if readable.
-   *  Null when they have none, or when it is a fixed amount rather than a
-   *  percentage (which cannot be compared without knowing the seat price). */
+  /** Percent off sitting on the owner's Stripe CUSTOMER, if readable. Null
+   *  when they have none, or when it is a fixed amount rather than a
+   *  percentage (which cannot be compared without knowing the seat price).
+   *  This one reaches seats on its own. */
   compPercentOff: number | null
-  /** Apply this coupon at subscription level, or null to leave the customer
-   *  discount to apply on its own. */
+  /** Percent off on the owner's own live plan subscription. This one does NOT
+   *  reach seats on its own and has to be copied onto them. */
+  ownerPlanPercentOff: number | null
+  /** What the seat ends up discounted by, however it gets there — inherited
+   *  from the customer or applied as a coupon. This is the number that
+   *  decides whether a seat is free. */
+  effectivePercentOff: number
+  /** Apply this coupon at subscription level. Zero means apply nothing, which
+   *  is either "no discount" or "the customer-level one already covers it". */
   applyPercentOff: number
-  /** The comp's Stripe duration - 'forever', 'once' or 'repeating'. Null when
-   *  there is no readable comp. Only informational: a comp that expires makes
-   *  a LATER invoice billable, and that is the enforcement job's problem, not
-   *  a reason to refuse the seat today. */
+  /** Where effectivePercentOff came from. */
+  compSource: 'customer' | 'owner_plan' | 'volume' | null
+  /** The winning comp's Stripe duration - 'forever', 'once' or 'repeating'.
+   *  Informational: a comp that expires makes a LATER invoice billable, which
+   *  the nightly reconcile and the enforcement job handle, and is not a reason
+   *  to refuse the seat today. */
   compDuration: string | null
   ownerPaidSeats: number
-  reason: 'volume' | 'comp_is_better' | 'none'
+  reason: 'volume' | 'comp_is_better' | 'owner_plan' | 'none'
 }
 
 /**
- * Will this seat invoice at zero on the owner's comp alone?
+ * Will this seat invoice at zero?
  *
- * Asked before requiring a card. A 100%-off discount sitting on the owner's
- * Stripe CUSTOMER reaches every subscription created on that customer that has
- * no discount of its own - which is exactly what a comped owner's seats are,
- * because resolveSeatDiscount deliberately applies nothing when the comp beats
- * the volume tier. There is no charge, so there is nothing a card would do.
+ * Asked before requiring a card, and it asks about the EFFECTIVE rate rather
+ * than about any one coupon: 100% off is 100% off whether it was inherited
+ * from the owner's customer or copied from their plan onto the seat. There is
+ * no charge either way, so there is nothing a card would do.
  */
 export function seatIsFullyComped(decision: SeatDiscountDecision): boolean {
-  return decision.compPercentOff === 100 && decision.applyPercentOff === 0
+  return decision.effectivePercentOff === 100
 }
 
 export async function resolveSeatDiscount(ownerId: string): Promise<SeatDiscountDecision> {
@@ -246,6 +271,9 @@ export async function resolveSeatDiscount(ownerId: string): Promise<SeatDiscount
 
   let compPercentOff: number | null = null
   let compDuration: string | null = null
+  let ownerPlanPercentOff: number | null = null
+  let planDuration: string | null = null
+
   try {
     const { data: owner } = await supabaseAdmin
       .from('users')
@@ -256,9 +284,38 @@ export async function resolveSeatDiscount(ownerId: string): Promise<SeatDiscount
     if (owner?.stripe_customer_id) {
       const customer = await stripe.customers.retrieve(owner.stripe_customer_id)
       if (!(customer as any).deleted) {
-        const pct = (customer as any).discount?.coupon?.percent_off
+        const coupon = (customer as any).discount?.coupon
+        const pct = coupon?.percent_off
         compPercentOff = typeof pct === 'number' ? pct : null
-        compDuration = (customer as any).discount?.coupon?.duration ?? null
+        compDuration = coupon?.duration ?? null
+      }
+
+      // ── THE OWNER'S OWN PLAN ────────────────────────────────────────────
+      // Only LIVE subscriptions count. A coupon on a canceled subscription is
+      // a discount that has ended, and reading it as current would comp an
+      // owner's seats off a plan they no longer hold — which is easy to do by
+      // accident, because the canceled row keeps the coupon on it forever.
+      //
+      // Seats are skipped: they are subscriptions on this same customer, and
+      // a seat already carrying last night's copied coupon would otherwise be
+      // read back as evidence of a comp and keep itself alive.
+      const subs = await stripe.subscriptions.list({
+        customer: owner.stripe_customer_id,
+        status: 'all',
+        limit: 100,
+      })
+      const LIVE = new Set(['active', 'trialing', 'past_due'])
+      for (const sub of subs.data) {
+        if (!LIVE.has(sub.status)) continue
+        if ((sub.metadata as any)?.sub_kind === 'team_seat') continue
+        const d = ((sub as any).discounts && (sub as any).discounts[0]) || (sub as any).discount
+        const coupon = d && typeof d !== 'string' ? d.coupon : null
+        const pct = coupon?.percent_off
+        if (typeof pct !== 'number') continue
+        if (ownerPlanPercentOff === null || pct > ownerPlanPercentOff) {
+          ownerPlanPercentOff = pct
+          planDuration = coupon?.duration ?? null
+        }
       }
     }
   } catch (err: any) {
@@ -267,23 +324,45 @@ export async function resolveSeatDiscount(ownerId: string): Promise<SeatDiscount
     console.error('[seatDiscount] could not read owner comp:', err?.message || err)
   }
 
-  if (compPercentOff !== null && compPercentOff >= volumePercentOff) {
+  const customerComp = compPercentOff ?? 0
+  const planComp = ownerPlanPercentOff ?? 0
+  const best = Math.max(volumePercentOff, customerComp, planComp)
+
+  const base = { volumePercentOff, compPercentOff, ownerPlanPercentOff, ownerPaidSeats }
+
+  // Customer-level wins ties. It arrives at the same number without a coupon
+  // of ours, so there is nothing to attach, nothing to keep in sync, and
+  // nothing to remove later.
+  if (customerComp > 0 && customerComp === best) {
     return {
-      volumePercentOff,
-      compPercentOff,
+      ...base,
+      effectivePercentOff: customerComp,
       applyPercentOff: 0,
+      compSource: 'customer',
       compDuration,
-      ownerPaidSeats,
       reason: 'comp_is_better',
     }
   }
 
+  // The owner's plan discount, copied onto the seat. Inheritance does not
+  // cross between subscriptions, so this is the only way it reaches them.
+  if (planComp > 0 && planComp === best) {
+    return {
+      ...base,
+      effectivePercentOff: planComp,
+      applyPercentOff: planComp,
+      compSource: 'owner_plan',
+      compDuration: planDuration,
+      reason: 'owner_plan',
+    }
+  }
+
   return {
-    volumePercentOff,
-    compPercentOff,
+    ...base,
+    effectivePercentOff: volumePercentOff,
     applyPercentOff: volumePercentOff,
+    compSource: volumePercentOff > 0 ? 'volume' : null,
     compDuration,
-    ownerPaidSeats,
     reason: volumePercentOff > 0 ? 'volume' : 'none',
   }
 }

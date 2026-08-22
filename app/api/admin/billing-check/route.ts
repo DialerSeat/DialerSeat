@@ -17,15 +17,19 @@ export const runtime = 'nodejs'
 //   Stripe applies a customer discount to any subscription with none of its
 //   own, and a comped owner's seats deliberately have none of their own.
 //
-//   The coupon is on the owner's PERSONAL SUBSCRIPTION — it does not reach
-//   the seats at all. Seats are separate subscriptions; a discount on one
-//   subscription has never applied to another. The owner is comped on their
-//   own plan and pays full price per seat.
+//   The coupon is on the owner's PERSONAL SUBSCRIPTION — Stripe does not
+//   carry it across, because a coupon on one subscription has never applied
+//   to another, so resolveSeatDiscount copies it onto each seat instead.
 //
-// Both show as "100% off" in the Stripe dashboard, on different objects, and
-// nothing in the product distinguishes them. This prints both, plus whether a
-// card is on file and what the seat pricing logic concludes — so the question
-// is answered by looking rather than by guessing.
+//   The coupon is on a CANCELED subscription — it reaches nothing and counts
+//   for nothing. Only live subscriptions are read. This is easy to miss: the
+//   canceled row keeps the coupon on it forever and looks identical in the
+//   dashboard to one that is still in force.
+//
+// All of them show as "100% off" in the Stripe dashboard, on different
+// objects, and nothing in the product distinguishes them. This prints every
+// place a discount could be, plus whether a card is on file and what the seat
+// pricing logic concludes — so the question is answered by looking.
 //
 // Read-only. Nothing here changes a coupon, a card, or a subscription. Admin
 // only, and it exposes one owner's billing shape to somebody who can already
@@ -126,17 +130,25 @@ export async function GET(req: NextRequest) {
   const hasCard = !!(defaultPmId || cards.data.length)
   const comped = decision ? seatIsFullyComped(decision) : false
 
-  const verdict = hasCard
-    ? 'A card is on file, so seats can be billed either way.'
-    : comped
-      ? 'No card, but the customer-level comp covers seats entirely — seats will open and invoice $0.'
-      : customerDiscount
-        ? 'No card. There IS a customer-level discount but it does not zero the seat, so a seat still needs a card.'
-        : subscriptions.some(s => s.kind === 'personal' && s.discount)
-          ? 'No card, and the only discount is on their PERSONAL subscription. That never reaches seats — ' +
-            'a discount on one subscription does not apply to another. Move the coupon onto the CUSTOMER ' +
-            'to comp their seats too, or add a card.'
-          : 'No card and no discount anywhere. Seats cannot be billed until a card is added.'
+  const LIVE = new Set(['active', 'trialing', 'past_due'])
+  const deadDiscount = subscriptions.find(
+    s => s.kind === 'personal' && s.discount && !LIVE.has(s.status)
+  )
+
+  const rate = decision
+    ? `Seats bill at ${decision.effectivePercentOff}% off` +
+      (decision.compSource ? ` (from ${decision.compSource})` : ' — no discount')
+    : 'Seat rate could not be computed'
+
+  const verdict = comped
+    ? `${rate}. Seats invoice $0.00, so no card is needed to open one.`
+    : hasCard
+      ? `${rate}. A card is on file, so seats can be billed.`
+      : deadDiscount
+        ? `${rate}. No card. There is a ${deadDiscount.discount?.percentOff}% coupon on a ` +
+          `${deadDiscount.status} subscription (${deadDiscount.id}) — a discount that has ended ` +
+          `counts for nothing. Re-apply it to the live plan or to the customer, or add a card.`
+        : `${rate}. No card and nothing discounting the seat, so seats cannot be billed yet.`
 
   return NextResponse.json({
     success: true,
