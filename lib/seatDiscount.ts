@@ -219,14 +219,33 @@ export interface SeatDiscountDecision {
   /** Apply this coupon at subscription level, or null to leave the customer
    *  discount to apply on its own. */
   applyPercentOff: number
+  /** The comp's Stripe duration - 'forever', 'once' or 'repeating'. Null when
+   *  there is no readable comp. Only informational: a comp that expires makes
+   *  a LATER invoice billable, and that is the enforcement job's problem, not
+   *  a reason to refuse the seat today. */
+  compDuration: string | null
   ownerPaidSeats: number
   reason: 'volume' | 'comp_is_better' | 'none'
+}
+
+/**
+ * Will this seat invoice at zero on the owner's comp alone?
+ *
+ * Asked before requiring a card. A 100%-off discount sitting on the owner's
+ * Stripe CUSTOMER reaches every subscription created on that customer that has
+ * no discount of its own - which is exactly what a comped owner's seats are,
+ * because resolveSeatDiscount deliberately applies nothing when the comp beats
+ * the volume tier. There is no charge, so there is nothing a card would do.
+ */
+export function seatIsFullyComped(decision: SeatDiscountDecision): boolean {
+  return decision.compPercentOff === 100 && decision.applyPercentOff === 0
 }
 
 export async function resolveSeatDiscount(ownerId: string): Promise<SeatDiscountDecision> {
   const { percentOff: volumePercentOff, ownerPaidSeats } = await ownerSeatDiscount(ownerId)
 
   let compPercentOff: number | null = null
+  let compDuration: string | null = null
   try {
     const { data: owner } = await supabaseAdmin
       .from('users')
@@ -239,6 +258,7 @@ export async function resolveSeatDiscount(ownerId: string): Promise<SeatDiscount
       if (!(customer as any).deleted) {
         const pct = (customer as any).discount?.coupon?.percent_off
         compPercentOff = typeof pct === 'number' ? pct : null
+        compDuration = (customer as any).discount?.coupon?.duration ?? null
       }
     }
   } catch (err: any) {
@@ -252,6 +272,7 @@ export async function resolveSeatDiscount(ownerId: string): Promise<SeatDiscount
       volumePercentOff,
       compPercentOff,
       applyPercentOff: 0,
+      compDuration,
       ownerPaidSeats,
       reason: 'comp_is_better',
     }
@@ -261,6 +282,7 @@ export async function resolveSeatDiscount(ownerId: string): Promise<SeatDiscount
     volumePercentOff,
     compPercentOff,
     applyPercentOff: volumePercentOff,
+    compDuration,
     ownerPaidSeats,
     reason: volumePercentOff > 0 ? 'volume' : 'none',
   }

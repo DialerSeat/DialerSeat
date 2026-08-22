@@ -1,7 +1,12 @@
 import { stripe } from '@/lib/stripe'
 import { supabaseAdmin } from '@/lib/supabase'
 import Stripe from 'stripe'
-import { ensureSeatCoupon, resolveSeatDiscount } from '@/lib/seatDiscount'
+import {
+  ensureSeatCoupon,
+  resolveSeatDiscount,
+  seatIsFullyComped,
+  type SeatDiscountDecision,
+} from '@/lib/seatDiscount'
 
 
 
@@ -36,8 +41,12 @@ export interface SeatBillingSuccess {
 interface ResolvedOwner {
   customer: Stripe.Customer
   /** The card to bill this seat to. Passed explicitly on the subscription
-   *  because the customer-level default is frequently absent — see below. */
-  paymentMethodId: string
+   *  because the customer-level default is frequently absent — see below.
+   *
+   *  Null when there is none. Whether that is fatal is NOT decided here: a
+   *  fully comped owner invoices at $0 and needs no card at all, and this
+   *  function cannot see the comp. The caller decides. */
+  paymentMethodId: string | null
 }
 
 // ── FINDING THE CARD AN OWNER ACTUALLY PAYS WITH ─────────────────────────
@@ -63,6 +72,11 @@ interface ResolvedOwner {
 // still preferred when set — that is the card they deliberately nominated —
 // and the card found here is passed explicitly on the seat subscription,
 // because there is no customer-level default for it to fall back to.
+const NO_CARD: SeatBillingError = {
+  code: 'no_card',
+  message: 'Owner has no payment method on file. Update billing before accepting team members.',
+}
+
 async function resolveOwnerCustomer(ownerId: string): Promise<ResolvedOwner> {
   const { data: user } = await supabaseAdmin
     .from('users')
@@ -102,14 +116,6 @@ async function resolveOwnerCustomer(ownerId: string): Promise<ResolvedOwner> {
     paymentMethodId = cards.data[0]?.id ?? null
   }
 
-  if (!paymentMethodId) {
-    const err: SeatBillingError = {
-      code: 'no_card',
-      message: 'Owner has no payment method on file. Update billing before accepting team members.',
-    }
-    throw err
-  }
-
   return { customer: customer as Stripe.Customer, paymentMethodId }
 }
 
@@ -117,8 +123,6 @@ async function resolveOwnerCustomer(ownerId: string): Promise<ResolvedOwner> {
 export async function createSeatSubscription(
   params: CreateSeatParams
 ): Promise<SeatBillingSuccess> {
-  const { customer, paymentMethodId } = await resolveOwnerCustomer(params.ownerId)
-
   const description = `Seat: ${params.agentEmail} on ${params.teamName}`
 
   // ── THE VOLUME DISCOUNT, ON THE ACTUAL CHARGE ─────────────────────────
@@ -136,16 +140,47 @@ export async function createSeatSubscription(
   // jump from free to $33.25 the moment they earn the 5% — punishing them for
   // crossing the threshold the tier exists to reward. This returns 0 when the
   // comp is already better, which leaves the inheritance alone.
+  //
+  // Resolved BEFORE the owner's card, because it decides whether a card is
+  // needed at all — see the block below.
   let couponId: string | null = null
   let discountReason = 'unknown'
+  let decision: SeatDiscountDecision | null = null
   try {
-    const decision = await resolveSeatDiscount(params.ownerId)
+    decision = await resolveSeatDiscount(params.ownerId)
     discountReason = decision.reason
     if (decision.applyPercentOff > 0) {
       couponId = await ensureSeatCoupon(decision.applyPercentOff)
     }
   } catch (err: any) {
     console.error('[teamBilling] discount lookup failed, opening seat at full price', err?.message || err)
+  }
+
+  const { customer, paymentMethodId } = await resolveOwnerCustomer(params.ownerId)
+
+  // ── A FREE SEAT DOES NOT NEED A CARD ──────────────────────────────────
+  // The card check used to run first and unconditionally, so an owner on a
+  // 100% comp was told "there is no working payment method on your account,
+  // so this seat could not be billed" — about a seat that would have invoiced
+  // $0.00. The discount was never consulted, because it was read afterwards.
+  //
+  // Now it is read first. When the comp covers the seat entirely there is
+  // nothing to charge, so the seat opens with no payment method named and
+  // Stripe settles the $0 invoice immediately.
+  //
+  // A comp that is NOT 'forever' means a later week's invoice becomes real
+  // while there is still no card on file. That is deliberately not blocked
+  // here: the seat is free today, and a future charge failing is exactly what
+  // the daily enforcement job already exists to chase — it retries, and
+  // suspends the seat on its own if the grace period runs out. Refusing the
+  // seat now would be refusing over a bill nobody is owed yet.
+  const fullyComped = decision !== null && seatIsFullyComped(decision)
+  if (!paymentMethodId && !fullyComped) throw NO_CARD
+  if (!paymentMethodId && fullyComped) {
+    console.log(
+      `[teamBilling] opening a fully comped seat with no card on file`,
+      { ownerId: params.ownerId, compDuration: decision?.compDuration }
+    )
   }
 
   // ── THE OWNER'S OWN FREE RIDE MUST NOT TRAVEL TO THE SEATS ────────────
@@ -192,7 +227,10 @@ export async function createSeatSubscription(
     // Named explicitly rather than left to the customer default, which is very
     // often unset — see resolveOwnerCustomer. Without this the first invoice
     // has no card to charge and the seat fails the moment it is created.
-    default_payment_method: paymentMethodId,
+    // Omitted entirely when there is no card, which only reaches here on a
+    // fully comped owner: naming null would be rejected, and a $0 invoice has
+    // nothing to charge anyway.
+    ...(paymentMethodId ? { default_payment_method: paymentMethodId } : {}),
     description,
     metadata: {
       seat_charge_id: params.seatChargeId,
@@ -302,8 +340,17 @@ export async function ownerCanBeCharged(
   ownerId: string
 ): Promise<{ ok: true } | { ok: false; code: SeatBillingError['code']; message: string }> {
   try {
-    await resolveOwnerCustomer(ownerId)
-    return { ok: true }
+    const { paymentMethodId } = await resolveOwnerCustomer(ownerId)
+    if (paymentMethodId) return { ok: true }
+
+    // No card. Same rule as createSeatSubscription: that only matters if the
+    // seat would actually be billed. resolveOwnerCustomer no longer decides
+    // this on its own, so without the check below a cardless owner would pass
+    // a pre-flight that then fails at the real thing.
+    const decision = await resolveSeatDiscount(ownerId)
+    if (seatIsFullyComped(decision)) return { ok: true }
+
+    return { ok: false, code: NO_CARD.code, message: NO_CARD.message }
   } catch (err: any) {
     if (isSeatBillingError(err)) {
       return { ok: false, code: err.code, message: err.message }

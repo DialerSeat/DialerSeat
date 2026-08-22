@@ -1089,7 +1089,7 @@ export default function TeamsPage() {
   }, [view, scope, rawTeams, teams])
 
   return (
-    <div className="ts-shell" style={{ display: 'flex', minHeight: 0, background: BG, color: TEXT }}>
+    <div className="ts-shell" style={{ display: 'flex', background: BG, color: TEXT }}>
       <style>{`
         /* ── THE SHELL FITS THE VISIBLE VIEWPORT ──────────────────────────
            This was height: 100vh. On iOS that is the height of the screen
@@ -1101,7 +1101,14 @@ export default function TeamsPage() {
            Both declarations on purpose: a browser that does not understand
            dvh keeps the vh value rather than falling back to auto, which
            would collapse the flex column entirely. */
-        .ts-shell { height: 100vh; height: 100dvh; }
+        /* min-height lives here rather than inline. It used to be an inline
+           minHeight: 0, which beats any stylesheet rule — including the
+           min-height: 100dvh the mobile block below sets. So on a phone the
+           shell was height: auto with min-height: 0, i.e. exactly as tall as
+           its content: on a short panel like All Users or Requests the page
+           simply stopped under the last row and the rest of the screen was
+           the white body showing through. */
+        .ts-shell { height: 100vh; height: 100dvh; min-height: 0; }
 
         /* ── ON A PHONE, LET THE PAGE SCROLL ──────────────────────────────
            A viewport-height shell with its own inner scroller is a desktop
