@@ -845,11 +845,11 @@ export default function CampaignDetail({
         <Stat label="Agents" value={String(agents.length)} />
         <Stat label="Total Leads" value={data.totalLeads ? data.totalLeads.toLocaleString() : '—'} />
         <Stat label="Dialed" value={data.calledLeads ? data.calledLeads.toLocaleString() : '—'} />
-        <Stat
-          label="Remaining"
-          value={data.remainingLeads ? data.remainingLeads.toLocaleString() : '—'}
-          accent={data.totalLeads > 0 && data.remainingLeads === 0 ? '#fbbf24' : undefined}
-        />
+        {/* No "Remaining" box. It was total minus dialed, sitting beside both
+            of them, and the same number is stated twice more below — in the
+            progress bar's percentage and in the Leads section's "N left to
+            dial". Three ways to read one figure is not three pieces of
+            information. */}
       </div>
 
       {data.totalLeads > 0 && (
