@@ -33,6 +33,11 @@ export interface DispositionDef {
   contact: boolean
   /** Counts toward conversions. */
   conversion: boolean
+  /** Kept out of the disposition breakdown. Not hidden data — these are
+   *  dialer mechanics rather than call outcomes, and on real traffic they
+   *  outnumber the outcomes by an order of magnitude, so a chart containing
+   *  them is a chart about the dialer instead of about the calls. */
+  hideFromBreakdown?: boolean
 }
 
 export const DISPOSITIONS: DispositionDef[] = [
@@ -56,8 +61,11 @@ export const DISPOSITIONS: DispositionDef[] = [
     agentChosen: false, contact: false, conversion: false },
   { value: 'NO_ANSWER', aliases: ['NO ANSWER'], label: 'No answer',
     agentChosen: false, contact: false, conversion: false },
+  // Skipped is the dialer moving on - a lead outside calling hours, a queue
+  // advancing, an agent passing. It is the largest bucket by far and says
+  // nothing about how a conversation went.
   { value: 'SKIPPED', aliases: [], label: 'Skipped',
-    agentChosen: false, contact: false, conversion: false },
+    agentChosen: false, contact: false, conversion: false, hideFromBreakdown: true },
   { value: 'ABANDONED', aliases: [], label: 'Abandoned',
     agentChosen: false, contact: false, conversion: false },
   { value: 'TCPA_BLOCKED', aliases: ['TCPA BLOCKED'], label: 'Outside calling hours',
@@ -102,3 +110,19 @@ export const CONTACT_FORMS = DISPOSITIONS
 export const CONVERSION_FORMS = DISPOSITIONS
   .filter(d => d.conversion)
   .flatMap(d => [d.value, ...d.aliases])
+
+/** Values that belong in the disposition breakdown. Everything else in this
+ *  list still counts everywhere else — this only decides what the chart is
+ *  about. */
+export const BREAKDOWN_FORMS = new Set(
+  DISPOSITIONS
+    .filter(d => !d.hideFromBreakdown)
+    .flatMap(d => [d.value, ...d.aliases])
+)
+
+/** Call STATUSES that leaked into the disposition column in the SignalWire
+ *  era — 'completed', 'failed'. They are not dispositions, nothing writes
+ *  them today, and they exist only in old rows. Named explicitly rather than
+ *  filtered by a shape rule, so a real disposition can never be swept up by
+ *  accident the way an allow-list used to sweep up TCPA_BLOCKED. */
+export const LEGACY_STATUS_VALUES = new Set(['completed', 'failed'])

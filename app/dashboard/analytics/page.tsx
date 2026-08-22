@@ -337,6 +337,23 @@ export default function AnalyticsPage({
   const [secondarySummary, setSecondarySummary] = useState<any>(null)
   const [series, setSeries] = useState<any[]>([])
   const [dispositions, setDispositions] = useState<any[]>([])
+
+  // ── A PIE WITH LEADER LINES NEEDS ROOM EITHER SIDE ────────────────────
+  // The labels sit at outerRadius + 22 and extend outward from there, which
+  // needs roughly 150px of clear space on each side. A phone has about 40, so
+  // "NOT INTERESTED" and "APPOINTMENT" ran off the edge and were cut in half.
+  //
+  // Below 700px the circle shrinks and the labels come off entirely, replaced
+  // by a legend underneath — which wraps, so a name is never truncated no
+  // matter how many slices there are.
+  const [isNarrow, setIsNarrow] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 700px)')
+    const apply = () => setIsNarrow(mq.matches)
+    apply()
+    mq.addEventListener('change', apply)
+    return () => mq.removeEventListener('change', apply)
+  }, [])
   const [campaigns, setCampaigns] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const isFirstRangeSaveRef = useRef(true)
@@ -847,16 +864,21 @@ export default function AnalyticsPage({
             <div className="chart-card">
               <div className="chart-title">▸ DISPOSITION BREAKDOWN</div>
               <div className={dispositions.length === 0 ? 'chart-faded' : ''}>
-                <ResponsiveContainer width="100%" height={240}>
+                <ResponsiveContainer width="100%" height={isNarrow ? 300 : 240}>
                   <PieChart>
                     <Pie
                       data={dispositionsToRender}
                       dataKey="count"
-                      nameKey="disposition"
+                      // The label, not the stored value — so the chart reads
+                      // "Not interested" rather than NOT INTERESTED, and a
+                      // legacy spelling never reaches the screen.
+                      nameKey="label"
                       cx="50%"
-                      cy="50%"
-                      outerRadius={75}
-                      label={(props: any) => renderDispositionLabels({ ...props, data: dispositionsToRender, chartHeight: 240 })}
+                      cy={isNarrow ? '42%' : '50%'}
+                      outerRadius={isNarrow ? 62 : 75}
+                      label={isNarrow
+                        ? false
+                        : (props: any) => renderDispositionLabels({ ...props, data: dispositionsToRender, chartHeight: 240 })}
                       labelLine={false}
                     >
                       {dispositionsToRender.map((d, i) => (
@@ -866,6 +888,13 @@ export default function AnalyticsPage({
                     <Tooltip
                       contentStyle={{ background: 'var(--brand-sidebar-bg)', border: '1px solid var(--brand-card-border)', color: 'var(--brand-on-sidebar)', fontSize: 11 }}
                     />
+                    {isNarrow && (
+                      <Legend
+                        verticalAlign="bottom"
+                        height={90}
+                        wrapperStyle={{ fontSize: 11, lineHeight: '18px' }}
+                      />
+                    )}
                   </PieChart>
                 </ResponsiveContainer>
               </div>
