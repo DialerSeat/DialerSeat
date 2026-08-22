@@ -864,7 +864,7 @@ export default function AnalyticsPage({
             <div className="chart-card">
               <div className="chart-title">▸ DISPOSITION BREAKDOWN</div>
               <div className={dispositions.length === 0 ? 'chart-faded' : ''}>
-                <ResponsiveContainer width="100%" height={isNarrow ? 300 : 240}>
+                <ResponsiveContainer width="100%" height={240}>
                   <PieChart>
                     <Pie
                       data={dispositionsToRender}
@@ -874,11 +874,12 @@ export default function AnalyticsPage({
                       // legacy spelling never reaches the screen.
                       nameKey="label"
                       cx="50%"
-                      cy={isNarrow ? '42%' : '50%'}
-                      outerRadius={isNarrow ? 62 : 75}
-                      label={isNarrow
-                        ? false
-                        : (props: any) => renderDispositionLabels({ ...props, data: dispositionsToRender, chartHeight: 240 })}
+                      cy="50%"
+                      // Smaller on a phone so the leader-line labels have room
+                      // to sit beside it instead of running off the edge. The
+                      // labels themselves are unchanged.
+                      outerRadius={isNarrow ? 52 : 75}
+                      label={(props: any) => renderDispositionLabels({ ...props, data: dispositionsToRender, chartHeight: 240 })}
                       labelLine={false}
                     >
                       {dispositionsToRender.map((d, i) => (
@@ -888,13 +889,6 @@ export default function AnalyticsPage({
                     <Tooltip
                       contentStyle={{ background: 'var(--brand-sidebar-bg)', border: '1px solid var(--brand-card-border)', color: 'var(--brand-on-sidebar)', fontSize: 11 }}
                     />
-                    {isNarrow && (
-                      <Legend
-                        verticalAlign="bottom"
-                        height={90}
-                        wrapperStyle={{ fontSize: 11, lineHeight: '18px' }}
-                      />
-                    )}
                   </PieChart>
                 </ResponsiveContainer>
               </div>
