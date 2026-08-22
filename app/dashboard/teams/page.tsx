@@ -1089,8 +1089,20 @@ export default function TeamsPage() {
   }, [view, scope, rawTeams, teams])
 
   return (
-    <div style={{ display: 'flex', height: '100vh', minHeight: 0, background: BG, color: TEXT }}>
+    <div className="ts-shell" style={{ display: 'flex', minHeight: 0, background: BG, color: TEXT }}>
       <style>{`
+        /* ── THE SHELL FITS THE VISIBLE VIEWPORT ──────────────────────────
+           This was height: 100vh. On iOS that is the height of the screen
+           WITHOUT the browser chrome, so the shell was taller than what you
+           can actually see and the last stretch of the scrolling panel sat
+           underneath the address bar — reachable by nothing. The drawer had
+           already been fixed for this; the page itself had not.
+
+           Both declarations on purpose: a browser that does not understand
+           dvh keeps the vh value rather than falling back to auto, which
+           would collapse the flex column entirely. */
+        .ts-shell { height: 100vh; height: 100dvh; }
+
         /* ── DESKTOP: A COLUMN. MOBILE: A DRAWER. ─────────────────────────────
            The sidebar is 300px of permanent furniture on a wide screen and the
            whole screen on a phone, so on mobile it slides in over the panel
@@ -1129,6 +1141,18 @@ export default function TeamsPage() {
             padding-top: env(safe-area-inset-top, 0px);
             padding-bottom: env(safe-area-inset-bottom, 0px);
             overflow: hidden;
+
+            /* ── AND IT HAS TO BE OPAQUE ALL THE WAY TO THE EDGES ───────
+               The colour lives on the sidebar INSIDE this element, which
+               means it starts after the insets above. So the strip behind
+               the status bar and the strip behind the home indicator were
+               bare — and with a dimmed page underneath, they read as the
+               drawer being translucent at both ends.
+
+               Same variable and same fallback the sidebar itself uses, so
+               the two are one surface on the default theme and on a
+               tenant's. */
+            background: var(--teams-sidebar-bg, #2b2d31);
           }
           .ts-drawer-checkbox:checked ~ .ts-side { transform: translateX(0); }
 
@@ -1232,7 +1256,14 @@ export default function TeamsPage() {
           </div>
         )}
 
-        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '24px 28px 40px' }}>
+        <div style={{
+          flex: 1, minHeight: 0, overflowY: 'auto',
+          // The extra bottom padding is the home indicator. Without it the last
+          // card ends flush against it and reads as cut off even once the
+          // shell is the right height.
+          padding: '24px 28px calc(40px + env(safe-area-inset-bottom, 0px))',
+          WebkitOverflowScrolling: 'touch',
+        }}>
           {view === 'floor' && <FloorView onBack={goOverview} />}
 
           {view === 'agent' && scope.kind === 'agent' && (
