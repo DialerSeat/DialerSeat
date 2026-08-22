@@ -209,6 +209,28 @@ async function lookupTenantRoute(slug: string): Promise<TenantRouteState> {
 
 const USER_BRAND_CACHE = new Map<string, { access: UserBrandAccess; expires: number }>()
 
+// ── A BRAND SWITCH HAS TO OUTRUN THIS CACHE ───────────────────────────────
+// Brand access is cached for 60s per user, in memory, per instance. Switching
+// to DialerSeat Pro writes active_tenant_id = null and lands on the apex —
+// where this cache may still hold the OLD selected tenant and redirect
+// straight back to the subdomain.
+//
+// That is why it looked intermittent rather than broken: whether it worked
+// depended on whether the instance serving the apex happened to have a warm
+// entry. A cold instance, or one more than a minute old, behaved perfectly.
+//
+// The switch carries a marker on the URL it navigates to, and that marker
+// drops the entry before anything reads it. Deliberately narrow: it only ever
+// discards one user's cached brand access, which is re-read from the database
+// on the next line, so the worst it can cost is one query.
+const BRAND_SWITCH_PARAM = 'brandswitched'
+
+function bustBrandCacheIfSwitching(url: URL, clerkId: string): void {
+  if (url.searchParams.get(BRAND_SWITCH_PARAM) === '1') {
+    USER_BRAND_CACHE.delete(clerkId)
+  }
+}
+
 async function lookupUserBrandAccess(clerkId: string): Promise<UserBrandAccess> {
   const cached = USER_BRAND_CACHE.get(clerkId)
   if (cached && cached.expires > Date.now()) return cached.access
@@ -346,6 +368,7 @@ export default clerkMiddleware(async (auth, request) => {
   ) {
     const { userId: rootUserId } = await auth()
     if (rootUserId) {
+      bustBrandCacheIfSwitching(url, rootUserId)
       const brandAccess = await lookupUserBrandAccess(rootUserId)
       // ── A CHOSEN STANDARD VIEW IS A CHOICE, NOT AN ABSENCE ─────────────
       // selectedSlug is null when somebody has picked DialerSeat Pro. Falling
@@ -411,6 +434,7 @@ export default clerkMiddleware(async (auth, request) => {
   }
 
   if (isProtectedAppRoute(request)) {
+    bustBrandCacheIfSwitching(url, userId)
     const brandAccess = await lookupUserBrandAccess(userId)
 
     if (tenantSlug) {

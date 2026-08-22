@@ -451,7 +451,12 @@ export default function SettingsPage() {
       }
 
       if (targetHost && targetHost !== window.location.host) {
-        window.location.href = `https://${targetHost}/dashboard/settings`
+        // brandswitched=1 drops this user's cached brand access in proxy.ts
+        // before it decides where they belong. Without it the middleware can
+        // still be holding the previous selection for up to a minute and
+        // bounces them straight back to the subdomain they just left — which
+        // is what made this look like it worked sometimes and not others.
+        window.location.href = `https://${targetHost}/dashboard/settings?brandswitched=1`
         return
       }
 
