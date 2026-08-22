@@ -244,14 +244,14 @@ export interface SeatDiscountDecision {
    *  is either "no discount" or "the customer-level one already covers it". */
   applyPercentOff: number
   /** Where effectivePercentOff came from. */
-  compSource: 'customer' | 'owner_plan' | 'volume' | null
+  compSource: 'customer' | 'owner_plan' | 'volume' | 'exempt' | null
   /** The winning comp's Stripe duration - 'forever', 'once' or 'repeating'.
    *  Informational: a comp that expires makes a LATER invoice billable, which
    *  the nightly reconcile and the enforcement job handle, and is not a reason
    *  to refuse the seat today. */
   compDuration: string | null
   ownerPaidSeats: number
-  reason: 'volume' | 'comp_is_better' | 'owner_plan' | 'none'
+  reason: 'volume' | 'comp_is_better' | 'owner_plan' | 'exempt' | 'none'
 }
 
 /**
@@ -273,13 +273,16 @@ export async function resolveSeatDiscount(ownerId: string): Promise<SeatDiscount
   let compDuration: string | null = null
   let ownerPlanPercentOff: number | null = null
   let planDuration: string | null = null
+  let exempt = false
 
   try {
     const { data: owner } = await supabaseAdmin
       .from('users')
-      .select('stripe_customer_id')
+      .select('stripe_customer_id, seat_billing_exempt')
       .eq('clerk_id', ownerId)
       .maybeSingle()
+
+    exempt = owner?.seat_billing_exempt === true
 
     if (owner?.stripe_customer_id) {
       const customer = await stripe.customers.retrieve(owner.stripe_customer_id)
@@ -329,6 +332,29 @@ export async function resolveSeatDiscount(ownerId: string): Promise<SeatDiscount
   const best = Math.max(volumePercentOff, customerComp, planComp)
 
   const base = { volumePercentOff, compPercentOff, ownerPlanPercentOff, ownerPaidSeats }
+
+  // ── AN EXEMPT OWNER'S SEATS ARE ALWAYS FREE ───────────────────────────
+  // users.seat_billing_exempt, off for everybody by default. It exists so the
+  // seat flow can be exercised end to end without moving money.
+  //
+  // Deliberately expressed as 100% off rather than as a branch that skips
+  // Stripe. The whole path still runs — subscription created, invoice
+  // settled at $0.00, charge marked paid, seat opened — so what is being
+  // tested is what a real owner hits, which is the entire point of testing
+  // it. A bypass would exercise the bypass.
+  //
+  // Checked before the comps because it is not a discount anybody earned or
+  // negotiated; it outranks whatever else is on the account.
+  if (exempt) {
+    return {
+      ...base,
+      effectivePercentOff: 100,
+      applyPercentOff: 100,
+      compSource: 'exempt',
+      compDuration: 'forever',
+      reason: 'exempt',
+    }
+  }
 
   // Customer-level wins ties. It arrives at the same number without a coupon
   // of ours, so there is nothing to attach, nothing to keep in sync, and

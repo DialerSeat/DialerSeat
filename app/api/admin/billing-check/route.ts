@@ -140,7 +140,11 @@ export async function GET(req: NextRequest) {
       (decision.compSource ? ` (from ${decision.compSource})` : ' — no discount')
     : 'Seat rate could not be computed'
 
-  const verdict = comped
+  const verdict = decision?.reason === 'exempt'
+    ? `${rate}. This account is flagged seat_billing_exempt, so its seats always invoice ` +
+      `$0.00 — the full flow runs, no card is needed and no money moves. Testing only; ` +
+      `clear the flag on users.seat_billing_exempt to bill it like any other account.`
+    : comped
     ? `${rate}. Seats invoice $0.00, so no card is needed to open one.`
     : hasCard
       ? `${rate}. A card is on file, so seats can be billed.`
@@ -166,6 +170,7 @@ export async function GET(req: NextRequest) {
     subscriptions,
     seatDecision: decision,
     seatWouldBeFree: comped,
+    seatBillingExempt: decision?.reason === 'exempt',
     decisionError,
     verdict,
   })
