@@ -1526,8 +1526,9 @@ export default function TeamsPage() {
                   >Clear</button>
                   <span style={{ fontSize: 11, color: DIM, width: '100%' }}>
                     Adding to a campaign costs nothing — those seats are already paid for.
-                    Adding to a team opens a new seat on it and bills you weekly for each
-                    person, unless they pay for DialerSeat themselves.
+                    Adding to a team opens a new seat and bills you weekly, unless they
+                    already hold a seat with you or pay for DialerSeat themselves — you
+                    are never charged twice for the same person.
                   </span>
                 </div>
               )}
@@ -1651,12 +1652,22 @@ export default function TeamsPage() {
                           >
                             {m.suspended
                               ? 'Paused'
+                              // Checked before the overrides: a covered seat
+                              // is stored as billing_override 'free', which
+                              // is also what a self-funded agent looks like.
+                              // Saying which costs a line and saves an owner
+                              // wondering why one of their seats is not on
+                              // the bill.
+                              : m.seatCoveredBy
+                              ? `No charge · ${m.coveredByTeam || 'their other seat'}`
                               : m.pickedUp
                               ? 'You picked this up'
                               : m.billingOverride === 'owner'
                               ? 'You pay'
                               : m.billingOverride === 'agent'
                               ? 'Pays their own'
+                              : m.billingOverride === 'free'
+                              ? 'No charge'
                               : 'Active'}
                           </span>
                         ))}

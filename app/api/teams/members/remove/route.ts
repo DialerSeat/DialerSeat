@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { cancelSeatSubscription } from '@/lib/teamBilling'
 import { apiError } from '@/lib/apiError'
+import { reconcileCoveredSeats } from '@/lib/coveredSeats'
 
 export async function POST(req: Request) {
   try {
@@ -98,9 +99,18 @@ export async function POST(req: Request) {
       .eq('team_member_id', memberId)
       .eq('is_active', true)
 
+    // Same rule from the other side: if the seat just cancelled was the one
+    // covering this person's other memberships with this owner, promote one
+    // of them rather than leaving the owner with unbilled active seats.
+    const { promotedMemberId } = await reconcileCoveredSeats(
+      (member as any).teams.owner_id,
+      member.user_id
+    )
+
     return NextResponse.json({
       success: true,
       stripeCancellations: stripeCancelResults,
+      promotedMemberId,
     })
   } catch (error: any) {
     console.error('Remove member error:', error)

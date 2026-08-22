@@ -3,6 +3,7 @@ import { getServiceClient } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 import { createSeatSubscription, isSeatBillingError, agentPaysForThemselves } from '@/lib/teamBilling'
 import { syncOwnerSeatDiscounts } from '@/lib/seatDiscount'
+import { reconcileCoveredSeats } from '@/lib/coveredSeats'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -260,12 +261,15 @@ export async function GET(req: Request) {
       console.warn(`[seat-enforcement] out of time with ${pending ?? 0} charge(s) still undecided`)
     }
 
+    const covered = await reconcileCoveredSeatsNightly(outOfTime)
+
     return NextResponse.json({
       success: true,
       checked,
       suspended: suspendedTotal,
       retried,
       discounts,
+      covered,
       graceDays: GRACE_DAYS,
       // false means the backlog outlasted one run; it resumes tomorrow, oldest
       // first, and pendingAfterRun says how much is waiting.
@@ -460,5 +464,53 @@ async function reconcileDiscounts(outOfTime: () => boolean): Promise<{
       console.error(`[seat-enforcement] discount sync failed for ${ownerId}: ${err?.message || err}`)
     }
   }
+  return out
+}
+
+// ── THE NET UNDER ONE SEAT PER PERSON PER OWNER ──────────────────────────
+// A membership marked seat_covered_by is not billed, because the owner
+// already pays for that person on another of their teams. The moment that
+// paying seat ends — they leave that team, they are removed, it suspends for
+// non-payment — the covered ones are active and funded by nothing.
+//
+// Every route that can end a seat already reconciles. This is the net under
+// all of them, for the endings no route saw: a subscription cancelled in the
+// Stripe dashboard, a suspension applied by this very job a few lines above,
+// a request that died halfway.
+//
+// Bounded by the number of COVERED memberships, which is small by nature —
+// it is people an owner put on a second team, not the roster.
+async function reconcileCoveredSeatsNightly(outOfTime: () => boolean): Promise<{
+  checked: number
+  promoted: number
+  unbilled: number
+}> {
+  const out = { checked: 0, promoted: 0, unbilled: 0 }
+
+  const { data: coveredRows } = await supabase
+    .from('team_members')
+    .select('user_id, team_id, teams!inner(owner_id)')
+    .eq('status', 'active')
+    .is('seat_suspended_at', null)
+    .not('seat_covered_by', 'is', null)
+    .limit(2000)
+
+  // One pass per owner-and-agent, not per membership: somebody on four of an
+  // owner's teams needs the invariant checked once, not four times.
+  const pairs = new Map<string, { ownerId: string; agentId: string }>()
+  for (const r of coveredRows || []) {
+    const ownerId = (r as any).teams?.owner_id
+    if (!ownerId || !r.user_id) continue
+    pairs.set(`${ownerId}:${r.user_id}`, { ownerId, agentId: r.user_id })
+  }
+
+  for (const { ownerId, agentId } of pairs.values()) {
+    if (outOfTime()) break
+    out.checked++
+    const result = await reconcileCoveredSeats(ownerId, agentId)
+    if (result.promotedMemberId) out.promoted++
+    else if (result.billingIssue) out.unbilled++
+  }
+
   return out
 }

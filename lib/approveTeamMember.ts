@@ -2,6 +2,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { createSeatSubscription, isSeatBillingError, agentPaysForThemselves } from '@/lib/teamBilling'
 import { activatePendingTeamMember } from '@/lib/teamMembership'
 import { syncIfTierChanged } from '@/lib/seatDiscount'
+import { findCoveringSeat, markSeatCovered } from '@/lib/coveredSeats'
 
 // ─────────────────────────────────────────────────────────────────────────
 // SETTLING A SEAT AND LETTING SOMEBODY IN
@@ -49,8 +50,11 @@ export async function approvePendingMember(params: {
   teamId: string
   teamName: string
   agentClerkId: string
+  /** Settle the seat without activating — the membership is already active.
+   *  Used when promoting a covered seat after the one paying for it ended. */
+  skipActivation?: boolean
 }): Promise<ApproveOutcome> {
-  const { ownerId, memberId, teamId, teamName, agentClerkId } = params
+  const { ownerId, memberId, teamId, teamName, agentClerkId, skipActivation } = params
 
   let billingIssue: string | null = null
   let stripeSubId: string | null = null
@@ -124,7 +128,10 @@ export async function approvePendingMember(params: {
     if (selfFunded && pendingCharge) {
       await supabaseAdmin
         .from('team_seat_charges')
-        .update({ status: 'voided' })
+        .update({
+          status: 'voided',
+          void_reason: 'The agent funds their own DialerSeat subscription',
+        })
         .eq('id', pendingCharge.id)
       await supabaseAdmin
         .from('team_members')
@@ -132,7 +139,24 @@ export async function approvePendingMember(params: {
         .eq('id', memberId)
     }
 
-    if (pendingCharge && !selfFunded) {
+    // ── ONE SEAT PER PERSON PER OWNER ───────────────────────────────────
+    // This owner may already be paying for this agent on another of their
+    // teams. A seat is access to the platform, and a person can only be on
+    // one call at a time, so a second team is not a second thing to buy.
+    //
+    // Only within one owner. A different owner paying for their own team is
+    // a separate arrangement and is left alone — they are buying access to
+    // THEIR campaigns, and making that depend on what some other owner
+    // happens to have bought would be a stranger's billing deciding theirs.
+    const covering = selfFunded
+      ? null
+      : await findCoveringSeat(ownerId, agentClerkId, memberId)
+
+    if (covering) {
+      await markSeatCovered(memberId, covering, pendingCharge?.id ?? null)
+    }
+
+    if (pendingCharge && !selfFunded && !covering) {
       const { data: agentUser } = await supabaseAdmin
         .from('users')
         .select('email')
@@ -188,6 +212,18 @@ export async function approvePendingMember(params: {
       stripeSubscriptionId: null,
       billingIssue,
       noCardOnFile: /^(no_card|no_customer):/.test(billingIssue),
+      activatedAccessGrants: 0,
+      defaultedToTenantId: null,
+    }
+  }
+
+  if (skipActivation) {
+    return {
+      ok: true,
+      memberId,
+      stripeSubscriptionId: stripeSubId,
+      billingIssue: null,
+      noCardOnFile: false,
       activatedAccessGrants: 0,
       defaultedToTenantId: null,
     }

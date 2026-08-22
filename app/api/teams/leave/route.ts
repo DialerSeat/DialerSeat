@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { cancelSeatSubscription } from '@/lib/teamBilling'
 import { apiError } from '@/lib/apiError'
+import { reconcileCoveredSeats } from '@/lib/coveredSeats'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -138,10 +139,16 @@ export async function POST(req: Request) {
       .eq('team_member_id', member.id)
       .eq('is_active', true)
 
+    // If this was the seat covering their other memberships with this owner,
+    // one of those is promoted to carry the charge — otherwise the owner ends
+    // up with active memberships and nothing billed for any of them.
+    const { promotedMemberId } = await reconcileCoveredSeats(team.owner_id, userId)
+
     return NextResponse.json({
       success: true,
       teamId,
       teamName: team.name,
+      promotedMemberId,
       wasPending: member.status === 'pending',
       stripeCancellations: stripeCancelResults,
     })
