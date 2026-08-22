@@ -45,6 +45,7 @@ interface Campaign {
   predictive_lines_per_agent?: number
   enable_appointments_sub?: boolean
   enable_not_interested_sub?: boolean
+  enable_voicemail_sub?: boolean
   virtual_parent_id?: string
   sub_type?: 'appointments' | 'not_interested'
 }
@@ -326,6 +327,7 @@ export default function CampaignsPage() {
   const [createRecording, setCreateRecording] = useState<boolean>(false)
   const [createApptSub, setCreateApptSub] = useState(false)
   const [createNotIntSub, setCreateNotIntSub] = useState(false)
+  const [createVoicemailSub, setCreateVoicemailSub] = useState(false)
   const [createSubOpen, setCreateSubOpen] = useState(false)
   const [settingsSubOpen, setSettingsSubOpen] = useState(false)
   const [createFirstScriptName, setCreateFirstScriptName] = useState('')
@@ -400,6 +402,7 @@ export default function CampaignsPage() {
     recording_enabled: boolean
     enable_appointments_sub: boolean
     enable_not_interested_sub: boolean
+    enable_voicemail_sub: boolean
     enabledScriptIds: Set<string>   // which library scripts are on for this campaign
     scriptOrder: string[]           // ordered enabled script ids (drag order)
   }
@@ -734,7 +737,7 @@ export default function CampaignsPage() {
       setPendingBlankCampaignId(newId)
 
       const parallel: Promise<any>[] = []
-      if (createApptSub || createNotIntSub) {
+      if (createApptSub || createNotIntSub || createVoicemailSub) {
         parallel.push(fetch('/api/campaigns/update', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -742,6 +745,7 @@ export default function CampaignsPage() {
             id: newId,
             enable_appointments_sub: createApptSub,
             enable_not_interested_sub: createNotIntSub,
+            enable_voicemail_sub: createVoicemailSub,
           }),
         }))
       }
@@ -796,7 +800,7 @@ export default function CampaignsPage() {
       const newId = data.campaign.id
 
       
-      if (createApptSub || createNotIntSub) {
+      if (createApptSub || createNotIntSub || createVoicemailSub) {
         await fetch('/api/campaigns/update', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -804,6 +808,7 @@ export default function CampaignsPage() {
             id: newId,
             enable_appointments_sub: createApptSub,
             enable_not_interested_sub: createNotIntSub,
+            enable_voicemail_sub: createVoicemailSub,
           }),
         })
       }
@@ -935,7 +940,7 @@ export default function CampaignsPage() {
     })
   }
 
-  const updateSubToggle = async (id: string, field: 'enable_appointments_sub' | 'enable_not_interested_sub', value: boolean) => {
+  const updateSubToggle = async (id: string, field: 'enable_appointments_sub' | 'enable_not_interested_sub' | 'enable_voicemail_sub', value: boolean) => {
     setCampaigns(cs => cs.map(c => c.id === id ? { ...c, [field]: value } : c))
     await fetch('/api/campaigns/update', {
       method: 'POST',
@@ -1451,6 +1456,7 @@ export default function CampaignsPage() {
     if (a.recording_enabled !== b.recording_enabled) return true
     if (a.enable_appointments_sub !== b.enable_appointments_sub) return true
     if (a.enable_not_interested_sub !== b.enable_not_interested_sub) return true
+    if (a.enable_voicemail_sub !== b.enable_voicemail_sub) return true
     if (a.enabledScriptIds.size !== b.enabledScriptIds.size) return true
     for (const id of a.enabledScriptIds) if (!b.enabledScriptIds.has(id)) return true
     if (a.scriptOrder.join(',') !== b.scriptOrder.join(',')) return true
@@ -1475,6 +1481,8 @@ export default function CampaignsPage() {
         corePatch.enable_appointments_sub = editDraft.enable_appointments_sub
       if (editDraft.enable_not_interested_sub !== editBaseline.enable_not_interested_sub)
         corePatch.enable_not_interested_sub = editDraft.enable_not_interested_sub
+      if (editDraft.enable_voicemail_sub !== editBaseline.enable_voicemail_sub)
+        corePatch.enable_voicemail_sub = editDraft.enable_voicemail_sub
       if (Object.keys(corePatch).length > 0) {
         const res = await fetch('/api/campaigns/update', {
           method: 'POST',
@@ -1590,6 +1598,7 @@ export default function CampaignsPage() {
       recording_enabled: !!campaign.recording_enabled,
       enable_appointments_sub: !!campaign.enable_appointments_sub,
       enable_not_interested_sub: !!campaign.enable_not_interested_sub,
+      enable_voicemail_sub: !!campaign.enable_voicemail_sub,
       enabledScriptIds: new Set<string>(),
       scriptOrder: [],
     }
@@ -3221,6 +3230,33 @@ export default function CampaignsPage() {
                     onClick={() => setCreateNotIntSub(v => !v)}
                   ><div className="knob" /></div>
                 </div>
+
+                {/* ── THE ONE THAT READS THE CALL, NOT THE AGENT ──────────
+                    The two above filter what an agent decided about a lead.
+                    This filters how the lead's last call ENDED, which is a
+                    different fact and lives in a different column — a
+                    voicemail is never written to the lead's disposition,
+                    because that would imply somebody judged it and would pull
+                    it out of rotation.
+
+                    It is also the only one of the three that empties itself:
+                    a lead here leaves the moment somebody actually reaches
+                    them. */}
+                <div className="settings-row">
+                  <div className="settings-row-label">
+                    VOICEMAIL SUB
+                    <small>
+                      When ON, a virtual "{campaignName.trim() || 'Campaign'} Reached Voicemail"
+                      campaign appears, holding every lead whose last call hit an
+                      answering machine. They stay dialable in the main campaign too —
+                      this is a way to work them deliberately, not a separate list.
+                    </small>
+                  </div>
+                  <div
+                    className={`settings-toggle ${createVoicemailSub ? 'on' : ''}`}
+                    onClick={() => setCreateVoicemailSub(v => !v)}
+                  ><div className="knob" /></div>
+                </div>
                 </>)}
               </div>
 
@@ -3683,6 +3719,26 @@ export default function CampaignsPage() {
                   <div
                     className={`settings-toggle ${editDraft?.enable_not_interested_sub ? 'on' : ''} ${isLapsed ? 'disabled' : ''}`}
                     onClick={() => !isLapsed && patchDraft({ enable_not_interested_sub: !editDraft?.enable_not_interested_sub })}
+                  ><div className="knob" /></div>
+                </div>
+
+                {/* Reads how the last CALL ended rather than what an agent
+                    decided, so it lives on a different column — see
+                    lib/subDispositions. It is also the only sub that empties
+                    itself: a lead leaves the moment somebody reaches them. */}
+                <div className="settings-row">
+                  <div className="settings-row-label">
+                    VOICEMAIL SUB
+                    <small>
+                      When ON, "{settingsCampaign.name} Reached Voicemail" appears
+                      in the dialer, holding every lead whose last call hit an
+                      answering machine. They stay dialable in the main campaign
+                      too — this is a way to work them deliberately.
+                    </small>
+                  </div>
+                  <div
+                    className={`settings-toggle ${editDraft?.enable_voicemail_sub ? 'on' : ''} ${isLapsed ? 'disabled' : ''}`}
+                    onClick={() => !isLapsed && patchDraft({ enable_voicemail_sub: !editDraft?.enable_voicemail_sub })}
                   ><div className="knob" /></div>
                 </div>
                 </>)}

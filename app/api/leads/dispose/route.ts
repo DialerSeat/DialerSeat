@@ -96,6 +96,13 @@ export async function POST(req: Request) {
       disposition: disposition,
       dial_attempts: newAttempts,
       last_called_at: new Date().toISOString(),
+      // ── THE LAST CALL IS NOW THIS ONE ───────────────────────────────────
+      // Kept in step with leads.disposition on this path, so a lead that
+      // reached a machine yesterday and was spoken to today leaves the
+      // voicemail queue rather than sitting in it having already been handled.
+      // Without this, the queue would only ever grow.
+      last_call_disposition: disposition,
+      last_call_at: new Date().toISOString(),
     }
 
     if (notes && String(notes).trim()) {

@@ -6,6 +6,7 @@ import { apiError } from '@/lib/apiError'
 import {
   SUB_DISPOSITION_FORMS,
   SUB_DISPOSITION_CANONICAL,
+  SUB_COLUMN,
   SUB_LABELS,
   type SubType,
 } from '@/lib/subDispositions'
@@ -100,6 +101,13 @@ export async function GET(req: Request) {
           disposition: SUB_DISPOSITION_CANONICAL.not_interested,
         })
       }
+      if (c.enable_voicemail_sub) {
+        virtualPlans.push({
+          parent: c,
+          subType: 'voicemail',
+          disposition: SUB_DISPOSITION_CANONICAL.voicemail,
+        })
+      }
     }
 
     if (virtualPlans.length === 0) {
@@ -115,7 +123,12 @@ export async function GET(req: Request) {
         .eq('campaign_id', plan.parent.id)
         // .in, not .eq: a queue must hold every spelling that means the same
         // thing, or the count disagrees with the list the user then opens.
-        .in('disposition', SUB_DISPOSITION_FORMS[plan.subType])
+        //
+        // And the COLUMN comes from the sub type. Voicemail reads how the last
+        // call ended, not what an agent decided — counting it against
+        // disposition would return zero forever, which is precisely the bug
+        // that hid the Not Interested queue.
+        .in(SUB_COLUMN[plan.subType], SUB_DISPOSITION_FORMS[plan.subType])
       countMap.set(`${plan.parent.id}:${plan.disposition}`, count || 0)
     }))
 
@@ -136,6 +149,7 @@ export async function GET(req: Request) {
 
           enable_appointments_sub: false,
           enable_not_interested_sub: false,
+          enable_voicemail_sub: false,
         })
       }
     }

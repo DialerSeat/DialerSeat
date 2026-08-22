@@ -615,7 +615,7 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
     const [{ data: callRow }, platformConfig] = await Promise.all([
       supabaseAdmin
         .from('calls')
-        .select('id, dial_source, agent_call_control_id, answered_at')
+        .select('id, lead_id, dial_source, agent_call_control_id, answered_at')
         .eq('call_control_id', callControlId)
         .maybeSingle(),
       getPlatformConfig(),
@@ -737,6 +737,26 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
       .then(({ error }) => {
         if (error) console.error('[calls/events] voicemail disposition failed', error)
       })
+
+    // ── AND ON THE LEAD, SO THE VOICEMAIL QUEUE CAN FIND IT ──────────────
+    // last_call_disposition, NOT disposition. The distinction is the whole
+    // design: leads.disposition means somebody judged this lead and it takes
+    // them out of rotation, which a machine must never do. This says only
+    // "the last attempt reached a machine", which is what the voicemail
+    // sub-campaign selects on and what makes the queue keep working rather
+    // than freezing at whatever the backfill captured.
+    if (callRow?.lead_id) {
+      void supabaseAdmin
+        .from('leads')
+        .update({
+          last_call_disposition: 'VOICEMAIL',
+          last_call_at: new Date().toISOString(),
+        })
+        .eq('id', callRow.lead_id)
+        .then(({ error }) => {
+          if (error) console.error('[calls/events] lead voicemail stamp failed', error)
+        })
+    }
 
     // ── THE AGENT COMES OFF FIRST, ALWAYS ─────────────────────────────────
     // Releasing the agent is the only latency the agent can feel, and it is

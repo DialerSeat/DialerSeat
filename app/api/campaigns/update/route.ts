@@ -17,6 +17,7 @@ const ALLOWED_FIELDS = [
   'voicemail_drop_url',
   'enable_appointments_sub',
   'enable_not_interested_sub',
+  'enable_voicemail_sub',
   // A vendor handing a list to closers they do not employ needs the numbers to
   // stay put. Owner-settable per campaign; enforced on every read path.
   'mask_lead_numbers',
@@ -118,6 +119,11 @@ export async function POST(req: Request) {
         case 'enable_not_interested_sub': {
           if (typeof v !== 'boolean') continue
           updates.enable_not_interested_sub = v
+          break
+        }
+        case 'enable_voicemail_sub': {
+          if (typeof v !== 'boolean') continue
+          updates.enable_voicemail_sub = v
           break
         }
       }
