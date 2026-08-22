@@ -816,6 +816,12 @@ export default function TeamsPage() {
   const [assigning, setAssigning] = useState(false)
   const [assignTo, setAssignTo] = useState('')
   const [assignResult, setAssignResult] = useState<string | null>(null)
+  // Adding to a TEAM, which is a different act from adding to a campaign: a
+  // campaign grant hands out access to a seat that already exists, and this
+  // opens a new one. Separate select, separate button, separate warning about
+  // what it costs.
+  const [addToTeamId, setAddToTeamId] = useState('')
+  const [addingToTeam, setAddingToTeam] = useState(false)
 
   const seatAction = async (memberId: string, action: 'pause' | 'resume') => {
     if (manageBusy) return
@@ -934,6 +940,76 @@ export default function TeamsPage() {
       alert(e?.message || 'Could not rename that.')
     } finally {
       setRenameBusy(false)
+    }
+  }
+
+  // ── ADD THE SELECTED PEOPLE TO A TEAM ───────────────────────────────────
+  // The selection holds MEMBERSHIP ids — somebody's place on the team they
+  // are already on. Adding them to another team is about the PERSON, so this
+  // maps back to user ids first. Using the membership id here would put the
+  // wrong row's key into a new team and quietly do nothing recognisable.
+  const addSelectedToTeam = async () => {
+    if (!addToTeamId || selectedMembers.size === 0 || addingToTeam) return
+    const userIds = Array.from(
+      new Set(
+        roster
+          .filter((r: any) => selectedMembers.has(r.memberId))
+          .map((r: any) => r.userId)
+          .filter(Boolean)
+      )
+    )
+    if (userIds.length === 0) return
+
+    setAddingToTeam(true)
+    setAssignResult(null)
+    try {
+      const res = await fetch('/api/teams/members/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teamId: addToTeamId, userIds }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data?.success) {
+        setAssignResult(data?.error || 'Could not add those people to that team.')
+      } else {
+        setAssignResult(data.summary || 'Done.')
+        setSelectedMembers(new Set())
+        setAddToTeamId('')
+        void refresh()
+        void loadRoster()
+      }
+    } catch (e: any) {
+      setAssignResult(e?.message || 'Something went wrong.')
+    } finally {
+      setAddingToTeam(false)
+    }
+  }
+
+  // ── SAVING AN ARRANGEMENT ───────────────────────────────────────────────
+  // Fire and refresh. The panel has already moved the row on screen, so this
+  // is confirming what the owner can see rather than producing it — which is
+  // why a failure only needs to put the real order back, not explain itself
+  // at length.
+  const saveOrder = async (
+    body: { kind: 'teams'; ids: string[] } | { kind: 'campaigns'; teamId: string; ids: string[] }
+  ) => {
+    try {
+      const res = await fetch('/api/teams/reorder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data?.success) {
+        setError(data?.error || 'Could not save that order.')
+      }
+    } catch {
+      setError('Could not save that order.')
+    } finally {
+      // Either way. On success this is the order coming back from the server
+      // rather than the client's guess at it; on failure it is what undoes
+      // the move the panel already made.
+      void refresh(true)
     }
   }
 
@@ -1387,15 +1463,45 @@ export default function TeamsPage() {
                       cursor: !assignTo || assigning ? 'not-allowed' : 'pointer',
                     }}
                   >{assigning ? 'Adding…' : 'Add'}</button>
+                  <select
+                    value={addToTeamId}
+                    onChange={e => setAddToTeamId(e.target.value)}
+                    style={{
+                      background: 'var(--teams-field, #0d0f13)', color: TEXT, fontSize: 12,
+                      border: `1px solid ${HAIRLINE}`, borderRadius: 3,
+                      padding: '6px 8px', fontFamily: 'inherit',
+                    }}
+                  >
+                    <option value="">Add to team…</option>
+                    {rawTeams.filter(t => t.isOwner).map(t => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
                   <button
-                    onClick={() => { setSelectedMembers(new Set()); setAssignTo(''); setAssignResult(null) }}
+                    onClick={addSelectedToTeam}
+                    disabled={!addToTeamId || addingToTeam}
+                    style={{
+                      background: !addToTeamId || addingToTeam ? '#1b1e25' : '#4a9eff',
+                      color: !addToTeamId || addingToTeam ? DIM : '#06080c',
+                      border: 'none', borderRadius: 3, padding: '7px 14px',
+                      fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
+                      cursor: !addToTeamId || addingToTeam ? 'not-allowed' : 'pointer',
+                    }}
+                  >{addingToTeam ? 'Adding…' : 'Add to team'}</button>
+                  <button
+                    onClick={() => {
+                      setSelectedMembers(new Set()); setAssignTo('')
+                      setAddToTeamId(''); setAssignResult(null)
+                    }}
                     style={{
                       background: 'transparent', color: DIM, border: 'none',
                       fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
                     }}
                   >Clear</button>
                   <span style={{ fontSize: 11, color: DIM, width: '100%' }}>
-                    No extra charge — these seats are already paid for.
+                    Adding to a campaign costs nothing — those seats are already paid for.
+                    Adding to a team opens a new seat on it and bills you weekly for each
+                    person, unless they pay for DialerSeat themselves.
                   </span>
                 </div>
               )}
@@ -1911,6 +2017,8 @@ export default function TeamsPage() {
           joinMessage={joinMessage}
           activeUserCount={seatCountForDisplay}
           onRename={(kind, id, name) => setRenaming({ kind, id, name })}
+          onReorderTeams={ids => saveOrder({ kind: 'teams', ids })}
+          onReorderCampaigns={(teamId, ids) => saveOrder({ kind: 'campaigns', teamId, ids })}
           onDeleteSelection={async sel => {
             setBusy(true)
             const failures: string[] = []

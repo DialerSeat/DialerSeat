@@ -35,10 +35,16 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const detail = searchParams.get('detail') === 'owned'
 
+    // ── THE ORDER THE OWNER ARRANGED, THEN THE ORDER THINGS HAPPENED ──────
+    // sort_order first, nulls last. Null means "never arranged", so a team
+    // that has never been dragged keeps its created_at position instead of
+    // tying at zero with every other unarranged one and letting Postgres
+    // decide. nullsFirst: false is doing the real work here.
     const { data: ownedTeams, error: ownedErr } = await supabaseAdmin
       .from('teams')
       .select('*')
       .eq('owner_id', userId)
+      .order('sort_order', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: false })
 
     if (ownedErr) throw ownedErr
@@ -124,8 +130,10 @@ export async function GET(req: NextRequest) {
     if (memberTeamIds.length > 0) {
       const { data, error } = await supabaseAdmin
         .from('teams')
-        .select('id, name, description, owner_id, created_at')
+        .select('id, name, description, owner_id, created_at, sort_order')
         .in('id', memberTeamIds)
+        .order('sort_order', { ascending: true, nullsFirst: false })
+        .order('created_at', { ascending: false })
 
       if (error) throw error
       memberTeams = data || []
@@ -174,8 +182,10 @@ export async function GET(req: NextRequest) {
           .limit(TREE_CODE_CAP),
         supabaseAdmin
           .from('team_campaigns')
-          .select('team_id, campaign_id, access_mode, created_at, campaigns(id, name, total_leads, called_leads, status, dialer_mode)')
+          .select('team_id, campaign_id, access_mode, created_at, sort_order, campaigns(id, name, total_leads, called_leads, status, dialer_mode)')
           .in('team_id', ownedIds)
+          .order('sort_order', { ascending: true, nullsFirst: false })
+          .order('created_at', { ascending: true })
           .limit(TREE_CODE_CAP),
         supabaseAdmin
           .from('team_campaign_access')
@@ -318,8 +328,12 @@ export async function GET(req: NextRequest) {
             // hard it has been worked — and an agent reading them learns
             // nothing they can act on while learning quite a lot about the
             // business paying them.
-            .select('team_id, campaign_id, access_mode, created_at, campaigns(id, name, status, dialer_mode)')
+            .select('team_id, campaign_id, access_mode, created_at, sort_order, campaigns(id, name, status, dialer_mode)')
             .in('team_id', memberIds)
+            // A member sees the owner's arrangement too. The order is a
+            // property of the team, not a per-viewer preference.
+            .order('sort_order', { ascending: true, nullsFirst: false })
+            .order('created_at', { ascending: true })
             .limit(TREE_CODE_CAP),
           myMemberIds.length > 0
             ? supabaseAdmin

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { readTeamsView, writeTeamsView } from '@/lib/rememberTeamsView'
+import ArrangePanel from '@/components/teams/ArrangePanel'
 
 // =============================================================================
 // TEAMS SIDEBAR — the navigation spine of the Teams page
@@ -89,6 +90,9 @@ interface Props {
   activeUserCount?: number
   /** Called with everything ticked when the agent confirms a delete. */
   onDeleteSelection?: (sel: SidebarSelection[]) => Promise<void> | void
+  /** Persist a new order. Teams among themselves, campaigns within one team. */
+  onReorderTeams?: (ids: string[]) => Promise<void> | void
+  onReorderCampaigns?: (teamId: string, ids: string[]) => Promise<void> | void
 }
 
 /** One ticked thing. Kind decides which endpoint the delete has to call, so it
@@ -154,6 +158,8 @@ export default function TeamsSidebar({
   joinMessage = null,
   activeUserCount = 0,
   onDeleteSelection,
+  onReorderTeams,
+  onReorderCampaigns,
 }: Props) {
   // Everything starts open. An agency with two teams should see its whole
   // shape on load; collapsing is for when the list has outgrown the screen,
@@ -187,6 +193,7 @@ export default function TeamsSidebar({
   const [codeInput, setCodeInput] = useState('')
   const [addMenuOpen, setAddMenuOpen] = useState(false)
   const [moreMenuOpen, setMoreMenuOpen] = useState(false)
+  const [arranging, setArranging] = useState(false)
   const [selectMode, setSelectMode] = useState(false)
   const [selected, setSelected] = useState<Record<string, SidebarSelection>>({})
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -594,6 +601,19 @@ export default function TeamsSidebar({
                       <span className="ts-menu-hint">{renameTarget.name}</span>
                     </button>
                   )}
+                  {/* Owners only, and only when there is something to put in
+                      an order. Offering it for one team would be offering a
+                      mode that cannot change anything. */}
+                  {teams.some(t => t.isOwner) && (
+                    <button
+                      className="ts-menu-item"
+                      role="menuitem"
+                      onClick={() => { setMoreMenuOpen(false); setArranging(true) }}
+                    >
+                      Rearrange
+                      <span className="ts-menu-hint">Drag teams and campaigns into order</span>
+                    </button>
+                  )}
                   <button
                     className="ts-menu-item"
                     role="menuitem"
@@ -673,7 +693,30 @@ export default function TeamsSidebar({
         </div>
       </div>
 
-      {/* ── THE TREE ─────────────────────────────────────────────────────── */}
+      {/* ── THE TREE, OR THE ARRANGER ────────────────────────────────────── */}
+      {arranging ? (
+        <ArrangePanel
+          teams={teams
+            .filter(t => t.isOwner)
+            .map(t => ({
+              id: t.id,
+              name: t.name,
+              campaigns: t.campaigns.map(c => ({ id: c.id, name: c.name })),
+            }))}
+          onClose={() => setArranging(false)}
+          onReorderTeams={ids => onReorderTeams?.(ids)}
+          onReorderCampaigns={(teamId, ids) => onReorderCampaigns?.(teamId, ids)}
+          colors={{
+            text: TEXT,
+            muted: TEXT_MUTED,
+            dim: TEXT_DIM,
+            surface: SURFACE,
+            raised: SURFACE_RAISED,
+            accent: ACCENT,
+            hairline: HAIRLINE,
+          }}
+        />
+      ) : (
       <div className="ts-scroll">
         {teams.length === 0 ? (
           <div style={{ padding: '10px 12px', fontSize: 13, color: TEXT_DIM, lineHeight: 1.6 }}>
@@ -849,6 +892,7 @@ export default function TeamsSidebar({
           )
         })}
       </div>
+      )}
 
       {/* ── SELECT MODE BAR ─────────────────────────────────────────────────
           Appears only while selecting, directly above the tree it acts on, and

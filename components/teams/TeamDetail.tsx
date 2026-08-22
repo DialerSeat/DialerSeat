@@ -414,12 +414,23 @@ export default function TeamDetail({
         ) : (
           <div style={{ display: 'grid', gap: 8 }}>
             {team.campaigns.map(c => (
+              // ── THIS ROW HAS TO SURVIVE A PHONE ──────────────────────
+              // It was a single non-wrapping flex line: name, badge, and up
+              // to three buttons. The buttons hold their width, so on a
+              // narrow screen the only thing that could give was the name —
+              // "Shared v1" broke across two lines, the meta line under it
+              // broke again, and the OPEN TO TEAM badge ended up sitting on
+              // top of the text it had pushed sideways.
+              //
+              // Now the row wraps and the controls travel as one block. On a
+              // wide screen nothing moves; on a phone the name keeps the
+              // first line to itself and the controls drop underneath it.
               <div key={c.id} style={{
-                display: 'flex', alignItems: 'center', gap: 12,
+                display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
                 background: PANEL, border: `1px solid ${HAIRLINE}`,
                 borderRadius: 4, padding: '12px 14px',
               }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ flex: '1 1 180px', minWidth: 0 }}>
                   <div style={{
                     fontSize: 14, fontWeight: 500,
                     color: c.status === 'inactive' ? DIM : TEXT,
@@ -434,11 +445,15 @@ export default function TeamDetail({
                     {c.totalLeads ? ` · ${c.totalLeads.toLocaleString()} leads` : ''}
                   </div>
                 </div>
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+                  marginLeft: 'auto',
+                }}>
                 {c.openToTeam && (
                   <span style={{
                     fontSize: 9, letterSpacing: 0.6, textTransform: 'uppercase',
                     color: DIM, border: `1px solid ${HAIRLINE}`,
-                    borderRadius: 3, padding: '2px 6px',
+                    borderRadius: 3, padding: '2px 6px', whiteSpace: 'nowrap',
                   }}>Open to team</span>
                 )}
                 {/* Each campaign can mint its own code. Someone joining with it
@@ -476,6 +491,7 @@ export default function TeamDetail({
                 {team.isOwner && (
                   <button style={btn} onClick={() => onOpenCampaign?.(c.id)}>Open</button>
                 )}
+                </div>
               </div>
             ))}
           </div>
