@@ -30,6 +30,7 @@ export type AppId =
   | 'analytics'
   | 'overview'
   | 'user-tracker'
+  | 'incentives'
   | 'teams'
   | 'numbers'
   | 'whitelabel'

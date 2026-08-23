@@ -124,6 +124,10 @@ const ExplorerApp = dynamic(() => import('./apps/Explorer'), {
   loading: () => <AppLoading />,
   ssr: false,
 })
+const IncentivesApp = dynamic(() => import('./apps/Incentives'), {
+  loading: () => <AppLoading />,
+  ssr: false,
+})
 const SettingsApp = dynamic(() => import('./apps/Settings'), {
   loading: () => <AppLoading />,
   ssr: false,
@@ -241,6 +245,17 @@ export const APPS: AppDefinition[] = [
     visibleTo: ['admin'],
     Component: UnitEconomicsApp,
     defaultSize: { width: 1120, height: 720 },
+  },
+  {
+    id: 'incentives',
+    name: 'Incentives',
+    shortName: 'Rates',
+    icon: '🏷️',
+    iconBg: 'linear-gradient(135deg, #7bd88f, #1a8a4a)',
+    description: 'Agreed seat rates per owner — the negotiated half of the volume tier',
+    visibleTo: ['admin'],
+    Component: IncentivesApp,
+    defaultSize: { width: 1040, height: 700 },
   },
   {
     id: 'visibility',

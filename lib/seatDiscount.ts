@@ -236,6 +236,8 @@ export interface SeatDiscountDecision {
   /** Percent off on the owner's own live plan subscription. This one does NOT
    *  reach seats on its own and has to be copied onto them. */
   ownerPlanPercentOff: number | null
+  /** A rate an admin agreed by hand, from the Incentives app. */
+  overridePercentOff: number | null
   /** What the seat ends up discounted by, however it gets there — inherited
    *  from the customer or applied as a coupon. This is the number that
    *  decides whether a seat is free. */
@@ -244,14 +246,14 @@ export interface SeatDiscountDecision {
    *  is either "no discount" or "the customer-level one already covers it". */
   applyPercentOff: number
   /** Where effectivePercentOff came from. */
-  compSource: 'customer' | 'owner_plan' | 'volume' | 'exempt' | null
+  compSource: 'customer' | 'owner_plan' | 'volume' | 'override' | 'exempt' | null
   /** The winning comp's Stripe duration - 'forever', 'once' or 'repeating'.
    *  Informational: a comp that expires makes a LATER invoice billable, which
    *  the nightly reconcile and the enforcement job handle, and is not a reason
    *  to refuse the seat today. */
   compDuration: string | null
   ownerPaidSeats: number
-  reason: 'volume' | 'comp_is_better' | 'owner_plan' | 'exempt' | 'none'
+  reason: 'volume' | 'comp_is_better' | 'owner_plan' | 'override' | 'exempt' | 'none'
 }
 
 /**
@@ -274,15 +276,18 @@ export async function resolveSeatDiscount(ownerId: string): Promise<SeatDiscount
   let ownerPlanPercentOff: number | null = null
   let planDuration: string | null = null
   let exempt = false
+  let overridePercentOff: number | null = null
 
   try {
     const { data: owner } = await supabaseAdmin
       .from('users')
-      .select('stripe_customer_id, seat_billing_exempt')
+      .select('stripe_customer_id, seat_billing_exempt, seat_discount_override_pct')
       .eq('clerk_id', ownerId)
       .maybeSingle()
 
     exempt = owner?.seat_billing_exempt === true
+    const pct = owner?.seat_discount_override_pct
+    overridePercentOff = typeof pct === 'number' ? pct : null
 
     if (owner?.stripe_customer_id) {
       const customer = await stripe.customers.retrieve(owner.stripe_customer_id)
@@ -329,9 +334,12 @@ export async function resolveSeatDiscount(ownerId: string): Promise<SeatDiscount
 
   const customerComp = compPercentOff ?? 0
   const planComp = ownerPlanPercentOff ?? 0
-  const best = Math.max(volumePercentOff, customerComp, planComp)
+  const manual = overridePercentOff ?? 0
+  const best = Math.max(volumePercentOff, customerComp, planComp, manual)
 
-  const base = { volumePercentOff, compPercentOff, ownerPlanPercentOff, ownerPaidSeats }
+  const base = {
+    volumePercentOff, compPercentOff, ownerPlanPercentOff, overridePercentOff, ownerPaidSeats,
+  }
 
   // ── AN EXEMPT OWNER'S SEATS ARE ALWAYS FREE ───────────────────────────
   // users.seat_billing_exempt, off for everybody by default. It exists so the
@@ -353,6 +361,26 @@ export async function resolveSeatDiscount(ownerId: string): Promise<SeatDiscount
       compSource: 'exempt',
       compDuration: 'forever',
       reason: 'exempt',
+    }
+  }
+
+  // ── A RATE SOMEBODY AGREED BEATS ONE THAT WAS CALCULATED ──────────────
+  // Checked before the automatic sources so that when an admin has agreed a
+  // number by hand, that is the number — the whole point of the partner tier
+  // being negotiated rather than printed.
+  //
+  // It still only wins if it is the BEST rate. Applying a manually agreed 20%
+  // to an owner whose volume already earned them 25% would use the word
+  // "override" to make somebody worse off than the published rate, which is
+  // not a thing anybody should be able to do by typing a number into a box.
+  if (manual > 0 && manual === best) {
+    return {
+      ...base,
+      effectivePercentOff: manual,
+      applyPercentOff: manual,
+      compSource: 'override',
+      compDuration: 'forever',
+      reason: 'override',
     }
   }
 
