@@ -1087,8 +1087,12 @@ export default function TeamsPage() {
     for (const r of rows) {
       for (const m of r.memberships || []) {
         if (m.status !== 'active') continue
+        // `billable` comes from the database, which is the only place that
+        // knows the full rule — not covered, not self-funded, not suspended.
+        // Re-deriving it here is how the screen and the invoice start
+        // disagreeing about what a seat is.
         if (m.suspended) parked.push(m.memberId)
-        else live.push(m.memberId)
+        else if (m.billable) live.push(m.memberId)
       }
     }
     return { live, parked }
@@ -1741,41 +1745,49 @@ export default function TeamsPage() {
                     key: 'seat',
                     header: 'Seat',
                     width: 170,
-                    // One line per seat, in the same order as the teams
-                    // beside it, so the two columns read across. A seat is a
-                    // per-team fact — somebody can be paused on one team and
-                    // dialing on another — and collapsing that to a single
-                    // word would have to lie about one of them.
-                    render: (r: any) => (
-                      <span style={{ fontSize: 12 }}>
-                        {(r.memberships || []).map((m: any, i: number) => (
-                          <span
-                            key={m.memberId || i}
-                            style={{ display: 'block', color: m.suspended ? '#fbbf24' : DIM }}
-                          >
-                            {m.suspended
-                              ? 'Paused'
-                              // Checked before the overrides: a covered seat
-                              // is stored as billing_override 'free', which
-                              // is also what a self-funded agent looks like.
-                              // Saying which costs a line and saves an owner
-                              // wondering why one of their seats is not on
-                              // the bill.
-                              : m.seatCoveredBy
-                              ? `No charge · ${m.coveredByTeam || 'their other seat'}`
-                              : m.pickedUp
-                              ? 'You picked this up'
-                              : m.billingOverride === 'owner'
-                              ? 'You pay'
-                              : m.billingOverride === 'agent'
-                              ? 'Pays their own'
-                              : m.billingOverride === 'free'
-                              ? 'No charge'
-                              : 'Active'}
+                    // ── ONE LINE, BECAUSE ONE PERSON IS ONE SEAT ────────
+                    // This printed a line per membership, so somebody on
+                    // three of your teams read as three seats. They are not.
+                    // A seat is access to the platform and you buy it once
+                    // per person; which of your teams they are on is the
+                    // column to the left, and a different question.
+                    render: (r: any) => {
+                      const ms: any[] = r.memberships || []
+                      const billable = ms.filter(m => m.billable)
+                      const parked = ms.filter(m => m.status === 'active' && m.suspended)
+                      const selfFunded = ms.some(
+                        m => m.billingOverride === 'agent' ||
+                          (m.billingOverride === 'free' && !m.seatCoveredBy)
+                      )
+
+                      if (billable.length > 0) {
+                        return (
+                          <span style={{ fontSize: 12, color: DIM }}>
+                            {billable.some(m => m.pickedUp) ? 'You picked this up' : 'You pay'}
+                            {/* More than one billable seat means duplicates
+                                predating the one-seat rule. Said out loud
+                                rather than silently summed — it is money. */}
+                            {billable.length > 1 && (
+                              <span style={{ display: 'block', color: '#fbbf24' }}>
+                                billed {billable.length}× — duplicate seats
+                              </span>
+                            )}
                           </span>
-                        ))}
-                      </span>
-                    ),
+                        )
+                      }
+                      if (selfFunded) {
+                        return (
+                          <span style={{ fontSize: 12, color: DIM }}>
+                            Paying for themselves
+                            <span style={{ display: 'block', color: '#5a6070' }}>costs you nothing</span>
+                          </span>
+                        )
+                      }
+                      if (parked.length > 0) {
+                        return <span style={{ fontSize: 12, color: '#fbbf24' }}>Parked — not billed</span>
+                      }
+                      return <span style={{ fontSize: 12, color: DIM }}>—</span>
+                    },
                   },
                   {
                     key: 'campaigns',
@@ -1787,79 +1799,94 @@ export default function TeamsPage() {
                   {
                     key: 'manage',
                     header: '',
-                    // Two buttons per seat now, and a team name on each when
-                    // somebody holds more than one.
-                    width: 210,
-                    // ── ONE BUTTON PER SEAT ────────────────────────────
-                    // Manage acts on a SEAT — pause it, change who pays,
-                    // remove it — and somebody on two teams has two. A single
-                    // button would have to pick one silently, and pausing the
-                    // wrong team's seat is not a mistake anybody would catch
-                    // from this screen. So each seat gets its own button,
-                    // labelled with its team when there is more than one.
-                    render: (r: any) => (
-                      <span style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        {(r.memberships || []).map((m: any) => (
-                          <span key={m.memberId} style={{ display: 'flex', gap: 4 }}>
+                    width: 190,
+                    // ── ONE PAIR OF BUTTONS PER PERSON ──────────────────
+                    // This rendered a Manage and a Park per membership, so
+                    // parking four people took twelve clicks across three
+                    // teams. Parking is a decision about a PERSON — stop
+                    // paying for them, stop them dialing — and it applies to
+                    // every seat they hold with this owner at once.
+                    render: (r: any) => {
+                      const ms: any[] = r.memberships || []
+                      const billable = ms.filter(m => m.billable)
+                      const parked = ms.filter(m => m.status === 'active' && m.suspended)
+                      const selfFunded = ms.some(
+                        m => m.billingOverride === 'agent' ||
+                          (m.billingOverride === 'free' && !m.seatCoveredBy)
+                      )
+                      // Manage still opens one seat, so it opens the one that
+                      // carries the charge — the only one with anything to
+                      // decide about.
+                      const primary = billable[0] || parked[0] || ms[0]
+                      const canPark = billable.length > 0
+                      const canResume = !canPark && parked.length > 0
+
+                      return (
+                        <span style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                          {primary && (
                             <button
                               onClick={e => {
-                                // The row opens the person; this opens one of
-                                // their seats. Without stopping here, Manage
-                                // would do both.
+                                // The row opens the person; this opens their
+                                // seat. Without stopping here, it does both.
                                 e.stopPropagation()
                                 setManageMember({
-                                  memberId: m.memberId,
+                                  memberId: primary.memberId,
                                   name: r.name,
                                   email: r.email,
-                                  teamName: m.teamName,
-                                  seatPaidBy: m.billingOverride === 'agent' ? 'agent' : 'owner',
-                                  seatSuspendedAt: m.suspended ? 'suspended' : null,
-                                  campaignCount: m.campaignCount || 0,
+                                  teamName: primary.teamName,
+                                  seatPaidBy: primary.billingOverride === 'agent' ? 'agent' : 'owner',
+                                  seatSuspendedAt: primary.suspended ? 'suspended' : null,
+                                  campaignCount: r.campaignCount || 0,
                                 })
                               }}
                               style={{
                                 background: 'transparent', border: `1px solid ${HAIRLINE}`,
-                                color: MUTED, borderRadius: 3, padding: '4px 9px',
+                                color: MUTED, borderRadius: 3, padding: '4px 10px',
                                 fontSize: 11.5, cursor: 'pointer', fontFamily: 'inherit',
-                                whiteSpace: 'nowrap', flex: 1, minWidth: 0,
-                                overflow: 'hidden', textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
                               }}
-                            >{(r.memberships || []).length > 1 ? m.teamName : 'Manage'}</button>
+                            >Manage</button>
+                          )}
 
-                            {/* Park stops the weekly charge and stops them
-                                dialing; nothing else about the seat changes.
-                                Not offered on a seat this owner does not fund
-                                — there is no charge to stop, and a button
-                                promising one would be a lie. */}
-                            {m.status === 'active'
-                              && !m.seatCoveredBy
-                              && m.billingOverride !== 'agent'
-                              && m.billingOverride !== 'free' && (
-                              <button
-                                onClick={e => {
-                                  e.stopPropagation()
-                                  void parkSeats([m.memberId], m.suspended ? 'resume' : 'pause')
-                                }}
-                                disabled={seatBusy}
-                                title={m.suspended
-                                  ? 'Restart weekly billing and let them dial again'
-                                  : 'Stop the weekly charge and stop them dialing'}
-                                style={{
-                                  background: 'transparent',
-                                  border: `1px solid ${m.suspended ? '#4ade80' : '#fbbf24'}`,
-                                  color: m.suspended ? '#4ade80' : '#fbbf24',
-                                  borderRadius: 3, padding: '4px 9px',
-                                  fontSize: 11.5, fontFamily: 'inherit',
-                                  cursor: seatBusy ? 'wait' : 'pointer',
-                                  opacity: seatBusy ? 0.5 : 1,
-                                  whiteSpace: 'nowrap', flexShrink: 0,
-                                }}
-                              >{m.suspended ? 'Resume' : 'Park'}</button>
-                            )}
-                          </span>
-                        ))}
-                      </span>
-                    ),
+                          {(canPark || canResume) && (
+                            <button
+                              onClick={e => {
+                                e.stopPropagation()
+                                void parkSeats(
+                                  (canPark ? billable : parked).map(m => m.memberId),
+                                  canPark ? 'pause' : 'resume'
+                                )
+                              }}
+                              disabled={seatBusy}
+                              title={canPark
+                                ? 'Stop the weekly charge and stop them dialing, on every team'
+                                : 'Restart weekly billing and let them dial again'}
+                              style={{
+                                background: 'transparent',
+                                border: `1px solid ${canResume ? '#4ade80' : '#fbbf24'}`,
+                                color: canResume ? '#4ade80' : '#fbbf24',
+                                borderRadius: 3, padding: '4px 10px',
+                                fontSize: 11.5, fontFamily: 'inherit',
+                                cursor: seatBusy ? 'wait' : 'pointer',
+                                opacity: seatBusy ? 0.5 : 1,
+                                whiteSpace: 'nowrap',
+                              }}
+                            >{canResume ? 'Resume' : 'Park'}</button>
+                          )}
+
+                          {/* A button that is simply absent reads as broken.
+                              Somebody funding their own subscription has no
+                              charge for an owner to stop, and saying so is the
+                              difference between "nothing to do here" and
+                              "this is missing". */}
+                          {!canPark && !canResume && selfFunded && (
+                            <span style={{ fontSize: 10.5, color: DIM, whiteSpace: 'nowrap' }}>
+                              self-funded
+                            </span>
+                          )}
+                        </span>
+                      )
+                    },
                   },
                 ] as Array<Column<any>>}
               />
