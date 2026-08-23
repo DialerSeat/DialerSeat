@@ -489,52 +489,33 @@ export default function BillingPage() {
   //
   // Waits for checkingStatus so the subscription state is settled first,
   // otherwise the apply races the page's own initialisation.
-  // ── AN INVITE BELONGS ON THE JOIN PAGE, NOT IN A PROMO BOX ────────────
-  // Somebody who followed an invite link and ended up here has been sent to
-  // the wrong page. The code survives Clerk in a cookie, but the two places
-  // that read it — post-signin and /welcome — are HOPS, and a force redirect
-  // configured in the Clerk dashboard can route straight past both. A real
-  // signup did exactly that: cookie set, code live, no membership created,
-  // straight to /billing with an empty box.
+  // ── FILL THE BOX FROM THE COOKIE WHEN THE URL DID NOT ─────────────────
+  // The normal path arrives as ?promo=CODE: /welcome reads the join cookie
+  // and appends it. But the places that read that cookie are HOPS, and a
+  // force redirect configured in the Clerk dashboard can route straight past
+  // all of them — which is what happened to a real signup: cookie set, code
+  // live, no membership created, and an empty promo box here.
   //
-  // The first version of this fix filled the promo box from the cookie. That
-  // was still wrong, because it assumed billing is where an invite ends up.
-  // For an OWNER-PAYS code it is not: that agent owes nothing, and the right
-  // outcome is to redeem and start dialing. Filling in a promo box would have
-  // charged them for a seat somebody else had already bought.
-  //
-  // So this sends them where they were going. /join/CODE names the team,
-  // asks them to confirm, and then routes by what the code actually is —
-  // billing with the promo attached for agent-pays, the dialer for
-  // owner-pays, a pending notice where the owner has to approve.
-  //
-  // ONCE PER SESSION. Redeeming clears the cookie, so the normal path cannot
-  // loop. The guard is for the abnormal one: a code that fails to redeem
-  // leaves the cookie in place, and without this the two pages would bounce
-  // a person between them indefinitely.
+  // So when the URL carries nothing, this asks for it. The cookie is
+  // httpOnly, hence the round trip. Once set, the effect below applies it
+  // exactly as if it had arrived in the URL — including the owner-pays
+  // branch, which collects nothing and sends them to the dialer.
   useEffect(() => {
     if (promoCode) return
-    if (typeof window === 'undefined') return
-    if (window.sessionStorage.getItem('ds:join-redirect') === '1') return
-
     let cancelled = false
     ;(async () => {
       try {
         const r = await fetch('/api/join/pending').then(x => x.json())
-        if (cancelled || !r?.code) return
-        const code = String(r.code).toUpperCase().replace(/[^A-Z0-9-]/g, '')
-        if (!code) return
-        window.sessionStorage.setItem('ds:join-redirect', '1')
-        router.replace(`/join/${encodeURIComponent(code)}`)
+        if (!cancelled && r?.code) setPromoCode(String(r.code).toUpperCase())
       } catch {
-        // Landing on billing with an empty box is the old behaviour, not a
-        // failure worth interrupting somebody's checkout to report.
+        // An empty box is the old behaviour, not a failure worth interrupting
+        // somebody's checkout to report.
       }
     })()
     return () => { cancelled = true }
-    // Once, on mount. Deliberately not keyed on promoCode: this fires only
-    // when the URL carried no code at all, and re-running it after somebody
-    // cleared the field would drag them off the page they were using.
+    // Once, on mount. Deliberately not keyed on promoCode: this only fills an
+    // empty box, and re-running it after somebody cleared the field would put
+    // the code straight back while they were trying to remove it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

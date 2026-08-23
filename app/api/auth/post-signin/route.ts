@@ -324,38 +324,6 @@ export async function GET(req: NextRequest) {
       console.error('[post-signin] profile refresh failed', err)
     }
 
-    // ── A PENDING INVITE OUTRANKS EVERYTHING BELOW ────────────────────────
-    // Somebody who arrived on a join link has told us exactly where they were
-    // going. Clerk was supposed to carry that in ?redirect_url and does not
-    // survive the hosted sign-up flow — a real signup confirmed it: the account
-    // was created, no team_members row was ever written, and the person landed
-    // on /welcome and then /billing having redeemed nothing.
-    //
-    // The cookie was set before they ever left for Clerk (see
-    // /api/join/start), so it is still here regardless of which route Clerk
-    // took to send them back. Reading it here makes the cookie the authority
-    // rather than the fallback, which is the right way round: it is OUR record
-    // of intent, and it cannot be dropped by somebody else's redirect.
-    //
-    // Only the shape is trusted, never the contents as a path. The value is
-    // constrained to a code and rebuilt into a /join/ URL here, so a tampered
-    // cookie cannot become an open redirect.
-    try {
-      const jar = await cookies()
-      const raw = jar.get(JOIN_CODE_COOKIE)?.value || ''
-      const code = raw.trim().toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 32)
-      if (code) {
-        console.log('[post-signin] pending join code found, routing to /join/%s', code)
-        const protocol = isDevHost(host) ? 'http' : 'https'
-        return NextResponse.redirect(`${protocol}://${host}/join/${encodeURIComponent(code)}`, 302)
-      }
-    } catch (err) {
-      // Never block sign-in on this. Worst case is the old behaviour.
-      console.error('[post-signin] join cookie read failed', err)
-    }
-
-    
-    
     if (await isAdmin(userId)) {
       return redirectAdminToDesktop(host)
     }
@@ -376,6 +344,45 @@ export async function GET(req: NextRequest) {
         return redirectToWelcome(host)
       }
       console.log('[post-signin][DIAG] -> NOT diverting, falling through to tenant routing')
+
+      // ── A PENDING INVITE, FOR SOMEBODY WHO HAS SEEN THE PRODUCT ────────
+      // Deliberately BELOW the welcome gate, which is the opposite of where
+      // this started. The two audiences want different things:
+      //
+      //   Signing IN with an invite — they already have an account, so send
+      //   them to /join/CODE, which names the team and asks whether they
+      //   want in. There is nothing else to explain to them.
+      //
+      //   Signing UP with an invite — they have never seen DialerSeat. The
+      //   showcase is the introduction, and it carries the code onward to
+      //   billing, which applies it and collects nothing when somebody else
+      //   is paying for the seat.
+      //
+      // Running this first sent brand-new agents straight past the showcase
+      // to a confirmation dialog for a product they had not laid eyes on.
+      //
+      // The cookie was set before they ever left for Clerk (see
+      // /api/join/start), so it survives whichever route Clerk took to send
+      // them back. That is the whole reason it exists: ?redirect_url does
+      // not survive the hosted sign-up flow, and a real signup proved it —
+      // account created, no team_members row, redeemed nothing.
+      //
+      // Only the SHAPE is trusted, never the contents as a path. The value
+      // is constrained to a code and rebuilt into a /join/ URL here, so a
+      // tampered cookie cannot become an open redirect.
+      try {
+        const jar = await cookies()
+        const raw = jar.get(JOIN_CODE_COOKIE)?.value || ''
+        const code = raw.trim().toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 32)
+        if (code) {
+          console.log('[post-signin] pending join code found, routing to /join/%s', code)
+          const protocol = isDevHost(host) ? 'http' : 'https'
+          return NextResponse.redirect(`${protocol}://${host}/join/${encodeURIComponent(code)}`, 302)
+        }
+      } catch (err) {
+        // Never block sign-in on this. Worst case is the old behaviour.
+        console.error('[post-signin] join cookie read failed', err)
+      }
     } catch (welcomeErr) {
       
       

@@ -208,3 +208,48 @@ The three destinations that hold the code (`/welcome`, its continue button,
 and `/billing`) now all forward to `/join/CODE` rather than to billing, so the
 symptom is contained even when this config is wrong. The config is still the
 thing to get right — containment is not correctness.
+
+
+---
+
+## The two paths, as designed
+
+A code link is one URL and two audiences, and they want different things.
+
+### Already have an account — SIGN IN
+
+```
+/join/CODE  ->  sign in  ->  /join/CODE  ->  "Join Winning Team?"  ->  done
+```
+
+They know what DialerSeat is. Naming the team and asking to confirm is the
+whole interaction. From there the code decides: the dialer for owner-pays,
+billing for agent-pays, a pending notice where the owner approves.
+
+### Brand new — SIGN UP
+
+```
+/join/CODE  ->  sign up  ->  /welcome (showcase)  ->  /billing?promo=CODE  ->  done
+```
+
+They have never seen the product, so the showcase is the introduction and the
+code travels with them to billing.
+
+**Billing is safe for both kinds of code**, which is the non-obvious part and
+was briefly "fixed" the wrong way. Applying an owner-pays code there does not
+put it in a checkout: it redeems, recognises somebody else is paying, sets the
+balance to nothing and sends the agent to the dialer. See the
+`payer === 'owner'` branch in `app/billing/page.tsx`. Nobody is ever asked to
+buy a seat that is already bought.
+
+### What makes the split work
+
+`/api/auth/post-signin` checks the welcome gate BEFORE the join cookie. A new
+account sees the showcase; an existing one goes straight to the join page.
+Reading the cookie first — which is where this started — sent brand-new agents
+past the showcase into a confirmation dialog for a product they had not seen.
+
+Three places can hold the code and all of them are covered: `/welcome` and its
+continue button append it to the billing URL, and `/billing` asks
+`/api/join/pending` for it if the URL arrived empty. That last one is the net
+under a misconfigured Clerk redirect.
