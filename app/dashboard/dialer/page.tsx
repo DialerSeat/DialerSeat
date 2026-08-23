@@ -4613,8 +4613,8 @@ function DialerPageInner() {
 
   // ── PHONE MATCHING MUST BE FORMAT-AGNOSTIC ────────────────────────────────
   // activeDialingNumbers comes from calls.phone_number, which is E.164
-  // ("+13365925053"). lead.phone is whatever was imported, typically bare
-  // digits ("3852821027"). A plain includes() between those two never matches,
+  // ("+13365550142"). lead.phone is whatever was imported, typically bare
+  // digits ("3855550127"). A plain includes() between those two never matches,
   // so predictive row highlighting could not work at all — it was comparing
   // two different notations for the same number.
   //
