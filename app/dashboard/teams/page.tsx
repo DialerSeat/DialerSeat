@@ -1035,6 +1035,65 @@ export default function TeamsPage() {
     }
   }
 
+  // ── PARK AND RESUME, FROM THE ROSTER ────────────────────────────────────
+  // The switch existed only on a person's own page, which meant parking a
+  // floor was a page load per agent and a click per seat. An owner standing
+  // a team down for a week is doing one thing, not thirty.
+  //
+  // Sequential, because each one can talk to Stripe and a burst of them
+  // failing halfway leaves a state nobody can read — the same reason the
+  // delete path does not parallelise.
+  //
+  // Already-parked seats are filtered out rather than sent and refused. The
+  // endpoint rejects a pause on a suspended seat, correctly, and surfacing
+  // nine "already suspended" errors for a bulk action that did exactly what
+  // was asked would be the product arguing with itself.
+  const [seatBusy, setSeatBusy] = useState(false)
+  const parkSeats = async (memberIds: string[], action: 'pause' | 'resume') => {
+    if (memberIds.length === 0 || seatBusy) return
+    setSeatBusy(true)
+    setAssignResult(null)
+    let done = 0
+    const failures: string[] = []
+    try {
+      for (const memberId of memberIds) {
+        const r = await fetch('/api/teams/members/seat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ memberId, action }),
+        })
+        const d = await r.json().catch(() => ({}))
+        if (r.ok && d?.success) done++
+        else failures.push(d?.error || 'failed')
+      }
+      const verb = action === 'pause' ? 'parked' : 'resumed'
+      setAssignResult(
+        failures.length === 0
+          ? `${done} ${done === 1 ? 'seat' : 'seats'} ${verb}.`
+          : `${done} ${verb}, ${failures.length} did not: ${failures[0]}`
+      )
+      await loadRoster()
+      void refresh()
+    } finally {
+      setSeatBusy(false)
+    }
+  }
+
+  /** Seats behind the selection that can actually take each action. */
+  const selectedSeats = useMemo(() => {
+    const rows = roster.filter((r: any) => selectedMembers.has(r.userId))
+    const live: string[] = []
+    const parked: string[] = []
+    for (const r of rows) {
+      for (const m of r.memberships || []) {
+        if (m.status !== 'active') continue
+        if (m.suspended) parked.push(m.memberId)
+        else live.push(m.memberId)
+      }
+    }
+    return { live, parked }
+  }, [roster, selectedMembers])
+
   const assignSelectedToCampaign = async () => {
     if (!assignTo || selectedMembers.size === 0 || assigning) return
     setAssigning(true)
@@ -1523,6 +1582,41 @@ export default function TeamsPage() {
                       cursor: !addToTeamId || addingToTeam ? 'not-allowed' : 'pointer',
                     }}
                   >{addingToTeam ? 'Adding…' : 'Add to team'}</button>
+                  {/* ── PARK THE WHOLE SELECTION ────────────────────────
+                      An owner standing a team down for a week is doing one
+                      thing, not thirty. Each button only appears when there
+                      is something for it to do, and only counts seats that
+                      can actually take the action — offering "Park 9" when
+                      six are already parked would be counting the wrong
+                      thing at somebody. */}
+                  {selectedSeats.live.length > 0 && (
+                    <button
+                      onClick={() => parkSeats(selectedSeats.live, 'pause')}
+                      disabled={seatBusy}
+                      style={{
+                        background: 'transparent', color: '#fbbf24',
+                        border: '1px solid #fbbf24', borderRadius: 3,
+                        padding: '7px 14px', fontSize: 12, fontWeight: 600,
+                        fontFamily: 'inherit',
+                        cursor: seatBusy ? 'wait' : 'pointer',
+                        opacity: seatBusy ? 0.5 : 1,
+                      }}
+                    >{seatBusy ? 'Working…' : `Park ${selectedSeats.live.length}`}</button>
+                  )}
+                  {selectedSeats.parked.length > 0 && (
+                    <button
+                      onClick={() => parkSeats(selectedSeats.parked, 'resume')}
+                      disabled={seatBusy}
+                      style={{
+                        background: 'transparent', color: '#4ade80',
+                        border: '1px solid #4ade80', borderRadius: 3,
+                        padding: '7px 14px', fontSize: 12, fontWeight: 600,
+                        fontFamily: 'inherit',
+                        cursor: seatBusy ? 'wait' : 'pointer',
+                        opacity: seatBusy ? 0.5 : 1,
+                      }}
+                    >{seatBusy ? 'Working…' : `Resume ${selectedSeats.parked.length}`}</button>
+                  )}
                   <button
                     onClick={() => {
                       setSelectedMembers(new Set()); setAssignTo('')
@@ -1693,9 +1787,9 @@ export default function TeamsPage() {
                   {
                     key: 'manage',
                     header: '',
-                    // Wider than it was: with two teams these buttons carry
-                    // team names rather than the word Manage.
-                    width: 140,
+                    // Two buttons per seat now, and a team name on each when
+                    // somebody holds more than one.
+                    width: 210,
                     // ── ONE BUTTON PER SEAT ────────────────────────────
                     // Manage acts on a SEAT — pause it, change who pays,
                     // remove it — and somebody on two teams has two. A single
@@ -1706,30 +1800,63 @@ export default function TeamsPage() {
                     render: (r: any) => (
                       <span style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                         {(r.memberships || []).map((m: any) => (
-                          <button
-                            key={m.memberId}
-                            onClick={e => {
-                              // The row opens the person; this opens one of
-                              // their seats. Without stopping here, Manage
-                              // would do both.
-                              e.stopPropagation()
-                              setManageMember({
-                                memberId: m.memberId,
-                                name: r.name,
-                                email: r.email,
-                                teamName: m.teamName,
-                                seatPaidBy: m.billingOverride === 'agent' ? 'agent' : 'owner',
-                                seatSuspendedAt: m.suspended ? 'suspended' : null,
-                                campaignCount: m.campaignCount || 0,
-                              })
-                            }}
-                            style={{
-                              background: 'transparent', border: `1px solid ${HAIRLINE}`,
-                              color: MUTED, borderRadius: 3, padding: '4px 10px',
-                              fontSize: 11.5, cursor: 'pointer', fontFamily: 'inherit',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >{(r.memberships || []).length > 1 ? m.teamName : 'Manage'}</button>
+                          <span key={m.memberId} style={{ display: 'flex', gap: 4 }}>
+                            <button
+                              onClick={e => {
+                                // The row opens the person; this opens one of
+                                // their seats. Without stopping here, Manage
+                                // would do both.
+                                e.stopPropagation()
+                                setManageMember({
+                                  memberId: m.memberId,
+                                  name: r.name,
+                                  email: r.email,
+                                  teamName: m.teamName,
+                                  seatPaidBy: m.billingOverride === 'agent' ? 'agent' : 'owner',
+                                  seatSuspendedAt: m.suspended ? 'suspended' : null,
+                                  campaignCount: m.campaignCount || 0,
+                                })
+                              }}
+                              style={{
+                                background: 'transparent', border: `1px solid ${HAIRLINE}`,
+                                color: MUTED, borderRadius: 3, padding: '4px 9px',
+                                fontSize: 11.5, cursor: 'pointer', fontFamily: 'inherit',
+                                whiteSpace: 'nowrap', flex: 1, minWidth: 0,
+                                overflow: 'hidden', textOverflow: 'ellipsis',
+                              }}
+                            >{(r.memberships || []).length > 1 ? m.teamName : 'Manage'}</button>
+
+                            {/* Park stops the weekly charge and stops them
+                                dialing; nothing else about the seat changes.
+                                Not offered on a seat this owner does not fund
+                                — there is no charge to stop, and a button
+                                promising one would be a lie. */}
+                            {m.status === 'active'
+                              && !m.seatCoveredBy
+                              && m.billingOverride !== 'agent'
+                              && m.billingOverride !== 'free' && (
+                              <button
+                                onClick={e => {
+                                  e.stopPropagation()
+                                  void parkSeats([m.memberId], m.suspended ? 'resume' : 'pause')
+                                }}
+                                disabled={seatBusy}
+                                title={m.suspended
+                                  ? 'Restart weekly billing and let them dial again'
+                                  : 'Stop the weekly charge and stop them dialing'}
+                                style={{
+                                  background: 'transparent',
+                                  border: `1px solid ${m.suspended ? '#4ade80' : '#fbbf24'}`,
+                                  color: m.suspended ? '#4ade80' : '#fbbf24',
+                                  borderRadius: 3, padding: '4px 9px',
+                                  fontSize: 11.5, fontFamily: 'inherit',
+                                  cursor: seatBusy ? 'wait' : 'pointer',
+                                  opacity: seatBusy ? 0.5 : 1,
+                                  whiteSpace: 'nowrap', flexShrink: 0,
+                                }}
+                              >{m.suspended ? 'Resume' : 'Park'}</button>
+                            )}
+                          </span>
                         ))}
                       </span>
                     ),
