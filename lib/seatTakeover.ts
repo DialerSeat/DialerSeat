@@ -44,6 +44,23 @@ export async function takeOverAgentPaidSeats(agentClerkId: string): Promise<Take
     billingFailed: [],
   }
 
+  // ── THE OPERATOR CAN TURN THIS OFF ──────────────────────────────────────
+  // This spends an owner's money without them clicking anything, which is
+  // defensible as a default and indefensible as something with no switch.
+  // platform_config.seat_takeover_enabled; off means the seat lapses and the
+  // owner decides for themselves whether to re-open it.
+  try {
+    const { getPlatformConfig } = await import('@/lib/platformConfig')
+    const cfg = await getPlatformConfig()
+    if (cfg?.seat_takeover_enabled === false) {
+      console.log('[seatTakeover] disabled in platform config — leaving seats to lapse')
+      return result
+    }
+  } catch {
+    // Unreadable config keeps the historical behaviour: take the seat over,
+    // because an agent losing access mid-shift is the worse failure.
+  }
+
   // One person can hold more than one subscription over time. If any is still
   // active they are not actually leaving, and picking up their seats would bill
   // owners for access the agent is still funding.

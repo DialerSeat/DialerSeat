@@ -32,6 +32,10 @@ export interface PlatformConfig {
   number_buying_frozen: boolean
   /** Ceiling applied on top of each campaign's predictive_lines_per_agent. */
   predictive_line_ceiling: number
+  /** Days an unpaid seat keeps working before it suspends. */
+  seat_grace_days: number
+  /** Owner automatically picks up a seat when the agent stops self-funding. */
+  seat_takeover_enabled: boolean
   /** Dialer call-status poll cadence, ms. */
   poll_interval_ms: number
   /** Dialer hangup-detection poll cadence, ms. */
@@ -101,6 +105,10 @@ export const PLATFORM_CONFIG_DEFAULTS: PlatformConfig = {
   recording_enabled_global: true,
   number_buying_frozen: false,
   predictive_line_ceiling: 5,
+  // Matches the constants these replaced, so an unreadable config table
+  // behaves exactly as the hardcoded version did.
+  seat_grace_days: 7,
+  seat_takeover_enabled: true,
   poll_interval_ms: 1500,
   hangup_poll_interval_ms: 2000,
   pool_capacity_alert_pct: 80,
@@ -191,7 +199,8 @@ export const PLATFORM_CONFIG_DEFAULTS: PlatformConfig = {
 
 const CONFIG_COLUMNS =
   'amd_enabled_global, recording_enabled_global, number_buying_frozen, ' +
-  'predictive_line_ceiling, poll_interval_ms, hangup_poll_interval_ms, ' +
+  'predictive_line_ceiling, seat_grace_days, seat_takeover_enabled, ' +
+  'poll_interval_ms, hangup_poll_interval_ms, ' +
   'pool_capacity_alert_pct, webhook_silence_minutes, agent_leg_refusal_alert_count, ' +
   'concurrency_budget, amd_detector, amd_tuning_enabled, ' +
   'amd_total_analysis_ms, amd_after_greeting_silence_ms, ' +

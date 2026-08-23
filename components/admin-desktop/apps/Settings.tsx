@@ -486,14 +486,6 @@ interface EmptyPaneDef {
 // no scaffolding needed beyond adding the real content where noted.
 const EMPTY_PANES: EmptyPaneDef[] = [
   {
-    pane: 'team',
-    title: 'Team & Access',
-    icon: '👥',
-    iconBg: 'linear-gradient(135deg, #5AC8FA, #007AFF)',
-    subtitle: 'Roles, permissions, seats',
-    blurb: 'Manage teammate roles, permissions, and seat assignments from here.',
-  },
-  {
     pane: 'branding',
     title: 'Branding & White Label',
     icon: '🎨',
@@ -580,6 +572,13 @@ function Sidebar({
     { pane: 'general', icon: '⚙️', iconBg: 'linear-gradient(135deg, #8E8E93, #636366)', title: 'General', subtitle: 'Account, sign out' },
     { pane: 'notifications', icon: '🔔', iconBg: `linear-gradient(135deg, ${IOS_RED}, #C41E1E)`, title: 'Notifications', subtitle: notifSubtitle },
     { pane: 'dialer', icon: '📞', iconBg: `linear-gradient(135deg, ${IOS_GREEN}, #248A3D)`, title: 'Dialer & Calling', subtitle: 'Global kill switches' },
+    {
+      pane: 'team' as const,
+      icon: '👥',
+      iconBg: 'linear-gradient(135deg, #5AC8FA, #007AFF)',
+      title: 'Teams & Seats',
+      subtitle: 'Grace period, seat takeover',
+    },
     ...EMPTY_PANES.map(def => ({ pane: def.pane, icon: def.icon, iconBg: def.iconBg, title: def.title, subtitle: def.subtitle })),
   ]
   const filtered = items.filter(i => matches(i.title, i.subtitle))
@@ -713,6 +712,147 @@ interface PlatformConfigShape {
   recording_enabled_global: boolean
   number_buying_frozen: boolean
   predictive_line_ceiling: number
+  seat_grace_days: number
+  seat_takeover_enabled: boolean
+}
+
+// =============================================================================
+// TEAMS & SEATS — the two team levers that were hardcoded
+// =============================================================================
+// Both govern money that moves without anybody pressing a button, which is
+// defensible as a default and indefensible as something with no switch.
+//
+// The seat PRICE is deliberately not here. What Stripe actually charges comes
+// from STRIPE_PRICE_ID, so a price box on this screen would change a number
+// this app records and nothing a customer pays — a control that looks like it
+// works and does not is worse than no control.
+// =============================================================================
+function TeamsPane({ onBack }: { onBack: () => void }) {
+  const [config, setConfig] = useState<PlatformConfigShape | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [saving, setSaving] = useState<string | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch('/api/admin/platform-config')
+        const json = await res.json()
+        if (cancelled) return
+        if (json.success) setConfig(json.config)
+        else setLoadError(json.error || 'Could not load settings')
+      } catch (e) {
+        if (!cancelled) setLoadError(e instanceof Error ? e.message : 'Could not load settings')
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  const patch = async (key: keyof PlatformConfigShape, value: boolean | number) => {
+    if (!config) return
+    const previous = config
+    setConfig({ ...config, [key]: value })
+    setSaving(key)
+    setSaveError(null)
+    try {
+      const res = await fetch('/api/admin/platform-config', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [key]: value }),
+      })
+      const json = await res.json()
+      if (!json.success) {
+        setConfig(previous)
+        setSaveError(json.error || 'Could not save')
+        return
+      }
+      setConfig(json.config)
+    } catch (e) {
+      setConfig(previous)
+      setSaveError(e instanceof Error ? e.message : 'Could not save')
+    } finally {
+      setSaving(null)
+    }
+  }
+
+  return (
+    <div>
+      <BackHeader title="Teams & Seats" onBack={onBack} />
+
+      {loadError && (
+        <div style={{ padding: '12px 16px', fontSize: 13, color: IOS_RED }}>{loadError}</div>
+      )}
+      {saveError && (
+        <div style={{ padding: '12px 16px', fontSize: 13, color: IOS_RED }}>{saveError}</div>
+      )}
+
+      {config && (
+        <>
+          <GroupLabel>Unpaid seats</GroupLabel>
+          <GroupedCard>
+            <SettingsRow
+              title="Grace period"
+              subtitle={
+                `A seat whose charge fails keeps working for ${config.seat_grace_days} ` +
+                `${config.seat_grace_days === 1 ? 'day' : 'days'}, retried daily, then suspends. ` +
+                `The agent stays on the roster either way.`
+              }
+              isLast
+              right={
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {[3, 7, 14, 30].map(n => (
+                    <button
+                      key={n}
+                      type="button"
+                      disabled={saving === 'seat_grace_days'}
+                      onClick={() => patch('seat_grace_days', n)}
+                      style={{
+                        minWidth: 34, height: 30, borderRadius: 8, cursor: 'pointer',
+                        fontSize: 13, fontWeight: 500, padding: '0 8px',
+                        border: 'none',
+                        background: config.seat_grace_days === n ? IOS_BLUE : 'rgba(120,120,128,0.16)',
+                        color: config.seat_grace_days === n ? '#fff' : LABEL_PRIMARY,
+                      }}
+                    >{n}d</button>
+                  ))}
+                </div>
+              }
+            />
+          </GroupedCard>
+
+          <GroupLabel>When an agent stops paying for themselves</GroupLabel>
+          <GroupedCard>
+            <SettingsRow
+              title="Owner picks up the seat"
+              subtitle={
+                config.seat_takeover_enabled
+                  ? 'On — the agent keeps dialing and the owner starts being billed. The owner is told, and can pause or remove the seat.'
+                  : 'Off — the seat lapses and the agent stops dialing until the owner opens a new one.'
+              }
+              isLast
+              right={
+                <IOSSwitch
+                  on={config.seat_takeover_enabled}
+                  onChange={v => patch('seat_takeover_enabled', v)}
+                  label="Owner automatically picks up a lapsed agent seat"
+                />
+              }
+            />
+          </GroupedCard>
+
+          <div style={{
+            margin: '10px 16px 20px', fontSize: 12, color: LABEL_SECONDARY, lineHeight: 1.5,
+          }}>
+            Per-owner seat rates live in the Incentives app. The published volume
+            tiers — 5% at ten seats, 10% at twenty-five, negotiated above fifty —
+            are in the code rather than here, because they are printed to
+            customers and changing them is a pricing decision, not a setting.
+          </div>
+        </>
+      )}
+    </div>
+  )
 }
 
 function DialerPane({ onBack }: { onBack: () => void }) {
@@ -1879,6 +2019,10 @@ export default function SettingsApp() {
           // Two hand-maintained lists describing one menu. The desktop one was
           // right and this one silently was not.
           { icon: '📞', iconBg: `linear-gradient(135deg, ${IOS_GREEN}, #248A3D)`, title: 'Dialer & Calling', subtitle: 'Global kill switches', onClick: () => setPane('dialer') },
+          // This list uses onClick; the desktop one above uses `pane`. Two
+          // hand-maintained lists describing one menu, which is exactly how
+          // Dialer & Calling came to be missing from the phone for a while.
+          { icon: '👥', iconBg: 'linear-gradient(135deg, #5AC8FA, #007AFF)', title: 'Teams & Seats', subtitle: 'Grace period, seat takeover', onClick: () => setPane('team') },
           ...EMPTY_PANES.map(def => ({
             icon: def.icon,
             iconBg: def.iconBg,
@@ -2355,6 +2499,7 @@ export default function SettingsApp() {
       )}
 
       {pane === 'dialer' && <DialerPane onBack={() => setPane('root')} />}
+      {pane === 'team' && <TeamsPane onBack={() => setPane('root')} />}
 
       {EMPTY_PANES.filter(def => def.pane === pane).map(def => (
         <EmptyPane key={def.pane} def={def} onBack={() => setPane('root')} />

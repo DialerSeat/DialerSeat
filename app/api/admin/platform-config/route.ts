@@ -38,6 +38,12 @@ const FIELDS: Record<keyof PlatformConfig, Validator> = {
   amd_enabled_global:        v => typeof v === 'boolean' ? v : null,
   recording_enabled_global:  v => typeof v === 'boolean' ? v : null,
   number_buying_frozen:      v => typeof v === 'boolean' ? v : null,
+  // ── TEAM LEVERS ────────────────────────────────────────────────────────
+  // Grace is bounded rather than free: zero would suspend a seat the instant
+  // a card blipped, and a very long window is an unpaid seat dialing for a
+  // month. One to thirty days covers every sane answer.
+  seat_grace_days:           v => typeof v === 'number' && v >= 1 && v <= 30 ? Math.round(v) : null,
+  seat_takeover_enabled:     v => typeof v === 'boolean' ? v : null,
   // Bounded by the DB CHECK constraint on predictive_lines_per_agent.
   predictive_line_ceiling:   v => intInRange(v, 1, 5),
   // Floors exist because a too-low poll interval turns every active dialer

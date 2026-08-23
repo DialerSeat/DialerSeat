@@ -4,6 +4,7 @@ import { apiError } from '@/lib/apiError'
 import { createSeatSubscription, isSeatBillingError, agentPaysForThemselves } from '@/lib/teamBilling'
 import { syncOwnerSeatDiscounts } from '@/lib/seatDiscount'
 import { reconcileCoveredSeats } from '@/lib/coveredSeats'
+import { getPlatformConfig } from '@/lib/platformConfig'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -48,7 +49,10 @@ const supabase = getServiceClient('cron/seat-billing-enforcement')
 // account and every lead, call and disposition in it.
 // ─────────────────────────────────────────────────────────────────────────
 
-const GRACE_DAYS = 7
+// Fallback only. The live value comes from platform_config.seat_grace_days,
+// read once per run — a suspension window is exactly the kind of thing an
+// operator needs to widen at 2am without waiting for a deploy.
+const GRACE_DAYS_FALLBACK = 7
 
 // Rows per round trip. A page size, not a ceiling: every pass below keeps
 // paging until its work is done or its time budget is spent, and reports
@@ -66,6 +70,19 @@ export async function GET(req: Request) {
   }
 
   try {
+    // One read for the whole run. Falls back to the old constant if the
+    // config table cannot be reached, so an unreadable row behaves exactly
+    // as the hardcoded version did rather than suspending everybody.
+    let graceDays = GRACE_DAYS_FALLBACK
+    try {
+      const cfg = await getPlatformConfig()
+      if (typeof cfg?.seat_grace_days === 'number' && cfg.seat_grace_days >= 1) {
+        graceDays = cfg.seat_grace_days
+      }
+    } catch {
+      // Keep the fallback.
+    }
+
     // ── STAGED BUDGETS, NOT ONE SHARED CLOCK ─────────────────────────────
     // One clock for all three passes would not actually protect anything: the
     // retry pass runs first and spends a Stripe round trip per row, so on a
@@ -96,7 +113,7 @@ export async function GET(req: Request) {
     // Runs before the suspension pass on purpose: a card added this morning
     // should rescue the seat today, not have it suspended an hour before the
     // retry that would have saved it.
-    const retried = await retryFailedSeatCharges(retryBudgetSpent)
+    const retried = await retryFailedSeatCharges(retryBudgetSpent, graceDays)
 
     // ── DISCOUNTS FOLLOW THE SEAT COUNT ──────────────────────────────────
     // Crossing ten seats has to discount the nine already open, or the tier
@@ -107,7 +124,7 @@ export async function GET(req: Request) {
     // charges.
     const discounts = await reconcileDiscounts(discountBudgetSpent)
 
-    const cutoff = new Date(Date.now() - GRACE_DAYS * 24 * 60 * 60 * 1000).toISOString()
+    const cutoff = new Date(Date.now() - graceDays * 24 * 60 * 60 * 1000).toISOString()
 
     // ── WHY THIS PAGES, AND WHY IT MARKS ─────────────────────────────────
     // This was a single LIMIT 500 with no ordering, over a filter that nothing
@@ -254,7 +271,7 @@ export async function GET(req: Request) {
 
     if (suspendedTotal > 0) {
       console.log(
-        `[seat-enforcement] suspended ${suspendedTotal} seat(s) unpaid for more than ${GRACE_DAYS} days`
+        `[seat-enforcement] suspended ${suspendedTotal} seat(s) unpaid for more than ${graceDays} days`
       )
     }
     if (!exhausted) {
@@ -270,7 +287,7 @@ export async function GET(req: Request) {
       retried,
       discounts,
       covered,
-      graceDays: GRACE_DAYS,
+      graceDays,
       // false means the backlog outlasted one run; it resumes tomorrow, oldest
       // first, and pendingAfterRun says how much is waiting.
       completed: exhausted,
@@ -300,7 +317,10 @@ interface RetrySummary {
  * has since started paying for DialerSeat themselves is voided rather than
  * retried: there is no seat to buy for somebody who already has access.
  */
-async function retryFailedSeatCharges(outOfTime: () => boolean): Promise<RetrySummary> {
+async function retryFailedSeatCharges(
+  outOfTime: () => boolean,
+  graceDays: number
+): Promise<RetrySummary> {
   const summary: RetrySummary = {
     attempted: 0,
     recovered: 0,
@@ -309,7 +329,7 @@ async function retryFailedSeatCharges(outOfTime: () => boolean): Promise<RetrySu
     notReached: 0,
   }
 
-  const windowStart = new Date(Date.now() - GRACE_DAYS * 24 * 60 * 60 * 1000).toISOString()
+  const windowStart = new Date(Date.now() - graceDays * 24 * 60 * 60 * 1000).toISOString()
 
   // ── OLDEST DEBT FIRST ───────────────────────────────────────────────────
   // Every row here costs a Stripe round trip, so unlike the suspension pass
