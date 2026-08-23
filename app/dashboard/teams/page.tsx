@@ -2269,7 +2269,7 @@ export default function TeamsPage() {
           onRename={(kind, id, name) => setRenaming({ kind, id, name })}
           onReorderTeams={ids => saveOrder({ kind: 'teams', ids })}
           onReorderCampaigns={(teamId, ids) => saveOrder({ kind: 'campaigns', teamId, ids })}
-          onDeleteSelection={async sel => {
+          onDeleteSelection={async (sel, mode) => {
             setBusy(true)
             const failures: string[] = []
             try {
@@ -2308,6 +2308,19 @@ export default function TeamsPage() {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                       teamId: item.teamId, campaignId: item.campaignId, confirm: 'remove',
+                    }),
+                  }).then(r => r.json()).catch(() => null)
+                } else if (mode === 'campaign') {
+                  // Off this campaign, still on the team and still holding
+                  // their seat. The endpoint resolves the access row from the
+                  // person and the campaign, so no id has to be carried here.
+                  res = await fetch('/api/teams/access/revoke', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      memberId: item.memberId,
+                      campaignId: item.campaignId,
+                      confirm: 'remove',
                     }),
                   }).then(r => r.json()).catch(() => null)
                 } else {

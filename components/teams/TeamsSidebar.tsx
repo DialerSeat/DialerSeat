@@ -89,7 +89,12 @@ interface Props {
   /** Active agents right now, shown as a count inside the All Users button. */
   activeUserCount?: number
   /** Called with everything ticked when the agent confirms a delete. */
-  onDeleteSelection?: (sel: SidebarSelection[]) => Promise<void> | void
+  /** Mode is only passed when every ticked item is an agent: 'campaign'
+   *  revokes this campaign's access, 'team' ends the membership. */
+  onDeleteSelection?: (
+    sel: SidebarSelection[],
+    mode?: 'campaign' | 'team'
+  ) => Promise<void> | void
   /** Persist a new order. Teams among themselves, campaigns within one team. */
   onReorderTeams?: (ids: string[]) => Promise<void> | void
   onReorderCampaigns?: (teamId: string, ids: string[]) => Promise<void> | void
@@ -221,7 +226,20 @@ export default function TeamsSidebar({
       return !!t && !t.isOwner
     })
 
-  const confirmWord = leaveMode ? 'LEAVE' : 'DELETE'
+  // ── REMOVING A PERSON IS TWO DIFFERENT ACTS ────────────────────────────
+  // An agent sits under a campaign in this tree, so "delete" is ambiguous in
+  // the one place it matters: take them off THIS campaign, or off the team
+  // altogether. The first is routine and reversible from the picker; the
+  // second ends their seat and their access to everything.
+  //
+  // The old bar offered one button labelled Delete for both, and did the
+  // second. Naming the acts separately is the whole fix.
+  const agentMode =
+    selectedList.length > 0 && selectedList.every(sel => sel.kind === 'agent')
+
+  const [removeMode, setRemoveMode] = useState<'campaign' | 'team'>('team')
+
+  const confirmWord = leaveMode ? 'LEAVE' : agentMode ? 'REMOVE' : 'DELETE'
 
   // The one ticked thing that can be renamed, or null. Requires exactly one
   // selection, a renameable kind, and ownership — the same three conditions
@@ -924,7 +942,23 @@ export default function TeamsSidebar({
               }}
             >Rename</button>
           )}
-          {selectedList.length > 0 && (
+          {selectedList.length > 0 && agentMode && (
+            <>
+              <button
+                className="ts-mini-btn"
+                onClick={() => {
+                  setRemoveMode('campaign'); setConfirmText(''); setConfirmOpen(true)
+                }}
+              >Remove from campaign</button>
+              <button
+                className="ts-mini-btn is-danger"
+                onClick={() => {
+                  setRemoveMode('team'); setConfirmText(''); setConfirmOpen(true)
+                }}
+              >Remove from team</button>
+            </>
+          )}
+          {selectedList.length > 0 && !agentMode && (
             <button
               className="ts-mini-btn is-danger"
               onClick={() => { setConfirmText(''); setConfirmOpen(true) }}
@@ -957,6 +991,8 @@ export default function TeamsSidebar({
             <h3 style={{ margin: '0 0 8px', fontSize: 17, fontWeight: 600 }}>
               {leaveMode
                 ? `Leave ${selectedList.length} team${selectedList.length === 1 ? '' : 's'}?`
+                : agentMode
+                ? `Remove ${selectedList.length} ${selectedList.length === 1 ? 'person' : 'people'} from ${removeMode === 'campaign' ? 'this campaign' : 'the team'}?`
                 : `Delete ${selectedList.length} item${selectedList.length === 1 ? '' : 's'}?`}
             </h3>
             <p style={{ margin: '0 0 12px', fontSize: 12.5, color: TEXT_DIM, lineHeight: 1.6 }}>
@@ -964,6 +1000,12 @@ export default function TeamsSidebar({
                 ? 'You lose access to its campaigns straight away, and any seat the owner ' +
                   'was paying for you ends. Nothing on the team is deleted. You would need ' +
                   'a new code to come back.'
+                : agentMode && removeMode === 'campaign'
+                ? 'They stay on the team and keep their seat — this only takes away this ' +
+                  'one campaign. Add them back any time from Add People.'
+                : agentMode
+                ? 'They come off the team entirely: every campaign, and the seat you were ' +
+                  'paying for. They would need a new code to come back.'
                 : 'This cannot be undone.'}
             </p>
             <ul style={{
@@ -1002,15 +1044,18 @@ export default function TeamsSidebar({
                 onClick={async () => {
                   setDeleting(true)
                   try {
-                    await onDeleteSelection?.(selectedList)
+                    await onDeleteSelection?.(
+                      selectedList,
+                      agentMode ? removeMode : undefined
+                    )
                     leaveSelectMode()
                   } finally {
                     setDeleting(false)
                   }
                 }}
               >{deleting
-                ? (leaveMode ? 'Leaving…' : 'Deleting…')
-                : (leaveMode ? 'Leave' : 'Delete')}</button>
+                ? (leaveMode ? 'Leaving…' : agentMode ? 'Removing…' : 'Deleting…')
+                : (leaveMode ? 'Leave' : agentMode ? 'Remove' : 'Delete')}</button>
             </div>
           </div>
         </div>
