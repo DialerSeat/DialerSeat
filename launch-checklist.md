@@ -10,9 +10,14 @@ proven to work with real money.
 
 ## 1. Upgrade Vercel to Pro — **you**
 
-Hobby's terms are non-commercial. Marketing is the definition of commercial
-use, and the risk is not throttling — it is the deployment being pulled while
-your first paying customers are on it.
+Not a precaution any more. This was written as "do it before you market",
+which understated it: DialerSeat has been **taking payment on Hobby since
+early July**. Two outside customers renew on it today — one on whitelabel
+since 6 July, one on pro since 27 July.
+
+So the non-commercial term is already being breached, and the risk was never
+throttling. It is the deployment being pulled with paying customers on it, at
+whatever moment somebody notices.
 
 Verified today: `vercel.json` has every cron at daily and `vercel-upgrade.md`
 still reads NOT YET APPLIED, so this has not happened yet.
