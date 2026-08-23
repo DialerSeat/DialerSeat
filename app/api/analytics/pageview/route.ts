@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { auth } from '@clerk/nextjs/server'
 import { createHash } from 'crypto'
 import { getServiceClient } from '@/lib/supabase'
 
@@ -108,12 +109,38 @@ export async function POST(req: NextRequest) {
       return v.trim().slice(0, 120)
     }
 
+    // Never throws on a public route — it returns a null userId for a
+    // signed-out visitor, which is exactly the distinction being recorded.
+    let isAuthed = false
+    try {
+      const { userId } = await auth()
+      isAuthed = !!userId
+    } catch {
+      // A beacon must never fail the page it is measuring. Unknown counts as
+      // anonymous, which is the safer direction: it under-reports signed-in
+      // traffic rather than inventing it.
+    }
+
     const { data: inserted } = await supabase
       .from('page_views')
       .insert({
         path,
         referrer_host: referrerHost,
-        is_authed: !!body?.authed,
+        // ── THE SERVER KNOWS, THE BROWSER GUESSES ────────────────────
+        // This trusted body.authed, which the tracker computed as
+        // `document.cookie.includes('__session')`. That produced 337 views
+        // with is_authed true and NOT ONE anonymous view in the table —
+        // including three views of /sign-in, which nobody already signed in
+        // has any reason to load. A signed-out visitor was being counted as
+        // a logged-in one every time, so the anonymous half of the traffic
+        // report never existed.
+        //
+        // The browser cannot answer this. It can only see the cookies it is
+        // allowed to see, on the host it happens to be on, and a stale one
+        // looks exactly like a live session. This request carries the
+        // session anyway, so auth() answers it properly — and cannot be
+        // fooled by a client that simply says it is signed in.
+        is_authed: isAuthed,
         visitor_hash: visitorHash,
         device: deviceFrom(ua),
         country,
