@@ -77,9 +77,8 @@ export async function POST(req: Request) {
         detail: noCardOnFile
           ? 'Add or update your card in Billing, then accept them again. They stay ' +
             'in Requests until you do, and their invite is not lost.'
-          : 'Try accepting again — this is often temporary. If it keeps failing, ' +
-            'check the card on file in Billing. They stay in Requests either way, ' +
-            'and their invite is not lost.',
+          : 'Try accepting again — this is often temporary. They stay in Requests ' +
+            'either way, and their invite is not lost.',
         // The raw Stripe message, for the owner who wants to know exactly what
         // their bank said rather than a paraphrase of it.
         billingIssue: outcome.billingIssue,

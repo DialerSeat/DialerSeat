@@ -4343,7 +4343,7 @@ function DialerPageInner() {
             {awaitingTeams.length > 0
               ? `${awaitingTeams.map(t => t.teamName).join(', ')} has not accepted your seat yet. Dialing opens as soon as they do — there is nothing for you to pay.`
               : tier === 'lapsed'
-              ? 'Your subscription has lapsed. Resubscribe to restore dialing access. Your leads, recordings, and campaigns are still here waiting for you.'
+              ? 'Your subscription has lapsed. Resubscribe to restore dialing access.'
               : 'An active subscription is required to make outbound calls.'}
           </div>
           {/* No checkout for somebody whose seat somebody else is buying.

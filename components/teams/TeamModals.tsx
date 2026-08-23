@@ -55,7 +55,17 @@ function Shell({ title, subtitle, onClose, children, footer }: {
         pressStartedOnBackdrop.current = false
       }}
       style={{
-        position: 'fixed', inset: 0, zIndex: 60,
+        // ── ABOVE THE PAGE'S OWN CHROME ───────────────────────────────
+        // This was 60, which is exactly the z-index of the teams sidebar
+        // drawer — and the modal renders earlier in the DOM, so at equal
+        // stacking the drawer won. On a phone that meant Manage appeared to
+        // do nothing: the dialog opened, behind the sidebar, every time.
+        // The page also has chrome at 65 and 200.
+        //
+        // 300 is above all of it. A modal is the top layer by definition;
+        // anything it can hide behind is a bug waiting to be reported as
+        // "the button does nothing".
+        position: 'fixed', inset: 0, zIndex: 300,
         background: 'rgba(0,0,0,0.6)', display: 'grid', placeItems: 'center',
         padding: 20,
       }}

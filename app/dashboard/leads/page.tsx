@@ -830,7 +830,7 @@ export default function LeadsPage() {
         <div className="leads-lapsed-banner">
           <span>
             <strong style={{ marginRight: 6 }}>▸ READ-ONLY</strong>
-            Your leads are still here. Export anytime. Editing disabled
+            Export anytime. Editing disabled
             {awaitingSeat
               ? ' until the team owner approves your seat.'
               : hasLapsedPlan ? ' until you resubscribe.' : ' until you subscribe.'}

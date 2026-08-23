@@ -3007,8 +3007,8 @@ export default function CampaignsPage() {
         {isLapsed && (
           <div className="cmp-lapsed-banner">
             <strong>READ-ONLY MODE.</strong>{' '}
-            Your campaigns are still here. Creating, deleting, importing, and
-            dialing require an active subscription.
+            Creating, deleting, importing, and dialing require an active
+            subscription.
           </div>
         )}
 
