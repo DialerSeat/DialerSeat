@@ -111,10 +111,12 @@ export async function POST(req: NextRequest) {
     // meaning "no discount" and would be pointless but is not the same
     // instruction as "stop overriding".
     const raw = body?.percentOff
+    // Two decimals, not whole percents. A round per-seat PRICE is the thing
+    // people agree on, and $35 less 57% is $15.05 — the number nobody meant.
     const percentOff =
       raw === null || raw === undefined || raw === ''
         ? null
-        : Math.round(Number(raw))
+        : Math.round(Number(raw) * 100) / 100
 
     if (!clerkId) {
       return NextResponse.json({ success: false, error: 'clerkId required' }, { status: 400 })

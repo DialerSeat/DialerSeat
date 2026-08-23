@@ -58,6 +58,13 @@ function weekly(percentOff: number): string {
   return `$${(cents / 100).toFixed(2)}`
 }
 
+/** The percent that lands a seat on a given weekly price, to two decimals.
+ *  People agree on "fifteen a seat", not on "fifty-seven point one four". */
+function percentForPrice(dollars: number): number {
+  const target = Math.round(dollars * 100)
+  return Math.round((1 - target / WEEKLY_CENTS) * 10000) / 100
+}
+
 export default function Incentives() {
   const [owners, setOwners] = useState<Owner[]>([])
   const [loading, setLoading] = useState(true)
@@ -199,6 +206,27 @@ export default function Incentives() {
                   }}
                 />
                 <span style={{ color: T.muted, fontSize: 12 }}>% off</span>
+
+                {/* Type the price you agreed, get the percent. The
+                    conversation is never about percentages. */}
+                <span style={{ color: T.dim, fontSize: 11.5 }}>or</span>
+                <span style={{ color: T.muted, fontSize: 12 }}>$</span>
+                <input
+                  placeholder="15.00"
+                  inputMode="decimal"
+                  onChange={e => {
+                    const v = Number(e.target.value)
+                    if (!Number.isFinite(v) || v <= 0 || v > 35) return
+                    setDrafts(d => ({ ...d, [o.clerkId]: String(percentForPrice(v)) }))
+                  }}
+                  style={{
+                    width: 68, background: T.raised, color: T.text,
+                    border: `1px solid ${T.line}`, borderRadius: 3,
+                    padding: '7px 9px', fontSize: 13, fontFamily: 'inherit',
+                    textAlign: 'right',
+                  }}
+                />
+                <span style={{ color: T.muted, fontSize: 12 }}>a week</span>
 
                 <span style={{ color: T.dim, fontSize: 12, marginLeft: 4 }}>
                   → <strong style={{ color: effective > 0 ? T.green : T.text }}>

@@ -27,13 +27,22 @@ import { summariseSeatTier, tierForSeats } from '@/lib/seatTiers'
 // end up disagreeing.
 // ─────────────────────────────────────────────────────────────────────────
 
-/** Deterministic, so the same coupon is reused forever rather than recreated. */
+/** Deterministic, so the same coupon is reused forever rather than recreated.
+ *
+ *  The dot in a fractional percent is replaced rather than passed through:
+ *  57.14 becomes dialerseat-seat-57-14pct. Stripe ids are not the place to
+ *  find out which punctuation an API accepts, and the id only has to be
+ *  stable and unique. */
 function couponIdFor(percentOff: number): string {
-  return `dialerseat-seat-${percentOff}pct`
+  return `dialerseat-seat-${String(percentOff).replace('.', '-')}pct`
 }
 
 export async function ensureSeatCoupon(percentOff: number): Promise<string | null> {
   if (!percentOff || percentOff <= 0) return null
+  // Two decimals, because that is what the column stores and what Stripe
+  // accepts. Passing 57.142857 through would mint a different coupon every
+  // time the same rate was resolved from a slightly different float.
+  percentOff = Math.round(percentOff * 100) / 100
   const id = couponIdFor(percentOff)
   try {
     const existing = await stripe.coupons.retrieve(id)
