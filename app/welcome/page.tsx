@@ -49,8 +49,17 @@ export default async function WelcomePage() {
   const jar = await cookies()
   const joinCode = jar.get(JOIN_CODE_COOKIE)?.value || null
 
-  const billingWithCode = joinCode
-    ? `/billing?from=welcome&promo=${encodeURIComponent(joinCode)}`
+  // ── AN INVITE GOES TO THE JOIN PAGE, NOT TO BILLING ───────────────────
+  // This used to hand the code to billing as ?promo=. That is right for an
+  // agent-pays code and wrong for an owner-pays one, where the agent owes
+  // nothing at all — sending them to a checkout with a promo box would ask
+  // them to pay for a seat somebody else had already bought.
+  //
+  // /join/CODE knows which it is. It names the team, asks them to confirm,
+  // then routes to billing with the promo attached, to the dialer, or to a
+  // pending notice, according to what the code actually says.
+  const nextAfterWelcome = joinCode
+    ? `/join/${encodeURIComponent(joinCode)}`
     : '/billing'
 
   let show: boolean
@@ -59,14 +68,14 @@ export default async function WelcomePage() {
   } catch {
     
     
-    redirect(billingWithCode)
+    redirect(nextAfterWelcome)
   }
 
   
   
   
   
-  if (!show!) redirect(billingWithCode)
+  if (!show!) redirect(nextAfterWelcome)
 
   
   return <Showcase joinCode={joinCode} />

@@ -31,9 +31,13 @@ const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace'
 
 // A joiner continues to billing with their invite attached, so the code is
 // already in the box (and already applied) when they land.
+// Where "continue" goes. With an invite in hand that is the JOIN page, not
+// billing: an owner-pays code owes nothing, and handing it to a checkout as a
+// promo would ask somebody to buy a seat that is already bought. /join/CODE
+// decides — billing with the promo, the dialer, or a pending notice.
 function billingPath(joinCode: string | null): string {
   return joinCode
-    ? `/billing?from=welcome&promo=${encodeURIComponent(joinCode)}`
+    ? `/join/${encodeURIComponent(joinCode)}`
     : '/billing?from=welcome'
 }
 
