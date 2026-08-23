@@ -103,6 +103,31 @@ export async function GET(req: NextRequest) {
     limit: 50,
   })
 
+  // ── WHAT DID IT ACTUALLY INVOICE ──────────────────────────────────────
+  // The coupon on a subscription tells you the intended rate; the invoice
+  // tells you what the customer was charged. Those are the same number right
+  // up until they are not, and "is the seat discount working" is a question
+  // about the second one. Fetched per subscription because a seat is its own
+  // subscription and there are only ever a handful.
+  const invoiceTotals = new Map<string, { total: number; subtotal: number; status: string }>()
+  await Promise.all(
+    subs.data.slice(0, 25).map(async sub => {
+      try {
+        const inv = await stripe.invoices.list({ subscription: sub.id, limit: 1 })
+        const latest = inv.data[0]
+        if (latest) {
+          invoiceTotals.set(sub.id, {
+            total: latest.total ?? 0,
+            subtotal: latest.subtotal ?? 0,
+            status: latest.status || 'unknown',
+          })
+        }
+      } catch {
+        // A missing invoice is not a failure worth breaking the report over.
+      }
+    })
+  )
+
   const subscriptions = subs.data.map(s => {
     const d = ((s as any).discounts && (s as any).discounts[0]) || (s as any).discount
     const coupon = d && typeof d !== 'string' ? d.coupon : null
@@ -115,6 +140,17 @@ export async function GET(req: NextRequest) {
         ? { couponId: coupon.id, percentOff: coupon.percent_off, amountOff: coupon.amount_off, duration: coupon.duration }
         : null,
       defaultPaymentMethod: (s as any).default_payment_method || null,
+      latestInvoice: (() => {
+        const inv = invoiceTotals.get(s.id)
+        if (!inv) return null
+        return {
+          // Dollars, because the question being asked is "was I charged
+          // fifteen dollars" and nobody asks it in cents.
+          charged: `$${(inv.total / 100).toFixed(2)}`,
+          beforeDiscount: `$${(inv.subtotal / 100).toFixed(2)}`,
+          status: inv.status,
+        }
+      })(),
     }
   })
 
