@@ -489,6 +489,35 @@ export default function BillingPage() {
   //
   // Waits for checkingStatus so the subscription state is settled first,
   // otherwise the apply races the page's own initialisation.
+  // ── ASK FOR THE INVITE RATHER THAN WAITING TO BE HANDED IT ────────────
+  // The code arrives in ?promo when the journey went through /welcome, which
+  // reads it from the join cookie and appends it. But Clerk can be configured
+  // with a force redirect that skips post-signin and /welcome entirely, and
+  // then nobody ever reads the cookie — the agent lands here with an empty
+  // box and no sign that an invite was attached at all. That happened to a
+  // real signup: cookie set, code live, no membership, straight to billing.
+  //
+  // So when the URL carries nothing, this asks. The cookie is httpOnly, hence
+  // the round trip. Once the code is set, the effect below applies it exactly
+  // as if it had arrived in the URL.
+  useEffect(() => {
+    if (promoCode) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const r = await fetch('/api/join/pending').then(x => x.json())
+        if (!cancelled && r?.code) setPromoCode(String(r.code).toUpperCase())
+      } catch {
+        // An empty box is the old behaviour, not a failure worth showing.
+      }
+    })()
+    return () => { cancelled = true }
+    // Once, on mount. promoCode is deliberately not a dependency: this only
+    // ever fills an empty box, and re-running it after the user clears the
+    // field would put the code back while they were trying to remove it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   useEffect(() => {
     if (autoAppliedRef.current) return
     if (checkingStatus || !isLoaded) return
