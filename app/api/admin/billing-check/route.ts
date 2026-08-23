@@ -109,17 +109,34 @@ export async function GET(req: NextRequest) {
   // up until they are not, and "is the seat discount working" is a question
   // about the second one. Fetched per subscription because a seat is its own
   // subscription and there are only ever a handful.
-  const invoiceTotals = new Map<string, { total: number; subtotal: number; status: string }>()
+  const invoiceTotals = new Map<
+    string,
+    { total: number; subtotal: number; status: string; descriptorSent: string | null }
+  >()
   await Promise.all(
     subs.data.slice(0, 25).map(async sub => {
       try {
-        const inv = await stripe.invoices.list({ subscription: sub.id, limit: 1 })
+        const inv = await stripe.invoices.list({ subscription: sub.id, limit: 1, expand: ['data.charge'] })
         const latest = inv.data[0]
         if (latest) {
+          // ── WHAT WE SENT vs WHAT THE BANK PRINTED ─────────────────────
+          // calculated_statement_descriptor is the exact string Stripe
+          // handed the card network for this charge. If it reads DIALERSEAT
+          // and the statement reads DIALERSEAT +1336..., NC, then nothing in
+          // this account added the phone number and no Stripe setting will
+          // remove it — the issuer is decorating it from the network's own
+          // merchant record. Those are opposite problems with opposite
+          // fixes, and the only way to tell them apart is to look at what
+          // was actually transmitted.
+          const charge: any = (latest as any).charge
           invoiceTotals.set(sub.id, {
             total: latest.total ?? 0,
             subtotal: latest.subtotal ?? 0,
             status: latest.status || 'unknown',
+            descriptorSent:
+              typeof charge === 'object' && charge
+                ? charge.calculated_statement_descriptor ?? charge.statement_descriptor ?? null
+                : null,
           })
         }
       } catch {
@@ -149,6 +166,8 @@ export async function GET(req: NextRequest) {
           charged: `$${(inv.total / 100).toFixed(2)}`,
           beforeDiscount: `$${(inv.subtotal / 100).toFixed(2)}`,
           status: inv.status,
+          // The exact string handed to the card network for this charge.
+          descriptorSent: inv.descriptorSent,
         }
       })(),
     }
