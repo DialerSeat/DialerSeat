@@ -57,27 +57,26 @@ without the other still stops.
 
 ---
 
-## 3. Save the Stripe Customer Portal configuration — **you**
+## 3. Stripe Customer Portal — **DONE**
 
-Stripe Dashboard → Settings → Billing → Customer portal → **Save**.
+Active by default on the account. Verified in code that nothing else blocks it:
+the only guard in `/api/stripe/portal` is on `stripe_customer_id` being null —
+somebody who has never paid at all — and it says so plainly rather than
+erroring. The "no configuration" case is caught and named explicitly if it ever
+does fire.
 
-Until that configuration is saved once, `/api/stripe/portal` throws. That is
-the "Manage payment methods" button in Settings, so the first customer whose
-card expires hits a 500 on the screen you sent them to.
+## 4. Clerk `user.updated` — **DONE**
 
-**I cannot do this** — Stripe dashboard, your account.
+Subscribed on the endpoint. Verified the handler acts on it rather than
+acknowledging and discarding, which is what an earlier version did and what
+caused the name-sync hunt:
 
----
+```ts
+if (evt.type !== 'user.created' && evt.type !== 'user.updated') return
+```
 
-## 4. Subscribe to `user.updated` in Clerk — **you**
-
-Clerk Dashboard → Webhooks → your endpoint → tick `user.updated`.
-
-Without it, a name change never reaches the users table. There are two other
-sync paths (a refresh on sign-in, and a bulk refresh when a roster is read) so
-this is not fatal, but it is the instant one and it is one checkbox.
-
-**I cannot do this** — Clerk dashboard.
+Worth one live check during the sweep: change a name in Clerk, confirm it
+reaches the `users` table without a sign-in.
 
 ---
 
