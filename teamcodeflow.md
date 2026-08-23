@@ -176,3 +176,35 @@ pasting a code into billing by hand.
 
 Steps 1 to 3 make the flow work at all. Step 4 is what stops the next person
 losing an evening to a misleading error message.
+
+---
+
+## The Clerk config this flow depends on
+
+Two environment variables, and the flow silently breaks if either is wrong:
+
+```
+NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL = /api/auth/post-signin
+NEXT_PUBLIC_CLERK_SIGN_IN_FORCE_REDIRECT_URL = /api/auth/post-signin
+```
+
+**FORCE, not FALLBACK.** Clerk's precedence is force > `?redirect_url` >
+fallback, so only a force value guarantees that `/api/auth/post-signin` runs.
+That endpoint is the router: it reads the join cookie, handles admin, the
+welcome gate and tenant subdomains. Nothing else does.
+
+The usual reason to prefer fallback is preserving deep links through
+`?redirect_url`. Nothing here uses them — `proxy.ts` sends unauthenticated
+users to a bare `/sign-in`, and post-signin ignores the parameter. The
+`?redirect_url=/join/CODE` set by `/api/join/start` is a spare, not the
+mechanism; the cookie is the mechanism.
+
+**Pointed anywhere else** — `/dashboard`, `/welcome`, `/billing` — and every
+invited signup skips the router. No membership is created, and the person
+lands on a page with no sign an invite existed. This is not hypothetical: a
+signup on 23 Aug 2026 did exactly that, and the code was live the whole time.
+
+The three destinations that hold the code (`/welcome`, its continue button,
+and `/billing`) now all forward to `/join/CODE` rather than to billing, so the
+symptom is contained even when this config is wrong. The config is still the
+thing to get right — containment is not correctness.
