@@ -98,6 +98,22 @@ Say the word and I flip it either way.
 
 ---
 
+## 6. One real seat charge, end to end — **DONE, 23 Aug 2026**
+
+Proven. `pmnt@dialerseat.com` joined Making Progress on an instant owner-pays
+code, the seat charge settled, and the card statement reads **$15.00** against
+`sub_1U7ft3LUtyFm1UFge9qHLdBk` — $35.00 list, less a 57.14% agreed rate, to the
+cent. Weekly period, Aug 23 to Aug 30.
+
+That is the first time money has moved through the seat path. Eleven billing
+bugs had been found by reading before this; none of them had ever been
+disproven by a transaction.
+
+The original text follows, since the same steps re-verify it after any change
+to the discount rules.
+
+### Original
+
 ## 6. One real seat charge, end to end — **you and me**
 
 The thing that has never happened. Nine paid seats, every one settled at $0
