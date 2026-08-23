@@ -35,6 +35,28 @@ function duration ceilings, and the capacity notes.
 
 ---
 
+## 2b. Upgrade Supabase off the free plan — **you**
+
+Added after the fact, and it is arguably more urgent than Vercel rather than
+less. The earlier version of this list left it out, which was a real omission.
+
+Two ceilings arrive almost immediately once a genuine floor dials:
+
+- **500 MB, then the database goes READ-ONLY.** No call rows, no dispositions,
+  no heartbeats, no uploads. At 50 seats dialing 1,000 leads a day that is
+  **under a week** of runway. `ops-health` warns at 70% and 85%, which is
+  warning, not headroom.
+- **The free Micro instance** (60 connections) lands around 300–500 progressive
+  agents or **40–70 predictive at 5 lines**, on arithmetic rather than a load
+  test. JG's 35 on predictive sits at the top of that range.
+
+So the sequence before that floor runs is Supabase Pro **and** Vercel Pro. One
+without the other still stops.
+
+**I cannot do this** — payment on your account.
+
+---
+
 ## 3. Save the Stripe Customer Portal configuration — **you**
 
 Stripe Dashboard → Settings → Billing → Customer portal → **Save**.
