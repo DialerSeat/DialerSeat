@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { cancelSeatSubscription } from '@/lib/teamBilling'
 import { apiError } from '@/lib/apiError'
 import { reconcileCoveredSeats } from '@/lib/coveredSeats'
+import { syncIfTierChanged } from '@/lib/seatDiscount'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -143,6 +144,10 @@ export async function POST(req: Request) {
     // one of those is promoted to carry the charge — otherwise the owner ends
     // up with active memberships and nothing billed for any of them.
     const { promotedMemberId } = await reconcileCoveredSeats(team.owner_id, userId)
+
+    // A seat ending can drop this owner below a volume tier they were being
+    // discounted for. Only fires on an actual boundary.
+    await syncIfTierChanged(team.owner_id, { removed: true })
 
     return NextResponse.json({
       success: true,

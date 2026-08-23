@@ -475,13 +475,30 @@ export async function syncOwnerSeatDiscounts(ownerId: string): Promise<DiscountS
  * ones opened BEFORE the threshold was reached, which are the whole reason a
  * volume tier is not just "cheaper from now on".
  */
-export async function syncIfTierChanged(ownerId: string): Promise<boolean> {
+export async function syncIfTierChanged(
+  ownerId: string,
+  opts: { removed?: boolean } = {}
+): Promise<boolean> {
   try {
     const { ownerPaidSeats } = await ownerSeatDiscount(ownerId)
-    if (ownerPaidSeats <= 0) return false
 
+    // ── LOSING A TIER IS AS IMMEDIATE AS EARNING ONE ────────────────────
+    // This only ever compared N against N-1, which is the question a seat
+    // being OPENED asks. On a seat ending, the boundary that matters is
+    // between N and N+1, so a floor dropping from ten seats to nine did not
+    // trigger anything and kept its 5% until the nightly pass — a day of a
+    // discount nobody was earning.
+    //
+    // Still only on an actual boundary. Re-syncing on every departure would
+    // mean reading every one of a two-hundred-seat floor's subscriptions from
+    // Stripe because one person left, which is what the nightly batch exists
+    // to avoid.
+    const before = opts.removed
+      ? tierForSeats(ownerPaidSeats + 1)
+      : tierForSeats(Math.max(0, ownerPaidSeats - 1))
     const now = tierForSeats(ownerPaidSeats)
-    const before = tierForSeats(ownerPaidSeats - 1)
+
+    if (!opts.removed && ownerPaidSeats <= 0) return false
     if (now.key === before.key) return false
 
     await syncOwnerSeatDiscounts(ownerId)

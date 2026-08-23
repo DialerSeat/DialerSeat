@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { cancelSeatSubscription } from '@/lib/teamBilling'
 import { apiError } from '@/lib/apiError'
 import { reconcileCoveredSeats } from '@/lib/coveredSeats'
+import { syncIfTierChanged } from '@/lib/seatDiscount'
 
 export async function POST(req: Request) {
   try {
@@ -106,6 +107,10 @@ export async function POST(req: Request) {
       (member as any).teams.owner_id,
       member.user_id
     )
+
+    // A seat ending can drop this owner below a volume tier they were being
+    // discounted for. Only fires on an actual boundary.
+    await syncIfTierChanged((member as any).teams.owner_id, { removed: true })
 
     return NextResponse.json({
       success: true,

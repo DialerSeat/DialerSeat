@@ -119,6 +119,7 @@ export async function POST(req: Request) {
             decision_seen_at: null,
             seat_suspended_at: null,
             seat_suspend_reason: null,
+            billing_override: 'owner',
           })
           .eq('id', prior.id)
           .select('id')
@@ -131,10 +132,22 @@ export async function POST(req: Request) {
             team_id: teamId,
             user_id: agentId,
             status: 'pending',
-            // No joined_via_code: they did not join with one. That column is
-            // also what the seat-payer rule reads, so leaving it null keeps
-            // this seat on the owner, which is what adding somebody means.
+            // No joined_via_code: they did not join with one.
             joined_via_code: null,
+            // ── SAY WHO PAYS, EXPLICITLY ──────────────────────────────
+            // Left null at first, on the reasoning that null already means
+            // the owner. It does not. ownerSeatDiscount counts a seat as
+            // owner-funded when billing_override is 'owner' OR the code they
+            // joined with is owner-pays — and somebody added directly
+            // matches neither, so every seat added this way counted toward
+            // nothing. An owner who built their roster from All Users would
+            // never reach the ten-seat tier however many people they added.
+            //
+            // approvePendingMember still overwrites this with 'free' if they
+            // fund themselves or are covered by another of this owner's
+            // seats, so stating it here cannot force a charge that should
+            // not exist.
+            billing_override: 'owner',
           })
           .select('id')
           .single()
