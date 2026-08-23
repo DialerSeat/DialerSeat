@@ -26,6 +26,7 @@ import CopyableEmail from '../CopyableEmail'
 interface AdminUser {
   clerk_id: string
   email: string
+  username: string | null
   first_name: string | null
   last_name: string | null
   created_at: string
@@ -225,8 +226,12 @@ export default function OverviewApp() {
     else if (filter === 'inactive') list = list.filter(u => !u.is_active_subscription)
     if (search.trim()) {
       const q = search.toLowerCase()
+      // Username included: it is now on screen, and a field you can read but
+      // not search for is a field that looks broken the first time somebody
+      // types it in.
       list = list.filter(u =>
         u.email.toLowerCase().includes(q) ||
+        (u.username || '').toLowerCase().includes(q) ||
         `${u.first_name || ''} ${u.last_name || ''}`.toLowerCase().includes(q)
       )
     }
@@ -422,12 +427,22 @@ export default function OverviewApp() {
         }
         .ovr-email {
           font-size: 11px;
-          color: ${T.muted};
+          /* Was T.muted, which on this light panel is a mid grey against a
+             near-white background — the one line somebody actually needs to
+             read to identify a person, rendered as the faintest thing in the
+             row. */
+          color: ${T.text};
           font-family: monospace;
           margin-top: 2px;
           display: block;
         }
-        .ovr-email:hover { color: ${T.text}; }
+        .ovr-email:hover { color: ${T.accent}; }
+        .ovr-username {
+          font-size: 11px;
+          color: ${T.muted};
+          font-family: monospace;
+          display: block;
+        }
         .ovr-status-stack {
           display: flex;
           flex-direction: column;
@@ -797,6 +812,13 @@ export default function OverviewApp() {
                     )}
                   </div>
                   <CopyableEmail email={u.email} className="ovr-email" />
+                  {/* The handle they chose, which is what they call
+                      themselves and often the only name that matches a
+                      support message. Only when set — an empty line is
+                      noise on a row that already has three. */}
+                  {u.username && (
+                    <span className="ovr-username">@{u.username}</span>
+                  )}
                 </div>
                 <div className="ovr-leadcount" style={{
                   fontFamily: 'monospace', fontSize: 11, color: T.muted, whiteSpace: 'nowrap',

@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
 
   const { data: users, error } = await supabase
     .from('users')
-    .select('clerk_id, email, first_name, last_name, stripe_customer_id, created_at, is_admin, exclude_from_analytics')
+    .select('clerk_id, email, username, first_name, last_name, stripe_customer_id, created_at, is_admin, exclude_from_analytics')
     .order('created_at', { ascending: false })
 
   if (error) {
@@ -191,6 +191,7 @@ export async function GET(req: NextRequest) {
     return {
       clerk_id: u.clerk_id,
       email: u.email,
+      username: u.username,
       first_name: u.first_name,
       last_name: u.last_name,
       created_at: u.created_at,
