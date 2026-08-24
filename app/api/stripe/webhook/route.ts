@@ -859,6 +859,80 @@ async function upsertPersonalSubscription(
     last_event_at: eventCreated != null ? new Date(eventCreated * 1000).toISOString() : undefined,
   }
 
+  // ── THE TRIAL, RECORDED AND POLICED ───────────────────────────────────
+  // Two jobs, both needing a card that only exists after checkout.
+  //
+  // Recorded: trial_started_at on the user makes them ineligible for another
+  // one, which is the account-level half of the rule.
+  //
+  // Policed: the CARD-level half. Someone opening a new account every week
+  // passes the account check every time, and the only thing that stays
+  // constant is the card. Stripe's fingerprint is documented for exactly this
+  // — "check whether two customers who've signed up with you are using the
+  // same card number". If this card has already had a trial on another
+  // account, the trial ends immediately: they keep the subscription and start
+  // paying today rather than being refused, because refusing somebody who is
+  // trying to pay is the wrong end of the problem to attack.
+  // Leaving 'trialing' — converted, cancelled, or expired. Recorded for
+  // reporting only; eligibility is decided by trial_started_at, which is set
+  // above and never cleared by anything.
+  if (clerkId && subscription.trial_start && subscription.status !== 'trialing') {
+    void supabase
+      .from('users')
+      .update({ trial_ended_at: new Date().toISOString() })
+      .eq('clerk_id', clerkId)
+      .is('trial_ended_at', null)
+  }
+
+  if (clerkId && subscription.status === 'trialing') {
+    void (async () => {
+      try {
+        const pmId =
+          typeof subscription.default_payment_method === 'string'
+            ? subscription.default_payment_method
+            : (subscription.default_payment_method as any)?.id ?? null
+        if (!pmId) return
+
+        const pm = await stripe.paymentMethods.retrieve(pmId)
+        const fingerprint = (pm as any)?.card?.fingerprint ?? null
+        if (!fingerprint) return
+
+        const { data: priorTrial } = await supabase
+          .from('users')
+          .select('clerk_id')
+          .eq('trial_card_fingerprint', fingerprint)
+          .neq('clerk_id', clerkId)
+          .limit(1)
+          .maybeSingle()
+
+        await supabase
+          .from('users')
+          .update({
+            trial_started_at: subscription.trial_start
+              ? new Date(subscription.trial_start * 1000).toISOString()
+              : new Date().toISOString(),
+            trial_card_fingerprint: fingerprint,
+          })
+          .eq('clerk_id', clerkId)
+
+        if (priorTrial) {
+          console.warn(
+            '[stripe/webhook] card %s has already had a trial (%s) — ending this one now',
+            fingerprint, priorTrial.clerk_id
+          )
+          // trial_end 'now' converts them to a paying subscription
+          // immediately. They keep their access and their data; they simply
+          // do not get a second free week on the same card.
+          await stripe.subscriptions.update(subscription.id, { trial_end: 'now' })
+        }
+      } catch (err: any) {
+        // Never fatal. A missed check costs one extra free week; a webhook
+        // that throws costs the whole subscription record.
+        console.error('[stripe/webhook] trial fingerprint check failed:', err?.message || err)
+      }
+    })()
+  }
+
   const { error } = await supabase
     .from('subscriptions')
     .upsert(payload, { onConflict: 'stripe_subscription_id' })

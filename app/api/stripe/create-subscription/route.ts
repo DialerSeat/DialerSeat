@@ -3,6 +3,7 @@ import { auth, currentUser } from '@clerk/nextjs/server'
 import { getServiceClient } from '@/lib/supabase'
 import { stripe } from '@/lib/stripe'
 import type Stripe from 'stripe'
+import { TRIAL_DAYS } from '@/lib/entitlement'
 
 const supabase = getServiceClient('stripe/create-subscription')
 
@@ -216,6 +217,40 @@ export async function POST(req: Request) {
       .eq('user_id', userId)
       .eq('status', 'incomplete')
 
+    // ── IS THIS A FIRST TRIAL? ────────────────────────────────────────────
+    // Two conditions, both about this account: they have never started a trial,
+    // and they have never had a subscription at all. A lapsed customer coming
+    // back is not a new customer, and giving them a free week every time they
+    // resubscribe would turn the trial into a discount for churning.
+    //
+    // The CARD check cannot happen here — the card is collected after this
+    // subscription exists — so it runs when the card first becomes visible and
+    // ends a repeat trial early rather than blocking checkout. See the webhook.
+    const { data: trialRow } = await supabase
+      .from('users')
+      .select('trial_started_at')
+      .eq('clerk_id', userId)
+      .maybeSingle()
+
+    const { data: priorSubs } = await supabase
+      .from('subscriptions')
+      .select('id')
+      .eq('user_id', userId)
+      .limit(1)
+
+    // ── ONCE PER ACCOUNT, FOREVER ─────────────────────────────────────────
+    // trial_started_at is set the moment a trial begins and is NEVER cleared
+    // — not on cancel, not when the trial expires, not when they resubscribe.
+    // Cancelling during a trial does not return it, and neither does letting
+    // it run out. After that there is one route back in and it is payment.
+    //
+    // It is also the durable half of the check. The prior-subscription test
+    // below can be defeated: this route deletes abandoned `incomplete` rows,
+    // so somebody who bails at checkout looks new again by that measure. The
+    // flag does not move, which is why it is first.
+    const eligibleForTrial =
+      !trialRow?.trial_started_at && (priorSubs || []).length === 0
+
     const subParams: Stripe.SubscriptionCreateParams = {
       customer: customerId,
       items: [{ price: priceId }],
@@ -224,8 +259,20 @@ export async function POST(req: Request) {
         payment_method_types: ['card'],
         save_default_payment_method: 'on_subscription',
       },
+      ...(eligibleForTrial
+        ? {
+            trial_period_days: TRIAL_DAYS,
+            // A trial with no card on file must end, not roll into a free
+            // subscription nobody is paying for. The card is collected during
+            // checkout, so this only fires if something went wrong.
+            trial_settings: {
+              end_behavior: { missing_payment_method: 'cancel' as const },
+            },
+          }
+        : {}),
       metadata: {
         clerk_id: userId,
+        ...(eligibleForTrial ? { trial: 'first' } : {}),
         ...(plan === 'wl' ? { sub_kind: 'whitelabel' } : {}),
         ...(pendingTeamMemberId ? { pending_team_member_id: pendingTeamMemberId } : {}),
       },
@@ -313,7 +360,11 @@ export async function POST(req: Request) {
 
     const subscription = await stripe.subscriptions.create({
       ...subParams,
-      expand: ['latest_invoice.confirmation_secret'],
+      // pending_setup_intent as well as the invoice secret. A trial has
+      // nothing to charge today, so there is no PaymentIntent to confirm —
+      // Stripe puts a SetupIntent there instead, and confirming THAT is what
+      // saves the card for when the trial ends.
+      expand: ['latest_invoice.confirmation_secret', 'pending_setup_intent'],
     })
 
     const invoice = subscription.latest_invoice as any
@@ -330,6 +381,43 @@ export async function POST(req: Request) {
           currency: (invoice.currency as string) || 'usd',
         }
       : null
+
+    // ── A TRIAL CONFIRMS A SETUP, NOT A PAYMENT ───────────────────────────
+    // Nothing is owed today, so there is no PaymentIntent. Stripe puts a
+    // SetupIntent on pending_setup_intent instead, and the client confirms
+    // that to save the card for when the trial ends. Same Elements form, a
+    // different confirm call — which is why `mode` travels with the secret
+    // rather than the client guessing from the amount.
+    if (subscription.status === 'trialing') {
+      const setupIntent = (subscription as any).pending_setup_intent
+      const setupSecret = setupIntent?.client_secret ?? null
+
+      if (!setupSecret) {
+        console.error('Trial subscription has no pending_setup_intent', {
+          subId: subscription.id,
+          status: subscription.status,
+        })
+        return NextResponse.json(
+          { error: 'Failed to start your trial. Please try again.' },
+          { status: 500 }
+        )
+      }
+
+      const trialEnd = (subscription as any).trial_end
+      return NextResponse.json({
+        subscriptionId: subscription.id,
+        clientSecret: setupSecret,
+        // The client needs to call confirmSetup rather than confirmPayment.
+        mode: 'setup',
+        plan,
+        trial: {
+          days: TRIAL_DAYS,
+          endsAt: trialEnd ? new Date(trialEnd * 1000).toISOString() : null,
+        },
+        amounts,
+        coupon: appliedCoupon,
+      })
+    }
 
     if (!confirmationSecret) {
       if (subscription.status === 'active') {
@@ -357,6 +445,9 @@ export async function POST(req: Request) {
     return NextResponse.json({
       subscriptionId: subscription.id,
       clientSecret: confirmationSecret,
+      // Explicit rather than implied by omission, so the client never has to
+      // infer which confirm call to make.
+      mode: 'payment',
       plan,
       amounts,
       coupon: appliedCoupon,

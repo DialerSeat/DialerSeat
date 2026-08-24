@@ -1,6 +1,7 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { ENTITLED_STATUSES } from '@/lib/entitlement'
 
 const isPublicRoute = createRouteMatcher([
   '/',
@@ -94,7 +95,8 @@ const isWhitelabelOnboardingRoute = createRouteMatcher([
   '/onboarding/whitelabel(.*)',
 ])
 
-const ACTIVE_STATUSES = ['active']
+// Shared with lib/subscription.ts rather than restated — see lib/entitlement.ts.
+const ACTIVE_STATUSES: readonly string[] = ENTITLED_STATUSES
 
 type AccessTier = 'active' | 'lapsed' | 'new'
 

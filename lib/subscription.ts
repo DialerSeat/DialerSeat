@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
+import { ENTITLED_STATUSES } from '@/lib/entitlement'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -9,7 +10,10 @@ const supabase = createClient(
 
 export type AccessTier = 'active' | 'lapsed' | 'new'
 
-const ACTIVE_STATUSES = ['active']  // strict: only a paid, active sub grants access (no trials; past_due is locked)
+// One shared definition — see lib/entitlement.ts. This and proxy.ts each had
+// their own copy, which is the difference between a customer being locked out
+// and a stranger dialling for free, kept in step by a comment.
+const ACTIVE_STATUSES: readonly string[] = ENTITLED_STATUSES
 
 export interface DetailedAccess {
   tier: AccessTier
