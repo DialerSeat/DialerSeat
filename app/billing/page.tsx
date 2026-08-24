@@ -667,7 +667,11 @@ export default function BillingPage() {
                 <span style={{ color: '#32ff7e' }}>{promoApplied?.toUpperCase()}</span> applied — then {billing.recurringLabel}
               </div>
             ) : (
-              <div style={priceCaptionStyle} className="billing-price-caption">Charged today, then weekly until you cancel.</div>
+              <div style={priceCaptionStyle} className="billing-price-caption">
+                {trial
+                  ? `Free for ${trial.days} days, then weekly until you cancel.`
+                  : 'Charged today, then weekly until you cancel.'}
+              </div>
             )}
 
             <div style={sectionTitleStyle}>{planInfo.title}</div>
@@ -702,7 +706,16 @@ export default function BillingPage() {
               <li style={termItemStyle}>
                 <span style={termBulletStyle} />
                 <span>
-                  <strong style={{ color: '#4a9eff' }}>{billing.todayLabel}</strong> charged today to start your subscription
+                  {trial ? (
+                    <>
+                      <strong style={{ color: '#32ff7e' }}>Nothing charged today</strong> —
+                      your {trial.days}-day free trial starts now
+                    </>
+                  ) : (
+                    <>
+                      <strong style={{ color: '#4a9eff' }}>{billing.todayLabel}</strong> charged today to start your subscription
+                    </>
+                  )}
                   {billing.hasDiscount && (
                     <span style={{ color: '#32ff7e' }}> ({promoApplied?.toUpperCase()} applied)</span>
                   )}
