@@ -261,6 +261,39 @@ export default function NumbersApp() {
   const [buyProgress, setBuyProgress] = useState<{ done: number; total: number } | null>(null)
 
   const [releaseConfirmId, setReleaseConfirmId] = useState<string | null>(null)
+  const [restingId, setRestingId] = useState<string | null>(null)
+  const [restError, setRestError] = useState<string | null>(null)
+
+  // ── COOLDOWN IS A HEURISTIC, SO IT NEEDS AN UNDO ────────────────────────
+  // number-health rests a number when its answer rate collapses, which is
+  // right far more often than it is wrong — but it is a rolling window, and a
+  // small window plus one bad afternoon rests a number that is fine. Nothing
+  // could undo that without editing the row in the database.
+  //
+  // Waking clears the health counters too, server-side. Leaving them would let
+  // the next health pass read the same collapsed rate and rest it again within
+  // the day: a button that appears to work and quietly undoes itself.
+  const handleRest = async (id: string, action: 'wake' | 'rest') => {
+    setRestingId(id)
+    setRestError(null)
+    try {
+      const res = await fetch('/api/admin/pool/rest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ numberId: id, action }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json?.success) {
+        setRestError(json?.error || 'That did not work.')
+        return
+      }
+      await load()
+    } catch (e) {
+      setRestError(e instanceof Error ? e.message : 'That did not work.')
+    } finally {
+      setRestingId(null)
+    }
+  }
   const [releasing, setReleasing] = useState<string | null>(null)
 
   const [configOpen, setConfigOpen] = useState(false)
@@ -1321,7 +1354,35 @@ export default function NumbersApp() {
                   </div>
                 )}
 
+                {restError && restingId === null && (
+                  <div style={{
+                    fontSize: 9, color: T.red, letterSpacing: 1,
+                    padding: 6, background: '#f8e8e8', borderRadius: 2, marginBottom: 8,
+                  }}>{restError}</div>
+                )}
+
                 <div style={{ display: 'flex', gap: 4 }}>
+                  {/* Resting is reversible and costs nothing either way, so no
+                      confirm step — unlike RELEASE, which gives the number
+                      back to the carrier and cannot be undone. */}
+                  {!isConfirming && n.status === 'resting' && (
+                    <button
+                      className="pool-btn"
+                      style={{ flex: 1, borderColor: T.green, color: T.green }}
+                      disabled={restingId === n.id}
+                      onClick={() => handleRest(n.id, 'wake')}
+                      title="Put this number back in rotation and clear its health window"
+                    >{restingId === n.id ? '...' : '▲ WAKE'}</button>
+                  )}
+                  {!isConfirming && n.status === 'active' && (
+                    <button
+                      className="pool-btn"
+                      style={{ flex: 1 }}
+                      disabled={restingId === n.id}
+                      onClick={() => handleRest(n.id, 'rest')}
+                      title="Take this number out of rotation without releasing it"
+                    >{restingId === n.id ? '...' : '⏸ REST'}</button>
+                  )}
                   {!isConfirming ? (
                     <button
                       className="pool-btn pool-btn-danger"
