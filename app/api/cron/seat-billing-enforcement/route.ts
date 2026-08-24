@@ -49,10 +49,20 @@ const supabase = getServiceClient('cron/seat-billing-enforcement')
 // account and every lead, call and disposition in it.
 // ─────────────────────────────────────────────────────────────────────────
 
-// Fallback only. The live value comes from platform_config.seat_grace_days,
-// read once per run — a suspension window is exactly the kind of thing an
-// operator needs to widen at 2am without waiting for a deploy.
-const GRACE_DAYS_FALLBACK = 7
+// ── A RETRY WINDOW, NOT A GRACE PERIOD ───────────────────────────────────
+// It was both, and that was the problem. A failed charge left the seat ACTIVE
+// for the whole window: the agent kept dialing, the card was retried daily,
+// and if a retry succeeded the new subscription started from that moment —
+// so the unpaid days were never billed. Seven days of free dialing per failed
+// card, unrecoverable, every time.
+//
+// Now the seat suspends the moment a charge fails, and the window is only
+// about how long the card keeps being retried. Nobody dials unpaid, so a long
+// window costs nothing and is simply a better chance of recovering the
+// customer — which is why the ceiling is 90 days rather than a fortnight.
+//
+// Fallback only. The live value is platform_config.seat_retry_days.
+const RETRY_DAYS_FALLBACK = 7
 
 // Rows per round trip. A page size, not a ceiling: every pass below keeps
 // paging until its work is done or its time budget is spent, and reports
@@ -73,11 +83,11 @@ export async function GET(req: Request) {
     // One read for the whole run. Falls back to the old constant if the
     // config table cannot be reached, so an unreadable row behaves exactly
     // as the hardcoded version did rather than suspending everybody.
-    let graceDays = GRACE_DAYS_FALLBACK
+    let retryDays = RETRY_DAYS_FALLBACK
     try {
       const cfg = await getPlatformConfig()
-      if (typeof cfg?.seat_grace_days === 'number' && cfg.seat_grace_days >= 1) {
-        graceDays = cfg.seat_grace_days
+      if (typeof cfg?.seat_retry_days === 'number' && cfg.seat_retry_days >= 1) {
+        retryDays = cfg.seat_retry_days
       }
     } catch {
       // Keep the fallback.
@@ -113,7 +123,7 @@ export async function GET(req: Request) {
     // Runs before the suspension pass on purpose: a card added this morning
     // should rescue the seat today, not have it suspended an hour before the
     // retry that would have saved it.
-    const retried = await retryFailedSeatCharges(retryBudgetSpent, graceDays)
+    const retried = await retryFailedSeatCharges(retryBudgetSpent, retryDays)
 
     // ── DISCOUNTS FOLLOW THE SEAT COUNT ──────────────────────────────────
     // Crossing ten seats has to discount the nine already open, or the tier
@@ -124,7 +134,17 @@ export async function GET(req: Request) {
     // charges.
     const discounts = await reconcileDiscounts(discountBudgetSpent)
 
-    const cutoff = new Date(Date.now() - graceDays * 24 * 60 * 60 * 1000).toISOString()
+    // ── SUSPENSION NO LONGER WAITS ────────────────────────────────────────
+    // This was `now - retryDays`, so a failed charge left the seat live for
+    // the whole window and the agent dialed unpaid until it expired. The
+    // window is now only about retrying the card; access stops when the money
+    // does.
+    //
+    // Still a cutoff rather than no filter at all: `now` means a charge that
+    // failed seconds ago, mid-run, is picked up on the next pass rather than
+    // racing the retry that is about to rescue it. The retry pass runs FIRST
+    // in this job for the same reason.
+    const cutoff = new Date().toISOString()
 
     // ── WHY THIS PAGES, AND WHY IT MARKS ─────────────────────────────────
     // This was a single LIMIT 500 with no ordering, over a filter that nothing
@@ -271,7 +291,7 @@ export async function GET(req: Request) {
 
     if (suspendedTotal > 0) {
       console.log(
-        `[seat-enforcement] suspended ${suspendedTotal} seat(s) unpaid for more than ${graceDays} days`
+        `[seat-enforcement] suspended ${suspendedTotal} seat(s) unpaid for more than ${retryDays} days`
       )
     }
     if (!exhausted) {
@@ -287,7 +307,7 @@ export async function GET(req: Request) {
       retried,
       discounts,
       covered,
-      graceDays,
+      retryDays,
       // false means the backlog outlasted one run; it resumes tomorrow, oldest
       // first, and pendingAfterRun says how much is waiting.
       completed: exhausted,
@@ -319,7 +339,7 @@ interface RetrySummary {
  */
 async function retryFailedSeatCharges(
   outOfTime: () => boolean,
-  graceDays: number
+  retryDays: number
 ): Promise<RetrySummary> {
   const summary: RetrySummary = {
     attempted: 0,
@@ -329,7 +349,7 @@ async function retryFailedSeatCharges(
     notReached: 0,
   }
 
-  const windowStart = new Date(Date.now() - graceDays * 24 * 60 * 60 * 1000).toISOString()
+  const windowStart = new Date(Date.now() - retryDays * 24 * 60 * 60 * 1000).toISOString()
 
   // ── OLDEST DEBT FIRST ───────────────────────────────────────────────────
   // Every row here costs a Stripe round trip, so unlike the suspension pass
@@ -418,6 +438,17 @@ async function retryFailedSeatCharges(
           period_end: sub.currentPeriodEnd,
         })
         .eq('id', c.id)
+      // ── A RECOVERED CHARGE LIFTS THE SUSPENSION IT CAUSED ─────────────
+      // The seat was suspended the moment the charge failed, so paying is
+      // what brings it back. Only an 'unpaid' suspension is lifted: an owner
+      // who deliberately parked the seat has said no to it, and a successful
+      // retry must not overturn that decision.
+      await supabase
+        .from('team_members')
+        .update({ seat_suspended_at: null, seat_suspend_reason: null })
+        .eq('id', c.team_member_id)
+        .eq('seat_suspend_reason', 'unpaid')
+
       summary.recovered++
     } catch (err: any) {
       const reason = isSeatBillingError(err) ? err.code : (err?.message || 'unknown')

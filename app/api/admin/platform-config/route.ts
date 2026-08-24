@@ -39,10 +39,12 @@ const FIELDS: Record<keyof PlatformConfig, Validator> = {
   recording_enabled_global:  v => typeof v === 'boolean' ? v : null,
   number_buying_frozen:      v => typeof v === 'boolean' ? v : null,
   // ── TEAM LEVERS ────────────────────────────────────────────────────────
-  // Grace is bounded rather than free: zero would suspend a seat the instant
-  // a card blipped, and a very long window is an unpaid seat dialing for a
-  // month. One to thirty days covers every sane answer.
-  seat_grace_days:           v => typeof v === 'number' && v >= 1 && v <= 30 ? Math.round(v) : null,
+  // How long a failed seat charge keeps being retried. The seat suspends the
+  // moment it fails, so a long window is not free access — it is a longer
+  // chance to recover the customer, which is why the ceiling is 90 days and
+  // not a fortnight. One day minimum: zero would mean never retrying at all,
+  // and a single blip on a good card would end the seat.
+  seat_retry_days:           v => typeof v === 'number' && v >= 1 && v <= 90 ? Math.round(v) : null,
   seat_takeover_enabled:     v => typeof v === 'boolean' ? v : null,
   // Bounded by the DB CHECK constraint on predictive_lines_per_agent.
   predictive_line_ceiling:   v => intInRange(v, 1, 5),

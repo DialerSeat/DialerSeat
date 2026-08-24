@@ -712,7 +712,7 @@ interface PlatformConfigShape {
   recording_enabled_global: boolean
   number_buying_frozen: boolean
   predictive_line_ceiling: number
-  seat_grace_days: number
+  seat_retry_days: number
   seat_takeover_enabled: boolean
 }
 
@@ -789,30 +789,30 @@ function TeamsPane({ onBack }: { onBack: () => void }) {
 
       {config && (
         <>
-          <GroupLabel>Unpaid seats</GroupLabel>
+          <GroupLabel>Failed seat charges</GroupLabel>
           <GroupedCard>
             <SettingsRow
-              title="Grace period"
+              title="Retry window"
               subtitle={
-                `A seat whose charge fails keeps working for ${config.seat_grace_days} ` +
-                `${config.seat_grace_days === 1 ? 'day' : 'days'}, retried daily, then suspends. ` +
-                `The agent stays on the roster either way.`
+                `A failed charge is retried once a day for ${config.seat_retry_days} ` +
+                `${config.seat_retry_days === 1 ? 'day' : 'days'}. The seat suspends the ` +
+                `moment it fails and comes back the moment it pays — nobody dials unpaid.`
               }
               isLast
               right={
                 <div style={{ display: 'flex', gap: 6 }}>
-                  {[3, 7, 14, 30].map(n => (
+                  {[7, 30, 60, 90].map(n => (
                     <button
                       key={n}
                       type="button"
-                      disabled={saving === 'seat_grace_days'}
-                      onClick={() => patch('seat_grace_days', n)}
+                      disabled={saving === 'seat_retry_days'}
+                      onClick={() => patch('seat_retry_days', n)}
                       style={{
                         minWidth: 34, height: 30, borderRadius: 8, cursor: 'pointer',
                         fontSize: 13, fontWeight: 500, padding: '0 8px',
                         border: 'none',
-                        background: config.seat_grace_days === n ? IOS_BLUE : 'rgba(120,120,128,0.16)',
-                        color: config.seat_grace_days === n ? '#fff' : LABEL_PRIMARY,
+                        background: config.seat_retry_days === n ? IOS_BLUE : 'rgba(120,120,128,0.16)',
+                        color: config.seat_retry_days === n ? '#fff' : LABEL_PRIMARY,
                       }}
                     >{n}d</button>
                   ))}
@@ -820,6 +820,15 @@ function TeamsPane({ onBack }: { onBack: () => void }) {
               }
             />
           </GroupedCard>
+          <div style={{
+            margin: '6px 16px 0', fontSize: 12, color: LABEL_SECONDARY, lineHeight: 1.5,
+          }}>
+            This used to be a grace period, which left the seat working while the
+            card was chased — so a failed card bought a week of dialing nobody
+            paid for, and a recovered charge started a fresh period rather than
+            backdating. Access now stops with the money, which is why the window
+            can be long: it costs nothing and recovers more customers.
+          </div>
 
           <GroupLabel>When an agent stops paying for themselves</GroupLabel>
           <GroupedCard>

@@ -32,8 +32,9 @@ export interface PlatformConfig {
   number_buying_frozen: boolean
   /** Ceiling applied on top of each campaign's predictive_lines_per_agent. */
   predictive_line_ceiling: number
-  /** Days an unpaid seat keeps working before it suspends. */
-  seat_grace_days: number
+  /** Days a failed seat charge keeps being retried. The seat is suspended the
+   *  moment it fails, so this is only about recovery — not free access. */
+  seat_retry_days: number
   /** Owner automatically picks up a seat when the agent stops self-funding. */
   seat_takeover_enabled: boolean
   /** Dialer call-status poll cadence, ms. */
@@ -107,7 +108,7 @@ export const PLATFORM_CONFIG_DEFAULTS: PlatformConfig = {
   predictive_line_ceiling: 5,
   // Matches the constants these replaced, so an unreadable config table
   // behaves exactly as the hardcoded version did.
-  seat_grace_days: 7,
+  seat_retry_days: 7,
   seat_takeover_enabled: true,
   poll_interval_ms: 1500,
   hangup_poll_interval_ms: 2000,
@@ -199,7 +200,7 @@ export const PLATFORM_CONFIG_DEFAULTS: PlatformConfig = {
 
 const CONFIG_COLUMNS =
   'amd_enabled_global, recording_enabled_global, number_buying_frozen, ' +
-  'predictive_line_ceiling, seat_grace_days, seat_takeover_enabled, ' +
+  'predictive_line_ceiling, seat_retry_days, seat_takeover_enabled, ' +
   'poll_interval_ms, hangup_poll_interval_ms, ' +
   'pool_capacity_alert_pct, webhook_silence_minutes, agent_leg_refusal_alert_count, ' +
   'concurrency_budget, amd_detector, amd_tuning_enabled, ' +
