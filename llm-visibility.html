@@ -6,40 +6,72 @@
 <style>
   @page { size: A4; margin: 18mm 16mm; }
   * { box-sizing: border-box; }
+
+  /* ── THIS IS PAPER, NOT A WEB PAGE ────────────────────────────────────
+     The first version set a text colour and no background, so a viewer in
+     dark mode painted its own dark ground behind near-black type and most
+     of the document was unreadable. A printable document has exactly one
+     correct appearance, so it is stated rather than inherited:
+     color-scheme stops the browser auto-inverting anything, and both the
+     background and the colour are explicit on html AND body. */
+  :root { color-scheme: only light; }
+  html, body { background: #ffffff; color: #14161c; }
+
   body {
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-    color: #14161c; line-height: 1.55; font-size: 10.5pt;
+    line-height: 1.55; font-size: 10.5pt;
     max-width: 780px; margin: 0 auto; padding: 28px 24px 60px;
     -webkit-font-smoothing: antialiased;
   }
-  h1 { font-size: 21pt; letter-spacing: -0.4px; margin: 0 0 4px; }
+
+  /* Dark mode is not a reading mode for a document that exists to be
+     printed. Held to the same appearance either way. */
+  @media (prefers-color-scheme: dark) {
+    html, body { background: #ffffff; color: #14161c; }
+  }
+  h1 { font-size: 21pt; letter-spacing: -0.4px; margin: 0 0 4px; color: #14161c; }
   .sub { color: #5a5e6a; font-size: 10pt; margin: 0 0 28px; }
   h2 {
     font-size: 13pt; margin: 30px 0 8px; padding-bottom: 5px;
-    border-bottom: 1.5px solid #14161c; letter-spacing: -0.2px;
+    border-bottom: 1.5px solid #14161c; letter-spacing: -0.2px; color: #14161c;
   }
-  h3 { font-size: 11pt; margin: 18px 0 4px; }
-  p { margin: 0 0 10px; }
+  h3 { font-size: 11pt; margin: 18px 0 4px; color: #14161c; }
+  p { margin: 0 0 10px; color: #14161c; }
+  li { color: #14161c; }
   ul { margin: 0 0 12px; padding-left: 20px; }
   li { margin-bottom: 5px; }
   strong { font-weight: 600; }
   .lead {
     background: #f4f5f8; border-left: 3px solid #2a4a8a;
-    padding: 12px 15px; margin: 0 0 22px; font-size: 10.5pt;
+    padding: 12px 15px; margin: 0 0 22px; font-size: 10.5pt; color: #14161c;
   }
   .box {
     border: 1px solid #d4d7de; border-radius: 4px;
     padding: 12px 15px; margin: 14px 0;
+    background: #ffffff; color: #14161c;
   }
   .box.warn { border-color: #c9a227; background: #fdfaf0; }
   .box.good { border-color: #2f7d43; background: #f2f9f4; }
   .box h3 { margin-top: 0; }
   table { width: 100%; border-collapse: collapse; margin: 12px 0 18px; font-size: 9.5pt; }
-  th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid #dfe2e8; vertical-align: top; }
-  th { background: #f4f5f8; font-weight: 600; }
-  code { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 9pt; background: #f0f1f4; padding: 1px 4px; border-radius: 3px; }
+  th, td {
+    text-align: left; padding: 7px 9px; border-bottom: 1px solid #dfe2e8;
+    vertical-align: top; color: #14161c;
+  }
+  th { background: #f4f5f8; font-weight: 600; color: #14161c; }
+  code {
+    font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 9pt;
+    background: #f0f1f4; color: #14161c; padding: 1px 4px; border-radius: 3px;
+  }
   .foot { margin-top: 34px; padding-top: 10px; border-top: 1px solid #dfe2e8; color: #5a5e6a; font-size: 8.5pt; }
   h2, h3 { break-after: avoid; page-break-after: avoid; }
+
+  /* Without this the tinted callouts print as untinted boxes and the
+     document loses the only visual separation it has. */
+  @media print {
+    html, body { background: #ffffff !important; color: #14161c !important; }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
   .box, table { break-inside: avoid; page-break-inside: avoid; }
 </style>
 </head>
