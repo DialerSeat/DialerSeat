@@ -713,9 +713,22 @@ function CampaignsTab() {
 
   useEffect(() => { load() }, [load])
 
+  /** Campaigns attached to at least one team — everything this tab is about. */
+  const teamScoped = useMemo(
+    () => campaigns.filter(c => c.teams.length > 0),
+    [campaigns]
+  )
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     let list = campaigns.filter(c => {
+      // ── THIS IS THE TEAMS APP ─────────────────────────────────────────
+      // A campaign with no team attachment is somebody's personal list. It
+      // has no team to assign, no roster to reason about and no bearing on
+      // anything else on this screen, so it was padding the tab with rows
+      // that could not be acted on from here. The Campaigns app is where
+      // every campaign lives; this tab is about the ones on teams.
+      if (c.teams.length === 0) return false
       if (statusFilter !== 'all' && c.status !== statusFilter) return false
       if (!q) return true
       return c.name.toLowerCase().includes(q) ||
@@ -799,12 +812,32 @@ function CampaignsTab() {
           <span style={S.headerSub}>{isManager ? 'tenant overview' : 'platform overview'}</span>
         </div>
 
+        {/* ── COUNTS THE SAME THING THE LIST SHOWS ────────────────────────
+            These were platform totals over every campaign, so with the tab
+            now scoped to team campaigns the header would have read 16 above
+            four rows. A stat that disagrees with the list beneath it makes
+            both look wrong. Personal campaigns are still counted in full in
+            the Campaigns app, which is the screen that is about them. */}
         {totals && (
           <div style={S.statRow}>
-            <Stat label="Campaigns" value={String(totals.campaigns)} />
-            <Stat label="Active" value={String(totals.active)} accent={G.green} />
-            {totals.inactive > 0 && <Stat label="Inactive" value={String(totals.inactive)} accent={G.textFaint} />}
-            <Stat label="Team-assigned" value={String(totals.attached)} accent={G.teal} />
+            <Stat label="Team campaigns" value={String(teamScoped.length)} />
+            <Stat
+              label="Active"
+              value={String(teamScoped.filter(c => c.status === 'active').length)}
+              accent={G.green}
+            />
+            {teamScoped.some(c => c.status !== 'active') && (
+              <Stat
+                label="Inactive"
+                value={String(teamScoped.filter(c => c.status !== 'active').length)}
+                accent={G.textFaint}
+              />
+            )}
+            <Stat
+              label="Personal, not shown"
+              value={String(totals.campaigns - teamScoped.length)}
+              accent={G.textFaint}
+            />
           </div>
         )}
       </div>
