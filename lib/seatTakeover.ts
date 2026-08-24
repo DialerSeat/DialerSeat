@@ -197,6 +197,9 @@ export async function takeOverAgentPaidSeats(agentClerkId: string): Promise<Take
           status: 'paid',
           period_start: sub.currentPeriodStart,
           period_end: sub.currentPeriodEnd,
+          // The invoiced amount, not the list price.
+          charged_cents: sub.chargedCents ?? null,
+          discount_percent: sub.discountPercent ?? null,
         })
         .eq('id', chargeRow.id)
     } catch (err: any) {

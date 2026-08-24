@@ -414,6 +414,9 @@ interface AdminData {
   summary: {
     totalUsers: number; payingActiveSubs: number; proSubs: number; wlSubs: number
     unknownPriceSubs: number; wrr: number; mrr: number; proWrr: number; wlWrr: number
+    seatsBilled: number; seatsWithKnownAmount: number; seatWrr: number; seatMrr: number
+    seatsAmountUnknown: number
+    seatRates: Array<{ weekly: string; cents: number; seats: number }>
     signupsInRange: number; paidConversionsInRange: number; cancellationsInRange: number
     netNewPaying: number; churnRate: number; avgLifetimeWeeks: number; wowDelta: number
     wowPct: number; newPayingUsers: number; establishedPayingUsers: number
@@ -471,6 +474,37 @@ function AdminRevenueView() {
               <div className="an-stat-sub">PRO {fmtMoney(data.summary.proWrr)} · MGR+ {fmtMoney(data.summary.wlWrr)}</div>
               <div className="an-stat-sub" style={{ marginTop: 3 }}>{fmtMoney(data.summary.mrr)} / MONTH</div>
             </div>
+            {/* ── SEATS, AT WHAT THEY ACTUALLY BILL ────────────────────────
+                Kept beside subscription revenue rather than blended into it.
+                They discount differently and move differently, and one
+                combined figure hides which of the two is changing.
+
+                The rate breakdown is the point: every seat can carry its own
+                agreed number, and "$15.00 × 1" says something an average
+                never would. */}
+            {data.summary.seatsBilled > 0 && (
+              <div className="an-stat-card hero" style={{ borderTopColor: T.green }}>
+                <div className="an-stat-label">SEAT REVENUE · WEEKLY</div>
+                <div className="an-stat-value" style={{ color: T.green }}>
+                  {fmtMoney(data.summary.seatWrr)}
+                </div>
+                <div className="an-stat-sub">
+                  {data.summary.seatRates.length > 0
+                    ? data.summary.seatRates
+                        .map(r => `${r.weekly} × ${r.seats}`)
+                        .join(' · ')
+                    : `${data.summary.seatsBilled} seats`}
+                </div>
+                <div className="an-stat-sub" style={{ marginTop: 3 }}>
+                  {fmtMoney(data.summary.seatMrr)} / MONTH
+                  {data.summary.seatsAmountUnknown > 0 && (
+                    <span style={{ color: T.amber }}>
+                      {' '}· {data.summary.seatsAmountUnknown} AMOUNT NOT RECORDED
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
             <div className="an-stat-card hero" style={{ borderTopColor: data.summary.netNewPaying >= 0 ? T.green : T.red }}>
               <div className="an-stat-label">NET NEW · {RANGE_LABELS[data.range]}</div>
               <div className="an-stat-value" style={{ color: data.summary.netNewPaying >= 0 ? T.green : T.red }}>

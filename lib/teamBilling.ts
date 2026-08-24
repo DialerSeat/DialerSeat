@@ -35,6 +35,12 @@ export interface SeatBillingSuccess {
    *  rather than one we chose. Signals a comp that was attached in the wrong
    *  place and is now quietly zeroing out seat revenue. */
   inheritedOwnerDiscount?: boolean
+  /** What Stripe actually invoiced, in cents. Null when the invoice could not
+   *  be read. This is the number worth storing — the list price is already
+   *  known and is not what anybody paid. */
+  chargedCents?: number | null
+  /** Percent off that produced it. */
+  discountPercent?: number | null
 }
 
 
@@ -301,6 +307,11 @@ export async function createSeatSubscription(
     currentPeriodStart: new Date(periodStart * 1000).toISOString(),
     currentPeriodEnd: new Date(periodEnd * 1000).toISOString(),
     inheritedOwnerDiscount: !!inheritedDiscount,
+    // Already read above to decide whether to alert on an unexpected
+    // discount, and previously thrown away. It is the only record of what
+    // this customer actually pays.
+    chargedCents: billedCents,
+    discountPercent: decision ? decision.effectivePercentOff : null,
   }
 }
 

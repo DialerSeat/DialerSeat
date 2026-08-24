@@ -185,6 +185,11 @@ export async function approvePendingMember(params: {
             status: 'paid',
             period_start: result.currentPeriodStart,
             period_end: result.currentPeriodEnd,
+            // What was actually invoiced, not the list price sitting in
+            // amount_cents. Without this nothing can answer what a customer
+            // pays for a seat.
+            charged_cents: result.chargedCents ?? null,
+            discount_percent: result.discountPercent ?? null,
           })
           .eq('id', pendingCharge.id)
       } catch (err: any) {

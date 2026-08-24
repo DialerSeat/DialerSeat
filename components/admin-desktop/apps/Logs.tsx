@@ -20,13 +20,17 @@ import { useEffect, useState, useRef } from 'react'
 
 interface LogEntry {
   id: string
-  event_type: 'account_created' | 'account_deleted' | 'initial_sub' | 'resub' | 'renewal' | 'cancel'
+  event_type:
+    | 'account_created' | 'account_deleted' | 'initial_sub' | 'resub' | 'renewal' | 'cancel'
+    | 'seat_charge'
   user_name: string
   user_email: string | null
   amount_cents: number
   date_iso: string
   retention_weeks: number | null
   source: string
+  /** Seat charges: which team, and the rate that produced the amount. */
+  detail?: string | null
 }
 
 interface LogsResponse {
@@ -36,7 +40,10 @@ interface LogsResponse {
   window_days: number | null
 }
 
-type FilterMode = 'all' | 'account_created' | 'account_deleted' | 'initial_sub' | 'resub' | 'renewal' | 'cancel'
+// Derived from LogEntry rather than restated. Two hand-maintained unions
+// describing the same set is how 'seat_charge' came to be renderable but not
+// filterable the moment it was added.
+type FilterMode = 'all' | LogEntry['event_type']
 
 
 const C = {
@@ -51,6 +58,7 @@ const C = {
   resub: '#5ce6b8',           // Teal — came back after lapsing
   renewal: '#5cb6ff',       // Cyan-blue
   cancel: '#ff4444',       // Red
+  seat_charge: '#a0e838',  // Lime — a seat, distinct from a personal sub
   error: '#ff8844',        // Amber for errors
   amount: '#ffe048',       // Yellow for money
 } as const
@@ -224,6 +232,7 @@ export default function LogsApp() {
           { key: 'resub', label: 'resub', count: data?.counts.resubs ?? 0 },
           { key: 'renewal', label: 'renewal', count: data?.counts.renewals ?? 0 },
           { key: 'cancel', label: 'cancel', count: data?.counts.cancels ?? 0 },
+          { key: 'seat_charge', label: 'seat charge', count: entries.filter(e => e.event_type === 'seat_charge').length },
         ] as const).map((f, i) => (
           <button
             key={f.key}
@@ -350,10 +359,19 @@ function LogLine({ entry }: { entry: LogEntry }) {
           <span style={{ color: C.textMute }}>&lt;{entry.user_email}&gt;</span>
         </>
       )}
-      {(entry.event_type === 'initial_sub' || entry.event_type === 'resub' || entry.event_type === 'renewal') && (
+      {(entry.event_type === 'initial_sub' || entry.event_type === 'resub'
+        || entry.event_type === 'renewal' || entry.event_type === 'seat_charge') && (
         <>
           {' '}
           <span style={{ color: C.amount }}>${(entry.amount_cents / 100).toFixed(2)}</span>
+        </>
+      )}
+      {/* Which team the seat is on and the rate behind the amount. Without it
+          a row reading $15.00 raises the question it was added to answer. */}
+      {entry.detail && (
+        <>
+          {' '}
+          <span style={{ color: C.textDim }}>({entry.detail})</span>
         </>
       )}
       {entry.retention_weeks !== null && (

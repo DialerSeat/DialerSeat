@@ -301,6 +301,43 @@ export async function GET(req: NextRequest) {
   const wrr = payingActiveSubs.reduce((sum, s) => sum + weeklyPriceFor(s), 0)
   const mrr = wrr * 4
 
+  // ── SEATS, AT WHAT THEY ACTUALLY BILL ─────────────────────────────────
+  // wrr above counts personal subscriptions only, so seat revenue — most of
+  // the money on a team account — was missing from every figure on this
+  // screen. And it has to be the INVOICED amount: amount_cents is the $35
+  // list price on every row, including the seat that billed $15.00 after an
+  // agreed rate, so summing it would report revenue nobody paid.
+  //
+  // charged_cents is null on charges raised before it was recorded. Those are
+  // counted separately and reported as unknown rather than folded in at list
+  // price, because a total that mixes measured and assumed money is worse
+  // than one that admits its gap.
+  const { data: seatRows } = await supabase
+    .from('team_seat_charges')
+    .select('charged_cents, discount_percent, amount_cents')
+    .eq('status', 'paid')
+
+  const seats = seatRows || []
+  const seatsMeasured = seats.filter(r => typeof r.charged_cents === 'number')
+  const seatWrrCents = seatsMeasured.reduce((sum, r) => sum + (r.charged_cents || 0), 0)
+
+  // The distinct rates in play. An account where every seat is a different
+  // negotiated number is a support problem waiting to happen, and it is
+  // invisible from a single average.
+  const rateTally = new Map<number, number>()
+  for (const r of seats) {
+    const cents = typeof r.charged_cents === 'number' ? r.charged_cents : null
+    if (cents === null) continue
+    rateTally.set(cents, (rateTally.get(cents) || 0) + 1)
+  }
+  const seatRates = Array.from(rateTally.entries())
+    .map(([cents, count]) => ({
+      weekly: `$${(cents / 100).toFixed(2)}`,
+      cents,
+      seats: count,
+    }))
+    .sort((a, b) => b.seats - a.seats)
+
   const signupsInRange = usersInRange.length
 
   const paidConversionsInRange = allSubs.filter(s => {
@@ -506,6 +543,16 @@ export async function GET(req: NextRequest) {
 
       wrr,
       mrr,
+
+      // Seats, separate from subscription revenue rather than blended into
+      // it — they behave differently, they are discounted differently, and a
+      // single combined number hides which of the two is moving.
+      seatsBilled: seats.length,
+      seatsWithKnownAmount: seatsMeasured.length,
+      seatWrr: seatWrrCents / 100,
+      seatMrr: (seatWrrCents / 100) * 4,
+      seatRates,
+      seatsAmountUnknown: seats.length - seatsMeasured.length,
       proWrr: proSubs.reduce((s, sub) => s + weeklyPriceFor(sub), 0),
       wlWrr: wlSubs.reduce((s, sub) => s + weeklyPriceFor(sub), 0),
 

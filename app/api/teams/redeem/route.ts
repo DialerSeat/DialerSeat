@@ -291,6 +291,9 @@ export async function POST(req: Request) {
               status: 'paid',
               period_start: result.currentPeriodStart,
               period_end: result.currentPeriodEnd,
+              // The invoiced amount, not the list price.
+              charged_cents: result.chargedCents ?? null,
+              discount_percent: result.discountPercent ?? null,
             })
             .eq('id', chargeRow.id)
         } catch (err: any) {

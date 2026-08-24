@@ -436,6 +436,9 @@ async function retryFailedSeatCharges(
           status: 'paid',
           period_start: sub.currentPeriodStart,
           period_end: sub.currentPeriodEnd,
+          // The invoiced amount, not the list price.
+          charged_cents: sub.chargedCents ?? null,
+          discount_percent: sub.discountPercent ?? null,
         })
         .eq('id', c.id)
       // ── A RECOVERED CHARGE LIFTS THE SUSPENSION IT CAUSED ─────────────

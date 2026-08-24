@@ -26,13 +26,17 @@ function parseTimeframe(raw: string | null): TimeframeKey {
 
 interface LogEntry {
   id: string
-  event_type: 'account_created' | 'initial_sub' | 'resub' | 'renewal' | 'cancel' | 'account_deleted'
+  event_type:
+    | 'account_created' | 'initial_sub' | 'resub' | 'renewal' | 'cancel' | 'account_deleted'
+    | 'seat_charge'
   user_name: string
   user_email: string | null
   amount_cents: number
   date_iso: string
   retention_weeks: number | null
   source: string
+  /** Seat charges only — who the seat is for, which team, and the rate. */
+  detail?: string | null
 }
 
 // This route used to reconstruct history on every request by joining the
@@ -97,7 +101,7 @@ export async function GET(req: NextRequest) {
 
     if (error) {
       console.error('[admin/logs] failed to read billing_events:', error)
-      return NextResponse.json({ error: 'Failed to build logs' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to build logs' }, { status: 500 })
     }
 
     const counts = { accountsCreated: 0, accountsDeleted: 0, initialSubs: 0, resubs: 0, renewals: 0, cancels: 0 }
@@ -125,6 +129,71 @@ export async function GET(req: NextRequest) {
         retention_weeks: e.retention_weeks ?? null,
         source: 'supabase:billing_events',
       })
+    }
+
+      // ── SEAT CHARGES BELONG IN THE LOG ────────────────────────────────────
+    // billing_events only records personal subscriptions, so seats — which are
+    // most of the revenue on a team account — appeared nowhere. And the amount
+    // has to be the INVOICED one: amount_cents is the $35 list price on every
+    // row, including the seat that billed $15.00 after an agreed rate, so a
+    // log built on it would state a number nobody was charged.
+    //
+    // charged_cents is null on charges raised before it existed. Those fall
+    // back to the list price and say so in the detail line rather than
+    // silently presenting a guess as a fact.
+    const { data: seatCharges } = await supabase
+      .from('team_seat_charges')
+      .select('id, agent_id, owner_id, team_id, status, amount_cents, charged_cents, discount_percent, created_at')
+      .eq('status', 'paid')
+      .order('created_at', { ascending: false })
+      .limit(MAX_ENTRIES)
+
+    if (seatCharges && seatCharges.length > 0) {
+      const agentIds = Array.from(new Set(seatCharges.map((c: any) => c.agent_id).filter(Boolean)))
+      const teamIds = Array.from(new Set(seatCharges.map((c: any) => c.team_id).filter(Boolean)))
+
+      const [{ data: agents }, { data: teamRows }] = await Promise.all([
+        supabase.from('users').select('clerk_id, email, first_name, last_name').in('clerk_id', agentIds),
+        supabase.from('teams').select('id, name').in('id', teamIds),
+      ])
+
+      const agentById = new Map(
+        (agents || []).map((u: any) => [
+          u.clerk_id,
+          {
+            name: [u.first_name, u.last_name].filter(Boolean).join(' ').trim() || u.email || 'Agent',
+            email: u.email as string | null,
+          },
+        ])
+      )
+      const teamById = new Map((teamRows || []).map((t: any) => [t.id, t.name]))
+
+      for (const c of seatCharges) {
+        if (excluded.has(c.owner_id)) continue
+        const agent = agentById.get(c.agent_id)
+        const team = teamById.get(c.team_id) || 'team'
+        const known = typeof c.charged_cents === 'number'
+        const pct = typeof c.discount_percent === 'number' ? Number(c.discount_percent) : null
+
+        entries.push({
+          id: `seat:${c.id}`,
+          event_type: 'seat_charge',
+          user_name: agent?.name || 'Agent',
+          user_email: agent?.email ?? null,
+          amount_cents: known ? c.charged_cents : (c.amount_cents ?? 0),
+          date_iso: c.created_at,
+          retention_weeks: null,
+          source: 'supabase:team_seat_charges',
+          detail:
+            `seat on ${team}` +
+            (pct && pct > 0 ? ` · ${pct}% off $${((c.amount_cents ?? 0) / 100).toFixed(2)}` : '') +
+            (known ? '' : ' · list price, actual not recorded'),
+        })
+      }
+
+      // Merged, so the feed stays one timeline rather than two lists stapled
+      // together in the wrong order.
+      entries.sort((a, b) => new Date(b.date_iso).getTime() - new Date(a.date_iso).getTime())
     }
 
     return NextResponse.json({
