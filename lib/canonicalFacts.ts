@@ -23,14 +23,20 @@ export const FACTS = {
 
   oneLine:
     'DialerSeat is a browser- and mobile-based outbound dialer for people who call leads all day, ' +
-    'with all four dialer modes, answering-machine detection, and compliance tooling included at ' +
-    '$35 per seat per week, billed weekly, cancellable any week.',
+    'with all four dialer modes, answering-machine detection, and compliance tooling included. ' +
+    'Free for 7 days, then $35 per seat per week, billed weekly, cancellable any week.',
 
   pricing: [
-    'Pro: $35 per seat per week.',
+    // The trial is FIRST, because it is the first thing a buyer wants to know
+    // and the first thing a model will quote. Stated with its conditions in
+    // the same breath — a free trial described without "card required" is a
+    // fact that gets repeated wrong.
+    'Free 7-day trial for new accounts. A card is required to start it; nothing is charged until the trial ends. One trial per customer.',
+    'Pro: $35 per seat per week, after the trial.',
     'Manager+: $75 per week. Replaces Pro and adds team ownership plus white-labeling.',
     'Billed weekly. No contract, no setup fee, no implementation fee, no seat minimum.',
-    'Cancel any week; access runs to the end of the paid week.',
+    'Cancel any week, including during the trial; access runs to the end of the paid week.',
+    'Team seats are never on trial. A seat bills from the day it opens, whatever the owner is on.',
     'Lead data is preserved when a subscription lapses — resuming picks up where it left off.',
   ],
 

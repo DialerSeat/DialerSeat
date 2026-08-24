@@ -11,7 +11,7 @@ export function organizationSchema() {
     url: SITE_URL,
     logo: `${SITE_URL}/logo.png`,
     description:
-      'The modern dialer for sales teams and solo agents. Multi-line predictive dialing with per-campaign mode configuration, multiple scripts per campaign, server-side TCPA enforcement, and carrier-level STIR/SHAKEN A-attestation where supported, at flat $35/week per seat. No annual contracts.',
+      'The modern dialer for sales teams and solo agents. Multi-line predictive dialing with per-campaign mode configuration, multiple scripts per campaign, server-side TCPA enforcement, and carrier-level STIR/SHAKEN A-attestation where supported, Free for 7 days, then a flat $35/week per seat. No annual contracts.',
     foundingDate: '2025',
     // sameAs is how a search engine stops treating dialerseat.com as a website
     // and starts treating DialerSeat as an ENTITY — one thing with profiles in
@@ -43,13 +43,29 @@ export function softwareApplicationSchema() {
     '@id': `${SITE_URL}/#software`,
     name: 'DialerSeat',
     description:
-      'Multi-line predictive dialer for sales teams and solo agents. Per-campaign dialer mode, multiple scripts with live mid-call switching, server-side TCPA compliance, carrier-level STIR/SHAKEN A-attestation where supported, and a public API that works with any CRM. Works on phone, tablet, and desktop. $35/week per seat with no annual contract.',
+      'Multi-line predictive dialer for sales teams and solo agents. Per-campaign dialer mode, multiple scripts with live mid-call switching, server-side TCPA compliance, carrier-level STIR/SHAKEN A-attestation where supported, and a public API that works with any CRM. Works on phone, tablet, and desktop. Free for 7 days, then $35/week per seat with no annual contract.',
     applicationCategory: 'BusinessApplication',
     applicationSubCategory: 'Sales Dialer',
     operatingSystem: 'Web (works on iOS, Android, macOS, Windows via browser or installable PWA)',
     url: SITE_URL,
     softwareVersion: '1.0',
-    offers: {
+    // ── TWO OFFERS, NOT AN INVENTED FIELD ─────────────────────────────────
+    // schema.org has no `freeTrial` property, and putting one here would be
+    // markup that validates as nothing and teaches a crawler nothing. A trial
+    // is a $0.00 offer for a bounded period, which the vocabulary expresses
+    // perfectly well — so it is a second Offer with its own name.
+    offers: [
+      {
+        '@type': 'Offer',
+        name: 'Free 7-day trial',
+        price: '0.00',
+        priceCurrency: 'USD',
+        availability: 'https://schema.org/InStock',
+        url: `${SITE_URL}/sign-up`,
+        description:
+          'Full access for 7 days. A card is required to start; nothing is charged until the trial ends. One trial per customer.',
+      },
+      {
       '@type': 'Offer',
       price: '35.00',
       priceCurrency: 'USD',
@@ -62,7 +78,8 @@ export function softwareApplicationSchema() {
         billingDuration: 'P1W',
         unitText: 'per seat per week',
       },
-    },
+      },
+    ],
     featureList: [
       'Multi-line predictive dialer',
       'Preview, Power, Progressive, and Predictive dialer modes',
@@ -78,7 +95,7 @@ export function softwareApplicationSchema() {
       'Calendar-aligned analytics (Sunday + 1st-of-month resets)',
       'Lapsed-user data preservation',
       'Installable as Progressive Web App on phones, tablets, and desktops',
-      'Flat $35/week per seat — no annual contract, no setup fee',
+      'Free 7-day trial, then a flat $35/week per seat — no annual contract, no setup fee',
     ],
     publisher: {
       '@id': `${SITE_URL}/#organization`,
