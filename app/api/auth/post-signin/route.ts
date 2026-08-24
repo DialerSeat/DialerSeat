@@ -337,29 +337,23 @@ export async function GET(req: NextRequest) {
     
     
     try {
-      const sees = await shouldSeeWelcome(userId)
-      console.log('[post-signin][DIAG] userId=%s shouldSeeWelcome=%s host=%s', userId, sees, host)
-      if (sees) {
-        console.log('[post-signin][DIAG] -> redirecting to /welcome')
-        return redirectToWelcome(host)
-      }
-      console.log('[post-signin][DIAG] -> NOT diverting, falling through to tenant routing')
-
-      // ── A PENDING INVITE, FOR SOMEBODY WHO HAS SEEN THE PRODUCT ────────
-      // Deliberately BELOW the welcome gate, which is the opposite of where
-      // this started. The two audiences want different things:
+      // ── THE INVITE IS READ FIRST, BECAUSE IT DECIDES THE DESTINATION ───
+      // This sat BELOW the welcome gate and has moved above it. The reasoning
+      // for the old order was that an invited agent has never seen DialerSeat,
+      // so the showcase should introduce it. True, but it answers a question
+      // nobody asked: an invited agent is not evaluating the product. Somebody
+      // already bought it and sent them a link. A product tour between them and
+      // the team they were invited to is a detour, not an introduction.
       //
-      //   Signing IN with an invite — they already have an account, so send
-      //   them to /join/CODE, which names the team and asks whether they
-      //   want in. There is nothing else to explain to them.
+      // Three destinations, and the invite plus the account age pick one:
       //
-      //   Signing UP with an invite — they have never seen DialerSeat. The
-      //   showcase is the introduction, and it carries the code onward to
-      //   billing, which applies it and collects nothing when somebody else
-      //   is paying for the seat.
-      //
-      // Running this first sent brand-new agents straight past the showcase
-      // to a confirmation dialog for a product they had not laid eyes on.
+      //   Invite + new account   -> /billing with the code attached. Billing
+      //                             redeems it, works out who is paying, and
+      //                             collects nothing when the owner is.
+      //   Invite + existing user -> /join/CODE, which names the team and asks
+      //                             whether they want in. Nothing to explain.
+      //   No invite + new account-> /welcome. This is the only audience that
+      //                             is actually deciding whether to buy.
       //
       // The cookie was set before they ever left for Clerk (see
       // /api/join/start), so it survives whichever route Clerk took to send
@@ -367,25 +361,50 @@ export async function GET(req: NextRequest) {
       // not survive the hosted sign-up flow, and a real signup proved it —
       // account created, no team_members row, redeemed nothing.
       //
-      // Only the SHAPE is trusted, never the contents as a path. The value
-      // is constrained to a code and rebuilt into a /join/ URL here, so a
-      // tampered cookie cannot become an open redirect.
+      // Only the SHAPE is trusted, never the contents as a path. The value is
+      // constrained to a code and rebuilt into a URL here, so a tampered
+      // cookie cannot become an open redirect.
+      let code = ''
       try {
         const jar = await cookies()
         const raw = jar.get(JOIN_CODE_COOKIE)?.value || ''
-        const code = raw.trim().toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 32)
-        if (code) {
-          console.log('[post-signin] pending join code found, routing to /join/%s', code)
-          const protocol = isDevHost(host) ? 'http' : 'https'
-          return NextResponse.redirect(`${protocol}://${host}/join/${encodeURIComponent(code)}`, 302)
-        }
+        code = raw.trim().toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 32)
       } catch (err) {
-        // Never block sign-in on this. Worst case is the old behaviour.
+        // Never block sign-in on this. Worst case is the no-invite path.
         console.error('[post-signin] join cookie read failed', err)
       }
+
+      // Doubles as "is this a brand-new account": nobody with a subscription
+      // or a funded seat sees the showcase.
+      const sees = await shouldSeeWelcome(userId)
+      console.log(
+        '[post-signin][DIAG] userId=%s shouldSeeWelcome=%s code=%s host=%s',
+        userId, sees, code || '(none)', host
+      )
+
+      const protocol = isDevHost(host) ? 'http' : 'https'
+
+      if (code) {
+        if (sees) {
+          console.log('[post-signin] invited signup -> billing with code %s', code)
+          return NextResponse.redirect(
+            `${protocol}://${host}/billing?from=join&promo=${encodeURIComponent(code)}`,
+            302
+          )
+        }
+        console.log('[post-signin] invited sign-in -> /join/%s', code)
+        return NextResponse.redirect(
+          `${protocol}://${host}/join/${encodeURIComponent(code)}`,
+          302
+        )
+      }
+
+      if (sees) {
+        console.log('[post-signin][DIAG] -> redirecting to /welcome')
+        return redirectToWelcome(host)
+      }
+      console.log('[post-signin][DIAG] -> NOT diverting, falling through to tenant routing')
     } catch (welcomeErr) {
-      
-      
       console.error('[post-signin][DIAG] shouldSeeWelcome THREW:', welcomeErr)
     }
 
