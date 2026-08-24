@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>DialerSeat — The Growth Approach</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  * { box-sizing: border-box; }
+  :root { color-scheme: only light; }
+  html, body { background: #ffffff; color: #14161c; }
+  @media (prefers-color-scheme: dark) { html, body { background: #ffffff; color: #14161c; } }
+  body {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    line-height: 1.5; font-size: 10pt;
+    max-width: 780px; margin: 0 auto; padding: 26px 24px 50px;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1 { font-size: 20pt; letter-spacing: -0.4px; margin: 0 0 3px; color: #14161c; }
+  .sub { color: #5a5e6a; font-size: 9.5pt; margin: 0 0 22px; }
+  h2 {
+    font-size: 12.5pt; margin: 26px 0 7px; padding-bottom: 4px;
+    border-bottom: 1.5px solid #14161c; letter-spacing: -0.2px; color: #14161c;
+  }
+  h3 { font-size: 10.5pt; margin: 15px 0 4px; color: #14161c; }
+  p { margin: 0 0 9px; color: #14161c; }
+  ul, ol { margin: 0 0 11px; padding-left: 20px; }
+  li { margin-bottom: 4px; color: #14161c; }
+  strong { font-weight: 600; }
+  .lead {
+    background: #f4f5f8; border-left: 3px solid #2a4a8a;
+    padding: 11px 14px; margin: 0 0 20px; color: #14161c;
+  }
+  .box { border: 1px solid #d4d7de; border-radius: 4px; padding: 11px 14px;
+         margin: 12px 0; background: #ffffff; color: #14161c; }
+  .box.warn { border-color: #c9a227; background: #fdfaf0; }
+  .box.good { border-color: #2f7d43; background: #f2f9f4; }
+  .box h3 { margin-top: 0; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 16px; font-size: 9pt; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #dfe2e8;
+           vertical-align: top; color: #14161c; }
+  th { background: #f4f5f8; font-weight: 600; color: #14161c; }
+  code { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 8.5pt;
+         background: #f0f1f4; color: #14161c; padding: 1px 4px; border-radius: 3px; }
+  .phase { font-size: 8.5pt; letter-spacing: 1.2px; text-transform: uppercase;
+           color: #5a5e6a; font-weight: 600; margin-top: 4px; }
+  .foot { margin-top: 30px; padding-top: 9px; border-top: 1px solid #dfe2e8;
+          color: #5a5e6a; font-size: 8pt; }
+  h2, h3 { break-after: avoid; page-break-after: avoid; }
+  .box, table { break-inside: avoid; page-break-inside: avoid; }
+  @media print {
+    html, body { background: #ffffff !important; color: #14161c !important; }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+
+<h1>The Growth Approach</h1>
+<p class="sub">DialerSeat &middot; 24 August 2026</p>
+
+<div class="lead">
+  <strong>The number that drives the whole plan.</strong> Seven strangers found
+  DialerSeat on Google. Three of them dialled. Three of them paid. That is roughly
+  <strong>40% activation and 40% conversion from cold organic search</strong> — with no
+  marketing, no sales calls, no trial, and a $35 barrier on day one. One of them,
+  chrisharb1987, has put <strong>2,167 calls</strong> through the platform.
+  <br><br>
+  Small sample, so treat it as a signal rather than a rate. But the signal points
+  one way: the channel that is already working has never been fed.
+</div>
+
+<h2>The strategy in one line</h2>
+<p>
+  <strong>Feed the channel that already converts before buying colder traffic.</strong>
+  Someone typing "predictive dialer no contract" arrives pre-qualified — they have the
+  problem and they are shopping. Someone receiving a cold DM has neither. The same 100
+  signups are worth wildly different amounts depending on where they came from.
+</p>
+
+<h2>Phase 0 — Unblock, before any traffic at all</h2>
+<p class="phase">Nothing below matters if the stack stops</p>
+<ol>
+  <li><strong>Vercel Pro.</strong> Hobby is non-commercial and you have been taking
+      payment on it since early July. This is catch-up, not preparation.</li>
+  <li><strong>Supabase Pro.</strong> Free goes <em>read-only</em> at 500&nbsp;MB — under a
+      week of runway once a real floor dials — and the Micro instance lands at 40–70
+      predictive agents.</li>
+  <li><strong>Register the number pool.</strong> All 9 active numbers currently read
+      <code>is_registered: false</code>. Unregistered numbers get flagged fastest, and
+      answer rate is the only thing a trial user judges you on.</li>
+  <li><strong>One real dialing day at volume</strong> on the current build.</li>
+</ol>
+
+<h2>Phase 1 — Pour into organic search</h2>
+<p class="phase">The channel that produced every paying customer you have</p>
+
+<div class="box good">
+  <h3>Already built, and unusually well</h3>
+  <p style="margin-bottom:0">
+    <code>canonicalFacts.ts</code> feeding <code>/llms.txt</code> and
+    <code>/llms-full.txt</code>, ten competitor comparison pages, schema markup, FAQ
+    pages, and pricing stated openly rather than hidden behind "contact sales" — which
+    matters more than it looks, because a model cannot recommend a product whose price
+    it cannot state.
+  </p>
+</div>
+
+<ol start="5">
+  <li><strong>List on the review platforms.</strong> G2, Capterra, GetApp, Software
+      Advice, TrustRadius. Free, a few hours, and the single biggest gap. These are
+      scraped constantly and cited heavily, and they are structured exactly the way a
+      model wants — category, price, rating, features.</li>
+  <li><strong>Ask chrisharb1987 and info@lsgrp.org for reviews.</strong> Nudge them
+      toward describing the <em>situation</em> — "final expense floor", "no contract, we
+      scale seats weekly", "moved off ReadyMode" — not toward rating you out of five.
+      Ten specific reviews beat two hundred saying "great product".</li>
+  <li><strong>Extend the comparison pages.</strong> "X alternative" is the highest-intent
+      query in the category and you already have ten of them live.</li>
+  <li><strong>Publish the edited video.</strong> Transcripts are indexed, so it becomes
+      retrievable <em>text</em> as well as video — a second return on work you are doing
+      anyway. Lead with the latency: the click and the "hello", split-screen. It is the
+      one thing a viewer feels in three seconds and it cannot be faked.</li>
+  <li><strong>Participate in the communities</strong> where your buyers already are, as
+      an operator rather than as an advert.</li>
+</ol>
+
+<h2>Phase 2 — Cut time to first ring</h2>
+<p class="phase">The biggest conversion lever, whatever the channel</p>
+<ol start="10">
+  <li><strong>A prebuilt demo campaign.</strong> Right now a new user must create a
+      campaign, upload and map a CSV, and understand dialer modes before hearing
+      anything. Every one of those is a place to close the tab. Sample leads pointed at
+      numbers you control would let somebody hear the 0.09-second connect before doing
+      any setup at all — your differentiator, currently sitting behind twenty minutes of
+      work.</li>
+</ol>
+
+<h2>Phase 3 — The trial, to unlock colder channels</h2>
+<p class="phase">Not a fix for the current funnel — an unlock for the next one</p>
+<p>
+  You convert cold strangers at ~40% while asking $35 up front, so price does not look
+  like the objection — reach does. The trial's real job is making ads and DMs viable at
+  all, since that audience will not pay on first contact.
+</p>
+<ol start="11">
+  <li><strong>Card required.</strong> Kills serial re-signup, filters people who were
+      never buying, and roughly doubles conversion because the default becomes "keep it".</li>
+  <li><strong>Card fingerprint check only.</strong> Stripe documents
+      <code>fingerprint</code> for exactly this: "check whether two customers who've
+      signed up with you are using the same card number". No blocking of prepaid,
+      credit, or wallet cards — the convenience is worth more than the marginal abuse
+      it would stop.</li>
+  <li><strong>Seats never trial</strong>, whatever the owner is doing. <em>Done</em> —
+      <code>trial_period_days: 0</code> is now explicit on seat subscriptions.</li>
+  <li><strong>Cap by usage as well as time.</strong> 7 days <em>or</em> N dials,
+      whichever comes first. Bounds both the cost and the pool exposure, and is honest
+      if stated upfront.</li>
+  <li><strong>One number pool, not two.</strong> A separate trial pool becomes the
+      degraded pool, and trial users are exactly the audience whose answer rates you can
+      least afford to be bad.</li>
+</ol>
+
+<div class="box warn">
+  <h3>The failure mode to watch — and it is not a spam label</h3>
+  <p style="margin-bottom:0">
+    <code>number-health</code> cannot tell a bad number from a bad list. One trial user
+    dialling a scraped file of dead numbers collapses the answer rate on every number
+    they touch, and the health cron does exactly what it was built to do: rests them —
+    pulling <em>good</em> numbers out of rotation for paying customers. No carrier
+    decision involved. Watch for a cluster of <code>rested_reason: low_answer_rate</code>
+    right after a trial signup, and use the WAKE button, which clears the health counters
+    as well as the status.
+  </p>
+</div>
+
+<h2>Phase 4 — Then, and only then, paid and cold</h2>
+<ol start="16">
+  <li>Ads and cold DMs, once the trial exists and activation is fast. That traffic
+      converts far worse than search and needs both to work at all.</li>
+</ol>
+
+<h2>What not to do</h2>
+<table>
+  <tr><th style="width:38%">Don't</th><th>Why</th></tr>
+  <tr><td>Chase the four dead signups</td><td>Zero campaigns, zero leads, zero calls. They never saw the product work. Lowest-yield hour available.</td></tr>
+  <tr><td>Buy reviews</td><td>Platforms delist them, and it poisons the exact signal you are building. Absence is neutral; fakery is evidence.</td></tr>
+  <tr><td>Buy "AEO" or "LLM optimisation" services</td><td>Overwhelmingly repackaged SEO. The technical half you have already done yourself.</td></tr>
+  <tr><td>Aim at "best dialer"</td><td>Five9 and Convoso own that through a decade of corpus volume. "No-contract dialer for a small agency that bills weekly" is winnable and nearly unoccupied.</td></tr>
+  <tr><td>Publish a real prospect's call audio</td><td>Two-party consent is a legal problem, and an outbound dialer showing off a stranger's voice tells every buyer what happens to their leads.</td></tr>
+</table>
+
+<h2>What is still unproven</h2>
+<ul>
+  <li>One fresh signup through the <em>fixed</em> join flow. The last attempt lost the code.</li>
+  <li>The 3D Secure path — <code>flowtst@dialerseat.com</code> is the live test case.</li>
+  <li>Deactivate / activate on a real seat.</li>
+  <li>Roughly a dozen UI changes from the last two days that no human has touched.</li>
+  <li>Why 60% of all dials record as skipped. The reason is discarded at the moment it
+      is known, so the product cannot currently answer it.</li>
+</ul>
+
+<p class="foot">
+  Every figure here is read from the DialerSeat database or the codebase, not from
+  benchmarks. The conversion numbers come from a sample of seven and should be treated
+  as a direction, not a rate.
+</p>
+
+</body>
+</html>
