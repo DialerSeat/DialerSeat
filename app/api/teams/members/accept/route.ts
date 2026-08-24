@@ -69,6 +69,29 @@ export async function POST(req: Request) {
       // needs the same button pressed again.
       const noCardOnFile = outcome.noCardOnFile
 
+      // ── AUTHENTICATION IS NOT A DECLINE ─────────────────────────────────
+      // "Try again" is the wrong advice for a card the bank wants
+      // authenticated: the charge is off-session, so every retry fails
+      // identically. It needs approving once, and Stripe's hosted invoice
+      // page runs the challenge — so the useful response is a link, not a
+      // suggestion to press the button again.
+      if (outcome.requiresAction) {
+        return NextResponse.json({
+          success: false,
+          error: 'Your bank wants this payment approved before the seat can open.',
+          detail: outcome.actionUrl
+            ? 'Open the link below and approve it once. Retrying here will keep ' +
+              'failing until you do — the charge happens in the background, so ' +
+              'there is nobody present for the bank to ask.'
+            : 'Approve the pending payment in your Stripe billing history, then ' +
+              'accept them again. Retrying here alone will keep failing.',
+          actionUrl: outcome.actionUrl,
+          billingIssue: outcome.billingIssue,
+          canRetry: false,
+          memberStatus: 'pending',
+        }, { status: 402 })
+      }
+
       return NextResponse.json({
         success: false,
         error: noCardOnFile

@@ -34,6 +34,10 @@ export interface ApproveOutcome {
   /** True when the failure was "nothing to charge" rather than "the charge
    *  did not go through" — the two want opposite responses from the owner. */
   noCardOnFile: boolean
+  /** The bank wants 3D Secure. Retrying cannot help; somebody has to approve
+   *  it once. actionUrl is Stripe's hosted page, which runs the challenge. */
+  requiresAction: boolean
+  actionUrl: string | null
   activatedAccessGrants: number
   defaultedToTenantId: string | null
 }
@@ -58,6 +62,7 @@ export async function approvePendingMember(params: {
 
   let billingIssue: string | null = null
   let stripeSubId: string | null = null
+  let actionUrl: string | null = null
 
   const { data: existingPaid } = await supabaseAdmin
     .from('team_seat_charges')
@@ -196,6 +201,9 @@ export async function approvePendingMember(params: {
         const reason = isSeatBillingError(err)
           ? `${err.code}: ${err.message}`
           : (err?.message || 'unknown')
+        if (isSeatBillingError(err) && err.code === 'requires_action') {
+          actionUrl = err.actionUrl ?? null
+        }
         console.error(`[approveTeamMember] seat charge failed for member ${memberId}: ${reason}`)
         await supabaseAdmin
           .from('team_seat_charges')
@@ -217,6 +225,8 @@ export async function approvePendingMember(params: {
       stripeSubscriptionId: null,
       billingIssue,
       noCardOnFile: /^(no_card|no_customer):/.test(billingIssue),
+      requiresAction: /^requires_action:/.test(billingIssue),
+      actionUrl,
       activatedAccessGrants: 0,
       defaultedToTenantId: null,
     }
@@ -229,6 +239,8 @@ export async function approvePendingMember(params: {
       stripeSubscriptionId: stripeSubId,
       billingIssue: null,
       noCardOnFile: false,
+      requiresAction: false,
+      actionUrl: null,
       activatedAccessGrants: 0,
       defaultedToTenantId: null,
     }
@@ -246,6 +258,8 @@ export async function approvePendingMember(params: {
     stripeSubscriptionId: stripeSubId,
     billingIssue: null,
     noCardOnFile: false,
+    requiresAction: false,
+    actionUrl: null,
     activatedAccessGrants,
     defaultedToTenantId,
   }

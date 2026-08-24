@@ -23,8 +23,12 @@ export interface CreateSeatParams {
 }
 
 export interface SeatBillingError {
-  code: 'no_customer' | 'no_card' | 'stripe_error' | 'unknown'
+  code: 'no_customer' | 'no_card' | 'requires_action' | 'stripe_error' | 'unknown'
   message: string
+  /** requires_action only: where the owner goes to authenticate the payment.
+   *  Stripe's hosted invoice page handles the 3DS challenge itself, so this is
+   *  the whole fix — no card form of ours is involved. */
+  actionUrl?: string | null
 }
 
 export interface SeatBillingSuccess {
@@ -126,6 +130,50 @@ async function resolveOwnerCustomer(ownerId: string): Promise<ResolvedOwner> {
 }
 
 
+/**
+ * subscriptions.create, with SCA told apart from a decline.
+ *
+ * Everything else is rethrown untouched — this exists to classify one error,
+ * not to swallow the rest.
+ */
+async function createSubscriptionOrExplainAction(
+  params: Stripe.SubscriptionCreateParams
+): Promise<Stripe.Subscription> {
+  try {
+    return await stripe.subscriptions.create(params)
+  } catch (err: any) {
+    const needsAction =
+      err?.code === 'subscription_payment_intent_requires_action' ||
+      /requires_action|requires additional user action/i.test(err?.message || '')
+
+    if (!needsAction) throw err
+
+    // The invoice Stripe just created carries the hosted page that performs
+    // the challenge. Best effort: if it cannot be read, the message alone is
+    // still far more actionable than "payment failed".
+    let actionUrl: string | null = null
+    try {
+      const subId = err?.raw?.subscription || err?.subscription
+      if (typeof subId === 'string') {
+        const sub = await stripe.subscriptions.retrieve(subId, { expand: ['latest_invoice'] })
+        const inv: any = (sub as any).latest_invoice
+        actionUrl = inv?.hosted_invoice_url ?? null
+      }
+    } catch {
+      // Leave it null.
+    }
+
+    const seatErr: SeatBillingError = {
+      code: 'requires_action',
+      message:
+        'The bank asked the cardholder to authenticate this payment (3D Secure). ' +
+        'It cannot be completed automatically — it has to be approved once, by hand.',
+      actionUrl,
+    }
+    throw seatErr
+  }
+}
+
 export async function createSeatSubscription(
   params: CreateSeatParams
 ): Promise<SeatBillingSuccess> {
@@ -218,7 +266,18 @@ export async function createSeatSubscription(
       ? inheritedDiscountPeek
       : null
 
-  const subscription = await stripe.subscriptions.create({
+  // ── A CARD NEEDING AUTHENTICATION IS NOT A DECLINED CARD ──────────────
+  // Stripe raises subscription_payment_intent_requires_action when the bank
+  // wants 3D Secure. Nothing about retrying changes that: the charge is
+  // off-session, and the whole point of "requires action" is that somebody has
+  // to be present. Left as a generic failure it becomes an invisible dead end
+  // — the agent stays pending, the nightly retry fails identically forever,
+  // and the owner is told their payment "did not go through" with no mention
+  // that they could fix it in one click.
+  //
+  // Stripe's hosted invoice page runs the challenge itself, so the fix is a
+  // URL. No card details touch this application.
+  const subscription = await createSubscriptionOrExplainAction({
     expand: ['latest_invoice'],
     customer: customer.id,
     items: [{ price: SEAT_PRICE_ID }],
@@ -240,6 +299,16 @@ export async function createSeatSubscription(
       team_member_id: params.teamMemberId,
       sub_kind: 'team_seat',  // disambiguates from personal subs in webhook router
     },
+    // ── error_if_incomplete, AND WHAT THAT MEANS FOR SCA ────────────────
+    // A seat must not open on a payment that has not actually cleared, so an
+    // incomplete subscription is an error rather than a pending seat.
+    //
+    // The consequence is that a card requiring 3D Secure fails outright. That
+    // is correct — but it is NOT a decline, and it must not be treated as one:
+    // retrying the same off-session charge can never satisfy "requires
+    // action", so a blind retry loop burns its whole window on something
+    // structurally impossible while the agent sits pending. The catch below
+    // separates the two.
     payment_behavior: 'error_if_incomplete',
     proration_behavior: 'none',
   })

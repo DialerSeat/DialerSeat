@@ -366,6 +366,13 @@ async function retryFailedSeatCharges(
     .select('id, team_id, owner_id, agent_id, team_member_id, amount_cents, period_end')
     .eq('status', 'failed')
     .not('team_member_id', 'is', null)
+    // ── DO NOT CHASE A 3D SECURE CHALLENGE ──────────────────────────────
+    // An off-session retry can never satisfy "requires action" — the whole
+    // meaning of it is that somebody has to be present. Retrying anyway
+    // spends the entire window failing identically, and each attempt is a
+    // Stripe round trip that pushes real recoverable charges further down
+    // the queue. It waits for the owner to approve the invoice instead.
+    .not('failure_reason', 'ilike', 'requires_action:%')
     .gte('period_end', windowStart)
     .order('period_end', { ascending: true })
     .limit(PAGE_SIZE)
