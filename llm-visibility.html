@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Getting DialerSeat Recommended by AI Assistants</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: #14161c; line-height: 1.55; font-size: 10.5pt;
+    max-width: 780px; margin: 0 auto; padding: 28px 24px 60px;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1 { font-size: 21pt; letter-spacing: -0.4px; margin: 0 0 4px; }
+  .sub { color: #5a5e6a; font-size: 10pt; margin: 0 0 28px; }
+  h2 {
+    font-size: 13pt; margin: 30px 0 8px; padding-bottom: 5px;
+    border-bottom: 1.5px solid #14161c; letter-spacing: -0.2px;
+  }
+  h3 { font-size: 11pt; margin: 18px 0 4px; }
+  p { margin: 0 0 10px; }
+  ul { margin: 0 0 12px; padding-left: 20px; }
+  li { margin-bottom: 5px; }
+  strong { font-weight: 600; }
+  .lead {
+    background: #f4f5f8; border-left: 3px solid #2a4a8a;
+    padding: 12px 15px; margin: 0 0 22px; font-size: 10.5pt;
+  }
+  .box {
+    border: 1px solid #d4d7de; border-radius: 4px;
+    padding: 12px 15px; margin: 14px 0;
+  }
+  .box.warn { border-color: #c9a227; background: #fdfaf0; }
+  .box.good { border-color: #2f7d43; background: #f2f9f4; }
+  .box h3 { margin-top: 0; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0 18px; font-size: 9.5pt; }
+  th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid #dfe2e8; vertical-align: top; }
+  th { background: #f4f5f8; font-weight: 600; }
+  code { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 9pt; background: #f0f1f4; padding: 1px 4px; border-radius: 3px; }
+  .foot { margin-top: 34px; padding-top: 10px; border-top: 1px solid #dfe2e8; color: #5a5e6a; font-size: 8.5pt; }
+  h2, h3 { break-after: avoid; page-break-after: avoid; }
+  .box, table { break-inside: avoid; page-break-inside: avoid; }
+</style>
+</head>
+<body>
+
+<h1>Getting DialerSeat Recommended by AI Assistants</h1>
+<p class="sub">What it takes for ChatGPT and similar tools to name DialerSeat when somebody asks for a dialer &middot; 23 August 2026</p>
+
+<div class="lead">
+  <strong>The short version.</strong> You have already built more of the technical
+  groundwork than most companies ever do. The gap is not on your website &mdash; it is
+  that nothing outside your website corroborates it. A model reads a vendor's own
+  marketing, recognises it as a vendor's own marketing, and looks for independent
+  confirmation before putting that name in front of a user.
+</div>
+
+<h2>Two mechanisms, only one of them winnable</h2>
+
+<h3>Training data</h3>
+<p>
+  The model absorbed information about you during pre-training. This is slow,
+  uncontrollable, and cannot be bought. It rewards products that have been widely
+  discussed for years. Treat it as a lagging consequence of everything else,
+  never as a lever.
+</p>
+
+<h3>Retrieval</h3>
+<p>
+  The model searches the web during the conversation, reads what it finds, and cites
+  it. This is where essentially all winnable ground is, it responds in weeks rather
+  than years, and it is what the <code>llms.txt</code> work already targets.
+</p>
+<p>
+  The critical thing to understand: <strong>being quotable and being recommendable are
+  different problems.</strong> Your own pages make you quotable. Third-party sources make
+  you recommendable. You have the first and almost none of the second.
+</p>
+
+<h2>What already exists</h2>
+
+<div class="box good">
+  <h3>Built and working</h3>
+  <ul>
+    <li><code>canonicalFacts.ts</code> &mdash; one source of truth rendering <code>/llms.txt</code>,
+        <code>/llms-full.txt</code> and every markdown mirror, so retrieved pages cannot
+        contradict each other on price or terms</li>
+    <li><strong>Ten competitor comparison pages</strong> &mdash; ReadyMode, Mojo, PhoneBurner,
+        Five9, Convoso, BatchDialer, WAVV, Kixie, Orum, JustCall</li>
+    <li><code>schema.ts</code> &mdash; structured markup describing the product to machines</li>
+    <li>FAQ pages answering real questions in plain language</li>
+    <li>Pricing stated openly rather than hidden behind "contact sales"</li>
+  </ul>
+  <p style="margin-bottom:0">
+    That last point matters more than it looks. A model cannot recommend a product
+    whose price it cannot state, and most of your competitors hide theirs.
+  </p>
+</div>
+
+<h2>What is missing</h2>
+
+<table>
+  <tr><th style="width:26%">Source</th><th style="width:16%">Effort</th><th>Why it matters</th></tr>
+  <tr>
+    <td><strong>Review platforms</strong><br>G2, Capterra, GetApp,<br>Software Advice, TrustRadius</td>
+    <td>Free listing<br>Hours</td>
+    <td>Scraped constantly and cited heavily. Structured by category, price, rating and features &mdash; exactly the shape a model wants. Being absent is the single biggest gap.</td>
+  </tr>
+  <tr>
+    <td><strong>Community threads</strong><br>Reddit, niche forums</td>
+    <td>Ongoing</td>
+    <td>Retrieved heavily because it reads as unpaid opinion. One honest thread from an operator who switched outweighs a page of your own copy.</td>
+  </tr>
+  <tr>
+    <td><strong>YouTube</strong></td>
+    <td>Already planned</td>
+    <td>Transcripts are indexed, so edited video becomes retrievable <em>text</em>. A second return on work you are doing anyway.</td>
+  </tr>
+  <tr>
+    <td><strong>Vertical directories</strong></td>
+    <td>Low</td>
+    <td>Insurance-tech lists and agency tool round-ups rank for exactly the narrow queries you can win.</td>
+  </tr>
+</table>
+
+<h2>What kind of reviews</h2>
+
+<p><strong>Specificity beats volume, and recency beats both.</strong></p>
+
+<p>
+  Ten reviews naming the situation &mdash; "final expense floor", "five-line predictive",
+  "no contract, we scale seats weekly", "moved off ReadyMode" &mdash; outperform two hundred
+  saying "great product, great support". Models match against the language of the
+  question, and buyers do not ask "what is the best dialer". They ask:
+</p>
+<ul>
+  <li>"cheap dialer for a small insurance team"</li>
+  <li>"predictive dialer with no contract"</li>
+  <li>"ReadyMode alternative"</li>
+  <li>"dialer that bills weekly"</li>
+</ul>
+<p>
+  Your reviews need to contain that vocabulary or they will not be retrieved for it.
+  Reviews stating checkable facts &mdash; the price, the billing terms, what it replaced,
+  how many seats &mdash; are the most quotable. Adjectives are not.
+</p>
+
+<h2>Two cautions</h2>
+
+<div class="box warn">
+  <h3>Do not buy reviews</h3>
+  <p style="margin-bottom:0">
+    Platforms detect and delist them, and more importantly it poisons the exact signal
+    being built. A model surfacing an obviously astroturfed review page is worse for you
+    than absence, because absence is neutral and fakery is evidence.
+  </p>
+</div>
+
+<div class="box warn">
+  <h3>Be sceptical of "AEO" and "LLM optimisation" services</h3>
+  <p style="margin-bottom:0">
+    Overwhelmingly repackaged SEO at a premium, sold on the novelty of the acronym. The
+    technical half is the half you have already done yourself.
+  </p>
+</div>
+
+<h2>The strategic point</h2>
+
+<p>
+  Models recommend <strong>narrow</strong> things confidently and <strong>broad</strong> things vaguely.
+  DialerSeat will not become the answer to "best dialer" &mdash; Five9 and Convoso own that
+  ground through sheer corpus volume built over a decade.
+</p>
+<p>
+  It can absolutely become the answer to <em>"no-contract dialer for a small agency
+  that bills weekly"</em>, because almost nobody occupies that ground and your pricing model
+  is the differentiator rather than any feature. Predictive dialing, AMD, recordings and
+  dispositions are table stakes; weekly billing with no seat minimum and no contract is not.
+</p>
+<p>
+  The comparison pages are your strongest existing asset for this. <strong>"X alternative"
+  is the highest-intent query in the category</strong>, and you have ten of those pages already
+  built and live.
+</p>
+
+<h2>Suggested order</h2>
+<ol>
+  <li>List on G2, Capterra, GetApp and Software Advice. Free, a few hours, largest single gap.</li>
+  <li>Ask your two current paying customers for reviews, with a nudge toward describing their <em>use case</em> rather than rating you out of five.</li>
+  <li>Publish demo video &mdash; transcripts become retrievable text.</li>
+  <li>Participate honestly in the communities where your buyers already are, as an operator rather than as an advert.</li>
+  <li>Keep the comparison pages current. They are already doing the work.</li>
+</ol>
+
+<p class="foot">
+  Prepared for DialerSeat. Grounded in what is currently in the codebase
+  (<code>lib/canonicalFacts.ts</code>, <code>lib/competitors.ts</code>, <code>lib/schema.ts</code>)
+  and in publicly observable behaviour of retrieval-based assistants. No claim here depends
+  on any assistant's private ranking behaviour, which is not documented by any vendor.
+</p>
+
+</body>
+</html>
