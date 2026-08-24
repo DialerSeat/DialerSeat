@@ -82,7 +82,10 @@ export async function POST(req: Request) {
 
     const added: Array<{ userId: string; memberId: string }> = []
     const alreadyOn: string[] = []
-    const failed: Array<{ userId: string; reason: string; noCardOnFile: boolean }> = []
+    const failed: Array<{
+      userId: string; reason: string; noCardOnFile: boolean
+      requiresAction?: boolean; actionUrl?: string | null
+    }> = []
 
     // Sequential. Each one of these can create a Stripe subscription, and a
     // burst of them failing halfway leaves a state nobody can read — the same
@@ -178,11 +181,16 @@ export async function POST(req: Request) {
           userId: agentId,
           reason: outcome.billingIssue || 'The seat could not be billed',
           noCardOnFile: outcome.noCardOnFile,
+          requiresAction: outcome.requiresAction,
+          actionUrl: outcome.actionUrl,
         })
       }
     }
 
     const noCard = failed.some(f => f.noCardOnFile)
+    // A bank asking for authentication needs approving once, not retrying —
+    // saying "try again" there sends somebody round a loop that cannot close.
+    const needsAuth = failed.find(f => f.requiresAction)
 
     return NextResponse.json({
       success: added.length > 0 || failed.length === 0,
@@ -195,6 +203,10 @@ export async function POST(req: Request) {
       summary:
         failed.length === 0
           ? `${added.length} added to ${team.name}.`
+          : needsAuth
+            ? `${added.length} added. ${failed.length} need the payment approving — ` +
+              `your bank asked the cardholder to authenticate, which cannot happen ` +
+              `in the background. Approve it once and add them again.`
           : noCard
             ? `${added.length} added. ${failed.length} could not be billed — there is no working ` +
               `payment method on your account, so those seats stay pending until you add one.`

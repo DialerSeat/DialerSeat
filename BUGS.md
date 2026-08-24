@@ -174,7 +174,32 @@ reads zero is worse than one that is missing, because it looks like an answer.
 
 ---
 
-## 6. Untested: the join link paired with a fresh signup
+## 6. The join link paired with a fresh signup. MOSTLY VERIFIED — 23 Aug 2026.
+
+**What was actually proven.** A fresh account (`pmnt@dialerseat.com`) was
+created from a live link and the code was LOST: no `team_members` row, straight
+to `/billing` with an empty promo box. Root cause was not the cookie — it was
+set and the code was live — but that every reader of the cookie is a HOP, and a
+force redirect configured in the Clerk dashboard can route past all of them.
+
+Fixed by making the destination ask rather than every hop carry it, and by
+splitting the two audiences: signing IN with an invite goes to `/join/CODE`,
+signing UP goes through the showcase and on to billing with the code attached.
+See teamcodeflow.md, which now also records the Clerk env var this depends on.
+
+**Redemption itself works.** Re-opening the same link while signed in redeemed
+instantly: membership active, charge `paid`, real subscription,, weekly period.
+
+**And step 5 is done.** A real card was charged **$15.00** — $35 list less a
+57.14% agreed rate — against `sub_1U7ft3LUtyFm1UFge9qHLdBk`, confirmed on the
+card statement. That was the first time money had ever moved through the seat
+path; eleven billing bugs had been found by reading and none disproven by a
+transaction.
+
+**Still owed:** one fresh signup on the FIXED code, which has not been run.
+And a genuinely new failure surfaced while checking this — see item 11.
+
+### Original text
 
 **Not a bug — the verification that is still owed.** Several fixes tonight all
 land on one path, and none of them has been watched end to end by a real person
@@ -353,3 +378,36 @@ component — *"something in the sidebar is breaking"* — read that component f
 Side effects of the earlier attempts, deliberately kept: the sidebar is now a
 single element restyled by media query rather than two copies, and the mobile
 topbar no longer carries its own `UserButton`.
+
+---
+
+## 11. A card needing 3D Secure looked like a declined card. FIXED.
+
+Found in the data, not by reasoning. A real test seat failed with
+`subscription_payment_intent_requires_action` — the bank wanted the cardholder
+to authenticate — and nothing in the codebase knew that error existed.
+
+It matters more than a one-off decline. The seat path uses
+`payment_behavior: 'error_if_incomplete'`, so a card needing 3DS fails
+outright, and the charge is **off-session** — the entire meaning of "requires
+action" is that somebody has to be present. Every retry therefore fails
+identically. Left classified as a generic failure it is an invisible dead end:
+
+- the agent stays `pending` forever
+- the nightly job spends its whole retry window on something structurally
+  impossible
+- each attempt is a Stripe round trip pushing genuinely recoverable charges
+  further down the queue
+- the owner is told the payment "did not go through" and to try again, which is
+  the one thing that cannot work
+
+Now: classified as its own `requires_action` code carrying the hosted invoice
+URL (Stripe's page runs the challenge, so no card details touch this app), the
+owner is told to approve it once with `canRetry: false`, and the nightly retry
+skips those charges entirely.
+
+**This is the class of failure that would have surfaced first on a real floor
+with real cards** — silently, as agents who joined and never got access.
+
+`flowtst@dialerseat.com` on Making Progress is currently stuck in exactly this
+state and is the live test case for the fix.
