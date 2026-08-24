@@ -538,7 +538,24 @@ export default clerkMiddleware(async (auth, request) => {
   }
 
   if (url.pathname.startsWith('/welcome')) {
-    return withTenantHeader(NextResponse.next())
+    // The loop-breaker for the /billing guard. Set HERE, on the response that
+    // actually serves the showcase, because a page render cannot set cookies
+    // in Next — only middleware and route handlers can.
+    //
+    // The two previous attempts at "did we just come from welcome" sniffed the
+    // referer and an x-invoke-path header that nothing ever sets, so they
+    // failed open and bounced /billing -> /welcome -> /billing forever. This
+    // cannot: once the showcase has been served once, the cookie exists, and
+    // the guard stands down permanently for the session.
+    const res = NextResponse.next()
+    res.cookies.set('ds_welcome_seen', '1', {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: request.nextUrl.protocol === 'https:',
+      path: '/',
+      maxAge: 60 * 60 * 24 * 30,
+    })
+    return withTenantHeader(res)
   }
 
   const welcomeUrl = new URL('/welcome', request.url)

@@ -1054,7 +1054,7 @@ function CheckoutForm({
               I agree my card will be charged{' '}
               <strong style={{ color: '#e0e2ea' }}>nothing today</strong>, then{' '}
               <strong style={{ color: '#e0e2ea' }}>{billing.recurringLabel}</strong>{' '}
-              when my {trial.days}-day free trial ends
+              when my free {trial.days}-day trial ends
               {trial.endsAt
                 ? ` on ${new Date(trial.endsAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
                 : ''}
@@ -1081,7 +1081,7 @@ function CheckoutForm({
         }}
         className="billing-submit-btn"
       >
-        {submitting ? 'Processing...' : trial ? `Start ${trial.days}-day free trial` : 'Continue'}
+        {submitting ? 'Processing...' : trial ? `Start free ${trial.days}-day trial` : 'Continue'}
       </button>
 
       <button
@@ -1279,6 +1279,8 @@ const switchLinkStyle: React.CSSProperties = {
   marginBottom: 24,
   fontFamily: FUTURA,
   textAlign: 'left',
+  textDecoration: 'underline',
+  textUnderlineOffset: 3,
 }
 
 const dividerStyle: React.CSSProperties = {

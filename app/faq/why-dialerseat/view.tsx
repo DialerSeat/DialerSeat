@@ -686,7 +686,7 @@ export default function WhyDialerSeatView() {
                   </p>
                   <div className="why-cta-row">
                     <Link href="/sign-up" className="why-btn-primary">
-                      START 7 DAYS FREE →
+                      START FREE 7 DAYS →
                     </Link>
                     <Link href="/faq" className="why-btn-secondary">
                       BACK TO FAQ

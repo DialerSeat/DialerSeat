@@ -398,7 +398,7 @@ export default async function Home({ searchParams }: PageProps) {
             letterSpacing: '3px',
             fontWeight: 'bold',
           }}>
-            7 DAYS FREE · THEN $35/WEEK · CANCEL ANYTIME
+            FREE 7 DAYS · THEN $35/WEEK · CANCEL ANYTIME
           </div>
         </div>
       )}
@@ -448,7 +448,7 @@ export default async function Home({ searchParams }: PageProps) {
               boxSizing: 'border-box',
             }}>
               {[
-                { number: '7 DAYS', label: 'FREE TO START' },
+                { number: 'FREE', label: '7 DAYS TO START' },
                 { number: '$35', label: 'PER WEEK AFTER' },
                 { number: '$0', label: 'SETUP FEES' },
                 { number: '∞', label: 'LEADS UPLOADED' },
@@ -521,7 +521,7 @@ export default async function Home({ searchParams }: PageProps) {
             </div>
 
             <p className="ds-hero-fineprint" style={{ fontSize: '11px', letterSpacing: '3px', color: 'var(--brand-muted-text, #5a5e6a)' }}>
-              7 DAYS FREE · THEN $35/WEEK · CANCEL ANYTIME
+              FREE 7 DAYS · THEN $35/WEEK · CANCEL ANYTIME
             </p>
           </div>
         </div>
@@ -833,7 +833,7 @@ export default async function Home({ searchParams }: PageProps) {
               color: '#4a9eff',
               marginBottom: '40px',
             }}>
-              7 DAYS FREE · THEN BILLED WEEKLY · CANCEL ANYTIME
+              FREE 7 DAYS · THEN BILLED WEEKLY · CANCEL ANYTIME
             </div>
 
             <div style={{ marginBottom: '40px', textAlign: 'left', flex: 1 }}>
@@ -1041,7 +1041,7 @@ export default async function Home({ searchParams }: PageProps) {
           {ctaLabel} →
         </Link>
         <p style={{ marginTop: '20px', fontSize: '11px', letterSpacing: '3px', color: 'rgba(255,255,255,0.5)' }}>
-          7 DAYS FREE · THEN $35/WEEK · CANCEL ANYTIME
+          FREE 7 DAYS · THEN $35/WEEK · CANCEL ANYTIME
         </p>
         </div>
       </section>

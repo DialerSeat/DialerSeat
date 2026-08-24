@@ -344,7 +344,7 @@ export default function ComplianceExportFaqView() {
               actually need one.
             </p>
             <a href={isSignedIn ? '/dashboard/campaigns' : '/sign-up'} className="cex-cta-btn">
-              {isSignedIn ? 'GO TO CAMPAIGNS →' : 'START 7 DAYS FREE →'}
+              {isSignedIn ? 'GO TO CAMPAIGNS →' : 'START FREE 7 DAYS →'}
             </a>
           </div>
         </article>

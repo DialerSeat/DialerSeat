@@ -252,7 +252,7 @@ export default function VsKixieView() {
               <strong>$35 per seat per week</strong>, one price, weekly billing, no tier to climb.
             </p>
             <div className="vs-cta-row">
-              <Link href="/sign-up" className="vs-btn-primary">START 7 DAYS FREE →</Link>
+              <Link href="/sign-up" className="vs-btn-primary">START FREE 7 DAYS →</Link>
             </div>
           </div>
         </div>
@@ -479,7 +479,7 @@ export default function VsKixieView() {
               first dial in under 10 minutes.
             </p>
             <div className="vs-cta-row">
-              <Link href="/sign-up" className="vs-btn-primary">START 7 DAYS FREE →</Link>
+              <Link href="/sign-up" className="vs-btn-primary">START FREE 7 DAYS →</Link>
             </div>
           </div>
         </div>

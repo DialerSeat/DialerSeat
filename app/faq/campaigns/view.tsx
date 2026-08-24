@@ -339,7 +339,7 @@ export default function CampaignsFaqView() {
               minute either way.
             </p>
             <a href={isSignedIn ? '/dashboard/campaigns' : '/sign-up'} className="cmp-cta-btn">
-              {isSignedIn ? 'GO TO CAMPAIGNS →' : 'START 7 DAYS FREE →'}
+              {isSignedIn ? 'GO TO CAMPAIGNS →' : 'START FREE 7 DAYS →'}
             </a>
           </div>
         </article>

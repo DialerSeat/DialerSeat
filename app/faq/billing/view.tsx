@@ -364,7 +364,7 @@ export default function BillingFaqView() {
               cut off early, nothing to negotiate.
             </p>
             <a href={isSignedIn ? '/dashboard' : '/sign-up'} className="bil-cta-btn">
-              {isSignedIn ? 'GO TO DASHBOARD →' : 'START 7 DAYS FREE →'}
+              {isSignedIn ? 'GO TO DASHBOARD →' : 'START FREE 7 DAYS →'}
             </a>
           </div>
         </article>

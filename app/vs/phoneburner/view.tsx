@@ -252,7 +252,7 @@ export default function VsPhoneBurnerView() {
               philosophy. DialerSeat™ covers all four modes at <strong>$35 per seat per week</strong>.
             </p>
             <div className="vs-cta-row">
-              <Link href="/sign-up" className="vs-btn-primary">START 7 DAYS FREE →</Link>
+              <Link href="/sign-up" className="vs-btn-primary">START FREE 7 DAYS →</Link>
             </div>
           </div>
         </div>
@@ -479,7 +479,7 @@ export default function VsPhoneBurnerView() {
               campaign, at a lower price with weekly billing, that's DialerSeat™.
             </p>
             <div className="vs-cta-row">
-              <Link href="/sign-up" className="vs-btn-primary">START 7 DAYS FREE →</Link>
+              <Link href="/sign-up" className="vs-btn-primary">START FREE 7 DAYS →</Link>
             </div>
           </div>
         </div>

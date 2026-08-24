@@ -255,7 +255,7 @@ export default function VsBatchDialerView() {
               mode included, cancel any Monday.
             </p>
             <div className="vs-cta-row">
-              <Link href="/sign-up" className="vs-btn-primary">START 7 DAYS FREE &rarr;</Link>
+              <Link href="/sign-up" className="vs-btn-primary">START FREE 7 DAYS &rarr;</Link>
               <Link href="/vs/everyone" className="vs-btn-ghost">COMPARE EVERYONE</Link>
             </div>
           </div>
@@ -531,7 +531,7 @@ export default function VsBatchDialerView() {
               built around them.
             </p>
             <div className="vs-cta-row">
-              <Link href="/sign-up" className="vs-btn-primary">START 7 DAYS FREE &rarr;</Link>
+              <Link href="/sign-up" className="vs-btn-primary">START FREE 7 DAYS &rarr;</Link>
             </div>
           </div>
         </div>

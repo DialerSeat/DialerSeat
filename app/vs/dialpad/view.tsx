@@ -256,7 +256,7 @@ export default function VsDialpadView() {
               one product, one price.
             </p>
             <div className="vs-cta-row">
-              <Link href="/sign-up" className="vs-btn-primary">START 7 DAYS FREE →</Link>
+              <Link href="/sign-up" className="vs-btn-primary">START FREE 7 DAYS →</Link>
             </div>
           </div>
         </div>
@@ -481,7 +481,7 @@ export default function VsDialpadView() {
               signup means first dial in under 10 minutes.
             </p>
             <div className="vs-cta-row">
-              <Link href="/sign-up" className="vs-btn-primary">START 7 DAYS FREE →</Link>
+              <Link href="/sign-up" className="vs-btn-primary">START FREE 7 DAYS →</Link>
             </div>
           </div>
         </div>

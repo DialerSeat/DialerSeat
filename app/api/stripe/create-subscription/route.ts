@@ -248,8 +248,27 @@ export async function POST(req: Request) {
     // below can be defeated: this route deletes abandoned `incomplete` rows,
     // so somebody who bails at checkout looks new again by that measure. The
     // flag does not move, which is why it is first.
+    // ── AND IT HAS TO BE THE PRO PLAN, WITH NO CODE IN HAND ──────────────
+    // Two holes, both found by a real signup (trial@dialerseat.com) that came
+    // in on a code and walked out with a trialing `wl` subscription.
+    //
+    //   plan === 'standard' — nothing anywhere advertises a free week of
+    //   Manager+. Every trial sentence on the site reads "free for 7 days,
+    //   then $35 per seat per week", which is the Pro price. Handing out the
+    //   $75 plan on copy that promised the $35 one gives away the more
+    //   expensive product and sets the wrong expectation for the renewal.
+    //
+    //   !promoCode — a team join always arrives holding a code, so this is
+    //   what actually enforces "team joins are never trials". Seats already
+    //   carry trial_period_days: 0 in lib/teamBilling.ts, but that only
+    //   covers the seat subscription the OWNER creates; it does nothing about
+    //   a subscription the joining agent creates for themselves here. It also
+    //   stops a discount code and a free week from stacking.
     const eligibleForTrial =
-      !trialRow?.trial_started_at && (priorSubs || []).length === 0
+      !trialRow?.trial_started_at &&
+      (priorSubs || []).length === 0 &&
+      plan === 'standard' &&
+      !promoCode
 
     const subParams: Stripe.SubscriptionCreateParams = {
       customer: customerId,

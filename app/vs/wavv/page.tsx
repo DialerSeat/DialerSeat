@@ -53,7 +53,7 @@ const FAQS = [
   {
     question: 'Does DialerSeat offer a free trial like WAVV?',
     answer:
-      'DialerSeat does not run a formal free-trial period the way WAVV\u2019s 7-day trial works. Signup is self-serve with weekly billing and no annual contract, so total risk is limited to a single week at $35 rather than a monthly commitment.',
+      'Yes. DialerSeat is free for 7 days, the same length as WAVV’s trial. A card is required to start it, nothing is charged until it ends, and there is one trial per customer. After that it is $35 per seat per week, billed weekly with no annual contract, so you can stop any week.',
   },
 ]
 

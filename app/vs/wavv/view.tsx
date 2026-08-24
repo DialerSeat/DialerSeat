@@ -26,7 +26,7 @@ const features = [
   { feature: 'Weekly billing option', dialerseat: true, competitor: false },
   { feature: 'No annual contract required', dialerseat: true, competitor: true },
   { feature: 'Per-number fee', dialerseat: '$0 (unlimited)', competitor: '$1/mo per number' },
-  { feature: 'Free trial', dialerseat: false, competitor: '7 days' },
+  { feature: 'Free trial', dialerseat: '7 days', competitor: '7 days' },
   { feature: 'Power dialer', dialerseat: true, competitor: true },
   { feature: 'Preview dialer', dialerseat: true, competitor: true },
   { feature: 'Predictive dialer (multi-line)', dialerseat: true, competitor: 'Top tier only' },
@@ -264,7 +264,7 @@ export default function VsWavvView() {
               billing, cancel any time.
             </p>
             <div className="vs-cta-row">
-              <Link href="/sign-up" className="vs-btn-primary">START 7 DAYS FREE →</Link>
+              <Link href="/sign-up" className="vs-btn-primary">START FREE 7 DAYS →</Link>
             </div>
           </div>
         </div>
@@ -506,7 +506,7 @@ export default function VsWavvView() {
               Self-serve signup means first dial in under 10 minutes.
             </p>
             <div className="vs-cta-row">
-              <Link href="/sign-up" className="vs-btn-primary">START 7 DAYS FREE →</Link>
+              <Link href="/sign-up" className="vs-btn-primary">START FREE 7 DAYS →</Link>
             </div>
           </div>
         </div>
