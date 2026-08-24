@@ -286,12 +286,18 @@ export default function BillingFaqView() {
           <section className="bil-section">
             <h2>▸ WHAT YOU CAN ACTUALLY LOSE</h2>
             <p>
-              <strong>One week. $35.</strong> That is the whole downside, and
-              it is worth saying plainly, because most of this industry does
-              not let you find out this cheaply. There is no annual contract to
-              break, no setup fee to write off and no implementation project to
-              walk away from — the incumbents commonly charge $500–$2,000
-              before the first call is placed.
+              <strong>Nothing, for the first seven days.</strong> New accounts
+              start on a free trial — a card is required to begin it, but you
+              are not charged until it ends, and cancelling before then costs
+              you nothing at all.
+            </p>
+            <p>
+              <strong>After that: one week. $35.</strong> That is the whole
+              downside, and it is worth saying plainly, because most of this
+              industry does not let you find out this cheaply. There is no
+              annual contract to break, no setup fee to write off and no
+              implementation project to walk away from — the incumbents
+              commonly charge $500–$2,000 before the first call is placed.
             </p>
             <p>
               Cancel in Settings and you keep access through the week you have
@@ -352,13 +358,13 @@ export default function BillingFaqView() {
           {/* ── CTA ──────────────────────────────────────────────────────────  */}
           <div className="bil-cta-box">
             <div className="bil-cta-eyebrow">▸ NO CONTRACT, NO RETENTION CALL</div>
-            <h3 className="bil-cta-h">$35/week. Cancel with one click, any time.</h3>
+            <h3 className="bil-cta-h">Free for 7 days, then $35/week. Cancel with one click, any time.</h3>
             <p>
               You keep access through what you already paid for — nothing
               cut off early, nothing to negotiate.
             </p>
             <a href={isSignedIn ? '/dashboard' : '/sign-up'} className="bil-cta-btn">
-              {isSignedIn ? 'GO TO DASHBOARD →' : 'GET STARTED →'}
+              {isSignedIn ? 'GO TO DASHBOARD →' : 'START 7 DAYS FREE →'}
             </a>
           </div>
         </article>

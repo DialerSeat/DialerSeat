@@ -443,7 +443,7 @@ export default function NumbersFaqView() {
               fee for local presence. It&apos;s the default on every seat.
             </p>
             <a href={isSignedIn ? '/dashboard/dialer' : '/sign-up'} className="num-cta-btn">
-              {isSignedIn ? 'GO TO DIALER →' : 'GET STARTED →'}
+              {isSignedIn ? 'GO TO DIALER →' : 'START 7 DAYS FREE →'}
             </a>
           </div>
         </article>

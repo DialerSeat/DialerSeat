@@ -256,7 +256,7 @@ export default function VsAircallView() {
               upgrade required.
             </p>
             <div className="vs-cta-row">
-              <Link href="/sign-up" className="vs-btn-primary">START DIALING →</Link>
+              <Link href="/sign-up" className="vs-btn-primary">START 7 DAYS FREE →</Link>
             </div>
           </div>
         </div>
@@ -486,7 +486,7 @@ export default function VsAircallView() {
               means first dial in under 10 minutes.
             </p>
             <div className="vs-cta-row">
-              <Link href="/sign-up" className="vs-btn-primary">START DIALING →</Link>
+              <Link href="/sign-up" className="vs-btn-primary">START 7 DAYS FREE →</Link>
             </div>
           </div>
         </div>

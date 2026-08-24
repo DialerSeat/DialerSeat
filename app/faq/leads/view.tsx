@@ -384,7 +384,7 @@ export default function LeadsFaqView() {
               template, no import wizard.
             </p>
             <a href={isSignedIn ? '/dashboard/campaigns' : '/sign-up'} className="lead-cta-btn">
-              {isSignedIn ? 'GO TO CAMPAIGNS →' : 'GET STARTED →'}
+              {isSignedIn ? 'GO TO CAMPAIGNS →' : 'START 7 DAYS FREE →'}
             </a>
           </div>
         </article>

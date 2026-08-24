@@ -14,7 +14,7 @@ const SLUG = 'smrtphone'
 
 export const metadata: Metadata = {
   title: "DialerSeat vs smrtPhone \u2014 Flat Weekly, Not Subscription Plus Credits",
-  description: "smrtPhone stacks three charges: a $62\u2013$104/month subscription, a $42\u2013$75/seat/month dialer add-on, then per-minute credits. DialerSeat is $35 per seat per week with call time included.",
+  description: "smrtPhone stacks three charges: a $62\u2013$104/month subscription, a $42\u2013$75/seat/month dialer add-on, then per-minute credits. DialerSeat is free for 7 days, then $35 per seat per week with call time included.",
   alternates: {
     canonical: 'https://dialerseat.com/vs/smrtphone',
   },

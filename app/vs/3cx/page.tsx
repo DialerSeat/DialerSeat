@@ -38,7 +38,7 @@ const FAQS = [
   {
     question: 'How is DialerSeat priced compared to 3CX?',
     answer:
-      'DialerSeat is $35 per seat per week, billed weekly, with carrier lines, hosting, and support included. 3CX licenses per system per year based on simultaneous call (SC) capacity rather than per seat, and typically requires separate SIP trunk, hosting, and support costs on top of the license itself.',
+      'DialerSeat is free for 7 days, then $35 per seat per week, billed weekly, with carrier lines, hosting, and support included. 3CX licenses per system per year based on simultaneous call (SC) capacity rather than per seat, and typically requires separate SIP trunk, hosting, and support costs on top of the license itself.',
   },
   {
     question: 'Does 3CX have a predictive dialer for sales campaigns?',

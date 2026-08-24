@@ -33,7 +33,7 @@ const FAQS = [
   {
     question: 'How does DialerSeat compare to JustCall on price?',
     answer:
-      "DialerSeat is $35 per seat per week, billed weekly, one seat minimum. JustCall's Team plan is genuinely $29/user/month, but every standard plan (Team through Pro Plus) carries a 2-seat minimum, putting the real floor closer to $58/month. The power and predictive dialer aren't included until the Pro tier, $49/user/month and up.",
+      "DialerSeat is free for 7 days, then $35 per seat per week, billed weekly, one seat minimum. JustCall's Team plan is genuinely $29/user/month, but every standard plan (Team through Pro Plus) carries a 2-seat minimum, putting the real floor closer to $58/month. The power and predictive dialer aren't included until the Pro tier, $49/user/month and up.",
   },
   {
     question: 'Does JustCall\u2019s $29 plan include the sales dialer?',

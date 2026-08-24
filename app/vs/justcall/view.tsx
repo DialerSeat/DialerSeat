@@ -254,7 +254,7 @@ export default function VsJustcallView() {
               <strong>$35 per seat per week</strong>, one seat minimum: one.
             </p>
             <div className="vs-cta-row">
-              <Link href="/sign-up" className="vs-btn-primary">START DIALING →</Link>
+              <Link href="/sign-up" className="vs-btn-primary">START 7 DAYS FREE →</Link>
             </div>
           </div>
         </div>
@@ -479,7 +479,7 @@ export default function VsJustcallView() {
               under 10 minutes.
             </p>
             <div className="vs-cta-row">
-              <Link href="/sign-up" className="vs-btn-primary">START DIALING →</Link>
+              <Link href="/sign-up" className="vs-btn-primary">START 7 DAYS FREE →</Link>
             </div>
           </div>
         </div>

@@ -14,7 +14,7 @@ export const runtime = 'nodejs'
 export const metadata: Metadata = {
   title: 'Why We Charge What We Charge | DialerSeat',
   description:
-    '$35 per week per seat, all-in. Unlimited dial-out numbers, multiple inbound numbers, every dialer mode, no per-minute charges. Manager+ at $75/week adds full white-label. Here\'s the math vs competitors.',
+    'Free for 7 days, then $35 per week per seat, all-in. Unlimited dial-out numbers, multiple inbound numbers, every dialer mode, no per-minute charges. Manager+ at $75/week adds full white-label. Here\'s the math vs competitors.',
   alternates: { canonical: 'https://dialerseat.com/faq/why-we-charge' },
   openGraph: {
     title: 'Why we charge what we charge.',
@@ -48,8 +48,9 @@ export default function Page() {
             <span style={{ fontSize: 11, color: "#8888aa", letterSpacing: "2px", display: "block", marginBottom: 16 }}>LAST UPDATED 07/28/2026</span>
             <h1>Why we charge what we charge.</h1>
             <p className="exp-lead">
-              $35 a week, per seat. Unlimited dial-out numbers, multiple
-              inbound numbers, every dialer mode, no per-minute charges.
+              Free for 7 days, then $35 a week, per seat. Unlimited dial-out
+              numbers, multiple inbound numbers, every dialer mode, no
+              per-minute charges.
               Manager+ — our white-label tier — is $75/week and adds
               teams, shared campaigns, and your own branding. Here&apos;s
               why we can price this way.

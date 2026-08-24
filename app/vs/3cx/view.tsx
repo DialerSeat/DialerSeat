@@ -260,7 +260,7 @@ export default function Vs3cxView() {
               If you're comparing the two for a sales team, here's what that actually means.
             </p>
             <div className="vs-cta-row">
-              <Link href="/sign-up" className="vs-btn-primary">START DIALING →</Link>
+              <Link href="/sign-up" className="vs-btn-primary">START 7 DAYS FREE →</Link>
             </div>
           </div>
         </div>
@@ -294,7 +294,7 @@ export default function Vs3cxView() {
           <p className="vs-section-lede">
             3CX licenses by simultaneous call (SC) capacity per system, per year — not per seat —
             so pricing depends on estimating concurrent call volume, then adding separate SIP
-            trunk, hosting, and support costs on top. DialerSeat™ is $35 a week per seat, billed
+            trunk, hosting, and support costs on top. DialerSeat™ is free for 7 days, then $35 a week per seat, billed
             weekly, with the phone lines, carrier registration, and support already included.
           </p>
 
@@ -500,7 +500,7 @@ export default function Vs3cxView() {
               Self-serve signup means first dial in under 10 minutes.
             </p>
             <div className="vs-cta-row">
-              <Link href="/sign-up" className="vs-btn-primary">START DIALING →</Link>
+              <Link href="/sign-up" className="vs-btn-primary">START 7 DAYS FREE →</Link>
             </div>
           </div>
         </div>

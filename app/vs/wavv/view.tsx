@@ -264,7 +264,7 @@ export default function VsWavvView() {
               billing, cancel any time.
             </p>
             <div className="vs-cta-row">
-              <Link href="/sign-up" className="vs-btn-primary">START DIALING →</Link>
+              <Link href="/sign-up" className="vs-btn-primary">START 7 DAYS FREE →</Link>
             </div>
           </div>
         </div>
@@ -298,7 +298,7 @@ export default function VsWavvView() {
           <p className="vs-section-lede">
             WAVV's published pricing starts at $59/user/month for manual preview dialing, $99 for
             single-line auto-dial, and $149 for multi-line dialing across up to three lines — plus
-            $1/month per phone number. DialerSeat™ is $35 a week per seat, billed weekly, with
+            $1/month per phone number. DialerSeat™ is free for 7 days, then $35 a week per seat, billed weekly, with
             unlimited numbers included and no separate tier to unlock predictive dialing.
           </p>
 
@@ -506,7 +506,7 @@ export default function VsWavvView() {
               Self-serve signup means first dial in under 10 minutes.
             </p>
             <div className="vs-cta-row">
-              <Link href="/sign-up" className="vs-btn-primary">START DIALING →</Link>
+              <Link href="/sign-up" className="vs-btn-primary">START 7 DAYS FREE →</Link>
             </div>
           </div>
         </div>

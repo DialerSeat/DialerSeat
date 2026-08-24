@@ -33,7 +33,7 @@ const FAQS = [
   {
     question: 'How does DialerSeat compare to CloudTalk on price?',
     answer:
-      "DialerSeat is $35 per seat per week, billed weekly, with every dialer mode included. CloudTalk's cheapest published tier (Lite) runs about $19/user/month on annual billing, but that's a phone-system seat, not a dialer. Power Dialer is a separate $15/user/month add-on, and Parallel Dialer (multi-line) is a separate $39/user/month add-on, both stacked on top of the base seat.",
+      "DialerSeat is free for 7 days, then $35 per seat per week, billed weekly, with every dialer mode included. CloudTalk's cheapest published tier (Lite) runs about $19/user/month on annual billing, but that's a phone-system seat, not a dialer. Power Dialer is a separate $15/user/month add-on, and Parallel Dialer (multi-line) is a separate $39/user/month add-on, both stacked on top of the base seat.",
   },
   {
     question: 'Does CloudTalk\u2019s advertised price include a power dialer?',

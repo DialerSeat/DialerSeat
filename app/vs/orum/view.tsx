@@ -253,7 +253,7 @@ export default function VsOrumView() {
               <strong>$35 per seat per week</strong>, published, self-serve, one seat minimum: one.
             </p>
             <div className="vs-cta-row">
-              <Link href="/sign-up" className="vs-btn-primary">START DIALING →</Link>
+              <Link href="/sign-up" className="vs-btn-primary">START 7 DAYS FREE →</Link>
             </div>
           </div>
         </div>
@@ -483,7 +483,7 @@ export default function VsOrumView() {
               first dial in under 10 minutes.
             </p>
             <div className="vs-cta-row">
-              <Link href="/sign-up" className="vs-btn-primary">START DIALING →</Link>
+              <Link href="/sign-up" className="vs-btn-primary">START 7 DAYS FREE →</Link>
             </div>
           </div>
         </div>

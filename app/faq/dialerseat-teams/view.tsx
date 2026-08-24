@@ -981,7 +981,7 @@ export default function DialerSeatTeamsFaqView() {
                   </p>
                   <div className="tfaq-cta-row">
                     <Link href="/sign-up" className="tfaq-btn-primary">
-                      START DIALING →
+                      START 7 DAYS FREE →
                     </Link>
                     <Link href="/faq" className="tfaq-btn-secondary">
                       BACK TO FAQ

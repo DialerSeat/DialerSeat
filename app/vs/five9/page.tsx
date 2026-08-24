@@ -33,7 +33,7 @@ const FAQS = [
   {
     question: 'How does DialerSeat compare to Five9 on price?',
     answer:
-      "DialerSeat is $35 per seat per week, billed weekly and cancellable any week, with public pricing and self-serve signup. Five9 doesn't publish pricing — most quotes land at $175+ per seat per month, often with a multi-year contract and implementation fees on top. DialerSeat has no setup fee, no contract, and you can sign up and start dialing in under 10 minutes.",
+      "DialerSeat is free for 7 days, then $35 per seat per week, billed weekly and cancellable any week, with public pricing and self-serve signup. Five9 doesn't publish pricing — most quotes land at $175+ per seat per month, often with a multi-year contract and implementation fees on top. DialerSeat has no setup fee, no contract, and you can sign up and start dialing in under 10 minutes.",
   },
   {
     question: 'Why does Five9 require a sales call?',

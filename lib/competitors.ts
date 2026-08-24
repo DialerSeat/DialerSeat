@@ -76,14 +76,22 @@ export interface Competitor {
   segment: 'call_center' | 'sales_crm' | 'real_estate' | 'phone_system'
 }
 
+// ── ONLY CLAIMS ABOUT OURSELVES ──────────────────────────────────────────
+// The trial is stated on DialerSeat's own record and NOWHERE on a
+// competitor's. Whether ReadyMode or Convoso offer a trial is not something
+// this repo knows, and "they don't" is a factual assertion about another
+// company on a page built to be quoted. The comparison earns its credibility
+// by conceding what rivals are genuinely good at; inventing an absence to win
+// a row would spend that in one line.
 export const DIALERSEAT = {
   name: 'DialerSeat',
-  pricing: '$35 per seat per week on Pro. $75 per week on Manager+, which adds team ownership and white-labeling.',
-  contract: 'Billed weekly. No contract, no setup fee, cancel any week. Lead data is preserved if a subscription lapses.',
+  pricing: 'Free for 7 days, then $35 per seat per week on Pro. $75 per week on Manager+, which adds team ownership and white-labeling.',
+  contract: 'Free 7-day trial to start, card required, nothing charged until it ends. Then billed weekly — no contract, no setup fee, cancel any week. Lead data is preserved if a subscription lapses.',
   dialing: 'Preview, power, progressive, and predictive — all four included at the base price, selectable per campaign.',
   wins: [
     'Every dialer mode included at one price, with no tier to climb',
     'Weekly billing with no annual commitment and no implementation fee',
+    'Free 7-day trial, self-serve — no demo, no sales call, no quote to see pricing',
     'Self-serve signup — no demo required to see pricing or start dialing',
     'Server-side TCPA calling-window enforcement per lead state',
     'FTC Telemarketing Sales Rule 3% abandon-rate cap enforced in predictive',
@@ -101,7 +109,7 @@ export const DIALERSEAT = {
   team: {
     minimum: 'One seat',
     addingASeat: 'Send a join code. The seat is live the moment they accept, and the owner chooses who pays.',
-    fiveSeats: '$175/week in seats plus $75/week for the Manager+ owner — all four dialer modes included, no contract.',
+    fiveSeats: '$175/week in seats plus $75/week for the Manager+ owner — all four dialer modes included, no contract. The owner starts on a free 7-day trial; seats bill from the day they open.',
   },
 }
 

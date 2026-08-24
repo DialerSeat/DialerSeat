@@ -38,7 +38,7 @@ const FAQS = [
   {
     question: 'How does DialerSeat compare to Dialpad on price?',
     answer:
-      "DialerSeat is $35 per seat per week, billed weekly, one product, dialer included. Dialpad Connect's Pro tier ($25/user/month), the one with CRM integrations, carries a 3-user minimum \u2014 one detailed breakdown documents a 2-person team paying roughly $46.75/month per active user once the seat minimum and a reported mandatory administrative fee are factored in, against the $25 headline. That's before adding Dialpad Sell for the dialer itself.",
+      "DialerSeat is free for 7 days, then $35 per seat per week, billed weekly, one product, dialer included. Dialpad Connect's Pro tier ($25/user/month), the one with CRM integrations, carries a 3-user minimum \u2014 one detailed breakdown documents a 2-person team paying roughly $46.75/month per active user once the seat minimum and a reported mandatory administrative fee are factored in, against the $25 headline. That's before adding Dialpad Sell for the dialer itself.",
   },
   {
     question: 'Is Dialpad\u2019s "unlimited calling" really unlimited?',

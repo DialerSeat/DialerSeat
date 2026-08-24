@@ -33,7 +33,7 @@ const FAQS = [
   {
     question: 'How does DialerSeat compare to WAVV on price?',
     answer:
-      'DialerSeat is $35 per seat per week, billed weekly, cancel any time, with preview, power, and multi-line predictive dialing all included at that one price. WAVV publishes three separate tiers — $59/month for manual preview dialing, $99/month for single-line auto-dial, and $149/month for multi-line predictive dialing across up to three lines — plus a $1/month fee per phone number on top of whichever plan you choose.',
+      'DialerSeat is free for 7 days, then $35 per seat per week, billed weekly, cancel any time, with preview, power, and multi-line predictive dialing all included at that one price. WAVV publishes three separate tiers — $59/month for manual preview dialing, $99/month for single-line auto-dial, and $149/month for multi-line predictive dialing across up to three lines — plus a $1/month fee per phone number on top of whichever plan you choose.',
   },
   {
     question: 'Does DialerSeat include predictive dialing at every price point?',
