@@ -1061,7 +1061,14 @@ export default function LeadsPage() {
                             fontSize: 9, letterSpacing: 2, color: T.muted, marginBottom: 6, fontWeight: 'bold',
                           }}>SET DISPOSITION</div>
                           <div className="disp-grid">
-                            {DISPOSITIONS.filter(d => d.value !== 'NO_ANSWER').map(d => (
+                            {/* Neither of these is an agent's choice. NO_ANSWER
+                                and SKIPPED are things the dialer records about
+                                a call, and SKIPPED now means "no disposition" —
+                                a chip offering to set that would appear to do
+                                nothing, because setting it does nothing. */}
+                            {DISPOSITIONS
+                              .filter(d => d.value !== 'NO_ANSWER' && d.value !== 'SKIPPED')
+                              .map(d => (
                               <button
                                 key={d.value}
                                 className="disp-btn"

@@ -102,6 +102,10 @@ export async function POST(req: Request) {
       .select('id, stripe_subscription_item_id')
       .eq('team_member_id', member.id)
       .eq('status', 'paid')
+      // Only seats this team's owner is paying for. Somebody leaving must
+      // never cancel a subscription of their own — theirs lives in
+      // `subscriptions`, billed to their card, and is not read here.
+      .eq('owner_id', team.owner_id)
 
     const stripeCancelResults: Array<{ chargeId: string; canceled: boolean; reason?: string }> = []
 

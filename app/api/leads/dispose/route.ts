@@ -91,9 +91,20 @@ export async function POST(req: Request) {
       newStatus = newAttempts >= attemptCap ? 'maxed' : 'no_answer'
     }
 
+    // ── A SKIP MUST NOT ERASE A JUDGEMENT ─────────────────────────────────
+    // leads.disposition was overwritten with SKIPPED on every skip, so an
+    // agent passing over a lead they had CLOSED last week wiped the close.
+    // Skipping is the dialer moving on; it says nothing about the lead, and
+    // it has no business overwriting something somebody decided.
+    //
+    // The lead's STATUS still changes — back to uncalled, or maxed once the
+    // attempt cap is reached — because that is real and is what governs
+    // whether it comes round again.
+    const isSkip = disposition === 'SKIPPED'
+
     const updates: Record<string, any> = {
       status: newStatus,
-      disposition: disposition,
+      ...(isSkip ? {} : { disposition }),
       dial_attempts: newAttempts,
       last_called_at: new Date().toISOString(),
       // ── THE LAST CALL IS NOW THIS ONE ───────────────────────────────────
@@ -101,7 +112,10 @@ export async function POST(req: Request) {
       // reached a machine yesterday and was spoken to today leaves the
       // voicemail queue rather than sitting in it having already been handled.
       // Without this, the queue would only ever grow.
-      last_call_disposition: disposition,
+      // Null on a skip, for the same reason: the last call did not reach a
+      // disposition. Writing SKIPPED here would put "skipped" into the queue
+      // filters that read this column, where it means nothing.
+      last_call_disposition: isSkip ? null : disposition,
       last_call_at: new Date().toISOString(),
     }
 

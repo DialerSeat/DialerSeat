@@ -69,7 +69,18 @@ export const DISPOSITIONS: DispositionDef[] = [
   // Skipped is the dialer moving on - a lead outside calling hours, a queue
   // advancing, an agent passing. It is the largest bucket by far and says
   // nothing about how a conversation went.
-  { value: 'SKIPPED', aliases: [], label: 'Skipped',
+  // ── SKIPPED IS NOT A DISPOSITION, IT IS THE ABSENCE OF ONE ────────────
+  // Reads as "No disposition" everywhere, because that is what it means:
+  // nobody judged this lead. Four unrelated events write it — an agent
+  // passing in preview, an agent skipping a live call, an unusable phone
+  // number, and a dial that failed to place — and not one of them is an
+  // opinion about the person on the other end.
+  //
+  // The VALUE stays, and is not written as null, because it does mechanical
+  // work: `calls` finds the row to close with `.is('disposition', null)`, so
+  // a null here would leave every skipped call permanently open and matchable
+  // by the next disposition that came along.
+  { value: 'SKIPPED', aliases: [], label: 'No disposition',
     agentChosen: false, contact: false, conversion: false, hideFromBreakdown: true },
   { value: 'ABANDONED', aliases: [], label: 'Abandoned',
     agentChosen: false, contact: false, conversion: false },

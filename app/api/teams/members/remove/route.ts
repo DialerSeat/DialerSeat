@@ -52,6 +52,7 @@ export async function POST(req: Request) {
     }
 
     const now = new Date().toISOString()
+    const ownerId = (member as any).teams.owner_id
 
     const { data: activeCharges } = await supabaseAdmin
       .from('team_seat_charges')
@@ -67,6 +68,18 @@ export async function POST(req: Request) {
       .select('id, stripe_subscription_item_id')
       .eq('team_member_id', memberId)
       .eq('status', 'paid')
+      // ── ONLY WHAT THIS OWNER IS ACTUALLY PAYING FOR ────────────────────
+      // Explicit rather than implied. A 'paid' charge against this membership
+      // is by construction one this owner raised, but the cancel below ends a
+      // live Stripe subscription and that is not a place to rely on "by
+      // construction". Naming the owner means a charge belonging to anybody
+      // else can never be reached from here, however the data shifts later.
+      //
+      // Nothing here can touch the agent's OWN DialerSeat subscription. That
+      // lives in `subscriptions`, is billed to their card, and is not read by
+      // this route at all — a self-funded agent's charge was voided when they
+      // joined, so there is no 'paid' row to match and nothing is cancelled.
+      .eq('owner_id', ownerId)
 
     const stripeCancelResults: Array<{ chargeId: string; canceled: boolean; reason?: string }> = []
 
@@ -103,14 +116,11 @@ export async function POST(req: Request) {
     // Same rule from the other side: if the seat just cancelled was the one
     // covering this person's other memberships with this owner, promote one
     // of them rather than leaving the owner with unbilled active seats.
-    const { promotedMemberId } = await reconcileCoveredSeats(
-      (member as any).teams.owner_id,
-      member.user_id
-    )
+    const { promotedMemberId } = await reconcileCoveredSeats(ownerId, member.user_id)
 
     // A seat ending can drop this owner below a volume tier they were being
     // discounted for. Only fires on an actual boundary.
-    await syncIfTierChanged((member as any).teams.owner_id, { removed: true })
+    await syncIfTierChanged(ownerId, { removed: true })
 
     return NextResponse.json({
       success: true,

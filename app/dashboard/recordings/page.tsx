@@ -1232,7 +1232,9 @@ export default function RecordingsPage() {
                         EDIT DISPOSITION — SYNCED WITH LEADS PAGE
                       </div>
                       <div className="disp-grid">
-                        {EDIT_DISPOSITIONS.filter(d => d.value !== 'NO_ANSWER').map(d => (
+                        {EDIT_DISPOSITIONS
+                          .filter(d => d.value !== 'NO_ANSWER' && d.value !== 'SKIPPED')
+                          .map(d => (
                           <button
                             key={d.value}
                             className="disp-btn"
