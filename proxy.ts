@@ -24,6 +24,21 @@ const isPublicRoute = createRouteMatcher([
   // do that.
   '/join/(.*)',
   '/api/join/(.*)',
+  // ── THE ANALYTICS BEACON IS FOR PEOPLE WHO ARE NOT SIGNED IN ────────
+  // Mounted in the root layout so it covers marketing pages, and protected
+  // here — so every anonymous visitor's beacon was redirected to Clerk's
+  // sign-in and died at CORS before it ever reached the route.
+  //
+  // Anonymous page views were therefore never recorded AT ALL. 337 rows, all
+  // is_authed true, and the reason was not the client's cookie guess (which
+  // was also wrong): only signed-in beacons could physically arrive. Fixing
+  // how the flag is computed without this would have kept reporting zero
+  // anonymous traffic forever, and looked correct doing it.
+  //
+  // Safe to open: it accepts a path, a referrer and three utm fields, all
+  // sanitised, and derives the visitor hash and auth state server-side. There
+  // is nothing here to read and nothing worth forging.
+  '/api/analytics/pageview',
   '/terms',
   '/privacy',
   '/faq(.*)',

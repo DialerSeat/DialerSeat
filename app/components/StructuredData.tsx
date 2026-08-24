@@ -44,7 +44,23 @@ export default function StructuredData({ branding }: { branding?: TenantBranding
           operatingSystem: 'Web, iOS, Android',
           url: base,
           description: `${brand} is a professional outbound dialer with predictive, progressive, power, and preview modes, automatic voicemail detection, inbound reception, and unlimited numbers.`,
-          offers: {
+          // ── SAME TWO OFFERS AS lib/schema.ts ────────────────────────
+          // Both files emit a SoftwareApplication for the same product, so
+          // both have to say the same thing. They disagreeing about price is
+          // a crawler learning our pricing is uncertain — the exact failure
+          // canonicalFacts exists to prevent, reproduced one layer up.
+          offers: [
+            {
+              '@type': 'Offer',
+              name: 'Free 7-day trial',
+              price: '0.00',
+              priceCurrency: 'USD',
+              availability: 'https://schema.org/InStock',
+              url: `${base}/sign-up`,
+              description:
+                'Full access for 7 days. A card is required to start; nothing is charged until the trial ends. One trial per customer.',
+            },
+            {
             '@type': 'Offer',
             price: '35.00',
             priceCurrency: 'USD',
@@ -57,7 +73,8 @@ export default function StructuredData({ branding }: { branding?: TenantBranding
             },
             availability: 'https://schema.org/InStock',
             url: `${base}/sign-up`,
-          },
+            },
+          ],
           publisher: { '@id': `${base}/#organization` },
           
         },
@@ -133,20 +150,35 @@ export default function StructuredData({ branding }: { branding?: TenantBranding
       url: BASE,
       description:
         'Browser-based outbound dialer with predictive, progressive, power, and preview modes; automatic voicemail detection; inbound call reception; unlimited numbers; team workflow; TCPA compliance. Built for solo agents up through larger teams.',
-      offers: {
-        '@type': 'Offer',
-        price: '35.00',
-        priceCurrency: 'USD',
-        priceSpecification: {
-          '@type': 'UnitPriceSpecification',
+      // Third copy of the same two offers. Three files describing one price
+      // is three chances to disagree — worth consolidating, but not while
+      // quietly changing what a live page emits.
+      offers: [
+        {
+          '@type': 'Offer',
+          name: 'Free 7-day trial',
+          price: '0.00',
+          priceCurrency: 'USD',
+          availability: 'https://schema.org/InStock',
+          url: `${BASE}/sign-up`,
+          description:
+            'Full access for 7 days. A card is required to start; nothing is charged until the trial ends. One trial per customer.',
+        },
+        {
+          '@type': 'Offer',
           price: '35.00',
           priceCurrency: 'USD',
-          unitText: 'per seat per week',
-          billingDuration: 'P7D',
+          priceSpecification: {
+            '@type': 'UnitPriceSpecification',
+            price: '35.00',
+            priceCurrency: 'USD',
+            unitText: 'per seat per week',
+            billingDuration: 'P7D',
+          },
+          availability: 'https://schema.org/InStock',
+          url: `${BASE}/sign-up`,
         },
-        availability: 'https://schema.org/InStock',
-        url: `${BASE}/sign-up`,
-      },
+      ],
       featureList: [
         'Predictive dialing',
         'Progressive dialing',
