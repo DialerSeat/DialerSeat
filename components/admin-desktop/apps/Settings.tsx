@@ -484,63 +484,27 @@ interface EmptyPaneDef {
 // Simple category tabs with nothing built yet. Each renders the standard
 // iOS "nothing here" empty state via <EmptyPane />. Fill these in later —
 // no scaffolding needed beyond adding the real content where noted.
-const EMPTY_PANES: EmptyPaneDef[] = [
-  {
-    pane: 'branding',
-    title: 'Branding & White Label',
-    icon: '🎨',
-    iconBg: 'linear-gradient(135deg, #FF9F0A, #FF6200)',
-    subtitle: 'Logo, colors, custom domain',
-    blurb: 'White label branding, custom domains, and theme controls will live here.',
-  },
-  {
-    pane: 'numbers',
-    title: 'Numbers & Compliance',
-    icon: '🔢',
-    iconBg: 'linear-gradient(135deg, #BF5AF2, #8944AB)',
-    subtitle: 'Provisioning, area codes, STIR/SHAKEN',
-    blurb: 'Phone number provisioning and compliance settings will live here.',
-  },
-  {
-    pane: 'billing',
-    title: 'Billing',
-    icon: '💳',
-    iconBg: 'linear-gradient(135deg, #34C759, #248A3D)',
-    subtitle: 'Plan, invoices, payment method',
-    blurb: 'Subscription plan, invoices, and payment details will live here.',
-  },
-  {
-    pane: 'integrations',
-    title: 'Integrations',
-    icon: '🔗',
-    iconBg: 'linear-gradient(135deg, #64D2FF, #0A84FF)',
-    subtitle: 'Gmail, webhooks, API keys',
-    blurb: 'Connected accounts, webhooks, and API keys will live here.',
-  },
-  {
-    pane: 'privacy',
-    title: 'Privacy & Security',
-    icon: '🔒',
-    iconBg: 'linear-gradient(135deg, #8E8E93, #636366)',
-    subtitle: 'Sessions, access logs',
-    blurb: 'Session management, admin access logs, and similar controls will live here.',
-  },
-  {
-    pane: 'advanced',
-    title: 'Advanced',
-    icon: '🛠️',
-    iconBg: 'linear-gradient(135deg, #8E8E93, #636366)',
-    subtitle: 'Logs, diagnostics, developer options',
-    blurb: 'Developer and diagnostic options will live here.',
-  },
-  {
-    pane: 'about',
-    title: 'About',
-    icon: 'ℹ️',
-    iconBg: 'linear-gradient(135deg, #8E8E93, #48484A)',
-    subtitle: 'Version, legal',
-    blurb: 'App version, changelog, and legal information will live here.',
-  },
+const EMPTY_PANES: EmptyPaneDef[] = []
+
+// ── THE PANES THAT ARE REAL NOW ──────────────────────────────────────────
+// These were EMPTY_PANES entries, rendered through <EmptyPane /> with a
+// "coming soon" blurb. They report real state now, so they moved here — but
+// the navigation still has to list them, and EMPTY_PANES going to zero would
+// otherwise have quietly removed seven items from the menu.
+//
+// One list, spread into both the desktop sidebar and the phone menu. Those are
+// two hand-maintained descriptions of one menu, which is exactly how Dialer &
+// Calling came to be missing from the phone for a while.
+const REAL_PANES: Array<{
+  pane: SettingsPane; icon: string; iconBg: string; title: string; subtitle: string
+}> = [
+  { pane: 'branding', icon: '🎨', iconBg: 'linear-gradient(135deg, #FF9F0A, #FF6200)', title: 'Branding & White Label', subtitle: 'Tenants, domains' },
+  { pane: 'numbers', icon: '☎️', iconBg: 'linear-gradient(135deg, #5AC8FA, #0A84FF)', title: 'Numbers & Compliance', subtitle: 'Pool, suppression, windows' },
+  { pane: 'billing', icon: '💳', iconBg: 'linear-gradient(135deg, #30D158, #248A3D)', title: 'Billing', subtitle: 'Plans and seats' },
+  { pane: 'integrations', icon: '🔗', iconBg: 'linear-gradient(135deg, #BF5AF2, #8944AB)', title: 'Integrations', subtitle: 'Keys configured, webhooks alive' },
+  { pane: 'privacy', icon: '🔒', iconBg: 'linear-gradient(135deg, #64D2FF, #0A84FF)', title: 'Privacy & Security', subtitle: 'Access and retention' },
+  { pane: 'advanced', icon: '⚙️', iconBg: 'linear-gradient(135deg, #8E8E93, #48484A)', title: 'Advanced', subtitle: 'Scheduled jobs, runtime' },
+  { pane: 'about', icon: 'ℹ️', iconBg: 'linear-gradient(135deg, #0A84FF, #0040DD)', title: 'About', subtitle: 'Build and legal' },
 ]
 
 function Sidebar({
@@ -579,6 +543,7 @@ function Sidebar({
       title: 'Teams & Seats',
       subtitle: 'Grace period, seat takeover',
     },
+    ...REAL_PANES.map(d => ({ pane: d.pane, icon: d.icon, iconBg: d.iconBg, title: d.title, subtitle: d.subtitle })),
     ...EMPTY_PANES.map(def => ({ pane: def.pane, icon: def.icon, iconBg: def.iconBg, title: def.title, subtitle: def.subtitle })),
   ]
   const filtered = items.filter(i => matches(i.title, i.subtitle))
@@ -858,6 +823,347 @@ function TeamsPane({ onBack }: { onBack: () => void }) {
             are in the code rather than here, because they are printed to
             customers and changing them is a pricing decision, not a setting.
           </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+
+// =============================================================================
+// THE PANES THAT USED TO SAY "COMING SOON"
+// =============================================================================
+// Seven placeholders, each promising a screen that did not exist. The
+// temptation with those is to fill them with plausible controls — a retention
+// slider wired to nothing, a toggle for an unbuilt feature — and that is worse
+// than the empty state, because an empty state is at least honest.
+//
+// So every one of these reports something REAL: a table, a constant in the
+// code, or whether an environment variable is present. Where a pane has no
+// lever of its own it says so and points at the app that owns it. Where a
+// thing genuinely is not built, it says that too, in words, rather than
+// implying otherwise with a disabled switch.
+//
+// One fetch behind all seven. They are opened rarely and read once, and seven
+// routes each doing three counts is seven places for the same auth check to
+// drift apart.
+// =============================================================================
+
+interface OverviewData {
+  branding: { tenants: Array<{ slug: string; active: boolean; createdAt: string }>; total: number; active: number }
+  numbers: { total: number; byStatus: Record<string, number>; suppressed: number }
+  billing: { activeByPlan: Record<string, number>; activeTotal: number; paidSeats: number }
+  privacy: { admins: number; excludedFromAnalytics: number }
+  integrations: {
+    configured: Record<string, boolean>
+    lastTelnyxEvent: string | null
+    lastStripeEvent: string | null
+  }
+  crons: Array<{ path: string; job: string; does: string }>
+  about: {
+    version: string; commit: string | null; branch: string | null
+    env: string; region: string | null; node: string
+  }
+}
+
+const PANE_TITLES: Record<string, string> = {
+  branding: 'Branding & White Label',
+  numbers: 'Numbers & Compliance',
+  billing: 'Billing',
+  integrations: 'Integrations',
+  privacy: 'Privacy & Security',
+  advanced: 'Advanced',
+  about: 'About',
+}
+
+/** Plain value row for facts with no control attached. */
+function FactRow({ label, value, tone, isLast }: {
+  label: string; value: string; tone?: string; isLast?: boolean
+}) {
+  return (
+    <SettingsRow
+      title={label}
+      isLast={isLast}
+      right={
+        <span style={{
+          fontSize: 13, fontVariantNumeric: 'tabular-nums',
+          color: tone || LABEL_SECONDARY, maxWidth: 200,
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>{value}</span>
+      }
+    />
+  )
+}
+
+/** "Not built" said out loud. A disabled switch implies it is coming; this
+ *  does not pretend either way. */
+function NotBuilt({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      margin: '6px 16px 16px', padding: '10px 12px', borderRadius: 10,
+      background: 'rgba(120,120,128,0.14)', color: LABEL_SECONDARY,
+      fontSize: 12, lineHeight: 1.5,
+    }}>{children}</div>
+  )
+}
+
+function ago(iso: string | null): string {
+  if (!iso) return 'never'
+  const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  return `${Math.floor(hrs / 24)}d ago`
+}
+
+function OverviewPane({ pane, onBack }: { pane: string; onBack: () => void }) {
+  const [data, setData] = useState<OverviewData | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const r = await fetch('/api/admin/settings-overview').then(x => x.json())
+        if (cancelled) return
+        if (r.success) setData(r)
+        else setError(r.error || 'Could not load')
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : 'Could not load')
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  const title = PANE_TITLES[pane] || 'Settings'
+
+  return (
+    <div>
+      <BackHeader title={title} onBack={onBack} />
+      {error && <div style={{ padding: '12px 16px', fontSize: 13, color: IOS_RED }}>{error}</div>}
+      {!data && !error && (
+        <div style={{ padding: '12px 16px', fontSize: 13, color: LABEL_SECONDARY }}>Loading…</div>
+      )}
+
+      {data && pane === 'branding' && (
+        <>
+          <GroupLabel>Tenants</GroupLabel>
+          <GroupedCard>
+            <FactRow label="White-label tenants" value={String(data.branding.total)} />
+            <FactRow
+              label="Active"
+              value={String(data.branding.active)}
+              tone={data.branding.active > 0 ? IOS_GREEN : undefined}
+              isLast={data.branding.tenants.length === 0}
+            />
+            {data.branding.tenants.map((t, i) => (
+              <FactRow
+                key={t.slug}
+                label={t.slug}
+                value={t.active ? 'live' : 'inactive'}
+                tone={t.active ? IOS_GREEN : LABEL_TERTIARY}
+                isLast={i === data.branding.tenants.length - 1}
+              />
+            ))}
+          </GroupedCard>
+          <NotBuilt>
+            Logos, colours and domains are edited per tenant in the{' '}
+            <strong style={{ color: LABEL_PRIMARY }}>White Label</strong> app — this
+            pane deliberately does not duplicate those controls, because two
+            screens editing one row is how they end up disagreeing.
+          </NotBuilt>
+        </>
+      )}
+
+      {data && pane === 'numbers' && (
+        <>
+          <GroupLabel>Caller ID pool</GroupLabel>
+          <GroupedCard>
+            <FactRow label="Numbers held" value={String(data.numbers.total)} />
+            {Object.entries(data.numbers.byStatus).map(([k, v], i, arr) => (
+              <FactRow
+                key={k}
+                label={k.charAt(0).toUpperCase() + k.slice(1)}
+                value={String(v)}
+                tone={k === 'active' ? IOS_GREEN : k === 'cooldown' ? '#FF9F0A' : undefined}
+                isLast={i === arr.length - 1}
+              />
+            ))}
+          </GroupedCard>
+
+          <GroupLabel>Compliance</GroupLabel>
+          <GroupedCard>
+            <FactRow label="Suppressed numbers" value={String(data.numbers.suppressed)} />
+            <FactRow label="Calling-window enforcement" value="On, per lead state" tone={IOS_GREEN} />
+            <FactRow label="Recording consent posture" value="Opt-in per campaign" tone={IOS_GREEN} isLast />
+          </GroupedCard>
+          <NotBuilt>
+            Buying, releasing and cooldown are in the{' '}
+            <strong style={{ color: LABEL_PRIMARY }}>Numbers</strong> app; the global
+            buying freeze is under Dialer &amp; Calling.{' '}
+            <strong style={{ color: LABEL_PRIMARY }}>STIR/SHAKEN attestation is not
+            implemented</strong> — Telnyx signs on its own account rating, and nothing
+            in this codebase reads or reports it.
+          </NotBuilt>
+        </>
+      )}
+
+      {data && pane === 'billing' && (
+        <>
+          <GroupLabel>Active subscriptions</GroupLabel>
+          <GroupedCard>
+            {Object.entries(data.billing.activeByPlan).map(([k, v], i, arr) => (
+              <FactRow
+                key={k}
+                label={k === 'pro' ? 'Pro' : k === 'wl' ? 'Manager+ / white label' : k}
+                value={String(v)}
+                tone={IOS_GREEN}
+                isLast={i === arr.length - 1 && arr.length > 0}
+              />
+            ))}
+            {Object.keys(data.billing.activeByPlan).length === 0 && (
+              <FactRow label="Active plans" value="none" isLast />
+            )}
+          </GroupedCard>
+
+          <GroupLabel>Seats</GroupLabel>
+          <GroupedCard>
+            <FactRow label="Seats currently billed" value={String(data.billing.paidSeats)} isLast />
+          </GroupedCard>
+          <NotBuilt>
+            Deliberately no revenue figure here. Every seat can carry its own
+            agreed rate, so a total computed on this screen would be a guess
+            that looks like an invoice. Per-owner rates live in{' '}
+            <strong style={{ color: LABEL_PRIMARY }}>Incentives</strong>, real money
+            in Stripe, and margin in{' '}
+            <strong style={{ color: LABEL_PRIMARY }}>Unit Economics</strong>.
+          </NotBuilt>
+        </>
+      )}
+
+      {data && pane === 'integrations' && (
+        <>
+          <GroupLabel>Configured</GroupLabel>
+          <GroupedCard>
+            {Object.entries(data.integrations.configured).map(([k, ok], i, arr) => (
+              <FactRow
+                key={k}
+                label={k
+                  .replace(/([A-Z])/g, ' $1')
+                  .replace(/^./, c => c.toUpperCase())}
+                value={ok ? 'configured' : 'missing'}
+                tone={ok ? IOS_GREEN : IOS_RED}
+                isLast={i === arr.length - 1}
+              />
+            ))}
+          </GroupedCard>
+
+          <GroupLabel>Inbound webhooks</GroupLabel>
+          <GroupedCard>
+            <FactRow label="Last Telnyx call event" value={ago(data.integrations.lastTelnyxEvent)} />
+            <FactRow label="Last Stripe event" value={ago(data.integrations.lastStripeEvent)} isLast />
+          </GroupedCard>
+          <NotBuilt>
+            Presence only — never a value. A screen that prints a key puts it in
+            a browser history, a screenshot and a screen-share. Silence on the
+            Telnyx row is the one to watch: talk time, AMD and recordings all
+            stop together and nothing else on screen says so.
+          </NotBuilt>
+        </>
+      )}
+
+      {data && pane === 'privacy' && (
+        <>
+          <GroupLabel>Access</GroupLabel>
+          <GroupedCard>
+            <FactRow label="Admin accounts" value={String(data.privacy.admins)} />
+            <FactRow
+              label="Excluded from analytics"
+              value={String(data.privacy.excludedFromAnalytics)}
+              isLast
+            />
+          </GroupedCard>
+
+          <GroupLabel>Retention</GroupLabel>
+          <GroupedCard>
+            <FactRow label="Recordings" value="Pruned nightly" />
+            <FactRow label="Analytics rows" value="Rolled up, then pruned" />
+            <FactRow label="Lead data on lapse" value="Kept, never deleted" tone={IOS_GREEN} isLast />
+          </GroupedCard>
+          <NotBuilt>
+            Sessions and passwords are Clerk's, not ours — revoking a session is
+            done in the Clerk dashboard, and this app deliberately holds no
+            copy of that state.{' '}
+            <strong style={{ color: LABEL_PRIMARY }}>There is no admin audit log.</strong>{' '}
+            Admin actions are written to the server log and nowhere queryable,
+            so "who suspended this seat" cannot currently be answered.
+          </NotBuilt>
+        </>
+      )}
+
+      {data && pane === 'advanced' && (
+        <>
+          <GroupLabel>Scheduled jobs</GroupLabel>
+          <GroupedCard>
+            {data.crons.map((c, i) => (
+              <SettingsRow
+                key={c.path}
+                title={c.job}
+                subtitle={c.does}
+                isLast={i === data.crons.length - 1}
+                right={
+                  <span style={{ fontSize: 11, color: LABEL_TERTIARY, fontFamily: 'monospace' }}>
+                    daily
+                  </span>
+                }
+              />
+            ))}
+          </GroupedCard>
+
+          <GroupLabel>Runtime</GroupLabel>
+          <GroupedCard>
+            <FactRow label="Environment" value={data.about.env} />
+            <FactRow label="Region" value={data.about.region || 'unknown'} />
+            <FactRow label="Node" value={data.about.node} isLast />
+          </GroupedCard>
+          <NotBuilt>
+            Every job runs once a day because that is the Vercel Hobby ceiling —
+            a sub-daily schedule fails the deploy outright. On Pro they can run
+            per minute, which is what <code>vercel-upgrade.md</code> changes.
+            Live call diagnostics are at <code>/api/calls/diagnostics</code>.
+          </NotBuilt>
+        </>
+      )}
+
+      {data && pane === 'about' && (
+        <>
+          <GroupLabel>This build</GroupLabel>
+          <GroupedCard>
+            <FactRow label="Version" value={data.about.version} />
+            <FactRow label="Commit" value={data.about.commit || 'local'} />
+            <FactRow label="Branch" value={data.about.branch || 'unknown'} />
+            <FactRow label="Environment" value={data.about.env} isLast />
+          </GroupedCard>
+
+          <GroupLabel>Legal</GroupLabel>
+          <GroupedCard>
+            <SettingsRow
+              title="Terms of Service"
+              right={<a href="/terms" target="_blank" rel="noreferrer" style={{ color: IOS_BLUE, fontSize: 13 }}>Open</a>}
+            />
+            <SettingsRow
+              title="Privacy Policy"
+              isLast
+              right={<a href="/privacy" target="_blank" rel="noreferrer" style={{ color: IOS_BLUE, fontSize: 13 }}>Open</a>}
+            />
+          </GroupedCard>
+          <NotBuilt>
+            DialerSeat is US-only: numbers are US, the calling-window rules are
+            US state law, phone normalisation assumes ten digits, and the tax
+            statements reference the IRS. That is a deliberate current scope
+            rather than an oversight — see BREAKDOWN.md.
+          </NotBuilt>
         </>
       )}
     </div>
@@ -2032,6 +2338,13 @@ export default function SettingsApp() {
           // hand-maintained lists describing one menu, which is exactly how
           // Dialer & Calling came to be missing from the phone for a while.
           { icon: '👥', iconBg: 'linear-gradient(135deg, #5AC8FA, #007AFF)', title: 'Teams & Seats', subtitle: 'Grace period, seat takeover', onClick: () => setPane('team') },
+          ...REAL_PANES.map(d => ({
+            icon: d.icon,
+            iconBg: d.iconBg,
+            title: d.title,
+            subtitle: d.subtitle,
+            onClick: () => setPane(d.pane),
+          })),
           ...EMPTY_PANES.map(def => ({
             icon: def.icon,
             iconBg: def.iconBg,
@@ -2509,6 +2822,8 @@ export default function SettingsApp() {
 
       {pane === 'dialer' && <DialerPane onBack={() => setPane('root')} />}
       {pane === 'team' && <TeamsPane onBack={() => setPane('root')} />}
+      {['branding', 'numbers', 'billing', 'integrations', 'privacy', 'advanced', 'about']
+        .includes(pane) && <OverviewPane pane={pane} onBack={() => setPane('root')} />}
 
       {EMPTY_PANES.filter(def => def.pane === pane).map(def => (
         <EmptyPane key={def.pane} def={def} onBack={() => setPane('root')} />
