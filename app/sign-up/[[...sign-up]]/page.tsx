@@ -127,20 +127,41 @@ export default function SignUpPage() {
           {logoUrl ? `JOIN ${brandName}` : 'CREATE YOUR ACCOUNT'}
         </p>
       </div>
-      {/* ── THE JOIN CODE USED TO DIE HERE ──────────────────────────────
-          forceRedirectUrl is Clerk's OVERRIDE: it wins over ?redirect_url,
-          so /join/CODE sending someone here to sign up had its return trip
-          discarded at the moment the account was created. The code never
-          reached /api/teams/redeem, which is why an invited agent landed on
-          /welcome and then /billing with no trace of what invited them.
+      {/* ── EVERY SIGN-UP GOES THROUGH THE ROUTER. NO EXCEPTIONS. ───────
+          This was fallbackRedirectUrl for four days and it cost us /welcome.
 
-          fallbackRedirectUrl is the prop that YIELDS to redirect_url: it is
-          used when no destination was requested, and stands aside when one
-          was. Skipping post-signin for those users is correct — it is a
-          router, not a provisioner (the users row is created by the Clerk
-          webhook), and /join/CODE does its own routing after redeeming. */}
+          The history is worth keeping straight, because the reasoning was
+          sound at each step and the end state still came out wrong:
+
+            1. forceRedirectUrl (original). Clerk's OVERRIDE — it wins over
+               ?redirect_url. /join/CODE sent an invited agent here to sign
+               up and the return trip was discarded, so the code never
+               reached /api/teams/redeem.
+            2. fallbackRedirectUrl (8b463cb2). YIELDS to ?redirect_url, so
+               the join code survived sign-up. It also meant post-signin —
+               the only thing that routes anyone to /welcome — was skipped
+               for anybody carrying a redirect_url, including whatever
+               Clerk's own hosted flow appends.
+            3. The cookie (615c176b, the very next day). ?redirect_url was
+               found not to survive the hosted portal either, so the code
+               moved to ds_join_code, set before the user ever leaves for
+               Clerk. See the header of /api/join/start.
+
+          Step 3 replaced step 2's mechanism but not step 2's edit, so this
+          prop kept standing aside for a query parameter nothing depends on
+          any more — and took the showcase down with it.
+
+          Safe to force now precisely BECAUSE of the cookie: post-signin and
+          /welcome both read it, and /welcome hands it to billing, which
+          redeems it. That is the flow the cookie was written for — its own
+          comment says "/welcome reads it on the server and puts it in the
+          URL it hands to billing."
+
+          Sign-in deliberately still uses fallbackRedirectUrl: an existing
+          user can be deep-linked to a real page, and that destination is
+          worth keeping. A brand-new account has no such destination. */}
       <SignUp
-        fallbackRedirectUrl="/api/auth/post-signin"
+        forceRedirectUrl="/api/auth/post-signin"
         appearance={{
           variables: {
             colorPrimary,
