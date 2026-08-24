@@ -50,6 +50,20 @@ export default function BillingSuccessPage() {
 
   const [countdown, setCountdown] = useState(3)
 
+  // ── ASK THE SERVER TO RE-READ STRIPE BEFORE WE SEND THEM ON ────────────
+  // A trial is only entitlement once the card is confirmed (lib/trialCard.ts),
+  // and that confirmation reaches us by webhook, which has no deadline. The
+  // three-second countdown below is otherwise a race: land on /dashboard
+  // before the webhook and the proxy sees `incomplete` and bounces them back
+  // to billing, which looks exactly like a declined card.
+  //
+  // Fire-and-forget on purpose. If it fails the webhook still arrives and the
+  // countdown still runs — this only ever makes access appear sooner, so
+  // there is nothing here worth blocking the redirect on.
+  useEffect(() => {
+    fetch('/api/stripe/sync', { method: 'POST' }).catch(() => {})
+  }, [])
+
   useEffect(() => {
     const interval = setInterval(() => {
       setCountdown((c) => {

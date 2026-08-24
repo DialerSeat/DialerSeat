@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import Stripe from 'stripe'
+import { persistableStatus } from '@/lib/trialCard'
 import { getServiceClient } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 import { stripe } from '@/lib/stripe'
@@ -843,7 +844,7 @@ async function upsertPersonalSubscription(
     stripe_subscription_id: subscription.id,
     stripe_price_id: priceId,
     plan,
-    status: subscription.status,
+    status: await persistableStatus(stripe, subscription),
     current_period_start: periodStart ? new Date(periodStart * 1000).toISOString() : null,
     current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
     trial_start: subscription.trial_start
