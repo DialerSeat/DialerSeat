@@ -42,7 +42,17 @@ const SYNC_MS = 5000
 type Point = {
   key: string; label: string; scope: 'state' | 'country'
   lat: number; lon: number; users: number; online: number; views: number
-  names: string[]
+  trialing: number; names: string[]
+}
+type Person = {
+  id: string; label: string; username: string | null; email: string | null
+  joined: string; place: string | null; device: string | null
+  dialerState: string | null; dialerMode: string | null
+  online: boolean; lastHeartbeat: string | null
+  status: string | null; plan: string | null; trialEnd: string | null
+  seatPayer: string | null; seatTeam: string | null
+  calls: number; answered: number; lastCall: string | null
+  campaigns: number; leads: number
 }
 type Target = {
   key: string; label: string; lat: number; lon: number
@@ -57,22 +67,66 @@ type FeedRow = {
   source: string | null; campaign: string | null; recording: string | null
 }
 type PulseBucket = { at: string; calls: number; answered: number; connected: number }
+type PlacePerson = {
+  label: string; username: string | null; email: string | null
+  joined: string; online: boolean
+  device: string | null; mode: string | null; state: string | null
+  lastHeartbeat: string | null
+  status: string | null; plan: string | null; trialEnd?: string | null
+  seatPayer?: string | null
+  calls: number; answered: number; lastCall: string | null
+  campaigns: number; leads: number
+}
+type PlaceDetail = {
+  people: PlacePerson[]
+  traffic: {
+    visitors: number; views: number; authed: number
+    firstSeen: string | null; lastSeen: string | null
+    signups: number; signupsInRange: number
+  } | null
+  topPaths: { path: string; views: number }[]
+  sources: { source: string; views: number }[]
+}
+
 type Payload = {
   mode: Mode; range: Range
   pulse: PulseBucket[]
+  people: Person[]
   points: Point[]; targets: Target[]
   arcs: { key: string; from: [number, number]; to: [number, number]; n: number }[]
   feed: FeedRow[]
   breakdown: Record<string, { label: string; n: number; detail: string }[]>
   totals: {
     total: number; placed: number; unplaced: number; online: number
-    locations: number; targetLocations: number; targetCalls: number; targetsUnmapped: number
+    locations: number; targetLocations: number; targetCalls: number
+    targetsUnmapped: number; trialing: number
   }
   unplacedNames: string[]
 }
 
-const MIN_W = MAP_W / 28
-const MAX_W = MAP_W
+// ── PERSISTED UI STATE ──────────────────────────────────────────────────
+// Read with a lazy initialiser rather than restored in an effect. That is only
+// safe because the registry loads this app with ssr:false — there is no server
+// render to disagree with, so there is no hydration mismatch to dodge, and
+// reading in an effect would just mean one wasted render plus a visible flip
+// from the default to the stored value.
+const STORE = 'ds:ops-map'
+type Persisted = {
+  mode?: Mode; range?: Range
+  feedOpen?: boolean; ranksOpen?: boolean; pulseOpen?: boolean
+  showTargets?: boolean; feedView?: 'calls' | 'people'
+}
+function readPersisted(): Persisted {
+  try { return JSON.parse(window.localStorage.getItem(STORE) || '{}') as Persisted }
+  catch { return {} }
+}
+
+const MIN_W = MAP_W / 40
+// Deliberately wider than the world. Stopping at exactly one world means the
+// globe touches all four edges at minimum zoom with nowhere to go — you can
+// never see the whole thing with air around it, and at scale the far pings sit
+// on the frame. 2.6 worlds gives it margin to breathe.
+const MAX_W = MAP_W * 2.6
 type View = { x: number; y: number; w: number; h: number }
 // Opens on North America rather than the whole globe: every point in the data
 // is there, and a world view spends most of its pixels on empty ocean.
@@ -105,39 +159,30 @@ const prettyPhone = (p: string | null) => {
 }
 
 export default function OpsMap() {
-  const [mode, setMode] = useState<Mode>('visitors')
-  const [range, setRange] = useState<Range>('24h')
+  const [saved] = useState(readPersisted)
+  const [mode, setMode] = useState<Mode>(
+    MODES.some(m => m.id === saved.mode) ? saved.mode! : 'visitors')
+  const [range, setRange] = useState<Range>(
+    (RANGES as readonly string[]).includes(saved.range || '') ? saved.range! : '24h')
   const [data, setData] = useState<Payload | null>(null)
   const [err, setErr] = useState<string | null>(null)
-  const [firstLoad, setFirstLoad] = useState(true)
   const [beat, setBeat] = useState(0)
 
   const [selected, setSelected] = useState<string | null>(null)
-  const [detail, setDetail] = useState<any | null>(null)
-  const [detailLoading, setDetailLoading] = useState(false)
+  const [detailFor, setDetailFor] = useState<{ key: string; data: PlaceDetail } | null>(null)
 
-  const [feedOpen, setFeedOpen] = useState(true)
-  const [ranksOpen, setRanksOpen] = useState(true)
-  const [showTargets, setShowTargets] = useState(true)
-  const [view, setView] = useState<View>(HOME)
+  const [feedOpen, setFeedOpen] = useState(saved.feedOpen ?? true)
+  const [ranksOpen, setRanksOpen] = useState(saved.ranksOpen ?? true)
+  const [pulseOpen, setPulseOpen] = useState(saved.pulseOpen ?? true)
+  const [showTargets, setShowTargets] = useState(saved.showTargets ?? true)
 
-  // ── UI STATE SURVIVES THE WINDOW ──────────────────────────────────────
-  // Restored in an effect rather than a lazy initialiser: the server renders
-  // the defaults, and reading localStorage during the first render makes the
-  // markup disagree with what came off the server. Nothing here is important
-  // enough to risk a hydration mismatch over.
-  useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem('ds:ops-map')
-      if (!raw) return
-      const v = JSON.parse(raw)
-      if (MODES.some(m => m.id === v.mode)) setMode(v.mode)
-      if ((RANGES as readonly string[]).includes(v.range)) setRange(v.range)
-      if (typeof v.feedOpen === 'boolean') setFeedOpen(v.feedOpen)
-      if (typeof v.ranksOpen === 'boolean') setRanksOpen(v.ranksOpen)
-      if (typeof v.showTargets === 'boolean') setShowTargets(v.showTargets)
-    } catch { /* private mode, full storage — defaults are fine */ }
-  }, [])
+  // What the wide panel is showing. CALLS is a ticker of events; PEOPLE is a
+  // roster of accounts. They answer different questions and neither belongs
+  // inside the other, so the panel switches rather than nesting one in the
+  // other or growing a second panel nobody has room for.
+  const [feedView, setFeedView] = useState<'calls' | 'people'>(saved.feedView ?? 'calls')
+  const [callFilter, setCallFilter] = useState<'all' | 'answered' | 'missed' | 'machine' | 'human'>('all')
+  const [view, setView] = useState<View>(WORLD)
 
   // Which feed rows arrived on the most recent sync. Held in state because it
   // drives a render; the ref beside it is the previous id set, which must NOT
@@ -145,6 +190,46 @@ export default function OpsMap() {
   // how this kind of diff turns into a loop.
   const [freshIds, setFreshIds] = useState<Set<string>>(new Set())
   const seenIds = useRef<Set<string> | null>(null)
+  const stampRef = useRef<string | null>(null)
+
+  // ── FULLSCREEN ────────────────────────────────────────────────────────
+  // The real Fullscreen API on this container, not a CSS "cover the window"
+  // trick. Only that actually escapes the desktop shell — a maximised div is
+  // still inside the app frame, under the taskbar, and bounded by whatever the
+  // window manager thinks its size is. requestFullscreen takes the element out
+  // of all of it, and Esc gets you back without the app having to handle it.
+  const rootRef = useRef<HTMLDivElement | null>(null)
+  const [isFull, setIsFull] = useState(false)
+  useEffect(() => {
+    const onChange = () => setIsFull(document.fullscreenElement === rootRef.current)
+    document.addEventListener('fullscreenchange', onChange)
+    return () => document.removeEventListener('fullscreenchange', onChange)
+  }, [])
+  const toggleFull = () => {
+    const el = rootRef.current
+    if (!el) return
+    if (document.fullscreenElement === el) void document.exitFullscreen?.()
+    else void el.requestFullscreen?.().catch(() => { /* denied by policy — leave as-is */ })
+  }
+
+  // ── FIT vs FILL ───────────────────────────────────────────────────────
+  // 'slice' fills a wide frame handsomely and crops badly on a tall narrow
+  // one — on a phone it throws away most of the world to fill the width.
+  // 'meet' letterboxes instead, which is the right trade when the whole map
+  // has to be visible. Measured from the element rather than a media query so
+  // it follows the WINDOW's size inside the desktop, not the device's.
+  const [narrow, setNarrow] = useState(false)
+  useEffect(() => {
+    const el = rootRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(([e]) => {
+      const { width, height } = e.contentRect
+      // The map is 2:1. Anything squarer than that has to fit rather than fill.
+      setNarrow(width / Math.max(height, 1) < 1.9)
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
 
   const svgRef = useRef<SVGSVGElement | null>(null)
   const pointers = useRef<Map<number, { x: number; y: number }>>(new Map())
@@ -164,14 +249,24 @@ export default function OpsMap() {
       setData(json)
       setErr(null)
       if (!quiet) setBeat(b => b + 1)
-    } catch (e: any) {
-      setErr(e?.message || 'Failed to load')
-    } finally {
-      setFirstLoad(false)
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Failed to load')
     }
   }, [mode, range])
 
-  useEffect(() => { setFirstLoad(true); load(false) }, [mode, range, load])
+  // No setState for "have we loaded yet" — that is `data === null`, and
+  // deriving it removes a state that could disagree with the data it
+  // describes, while keeping a mode switch from flashing a spinner over
+  // results that are still perfectly good.
+  //
+  // The disable below is for a false positive: load() awaits fetch before it
+  // touches state, so nothing runs synchronously in the effect body. The
+  // rule cannot see across the useCallback boundary to know that, and both
+  // ways to satisfy it are worse than the warning — fetching during render, or
+  // an initial-fetch flag that is itself state describing the fetch.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { load(false) }, [load])
+
   useEffect(() => {
     const t = setInterval(() => { load(false) }, SYNC_MS)
     return () => clearInterval(t)
@@ -180,22 +275,36 @@ export default function OpsMap() {
   // Detail for whichever ping is open, refreshed on the same beat so it never
   // contradicts the map behind it.
   useEffect(() => {
-    if (!selected) { setDetail(null); return }
-    const originKey = selected.startsWith('T-') ? null : selected
-    if (!originKey) { setDetail(null); return }
+    // Nothing to clear on deselect: the result carries the key it belongs to
+    // and the render below ignores it once that key stops matching. Storing
+    // the pair instead of clearing state is also what stops a slow response
+    // for one ping landing under a different ping the user has since clicked.
+    const originKey = selected && !selected.startsWith('T-') ? selected : null
+    if (!originKey) return
     let cancelled = false
-    setDetailLoading(true)
     fetch(`/api/admin/ops-map?place=${encodeURIComponent(originKey)}&range=${range}`)
       .then(r => r.json())
-      .then(j => { if (!cancelled && j?.success) setDetail(j.detail) })
-      .catch(() => {})
-      .finally(() => { if (!cancelled) setDetailLoading(false) })
+      .then((j: { success?: boolean; detail?: PlaceDetail }) => {
+        if (!cancelled && j?.success && j.detail) setDetailFor({ key: originKey, data: j.detail })
+      })
+      .catch(() => { /* the next beat tries again */ })
     return () => { cancelled = true }
   }, [selected, range, beat])
+
+  const detail = detailFor && detailFor.key === selected ? detailFor.data : null
 
   useEffect(() => {
     const ids = (data?.feed ?? []).map(f => f.id)
     if (!ids.length) return
+    // Switching mode or range replaces the feed wholesale, so the baseline is
+    // dropped here rather than in a second effect that would have to setState
+    // to do it. A ref can be reset in place; state cannot.
+    const stamp = `${mode}|${range}`
+    if (stampRef.current !== stamp) {
+      stampRef.current = stamp
+      seenIds.current = new Set(ids)
+      return
+    }
     // First payload is not "new" — every row would flash at once and the
     // effect would read as a glitch rather than as activity.
     if (seenIds.current === null) { seenIds.current = new Set(ids); return }
@@ -206,19 +315,17 @@ export default function OpsMap() {
     setFreshIds(new Set(fresh))
     const t = setTimeout(() => setFreshIds(new Set()), 1800)
     return () => clearTimeout(t)
-  }, [data])
+  }, [data, mode, range])
 
-  // Switching mode or range replaces the feed wholesale; without this the
-  // next diff treats the entire replacement as newly arrived calls.
-  useEffect(() => { seenIds.current = null; setFreshIds(new Set()) }, [mode, range])
+
 
   useEffect(() => {
     try {
-      window.localStorage.setItem('ds:ops-map', JSON.stringify({
-        mode, range, feedOpen, ranksOpen, showTargets,
+      window.localStorage.setItem(STORE, JSON.stringify({
+        mode, range, feedOpen, ranksOpen, showTargets, pulseOpen, feedView,
       }))
     } catch { /* nothing here is worth failing a render for */ }
-  }, [mode, range, feedOpen, ranksOpen, showTargets])
+  }, [mode, range, feedOpen, ranksOpen, showTargets, pulseOpen, feedView])
 
   // ── GEOMETRY ──────────────────────────────────────────────────────────
   const landPaths = useMemo(
@@ -248,13 +355,26 @@ export default function OpsMap() {
   const arcs = showTargets ? (data?.arcs ?? []) : []
   const maxUsers = Math.max(1, ...points.map(p => p.users))
   const maxCalls = Math.max(1, ...targets.map(t => t.calls))
+  // Filtering here rather than in the query: the feed is 80 rows and already
+  // in memory, so a round trip per filter click would add latency to answer a
+  // question the client can answer instantly.
+  const shownFeed = (data?.feed ?? []).filter(f => {
+    if (callFilter === 'answered') return f.answered
+    if (callFilter === 'missed') return !f.answered
+    if (callFilter === 'human') return f.amdResult === 'human'
+    if (callFilter === 'machine') return f.amdResult === 'machine'
+    return true
+  })
+
   const zoom = MAP_W / view.w
   const k = 1 / zoom
 
   const clampView = useCallback((v: View): View => {
     const w = Math.min(MAX_W, Math.max(MIN_W, v.w))
     const h = w * (MAP_H / MAP_W)
-    const pad = w * 0.2
+    // Pad scales with the view, so zoomed all the way out the world can sit
+    // centred with space around it rather than pinned to a corner.
+    const pad = Math.max(w * 0.2, (w - MAP_W) / 2 + 20)
     return {
       w, h,
       x: Math.min(MAP_W - w + pad, Math.max(-pad, v.x)),
@@ -372,6 +492,7 @@ export default function OpsMap() {
 
   return (
     <div
+      ref={rootRef}
       tabIndex={0}
       onKeyDown={onKeyDown}
       style={{
@@ -385,7 +506,7 @@ export default function OpsMap() {
           background: ${VOID};
           border: 1px solid ${EDGE};
           border-radius: 5px;
-          box-shadow: 0 0 0 1px rgba(18,80,138,0.25), 0 0 22px rgba(18,80,138,0.30), inset 0 0 40px rgba(8,30,54,0.5);
+          box-shadow: 0 0 0 1px rgba(18,80,138,0.18), 0 0 10px rgba(18,80,138,0.16), inset 0 0 30px rgba(8,30,54,0.4);
           display: flex; flex-direction: column; min-height: 0;
         }
         .om-head {
@@ -394,7 +515,7 @@ export default function OpsMap() {
           border-bottom:1px solid ${EDGE};
           background: linear-gradient(180deg, rgba(20,72,124,0.35), rgba(4,6,10,0));
           font-size:10.5px; letter-spacing:3px; font-weight:800; color:${INK};
-          text-shadow: 0 0 10px rgba(95,216,255,0.45);
+          text-shadow: 0 0 6px rgba(95,216,255,0.25);
           flex-shrink:0;
         }
         .om-caret {
@@ -420,13 +541,39 @@ export default function OpsMap() {
           border-radius:3px; padding:5px 9px; font-size:9.5px; letter-spacing:1.6px;
           font-weight:800; cursor:pointer; white-space:nowrap;
         }
+        .om-switch { display:inline-flex; align-items:center; gap:6px; }
+        .om-track {
+          width:20px; height:10px; border-radius:6px; flex-shrink:0;
+          border:1px solid ${EDGE}; background:rgba(0,0,0,0.5);
+          display:inline-flex; align-items:center; padding:0 1px;
+          transition: background .12s, border-color .12s;
+        }
+        .om-knob {
+          width:6px; height:6px; border-radius:50%; background:${DIM};
+          transform:translateX(0); transition: transform .12s, background .12s;
+        }
+        .om-switch[data-on="true"] .om-track { border-color:${AMBER}; background:rgba(255,174,60,0.2); }
+        .om-switch[data-on="true"] .om-knob { transform:translateX(9px); background:${AMBER}; }
         .om-chip[data-on="true"] {
           border-color:${EDGE_HOT}; color:${CYAN}; background:rgba(18,80,138,0.28);
-          box-shadow:0 0 12px rgba(47,143,216,0.4);
+          box-shadow:0 0 7px rgba(47,143,216,0.25);
         }
         /* position:relative is load-bearing — the magnitude bar inside each row
            is absolutely positioned, and without it every bar escapes to the
            app container and stacks in one corner. */
+        .om-subbar {
+          display:flex; align-items:center; gap:4px; flex-wrap:wrap;
+          padding:4px 8px; border-bottom:1px solid ${EDGE};
+          background: rgba(18,80,138,0.07); flex-shrink:0;
+        }
+        .om-mini {
+          background:transparent; border:1px solid transparent; color:${DIM};
+          border-radius:3px; padding:2px 6px; font-size:8.5px; letter-spacing:1.3px;
+          font-weight:800; cursor:pointer; white-space:nowrap;
+        }
+        .om-mini:hover { color:${MUTED}; }
+        .om-mini[data-on="true"] { color:${CYAN}; border-color:${EDGE}; background:rgba(18,80,138,0.25); }
+        .om-sep { width:1px; height:11px; background:${EDGE}; margin:0 3px; }
         .om-rank { position:relative; display:flex; align-items:center; gap:7px;
                    padding:2.5px 9px; font-size:10.5px; overflow:hidden;
                    font-family: ui-monospace, Menlo, Consolas, monospace; }
@@ -446,14 +593,14 @@ export default function OpsMap() {
         .om-dock-row { display:flex; gap:8px; align-items:flex-end; min-height:0; }
         .om-dock * { pointer-events:auto; }
         .om-pulse-wrap { flex:0 0 auto; }
-        .om-feed-wrap { flex:1 1 auto; min-width:0; max-height:38vh; }
-        .om-rank-wrap { width:270px; flex:0 0 auto; max-height:38vh; }
+        .om-feed-wrap { flex:1 1 auto; min-width:0; max-height:28vh; }
+        .om-rank-wrap { width:258px; flex:0 0 auto; max-height:28vh; }
         .om-detail { position:absolute; right:8px; top:44px; width:300px; max-height:46vh; z-index:6; }
         @media (max-width: 900px) {
           .om-dock { left:6px; right:6px; bottom:6px; }
           .om-dock-row { flex-direction:column; align-items:stretch; }
-          .om-rank-wrap { width:auto; max-height:26vh; }
-          .om-feed-wrap { max-height:30vh; }
+          .om-rank-wrap { width:auto; max-height:20vh; }
+          .om-feed-wrap { max-height:23vh; }
           .om-detail { left:6px; right:6px; width:auto; top:auto; bottom:6px; max-height:56vh; }
           .om-hide-sm { display:none !important; }
         }
@@ -463,7 +610,7 @@ export default function OpsMap() {
       <svg
         ref={svgRef}
         viewBox={`${view.x} ${view.y} ${view.w} ${view.h}`}
-        preserveAspectRatio="xMidYMid slice"
+        preserveAspectRatio={narrow ? 'xMidYMid meet' : 'xMidYMid slice'}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={endPointer}
@@ -475,23 +622,26 @@ export default function OpsMap() {
         }}
       >
         <defs>
-          <filter id="om-glow" x="-200%" y="-200%" width="500%" height="500%">
-            <feGaussianBlur stdDeviation="2.2" result="b" />
+          {/* Bloom kept faint. Glow reads as importance, so when everything
+              glows nothing does — and a filter this cheap applied to hundreds
+              of nodes is also the first thing to cost frames at scale. */}
+          <filter id="om-glow" x="-120%" y="-120%" width="340%" height="340%">
+            <feGaussianBlur stdDeviation="0.7" result="b" />
             <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
           </filter>
           <radialGradient id="om-halo">
-            <stop offset="0%" stopColor={CYAN} stopOpacity="0.5" />
-            <stop offset="70%" stopColor={CYAN} stopOpacity="0.06" />
+            <stop offset="0%" stopColor={CYAN} stopOpacity="0.22" />
+            <stop offset="70%" stopColor={CYAN} stopOpacity="0.03" />
             <stop offset="100%" stopColor={CYAN} stopOpacity="0" />
           </radialGradient>
           <radialGradient id="om-halo-hot">
-            <stop offset="0%" stopColor={GREEN} stopOpacity="0.55" />
-            <stop offset="70%" stopColor={GREEN} stopOpacity="0.07" />
+            <stop offset="0%" stopColor={GREEN} stopOpacity="0.28" />
+            <stop offset="70%" stopColor={GREEN} stopOpacity="0.03" />
             <stop offset="100%" stopColor={GREEN} stopOpacity="0" />
           </radialGradient>
           <radialGradient id="om-halo-t">
-            <stop offset="0%" stopColor={AMBER} stopOpacity="0.45" />
-            <stop offset="70%" stopColor={AMBER} stopOpacity="0.05" />
+            <stop offset="0%" stopColor={AMBER} stopOpacity="0.16" />
+            <stop offset="70%" stopColor={AMBER} stopOpacity="0.02" />
             <stop offset="100%" stopColor={AMBER} stopOpacity="0" />
           </radialGradient>
         </defs>
@@ -540,12 +690,15 @@ export default function OpsMap() {
         {/* Destinations — where the calls went. */}
         {targets.map(t => {
           const { x, y } = project(t.lat, t.lon, MAP_W, MAP_H)
-          const r = (1.6 + Math.sqrt(t.calls / maxCalls) * 3.6) * k
+          // Tiny by design. There will eventually be one of these per state
+          // dialed into; at the old size a busy week painted the whole country
+          // amber and the origins disappeared underneath it.
+          const r = (0.5 + Math.sqrt(t.calls / maxCalls) * 1.1) * k
           const on = selected === t.key
           return (
             <g key={t.key} style={{ cursor: 'pointer' }}
                onClick={() => { if (!moved.current) setSelected(on ? null : t.key) }}>
-              <circle cx={x} cy={y} r={r * 6} fill="url(#om-halo-t)" />
+              <circle cx={x} cy={y} r={r * 4} fill="url(#om-halo-t)" />
               <circle cx={x} cy={y} r={r} fill={AMBER} fillOpacity={0.9} filter="url(#om-glow)" />
               <circle cx={x} cy={y} r={r + (on ? 3 : 1.5) * k} fill="none"
                       stroke={AMBER} strokeOpacity={on ? 0.95 : 0.4} strokeWidth={(on ? 1.4 : 0.7) * k} />
@@ -560,14 +713,15 @@ export default function OpsMap() {
         {/* Origins — people. */}
         {points.map(p => {
           const { x, y } = project(p.lat, p.lon, MAP_W, MAP_H)
-          const r = (2.1 + Math.sqrt(p.users / maxUsers) * 4.6) * k
+          // Sized for a map with hundreds of these on it, not four.
+          const r = (0.9 + Math.sqrt(p.users / maxUsers) * 2.0) * k
           const live = p.online > 0
           const c = live ? GREEN : CYAN
           const on = selected === p.key
           return (
             <g key={p.key} style={{ cursor: 'pointer' }}
                onClick={() => { if (!moved.current) setSelected(on ? null : p.key) }}>
-              <circle cx={x} cy={y} r={r * 7} fill={live ? 'url(#om-halo-hot)' : 'url(#om-halo)'} />
+              <circle cx={x} cy={y} r={r * 5} fill={live ? 'url(#om-halo-hot)' : 'url(#om-halo)'} />
               {live && (
                 <circle cx={x} cy={y} r={r} fill="none" stroke={GREEN} strokeWidth={1.1 * k}
                         style={{ transformOrigin: `${x}px ${y}px`, animation: 'om-ping 2.4s ease-out infinite' }} />
@@ -619,9 +773,17 @@ export default function OpsMap() {
           ))}
         </div>
         <div style={{ display: 'flex', gap: 5, pointerEvents: 'auto', marginLeft: 'auto' }}>
-          <button className="om-chip" data-on={showTargets}
-                  title="Show where calls were placed to"
-                  onClick={() => setShowTargets(v => !v)}>TARGETS</button>
+          {/* A switch rather than a chip: this hides a whole layer of the
+              map, and a toggle that looks like the mode buttons beside it
+              invites being read as another mode. */}
+          <button className="om-chip om-switch" data-on={showTargets}
+                  title="Show or hide the tiny dots marking where calls were placed"
+                  onClick={() => setShowTargets(v => !v)}>
+            <span className="om-track"><span className="om-knob" /></span>
+            CALLS MADE
+          </button>
+          <button className="om-chip" title="Fullscreen (Esc to exit)"
+                  onClick={toggleFull}>{isFull ? 'EXIT' : 'FULL'}</button>
           <button className="om-chip" onClick={() => zoomAbout(1.6)}>+</button>
           <button className="om-chip" onClick={() => zoomAbout(1 / 1.6)}>−</button>
           <button className="om-chip" onClick={() => { setView(HOME); setSelected(null) }}>US</button>
@@ -637,12 +799,14 @@ export default function OpsMap() {
       }}>
         <span style={{ color: GREEN }}>●</span> LIVE · {SYNC_MS / 1000}s
         {data && <> · {data.totals.placed} PLACED / {data.totals.locations} LOC</>}
+        {data && data.totals.trialing > 0 &&
+          <> · <span style={{ color: CYAN }}>{data.totals.trialing} TRIALING</span></>}
         {data && data.totals.targetCalls > 0 &&
           <> · <span style={{ color: AMBER }}>{data.totals.targetCalls} DIALED</span> / {data.totals.targetLocations} ST</>}
         {data && data.totals.unplaced > 0 && <> · <span style={{ color: AMBER }}>{data.totals.unplaced} UNPLACED</span></>}
         {zoom > 1.02 && <> · {zoom.toFixed(1)}×</>}
         {err && <> · <span style={{ color: RED }}>{err}</span></>}
-        {firstLoad && <> · SYNCING…</>}
+        {!data && <> · SYNCING…</>}
       </div>
 
       {/* ── DETAIL ──────────────────────────────────────────────────────── */}
@@ -666,35 +830,46 @@ export default function OpsMap() {
               <>
                 <Row k={isVisitors ? 'UNIQUE VISITORS' : 'PEOPLE'} v={String(selPoint.users)} c={CYAN} />
                 {selPoint.online > 0 && <Row k="DIALING NOW" v={String(selPoint.online)} c={GREEN} />}
-                {detailLoading && !detail && <div style={{ color: DIM, fontSize: 10, padding: '6px 0' }}>Loading…</div>}
+                {selPoint.trialing > 0 && <Row k="ON TRIAL" v={String(selPoint.trialing)} c={CYAN} />}
+                {!detail && <div style={{ color: DIM, fontSize: 10, padding: '6px 0' }}>Loading…</div>}
+
                 {detail?.traffic && (
-                  <>
-                    <Sub>TRAFFIC · {range.toUpperCase()}</Sub>
+                  <Section title={`TRAFFIC · ${range.toUpperCase()}`}>
                     <Row k="VISITORS" v={String(detail.traffic.visitors ?? 0)} />
                     <Row k="VIEWS" v={String(detail.traffic.views ?? 0)} />
                     <Row k="SIGNED-IN VIEWS" v={String(detail.traffic.authed ?? 0)} />
-                  </>
+                    {/* Attention and what it turned into, together. "312 views,
+                        14 visitors, 0 signed up" is a different story from the
+                        same traffic with three, and reading it used to mean
+                        holding two panels in your head. */}
+                    <Row k="SIGNED UP" v={String(detail.traffic.signups ?? 0)}
+                         c={(detail.traffic.signups ?? 0) > 0 ? GREEN : DIM} />
+                    <Row k={`SIGNED UP · ${range.toUpperCase()}`}
+                         v={String(detail.traffic.signupsInRange ?? 0)}
+                         c={(detail.traffic.signupsInRange ?? 0) > 0 ? GREEN : DIM} />
+                  </Section>
                 )}
+
                 {Array.isArray(detail?.sources) && detail.sources.length > 0 && (
-                  <>
-                    <Sub>CAME FROM</Sub>
-                    {detail.sources.map((s: any, i: number) => (
-                      <Row key={i} k={s.source} v={String(s.views)} c={s.source?.includes('chatgpt') ? PINK : undefined} />
+                  <Section title="CAME FROM">
+                    {detail.sources.map((s, i) => (
+                      <Row key={i} k={s.source} v={String(s.views)}
+                           c={s.source?.includes('chatgpt') ? PINK : undefined} />
                     ))}
-                  </>
+                  </Section>
                 )}
+
                 {Array.isArray(detail?.topPaths) && detail.topPaths.length > 0 && (
-                  <>
-                    <Sub>READ</Sub>
-                    {detail.topPaths.map((p: any, i: number) => (
+                  <Section title="READ">
+                    {detail.topPaths.map((p, i) => (
                       <Row key={i} k={p.path} v={String(p.views)} />
                     ))}
-                  </>
+                  </Section>
                 )}
+
                 {Array.isArray(detail?.people) && detail.people.length > 0 && (
-                  <>
-                    <Sub>PEOPLE</Sub>
-                    {detail.people.map((p: any, i: number) => (
+                  <Section title={`PEOPLE · ${detail.people.length}`}>
+                    {detail.people.map((p, i) => (
                       <div key={i} style={{
                         border: `1px solid ${EDGE}`, borderRadius: 3, padding: '6px 7px',
                         marginBottom: 5, background: 'rgba(18,80,138,0.08)',
@@ -702,9 +877,11 @@ export default function OpsMap() {
                         <div style={{ fontSize: 11, fontWeight: 700, color: p.online ? GREEN : INK }}>
                           {p.online ? '● ' : ''}{p.label}
                         </div>
+                        {p.username && (
+                          <div style={{ fontSize: 9.5, color: CYAN }}>@{p.username}</div>
+                        )}
                         <div style={{ fontSize: 9.5, color: DIM, marginBottom: 4 }}>{p.email}</div>
-                        <Row k="STATUS" v={`${p.status || 'none'}${p.plan ? ` · ${p.plan}` : ''}`}
-                             c={p.status === 'active' ? GREEN : p.status === 'trialing' ? CYAN : MUTED} />
+                        <Row k="STATUS" v={statusLabel(p)} c={statusColour(p)} />
                         <Row k="CALLS" v={`${p.calls} · ${p.answered} answered`} />
                         <Row k="CAMPAIGNS" v={`${p.campaigns} · ${p.leads} leads`} />
                         {p.device && <Row k="DEVICE" v={`${p.device}${p.mode ? ` · ${p.mode}` : ''}`} />}
@@ -713,7 +890,7 @@ export default function OpsMap() {
                         <Row k="JOINED" v={new Date(p.joined).toLocaleDateString()} />
                       </div>
                     ))}
-                  </>
+                  </Section>
                 )}
               </>
             )}
@@ -728,56 +905,160 @@ export default function OpsMap() {
             different facts and only one of them survives a total. */}
         {(data?.pulse?.length ?? 0) > 0 && (
           <div className="om-panel om-pulse-wrap om-hide-sm">
-            <Pulse buckets={data!.pulse} range={range} />
+            <div className="om-head" onClick={() => setPulseOpen(o => !o)}>
+              CALL VOLUME · {range.toUpperCase()}
+              <span className="om-caret">{pulseOpen ? '▼' : '▲'}</span>
+            </div>
+            {pulseOpen && <Pulse buckets={data!.pulse} />}
           </div>
         )}
 
         <div className="om-dock-row">
           <div className="om-panel om-feed-wrap" style={feedOpen ? undefined : { maxHeight: 'none' }}>
             <div className="om-head" onClick={() => setFeedOpen(o => !o)}>
-              LIVE CALLS
+              {feedView === 'calls' ? 'LIVE CALLS' : 'PEOPLE'}
               <span className="om-caret">{feedOpen ? '▼' : '▲'}</span>
             </div>
+
             {feedOpen && (
-              <div className="om-scroll">
-                <table className="om-t">
-                  <thead>
-                    <tr>
-                      <th>TIME</th>
-                      <th style={{ color: GREEN }}>AGENT</th>
-                      <th className="om-hide-sm">FROM</th>
-                      <th style={{ color: AMBER }}>DIALED</th>
-                      <th className="om-hide-sm">TO</th>
-                      <th className="om-hide-sm">DUR</th>
-                      <th>RESULT</th>
-                      <th className="om-hide-sm">AMD</th>
-                      <th className="om-hide-sm">CAMPAIGN</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(data?.feed ?? []).map(f => (
-                      <tr key={f.id} data-fresh={freshIds.has(f.id) ? '1' : undefined}>
-                        <td style={{ color: CYAN }}>{hhmmss(f.at)}</td>
-                        <td style={{ color: GREEN }}>{f.agent}</td>
-                        <td className="om-hide-sm" style={{ color: MUTED }}>{f.agentPlace || '—'}</td>
-                        <td style={{ color: AMBER }}>{prettyPhone(f.phone)}</td>
-                        <td className="om-hide-sm" style={{ color: MUTED }}>{f.targetPlace || 'unknown'}</td>
-                        <td className="om-hide-sm" style={{ color: f.duration >= 9 ? INK : DIM }}>{f.duration}s</td>
-                        <td style={{ color: f.disposition ? dispColour(f.disposition) : (f.answered ? INK : DIM) }}>
-                          {f.disposition || (f.answered ? 'answered' : 'no answer')}
-                        </td>
-                        <td className="om-hide-sm" style={{ color: amdColour(f.amdResult) }}>
-                          {f.amdResult || (f.amdRequested ? 'pending' : 'off')}
-                        </td>
-                        <td className="om-hide-sm" style={{ color: DIM }}>{f.campaign || 'manual'}</td>
-                      </tr>
-                    ))}
-                    {(data?.feed ?? []).length === 0 && (
-                      <tr><td colSpan={9} style={{ color: DIM, padding: 10 }}>No calls yet.</td></tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+              <>
+                {/* View and filter live in the panel, not the top bar. They
+                    change what this box shows and nothing else, and a control
+                    sitting next to the thing it changes never has to be
+                    explained. Stops propagation so picking a filter does not
+                    also collapse the panel underneath it. */}
+                <div className="om-subbar" onClick={e => e.stopPropagation()}>
+                  <button className="om-mini" data-on={feedView === 'calls'}
+                          onClick={() => setFeedView('calls')}>CALLS</button>
+                  <button className="om-mini" data-on={feedView === 'people'}
+                          onClick={() => setFeedView('people')}>PEOPLE</button>
+                  {feedView === 'calls' && (
+                    <>
+                      <span className="om-sep" />
+                      {([
+                        ['all', 'ALL'], ['answered', 'ANSWERED'], ['missed', 'MISSED'],
+                        ['human', 'HUMAN'], ['machine', 'MACHINE'],
+                      ] as const).map(([id, lbl]) => (
+                        <button key={id} className="om-mini" data-on={callFilter === id}
+                                onClick={() => setCallFilter(id)}>{lbl}</button>
+                      ))}
+                    </>
+                  )}
+                  <span style={{ marginLeft: 'auto', color: DIM, fontSize: 9, letterSpacing: 1 }}>
+                    {feedView === 'calls'
+                      ? shownFeed.length + ' of ' + (data?.feed ?? []).length
+                      : (data?.people ?? []).length + ' accounts'}
+                  </span>
+                </div>
+
+                <div className="om-scroll">
+                  {feedView === 'calls' ? (
+                    <table className="om-t">
+                      <thead>
+                        <tr>
+                          <th>TIME</th>
+                          <th style={{ color: GREEN }}>AGENT</th>
+                          <th className="om-hide-sm">FROM</th>
+                          <th style={{ color: AMBER }}>DIALED</th>
+                          <th className="om-hide-sm">TO</th>
+                          <th className="om-hide-sm">DUR</th>
+                          <th className="om-hide-sm">TALK</th>
+                          <th>RESULT</th>
+                          <th className="om-hide-sm">AMD</th>
+                          <th className="om-hide-sm">CAMPAIGN</th>
+                          <th className="om-hide-sm">REC</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {shownFeed.map(f => (
+                          <tr key={f.id} data-fresh={freshIds.has(f.id) ? '1' : undefined}>
+                            <td style={{ color: CYAN }}>{hhmmss(f.at)}</td>
+                            <td style={{ color: GREEN }}>{f.agent}</td>
+                            <td className="om-hide-sm" style={{ color: MUTED }}>{f.agentPlace || '—'}</td>
+                            <td style={{ color: AMBER }}>{prettyPhone(f.phone)}</td>
+                            <td className="om-hide-sm" style={{ color: MUTED }}>{f.targetPlace || 'unknown'}</td>
+                            {/* Nine seconds is the compliance floor, so a short
+                                call is worth seeing without reading the number. */}
+                            <td className="om-hide-sm" style={{ color: f.duration >= 9 ? INK : RED }}>{f.duration}s</td>
+                            <td className="om-hide-sm" style={{ color: f.talkSeconds ? INK : DIM }}>
+                              {f.talkSeconds ? f.talkSeconds + 's' : '—'}
+                            </td>
+                            <td style={{ color: f.disposition ? dispColour(f.disposition) : (f.answered ? INK : DIM) }}>
+                              {f.disposition || (f.answered ? 'answered' : 'no answer')}
+                            </td>
+                            <td className="om-hide-sm" style={{ color: amdColour(f.amdResult) }}>
+                              {f.amdResult || (f.amdRequested ? 'pending' : 'off')}
+                            </td>
+                            <td className="om-hide-sm" style={{ color: DIM }}>{f.campaign || 'manual'}</td>
+                            <td className="om-hide-sm"
+                                style={{ color: f.recording === 'completed' ? VIOLET : DIM }}>
+                              {f.recording === 'completed' ? 'rec' : '—'}
+                            </td>
+                          </tr>
+                        ))}
+                        {shownFeed.length === 0 && (
+                          <tr><td colSpan={11} style={{ color: DIM, padding: 10 }}>
+                            {(data?.feed ?? []).length === 0
+                              ? 'No calls yet.'
+                              : 'No calls match this filter.'}
+                          </td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <table className="om-t">
+                      <thead>
+                        <tr>
+                          <th style={{ color: GREEN }}>WHO</th>
+                          <th className="om-hide-sm">USERNAME</th>
+                          <th className="om-hide-sm">EMAIL</th>
+                          <th>STATUS</th>
+                          <th className="om-hide-sm">WHERE</th>
+                          <th className="om-hide-sm">DEVICE</th>
+                          <th>CALLS</th>
+                          <th className="om-hide-sm">CAMPAIGNS</th>
+                          <th className="om-hide-sm">LEADS</th>
+                          <th className="om-hide-sm">LAST CALL</th>
+                          <th className="om-hide-sm">JOINED</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(data?.people ?? []).map(pr => (
+                          <tr key={pr.id}>
+                            <td style={{ color: pr.online ? GREEN : INK }}>
+                              {pr.online ? '● ' : ''}{pr.label}
+                            </td>
+                            {/* The display label falls back to username, so
+                                without its own column the handle disappears the
+                                moment somebody sets a real name. */}
+                            <td className="om-hide-sm" style={{ color: CYAN }}>{pr.username || '—'}</td>
+                            <td className="om-hide-sm" style={{ color: MUTED }}>{pr.email || '—'}</td>
+                            <td style={{ color: statusColour(pr) }}>{statusLabel(pr)}</td>
+                            <td className="om-hide-sm" style={{ color: MUTED }}>{pr.place || 'unplaced'}</td>
+                            <td className="om-hide-sm" style={{ color: DIM }}>
+                              {pr.device || '—'}{pr.dialerMode ? ' · ' + pr.dialerMode : ''}
+                            </td>
+                            <td style={{ color: pr.calls ? INK : DIM }}>
+                              {pr.calls}{pr.calls ? ' · ' + pr.answered + 'a' : ''}
+                            </td>
+                            <td className="om-hide-sm" style={{ color: DIM }}>{pr.campaigns}</td>
+                            <td className="om-hide-sm" style={{ color: DIM }}>{pr.leads}</td>
+                            <td className="om-hide-sm" style={{ color: DIM }}>
+                              {pr.lastCall ? new Date(pr.lastCall).toLocaleDateString() : '—'}
+                            </td>
+                            <td className="om-hide-sm" style={{ color: DIM }}>
+                              {new Date(pr.joined).toLocaleDateString()}
+                            </td>
+                          </tr>
+                        ))}
+                        {(data?.people ?? []).length === 0 && (
+                          <tr><td colSpan={11} style={{ color: DIM, padding: 10 }}>No accounts.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </>
             )}
           </div>
 
@@ -832,7 +1113,7 @@ export default function OpsMap() {
 // one strip rather than two strips, because the question is always the ratio
 // between them — dialing hard and connecting nothing looks identical to not
 // dialing when the second series is somewhere else on screen.
-function Pulse({ buckets, range }: { buckets: PulseBucket[]; range: Range }) {
+function Pulse({ buckets }: { buckets: PulseBucket[] }) {
   const W = 1000, H = 46
   const max = Math.max(1, ...buckets.map(b => b.calls))
   const n = buckets.length
@@ -850,10 +1131,9 @@ function Pulse({ buckets, range }: { buckets: PulseBucket[]; range: Range }) {
   return (
     <div style={{ padding: '5px 9px 6px' }}>
       <div style={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
-        fontSize: 8.5, letterSpacing: 2, color: EDGE_HOT, fontWeight: 800, marginBottom: 3,
+        display: 'flex', justifyContent: 'flex-end', alignItems: 'baseline',
+        fontSize: 8.5, letterSpacing: 2, fontWeight: 800, marginBottom: 3,
       }}>
-        <span>CALL VOLUME · {range.toUpperCase()}</span>
         <span style={{ color: DIM, letterSpacing: 1 }}>
           <span style={{ color: CYAN }}>{total}</span> placed ·{' '}
           <span style={{ color: GREEN }}>{ans}</span> answered ·{' '}
@@ -887,6 +1167,35 @@ function Pulse({ buckets, range }: { buckets: PulseBucket[]; range: Range }) {
   )
 }
 
+// ── WHAT A PERSON'S STATUS ACTUALLY IS ──────────────────────────────────
+// An owner-funded agent holds no subscription, so `status` alone reports them
+// as having nothing — which reads as a freeloader rather than as a paid seat
+// somebody else covers. The payer wins over the empty status for exactly that
+// reason, and is shown as a name because "owner-funded" answers a different,
+// less useful question than "Chris is paying for this".
+type StatusLike = {
+  seatPayer?: string | null; status: string | null
+  plan: string | null; trialEnd?: string | null
+}
+function statusLabel(p: StatusLike): string {
+  if (p.seatPayer) return `seat · ${p.seatPayer}`
+  if (!p.status) return 'no sub'
+  if (p.status === 'trialing') {
+    if (!p.trialEnd) return 'trialing'
+    const days = Math.ceil((new Date(p.trialEnd).getTime() - Date.now()) / 86400000)
+    return days > 0 ? `trial · ${days}d left` : 'trial ending'
+  }
+  return p.plan ? `${p.status} · ${p.plan}` : p.status
+}
+function statusColour(p: StatusLike): string {
+  if (p.seatPayer) return VIOLET
+  if (p.status === 'trialing') return CYAN
+  if (p.status === 'active') return GREEN
+  if (p.status === 'canceled' || p.status === 'unpaid') return AMBER
+  if (!p.status) return DIM
+  return MUTED
+}
+
 function Row({ k, v, c }: { k: string; v: string; c?: string }) {
   return (
     <div style={{
@@ -899,12 +1208,41 @@ function Row({ k, v, c }: { k: string; v: string; c?: string }) {
     </div>
   )
 }
-function Sub({ children }: { children: React.ReactNode }) {
+// ── A FOLDABLE SECTION ──────────────────────────────────────────────────
+// The detail panel stacks four of these and a place with ten people pushes
+// everything else off the bottom. Collapsing is per-section and per-title, so
+// the choice survives clicking a different ping — closing PEOPLE once should
+// not have to be done again at every location.
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  const storeKey = 'ds:ops-map:sec:' + title.split(' · ')[0]
+  const [open, setOpen] = useState(() => {
+    try { return window.localStorage.getItem(storeKey) !== '0' }
+    catch { return true }
+  })
+  const toggle = () => {
+    setOpen(o => {
+      const next = !o
+      try { window.localStorage.setItem(storeKey, next ? '1' : '0') } catch {}
+      return next
+    })
+  }
   return (
-    <div style={{
-      fontSize: 8.5, letterSpacing: 2, color: EDGE_HOT, fontWeight: 800,
-      margin: '9px 0 3px', borderTop: `1px solid ${EDGE}`, paddingTop: 6,
-    }}>{children}</div>
+    <div>
+      <button
+        onClick={toggle}
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          width: '100%', background: 'none', border: 'none', cursor: 'pointer',
+          fontSize: 8.5, letterSpacing: 2, color: EDGE_HOT, fontWeight: 800,
+          margin: '9px 0 3px', borderTop: `1px solid ${EDGE}`, paddingTop: 6,
+          textAlign: 'left',
+        }}
+      >
+        {title}
+        <span style={{ color: EDGE_HOT, fontSize: 8 }}>{open ? '▼' : '▲'}</span>
+      </button>
+      {open && children}
+    </div>
   )
 }
 function RankList({ title, rows, colour, onPick }: {
@@ -928,7 +1266,7 @@ function RankList({ title, rows, colour, onPick }: {
           <span style={{ color: DIM, width: 26, textAlign: 'right', flexShrink: 0 }}>{r.n}</span>
           <span style={{
             width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
-            background: colour(r), boxShadow: `0 0 7px ${colour(r)}`,
+            background: colour(r), boxShadow: `0 0 4px ${colour(r)}`,
           }} />
           <span style={{
             flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis',
