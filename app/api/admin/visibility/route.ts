@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
     const prevStart = new Date(since.getTime() - days * 24 * 60 * 60 * 1000)
 
     const [
-      totalsRes, seriesRes, pathsRes, entryRes, breakdownRes, histRes, todayRes, prevRes,
+      totalsRes, seriesRes, pathsRes, entryRes, breakdownRes, histRes, individualsRes, todayRes, prevRes,
     ] = await Promise.all([
       supabase.rpc('pv_totals', { p_since: sinceIso, p_until: null, p_authed: audience }),
       supabase.rpc('pv_series', { p_since: sinceIso, p_until: null, p_by_hour: byHour, p_authed: audience }),
@@ -68,6 +68,10 @@ export async function GET(req: NextRequest) {
       supabase.rpc('pv_entry_pages', { p_since: sinceIso, p_until: null, p_limit: 15, p_authed: audience }),
       supabase.rpc('pv_breakdowns', { p_since: sinceIso, p_until: null, p_limit: 15, p_authed: audience }),
       supabase.rpc('pv_histograms', { p_since: sinceIso, p_until: null, p_authed: audience }),
+      // Individuals. No p_authed: the point is to follow ONE person across
+      // the anonymous-to-signed-in boundary, and splitting by audience would
+      // cut every one of them in half at the moment they signed up.
+      supabase.rpc('pv_individuals', { p_since: sinceIso, p_until: null, p_limit: 100 }),
       supabase.rpc('pv_totals', { p_since: todayStart.toISOString(), p_until: null, p_authed: audience }),
       // Same audience as everything else — comparing anonymous traffic against
       // everybody's would be a percentage between two different populations.
@@ -192,6 +196,22 @@ export async function GET(req: NextRequest) {
         visits: Number(r.visits) || 0,
       })),
       dwellPages,
+      // ── INDIVIDUALS ──────────────────────────────────────────────────
+      // One row per browser, with the anonymous half joined to the account
+      // half. first_source comes from the FIRST page of the visit, because by
+      // the time somebody reaches /billing the referrer is our own domain and
+      // attributing on the latest row credits every signup to ourselves.
+      individuals: (individualsRes.data || []).map((r: any) => ({
+        visitorId: r.visitor_id,
+        email: r.email || null,
+        signedUp: !!r.signed_up,
+        views: Number(r.views) || 0,
+        activeDays: Number(r.active_days) || 0,
+        firstSeen: r.first_seen,
+        lastSeen: r.last_seen,
+        source: r.first_source || null,
+        landedOn: r.first_path || null,
+      })),
       referrers: pick('referrer').map((r: any) => ({ host: r.label, views: r.views })),
       devices: pick('device').map((r: any) => ({ device: r.label, views: r.views })),
       countries: pick('country').map((r: any) => ({ country: r.label, views: r.views })),

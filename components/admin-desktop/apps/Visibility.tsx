@@ -602,6 +602,78 @@ export default function Visibility() {
             </div>
           </div>
 
+          {/* ── INDIVIDUALS ───────────────────────────────────────────────
+              One row per browser rather than per day. The stitch is the
+              point: a visitor who arrives anonymous and later signs up shows
+              as ONE person with an email attached, and the source column
+              still reads the page they first landed on — so "this customer
+              came from ChatGPT" is a fact here rather than an inference from
+              two timestamps.
+
+              Only covers visits recorded after the visitor id shipped;
+              earlier rows have no id to group by, which the empty state
+              says rather than quietly showing a short list. */}
+          <div style={{
+            background: PANEL, border: `1px solid ${HAIRLINE}`, borderRadius: 6,
+            padding: '12px 14px 14px', marginTop: 14,
+          }}>
+            <div style={{
+              fontSize: 9.5, letterSpacing: 1.2, textTransform: 'uppercase',
+              color: MUTED, marginBottom: 4,
+            }}>People</div>
+            <div style={{ fontSize: 10.5, color: DIM, marginBottom: 10 }}>
+              One row per browser · anonymous visits joined to the account they became
+            </div>
+            {(data.individuals || []).length === 0 ? (
+              <div style={{ color: DIM, fontSize: 12, lineHeight: 1.7 }}>
+                Nobody yet. Visits are grouped by an id issued on first visit,
+                so this fills from now on — earlier views cannot be grouped
+                into people after the fact.
+              </div>
+            ) : (
+              <div className="vz-wrap">
+                <table className="vz-t">
+                  <thead>
+                    <tr>
+                      <th>Who</th>
+                      <th>Came from</th>
+                      <th>Landed on</th>
+                      <th className="num">Views</th>
+                      <th className="num">Days</th>
+                      <th className="num">Last seen</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(data.individuals || []).map((p: any) => (
+                      <tr key={p.visitorId}>
+                        <td title={p.visitorId}>
+                          {p.email ? (
+                            <span style={{ color: '#32ff7e' }}>{p.email}</span>
+                          ) : (
+                            <span style={{ color: DIM }}>
+                              anon · {String(p.visitorId).slice(0, 8)}
+                            </span>
+                          )}
+                        </td>
+                        <td style={{ color: p.source ? undefined : DIM }}>
+                          {p.source || 'direct'}
+                        </td>
+                        <td className="vz-path" title={p.landedOn || ''}>
+                          {p.landedOn || '—'}
+                        </td>
+                        <td className="num">{n(p.views)}</td>
+                        <td className="num" style={{ color: DIM }}>{n(p.activeDays)}</td>
+                        <td className="num" style={{ color: DIM }}>
+                          {p.lastSeen ? new Date(p.lastSeen).toLocaleDateString() : '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
           {/* ── WHEN ─────────────────────────────────────────────────────── */}
           <div style={{
             display: 'grid', gap: 12, marginTop: 12,

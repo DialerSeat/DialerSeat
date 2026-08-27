@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { createHash } from 'crypto'
+import { createHash, randomBytes } from 'crypto'
+
+// First-party, ours, and readable only by us. Two years so a returning reader
+// is still recognisable next quarter; there is nothing sensitive in the value,
+// it is a random number we issued.
+const VISITOR_COOKIE = 'ds_vid'
+const VISITOR_COOKIE_MAX_AGE = 60 * 60 * 24 * 730
 import { getServiceClient } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
@@ -77,6 +83,24 @@ export async function POST(req: NextRequest) {
       .digest('hex')
       .slice(0, 32)
 
+    // ── A STABLE ID FOR THE BROWSER, NEXT TO THE DAILY ONE ────────────────
+    // visitorHash above rotates every day by design, so somebody reading the
+    // site three days running counts as three visitors and a signup cannot be
+    // joined to the visit that produced it. That made "did this customer come
+    // from ChatGPT?" answerable only by lining up timestamps by eye.
+    //
+    // This is a random first-party id in our own cookie. Nothing is derived
+    // from the device — no fingerprint, no IP in the value — so it identifies
+    // a BROWSER we handed an id to, and clearing cookies genuinely resets it.
+    //
+    // Set on the response further down rather than here, because a beacon
+    // must never fail the page it is measuring.
+    const existingVid = req.cookies.get(VISITOR_COOKIE)?.value || ''
+    const visitorId = /^[0-9a-f]{32}$/.test(existingVid)
+      ? existingVid
+      : randomBytes(16).toString('hex')
+    const isNewVisitor = visitorId !== existingVid
+
     // ── DWELL COMES BACK LATER ────────────────────────────────────────
     // A second beacon fires when the page is left, carrying how long it was
     // open. It updates the row the first beacon wrote rather than inserting a
@@ -113,9 +137,11 @@ export async function POST(req: NextRequest) {
     // signed-out visitor, which is exactly the distinction being recorded.
     let isAuthed = false
     let isAdmin = false
+    let clerkId: string | null = null
     try {
       const { userId } = await auth()
       isAuthed = !!userId
+      clerkId = userId || null
 
       // ── OUR OWN VISITS ARE NOT TRAFFIC ────────────────────────────────
       // The owner is on this site constantly, and at current volume that is
@@ -147,6 +173,11 @@ export async function POST(req: NextRequest) {
         path,
         referrer_host: referrerHost,
         is_admin: isAdmin,
+        visitor_id: visitorId,
+        // Only ever set from a real server-side session. This says "this
+        // account did this"; it never claims to have worked out who an
+        // anonymous visitor is.
+        clerk_id: clerkId,
         // ── THE SERVER KNOWS, THE BROWSER GUESSES ────────────────────
         // This trusted body.authed, which the tracker computed as
         // `document.cookie.includes('__session')`. That produced 337 views
@@ -176,7 +207,21 @@ export async function POST(req: NextRequest) {
     // The id goes back so the exit beacon can find its own row. Returned as
     // JSON rather than 204 only on the insert path — the dwell path above stays
     // empty because nothing needs to come back from it.
-    return NextResponse.json({ id: inserted?.id ?? null })
+    const res = NextResponse.json({ id: inserted?.id ?? null })
+
+    // Only written when it is actually new, so a returning visitor's expiry is
+    // not pushed forward on every single page load.
+    if (isNewVisitor) {
+      res.cookies.set(VISITOR_COOKIE, visitorId, {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: req.nextUrl.protocol === 'https:',
+        path: '/',
+        maxAge: VISITOR_COOKIE_MAX_AGE,
+      })
+    }
+
+    return res
   } catch {
     // Deliberately silent. A tally mark is not worth an error in anybody's
     // console, and certainly not worth a failed request on a marketing page.
