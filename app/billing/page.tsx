@@ -60,9 +60,40 @@ function describeBilling(
     amountOffCents: number | null
     duration: 'once' | 'repeating' | 'forever'
     durationInMonths: number | null
-  } | null
+  } | null,
+  trialing = false
 ) {
   const fallback = planInfo.weeklyBlurb
+
+  // ── A TRIAL INVOICE CANNOT DESCRIBE WHAT HAPPENS AFTER THE TRIAL ───────
+  // Everything below prices the order from the real Stripe invoice, which is
+  // right for a normal checkout and wrong for a trial: the trial invoice is
+  // $0.00, so `recurringLabel: todayLabel` handed back $0.00 for BOTH halves.
+  // The consent read "I agree my card will be charged nothing today, then
+  // $0.00 when my free 7-day trial ends" — an agreement to never pay
+  // anything, printed above a Start button, which is worse than a cosmetic
+  // bug: it is the sentence we would have to stand behind in a dispute.
+  //
+  // So during a trial the recurring line comes from the PLAN, not the
+  // invoice. That is the number that will actually be charged on day 8, and
+  // it is the only one the $0.00 invoice cannot tell us.
+  if (trialing) {
+    const currency = amounts?.currency || 'usd'
+    const baseCents = planInfo.price * 100
+    let afterCents = baseCents
+    if (coupon?.percentOff) {
+      afterCents = Math.round(baseCents * (1 - coupon.percentOff / 100))
+    } else if (coupon?.amountOffCents) {
+      afterCents = Math.max(0, baseCents - coupon.amountOffCents)
+    }
+    return {
+      todayLabel: formatCents(0, currency),
+      recurringLabel: formatCents(afterCents, currency),
+      hasDiscount: afterCents !== baseCents,
+      todayCents: 0 as number | null,
+    }
+  }
+
   if (!amounts) {
     return {
       todayLabel: fallback,
@@ -638,7 +669,7 @@ export default function BillingPage() {
     return <LoadingCard text="Preparing secure checkout" />
   }
 
-  const billing = describeBilling(planInfo, amounts, coupon)
+  const billing = describeBilling(planInfo, amounts, coupon, !!trial)
 
   return (
     <main style={pageStyle} className="billing-page">

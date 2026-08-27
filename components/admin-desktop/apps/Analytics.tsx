@@ -415,7 +415,10 @@ interface AdminData {
     totalUsers: number; payingActiveSubs: number; proSubs: number; wlSubs: number
     unknownPriceSubs: number; wrr: number; mrr: number; proWrr: number; wlWrr: number
     seatsBilled: number; seatsWithKnownAmount: number; seatWrr: number; seatMrr: number
-    seatsAmountUnknown: number
+    seatsAmountUnknown: number; seatsThisPeriod: number; seatRevenueAllTime: number
+    combinedWrr: number; combinedMrr: number
+    trialingCount: number; trialsEndingSoon: number; trialPipelineWrr: number
+    trialsStartedInRange: number; trialsConvertedInRange: number
     seatRates: Array<{ weekly: string; cents: number; seats: number }>
     signupsInRange: number; paidConversionsInRange: number; cancellationsInRange: number
     netNewPaying: number; churnRate: number; avgLifetimeWeeks: number; wowDelta: number
@@ -468,12 +471,45 @@ function AdminRevenueView() {
                 {data.summary.wowDelta >= 0 ? '↑' : '↓'} {Math.abs(data.summary.wowDelta)} ({data.summary.wowPct >= 0 ? '+' : ''}{data.summary.wowPct}%) WoW
               </div>
             </div>
+            {/* Subscriptions AND seats. The two used to be shown only apart,
+                which meant no figure on this screen answered "what does the
+                business make in a week" — the reader had to add two cards in
+                their head. The split stays directly underneath, so it is
+                still obvious which half moved. */}
             <div className="an-stat-card hero" style={{ borderTopColor: T.accent }}>
               <div className="an-stat-label">WEEKLY REVENUE · NOW</div>
-              <div className="an-stat-value" style={{ color: T.accent }}>{fmtMoney(data.summary.wrr)}</div>
+              <div className="an-stat-value" style={{ color: T.accent }}>{fmtMoney(data.summary.combinedWrr)}</div>
+              <div className="an-stat-sub">
+                SUBS {fmtMoney(data.summary.wrr)} · SEATS {fmtMoney(data.summary.seatWrr)}
+              </div>
               <div className="an-stat-sub">PRO {fmtMoney(data.summary.proWrr)} · MGR+ {fmtMoney(data.summary.wlWrr)}</div>
-              <div className="an-stat-sub" style={{ marginTop: 3 }}>{fmtMoney(data.summary.mrr)} / MONTH</div>
+              <div className="an-stat-sub" style={{ marginTop: 3 }}>{fmtMoney(data.summary.combinedMrr)} / MONTH</div>
             </div>
+            {/* ── TRIALS: PIPELINE, NOT REVENUE ───────────────────────────
+                Nobody here has paid, so none of this is counted in the
+                figures above and the card is coloured to say so. It is the
+                best read this screen has on next week, and before the trial
+                shipped there was nothing here at all — a week that landed a
+                cohort of trials looked exactly like a dead one. */}
+            {(data.summary.trialingCount > 0 || data.summary.trialsStartedInRange > 0) && (
+              <div className="an-stat-card hero" style={{ borderTopColor: T.amber }}>
+                <div className="an-stat-label">ON TRIAL · NOT YET REVENUE</div>
+                <div className="an-stat-value" style={{ color: T.amber }}>
+                  {data.summary.trialingCount.toLocaleString()}
+                </div>
+                <div className="an-stat-sub">
+                  {fmtMoney(data.summary.trialPipelineWrr)}/WK IF ALL CONVERT
+                </div>
+                <div className="an-stat-sub" style={{ marginTop: 3 }}>
+                  {data.summary.trialsStartedInRange} STARTED · {data.summary.trialsConvertedInRange} CONVERTED
+                  {data.summary.trialsEndingSoon > 0 && (
+                    <span style={{ color: T.accent }}>
+                      {' '}· {data.summary.trialsEndingSoon} ENDING ≤3D
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
             {/* ── SEATS, AT WHAT THEY ACTUALLY BILL ────────────────────────
                 Kept beside subscription revenue rather than blended into it.
                 They discount differently and move differently, and one
@@ -502,6 +538,10 @@ function AdminRevenueView() {
                       {' '}· {data.summary.seatsAmountUnknown} AMOUNT NOT RECORDED
                     </span>
                   )}
+                </div>
+                <div className="an-stat-sub" style={{ marginTop: 3, opacity: 0.75 }}>
+                  {data.summary.seatsThisPeriod} SEAT{data.summary.seatsThisPeriod === 1 ? '' : 'S'} THIS WEEK
+                  {' '}· {fmtMoney(data.summary.seatRevenueAllTime)} ALL TIME
                 </div>
               </div>
             )}

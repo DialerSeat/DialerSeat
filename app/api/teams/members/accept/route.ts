@@ -76,15 +76,31 @@ export async function POST(req: Request) {
       // page runs the challenge — so the useful response is a link, not a
       // suggestion to press the button again.
       if (outcome.requiresAction) {
+        // ── DON'T NAME A CAUSE WE HAVEN'T CONFIRMED ───────────────────────
+        // This used to open "Your bank wants this payment approved", which
+        // states one specific reason. A real case proved it wrong: the card
+        // had no balance, so the truthful reason was a decline, and the
+        // message sent the owner looking for an approval prompt that was
+        // never going to appear.
+        //
+        // What we actually know is narrower than either explanation — the
+        // payment is sitting unresolved and pressing this button again will
+        // not resolve it, because the charge runs off-session with nobody
+        // present. Authentication and insufficient funds both land here, and
+        // Stripe's own invoice page names which one it was. So point at the
+        // page that knows, and stop guessing.
         return NextResponse.json({
           success: false,
-          error: 'Your bank wants this payment approved before the seat can open.',
+          error: 'This card needs attention before the seat can open.',
           detail: outcome.actionUrl
-            ? 'Open the link below and approve it once. Retrying here will keep ' +
-              'failing until you do — the charge happens in the background, so ' +
-              'there is nobody present for the bank to ask.'
-            : 'Approve the pending payment in your Stripe billing history, then ' +
-              'accept them again. Retrying here alone will keep failing.',
+            ? 'Open the link below. If your bank wants the payment approved, ' +
+              'approve it there; if it was declined — no balance, a limit, or ' +
+              'a block — it will say so, and the fix is a different card. ' +
+              'Retrying here alone will keep failing either way.'
+            : 'Open the pending payment in your Stripe billing history. ' +
+              'Approve it if your bank is asking, or use a different card if ' +
+              'it was declined for balance or limits, then accept them again. ' +
+              'Retrying here alone will keep failing.',
           actionUrl: outcome.actionUrl,
           billingIssue: outcome.billingIssue,
           canRetry: false,

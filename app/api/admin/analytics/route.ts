@@ -195,7 +195,7 @@ export async function GET(req: NextRequest) {
     .select(`
       user_id, status, current_period_end, cancel_at_period_end,
       created_at, canceled_at, updated_at, discount_coupon,
-      stripe_subscription_id, stripe_price_id
+      stripe_subscription_id, stripe_price_id, trial_start, trial_end
     `)
 
   const visibleSubs = (rawSubs || []).filter(s => !excluded.has(s.user_id))
@@ -314,12 +314,37 @@ export async function GET(req: NextRequest) {
   // than one that admits its gap.
   const { data: seatRows } = await supabase
     .from('team_seat_charges')
-    .select('charged_cents, discount_percent, amount_cents')
+    .select('charged_cents, discount_percent, amount_cents, period_start, period_end')
     .eq('status', 'paid')
 
   const seats = seatRows || []
   const seatsMeasured = seats.filter(r => typeof r.charged_cents === 'number')
-  const seatWrrCents = seatsMeasured.reduce((sum, r) => sum + (r.charged_cents || 0), 0)
+
+  // ── A WEEKLY RATE, NOT A RUNNING TOTAL ────────────────────────────────
+  // This summed every paid charge ever raised and called the result seatWrr.
+  // It reads correctly today only by accident: no seat has billed twice yet,
+  // so one row per seat happens to equal one week. The moment any seat
+  // renews, the same sum silently becomes all-time revenue while still being
+  // labelled and charted as a weekly rate — and it would climb every week
+  // whether or not a single new seat was sold.
+  //
+  // That mattered little while the two numbers were displayed apart. It
+  // matters a lot now they are added to subscription WRR, because a
+  // cumulative figure inside a run-rate makes the combined total wrong and
+  // wrong in the flattering direction.
+  //
+  // The current week is the charges whose period has not closed yet.
+  const nowMs = Date.now()
+  const seatsThisPeriod = seatsMeasured.filter(r =>
+    r.period_end ? new Date(r.period_end).getTime() >= nowMs : false
+  )
+  const seatWrrCents = seatsThisPeriod.reduce((sum, r) => sum + (r.charged_cents || 0), 0)
+
+  // Kept separately so the all-time figure is still available, correctly
+  // named, rather than deleted or quietly conflated with the rate above.
+  const seatRevenueAllTimeCents = seatsMeasured.reduce(
+    (sum, r) => sum + (r.charged_cents || 0), 0
+  )
 
   // The distinct rates in play. An account where every seat is a different
   // negotiated number is a support problem waiting to happen, and it is
@@ -337,6 +362,38 @@ export async function GET(req: NextRequest) {
       seats: count,
     }))
     .sort((a, b) => b.seats - a.seats)
+
+  // ── TRIALS ARE NOT REVENUE, BUT THEY ARE THE PIPELINE ─────────────────
+  // Deliberately outside every figure above: isSubscriptionTrulyActive
+  // requires the literal 'active', so a trial has never counted as WRR and
+  // must not start now — nobody has paid. But a trial is the best predictor
+  // of next week's revenue this screen has, and until now it was invisible
+  // here, which meant the week a trial cohort landed looked identical to a
+  // dead week.
+  const trialingSubs = latestSubs.filter(s => s.status === 'trialing')
+  const THREE_DAYS = 3 * 24 * 60 * 60 * 1000
+  const trialsEndingSoon = trialingSubs.filter(s => {
+    if (!s.trial_end) return false
+    const t = new Date(s.trial_end).getTime()
+    return t >= nowMs && t <= nowMs + THREE_DAYS
+  })
+  // What they would be worth if every one of them converted. A ceiling, not
+  // a forecast — labelled that way on the screen for the same reason.
+  const trialPipelineWrr = trialingSubs.reduce((sum, s) => sum + weeklyPriceFor(s), 0)
+
+  const trialsStartedInRange = allSubs.filter(s => {
+    if (!s.trial_start) return false
+    const t = new Date(s.trial_start).getTime()
+    return t >= start && t <= end
+  }).length
+
+  // Converted = the trial ended and the subscription is live and paying.
+  const trialsConvertedInRange = allSubs.filter(s => {
+    if (!s.trial_start || !s.trial_end) return false
+    const ended = new Date(s.trial_end).getTime()
+    if (ended < start || ended > end) return false
+    return s.status === 'active'
+  }).length
 
   const signupsInRange = usersInRange.length
 
@@ -553,6 +610,20 @@ export async function GET(req: NextRequest) {
       seatMrr: (seatWrrCents / 100) * 4,
       seatRates,
       seatsAmountUnknown: seats.length - seatsMeasured.length,
+      seatsThisPeriod: seatsThisPeriod.length,
+      seatRevenueAllTime: seatRevenueAllTimeCents / 100,
+
+      // Subscriptions plus seats, which is the number that answers "what does
+      // this business make in a week". Both halves stay above so it is always
+      // visible which one moved.
+      combinedWrr: wrr + seatWrrCents / 100,
+      combinedMrr: (wrr + seatWrrCents / 100) * 4,
+
+      trialingCount: trialingSubs.length,
+      trialsEndingSoon: trialsEndingSoon.length,
+      trialPipelineWrr,
+      trialsStartedInRange,
+      trialsConvertedInRange,
       proWrr: proSubs.reduce((s, sub) => s + weeklyPriceFor(sub), 0),
       wlWrr: wlSubs.reduce((s, sub) => s + weeklyPriceFor(sub), 0),
 

@@ -194,6 +194,12 @@ export default function ExplorerApp() {
   const [deleteCampaignTyped, setDeleteCampaignTyped] = useState('')
   const [deletingCampaign, setDeletingCampaign] = useState(false)
 
+  // Changing a customer's dialer mode from here. Held locally so the select
+  // reflects the change immediately — selectedCampaign came from a list that
+  // is not refetched on every keystroke.
+  const [savingMode, setSavingMode] = useState(false)
+  const [modeError, setModeError] = useState<string | null>(null)
+
   const [deleteLeadTarget, setDeleteLeadTarget] = useState<Lead | null>(null)
   const [deletingLead, setDeletingLead] = useState(false)
 
@@ -349,6 +355,40 @@ export default function ExplorerApp() {
     window.open(`/api/admin/user-data/leads/export?campaign_id=${encodeURIComponent(selectedCampaign.id)}`, '_blank')
   }
 
+  // ── CHANGING SOMEBODY ELSE'S DIALER MODE ──────────────────────────────
+  // The single setting that most often explains "the dialer is behaving
+  // strangely", changed from the screen where support is already looking at
+  // the campaign — rather than talking a customer through finding a dropdown
+  // while their floor sits idle.
+  //
+  // Mode is read per call rather than latched when a campaign starts, so this
+  // takes effect on the next dial even mid-session.
+  async function changeDialerMode(mode: string) {
+    if (!selectedCampaign || mode === selectedCampaign.dialer_mode) return
+    setSavingMode(true)
+    setModeError(null)
+    try {
+      const res = await fetch('/api/admin/user-data/campaigns/dialer-mode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ campaignId: selectedCampaign.id, dialerMode: mode }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || 'Could not change the dialer mode')
+
+      // Both the detail object and the row behind it, so going back to the
+      // list does not show the old value.
+      setSelectedCampaign(prev => (prev ? { ...prev, dialer_mode: mode } : prev))
+      setCampaigns(prev =>
+        prev.map(c => (c.id === selectedCampaign.id ? { ...c, dialer_mode: mode } : c))
+      )
+    } catch (err: any) {
+      setModeError(err?.message || 'Could not change the dialer mode')
+    } finally {
+      setSavingMode(false)
+    }
+  }
+
   const filteredUsers = users.filter(u => {
     if (!userSearch.trim()) return true
     const q = userSearch.trim().toLowerCase()
@@ -398,6 +438,21 @@ export default function ExplorerApp() {
 
         {view === 'leads' && selectedCampaign && (
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
+            <span style={{ color: T.muted, fontSize: 11, letterSpacing: 1 }}>DIALER MODE</span>
+            <select
+              value={selectedCampaign.dialer_mode || ''}
+              disabled={savingMode}
+              onChange={e => changeDialerMode(e.target.value)}
+              style={{ ...searchInputStyle, width: 'auto', cursor: savingMode ? 'wait' : 'pointer' }}
+              title={modeError || 'Changes take effect on the next dial'}
+            >
+              {['preview', 'power', 'progressive', 'predictive'].map(m => (
+                <option key={m} value={m}>{m.toUpperCase()}</option>
+              ))}
+            </select>
+            {modeError && (
+              <span style={{ color: '#ff6b6b', fontSize: 11 }}>{modeError}</span>
+            )}
             <input
               value={leadSearch}
               onChange={e => setLeadSearch(e.target.value)}

@@ -112,9 +112,29 @@ export async function POST(req: NextRequest) {
     // Never throws on a public route — it returns a null userId for a
     // signed-out visitor, which is exactly the distinction being recorded.
     let isAuthed = false
+    let isAdmin = false
     try {
       const { userId } = await auth()
       isAuthed = !!userId
+
+      // ── OUR OWN VISITS ARE NOT TRAFFIC ────────────────────────────────
+      // The owner is on this site constantly, and at current volume that is
+      // not noise at the margin — it is most of the table. Flagged at write
+      // time rather than filtered at read time, because the report should
+      // not have to know who the owner is, and a later change of admin must
+      // not silently rewrite the history of who visited.
+      //
+      // A boolean, never a clerk_id. The report only needs "is this us"; an
+      // analytics table is the wrong place to build a record of who read
+      // what.
+      if (userId) {
+        const { data: row } = await supabase
+          .from('users')
+          .select('is_admin')
+          .eq('clerk_id', userId)
+          .maybeSingle()
+        isAdmin = !!row?.is_admin
+      }
     } catch {
       // A beacon must never fail the page it is measuring. Unknown counts as
       // anonymous, which is the safer direction: it under-reports signed-in
@@ -126,6 +146,7 @@ export async function POST(req: NextRequest) {
       .insert({
         path,
         referrer_host: referrerHost,
+        is_admin: isAdmin,
         // ── THE SERVER KNOWS, THE BROWSER GUESSES ────────────────────
         // This trusted body.authed, which the tracker computed as
         // `document.cookie.includes('__session')`. That produced 337 views

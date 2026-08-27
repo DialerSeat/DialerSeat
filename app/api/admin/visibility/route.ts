@@ -71,18 +71,23 @@ export async function GET(req: NextRequest) {
       supabase.rpc('pv_totals', { p_since: todayStart.toISOString(), p_until: null, p_authed: audience }),
       // Same audience as everything else — comparing anonymous traffic against
       // everybody's would be a percentage between two different populations.
+      // is_admin false on both branches: the owner is on this site constantly
+      // and those visits are not traffic. The RPCs above filter it too — see
+      // the visibility_excludes_admin_views migration.
       (audience === null
         ? supabase
             .from('page_views')
             .select('id', { count: 'exact', head: true })
             .gte('created_at', prevStart.toISOString())
             .lt('created_at', sinceIso)
+            .eq('is_admin', false)
         : supabase
             .from('page_views')
             .select('id', { count: 'exact', head: true })
             .gte('created_at', prevStart.toISOString())
             .lt('created_at', sinceIso)
-            .eq('is_authed', audience)),
+            .eq('is_authed', audience)
+            .eq('is_admin', false)),
     ])
 
     if (totalsRes.error) throw totalsRes.error

@@ -398,7 +398,7 @@ export default async function Home({ searchParams }: PageProps) {
             letterSpacing: '3px',
             fontWeight: 'bold',
           }}>
-            FREE 7 DAYS · THEN $35/WEEK · CANCEL ANYTIME
+            $35/WEEK · NO CONTRACTS · CANCEL ANYTIME
           </div>
         </div>
       )}
@@ -448,8 +448,8 @@ export default async function Home({ searchParams }: PageProps) {
               boxSizing: 'border-box',
             }}>
               {[
-                { number: 'FREE', label: '7 DAYS TO START' },
-                { number: '$35', label: 'PER WEEK AFTER' },
+                { number: '$35', label: 'PER WEEK' },
+                { number: '5X', label: 'CHEAPER THAN OTHERS' },
                 { number: '$0', label: 'SETUP FEES' },
                 { number: '∞', label: 'LEADS UPLOADED' },
               ].map((stat, i) => (
@@ -521,7 +521,7 @@ export default async function Home({ searchParams }: PageProps) {
             </div>
 
             <p className="ds-hero-fineprint" style={{ fontSize: '11px', letterSpacing: '3px', color: 'var(--brand-muted-text, #5a5e6a)' }}>
-              FREE 7 DAYS · THEN $35/WEEK · CANCEL ANYTIME
+              $35/WEEK · NO CONTRACTS · CANCEL ANYTIME
             </p>
           </div>
         </div>
@@ -645,7 +645,7 @@ export default async function Home({ searchParams }: PageProps) {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {[
-            { step: '01', title: 'CREATE YOUR ACCOUNT', desc: 'Sign up with Google or email. Enter your card and you are dialing in seconds. Free for 7 days, then $35 weekly, cancel anytime.' },
+            { step: '01', title: 'CREATE YOUR ACCOUNT', desc: 'Sign up with Google or email. Enter your card and you are dialing in seconds. $35 weekly, cancel anytime.' },
             { step: '02', title: 'UPLOAD YOUR LEADS', desc: 'Drop your CSV into a campaign. Name it, organize it, and have multiple campaigns ready to go simultaneously.' },
             { step: '03', title: 'HIT DIAL AND GO', desc: 'Launch your campaign and DialerSeat starts working immediately. Live connections come through the second someone picks up.' },
             { step: '04', title: 'TRACK AND CLOSE', desc: 'Disposition every call in one click. Track your performance in real time. Rinse and repeat until your list is done.' },
@@ -833,7 +833,7 @@ export default async function Home({ searchParams }: PageProps) {
               color: '#4a9eff',
               marginBottom: '40px',
             }}>
-              FREE 7 DAYS · THEN BILLED WEEKLY · CANCEL ANYTIME
+              FIRST CHARGE TODAY · CANCEL ANYTIME
             </div>
 
             <div style={{ marginBottom: '40px', textAlign: 'left', flex: 1 }}>
@@ -890,7 +890,7 @@ export default async function Home({ searchParams }: PageProps) {
               {ctaLabel}
             </Link>
             <p style={{ fontSize: '11px', letterSpacing: '2px', color: 'rgba(255,255,255,0.5)' }}>
-              NOTHING CHARGED TODAY · CANCEL ANYTIME
+              $35 CHARGED TODAY · CANCEL ANYTIME
             </p>
           </div>
 
@@ -991,7 +991,7 @@ export default async function Home({ searchParams }: PageProps) {
               {wlCtaLabel}
             </Link>
             <p style={{ fontSize: '11px', letterSpacing: '2px', color: '#5a5e6a' }}>
-              NOTHING CHARGED TODAY · CANCEL ANYTIME
+              $75 CHARGED TODAY · CANCEL ANYTIME
             </p>
           </div>
 
@@ -1041,7 +1041,7 @@ export default async function Home({ searchParams }: PageProps) {
           {ctaLabel} →
         </Link>
         <p style={{ marginTop: '20px', fontSize: '11px', letterSpacing: '3px', color: 'rgba(255,255,255,0.5)' }}>
-          FREE 7 DAYS · THEN $35/WEEK · CANCEL ANYTIME
+          $35/WEEK · NO CONTRACTS · CANCEL ANYTIME
         </p>
         </div>
       </section>
