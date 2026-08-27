@@ -205,6 +205,31 @@ export async function POST(req: Request) {
       }
     }
 
+    // ── ASK BEFORE DESTROYING THE EVIDENCE ────────────────────────────────
+    // This has to run BEFORE the two deletes below, and that ordering is the
+    // whole point. STALE_STATUSES includes 'canceled', so the cleanup wipes
+    // the record of anyone who ever held a real subscription — and the
+    // eligibility test further down then sees no prior subscriptions and
+    // concludes they are new.
+    //
+    // The effect was a free week for every returning customer: cancel,
+    // resubscribe, get seven days free. Exactly the "discount for churning"
+    // the comment below warns against, defeated by the order of two
+    // statements rather than by anything the check itself got wrong.
+    //
+    // 'incomplete' and 'incomplete_expired' are deliberately NOT counted.
+    // Those are abandoned checkouts — somebody who opened billing and left
+    // never bought anything, and should still get their first trial.
+    // Everything else means a subscription that actually existed.
+    const { data: paidBefore } = await supabase
+      .from('subscriptions')
+      .select('id')
+      .eq('user_id', userId)
+      .not('status', 'in', '(incomplete,incomplete_expired)')
+      .limit(1)
+
+    const hasEverSubscribed = (paidBefore || []).length > 0
+
     await supabase
       .from('subscriptions')
       .delete()
@@ -266,6 +291,10 @@ export async function POST(req: Request) {
     //   stops a discount code and a free week from stacking.
     const eligibleForTrial =
       !trialRow?.trial_started_at &&
+      // Read before the stale-row cleanup above, so a cancelled customer is
+      // still recognisable as a returning one. A lapsed customer is not a new
+      // customer.
+      !hasEverSubscribed &&
       (priorSubs || []).length === 0 &&
       plan === 'standard' &&
       !promoCode
