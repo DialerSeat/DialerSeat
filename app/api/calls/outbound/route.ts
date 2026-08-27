@@ -26,7 +26,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json()
-    const { to, leadId, campaignId, teamId, record } = body
+    const { to, leadId, campaignId, teamId, record, amd } = body
 
     // ── ON A MASKED CAMPAIGN THE CLIENT DOES NOT KNOW THE NUMBER ────────
     // The queue sends back "(•••) •••-4821" instead of the real thing, so the
@@ -75,6 +75,10 @@ export async function POST(req: Request) {
       // The manual dialer's record toggle. Ignored on anything carrying a
       // campaign — placeOutboundCall enforces that, not this route.
       recordManual: record === true,
+      // Passed through only when the client actually expressed a preference.
+      // `undefined` is meaningfully different from `false` here: false turns
+      // detection off, undefined leaves today's behaviour untouched.
+      amdManual: typeof amd === 'boolean' ? amd : undefined,
     })
 
     if (!result.success) {

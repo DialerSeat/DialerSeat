@@ -92,6 +92,7 @@ export interface PlaceCallParams {
    *  own toggle. Only honoured on a campaign-less dial — see the block that
    *  reads it. Undefined everywhere else, which is the same as false. */
   recordManual?: boolean
+  amdManual?: boolean
 }
 
 export interface PlaceCallResult {
@@ -122,7 +123,7 @@ export interface PlaceCallResult {
 export async function placeOutboundCall(
   params: PlaceCallParams
 ): Promise<PlaceCallResult> {
-  const { to, userId, leadId, campaignId, teamId, source, agentSessionId, recordManual } = params
+  const { to, userId, leadId, campaignId, teamId, source, agentSessionId, recordManual, amdManual } = params
 
   if (!to) {
     return { success: false, error: 'Missing destination', httpStatus: 400 }
@@ -266,6 +267,27 @@ export async function placeOutboundCall(
   // not a reason to keep recording through it.
   const manualRecordingRequested = !campaignId && recordManual === true
   if (manualRecordingRequested) recordingEnabled = true
+
+  // ── THE SAME QUESTION, ASKED THE OTHER WAY ROUND ─────────────────────────
+  // Detection is ON for a manual dial today: amdEnabled starts true and a
+  // campaign-less call has nothing to turn it off. So this toggle exists to
+  // turn it OFF, which is the opposite direction to the recording one above —
+  // worth stating, because the two sit side by side on screen and look like
+  // they should behave the same way.
+  //
+  // Wanting it off is ordinary on a dial placed by hand: the agent already
+  // knows who they are calling, they are listening to the line themselves,
+  // and detection costs ~$0.002 per call to answer a question nobody asked.
+  //
+  // STRICT `=== false`, so an absent value changes nothing. Anything that
+  // does not send the field — every other caller in this codebase, and any
+  // client that has not shipped yet — behaves exactly as it does today.
+  //
+  // Campaign-less only, for the same reason recording is: an agent must not
+  // be able to overrule a tenant's campaign detection policy from their own
+  // screen. And placed BEFORE the global override below, so a platform-wide
+  // AMD kill switch still wins.
+  if (!campaignId && amdManual === false) amdEnabled = false
 
   // ── GLOBAL OVERRIDES ─────────────────────────────────────────────────────
   // Applied AFTER the campaign's own values, and only ever to turn something

@@ -274,6 +274,31 @@ function DialerPageInner() {
       return next
     })
   }
+
+  // ── DETECTION, WHICH STARTS ON RATHER THAN OFF ──────────────────────────
+  // The mirror image of the recording toggle beside it, and the default is
+  // the reason it cannot just be copied. A manual dial already runs answering
+  // machine detection today, so `true` here is not a preference — it is
+  // current behaviour written down. Starting it false would silently switch
+  // detection off for every manual call the moment this shipped.
+  //
+  // Same reason it is stored as an explicit '0' rather than by absence: a
+  // missing key means "never touched it", which has to read as ON.
+  const [manualAmd, setManualAmd] = useState(true)
+  useEffect(() => {
+    try {
+      setManualAmd(window.localStorage.getItem('ds:manual-amd') !== '0')
+    } catch {
+      // Disabled or full storage. The toggle still works for this session.
+    }
+  }, [])
+  const toggleManualAmd = () => {
+    setManualAmd(prev => {
+      const next = !prev
+      try { window.localStorage.setItem('ds:manual-amd', next ? '1' : '0') } catch {}
+      return next
+    })
+  }
   const [seconds, setSeconds] = useState(0)
   const [available, setAvailable] = useState(false)
 
@@ -3963,7 +3988,7 @@ function DialerPageInner() {
       const res = await fetch('/api/calls/outbound', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: manualNumber, record: manualRecord }),
+        body: JSON.stringify({ to: manualNumber, record: manualRecord, amd: manualAmd }),
       })
       const data = await res.json()
       if (data.success) {
@@ -4548,6 +4573,48 @@ function DialerPageInner() {
             border: `1px solid ${manualRecord ? '#dc2626' : terminalBorder}`,
             color: manualRecord ? '#fff' : terminalMuted,
           }}>{manualRecord ? 'ON' : 'OFF'}</span>
+        </button>
+
+        {/* Paired with RECORD deliberately, because the two answers are made
+            at the same moment and about the same call. Blue rather than red:
+            detection is not a legal decision and should not borrow the colour
+            of the one that is. */}
+        <button
+          onClick={toggleManualAmd}
+          aria-pressed={manualAmd}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            gap: 8, width: '100%', boxSizing: 'border-box',
+            padding: inOverlay ? '12px 14px' : '8px 10px',
+            marginBottom: inOverlay ? 12 : 6,
+            borderRadius: 3, cursor: 'pointer', flexShrink: 0,
+            background: manualAmd ? 'rgba(74, 158, 255, 0.12)' : terminalSurface,
+            border: `1px solid ${manualAmd ? '#4a9eff' : terminalBorder}`,
+            color: manualAmd ? '#4a9eff' : terminalMuted,
+            fontFamily: FUTURA,
+            fontSize: inOverlay ? '11px' : '9px',
+            letterSpacing: '2px', fontWeight: 'bold',
+          }}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span
+              aria-hidden="true"
+              style={{
+                width: 9, height: 9, borderRadius: '50%', flexShrink: 0,
+                background: manualAmd ? '#4a9eff' : 'transparent',
+                border: `1.5px solid ${manualAmd ? '#4a9eff' : terminalMuted}`,
+                boxShadow: manualAmd ? '0 0 6px rgba(74, 158, 255, 0.75)' : 'none',
+              }}
+            />
+            MACHINE DETECTION
+          </span>
+          <span style={{
+            fontSize: inOverlay ? '10px' : '8px', letterSpacing: '1.5px',
+            padding: '2px 7px', borderRadius: 2,
+            background: manualAmd ? '#4a9eff' : 'transparent',
+            border: `1px solid ${manualAmd ? '#4a9eff' : terminalBorder}`,
+            color: manualAmd ? '#fff' : terminalMuted,
+          }}>{manualAmd ? 'ON' : 'OFF'}</span>
         </button>
 
         <div style={{
