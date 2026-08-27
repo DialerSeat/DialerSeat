@@ -320,6 +320,13 @@ export async function POST(req: NextRequest) {
           // about itself. Same helper page_views uses — see lib/device.ts for
           // why that matters.
           device: deviceFrom(req.headers.get('user-agent') || ''),
+          // Same idea, same headers page_views records. An authenticated
+          // request arriving every few seconds is the most current statement
+          // of where somebody is that this product has — better than the last
+          // page they happened to load, and it follows them if they move.
+          // Country and region only; city and postcode are not collected.
+          country: req.headers.get('x-vercel-ip-country')?.slice(0, 4) || null,
+          region: req.headers.get('x-vercel-ip-country-region')?.slice(0, 8) || null,
           // ── NEVER NULL A SERVER-ASSIGNED CALL ────────────────────────────
           // In every client-dialed mode this column mirrors what the browser
           // is on. Predictive is the opposite: the fan-out bridge assigns the

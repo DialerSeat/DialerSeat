@@ -88,6 +88,10 @@ const VisibilityApp = dynamic(() => import('./apps/Visibility'), {
   loading: () => <AppLoading />,
   ssr: false,
 })
+const OpsMapApp = dynamic(() => import('./apps/OpsMap'), {
+  loading: () => <AppLoading />,
+  ssr: false,
+})
 const NumbersApp = dynamic(() => import('./apps/Numbers'), {
   loading: () => <AppLoading />,
   ssr: false,
@@ -267,6 +271,17 @@ export const APPS: AppDefinition[] = [
     visibleTo: ['admin'],
     Component: VisibilityApp,
     defaultSize: { width: 1120, height: 760 },
+  },
+  {
+    id: 'ops-map',
+    name: 'Map',
+    shortName: 'Map',
+    icon: '🗺️',
+    iconBg: 'linear-gradient(135deg, #32ff7e, #1a9e4b)',
+    description: 'Where everyone is — online agents, subscribers and visitors by state and country',
+    visibleTo: ['admin'],
+    Component: OpsMapApp,
+    defaultSize: { width: 1180, height: 780 },
   },
   {
     id: 'numbers',
