@@ -4531,9 +4531,53 @@ function DialerPageInner() {
           ))}
         </div>
 
-        {/* Directly above DIAL, because that is the moment the answer
-            matters. A recording switch somewhere in settings is a switch
-            nobody remembers the state of at the one second it counts. */}
+        {/* First of the two. Detection is the setting an agent changes far
+            more often — recording is usually left alone for legal reasons —
+            so it sits where the thumb reaches first on a phone.
+            Blue rather than red: detection is a cost decision, not a legal
+            one, and should not borrow the colour of the switch that is. */}
+        <button
+          onClick={toggleManualAmd}
+          aria-pressed={manualAmd}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            gap: 8, width: '100%', boxSizing: 'border-box',
+            padding: inOverlay ? '12px 14px' : '8px 10px',
+            marginBottom: inOverlay ? 12 : 6,
+            borderRadius: 3, cursor: 'pointer', flexShrink: 0,
+            background: manualAmd ? 'rgba(74, 158, 255, 0.12)' : terminalSurface,
+            border: `1px solid ${manualAmd ? '#4a9eff' : terminalBorder}`,
+            color: manualAmd ? '#4a9eff' : terminalMuted,
+            fontFamily: FUTURA,
+            fontSize: inOverlay ? '11px' : '9px',
+            letterSpacing: '2px', fontWeight: 'bold',
+          }}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span
+              aria-hidden="true"
+              style={{
+                width: 9, height: 9, borderRadius: '50%', flexShrink: 0,
+                background: manualAmd ? '#4a9eff' : 'transparent',
+                border: `1.5px solid ${manualAmd ? '#4a9eff' : terminalMuted}`,
+                boxShadow: manualAmd ? '0 0 6px rgba(74, 158, 255, 0.75)' : 'none',
+              }}
+            />
+            MACHINE DETECTION
+          </span>
+          <span style={{
+            fontSize: inOverlay ? '10px' : '8px', letterSpacing: '1.5px',
+            padding: '2px 7px', borderRadius: 2,
+            background: manualAmd ? '#4a9eff' : 'transparent',
+            border: `1px solid ${manualAmd ? '#4a9eff' : terminalBorder}`,
+            color: manualAmd ? '#fff' : terminalMuted,
+          }}>{manualAmd ? 'ON' : 'OFF'}</span>
+        </button>
+        {/* Second of the two, and the one closest to DIAL, because it is
+            the answer with consequences outside this call: a recording is
+            kept. Both live here rather than in settings for the same reason —
+            a switch somewhere else is a switch nobody remembers the state of
+            at the one second it counts. */}
         <button
           onClick={toggleManualRecord}
           aria-pressed={manualRecord}
@@ -4575,47 +4619,6 @@ function DialerPageInner() {
           }}>{manualRecord ? 'ON' : 'OFF'}</span>
         </button>
 
-        {/* Paired with RECORD deliberately, because the two answers are made
-            at the same moment and about the same call. Blue rather than red:
-            detection is not a legal decision and should not borrow the colour
-            of the one that is. */}
-        <button
-          onClick={toggleManualAmd}
-          aria-pressed={manualAmd}
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            gap: 8, width: '100%', boxSizing: 'border-box',
-            padding: inOverlay ? '12px 14px' : '8px 10px',
-            marginBottom: inOverlay ? 12 : 6,
-            borderRadius: 3, cursor: 'pointer', flexShrink: 0,
-            background: manualAmd ? 'rgba(74, 158, 255, 0.12)' : terminalSurface,
-            border: `1px solid ${manualAmd ? '#4a9eff' : terminalBorder}`,
-            color: manualAmd ? '#4a9eff' : terminalMuted,
-            fontFamily: FUTURA,
-            fontSize: inOverlay ? '11px' : '9px',
-            letterSpacing: '2px', fontWeight: 'bold',
-          }}
-        >
-          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span
-              aria-hidden="true"
-              style={{
-                width: 9, height: 9, borderRadius: '50%', flexShrink: 0,
-                background: manualAmd ? '#4a9eff' : 'transparent',
-                border: `1.5px solid ${manualAmd ? '#4a9eff' : terminalMuted}`,
-                boxShadow: manualAmd ? '0 0 6px rgba(74, 158, 255, 0.75)' : 'none',
-              }}
-            />
-            MACHINE DETECTION
-          </span>
-          <span style={{
-            fontSize: inOverlay ? '10px' : '8px', letterSpacing: '1.5px',
-            padding: '2px 7px', borderRadius: 2,
-            background: manualAmd ? '#4a9eff' : 'transparent',
-            border: `1px solid ${manualAmd ? '#4a9eff' : terminalBorder}`,
-            color: manualAmd ? '#fff' : terminalMuted,
-          }}>{manualAmd ? 'ON' : 'OFF'}</span>
-        </button>
 
         <div style={{
           display: 'grid', gridTemplateColumns: '1fr 2fr',
@@ -6218,7 +6221,20 @@ function DialerPageInner() {
             <span style={{ fontSize: '9px', letterSpacing: '3px', color: 'var(--brand-on-sidebar-muted)', fontWeight: 'bold' }}>TODAY&apos;S METRICS</span>
           </div>
 
-          <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '5px', flexShrink: 0 }}>
+          {/* ── SIX TILES, THREE ROWS, NOT SIX STACKED BARS ──────────────────
+              These were full-width rows with 18-20px numerals, and together
+              they ate enough of a phone screen that DIAL was clipped and the
+              system log was pushed off it entirely — the two things an agent
+              actually needs while dialing, lost to counters that are mostly
+              zero.
+              Two columns costs nothing in legibility: every value is a small
+              integer or a percentage, so the digits were never what needed the
+              room. The labels ellipsis rather than wrap, which keeps every
+              tile exactly one line tall and the grid honest. */}
+          <div style={{
+            padding: '8px 10px', display: 'grid',
+            gridTemplateColumns: '1fr 1fr', gap: '4px', flexShrink: 0,
+          }}>
             {[
               { label: 'CONNECTED', value: sessionStats.connected, color: 'var(--brand-primary)' },
               { label: 'CLOSED', value: sessionStats.closed, color: '#16a34a' },
@@ -6228,30 +6244,43 @@ function DialerPageInner() {
             ].map((stat) => (
               <div key={stat.label} style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '8px 12px', background: terminalSurface,
+                gap: 6, minWidth: 0,
+                padding: '5px 8px', background: terminalSurface,
                 border: `1px solid ${terminalBorder}`, borderRadius: '3px',
                 borderLeft: `3px solid ${stat.color}`,
               }}>
-                <span style={{ fontSize: '9px', letterSpacing: '2px', color: terminalMuted }}>{stat.label}</span>
-                <span style={{ fontSize: '18px', fontWeight: 'bold', fontFamily: 'monospace', color: stat.color }}>{stat.value}</span>
+                <span style={{
+                  fontSize: '8px', letterSpacing: '1px', color: terminalMuted,
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>{stat.label}</span>
+                <span style={{
+                  fontSize: '15px', fontWeight: 'bold', fontFamily: 'monospace',
+                  color: stat.color, flexShrink: 0,
+                }}>{stat.value}</span>
               </div>
             ))}
-          </div>
 
-          <div style={{ padding: '0 12px 10px', flexShrink: 0 }}>
+            {/* Sixth cell, so the grid closes evenly instead of leaving a hole
+                next to DO NOT CALL. */}
             <div style={{
-              padding: '10px 12px', background: terminalSurface,
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              gap: 6, minWidth: 0,
+              padding: '5px 8px', background: terminalSurface,
               border: `1px solid ${terminalBorder}`, borderRadius: '3px',
-              borderTop: `3px solid ${terminalAccent}`,
+              borderLeft: `3px solid ${terminalAccent}`,
             }}>
-              <div style={{ fontSize: '8px', letterSpacing: '1px', color: terminalMuted, marginBottom: '3px' }}>
-                TODAY&apos;S CONVERSION RATE
-              </div>
-              <div style={{ fontSize: '20px', fontWeight: 'bold', fontFamily: 'monospace', color: terminalAccent }}>
+              <span style={{
+                fontSize: '8px', letterSpacing: '1px', color: terminalMuted,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>CONV RATE</span>
+              <span style={{
+                fontSize: '15px', fontWeight: 'bold', fontFamily: 'monospace',
+                color: terminalAccent, flexShrink: 0,
+              }}>
                 {sessionStats.calls > 0
                   ? `${(((sessionStats.appointments + sessionStats.closed) / sessionStats.calls) * 100).toFixed(1)}%`
                   : '0.0%'}
-              </div>
+              </span>
             </div>
           </div>
 
