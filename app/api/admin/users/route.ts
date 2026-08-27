@@ -3,6 +3,7 @@ import { getServiceClient } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 import { requireAdmin } from '@/lib/admin'
 import { isSubscriptionTrulyActive } from '@/lib/subscriptionStatus'
+import { isEntitledStatus, isTrialing } from '@/lib/entitlement'
 
 const supabase = getServiceClient('admin/users')
 
@@ -187,7 +188,20 @@ export async function GET(req: NextRequest) {
     // ONLY overrides what this row DISPLAYS as active — `sub` itself and
     // everything in the `subscription` object below is untouched, so the
     // real subscription stays exactly as it is.
+    // ── BILLING AND ACCESS ARE DIFFERENT QUESTIONS ───────────────────────
+    // isSubscriptionTrulyActive answers "is this money arriving", and it is
+    // deliberately narrow: analytics divides revenue by it, so widening it to
+    // include trials would book income nobody has paid. Left alone.
+    //
+    // The overview asks something else — can this person use the product —
+    // and by that measure a trial IS active. Showing a live trial as INACTIVE
+    // next to a green ONLINE dot, on somebody dialing right now, is simply
+    // wrong. Answered with the same ENTITLED_STATUSES the proxy gates on, so
+    // the badge and the door agree.
+    const entitled = !!sub && isEntitledStatus(sub.status) && !sub.cancel_at_period_end
+    const trialing = !!sub && isTrialing(sub.status)
     const displayAsActive = isActive && !u.exclude_from_analytics
+    const displayAsEntitled = entitled && !u.exclude_from_analytics
     return {
       clerk_id: u.clerk_id,
       email: u.email,
@@ -218,6 +232,9 @@ export async function GET(req: NextRequest) {
           }
         : null,
       is_active_subscription: displayAsActive,
+      // Has access right now — includes a live trial. The pill reads this.
+      has_access: displayAsEntitled,
+      is_trialing: trialing,
     }
   })
 

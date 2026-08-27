@@ -44,6 +44,8 @@ interface AdminUser {
     subscribed_since: string | null
   } | null
   is_active_subscription: boolean
+  has_access?: boolean
+  is_trialing?: boolean
 }
 
 type FilterMode = 'all' | 'active' | 'inactive'
@@ -222,8 +224,8 @@ export default function OverviewApp() {
 
   const filtered = useMemo(() => {
     let list = users
-    if (filter === 'active') list = list.filter(u => u.is_active_subscription)
-    else if (filter === 'inactive') list = list.filter(u => !u.is_active_subscription)
+    if (filter === 'active') list = list.filter(u => u.has_access ?? u.is_active_subscription)
+    else if (filter === 'inactive') list = list.filter(u => !(u.has_access ?? u.is_active_subscription))
     if (search.trim()) {
       const q = search.toLowerCase()
       // Username included: it is now on screen, and a field you can read but
@@ -256,8 +258,8 @@ export default function OverviewApp() {
 
   const counts = useMemo(() => ({
     all: users.length,
-    active: users.filter(u => u.is_active_subscription).length,
-    inactive: users.filter(u => !u.is_active_subscription).length,
+    active: users.filter(u => u.has_access ?? u.is_active_subscription).length,
+    inactive: users.filter(u => !(u.has_access ?? u.is_active_subscription)).length,
     online: users.filter(u => isOnline(u.last_seen_at)).length,
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [users, tick])
@@ -831,9 +833,13 @@ export default function OverviewApp() {
                   {timeAgo(u.created_at)}
                 </div>
                 <div className="ovr-status-stack">
-                  <span className={`ovr-pill-status ${u.is_active_subscription ? 'active' : 'inactive'}`}>
-                    <span className={`ovr-status-dot ${u.is_active_subscription ? 'green' : 'gray'}`} />
-                    {u.is_active_subscription ? 'ACTIVE' : 'INACTIVE'}
+                  {/* Access, not billing. A trial is active — the person can
+                      dial — and showing them INACTIVE beside a green ONLINE
+                      dot was simply untrue. Labelled TRIAL rather than just
+                      coloured, so "active" never quietly means "paying". */}
+                  <span className={`ovr-pill-status ${(u.has_access ?? u.is_active_subscription) ? 'active' : 'inactive'}`}>
+                    <span className={`ovr-status-dot ${(u.has_access ?? u.is_active_subscription) ? 'green' : 'gray'}`} />
+                    {u.is_trialing ? 'TRIAL' : (u.has_access ?? u.is_active_subscription) ? 'ACTIVE' : 'INACTIVE'}
                   </span>
                   {userOnline && (
                     <span className="ovr-pill-status online">

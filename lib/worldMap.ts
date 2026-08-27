@@ -290,6 +290,74 @@ export const LAND: ReadonlyArray<{ name: string; ring: LatLon[] }> = [
   },
 ]
 
+
+// ── INTERNAL BORDERS ─────────────────────────────────────────────────────
+// Open polylines, not rings: a border is a line between two places, and
+// closing it would fill a country that the coastline already drew.
+//
+// INDICATIVE, and more so than the coastlines. These are the divisions that
+// make a dark map legible at a glance — you find Texas by the line above it,
+// not by reading a label — and they are traced to a few degrees. They are not
+// a statement about any disputed boundary and nothing in the product reads
+// them; they are ink.
+//
+// Drawn under the pings and over the land fill, in a stroke a shade lighter
+// than the coast so the outline of a continent still reads as the strongest
+// line on the map.
+export const BORDERS: ReadonlyArray<LatLon[]> = [
+  // US / Canada — the 49th, the lakes, and the eastern run
+  [[49, -123], [49, -95], [48.5, -94], [46.5, -84], [45.5, -82], [43, -79],
+   [44.5, -76], [45, -71], [47, -68], [47.2, -67.8]],
+  // US / Mexico
+  [[32.5, -117], [31.3, -111], [31.3, -108], [31.8, -106.5], [29.8, -104],
+   [29.3, -101], [26.5, -99], [25.9, -97.1]],
+  // Mexico / Guatemala + Belize
+  [[17.8, -92.2], [17.8, -89.1], [15.9, -88.9]],
+  // Panama / Colombia
+  [[9, -77.4], [7.9, -77.3]],
+  // Brazil, western and southern
+  [[4.5, -60.5], [1, -69.5], [-4, -70], [-9, -73], [-11, -68.5], [-16, -60],
+   [-20, -58], [-22, -57.6], [-27, -55], [-30, -57], [-33.7, -53.4]],
+  // Argentina / Chile — the Andes
+  [[-22, -67], [-27, -69], [-33, -70.1], [-39, -71.5], [-46, -72], [-52, -72]],
+  // Scandinavia's inner lines
+  [[69, 20], [66, 15], [63, 12], [61, 12.5], [59, 11.5]],
+  [[70, 28], [68, 23], [66, 24], [65, 24], [60, 27.5]],
+  // France / Spain, France / Germany, Germany / Poland
+  [[43.4, -1.8], [42.7, 0.7], [42.5, 3.2]],
+  [[49, 8.2], [48, 7.6], [47.5, 7.6]],
+  [[54, 14.3], [52, 14.6], [50.9, 15]],
+  [[47, 12], [46.5, 13.7], [45.5, 13.6]],
+  // Poland / Ukraine / Belarus
+  [[52, 23.5], [50.5, 24], [48.5, 22.6]],
+  // Russia / Kazakhstan
+  [[51, 50], [51, 60], [53, 70], [50.5, 80], [49, 87]],
+  // China / Mongolia / Russia
+  [[49.5, 88], [50, 100], [49.5, 115], [45, 120], [42.5, 130]],
+  // China / India — the Himalaya
+  [[35, 76], [32, 79], [30, 81], [28, 88], [27.5, 92], [28.2, 97]],
+  // India / Pakistan
+  [[35, 74], [32, 75], [28, 70], [24, 68.8]],
+  // India / Bangladesh / Myanmar
+  [[26.5, 89], [23, 89], [22, 92], [25, 94.5], [27.5, 97]],
+  // Thailand / Laos / Vietnam
+  [[20.3, 100.4], [18, 103], [15, 105.5], [14, 107.5], [11.5, 106]],
+  // Egypt / Sudan / Libya
+  [[22, 25], [22, 36]],
+  [[31, 25], [22, 25]],
+  // Sahel: Algeria / Mali / Niger
+  [[27, -8.7], [22, 0], [19, 4], [23, 12]],
+  // Nigeria and the Gulf of Guinea states
+  [[13.5, 4], [11, 3.6], [6.5, 2.7], [4.5, 8.5], [12, 14], [13.5, 14]],
+  // DRC / Angola / Zambia
+  [[-6, 12.3], [-8, 19], [-11, 22], [-13, 24], [-17.8, 25.3]],
+  // South Africa / Namibia / Botswana / Zimbabwe
+  [[-28.6, 16.5], [-25, 20], [-22, 29], [-22.3, 31.3]],
+  // Australia is one country; these are the state lines that make it read
+  [[-26, 129], [-26, 141], [-29, 141], [-29, 153]],
+  [[-26, 138], [-38, 141]],
+]
+
 // ── WHERE A PING GOES ────────────────────────────────────────────────────
 // Centroids, not capitals. A ping is a claim about a REGION, and putting it on
 // the capital says something more precise than the data supports — Vercel's

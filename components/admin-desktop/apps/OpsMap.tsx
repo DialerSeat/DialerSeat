@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { LAND, MAP_W, MAP_H, project } from '@/lib/worldMap'
+import { LAND, BORDERS, MAP_W, MAP_H, project } from '@/lib/worldMap'
 
 // ── PALETTE ─────────────────────────────────────────────────────────────
 // Deliberately NOT the admin desktop's chrome. This app is meant to read as
@@ -34,7 +34,7 @@ const MODES = [
 ] as const
 type Mode = (typeof MODES)[number]['id']
 
-const RANGES = ['24h', '7d', '30d', '90d'] as const
+const RANGES = ['12h', '24h', '7d', '30d', '90d'] as const
 type Range = (typeof RANGES)[number]
 
 const SYNC_MS = 5000
@@ -182,6 +182,10 @@ export default function OpsMap() {
   // other or growing a second panel nobody has room for.
   const [feedView, setFeedView] = useState<'calls' | 'people'>(saved.feedView ?? 'calls')
   const [callFilter, setCallFilter] = useState<'all' | 'answered' | 'missed' | 'machine' | 'human'>('all')
+  // The PEOPLE view needs its own filter, not a shared one: "answered" means
+  // nothing about an account and "trial" means nothing about a call.
+  const [peopleFilter, setPeopleFilter] =
+    useState<'all' | 'online' | 'paying' | 'trial' | 'seat' | 'dialed' | 'unplaced'>('all')
   const [view, setView] = useState<View>(WORLD)
 
   // Which feed rows arrived on the most recent sync. Held in state because it
@@ -337,6 +341,17 @@ export default function OpsMap() {
       }).join(' ') + ' Z',
     })), [])
 
+  // Same projection as the coastlines, so the two can never drift apart.
+  const borderPaths = useMemo(
+    () => BORDERS.map(line =>
+      line.map(([lat, lon], i) => {
+        const { x, y } = project(lat, lon, MAP_W, MAP_H)
+        return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)}`
+      }).join(' ')
+    ),
+    []
+  )
+
   const graticule = useMemo(() => {
     const l: { x1: number; y1: number; x2: number; y2: number }[] = []
     for (let lon = -180; lon <= 180; lon += 15) {
@@ -358,6 +373,20 @@ export default function OpsMap() {
   // Filtering here rather than in the query: the feed is 80 rows and already
   // in memory, so a round trip per filter click would add latency to answer a
   // question the client can answer instantly.
+  const shownPeople = (data?.people ?? []).filter(p => {
+    switch (peopleFilter) {
+      case 'online': return p.online
+      case 'paying': return p.status === 'active' || !!p.seatPayer
+      case 'trial': return p.status === 'trialing'
+      case 'seat': return !!p.seatPayer
+      case 'dialed': return p.calls > 0
+      // The ones the map cannot draw. Worth a filter of its own precisely
+      // because they are invisible everywhere else on this screen.
+      case 'unplaced': return !p.place
+      default: return true
+    }
+  })
+
   const shownFeed = (data?.feed ?? []).filter(f => {
     if (callFilter === 'answered') return f.answered
     if (callFilter === 'missed') return !f.answered
@@ -367,7 +396,44 @@ export default function OpsMap() {
   })
 
   const zoom = MAP_W / view.w
+  // Ping radii are drawn in map units, so dividing by the zoom keeps them a
+  // constant size on screen. That is right on a desktop, where zooming is for
+  // reading labels — and wrong on a phone, where zooming IS how you pick a
+  // ping out and a dot that never grows stays just as hard to hit.
+  //
+  // The exponent is the compromise: at 0.55 a 4x zoom makes a ping about
+  // twice its size rather than four times, so it becomes tappable without
+  // swallowing the state it is sitting on.
   const k = 1 / zoom
+  const pingK = narrow ? Math.pow(k, 0.55) : k
+
+  // ── SCREEN PIXELS TO MAP UNITS ────────────────────────────────────────
+  // rect.width / view.w is only the scale when the viewBox stretches to fill
+  // the element, which is what preserveAspectRatio="none" does. This map uses
+  // meet or slice, so the SVG scales UNIFORMLY and one axis is letterboxed or
+  // cropped — on that axis the naive ratio is wrong, and it gets wronger the
+  // further you zoom, which is exactly how dragging came to feel like it was
+  // fighting back.
+  //
+  // One scale for both axes, plus the offset of the rendered content inside
+  // the element. Everything that converts a pointer position goes through it,
+  // so panning, pinching and wheel-zoom all agree about where the finger is.
+  const viewScale = useCallback((v: View) => {
+    const rect = svgRef.current?.getBoundingClientRect()
+    if (!rect || !rect.width || !rect.height) {
+      return { scale: 1, offX: 0, offY: 0, rect: null as DOMRect | null }
+    }
+    const sx = rect.width / v.w
+    const sy = rect.height / v.h
+    // meet fits the whole box inside (min); slice covers it (max).
+    const scale = narrow ? Math.min(sx, sy) : Math.max(sx, sy)
+    return {
+      scale,
+      offX: (rect.width - v.w * scale) / 2,
+      offY: (rect.height - v.h * scale) / 2,
+      rect,
+    }
+  }, [narrow])
 
   const clampView = useCallback((v: View): View => {
     const w = Math.min(MAX_W, Math.max(MIN_W, v.w))
@@ -425,15 +491,24 @@ export default function OpsMap() {
         moved.current = true
         const nw = Math.min(MAX_W, Math.max(MIN_W, st.view.w / (dist / st.dist)))
         const nh = nw * (MAP_H / MAP_W)
-        const fx = (st.cx - rect.left) / rect.width
-        const fy = (st.cy - rect.top) / rect.height
+        // Same correction as the wheel path: find the map point under the
+        // pinch centre through the real scale and the letterbox offset, then
+        // hold it still. Without this a two-finger zoom drifts sideways.
+        const { scale: s0, offX, offY } = viewScale(st.view)
+        const mx = st.view.x + (st.cx - rect.left - offX) / s0
+        const my = st.view.y + (st.cy - rect.top - offY) / s0
+        const fx = (mx - st.view.x) / st.view.w
+        const fy = (my - st.view.y) / st.view.h
         setView(clampView({ w: nw, h: nh, x: st.view.x + (st.view.w - nw) * fx, y: st.view.y + (st.view.h - nh) * fy }))
       }
       return
     }
     if (dragFrom.current) {
-      const dx = ((e.clientX - dragFrom.current.px) / rect.width) * dragFrom.current.view.w
-      const dy = ((e.clientY - dragFrom.current.py) / rect.height) * dragFrom.current.view.h
+      // Divide by the real scale, so one pixel of finger is one pixel of map
+      // at every zoom level and on both axes.
+      const { scale } = viewScale(dragFrom.current.view)
+      const dx = (e.clientX - dragFrom.current.px) / scale
+      const dy = (e.clientY - dragFrom.current.py) / scale
       if (Math.abs(dx) > 0.4 || Math.abs(dy) > 0.4) moved.current = true
       setView(clampView({ ...dragFrom.current.view, x: dragFrom.current.view.x - dx, y: dragFrom.current.view.y - dy }))
     }
@@ -653,6 +728,17 @@ export default function OpsMap() {
                 strokeWidth={0.8 * k} strokeLinejoin="round" />
         ))}
 
+        {/* Borders sit above the land fill and below everything else. They
+            exist to make a shape recognisable — you find Texas by the line
+            above it, not by reading a label — and are drawn thinner and
+            fainter than the coast so a continent's outline stays the
+            strongest line on the map. */}
+        {borderPaths.map((d, i) => (
+          <path key={i} d={d} fill="none" stroke={LAND_EDGE}
+                strokeWidth={0.4 * k} strokeOpacity={0.65}
+                strokeLinejoin="round" strokeLinecap="round" />
+        ))}
+
         {/* Arcs: origin -> destination, curved so two-way traffic does not
             overlap into one ambiguous straight line. */}
         {arcs.map((a, i) => {
@@ -693,7 +779,7 @@ export default function OpsMap() {
           // Tiny by design. There will eventually be one of these per state
           // dialed into; at the old size a busy week painted the whole country
           // amber and the origins disappeared underneath it.
-          const r = (0.5 + Math.sqrt(t.calls / maxCalls) * 1.1) * k
+          const r = (0.5 + Math.sqrt(t.calls / maxCalls) * 1.1) * pingK
           const on = selected === t.key
           return (
             <g key={t.key} style={{ cursor: 'pointer' }}
@@ -714,7 +800,7 @@ export default function OpsMap() {
         {points.map(p => {
           const { x, y } = project(p.lat, p.lon, MAP_W, MAP_H)
           // Sized for a map with hundreds of these on it, not four.
-          const r = (0.9 + Math.sqrt(p.users / maxUsers) * 2.0) * k
+          const r = (0.9 + Math.sqrt(p.users / maxUsers) * 2.0) * pingK
           const live = p.online > 0
           const c = live ? GREEN : CYAN
           const on = selected === p.key
@@ -755,10 +841,20 @@ export default function OpsMap() {
           'radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 38%, rgba(0,0,0,0.45) 78%, rgba(0,0,0,0.78) 100%)',
       }} />
 
-      {/* ── TOP BAR ─────────────────────────────────────────────────────── */}
+      {/* ── TOP BAR ─────────────────────────────────────────────────────────
+          The bar and the status line share one absolutely-positioned column
+          rather than each being pinned to its own `top`. The bar wraps — five
+          modes, five ranges and six buttons will not fit one row on a narrow
+          window — and a status strip nailed to top:40 sat underneath the
+          second row the moment it did. Stacking them means the status is
+          wherever the bar ended, at any width. */}
       <div style={{
-        position: 'absolute', top: 8, left: 8, right: 8, display: 'flex',
-        gap: 6, flexWrap: 'wrap', alignItems: 'center', zIndex: 6, pointerEvents: 'none',
+        position: 'absolute', top: 8, left: 8, right: 8, zIndex: 6,
+        pointerEvents: 'none', display: 'flex', flexDirection: 'column', gap: 5,
+      }}>
+      <div style={{
+        display: 'flex',
+        gap: 6, flexWrap: 'wrap', alignItems: 'center', pointerEvents: 'none',
       }}>
         <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', pointerEvents: 'auto' }}>
           {MODES.map(m => (
@@ -791,9 +887,10 @@ export default function OpsMap() {
         </div>
       </div>
 
-      {/* Status strip */}
+      {/* Status strip — now a sibling in the column above, so it follows the
+          bar down instead of being overlapped by it. */}
       <div style={{
-        position: 'absolute', top: 40, left: 10, zIndex: 6, fontSize: 9.5,
+        fontSize: 9.5, paddingLeft: 2,
         letterSpacing: 1.4, color: DIM, fontFamily: 'ui-monospace, Menlo, monospace',
         textShadow: `0 0 8px ${VOID}`, pointerEvents: 'none',
       }}>
@@ -807,6 +904,7 @@ export default function OpsMap() {
         {zoom > 1.02 && <> · {zoom.toFixed(1)}×</>}
         {err && <> · <span style={{ color: RED }}>{err}</span></>}
         {!data && <> · SYNCING…</>}
+      </div>
       </div>
 
       {/* ── DETAIL ──────────────────────────────────────────────────────── */}
@@ -932,7 +1030,7 @@ export default function OpsMap() {
                           onClick={() => setFeedView('calls')}>CALLS</button>
                   <button className="om-mini" data-on={feedView === 'people'}
                           onClick={() => setFeedView('people')}>PEOPLE</button>
-                  {feedView === 'calls' && (
+                  {feedView === 'calls' ? (
                     <>
                       <span className="om-sep" />
                       {([
@@ -943,11 +1041,23 @@ export default function OpsMap() {
                                 onClick={() => setCallFilter(id)}>{lbl}</button>
                       ))}
                     </>
+                  ) : (
+                    <>
+                      <span className="om-sep" />
+                      {([
+                        ['all', 'ALL'], ['online', 'ONLINE'], ['paying', 'PAYING'],
+                        ['trial', 'TRIAL'], ['seat', 'ON A SEAT'], ['dialed', 'HAS DIALED'],
+                        ['unplaced', 'UNPLACED'],
+                      ] as const).map(([id, lbl]) => (
+                        <button key={id} className="om-mini" data-on={peopleFilter === id}
+                                onClick={() => setPeopleFilter(id)}>{lbl}</button>
+                      ))}
+                    </>
                   )}
                   <span style={{ marginLeft: 'auto', color: DIM, fontSize: 9, letterSpacing: 1 }}>
                     {feedView === 'calls'
                       ? shownFeed.length + ' of ' + (data?.feed ?? []).length
-                      : (data?.people ?? []).length + ' accounts'}
+                      : shownPeople.length + ' of ' + (data?.people ?? []).length + ' accounts'}
                   </span>
                 </div>
 
@@ -1023,7 +1133,7 @@ export default function OpsMap() {
                         </tr>
                       </thead>
                       <tbody>
-                        {(data?.people ?? []).map(pr => (
+                        {shownPeople.map(pr => (
                           <tr key={pr.id}>
                             <td style={{ color: pr.online ? GREEN : INK }}>
                               {pr.online ? '● ' : ''}{pr.label}
@@ -1051,8 +1161,12 @@ export default function OpsMap() {
                             </td>
                           </tr>
                         ))}
-                        {(data?.people ?? []).length === 0 && (
-                          <tr><td colSpan={11} style={{ color: DIM, padding: 10 }}>No accounts.</td></tr>
+                        {shownPeople.length === 0 && (
+                          <tr><td colSpan={11} style={{ color: DIM, padding: 10 }}>
+                            {(data?.people ?? []).length === 0
+                              ? 'No accounts.'
+                              : 'No accounts match this filter.'}
+                          </td></tr>
                         )}
                       </tbody>
                     </table>

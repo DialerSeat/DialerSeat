@@ -12,6 +12,7 @@ const LINE = '#4a9eff'
 const LINE2 = '#32c48d'
 
 const RANGES = [
+  { key: '12h', label: '12 hours' },
   { key: '24h', label: '24 hours' },
   { key: '7d', label: '7 days' },
   { key: '30d', label: '30 days' },

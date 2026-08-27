@@ -89,7 +89,7 @@ export async function GET(req: NextRequest) {
     const place = req.nextUrl.searchParams.get('place')
     if (place) {
       const rangeQ = req.nextUrl.searchParams.get('range') || '24h'
-      const d = rangeQ === '24h' ? 1 : rangeQ === '7d' ? 7 : rangeQ === '90d' ? 90 : 30
+      const d = rangeQ === '12h' ? 0.5 : rangeQ === '24h' ? 1 : rangeQ === '7d' ? 7 : rangeQ === '90d' ? 90 : 30
       const sinceQ = new Date(Date.now() - d * 24 * 60 * 60 * 1000).toISOString()
       // "US-NC" -> country US, region NC. "PH" -> country PH, region null.
       const [country, region] = place.includes('-')
@@ -109,12 +109,20 @@ export async function GET(req: NextRequest) {
     const mode: Mode = (MODES as readonly string[]).includes(rawMode) ? (rawMode as Mode) : 'visitors'
 
     const rangeParam = req.nextUrl.searchParams.get('range') || '24h'
-    const days = rangeParam === '24h' ? 1 : rangeParam === '7d' ? 7 : rangeParam === '90d' ? 90 : 30
+    // 12h is half a day rather than a special case — the arithmetic below is
+    // all in days, so a fraction costs nothing and keeps one code path.
+    const days = rangeParam === '12h' ? 0.5
+      : rangeParam === '24h' ? 1
+      : rangeParam === '7d' ? 7
+      : rangeParam === '90d' ? 90 : 30
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
 
     // Bucket count follows the range: a day reads well in hours, ninety days
     // does not. Decided here so both the query and the axis label agree.
-    const buckets = rangeParam === '24h' ? 24 : rangeParam === '7d' ? 28 : rangeParam === '90d' ? 45 : 30
+    const buckets = rangeParam === '12h' ? 24
+      : rangeParam === '24h' ? 24
+      : rangeParam === '7d' ? 28
+      : rangeParam === '90d' ? 45 : 30
 
     const [originsRes, targetsRes, feedRes, breakdownRes, pulseRes, peopleRes] = await Promise.all([
       mode === 'visitors'

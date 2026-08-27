@@ -60,13 +60,17 @@ export async function GET(req: NextRequest) {
     const audienceParam = req.nextUrl.searchParams.get('audience') || 'all'
     const audience: boolean | null =
       audienceParam === 'anon' ? false : audienceParam === 'authed' ? true : null
-    const days = range === '24h' ? 1 : range === '7d' ? 7 : range === '90d' ? 90 : 30
+    const days = range === '12h' ? 0.5
+      : range === '24h' ? 1
+      : range === '7d' ? 7
+      : range === '90d' ? 90 : 30
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
     const sinceIso = since.toISOString()
 
     // Hourly across a single day, daily beyond it. A 24-hour view bucketed by
     // day is one bar, and a 90-day view bucketed by hour is 2,160 points of
     // noise — neither answers the question the range was chosen to ask.
+    // Half a day and a whole day both read as hours; anything longer does not.
     const byHour = days <= 1
 
     const todayStart = new Date()
