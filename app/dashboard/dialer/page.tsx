@@ -300,6 +300,12 @@ function DialerPageInner() {
   // why dialing stopped working. This puts it where STATUS is.
   const [agentLegError, setAgentLegError] = useState<string | null>(null)
 
+  // Collapsed by default. Both settings below are deliberate exceptions to
+  // what a campaign would do, so the resting state of this panel should be
+  // "nothing unusual is set" rather than two switches inviting a decision on
+  // every call.
+  const [manualSettingsOpen, setManualSettingsOpen] = useState(false)
+
   const [manualAmd, setManualAmd] = useState(true)
   useEffect(() => {
     try {
@@ -2232,7 +2238,12 @@ function DialerPageInner() {
     }
   }, [isActive, isPredictive, available, isSpecificCampaign, selectedCampaign, currentCampaign, linesPref])
 
-  const handleSetAvailable = async () => {
+  /**
+   * Returns whether the agent is LIVE afterwards. Callers that go live on
+   * somebody's behalf need to know, because the one way this fails — a refused
+   * microphone — is also the one that makes a placed call silently unanswerable.
+   */
+  const handleSetAvailable = async (): Promise<boolean> => {
     // ── GOING AVAILABLE IS NOT ARMING ──────────────────────────────────────
     // Now that predictive_armed lives in the database it survives everything —
     // a reload, a closed tab, a session that ended badly. So a flag left set
@@ -2256,7 +2267,7 @@ function DialerPageInner() {
         granted = true
       } catch (err) {
         console.warn('Microphone permission denied:', err)
-        return
+        return false
       }
     }
 
@@ -2330,6 +2341,9 @@ function DialerPageInner() {
     }
 
     setAvailable(prev => !prev)
+    // The state has not flushed yet, so report the intent rather than reading
+    // `available` back. goingOffline true means we just went offline.
+    return !goingOffline
   }
 
   // ── TONES ────────────────────────────────────────────────────────────────
@@ -3998,6 +4012,32 @@ function DialerPageInner() {
 
   const handleManualDial = async () => {
     if (!manualNumber) return
+
+    // ── DIAL MEANS GO LIVE ────────────────────────────────────────────────
+    // Pressing DIAL while offline used to place the call anyway, and the call
+    // would ring the lead and then fail with no audio — because going LIVE is
+    // where the microphone is actually requested. Without it, the agent leg's
+    // accept() calls getUserMedia against a permission nobody has asked for,
+    // throws, and Telnyx reports the leg as hung up by the callee. Placed,
+    // ringing, unanswerable, and nothing on screen explaining it.
+    //
+    // So DIAL now flips the switch itself. Nobody presses DIAL meaning "but
+    // stay offline", and the toggle was a prerequisite the button never
+    // mentioned.
+    //
+    // If the microphone is refused we do NOT dial. Ringing a stranger's phone
+    // from a browser that cannot answer is worse than not calling at all.
+    if (!availableRef.current) {
+      const live = await handleSetAvailable()
+      if (!live) {
+        setAgentLegError(
+          'MICROPHONE BLOCKED — allow mic access for this site, then reload. ' +
+          'Nothing was dialed.'
+        )
+        return
+      }
+    }
+
     setDialZoomed(false)
     setStatus('calling')
     setSessionStats(s => ({ ...s, calls: s.calls + 1 }))
@@ -4556,93 +4596,153 @@ function DialerPageInner() {
           ))}
         </div>
 
-        {/* First of the two. Detection is the setting an agent changes far
-            more often — recording is usually left alone for legal reasons —
-            so it sits where the thumb reaches first on a phone.
-            Blue rather than red: detection is a cost decision, not a legal
-            one, and should not borrow the colour of the switch that is. */}
-        <button
-          onClick={toggleManualAmd}
-          aria-pressed={manualAmd}
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            gap: 8, width: '100%', boxSizing: 'border-box',
-            padding: inOverlay ? '12px 14px' : '8px 10px',
-            marginBottom: inOverlay ? 12 : 6,
-            borderRadius: 3, cursor: 'pointer', flexShrink: 0,
-            background: manualAmd ? 'rgba(74, 158, 255, 0.12)' : terminalSurface,
-            border: `1px solid ${manualAmd ? '#4a9eff' : terminalBorder}`,
-            color: manualAmd ? '#4a9eff' : terminalMuted,
-            fontFamily: FUTURA,
-            fontSize: inOverlay ? '11px' : '9px',
-            letterSpacing: '2px', fontWeight: 'bold',
-          }}
-        >
-          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span
-              aria-hidden="true"
-              style={{
-                width: 9, height: 9, borderRadius: '50%', flexShrink: 0,
-                background: manualAmd ? '#4a9eff' : 'transparent',
-                border: `1.5px solid ${manualAmd ? '#4a9eff' : terminalMuted}`,
-                boxShadow: manualAmd ? '0 0 6px rgba(74, 158, 255, 0.75)' : 'none',
-              }}
-            />
-            MACHINE DETECTION
-          </span>
-          <span style={{
-            fontSize: inOverlay ? '10px' : '8px', letterSpacing: '1.5px',
-            padding: '2px 7px', borderRadius: 2,
-            background: manualAmd ? '#4a9eff' : 'transparent',
-            border: `1px solid ${manualAmd ? '#4a9eff' : terminalBorder}`,
-            color: manualAmd ? '#fff' : terminalMuted,
-          }}>{manualAmd ? 'ON' : 'OFF'}</span>
-        </button>
-        {/* Second of the two, and the one closest to DIAL, because it is
-            the answer with consequences outside this call: a recording is
-            kept. Both live here rather than in settings for the same reason —
-            a switch somewhere else is a switch nobody remembers the state of
-            at the one second it counts. */}
-        <button
-          onClick={toggleManualRecord}
-          aria-pressed={manualRecord}
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            gap: 8, width: '100%', boxSizing: 'border-box',
-            padding: inOverlay ? '12px 14px' : '8px 10px',
-            marginBottom: inOverlay ? 12 : 6,
-            borderRadius: 3, cursor: 'pointer', flexShrink: 0,
-            background: manualRecord ? 'rgba(220, 38, 38, 0.12)' : terminalSurface,
-            border: `1px solid ${manualRecord ? '#dc2626' : terminalBorder}`,
-            color: manualRecord ? '#f87171' : terminalMuted,
-            fontFamily: FUTURA,
-            fontSize: inOverlay ? '11px' : '9px',
-            letterSpacing: '2px', fontWeight: 'bold',
-          }}
-        >
-          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {/* The dot is the whole point of it being visual: a solid red
-                circle reads as "armed" across the room, and a hollow one
-                reads as off without having to parse the word beside it. */}
-            <span
-              aria-hidden="true"
-              style={{
-                width: 9, height: 9, borderRadius: '50%', flexShrink: 0,
-                background: manualRecord ? '#dc2626' : 'transparent',
-                border: `1.5px solid ${manualRecord ? '#dc2626' : terminalMuted}`,
-                boxShadow: manualRecord ? '0 0 6px rgba(220, 38, 38, 0.75)' : 'none',
-              }}
-            />
-            RECORD CALL
-          </span>
-          <span style={{
-            fontSize: inOverlay ? '10px' : '8px', letterSpacing: '1.5px',
-            padding: '2px 7px', borderRadius: 2,
-            background: manualRecord ? '#dc2626' : 'transparent',
-            border: `1px solid ${manualRecord ? '#dc2626' : terminalBorder}`,
-            color: manualRecord ? '#fff' : terminalMuted,
-          }}>{manualRecord ? 'ON' : 'OFF'}</span>
-        </button>
+        {/* ── MANUAL DIALER SETTINGS ────────────────────────────────────
+            Both of these override what a campaign would decide, and both are
+            the exception rather than the rule — so they are folded away by
+            default. Left loose above DIAL they read as two more things to
+            answer before every call, which is the confusion this closes.
+
+            The header still reports the state while closed, so folding them
+            away never hides what is set: an agent glancing down sees
+            "DETECTION ON / REC OFF" without opening anything. A collapsed
+            panel that concealed its own settings would be worse than none. */}
+        <div style={{
+          marginBottom: inOverlay ? 12 : 6, flexShrink: 0,
+          border: `1px solid ${terminalBorder}`, borderRadius: 3,
+          background: terminalSurface, overflow: 'hidden',
+        }}>
+          <button
+            onClick={() => setManualSettingsOpen(o => !o)}
+            aria-expanded={manualSettingsOpen}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              gap: 8, width: '100%', boxSizing: 'border-box',
+              padding: inOverlay ? '12px 14px' : '8px 10px',
+              background: 'transparent', border: 'none', cursor: 'pointer',
+              color: terminalMuted, fontFamily: FUTURA,
+              fontSize: inOverlay ? '11px' : '9px',
+              letterSpacing: '2px', fontWeight: 'bold', textAlign: 'left',
+            }}
+          >
+            <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+              <span aria-hidden="true" style={{
+                display: 'inline-block', flexShrink: 0,
+                transform: manualSettingsOpen ? 'rotate(90deg)' : 'none',
+                transition: 'transform 0.12s',
+              }}>&#9656;</span>
+              MANUAL DIALER SETTINGS
+            </span>
+            {!manualSettingsOpen && (
+              <span style={{
+                fontSize: inOverlay ? '9px' : '7.5px', letterSpacing: '1px',
+                whiteSpace: 'nowrap', flexShrink: 0,
+              }}>
+                <span style={{ color: manualAmd ? '#4a9eff' : terminalMuted }}>
+                  DETECTION {manualAmd ? 'ON' : 'OFF'}
+                </span>
+                <span style={{ color: terminalMuted }}> &middot; </span>
+                <span style={{ color: manualRecord ? '#f87171' : terminalMuted }}>
+                  REC {manualRecord ? 'ON' : 'OFF'}
+                </span>
+              </span>
+            )}
+          </button>
+
+          {manualSettingsOpen && (
+            <div style={{
+              padding: inOverlay ? '0 14px 12px' : '0 10px 8px',
+              display: 'flex', flexDirection: 'column',
+            }}>
+          {/* First of the two. Detection is the setting an agent changes far
+              more often — recording is usually left alone for legal reasons —
+              so it sits where the thumb reaches first on a phone.
+              Blue rather than red: detection is a cost decision, not a legal
+              one, and should not borrow the colour of the switch that is. */}
+          <button
+            onClick={toggleManualAmd}
+            aria-pressed={manualAmd}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              gap: 8, width: '100%', boxSizing: 'border-box',
+              padding: inOverlay ? '12px 14px' : '8px 10px',
+              marginBottom: inOverlay ? 12 : 6,
+              borderRadius: 3, cursor: 'pointer', flexShrink: 0,
+              background: manualAmd ? 'rgba(74, 158, 255, 0.12)' : terminalSurface,
+              border: `1px solid ${manualAmd ? '#4a9eff' : terminalBorder}`,
+              color: manualAmd ? '#4a9eff' : terminalMuted,
+              fontFamily: FUTURA,
+              fontSize: inOverlay ? '11px' : '9px',
+              letterSpacing: '2px', fontWeight: 'bold',
+            }}
+          >
+            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span
+                aria-hidden="true"
+                style={{
+                  width: 9, height: 9, borderRadius: '50%', flexShrink: 0,
+                  background: manualAmd ? '#4a9eff' : 'transparent',
+                  border: `1.5px solid ${manualAmd ? '#4a9eff' : terminalMuted}`,
+                  boxShadow: manualAmd ? '0 0 6px rgba(74, 158, 255, 0.75)' : 'none',
+                }}
+              />
+              MACHINE DETECTION
+            </span>
+            <span style={{
+              fontSize: inOverlay ? '10px' : '8px', letterSpacing: '1.5px',
+              padding: '2px 7px', borderRadius: 2,
+              background: manualAmd ? '#4a9eff' : 'transparent',
+              border: `1px solid ${manualAmd ? '#4a9eff' : terminalBorder}`,
+              color: manualAmd ? '#fff' : terminalMuted,
+            }}>{manualAmd ? 'ON' : 'OFF'}</span>
+          </button>
+          {/* Second of the two, and the one closest to DIAL, because it is
+              the answer with consequences outside this call: a recording is
+              kept. Both live here rather than in settings for the same reason —
+              a switch somewhere else is a switch nobody remembers the state of
+              at the one second it counts. */}
+          <button
+            onClick={toggleManualRecord}
+            aria-pressed={manualRecord}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              gap: 8, width: '100%', boxSizing: 'border-box',
+              padding: inOverlay ? '12px 14px' : '8px 10px',
+              marginBottom: inOverlay ? 12 : 6,
+              borderRadius: 3, cursor: 'pointer', flexShrink: 0,
+              background: manualRecord ? 'rgba(220, 38, 38, 0.12)' : terminalSurface,
+              border: `1px solid ${manualRecord ? '#dc2626' : terminalBorder}`,
+              color: manualRecord ? '#f87171' : terminalMuted,
+              fontFamily: FUTURA,
+              fontSize: inOverlay ? '11px' : '9px',
+              letterSpacing: '2px', fontWeight: 'bold',
+            }}
+          >
+            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {/* The dot is the whole point of it being visual: a solid red
+                  circle reads as "armed" across the room, and a hollow one
+                  reads as off without having to parse the word beside it. */}
+              <span
+                aria-hidden="true"
+                style={{
+                  width: 9, height: 9, borderRadius: '50%', flexShrink: 0,
+                  background: manualRecord ? '#dc2626' : 'transparent',
+                  border: `1.5px solid ${manualRecord ? '#dc2626' : terminalMuted}`,
+                  boxShadow: manualRecord ? '0 0 6px rgba(220, 38, 38, 0.75)' : 'none',
+                }}
+              />
+              RECORD CALL
+            </span>
+            <span style={{
+              fontSize: inOverlay ? '10px' : '8px', letterSpacing: '1.5px',
+              padding: '2px 7px', borderRadius: 2,
+              background: manualRecord ? '#dc2626' : 'transparent',
+              border: `1px solid ${manualRecord ? '#dc2626' : terminalBorder}`,
+              color: manualRecord ? '#fff' : terminalMuted,
+            }}>{manualRecord ? 'ON' : 'OFF'}</span>
+          </button>
+            </div>
+          )}
+        </div>
 
 
         <div style={{
