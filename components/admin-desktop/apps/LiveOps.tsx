@@ -71,6 +71,7 @@ interface OpsData {
     campaignId: string | null
     mode: string | null
     state: string
+    device: string | null
     lastHeartbeatSeconds: number
   }>
 }
@@ -357,6 +358,16 @@ export default function LiveOps() {
                       title={a.userId}
                     >
                       {a.name || a.userId}
+                    </span>
+                    {/* What they are dialing ON. A mobile agent and a desktop
+                        agent produce the same row otherwise, and the device is
+                        usually the explanation when one of them sounds bad. */}
+                    <span
+                      style={{ color: T.muted, fontSize: 10 }}
+                      title={a.device ? `Dialing from ${a.device}` : 'Device not recorded for this session'}
+                    >
+                      {a.device === 'mobile' ? '📱' : a.device === 'tablet' ? '▭' : a.device === 'desktop' ? '🖥' : '—'}
+                      {a.device ? ` ${a.device}` : ''}
                     </span>
                     <span style={{ color: T.muted, fontSize: 10 }}>{a.mode || '—'}</span>
                     <span style={{

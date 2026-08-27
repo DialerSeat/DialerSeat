@@ -23,7 +23,23 @@ const supabase = getServiceClient('admin/visibility')
 // stops moving with traffic.
 // ─────────────────────────────────────────────────────────────────────────
 
-const TOP_N = 25
+// ── EVERYTHING, NOT A TOP TEN ────────────────────────────────────────────
+// These lists were capped at 25 and 15, which answers "what are the popular
+// pages" and quietly refuses to answer "did anyone ever read X". On a site
+// with a hundred-odd URLs the tail IS the question: a comparison page nobody
+// has opened is worth knowing about, and it can never appear in a top fifteen.
+//
+// Safe to lift because every one of these is grouped in Postgres and bounded
+// by DISTINCT VALUES, not by traffic — distinct paths, referrer hosts,
+// countries, UTM tags. Those grow with the size of the site, not the size of
+// the audience, so this does not reintroduce the row cap the header warns
+// about: ten million views still return the same handful of rows.
+//
+// A ceiling rather than no limit at all, because an unbounded query against a
+// column somebody can influence — a referrer host, a UTM tag — is a way to be
+// surprised later. 1000 is far above any honest number of distinct values and
+// low enough that a pathological one cannot flood the response.
+const ROW_CEILING = 1000
 
 export async function GET(req: NextRequest) {
   try {
@@ -64,14 +80,14 @@ export async function GET(req: NextRequest) {
     ] = await Promise.all([
       supabase.rpc('pv_totals', { p_since: sinceIso, p_until: null, p_authed: audience }),
       supabase.rpc('pv_series', { p_since: sinceIso, p_until: null, p_by_hour: byHour, p_authed: audience }),
-      supabase.rpc('pv_paths', { p_since: sinceIso, p_until: null, p_limit: TOP_N, p_authed: audience }),
-      supabase.rpc('pv_entry_pages', { p_since: sinceIso, p_until: null, p_limit: 15, p_authed: audience }),
-      supabase.rpc('pv_breakdowns', { p_since: sinceIso, p_until: null, p_limit: 15, p_authed: audience }),
+      supabase.rpc('pv_paths', { p_since: sinceIso, p_until: null, p_limit: ROW_CEILING, p_authed: audience }),
+      supabase.rpc('pv_entry_pages', { p_since: sinceIso, p_until: null, p_limit: ROW_CEILING, p_authed: audience }),
+      supabase.rpc('pv_breakdowns', { p_since: sinceIso, p_until: null, p_limit: ROW_CEILING, p_authed: audience }),
       supabase.rpc('pv_histograms', { p_since: sinceIso, p_until: null, p_authed: audience }),
       // Individuals. No p_authed: the point is to follow ONE person across
       // the anonymous-to-signed-in boundary, and splitting by audience would
       // cut every one of them in half at the moment they signed up.
-      supabase.rpc('pv_individuals', { p_since: sinceIso, p_until: null, p_limit: 100 }),
+      supabase.rpc('pv_individuals', { p_since: sinceIso, p_until: null, p_limit: ROW_CEILING }),
       supabase.rpc('pv_totals', { p_since: todayStart.toISOString(), p_until: null, p_authed: audience }),
       // Same audience as everything else — comparing anonymous traffic against
       // everybody's would be a percentage between two different populations.
@@ -153,7 +169,6 @@ export async function GET(req: NextRequest) {
         samples: Number(r.dwell_samples) || 0,
       }))
       .sort((a: any, b: any) => b.avgMs - a.avgMs)
-      .slice(0, 15)
 
     return NextResponse.json({
       success: true,

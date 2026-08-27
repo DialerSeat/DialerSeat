@@ -485,7 +485,7 @@ export default function Visibility() {
               <div style={{
                 fontSize: 9.5, letterSpacing: 1.2, textTransform: 'uppercase',
                 color: MUTED, marginBottom: 12,
-              }}>Most viewed pages</div>
+              }}>Every page viewed</div>
               {topPages.length === 0 ? (
                 <div style={{ color: DIM, fontSize: 12 }}>Nothing yet.</div>
               ) : (

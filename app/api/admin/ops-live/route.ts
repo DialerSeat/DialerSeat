@@ -82,7 +82,7 @@ export async function GET() {
 
       supabase
         .from('agent_sessions')
-        .select('id, user_id, campaign_id, dialer_mode, state, last_heartbeat')
+        .select('id, user_id, campaign_id, dialer_mode, state, last_heartbeat, device')
         .gte('last_heartbeat', new Date(now - AGENT_ONLINE_WINDOW_MS).toISOString())
         .limit(200),
     ])
@@ -299,6 +299,11 @@ export async function GET() {
         campaignId: s.campaign_id,
         mode: s.dialer_mode,
         state: s.state,
+        // Null on any session that last beat before the column existed; the
+        // panel shows a dash rather than guessing 'desktop', because a wrong
+        // device is worse than an absent one when the point of the column is
+        // to explain a bad connection.
+        device: s.device ?? null,
         lastHeartbeatSeconds: Math.round(
           (now - new Date(s.last_heartbeat).getTime()) / 1000
         ),

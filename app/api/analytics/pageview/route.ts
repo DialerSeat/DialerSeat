@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { createHash, randomBytes } from 'crypto'
+import { deviceFrom } from '@/lib/device'
 
 // First-party, ours, and readable only by us. Two years so a returning reader
 // is still recognisable next quarter; there is nothing sensitive in the value,
@@ -33,12 +34,6 @@ const supabase = getServiceClient('analytics/pageview')
 // traffic graph reflects people rather than uptime monitors, and the long tail
 // of unknown bots matters far less than Googlebot hitting every page nightly.
 const BOT = /bot|crawler|spider|crawling|slurp|bingpreview|headless|lighthouse|pingdom|uptime|curl|wget|python-requests|axios|postman|monitor|preview/i
-
-function deviceFrom(ua: string): string {
-  if (/iPad|Tablet/i.test(ua)) return 'tablet'
-  if (/Mobi|Android|iPhone/i.test(ua)) return 'mobile'
-  return 'desktop'
-}
 
 /** Path only — query strings carry search terms, tokens and ids, none of which
  *  belong in an analytics table. Trailing slash normalised so /pricing and

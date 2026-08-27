@@ -4,6 +4,7 @@ import { getServiceClient } from '@/lib/supabase'
 import { runPredictiveController } from '@/lib/predictiveController'
 import { STALE_HEARTBEAT_SECONDS, ABANDON_YIELD_PCT } from '@/lib/dialerConstants'
 import { sendAdminPush } from '@/lib/pushNotify'
+import { deviceFrom } from '@/lib/device'
 import { logCallEvent } from '@/lib/callEvents'
 import { shouldMaskCampaign, maskLeadRow } from '@/lib/leadMasking'
 
@@ -88,6 +89,19 @@ const skipLogCache = new Map<string, number>()
 // missed beats — long enough that a redeploy, a tab reload or a phone locking
 // briefly does not read as a new arrival and re-notify.
 const AGENT_ONLINE_GAP_MS = 5 * 60 * 1000
+
+// ── AND AT MOST ONE PER AGENT PER FOUR HOURS ────────────────────────────
+// The gap above decides what counts as ARRIVING: five minutes of silence and
+// the next beat is a new session. That is the right test for "did they just
+// start", and the wrong one for how often a phone should buzz. An agent who
+// steps away for coffee, loses wifi, or closes the tab between lists trips it
+// every time, so a single working day produced a stream of notifications all
+// saying the same thing about the same person.
+//
+// This is a separate, blunter question — how recently did we already tell you
+// about this agent — and it is deliberately not the same number. Arrival is
+// still what triggers the notification; this only suppresses the repeats.
+const AGENT_ONLINE_QUIET_MS = 4 * 60 * 60 * 1000
 type ResolvedIdentity = { userId: string; teamId: string | null }
 const identityCache = new Map<string, { value: ResolvedIdentity; expires: number }>()
 
@@ -251,11 +265,24 @@ export async function POST(req: NextRequest) {
     // inserted with online_notified_at NULL and picked up by the null branch
     // on the next beat five seconds later, which is soon enough.
     const onlineGapCutoff = new Date(Date.now() - AGENT_ONLINE_GAP_MS).toISOString()
+    const onlineQuietCutoff = new Date(Date.now() - AGENT_ONLINE_QUIET_MS).toISOString()
+
+    // Never notified, OR they have arrived again AND it has been quiet for
+    // long enough to be worth saying twice. The null branch stays outside the
+    // and() so a genuinely first-ever session is never held back.
+    //
+    // The whole condition lives in the UPDATE, not in a read followed by a
+    // write: online_notified_at is stamped by the same statement that decides
+    // whether to stamp it, so two beats arriving together cannot both match
+    // and fire the notification twice.
     const { data: cameOnline } = await supabase
       .from('agent_sessions')
       .update({ online_notified_at: now })
       .eq('user_id', userInternalId)
-      .or(`online_notified_at.is.null,last_heartbeat.lt.${onlineGapCutoff}`)
+      .or(
+        `online_notified_at.is.null,` +
+        `and(last_heartbeat.lt.${onlineGapCutoff},online_notified_at.lt.${onlineQuietCutoff})`
+      )
       .select('id')
 
     if (cameOnline && cameOnline.length > 0) {
@@ -288,6 +315,11 @@ export async function POST(req: NextRequest) {
           campaign_id: campaignId,
           dialer_mode: dialerMode,
           state,
+          // Read from the request's own user agent rather than anything the
+          // client sends, so it costs the beat nothing and cannot be wrong
+          // about itself. Same helper page_views uses — see lib/device.ts for
+          // why that matters.
+          device: deviceFrom(req.headers.get('user-agent') || ''),
           // ── NEVER NULL A SERVER-ASSIGNED CALL ────────────────────────────
           // In every client-dialed mode this column mirrors what the browser
           // is on. Predictive is the opposite: the fan-out bridge assigns the
