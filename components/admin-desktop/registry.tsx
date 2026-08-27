@@ -276,12 +276,14 @@ export const APPS: AppDefinition[] = [
     id: 'ops-map',
     name: 'Map',
     shortName: 'Map',
-    icon: '🗺️',
-    iconBg: 'linear-gradient(135deg, #32ff7e, #1a9e4b)',
-    description: 'Where everyone is — online agents, subscribers and visitors by state and country',
+    icon: '🛰️',
+    iconBg: 'linear-gradient(135deg, #12508a, #04060a)',
+    description: 'Live map — who is dialing, where calls land, and everything behind a ping',
     visibleTo: ['admin'],
     Component: OpsMapApp,
-    defaultSize: { width: 1180, height: 780 },
+    // Wider than the other apps on purpose: the dock is a nine-column feed
+    // beside a breakdown, and below ~1100 the feed starts dropping columns.
+    defaultSize: { width: 1320, height: 840 },
   },
   {
     id: 'numbers',
