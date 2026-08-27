@@ -2108,8 +2108,17 @@ function DialerPageInner() {
       const callSid = activeCallSidRef.current
       if (callSid && navigator.sendBeacon) {
         try {
+          // Same compliance hold as every other way an agent leaves a call.
+          // This beacon carried only the sid, so closing the tab mid-call
+          // dropped the line instantly — the one exit that skipped the
+          // threshold entirely, and the one nobody thinks to test.
+          //
+          // sendBeacon is the right transport for it: the request is handed to
+          // the browser and completes independently of the page, so the server
+          // still receives it after this document is gone and can run the hold
+          // on its own side.
           const blob = new Blob(
-            [JSON.stringify({ sid: callSid })],
+            [JSON.stringify({ sid: callSid, reason: 'skip' })],
             { type: 'application/json' }
           )
           navigator.sendBeacon('/api/calls/hangup', blob)
@@ -2228,7 +2237,18 @@ function DialerPageInner() {
       // still working.
       await Promise.all([
         activeCallSidRef.current
-          ? hangupCall(activeCallSidRef.current).catch(() => {})
+          // 'skip' for the same reason TERMINATE sends it (see the STOP path
+          // below): it is the flag that holds the lead's line to the
+          // short-duration threshold. Clocking off while connected is, to the
+          // LEAD, identical to a skip — the agent is leaving and is not coming
+          // back — but without the reason the line was dropped at whatever
+          // second the agent happened to clock off, counting against the
+          // carrier ratio.
+          //
+          // Not awaited once the reason is 'skip', which is the existing
+          // behaviour of hangupCall and the right one here: the hold runs
+          // server-side and an agent going off shift must not sit and watch it.
+          ? hangupCall(activeCallSidRef.current, 'skip').catch(() => {})
           : Promise.resolve(),
         fetch('/api/dialer/abort', {
           method: 'POST',
