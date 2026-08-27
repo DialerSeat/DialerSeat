@@ -284,6 +284,22 @@ function DialerPageInner() {
   //
   // Same reason it is stored as an explicit '0' rather than by absence: a
   // missing key means "never touched it", which has to read as ON.
+  // ── WHY A CALL CAN LOOK FINE AND HAVE NO AUDIO ──────────────────────────
+  // onInvite has no gate — it always accepts — so the only way the agent leg
+  // fails is accept() itself throwing, and sip.js calls getUserMedia while
+  // building the answer. A mic that is blocked, missing, or already held by
+  // something else surfaces there and nowhere else.
+  //
+  // Telnyx then reports the leg as normal_clearing from the CALLEE, which is
+  // indistinguishable from an ordinary hangup in the calls table. The dial
+  // looks placed, the lead's phone rings, and the call collapses in about two
+  // seconds with nothing anywhere saying why.
+  //
+  // It was already logged — to the console, and to the SYSTEM LOG panel that
+  // does not fit on a phone. Neither is a place somebody looks while wondering
+  // why dialing stopped working. This puts it where STATUS is.
+  const [agentLegError, setAgentLegError] = useState<string | null>(null)
+
   const [manualAmd, setManualAmd] = useState(true)
   useEffect(() => {
     try {
@@ -1489,6 +1505,14 @@ function DialerPageInner() {
                 err instanceof Error &&
                 ['NotAllowedError', 'NotFoundError', 'NotReadableError', 'SecurityError'].includes(err.name)
               console.error(`[sip #${sipInstanceId}] FAILED to accept agent leg — ${msg}`)
+              // Surfaced for EVERY accept failure, not only the ones we can
+              // name. An unrecognised cause is still a call with no audio, and
+              // saying "could not answer" beats showing nothing.
+              setAgentLegError(
+                micBlocked
+                  ? 'MICROPHONE BLOCKED — allow mic access for this site, then reload. Calls cannot connect until then.'
+                  : `COULD NOT ANSWER THIS CALL — ${msg}`
+              )
               if (micBlocked) {
                 console.error(
                   '[sip] ^ that is a MICROPHONE problem, not a SIP problem. The browser refused ' +
@@ -3978,6 +4002,7 @@ function DialerPageInner() {
     setStatus('calling')
     setSessionStats(s => ({ ...s, calls: s.calls + 1 }))
     playInitiateBlip()
+    setAgentLegError(null) // a new attempt gets a clean slate
     armDialing() // user pressed dial on the keypad — allow bridge
     // Same agent-leg window as the queue dial path — a manual dial places an
     // agent leg exactly the same way, so it needs the same protection against
@@ -5491,6 +5516,19 @@ function DialerPageInner() {
 
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
         <div className={`dialer-main-col ${profileFullscreen ? 'has-fullscreen' : ''}`} style={{ flex: 1, padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px', overflow: 'auto', minHeight: 0 }}>
+
+          {agentLegError && (
+            <div style={{
+              padding: '10px 12px', marginBottom: 8, flexShrink: 0,
+              background: 'rgba(220, 38, 38, 0.12)',
+              border: '1px solid #dc2626', borderLeft: '4px solid #dc2626',
+              borderRadius: 4, color: '#f87171',
+              fontFamily: FUTURA, fontSize: 10, letterSpacing: 1.5,
+              fontWeight: 'bold', lineHeight: 1.6,
+            }}>
+              {agentLegError}
+            </div>
+          )}
 
           <div className="dialer-stat-grid dialer-collapse-on-fs" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', flexShrink: 0 }}>
             <div style={{
