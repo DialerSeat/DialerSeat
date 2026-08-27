@@ -2235,25 +2235,33 @@ function DialerPageInner() {
       // leads back to the pool and pause the session so the controller stops
       // filling lines. Abort deliberately does not, because the agent is
       // still working.
+      // Captured before either request starts. hangupCall clears the active
+      // call as it unwinds, so reading the ref again when the sweep's body is
+      // built can hand it null — and a null exclusion is the bug this is
+      // fixing, silently back again.
+      const heldSid = activeCallSidRef.current
+
       await Promise.all([
-        activeCallSidRef.current
-          // 'skip' for the same reason TERMINATE sends it (see the STOP path
-          // below): it is the flag that holds the lead's line to the
-          // short-duration threshold. Clocking off while connected is, to the
-          // LEAD, identical to a skip — the agent is leaving and is not coming
-          // back — but without the reason the line was dropped at whatever
-          // second the agent happened to clock off, counting against the
-          // carrier ratio.
+        heldSid
+          // 'skip' for the same reason TERMINATE sends it: it is the flag that
+          // holds the lead's line to the short-duration threshold. Clocking off
+          // while connected is, to the LEAD, identical to a skip — the agent is
+          // leaving and is not coming back — but without the reason the line
+          // was dropped at whatever second the agent happened to clock off,
+          // counting against the carrier ratio.
           //
-          // Not awaited once the reason is 'skip', which is the existing
-          // behaviour of hangupCall and the right one here: the hold runs
+          // Not awaited once the reason is 'skip', which is hangupCall's
+          // existing behaviour and the right one here: the hold runs
           // server-side and an agent going off shift must not sit and watch it.
-          ? hangupCall(activeCallSidRef.current, 'skip').catch(() => {})
+          ? hangupCall(heldSid, 'skip').catch(() => {})
           : Promise.resolve(),
         fetch('/api/dialer/abort', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ scope: 'all' }),
+          // Named so the sweep leaves this leg to the hangup above, which is
+          // holding it. Without this the two race and the sweep wins, ending
+          // the call at ~0s and cancelling the hold entirely.
+          body: JSON.stringify({ scope: 'all', excludeSid: heldSid }),
         }).catch(err => console.error('[offline] server sweep failed:', err)),
       ])
       setStatus('idle')
@@ -3748,7 +3756,10 @@ function DialerPageInner() {
     void fetch('/api/dialer/abort', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ scope: 'calls' }),
+      // Same race as the clock-off path: the hangup above is holding this leg
+      // and this sweep would end it immediately. Every other fanned-out line
+      // is still swept.
+      body: JSON.stringify({ scope: 'calls', excludeSid: sid }),
     }).catch(err => console.error('[abort] server call sweep failed:', err))
 
     setPredictiveEngineStarted(false)
@@ -3826,7 +3837,7 @@ function DialerPageInner() {
     void fetch('/api/dialer/abort', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ scope: 'calls' }),
+      body: JSON.stringify({ scope: 'calls', excludeSid: sid }),
     }).catch(err => console.error('[terminate] server call sweep failed:', err))
 
     if (agentWasOnTheCall) {

@@ -69,6 +69,25 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}))
     const scope: 'all' | 'calls' = body?.scope === 'calls' ? 'calls' : 'all'
 
+    // ── ONE LEG THIS SWEEP MUST NOT TOUCH ─────────────────────────────────
+    // The client fires /api/calls/hangup and this endpoint at the same moment.
+    // That hangup may be holding the lead's line to clear the short-duration
+    // threshold — a deliberate server-side wait of up to
+    // amd_hold_seconds_after_machine before it ends the call.
+    //
+    // This sweep hangs up every live leg the instant it finds it. Running the
+    // two in parallel is a race the sweep always wins, so the hold was being
+    // silently cancelled: the agent clocked off, the flag said hold, and the
+    // line still dropped at the second they left. The compliance flag looked
+    // correct in the client and did nothing.
+    //
+    // Naming the leg here means the sweep leaves it to the request that is
+    // already responsible for it. Everything else — the other fanned-out
+    // lines, the claims, the session — is untouched.
+    const excludeSid = typeof body?.excludeSid === 'string' && body.excludeSid.trim()
+      ? body.excludeSid.trim()
+      : null
+
     // ── DISARM FIRST, BEFORE ANYTHING ELSE ────────────────────────────────
     // Hanging up the live lines is pointless while the engine is still armed:
     // the next heartbeat is at most five seconds away and will simply fan out
@@ -99,6 +118,12 @@ export async function POST(req: Request) {
     let claimsReleased = 0
 
     const alreadyHungUp = new Set<string>()
+
+    // Pre-seeded rather than filtered at each call site. hangUpAll already
+    // skips anything in this set, so one line here covers BOTH discovery
+    // paths — Telnyx's active list and the database backstop — and any future
+    // one, without adding a condition to the teardown logic itself.
+    if (excludeSid) alreadyHungUp.add(excludeSid)
 
     /**
      * Hang up a set of legs, a few at a time.
