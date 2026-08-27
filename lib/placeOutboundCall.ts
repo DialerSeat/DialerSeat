@@ -11,24 +11,24 @@ import { normalizeToE164 } from '@/lib/phoneNormalize'
 import { checkSuppression } from '@/lib/suppression'
 import { logCallEvent } from '@/lib/callEvents'
 
-// ── A CEILING ON EVERY LEG WE PLACE ──────────────────────────────────────
-// Nothing in this codebase could close a call that lost the thing responsible
-// for closing it. The stale-call reaper frees the wedged agent SESSION but
-// never hung up the leg; the abort sweep skips a leg that another request is
-// holding; and /api/calls/hangup does its compliance hold inside a serverless
-// handler, so a function timeout, an instance recycle or a deploy landing
-// mid-call kills the wait and the hangup that was supposed to follow it.
+// ── A CEILING ON EVERY LEG: REVERTED, AND WHY ────────────────────────────
+// This set time_limit_secs on both dials so an orphaned leg could not run to
+// Telnyx's four-hour default. It was removed after live dialing broke: every
+// attempt produced legs completing within ~200ms carrying
+// hangup_cause 'unspecified' / hangup_source 'unknown', which is a rejected
+// dial rather than a hung-up call.
 //
-// Telnyx's own default is the only thing that ever ended those: time_limit_secs
-// defaults to 14400 — four hours — and that is also its maximum. Four hours is
-// a silent open line to a stranger's phone, holding a concurrency slot.
+// The earlier calls that appeared to prove it safe all went to VOICEMAIL, so
+// the agent leg never had to bridge and its failure was invisible. That is
+// why this looked verified when it was not — the check confirmed a lead leg
+// answering, not a call completing.
 //
-// So we set our own. This is a BACKSTOP, not a policy: it must sit far above
-// any real call (the longest ever placed here is 927 seconds) so it only ever
-// fires on a leg that is already broken. It bounds the whole class of failure
-// at once — this race, a missed webhook, and whatever comes next — without any
-// of them having to be anticipated individually.
-const CALL_TIME_LIMIT_SECS = 3600
+// The problem it solved is real and still open: nothing here closes a leg
+// that has lost whatever was responsible for closing it, and the reaper now
+// covers only the wedged-session case. Worth another attempt, but against a
+// dial that is actually watched through to a human answering, and one leg at
+// a time — the lead leg alone would have bounded the orphan case without
+// touching the agent's own SIP leg at all.
 
 // Re-exported so existing importers (and anything reaching for it here out of
 // habit) keep working. The implementation moved to lib/phoneNormalize.ts
@@ -464,7 +464,6 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
           from: p.fromNumber,
           webhook_url: p.env.webhookUrl,
           timeout_secs: 30, // agent's own device ring timeout — generous but bounded
-          time_limit_secs: CALL_TIME_LIMIT_SECS,
         }),
       })
 
@@ -562,7 +561,6 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
     from: p.fromNumber,
     webhook_url: p.env.webhookUrl,
     timeout_secs: ringTimeoutSecs,
-    time_limit_secs: CALL_TIME_LIMIT_SECS,
   }
 
   // ── RECORDING TOGGLE ──────────────────────────────────────────────────
