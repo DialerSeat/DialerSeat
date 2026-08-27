@@ -588,10 +588,32 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
   // call, and if it goes to voicemail the message they leave is very often
   // the thing they wanted recorded. Waiting for a human verdict would mean
   // the toggle silently did nothing on exactly those calls.
-  if (p.recordingEnabled && (!p.amdEnabled || p.recordingManual)) {
-    dialBody.record = 'record-from-answer'
-    dialBody.record_channels = 'dual'
-  }
+  // ── NOTHING RECORDS FROM THE DIAL ANY MORE ─────────────────────────────
+  // 'record-from-answer' does not mean what it reads like. Measured on a real
+  // customer's calls, the saved file spans the whole leg:
+  //
+  //     ring 30.8s + talk 2.0s  ->  33s recording
+  //     ring 21.6s + talk 9.0s  ->  31s recording
+  //     ring 23.2s + talk 31.0s ->  55s recording
+  //
+  // recording_duration tracked ring + talk every time, so what got saved was
+  // half a minute of ringback with a couple of seconds of conversation buried
+  // at the end. Played back it reads as a dead file — which is exactly how it
+  // was reported.
+  //
+  // A recording should contain the conversation and nothing else, so it now
+  // starts when the agent is actually on the call:
+  //
+  //   AMD on   -> at the human verdict (already the case; see
+  //               startRecordingForCall in calls/events).
+  //   AMD off  -> at the bridge, from recording_status 'pending_bridge'.
+  //   manual   -> at the bridge too. The old exception recorded from answer so
+  //               a voicemail message would be captured, but it bought that by
+  //               recording every ring, and an agent leaving a voicemail is
+  //               bridged for it anyway.
+  //
+  // Also stops paying to record silence: a 30-second unanswered ring was
+  // billed as 30 recorded seconds.
 
   // ── ALWAYS BRIDGE ON ANSWER ─────────────────────────────────────────────
   // The agent hears the lead the millisecond they pick up. No exceptions, no
@@ -1019,11 +1041,17 @@ async function doPlaceCall(p: DoPlaceCallParams): Promise<PlaceCallResult> {
       // know it must NOT be discarded when the AMD verdict comes back a
       // machine. That exception was written before anything could set the
       // status — this is what finally does.
+      // What the webhook needs to know later: whether a recording is OWED and
+      // what is supposed to trigger it. 'manual' also tells the AMD path not
+      // to discard the file on a machine verdict — somebody asked for that one
+      // specifically.
       ...(p.recordingManual
         ? { recording_status: 'manual' }
         : p.recordingEnabled && p.amdEnabled
           ? { recording_status: 'pending_amd' }
-          : {}),
+          : p.recordingEnabled
+            ? { recording_status: 'pending_bridge' }
+            : {}),
       duration: 0,
       disposition: null,
       dial_source: p.source,

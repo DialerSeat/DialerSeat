@@ -387,6 +387,12 @@ async function handleCallAnswered(callControlId: string): Promise<void> {
           status: outcome,
           detail: { dial_source: row.dial_source, call_row: row.id, at: 'answer' },
         })
+        // The agent is on the call now, so this is the moment a recording is
+        // supposed to begin. Awaited rather than fired and forgotten: the
+        // first seconds of a conversation are the ones worth having.
+        if (outcome === 'bridged' || outcome === 'already') {
+          await startRecordingIfOwedAtBridge(callControlId, row.id)
+        }
       } catch (err) {
         // Never let this take down a live call the agent is already talking on.
         console.error(`[calls/events] pickup bridge for ${callControlId} threw`, err)
@@ -1093,6 +1099,10 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
     // still a pickup, so the lines that are merely ringing end here too.
     await abortSiblingFanoutLines({ sessionId, keepCallControlId: callControlId })
     await recordingStart
+    // Covers the AMD-off campaigns, whose recordings no longer start at dial
+    // and have nothing else to trigger them. A no-op when the AMD path above
+    // already claimed the row.
+    await startRecordingIfOwedAtBridge(callControlId, callRow.id)
     return
   }
 
@@ -1119,10 +1129,57 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
  * Best-effort. A recording that fails to start must never take down a live
  * call the agent is already talking on.
  */
-async function startRecordingForCall(
+/**
+ * Start a recording that was OWED but deliberately not started at dial.
+ *
+ * Nothing records from the dial any more (see the long note in
+ * placeOutboundCall): 'record-from-answer' captured the whole ring, so a
+ * thirty-second ring with two seconds of talk produced a thirty-three second
+ * file that plays as dead air. Recording now begins when the agent is actually
+ * on the call, and the status column says which calls are still waiting:
+ *
+ *   'pending_bridge'  recording is on, AMD is off — start at the bridge.
+ *   'manual'          the agent pressed record — same trigger.
+ *   'pending_amd'     NOT handled here. That one waits for a human verdict,
+ *                     which is the whole reason it is a different status.
+ *
+ * Idempotent by status: the update below moves the row off the waiting state,
+ * so a duplicate bridge webhook cannot start a second recording.
+ */
+async function startRecordingIfOwedAtBridge(
   callControlId: string,
   callRowId: string
 ): Promise<void> {
+  // The conditional UPDATE is the whole guard — no read-then-write, so two
+  // bridge webhooks arriving together cannot both start a recording. It also
+  // means callers do not need to have selected the status first.
+  const { data: claimed } = await supabaseAdmin
+    .from('calls')
+    .update({ recording_status: 'starting' })
+    .eq('id', callRowId)
+    .in('recording_status', ['pending_bridge', 'manual'])
+    .select('id')
+
+  if (!claimed || claimed.length === 0) return // another webhook got there first
+
+  const ok = await startRecordingForCall(callControlId, callRowId)
+  if (!ok) {
+    // Put the row back rather than leaving it stranded on 'starting'. A
+    // recording that was owed and never began should still say so — 'starting'
+    // forever describes nothing and would hide the failure from every screen
+    // that reads this column.
+    await supabaseAdmin
+      .from('calls')
+      .update({ recording_status: 'failed' })
+      .eq('id', callRowId)
+      .eq('recording_status', 'starting')
+  }
+}
+
+async function startRecordingForCall(
+  callControlId: string,
+  callRowId: string
+): Promise<boolean> {
   const env = resolveTelnyxConfigOrLog('calls/events:record')
   if (!env) return
 
@@ -1137,7 +1194,7 @@ async function startRecordingForCall(
       status: 'failed',
       source: 'webhook',
     })
-    return
+    return false
   }
 
   await supabaseAdmin
@@ -1151,6 +1208,7 @@ async function startRecordingForCall(
     status: 'amd_human',
     source: 'webhook',
   })
+  return true
 }
 
 async function handleHangup(
