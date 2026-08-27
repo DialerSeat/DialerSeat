@@ -48,7 +48,7 @@ export async function GET() {
     // calls understates every rate on this page.
     const { data: calls, error } = await supabase
       .from('calls')
-      .select('answered_at, talk_seconds, amd_result, dial_source, created_at')
+      .select('answered_at, talk_seconds, duration, amd_result, dial_source, created_at')
       .not('call_control_id', 'is', null)
       .gte('created_at', monthStart.toISOString())
       .limit(50000)
@@ -62,16 +62,69 @@ export async function GET() {
     // them. answered_at was not recorded before 2026-08-05, so older calls are
     // excluded rather than counted as zero — a call with unknown talk time is
     // not a short call, it is an unknown one.
-    const measured = connected.filter(c => c.talk_seconds !== null)
-    const short = measured.filter(c => (c.talk_seconds ?? 0) <= SHORT_CALL_SECONDS)
+    // ── WHAT THE CARRIER ACTUALLY BILLS ───────────────────────────────────
+    // talk_seconds is bridge -> hangup. Telnyx bills ANSWER -> hangup, and the
+    // two are not the same call: a machine verdict holds the line for nine
+    // seconds with nobody bridged, so talk_seconds reads ~0 on a call the
+    // carrier is billing at nine. Judged on talk_seconds those all counted as
+    // short, which made the ratio on this page worse than the one Telnyx
+    // computes — and this page exists to predict THEIR number.
+    //
+    // duration is dial -> hangup and answered_at is the answer, so
+    // duration - ring is the billed span. Falls back to talk_seconds when the
+    // ring cannot be derived, which is better than dropping the row.
+    const billedSeconds = (c: {
+      answered_at: string | null; created_at: string; duration: number | null
+      talk_seconds: number | null
+    }): number | null => {
+      if (c.answered_at && c.duration != null) {
+        const ring = (new Date(c.answered_at).getTime() - new Date(c.created_at).getTime()) / 1000
+        const billed = c.duration - ring
+        // A negative span means the timestamps disagree — usually a row whose
+        // duration was written by one webhook and answered_at by another that
+        // arrived out of order. Unknown, not zero.
+        if (Number.isFinite(billed) && billed >= 0) return billed
+      }
+      return c.talk_seconds
+    }
+
+    const measured = connected
+      .map(c => ({ ...c, billed: billedSeconds(c) }))
+      .filter(c => c.billed !== null)
+    const short = measured.filter(c => (c.billed ?? 0) <= SHORT_CALL_SECONDS)
 
     const shortPct = measured.length > 0
       ? (short.length / measured.length) * 100
       : null
     const answerRatePct = placed > 0 ? (connected.length / placed) * 100 : null
     const avgTalkSeconds = measured.length > 0
-      ? measured.reduce((s, c) => s + (c.talk_seconds ?? 0), 0) / measured.length
+      ? measured.reduce((s, c) => s + (c.billed ?? 0), 0) / measured.length
       : null
+
+    // ── AND THE SAME RATIO, DAY BY DAY ────────────────────────────────────
+    // Telnyx assess per calendar month, so the month figure above is the one
+    // that matters to them. It is also the one that hides a fix: a heavy week
+    // early in the month keeps the ratio high long after the behaviour causing
+    // it has changed, and there is no way to tell from a single number whether
+    // today is better or worse than the month says.
+    const byDayMap = new Map<string, { measured: number; short: number; billed: number }>()
+    for (const c of measured) {
+      const day = new Date(c.created_at).toISOString().slice(0, 10)
+      const e = byDayMap.get(day) || { measured: 0, short: 0, billed: 0 }
+      e.measured += 1
+      e.billed += c.billed ?? 0
+      if ((c.billed ?? 0) <= SHORT_CALL_SECONDS) e.short += 1
+      byDayMap.set(day, e)
+    }
+    const byDay = [...byDayMap.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([day, e]) => ({
+        day,
+        measured: e.measured,
+        short: e.short,
+        shortPct: e.measured > 0 ? (e.short / e.measured) * 100 : null,
+        avgBilled: e.measured > 0 ? e.billed / e.measured : null,
+      }))
 
     // Where the short calls come from, because the ratio alone does not tell
     // you what to do about it.
@@ -102,12 +155,16 @@ export async function GET() {
         daysElapsed,
         daysRemaining,
       },
+      // The month is the number Telnyx judge, and it is also the number that
+      // hides a fix: a heavy early week keeps the ratio high long after the
+      // behaviour changed. This says whether today is better than the month.
+      byDay,
       checks: [
         {
           key: 'short_calls',
           label: 'Short-duration calls',
           expects: `At or below ${SHORT_CALL_THRESHOLD_PCT}% of connected calls`,
-          detail: `Telnyx counts any connected call of ${SHORT_CALL_SECONDS}s or less of talk time. Above ${SHORT_CALL_THRESHOLD_PCT}% they may surcharge every short call on the account.`,
+          detail: `Telnyx counts any connected call of ${SHORT_CALL_SECONDS}s or less of BILLED time — answer to hangup, ring excluded. Above ${SHORT_CALL_THRESHOLD_PCT}% they may surcharge every short call on the account.`,
           value: shortPct,
           unit: '%',
           threshold: SHORT_CALL_THRESHOLD_PCT,

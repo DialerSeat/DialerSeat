@@ -29,7 +29,16 @@ interface Check {
   sample: number | null
 }
 
+interface DayPoint {
+  day: string
+  measured: number
+  short: number
+  shortPct: number | null
+  avgBilled: number | null
+}
+
 interface Payload {
+  byDay?: DayPoint[]
   period: {
     label: string
     resetsOn: string
@@ -74,7 +83,7 @@ export default function Compliance() {
   if (error) return <Msg>{error}</Msg>
   if (!data) return <Msg>LOADING…</Msg>
 
-  const { period, checks, shortCalls, volume } = data
+  const { period, checks, shortCalls, volume, byDay } = data
   const headline = checks.find(c => c.key === 'short_calls')
 
   return (
@@ -173,6 +182,50 @@ export default function Compliance() {
           <Cause n={shortCalls.byCause.human} label="HUMAN HUNG UP" />
           {shortCalls.byCause.other > 0 && <Cause n={shortCalls.byCause.other} label="OTHER" />}
         </div>
+      )}
+
+      {/* ── THE MONTH HIDES THE FIX ───────────────────────────────────────
+          Telnyx assess per calendar month, so the headline number is the one
+          that matters to them — and the one that cannot show whether anything
+          changed. A heavy week early in the month keeps the ratio high long
+          after the behaviour causing it stopped, and from a single percentage
+          there is no way to tell an improving account from a worsening one. */}
+      {byDay && byDay.length > 1 && (
+        <>
+          <div style={{
+            fontSize: 9.5, letterSpacing: 1.6, fontWeight: 700,
+            color: 'var(--brand-muted-text)', margin: '26px 0 10px',
+          }}>SHORT-CALL RATIO BY DAY</div>
+          <div style={{
+            display: 'flex', alignItems: 'flex-end', gap: 3, height: 84,
+            border: '1px solid var(--brand-card-border)', borderRadius: 10,
+            background: 'var(--brand-card-surface)', padding: '10px 12px',
+            overflowX: 'auto',
+          }}>
+            {byDay.map(d => {
+              const pct = d.shortPct ?? 0
+              // Bars are scaled against the threshold rather than the tallest
+              // day, so the 15% line sits in the same place every time and a
+              // good day cannot be made to look bad by a worse one beside it.
+              const h = Math.max(2, Math.min(100, (pct / 40) * 100))
+              const over = pct > 15
+              return (
+                <div key={d.day} title={`${d.day} · ${pct.toFixed(1)}% short of ${d.measured} · avg ${d.avgBilled?.toFixed(1) ?? '—'}s`}
+                     style={{ flex: '1 0 10px', display: 'flex', flexDirection: 'column',
+                              justifyContent: 'flex-end', height: '100%', minWidth: 10 }}>
+                  <div style={{
+                    height: `${h}%`, borderRadius: 2,
+                    background: over ? RED : GREEN, opacity: 0.85,
+                  }} />
+                </div>
+              )
+            })}
+          </div>
+          <div style={{ fontSize: 10, color: 'var(--brand-muted-text)', marginTop: 6 }}>
+            Each bar is one day, scaled to 40%. Red is above the 15% line.
+            Hover for the count and average billed length.
+          </div>
+        </>
       )}
 
       <div style={{
