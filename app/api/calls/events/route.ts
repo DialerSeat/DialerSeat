@@ -1181,7 +1181,7 @@ async function startRecordingForCall(
   callRowId: string
 ): Promise<boolean> {
   const env = resolveTelnyxConfigOrLog('calls/events:record')
-  if (!env) return
+  if (!env) return false
 
   const started = await startTelnyxRecording(callControlId, env.apiKey)
   if (!started) {
