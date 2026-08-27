@@ -253,9 +253,15 @@ export async function POST(req: Request) {
     // ends a repeat trial early rather than blocking checkout. See the webhook.
     const { data: trialRow } = await supabase
       .from('users')
-      .select('trial_started_at')
+      .select('trial_started_at, trial_override_at')
       .eq('clerk_id', userId)
       .maybeSingle()
+
+    // A trial granted by hand to somebody the rules would refuse — see the
+    // column comment in the users_trial_override migration. It lifts the
+    // returning-customer bar and nothing else: trial_started_at still blocks a
+    // repeat, so this is one trial, not a standing exemption.
+    const trialGranted = !!trialRow?.trial_override_at
 
     const { data: priorSubs } = await supabase
       .from('subscriptions')
@@ -290,12 +296,16 @@ export async function POST(req: Request) {
     //   a subscription the joining agent creates for themselves here. It also
     //   stops a discount code and a free week from stacking.
     const eligibleForTrial =
+      // Never lifted, by anything. Whatever else is true, one trial each.
       !trialRow?.trial_started_at &&
-      // Read before the stale-row cleanup above, so a cancelled customer is
-      // still recognisable as a returning one. A lapsed customer is not a new
-      // customer.
-      !hasEverSubscribed &&
-      (priorSubs || []).length === 0 &&
+      // The history bar, and the only one a manual grant can lift. Read before
+      // the stale-row cleanup above, so a cancelled customer is still
+      // recognisable as a returning one — a lapsed customer is not a new
+      // customer unless somebody has decided otherwise.
+      (trialGranted || (!hasEverSubscribed && (priorSubs || []).length === 0)) &&
+      // Deliberately outside the grant. Manager+ is not what the trial copy
+      // offers, and a code plus a free week still should not stack — neither
+      // becomes acceptable just because somebody was invited back.
       plan === 'standard' &&
       !promoCode
 
