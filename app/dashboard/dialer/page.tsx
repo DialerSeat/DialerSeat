@@ -2446,10 +2446,29 @@ function DialerPageInner() {
     }
   }
 
-  // `reason` decides whether the server holds the lead's line briefly after
-  // the agent has gone. Only 'skip' does; terminate and abort stay instant,
-  // because those mean "get me off this now" and a delay would be felt.
-  const hangupCall = async (sid: string | null, reason?: 'skip') => {
+  // ── REQUIRED, BECAUSE OPTIONAL KEPT LOSING ────────────────────────────
+  // `reason` decides whether the server holds the lead's line to clear the
+  // short-duration threshold after the agent has gone.
+  //
+  // This was `reason?: 'skip'`, and every single teardown path that has ever
+  // been added or refactored got it wrong: TERMINATE shipped without it,
+  // clocking off shipped without it, and closing the tab shipped without it.
+  // Three separate compliance regressions from one optional parameter,
+  // because omitting it is silent — it opts out of the hold and nothing
+  // fails, so the default state of any new exit was non-compliant.
+  //
+  // Required now, with no default. A new call site cannot compile until it
+  // says which it means, which turns the next one of these into a type error
+  // instead of a short call nobody notices until the answer rate drops.
+  //
+  //   'skip'      the agent is leaving an ANSWERED call — hold the line.
+  //               Skip, terminate, stop, clocking off, closing the tab: to
+  //               the LEAD these are all the same event.
+  //   'immediate' end it now, no hold. For a call that was never answered,
+  //               where there is no billed duration and nothing to hold.
+  //               The server independently guards on answered_at, so this is
+  //               a statement of intent rather than the thing enforcing it.
+  const hangupCall = async (sid: string | null, reason: 'skip' | 'immediate') => {
     // Any hangup means the user is no longer on a call they initiated — disarm
     // so a follow-on INVITE can't reconnect audio behind their back.
     disarmDialing()

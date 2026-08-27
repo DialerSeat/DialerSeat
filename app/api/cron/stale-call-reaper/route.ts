@@ -3,6 +3,7 @@ import { getServiceClient } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 import { logCallEvent } from '@/lib/callEvents'
 import { sweepTelnyxEvents, TELNYX_EVENT_RETENTION_HOURS } from '@/lib/telnyxIdempotency'
+import { hangupCallControlId } from '@/lib/placeOutboundCall'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -61,6 +62,7 @@ export async function GET(req: Request) {
     }
 
     let sessionsFreed = 0
+    let legsHungUp = 0
     if (wedged && wedged.length > 0) {
       for (const s of wedged) {
         await logCallEvent({
@@ -74,6 +76,35 @@ export async function GET(req: Request) {
           },
         })
       }
+      // ── AND CLOSE THE LEG, NOT JUST THE ROW ──────────────────────────
+      // This freed the agent's SESSION and left the call itself running.
+      // Clearing current_call_id makes the agent dialable again; it does
+      // nothing to the leg, which is still up on the lead's phone with
+      // nobody on it. The row said idle and the line said connected.
+      //
+      // Safe to end here precisely because of the condition that selected
+      // these rows: the heartbeat is ~5 seconds and has been silent for
+      // SESSION_DEAD_HEARTBEAT_MIN. The browser holding that call is gone,
+      // so there is no one left for the hold to protect and nothing to
+      // wait for.
+      //
+      // Best-effort per leg. A hangup that fails — already ended, unknown
+      // id — must not stop the rest of the batch being freed, and Telnyx
+      // returning "not found" is the ordinary case for a call that closed
+      // normally while the row went stale.
+      for (const w of wedged) {
+        if (!w.current_call_id) continue
+        try {
+          await hangupCallControlId(w.current_call_id)
+          legsHungUp++
+        } catch (e: any) {
+          console.warn(
+            '[reaper] could not hang up wedged leg', w.current_call_id,
+            e?.message || e
+          )
+        }
+      }
+
       const ids = wedged.map(s => s.id)
       const { error: updErr, count } = await db
         .from('agent_sessions')
@@ -95,6 +126,7 @@ export async function GET(req: Request) {
     return NextResponse.json({
       success: true,
       sessionsFreed,
+      legsHungUp,
       dedupeRowsSwept,
       thresholds: {
         sessionDeadHeartbeatMin: SESSION_DEAD_HEARTBEAT_MIN,
