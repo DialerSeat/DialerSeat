@@ -54,7 +54,7 @@ export async function POST(req: Request) {
     // Verify the caller owns this call before hanging it up.
     const { data: callRow } = await supabase
       .from('calls')
-      .select('user_id, answered_at')
+      .select('user_id, answered_at, agent_call_control_id')
       .eq('call_control_id', sid)
       .maybeSingle()
 
@@ -75,6 +75,29 @@ export async function POST(req: Request) {
     // Only extends calls that would otherwise be short. Skip after the
     // threshold and this does nothing — the call was never a problem.
     if (isSkip && callRow.answered_at) {
+      // ── FREE THE AGENT FIRST, THEN HOLD THE LEAD ─────────────────────────
+      // The browser no longer sends its own BYE on a skip, because doing so
+      // collapsed the bridge and took the lead's leg down with it — leaving
+      // this hold to run against a call that no longer existed. So the agent
+      // leg is dropped here instead, explicitly, before the wait begins.
+      //
+      // Order matters and is the whole fix. Hanging up the AGENT leg ends the
+      // agent's audio and their SIP session while leaving the lead's leg
+      // running, which is exactly what the machine-verdict path in
+      // calls/events has always done. Awaited, because the agent is sitting
+      // there until it lands.
+      //
+      // Best-effort: a failure here must not skip the hold. Worst case the
+      // agent hears a few more seconds of a call they have left, which is
+      // recoverable; a short call on the carrier's ledger is not.
+      if (callRow.agent_call_control_id) {
+        try {
+          await hangupCallControlId(callRow.agent_call_control_id)
+        } catch (err) {
+          console.warn('[calls/hangup] agent leg teardown failed', err)
+        }
+      }
+
       const { amd_hold_seconds_after_machine: holdSeconds } = await getPlatformConfig()
       if (holdSeconds > 0) {
         const elapsedMs = Date.now() - new Date(callRow.answered_at).getTime()

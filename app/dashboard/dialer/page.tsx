@@ -1588,6 +1588,21 @@ function DialerPageInner() {
     }
   }, [isActive])
 
+  /**
+   * Stop the agent hearing the call, without ending it.
+   *
+   * The counterpart to not sending BYE on a skip: the line stays up for the
+   * server to hold, but the agent is done with it immediately. Muting the
+   * element is enough — the media keeps arriving and nobody hears it, and the
+   * session is torn down properly a moment later by the server.
+   */
+  const silenceSIPAudio = () => {
+    try {
+      const el = document.getElementById('sip-audio') as HTMLAudioElement | null
+      if (el) { el.muted = true; el.srcObject = null }
+    } catch { /* the element is gone, which is the same outcome */ }
+  }
+
   const attachSIPAudio = (session: any) => {
     // Ensure the AudioContext is running (autoplay policies can suspend it).
     try {
@@ -1598,6 +1613,11 @@ function DialerPageInner() {
 
     const getAudioEl = (): HTMLAudioElement => {
       let audioEl = document.getElementById('sip-audio') as HTMLAudioElement | null
+      // Cleared here because silenceSIPAudio mutes this same element on a
+      // skip. Without this the mute survives and every call after the first
+      // skip is silent — the worst possible bug to introduce while fixing a
+      // hangup path.
+      if (audioEl) audioEl.muted = false
       if (!audioEl) {
         audioEl = document.createElement('audio')
         audioEl.id = 'sip-audio'
@@ -2538,17 +2558,39 @@ function DialerPageInner() {
     if (!sid) return
     if (activePollRef.current) clearInterval(activePollRef.current)
     activePollRef.current = null
+    // ── THE BROWSER MUST NOT HANG UP ITS OWN LEG ON A SKIP ────────────────
+    // Sending a SIP BYE here collapses the bridge, and Telnyx ends the LEAD's
+    // leg along with it — so the server's compliance hold then runs against a
+    // call that is already dead. Measured on a real call: answered and bridged
+    // at 0.3s, hung up by us at 5.45s, and the AMD verdict arrived at 9.10s,
+    // almost four seconds AFTER the line was gone. The hold never had a call
+    // to hold.
+    //
+    // The machine-verdict path has always done this correctly: the SERVER
+    // hangs up the agent leg and deliberately leaves the lead's leg running to
+    // clear the threshold. This mirrors that. The audio is silenced locally so
+    // the agent is free instantly, and the server drops the agent leg for real
+    // a moment later — which is what actually ends the SIP session.
+    //
+    // 'immediate' still byes: there is no hold on that path, so nothing is
+    // waiting on the lead's leg and the fastest teardown is the right one.
     if (swCallRef.current) {
-      try {
-        if (swCallRef.current.bye) await swCallRef.current.bye()
-        else if (swCallRef.current.hangup) await swCallRef.current.hangup()
-      } catch {}
-      swCallRef.current = null
+      if (reason === 'immediate') {
+        try {
+          if (swCallRef.current.bye) await swCallRef.current.bye()
+          else if (swCallRef.current.hangup) await swCallRef.current.hangup()
+        } catch {}
+        swCallRef.current = null
+      } else {
+        silenceSIPAudio()
+        // Deliberately NOT cleared: the session is still live until the server
+        // drops it, and nulling the ref here would lose the handle needed to
+        // tear it down if that request never lands.
+      }
     }
-    // NOT awaited when skipping. The server may hold the lead's line for a few
+    // NOT awaited when skipping. The server holds the lead's line for a few
     // seconds to clear the short-duration threshold, and the agent must not
-    // wait on that — they are already meant to be on the next lead. The
-    // browser's own audio is torn down above, so nothing here is user-visible.
+    // wait on that — they are already meant to be on the next lead.
     const hangupRequest = fetch('/api/calls/hangup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
