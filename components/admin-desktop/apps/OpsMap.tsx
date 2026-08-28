@@ -107,12 +107,14 @@ type Visitor = {
   firstSeen: string; lastSeen: string
 }
 type VisitorBucket = { at: string; newVisitors: number; returning: number; views: number }
+type IncomeBucket = { at: string; seatUsd: number; subUsd: number; events: number }
 
 type Payload = {
   notis: Noti[]
   logs: Noti[]
   visitors: Visitor[]
   visitorPulse: VisitorBucket[]
+  incomePulse: IncomeBucket[]
   compliance: Record<string, ComplianceWindow>
   complianceMeta: { threshold: number; resetsInDays: number }
   mode: Mode; range: Range
@@ -141,7 +143,7 @@ type Persisted = {
   feedOpen?: boolean; ranksOpen?: boolean; pulseOpen?: boolean
   notisOpen?: boolean; compOpen?: boolean
   notisTab?: 'notis' | 'logs' | 'visitors' | 'both'
-  pulseTab?: 'calls' | 'visitors'
+  pulseTab?: 'calls' | 'visitors' | 'income'
   compWindow?: '7d' | 'month' | 'all'
   showTargets?: boolean; feedView?: 'calls' | 'people'
   callFilter?: 'all' | 'answered' | 'missed' | 'machine' | 'human'
@@ -212,7 +214,7 @@ export default function OpsMap() {
   const [pulseOpen, setPulseOpen] = useState(saved.pulseOpen ?? true)
   const [notisOpen, setNotisOpen] = useState(saved.notisOpen ?? false)
   const [notisTab, setNotisTab] = useState<'notis' | 'logs' | 'visitors' | 'both'>(saved.notisTab ?? 'both')
-  const [pulseTab, setPulseTab] = useState<'calls' | 'visitors'>(saved.pulseTab ?? 'calls')
+  const [pulseTab, setPulseTab] = useState<'calls' | 'visitors' | 'income'>(saved.pulseTab ?? 'calls')
   // 'month' is what Telnyx assess, so it is the default even though it is the
   // least flattering — the box should open on the number that matters.
   const [compWindow, setCompWindow] = useState<'7d' | 'month' | 'all'>(saved.compWindow ?? 'month')
@@ -1414,20 +1416,23 @@ export default function OpsMap() {
         {(data?.pulse?.length ?? 0) > 0 && (
           <div className="om-panel om-pulse-wrap om-hide-sm">
             <div className="om-head" onClick={() => setPulseOpen(o => !o)}>
-              {pulseTab === 'calls' ? 'CALL VOLUME' : 'NEW VISITOR VOLUME'} · {range.toUpperCase()}
+              {pulseTab === 'calls' ? 'CALL VOLUME'
+                : pulseTab === 'visitors' ? 'NEW VISITOR VOLUME'
+                : 'INCOME'} · {range === 'all' ? 'ALL TIME' : range.toUpperCase()}
               <span className="om-caret">{pulseOpen ? '▼' : '▲'}</span>
             </div>
             {pulseOpen && (
               <>
                 <div className="om-subbar" onClick={e => e.stopPropagation()}>
-                  {([['calls', 'CALLS'], ['visitors', 'NEW VISITORS']] as const).map(([id, lbl]) => (
+                  {([['calls', 'CALLS'], ['visitors', 'NEW VISITORS'],
+                     ['income', 'INCOME']] as const).map(([id, lbl]) => (
                     <button key={id} className="om-mini" data-on={pulseTab === id}
                             onClick={() => setPulseTab(id)}>{lbl}</button>
                   ))}
                 </div>
-                {pulseTab === 'calls'
-                  ? <Pulse buckets={data!.pulse} />
-                  : <VisitorPulse buckets={data?.visitorPulse ?? []} />}
+                {pulseTab === 'calls' ? <Pulse buckets={data!.pulse} />
+                  : pulseTab === 'visitors' ? <VisitorPulse buckets={data?.visitorPulse ?? []} />
+                  : <IncomePulse buckets={data?.incomePulse ?? []} />}
               </>
             )}
           </div>
@@ -1670,42 +1675,123 @@ export default function OpsMap() {
 // between them — dialing hard and connecting nothing looks identical to not
 // dialing when the second series is somewhere else on screen.
 /**
- * New arrivals over time.
+ * A small multi-series line chart.
  *
- * NEW is the whole point and is why this cannot just count visitors per
- * bucket: somebody reading across three days is one arrival, and counting them
- * in all three turns a single visit into growth. Returning is drawn behind, in
- * a dimmer tone, because arrivals without returns is churn and returns without
- * arrivals is a dry funnel — neither number means much alone.
+ * Lines rather than bars because both things drawn with it are RATES over
+ * time — arrivals per hour, dollars per day — and a rate is a shape. Bars
+ * invite reading each column as a total worth comparing to its neighbour,
+ * which is the wrong question for "is this climbing".
+ *
+ * Scaled against the tallest point across ALL series, never per series.
+ * Independent scales would let a line of two dollars and a line of two hundred
+ * occupy the same height, which is not a chart, it is two charts drawn on top
+ * of each other.
+ *
+ * Sparse data is the normal case here, not an edge case: this platform has
+ * days with one visitor and one payment. A single point still draws — as a
+ * dot, since a line through one value is not a line.
  */
-function VisitorPulse({ buckets }: { buckets: VisitorBucket[] }) {
-  if (!buckets.length) {
-    return <div style={{ padding: '10px 12px', color: DIM, fontSize: 10.5 }}>No visits in this range.</div>
+function LineChart({ series, buckets, format, empty }: {
+  series: { label: string; colour: string; values: number[] }[]
+  buckets: string[]
+  format: (n: number) => string
+  empty: string
+}) {
+  const flat = series.flatMap(s => s.values)
+  if (!flat.length) {
+    return <div style={{ padding: '10px 12px', color: DIM, fontSize: 10.5 }}>{empty}</div>
   }
-  const max = Math.max(1, ...buckets.map(b => b.newVisitors + b.returning))
-  const totalNew = buckets.reduce((n, b) => n + b.newVisitors, 0)
+  const max = Math.max(1, ...flat)
+  const W = 260
+  const H = 46
+  const n = Math.max(1, buckets.length - 1)
+  const px = (i: number) => (i / n) * W
+  const py = (v: number) => H - (v / max) * H
+
   return (
     <div style={{ padding: '8px 10px 9px' }}>
       <div style={{
-        display: 'flex', justifyContent: 'flex-end', fontSize: 8.5,
-        letterSpacing: 1, color: DIM, marginBottom: 3,
-      }}>{totalNew} NEW</div>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 46 }}>
-        {buckets.map((b, i) => {
-          const nh = (b.newVisitors / max) * 100
-          const rh = (b.returning / max) * 100
+        display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+        fontSize: 8.5, letterSpacing: 1, marginBottom: 3,
+      }}>
+        <span style={{ display: 'flex', gap: 8 }}>
+          {series.map(s => (
+            <span key={s.label} style={{ color: s.colour }}>
+              <span style={{ opacity: 0.9 }}>●</span> {s.label}
+            </span>
+          ))}
+        </span>
+        <span style={{ color: DIM }}>PEAK {format(max)}</span>
+      </div>
+
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none"
+           style={{ width: '100%', height: H, display: 'block', overflow: 'visible' }}>
+        {/* A midline, so a flat run reads as flat rather than as no data. */}
+        <line x1={0} y1={H / 2} x2={W} y2={H / 2} stroke={EDGE} strokeOpacity={0.35} strokeWidth={0.5} />
+        {series.map(s => {
+          const pts = s.values.map((v, i) => `${px(i).toFixed(1)},${py(v).toFixed(1)}`)
+          if (pts.length === 1) {
+            return <circle key={s.label} cx={px(0)} cy={py(s.values[0])} r={2} fill={s.colour} />
+          }
           return (
-            <div key={i}
-                 title={`${new Date(b.at).toLocaleString()} · ${b.newVisitors} new, ${b.returning} returning, ${b.views} views`}
-                 style={{ flex: 1, minWidth: 2, height: '100%', display: 'flex',
-                          flexDirection: 'column', justifyContent: 'flex-end' }}>
-              <div style={{ height: `${nh}%`, background: GREEN, opacity: 0.9, borderRadius: '1px 1px 0 0' }} />
-              <div style={{ height: `${rh}%`, background: EDGE_HOT, opacity: 0.55 }} />
-            </div>
+            <g key={s.label}>
+              <polyline points={pts.join(' ')} fill="none" stroke={s.colour}
+                        strokeWidth={1.4} strokeLinejoin="round" strokeLinecap="round"
+                        vectorEffect="non-scaling-stroke" />
+              {/* The last point marked, because "where is it now" is the
+                  question a trend line is usually being asked. */}
+              <circle cx={px(s.values.length - 1)} cy={py(s.values[s.values.length - 1])}
+                      r={1.8} fill={s.colour} />
+            </g>
           )
         })}
+      </svg>
+
+      <div style={{
+        display: 'flex', justifyContent: 'space-between',
+        fontSize: 8, color: DIM, marginTop: 3, fontFamily: 'ui-monospace, Menlo, monospace',
+      }}>
+        <span>{buckets.length ? hhmmss(buckets[0]) : ''}</span>
+        <span>{buckets.length ? hhmmss(buckets[buckets.length - 1]) : ''}</span>
       </div>
     </div>
+  )
+}
+
+/** New arrivals over time. */
+function VisitorPulse({ buckets }: { buckets: VisitorBucket[] }) {
+  return (
+    <LineChart
+      buckets={buckets.map(b => b.at)}
+      format={n => String(Math.round(n))}
+      empty="No visits in this range."
+      series={[
+        // NEW is the number that matters and is drawn brightest. Returning is
+        // there for contrast: arrivals with no returns is churn, returns with
+        // no arrivals is a dry funnel, and neither means much alone.
+        { label: 'NEW', colour: GREEN, values: buckets.map(b => b.newVisitors) },
+        { label: 'RETURNING', colour: EDGE_HOT, values: buckets.map(b => b.returning) },
+      ]}
+    />
+  )
+}
+
+/** Money in, over time. */
+function IncomePulse({ buckets }: { buckets: IncomeBucket[] }) {
+  return (
+    <LineChart
+      buckets={buckets.map(b => b.at)}
+      format={n => `$${n.toFixed(2)}`}
+      empty="Nothing billed in this range."
+      series={[
+        // Seats are the measured half — charged_cents is what was actually
+        // invoiced after comps. Subscriptions are billing_events.amount_cents,
+        // which the webhook writes as a flat list price, so that line is an
+        // upper bound rather than a receipt. Drawn separately for that reason.
+        { label: 'SEATS', colour: GREEN, values: buckets.map(b => b.seatUsd) },
+        { label: 'SUBS (LIST)', colour: CYAN, values: buckets.map(b => b.subUsd) },
+      ]}
+    />
   )
 }
 

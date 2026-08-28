@@ -145,7 +145,7 @@ export async function GET(req: NextRequest) {
       : rangeParam === '7d' ? 28
       : rangeParam === '90d' ? 45 : 30
 
-    const [originsRes, extraVisitorsRes, targetsRes, feedRes, breakdownRes, pulseRes, peopleRes, notisRes, compRes, logsRes, visitorsRes, vPulseRes] = await Promise.all([
+    const [originsRes, extraVisitorsRes, targetsRes, feedRes, breakdownRes, pulseRes, peopleRes, notisRes, compRes, logsRes, visitorsRes, vPulseRes, incomeRes] = await Promise.all([
       mode === 'visitors'
         ? supabase.rpc('ops_map_visitors', { p_since: since })
         : supabase.rpc('ops_map', {
@@ -195,6 +195,7 @@ export async function GET(req: NextRequest) {
       supabase.rpc('pv_individuals', { p_since: since, p_until: null, p_limit: 60 }),
       // New arrivals over time, bucketed to line up with the call pulse.
       supabase.rpc('ops_map_visitor_pulse', { p_since: since, p_buckets: buckets }),
+      supabase.rpc('ops_map_income_pulse', { p_since: since, p_buckets: buckets }),
     ])
     if (originsRes.error) throw originsRes.error
 
@@ -499,9 +500,19 @@ export async function GET(req: NextRequest) {
       lastSeen: v.last_seen,
     }))
 
+    const incomePulse = ((incomeRes.data || []) as Array<Record<string, string | number>>).map(r => ({
+      at: String(r.bucket),
+      seatUsd: (Number(r.seat_cents) || 0) / 100,
+      // List price, not invoiced — billing_events writes a flat 3500 on every
+      // subscription event. Named separately so the panel can say so.
+      subUsd: (Number(r.sub_cents) || 0) / 100,
+      events: Number(r.events) || 0,
+    }))
+
     return NextResponse.json({
       success: true,
       notis,
+      incomePulse,
       logs,
       visitors,
       visitorPulse,
