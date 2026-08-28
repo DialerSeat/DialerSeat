@@ -88,12 +88,23 @@ type PlaceDetail = {
   sources: { source: string; views: number }[]
 }
 
+type Noti = {
+  id: string; kind: string; title: string
+  body: string | null; url: string | null; unread: boolean; at: string
+}
+type ComplianceSummary = {
+  placed: number; connected: number; measured: number; short: number
+  shortPct: number | null; answerPct: number | null; avgBilled: number | null
+  threshold: number
+}
+
 type Payload = {
+  notis: Noti[]
+  compliance: ComplianceSummary
   mode: Mode; range: Range
   pulse: PulseBucket[]
   people: Person[]
   points: Point[]; targets: Target[]
-  arcs: { key: string; from: [number, number]; to: [number, number]; n: number }[]
   feed: FeedRow[]
   breakdown: Record<string, { label: string; n: number; detail: string }[]>
   totals: {
@@ -174,6 +185,14 @@ export default function OpsMap() {
   const [feedOpen, setFeedOpen] = useState(saved.feedOpen ?? true)
   const [ranksOpen, setRanksOpen] = useState(saved.ranksOpen ?? true)
   const [pulseOpen, setPulseOpen] = useState(saved.pulseOpen ?? true)
+  const [notisOpen, setNotisOpen] = useState(false)
+  const [compOpen, setCompOpen] = useState(false)
+  // Which person's card is open. Held by id rather than by object so a refresh
+  // reopens it against the NEW row instead of pinning a stale copy on screen.
+  const [personId, setPersonId] = useState<string | null>(null)
+  // Sorting is a different question from filtering — "who joined first" is not
+  // a subset, it is an order — so it lives beside the filter, not inside it.
+  const [peopleSort, setPeopleSort] = useState<'recent' | 'first'>('recent')
   const [showTargets, setShowTargets] = useState(saved.showTargets ?? true)
 
   // What the wide panel is showing. CALLS is a ticker of events; PEOPLE is a
@@ -371,7 +390,6 @@ export default function OpsMap() {
 
   const points = data?.points ?? []
   const targets = showTargets ? (data?.targets ?? []) : []
-  const arcs = showTargets ? (data?.arcs ?? []) : []
   const maxUsers = Math.max(1, ...points.map(p => p.users))
   const maxCalls = Math.max(1, ...targets.map(t => t.calls))
   // Filtering here rather than in the query: the feed is 80 rows and already
@@ -389,6 +407,10 @@ export default function OpsMap() {
       case 'unplaced': return !p.place
       default: return true
     }
+  }).slice().sort((a, b) => {
+    const ta = new Date(a.joined).getTime()
+    const tb = new Date(b.joined).getTime()
+    return peopleSort === 'first' ? ta - tb : tb - ta
   })
 
   const shownFeed = (data?.feed ?? []).filter(f => {
@@ -398,6 +420,13 @@ export default function OpsMap() {
     if (callFilter === 'machine') return f.amdResult === 'machine'
     return true
   })
+
+  const unreadNotis = (data?.notis ?? []).filter(n => n.unread).length
+  const comp = data?.compliance ?? null
+  // Resolved from the current payload every render, so a sync refreshes the
+  // open card rather than leaving a stale snapshot of it.
+  const person = (data?.people ?? []).find(p => p.id === personId) || null
+
 
   const zoom = MAP_W / view.w
   // Ping radii are drawn in map units, so dividing by the zoom keeps them a
@@ -475,6 +504,15 @@ export default function OpsMap() {
       y: Math.min(MAP_H - h + pad, Math.max(-pad, v.y)),
     }
   }, [])
+
+  /** Centre the map on a point and select it. */
+  const focusPoint = useCallback((pt: { key: string; lat: number; lon: number }) => {
+    const { x, y } = project(pt.lat, pt.lon, MAP_W, MAP_H)
+    const w = Math.max(MIN_W, MAP_W / 9)
+    const h = w * (MAP_H / MAP_W)
+    setView(clampView({ w, h, x: x - w / 2, y: y - h / 2 }))
+    setSelected(pt.key)
+  }, [clampView])
 
   const zoomAbout = useCallback((factor: number, cx?: number, cy?: number) => {
     setView(prev => {
@@ -677,6 +715,17 @@ export default function OpsMap() {
         .om-mini:hover { color:${MUTED}; }
         .om-mini[data-on="true"] { color:${CYAN}; border-color:${EDGE}; background:rgba(18,80,138,0.25); }
         .om-sep { width:1px; height:11px; background:${EDGE}; margin:0 3px; }
+        .om-funnel {
+          display:inline-flex; align-items:center; gap:4px; cursor:pointer;
+          border:1px solid ${EDGE}; border-radius:3px; padding:1px 5px 1px 6px;
+          background:rgba(18,80,138,0.18); color:${CYAN};
+          font-size:8.5px; letter-spacing:1.1px; font-weight:800;
+        }
+        .om-funnel select {
+          background:transparent; border:none; color:${CYAN}; cursor:pointer;
+          font:inherit; letter-spacing:inherit; outline:none; padding:2px 0;
+        }
+        .om-funnel select option { background:${VOID}; color:${INK}; letter-spacing:0; }
         .om-rank { position:relative; display:flex; align-items:center; gap:7px;
                    padding:2.5px 9px; font-size:10.5px; overflow:hidden;
                    font-family: ui-monospace, Menlo, Consolas, monospace; }
@@ -696,14 +745,19 @@ export default function OpsMap() {
         .om-dock-row { display:flex; gap:8px; align-items:flex-end; min-height:0; }
         .om-dock * { pointer-events:auto; }
         .om-pulse-wrap { flex:0 0 auto; }
-        .om-feed-wrap { flex:1 1 auto; min-width:0; max-height:28vh; }
-        .om-rank-wrap { width:258px; flex:0 0 auto; max-height:28vh; }
+        /* The two corner boxes sit on one row above CALL VOLUME, pushed to the
+           outer edges so the middle of the map stays clear. */
+        .om-corner-row { display:flex; justify-content:space-between; gap:8px; align-items:flex-end; }
+        .om-corner { width:290px; max-width:44%; }
+        @media (max-width: 900px) { .om-corner { width:auto; max-width:none; flex:1 1 0; } }
+        .om-feed-wrap { flex:1 1 auto; min-width:0; height:28vh; }
+        .om-rank-wrap { width:258px; flex:0 0 auto; height:28vh; }
         .om-detail { position:absolute; right:8px; top:44px; width:300px; max-height:46vh; z-index:6; }
         @media (max-width: 900px) {
           .om-dock { left:6px; right:6px; bottom:6px; }
           .om-dock-row { flex-direction:column; align-items:stretch; }
-          .om-rank-wrap { width:auto; max-height:20vh; }
-          .om-feed-wrap { max-height:23vh; }
+          .om-rank-wrap { width:auto; height:20vh; }
+          .om-feed-wrap { height:23vh; }
           .om-detail { left:6px; right:6px; width:auto; top:auto; bottom:6px; max-height:56vh; }
           .om-hide-sm { display:none !important; }
         }
@@ -767,39 +821,11 @@ export default function OpsMap() {
                 strokeLinejoin="round" strokeLinecap="round" />
         ))}
 
-        {/* Arcs: origin -> destination, curved so two-way traffic does not
-            overlap into one ambiguous straight line. */}
-        {arcs.map((a, i) => {
-          const p1 = project(a.from[0], a.from[1], MAP_W, MAP_H)
-          const p2 = project(a.to[0], a.to[1], MAP_W, MAP_H)
-          const mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2
-          const dx = p2.x - p1.x, dy = p2.y - p1.y
-          const len = Math.hypot(dx, dy) || 1
-          // Bowed perpendicular to the line, so a route dialed both ways draws
-          // two visible arcs instead of one overdrawn straight stroke.
-          const cx = mx - (dy / len) * len * 0.22
-          const cy = my + (dx / len) * len * 0.22
-          const d = `M${p1.x} ${p1.y} Q${cx} ${cy} ${p2.x} ${p2.y}`
-          // Busier routes send their pulse more often. Staggered by index so
-          // every arc on the map does not fire in lockstep, which reads as one
-          // blinking object rather than as independent traffic.
-          const dur = Math.max(1.6, 4.2 - Math.min(2.4, a.n * 0.3))
-          return (
-            <g key={a.key}>
-              <path d={d} fill="none" stroke={CYAN} strokeOpacity={0.3}
-                strokeWidth={(0.5 + Math.min(2, a.n * 0.25)) * k}
-                strokeDasharray={`${3 * k} ${3 * k}`}
-                style={{ animation: 'om-dash 6s linear infinite' }} />
-              {/* animateMotion rather than a JS rAF loop: the browser drives it
-                  off the compositor, so a hundred arcs cost nothing on the main
-                  thread and keep moving while React re-renders around them. */}
-              <circle r={1.5 * k} fill={CYAN} filter="url(#om-glow)">
-                <animateMotion dur={`${dur}s`} repeatCount="indefinite" path={d}
-                               begin={`${(i % 7) * 0.35}s`} />
-              </circle>
-            </g>
-          )
-        })}
+        {/* Arcs were here — a curve from each agent to the state they dialed.
+            Removed as decoration: with one dialing agent every line leaves the
+            same point, and at scale a hundred agents into forty states is a
+            mesh drawn on top of the pings it makes harder to see. The same
+            pairing is in the LIVE CALLS table, exactly, one row per call. */}
 
         {/* Destinations — where the calls went. */}
         {targets.map(t => {
@@ -1029,8 +1055,187 @@ export default function OpsMap() {
         </div>
       )}
 
+      {/* ── ONE ACCOUNT, IN FULL ──────────────────────────────────────────
+          The table row is a summary and deliberately narrow: on a phone most
+          of its columns are hidden, so tapping a name was the only way to see
+          the rest. Looked up by id on every render rather than captured at
+          click time, so a background sync updates the open card instead of
+          leaving a stale copy on screen — an ONLINE dot that has stopped being
+          true is worse than no dot. */}
+      {person && (
+        <div
+          onClick={() => setPersonId(null)}
+          style={{
+            position: 'absolute', inset: 0, zIndex: 40, display: 'grid',
+            placeItems: 'center', padding: 16,
+            background: 'rgba(4,6,10,0.72)', backdropFilter: 'blur(2px)',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            className="om-panel"
+            style={{ width: 'min(420px, 100%)', maxHeight: '82%', display: 'flex', flexDirection: 'column' }}
+          >
+            <div className="om-head" onClick={() => setPersonId(null)}>
+              {person.label.toUpperCase()}
+              <span className="om-caret">✕</span>
+            </div>
+            <div className="om-scroll" style={{ padding: '8px 10px 10px' }}>
+              {person.username && (
+                <div style={{ fontSize: 11, color: CYAN, marginBottom: 1 }}>@{person.username}</div>
+              )}
+              {person.email && (
+                <div style={{ fontSize: 10.5, color: MUTED, marginBottom: 8 }}>{person.email}</div>
+              )}
+
+              <Section title="ACCOUNT">
+                <Row k="STATUS" v={statusLabel(person)} c={statusColour(person)} />
+                {person.seatTeam && <Row k="TEAM" v={person.seatTeam} c={VIOLET} />}
+                {person.plan && <Row k="PLAN" v={person.plan.toUpperCase()} />}
+                {person.trialEnd && (
+                  <Row k="TRIAL ENDS" v={new Date(person.trialEnd).toLocaleString()} c={CYAN} />
+                )}
+                <Row k="JOINED" v={new Date(person.joined).toLocaleString()} />
+              </Section>
+
+              <Section title="ACTIVITY">
+                <Row k="CALLS" v={String(person.calls)} c={person.calls ? INK : DIM} />
+                <Row k="ANSWERED"
+                     v={person.calls
+                        ? `${person.answered} · ${Math.round((person.answered / person.calls) * 100)}%`
+                        : '—'} />
+                <Row k="CAMPAIGNS" v={String(person.campaigns)} />
+                <Row k="LEADS" v={String(person.leads)} />
+                <Row k="LAST CALL"
+                     v={person.lastCall ? new Date(person.lastCall).toLocaleString() : 'never'}
+                     c={person.lastCall ? undefined : DIM} />
+              </Section>
+
+              <Section title="RIGHT NOW">
+                <Row k="STATE" v={person.online ? 'ONLINE' : 'OFFLINE'}
+                     c={person.online ? GREEN : DIM} />
+                <Row k="WHERE" v={person.place || 'unplaced'}
+                     c={person.place ? undefined : AMBER} />
+                {person.device && <Row k="DEVICE" v={person.device} />}
+                {person.dialerMode && <Row k="MODE" v={person.dialerMode} />}
+                {person.dialerState && (
+                  <Row k="DIALER" v={person.dialerState}
+                       c={person.dialerState === 'available' ? GREEN : MUTED} />
+                )}
+                <Row k="LAST BEAT"
+                     v={person.lastHeartbeat ? new Date(person.lastHeartbeat).toLocaleString() : 'never'}
+                     c={person.lastHeartbeat ? undefined : DIM} />
+              </Section>
+
+              {/* Only offered when there is somewhere to go. An account the map
+                  cannot place has no ping to fly to. */}
+              {person.place && (
+                <button
+                  className="om-chip"
+                  style={{ marginTop: 10, width: '100%' }}
+                  onClick={() => {
+                    const hit = (data?.points ?? []).find(pt => pt.label === person.place)
+                    if (hit) { focusPoint(hit); setPersonId(null) }
+                  }}
+                >SHOW ON MAP</button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── DOCK ────────────────────────────────────────────────────────── */}
       <div className="om-dock">
+        {/* ── CORNER BOXES ──────────────────────────────────────────────
+            Both sit above CALL VOLUME and both are collapsed by default: the
+            map is the point of this screen, and a box that opens itself every
+            time takes room from it to show something that was not asked for.
+
+            Both read from the map's own payload rather than fetching their
+            own — one request, one instant, so the notification count here can
+            never disagree with the bell, and the ratio here can never disagree
+            with the Compliance app. */}
+        <div className="om-corner-row">
+          <div className="om-panel om-corner">
+            <div className="om-head" onClick={() => setNotisOpen(o => !o)}>
+              MINI NOTIS
+              <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+                {unreadNotis > 0 && (
+                  <span style={{
+                    background: AMBER, color: VOID, borderRadius: 8, padding: '0 5px',
+                    fontSize: 8.5, fontWeight: 900, letterSpacing: 0.5,
+                  }}>{unreadNotis}</span>
+                )}
+                <span className="om-caret">{notisOpen ? '▼' : '▲'}</span>
+              </span>
+            </div>
+            {notisOpen && (
+              <div className="om-scroll" style={{ maxHeight: 150 }}>
+                {(data?.notis ?? []).length === 0 ? (
+                  <div style={{ color: DIM, fontSize: 10.5, padding: '8px 9px' }}>Nothing yet.</div>
+                ) : (
+                  (data?.notis ?? []).map(n => (
+                    <div key={n.id} style={{
+                      padding: '5px 9px', borderBottom: `1px solid ${EDGE}`,
+                      borderLeft: `2px solid ${n.unread ? AMBER : 'transparent'}`,
+                    }}>
+                      <div style={{
+                        display: 'flex', justifyContent: 'space-between', gap: 8,
+                        fontSize: 10, color: n.unread ? INK : MUTED, fontWeight: n.unread ? 700 : 400,
+                      }}>
+                        <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {n.title}
+                        </span>
+                        <span style={{ color: DIM, flexShrink: 0, fontFamily: 'ui-monospace, Menlo, monospace' }}>
+                          {hhmmss(n.at)}
+                        </span>
+                      </div>
+                      {n.body && (
+                        <div style={{ fontSize: 9.5, color: DIM, marginTop: 1, lineHeight: 1.4 }}>{n.body}</div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="om-panel om-corner">
+            <div className="om-head" onClick={() => setCompOpen(o => !o)}>
+              COMPLIANCE
+              <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+                {comp && comp.shortPct !== null && (
+                  <span style={{
+                    color: comp.shortPct > comp.threshold ? RED : GREEN,
+                    fontFamily: 'ui-monospace, Menlo, monospace', fontWeight: 800, fontSize: 10,
+                  }}>{comp.shortPct.toFixed(1)}%</span>
+                )}
+                <span className="om-caret">{compOpen ? '▼' : '▲'}</span>
+              </span>
+            </div>
+            {compOpen && comp && (
+              <div style={{ padding: '7px 9px 9px' }}>
+                {/* The one number Telnyx judge, and the line they judge it
+                    against, together — a ratio with no threshold beside it is
+                    not actionable. */}
+                <Row k={`SHORT CALLS (<=6s)`}
+                     v={comp.shortPct === null ? '—' : `${comp.shortPct.toFixed(1)}% of ${comp.measured}`}
+                     c={comp.shortPct !== null && comp.shortPct > comp.threshold ? RED : GREEN} />
+                <Row k="THEIR LIMIT" v={`${comp.threshold}%`} />
+                <Row k="ANSWER RATE"
+                     v={comp.answerPct === null ? '—' : `${comp.answerPct.toFixed(1)}%`} />
+                <Row k="AVG BILLED"
+                     v={comp.avgBilled === null ? '—' : `${comp.avgBilled.toFixed(1)}s`} />
+                <Row k="PLACED / CONNECTED" v={`${comp.placed} / ${comp.connected}`} />
+                <div style={{ fontSize: 9, color: DIM, marginTop: 5, lineHeight: 1.5 }}>
+                  This calendar month. Billed time is answer to hangup, ring
+                  excluded — the span Telnyx charge for.
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* VOLUME. The panels below count; this shows shape. "1,569 skipped"
             and "1,569 skipped, all inside twenty minutes on Tuesday" are
             different facts and only one of them survives a total. */}
@@ -1077,14 +1282,31 @@ export default function OpsMap() {
                   ) : (
                     <>
                       <span className="om-sep" />
-                      {([
-                        ['all', 'ALL'], ['online', 'ONLINE'], ['paying', 'PAYING'],
-                        ['trial', 'TRIAL'], ['seat', 'ON A SEAT'], ['dialed', 'HAS DIALED'],
-                        ['unplaced', 'UNPLACED'],
-                      ] as const).map(([id, lbl]) => (
-                        <button key={id} className="om-mini" data-on={peopleFilter === id}
-                                onClick={() => setPeopleFilter(id)}>{lbl}</button>
-                      ))}
+                      {/* A funnel rather than seven chips. Seven filters plus
+                          two sorts plus the view switch is more controls than
+                          the strip can hold, and a row that wraps pushes the
+                          table it belongs to off the bottom of the panel. */}
+                      <label className="om-funnel" title="Filter these accounts">
+                        <span aria-hidden="true">▼</span>
+                        <select value={peopleFilter}
+                                onChange={e => setPeopleFilter(e.target.value as typeof peopleFilter)}>
+                          <option value="all">ALL ACCOUNTS</option>
+                          <option value="online">ONLINE NOW</option>
+                          <option value="paying">PAYING</option>
+                          <option value="trial">ON TRIAL</option>
+                          <option value="seat">ON A TEAM SEAT</option>
+                          <option value="dialed">HAS DIALED</option>
+                          <option value="unplaced">UNPLACED</option>
+                        </select>
+                      </label>
+                      <label className="om-funnel" title="Order these accounts">
+                        <span aria-hidden="true">⇅</span>
+                        <select value={peopleSort}
+                                onChange={e => setPeopleSort(e.target.value as typeof peopleSort)}>
+                          <option value="recent">MOST RECENTLY JOINED</option>
+                          <option value="first">FIRST JOINED</option>
+                        </select>
+                      </label>
                     </>
                   )}
                   <span style={{ marginLeft: 'auto', color: DIM, fontSize: 9, letterSpacing: 1 }}>
@@ -1167,8 +1389,11 @@ export default function OpsMap() {
                       </thead>
                       <tbody>
                         {shownPeople.map(pr => (
-                          <tr key={pr.id}>
-                            <td style={{ color: pr.online ? GREEN : INK }}>
+                          <tr key={pr.id} onClick={() => setPersonId(pr.id)}
+                              style={{ cursor: 'pointer' }}
+                              title="Open this account">
+                            <td style={{ color: pr.online ? GREEN : INK, textDecoration: 'underline',
+                                         textDecorationColor: EDGE, textUnderlineOffset: 3 }}>
                               {pr.online ? '● ' : ''}{pr.label}
                             </td>
                             {/* The display label falls back to username, so

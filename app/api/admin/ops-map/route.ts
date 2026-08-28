@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 import { requireAdmin } from '@/lib/admin'
-import { locate, US_STATES } from '@/lib/worldMap'
+import { locate, US_STATES, COUNTRIES } from '@/lib/worldMap'
 import { stateForNumber, AREA_CODE_STATE } from '@/lib/areaCodes'
 
 export const dynamic = 'force-dynamic'
@@ -66,6 +66,21 @@ type PersonRow = {
   campaigns: number | string; leads: number | string
 }
 
+/**
+ * A human name for a country/region pair.
+ *
+ * Region codes are only US state letters in one country. Jamaica numbers its
+ * parishes, so a real trialing user was displayed as being "in 12" — the
+ * label fell through to the raw code because the lookup only knew US states.
+ * Outside the US the country is the honest answer: the region code is a
+ * subdivision this product has no table for and no use for.
+ */
+function placeLabel(country: string | null, region: string | null): string | null {
+  if (country === 'US' && region && US_STATES[region]) return US_STATES[region].name
+  if (country && COUNTRIES[country]) return COUNTRIES[country].name
+  return country || null
+}
+
 const MODES = ['visitors', 'online', 'subscribed', 'all'] as const
 type Mode = (typeof MODES)[number]
 
@@ -124,7 +139,7 @@ export async function GET(req: NextRequest) {
       : rangeParam === '7d' ? 28
       : rangeParam === '90d' ? 45 : 30
 
-    const [originsRes, targetsRes, feedRes, breakdownRes, pulseRes, peopleRes] = await Promise.all([
+    const [originsRes, targetsRes, feedRes, breakdownRes, pulseRes, peopleRes, notisRes, compRes] = await Promise.all([
       mode === 'visitors'
         ? supabase.rpc('ops_map_visitors', { p_since: since })
         : supabase.rpc('ops_map', { p_mode: mode, p_online_seconds: ONLINE_SECONDS }),
@@ -136,6 +151,19 @@ export async function GET(req: NextRequest) {
       // whole point is showing accounts the map cannot place. Narrowing it to
       // the current mode would hide exactly the ones worth looking at.
       supabase.rpc('ops_map_people', { p_online_seconds: ONLINE_SECONDS }),
+      // ── THE SAME NOTIFICATIONS THE BELL SHOWS ──────────────────────────
+      // Read straight from admin_notifications rather than proxied through
+      // /api/admin/notifications, so the map's copy cannot drift from the
+      // one the notification centre shows — same table, same instant, and
+      // it arrives on the map's own sync rather than a second timer.
+      supabase
+        .from('admin_notifications')
+        .select('id, event_type, title, body, url, read_at, created_at')
+        .order('created_at', { ascending: false })
+        .limit(40),
+      // Same numbers the Compliance app shows, aggregated in Postgres so a
+      // corner box does not have to read a month of calls to draw four values.
+      supabase.rpc('ops_map_compliance'),
     ])
     if (originsRes.error) throw originsRes.error
 
@@ -228,9 +256,7 @@ export async function GET(req: NextRequest) {
         id: r.call_id,
         at: r.at,
         agent: r.agent || 'unknown',
-        agentPlace: r.agent_region
-          ? (US_STATES[r.agent_region]?.name || r.agent_region)
-          : (r.agent_country || null),
+        agentPlace: placeLabel(r.agent_country, r.agent_region),
         agentRegion: r.agent_region || null,
         phone: r.phone || null,
         targetState,
@@ -298,7 +324,7 @@ export async function GET(req: NextRequest) {
       username: r.username || null,
       email: r.email,
       joined: r.joined,
-      place: r.region ? (US_STATES[r.region]?.name || r.region) : (r.country || null),
+      place: placeLabel(r.country, r.region),
       device: r.device || null,
       dialerState: r.dialer_state || null,
       dialerMode: r.dialer_mode || null,
@@ -320,8 +346,37 @@ export async function GET(req: NextRequest) {
       leads: Number(r.leads) || 0,
     }))
 
+    const notis = ((notisRes.data || []) as Array<{
+      id: string; event_type: string | null; title: string | null
+      body: string | null; url: string | null
+      read_at: string | null; created_at: string
+    }>).map(n => ({
+      id: n.id,
+      kind: n.event_type || 'event',
+      title: n.title || n.event_type || 'Notification',
+      body: n.body || null,
+      url: n.url || null,
+      unread: !n.read_at,
+      at: n.created_at,
+    }))
+
+    const c0 = ((compRes.data || []) as Array<Record<string, number | null>>)[0] || {}
+    const compliance = {
+      placed: Number(c0.placed) || 0,
+      connected: Number(c0.connected) || 0,
+      measured: Number(c0.measured) || 0,
+      short: Number(c0.short) || 0,
+      shortPct: c0.short_pct == null ? null : Number(c0.short_pct),
+      answerPct: c0.answer_pct == null ? null : Number(c0.answer_pct),
+      avgBilled: c0.avg_billed == null ? null : Number(c0.avg_billed),
+      // The line Telnyx draw. Kept here so the box does not have to know it.
+      threshold: 15,
+    }
+
     return NextResponse.json({
       success: true,
+      notis,
+      compliance,
       mode,
       range: rangeParam,
       pulse,
