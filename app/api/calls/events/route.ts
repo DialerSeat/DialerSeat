@@ -12,6 +12,7 @@ import { hangupCallControlId, bridgeCallControlIds } from '@/lib/placeOutboundCa
 import { handleOverflowAnsweredCall } from '@/lib/teamOverflow'
 import { abortSiblingFanoutLines } from '@/lib/predictiveController'
 import { startTelnyxRecording } from '@/lib/telnyxRecording'
+import { remainingHoldMs, HOLD_SPREAD_SECONDS } from '@/lib/complianceHold'
 import { resolveTelnyxConfigOrLog } from '@/lib/telnyxConfig'
 import { agentSipUriForUserId, resolveCredentialConnectionId } from '@/lib/agentSipCredentials'
 import { ensureSipUriCallingEnabled, isSipUriRejection } from '@/lib/telnyxSipUriCalling'
@@ -871,13 +872,17 @@ async function handleAmdResult(callControlId: string, result: string): Promise<v
         ? Date.now() - answeredAt
         : 4000
 
-      const remainingMs = holdSeconds * 1000 - elapsedMs
+      // Randomised between the floor and three seconds above it — see
+      // lib/complianceHold.ts. A hold that always lands on exactly nine
+      // seconds is a signature, and the point of holding at all is to stop
+      // looking like a pattern.
+      const remainingMs = remainingHoldMs(holdSeconds, elapsedMs)
       // Only ever extends a call that would otherwise be short. A call already
       // past the threshold is left alone — there is nothing to correct.
       if (remainingMs > 0) {
         console.log(
           `[calls/events] holding ${callControlId} a further ${Math.round(remainingMs)}ms ` +
-          `(target ${holdSeconds}s, elapsed ${Math.round(elapsedMs)}ms, ` +
+          `(floor ${holdSeconds}s +0-${HOLD_SPREAD_SECONDS}s, elapsed ${Math.round(elapsedMs)}ms, ` +
           `answered_at ${answeredAt === null ? 'MISSING — estimated' : 'known'})`
         )
         await new Promise(resolve => setTimeout(resolve, remainingMs))

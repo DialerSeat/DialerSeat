@@ -4,6 +4,7 @@ import { getServiceClient } from '@/lib/supabase'
 import { apiError } from '@/lib/apiError'
 import { logCallEvent } from '@/lib/callEvents'
 import { hangupCallControlId } from '@/lib/placeOutboundCall'
+import { remainingHoldMs } from '@/lib/complianceHold'
 import { getPlatformConfig } from '@/lib/platformConfig'
 
 const supabase = getServiceClient('calls/hangup')
@@ -77,7 +78,10 @@ export async function POST(req: Request) {
       const { amd_hold_seconds_after_machine: holdSeconds } = await getPlatformConfig()
       if (holdSeconds > 0) {
         const elapsedMs = Date.now() - new Date(callRow.answered_at).getTime()
-        const remainingMs = holdSeconds * 1000 - elapsedMs
+        // Same randomised target as the machine-verdict hold, from the same
+        // helper. Two independent implementations of one compliance rule is
+        // how they end up disagreeing — and this one runs on far more calls.
+        const remainingMs = remainingHoldMs(holdSeconds, elapsedMs)
         if (remainingMs > 0) {
           await new Promise(resolve => setTimeout(resolve, remainingMs))
         }
