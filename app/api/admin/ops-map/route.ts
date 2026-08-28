@@ -380,6 +380,15 @@ export async function GET(req: NextRequest) {
       avgBilled: c0.avg_billed == null ? null : Number(c0.avg_billed),
       // The line Telnyx draw. Kept here so the box does not have to know it.
       threshold: 15,
+      // Computed server-side, alongside the query that used
+      // date_trunc('month', now()) to pick the window. Working it out in the
+      // browser instead would use the viewer's clock and its timezone, and on
+      // the last day of a month those disagree about which month it is.
+      resetsInDays: (() => {
+        const now = new Date()
+        const next = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+        return Math.max(0, Math.ceil((next.getTime() - now.getTime()) / 86400000))
+      })(),
     }
 
     const logs = ((logsRes.data || []) as Array<{

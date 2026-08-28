@@ -96,6 +96,7 @@ type ComplianceSummary = {
   placed: number; connected: number; measured: number; short: number
   shortPct: number | null; answerPct: number | null; avgBilled: number | null
   threshold: number
+  resetsInDays: number
 }
 
 type Payload = {
@@ -1283,6 +1284,12 @@ export default function OpsMap() {
                 <Row k="AVG BILLED"
                      v={comp.avgBilled === null ? '—' : `${comp.avgBilled.toFixed(1)}s`} />
                 <Row k="PLACED / CONNECTED" v={`${comp.placed} / ${comp.connected}`} />
+                {/* Stated because the ratio is a MONTH's ratio: a bad week
+                    early on keeps it high until the month turns, and knowing
+                    how long that is decides whether to act now or wait. */}
+                <Row k="RESETS IN"
+                     v={`${comp.resetsInDays} day${comp.resetsInDays === 1 ? '' : 's'}`}
+                     c={comp.resetsInDays <= 3 ? CYAN : undefined} />
                 <div style={{ fontSize: 9, color: DIM, marginTop: 5, lineHeight: 1.5 }}>
                   This calendar month. Billed time is answer to hangup, ring
                   excluded — the span Telnyx charge for.
