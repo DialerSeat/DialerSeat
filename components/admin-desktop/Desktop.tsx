@@ -80,10 +80,23 @@ function defaultFillColsFor(role: AppRole): number {
 
 const MANAGER_DEFAULT_ORDER: string[] = ['dashboard', 'analytics', 'teams', 'appstore']
 
+// A cell is 106px tall but the icon inside it is not — there is padding below
+// the label that only exists to separate one row from the next. The bottom row
+// has nothing under it except the taskbar, so that padding is dead space, and
+// flooring the division threw away a whole row of apps to preserve it.
+//
+// ICON_MIN is what a row actually needs to draw: the tile, the label, and a
+// couple of pixels of clearance. If the leftover after the last full row is at
+// least that, one more row fits above the taskbar and is used.
+const ICON_MIN = 84
+
 function gridDims(vw: number, vh: number, taskbarH: number) {
+  const usableH = vh - taskbarH - GRID_Y
+  const full = Math.floor(usableH / CELL_H)
+  const leftover = usableH - full * CELL_H
   return {
     cols: Math.max(1, Math.floor((vw - GRID_X) / CELL_W)),
-    rows: Math.max(1, Math.floor((vh - taskbarH - GRID_Y) / CELL_H)),
+    rows: Math.max(1, full + (leftover >= ICON_MIN ? 1 : 0)),
   }
 }
 

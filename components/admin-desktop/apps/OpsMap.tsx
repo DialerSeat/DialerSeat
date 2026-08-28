@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { LAND, BORDERS, MAP_W, MAP_H, project } from '@/lib/worldMap'
+import { LAND, LAKES, BORDERS, MAP_W, MAP_H, project } from '@/lib/worldMap'
 
 // ── PALETTE ─────────────────────────────────────────────────────────────
 // Deliberately NOT the admin desktop's chrome. This app is meant to read as
@@ -142,7 +142,7 @@ type Persisted = {
   notisOpen?: boolean; compOpen?: boolean
   notisTab?: 'notis' | 'logs' | 'visitors' | 'both'
   pulseTab?: 'calls' | 'visitors'
-  compWindow?: 'today' | '7d' | 'month' | 'all'
+  compWindow?: '7d' | 'month' | 'all'
   showTargets?: boolean; feedView?: 'calls' | 'people'
   callFilter?: 'all' | 'answered' | 'missed' | 'machine' | 'human'
   peopleFilter?: 'all' | 'online' | 'paying' | 'trial' | 'seat' | 'dialed' | 'unplaced'
@@ -215,7 +215,7 @@ export default function OpsMap() {
   const [pulseTab, setPulseTab] = useState<'calls' | 'visitors'>(saved.pulseTab ?? 'calls')
   // 'month' is what Telnyx assess, so it is the default even though it is the
   // least flattering — the box should open on the number that matters.
-  const [compWindow, setCompWindow] = useState<'today' | '7d' | 'month' | 'all'>(saved.compWindow ?? 'month')
+  const [compWindow, setCompWindow] = useState<'7d' | 'month' | 'all'>(saved.compWindow ?? 'month')
   const [compOpen, setCompOpen] = useState(saved.compOpen ?? false)
   const [dockHidden, setDockHidden] = useState(false)
   // Which person's card is open. Held by id rather than by object so a refresh
@@ -417,6 +417,16 @@ export default function OpsMap() {
         return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)}`
       }).join(' ') + ' Z',
     })), [])
+
+  const lakePaths = useMemo(
+    () => LAKES.map(ring =>
+      ring.map(([lat, lon], i) => {
+        const { x, y } = project(lat, lon, MAP_W, MAP_H)
+        return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)}`
+      }).join(' ') + ' Z'
+    ),
+    []
+  )
 
   // Same projection as the coastlines, so the two can never drift apart.
   const borderPaths = useMemo(
@@ -884,6 +894,14 @@ export default function OpsMap() {
         {landPaths.map(l => (
           <path key={l.name} d={l.d} fill={LAND_FILL} stroke={LAND_EDGE}
                 strokeWidth={0.8 * k} strokeLinejoin="round" />
+        ))}
+
+        {/* Water punched back out of the land, in the sea colour. Drawn
+            before the borders so the US/Canada line runs over the lakes it
+            actually follows rather than under them. */}
+        {lakePaths.map((d, i) => (
+          <path key={`lake-${i}`} d={d} fill={SEA} stroke={LAND_EDGE}
+                strokeWidth={0.35 * k} strokeOpacity={0.5} />
         ))}
 
         {/* Three borders, above the land fill and below every ping. Every ping
@@ -1366,7 +1384,11 @@ export default function OpsMap() {
                     The month is what Telnyx assess; the others exist because a
                     calendar month cannot answer "is this better than it was". */}
                 <div className="om-subbar" onClick={e => e.stopPropagation()}>
-                  {([['today', 'TODAY'], ['7d', '7 DAYS'],
+                  {/* No TODAY. On a normal day it is a handful of calls, and a
+                      ratio over five pickups swings twenty points on one
+                      voicemail — a number that alarming and that meaningless
+                      is worse than no number. */}
+                  {([['7d', '7 DAYS'],
                      ['month', 'THIS MONTH'], ['all', 'ALL TIME']] as const).map(([id, lbl]) => (
                     <button key={id} className="om-mini" data-on={compWindow === id}
                             onClick={() => setCompWindow(id)}>{lbl}</button>
