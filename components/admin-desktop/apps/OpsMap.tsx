@@ -31,10 +31,13 @@ const MODES = [
   { id: 'online', label: 'ONLINE NOW', hint: 'Dialing in the last 90 seconds' },
   { id: 'subscribed', label: 'ACTIVE SUB', hint: 'Active subscriptions, including trials' },
   { id: 'all', label: 'ALL SIGNUPS', hint: 'Every account we can place' },
+  // Accounts and strangers on one map. Deliberately last: it is the widest and
+  // least specific answer, and a mode list should read from precise to broad.
+  { id: 'everything', label: 'EVERYTHING', hint: 'Every account and every visitor together' },
 ] as const
 type Mode = (typeof MODES)[number]['id']
 
-const RANGES = ['12h', '24h', '7d', '30d', '90d'] as const
+const RANGES = ['12h', '24h', '7d', '30d', '90d', 'all'] as const
 type Range = (typeof RANGES)[number]
 
 const SYNC_MS = 5000
@@ -93,17 +96,25 @@ type Noti = {
   id: string; kind: string; title: string
   body: string | null; url: string | null; unread: boolean; at: string
 }
-type ComplianceSummary = {
+type ComplianceWindow = {
   placed: number; connected: number; measured: number; short: number
   shortPct: number | null; answerPct: number | null; avgBilled: number | null
-  threshold: number
-  resetsInDays: number
 }
+type Visitor = {
+  id: string; label: string; signedUp: boolean
+  views: number; days: number
+  source: string; landedOn: string | null
+  firstSeen: string; lastSeen: string
+}
+type VisitorBucket = { at: string; newVisitors: number; returning: number; views: number }
 
 type Payload = {
   notis: Noti[]
   logs: Noti[]
-  compliance: ComplianceSummary
+  visitors: Visitor[]
+  visitorPulse: VisitorBucket[]
+  compliance: Record<string, ComplianceWindow>
+  complianceMeta: { threshold: number; resetsInDays: number }
   mode: Mode; range: Range
   pulse: PulseBucket[]
   people: Person[]
@@ -129,7 +140,9 @@ type Persisted = {
   mode?: Mode; range?: Range
   feedOpen?: boolean; ranksOpen?: boolean; pulseOpen?: boolean
   notisOpen?: boolean; compOpen?: boolean
-  notisTab?: 'notis' | 'logs' | 'both'
+  notisTab?: 'notis' | 'logs' | 'visitors' | 'both'
+  pulseTab?: 'calls' | 'visitors'
+  compWindow?: 'today' | '7d' | 'month' | 'all'
   showTargets?: boolean; feedView?: 'calls' | 'people'
   callFilter?: 'all' | 'answered' | 'missed' | 'machine' | 'human'
   peopleFilter?: 'all' | 'online' | 'paying' | 'trial' | 'seat' | 'dialed' | 'unplaced'
@@ -198,8 +211,13 @@ export default function OpsMap() {
   const [ranksOpen, setRanksOpen] = useState(saved.ranksOpen ?? true)
   const [pulseOpen, setPulseOpen] = useState(saved.pulseOpen ?? true)
   const [notisOpen, setNotisOpen] = useState(saved.notisOpen ?? false)
-  const [notisTab, setNotisTab] = useState<'notis' | 'logs' | 'both'>(saved.notisTab ?? 'both')
+  const [notisTab, setNotisTab] = useState<'notis' | 'logs' | 'visitors' | 'both'>(saved.notisTab ?? 'both')
+  const [pulseTab, setPulseTab] = useState<'calls' | 'visitors'>(saved.pulseTab ?? 'calls')
+  // 'month' is what Telnyx assess, so it is the default even though it is the
+  // least flattering — the box should open on the number that matters.
+  const [compWindow, setCompWindow] = useState<'today' | '7d' | 'month' | 'all'>(saved.compWindow ?? 'month')
   const [compOpen, setCompOpen] = useState(saved.compOpen ?? false)
+  const [dockHidden, setDockHidden] = useState(false)
   // Which person's card is open. Held by id rather than by object so a refresh
   // reopens it against the NEW row instead of pinning a stale copy on screen.
   const [personId, setPersonId] = useState<string | null>(null)
@@ -371,7 +389,8 @@ export default function OpsMap() {
     try {
       window.localStorage.setItem(STORE, JSON.stringify({
         mode, range, feedOpen, ranksOpen, showTargets, pulseOpen, feedView,
-        notisOpen, compOpen, notisTab, callFilter, peopleFilter, peopleSort,
+        notisOpen, compOpen, notisTab, pulseTab, compWindow,
+        callFilter, peopleFilter, peopleSort,
         selected,
         // Rounded before storing. The view changes on every frame of a drag,
         // and writing sixteen decimal places sixty times a second is a lot of
@@ -385,7 +404,8 @@ export default function OpsMap() {
       }))
     } catch { /* nothing here is worth failing a render for */ }
   }, [mode, range, feedOpen, ranksOpen, showTargets, pulseOpen, feedView,
-      notisOpen, compOpen, notisTab, callFilter, peopleFilter, peopleSort,
+      notisOpen, compOpen, notisTab, pulseTab, compWindow,
+      callFilter, peopleFilter, peopleSort,
       selected, view])
 
   // ── GEOMETRY ──────────────────────────────────────────────────────────
@@ -461,9 +481,11 @@ export default function OpsMap() {
   const notiStream = (
     notisTab === 'notis' ? (data?.notis ?? [])
     : notisTab === 'logs' ? (data?.logs ?? [])
+    : notisTab === 'visitors' ? []
     : [...(data?.notis ?? []), ...(data?.logs ?? [])]
   ).slice().sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
-  const comp = data?.compliance ?? null
+  const comp = data?.compliance?.[compWindow] ?? null
+  const compMeta = data?.complianceMeta ?? null
   // Resolved from the current payload every render, so a sync refreshes the
   // open card rather than leaving a stale snapshot of it.
   const person = (data?.people ?? []).find(p => p.id === personId) || null
@@ -786,7 +808,12 @@ export default function OpsMap() {
         .om-dock { position:absolute; left:8px; right:8px; bottom:8px; display:flex;
                    flex-direction:column; gap:8px; z-index:5; pointer-events:none; }
         .om-dock-row { display:flex; gap:8px; align-items:flex-end; min-height:0; }
-        .om-dock * { pointer-events:auto; }
+        /* The dock itself is transparent to the pointer; only its PANELS
+           take events. Without this the whole strip along the bottom of the
+           map was dead to dragging — the gap between panels, and the margin
+           around them, all belonged to a container nobody could see. */
+        .om-dock { pointer-events:none; }
+        .om-panel, .om-corner, .om-pulse-wrap { pointer-events:auto; }
         .om-pulse-wrap { flex:0 0 auto; }
         /* The two corner boxes sit on one row above CALL VOLUME, pushed to the
            outer edges so the middle of the map stays clear. */
@@ -883,13 +910,15 @@ export default function OpsMap() {
           // Tiny by design. There will eventually be one of these per state
           // dialed into; at the old size a busy week painted the whole country
           // amber and the origins disappeared underneath it.
-          const r = (0.5 + Math.sqrt(t.calls / maxCalls) * 1.1) * pingK
+          const r = (0.35 + Math.sqrt(t.calls / maxCalls) * 0.8) * pingK
           const on = selected === t.key
           return (
             <g key={t.key} style={{ cursor: 'pointer' }}
                onClick={() => { if (!moved.current) setSelected(on ? null : t.key) }}>
               <circle cx={x} cy={y} r={r * 4} fill="url(#om-halo-t)" />
-              <circle cx={x} cy={y} r={r} fill={AMBER} fillOpacity={0.9} filter="url(#om-glow)" />
+              <circle cx={x} cy={y} r={Math.max(r * 3.5, 6 * k)} fill="transparent" />
+              <circle cx={x} cy={y} r={r} fill={AMBER} fillOpacity={0.9}
+                      filter="url(#om-glow)" pointerEvents="none" />
               <circle cx={x} cy={y} r={r + (on ? 3 : 1.5) * k} fill="none"
                       stroke={AMBER} strokeOpacity={on ? 0.95 : 0.4} strokeWidth={(on ? 1.4 : 0.7) * k} />
               {/* Native title: hover answers the small question without a
@@ -904,7 +933,7 @@ export default function OpsMap() {
         {points.map(p => {
           const { x, y } = project(p.lat, p.lon, MAP_W, MAP_H)
           // Sized for a map with hundreds of these on it, not four.
-          const r = (0.9 + Math.sqrt(p.users / maxUsers) * 2.0) * pingK
+          const r = (0.6 + Math.sqrt(p.users / maxUsers) * 1.3) * pingK
           const live = p.online > 0
           const c = live ? GREEN : CYAN
           const on = selected === p.key
@@ -916,7 +945,14 @@ export default function OpsMap() {
                 <circle cx={x} cy={y} r={r} fill="none" stroke={GREEN} strokeWidth={1.1 * k}
                         style={{ transformOrigin: `${x}px ${y}px`, animation: 'om-ping 2.4s ease-out infinite' }} />
               )}
-              <circle cx={x} cy={y} r={r} fill={c} fillOpacity={0.95} filter="url(#om-glow)" />
+              {/* The visible dot is a few pixels across and shrinking it
+                  further made it almost unhittable, especially on a phone.
+                  This invisible circle is the actual target: sized in SCREEN
+                  pixels via k, so it stays a comfortable tap however small the
+                  ping is drawn or however far out the map is zoomed. */}
+              <circle cx={x} cy={y} r={Math.max(r * 3, 7 * k)} fill="transparent" />
+              <circle cx={x} cy={y} r={r} fill={c} fillOpacity={0.95}
+                      filter="url(#om-glow)" pointerEvents="none" />
               <circle cx={x} cy={y} r={r + (on ? 3.4 : 1.6) * k} fill="none"
                       stroke={c} strokeOpacity={on ? 1 : 0.55} strokeWidth={(on ? 1.6 : 0.8) * k} />
               <title>
@@ -974,7 +1010,7 @@ export default function OpsMap() {
         <div style={{ display: 'flex', gap: 5, pointerEvents: 'auto' }} className="om-hide-sm">
           {RANGES.map(r => (
             <button key={r} className="om-chip" data-on={range === r}
-                    onClick={() => setRange(r)}>{r.toUpperCase()}</button>
+                    onClick={() => setRange(r)}>{r === 'all' ? 'ALL TIME' : r.toUpperCase()}</button>
           ))}
         </div>
         <div style={{ display: 'flex', gap: 5, pointerEvents: 'auto', marginLeft: 'auto' }}>
@@ -987,12 +1023,16 @@ export default function OpsMap() {
             <span className="om-track"><span className="om-knob" /></span>
             CALLS MADE
           </button>
-          <button className="om-chip" title="Fullscreen (Esc to exit)"
-                  onClick={toggleFull}>{isFull ? 'EXIT' : 'FULL'}</button>
-          <button className="om-chip" onClick={() => zoomAbout(1.6)}>+</button>
-          <button className="om-chip" onClick={() => zoomAbout(1 / 1.6)}>−</button>
-          <button className="om-chip" onClick={() => { setView(HOME); setSelected(null) }}>US</button>
-          <button className="om-chip" onClick={() => { setView(WORLD); setSelected(null) }}>WORLD</button>
+          <button className="om-chip" onClick={() => zoomAbout(1.6)} title="Zoom in">+</button>
+          <button className="om-chip" onClick={() => zoomAbout(1 / 1.6)} title="Zoom out">−</button>
+          {/* Standard window controls rather than words. Minimise folds every
+              dock panel at once — the map is the point of the screen and
+              sometimes you want all of it — and remembers nothing, so the
+              panels come back exactly as they were. */}
+          <button className="om-chip" title={dockHidden ? 'Restore panels' : 'Minimise panels'}
+                  onClick={() => setDockHidden(v => !v)}>{dockHidden ? '▣' : '—'}</button>
+          <button className="om-chip" title={isFull ? 'Exit fullscreen (Esc)' : 'Fullscreen'}
+                  onClick={toggleFull}>{isFull ? '❐' : '⛶'}</button>
         </div>
       </div>
 
@@ -1049,9 +1089,12 @@ export default function OpsMap() {
                         14 visitors, 0 signed up" is a different story from the
                         same traffic with three, and reading it used to mean
                         holding two panels in your head. */}
-                    <Row k="SIGNED UP" v={String(detail.traffic.signups ?? 0)}
-                         c={(detail.traffic.signups ?? 0) > 0 ? GREEN : DIM} />
-                    <Row k={`SIGNED UP · ${range.toUpperCase()}`}
+                    {/* Only the in-range figure. An all-time count sitting
+                        beside views and visitors that ARE range-scoped invites
+                        reading them as one ratio, and they are not comparable:
+                        "312 views, 14 visitors, 8 signed up" is a lie when the
+                        eight arrived over four months. */}
+                    <Row k={`SIGNED UP · ${range === 'all' ? 'ALL TIME' : range.toUpperCase()}`}
                          v={String(detail.traffic.signupsInRange ?? 0)}
                          c={(detail.traffic.signupsInRange ?? 0) > 0 ? GREEN : DIM} />
                   </Section>
@@ -1204,7 +1247,7 @@ export default function OpsMap() {
       )}
 
       {/* ── DOCK ────────────────────────────────────────────────────────── */}
-      <div className="om-dock">
+      <div className="om-dock" style={dockHidden ? { display: 'none' } : undefined}>
         {/* ── CORNER BOXES ──────────────────────────────────────────────
             Both sit above CALL VOLUME and both are collapsed by default: the
             map is the point of this screen, and a box that opens itself every
@@ -1231,16 +1274,49 @@ export default function OpsMap() {
             {notisOpen && (
               <>
                 <div className="om-subbar" onClick={e => e.stopPropagation()}>
-                  {([['notis', 'NOTIS'], ['logs', 'LOGS'], ['both', 'BOTH']] as const).map(([id, lbl]) => (
+                  {([['notis', 'NOTIS'], ['logs', 'LOGS'],
+                     ['visitors', 'VISITORS'], ['both', 'BOTH']] as const).map(([id, lbl]) => (
                     <button key={id} className="om-mini" data-on={notisTab === id}
                             onClick={() => setNotisTab(id)}>{lbl}</button>
                   ))}
                   <span style={{ marginLeft: 'auto', color: DIM, fontSize: 9, letterSpacing: 1 }}>
-                    {notiStream.length}
+                    {notisTab === 'visitors' ? (data?.visitors ?? []).length : notiStream.length}
                   </span>
                 </div>
               <div className="om-scroll" style={{ maxHeight: 150 }}>
-                {notiStream.length === 0 ? (
+                {/* Visitors are people, not events, so they get their own
+                    shape rather than being squeezed into a title and a
+                    timestamp. An anonymous reader has no name and is shown as
+                    their browser id — inventing one would be the single
+                    dishonest thing this panel could do. */}
+                {notisTab === 'visitors' ? (
+                  (data?.visitors ?? []).length === 0 ? (
+                    <div style={{ color: DIM, fontSize: 10.5, padding: '8px 9px' }}>
+                      Nobody in this range.
+                    </div>
+                  ) : (
+                    (data?.visitors ?? []).map(v => (
+                      <div key={v.id} style={{
+                        padding: '5px 9px', borderBottom: `1px solid ${EDGE}`,
+                        borderLeft: `2px solid ${v.signedUp ? GREEN : 'transparent'}`,
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 10 }}>
+                          <span style={{ color: v.signedUp ? GREEN : MUTED, minWidth: 0,
+                                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {v.label}
+                          </span>
+                          <span style={{ color: DIM, flexShrink: 0, fontFamily: 'ui-monospace, Menlo, monospace' }}>
+                            {v.views}v · {v.days}d
+                          </span>
+                        </div>
+                        <div style={{ fontSize: 9.5, color: DIM, marginTop: 1 }}>
+                          <span style={{ color: v.source.includes('chatgpt') ? PINK : DIM }}>{v.source}</span>
+                          {v.landedOn ? ` → ${v.landedOn}` : ''}
+                        </div>
+                      </div>
+                    ))
+                  )
+                ) : notiStream.length === 0 ? (
                   <div style={{ color: DIM, fontSize: 10.5, padding: '8px 9px' }}>Nothing yet.</div>
                 ) : (
                   notiStream.map(n => (
@@ -1274,24 +1350,36 @@ export default function OpsMap() {
             <div className="om-head" onClick={() => setCompOpen(o => !o)}>
               COMPLIANCE
               <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
-                {comp && comp.shortPct !== null && (
+                {comp && comp.shortPct !== null && compMeta && (
                   <span style={{
-                    color: comp.shortPct > comp.threshold ? RED : GREEN,
+                    color: comp.shortPct > compMeta.threshold ? RED : GREEN,
                     fontFamily: 'ui-monospace, Menlo, monospace', fontWeight: 800, fontSize: 10,
                   }}>{comp.shortPct.toFixed(1)}%</span>
                 )}
                 <span className="om-caret">{compOpen ? '▼' : '▲'}</span>
               </span>
             </div>
-            {compOpen && comp && (
+            {compOpen && comp && compMeta && (
+              <div>
+                {/* All four windows arrive in one payload, so switching is
+                    instant and the box cannot disagree with itself mid-change.
+                    The month is what Telnyx assess; the others exist because a
+                    calendar month cannot answer "is this better than it was". */}
+                <div className="om-subbar" onClick={e => e.stopPropagation()}>
+                  {([['today', 'TODAY'], ['7d', '7 DAYS'],
+                     ['month', 'THIS MONTH'], ['all', 'ALL TIME']] as const).map(([id, lbl]) => (
+                    <button key={id} className="om-mini" data-on={compWindow === id}
+                            onClick={() => setCompWindow(id)}>{lbl}</button>
+                  ))}
+                </div>
               <div style={{ padding: '7px 9px 9px' }}>
                 {/* The one number Telnyx judge, and the line they judge it
                     against, together — a ratio with no threshold beside it is
                     not actionable. */}
                 <Row k={`SHORT CALLS (<=6s)`}
                      v={comp.shortPct === null ? '—' : `${comp.shortPct.toFixed(1)}% of ${comp.measured}`}
-                     c={comp.shortPct !== null && comp.shortPct > comp.threshold ? RED : GREEN} />
-                <Row k="THEIR LIMIT" v={`${comp.threshold}%`} />
+                     c={comp.shortPct !== null && comp.shortPct > compMeta.threshold ? RED : GREEN} />
+                <Row k="THEIR LIMIT" v={`${compMeta.threshold}%`} />
                 <Row k="ANSWER RATE"
                      v={comp.answerPct === null ? '—' : `${comp.answerPct.toFixed(1)}%`} />
                 <Row k="AVG BILLED"
@@ -1300,13 +1388,17 @@ export default function OpsMap() {
                 {/* Stated because the ratio is a MONTH's ratio: a bad week
                     early on keeps it high until the month turns, and knowing
                     how long that is decides whether to act now or wait. */}
-                <Row k="RESETS IN"
-                     v={`${comp.resetsInDays} day${comp.resetsInDays === 1 ? '' : 's'}`}
-                     c={comp.resetsInDays <= 3 ? CYAN : undefined} />
+                {/* Only meaningful for the window Telnyx actually reset. */}
+                {compWindow === 'month' && (
+                  <Row k="RESETS IN"
+                       v={`${compMeta.resetsInDays} day${compMeta.resetsInDays === 1 ? '' : 's'}`}
+                       c={compMeta.resetsInDays <= 3 ? CYAN : undefined} />
+                )}
                 <div style={{ fontSize: 9, color: DIM, marginTop: 5, lineHeight: 1.5 }}>
-                  This calendar month. Billed time is answer to hangup, ring
-                  excluded — the span Telnyx charge for.
+                  Billed time is answer to hangup, ring excluded — the span
+                  Telnyx charge for. They assess per calendar month.
                 </div>
+              </div>
               </div>
             )}
           </div>
@@ -1318,10 +1410,22 @@ export default function OpsMap() {
         {(data?.pulse?.length ?? 0) > 0 && (
           <div className="om-panel om-pulse-wrap om-hide-sm">
             <div className="om-head" onClick={() => setPulseOpen(o => !o)}>
-              CALL VOLUME · {range.toUpperCase()}
+              {pulseTab === 'calls' ? 'CALL VOLUME' : 'NEW VISITOR VOLUME'} · {range.toUpperCase()}
               <span className="om-caret">{pulseOpen ? '▼' : '▲'}</span>
             </div>
-            {pulseOpen && <Pulse buckets={data!.pulse} />}
+            {pulseOpen && (
+              <>
+                <div className="om-subbar" onClick={e => e.stopPropagation()}>
+                  {([['calls', 'CALLS'], ['visitors', 'NEW VISITORS']] as const).map(([id, lbl]) => (
+                    <button key={id} className="om-mini" data-on={pulseTab === id}
+                            onClick={() => setPulseTab(id)}>{lbl}</button>
+                  ))}
+                </div>
+                {pulseTab === 'calls'
+                  ? <Pulse buckets={data!.pulse} />
+                  : <VisitorPulse buckets={data?.visitorPulse ?? []} />}
+              </>
+            )}
           </div>
         )}
 
@@ -1561,6 +1665,46 @@ export default function OpsMap() {
 // one strip rather than two strips, because the question is always the ratio
 // between them — dialing hard and connecting nothing looks identical to not
 // dialing when the second series is somewhere else on screen.
+/**
+ * New arrivals over time.
+ *
+ * NEW is the whole point and is why this cannot just count visitors per
+ * bucket: somebody reading across three days is one arrival, and counting them
+ * in all three turns a single visit into growth. Returning is drawn behind, in
+ * a dimmer tone, because arrivals without returns is churn and returns without
+ * arrivals is a dry funnel — neither number means much alone.
+ */
+function VisitorPulse({ buckets }: { buckets: VisitorBucket[] }) {
+  if (!buckets.length) {
+    return <div style={{ padding: '10px 12px', color: DIM, fontSize: 10.5 }}>No visits in this range.</div>
+  }
+  const max = Math.max(1, ...buckets.map(b => b.newVisitors + b.returning))
+  const totalNew = buckets.reduce((n, b) => n + b.newVisitors, 0)
+  return (
+    <div style={{ padding: '8px 10px 9px' }}>
+      <div style={{
+        display: 'flex', justifyContent: 'flex-end', fontSize: 8.5,
+        letterSpacing: 1, color: DIM, marginBottom: 3,
+      }}>{totalNew} NEW</div>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 46 }}>
+        {buckets.map((b, i) => {
+          const nh = (b.newVisitors / max) * 100
+          const rh = (b.returning / max) * 100
+          return (
+            <div key={i}
+                 title={`${new Date(b.at).toLocaleString()} · ${b.newVisitors} new, ${b.returning} returning, ${b.views} views`}
+                 style={{ flex: 1, minWidth: 2, height: '100%', display: 'flex',
+                          flexDirection: 'column', justifyContent: 'flex-end' }}>
+              <div style={{ height: `${nh}%`, background: GREEN, opacity: 0.9, borderRadius: '1px 1px 0 0' }} />
+              <div style={{ height: `${rh}%`, background: EDGE_HOT, opacity: 0.55 }} />
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function Pulse({ buckets }: { buckets: PulseBucket[] }) {
   const W = 1000, H = 46
   const max = Math.max(1, ...buckets.map(b => b.calls))

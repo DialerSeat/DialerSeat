@@ -81,7 +81,7 @@ function placeLabel(country: string | null, region: string | null): string | nul
   return country || null
 }
 
-const MODES = ['visitors', 'online', 'subscribed', 'all'] as const
+const MODES = ['visitors', 'online', 'subscribed', 'all', 'everything'] as const
 type Mode = (typeof MODES)[number]
 
 /** Matches the dialer's own staleness idea: a beat is ~5s, so 90s is gone. */
@@ -104,7 +104,9 @@ export async function GET(req: NextRequest) {
     const place = req.nextUrl.searchParams.get('place')
     if (place) {
       const rangeQ = req.nextUrl.searchParams.get('range') || '24h'
-      const d = rangeQ === '12h' ? 0.5 : rangeQ === '24h' ? 1 : rangeQ === '7d' ? 7 : rangeQ === '90d' ? 90 : 30
+      const d = rangeQ === 'all' ? 3650
+        : rangeQ === '12h' ? 0.5 : rangeQ === '24h' ? 1
+        : rangeQ === '7d' ? 7 : rangeQ === '90d' ? 90 : 30
       const sinceQ = new Date(Date.now() - d * 24 * 60 * 60 * 1000).toISOString()
       // "US-NC" -> country US, region NC. "PH" -> country PH, region null.
       const [country, region] = place.includes('-')
@@ -126,7 +128,10 @@ export async function GET(req: NextRequest) {
     const rangeParam = req.nextUrl.searchParams.get('range') || '24h'
     // 12h is half a day rather than a special case — the arithmetic below is
     // all in days, so a fraction costs nothing and keeps one code path.
-    const days = rangeParam === '12h' ? 0.5
+    // 'all' reaches back past anything in the table. Not Infinity — that
+    // stringifies to null in JSON and lands in Postgres as a null bound.
+    const days = rangeParam === 'all' ? 3650
+      : rangeParam === '12h' ? 0.5
       : rangeParam === '24h' ? 1
       : rangeParam === '7d' ? 7
       : rangeParam === '90d' ? 90 : 30
@@ -134,15 +139,25 @@ export async function GET(req: NextRequest) {
 
     // Bucket count follows the range: a day reads well in hours, ninety days
     // does not. Decided here so both the query and the axis label agree.
-    const buckets = rangeParam === '12h' ? 24
+    const buckets = rangeParam === 'all' ? 40
+      : rangeParam === '12h' ? 24
       : rangeParam === '24h' ? 24
       : rangeParam === '7d' ? 28
       : rangeParam === '90d' ? 45 : 30
 
-    const [originsRes, targetsRes, feedRes, breakdownRes, pulseRes, peopleRes, notisRes, compRes, logsRes] = await Promise.all([
+    const [originsRes, extraVisitorsRes, targetsRes, feedRes, breakdownRes, pulseRes, peopleRes, notisRes, compRes, logsRes, visitorsRes, vPulseRes] = await Promise.all([
       mode === 'visitors'
         ? supabase.rpc('ops_map_visitors', { p_since: since })
-        : supabase.rpc('ops_map', { p_mode: mode, p_online_seconds: ONLINE_SECONDS }),
+        : supabase.rpc('ops_map', {
+            // EVERYTHING draws accounts and strangers on one map, so the
+            // account half is the widest one there is.
+            p_mode: mode === 'everything' ? 'all' : mode,
+            p_online_seconds: ONLINE_SECONDS,
+          }),
+      // Only fetched for EVERYTHING; every other mode already has its answer.
+      mode === 'everything'
+        ? supabase.rpc('ops_map_visitors', { p_since: since })
+        : Promise.resolve({ data: [], error: null }),
       supabase.rpc('ops_map_targets', { p_since: since }),
       supabase.rpc('ops_map_feed', { p_limit: FEED_LIMIT }),
       supabase.rpc('ops_map_breakdown', { p_since: since }),
@@ -173,6 +188,13 @@ export async function GET(req: NextRequest) {
         .select('id, event_type, user_name, user_email, plan, amount_cents, created_at')
         .order('created_at', { ascending: false })
         .limit(40),
+      // Individual visitors — the same stitched view Visibility shows, where a
+      // browser's anonymous reading and the account it later became are one
+      // person. Reused rather than re-derived so the two screens cannot
+      // disagree about who visited.
+      supabase.rpc('pv_individuals', { p_since: since, p_until: null, p_limit: 60 }),
+      // New arrivals over time, bucketed to line up with the call pulse.
+      supabase.rpc('ops_map_visitor_pulse', { p_since: since, p_buckets: buckets }),
     ])
     if (originsRes.error) throw originsRes.error
 
@@ -221,6 +243,28 @@ export async function GET(req: NextRequest) {
         })
       }
     }
+    // EVERYTHING folds the visitor counts into the same points, so a place
+    // with two accounts and eleven strangers reads as one ping of thirteen
+    // rather than two pings fighting for the same pixel.
+    if (mode === 'everything') {
+      for (const row of (extraVisitorsRes.data || []) as OriginRow[]) {
+        const where = locate(row.country ?? null, row.region ?? null)
+        const v = Number(row.visitors) || 0
+        if (!where) { unplaced += v; total += v; continue }
+        total += v
+        const hit = points.find(p => p.key === where.key)
+        if (hit) { hit.users += v; hit.views += Number(row.views) || 0 }
+        else {
+          points.push({
+            key: where.key, label: where.label, scope: where.scope,
+            lat: where.at[0], lon: where.at[1],
+            users: v, online: 0, views: Number(row.views) || 0,
+            trialing: 0, names: [],
+          })
+        }
+      }
+    }
+
     points.sort((a, b) => b.users - a.users || a.label.localeCompare(b.label))
     for (const p of points) p.names.sort((a, b) => a.localeCompare(b))
 
@@ -380,15 +424,33 @@ export async function GET(req: NextRequest) {
       at: n.created_at,
     }))
 
-    const c0 = ((compRes.data || []) as Array<Record<string, number | null>>)[0] || {}
-    const compliance = {
-      placed: Number(c0.placed) || 0,
-      connected: Number(c0.connected) || 0,
-      measured: Number(c0.measured) || 0,
-      short: Number(c0.short) || 0,
-      shortPct: c0.short_pct == null ? null : Number(c0.short_pct),
-      answerPct: c0.answer_pct == null ? null : Number(c0.answer_pct),
-      avgBilled: c0.avg_billed == null ? null : Number(c0.avg_billed),
+    // Four windows, keyed so the box can switch between them without a
+    // refetch — and so "today vs this month", the comparison the filter is
+    // for, is one instant rather than two round trips apart.
+    const compliance: Record<string, {
+      placed: number; connected: number; measured: number; short: number
+      shortPct: number | null; answerPct: number | null; avgBilled: number | null
+    }> = {}
+    for (const row of (compRes.data || []) as Array<Record<string, string | number | null>>) {
+      compliance[String(row.period)] = {
+        placed: Number(row.placed) || 0,
+        connected: Number(row.connected) || 0,
+        measured: Number(row.measured) || 0,
+        short: Number(row.short) || 0,
+        shortPct: row.short_pct == null ? null : Number(row.short_pct),
+        answerPct: row.answer_pct == null ? null : Number(row.answer_pct),
+        avgBilled: row.avg_billed == null ? null : Number(row.avg_billed),
+      }
+    }
+
+    const visitorPulse = ((vPulseRes.data || []) as Array<Record<string, string | number>>).map(r => ({
+      at: String(r.bucket),
+      newVisitors: Number(r.new_visitors) || 0,
+      returning: Number(r.returning_visitors) || 0,
+      views: Number(r.views) || 0,
+    }))
+
+    const complianceMeta = {
       // The line Telnyx draw. Kept here so the box does not have to know it.
       threshold: 15,
       // Computed server-side, alongside the query that used
@@ -418,10 +480,32 @@ export async function GET(req: NextRequest) {
       at: l.created_at,
     }))
 
+    const visitors = ((visitorsRes.data || []) as Array<{
+      visitor_id: string; email: string | null; views: number | string
+      active_days: number | string; first_seen: string; last_seen: string
+      first_source: string | null; first_path: string | null; signed_up: boolean
+    }>).map(v => ({
+      id: v.visitor_id,
+      // An account when we can name one, otherwise the browser's own id. Never
+      // invented: an anonymous reader has no name and saying otherwise would
+      // be the one dishonest thing this panel could do.
+      label: v.email || `anon · ${String(v.visitor_id).slice(0, 8)}`,
+      signedUp: !!v.signed_up,
+      views: Number(v.views) || 0,
+      days: Number(v.active_days) || 0,
+      source: v.first_source || 'direct',
+      landedOn: v.first_path || null,
+      firstSeen: v.first_seen,
+      lastSeen: v.last_seen,
+    }))
+
     return NextResponse.json({
       success: true,
       notis,
       logs,
+      visitors,
+      visitorPulse,
+      complianceMeta,
       compliance,
       mode,
       range: rangeParam,
