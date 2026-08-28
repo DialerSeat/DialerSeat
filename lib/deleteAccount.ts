@@ -3,8 +3,19 @@ import { isSubscriptionTrulyActive } from '@/lib/subscriptionStatus'
 import { sendAdminPush } from '@/lib/pushNotify'
 import { logBillingEvent } from '@/lib/billingEvents'
 
+// ── EVERY TABLE THAT HOLDS SOMETHING OF THEIRS, PARENTS LAST ─────────────
+// call_rooms used to head this list and no longer exists: the Telnyx migration
+// bridges legs directly and never created a conference room, so the table was
+// dropped. This list was not updated with it, and because a missing table
+// returns an error like any other, the FIRST step of every account deletion
+// failed. A real customer hit it — "Could not find the table
+// 'public.call_rooms' in the schema cache" — and could not delete their
+// account at all.
+//
+// Everything else here was verified to exist, and every foreign key pointing
+// at users is CASCADE or SET NULL, so removing the users row at the end
+// cleans up what this list does not name.
 const DELETE_ORDER: Array<[string, string]> = [
-  ['call_rooms', 'user_id'],
   ['dial_attempts', 'user_id'],
   ['calls', 'user_id'],
   ['lead_notes', 'user_id'],
@@ -122,10 +133,16 @@ export async function deleteAccount(
 
   for (const [table, col] of DELETE_ORDER) {
     if (dryRun) {
-      const { count } = await supabaseAdmin
+      // Same tolerance as the real path below: a preview must not fail on a
+      // table that is gone, or it reports a deletion as impossible when it
+      // would in fact succeed.
+      const { count, error } = await supabaseAdmin
         .from(table)
         .select('*', { count: 'exact', head: true })
         .eq(col, clerkUserId)
+      if (error && (error.code === 'PGRST205' || /Could not find the table/i.test(error.message))) {
+        console.error(`[deleteAccount] DELETE_ORDER lists '${table}', which does not exist.`)
+      }
       counts[table] = count ?? 0
     } else {
       if (table === 'subscriptions') {
@@ -156,7 +173,26 @@ export async function deleteAccount(
         .delete({ count: 'exact' })
         .eq(col, clerkUserId)
       if (error) {
-
+        // ── A TABLE THAT NO LONGER EXISTS IS NOT A REASON TO STOP ─────────
+        // PostgREST reports an unknown relation as PGRST205 / "Could not find
+        // the table". That means a migration dropped it and this list was not
+        // updated — which is a bug in this file, not a reason to refuse
+        // somebody their account deletion. There is nothing of theirs left in
+        // a table that does not exist.
+        //
+        // Logged loudly rather than swallowed: the list still needs fixing,
+        // and the next person to drop a table should find this in the logs
+        // instead of finding out from a customer.
+        const missingTable =
+          error.code === 'PGRST205' || /Could not find the table/i.test(error.message)
+        if (missingTable) {
+          console.error(
+            `[deleteAccount] DELETE_ORDER lists '${table}', which does not exist. ` +
+            `Skipping it and continuing — remove it from the list.`
+          )
+          counts[table] = 0
+          continue
+        }
         return { ok: false, dryRun, counts, blocked: `${table}: ${error.message}` }
       }
       counts[table] = count ?? 0
