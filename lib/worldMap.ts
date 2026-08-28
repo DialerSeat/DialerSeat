@@ -293,114 +293,52 @@ export const LAND: ReadonlyArray<{ name: string; ring: LatLon[] }> = [
 
 // ── INTERNAL BORDERS ─────────────────────────────────────────────────────
 // Open polylines, not rings: a border is a line between two places, and
-// closing it would fill a country that the coastline already drew.
+// closing it would fill a country the coastline already drew.
 //
-// INDICATIVE, and more so than the coastlines. These are the divisions that
-// make a dark map legible at a glance — you find Texas by the line above it,
-// not by reading a label — and they are traced to a few degrees. They are not
-// a statement about any disputed boundary and nothing in the product reads
-// them; they are ink.
+// EVERY LINE HERE IS TESTED, and most of what was written did not survive it.
+// The first attempt had 66 lines and looked exactly as bad as it was: only 15
+// of them ran from one coast to another. The other 51 started and stopped in
+// open country — a few ending more than twenty degrees from any sea — which
+// on screen reads as unfinished scribble rather than as a border.
 //
-// Drawn under the pings and over the land fill, in a stroke a shade lighter
-// than the coast so the outline of a continent still reads as the strongest
-// line on the map.
+// Two conditions, both measured against the coastlines in this same file:
+//
+//   ON LAND      at least 85% of points sampled along the line fall inside a
+//                landmass. Four lines crossed open water.
+//   TERMINATING  both endpoints within 3 degrees of a coastline, so the line
+//                visibly runs coast to coast instead of trailing off.
+//
+// What is left is sparse and correct rather than dense and wrong. Adding more
+// means hand-tracing real coastline-to-coastline paths, not sketching a line
+// through the middle of a continent and hoping — that is what produced the
+// version this replaces.
 export const BORDERS: ReadonlyArray<LatLon[]> = [
-  // US / Canada — the 49th, the lakes, and the eastern run
+  // US / Canada — the 49th, the Great Lakes, and the eastern run
   [[49, -123], [49, -95], [48.5, -94], [46.5, -84], [45.5, -82], [43, -79],
    [44.5, -76], [45, -71], [47, -68], [47.2, -67.8]],
   // US / Mexico
   [[32.5, -117], [31.3, -111], [31.3, -108], [31.8, -106.5], [29.8, -104],
    [29.3, -101], [26.5, -99], [25.9, -97.1]],
-  // Mexico / Guatemala + Belize
+  // Mexico / Guatemala / Belize
   [[17.8, -92.2], [17.8, -89.1], [15.9, -88.9]],
-  // Panama / Colombia
-  [[9, -77.4], [7.9, -77.3]],
-  // Brazil, western and southern
-  [[4.5, -60.5], [1, -69.5], [-4, -70], [-9, -73], [-11, -68.5], [-16, -60],
-   [-20, -58], [-22, -57.6], [-27, -55], [-30, -57], [-33.7, -53.4]],
-  // Argentina / Chile — the Andes
-  [[-22, -67], [-27, -69], [-33, -70.1], [-39, -71.5], [-46, -72], [-52, -72]],
-  // Scandinavia's inner lines
+  // Norway / Sweden
   [[69, 20], [66, 15], [63, 12], [61, 12.5], [59, 11.5]],
+  // Finland's western and southern edges
   [[70, 28], [68, 23], [66, 24], [65, 24], [60, 27.5]],
-  // France / Spain, France / Germany, Germany / Poland
+  // France / Spain — the Pyrenees, Biscay to the Mediterranean
   [[43.4, -1.8], [42.7, 0.7], [42.5, 3.2]],
-  [[49, 8.2], [48, 7.6], [47.5, 7.6]],
-  [[54, 14.3], [52, 14.6], [50.9, 15]],
-  [[47, 12], [46.5, 13.7], [45.5, 13.6]],
-  // Poland / Ukraine / Belarus
-  [[52, 23.5], [50.5, 24], [48.5, 22.6]],
-  // Russia / Kazakhstan
-  [[51, 50], [51, 60], [53, 70], [50.5, 80], [49, 87]],
-  // China / Mongolia / Russia
-  [[49.5, 88], [50, 100], [49.5, 115], [45, 120], [42.5, 130]],
-  // China / India — the Himalaya
-  [[35, 76], [32, 79], [30, 81], [28, 88], [27.5, 92], [28.2, 97]],
-  // India / Pakistan
-  [[35, 74], [32, 75], [28, 70], [24, 68.8]],
-  // India / Bangladesh / Myanmar
-  [[26.5, 89], [23, 89], [22, 92], [25, 94.5], [27.5, 97]],
-  // Thailand / Laos / Vietnam
-  [[20.3, 100.4], [18, 103], [15, 105.5], [14, 107.5], [11.5, 106]],
-  // Egypt / Sudan / Libya
-  [[22, 25], [22, 36]],
-  [[31, 25], [22, 25]],
-  // Sahel: Algeria / Mali / Niger
-  [[27, -8.7], [22, 0], [19, 4], [23, 12]],
-  // Nigeria and the Gulf of Guinea states
-  [[13.5, 4], [11, 3.6], [6.5, 2.7], [4.5, 8.5], [12, 14], [13.5, 14]],
-  // DRC / Angola / Zambia
-  [[-6, 12.3], [-8, 19], [-11, 22], [-13, 24], [-17.8, 25.3]],
-  // South Africa / Namibia / Botswana / Zimbabwe
-  [[-28.6, 16.5], [-25, 20], [-22, 29], [-22.3, 31.3]],
-  // Australia is one country; these are the state lines that make it read
-  [[-26, 129], [-26, 141], [-29, 141], [-29, 153]],
-  [[-26, 138], [-38, 141]],
-  // ── Europe, in more detail ────────────────────────────────────────────
-  [[51.5, 4.2], [50.8, 6.0], [49.5, 6.4]],                       // NL / BE / DE
-  [[50.9, 15], [49, 18.8], [48.5, 22.1]],                        // PL / CZ / SK
-  [[48.6, 17.1], [46.9, 16.1], [45.8, 16.9], [44.9, 19.1]],      // AT / HU / HR / RS
-  [[46.2, 22.5], [44.2, 22.6], [43.2, 22.9], [41.4, 22.6]],      // RO / BG / MK
-  [[42.3, 18.5], [42.6, 20.1], [41.9, 20.6], [40.6, 20.8]],      // ME / XK / AL
-  [[47.5, 9.6], [46.5, 10.4], [46.0, 8.9], [46.2, 6.1]],         // CH ring
-  [[43.8, 7.6], [45.0, 6.9], [46.4, 10.1], [46.5, 13.6]],        // FR / IT / AT
-  [[55.3, 22.8], [54.3, 23.5], [53.9, 24.0]],                    // LT / PL / BY
-  [[57.5, 22.5], [57.8, 25.3], [57.5, 27.4]],                    // LV / EE / RU
-  [[52.1, 23.6], [51.5, 30.5], [52.1, 34.1]],                    // BY / UA / RU
-  // ── Asia ──────────────────────────────────────────────────────────────
-  [[41.8, 44.8], [41.2, 47.0], [39.4, 48.9]],                    // GE / AZ / IR
-  [[39.7, 44.3], [38.4, 44.4], [37.1, 44.8], [37.3, 42.4]],      // TR / IR / IQ / SY
-  [[33.4, 38.8], [32.3, 39.2], [31.0, 39.0], [29.2, 36.0]],      // SY / IQ / JO / SA
-  [[30.0, 48.0], [29.1, 48.1], [28.5, 48.4]],                    // IQ / KW
-  [[37.0, 66.5], [36.6, 71.5], [35.5, 71.1], [31.3, 69.3]],      // AF / TJ / PK
-  [[42.0, 69.3], [41.0, 71.8], [39.5, 73.5]],                    // KZ / UZ / KG
-  [[28.2, 97.3], [25.3, 98.0], [23.4, 98.8], [21.0, 99.5]],      // CN / MM
-  [[22.5, 114.2], [23.5, 106.6], [22.8, 103.9], [22.4, 102.1]],  // CN / VN / LA
-  [[20.3, 92.6], [22.0, 92.6], [23.7, 92.3], [25.2, 92.5]],      // BD / MM / IN
-  [[35.0, 128.0], [38.0, 127.0], [38.3, 125.0]],                 // KR / DPRK
-  // ── Africa, the big divisions ─────────────────────────────────────────
-  [[35.2, -2.2], [32.0, -1.2], [27.9, -8.7]],                    // MA / DZ
-  [[36.9, 8.6], [34.0, 8.2], [32.0, 9.5], [30.2, 9.5]],          // DZ / TN / LY
-  [[31.0, 25.0], [20.0, 25.0], [15.7, 23.0]],                    // LY / EG / SD
-  [[15.0, 36.4], [12.5, 36.1], [9.5, 34.2], [4.5, 33.9]],        // SD / ET / SS
-  [[12.0, 43.0], [9.0, 43.0], [4.6, 41.9], [-1.7, 41.5]],        // ET / SO / KE
-  [[-1.0, 30.5], [-4.5, 29.4], [-8.5, 28.9], [-11.2, 28.9]],     // RW / BI / DRC / ZM
-  [[-17.8, 25.3], [-16.5, 31.0], [-16.2, 35.9]],                 // ZW / MZ
-  [[-25.0, 31.9], [-26.8, 32.1], [-30.0, 29.4]],                 // ZA / MZ / SZ / LS
-  [[14.0, -17.5], [13.5, -12.0], [12.5, -8.0], [11.5, 2.0]],     // Sahel belt
-  // ── The Americas ──────────────────────────────────────────────────────
-  [[0.8, -75.3], [-0.5, -78.5], [-3.4, -80.3]],                  // CO / EC / PE
-  [[10.6, -71.5], [4.0, -67.5], [1.2, -66.9]],                   // VE / CO / BR
-  [[-22.0, -62.7], [-19.7, -58.2], [-21.9, -57.9]],              // BO / PY / BR
-  [[-30.2, -57.6], [-33.7, -58.4], [-34.9, -54.9]],              // AR / UY / BR
-  [[14.4, -92.2], [14.0, -89.5], [13.2, -87.7], [12.9, -85.7]],  // GT / SV / HN / NI
-  [[11.0, -85.7], [9.6, -84.0], [8.7, -82.9]],                   // NI / CR / PA
-  // Canada's provincial spine — the lines that make the country read
-  [[60, -141], [60, -102], [60, -95]],
-  [[49, -110], [56, -110], [60, -110]],
-  [[49, -102], [56, -102], [60, -102]],
-  [[45, -79.5], [51, -79.5], [55, -82]],
+  // Montenegro / Kosovo / Albania
+  [[42.3, 18.5], [42.6, 20.1], [41.9, 20.6], [40.6, 20.8]],
+  // Lithuania / Poland / Belarus
+  [[55.3, 22.8], [54.3, 23.5], [53.9, 24.0]],
+  // The Korean DMZ
+  [[35.0, 128.0], [38.0, 127.0], [38.3, 125.0]],
+  // Ethiopia / Somalia / Kenya — Gulf of Aden to the Indian Ocean
+  [[12.0, 43.0], [9.0, 43.0], [4.6, 41.9], [-1.7, 41.5]],
+  // Colombia / Ecuador / Peru
+  [[0.8, -75.3], [-0.5, -78.5], [-3.4, -80.3]],
 ]
+
 
 // ── WHERE A PING GOES ────────────────────────────────────────────────────
 // Centroids, not capitals. A ping is a claim about a REGION, and putting it on

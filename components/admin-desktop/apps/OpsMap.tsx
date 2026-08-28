@@ -100,6 +100,7 @@ type ComplianceSummary = {
 
 type Payload = {
   notis: Noti[]
+  logs: Noti[]
   compliance: ComplianceSummary
   mode: Mode; range: Range
   pulse: PulseBucket[]
@@ -125,7 +126,16 @@ const STORE = 'ds:ops-map'
 type Persisted = {
   mode?: Mode; range?: Range
   feedOpen?: boolean; ranksOpen?: boolean; pulseOpen?: boolean
+  notisOpen?: boolean; compOpen?: boolean
+  notisTab?: 'notis' | 'logs' | 'both'
   showTargets?: boolean; feedView?: 'calls' | 'people'
+  callFilter?: 'all' | 'answered' | 'missed' | 'machine' | 'human'
+  peopleFilter?: 'all' | 'online' | 'paying' | 'trial' | 'seat' | 'dialed' | 'unplaced'
+  peopleSort?: 'recent' | 'first'
+  selected?: string | null
+  // Where the map was pointing. Stored so a refresh does not throw away a
+  // zoom somebody spent several gestures getting to.
+  view?: { x: number; y: number; w: number; h: number }
 }
 function readPersisted(): Persisted {
   try { return JSON.parse(window.localStorage.getItem(STORE) || '{}') as Persisted }
@@ -179,20 +189,21 @@ export default function OpsMap() {
   const [err, setErr] = useState<string | null>(null)
   const [beat, setBeat] = useState(0)
 
-  const [selected, setSelected] = useState<string | null>(null)
+  const [selected, setSelected] = useState<string | null>(saved.selected ?? null)
   const [detailFor, setDetailFor] = useState<{ key: string; data: PlaceDetail } | null>(null)
 
   const [feedOpen, setFeedOpen] = useState(saved.feedOpen ?? true)
   const [ranksOpen, setRanksOpen] = useState(saved.ranksOpen ?? true)
   const [pulseOpen, setPulseOpen] = useState(saved.pulseOpen ?? true)
-  const [notisOpen, setNotisOpen] = useState(false)
-  const [compOpen, setCompOpen] = useState(false)
+  const [notisOpen, setNotisOpen] = useState(saved.notisOpen ?? false)
+  const [notisTab, setNotisTab] = useState<'notis' | 'logs' | 'both'>(saved.notisTab ?? 'both')
+  const [compOpen, setCompOpen] = useState(saved.compOpen ?? false)
   // Which person's card is open. Held by id rather than by object so a refresh
   // reopens it against the NEW row instead of pinning a stale copy on screen.
   const [personId, setPersonId] = useState<string | null>(null)
   // Sorting is a different question from filtering — "who joined first" is not
   // a subset, it is an order — so it lives beside the filter, not inside it.
-  const [peopleSort, setPeopleSort] = useState<'recent' | 'first'>('recent')
+  const [peopleSort, setPeopleSort] = useState<'recent' | 'first'>(saved.peopleSort ?? 'recent')
   const [showTargets, setShowTargets] = useState(saved.showTargets ?? true)
 
   // What the wide panel is showing. CALLS is a ticker of events; PEOPLE is a
@@ -200,12 +211,20 @@ export default function OpsMap() {
   // inside the other, so the panel switches rather than nesting one in the
   // other or growing a second panel nobody has room for.
   const [feedView, setFeedView] = useState<'calls' | 'people'>(saved.feedView ?? 'calls')
-  const [callFilter, setCallFilter] = useState<'all' | 'answered' | 'missed' | 'machine' | 'human'>('all')
+  const [callFilter, setCallFilter] = useState<'all' | 'answered' | 'missed' | 'machine' | 'human'>(saved.callFilter ?? 'all')
   // The PEOPLE view needs its own filter, not a shared one: "answered" means
   // nothing about an account and "trial" means nothing about a call.
   const [peopleFilter, setPeopleFilter] =
-    useState<'all' | 'online' | 'paying' | 'trial' | 'seat' | 'dialed' | 'unplaced'>('all')
-  const [view, setView] = useState<View>(WORLD)
+    useState<'all' | 'online' | 'paying' | 'trial' | 'seat' | 'dialed' | 'unplaced'>(saved.peopleFilter ?? 'all')
+  // Restored from the last visit. Validated rather than trusted: a stored view
+  // from an older build could be any shape, and clamping it here means a bad
+  // value costs one frame instead of an unusable map.
+  const [view, setView] = useState<View>(() => {
+    const v = saved.view
+    if (!v || ![v.x, v.y, v.w, v.h].every(n => typeof n === 'number' && Number.isFinite(n))) return WORLD
+    if (v.w < MIN_W || v.w > MAX_W) return WORLD
+    return v
+  })
 
   // Which feed rows arrived on the most recent sync. Held in state because it
   // drives a render; the ref beside it is the previous id set, which must NOT
@@ -350,9 +369,22 @@ export default function OpsMap() {
     try {
       window.localStorage.setItem(STORE, JSON.stringify({
         mode, range, feedOpen, ranksOpen, showTargets, pulseOpen, feedView,
+        notisOpen, compOpen, notisTab, callFilter, peopleFilter, peopleSort,
+        selected,
+        // Rounded before storing. The view changes on every frame of a drag,
+        // and writing sixteen decimal places sixty times a second is a lot of
+        // JSON for a number nobody can see the end of.
+        view: {
+          x: Math.round(view.x * 100) / 100,
+          y: Math.round(view.y * 100) / 100,
+          w: Math.round(view.w * 100) / 100,
+          h: Math.round(view.h * 100) / 100,
+        },
       }))
     } catch { /* nothing here is worth failing a render for */ }
-  }, [mode, range, feedOpen, ranksOpen, showTargets, pulseOpen, feedView])
+  }, [mode, range, feedOpen, ranksOpen, showTargets, pulseOpen, feedView,
+      notisOpen, compOpen, notisTab, callFilter, peopleFilter, peopleSort,
+      selected, view])
 
   // ── GEOMETRY ──────────────────────────────────────────────────────────
   const landPaths = useMemo(
@@ -422,6 +454,13 @@ export default function OpsMap() {
   })
 
   const unreadNotis = (data?.notis ?? []).filter(n => n.unread).length
+  // BOTH interleaves by time rather than concatenating, so a payment and the
+  // notification about it sit next to each other instead of in two piles.
+  const notiStream = (
+    notisTab === 'notis' ? (data?.notis ?? [])
+    : notisTab === 'logs' ? (data?.logs ?? [])
+    : [...(data?.notis ?? []), ...(data?.logs ?? [])]
+  ).slice().sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
   const comp = data?.compliance ?? null
   // Resolved from the current payload every render, so a sync refreshes the
   // open card rather than leaving a stale snapshot of it.
@@ -750,14 +789,20 @@ export default function OpsMap() {
         .om-corner-row { display:flex; justify-content:space-between; gap:8px; align-items:flex-end; }
         .om-corner { width:290px; max-width:44%; }
         @media (max-width: 900px) { .om-corner { width:auto; max-width:none; flex:1 1 0; } }
-        .om-feed-wrap { flex:1 1 auto; min-width:0; height:28vh; }
-        .om-rank-wrap { width:258px; flex:0 0 auto; height:28vh; }
+        /* Height belongs to the OPEN panel only. Setting it unconditionally
+           kept the box its full size with nothing in it, which is what stopped
+           these collapsing — the caret flipped and the panel did not move. */
+        .om-feed-wrap { flex:1 1 auto; min-width:0; }
+        .om-rank-wrap { width:258px; flex:0 0 auto; }
+        .om-feed-wrap[data-open="true"],
+        .om-rank-wrap[data-open="true"] { height:28vh; }
         .om-detail { position:absolute; right:8px; top:44px; width:300px; max-height:46vh; z-index:6; }
         @media (max-width: 900px) {
           .om-dock { left:6px; right:6px; bottom:6px; }
           .om-dock-row { flex-direction:column; align-items:stretch; }
-          .om-rank-wrap { width:auto; height:20vh; }
-          .om-feed-wrap { height:23vh; }
+          .om-rank-wrap { width:auto; }
+          .om-rank-wrap[data-open="true"] { height:20vh; }
+          .om-feed-wrap[data-open="true"] { height:23vh; }
           .om-detail { left:6px; right:6px; width:auto; top:auto; bottom:6px; max-height:56vh; }
           .om-hide-sm { display:none !important; }
         }
@@ -1162,7 +1207,7 @@ export default function OpsMap() {
               <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
                 {unreadNotis > 0 && (
                   <span style={{
-                    background: AMBER, color: VOID, borderRadius: 8, padding: '0 5px',
+                    background: GREEN, color: VOID, borderRadius: 8, padding: '0 5px',
                     fontSize: 8.5, fontWeight: 900, letterSpacing: 0.5,
                   }}>{unreadNotis}</span>
                 )}
@@ -1170,11 +1215,21 @@ export default function OpsMap() {
               </span>
             </div>
             {notisOpen && (
+              <>
+                <div className="om-subbar" onClick={e => e.stopPropagation()}>
+                  {([['notis', 'NOTIS'], ['logs', 'LOGS'], ['both', 'BOTH']] as const).map(([id, lbl]) => (
+                    <button key={id} className="om-mini" data-on={notisTab === id}
+                            onClick={() => setNotisTab(id)}>{lbl}</button>
+                  ))}
+                  <span style={{ marginLeft: 'auto', color: DIM, fontSize: 9, letterSpacing: 1 }}>
+                    {notiStream.length}
+                  </span>
+                </div>
               <div className="om-scroll" style={{ maxHeight: 150 }}>
-                {(data?.notis ?? []).length === 0 ? (
+                {notiStream.length === 0 ? (
                   <div style={{ color: DIM, fontSize: 10.5, padding: '8px 9px' }}>Nothing yet.</div>
                 ) : (
-                  (data?.notis ?? []).map(n => (
+                  notiStream.map(n => (
                     <div key={n.id} style={{
                       padding: '5px 9px', borderBottom: `1px solid ${EDGE}`,
                       borderLeft: `2px solid ${n.unread ? AMBER : 'transparent'}`,
@@ -1197,6 +1252,7 @@ export default function OpsMap() {
                   ))
                 )}
               </div>
+              </>
             )}
           </div>
 
@@ -1250,7 +1306,7 @@ export default function OpsMap() {
         )}
 
         <div className="om-dock-row">
-          <div className="om-panel om-feed-wrap" style={feedOpen ? undefined : { maxHeight: 'none' }}>
+          <div className="om-panel om-feed-wrap" data-open={feedOpen}>
             <div className="om-head" onClick={() => setFeedOpen(o => !o)}>
               {feedView === 'calls' ? 'LIVE CALLS' : 'PEOPLE'}
               <span className="om-caret">{feedOpen ? '▼' : '▲'}</span>
@@ -1434,7 +1490,7 @@ export default function OpsMap() {
             )}
           </div>
 
-          <div className="om-panel om-rank-wrap" style={ranksOpen ? undefined : { maxHeight: 'none' }}>
+          <div className="om-panel om-rank-wrap" data-open={ranksOpen}>
             {/* The range belongs in this title and not on the feed, because the
                 two genuinely differ: the feed is the latest calls whenever they
                 happened, these counts are bounded by the range. Leaving both

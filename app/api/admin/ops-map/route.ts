@@ -139,7 +139,7 @@ export async function GET(req: NextRequest) {
       : rangeParam === '7d' ? 28
       : rangeParam === '90d' ? 45 : 30
 
-    const [originsRes, targetsRes, feedRes, breakdownRes, pulseRes, peopleRes, notisRes, compRes] = await Promise.all([
+    const [originsRes, targetsRes, feedRes, breakdownRes, pulseRes, peopleRes, notisRes, compRes, logsRes] = await Promise.all([
       mode === 'visitors'
         ? supabase.rpc('ops_map_visitors', { p_since: since })
         : supabase.rpc('ops_map', { p_mode: mode, p_online_seconds: ONLINE_SECONDS }),
@@ -164,6 +164,15 @@ export async function GET(req: NextRequest) {
       // Same numbers the Compliance app shows, aggregated in Postgres so a
       // corner box does not have to read a month of calls to draw four values.
       supabase.rpc('ops_map_compliance'),
+      // Billing events — the LOGS half of the mini panel. Notifications are
+      // what got pushed; logs are what happened. They overlap but are not the
+      // same set, which is why the panel offers both and a merged view rather
+      // than pretending one is the other.
+      supabase
+        .from('billing_events')
+        .select('id, event_type, user_name, user_email, plan, amount_cents, created_at')
+        .order('created_at', { ascending: false })
+        .limit(40),
     ])
     if (originsRes.error) throw originsRes.error
 
@@ -373,9 +382,26 @@ export async function GET(req: NextRequest) {
       threshold: 15,
     }
 
+    const logs = ((logsRes.data || []) as Array<{
+      id: string; event_type: string | null
+      user_name: string | null; user_email: string | null
+      plan: string | null; amount_cents: number | null; created_at: string
+    }>).map(l => ({
+      id: `log-${l.id}`,
+      kind: l.event_type || 'event',
+      title: (l.event_type || 'event').replace(/_/g, ' '),
+      body: [l.user_name || l.user_email, l.plan?.toUpperCase(),
+             l.amount_cents ? `$${(l.amount_cents / 100).toFixed(2)}` : null]
+        .filter(Boolean).join(' · ') || null,
+      url: null as string | null,
+      unread: false,
+      at: l.created_at,
+    }))
+
     return NextResponse.json({
       success: true,
       notis,
+      logs,
       compliance,
       mode,
       range: rangeParam,
