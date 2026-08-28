@@ -63,29 +63,32 @@ export async function GET() {
     // excluded rather than counted as zero — a call with unknown talk time is
     // not a short call, it is an unknown one.
     // ── WHAT THE CARRIER ACTUALLY BILLS ───────────────────────────────────
-    // talk_seconds is bridge -> hangup. Telnyx bills ANSWER -> hangup, and the
-    // two are not the same call: a machine verdict holds the line for nine
-    // seconds with nobody bridged, so talk_seconds reads ~0 on a call the
-    // carrier is billing at nine. Judged on talk_seconds those all counted as
-    // short, which made the ratio on this page worse than the one Telnyx
-    // computes — and this page exists to predict THEIR number.
+    // talk_seconds IS the billed span. The hangup handler writes it once, as
+    // answered_at -> now: answer to hangup, which is exactly what Telnyx
+    // charges for. This page should trust it first.
     //
-    // duration is dial -> hangup and answered_at is the answer, so
-    // duration - ring is the billed span. Falls back to talk_seconds when the
-    // ring cannot be derived, which is better than dropping the row.
+    // It briefly preferred `duration - ring` instead, on the belief that
+    // talk_seconds measured bridge -> hangup. It does not, and the swap was
+    // worse rather than merely redundant: `duration` is only written when it
+    // is not already set, so any path stamping it early — an abort, an
+    // abandon — leaves it measured from a different moment. A real call shows
+    // duration 13 against talk_seconds 20: talk longer than the whole call,
+    // which is impossible, and anything derived from duration inherits it.
+    //
+    // So talk_seconds when present, duration - ring only for rows old enough
+    // to predate it, and an unknown span stays unknown — a call of unknown
+    // length is not a short call.
     const billedSeconds = (c: {
       answered_at: string | null; created_at: string; duration: number | null
       talk_seconds: number | null
     }): number | null => {
+      if (c.talk_seconds != null) return c.talk_seconds
       if (c.answered_at && c.duration != null) {
         const ring = (new Date(c.answered_at).getTime() - new Date(c.created_at).getTime()) / 1000
         const billed = c.duration - ring
-        // A negative span means the timestamps disagree — usually a row whose
-        // duration was written by one webhook and answered_at by another that
-        // arrived out of order. Unknown, not zero.
         if (Number.isFinite(billed) && billed >= 0) return billed
       }
-      return c.talk_seconds
+      return null
     }
 
     const measured = connected
