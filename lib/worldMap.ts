@@ -313,33 +313,6 @@ export const LAND: ReadonlyArray<{ name: string; ring: LatLon[] }> = [
 ]
 
 
-// ── INLAND WATER ─────────────────────────────────────────────────────────
-// Drawn in the sea colour ON TOP of the land, which is the cheap way to get a
-// hole in a polygon without fill-rule gymnastics or splitting North America
-// into a ring with sub-paths.
-//
-// Only the Great Lakes, and only because they are the single most recognisable
-// feature of the map's most important landmass — without them the US/Canada
-// border runs through solid ground and the whole upper Midwest reads as blank.
-// Every other lake on Earth is deliberately absent; at this scale they are
-// noise.
-export const LAKES: ReadonlyArray<LatLon[]> = [
-  // Superior
-  [[46.8, -92.1], [46.7, -90.5], [48.0, -89.2], [48.6, -86.5], [48.5, -84.5],
-   [46.5, -84.4], [46.4, -86.5], [46.6, -90.0], [46.8, -92.1]],
-  // Michigan
-  [[45.8, -85.0], [45.0, -85.5], [43.0, -86.5], [41.7, -87.5], [42.1, -86.2],
-   [43.5, -86.0], [44.9, -86.2], [45.8, -85.0]],
-  // Huron
-  [[46.0, -84.0], [45.3, -82.0], [44.0, -81.7], [43.0, -82.4], [44.0, -83.5],
-   [45.0, -83.9], [46.0, -84.0]],
-  // Erie
-  [[42.9, -83.0], [42.6, -80.0], [42.0, -78.9], [41.4, -81.5], [41.7, -83.4],
-   [42.9, -83.0]],
-  // Ontario
-  [[44.2, -79.8], [44.1, -76.5], [43.3, -76.4], [43.2, -79.2], [44.2, -79.8]],
-]
-
 // ── INTERNAL BORDERS ─────────────────────────────────────────────────────
 // Open polylines, not rings: a border is a line between two places, and
 // closing it would fill a country the coastline already drew.

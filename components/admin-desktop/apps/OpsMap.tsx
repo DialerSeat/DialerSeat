@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { LAND, LAKES, BORDERS, MAP_W, MAP_H, project } from '@/lib/worldMap'
+import { LAND, BORDERS, MAP_W, MAP_H, project } from '@/lib/worldMap'
 
 // ── PALETTE ─────────────────────────────────────────────────────────────
 // Deliberately NOT the admin desktop's chrome. This app is meant to read as
@@ -417,16 +417,6 @@ export default function OpsMap() {
         return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)}`
       }).join(' ') + ' Z',
     })), [])
-
-  const lakePaths = useMemo(
-    () => LAKES.map(ring =>
-      ring.map(([lat, lon], i) => {
-        const { x, y } = project(lat, lon, MAP_W, MAP_H)
-        return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)}`
-      }).join(' ') + ' Z'
-    ),
-    []
-  )
 
   // Same projection as the coastlines, so the two can never drift apart.
   const borderPaths = useMemo(
@@ -894,14 +884,6 @@ export default function OpsMap() {
         {landPaths.map(l => (
           <path key={l.name} d={l.d} fill={LAND_FILL} stroke={LAND_EDGE}
                 strokeWidth={0.8 * k} strokeLinejoin="round" />
-        ))}
-
-        {/* Water punched back out of the land, in the sea colour. Drawn
-            before the borders so the US/Canada line runs over the lakes it
-            actually follows rather than under them. */}
-        {lakePaths.map((d, i) => (
-          <path key={`lake-${i}`} d={d} fill={SEA} stroke={LAND_EDGE}
-                strokeWidth={0.35 * k} strokeOpacity={0.5} />
         ))}
 
         {/* Three borders, above the land fill and below every ping. Every ping
