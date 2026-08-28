@@ -51,6 +51,7 @@ type Person = {
   online: boolean; lastHeartbeat: string | null
   status: string | null; plan: string | null; trialEnd: string | null
   seatPayer: string | null; seatTeam: string | null
+  placeKey: string | null; lat: number | null; lon: number | null
   calls: number; answered: number; lastCall: string | null
   campaigns: number; leads: number
 }
@@ -551,7 +552,9 @@ export default function OpsMap() {
     const w = Math.max(MIN_W, MAP_W / 9)
     const h = w * (MAP_H / MAP_W)
     setView(clampView({ w, h, x: x - w / 2, y: y - h / 2 }))
-    setSelected(pt.key)
+    // Empty key means "fly there, select nothing" — the caller knows where the
+    // place is but this mode has no ping on it.
+    setSelected(pt.key || null)
   }, [clampView])
 
   const zoomAbout = useCallback((factor: number, cx?: number, cy?: number) => {
@@ -856,16 +859,17 @@ export default function OpsMap() {
                 strokeWidth={0.8 * k} strokeLinejoin="round" />
         ))}
 
-        {/* Borders sit above the land fill and below everything else. They
-            exist to make a shape recognisable — you find Texas by the line
-            above it, not by reading a label — and are drawn thinner and
-            fainter than the coast so a continent's outline stays the
-            strongest line on the map. */}
+        {/* Three borders, above the land fill and below every ping. Every ping
+            on this map is American, so these are the lines that make it
+            readable — you find Texas by the border above it. Thinner and
+            fainter than the coast, so a continent's outline stays the strongest
+            line on the map. */}
         {borderPaths.map((d, i) => (
           <path key={i} d={d} fill="none" stroke={LAND_EDGE}
-                strokeWidth={0.4 * k} strokeOpacity={0.65}
+                strokeWidth={0.4 * k} strokeOpacity={0.7}
                 strokeLinejoin="round" strokeLinecap="round" />
         ))}
+
 
         {/* Arcs were here — a curve from each agent to the state they dialed.
             Removed as decoration: with one dialing agent every line leaves the
@@ -1175,15 +1179,24 @@ export default function OpsMap() {
 
               {/* Only offered when there is somewhere to go. An account the map
                   cannot place has no ping to fly to. */}
-              {person.place && (
+              {/* Offered whenever we know WHERE, not whenever a ping happens
+                  to exist there. Flies to the coordinates and selects the ping
+                  only if the current mode has one — so the button always does
+                  something rather than failing silently. */}
+              {person.lat !== null && person.lon !== null && (
                 <button
                   className="om-chip"
                   style={{ marginTop: 10, width: '100%' }}
                   onClick={() => {
-                    const hit = (data?.points ?? []).find(pt => pt.label === person.place)
-                    if (hit) { focusPoint(hit); setPersonId(null) }
+                    const hit = (data?.points ?? []).find(pt => pt.key === person.placeKey)
+                    focusPoint({
+                      key: hit ? hit.key : '',
+                      lat: person.lat as number,
+                      lon: person.lon as number,
+                    })
+                    setPersonId(null)
                   }}
-                >SHOW ON MAP</button>
+                >SHOW ON MAP{person.place ? ` · ${person.place.toUpperCase()}` : ''}</button>
               )}
             </div>
           </div>

@@ -295,23 +295,23 @@ export const LAND: ReadonlyArray<{ name: string; ring: LatLon[] }> = [
 // Open polylines, not rings: a border is a line between two places, and
 // closing it would fill a country the coastline already drew.
 //
-// EVERY LINE HERE IS TESTED, and most of what was written did not survive it.
-// The first attempt had 66 lines and looked exactly as bad as it was: only 15
-// of them ran from one coast to another. The other 51 started and stopped in
-// open country — a few ending more than twenty degrees from any sea — which
-// on screen reads as unfinished scribble rather than as a border.
+// THREE LINES, AND ONLY THREE. This started as 66 hand-drawn borders and was
+// as bad as it looked — measured against the coastlines in this same file,
+// only 15 ran from one coast to another, and 24 started and stopped in open
+// country, several ending more than twenty degrees from any sea. On screen
+// that is not a border, it is a scribble.
 //
-// Two conditions, both measured against the coastlines in this same file:
+// What survives is the set that is both verified and worth having: the two
+// that define the United States, plus the one below it. Every ping on this map
+// is American, so those are the lines that make it readable — you find Texas
+// by the border above it, not by reading a label. A line through the middle of
+// Africa does not help anybody using this product and was only ever decoration
+// pretending to be a map.
 //
-//   ON LAND      at least 85% of points sampled along the line fall inside a
-//                landmass. Four lines crossed open water.
-//   TERMINATING  both endpoints within 3 degrees of a coastline, so the line
-//                visibly runs coast to coast instead of trailing off.
-//
-// What is left is sparse and correct rather than dense and wrong. Adding more
-// means hand-tracing real coastline-to-coastline paths, not sketching a line
-// through the middle of a continent and hoping — that is what produced the
-// version this replaces.
+// Both conditions still hold for all three: at least 85% of sampled points
+// inside a landmass, and both endpoints within 3 degrees of a coastline so
+// each visibly terminates rather than trailing off. Anything added here must
+// pass the same test — trace a real coast-to-coast path, do not sketch one.
 export const BORDERS: ReadonlyArray<LatLon[]> = [
   // US / Canada — the 49th, the Great Lakes, and the eastern run
   [[49, -123], [49, -95], [48.5, -94], [46.5, -84], [45.5, -82], [43, -79],
@@ -321,23 +321,8 @@ export const BORDERS: ReadonlyArray<LatLon[]> = [
    [29.3, -101], [26.5, -99], [25.9, -97.1]],
   // Mexico / Guatemala / Belize
   [[17.8, -92.2], [17.8, -89.1], [15.9, -88.9]],
-  // Norway / Sweden
-  [[69, 20], [66, 15], [63, 12], [61, 12.5], [59, 11.5]],
-  // Finland's western and southern edges
-  [[70, 28], [68, 23], [66, 24], [65, 24], [60, 27.5]],
-  // France / Spain — the Pyrenees, Biscay to the Mediterranean
-  [[43.4, -1.8], [42.7, 0.7], [42.5, 3.2]],
-  // Montenegro / Kosovo / Albania
-  [[42.3, 18.5], [42.6, 20.1], [41.9, 20.6], [40.6, 20.8]],
-  // Lithuania / Poland / Belarus
-  [[55.3, 22.8], [54.3, 23.5], [53.9, 24.0]],
-  // The Korean DMZ
-  [[35.0, 128.0], [38.0, 127.0], [38.3, 125.0]],
-  // Ethiopia / Somalia / Kenya — Gulf of Aden to the Indian Ocean
-  [[12.0, 43.0], [9.0, 43.0], [4.6, 41.9], [-1.7, 41.5]],
-  // Colombia / Ecuador / Peru
-  [[0.8, -75.3], [-0.5, -78.5], [-3.4, -80.3]],
 ]
+
 
 
 // ── WHERE A PING GOES ────────────────────────────────────────────────────

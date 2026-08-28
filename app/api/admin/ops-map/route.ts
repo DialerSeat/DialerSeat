@@ -334,6 +334,17 @@ export async function GET(req: NextRequest) {
       email: r.email,
       joined: r.joined,
       place: placeLabel(r.country, r.region),
+      // Coordinates, not just a label. SHOW ON MAP used to hunt for a point
+      // whose label matched this string, which fails whenever the current mode
+      // has no ping there — a JM account is invisible in ONLINE, so the button
+      // found nothing and silently did nothing. Carrying the position means it
+      // can always fly somewhere, and select the ping only if one exists.
+      ...(() => {
+        const where = locate(r.country, r.region)
+        return where
+          ? { placeKey: where.key, lat: where.at[0], lon: where.at[1] }
+          : { placeKey: null, lat: null, lon: null }
+      })(),
       device: r.device || null,
       dialerState: r.dialer_state || null,
       dialerMode: r.dialer_mode || null,
