@@ -223,6 +223,9 @@ export default function OpsMap() {
   // has to be visible. Measured from the element rather than a media query so
   // it follows the WINDOW's size inside the desktop, not the device's.
   const [narrow, setNarrow] = useState(false)
+  // The actual rendered size, kept in state because label sizing needs real
+  // pixels and a ref cannot trigger the re-render that would use them.
+  const [box, setBox] = useState<{ w: number; h: number }>({ w: 0, h: 0 })
   useEffect(() => {
     const el = rootRef.current
     if (!el || typeof ResizeObserver === 'undefined') return
@@ -230,6 +233,7 @@ export default function OpsMap() {
       const { width, height } = e.contentRect
       // The map is 2:1. Anything squarer than that has to fit rather than fill.
       setNarrow(width / Math.max(height, 1) < 1.9)
+      setBox({ w: width, h: height })
     })
     ro.observe(el)
     return () => ro.disconnect()
@@ -406,6 +410,30 @@ export default function OpsMap() {
   // swallowing the state it is sitting on.
   const k = 1 / zoom
   const pingK = narrow ? Math.pow(k, 0.55) : k
+
+  // ── LABELS IN REAL PIXELS ─────────────────────────────────────────────
+  // `6.5 * k` looks like it means "6.5px on screen". It does not. The SVG
+  // scales the whole viewBox to the element, so that expression works out to a
+  // constant fraction of the ELEMENT WIDTH — about 12px in a 1200px desktop
+  // window and about 4px on a 400px phone. Same code, unreadable on the
+  // smaller screen, and zooming could never help because k cancels the zoom
+  // out again.
+  //
+  // Dividing a target pixel size by the real px-per-map-unit gives a label
+  // that is the size it says it is, on any screen and at any zoom. The narrow
+  // boost then lets it grow a little as you zoom in, matching the pings.
+  const renderScale = (() => {
+    if (!box.w || !box.h) return 1
+    const sx = box.w / view.w
+    const sy = box.h / view.h
+    return narrow ? Math.min(sx, sy) : Math.max(sx, sy)
+  })()
+  // 13 on a phone, 13.5 on a desktop. The desktop number is not a preference
+  // so much as not making a working screen worse: the old expression happened
+  // to render about 14px in a 1180px window, and dropping to 11 would have
+  // fixed the phone by shrinking the desktop.
+  const labelPx = narrow ? 13 : 13.5
+  const labelSize = (labelPx / (renderScale || 1)) * (narrow ? Math.pow(zoom, 0.18) : 1)
 
   // ── SCREEN PIXELS TO MAP UNITS ────────────────────────────────────────
   // rect.width / view.w is only the scale when the viewBox stretches to fill
@@ -819,9 +847,14 @@ export default function OpsMap() {
                 {`${p.label} — ${p.users} ${isVisitors ? 'visitor' : 'person'}${p.users === 1 ? '' : 's'}` +
                  (p.online ? `, ${p.online} dialing now` : '')}
               </title>
-              {zoom > 2.6 && (
-                <text x={x} y={y - r - 3.4 * k} textAnchor="middle" fill={INK}
-                      style={{ fontSize: `${6.5 * k}px`, letterSpacing: `${0.3 * k}px`, pointerEvents: 'none',
+              {/* Sooner on a phone: there is less room, so the label is the
+                  only way to tell two nearby pings apart, and waiting for 2.6x
+                  meant most of the zoom range had no labels at all. */}
+              {zoom > (narrow ? 1.6 : 2.6) && (
+                <text x={x} y={y - r - labelSize * 0.55} textAnchor="middle" fill={INK}
+                      style={{ fontSize: `${labelSize}px`, letterSpacing: `${labelSize * 0.05}px`,
+                               pointerEvents: 'none', paintOrder: 'stroke',
+                               stroke: VOID, strokeWidth: labelSize * 0.22, strokeLinejoin: 'round',
                                fontFamily: 'ui-monospace, Menlo, monospace' }}>
                   {p.label.toUpperCase()} · {p.users}
                 </text>
