@@ -1175,6 +1175,11 @@ function DialerPane({ onBack }: { onBack: () => void }) {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [saving, setSaving] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
+  // Ratio cycling lives in pool_config, not platform_config, so it needs its
+  // own read and its own write. null means "not loaded yet" — distinct from
+  // false, because showing a pause switch in the wrong position is worse than
+  // showing no switch at all.
+  const [cycling, setCycling] = useState<boolean | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -1189,9 +1194,54 @@ function DialerPane({ onBack }: { onBack: () => void }) {
         if (!cancelled) setLoadError(e instanceof Error ? e.message : 'Could not load settings')
       }
     }
+    const loadPool = async () => {
+      try {
+        const res = await fetch('/api/admin/pool/config')
+        const json = await res.json()
+        if (cancelled) return
+        if (json.success) setCycling(json.config?.ratio_cycling_enabled !== false)
+      } catch {
+        // Left null: the row stays hidden rather than claiming a state it
+        // could not read.
+      }
+    }
     load()
+    loadPool()
     return () => { cancelled = true }
   }, [])
+
+  /**
+   * Pause or resume the monthly pool reconcile.
+   *
+   * Separate from `patch` because it writes a different table through a
+   * different route. Same optimistic-then-roll-back shape so the switch moves
+   * on touch.
+   */
+  const patchCycling = async (enabled: boolean) => {
+    const previous = cycling
+    setCycling(enabled)
+    setSaving('ratio_cycling_enabled')
+    setSaveError(null)
+    try {
+      const res = await fetch('/api/admin/pool/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ratio_cycling_enabled: enabled }),
+      })
+      const json = await res.json()
+      if (!json.success) {
+        setCycling(previous)
+        setSaveError(json.error || 'Could not save')
+        return
+      }
+      setCycling(json.config?.ratio_cycling_enabled !== false)
+    } catch (e) {
+      setCycling(previous)
+      setSaveError(e instanceof Error ? e.message : 'Could not save')
+    } finally {
+      setSaving(null)
+    }
+  }
 
   const patch = async (key: keyof PlatformConfigShape, value: boolean | number) => {
     if (!config) return
@@ -1223,7 +1273,8 @@ function DialerPane({ onBack }: { onBack: () => void }) {
   }
 
   const anyOverrideActive = config
-    ? !config.amd_enabled_global || !config.recording_enabled_global || config.number_buying_frozen
+    ? !config.amd_enabled_global || !config.recording_enabled_global ||
+      config.number_buying_frozen || cycling === false
     : false
 
   return (
@@ -1286,7 +1337,7 @@ function DialerPane({ onBack }: { onBack: () => void }) {
                   ? 'FROZEN — automation and manual buys both refuse'
                   : 'Automation and manual buys allowed'
               }
-              isLast
+              isLast={cycling === null}
               right={
                 <IOSSwitch
                   on={config.number_buying_frozen}
@@ -1295,6 +1346,29 @@ function DialerPane({ onBack }: { onBack: () => void }) {
                 />
               }
             />
+            {/* Freezing buying only stops the pool GROWING. The monthly
+                reconcile also RELEASES numbers when the pool sits above
+                active_subs x numbers_per_user, and a released number is gone
+                for good — along with any caller-ID registration filed against
+                it. This is the switch that stops that half. */}
+            {cycling !== null && (
+              <SettingsRow
+                title="Pause number cycling"
+                subtitle={
+                  cycling
+                    ? 'Pool trues up to subscriber count on the 1st — buying AND releasing'
+                    : 'PAUSED — the monthly reconcile will not buy or release'
+                }
+                isLast
+                right={
+                  <IOSSwitch
+                    on={!cycling}
+                    onChange={v => patchCycling(!v)}
+                    label="Pause number cycling"
+                  />
+                }
+              />
+            )}
           </GroupedCard>
 
           <GroupLabel>Predictive</GroupLabel>
