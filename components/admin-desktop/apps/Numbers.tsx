@@ -350,6 +350,7 @@ export default function NumbersApp() {
   
   const [registeringIds, setRegisteringIds] = useState<Set<string>>(new Set())
   const [registerAllOpen, setRegisterAllOpen] = useState(false)
+  const [regHelpOpen, setRegHelpOpen] = useState(false)
   const [registerAllInFlight, setRegisterAllInFlight] = useState(false)
   const [registerAllMessage, setRegisterAllMessage] = useState<string | null>(null)
 
@@ -1135,6 +1136,12 @@ export default function NumbersApp() {
           >
             ⤓ FCR CSV{unregisteredCount > 0 ? ` · ${unregisteredCount}` : ''}
           </button>
+          <button
+            className="pool-btn"
+            title="How caller-ID registration works, and what to do with the CSV"
+            style={{ minWidth: 34, fontWeight: 700 }}
+            onClick={() => setRegHelpOpen(true)}
+          >?</button>
           {unregisteredCount > 0 && (
             <button
               className="pool-btn pool-btn-success"
@@ -1949,6 +1956,101 @@ export default function NumbersApp() {
         </div>
       )}
 
+      {/* Registration tutorial. The free path is mostly a manual errand on
+          someone else's website, so the app cannot do it for you — but it can
+          stop you having to remember how it works each time. */}
+      {regHelpOpen && (
+        <div className="pool-modal-bg" {...overlayDismiss(() => setRegHelpOpen(false))}>
+          <div
+            className="pool-modal"
+            onClick={e => e.stopPropagation()}
+            style={{ maxWidth: 560, maxHeight: '82vh', overflowY: 'auto' }}
+          >
+            <div style={{ fontSize: 11, letterSpacing: 3, fontWeight: 'bold', marginBottom: 10 }}>
+              REGISTERING CALLER ID
+            </div>
+
+            <div style={{ fontSize: 11, color: T.text, letterSpacing: 0.3, lineHeight: 1.65 }}>
+              Three companies decide whether your calls get labelled, and they
+              split by carrier:
+              <div style={{
+                margin: '8px 0 10px', padding: '8px 10px', fontFamily: 'monospace',
+                fontSize: 10.5, lineHeight: 1.8, background: 'rgba(0,0,0,0.04)', borderRadius: 3,
+              }}>
+                First Orion &rarr; T-Mobile<br />
+                Hiya &rarr; AT&amp;T<br />
+                TNS &rarr; Verizon
+              </div>
+              Free Caller Registry submits to all three at once, for free. That
+              is the whole reason to use it — one form instead of three, and
+              Verizon has no free API at all, so there is no way to automate
+              past it.
+
+              <div style={{ fontWeight: 'bold', letterSpacing: 2, margin: '16px 0 8px', fontSize: 10 }}>
+                THE STEPS
+              </div>
+              <div style={{ paddingLeft: 2 }}>
+                <strong>1.</strong> Hit <strong>&#8595; FCR CSV</strong> above. You get the numbers
+                not yet filed with all three engines. Released numbers are left
+                out — you no longer hold them, and the registry asks you to
+                attest that you do.
+                <br /><br />
+                <strong>2.</strong> Go to <strong>freecallerregistry.com</strong> and fill in your
+                business details. Use the <strong>same legal entity every time</strong>.
+                <br /><br />
+                <strong>3.</strong> Numbers: the form takes up to 20 inline. Above that use
+                its <strong>Upload Additional Numbers</strong> option — Text or Excel,
+                under 100KB. A 500-number export is roughly 30KB, so size will
+                not be your problem.
+                <br /><br />
+                <strong>4.</strong> Come back and hit <strong>&#10003; REGISTER ALL</strong> so the
+                pool remembers the filing.
+              </div>
+
+              <div style={{ fontWeight: 'bold', letterSpacing: 2, margin: '16px 0 8px', fontSize: 10 }}>
+                WHY THE EXPORT SKIPS NUMBERS ALREADY FILED
+              </div>
+              Not because uploading twice breaks anything. The registry keeps a
+              record you revisit and edit — change an outbound number and you
+              update or remove the old one — so re-submitting the same list
+              under the same business updates that record rather than
+              duplicating it. Their guidance calls repeat registration
+              pointless, not harmful.
+              <br /><br />
+              The exclusion is for you. At 500 numbers the question worth
+              answering is <em>what is new since last time</em>, and a twelve-row
+              diff answers it in a way a 500-row re-read does not. When nothing
+              is pending the button exports the whole pool instead, for a
+              deliberate re-file.
+              <br /><br />
+              The real risk is not a duplicate number, it is an{' '}
+              <strong>inconsistent business identity</strong>. Two submissions under
+              slightly different business names can leave competing records
+              against the same number. Keep the entity identical.
+
+              <div style={{ fontWeight: 'bold', letterSpacing: 2, margin: '16px 0 8px', fontSize: 10 }}>
+                WHAT THIS DOES NOT DO
+              </div>
+              <div style={{ color: T.muted, lineHeight: 1.7 }}>
+                • Status rests at <strong>SUBMITTED</strong>, never CONFIRMED. The registry
+                sends no acknowledgement, so anything stronger would be us
+                guessing.<br />
+                • Registration <strong>reduces</strong> the risk of being labelled. It
+                guarantees nothing.<br />
+                • It is not what keeps your answer rate up. Labelling follows
+                behaviour — calls per number, short-call ratio, complaints. The
+                9–12s hold and number-health rotation move that needle harder
+                than any filing does.
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button className="pool-btn" onClick={() => setRegHelpOpen(false)}>CLOSE</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Register All Modal */}
       {registerAllOpen && (
         <div className="pool-modal-bg" {...overlayDismiss(registerAllInFlight ? undefined : () => setRegisterAllOpen(false))}>
@@ -1960,9 +2062,13 @@ export default function NumbersApp() {
               Flip all <strong>{unregisteredCount}</strong> currently-unregistered number
               {unregisteredCount === 1 ? '' : 's'} to registered.
               <br /><br />
-              This is a UI flag only — it does NOT submit to Free Caller Registry, A2P 10DLC, or any
-              external carrier system. Use this once you&apos;ve completed the actual registration
-              externally to track which numbers are compliant.
+              This records a filing — it does NOT submit anything. Nothing here reaches Free
+              Caller Registry, A2P 10DLC, or any carrier system; that upload happens on their
+              site, by you. Use this afterwards, so the pool knows which numbers are covered.
+              <br /><br />
+              Each number is marked <strong>submitted</strong> against all three engines, because one
+              FCR upload reaches all three. It is never marked confirmed — they send no
+              acknowledgement back, so there is nothing to confirm it with.
             </div>
             {registerAllMessage && (
               <div style={{
