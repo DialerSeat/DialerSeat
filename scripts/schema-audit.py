@@ -43,6 +43,7 @@ SCHEMA = {
  'lead_notes': 'created_at,disposition,id,lead_id,note,source,user_id',
  'leads': 'address,call_count,campaign_id,city,claimed_at,claimed_by_session_id,consent_date,consent_description,consent_proof_url,consent_source,created_at,dial_attempts,disposition,email,extra_data,first_name,id,last_call_at,last_call_disposition,last_called,last_called_at,last_name,next_eligible_at,notes,phone,state,status,user_id,zip',
  'manager_desktop_prefs': 'background,clerk_id,hidden_apps,icon_positions,installed_apps,updated_at',
+ 'number_registrations': 'batch_label,confirmed_at,id,note,number_id,provider,status,submitted_at,updated_at,updated_by',
  'ops_alert_log': 'alert_key,created_at,detail,id',
  'pacing_metrics': 'campaign_id,id,metric_date,total_abandons,total_amd_detected,total_answers,total_connects,total_dials,total_predictive_groups,updated_at',
  'page_views': 'country,created_at,device,dwell_ms,id,is_authed,path,referrer_host,region,utm_campaign,utm_medium,utm_source,visitor_hash',

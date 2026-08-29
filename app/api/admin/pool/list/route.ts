@@ -18,10 +18,30 @@ export async function GET() {
 
   if (error) return apiError(error, { route: 'admin/pool/list' })
 
+  // Per-engine registration state, attached to each number. is_registered is
+  // only the summary ("filed with all three"); this is what says WHICH filing
+  // is missing, which is the part that decides what goes in the next batch.
+  const { data: regs, error: regError } = await supabase
+    .from('number_registrations')
+    .select('number_id, provider, status, submitted_at')
+  if (regError) return apiError(regError, { route: 'admin/pool/list' })
+
+  const regsByNumber = new Map<string, Record<string, { status: string; submitted_at: string | null }>>()
+  for (const r of regs ?? []) {
+    const entry = regsByNumber.get(r.number_id) ?? {}
+    entry[r.provider] = { status: r.status, submitted_at: r.submitted_at }
+    regsByNumber.set(r.number_id, entry)
+  }
+
+  const withRegs = (numbers ?? []).map(n => ({
+    ...n,
+    registrations: regsByNumber.get(n.id) ?? {},
+  }))
+
   const config = await getPoolConfig()
   const stats = await getPoolStats()
 
-  
+
   const totalDailyCalls = (numbers ?? []).reduce((s, n) => s + n.daily_call_count, 0)
   const totalDailyCapacity = (numbers ?? []).reduce((s, n) => s + n.daily_cap, 0)
   const liveUtilizationPct = totalDailyCapacity > 0
@@ -30,7 +50,7 @@ export async function GET() {
 
   return NextResponse.json({
     success: true,
-    numbers: numbers ?? [],
+    numbers: withRegs,
     config,
     stats,
     liveUtilization: {

@@ -293,8 +293,37 @@ CREATE TABLE IF NOT EXISTS public.phone_numbers (
   acquired_at        timestamptz NOT NULL DEFAULT now(),
   created_at         timestamptz NOT NULL DEFAULT now(),
   updated_at         timestamptz NOT NULL DEFAULT now(),
+  -- Summary only, and no longer set by hand: a trigger on
+  -- number_registrations maintains this as "filed with all three engines".
   is_registered      boolean NOT NULL DEFAULT false
 );
+
+-- ---- number_registrations (caller-ID filings, one row per engine) ----------
+-- Registration is three filings, not one: First Orion feeds T-Mobile, Hiya
+-- feeds AT&T, TNS feeds Verizon. Free Caller Registry submits to all three at
+-- once, which is why a single boolean looked sufficient — but the free APIs
+-- are per-engine (First Orion is T-Mobile only, Hiya needs a DUNS number, TNS
+-- has no free API at all), so partial coverage is the normal state.
+--
+-- 'confirmed' is deliberately rare: FCR acknowledges nothing, so the honest
+-- resting state after an upload is 'submitted'. Only a paid reputation API can
+-- justify 'confirmed'.
+CREATE TABLE IF NOT EXISTS public.number_registrations (
+  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  number_id    uuid NOT NULL REFERENCES public.phone_numbers(id) ON DELETE CASCADE,
+  provider     text NOT NULL,                       -- CHECK first_orion|hiya|tns
+  status       text NOT NULL DEFAULT 'unsubmitted', -- CHECK unsubmitted|submitted|confirmed|rejected
+  submitted_at timestamptz,
+  confirmed_at timestamptz,
+  batch_label  text,
+  note         text,
+  updated_at   timestamptz NOT NULL DEFAULT now(),
+  updated_by   text,
+  UNIQUE (number_id, provider)
+);
+-- Triggers: phone_numbers_seed_registrations seeds three rows on every new
+-- number, so a pool buy cannot create a blind spot; number_registrations_sync
+-- recomputes phone_numbers.is_registered on every write.
 
 -- ---- pool_config (singleton row controlling pool auto-scaling) -------------
 CREATE TABLE IF NOT EXISTS public.pool_config (

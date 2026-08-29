@@ -57,7 +57,12 @@ interface PoolNumber {
   flag_reason: string | null
   monthly_cost_cents: number
   acquired_at: string
+  /** Summary only: filed with all three analytics engines. Derived from
+   *  number_registrations by trigger — no longer set by hand. */
   is_registered: boolean
+  /** Per-engine filing state, keyed by provider. is_registered says whether
+   *  anything is missing; this says which. */
+  registrations?: Record<string, { status: string; submitted_at: string | null }>
   // Written by the number-health cron. Collected since it shipped and never
   // displayed anywhere — which meant the one metric that tells you a caller ID
   // is going bad was being computed and thrown away.
@@ -65,6 +70,35 @@ interface PoolNumber {
   health_window_calls: number | null
   health_window_answered: number | null
   health_checked_at: string | null
+}
+
+/** Which analytics engine reaches which carrier. Naming the carrier is the
+ *  point — "unfiled with TNS" means nothing, "Verizon" means something. */
+const ENGINE_CARRIERS: Record<string, string> = {
+  first_orion: 'T-Mobile',
+  hiya: 'AT&T',
+  tns: 'Verizon',
+}
+const ENGINES = Object.keys(ENGINE_CARRIERS)
+
+/** Tooltip for the REG badge, naming the carriers still uncovered. */
+function registrationTitle(n: PoolNumber): string {
+  const regs = n.registrations
+  if (!regs || Object.keys(regs).length === 0) {
+    return n.is_registered
+      ? 'Filed with all three engines. Click to unmark.'
+      : 'Not filed. Click to mark as submitted to Free Caller Registry.'
+  }
+  const missing = ENGINES.filter(e => {
+    const s = regs[e]?.status
+    return s !== 'submitted' && s !== 'confirmed'
+  })
+  if (missing.length === 0) {
+    const when = Object.values(regs).map(r => r.submitted_at).filter(Boolean).sort()[0]
+    return `Filed with all three engines${when ? ` since ${new Date(when as string).toLocaleDateString()}` : ''}. Click to unmark.`
+  }
+  return `Not filed with ${missing.map(e => ENGINE_CARRIERS[e]).join(', ')}. ` +
+    `Click to mark as submitted to Free Caller Registry (reaches all three).`
 }
 
 interface PoolConfig {
@@ -1080,6 +1114,27 @@ export default function NumbersApp() {
           <button className="pool-btn" onClick={handleSync} disabled={syncing}>
             {syncing ? '⟳ SYNCING...' : '⟳ SYNC'}
           </button>
+          {/* The free registration path is a web form, so the software half of
+              it is producing the list and remembering the filing. This is the
+              list. Exports what is still unfiled; falls back to the whole pool
+              once nothing is pending, for a re-file. */}
+          <button
+            className="pool-btn"
+            title={unregisteredCount > 0
+              ? `Download the ${unregisteredCount} number(s) not yet filed with all three engines, for upload to freecallerregistry.com`
+              : 'Everything is filed — downloads the whole pool, for a re-submission'}
+            onClick={() => {
+              const scope = unregisteredCount > 0 ? 'pending' : 'all'
+              const a = document.createElement('a')
+              a.href = `/api/admin/pool/registration/export?scope=${scope}`
+              a.download = ''
+              document.body.appendChild(a)
+              a.click()
+              a.remove()
+            }}
+          >
+            ⤓ FCR CSV{unregisteredCount > 0 ? ` · ${unregisteredCount}` : ''}
+          </button>
           {unregisteredCount > 0 && (
             <button
               className="pool-btn pool-btn-success"
@@ -1281,9 +1336,7 @@ export default function NumbersApp() {
                       className={`pool-reg-badge ${n.is_registered ? 'registered' : 'unregistered'}`}
                       disabled={isRegistering}
                       onClick={() => handleToggleRegister(n)}
-                      title={n.is_registered
-                        ? 'Marked as registered with carriers. Click to unmark.'
-                        : 'Not yet registered with carriers (FCR, etc). Click to mark as registered.'}
+                      title={registrationTitle(n)}
                     >
                       {isRegistering ? '...' : (n.is_registered ? '✓ REG' : '✗ UNREG')}
                     </button>
