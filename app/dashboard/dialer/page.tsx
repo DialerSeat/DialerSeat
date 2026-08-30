@@ -1603,7 +1603,11 @@ function DialerPageInner() {
   const silenceSIPAudio = () => {
     try {
       const el = document.getElementById('sip-audio') as HTMLAudioElement | null
-      if (el) { el.muted = true; el.srcObject = null }
+      // trackId is cleared alongside srcObject. The attach guard skips a track
+      // it believes is already playing, so leaving a stale id here would make
+      // the next call silent — which is the exact bug this whole path keeps
+      // finding new ways to reintroduce.
+      if (el) { el.muted = true; el.srcObject = null; delete el.dataset.trackId }
     } catch { /* the element is gone, which is the same outcome */ }
   }
 
@@ -1680,20 +1684,45 @@ function DialerPageInner() {
           }
         }
 
-        pc.ontrack = (event: RTCTrackEvent) => {
-          if (event.streams && event.streams[0]) {
-            const audioEl = getAudioEl()
-            audioEl.srcObject = event.streams[0]
-            audioEl.play().catch(console.error)
+        // ── ATTACH ONCE PER TRACK, NOT ONCE PER POLL ──────────────────────
+        // Assigning srcObject issues a NEW LOAD REQUEST, and a new load request
+        // aborts any play() still settling on that element. The browser says so
+        // out loud: "The play() request was interrupted by a new load request."
+        //
+        // tryAttach runs several times per call — immediately, then on timers —
+        // and both paths below used to assign unconditionally. So every tick
+        // wrapped the same remote track in a brand new MediaStream, replaced
+        // srcObject, and called play() again, aborting the previous one. The
+        // call connects, ICE reports connected, the SDP is fine, and nobody
+        // hears anything.
+        //
+        // Keyed on the TRACK id rather than the stream object, because ontrack
+        // hands over event.streams[0] while the receiver path constructs its
+        // own MediaStream — two different objects around the identical track,
+        // so comparing streams would never match and would re-attach forever.
+        const attachTrack = (track: MediaStreamTrack, stream?: MediaStream) => {
+          const audioEl = getAudioEl()
+          if (audioEl.dataset.trackId === track.id && audioEl.srcObject) return
+          audioEl.dataset.trackId = track.id
+          audioEl.srcObject = stream ?? new MediaStream([track])
+          const played = audioEl.play()
+          if (played) {
+            played.catch((err: unknown) => {
+              // An AbortError here is this same race losing a benign copy of
+              // itself; anything else is a real playback failure worth seeing.
+              if ((err as { name?: string })?.name !== 'AbortError') console.error(err)
+            })
           }
+        }
+
+        pc.ontrack = (event: RTCTrackEvent) => {
+          const track = event.track ?? event.streams?.[0]?.getAudioTracks()?.[0]
+          if (track && track.kind === 'audio') attachTrack(track, event.streams?.[0])
         }
 
         pc.getReceivers().forEach((receiver: RTCRtpReceiver) => {
           if (receiver.track && receiver.track.kind === 'audio') {
-            const stream = new MediaStream([receiver.track])
-            const audioEl = getAudioEl()
-            audioEl.srcObject = stream
-            audioEl.play().catch(console.error)
+            attachTrack(receiver.track)
           }
         })
         return true
