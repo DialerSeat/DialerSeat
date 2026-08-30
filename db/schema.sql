@@ -120,7 +120,7 @@ CREATE TABLE IF NOT EXISTS public.campaigns (
   called_leads               integer DEFAULT 0,
   created_at                 timestamptz DEFAULT now(),
   script                     text DEFAULT ''::text,
-  dialer_mode                text NOT NULL DEFAULT 'power'::text,
+  dialer_mode                text NOT NULL DEFAULT 'progressive'::text,
   amd_enabled                boolean NOT NULL DEFAULT false,
   voicemail_drop_url         text,
   predictive_lines_per_agent numeric(3,1) NOT NULL DEFAULT 1.5, -- per-agent multiplier (CHECK 1.0-3.0)

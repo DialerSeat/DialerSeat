@@ -37,11 +37,14 @@ export async function POST(req: Request) {
       }
     }
 
-    // SANDBOX DEFAULT: progressive (per build instruction). Production's
-    // equivalent route still defaults to 'power' — this divergence is
-    // intentional and sandbox-only, matching most current subscribers'
-    // actual mode, so Telnyx validation happens against the mode that
-    // matters most first.
+    // Progressive is the house default for a new campaign, and the column
+    // default in db/schema.sql now matches it. It is what almost every
+    // subscriber actually runs: 13 of the 16 campaigns on the platform are
+    // progressive, against two power and one predictive.
+    //
+    // The comment here used to describe this as a sandbox-only divergence
+    // from a production route that defaulted to 'power'. There is no such
+    // second route -- this is the only campaign insert path in the codebase.
     const mode: DialerMode = dialer_mode && VALID_MODES.includes(dialer_mode)
       ? dialer_mode
       : 'progressive'
