@@ -899,9 +899,13 @@ function DialerPageInner() {
     isSpecificCampaign
       ? (agentMayPickMode
           ? allActiveOverrideMode
-          : ((currentCampaign?.dialer_mode as DialerMode) || 'power'))
+          : ((currentCampaign?.dialer_mode as DialerMode) || 'progressive'))
       : isAllActive
         ? allActiveOverrideMode
+        // No campaign selected at all -- nothing is being dialed, so this is a
+        // label for an idle screen rather than a dialing decision. Left at
+        // power on purpose; the branch above it, which covers a real campaign
+        // whose row has not loaded yet, is the one that reads progressive.
         : 'power'
 
   // Load the selected campaign's persisted dial-repeat-count whenever the

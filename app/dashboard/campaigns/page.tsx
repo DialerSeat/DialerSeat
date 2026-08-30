@@ -1586,7 +1586,7 @@ export default function CampaignsPage() {
     const baseDraft: EditDraft = {
       name: campaign.name || '',
       status: campaign.status || 'active',
-      dialer_mode: (campaign.dialer_mode || 'power') as DialerMode,
+      dialer_mode: (campaign.dialer_mode || 'progressive') as DialerMode,
       amd_enabled: !!campaign.amd_enabled,
       // The comment that used to sit here justified defaulting this to TRUE
       // "matching the column's own DEFAULT true". The column's default is
@@ -3616,7 +3616,7 @@ export default function CampaignsPage() {
                     </div>
                     <select
                       className="settings-mode-select"
-                      value={editDraft?.dialer_mode || 'power'}
+                      value={editDraft?.dialer_mode || 'progressive'}
                       onChange={e => {
                         const m = e.target.value as DialerMode
                         patchDraft({ dialer_mode: m, amd_enabled: AMD_DEFAULT_BY_MODE[m] })
@@ -3640,7 +3640,7 @@ export default function CampaignsPage() {
                     onClick={() => {
                       if (isLapsed) return
                       const turningOn = !editDraft?.amd_enabled
-                      const currentMode = editDraft?.dialer_mode || 'power'
+                      const currentMode = editDraft?.dialer_mode || 'progressive'
                       // "the only difference between power and progressive is
                       // amd" — turning AMD off while on progressive drops to
                       // power; turning it on while on power promotes to

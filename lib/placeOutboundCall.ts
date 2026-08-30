@@ -236,6 +236,13 @@ export async function placeOutboundCall(
   // (no campaignId) do not record.
   let amdEnabled = true
   let recordingEnabled = false
+  // DELIBERATELY power, not progressive. This is the MANUAL dial value -- it
+  // survives only when there is no campaignId at all. Everywhere a campaign
+  // exists the house default is progressive, but mode is not cosmetic here:
+  // isTsrRegulated below is true for progressive and predictive, and
+  // pickNumberForLead branches on it. Calling a manual one-at-a-time dial
+  // progressive would put it under the abandoned-call rule and change which
+  // number it goes out on, to describe something that is not happening.
   let dialerMode = 'power'
   if (campaignId) {
     const { data: campaign } = await supabase
@@ -244,7 +251,7 @@ export async function placeOutboundCall(
       .eq('id', campaignId)
       .maybeSingle()
     if (campaign) {
-      dialerMode = campaign.dialer_mode || 'power'
+      dialerMode = campaign.dialer_mode || 'progressive'
       amdEnabled = campaign.amd_enabled !== false
       // Strict equality: null/undefined means "not opted in", not "on".
       recordingEnabled = campaign.recording_enabled === true

@@ -318,7 +318,7 @@ export default function CompliancePage() {
               const stats = statsByCampaign[campaign.id]
               const isLoadingStats = statsLoading[campaign.id]
               const isExporting = exportingId === campaign.id
-              const mode = (campaign.dialer_mode || 'power') as DialerMode
+              const mode = (campaign.dialer_mode || 'progressive') as DialerMode
 
               return (
                 <CampaignComplianceCard

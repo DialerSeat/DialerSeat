@@ -49,7 +49,12 @@ const CANDIDATE_LIMIT = 50
 
 // Fetch the campaign's dialer mode + AMD setting so the client can drive
 // per-call behavior (especially for ALL_ACTIVE which dials across many
-// campaigns each with its own mode). Falls back to power+AMD-on if not set.
+// campaigns each with its own mode).
+//
+// The fallback only fires when the campaign row is gone, since dialer_mode is
+// NOT NULL. It used to read power+AMD-on, which contradicted itself: this
+// codebase treats AMD as the only thing separating power from progressive, so
+// that pairing already WAS progressive, spelled wrong.
 async function fetchCampaignMode(campaignId: string) {
   const { data } = await supabaseAdmin
     .from('campaigns')
@@ -57,7 +62,7 @@ async function fetchCampaignMode(campaignId: string) {
     .eq('id', campaignId)
     .maybeSingle()
   return {
-    dialer_mode: (data?.dialer_mode as string) || 'power',
+    dialer_mode: (data?.dialer_mode as string) || 'progressive',
     amd_enabled: data?.amd_enabled !== false,
   }
 }
