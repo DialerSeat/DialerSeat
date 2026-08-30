@@ -3736,6 +3736,23 @@ function DialerPageInner() {
   // is the one signal every dial path (client auto-chain via availableRef, and
   // the server controller via the heartbeat 'paused' state) actually respects.
   const abortDialingRef = useRef(false)
+  /**
+   * One dial at a time.
+   *
+   * Every guard above this was about WHETHER to dial — available, not aborted,
+   * campaign selected — and none of them about how many at once. Spam-clicking
+   * INITIATE DIAL SEQUENCE therefore ran handleDial several times over, each
+   * pass sailing through identical guards, claiming its own lead and placing
+   * its own leg. Two legs from one agent also burn two of the 100 concurrency
+   * slots and leave whichever one is not on screen to be answered by a real
+   * person nobody is looking at.
+   *
+   * Set synchronously so two clicks in the same tick cannot both pass, and
+   * released in a finally so a thrown fetch cannot wedge the auto-chain shut.
+   * It spans placing the call, not the call itself — dialLeadCall returns once
+   * the leg is out, and hangup is driven by polling from there.
+   */
+  const dialInFlightRef = useRef(false)
 
   // Schedules the next auto-chain dial, but tracked so it can be cancelled, and
   // re-checks availability when it fires. Use this everywhere instead of a bare
@@ -3761,6 +3778,18 @@ function DialerPageInner() {
   }
 
   const handleDial = async () => {
+    // Collapse concurrent entries before anything else runs. Checked and set
+    // in the same synchronous step, so no await can interleave between them.
+    if (dialInFlightRef.current) return
+    dialInFlightRef.current = true
+    try {
+      await runDial()
+    } finally {
+      dialInFlightRef.current = false
+    }
+  }
+
+  const runDial = async () => {
     // ── HARD GUARD ──────────────────────────────────────────────────────────
     // The single authoritative gate: a dial may only proceed if you are
     // actively available at THIS moment. This stops "ghost dialing" — calls
