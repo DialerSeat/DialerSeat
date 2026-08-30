@@ -38,6 +38,7 @@ export type AppId =
   | 'logs'
   | 'support'
   | 'notes'
+  | 'daily-tasks'
   | 'gmail'
   | 'clerk-profile'
   | 'browser'

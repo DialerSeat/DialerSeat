@@ -2,6 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { LAND, BORDERS, MAP_W, MAP_H, project } from '@/lib/worldMap'
+import { localDay } from '@/lib/dailyTasks'
+
+/** One of the four fixed daily tasks, as the mini panel needs it. */
+interface DailyCore { key: string; label: string; done: boolean }
 
 // ── PALETTE ─────────────────────────────────────────────────────────────
 // Deliberately NOT the admin desktop's chrome. This app is meant to read as
@@ -141,7 +145,7 @@ const STORE = 'ds:ops-map'
 type Persisted = {
   mode?: Mode; range?: Range
   feedOpen?: boolean; ranksOpen?: boolean; pulseOpen?: boolean
-  notisOpen?: boolean; compOpen?: boolean
+  notisOpen?: boolean; compOpen?: boolean; tasksOpen?: boolean
   notisTab?: 'notis' | 'logs' | 'visitors' | 'both'
   pulseTab?: 'calls' | 'visitors' | 'income'
   compWindow?: '7d' | 'month' | 'all'
@@ -219,6 +223,14 @@ export default function OpsMap() {
   // least flattering — the box should open on the number that matters.
   const [compWindow, setCompWindow] = useState<'7d' | 'month' | 'all'>(saved.compWindow ?? 'month')
   const [compOpen, setCompOpen] = useState(saved.compOpen ?? false)
+  const [tasksOpen, setTasksOpen] = useState(saved.tasksOpen ?? false)
+  // The daily list is personal, not operational, so it is fetched on its own
+  // rather than bolted onto the map payload — nothing else on this screen is
+  // scoped to one human, and the map route should not start being.
+  const [tasks, setTasks] = useState<
+    { core: DailyCore[]; streak: number; coreCount: number } | null
+  >(null)
+
   const [dockHidden, setDockHidden] = useState(false)
   // Which person's card is open. Held by id rather than by object so a refresh
   // reopens it against the NEW row instead of pinning a stale copy on screen.
@@ -359,6 +371,46 @@ export default function OpsMap() {
     return () => { cancelled = true }
   }, [selected, range, beat])
 
+  // The daily list, refreshed on the same beat as everything else so the
+  // count in the corner cannot sit stale next to live data.
+  const loadTasks = useCallback(async () => {
+    try {
+      const r = await fetch(`/api/admin/daily-tasks?day=${localDay()}`)
+      const j = await r.json()
+      if (j?.ok) setTasks({ core: j.core, streak: j.streak, coreCount: j.coreCount })
+    } catch { /* the next beat tries again */ }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    fetch(`/api/admin/daily-tasks?day=${localDay()}`)
+      .then(r => r.json())
+      .then((j: { ok?: boolean; core?: DailyCore[]; streak?: number; coreCount?: number }) => {
+        if (cancelled || !j?.ok || !j.core) return
+        setTasks({ core: j.core, streak: j.streak ?? 0, coreCount: j.coreCount ?? 4 })
+      })
+      .catch(() => { /* the next beat tries again */ })
+    return () => { cancelled = true }
+  }, [beat])
+
+  const toggleTask = useCallback(async (key: string, next: boolean) => {
+    // Optimistic, then reconciled from the server. Ticking a box here should
+    // feel like ticking a box, not like filing a request.
+    setTasks(t => t && ({ ...t, core: t.core.map(c => c.key === key ? { ...c, done: next } : c) }))
+    try {
+      await fetch('/api/admin/daily-tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'toggle', day: localDay(), taskKey: key, done: next }),
+      })
+    } finally {
+      void loadTasks()
+    }
+  }, [loadTasks])
+
+  const tasksDone = tasks ? tasks.core.filter(c => c.done).length : 0
+  const tasksTotal = tasks?.coreCount ?? 4
+
   const detail = detailFor && detailFor.key === selected ? detailFor.data : null
 
   useEffect(() => {
@@ -391,7 +443,7 @@ export default function OpsMap() {
     try {
       window.localStorage.setItem(STORE, JSON.stringify({
         mode, range, feedOpen, ranksOpen, showTargets, pulseOpen, feedView,
-        notisOpen, compOpen, notisTab, pulseTab, compWindow,
+        notisOpen, compOpen, tasksOpen, notisTab, pulseTab, compWindow,
         callFilter, peopleFilter, peopleSort,
         selected,
         // Rounded before storing. The view changes on every frame of a drag,
@@ -406,7 +458,7 @@ export default function OpsMap() {
       }))
     } catch { /* nothing here is worth failing a render for */ }
   }, [mode, range, feedOpen, ranksOpen, showTargets, pulseOpen, feedView,
-      notisOpen, compOpen, notisTab, pulseTab, compWindow,
+      notisOpen, compOpen, tasksOpen, notisTab, pulseTab, compWindow,
       callFilter, peopleFilter, peopleSort,
       selected, view])
 
@@ -1348,7 +1400,70 @@ export default function OpsMap() {
             )}
           </div>
 
-          <div className="om-panel om-corner">
+          {/* The right corner is a column now: the daily list sits above
+              compliance. It is the only thing on this screen addressed to a
+              person rather than to the platform, which is exactly why it goes
+              where the eye already lands. */}
+          <div className="om-corner" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+
+          <div className="om-panel">
+            <div className="om-head" onClick={() => setTasksOpen(o => !o)}>
+              DAILY TASKS
+              <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+                {tasks && (
+                  <span style={{
+                    color: tasksDone >= tasksTotal ? GREEN : AMBER,
+                    fontFamily: 'ui-monospace, Menlo, monospace', fontWeight: 800, fontSize: 10,
+                  }}>{tasksDone}/{tasksTotal}</span>
+                )}
+                {/* The streak earns a badge only once it exists. A "0d" chip
+                    every morning is a reminder of nothing. */}
+                {!!tasks?.streak && (
+                  <span style={{
+                    background: GREEN, color: VOID, borderRadius: 8, padding: '0 5px',
+                    fontSize: 8.5, fontWeight: 900, letterSpacing: 0.5,
+                  }}>{tasks.streak}d</span>
+                )}
+                <span className="om-caret">{tasksOpen ? '▼' : '▲'}</span>
+              </span>
+            </div>
+            {tasksOpen && (
+              <div style={{ padding: '7px 9px 9px' }}>
+                <div style={{
+                  fontSize: 9, color: DIM, letterSpacing: 1, fontStyle: 'italic', marginBottom: 7,
+                }}>
+                  Regardless how you feel.
+                </div>
+                {!tasks ? (
+                  <div style={{ color: DIM, fontSize: 10.5 }}>Loading…</div>
+                ) : tasks.core.map(t => (
+                  <div
+                    key={t.key}
+                    onClick={() => void toggleTask(t.key, !t.done)}
+                    style={{
+                      display: 'flex', gap: 7, alignItems: 'flex-start',
+                      padding: '4px 0', cursor: 'pointer',
+                    }}
+                  >
+                    <span style={{
+                      width: 13, height: 13, flexShrink: 0, marginTop: 1, borderRadius: 2,
+                      border: `1.5px solid ${t.done ? GREEN : DIM}`,
+                      background: t.done ? GREEN : 'transparent',
+                      color: VOID, fontSize: 9, lineHeight: '10px', fontWeight: 900,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>{t.done ? '✓' : ''}</span>
+                    <span style={{
+                      fontSize: 10.5, lineHeight: 1.35,
+                      color: t.done ? DIM : INK,
+                      textDecoration: t.done ? 'line-through' : 'none',
+                    }}>{t.label}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="om-panel">
             <div className="om-head" onClick={() => setCompOpen(o => !o)}>
               COMPLIANCE
               <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -1407,6 +1522,7 @@ export default function OpsMap() {
               </div>
               </div>
             )}
+          </div>
           </div>
         </div>
 

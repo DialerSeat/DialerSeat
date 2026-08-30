@@ -13,6 +13,7 @@ gets ignored, which is worse than not running it.
 import io, os, re
 
 SCHEMA = {
+ 'admin_daily_tasks': 'created_at,day,done,done_at,id,label,owner_clerk_id,sort_order,task_key',
  'admin_desktop_prefs': 'background,clerk_id,hidden_apps,icon_positions,installed_apps,updated_at',
  'admin_notes': 'body,content_edited_at,created_at,id,owner_clerk_id,pin_order,starred,title,updated_at',
  'admin_notification_prefs': 'account_deleted,agent_leg_refused,agent_online,cancel,id,master_enabled,new_sub,payment_failed,pool_capacity,renewal,resub,signup,sub_paused,sub_resumed,team_join,updated_at,webhook_silence',

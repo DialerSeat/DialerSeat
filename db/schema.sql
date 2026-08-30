@@ -298,6 +298,28 @@ CREATE TABLE IF NOT EXISTS public.phone_numbers (
   is_registered      boolean NOT NULL DEFAULT false
 );
 
+-- ---- admin_daily_tasks (the daily list, per admin) -------------------------
+-- Four fixed tasks recur every day; their WORDING lives in lib/dailyTasks.ts
+-- and only completion is stored here, so rewording one needs no migration and
+-- leaves no stale copies in history. Anything else belongs to a single date --
+-- including a future one, so a trip can be written down when it is booked.
+--
+-- `day` is a DATE and never a timestamp: the client sends its own local
+-- YYYY-MM-DD and the server stores exactly that. No timezone conversion
+-- happens anywhere, because each conversion is a chance to lose a streak day.
+CREATE TABLE IF NOT EXISTS public.admin_daily_tasks (
+  id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_clerk_id text NOT NULL,
+  day            date NOT NULL,
+  task_key       text NOT NULL,   -- 'core1'..'core4', or 'custom:<uuid>'
+  label          text,            -- NULL for core tasks; set for custom ones
+  done           boolean NOT NULL DEFAULT false,
+  done_at        timestamptz,
+  sort_order     integer NOT NULL DEFAULT 0,
+  created_at     timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (owner_clerk_id, day, task_key)
+);
+
 -- ---- number_registrations (caller-ID filings, one row per engine) ----------
 -- Registration is three filings, not one: First Orion feeds T-Mobile, Hiya
 -- feeds AT&T, TNS feeds Verizon. Free Caller Registry submits to all three at

@@ -108,6 +108,10 @@ const NotesApp = dynamic(() => import('./apps/Notes'), {
   loading: () => <AppLoading />,
   ssr: false,
 })
+const DailyTasksApp = dynamic(() => import('./apps/DailyTasks'), {
+  loading: () => <AppLoading />,
+  ssr: false,
+})
 const GmailApp = dynamic(() => import('./apps/Gmail'), {
   loading: () => <AppLoading />,
   ssr: false,
@@ -325,6 +329,16 @@ export const APPS: AppDefinition[] = [
     visibleTo: ['admin', 'manager'],
     Component: NotesApp,
     defaultSize: { width: 1000, height: 700 },
+  },
+  {
+    id: 'daily-tasks',
+    name: 'Daily Tasks',
+    icon: '✓',
+    iconBg: 'linear-gradient(135deg, #4fd47a, #1a6a1a)',
+    description: 'The four that happen every day, regardless how you feel — plus a streak.',
+    visibleTo: ['admin'],
+    Component: DailyTasksApp,
+    defaultSize: { width: 720, height: 720 },
   },
   {
     id: 'gmail',
