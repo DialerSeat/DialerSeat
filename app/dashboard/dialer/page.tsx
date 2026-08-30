@@ -3191,6 +3191,21 @@ function DialerPageInner() {
     return () => { document.body.style.overflow = '' }
   }, [dialZoomed])
 
+  // ── DO NOT STRAND ANYONE IN AN OVERLAY THEY CANNOT CLOSE ────────────────
+  // The full-screen dialer is mobile-only now, and the button that closes it
+  // carries the same class as the button that opens it — so above 768px BOTH
+  // are hidden. A phone rotated into landscape, or a resized window, would
+  // leave the overlay up with no visible way out and no keyboard to press
+  // Escape on. Closing it on the way past the breakpoint costs nothing and is
+  // the only exit a touch user has.
+  useEffect(() => {
+    if (!dialZoomed) return
+    const mq = window.matchMedia('(min-width: 769px)')
+    const onChange = (e: MediaQueryListEvent) => { if (e.matches) setDialZoomed(false) }
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [dialZoomed])
+
   const fetchPreviewLead = async () => {
     setShowDisposition(false)
     setDisposition('')
@@ -4648,7 +4663,15 @@ function DialerPageInner() {
           color: 'var(--brand-on-sidebar-muted)', fontWeight: 'bold',
         }}>MANUAL DIAL</span>
         <button
-          onClick={() => setDialZoomed(!inOverlay)}
+          className="dialer-manual-fs-btn"
+          onClick={() => {
+            // Desktop cannot enter it at all. The CSS hides this button there,
+            // so this only catches a keyboard or programmatic route to the same
+            // place — and entering on desktop is what strands you, because the
+            // close button is hidden by that same rule.
+            if (!inOverlay && window.matchMedia('(min-width: 769px)').matches) return
+            setDialZoomed(!inOverlay)
+          }}
           aria-label={inOverlay ? 'Close fullscreen dialer' : 'Open fullscreen dialer'}
           style={{
             background: 'transparent', border: '1px solid var(--brand-sidebar-active-bg)', borderRadius: 4,
@@ -5508,6 +5531,11 @@ function DialerPageInner() {
         /* Full-screen lead-profile toggle is mobile-only — hidden on desktop,
            shown inside the mobile media query below. */
         .dialer-profile-fs-btn { display: none; }
+        /* Manual dial's own full-screen toggle, hidden on desktop for the same
+           reason: on a wide screen the dialer is already fully visible beside
+           the lead, so blowing it up covers the thing the agent is reading. On
+           a phone it is the only way to get a usable keypad. */
+        .dialer-manual-fs-btn { display: none; }
 
         @media (max-width: 768px) {
           .dialer-root { height: calc(100vh - 64px); height: calc(100dvh - 64px); }
@@ -5515,6 +5543,7 @@ function DialerPageInner() {
 
           /* Show the full-screen toggle on mobile only. */
           .dialer-profile-fs-btn { display: inline-flex; align-items: center; }
+          .dialer-manual-fs-btn { display: flex; }
 
           /* Full-screen lead profile: NOT an overlay. It's an in-flow page
              region — the profile/script card grows to fill the available space

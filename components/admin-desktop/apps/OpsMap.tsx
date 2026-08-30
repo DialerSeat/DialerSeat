@@ -146,7 +146,7 @@ type Persisted = {
   mode?: Mode; range?: Range
   feedOpen?: boolean; ranksOpen?: boolean; pulseOpen?: boolean
   notisOpen?: boolean; compOpen?: boolean; tasksOpen?: boolean
-  notisTab?: 'notis' | 'logs' | 'visitors' | 'both'
+  notisTab?: 'notis' | 'logs'
   pulseTab?: 'calls' | 'visitors' | 'income'
   compWindow?: '7d' | 'month' | 'all'
   showTargets?: boolean; feedView?: 'calls' | 'people'
@@ -217,7 +217,11 @@ export default function OpsMap() {
   const [ranksOpen, setRanksOpen] = useState(saved.ranksOpen ?? true)
   const [pulseOpen, setPulseOpen] = useState(saved.pulseOpen ?? true)
   const [notisOpen, setNotisOpen] = useState(saved.notisOpen ?? false)
-  const [notisTab, setNotisTab] = useState<'notis' | 'logs' | 'visitors' | 'both'>(saved.notisTab ?? 'both')
+  // Coerced, not trusted: 'both' and 'visitors' were valid until now and are
+  // still in localStorage for anyone who used this before. An unrecognised
+  // saved tab would select nothing and render an empty panel.
+  const [notisTab, setNotisTab] = useState<'notis' | 'logs'>(
+    saved.notisTab === 'logs' ? 'logs' : 'notis')
   const [pulseTab, setPulseTab] = useState<'calls' | 'visitors' | 'income'>(saved.pulseTab ?? 'calls')
   // 'month' is what Telnyx assess, so it is the default even though it is the
   // least flattering — the box should open on the number that matters.
@@ -533,10 +537,7 @@ export default function OpsMap() {
   // BOTH interleaves by time rather than concatenating, so a payment and the
   // notification about it sit next to each other instead of in two piles.
   const notiStream = (
-    notisTab === 'notis' ? (data?.notis ?? [])
-    : notisTab === 'logs' ? (data?.logs ?? [])
-    : notisTab === 'visitors' ? []
-    : [...(data?.notis ?? []), ...(data?.logs ?? [])]
+    notisTab === 'logs' ? (data?.logs ?? []) : (data?.notis ?? [])
   ).slice().sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
   const comp = data?.compliance?.[compWindow] ?? null
   const compMeta = data?.complianceMeta ?? null
@@ -1328,49 +1329,16 @@ export default function OpsMap() {
             {notisOpen && (
               <>
                 <div className="om-subbar" onClick={e => e.stopPropagation()}>
-                  {([['notis', 'NOTIS'], ['logs', 'LOGS'],
-                     ['visitors', 'VISITORS'], ['both', 'BOTH']] as const).map(([id, lbl]) => (
+                  {([['notis', 'NOTIS'], ['logs', 'LOGS']] as const).map(([id, lbl]) => (
                     <button key={id} className="om-mini" data-on={notisTab === id}
                             onClick={() => setNotisTab(id)}>{lbl}</button>
                   ))}
                   <span style={{ marginLeft: 'auto', color: DIM, fontSize: 9, letterSpacing: 1 }}>
-                    {notisTab === 'visitors' ? (data?.visitors ?? []).length : notiStream.length}
+                    {notiStream.length}
                   </span>
                 </div>
               <div className="om-scroll" style={{ maxHeight: 150 }}>
-                {/* Visitors are people, not events, so they get their own
-                    shape rather than being squeezed into a title and a
-                    timestamp. An anonymous reader has no name and is shown as
-                    their browser id — inventing one would be the single
-                    dishonest thing this panel could do. */}
-                {notisTab === 'visitors' ? (
-                  (data?.visitors ?? []).length === 0 ? (
-                    <div style={{ color: DIM, fontSize: 10.5, padding: '8px 9px' }}>
-                      Nobody in this range.
-                    </div>
-                  ) : (
-                    (data?.visitors ?? []).map(v => (
-                      <div key={v.id} style={{
-                        padding: '5px 9px', borderBottom: `1px solid ${EDGE}`,
-                        borderLeft: `2px solid ${v.signedUp ? GREEN : 'transparent'}`,
-                      }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 10 }}>
-                          <span style={{ color: v.signedUp ? GREEN : MUTED, minWidth: 0,
-                                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {v.label}
-                          </span>
-                          <span style={{ color: DIM, flexShrink: 0, fontFamily: 'ui-monospace, Menlo, monospace' }}>
-                            {v.views}v · {v.days}d
-                          </span>
-                        </div>
-                        <div style={{ fontSize: 9.5, color: DIM, marginTop: 1 }}>
-                          <span style={{ color: v.source.includes('chatgpt') ? PINK : DIM }}>{v.source}</span>
-                          {v.landedOn ? ` → ${v.landedOn}` : ''}
-                        </div>
-                      </div>
-                    ))
-                  )
-                ) : notiStream.length === 0 ? (
+                {notiStream.length === 0 ? (
                   <div style={{ color: DIM, fontSize: 10.5, padding: '8px 9px' }}>Nothing yet.</div>
                 ) : (
                   notiStream.map(n => (

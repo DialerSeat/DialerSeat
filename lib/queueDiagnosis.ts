@@ -86,12 +86,25 @@ export class QueueDiagnosisBuilder {
       // Lead with the largest group, then name the rest. The biggest group is
       // usually the real story, but a small group of broken numbers is the
       // part someone can actually fix today, so it must not be dropped.
-      const parts = reasons.map(r => `${r.count.toLocaleString()} ${LABELS[r.code]}`)
-      const head = parts[0]
-      const tail = parts.slice(1)
-      summary =
-        `Nothing is dialable right now — of ${this.examined.toLocaleString()} leads checked, ${head}` +
-        (tail.length > 0 ? `; ${tail.join('; ')}` : '') + '.'
+      // WHEN THE ONLY PROBLEM IS THE CLOCK, DO NOT SHOW ARITHMETIC. "of 10
+      // leads checked, 10 are before their local calling window opens" makes
+      // the reader do a subtraction to reach a fact that needed no numbers at
+      // all: it is not calling hours yet. The counts are only worth printing
+      // when they differ from each other, because then they are telling you
+      // which leads to go and fix.
+      const allClock = reasons.every(r => CLOCK_CODES.has(r.code))
+      if (allClock) {
+        summary = 'All leads are outside their local calling hours (9am–9pm).'
+      } else {
+        const parts = reasons.map(r => `${r.count.toLocaleString()} ${LABELS[r.code]}`)
+        const head = parts[0]
+        const tail = parts.slice(1)
+        // The examined total is dropped here too. It only ever equalled the sum
+        // of the parts below it, so it was restating them in advance.
+        summary =
+          `Nothing is dialable right now — ${head}` +
+          (tail.length > 0 ? `; ${tail.join('; ')}` : '') + '.'
+      }
 
       // The fixable reasons deserve an instruction, not just a count.
       const fixable = reasons.find(r =>
