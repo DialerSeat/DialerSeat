@@ -39,6 +39,7 @@ export type AppId =
   | 'support'
   | 'notes'
   | 'daily-tasks'
+  | 'outreach'
   | 'gmail'
   | 'clerk-profile'
   | 'browser'

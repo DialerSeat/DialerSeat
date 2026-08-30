@@ -108,6 +108,10 @@ const NotesApp = dynamic(() => import('./apps/Notes'), {
   loading: () => <AppLoading />,
   ssr: false,
 })
+const OutreachApp = dynamic(() => import('./apps/Outreach'), {
+  loading: () => <AppLoading />,
+  ssr: false,
+})
 const DailyTasksApp = dynamic(() => import('./apps/DailyTasks'), {
   loading: () => <AppLoading />,
   ssr: false,
@@ -329,6 +333,16 @@ export const APPS: AppDefinition[] = [
     visibleTo: ['admin', 'manager'],
     Component: NotesApp,
     defaultSize: { width: 1000, height: 700 },
+  },
+  {
+    id: 'outreach',
+    name: 'Outreach',
+    icon: '✉',
+    iconBg: 'linear-gradient(135deg, #7ab8ff, #1a4a8a)',
+    description: 'Cold list, opt-outs, and unsubscribe links. Sending happens elsewhere.',
+    visibleTo: ['admin'],
+    Component: OutreachApp,
+    defaultSize: { width: 980, height: 720 },
   },
   {
     id: 'daily-tasks',
