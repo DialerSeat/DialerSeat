@@ -46,8 +46,6 @@ SCHEMA = {
  'manager_desktop_prefs': 'background,clerk_id,hidden_apps,icon_positions,installed_apps,updated_at',
  'number_registrations': 'batch_label,confirmed_at,id,note,number_id,provider,status,submitted_at,updated_at,updated_by',
  'ops_alert_log': 'alert_key,created_at,detail,id',
- 'outreach_contacts': 'company,created_at,email,id,last_sent_at,name,source,status,times_sent,unsubscribe_token',
- 'outreach_suppression': 'created_at,email,reason,source',
  'pacing_metrics': 'campaign_id,id,metric_date,total_abandons,total_amd_detected,total_answers,total_connects,total_dials,total_predictive_groups,updated_at',
  'page_views': 'country,created_at,device,dwell_ms,id,is_authed,path,referrer_host,region,utm_campaign,utm_medium,utm_source,visitor_hash',
  'pending_reactivations': 'created_at,email,id,original_clerk_id,owed_until,plan,redeemed_at,stripe_customer_id',

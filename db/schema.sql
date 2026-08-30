@@ -298,39 +298,6 @@ CREATE TABLE IF NOT EXISTS public.phone_numbers (
   is_registered      boolean NOT NULL DEFAULT false
 );
 
--- ---- outreach_contacts / outreach_suppression (cold list + opt-outs) -------
--- The half of cold outreach that must survive changing how you send. Sending
--- itself belongs to a tool whose terms permit cold email -- the transactional
--- providers (Resend, SendGrid, Mailgun, SES) all ban it -- but the suppression
--- list cannot live inside a vendor, because the day you switch is the day you
--- would otherwise re-mail everyone who already said no.
---
--- Suppression is keyed by EMAIL and has NO foreign key, deliberately: an
--- opt-out must outlive the contact row, the import it arrived in, and any
--- future purge of the list.
-CREATE TABLE IF NOT EXISTS public.outreach_contacts (
-  id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  email             text NOT NULL UNIQUE,   -- always lowercased + trimmed
-  name              text,
-  company           text,
-  source            text,                   -- which import it arrived on
-  status            text NOT NULL DEFAULT 'new',
-                    -- CHECK new|sent|replied|bounced|unsubscribed
-  unsubscribe_token uuid NOT NULL UNIQUE DEFAULT gen_random_uuid(),
-  times_sent        integer NOT NULL DEFAULT 0,
-  last_sent_at      timestamptz,
-  created_at        timestamptz NOT NULL DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS public.outreach_suppression (
-  email      text PRIMARY KEY,
-  reason     text NOT NULL,  -- CHECK unsubscribed|bounced|complained|manual|role_account
-  source     text,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
--- Trigger outreach_suppression_marks_contact sets the contact's status on
--- insert. Nothing un-suppresses automatically, in either direction.
-
 -- ---- admin_daily_tasks (the daily list, per admin) -------------------------
 -- Four fixed tasks recur every day; their WORDING lives in lib/dailyTasks.ts
 -- and only completion is stored here, so rewording one needs no migration and
