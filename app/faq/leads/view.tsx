@@ -4,22 +4,8 @@ import { useUser } from '@clerk/nextjs'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import FaqTheme from '@/components/faq-theme'
+import { SITE } from '@/lib/siteTheme'
 
-const T = {
-  bg: '#0a0a14',
-  surface: '#1a1a2e',
-  surface2: '#2a2a4a',
-  border: '#2a2a4a',
-  dark: '#1a1a2e',
-  darker: '#0a0a14',
-  text: '#ffffff',
-  muted: '#8888aa',
-  accent: '#4a9eff',
-  blue: '#4a9eff',
-  green: '#4ade80',
-  red: '#f87171',
-  amber: '#fbbf24',
-}
 
 export default function LeadsFaqView() {
   const { isSignedIn } = useUser()
@@ -30,17 +16,17 @@ export default function LeadsFaqView() {
       <div
         style={{
           flex: 1,
-          background: T.bg,
+          background: SITE.bg,
           minHeight: 'calc(100vh - 64px)',
           fontFamily: 'Futura PT, Futura, sans-serif',
-          color: T.text,
+          color: SITE.text,
         }}
       >
         <FaqTheme />
 
         <article className="faq-root">
           <div className="faq-eyebrow">▸ UPLOADING &amp; MANAGING LEADS</div>
-          <span style={{ fontSize: 11, color: '#8888aa', letterSpacing: '2px', display: 'block', marginBottom: 16 }}>LAST UPDATED 07/28/2026</span>
+          <span style={{ fontSize: 11, color: SITE.muted, letterSpacing: '2px', display: 'block', marginBottom: 16 }}>LAST UPDATED 07/28/2026</span>
 
           <h1 className="faq-h1">
             Drop in a spreadsheet. It figures out the columns <em>itself.</em>

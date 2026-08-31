@@ -1,45 +1,29 @@
 'use client'
 
+import { SITE as T, SITE_TYPE, SITE_SPACE } from '@/lib/siteTheme'
+
 // =============================================================================
-// ONE VISUAL LANGUAGE FOR EVERY /faq ARTICLE
+// ONE VISUAL LANGUAGE FOR EVERY /faq ARTICLE — TAKEN FROM THE LANDING PAGE
 // =============================================================================
 // Fourteen FAQ pages, fourteen private stylesheets, 404 distinct class names
 // between them and — measured — only THREE css lines common to all fourteen.
-// There was no shared style to extract, which is why the first attempt at this
-// was abandoned: extraction assumes commonality that did not exist.
+// There was nothing to extract, which is why the first attempt at this failed:
+// extraction assumes a commonality these pages never had.
 //
-// So this is not an extraction, it is a canonical vocabulary. It deliberately
-// mirrors components/vs-competitor-view.tsx — same palette, same hero rhythm,
-// same section spacing, same card and table treatment — so that a reader moving
-// between /vs/readymode and /faq/leads sees one product rather than two.
+// So this is a canonical vocabulary, and every value in it comes from
+// lib/siteTheme.ts, which was read out of app/page.tsx. The FAQ pages used to
+// be dark — #0a0a14 with white type — against a light landing page. Not a
+// looser grid or a different accent: the inverse. That is what made the site
+// feel like two products, and it is what this reverses.
 //
-// WHAT THIS IS NOT. It is not a layout component and it does not own page
-// structure. FAQ pages run from three sections to ten and 331 to 999 lines,
-// and a schema wide enough to express all of them would BE the page, with worse
-// ergonomics. Each page keeps its own JSX. This supplies the chrome those
-// elements are painted with.
+// WHAT THIS IS NOT. It is not a layout component and does not own page
+// structure. FAQ pages run 3 to 10 sections and 331 to 999 lines; a schema wide
+// enough for all of them would BE the page, with worse ergonomics than JSX.
+// Each page keeps its own markup. This supplies the chrome it is painted with.
 //
-// TO MIGRATE A PAGE: drop its <style> block, render <FaqTheme />, and rename
-// its private prefix onto the vocabulary below. See docs/vs-and-faq-pages.md.
+// TO MIGRATE A PAGE: drop its <style> block, render <FaqTheme />, rename its
+// private prefix onto the vocabulary below. See docs/vs-and-faq-pages.md.
 // =============================================================================
-
-/** Shared with vs-competitor-view.tsx. Changing a value here changes it there. */
-export const FAQ_T = {
-  bg: '#0a0a14',
-  surface: '#1a1a2e',
-  surface2: '#2a2a4a',
-  border: '#2a2a4a',
-  dark: '#1a1a2e',
-  darker: '#0a0a14',
-  text: '#ffffff',
-  muted: '#8888aa',
-  blue: '#4a9eff',
-  green: '#4ade80',
-  red: '#f87171',
-  amber: '#fbbf24',
-}
-
-const T = FAQ_T
 
 export default function FaqTheme() {
   return (
@@ -47,75 +31,92 @@ export default function FaqTheme() {
       .faq-root * { box-sizing: border-box; }
 
       /* ── ARTICLE COLUMN ──────────────────────────────────────────────
-         Narrower than /vs on purpose. A comparison page is a table the eye
-         scans across; an answer is prose the eye reads down, and prose past
-         roughly 75 characters a line is measurably harder to track. */
-      .faq-root { max-width: 820px; margin: 0 auto; padding: 80px 32px 120px; }
+         Narrower than /vs on purpose. A comparison is a table the eye scans
+         across; an answer is prose the eye reads down, and a line much past
+         75 characters is measurably harder to track back from. */
+      .faq-root {
+        max-width: ${SITE_SPACE.articleWidth};
+        margin: 0 auto;
+        padding: 96px ${SITE_SPACE.sectionX} 120px;
+        color: ${T.text};
+      }
 
       .faq-eyebrow {
-        font-size: 11px; letter-spacing: 4px; color: ${T.muted};
-        font-weight: bold; margin-bottom: 14px; text-transform: uppercase;
-      }
-      .faq-h1 {
-        font-size: 44px; line-height: 1.1; letter-spacing: -0.5px;
-        font-weight: 800; margin: 0 0 18px 0; color: ${T.text};
-      }
-      .faq-deck {
-        font-size: 18px; line-height: 1.65; color: ${T.muted};
-        margin: 0 0 48px 0;
+        font-size: 12px; letter-spacing: 3px; color: ${T.muted};
+        font-weight: bold; margin-bottom: 16px; text-transform: uppercase;
       }
 
-      /* ── SECTIONS ────────────────────────────────────────────────────
-         Same vertical rhythm as .vs-section so the two page types feel like
-         one site rather than two templates that happen to share a palette. */
-      .faq-section { margin: 0 0 56px 0; }
+      /* ── THE TWO-TONE HEADLINE ───────────────────────────────────────
+         The landing page's signature: near-black over deep blue, as in
+         "DIAL SMARTER." / "CLOSE FASTER.". Wrapping the second half in
+         <span class="alt"> is what makes an article page read as the same
+         product rather than a documentation site that borrowed the colours. */
+      .faq-h1 {
+        font-size: ${SITE_TYPE.articleH1}; line-height: 1.05; letter-spacing: -2px;
+        font-weight: bold; margin: 0 0 20px 0; color: ${T.text};
+      }
+      .faq-h1 .alt { color: ${T.deep}; }
+      .faq-deck {
+        font-size: 18px; line-height: 1.65; color: ${T.muted};
+        margin: 0 0 56px 0; max-width: 680px;
+      }
+
+      /* ── SECTIONS ───────────────────────────────────────────────────── */
+      .faq-section { margin: 0 0 64px 0; }
       .faq-section-eyebrow {
-        font-size: 11px; letter-spacing: 4px; color: ${T.muted};
-        font-weight: bold; margin-bottom: 12px;
+        font-size: 12px; letter-spacing: 3px; color: ${T.muted};
+        font-weight: bold; margin-bottom: 14px; text-transform: uppercase;
       }
       .faq-h2 {
-        font-size: 30px; line-height: 1.2; letter-spacing: -0.3px;
-        font-weight: 800; margin: 0 0 14px 0; color: ${T.text};
+        font-size: ${SITE_TYPE.articleH2}; line-height: 1.15; letter-spacing: -1px;
+        font-weight: bold; margin: 0 0 16px 0; color: ${T.text};
       }
+      .faq-h2 .alt { color: ${T.deep}; }
       .faq-h3 {
-        font-size: 19px; font-weight: 700; margin: 28px 0 10px 0; color: ${T.text};
+        font-size: ${SITE_TYPE.articleH3}; font-weight: bold; letter-spacing: -0.3px;
+        margin: 32px 0 10px 0; color: ${T.text};
       }
       .faq-p {
-        font-size: 16px; line-height: 1.75; color: ${T.muted}; margin: 0 0 16px 0;
+        font-size: ${SITE_TYPE.body}; line-height: 1.75; color: ${T.muted};
+        margin: 0 0 18px 0;
       }
-      .faq-p strong { color: ${T.text}; font-weight: 700; }
+      .faq-p strong { color: ${T.text}; font-weight: bold; }
       .faq-p a, .faq-link { color: ${T.blue}; text-decoration: none; }
       .faq-p a:hover, .faq-link:hover { text-decoration: underline; }
 
       /* ── LISTS ───────────────────────────────────────────────────────── */
-      .faq-list { list-style: none; padding: 0; margin: 0 0 20px 0; }
+      .faq-list { list-style: none; padding: 0; margin: 0 0 22px 0; }
       .faq-list li {
-        position: relative; padding: 0 0 0 22px; margin-bottom: 10px;
-        font-size: 15.5px; line-height: 1.7; color: ${T.muted};
+        position: relative; padding: 0 0 0 24px; margin-bottom: 11px;
+        font-size: 16px; line-height: 1.7; color: ${T.muted};
       }
       .faq-list li::before {
-        content: '–'; position: absolute; left: 0; color: ${T.blue}; font-weight: bold;
+        content: ''; position: absolute; left: 0; top: 11px;
+        width: 8px; height: 2px; background: ${T.blue};
       }
       .faq-list li strong { color: ${T.text}; }
 
-      /* ── CARD ────────────────────────────────────────────────────────── */
+      /* ── CARDS ───────────────────────────────────────────────────────
+         White on the page ground, with the landing page's 3px top edge —
+         the same treatment its buttons and pricing cards use. */
       .faq-card {
         background: ${T.surface}; border: 1px solid ${T.border};
-        border-radius: 4px; padding: 24px; margin: 0 0 20px 0;
+        border-top: 3px solid ${T.deep}; border-radius: 6px;
+        padding: 26px; margin: 0 0 20px 0;
       }
       .faq-card-title {
-        font-size: 17px; font-weight: 800; color: ${T.text}; margin: 0 0 8px 0;
+        font-size: 17px; font-weight: bold; color: ${T.text}; margin: 0 0 8px 0;
       }
-      .faq-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      .faq-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
 
-      /* ── CALLOUT ──────────────────────────────────────────────────────
+      /* ── CALLOUT ─────────────────────────────────────────────────────
          The left border carries the meaning, so the tone modifiers change
          only that and nothing else. */
       .faq-callout {
-        background: ${T.surface}; border: 1px solid ${T.border};
-        border-left: 3px solid ${T.blue}; border-radius: 4px;
-        padding: 18px 22px; margin: 0 0 24px 0;
-        font-size: 15px; line-height: 1.7; color: ${T.muted};
+        background: ${T.surface}; border: 1px solid ${T.borderSoft};
+        border-left: 3px solid ${T.blue}; border-radius: 6px;
+        padding: 20px 24px; margin: 0 0 26px 0;
+        font-size: 15.5px; line-height: 1.7; color: ${T.muted};
       }
       .faq-callout strong { color: ${T.text}; }
       .faq-callout.warn { border-left-color: ${T.amber}; }
@@ -123,104 +124,119 @@ export default function FaqTheme() {
       .faq-callout.bad  { border-left-color: ${T.red}; }
 
       /* ── TABLE ──────────────────────────────────────────────────────
-         Identical treatment to .feature-table on /vs. */
+         Same treatment as .feature-table on /vs, so the two page types do
+         not disagree about what a table looks like. */
       .faq-table {
         width: 100%; border-collapse: collapse; background: ${T.surface};
-        border: 1px solid ${T.border}; border-radius: 4px; overflow: hidden;
-        margin: 0 0 24px 0;
+        border: 1px solid ${T.border}; border-radius: 6px; overflow: hidden;
+        margin: 0 0 26px 0;
       }
       .faq-table th {
-        padding: 14px 18px; background: ${T.dark}; color: ${T.text};
+        padding: 15px 18px; background: ${T.ink}; color: ${T.inkText};
         font-size: 11px; letter-spacing: 2px; text-align: left; font-weight: bold;
       }
       .faq-table td {
-        padding: 13px 18px; border-top: 1px solid ${T.border};
-        font-size: 14.5px; color: ${T.muted};
+        padding: 14px 18px; border-top: 1px solid ${T.borderSoft};
+        font-size: 15px; color: ${T.muted};
       }
       .faq-table td strong { color: ${T.text}; }
-      .faq-table tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+      .faq-table tr:nth-child(even) td { background: rgba(0,0,0,0.015); }
 
       /* ── FIELD TABLE ────────────────────────────────────────────────
          A grid rather than a <table>, because these are label/value pairs
-         that must collapse to stacked rows on a phone — something a real
-         table cell cannot do without fighting it. */
+         that must collapse to stacked rows on a phone — which a real table
+         cell cannot do without a fight. */
       .faq-fieldtable {
-        margin: 20px 0 8px; border: 1px solid ${T.border}; border-radius: 4px;
+        margin: 22px 0 10px; border: 1px solid ${T.border}; border-radius: 6px;
         overflow: hidden; background: ${T.surface};
       }
-      .faq-fieldrow { display: grid; grid-template-columns: 180px 1fr; }
-      .faq-fieldrow + .faq-fieldrow { border-top: 1px solid ${T.border}; }
-      .faq-fieldrow.head { background: ${T.dark}; }
-      .faq-fieldcell { padding: 13px 16px; font-size: 14px; line-height: 1.6; color: ${T.muted}; }
-      .faq-fieldcell.name { color: ${T.text}; font-weight: 600; }
+      .faq-fieldrow { display: grid; grid-template-columns: 190px 1fr; }
+      .faq-fieldrow + .faq-fieldrow { border-top: 1px solid ${T.borderSoft}; }
+      .faq-fieldrow.head { background: ${T.ink}; }
+      .faq-fieldcell { padding: 14px 17px; font-size: 14.5px; line-height: 1.6; color: ${T.muted}; }
+      .faq-fieldcell.name { color: ${T.text}; font-weight: bold; }
       .faq-fieldcell.muted { color: ${T.muted}; }
       .faq-fieldrow.head .faq-fieldcell {
-        color: ${T.text}; font-size: 11px; letter-spacing: 2px; font-weight: bold;
+        color: ${T.inkText}; font-size: 11px; letter-spacing: 2px; font-weight: bold;
       }
       .faq-fieldcell .req { color: ${T.amber}; font-size: 11px; letter-spacing: 1px; }
 
       /* ── NUMBERED FLOW ───────────────────────────────────────────────── */
-      .faq-flow { counter-reset: faqstep; margin: 0 0 24px 0; }
+      .faq-flow { counter-reset: faqstep; margin: 0 0 26px 0; }
       .faq-flow-step {
         counter-increment: faqstep; position: relative;
-        padding: 0 0 22px 46px; border-left: 1px solid ${T.border};
-        margin-left: 14px;
+        padding: 0 0 24px 48px; border-left: 1px solid ${T.border};
+        margin-left: 15px;
       }
       .faq-flow-step:last-child { border-left-color: transparent; padding-bottom: 0; }
       .faq-flow-step::before {
         content: counter(faqstep);
-        position: absolute; left: -14px; top: -2px;
-        width: 28px; height: 28px; border-radius: 50%;
-        background: ${T.surface}; border: 1px solid ${T.blue}; color: ${T.blue};
+        position: absolute; left: -15px; top: -2px;
+        width: 30px; height: 30px; border-radius: 50%;
+        background: ${T.surface}; border: 1px solid ${T.deep}; color: ${T.deep};
         font-size: 12px; font-weight: bold;
         display: flex; align-items: center; justify-content: center;
       }
-      .faq-flow-title { font-size: 16px; font-weight: 700; color: ${T.text}; margin-bottom: 5px; }
-      .faq-flow-body { font-size: 15px; line-height: 1.7; color: ${T.muted}; }
+      .faq-flow-title { font-size: 16.5px; font-weight: bold; color: ${T.text}; margin-bottom: 5px; }
+      .faq-flow-body { font-size: 15.5px; line-height: 1.7; color: ${T.muted}; }
 
       /* ── BADGES ──────────────────────────────────────────────────────── */
-      .faq-badge-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 20px 0; }
+      .faq-badge-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 22px 0; }
       .faq-badge {
-        display: inline-block; padding: 5px 11px; border-radius: 3px;
-        background: rgba(74,158,255,0.12); border: 1px solid ${T.blue};
-        color: ${T.blue}; font-size: 11px; letter-spacing: 1.5px; font-weight: bold;
+        display: inline-block; padding: 6px 12px; border-radius: 4px;
+        background: rgba(74,158,255,0.10); border: 1px solid ${T.blue};
+        color: ${T.deep}; font-size: 11px; letter-spacing: 1.5px; font-weight: bold;
       }
-      .faq-badge.hi { background: rgba(74,222,128,0.12); border-color: ${T.green}; color: ${T.green}; }
+      .faq-badge.hi {
+        background: rgba(26,106,26,0.08); border-color: ${T.green}; color: ${T.green};
+      }
 
-      /* ── CLOSING CTA ─────────────────────────────────────────────────── */
+      /* ── CLOSING CTA ─────────────────────────────────────────────────
+         A dark panel inside a light page — the same exception the landing
+         page makes for its stat bar, and the reason the light ground reads
+         as chosen rather than default. */
       .faq-cta {
-        background: linear-gradient(135deg, ${T.darker} 0%, ${T.dark} 100%);
-        border: 1px solid ${T.border}; border-radius: 4px;
-        padding: 36px 32px; text-align: center; margin: 56px 0 0 0;
+        background: ${T.ink}; border-radius: 8px;
+        padding: 44px 36px; text-align: center; margin: 72px 0 0 0;
       }
-      .faq-cta-eyebrow { font-size: 11px; letter-spacing: 4px; color: ${T.muted}; font-weight: bold; margin-bottom: 10px; }
-      .faq-cta-h { font-size: 26px; font-weight: 800; color: ${T.text}; margin: 0 0 20px 0; line-height: 1.25; }
+      .faq-cta-eyebrow {
+        font-size: 12px; letter-spacing: 3px; color: rgba(255,255,255,0.55);
+        font-weight: bold; margin-bottom: 12px; text-transform: uppercase;
+      }
+      .faq-cta-h {
+        font-size: 30px; font-weight: bold; letter-spacing: -1px;
+        color: ${T.inkText}; margin: 0 0 24px 0; line-height: 1.2;
+      }
+      .faq-cta-h .alt { color: ${T.blue}; }
       .faq-cta-btn {
-        display: inline-block; padding: 14px 30px; border-radius: 4px;
-        background: ${T.blue}; color: ${T.darker}; font-weight: 800;
-        font-size: 14px; letter-spacing: 1px; text-decoration: none;
+        display: inline-block; padding: 13px 26px; border-radius: 6px;
+        background: transparent; color: ${T.blue}; font-weight: bold;
+        font-size: 12px; letter-spacing: 3px; text-decoration: none;
+        border: 1px solid ${T.blue}; border-top: 3px solid ${T.blue};
       }
-      .faq-cta-btn:hover { opacity: 0.9; }
+      .faq-cta-btn:hover { background: rgba(74,158,255,0.10); }
 
       /* ── RELATED ─────────────────────────────────────────────────────── */
-      .faq-related { margin-top: 56px; padding-top: 28px; border-top: 1px solid ${T.border}; }
-      .faq-related-title { font-size: 11px; letter-spacing: 4px; color: ${T.muted}; font-weight: bold; margin-bottom: 14px; }
-      .faq-related-label { font-size: 11px; letter-spacing: 4px; color: ${T.muted}; font-weight: bold; margin-bottom: 14px; }
+      .faq-related { margin-top: 64px; padding-top: 30px; border-top: 1px solid ${T.border}; }
+      .faq-related-title, .faq-related-label {
+        font-size: 12px; letter-spacing: 3px; color: ${T.muted};
+        font-weight: bold; margin-bottom: 16px; text-transform: uppercase;
+      }
       .faq-related-links { display: flex; flex-direction: column; }
-      .faq-related a { display: block; color: ${T.blue}; text-decoration: none; font-size: 15px; padding: 7px 0; }
+      .faq-related a { display: block; color: ${T.blue}; text-decoration: none; font-size: 15.5px; padding: 8px 0; }
       .faq-related a:hover { text-decoration: underline; }
 
       @media (max-width: 768px) {
-        .faq-root { padding: 52px 20px 80px; }
-        .faq-h1 { font-size: 32px; }
-        .faq-deck { font-size: 16px; margin-bottom: 36px; }
-        .faq-h2 { font-size: 24px; }
-        .faq-section { margin-bottom: 42px; }
+        .faq-root { padding: 56px ${SITE_SPACE.sectionXMobile} 80px; }
+        .faq-h1 { font-size: 34px; letter-spacing: -1px; }
+        .faq-deck { font-size: 16px; margin-bottom: 40px; }
+        .faq-h2 { font-size: 25px; }
+        .faq-section { margin-bottom: 46px; }
         .faq-grid { grid-template-columns: 1fr; }
         .faq-fieldrow { grid-template-columns: 1fr; }
         .faq-fieldrow .faq-fieldcell + .faq-fieldcell { padding-top: 0; }
-        .faq-cta { padding: 28px 20px; }
-        .faq-cta-h { font-size: 21px; }
+        .faq-cta { padding: 32px 22px; }
+        .faq-cta-h { font-size: 23px; }
       }
     `}</style>
   )

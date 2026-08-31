@@ -5,6 +5,7 @@ import SiteFooter from '@/components/site-footer'
 import BackToVsButton from '@/components/back-to-vs-button'
 import { DIALERSEAT, type Competitor } from '@/lib/competitors'
 import { featuresFor } from '@/lib/competitorFeatures'
+import { SITE, SITE_TYPE, SITE_SPACE } from '@/lib/siteTheme'
 
 // =============================================================================
 // DATA-DRIVEN COMPETITOR PAGE
@@ -32,19 +33,7 @@ import { featuresFor } from '@/lib/competitorFeatures'
 // rather than being retyped, and render below from there.
 // =============================================================================
 
-const T = {
-  bg: '#0a0a14',
-  surface: '#1a1a2e',
-  border: '#2a2a4a',
-  dark: '#1a1a2e',
-  darker: '#0a0a14',
-  text: '#ffffff',
-  muted: '#8888aa',
-  blue: '#4a9eff',
-  green: '#4ade80',
-  red: '#f87171',
-  amber: '#fbbf24',
-}
+const T = SITE
 
 export default function VsCompetitorView({ c }: { c: Competitor }) {
   // Null for the eight competitors that were data-driven from the start and
@@ -64,41 +53,40 @@ export default function VsCompetitorView({ c }: { c: Competitor }) {
       }}>
         <style>{`
           .vs-root * { box-sizing: border-box; }
+          /* Light, like the landing page. This was a dark gradient with a
+             blue glow behind it, against a homepage that is #f0f1f4 — the
+             inverse of the site it belongs to. */
           .vs-hero {
-            background: linear-gradient(135deg, ${T.darker} 0%, ${T.dark} 100%);
-            color: white;
-            padding: 80px 32px 100px;
+            background: transparent;
+            color: ${T.text};
+            padding: 88px 32px 72px;
             text-align: center;
             position: relative;
-            overflow: hidden;
-          }
-          .vs-hero::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: radial-gradient(circle at 30% 30%, rgba(74,158,255,0.15) 0%, transparent 50%);
           }
           .vs-hero-inner { position: relative; max-width: 880px; margin: 0 auto; }
           .vs-eyebrow {
             display: inline-block;
             padding: 6px 14px;
-            background: rgba(74,158,255,0.15);
+            background: rgba(74,158,255,0.10);
             border: 1px solid ${T.blue};
             border-radius: 4px;
-            color: ${T.blue};
+            color: ${T.deep};
             font-size: 11px;
             letter-spacing: 3px;
             font-weight: bold;
             margin-bottom: 24px;
           }
           .vs-h1 {
-            font-size: 56px;
-            letter-spacing: -1px;
+            font-size: ${SITE_TYPE.articleH1};
+            letter-spacing: -2px;
             line-height: 1.05;
-            font-weight: 800;
+            font-weight: bold;
             margin: 0 0 20px 0;
+            color: ${T.text};
           }
-          .vs-h1 .versus { color: ${T.blue}; }
+          /* The landing page's two-tone headline, applied to the one word
+             that carries the meaning of a comparison page. */
+          .vs-h1 .versus { color: ${T.deep}; }
           .vs-subhead {
             font-size: 19px;
             line-height: 1.55;
@@ -107,30 +95,35 @@ export default function VsCompetitorView({ c }: { c: Competitor }) {
             margin: 0 auto 36px;
           }
           .vs-cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+          /* The landing page's signature key: 1px all round, 3px on top.
+             A button here without it looks like a different product. */
           .vs-btn-primary {
-            padding: 16px 32px;
-            background: linear-gradient(135deg, ${T.blue}, #2a6eff);
-            color: white;
-            font-size: 13px;
-            letter-spacing: 2.5px;
+            padding: 13px 26px;
+            background: transparent;
+            color: ${T.blue};
+            font-size: 12px;
+            letter-spacing: 3px;
             font-weight: bold;
-            border-radius: 8px;
+            border: 1px solid ${T.blue};
+            border-top: 3px solid ${T.blue};
+            border-radius: 6px;
             text-decoration: none;
             display: inline-block;
-            box-shadow: 0 0 24px rgba(74,158,255,0.4);
           }
+          .vs-btn-primary:hover { background: rgba(74,158,255,0.10); }
           .vs-btn-ghost {
-            padding: 16px 32px;
+            padding: 13px 26px;
             border: 1px solid ${T.border};
+            border-top: 3px solid ${T.muted};
             color: ${T.text};
-            font-size: 13px;
-            letter-spacing: 2.5px;
+            font-size: 12px;
+            letter-spacing: 3px;
             font-weight: bold;
-            border-radius: 8px;
+            border-radius: 6px;
             text-decoration: none;
             display: inline-block;
           }
-          .vs-section { max-width: 1080px; margin: 0 auto; padding: 72px 32px; }
+          .vs-section { max-width: ${SITE_SPACE.wideWidth}; margin: 0 auto; padding: 72px 32px; }
           .vs-section-eyebrow { font-size: 11px; letter-spacing: 4px; color: ${T.muted}; font-weight: bold; margin-bottom: 12px; }
           .vs-section-h2 { font-size: 36px; letter-spacing: -0.5px; line-height: 1.15; font-weight: 800; margin: 0 0 16px 0; color: ${T.text}; }
           .vs-section-lede { font-size: 16px; color: ${T.muted}; line-height: 1.65; max-width: 720px; margin: 0 0 40px 0; }
@@ -145,8 +138,8 @@ export default function VsCompetitorView({ c }: { c: Competitor }) {
           }
           .feature-table th {
             padding: 16px 20px;
-            background: ${T.dark};
-            color: white;
+            background: ${T.ink};
+            color: ${T.inkText};
             font-size: 11px;
             letter-spacing: 2px;
             text-align: left;

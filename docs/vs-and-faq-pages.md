@@ -115,6 +115,51 @@ page depends on.
 
 ---
 
+## The design source is the landing page
+
+`lib/siteTheme.ts` holds the tokens, and every value in it was **read out of
+`app/page.tsx`** rather than invented. Both article templates import from it, so
+there is one place to change a colour.
+
+### The drift it fixed, which was not subtle
+
+The landing page is **light** — `#f0f1f4` ground, near-black type. `/vs` and
+`/faq` were built **dark** — `#0a0a14` with white type. Not a different accent
+or a looser grid: the inverse. A visitor going from the homepage to
+`/vs/readymode` was not moving through one site, and matching the spacing would
+never have hidden that.
+
+The only thing already shared was the accent blue, `#4a9eff`, on both sides.
+
+### The two conventions worth keeping
+
+**Two-tone headlines.** The landing page sets "DIAL SMARTER." in near-black over
+"CLOSE FASTER." in deep blue (`SITE.deep`). Wrap the second half in
+`<span class="alt">` (`.versus` on `/vs`). This is the site's signature move and
+the main reason the homepage reads as designed rather than assembled.
+
+**The button.** 1px border all round, **3px on top**, 6px radius, transparent
+fill. It reads as a physical key. Any button that omits the top edge looks like
+it came from a different product.
+
+### Tokens
+
+| Token | Value | Use |
+|---|---|---|
+| `bg` | `#f0f1f4` | page ground |
+| `surface` | `#ffffff` | cards, panels |
+| `border` / `borderSoft` | `#c4c8d0` / `#e2e4ea` | containers / dividers |
+| `text` / `muted` | `#1a1c24` / `#5a5e6a` | type |
+| `blue` / `deep` | `#4a9eff` / `#2a4a8a` | accent / headline second tone |
+| `ink` / `inkText` | `#0e0e16` / `#fff` | dark panels inside a light page |
+| `amber` `green` `red` | | caution / good / bad |
+
+`ink` is the exception that makes the light ground read as chosen: the landing
+page uses it for the stat bar under the hero, and the article templates use it
+for table headers and the closing CTA. Used sparingly on purpose.
+
+---
+
 ## `/faq` — one visual language, kept as separate pages
 
 ### What was measured, and what it ruled out
