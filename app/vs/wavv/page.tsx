@@ -1,12 +1,16 @@
 import type { Metadata } from 'next'
-import VsWavvView from './view'
+import { notFound } from 'next/navigation'
+import VsCompetitorView from '@/components/vs-competitor-view'
 import JsonLd from '@/components/json-ld'
+import { competitorBySlug } from '@/lib/competitors'
 import {
   organizationSchema,
   softwareApplicationSchema,
   faqPageSchema,
   breadcrumbSchema,
 } from '@/lib/schema'
+
+const SLUG = 'wavv'
 
 export const metadata: Metadata = {
   title: 'DialerSeat vs WAVV — Every Dialer Mode, One Flat Price',
@@ -58,6 +62,9 @@ const FAQS = [
 ]
 
 export default function Page() {
+  const competitor = competitorBySlug(SLUG)
+  if (!competitor) notFound()
+
   return (
     <>
       <JsonLd data={organizationSchema()} />
@@ -70,7 +77,7 @@ export default function Page() {
           { name: 'DialerSeat vs WAVV', url: '/vs/wavv' },
         ])}
       />
-      <VsWavvView />
+      <VsCompetitorView c={competitor} />
     </>
   )
 }

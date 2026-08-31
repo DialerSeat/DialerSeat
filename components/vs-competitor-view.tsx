@@ -4,6 +4,7 @@ import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
 import BackToVsButton from '@/components/back-to-vs-button'
 import { DIALERSEAT, type Competitor } from '@/lib/competitors'
+import { featuresFor } from '@/lib/competitorFeatures'
 
 // =============================================================================
 // DATA-DRIVEN COMPETITOR PAGE
@@ -19,9 +20,16 @@ import { DIALERSEAT, type Competitor } from '@/lib/competitors'
 // renders from that single source instead, and adding competitor twenty-two is
 // a data entry rather than a file.
 //
-// The bespoke pages are deliberately left alone. They rank, they carry
-// hand-written detail that does not fit a schema, and rewriting a page that
-// works to satisfy a consistency instinct is not an improvement.
+// That reasoning used to end with "the bespoke pages are deliberately left
+// alone -- they rank, and rewriting a page that works to satisfy a consistency
+// instinct is not an improvement." It held right up until the pages needed a
+// redesign. Fifteen copies of one layout means applying a new design fifteen
+// times and living with fourteen near-misses, which is a far worse outcome
+// than the duplication it was protecting.
+//
+// So they were migrated. Their feature matrices -- 296 rows of hand-written
+// claims about other vendors -- moved verbatim into lib/competitorFeatures.ts
+// rather than being retyped, and render below from there.
 // =============================================================================
 
 const T = {
@@ -34,10 +42,16 @@ const T = {
   muted: '#8888aa',
   blue: '#4a9eff',
   green: '#4ade80',
+  red: '#f87171',
   amber: '#fbbf24',
 }
 
 export default function VsCompetitorView({ c }: { c: Competitor }) {
+  // Null for the eight competitors that were data-driven from the start and
+  // never had a hand-written matrix. The section below is skipped entirely
+  // rather than rendering an empty table.
+  const matrix = featuresFor(c.slug)
+
   return (
     <>
       <SiteHeader />
@@ -120,6 +134,32 @@ export default function VsCompetitorView({ c }: { c: Competitor }) {
           .vs-section-eyebrow { font-size: 11px; letter-spacing: 4px; color: ${T.muted}; font-weight: bold; margin-bottom: 12px; }
           .vs-section-h2 { font-size: 36px; letter-spacing: -0.5px; line-height: 1.15; font-weight: 800; margin: 0 0 16px 0; color: ${T.text}; }
           .vs-section-lede { font-size: 16px; color: ${T.muted}; line-height: 1.65; max-width: 720px; margin: 0 0 40px 0; }
+          .feature-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: ${T.surface};
+            border: 1px solid ${T.border};
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 24px;
+          }
+          .feature-table th {
+            padding: 16px 20px;
+            background: ${T.dark};
+            color: white;
+            font-size: 11px;
+            letter-spacing: 2px;
+            text-align: left;
+            font-weight: bold;
+          }
+          .feature-table th:nth-child(2), .feature-table th:nth-child(3) { text-align: center; width: 18%; }
+          .feature-table td { padding: 14px 20px; border-top: 1px solid ${T.border}; font-size: 14px; }
+          .feature-table td:nth-child(2), .feature-table td:nth-child(3) { text-align: center; font-weight: bold; }
+          .feature-table tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+          .feature-table .yes { color: ${T.green}; font-size: 18px; }
+          .feature-table .no { color: ${T.red}; font-size: 18px; }
+          .feature-table .partial { color: ${T.amber}; font-style: italic; font-size: 12px; }
+          .feature-table .ds-cell { background: rgba(74,158,255,0.04); }
           .vs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
           .vs-card {
             background: ${T.surface};
@@ -254,6 +294,49 @@ export default function VsCompetitorView({ c }: { c: Competitor }) {
             </div>
           </div>
         </section>
+
+        {/* ── FEATURE BY FEATURE ────────────────────────────────────────
+            Only rendered for competitors that HAVE a matrix. The eight pages
+            that were data-driven from the start never had one, and inventing
+            296 rows to make them symmetrical would mean publishing claims
+            about other companies' products that nobody researched. A missing
+            table is honest; a fabricated one is not. */}
+        {matrix && (
+          <section className="vs-section" style={{ paddingTop: 0 }}>
+            <div className="vs-section-eyebrow">FEATURE-BY-FEATURE</div>
+            <h2 className="vs-section-h2">Where each tool wins.</h2>
+            <p className="vs-section-lede">{matrix.lede}</p>
+
+            <div style={{ overflowX: 'auto' }}>
+              <table className="feature-table">
+                <thead>
+                  <tr>
+                    <th>Feature</th>
+                    <th>DialerSeat</th>
+                    <th>{c.name}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {matrix.rows.map((f, i) => (
+                    <tr key={i}>
+                      <td>{f.feature}</td>
+                      <td className="ds-cell">
+                        {f.dialerseat === true ? <span className="yes">✓</span>
+                          : f.dialerseat === false ? <span className="no">✕</span>
+                          : <span style={{ color: T.text, fontSize: 12 }}>{f.dialerseat}</span>}
+                      </td>
+                      <td>
+                        {f.competitor === true ? <span className="yes">✓</span>
+                          : f.competitor === false ? <span className="no">✕</span>
+                          : <span className="partial">{f.competitor}</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
 
         {/* ── WHERE THEY ARE GENUINELY BETTER ───────────────────────────── */}
         <section className="vs-section" style={{ paddingTop: 0 }}>

@@ -1,12 +1,16 @@
 import type { Metadata } from 'next'
-import VsBatchDialerView from './view'
+import { notFound } from 'next/navigation'
+import VsCompetitorView from '@/components/vs-competitor-view'
 import JsonLd from '@/components/json-ld'
+import { competitorBySlug } from '@/lib/competitors'
 import {
   organizationSchema,
   softwareApplicationSchema,
   faqPageSchema,
   breadcrumbSchema,
 } from '@/lib/schema'
+
+const SLUG = 'batchdialer'
 
 export const metadata: Metadata = {
   title: 'DialerSeat vs BatchDialer — Their Annual Rate Without the Annual Contract',
@@ -66,6 +70,9 @@ const FAQS = [
 ]
 
 export default function Page() {
+  const competitor = competitorBySlug(SLUG)
+  if (!competitor) notFound()
+
   return (
     <>
       <JsonLd data={organizationSchema()} />
@@ -78,7 +85,7 @@ export default function Page() {
           { name: 'DialerSeat vs BatchDialer', url: '/vs/batchdialer' },
         ])}
       />
-      <VsBatchDialerView />
+      <VsCompetitorView c={competitor} />
     </>
   )
 }

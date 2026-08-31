@@ -1,12 +1,16 @@
 import type { Metadata } from 'next'
-import Vs3cxView from './view'
+import { notFound } from 'next/navigation'
+import VsCompetitorView from '@/components/vs-competitor-view'
 import JsonLd from '@/components/json-ld'
+import { competitorBySlug } from '@/lib/competitors'
 import {
   organizationSchema,
   softwareApplicationSchema,
   faqPageSchema,
   breadcrumbSchema,
 } from '@/lib/schema'
+
+const SLUG = '3cx'
 
 export const metadata: Metadata = {
   title: 'DialerSeat vs 3CX — Sales Dialer vs Business Phone System',
@@ -53,6 +57,9 @@ const FAQS = [
 ]
 
 export default function Page() {
+  const competitor = competitorBySlug(SLUG)
+  if (!competitor) notFound()
+
   return (
     <>
       <JsonLd data={organizationSchema()} />
@@ -65,7 +72,7 @@ export default function Page() {
           { name: 'DialerSeat vs 3CX', url: '/vs/3cx' },
         ])}
       />
-      <Vs3cxView />
+      <VsCompetitorView c={competitor} />
     </>
   )
 }
