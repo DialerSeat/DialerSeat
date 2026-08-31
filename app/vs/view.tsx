@@ -3,17 +3,23 @@ import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
+import { SITE } from '@/lib/siteTheme'
 
 const T = {
-  bg: '#0a0a14',
-  surface: '#1a1a2e',
-  border: '#2a2a4a',
-  dark: '#1a1a2e',
-  darker: '#0a0a14',
-  text: '#ffffff',
-  muted: '#8888aa',
-  accent: '#2a4a8a',
-  blue: '#4a9eff',
+  bg: SITE.bg,
+  surface: SITE.surface,
+  border: SITE.border,
+  // `dark`/`darker` used to paint BOTH the hero gradient and the closing CTA.
+  // The hero is now light like the landing page; the CTA stays dark on
+  // purpose, because a dark panel inside a light page is the exception that
+  // makes the light ground read as chosen. Both keys therefore mean "the CTA
+  // panel" now, and the hero rule below no longer uses them.
+  dark: SITE.ink,
+  darker: SITE.ink,
+  text: SITE.text,
+  muted: SITE.muted,
+  accent: SITE.deep,
+  blue: SITE.blue,
 }
 
 const FUTURA = `'Futura PT', Futura, 'Helvetica Neue', Helvetica, Arial, sans-serif`
@@ -210,8 +216,10 @@ export default function VsHubView() {
 
           /* ── HERO ── */
           .vshub-hero {
-            background: linear-gradient(135deg, ${T.darker} 0%, ${T.dark} 100%);
-            color: white;
+            /* Light, like the landing page. This was a dark gradient
+               against a #f0f1f4 homepage — the inverse of the site. */
+            background: transparent;
+            color: ${T.text};
             padding: 100px 32px 80px;
             text-align: center;
             position: relative;
@@ -245,7 +253,7 @@ export default function VsHubView() {
           .vshub-lead {
             font-size: 18px;
             line-height: 1.6;
-            color: #c4c8d8;
+            color: ${T.muted};
             max-width: 680px;
             margin: 0 auto;
           }
@@ -300,7 +308,7 @@ export default function VsHubView() {
             border-radius: 4px;
             padding: 40px 44px;
             text-decoration: none;
-            color: white;
+            color: ${T.text};
             position: relative;
             overflow: hidden;
             margin-bottom: 20px;
@@ -343,7 +351,7 @@ export default function VsHubView() {
             letter-spacing: -0.5px;
             line-height: 1.15;
             margin: 0 0 14px 0;
-            color: white;
+            color: ${T.text};
           }
           .vshub-featured p {
             position: relative;
@@ -446,7 +454,7 @@ export default function VsHubView() {
           .vshub-cta-eyebrow {
             font-size: 11px;
             letter-spacing: 4px;
-            color: #8888aa;
+            color: rgba(255,255,255,0.55);
             font-weight: bold;
             margin-bottom: 16px;
           }

@@ -4,17 +4,23 @@ import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
+import { SITE } from '@/lib/siteTheme'
 
 const T = {
-  bg: '#0a0a14',
-  surface: '#1a1a2e',
-  border: '#2a2a4a',
-  dark: '#1a1a2e',
-  darker: '#0a0a14',
-  text: '#ffffff',
-  muted: '#8888aa',
-  accent: '#2a4a8a',
-  blue: '#4a9eff',
+  bg: SITE.bg,
+  surface: SITE.surface,
+  border: SITE.border,
+  // `dark`/`darker` used to paint BOTH the hero gradient and the closing CTA.
+  // The hero is now light like the landing page; the CTA stays dark on
+  // purpose, because a dark panel inside a light page is the exception that
+  // makes the light ground read as chosen. Both keys therefore mean "the CTA
+  // panel" now, and the hero rule below no longer uses them.
+  dark: SITE.ink,
+  darker: SITE.ink,
+  text: SITE.text,
+  muted: SITE.muted,
+  accent: SITE.deep,
+  blue: SITE.blue,
 }
 
 const FUTURA = `'Futura PT', Futura, 'Helvetica Neue', Helvetica, Arial, sans-serif`
@@ -37,8 +43,10 @@ export default function FaqView() {
 
           /* ── HERO ── */
           .faq-hero {
-            background: linear-gradient(135deg, ${T.darker} 0%, ${T.dark} 100%);
-            color: white;
+            /* Light, like the landing page. This was a dark gradient
+               against a #f0f1f4 homepage — the inverse of the site. */
+            background: transparent;
+            color: ${T.text};
             padding: 80px 32px 64px;
             text-align: center;
             position: relative;
@@ -72,7 +80,7 @@ export default function FaqView() {
           .faq-lead {
             font-size: 16px;
             line-height: 1.6;
-            color: #c4c8d8;
+            color: ${T.muted};
             max-width: 560px;
             margin: 0 auto;
           }
@@ -107,7 +115,7 @@ export default function FaqView() {
             border-radius: 4px;
             padding: 32px 36px;
             text-decoration: none;
-            color: white;
+            color: ${T.text};
             position: relative;
             overflow: hidden;
             margin-bottom: 48px;
@@ -139,7 +147,7 @@ export default function FaqView() {
             letter-spacing: -0.3px;
             line-height: 1.2;
             margin: 0 0 12px 0;
-            color: white;
+            color: ${T.text};
           }
           .faq-featured p {
             position: relative;
@@ -201,23 +209,23 @@ export default function FaqView() {
           }
 
           /* pill color variants from PALETTE.md status pills */
-          .faq-exp-card.preview .pill   { background: #1a1a2e; color: #8888aa; border-top-color: #8888aa; }
+          .faq-exp-card.preview .pill   { background: rgba(90,94,106,0.1); color: #5a5e6a; border-top-color: #5a5e6a; }
           .faq-exp-card.power .pill     { background: rgba(74,158,255,0.1); color: ${T.blue}; border-top-color: ${T.blue}; }
-          .faq-exp-card.progressive .pill { background: rgba(26,106,26,0.1); color: #4ade80; border-top-color: #4ade80; }
-          .faq-exp-card.predictive .pill  { background: rgba(138,26,26,0.1); color: #f87171; border-top-color: #f87171; }
-          .faq-exp-card.compliance .pill  { background: rgba(138,106,26,0.1); color: #fbbf24; border-top-color: #fbbf24; }
+          .faq-exp-card.progressive .pill { background: rgba(26,106,26,0.1); color: #1a6a1a; border-top-color: #1a6a1a; }
+          .faq-exp-card.predictive .pill  { background: rgba(138,26,26,0.1); color: #8a1a1a; border-top-color: #8a1a1a; }
+          .faq-exp-card.compliance .pill  { background: rgba(138,106,26,0.1); color: #8a6a1a; border-top-color: #8a6a1a; }
           .faq-exp-card.amd .pill         { background: rgba(74,158,255,0.1); color: ${T.blue}; border-top-color: ${T.blue}; }
-          .faq-exp-card.pricing .pill     { background: rgba(26,106,26,0.1); color: #4ade80; border-top-color: #4ade80; }
-          .faq-exp-card.teams .pill       { background: rgba(90,42,138,0.1); color: #a78bfa; border-top-color: #a78bfa; }
+          .faq-exp-card.pricing .pill     { background: rgba(26,106,26,0.1); color: #1a6a1a; border-top-color: #1a6a1a; }
+          .faq-exp-card.teams .pill       { background: rgba(90,42,138,0.1); color: #5a2a8a; border-top-color: #5a2a8a; }
           .faq-exp-card.managerplus .pill { background: rgba(74,158,255,0.1); color: ${T.blue}; border-top-color: ${T.blue}; }
           .faq-exp-card.mobile .pill      { background: rgba(74,158,255,0.1); color: ${T.blue}; border-top-color: ${T.blue}; }
-          .faq-exp-card.numbers .pill     { background: rgba(138,26,26,0.1); color: #f87171; border-top-color: #f87171; }
-          .faq-exp-card.leads .pill       { background: rgba(26,106,74,0.1); color: #34d399; border-top-color: #34d399; }
-          .faq-exp-card.scripts .pill     { background: rgba(74,74,168,0.1); color: #818cf8; border-top-color: #818cf8; }
+          .faq-exp-card.numbers .pill     { background: rgba(138,26,26,0.1); color: #8a1a1a; border-top-color: #8a1a1a; }
+          .faq-exp-card.leads .pill       { background: rgba(26,106,74,0.1); color: #1a6a4a; border-top-color: #1a6a4a; }
+          .faq-exp-card.scripts .pill     { background: rgba(74,74,168,0.1); color: #4a4aa8; border-top-color: #4a4aa8; }
           .faq-exp-card.campaigns .pill   { background: rgba(74,158,255,0.1); color: ${T.blue}; border-top-color: ${T.blue}; }
-          .faq-exp-card.billing .pill     { background: rgba(26,106,26,0.1); color: #4ade80; border-top-color: #4ade80; }
-          .faq-exp-card.compliance-export .pill { background: rgba(138,106,26,0.1); color: #fbbf24; border-top-color: #fbbf24; }
-          .faq-exp-card.data .pill        { background: rgba(74,74,168,0.1); color: #818cf8; border-top-color: #818cf8; }
+          .faq-exp-card.billing .pill     { background: rgba(26,106,26,0.1); color: #1a6a1a; border-top-color: #1a6a1a; }
+          .faq-exp-card.compliance-export .pill { background: rgba(138,106,26,0.1); color: #8a6a1a; border-top-color: #8a6a1a; }
+          .faq-exp-card.data .pill        { background: rgba(74,74,168,0.1); color: #4a4aa8; border-top-color: #4a4aa8; }
 
           /* ── ACCORDION ── */
           .faq-qa details {
@@ -288,7 +296,7 @@ export default function FaqView() {
           .faq-cta-eyebrow {
             font-size: 11px;
             letter-spacing: 4px;
-            color: #8888aa;
+            color: rgba(255,255,255,0.55);
             font-weight: bold;
             margin-bottom: 12px;
           }
@@ -327,8 +335,9 @@ export default function FaqView() {
           .faq-btn-secondary {
             padding: 14px 28px;
             background: transparent;
-            color: white;
-            border: 1px solid #c4c8d0;
+            color: ${T.text};
+            border: 1px solid ${T.border};
+            border-top: 3px solid ${T.muted};
             border-top: 3px solid white;
             font-size: 12px;
             letter-spacing: 4px;
