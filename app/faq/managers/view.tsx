@@ -3,6 +3,8 @@ import Link from 'next/link'
 import { useUser } from '@clerk/nextjs'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
+import FaqTheme from '@/components/faq-theme'
+import { SITE } from '@/lib/siteTheme'
 
 
 
@@ -27,21 +29,6 @@ import SiteFooter from '@/components/site-footer'
 
 
 
-const T = {
-  bg: '#0a0a14',
-  surface: '#1a1a2e',
-  surface2: '#2a2a4a',
-  border: '#2a2a4a',
-  dark: '#1a1a2e',
-  darker: '#0a0a14',
-  text: '#ffffff',
-  muted: '#8888aa',
-  accent: '#4a9eff',
-  blue: '#4a9eff',
-  green: '#4ade80',
-  red: '#f87171',
-  amber: '#fbbf24',
-}
 
 export default function View() {
   const { isSignedIn } = useUser()
@@ -51,94 +38,50 @@ export default function View() {
       <SiteHeader />
       <div style={{
         flex: 1,
-        background: T.bg,
+        background: SITE.bg,
         minHeight: 'calc(100vh - 64px)',
         fontFamily: 'Futura PT, Futura, sans-serif',
-        color: T.text,
+        color: SITE.text,
       }}>
+        <FaqTheme />
         <style>{`
-          .mgr-root { max-width: 820px; margin: 0 auto; padding: 80px 32px 120px; }
-          .mgr-eyebrow {
-            font-size: 11px; letter-spacing: 4px; color: ${T.muted};
-            font-weight: bold; margin-bottom: 18px;
-          }
-          .mgr-h1 {
-            font-size: 44px; line-height: 1.15; letter-spacing: -0.5px;
-            font-weight: 700; margin: 0 0 24px 0;
-          }
-          .mgr-h1 em {
-            font-style: normal; color: ${T.blue};
-          }
-          .mgr-deck {
-            font-size: 19px; line-height: 1.6; color: ${T.muted};
-            margin-bottom: 56px; max-width: 680px;
-          }
-          .mgr-section { margin: 56px 0; }
-          .mgr-section h2 {
-            font-size: 13px; letter-spacing: 3px; font-weight: bold;
-            color: ${T.accent}; margin: 0 0 18px 0;
-            padding-bottom: 10px; border-bottom: 1px solid ${T.border};
-          }
-          .mgr-section h3 {
-            font-size: 22px; line-height: 1.3; font-weight: 700;
-            margin: 28px 0 14px 0; letter-spacing: -0.2px;
-          }
-          .mgr-section p {
-            font-size: 16px; line-height: 1.75; margin: 0 0 18px 0;
-            color: ${T.text};
-          }
-          .mgr-section p.muted { color: ${T.muted}; font-size: 15px; }
-          .mgr-section strong { color: ${T.text}; font-weight: 700; }
-          .mgr-section em { font-style: italic; color: ${T.accent}; }
-          .mgr-section ul { margin: 14px 0 24px 0; padding-left: 22px; }
-          .mgr-section li { font-size: 16px; line-height: 1.75; margin-bottom: 8px; }
-
-          .mgr-math {
+.mgr-math {
             margin: 28px 0; padding: 24px 28px;
-            background: ${T.surface};
-            border: 1px solid ${T.border};
-            border-left: 3px solid ${T.green};
+            background: ${SITE.surface};
+            border: 1px solid ${SITE.border};
+            border-left: 3px solid ${SITE.green};
             border-radius: 6px;
           }
           .mgr-math-title {
-            font-size: 11px; letter-spacing: 3px; color: ${T.green};
+            font-size: 11px; letter-spacing: 3px; color: ${SITE.green};
             font-weight: bold; margin-bottom: 14px;
           }
           .mgr-math-row {
             display: flex; justify-content: space-between; align-items: baseline;
             padding: 6px 0; font-size: 15px;
-            border-bottom: 1px dashed ${T.border};
+            border-bottom: 1px dashed ${SITE.border};
           }
           .mgr-math-row:last-child { border-bottom: none; padding-top: 10px; margin-top: 4px; }
           .mgr-math-row.total {
-            border-top: 2px solid ${T.border}; border-bottom: none;
+            border-top: 2px solid ${SITE.border}; border-bottom: none;
             padding-top: 12px; margin-top: 8px;
             font-size: 17px; font-weight: 700;
           }
-          .mgr-math-row.total .mgr-math-val { color: ${T.green}; }
-          .mgr-math-label { color: ${T.muted}; }
-          .mgr-math-val { font-family: monospace; font-weight: 600; color: ${T.text}; }
-
-          .mgr-callout {
-            margin: 32px 0; padding: 22px 26px;
-            background: ${T.surface};
-            border-left: 3px solid ${T.blue};
-            border-radius: 4px;
-          }
-          .mgr-callout p { font-size: 15px; line-height: 1.7; margin: 0; color: ${T.text}; }
-          .mgr-callout strong { color: ${T.accent}; }
+          .mgr-math-row.total .mgr-math-val { color: ${SITE.green}; }
+          .mgr-math-label { color: ${SITE.muted}; }
+          .mgr-math-val { font-family: monospace; font-weight: 600; color: ${SITE.text}; }
 
           .mgr-promo {
             margin: 56px 0 32px;
             padding: 20px 24px;
-            background: ${T.surface};
-            border: 1px dashed ${T.amber};
+            background: ${SITE.surface};
+            border: 1px dashed ${SITE.amber};
             border-radius: 6px;
             font-size: 14px; line-height: 1.7;
-            color: ${T.muted}; font-style: italic;
+            color: ${SITE.muted}; font-style: italic;
           }
           .mgr-promo strong {
-            font-style: normal; color: ${T.amber};
+            font-style: normal; color: ${SITE.amber};
             letter-spacing: 1px;
           }
 
@@ -158,7 +101,7 @@ export default function View() {
             letter-spacing: -0.2px; line-height: 1.3;
           }
           .mgr-wl-upsell p {
-            font-size: 14px; line-height: 1.7; color: ${T.muted};
+            font-size: 14px; line-height: 1.7; color: ${SITE.muted};
             margin: 0 0 16px 0;
           }
           .mgr-wl-upsell a {
@@ -167,84 +110,27 @@ export default function View() {
             border-bottom: 1px solid transparent;
           }
           .mgr-wl-upsell a:hover { border-bottom-color: #4a9eff; }
-
-          .mgr-cta-box {
-            margin-top: 56px;
-            padding: 40px 36px;
-            background: ${T.dark};
-            border-radius: 8px;
-            text-align: center;
-          }
-          .mgr-cta-box .mgr-cta-eyebrow {
-            font-size: 10px; letter-spacing: 4px; color: ${T.blue};
-            font-weight: bold; margin-bottom: 14px;
-          }
-          .mgr-cta-box .mgr-cta-h {
-            font-size: 26px; color: white; font-weight: 700;
-            margin: 0 0 12px 0; letter-spacing: -0.2px;
-          }
-          .mgr-cta-box p {
-            font-size: 15px; color: ${T.muted}; line-height: 1.6;
-            margin: 0 0 28px 0;
-          }
-          .mgr-cta-box .mgr-cta-btn {
-            display: inline-block;
-            padding: 16px 36px;
-            background: linear-gradient(135deg, ${T.blue}, #2a6eff);
-            border: none; border-radius: 6px;
-            color: white;
-            font-size: 12px; font-weight: bold; letter-spacing: 3px;
-            text-decoration: none;
-            font-family: 'Futura PT', Futura, sans-serif;
-            box-shadow: 0 0 24px rgba(74,158,255,0.3);
-          }
           .mgr-cta-secondary {
             display: inline-block; margin-top: 16px;
             color: #888a92; font-size: 11px; letter-spacing: 2px;
             text-decoration: none;
           }
-          .mgr-cta-secondary:hover { color: ${T.muted}; }
-
-          .mgr-related {
-            margin-top: 48px;
-            padding-top: 28px;
-            border-top: 1px solid ${T.border};
-          }
-          .mgr-related-label {
-            font-size: 10px; letter-spacing: 3px; color: ${T.muted};
-            font-weight: bold; margin-bottom: 14px;
-          }
-          .mgr-related-links { display: flex; gap: 24px; flex-wrap: wrap; }
-          .mgr-related-links a {
-            font-size: 13px; color: ${T.accent}; text-decoration: none;
-            border-bottom: 1px solid transparent; padding-bottom: 1px;
-            transition: border-color 0.15s;
-          }
-          .mgr-related-links a:hover { border-bottom-color: ${T.accent}; }
-
-          @media (max-width: 768px) {
-            .mgr-root { padding: 48px 20px 80px; }
-            .mgr-h1 { font-size: 30px; }
-            .mgr-deck { font-size: 16px; }
-            .mgr-section h3 { font-size: 19px; }
-            .mgr-section p, .mgr-section li { font-size: 15px; }
+          .mgr-cta-secondary:hover { color: ${SITE.muted}; }@media (max-width: 768px) {
             .mgr-math { padding: 18px 20px; }
-            .mgr-cta-box { padding: 32px 24px; }
-            .mgr-cta-box .mgr-cta-h { font-size: 22px; }
             .mgr-wl-upsell { padding: 22px 22px; }
           }
         `}</style>
 
-        <article className="mgr-root">
+        <article className="faq-root">
 
-          <div className="mgr-eyebrow">▸ FOR MANAGERS</div>
+          <div className="faq-eyebrow">▸ FOR MANAGERS</div>
           <span style={{ fontSize: 11, color: '#8888aa', letterSpacing: '2px', display: 'block', marginBottom: 16 }}>LAST UPDATED 07/28/2026</span>
 
-          <h1 className="mgr-h1">
+          <h1 className="faq-h1">
             Built for the people <em>actually running the sales floor.</em>
           </h1>
 
-          <p className="mgr-deck">
+          <p className="faq-deck">
             This page is for agency owners and lead vendors. If you&apos;re
             running other agents — paying for their dialer, generating their
             leads, or both — DialerSeat is built around what you actually need.
@@ -252,7 +138,7 @@ export default function View() {
           </p>
 
           {/* ── WHAT IT IS ─────────────────────────────────────────────────── */}
-          <section className="mgr-section">
+          <section className="faq-section">
             <h2>WHAT IT IS</h2>
 
             <p>
@@ -285,7 +171,7 @@ export default function View() {
           </section>
 
           {/* ── AGENCY OWNER ───────────────────────────────────────────────── */}
-          <section className="mgr-section">
+          <section className="faq-section">
             <h2>▸ FOR AGENCY OWNERS</h2>
 
             <h3>You already run a floor. You already pay per seat somewhere.</h3>
@@ -366,7 +252,7 @@ export default function View() {
           </section>
 
           {/* ── LEAD VENDOR ────────────────────────────────────────────────── */}
-          <section className="mgr-section">
+          <section className="faq-section">
             <h2>▸ FOR LEAD VENDORS</h2>
 
             <h3>You sell leads. The agents who buy them dial them somewhere.</h3>
@@ -456,7 +342,7 @@ export default function View() {
           </section>
 
           {/* ── WHAT YOU BOTH GET ──────────────────────────────────────────── */}
-          <section className="mgr-section">
+          <section className="faq-section">
             <h2>▸ WHAT YOU BOTH GET</h2>
 
             <p>
@@ -501,7 +387,7 @@ export default function View() {
           </section>
 
           {/* ── HONEST CALLOUT ─────────────────────────────────────────────── */}
-          <div className="mgr-callout">
+          <div className="faq-callout">
             <p>
               <strong>One honest thing</strong> — DialerSeat doesn&apos;t process
               your resell payments. If you charge agents $150/week and
@@ -540,7 +426,7 @@ export default function View() {
           </div>
 
           {/* ── HOW TO ACTUALLY START ──────────────────────────────────────── */}
-          <section className="mgr-section">
+          <section className="faq-section">
             <h2>HOW TO ACTUALLY START</h2>
 
             <p>
@@ -560,9 +446,9 @@ export default function View() {
           </section>
 
           {/* ── CTA ────────────────────────────────────────────────────────── */}
-          <div className="mgr-cta-box">
-            <div className="mgr-cta-eyebrow">▸ READY TO TRY IT</div>
-            <div className="mgr-cta-h">
+          <div className="faq-cta">
+            <div className="faq-cta-eyebrow">▸ READY TO TRY IT</div>
+            <div className="faq-cta-h">
               Start a team in under five minutes.
             </div>
             <p>
@@ -571,7 +457,7 @@ export default function View() {
             </p>
             <Link
               href={isSignedIn ? '/dashboard/teams' : '/signup'}
-              className="mgr-cta-btn"
+              className="faq-cta-btn"
             >
               {isSignedIn ? 'GO TO TEAMS →' : 'START FREE 7 DAYS →'}
             </Link>
@@ -586,9 +472,9 @@ export default function View() {
           </div>
 
           {/* ── RELATED ────────────────────────────────────────────────────── */}
-          <div className="mgr-related">
-            <div className="mgr-related-label">▸ RELATED READING</div>
-            <div className="mgr-related-links">
+          <div className="faq-related">
+            <div className="faq-related-label">▸ RELATED READING</div>
+            <div className="faq-related-links">
               <Link href="/faq/white-label">White-label your dialer</Link>
               <Link href="/faq/why-dialerseat">Why I built DialerSeat</Link>
               <Link href="/dialing-modes">Dialing modes explained</Link>

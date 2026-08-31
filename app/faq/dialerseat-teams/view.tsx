@@ -17,22 +17,9 @@ import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
+import FaqTheme from '@/components/faq-theme'
+import { SITE } from '@/lib/siteTheme'
 
-const T = {
-  bg: '#0a0a14',
-  surface: '#1a1a2e',
-  surface2: '#2a2a4a',
-  border: '#2a2a4a',
-  dark: '#1a1a2e',
-  darker: '#0a0a14',
-  text: '#ffffff',
-  muted: '#8888aa',
-  accent: '#4a9eff',
-  blue: '#4a9eff',
-  green: '#4ade80',
-  red: '#f87171',
-  amber: '#fbbf24',
-}
 
 export default function DialerSeatTeamsFaqView() {
   const { isLoaded, isSignedIn } = useUser()
@@ -42,15 +29,14 @@ export default function DialerSeatTeamsFaqView() {
     <>
       <SiteHeader />
       <main style={{
-        background: T.bg,
+        background: SITE.bg,
         minHeight: '100vh',
         fontFamily: 'Futura PT, Futura, sans-serif',
-        color: T.text,
+        color: SITE.text,
       }}>
+        <FaqTheme />
         <style>{`
-          .tfaq-root * { box-sizing: border-box; }
-
-          /* HERO */
+/* HERO */
           .tfaq-hero {
             background: linear-gradient(135deg, #0a0a14 0%, #1a1a2e 100%);
             color: white;
@@ -76,19 +62,7 @@ export default function DialerSeatTeamsFaqView() {
             margin-bottom: 22px;
             transition: color 0.12s;
           }
-          .tfaq-breadcrumb:hover { color: ${T.accent}; }
-          .tfaq-eyebrow {
-            display: inline-block;
-            padding: 6px 14px;
-            background: rgba(74,158,255,0.15);
-            border: 1px solid #4a9eff;
-            border-radius: 4px;
-            color: #4a9eff;
-            font-size: 11px;
-            letter-spacing: 3px;
-            font-weight: bold;
-            margin-bottom: 24px;
-          }
+          .tfaq-breadcrumb:hover { color: ${SITE.deep}; }
           .tfaq-hero h1 {
             font-size: 54px;
             font-weight: 800;
@@ -103,73 +77,37 @@ export default function DialerSeatTeamsFaqView() {
             max-width: 680px;
             margin: 0 auto;
           }
-
-          /* SECTIONS */
-          .tfaq-section {
-            max-width: 860px;
-            margin: 0 auto;
-            padding: 72px 32px;
-          }
-          .tfaq-section.alt {
-            background: ${T.surface};
-            max-width: none;
-          }
-          .tfaq-section.alt > .inner {
-            max-width: 860px;
-            margin: 0 auto;
-            padding: 0 32px;
-          }
           .tfaq-label {
             font-size: 10px;
             letter-spacing: 4px;
-            color: ${T.muted};
+            color: ${SITE.muted};
             font-weight: bold;
             margin-bottom: 14px;
-          }
-          .tfaq-section h2 {
-            font-size: 32px;
-            font-weight: 800;
-            letter-spacing: -0.4px;
-            line-height: 1.2;
-            margin: 0 0 22px 0;
-          }
-          .tfaq-section h3 {
-            font-size: 19px;
-            font-weight: 700;
-            letter-spacing: 0.2px;
-            margin: 28px 0 12px 0;
-            color: ${T.accent};
-          }
-          .tfaq-section p {
-            font-size: 16px;
-            line-height: 1.75;
-            color: ${T.text};
-            margin: 0 0 16px 0;
           }
           .tfaq-pullquote {
             margin: 26px 0;
             padding: 22px 26px;
-            background: ${T.bg};
-            border-left: 3px solid ${T.accent};
+            background: ${SITE.bg};
+            border-left: 3px solid ${SITE.deep};
             border-radius: 4px;
             font-size: 16px;
             line-height: 1.7;
-            color: ${T.text};
+            color: ${SITE.text};
           }
 
           /* AGED LEADS CALLOUT — subdued, signals "bonus feature" */
           .tfaq-aged-callout {
             margin-top: 36px;
             padding: 24px 26px;
-            background: ${T.bg};
-            border: 1px solid ${T.border};
-            border-left: 3px solid ${T.amber};
+            background: ${SITE.bg};
+            border: 1px solid ${SITE.border};
+            border-left: 3px solid ${SITE.amber};
             border-radius: 6px;
           }
           .tfaq-aged-callout .label {
             font-size: 10px;
             letter-spacing: 3px;
-            color: ${T.amber};
+            color: ${SITE.amber};
             font-weight: bold;
             margin-bottom: 8px;
           }
@@ -177,13 +115,13 @@ export default function DialerSeatTeamsFaqView() {
             font-size: 18px;
             font-weight: 700;
             margin: 0 0 12px 0;
-            color: ${T.text};
+            color: ${SITE.text};
             letter-spacing: 0.2px;
           }
           .tfaq-aged-callout p {
             font-size: 14px;
             line-height: 1.65;
-            color: ${T.text};
+            color: ${SITE.text};
             margin: 0 0 10px 0;
           }
           .tfaq-aged-callout p:last-child { margin-bottom: 0; }
@@ -197,9 +135,9 @@ export default function DialerSeatTeamsFaqView() {
           }
           .tfaq-audience-card {
             padding: 24px 22px;
-            background: ${T.surface};
-            border: 1px solid ${T.border};
-            border-top: 3px solid ${T.accent};
+            background: ${SITE.surface};
+            border: 1px solid ${SITE.border};
+            border-top: 3px solid ${SITE.deep};
             border-radius: 8px;
           }
           .tfaq-audience-card h3 {
@@ -207,12 +145,12 @@ export default function DialerSeatTeamsFaqView() {
             font-weight: 700;
             letter-spacing: 2px;
             margin: 0 0 10px 0;
-            color: ${T.accent};
+            color: ${SITE.deep};
           }
           .tfaq-audience-card p {
             font-size: 13px;
             line-height: 1.65;
-            color: ${T.text};
+            color: ${SITE.text};
             margin: 0;
           }
 
@@ -225,31 +163,31 @@ export default function DialerSeatTeamsFaqView() {
           }
           .tfaq-mode-card {
             padding: 22px 24px;
-            background: ${T.surface};
-            border: 1px solid ${T.border};
-            border-left: 3px solid ${T.accent};
+            background: ${SITE.surface};
+            border: 1px solid ${SITE.border};
+            border-left: 3px solid ${SITE.deep};
             border-radius: 8px;
           }
-          .tfaq-mode-card.free { border-left-color: ${T.green}; }
+          .tfaq-mode-card.free { border-left-color: ${SITE.green}; }
           .tfaq-mode-card h3 {
             font-size: 13px;
             font-weight: 700;
             letter-spacing: 2px;
             margin: 0 0 4px 0;
-            color: ${T.accent};
+            color: ${SITE.deep};
           }
-          .tfaq-mode-card.free h3 { color: ${T.green}; }
+          .tfaq-mode-card.free h3 { color: ${SITE.green}; }
           .tfaq-mode-card .sub {
             font-size: 11px;
             letter-spacing: 1px;
-            color: ${T.muted};
+            color: ${SITE.muted};
             font-weight: bold;
             margin-bottom: 10px;
           }
           .tfaq-mode-card p {
             font-size: 13px;
             line-height: 1.6;
-            color: ${T.text};
+            color: ${SITE.text};
             margin: 0;
           }
 
@@ -257,7 +195,7 @@ export default function DialerSeatTeamsFaqView() {
           .tfaq-platform-notice {
             margin-top: 22px;
             padding: 18px 22px;
-            background: ${T.dark};
+            background: ${SITE.ink};
             border-radius: 8px;
             color: white;
           }
@@ -284,14 +222,14 @@ export default function DialerSeatTeamsFaqView() {
             margin-top: 28px;
           }
           .tfaq-step-block {
-            background: ${T.surface};
-            border: 1px solid ${T.border};
+            background: ${SITE.surface};
+            border: 1px solid ${SITE.border};
             border-radius: 10px;
             overflow: hidden;
           }
           .tfaq-step-head {
             padding: 16px 22px;
-            background: ${T.dark};
+            background: ${SITE.ink};
             color: white;
             display: flex;
             justify-content: space-between;
@@ -308,9 +246,9 @@ export default function DialerSeatTeamsFaqView() {
             letter-spacing: 2px;
             padding: 4px 10px;
             background: rgba(74,158,255,0.15);
-            border: 1px solid ${T.accent};
+            border: 1px solid ${SITE.deep};
             border-radius: 3px;
-            color: ${T.accent};
+            color: ${SITE.deep};
             font-weight: bold;
           }
           .tfaq-step-body { padding: 20px 24px; }
@@ -326,7 +264,7 @@ export default function DialerSeatTeamsFaqView() {
             margin-bottom: 12px;
             font-size: 14px;
             line-height: 1.6;
-            color: ${T.text};
+            color: ${SITE.text};
             counter-increment: tfaq-step;
           }
           .tfaq-step-body li::before {
@@ -337,7 +275,7 @@ export default function DialerSeatTeamsFaqView() {
             width: 18px;
             height: 18px;
             border-radius: 50%;
-            background: ${T.accent};
+            background: ${SITE.deep};
             color: white;
             font-size: 10px;
             font-weight: 700;
@@ -347,11 +285,11 @@ export default function DialerSeatTeamsFaqView() {
           }
           .tfaq-step-body p {
             font-size: 13px;
-            color: ${T.muted};
+            color: ${SITE.muted};
             margin: 10px 0 0 0;
             line-height: 1.55;
             padding-top: 10px;
-            border-top: 1px solid ${T.border};
+            border-top: 1px solid ${SITE.border};
           }
 
           /* Q&A GRID */
@@ -363,8 +301,8 @@ export default function DialerSeatTeamsFaqView() {
           }
           .tfaq-qa-card {
             padding: 18px 20px;
-            background: ${T.surface};
-            border: 1px solid ${T.border};
+            background: ${SITE.surface};
+            border: 1px solid ${SITE.border};
             border-radius: 8px;
           }
           .tfaq-qa-card h4 {
@@ -372,30 +310,23 @@ export default function DialerSeatTeamsFaqView() {
             font-weight: 700;
             letter-spacing: 0.4px;
             margin: 0 0 8px 0;
-            color: ${T.accent};
+            color: ${SITE.deep};
           }
           .tfaq-qa-card p {
             font-size: 13px;
             line-height: 1.6;
-            color: ${T.text};
+            color: ${SITE.text};
             margin: 0;
           }
 
           /* CTA */
           .tfaq-cta {
-            background: ${T.dark};
+            background: ${SITE.ink};
             color: white;
             padding: 72px 32px;
             text-align: center;
           }
           .tfaq-cta-inner { max-width: 640px; margin: 0 auto; }
-          .tfaq-cta-eyebrow {
-            font-size: 11px;
-            letter-spacing: 4px;
-            color: #8888aa;
-            font-weight: bold;
-            margin-bottom: 12px;
-          }
           .tfaq-cta h2 {
             font-size: 30px;
             font-weight: 800;
@@ -406,7 +337,7 @@ export default function DialerSeatTeamsFaqView() {
           .tfaq-cta p {
             font-size: 15px;
             line-height: 1.7;
-            color: ${T.muted};
+            color: ${SITE.muted};
             margin: 0 auto 28px;
             max-width: 540px;
           }
@@ -415,7 +346,7 @@ export default function DialerSeatTeamsFaqView() {
           }
           .tfaq-btn-primary {
             padding: 14px 28px;
-            background: linear-gradient(135deg, ${T.blue}, #2a6eff);
+            background: linear-gradient(135deg, ${SITE.blue}, #2a6eff);
             color: white;
             font-size: 12px;
             letter-spacing: 2.5px;
@@ -434,17 +365,10 @@ export default function DialerSeatTeamsFaqView() {
             font-weight: bold;
             border-radius: 8px;
             text-decoration: none;
-          }
-
-          @media (max-width: 768px) {
+          }@media (max-width: 768px) {
             .tfaq-hero { padding: 64px 20px 56px; }
             .tfaq-hero h1 { font-size: 34px; }
             .tfaq-lead { font-size: 15px; }
-            .tfaq-section, .tfaq-section.alt > .inner {
-              padding-left: 20px; padding-right: 20px;
-            }
-            .tfaq-section { padding-top: 52px; padding-bottom: 52px; }
-            .tfaq-section h2 { font-size: 26px; }
             .tfaq-audience-grid,
             .tfaq-mode-grid,
             .tfaq-qa-grid {
@@ -456,13 +380,13 @@ export default function DialerSeatTeamsFaqView() {
           }
         `}</style>
 
-        <div className="tfaq-root">
+        <div className="faq-root">
 
           {/* HERO */}
           <section className="tfaq-hero">
             <div className="tfaq-hero-inner">
               <Link href="/faq" className="tfaq-breadcrumb">← BACK TO FAQ</Link>
-              <div className="tfaq-eyebrow">DIALERSEAT TEAMS</div>
+              <div className="faq-eyebrow">DIALERSEAT TEAMS</div>
         <span style={{ fontSize: 11, color: '#8888aa', letterSpacing: '2px', display: 'block', marginBottom: 16 }}>LAST UPDATED 07/28/2026</span>
               <h1>Premium leads, agency floors, shared pools.</h1>
               <p className="tfaq-lead">
@@ -477,7 +401,7 @@ export default function DialerSeatTeamsFaqView() {
           </section>
 
           {/* WHAT IT IS */}
-          <section className="tfaq-section">
+          <section className="faq-section">
             <div className="tfaq-label">▸ WHAT TEAMS ACTUALLY ARE</div>
             <h2>One account holder. Many seats. Real attribution.</h2>
             <p>
@@ -498,7 +422,7 @@ export default function DialerSeatTeamsFaqView() {
           </section>
 
           {/* THREE AUDIENCES */}
-          <section className="tfaq-section alt">
+          <section className="faq-section alt">
             <div className="inner">
               <div className="tfaq-label">▸ WHO TEAMS IS FOR</div>
               <h2>Three real use cases.</h2>
@@ -540,7 +464,7 @@ export default function DialerSeatTeamsFaqView() {
           </section>
 
           {/* DEEP DIVE: LEAD VENDORS (PREMIUM LEADS) */}
-          <section className="tfaq-section">
+          <section className="faq-section">
             <div className="tfaq-label">▸ LEAD VENDORS</div>
             <h2>Rent seats to your premium campaigns.</h2>
             <p>
@@ -629,7 +553,7 @@ export default function DialerSeatTeamsFaqView() {
           </section>
 
           {/* DEEP DIVE: AGENCY OWNERS */}
-          <section className="tfaq-section alt">
+          <section className="faq-section alt">
             <div className="inner">
               <div className="tfaq-label">▸ AGENCY OWNERS</div>
               <h2>Your producers, your floor, your numbers.</h2>
@@ -675,7 +599,7 @@ export default function DialerSeatTeamsFaqView() {
           </section>
 
           {/* DEEP DIVE: SHARED POOLS */}
-          <section className="tfaq-section">
+          <section className="faq-section">
             <div className="tfaq-label">▸ SHARED LEAD POOL</div>
             <h2>Many dialers, one file, zero collisions.</h2>
             <p>
@@ -704,7 +628,7 @@ export default function DialerSeatTeamsFaqView() {
           </section>
 
           {/* BILLING MODES */}
-          <section className="tfaq-section alt">
+          <section className="faq-section alt">
             <div className="inner">
               <div className="tfaq-label">▸ BILLING MODES</div>
               <h2>Four ways to handle the per-seat cost.</h2>
@@ -774,7 +698,7 @@ export default function DialerSeatTeamsFaqView() {
           </section>
 
           {/* STEP-BY-STEP SETUPS */}
-          <section className="tfaq-section">
+          <section className="faq-section">
             <div className="tfaq-label">▸ STEP-BY-STEP SETUPS</div>
             <h2>How each use case actually goes.</h2>
 
@@ -852,7 +776,7 @@ export default function DialerSeatTeamsFaqView() {
           </section>
 
           {/* COMMON QUESTIONS */}
-          <section className="tfaq-section alt">
+          <section className="faq-section alt">
             <div className="inner">
               <div className="tfaq-label">▸ COMMON QUESTIONS</div>
               <h2>The ones that come up before signup.</h2>
@@ -951,7 +875,7 @@ export default function DialerSeatTeamsFaqView() {
           {/* CTA */}
           <section className="tfaq-cta">
             <div className="tfaq-cta-inner">
-              <div className="tfaq-cta-eyebrow">
+              <div className="faq-cta-eyebrow">
                 {showSignedIn ? '▸ READY TO BUILD A TEAM' : '▸ START THE TEAM ON DAY ONE'}
               </div>
               {showSignedIn ? (

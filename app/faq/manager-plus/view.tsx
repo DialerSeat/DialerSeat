@@ -5,22 +5,9 @@ import Image from 'next/image'
 import { useUser } from '@clerk/nextjs'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
+import FaqTheme from '@/components/faq-theme'
+import { SITE } from '@/lib/siteTheme'
 
-const T = {
-  bg: '#0a0a14',
-  surface: '#1a1a2e',
-  surface2: '#2a2a4a',
-  border: '#2a2a4a',
-  dark: '#1a1a2e',
-  darker: '#0a0a14',
-  text: '#ffffff',
-  muted: '#8888aa',
-  accent: '#4a9eff',
-  blue: '#4a9eff',
-  green: '#4ade80',
-  red: '#f87171',
-  amber: '#fbbf24',
-}
 
 type Slide = { src: string; alt: string; caption: string }
 
@@ -104,122 +91,80 @@ export default function ManagerPlusFaqView() {
       <div
         style={{
           flex: 1,
-          background: T.bg,
+          background: SITE.bg,
           minHeight: 'calc(100vh - 64px)',
           fontFamily: 'Futura PT, Futura, sans-serif',
-          color: T.text,
+          color: SITE.text,
         }}
       >
+        <FaqTheme />
         <style>{`
-          .mp-root { max-width: 820px; margin: 0 auto; padding: 80px 32px 120px; }
-          .mp-eyebrow {
-            font-size: 11px; letter-spacing: 4px; color: ${T.muted};
-            font-weight: bold; margin-bottom: 18px;
-          }
-          .mp-h1 {
-            font-size: 44px; line-height: 1.15; letter-spacing: -0.5px;
-            font-weight: 700; margin: 0 0 24px 0;
-          }
-          .mp-h1 em { font-style: normal; color: ${T.blue}; }
-          .mp-deck {
-            font-size: 19px; line-height: 1.6; color: ${T.muted};
-            margin-bottom: 40px; max-width: 680px;
-          }
-
-          .mp-badge-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 56px; }
-          .mp-badge {
-            padding: 8px 16px; border-radius: 20px; font-size: 12px;
-            font-weight: bold; letter-spacing: 1px; border: 1px solid ${T.border};
-            background: ${T.surface}; color: ${T.text};
-          }
-          .mp-badge.price { background: ${T.dark}; color: white; border-color: ${T.dark}; }
-
-          .mp-section { margin: 56px 0; }
-          .mp-section h2 {
-            font-size: 13px; letter-spacing: 3px; font-weight: bold;
-            color: ${T.accent}; margin: 0 0 18px 0;
-            padding-bottom: 10px; border-bottom: 1px solid ${T.border};
-          }
-          .mp-section h3 {
-            font-size: 22px; line-height: 1.3; font-weight: 700;
-            margin: 28px 0 14px 0; letter-spacing: -0.2px;
-          }
-          .mp-section p {
-            font-size: 16px; line-height: 1.75; margin: 0 0 18px 0;
-            color: ${T.text};
-          }
-          .mp-section p.muted { color: ${T.muted}; font-size: 15px; }
-          .mp-section strong { color: ${T.text}; font-weight: 700; }
-          .mp-section em { font-style: italic; color: ${T.accent}; }
-          .mp-section ul { margin: 14px 0 24px 0; padding-left: 22px; }
-          .mp-section li { font-size: 16px; line-height: 1.75; margin-bottom: 8px; }
-
-          /* PRICING TABLE */
+/* PRICING TABLE */
           .mp-tiers {
             display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
             margin: 28px 0 32px;
           }
           .mp-tier-card {
-            background: ${T.surface}; border: 1px solid ${T.border}; border-radius: 8px;
+            background: ${SITE.surface}; border: 1px solid ${SITE.border}; border-radius: 8px;
             padding: 24px 22px;
           }
           .mp-tier-card.hi {
-            border: 2px solid ${T.accent};
+            border: 2px solid ${SITE.deep};
             box-shadow: 0 4px 20px rgba(42,74,138,0.12);
           }
           .mp-tier-name {
-            font-size: 11px; letter-spacing: 2px; font-weight: bold; color: ${T.muted};
+            font-size: 11px; letter-spacing: 2px; font-weight: bold; color: ${SITE.muted};
             margin-bottom: 8px;
           }
-          .mp-tier-card.hi .mp-tier-name { color: ${T.accent}; }
+          .mp-tier-card.hi .mp-tier-name { color: ${SITE.deep}; }
           .mp-tier-price { font-size: 30px; font-weight: 800; margin-bottom: 4px; }
-          .mp-tier-price span { font-size: 14px; font-weight: 600; color: ${T.muted}; }
-          .mp-tier-sub { font-size: 13px; color: ${T.muted}; margin-bottom: 16px; }
+          .mp-tier-price span { font-size: 14px; font-weight: 600; color: ${SITE.muted}; }
+          .mp-tier-sub { font-size: 13px; color: ${SITE.muted}; margin-bottom: 16px; }
           .mp-tier-card ul { margin: 0; padding-left: 18px; }
           .mp-tier-card li { font-size: 14px; line-height: 1.6; margin-bottom: 6px; }
 
           /* MATH BLOCK */
           .mp-math {
             margin: 28px 0; padding: 24px 28px;
-            background: ${T.surface}; border: 1px solid ${T.border};
-            border-left: 3px solid ${T.green}; border-radius: 6px;
+            background: ${SITE.surface}; border: 1px solid ${SITE.border};
+            border-left: 3px solid ${SITE.green}; border-radius: 6px;
           }
           .mp-math-title {
-            font-size: 11px; letter-spacing: 3px; color: ${T.green};
+            font-size: 11px; letter-spacing: 3px; color: ${SITE.green};
             font-weight: bold; margin-bottom: 14px;
           }
           .mp-math-row {
             display: flex; justify-content: space-between; align-items: baseline;
-            padding: 6px 0; font-size: 15px; border-bottom: 1px dashed ${T.border};
+            padding: 6px 0; font-size: 15px; border-bottom: 1px dashed ${SITE.border};
           }
           .mp-math-row:last-child { border-bottom: none; padding-top: 10px; margin-top: 4px; }
           .mp-math-row.total {
-            border-top: 2px solid ${T.border}; border-bottom: none;
+            border-top: 2px solid ${SITE.border}; border-bottom: none;
             padding-top: 12px; margin-top: 8px; font-size: 17px; font-weight: 700;
           }
-          .mp-math-row.total .mp-math-val { color: ${T.green}; }
-          .mp-math-label { color: ${T.muted}; }
-          .mp-math-val { font-family: monospace; font-weight: 600; color: ${T.text}; }
+          .mp-math-row.total .mp-math-val { color: ${SITE.green}; }
+          .mp-math-label { color: ${SITE.muted}; }
+          .mp-math-val { font-family: monospace; font-weight: 600; color: ${SITE.text}; }
 
           /* SCENARIO CARDS */
           .mp-scenario {
-            margin: 28px 0; padding: 26px 28px; background: ${T.surface};
-            border: 1px solid ${T.border}; border-radius: 8px;
+            margin: 28px 0; padding: 26px 28px; background: ${SITE.surface};
+            border: 1px solid ${SITE.border}; border-radius: 8px;
           }
           .mp-scenario-eyebrow {
             font-size: 10px; letter-spacing: 3px; font-weight: bold;
-            color: ${T.accent}; margin-bottom: 10px;
+            color: ${SITE.deep}; margin-bottom: 10px;
           }
           .mp-scenario h4 { font-size: 19px; margin: 0 0 12px 0; font-weight: 700; }
-          .mp-scenario p { font-size: 15px; line-height: 1.7; margin: 0 0 12px 0; color: ${T.text}; }
+          .mp-scenario p { font-size: 15px; line-height: 1.7; margin: 0 0 12px 0; color: ${SITE.text}; }
           .mp-scenario p:last-child { margin-bottom: 0; }
 
           /* CAROUSEL */
           .mp-carousel { margin: 32px 0 8px; }
           .mp-carousel-frame {
             position: relative; width: 100%; aspect-ratio: 16 / 9;
-            background: ${T.dark}; border-radius: 10px; overflow: hidden;
-            border: 1px solid ${T.border};
+            background: ${SITE.ink}; border-radius: 10px; overflow: hidden;
+            border: 1px solid ${SITE.border};
             box-shadow: 0 20px 50px rgba(20,20,40,0.18);
           }
           .mp-carousel-imgwrap { position: absolute; inset: 0; }
@@ -235,7 +180,7 @@ export default function ManagerPlusFaqView() {
           .mp-carousel-arrow.left { left: 12px; }
           .mp-carousel-arrow.right { right: 12px; }
           .mp-carousel-caption {
-            font-size: 13.5px; line-height: 1.6; color: ${T.muted};
+            font-size: 13.5px; line-height: 1.6; color: ${SITE.muted};
             margin: 14px 4px 0; text-align: center;
           }
           .mp-carousel-dots {
@@ -243,18 +188,10 @@ export default function ManagerPlusFaqView() {
           }
           .mp-dot {
             width: 8px; height: 8px; border-radius: 50%; border: none;
-            background: ${T.border}; cursor: pointer; padding: 0;
+            background: ${SITE.border}; cursor: pointer; padding: 0;
             transition: background 0.15s, transform 0.15s;
           }
-          .mp-dot.active { background: ${T.accent}; transform: scale(1.3); }
-
-          /* CALLOUT */
-          .mp-callout {
-            margin: 32px 0; padding: 22px 26px; background: ${T.surface};
-            border-left: 3px solid ${T.blue}; border-radius: 4px;
-          }
-          .mp-callout p { font-size: 15px; line-height: 1.7; margin: 0; color: ${T.text}; }
-          .mp-callout strong { color: ${T.accent}; }
+          .mp-dot.active { background: ${SITE.deep}; transform: scale(1.3); }
 
           /* PRIORITY LIST */
           .mp-priority-grid {
@@ -262,82 +199,35 @@ export default function ManagerPlusFaqView() {
             margin: 20px 0 8px;
           }
           .mp-priority-item {
-            background: ${T.surface}; border: 1px solid ${T.border}; border-radius: 8px;
+            background: ${SITE.surface}; border: 1px solid ${SITE.border}; border-radius: 8px;
             padding: 18px 20px;
           }
           .mp-priority-item h5 {
-            font-size: 14px; margin: 0 0 6px 0; color: ${T.accent}; font-weight: 700;
+            font-size: 14px; margin: 0 0 6px 0; color: ${SITE.deep}; font-weight: 700;
           }
-          .mp-priority-item p { font-size: 13.5px; line-height: 1.6; margin: 0; color: ${T.muted}; }
-
-          /* CTA */
-          .mp-cta-box {
-            margin-top: 56px; padding: 40px 36px; background: ${T.dark};
-            border-radius: 8px; text-align: center;
-          }
-          .mp-cta-box .mp-cta-eyebrow {
-            font-size: 10px; letter-spacing: 4px; color: ${T.blue};
-            font-weight: bold; margin-bottom: 14px;
-          }
-          .mp-cta-box .mp-cta-h {
-            font-size: 26px; color: white; font-weight: 700;
-            margin: 0 0 12px 0; letter-spacing: -0.2px;
-          }
-          .mp-cta-box p { font-size: 15px; color: ${T.muted}; line-height: 1.6; margin: 0 0 28px 0; }
-          .mp-cta-box .mp-cta-btn {
-            display: inline-block; padding: 16px 36px;
-            background: linear-gradient(135deg, ${T.blue}, #2a6eff);
-            border: none; border-radius: 6px; color: white;
-            font-size: 12px; font-weight: bold; letter-spacing: 3px;
-            text-decoration: none; font-family: 'Futura PT', Futura, sans-serif;
-            box-shadow: 0 0 24px rgba(74,158,255,0.3);
-          }
+          .mp-priority-item p { font-size: 13.5px; line-height: 1.6; margin: 0; color: ${SITE.muted}; }
           .mp-cta-secondary {
             display: inline-block; margin-top: 16px; color: #888a92;
             font-size: 11px; letter-spacing: 2px; text-decoration: none;
           }
-          .mp-cta-secondary:hover { color: ${T.muted}; }
-
-          .mp-related {
-            margin-top: 48px; padding-top: 28px; border-top: 1px solid ${T.border};
-          }
-          .mp-related-label {
-            font-size: 10px; letter-spacing: 3px; color: ${T.muted};
-            font-weight: bold; margin-bottom: 14px;
-          }
-          .mp-related-links { display: flex; gap: 24px; flex-wrap: wrap; }
-          .mp-related-links a {
-            font-size: 13px; color: ${T.accent}; text-decoration: none;
-            border-bottom: 1px solid transparent; padding-bottom: 1px;
-            transition: border-color 0.15s;
-          }
-          .mp-related-links a:hover { border-bottom-color: ${T.accent}; }
-
-          @media (max-width: 768px) {
-            .mp-root { padding: 48px 20px 80px; }
-            .mp-h1 { font-size: 30px; }
-            .mp-deck { font-size: 16px; }
-            .mp-section h3 { font-size: 19px; }
-            .mp-section p, .mp-section li { font-size: 15px; }
+          .mp-cta-secondary:hover { color: ${SITE.muted}; }@media (max-width: 768px) {
             .mp-tiers { grid-template-columns: 1fr; }
             .mp-priority-grid { grid-template-columns: 1fr; }
             .mp-math { padding: 18px 20px; }
             .mp-scenario { padding: 20px 20px; }
-            .mp-cta-box { padding: 32px 24px; }
-            .mp-cta-box .mp-cta-h { font-size: 22px; }
             .mp-carousel-frame { aspect-ratio: 4 / 3; }
           }
         `}</style>
 
-        <article className="mp-root">
-          <div className="mp-eyebrow">▸ THE TIER ABOVE PRO</div>
+        <article className="faq-root">
+          <div className="faq-eyebrow">▸ THE TIER ABOVE PRO</div>
           <span style={{ fontSize: 11, color: '#8888aa', letterSpacing: '2px', display: 'block', marginBottom: 16 }}>LAST UPDATED 07/28/2026</span>
 
-          <h1 className="mp-h1">
+          <h1 className="faq-h1">
             Manager+: the higher tier for people who <em>own</em> the operation, not just work it.
           </h1>
 
-          <p className="mp-deck">
+          <p className="faq-deck">
             Pro gets you the dialer. Manager+ gets you the dialer <em>plus</em>{' '}
             the ability to own teams, resell seats, white-label the entire
             platform under your own brand, and see a level of analytics depth
@@ -346,15 +236,15 @@ export default function ManagerPlusFaqView() {
             examples of who it&apos;s for.
           </p>
 
-          <div className="mp-badge-row">
-            <span className="mp-badge price">$75 / WEEK</span>
-            <span className="mp-badge">REPLACES PRO — NOT STACKED ON TOP</span>
-            <span className="mp-badge">NO CONTRACT</span>
-            <span className="mp-badge">CANCEL ANYTIME</span>
+          <div className="faq-badge-row">
+            <span className="faq-badge price">$75 / WEEK</span>
+            <span className="faq-badge">REPLACES PRO — NOT STACKED ON TOP</span>
+            <span className="faq-badge">NO CONTRACT</span>
+            <span className="faq-badge">CANCEL ANYTIME</span>
           </div>
 
           {/* ── THE TWO TIERS ──────────────────────────────────────────────── */}
-          <section className="mp-section">
+          <section className="faq-section">
             <h2>▸ THE TWO TIERS</h2>
             <p>
               DialerSeat only has two pricing tiers. No middle tiers, no
@@ -405,7 +295,7 @@ export default function ManagerPlusFaqView() {
           </section>
 
           {/* ── TWO EXAMPLES ───────────────────────────────────────────────── */}
-          <section className="mp-section">
+          <section className="faq-section">
             <h2>▸ TWO PEOPLE THIS TIER IS BUILT FOR</h2>
             <p>
               Manager+ covers a lot of different setups, but almost everyone
@@ -473,7 +363,7 @@ export default function ManagerPlusFaqView() {
             </div>
           </section>
 
-          <section className="mp-section">
+          <section className="faq-section">
             <h2>▸ HOW THE SEAT COST STACKS</h2>
             <p>
               Two numbers, always. What you pay for Manager+ itself, and what
@@ -529,7 +419,7 @@ export default function ManagerPlusFaqView() {
           </section>
 
           {/* ── ADVANCED ANALYTICS ─────────────────────────────────────────── */}
-          <section className="mp-section">
+          <section className="faq-section">
             <h2>▸ WHAT &ldquo;ADVANCED ANALYTICS&rdquo; ACTUALLY MEANS</h2>
             <p>
               Pro gives you your own dialing stats. Manager+ gives you the
@@ -567,7 +457,7 @@ export default function ManagerPlusFaqView() {
           </section>
 
           {/* ── PRIORITY ───────────────────────────────────────────────────── */}
-          <section className="mp-section">
+          <section className="faq-section">
             <h2>▸ WHAT PRIORITY ACTUALLY MEANS</h2>
             <p>
               &ldquo;Priority support&rdquo; is a phrase that gets thrown
@@ -596,7 +486,7 @@ export default function ManagerPlusFaqView() {
           </section>
 
           {/* ── HONEST CALLOUT ─────────────────────────────────────────────── */}
-          <div className="mp-callout">
+          <div className="faq-callout">
             <p>
               <strong>One honest thing —</strong> DialerSeat doesn&apos;t
               process your resell payments for you. If you charge a buyer or
@@ -609,9 +499,9 @@ export default function ManagerPlusFaqView() {
           </div>
 
           {/* ── RELATED ────────────────────────────────────────────────────── */}
-          <div className="mp-related">
-            <div className="mp-related-label">▸ RELATED READING</div>
-            <div className="mp-related-links">
+          <div className="faq-related">
+            <div className="faq-related-label">▸ RELATED READING</div>
+            <div className="faq-related-links">
               <Link href="/faq/managers">For managers — agency owners &amp; lead vendors</Link>
               <Link href="/faq/white-label">White-label your dialer</Link>
               <Link href="/faq/white-label-mobile">White-label on mobile</Link>
@@ -623,15 +513,15 @@ export default function ManagerPlusFaqView() {
           </div>
 
           {/* ── CTA ──────────────────────────────────────────────────────────  */}
-          <div className="mp-cta-box">
-            <div className="mp-cta-eyebrow">▸ READY TO OWN YOUR OWN FLOOR?</div>
-            <h3 className="mp-cta-h">$75/week. No contract. Cancel any time.</h3>
+          <div className="faq-cta">
+            <div className="faq-cta-eyebrow">▸ READY TO OWN YOUR OWN FLOOR?</div>
+            <h3 className="faq-cta-h">$75/week. No contract. Cancel any time.</h3>
             <p>
               Sign up, create your first team, and generate your first seat
               code in the next few minutes. White-labeling is a setting away
               once you&apos;re in.
             </p>
-            <a href={isSignedIn ? '/dashboard/teams' : '/sign-up'} className="mp-cta-btn">
+            <a href={isSignedIn ? '/dashboard/teams' : '/sign-up'} className="faq-cta-btn">
               {isSignedIn ? 'GO TO TEAMS →' : 'START MANAGER+ →'}
             </a>
             <br />

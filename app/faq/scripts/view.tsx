@@ -3,22 +3,9 @@ import Link from 'next/link'
 import { useUser } from '@clerk/nextjs'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
+import FaqTheme from '@/components/faq-theme'
+import { SITE } from '@/lib/siteTheme'
 
-const T = {
-  bg: '#0a0a14',
-  surface: '#1a1a2e',
-  surface2: '#2a2a4a',
-  border: '#2a2a4a',
-  dark: '#1a1a2e',
-  darker: '#0a0a14',
-  text: '#ffffff',
-  muted: '#8888aa',
-  accent: '#4a9eff',
-  blue: '#4a9eff',
-  green: '#4ade80',
-  red: '#f87171',
-  amber: '#fbbf24',
-}
 
 export default function ScriptsFaqView() {
   const { isSignedIn } = useUser()
@@ -29,68 +16,23 @@ export default function ScriptsFaqView() {
       <div
         style={{
           flex: 1,
-          background: T.bg,
+          background: SITE.bg,
           minHeight: 'calc(100vh - 64px)',
           fontFamily: 'Futura PT, Futura, sans-serif',
-          color: T.text,
+          color: SITE.text,
         }}
       >
+        <FaqTheme />
         <style>{`
-          .scr-root { max-width: 820px; margin: 0 auto; padding: 80px 32px 120px; }
-          .scr-eyebrow {
-            font-size: 11px; letter-spacing: 4px; color: ${T.muted};
-            font-weight: bold; margin-bottom: 18px;
-          }
-          .scr-h1 {
-            font-size: 42px; line-height: 1.15; letter-spacing: -0.5px;
-            font-weight: 700; margin: 0 0 24px 0;
-          }
-          .scr-h1 em { font-style: normal; color: ${T.accent}; }
-          .scr-deck {
-            font-size: 19px; line-height: 1.6; color: ${T.muted};
-            margin-bottom: 40px; max-width: 680px;
-          }
-          .scr-badge-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 56px; }
-          .scr-badge {
-            padding: 8px 16px; border-radius: 20px; font-size: 12px;
-            font-weight: bold; letter-spacing: 1px; border: 1px solid ${T.border};
-            background: ${T.surface}; color: ${T.text};
-          }
-          .scr-badge.hi { background: ${T.dark}; color: #a8b8ff; border-color: ${T.dark}; }
-
-          .scr-section { margin: 56px 0; }
-          .scr-section h2 {
-            font-size: 13px; letter-spacing: 3px; font-weight: bold;
-            color: ${T.accent}; margin: 0 0 18px 0;
-            padding-bottom: 10px; border-bottom: 1px solid ${T.border};
-          }
-          .scr-section h3 {
-            font-size: 22px; line-height: 1.3; font-weight: 700;
-            margin: 28px 0 14px 0; letter-spacing: -0.2px;
-          }
-          .scr-section p {
-            font-size: 16px; line-height: 1.75; margin: 0 0 18px 0;
-            color: ${T.text};
-          }
-          .scr-section p.muted { color: ${T.muted}; font-size: 15px; }
-          .scr-section strong { color: ${T.text}; font-weight: 700; }
-          .scr-section em { font-style: italic; color: ${T.accent}; }
-          .scr-section ul { margin: 14px 0 24px 0; padding-left: 22px; }
-          .scr-section li { font-size: 16px; line-height: 1.75; margin-bottom: 8px; }
-          .scr-section code {
-            background: ${T.surface}; padding: 1px 6px; border-radius: 3px;
-            font-size: 13.5px; font-family: monospace;
-          }
-
-          /* OWNERSHIP CARDS */
+/* OWNERSHIP CARDS */
           .scr-owner-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 24px 0 8px; }
-          .scr-owner-card { background: ${T.surface}; border: 1px solid ${T.border}; border-radius: 8px; padding: 22px 22px; }
-          .scr-owner-card h4 { font-size: 15px; margin: 0 0 8px 0; font-weight: 700; color: ${T.accent}; }
-          .scr-owner-card p { font-size: 14px; line-height: 1.65; margin: 0; color: ${T.muted}; }
+          .scr-owner-card { background: ${SITE.surface}; border: 1px solid ${SITE.border}; border-radius: 8px; padding: 22px 22px; }
+          .scr-owner-card h4 { font-size: 15px; margin: 0 0 8px 0; font-weight: 700; color: ${SITE.deep}; }
+          .scr-owner-card p { font-size: 14px; line-height: 1.65; margin: 0; color: ${SITE.muted}; }
 
           /* MOCKUP CARD */
           .scr-mockup {
-            margin: 28px 0; background: ${T.dark}; border-radius: 10px; overflow: hidden;
+            margin: 28px 0; background: ${SITE.ink}; border-radius: 10px; overflow: hidden;
             box-shadow: 0 20px 50px rgba(20,20,40,0.18);
           }
           .scr-mockup-bar { display: flex; gap: 6px; padding: 12px 16px; background: #111225; }
@@ -105,104 +47,35 @@ export default function ScriptsFaqView() {
           .scr-mockup-text {
             color: #d8dae8; font-size: 14px; line-height: 1.7; font-family: monospace;
             background: #14162a; border-radius: 6px; padding: 16px 18px;
-          }
-
-          /* FLOW LIST */
-          .scr-flow { display: flex; flex-direction: column; gap: 0; margin: 24px 0 8px; }
-          .scr-flow-step {
-            display: flex; gap: 16px; padding: 14px 0; align-items: flex-start;
-            border-left: 2px solid ${T.border}; padding-left: 22px; margin-left: 15px;
-            position: relative;
-          }
-          .scr-flow-step::before {
-            content: ''; position: absolute; left: -7px; top: 18px;
-            width: 12px; height: 12px; border-radius: 50%;
-            background: ${T.accent}; border: 2px solid white;
-          }
-          .scr-flow-step:last-child { border-left: 2px solid transparent; }
-          .scr-flow-body h4 { font-size: 15px; margin: 0 0 4px 0; font-weight: 700; }
-          .scr-flow-body p { font-size: 14px; line-height: 1.6; margin: 0; color: ${T.muted}; }
-
-          .scr-callout {
-            margin: 32px 0; padding: 22px 26px; background: ${T.surface};
-            border-left: 3px solid ${T.blue}; border-radius: 4px;
-          }
-          .scr-callout p { font-size: 15px; line-height: 1.7; margin: 0; color: ${T.text}; }
-          .scr-callout strong { color: ${T.accent}; }
-
-          .scr-related {
-            margin-top: 48px; padding-top: 28px; border-top: 1px solid ${T.border};
-          }
-          .scr-related-label {
-            font-size: 10px; letter-spacing: 3px; color: ${T.muted};
-            font-weight: bold; margin-bottom: 14px;
-          }
-          .scr-related-links { display: flex; gap: 24px; flex-wrap: wrap; }
-          .scr-related-links a {
-            font-size: 13px; color: ${T.accent}; text-decoration: none;
-            border-bottom: 1px solid transparent; padding-bottom: 1px;
-            transition: border-color 0.15s;
-          }
-          .scr-related-links a:hover { border-bottom-color: ${T.accent}; }
-
-          .scr-cta-box {
-            margin-top: 56px; padding: 40px 36px; background: ${T.dark};
-            border-radius: 8px; text-align: center;
-          }
-          .scr-cta-box .scr-cta-eyebrow {
-            font-size: 10px; letter-spacing: 4px; color: #a8b8ff;
-            font-weight: bold; margin-bottom: 14px;
-          }
-          .scr-cta-box .scr-cta-h {
-            font-size: 26px; color: white; font-weight: 700;
-            margin: 0 0 12px 0; letter-spacing: -0.2px;
-          }
-          .scr-cta-box p { font-size: 15px; color: ${T.muted}; line-height: 1.6; margin: 0 0 28px 0; }
-          .scr-cta-box .scr-cta-btn {
-            display: inline-block; padding: 16px 36px;
-            background: linear-gradient(135deg, #6a7aff, #4a5aff);
-            border: none; border-radius: 6px; color: white;
-            font-size: 12px; font-weight: bold; letter-spacing: 3px;
-            text-decoration: none; font-family: 'Futura PT', Futura, sans-serif;
-            box-shadow: 0 0 24px rgba(90,100,255,0.3);
-          }
-
-          @media (max-width: 768px) {
-            .scr-root { padding: 48px 20px 80px; }
-            .scr-h1 { font-size: 28px; }
-            .scr-deck { font-size: 16px; }
-            .scr-section h3 { font-size: 19px; }
-            .scr-section p, .scr-section li { font-size: 15px; }
+          }@media (max-width: 768px) {
             .scr-owner-grid { grid-template-columns: 1fr; }
-            .scr-cta-box { padding: 32px 24px; }
-            .scr-cta-box .scr-cta-h { font-size: 22px; }
           }
         `}</style>
 
-        <article className="scr-root">
-          <div className="scr-eyebrow">▸ CALL SCRIPTS</div>
+        <article className="faq-root">
+          <div className="faq-eyebrow">▸ CALL SCRIPTS</div>
           <span style={{ fontSize: 11, color: '#8888aa', letterSpacing: '2px', display: 'block', marginBottom: 16 }}>LAST UPDATED 07/28/2026</span>
 
-          <h1 className="scr-h1">
+          <h1 className="faq-h1">
             Write it once. See it on <em>every</em> call, without alt-tabbing.
           </h1>
 
-          <p className="scr-deck">
+          <p className="faq-deck">
             Scripts live inside the dialer itself, right next to the lead
             profile — not in a separate doc you keep switching to mid-call.
             Write as many as you want, attach them to whichever campaigns
             need them, and control which one shows first.
           </p>
 
-          <div className="scr-badge-row">
-            <span className="scr-badge hi">INCLUDED ON EVERY PLAN</span>
-            <span className="scr-badge">PERSONAL OR TEAM-SHARED</span>
-            <span className="scr-badge">MULTIPLE SCRIPTS PER CAMPAIGN</span>
-            <span className="scr-badge">REORDERABLE</span>
+          <div className="faq-badge-row">
+            <span className="faq-badge hi">INCLUDED ON EVERY PLAN</span>
+            <span className="faq-badge">PERSONAL OR TEAM-SHARED</span>
+            <span className="faq-badge">MULTIPLE SCRIPTS PER CAMPAIGN</span>
+            <span className="faq-badge">REORDERABLE</span>
           </div>
 
           {/* ── WHAT IT LOOKS LIKE ─────────────────────────────────────────── */}
-          <section className="scr-section">
+          <section className="faq-section">
             <h2>▸ WHAT AN AGENT ACTUALLY SEES</h2>
             <p>
               The active script for a campaign shows up in the lead profile
@@ -241,7 +114,7 @@ export default function ScriptsFaqView() {
           </section>
 
           {/* ── PERSONAL VS TEAM ───────────────────────────────────────────── */}
-          <section className="scr-section">
+          <section className="faq-section">
             <h2>▸ PERSONAL SCRIPTS VS. TEAM SCRIPTS</h2>
             <p>
               Every script belongs to either you personally or to a team you
@@ -269,7 +142,7 @@ export default function ScriptsFaqView() {
           </section>
 
           {/* ── ATTACHING TO CAMPAIGNS ─────────────────────────────────────── */}
-          <section className="scr-section">
+          <section className="faq-section">
             <h2>▸ HOW SCRIPTS ATTACH TO CAMPAIGNS</h2>
             <p>
               A script and a campaign are two separate things until you
@@ -278,21 +151,21 @@ export default function ScriptsFaqView() {
               a many-to-many relationship, not a strict one-to-one.
             </p>
 
-            <div className="scr-flow">
-              <div className="scr-flow-step">
-                <div className="scr-flow-body">
+            <div className="faq-flow">
+              <div className="faq-flow-step">
+                <div className="faq-flow-body">
                   <h4>1. WRITE THE SCRIPT</h4>
                   <p>Create it once, name it, save it. It exists independently of any campaign until you attach it somewhere.</p>
                 </div>
               </div>
-              <div className="scr-flow-step">
-                <div className="scr-flow-body">
+              <div className="faq-flow-step">
+                <div className="faq-flow-body">
                   <h4>2. TOGGLE IT ONTO A CAMPAIGN</h4>
                   <p>Turn it on for whichever campaign(s) should use it. Turning it off removes the link without deleting the script itself.</p>
                 </div>
               </div>
-              <div className="scr-flow-step">
-                <div className="scr-flow-body">
+              <div className="faq-flow-step">
+                <div className="faq-flow-body">
                   <h4>3. REORDER IF MORE THAN ONE IS ATTACHED</h4>
                   <p>Whichever script sits first in the order is what agents see by default on that campaign — drag to reorder any time.</p>
                 </div>
@@ -308,7 +181,7 @@ export default function ScriptsFaqView() {
           </section>
 
           {/* ── HONEST NOTE ───────────────────────────────────────────────── */}
-          <div className="scr-callout">
+          <div className="faq-callout">
             <p>
               <strong>Keep it simple —</strong> scripts are plain text, on
               purpose. No rich formatting, no branching logic, no
@@ -322,9 +195,9 @@ export default function ScriptsFaqView() {
           </div>
 
           {/* ── RELATED ────────────────────────────────────────────────────── */}
-          <div className="scr-related">
-            <div className="scr-related-label">▸ RELATED READING</div>
-            <div className="scr-related-links">
+          <div className="faq-related">
+            <div className="faq-related-label">▸ RELATED READING</div>
+            <div className="faq-related-links">
               <Link href="/faq/campaigns">Setting up a campaign</Link>
               <Link href="/faq/leads">Uploading &amp; managing leads</Link>
               <Link href="/faq/dialerseat-teams">DialerSeat for teams</Link>
@@ -334,14 +207,14 @@ export default function ScriptsFaqView() {
           </div>
 
           {/* ── CTA ──────────────────────────────────────────────────────────  */}
-          <div className="scr-cta-box">
-            <div className="scr-cta-eyebrow">▸ WRITE YOUR FIRST SCRIPT</div>
-            <h3 className="scr-cta-h">Included on every seat. No extra cost.</h3>
+          <div className="faq-cta">
+            <div className="faq-cta-eyebrow">▸ WRITE YOUR FIRST SCRIPT</div>
+            <h3 className="faq-cta-h">Included on every seat. No extra cost.</h3>
             <p>
               Scripts live in the dialer, not in a separate tab you have to
               keep switching to.
             </p>
-            <a href={isSignedIn ? '/dashboard/dialer' : '/sign-up'} className="scr-cta-btn">
+            <a href={isSignedIn ? '/dashboard/dialer' : '/sign-up'} className="faq-cta-btn">
               {isSignedIn ? 'GO TO DIALER →' : 'START FREE 7 DAYS →'}
             </a>
           </div>

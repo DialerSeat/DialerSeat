@@ -3,22 +3,9 @@ import Link from 'next/link'
 import { useUser } from '@clerk/nextjs'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
+import FaqTheme from '@/components/faq-theme'
+import { SITE } from '@/lib/siteTheme'
 
-const T = {
-  bg: '#0a0a14',
-  surface: '#1a1a2e',
-  surface2: '#2a2a4a',
-  border: '#2a2a4a',
-  dark: '#1a1a2e',
-  darker: '#0a0a14',
-  text: '#ffffff',
-  muted: '#8888aa',
-  accent: '#4a9eff',
-  blue: '#4a9eff',
-  green: '#4ade80',
-  red: '#f87171',
-  amber: '#fbbf24',
-}
 
 export default function ComplianceExportFaqView() {
   const { isSignedIn } = useUser()
@@ -29,62 +16,17 @@ export default function ComplianceExportFaqView() {
       <div
         style={{
           flex: 1,
-          background: T.bg,
+          background: SITE.bg,
           minHeight: 'calc(100vh - 64px)',
           fontFamily: 'Futura PT, Futura, sans-serif',
-          color: T.text,
+          color: SITE.text,
         }}
       >
+        <FaqTheme />
         <style>{`
-          .cex-root { max-width: 820px; margin: 0 auto; padding: 80px 32px 120px; }
-          .cex-eyebrow {
-            font-size: 11px; letter-spacing: 4px; color: ${T.muted};
-            font-weight: bold; margin-bottom: 18px;
-          }
-          .cex-h1 {
-            font-size: 42px; line-height: 1.15; letter-spacing: -0.5px;
-            font-weight: 700; margin: 0 0 24px 0;
-          }
-          .cex-h1 em { font-style: normal; color: ${T.amber}; }
-          .cex-deck {
-            font-size: 19px; line-height: 1.6; color: ${T.muted};
-            margin-bottom: 40px; max-width: 680px;
-          }
-          .cex-badge-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 56px; }
-          .cex-badge {
-            padding: 8px 16px; border-radius: 20px; font-size: 12px;
-            font-weight: bold; letter-spacing: 1px; border: 1px solid ${T.border};
-            background: ${T.surface}; color: ${T.text};
-          }
-          .cex-badge.hi { background: ${T.dark}; color: #ffcf7a; border-color: ${T.dark}; }
-
-          .cex-section { margin: 56px 0; }
-          .cex-section h2 {
-            font-size: 13px; letter-spacing: 3px; font-weight: bold;
-            color: ${T.accent}; margin: 0 0 18px 0;
-            padding-bottom: 10px; border-bottom: 1px solid ${T.border};
-          }
-          .cex-section h3 {
-            font-size: 22px; line-height: 1.3; font-weight: 700;
-            margin: 28px 0 14px 0; letter-spacing: -0.2px;
-          }
-          .cex-section p {
-            font-size: 16px; line-height: 1.75; margin: 0 0 18px 0;
-            color: ${T.text};
-          }
-          .cex-section p.muted { color: ${T.muted}; font-size: 15px; }
-          .cex-section strong { color: ${T.text}; font-weight: 700; }
-          .cex-section em { font-style: italic; color: ${T.accent}; }
-          .cex-section ul { margin: 14px 0 24px 0; padding-left: 22px; }
-          .cex-section li { font-size: 16px; line-height: 1.75; margin-bottom: 8px; }
-          .cex-section code {
-            background: ${T.surface}; padding: 1px 6px; border-radius: 3px;
-            font-size: 13.5px; font-family: monospace;
-          }
-
-          /* CSV MOCKUP */
+/* CSV MOCKUP */
           .cex-csv {
-            margin: 24px 0; background: ${T.dark}; border-radius: 8px; overflow-x: auto;
+            margin: 24px 0; background: ${SITE.ink}; border-radius: 8px; overflow-x: auto;
             padding: 20px 22px; box-shadow: 0 20px 50px rgba(20,20,40,0.18);
           }
           .cex-csv-title { font-size: 10px; letter-spacing: 2px; color: #ffcf7a; font-weight: bold; margin-bottom: 12px; }
@@ -101,83 +43,30 @@ export default function ComplianceExportFaqView() {
           .cex-csv tr:not(:last-child) td { border-bottom: 1px solid #1f2140; }
 
           /* FIELD TABLE */
-          .cex-field-table { margin: 20px 0 8px; border: 1px solid ${T.border}; border-radius: 8px; overflow: hidden; background: ${T.surface}; }
+          .cex-field-table { margin: 20px 0 8px; border: 1px solid ${SITE.border}; border-radius: 8px; overflow: hidden; background: ${SITE.surface}; }
           .cex-field-row { display: grid; grid-template-columns: 160px 1fr; }
-          .cex-field-row + .cex-field-row { border-top: 1px solid ${T.border}; }
-          .cex-field-row.head { background: ${T.dark}; }
+          .cex-field-row + .cex-field-row { border-top: 1px solid ${SITE.border}; }
+          .cex-field-row.head { background: ${SITE.ink}; }
           .cex-field-cell { padding: 12px 16px; font-size: 13.5px; line-height: 1.6; }
           .cex-field-row.head .cex-field-cell {
             color: white; font-size: 10.5px; letter-spacing: 2px; font-weight: bold;
           }
-          .cex-field-cell.name { font-weight: 700; color: ${T.text}; background: ${T.surface}; font-size: 12.5px; }
-          .cex-field-cell code { background: transparent; padding: 0; font-size: 12px; }
-
-          .cex-callout {
-            margin: 32px 0; padding: 22px 26px; background: ${T.surface};
-            border-left: 3px solid ${T.amber}; border-radius: 4px;
-          }
-          .cex-callout p { font-size: 15px; line-height: 1.7; margin: 0; color: ${T.text}; }
-          .cex-callout strong { color: ${T.accent}; }
-
-          .cex-related {
-            margin-top: 48px; padding-top: 28px; border-top: 1px solid ${T.border};
-          }
-          .cex-related-label {
-            font-size: 10px; letter-spacing: 3px; color: ${T.muted};
-            font-weight: bold; margin-bottom: 14px;
-          }
-          .cex-related-links { display: flex; gap: 24px; flex-wrap: wrap; }
-          .cex-related-links a {
-            font-size: 13px; color: ${T.accent}; text-decoration: none;
-            border-bottom: 1px solid transparent; padding-bottom: 1px;
-            transition: border-color 0.15s;
-          }
-          .cex-related-links a:hover { border-bottom-color: ${T.accent}; }
-
-          .cex-cta-box {
-            margin-top: 56px; padding: 40px 36px; background: ${T.dark};
-            border-radius: 8px; text-align: center;
-          }
-          .cex-cta-box .cex-cta-eyebrow {
-            font-size: 10px; letter-spacing: 4px; color: #ffcf7a;
-            font-weight: bold; margin-bottom: 14px;
-          }
-          .cex-cta-box .cex-cta-h {
-            font-size: 26px; color: white; font-weight: 700;
-            margin: 0 0 12px 0; letter-spacing: -0.2px;
-          }
-          .cex-cta-box p { font-size: 15px; color: ${T.muted}; line-height: 1.6; margin: 0 0 28px 0; }
-          .cex-cta-box .cex-cta-btn {
-            display: inline-block; padding: 16px 36px;
-            background: linear-gradient(135deg, #ffb84a, #e08a1a);
-            border: none; border-radius: 6px; color: #1a1a2e;
-            font-size: 12px; font-weight: bold; letter-spacing: 3px;
-            text-decoration: none; font-family: 'Futura PT', Futura, sans-serif;
-            box-shadow: 0 0 24px rgba(255,184,74,0.25);
-          }
-
-          @media (max-width: 768px) {
-            .cex-root { padding: 48px 20px 80px; }
-            .cex-h1 { font-size: 26px; }
-            .cex-deck { font-size: 16px; }
-            .cex-section h3 { font-size: 19px; }
-            .cex-section p, .cex-section li { font-size: 15px; }
+          .cex-field-cell.name { font-weight: 700; color: ${SITE.text}; background: ${SITE.surface}; font-size: 12.5px; }
+          .cex-field-cell code { background: transparent; padding: 0; font-size: 12px; }@media (max-width: 768px) {
             .cex-field-row { grid-template-columns: 110px 1fr; }
             .cex-field-cell { font-size: 12px; padding: 10px 12px; }
-            .cex-cta-box { padding: 32px 24px; }
-            .cex-cta-box .cex-cta-h { font-size: 22px; }
           }
         `}</style>
 
-        <article className="cex-root">
-          <div className="cex-eyebrow">▸ COMPLIANCE EXPORT</div>
+        <article className="faq-root">
+          <div className="faq-eyebrow">▸ COMPLIANCE EXPORT</div>
           <span style={{ fontSize: 11, color: '#8888aa', letterSpacing: '2px', display: 'block', marginBottom: 16 }}>LAST UPDATED 07/28/2026</span>
 
-          <h1 className="cex-h1">
+          <h1 className="faq-h1">
             Don&apos;t just tell an auditor you&apos;re compliant. <em>Show them.</em>
           </h1>
 
-          <p className="cex-deck">
+          <p className="faq-deck">
             Every campaign can generate a real, downloadable compliance
             record for any date range — AMD results, abandon flags,
             dispositions, call duration, and a link to the recording, one
@@ -186,15 +75,15 @@ export default function ComplianceExportFaqView() {
             describe.
           </p>
 
-          <div className="cex-badge-row">
-            <span className="cex-badge hi">DOWNLOADABLE CSV</span>
-            <span className="cex-badge">ANY DATE RANGE</span>
-            <span className="cex-badge">PHONE REDACTION ON BY DEFAULT</span>
-            <span className="cex-badge">INCLUDED, NO EXTRA COST</span>
+          <div className="faq-badge-row">
+            <span className="faq-badge hi">DOWNLOADABLE CSV</span>
+            <span className="faq-badge">ANY DATE RANGE</span>
+            <span className="faq-badge">PHONE REDACTION ON BY DEFAULT</span>
+            <span className="faq-badge">INCLUDED, NO EXTRA COST</span>
           </div>
 
           {/* ── WHAT YOU GET ───────────────────────────────────────────────── */}
-          <section className="cex-section">
+          <section className="faq-section">
             <h2>▸ WHAT&apos;S ACTUALLY IN THE FILE</h2>
             <p>
               Pick a campaign and a date range, and DialerSeat generates a
@@ -270,7 +159,7 @@ export default function ComplianceExportFaqView() {
           </section>
 
           {/* ── PHONE REDACTION ────────────────────────────────────────────── */}
-          <section className="cex-section">
+          <section className="faq-section">
             <h2>▸ PHONE NUMBERS ARE MASKED BY DEFAULT</h2>
             <p>
               Every export redacts the lead&apos;s phone number automatically
@@ -285,7 +174,7 @@ export default function ComplianceExportFaqView() {
           </section>
 
           {/* ── WHO CAN PULL IT ────────────────────────────────────────────── */}
-          <section className="cex-section">
+          <section className="faq-section">
             <h2>▸ WHO CAN GENERATE ONE</h2>
             <p>
               Only a campaign&apos;s owner can export its compliance
@@ -298,7 +187,7 @@ export default function ComplianceExportFaqView() {
           </section>
 
           {/* ── WHEN TO USE IT ────────────────────────────────────────────── */}
-          <section className="cex-section">
+          <section className="faq-section">
             <h2>▸ WHEN THIS ACTUALLY GETS USED</h2>
             <ul>
               <li><strong>A lead vendor asking for proof.</strong> If you&apos;re buying leads under a contract that requires demonstrating TCPA-compliant handling, this is the receipt.</li>
@@ -309,7 +198,7 @@ export default function ComplianceExportFaqView() {
           </section>
 
           {/* ── HONEST NOTE ───────────────────────────────────────────────── */}
-          <div className="cex-callout">
+          <div className="faq-callout">
             <p>
               <strong>What this isn&apos;t —</strong> the export shows you
               exactly what happened on every call. It doesn&apos;t retroactively
@@ -324,9 +213,9 @@ export default function ComplianceExportFaqView() {
           </div>
 
           {/* ── RELATED ────────────────────────────────────────────────────── */}
-          <div className="cex-related">
-            <div className="cex-related-label">▸ RELATED READING</div>
-            <div className="cex-related-links">
+          <div className="faq-related">
+            <div className="faq-related-label">▸ RELATED READING</div>
+            <div className="faq-related-links">
               <Link href="/faq/how-we-keep-compliance">How we keep compliance</Link>
               <Link href="/faq/why-is-compliance-important">Why compliance is important</Link>
               <Link href="/faq/numbers">Phone numbers &amp; caller ID</Link>
@@ -336,14 +225,14 @@ export default function ComplianceExportFaqView() {
           </div>
 
           {/* ── CTA ──────────────────────────────────────────────────────────  */}
-          <div className="cex-cta-box">
-            <div className="cex-cta-eyebrow">▸ EVERY CAMPAIGN CAN GENERATE ONE</div>
-            <h3 className="cex-cta-h">Included, no extra cost, no separate compliance-reporting add-on.</h3>
+          <div className="faq-cta">
+            <div className="faq-cta-eyebrow">▸ EVERY CAMPAIGN CAN GENERATE ONE</div>
+            <h3 className="faq-cta-h">Included, no extra cost, no separate compliance-reporting add-on.</h3>
             <p>
               Pull a record for any campaign, any date range, whenever you
               actually need one.
             </p>
-            <a href={isSignedIn ? '/dashboard/campaigns' : '/sign-up'} className="cex-cta-btn">
+            <a href={isSignedIn ? '/dashboard/campaigns' : '/sign-up'} className="faq-cta-btn">
               {isSignedIn ? 'GO TO CAMPAIGNS →' : 'START FREE 7 DAYS →'}
             </a>
           </div>

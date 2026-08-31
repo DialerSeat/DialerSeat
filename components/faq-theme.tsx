@@ -84,6 +84,67 @@ export default function FaqTheme() {
       .faq-p a, .faq-link { color: ${T.blue}; text-decoration: none; }
       .faq-p a:hover, .faq-link:hover { text-decoration: underline; }
 
+      /* ── BARE ELEMENTS, WHICH IS HOW THESE PAGES ARE ACTUALLY WRITTEN ──
+         The FAQ pages use <h2>, <p>, <li>, <code> directly and almost never
+         a className. Styling only .faq-h2 / .faq-p would have left every
+         heading and paragraph on all thirteen pages unstyled — the rules that
+         used to do this job lived in each page's private stylesheet.
+         For prose this is the right shape anyway: an author writing an answer
+         should not have to class every paragraph. */
+      .faq-section h2 {
+        font-size: ${SITE_TYPE.articleH2}; line-height: 1.15; letter-spacing: -1px;
+        font-weight: bold; margin: 0 0 16px 0; color: ${T.text};
+      }
+      .faq-section h3 {
+        font-size: ${SITE_TYPE.articleH3}; font-weight: bold; letter-spacing: -0.3px;
+        margin: 32px 0 10px 0; color: ${T.text};
+      }
+      .faq-section h4 {
+        font-size: 16.5px; font-weight: bold; margin: 24px 0 8px 0; color: ${T.text};
+      }
+      .faq-section p {
+        font-size: ${SITE_TYPE.body}; line-height: 1.75; color: ${T.muted}; margin: 0 0 18px 0;
+      }
+      .faq-section ul, .faq-section ol { padding-left: 22px; margin: 0 0 20px 0; }
+      .faq-section li {
+        font-size: 16px; line-height: 1.7; color: ${T.muted}; margin-bottom: 10px;
+      }
+      .faq-section li::marker { color: ${T.blue}; }
+      .faq-section strong { color: ${T.text}; font-weight: bold; }
+      .faq-section em { color: ${T.deep}; font-style: normal; font-weight: bold; }
+      .faq-section a { color: ${T.blue}; text-decoration: none; }
+      .faq-section a:hover { text-decoration: underline; }
+      .faq-section code {
+        font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13.5px;
+        background: rgba(0,0,0,0.05); border: 1px solid ${T.borderSoft};
+        border-radius: 3px; padding: 1px 6px; color: ${T.text};
+      }
+      /* The two-tone headline again, reached the way these pages write it.
+         <em> inside an h1 is their accent span, so it gets the deep blue
+         rather than italics. */
+      .faq-h1 em { color: ${T.deep}; font-style: normal; }
+      .faq-callout p { margin: 0 0 10px 0; font-size: 15.5px; line-height: 1.7; }
+      .faq-callout p:last-child { margin-bottom: 0; }
+      .faq-flow-body h4 { font-size: 16.5px; font-weight: bold; margin: 0 0 5px 0; color: ${T.text}; }
+
+      /* ── GENERIC MODIFIERS AND NESTED PROSE ──────────────────────────
+         Pages write <p className="muted"> and put bare <p> inside flow steps
+         and CTAs. Those rules lived in each page's private stylesheet and
+         died with it, which left the paragraphs inheriting body colour and
+         silently losing their hierarchy — the kind of regression that does
+         not error, it just reads slightly wrong on thirteen pages. */
+      .faq-root p.muted, .faq-section p.muted, .faq-root .muted {
+        color: ${T.muted}; font-size: 15px;
+      }
+      .faq-root .hi { color: ${T.green}; }
+      .faq-flow-body p { font-size: 15.5px; line-height: 1.7; margin: 0 0 8px 0; color: ${T.muted}; }
+      .faq-flow-body p:last-child { margin-bottom: 0; }
+      .faq-cta p {
+        font-size: 15.5px; line-height: 1.7; margin: 0 auto 28px;
+        max-width: 520px; color: rgba(255,255,255,0.7);
+      }
+      .faq-cta .muted { color: rgba(255,255,255,0.55); }
+
       /* ── LISTS ───────────────────────────────────────────────────────── */
       .faq-list { list-style: none; padding: 0; margin: 0 0 22px 0; }
       .faq-list li {
@@ -189,6 +250,36 @@ export default function FaqTheme() {
       }
       .faq-badge.hi {
         background: rgba(26,106,26,0.08); border-color: ${T.green}; color: ${T.green};
+      }
+
+      /* ── THREE THINGS ONE PAGE EACH STILL NEEDS ──────────────────────
+         Found by auditing every rule the migration dropped rather than by
+         noticing them broken later. Each was used by exactly one page, and
+         each is generic enough that the second page to want it should not
+         have to reinvent it. */
+
+      /* dialerseat-teams: a full-bleed alternating band. White against the
+         #f0f1f4 ground gives the banding without a second colour. */
+      .faq-section.alt {
+        background: ${T.surface};
+        max-width: none;
+        padding: 56px 0;
+        border-top: 1px solid ${T.borderSoft};
+        border-bottom: 1px solid ${T.borderSoft};
+      }
+      .faq-section.alt > .inner { max-width: 820px; margin: 0 auto; padding: 0 32px; }
+
+      /* why-dialerseat: an eyebrow, tighter and wider-tracked than the
+         standard one. */
+      .faq-section-label {
+        font-size: 10px; letter-spacing: 4px; color: ${T.muted};
+        font-weight: bold; margin-bottom: 14px; text-transform: uppercase;
+      }
+
+      /* manager-plus: the price badge, which wants the ink treatment rather
+         than the tinted one every other badge uses. */
+      .faq-badge.price {
+        background: ${T.ink}; color: ${T.inkText}; border-color: ${T.ink};
       }
 
       /* ── CLOSING CTA ─────────────────────────────────────────────────

@@ -3,22 +3,9 @@ import Link from 'next/link'
 import { useUser } from '@clerk/nextjs'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
+import FaqTheme from '@/components/faq-theme'
+import { SITE } from '@/lib/siteTheme'
 
-const T = {
-  bg: '#0a0a14',
-  surface: '#1a1a2e',
-  surface2: '#2a2a4a',
-  border: '#2a2a4a',
-  dark: '#1a1a2e',
-  darker: '#0a0a14',
-  text: '#ffffff',
-  muted: '#8888aa',
-  accent: '#4a9eff',
-  blue: '#4a9eff',
-  green: '#4ade80',
-  red: '#f87171',
-  amber: '#fbbf24',
-}
 
 export default function CampaignsFaqView() {
   const { isSignedIn } = useUser()
@@ -29,176 +16,62 @@ export default function CampaignsFaqView() {
       <div
         style={{
           flex: 1,
-          background: T.bg,
+          background: SITE.bg,
           minHeight: 'calc(100vh - 64px)',
           fontFamily: 'Futura PT, Futura, sans-serif',
-          color: T.text,
+          color: SITE.text,
         }}
       >
+        <FaqTheme />
         <style>{`
-          .cmp-root { max-width: 820px; margin: 0 auto; padding: 80px 32px 120px; }
-          .cmp-eyebrow {
-            font-size: 11px; letter-spacing: 4px; color: ${T.muted};
-            font-weight: bold; margin-bottom: 18px;
-          }
-          .cmp-h1 {
-            font-size: 42px; line-height: 1.15; letter-spacing: -0.5px;
-            font-weight: 700; margin: 0 0 24px 0;
-          }
-          .cmp-h1 em { font-style: normal; color: ${T.blue}; }
-          .cmp-deck {
-            font-size: 19px; line-height: 1.6; color: ${T.muted};
-            margin-bottom: 40px; max-width: 680px;
-          }
-          .cmp-badge-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 56px; }
-          .cmp-badge {
-            padding: 8px 16px; border-radius: 20px; font-size: 12px;
-            font-weight: bold; letter-spacing: 1px; border: 1px solid ${T.border};
-            background: ${T.surface}; color: ${T.text};
-          }
-          .cmp-badge.hi { background: ${T.dark}; color: #7ab8ff; border-color: ${T.dark}; }
-
-          .cmp-section { margin: 56px 0; }
-          .cmp-section h2 {
-            font-size: 13px; letter-spacing: 3px; font-weight: bold;
-            color: ${T.accent}; margin: 0 0 18px 0;
-            padding-bottom: 10px; border-bottom: 1px solid ${T.border};
-          }
-          .cmp-section h3 {
-            font-size: 22px; line-height: 1.3; font-weight: 700;
-            margin: 28px 0 14px 0; letter-spacing: -0.2px;
-          }
-          .cmp-section p {
-            font-size: 16px; line-height: 1.75; margin: 0 0 18px 0;
-            color: ${T.text};
-          }
-          .cmp-section p.muted { color: ${T.muted}; font-size: 15px; }
-          .cmp-section strong { color: ${T.text}; font-weight: 700; }
-          .cmp-section em { font-style: italic; color: ${T.accent}; }
-          .cmp-section ul { margin: 14px 0 24px 0; padding-left: 22px; }
-          .cmp-section li { font-size: 16px; line-height: 1.75; margin-bottom: 8px; }
-          .cmp-section code {
-            background: ${T.surface}; padding: 1px 6px; border-radius: 3px;
-            font-size: 13.5px; font-family: monospace;
-          }
-
-          /* SETTINGS TABLE */
-          .cmp-settings-table { margin: 20px 0 8px; border: 1px solid ${T.border}; border-radius: 8px; overflow: hidden; background: ${T.surface}; }
+/* SETTINGS TABLE */
+          .cmp-settings-table { margin: 20px 0 8px; border: 1px solid ${SITE.border}; border-radius: 8px; overflow: hidden; background: ${SITE.surface}; }
           .cmp-settings-row { display: grid; grid-template-columns: 180px 1fr; }
-          .cmp-settings-row + .cmp-settings-row { border-top: 1px solid ${T.border}; }
-          .cmp-settings-row.head { background: ${T.dark}; }
+          .cmp-settings-row + .cmp-settings-row { border-top: 1px solid ${SITE.border}; }
+          .cmp-settings-row.head { background: ${SITE.ink}; }
           .cmp-settings-cell { padding: 13px 16px; font-size: 14px; line-height: 1.6; }
           .cmp-settings-row.head .cmp-settings-cell {
             color: white; font-size: 10.5px; letter-spacing: 2px; font-weight: bold;
           }
-          .cmp-settings-cell.name { font-weight: 700; color: ${T.text}; background: ${T.surface}; font-size: 13px; }
+          .cmp-settings-cell.name { font-weight: 700; color: ${SITE.text}; background: ${SITE.surface}; font-size: 13px; }
           .cmp-settings-cell code { background: transparent; padding: 0; font-size: 12.5px; }
 
           /* AMD DEFAULTS GRID */
           .cmp-amd-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 20px 0 8px; }
-          .cmp-amd-card { background: ${T.surface}; border: 1px solid ${T.border}; border-radius: 8px; padding: 16px 14px; text-align: center; }
-          .cmp-amd-mode { font-size: 12px; font-weight: 700; letter-spacing: 1px; margin-bottom: 8px; color: ${T.text}; }
+          .cmp-amd-card { background: ${SITE.surface}; border: 1px solid ${SITE.border}; border-radius: 8px; padding: 16px 14px; text-align: center; }
+          .cmp-amd-mode { font-size: 12px; font-weight: 700; letter-spacing: 1px; margin-bottom: 8px; color: ${SITE.text}; }
           .cmp-amd-state { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; padding: 4px 10px; border-radius: 12px; display: inline-block; }
-          .cmp-amd-state.on { background: #e8f5e8; color: ${T.green}; }
-          .cmp-amd-state.off { background: ${T.bg}; color: ${T.muted}; }
-
-          /* FLOW LIST */
-          .cmp-flow { display: flex; flex-direction: column; gap: 0; margin: 24px 0 8px; }
-          .cmp-flow-step {
-            display: flex; gap: 16px; padding: 14px 0; align-items: flex-start;
-            border-left: 2px solid ${T.border}; padding-left: 22px; margin-left: 15px;
-            position: relative;
-          }
-          .cmp-flow-step::before {
-            content: ''; position: absolute; left: -7px; top: 18px;
-            width: 12px; height: 12px; border-radius: 50%;
-            background: ${T.accent}; border: 2px solid white;
-          }
-          .cmp-flow-step:last-child { border-left: 2px solid transparent; }
-          .cmp-flow-body h4 { font-size: 15px; margin: 0 0 4px 0; font-weight: 700; }
-          .cmp-flow-body p { font-size: 14px; line-height: 1.6; margin: 0; color: ${T.muted}; }
-
-          .cmp-callout {
-            margin: 32px 0; padding: 22px 26px; background: ${T.surface};
-            border-left: 3px solid ${T.blue}; border-radius: 4px;
-          }
-          .cmp-callout p { font-size: 15px; line-height: 1.7; margin: 0; color: ${T.text}; }
-          .cmp-callout strong { color: ${T.accent}; }
-
-          .cmp-related {
-            margin-top: 48px; padding-top: 28px; border-top: 1px solid ${T.border};
-          }
-          .cmp-related-label {
-            font-size: 10px; letter-spacing: 3px; color: ${T.muted};
-            font-weight: bold; margin-bottom: 14px;
-          }
-          .cmp-related-links { display: flex; gap: 24px; flex-wrap: wrap; }
-          .cmp-related-links a {
-            font-size: 13px; color: ${T.accent}; text-decoration: none;
-            border-bottom: 1px solid transparent; padding-bottom: 1px;
-            transition: border-color 0.15s;
-          }
-          .cmp-related-links a:hover { border-bottom-color: ${T.accent}; }
-
-          .cmp-cta-box {
-            margin-top: 56px; padding: 40px 36px; background: ${T.dark};
-            border-radius: 8px; text-align: center;
-          }
-          .cmp-cta-box .cmp-cta-eyebrow {
-            font-size: 10px; letter-spacing: 4px; color: #7ab8ff;
-            font-weight: bold; margin-bottom: 14px;
-          }
-          .cmp-cta-box .cmp-cta-h {
-            font-size: 26px; color: white; font-weight: 700;
-            margin: 0 0 12px 0; letter-spacing: -0.2px;
-          }
-          .cmp-cta-box p { font-size: 15px; color: ${T.muted}; line-height: 1.6; margin: 0 0 28px 0; }
-          .cmp-cta-box .cmp-cta-btn {
-            display: inline-block; padding: 16px 36px;
-            background: linear-gradient(135deg, ${T.blue}, #2a6eff);
-            border: none; border-radius: 6px; color: white;
-            font-size: 12px; font-weight: bold; letter-spacing: 3px;
-            text-decoration: none; font-family: 'Futura PT', Futura, sans-serif;
-            box-shadow: 0 0 24px rgba(74,158,255,0.3);
-          }
-
-          @media (max-width: 768px) {
-            .cmp-root { padding: 48px 20px 80px; }
-            .cmp-h1 { font-size: 28px; }
-            .cmp-deck { font-size: 16px; }
-            .cmp-section h3 { font-size: 19px; }
-            .cmp-section p, .cmp-section li { font-size: 15px; }
+          .cmp-amd-state.on { background: #e8f5e8; color: ${SITE.green}; }
+          .cmp-amd-state.off { background: ${SITE.bg}; color: ${SITE.muted}; }@media (max-width: 768px) {
             .cmp-settings-row { grid-template-columns: 130px 1fr; }
             .cmp-settings-cell { font-size: 12.5px; padding: 10px 12px; }
             .cmp-amd-grid { grid-template-columns: repeat(2, 1fr); }
-            .cmp-cta-box { padding: 32px 24px; }
-            .cmp-cta-box .cmp-cta-h { font-size: 22px; }
           }
         `}</style>
 
-        <article className="cmp-root">
-          <div className="cmp-eyebrow">▸ SETTING UP A CAMPAIGN</div>
+        <article className="faq-root">
+          <div className="faq-eyebrow">▸ SETTING UP A CAMPAIGN</div>
           <span style={{ fontSize: 11, color: '#8888aa', letterSpacing: '2px', display: 'block', marginBottom: 16 }}>LAST UPDATED 07/28/2026</span>
 
-          <h1 className="cmp-h1">
+          <h1 className="faq-h1">
             A campaign is just a mode, a list, and a script. <em>That&apos;s it.</em>
           </h1>
 
-          <p className="cmp-deck">
+          <p className="faq-deck">
             No wizard, no required setup flow, no fields you&apos;re forced
             to fill in before you can dial. Create one, it&apos;s active
             immediately, and every setting below has a sane default so you
             can start dialing before you&apos;ve touched a single toggle.
           </p>
 
-          <div className="cmp-badge-row">
-            <span className="cmp-badge hi">ACTIVE THE MOMENT YOU CREATE IT</span>
-            <span className="cmp-badge">EVERY SETTING HAS A DEFAULT</span>
-            <span className="cmp-badge">EDITABLE ANY TIME</span>
+          <div className="faq-badge-row">
+            <span className="faq-badge hi">ACTIVE THE MOMENT YOU CREATE IT</span>
+            <span className="faq-badge">EVERY SETTING HAS A DEFAULT</span>
+            <span className="faq-badge">EDITABLE ANY TIME</span>
           </div>
 
           {/* ── THE SETTINGS ───────────────────────────────────────────────── */}
-          <section className="cmp-section">
+          <section className="faq-section">
             <h2>▸ THE ACTUAL SETTINGS ON A CAMPAIGN</h2>
             <p>
               This is the complete list — nothing hidden behind a
@@ -234,7 +107,7 @@ export default function CampaignsFaqView() {
           </section>
 
           {/* ── AMD DEFAULTS ───────────────────────────────────────────────── */}
-          <section className="cmp-section">
+          <section className="faq-section">
             <h2>▸ THE AMD DEFAULT, MODE BY MODE</h2>
             <p>
               AMD is a toggle available on every dialer mode — it&apos;s
@@ -269,36 +142,36 @@ export default function CampaignsFaqView() {
           </section>
 
           {/* ── HOW A CAMPAIGN COMES TOGETHER ──────────────────────────────── */}
-          <section className="cmp-section">
+          <section className="faq-section">
             <h2>▸ THE ACTUAL ORDER MOST PEOPLE SET ONE UP</h2>
 
-            <div className="cmp-flow">
-              <div className="cmp-flow-step">
-                <div className="cmp-flow-body">
+            <div className="faq-flow">
+              <div className="faq-flow-step">
+                <div className="faq-flow-body">
                   <h4>1. CREATE THE CAMPAIGN</h4>
                   <p>Name it, pick a mode (or leave it on power). It&apos;s live immediately.</p>
                 </div>
               </div>
-              <div className="cmp-flow-step">
-                <div className="cmp-flow-body">
+              <div className="faq-flow-step">
+                <div className="faq-flow-body">
                   <h4>2. UPLOAD LEADS</h4>
                   <p>Drop in a spreadsheet — see <Link href="/faq/leads">uploading &amp; managing leads</Link> for the full field reference.</p>
                 </div>
               </div>
-              <div className="cmp-flow-step">
-                <div className="cmp-flow-body">
+              <div className="faq-flow-step">
+                <div className="faq-flow-body">
                   <h4>3. ATTACH A SCRIPT (OPTIONAL)</h4>
                   <p>Toggle on any script you or your team already wrote — see <Link href="/faq/scripts">call scripts</Link>. Skip this step entirely if you don&apos;t use scripts.</p>
                 </div>
               </div>
-              <div className="cmp-flow-step">
-                <div className="cmp-flow-body">
+              <div className="faq-flow-step">
+                <div className="faq-flow-body">
                   <h4>4. ADJUST MODE-SPECIFIC SETTINGS</h4>
                   <p>AMD toggle, and lines-per-agent if predictive. Both optional, both editable later.</p>
                 </div>
               </div>
-              <div className="cmp-flow-step">
-                <div className="cmp-flow-body">
+              <div className="faq-flow-step">
+                <div className="faq-flow-body">
                   <h4>5. DIAL</h4>
                   <p>Select the campaign from the dialer terminal and go available. Nothing else is required.</p>
                 </div>
@@ -307,7 +180,7 @@ export default function CampaignsFaqView() {
           </section>
 
           {/* ── HONEST NOTE ───────────────────────────────────────────────── */}
-          <div className="cmp-callout">
+          <div className="faq-callout">
             <p>
               <strong>One thing worth knowing —</strong> every setting on
               this page is editable after the fact, including dialer mode.
@@ -319,9 +192,9 @@ export default function CampaignsFaqView() {
           </div>
 
           {/* ── RELATED ────────────────────────────────────────────────────── */}
-          <div className="cmp-related">
-            <div className="cmp-related-label">▸ RELATED READING</div>
-            <div className="cmp-related-links">
+          <div className="faq-related">
+            <div className="faq-related-label">▸ RELATED READING</div>
+            <div className="faq-related-links">
               <Link href="/faq/dialer-modes">Dialer modes explained</Link>
               <Link href="/faq/leads">Uploading &amp; managing leads</Link>
               <Link href="/faq/scripts">Call scripts</Link>
@@ -331,14 +204,14 @@ export default function CampaignsFaqView() {
           </div>
 
           {/* ── CTA ──────────────────────────────────────────────────────────  */}
-          <div className="cmp-cta-box">
-            <div className="cmp-cta-eyebrow">▸ CREATE YOUR FIRST CAMPAIGN</div>
-            <h3 className="cmp-cta-h">$35/week. No setup wizard, no required fields.</h3>
+          <div className="faq-cta">
+            <div className="faq-cta-eyebrow">▸ CREATE YOUR FIRST CAMPAIGN</div>
+            <h3 className="faq-cta-h">$35/week. No setup wizard, no required fields.</h3>
             <p>
               Name it or don&apos;t — you&apos;ll be dialing in under a
               minute either way.
             </p>
-            <a href={isSignedIn ? '/dashboard/campaigns' : '/sign-up'} className="cmp-cta-btn">
+            <a href={isSignedIn ? '/dashboard/campaigns' : '/sign-up'} className="faq-cta-btn">
               {isSignedIn ? 'GO TO CAMPAIGNS →' : 'START FREE 7 DAYS →'}
             </a>
           </div>

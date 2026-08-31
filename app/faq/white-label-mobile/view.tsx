@@ -5,22 +5,9 @@ import Image from 'next/image'
 import { useUser } from '@clerk/nextjs'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
+import FaqTheme from '@/components/faq-theme'
+import { SITE } from '@/lib/siteTheme'
 
-const T = {
-  bg: '#0a0a14',
-  surface: '#1a1a2e',
-  surface2: '#2a2a4a',
-  border: '#2a2a4a',
-  dark: '#1a1a2e',
-  darker: '#0a0a14',
-  text: '#ffffff',
-  muted: '#8888aa',
-  accent: '#4a9eff',
-  blue: '#4a9eff',
-  green: '#4ade80',
-  red: '#f87171',
-  amber: '#fbbf24',
-}
 
 type Slide = { src: string; alt: string; caption: string; theme: string }
 
@@ -145,55 +132,15 @@ export default function WhiteLabelMobileFaqView() {
       <div
         style={{
           flex: 1,
-          background: T.bg,
+          background: SITE.bg,
           minHeight: 'calc(100vh - 64px)',
           fontFamily: 'Futura PT, Futura, sans-serif',
-          color: T.text,
+          color: SITE.text,
         }}
       >
+        <FaqTheme />
         <style>{`
-          .wlm-root { max-width: 820px; margin: 0 auto; padding: 80px 32px 120px; }
-          .wlm-eyebrow {
-            font-size: 11px; letter-spacing: 4px; color: ${T.muted};
-            font-weight: bold; margin-bottom: 18px;
-          }
-          .wlm-h1 {
-            font-size: 42px; line-height: 1.15; letter-spacing: -0.5px;
-            font-weight: 700; margin: 0 0 24px 0;
-          }
-          .wlm-h1 em { font-style: normal; color: ${T.green}; }
-          .wlm-deck {
-            font-size: 19px; line-height: 1.6; color: ${T.muted};
-            margin-bottom: 40px; max-width: 680px;
-          }
-          .wlm-badge-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 56px; }
-          .wlm-badge {
-            padding: 8px 16px; border-radius: 20px; font-size: 12px;
-            font-weight: bold; letter-spacing: 1px; border: 1px solid ${T.border};
-            background: ${T.surface}; color: ${T.text};
-          }
-          .wlm-badge.hi { background: ${T.dark}; color: #5ad17a; border-color: ${T.dark}; }
-
-          .wlm-section { margin: 56px 0; }
-          .wlm-section h2 {
-            font-size: 13px; letter-spacing: 3px; font-weight: bold;
-            color: ${T.accent}; margin: 0 0 18px 0;
-            padding-bottom: 10px; border-bottom: 1px solid ${T.border};
-          }
-          .wlm-section h3 {
-            font-size: 22px; line-height: 1.3; font-weight: 700;
-            margin: 28px 0 14px 0; letter-spacing: -0.2px;
-          }
-          .wlm-section p {
-            font-size: 16px; line-height: 1.75; margin: 0 0 18px 0;
-            color: ${T.text};
-          }
-          .wlm-section p.muted { color: ${T.muted}; font-size: 15px; }
-          .wlm-section strong { color: ${T.text}; font-weight: 700; }
-          .wlm-section ul { margin: 14px 0 24px 0; padding-left: 22px; }
-          .wlm-section li { font-size: 16px; line-height: 1.75; margin-bottom: 8px; }
-
-          /* PORTRAIT CAROUSEL */
+/* PORTRAIT CAROUSEL */
           .wlm-carousel { margin: 32px 0 8px; display: flex; flex-direction: column; align-items: center; }
           .wlm-carousel-frame {
             position: relative; display: flex; align-items: center; justify-content: center;
@@ -212,28 +159,28 @@ export default function WhiteLabelMobileFaqView() {
           .wlm-phone-imgwrap { position: absolute; inset: 0; }
           .wlm-carousel-arrow {
             width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
-            background: ${T.surface}; color: ${T.text}; border: 1px solid ${T.border};
+            background: ${SITE.surface}; color: ${SITE.text}; border: 1px solid ${SITE.border};
             font-size: 20px; line-height: 1; cursor: pointer;
             display: flex; align-items: center; justify-content: center;
             transition: background 0.15s;
           }
-          .wlm-carousel-arrow:hover { background: ${T.surface}; }
+          .wlm-carousel-arrow:hover { background: ${SITE.surface}; }
           .wlm-carousel-theme-tag {
             margin-top: 16px; font-size: 10px; letter-spacing: 2px; font-weight: bold;
-            color: ${T.accent}; background: ${T.surface}; padding: 4px 12px;
+            color: ${SITE.deep}; background: ${SITE.surface}; padding: 4px 12px;
             border-radius: 10px;
           }
           .wlm-carousel-caption {
-            font-size: 13.5px; line-height: 1.6; color: ${T.muted};
+            font-size: 13.5px; line-height: 1.6; color: ${SITE.muted};
             margin: 12px 4px 0; text-align: center; max-width: 420px;
           }
           .wlm-carousel-dots { display: flex; justify-content: center; gap: 8px; margin-top: 16px; }
           .wlm-dot {
             width: 8px; height: 8px; border-radius: 50%; border: none;
-            background: ${T.border}; cursor: pointer; padding: 0;
+            background: ${SITE.border}; cursor: pointer; padding: 0;
             transition: background 0.15s, transform 0.15s;
           }
-          .wlm-dot.active { background: ${T.accent}; transform: scale(1.3); }
+          .wlm-dot.active { background: ${SITE.deep}; transform: scale(1.3); }
 
           /* THEME COMPARE */
           .wlm-compare {
@@ -242,8 +189,8 @@ export default function WhiteLabelMobileFaqView() {
           }
           .wlm-compare-col { display: flex; flex-direction: column; align-items: center; width: 180px; }
           .wlm-compare-label {
-            font-size: 10px; letter-spacing: 2px; font-weight: bold; color: ${T.accent};
-            margin-bottom: 10px; background: ${T.surface}; padding: 4px 10px; border-radius: 10px;
+            font-size: 10px; letter-spacing: 2px; font-weight: bold; color: ${SITE.deep};
+            margin-bottom: 10px; background: ${SITE.surface}; padding: 4px 10px; border-radius: 10px;
           }
           .wlm-compare-label.neon { color: #1a8a4a; background: #0a1a0f; }
           .wlm-compare-frame {
@@ -253,93 +200,40 @@ export default function WhiteLabelMobileFaqView() {
           }
 
           /* HOW IT DIFFERS TABLE */
-          .wlm-vs-table { margin: 24px 0 8px; border: 1px solid ${T.border}; border-radius: 8px; overflow: hidden; background: ${T.surface}; }
+          .wlm-vs-table { margin: 24px 0 8px; border: 1px solid ${SITE.border}; border-radius: 8px; overflow: hidden; background: ${SITE.surface}; }
           .wlm-vs-row { display: grid; grid-template-columns: 1fr 1fr; }
-          .wlm-vs-row + .wlm-vs-row { border-top: 1px solid ${T.border}; }
-          .wlm-vs-row.head { background: ${T.dark}; }
+          .wlm-vs-row + .wlm-vs-row { border-top: 1px solid ${SITE.border}; }
+          .wlm-vs-row.head { background: ${SITE.ink}; }
           .wlm-vs-cell {
             padding: 14px 18px; font-size: 14px; line-height: 1.6;
           }
           .wlm-vs-cell.label {
-            font-weight: 700; color: ${T.text}; background: ${T.surface};
-            border-right: 1px solid ${T.border}; font-size: 13px;
+            font-weight: 700; color: ${SITE.text}; background: ${SITE.surface};
+            border-right: 1px solid ${SITE.border}; font-size: 13px;
           }
           .wlm-vs-row.head .wlm-vs-cell {
             color: white; font-size: 11px; letter-spacing: 2px; font-weight: bold;
             border-right: 1px solid rgba(255,255,255,0.1);
           }
-          .wlm-vs-cell.us { color: ${T.green}; font-weight: 600; }
-          .wlm-vs-cell.them { color: ${T.red}; }
-
-          .wlm-callout {
-            margin: 32px 0; padding: 22px 26px; background: ${T.surface};
-            border-left: 3px solid ${T.green}; border-radius: 4px;
-          }
-          .wlm-callout p { font-size: 15px; line-height: 1.7; margin: 0; color: ${T.text}; }
-          .wlm-callout strong { color: ${T.accent}; }
-
-          .wlm-related {
-            margin-top: 48px; padding-top: 28px; border-top: 1px solid ${T.border};
-          }
-          .wlm-related-label {
-            font-size: 10px; letter-spacing: 3px; color: ${T.muted};
-            font-weight: bold; margin-bottom: 14px;
-          }
-          .wlm-related-links { display: flex; gap: 24px; flex-wrap: wrap; }
-          .wlm-related-links a {
-            font-size: 13px; color: ${T.accent}; text-decoration: none;
-            border-bottom: 1px solid transparent; padding-bottom: 1px;
-            transition: border-color 0.15s;
-          }
-          .wlm-related-links a:hover { border-bottom-color: ${T.accent}; }
-
-          .wlm-cta-box {
-            margin-top: 56px; padding: 40px 36px; background: ${T.dark};
-            border-radius: 8px; text-align: center;
-          }
-          .wlm-cta-box .wlm-cta-eyebrow {
-            font-size: 10px; letter-spacing: 4px; color: #5ad17a;
-            font-weight: bold; margin-bottom: 14px;
-          }
-          .wlm-cta-box .wlm-cta-h {
-            font-size: 26px; color: white; font-weight: 700;
-            margin: 0 0 12px 0; letter-spacing: -0.2px;
-          }
-          .wlm-cta-box p { font-size: 15px; color: ${T.muted}; line-height: 1.6; margin: 0 0 28px 0; }
-          .wlm-cta-box .wlm-cta-btn {
-            display: inline-block; padding: 16px 36px;
-            background: linear-gradient(135deg, ${T.green}, #1a8a4a);
-            border: none; border-radius: 6px; color: white;
-            font-size: 12px; font-weight: bold; letter-spacing: 3px;
-            text-decoration: none; font-family: 'Futura PT', Futura, sans-serif;
-            box-shadow: 0 0 24px rgba(47,209,106,0.25);
-          }
-
-          @media (max-width: 768px) {
-            .wlm-root { padding: 48px 20px 80px; }
-            .wlm-h1 { font-size: 28px; }
-            .wlm-deck { font-size: 16px; }
-            .wlm-section h3 { font-size: 19px; }
-            .wlm-section p, .wlm-section li { font-size: 15px; }
+          .wlm-vs-cell.us { color: ${SITE.green}; font-weight: 600; }
+          .wlm-vs-cell.them { color: ${SITE.red}; }@media (max-width: 768px) {
             .wlm-phone-shell { width: 150px; }
             .wlm-carousel-arrow { width: 30px; height: 30px; font-size: 16px; }
             .wlm-compare-col { width: 130px; }
             .wlm-compare-frame { width: 130px; }
             .wlm-vs-cell { font-size: 12.5px; padding: 10px 12px; }
-            .wlm-cta-box { padding: 32px 24px; }
-            .wlm-cta-box .wlm-cta-h { font-size: 22px; }
           }
         `}</style>
 
-        <article className="wlm-root">
-          <div className="wlm-eyebrow">▸ WHITE-LABEL, ON MOBILE</div>
+        <article className="faq-root">
+          <div className="faq-eyebrow">▸ WHITE-LABEL, ON MOBILE</div>
           <span style={{ fontSize: 11, color: '#8888aa', letterSpacing: '2px', display: 'block', marginBottom: 16 }}>LAST UPDATED 07/28/2026</span>
 
-          <h1 className="wlm-h1">
+          <h1 className="faq-h1">
             Your brand doesn&apos;t stop at the browser tab. It follows onto the phone.
           </h1>
 
-          <p className="wlm-deck">
+          <p className="faq-deck">
             White-labeling on desktop is table stakes for most resellers.
             Mobile is where it usually falls apart — either there&apos;s no
             real mobile experience at all, or the &ldquo;mobile app&rdquo;
@@ -349,15 +243,15 @@ export default function WhiteLabelMobileFaqView() {
             theme intact from the login screen to the dialer itself.
           </p>
 
-          <div className="wlm-badge-row">
-            <span className="wlm-badge hi">PART OF MANAGER+ ($75/WK)</span>
-            <span className="wlm-badge">NO APP STORE REQUIRED</span>
-            <span className="wlm-badge">INSTALLS TO HOME SCREEN</span>
-            <span className="wlm-badge">SAME CODEBASE AS DESKTOP</span>
+          <div className="faq-badge-row">
+            <span className="faq-badge hi">PART OF MANAGER+ ($75/WK)</span>
+            <span className="faq-badge">NO APP STORE REQUIRED</span>
+            <span className="faq-badge">INSTALLS TO HOME SCREEN</span>
+            <span className="faq-badge">SAME CODEBASE AS DESKTOP</span>
           </div>
 
           {/* ── HOW IT WORKS ───────────────────────────────────────────────── */}
-          <section className="wlm-section">
+          <section className="faq-section">
             <h2>▸ HOW IT ACTUALLY WORKS</h2>
             <p>
               DialerSeat&apos;s mobile experience is a <strong>Progressive
@@ -390,7 +284,7 @@ export default function WhiteLabelMobileFaqView() {
           </section>
 
           {/* ── SAME CODEBASE, DIFFERENT SKIN ──────────────────────────────── */}
-          <section className="wlm-section">
+          <section className="faq-section">
             <h2>▸ SAME CODEBASE, COMPLETELY DIFFERENT SKIN</h2>
             <p>
               The two screenshots below are the exact same navigation menu,
@@ -410,7 +304,7 @@ export default function WhiteLabelMobileFaqView() {
           </section>
 
           {/* ── HOW OTHERS DON'T ───────────────────────────────────────────── */}
-          <section className="wlm-section">
+          <section className="faq-section">
             <h2>▸ WHY MOST WHITE-LABEL DIALERS DON&apos;T DO THIS ON MOBILE</h2>
             <p>
               This isn&apos;t a shot at the competition for the sake of it —
@@ -482,7 +376,7 @@ export default function WhiteLabelMobileFaqView() {
           </section>
 
           {/* ── HONEST LIMITATION ──────────────────────────────────────────── */}
-          <div className="wlm-callout">
+          <div className="faq-callout">
             <p>
               <strong>One honest limitation —</strong> a PWA is not a
               listing in the App Store or Play Store. There&apos;s no
@@ -499,9 +393,9 @@ export default function WhiteLabelMobileFaqView() {
           </div>
 
           {/* ── RELATED ────────────────────────────────────────────────────── */}
-          <div className="wlm-related">
-            <div className="wlm-related-label">▸ RELATED READING</div>
-            <div className="wlm-related-links">
+          <div className="faq-related">
+            <div className="faq-related-label">▸ RELATED READING</div>
+            <div className="faq-related-links">
               <Link href="/faq/white-label">White-label your dialer</Link>
               <Link href="/faq/manager-plus">What Manager+ adds over Pro</Link>
               <Link href="/faq/mobile">DialerSeat on mobile (standard accounts)</Link>
@@ -512,15 +406,15 @@ export default function WhiteLabelMobileFaqView() {
           </div>
 
           {/* ── CTA ──────────────────────────────────────────────────────────  */}
-          <div className="wlm-cta-box">
-            <div className="wlm-cta-eyebrow">▸ SEE IT ON YOUR OWN PHONE</div>
-            <h3 className="wlm-cta-h">Set up your theme, then add it to your home screen.</h3>
+          <div className="faq-cta">
+            <div className="faq-cta-eyebrow">▸ SEE IT ON YOUR OWN PHONE</div>
+            <h3 className="faq-cta-h">Set up your theme, then add it to your home screen.</h3>
             <p>
               White-labeling is part of Manager+, $75/week. Once your theme
               is configured, installing to mobile takes one tap from any
               browser.
             </p>
-            <a href={isSignedIn ? '/dashboard/teams' : '/sign-up'} className="wlm-cta-btn">
+            <a href={isSignedIn ? '/dashboard/teams' : '/sign-up'} className="faq-cta-btn">
               {isSignedIn ? 'GO TO DASHBOARD →' : 'START MANAGER+ →'}
             </a>
           </div>

@@ -3,22 +3,9 @@ import Link from 'next/link'
 import { useUser } from '@clerk/nextjs'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
+import FaqTheme from '@/components/faq-theme'
+import { SITE } from '@/lib/siteTheme'
 
-const T = {
-  bg: '#0a0a14',
-  surface: '#1a1a2e',
-  surface2: '#2a2a4a',
-  border: '#2a2a4a',
-  dark: '#1a1a2e',
-  darker: '#0a0a14',
-  text: '#ffffff',
-  muted: '#8888aa',
-  accent: '#4a9eff',
-  blue: '#4a9eff',
-  green: '#4ade80',
-  red: '#f87171',
-  amber: '#fbbf24',
-}
 
 export default function NumbersFaqView() {
   const { isSignedIn } = useUser()
@@ -29,63 +16,22 @@ export default function NumbersFaqView() {
       <div
         style={{
           flex: 1,
-          background: T.bg,
+          background: SITE.bg,
           minHeight: 'calc(100vh - 64px)',
           fontFamily: 'Futura PT, Futura, sans-serif',
-          color: T.text,
+          color: SITE.text,
         }}
       >
+        <FaqTheme />
         <style>{`
-          .num-root { max-width: 820px; margin: 0 auto; padding: 80px 32px 120px; }
-          .num-eyebrow {
-            font-size: 11px; letter-spacing: 4px; color: ${T.muted};
-            font-weight: bold; margin-bottom: 18px;
-          }
-          .num-h1 {
-            font-size: 42px; line-height: 1.15; letter-spacing: -0.5px;
-            font-weight: 700; margin: 0 0 24px 0;
-          }
-          .num-h1 em { font-style: normal; color: ${T.red}; }
-          .num-deck {
-            font-size: 19px; line-height: 1.6; color: ${T.muted};
-            margin-bottom: 40px; max-width: 680px;
-          }
-          .num-badge-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 56px; }
-          .num-badge {
-            padding: 8px 16px; border-radius: 20px; font-size: 12px;
-            font-weight: bold; letter-spacing: 1px; border: 1px solid ${T.border};
-            background: ${T.surface}; color: ${T.text};
-          }
-          .num-badge.hi { background: ${T.dark}; color: #7ab8ff; border-color: ${T.dark}; }
-
-          .num-section { margin: 56px 0; }
-          .num-section h2 {
-            font-size: 13px; letter-spacing: 3px; font-weight: bold;
-            color: ${T.accent}; margin: 0 0 18px 0;
-            padding-bottom: 10px; border-bottom: 1px solid ${T.border};
-          }
-          .num-section h3 {
-            font-size: 22px; line-height: 1.3; font-weight: 700;
-            margin: 28px 0 14px 0; letter-spacing: -0.2px;
-          }
-          .num-section p {
-            font-size: 16px; line-height: 1.75; margin: 0 0 18px 0;
-            color: ${T.text};
-          }
-          .num-section p.muted { color: ${T.muted}; font-size: 15px; }
-          .num-section strong { color: ${T.text}; font-weight: 700; }
-          .num-section em { font-style: italic; color: ${T.accent}; }
-          .num-section ul { margin: 14px 0 24px 0; padding-left: 22px; }
-          .num-section li { font-size: 16px; line-height: 1.75; margin-bottom: 8px; }
-
-          /* WHY IT HAPPENS CALLOUT (problem framing) */
+/* WHY IT HAPPENS CALLOUT (problem framing) */
           .num-problem {
-            margin: 28px 0; padding: 26px 28px; background: ${T.surface};
-            border: 1px solid ${T.border}; border-left: 3px solid ${T.red};
+            margin: 28px 0; padding: 26px 28px; background: ${SITE.surface};
+            border: 1px solid ${SITE.border}; border-left: 3px solid ${SITE.red};
             border-radius: 6px;
           }
           .num-problem-title {
-            font-size: 11px; letter-spacing: 3px; color: ${T.red};
+            font-size: 11px; letter-spacing: 3px; color: ${SITE.red};
             font-weight: bold; margin-bottom: 12px;
           }
           .num-problem p { font-size: 15px; line-height: 1.7; margin: 0 0 10px 0; }
@@ -94,118 +40,65 @@ export default function NumbersFaqView() {
           /* PROTECTION LAYER CARDS */
           .num-layers { display: flex; flex-direction: column; gap: 14px; margin: 24px 0 8px; }
           .num-layer {
-            display: flex; gap: 18px; background: ${T.surface}; border: 1px solid ${T.border};
+            display: flex; gap: 18px; background: ${SITE.surface}; border: 1px solid ${SITE.border};
             border-radius: 8px; padding: 20px 22px; align-items: flex-start;
           }
           .num-layer-num {
             flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%;
-            background: ${T.dark}; color: #7ab8ff; font-size: 14px; font-weight: 800;
+            background: ${SITE.ink}; color: #7ab8ff; font-size: 14px; font-weight: 800;
             display: flex; align-items: center; justify-content: center;
           }
           .num-layer-body h4 { font-size: 16px; margin: 0 0 6px 0; font-weight: 700; }
-          .num-layer-body p { font-size: 14.5px; line-height: 1.65; margin: 0; color: ${T.muted}; }
+          .num-layer-body p { font-size: 14.5px; line-height: 1.65; margin: 0; color: ${SITE.muted}; }
 
           /* POOL MATH */
           .num-math {
             margin: 28px 0; padding: 24px 28px;
-            background: ${T.surface}; border: 1px solid ${T.border};
-            border-left: 3px solid ${T.green}; border-radius: 6px;
+            background: ${SITE.surface}; border: 1px solid ${SITE.border};
+            border-left: 3px solid ${SITE.green}; border-radius: 6px;
           }
           .num-math-title {
-            font-size: 11px; letter-spacing: 3px; color: ${T.green};
+            font-size: 11px; letter-spacing: 3px; color: ${SITE.green};
             font-weight: bold; margin-bottom: 14px;
           }
           .num-math-row {
             display: flex; justify-content: space-between; align-items: baseline;
-            padding: 6px 0; font-size: 15px; border-bottom: 1px dashed ${T.border};
+            padding: 6px 0; font-size: 15px; border-bottom: 1px dashed ${SITE.border};
           }
           .num-math-row:last-child { border-bottom: none; padding-top: 10px; margin-top: 4px; }
-          .num-math-label { color: ${T.muted}; }
-          .num-math-val { font-family: monospace; font-weight: 600; color: ${T.text}; }
+          .num-math-label { color: ${SITE.muted}; }
+          .num-math-val { font-family: monospace; font-weight: 600; color: ${SITE.text}; }
 
           /* VS TABLE */
-          .num-vs-table { margin: 24px 0 8px; border: 1px solid ${T.border}; border-radius: 8px; overflow: hidden; background: ${T.surface}; }
+          .num-vs-table { margin: 24px 0 8px; border: 1px solid ${SITE.border}; border-radius: 8px; overflow: hidden; background: ${SITE.surface}; }
           .num-vs-row { display: grid; grid-template-columns: 1fr 1fr; }
-          .num-vs-row + .num-vs-row { border-top: 1px solid ${T.border}; }
-          .num-vs-row.head { background: ${T.dark}; }
+          .num-vs-row + .num-vs-row { border-top: 1px solid ${SITE.border}; }
+          .num-vs-row.head { background: ${SITE.ink}; }
           .num-vs-cell { padding: 14px 18px; font-size: 14px; line-height: 1.6; }
           .num-vs-cell.label {
-            font-weight: 700; color: ${T.text}; background: ${T.surface};
-            border-right: 1px solid ${T.border}; font-size: 13px;
+            font-weight: 700; color: ${SITE.text}; background: ${SITE.surface};
+            border-right: 1px solid ${SITE.border}; font-size: 13px;
           }
           .num-vs-row.head .num-vs-cell {
             color: white; font-size: 11px; letter-spacing: 2px; font-weight: bold;
             border-right: 1px solid rgba(255,255,255,0.1);
           }
-          .num-vs-cell.us { color: ${T.green}; font-weight: 600; }
-          .num-vs-cell.them { color: ${T.red}; }
-
-          .num-callout {
-            margin: 32px 0; padding: 22px 26px; background: ${T.surface};
-            border-left: 3px solid ${T.amber}; border-radius: 4px;
-          }
-          .num-callout p { font-size: 15px; line-height: 1.7; margin: 0; color: ${T.text}; }
-          .num-callout strong { color: ${T.accent}; }
-
-          .num-related {
-            margin-top: 48px; padding-top: 28px; border-top: 1px solid ${T.border};
-          }
-          .num-related-label {
-            font-size: 10px; letter-spacing: 3px; color: ${T.muted};
-            font-weight: bold; margin-bottom: 14px;
-          }
-          .num-related-links { display: flex; gap: 24px; flex-wrap: wrap; }
-          .num-related-links a {
-            font-size: 13px; color: ${T.accent}; text-decoration: none;
-            border-bottom: 1px solid transparent; padding-bottom: 1px;
-            transition: border-color 0.15s;
-          }
-          .num-related-links a:hover { border-bottom-color: ${T.accent}; }
-
-          .num-cta-box {
-            margin-top: 56px; padding: 40px 36px; background: ${T.dark};
-            border-radius: 8px; text-align: center;
-          }
-          .num-cta-box .num-cta-eyebrow {
-            font-size: 10px; letter-spacing: 4px; color: #7ab8ff;
-            font-weight: bold; margin-bottom: 14px;
-          }
-          .num-cta-box .num-cta-h {
-            font-size: 26px; color: white; font-weight: 700;
-            margin: 0 0 12px 0; letter-spacing: -0.2px;
-          }
-          .num-cta-box p { font-size: 15px; color: ${T.muted}; line-height: 1.6; margin: 0 0 28px 0; }
-          .num-cta-box .num-cta-btn {
-            display: inline-block; padding: 16px 36px;
-            background: linear-gradient(135deg, ${T.blue}, #2a6eff);
-            border: none; border-radius: 6px; color: white;
-            font-size: 12px; font-weight: bold; letter-spacing: 3px;
-            text-decoration: none; font-family: 'Futura PT', Futura, sans-serif;
-            box-shadow: 0 0 24px rgba(74,158,255,0.3);
-          }
-
-          @media (max-width: 768px) {
-            .num-root { padding: 48px 20px 80px; }
-            .num-h1 { font-size: 28px; }
-            .num-deck { font-size: 16px; }
-            .num-section h3 { font-size: 19px; }
-            .num-section p, .num-section li { font-size: 15px; }
+          .num-vs-cell.us { color: ${SITE.green}; font-weight: 600; }
+          .num-vs-cell.them { color: ${SITE.red}; }@media (max-width: 768px) {
             .num-layer { flex-direction: column; gap: 10px; }
             .num-vs-cell { font-size: 12.5px; padding: 10px 12px; }
-            .num-cta-box { padding: 32px 24px; }
-            .num-cta-box .num-cta-h { font-size: 22px; }
           }
         `}</style>
 
-        <article className="num-root">
-          <div className="num-eyebrow">▸ PHONE NUMBERS &amp; CALLER ID</div>
+        <article className="faq-root">
+          <div className="faq-eyebrow">▸ PHONE NUMBERS &amp; CALLER ID</div>
           <span style={{ fontSize: 11, color: '#8888aa', letterSpacing: '2px', display: 'block', marginBottom: 16 }}>LAST UPDATED 07/28/2026</span>
 
-          <h1 className="num-h1">
+          <h1 className="faq-h1">
             Unlimited numbers means nothing if they all get <em>flagged.</em>
           </h1>
 
-          <p className="num-deck">
+          <p className="faq-deck">
             Every dialer says &ldquo;unlimited numbers&rdquo; on the pricing
             page. Almost none explain what actually keeps those numbers from
             showing up as &ldquo;Spam Likely&rdquo; on your prospect&apos;s
@@ -213,15 +106,15 @@ export default function NumbersFaqView() {
             on the carrier side, and what&apos;s genuinely still on you.
           </p>
 
-          <div className="num-badge-row">
-            <span className="num-badge hi">STIR/SHAKEN A-ATTESTATION</span>
-            <span className="num-badge">CNAM + FREE CALLER REGISTRY</span>
-            <span className="num-badge">LOCAL PRESENCE DIALING</span>
-            <span className="num-badge">INCLUDED IN EVERY $35/WK SEAT</span>
+          <div className="faq-badge-row">
+            <span className="faq-badge hi">STIR/SHAKEN A-ATTESTATION</span>
+            <span className="faq-badge">CNAM + FREE CALLER REGISTRY</span>
+            <span className="faq-badge">LOCAL PRESENCE DIALING</span>
+            <span className="faq-badge">INCLUDED IN EVERY $35/WK SEAT</span>
           </div>
 
           {/* ── WHY THIS HAPPENS ───────────────────────────────────────────── */}
-          <section className="num-section">
+          <section className="faq-section">
             <h2>▸ WHY LEGITIMATE CALLS GET FLAGGED IN THE FIRST PLACE</h2>
             <p>
               &ldquo;Spam Likely&rdquo; and &ldquo;Scam Likely&rdquo; labels
@@ -252,7 +145,7 @@ export default function NumbersFaqView() {
           </section>
 
           {/* ── WHAT WE DO ─────────────────────────────────────────────────── */}
-          <section className="num-section">
+          <section className="faq-section">
             <h2>▸ WHAT DIALERSEAT ACTUALLY DOES ABOUT IT</h2>
             <p>
               This isn&apos;t optional add-on infrastructure you have to ask
@@ -301,7 +194,7 @@ export default function NumbersFaqView() {
           </section>
 
           {/* ── HOW THE POOL SCALES ────────────────────────────────────────── */}
-          <section className="num-section">
+          <section className="faq-section">
             <h2>▸ HOW THE NUMBER POOL ACTUALLY SCALES</h2>
             <p>
               &ldquo;Unlimited numbers&rdquo; doesn&apos;t mean one giant
@@ -340,7 +233,7 @@ export default function NumbersFaqView() {
           </section>
 
           {/* ── VS INDUSTRY ────────────────────────────────────────────────── */}
-          <section className="num-section">
+          <section className="faq-section">
             <h2>▸ HOW THIS COMPARES TO THE TYPICAL SETUP</h2>
 
             <div className="num-vs-table">
@@ -391,7 +284,7 @@ export default function NumbersFaqView() {
           </section>
 
           {/* ── WHAT'S STILL ON YOU ────────────────────────────────────────── */}
-          <section className="num-section">
+          <section className="faq-section">
             <h2>▸ WHAT&apos;S STILL ON YOU</h2>
             <p>
               Infrastructure removes the carrier-level causes of flagging.
@@ -408,7 +301,7 @@ export default function NumbersFaqView() {
           </section>
 
           {/* ── HONEST NOTE ───────────────────────────────────────────────── */}
-          <div className="num-callout">
+          <div className="faq-callout">
             <p>
               <strong>One honest note —</strong> no infrastructure,
               ours or anyone else&apos;s, makes a number permanently
@@ -423,9 +316,9 @@ export default function NumbersFaqView() {
           </div>
 
           {/* ── RELATED ────────────────────────────────────────────────────── */}
-          <div className="num-related">
-            <div className="num-related-label">▸ RELATED READING</div>
-            <div className="num-related-links">
+          <div className="faq-related">
+            <div className="faq-related-label">▸ RELATED READING</div>
+            <div className="faq-related-links">
               <Link href="/faq/how-we-keep-compliance">How we keep compliance</Link>
               <Link href="/faq/why-is-compliance-important">Why compliance is important</Link>
               <Link href="/faq/why-we-charge">Why we charge what we charge</Link>
@@ -435,14 +328,14 @@ export default function NumbersFaqView() {
           </div>
 
           {/* ── CTA ──────────────────────────────────────────────────────────  */}
-          <div className="num-cta-box">
-            <div className="num-cta-eyebrow">▸ DIAL FROM NUMBERS THAT ACTUALLY GET ANSWERED</div>
-            <h3 className="num-cta-h">$35/week. A-attestation, CNAM, and local presence included.</h3>
+          <div className="faq-cta">
+            <div className="faq-cta-eyebrow">▸ DIAL FROM NUMBERS THAT ACTUALLY GET ANSWERED</div>
+            <h3 className="faq-cta-h">$35/week. A-attestation, CNAM, and local presence included.</h3>
             <p>
               No separate reputation-monitoring subscription, no add-on
               fee for local presence. It&apos;s the default on every seat.
             </p>
-            <a href={isSignedIn ? '/dashboard/dialer' : '/sign-up'} className="num-cta-btn">
+            <a href={isSignedIn ? '/dashboard/dialer' : '/sign-up'} className="faq-cta-btn">
               {isSignedIn ? 'GO TO DIALER →' : 'START FREE 7 DAYS →'}
             </a>
           </div>

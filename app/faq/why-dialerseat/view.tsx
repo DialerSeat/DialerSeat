@@ -24,22 +24,9 @@ import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
+import FaqTheme from '@/components/faq-theme'
+import { SITE } from '@/lib/siteTheme'
 
-const T = {
-  bg: '#0a0a14',
-  surface: '#1a1a2e',
-  surface2: '#2a2a4a',
-  border: '#2a2a4a',
-  dark: '#1a1a2e',
-  darker: '#0a0a14',
-  text: '#ffffff',
-  muted: '#8888aa',
-  accent: '#4a9eff',
-  blue: '#4a9eff',
-  green: '#4ade80',
-  red: '#f87171',
-  amber: '#fbbf24',
-}
 
 export default function WhyDialerSeatView() {
   const { isLoaded, isSignedIn } = useUser()
@@ -49,15 +36,14 @@ export default function WhyDialerSeatView() {
     <>
       <SiteHeader />
       <main style={{
-        background: T.bg,
+        background: SITE.bg,
         minHeight: '100vh',
         fontFamily: 'Futura PT, Futura, sans-serif',
-        color: T.text,
+        color: SITE.text,
       }}>
+        <FaqTheme />
         <style>{`
-          .why-root * { box-sizing: border-box; }
-
-          /* HERO */
+/* HERO */
           .why-hero {
             background: linear-gradient(135deg, #0a0a14 0%, #1a1a2e 100%);
             color: white;
@@ -83,19 +69,7 @@ export default function WhyDialerSeatView() {
             margin-bottom: 22px;
             transition: color 0.12s;
           }
-          .why-breadcrumb:hover { color: ${T.accent}; }
-          .why-eyebrow {
-            display: inline-block;
-            padding: 6px 14px;
-            background: rgba(74,158,255,0.15);
-            border: 1px solid #4a9eff;
-            border-radius: 4px;
-            color: #4a9eff;
-            font-size: 11px;
-            letter-spacing: 3px;
-            font-weight: bold;
-            margin-bottom: 24px;
-          }
+          .why-breadcrumb:hover { color: ${SITE.deep}; }
           .why-hero h1 {
             font-size: 56px;
             font-weight: 800;
@@ -110,51 +84,15 @@ export default function WhyDialerSeatView() {
             max-width: 620px;
             margin: 0 auto;
           }
-
-          /* BODY SECTIONS */
-          .why-section {
-            max-width: 820px;
-            margin: 0 auto;
-            padding: 72px 32px;
-          }
-          .why-section.alt {
-            background: ${T.surface};
-            max-width: none;
-          }
-          .why-section.alt > .inner {
-            max-width: 820px;
-            margin: 0 auto;
-            padding: 0 32px;
-          }
-          .why-section-label {
-            font-size: 10px;
-            letter-spacing: 4px;
-            color: ${T.muted};
-            font-weight: bold;
-            margin-bottom: 14px;
-          }
-          .why-section h2 {
-            font-size: 32px;
-            font-weight: 800;
-            letter-spacing: -0.4px;
-            line-height: 1.2;
-            margin: 0 0 22px 0;
-          }
-          .why-section p {
-            font-size: 16px;
-            line-height: 1.75;
-            color: ${T.text};
-            margin: 0 0 16px 0;
-          }
           .why-pullquote {
             margin: 28px 0;
             padding: 22px 26px;
-            background: ${T.bg};
-            border-left: 3px solid ${T.accent};
+            background: ${SITE.bg};
+            border-left: 3px solid ${SITE.deep};
             border-radius: 4px;
             font-size: 16px;
             line-height: 1.7;
-            color: ${T.text};
+            color: ${SITE.text};
           }
 
           /* CARD GRID */
@@ -166,9 +104,9 @@ export default function WhyDialerSeatView() {
           }
           .why-card {
             padding: 22px 24px;
-            background: ${T.surface};
-            border: 1px solid ${T.border};
-            border-left: 3px solid ${T.accent};
+            background: ${SITE.surface};
+            border: 1px solid ${SITE.border};
+            border-left: 3px solid ${SITE.deep};
             border-radius: 8px;
           }
           .why-card h3 {
@@ -176,12 +114,12 @@ export default function WhyDialerSeatView() {
             font-weight: 700;
             letter-spacing: 0.5px;
             margin: 0 0 8px 0;
-            color: ${T.accent};
+            color: ${SITE.deep};
           }
           .why-card p {
             font-size: 14px;
             line-height: 1.65;
-            color: ${T.text};
+            color: ${SITE.text};
             margin: 0;
           }
 
@@ -195,9 +133,9 @@ export default function WhyDialerSeatView() {
           }
           .why-comp-card {
             padding: 20px 22px;
-            background: ${T.surface};
-            border: 1px solid ${T.border};
-            border-top: 3px solid ${T.red};
+            background: ${SITE.surface};
+            border: 1px solid ${SITE.border};
+            border-top: 3px solid ${SITE.red};
             border-radius: 8px;
           }
           .why-comp-card h4 {
@@ -205,18 +143,18 @@ export default function WhyDialerSeatView() {
             font-weight: 700;
             letter-spacing: 2px;
             margin: 0 0 8px 0;
-            color: ${T.red};
+            color: ${SITE.red};
           }
           .why-comp-card p {
             font-size: 13px;
             line-height: 1.6;
-            color: ${T.text};
+            color: ${SITE.text};
             margin: 0;
           }
           .why-comp-links {
             margin-top: 26px;
             padding: 24px;
-            background: ${T.dark};
+            background: ${SITE.ink};
             border-radius: 10px;
           }
           .why-comp-links-label {
@@ -247,10 +185,10 @@ export default function WhyDialerSeatView() {
           }
           .why-comp-link:hover {
             background: rgba(74,158,255,0.12);
-            border-color: ${T.accent};
+            border-color: ${SITE.deep};
           }
           .why-comp-link .arrow {
-            color: ${T.accent};
+            color: ${SITE.deep};
             font-weight: bold;
           }
 
@@ -265,13 +203,13 @@ export default function WhyDialerSeatView() {
             display: flex;
             gap: 14px;
             padding: 16px 18px;
-            background: ${T.surface};
-            border: 1px solid ${T.border};
-            border-left: 3px solid ${T.green};
+            background: ${SITE.surface};
+            border: 1px solid ${SITE.border};
+            border-left: 3px solid ${SITE.green};
             border-radius: 8px;
           }
           .why-promise-item .check {
-            color: ${T.green};
+            color: ${SITE.green};
             font-weight: bold;
             flex-shrink: 0;
             font-size: 18px;
@@ -282,31 +220,24 @@ export default function WhyDialerSeatView() {
             font-size: 14px;
             font-weight: 700;
             margin: 0 0 4px 0;
-            color: ${T.text};
+            color: ${SITE.text};
             letter-spacing: 0.3px;
           }
           .why-promise-item p {
             font-size: 13px;
             line-height: 1.6;
-            color: ${T.muted};
+            color: ${SITE.muted};
             margin: 0;
           }
 
           /* CTA */
           .why-cta {
-            background: ${T.dark};
+            background: ${SITE.ink};
             color: white;
             padding: 72px 32px;
             text-align: center;
           }
           .why-cta-inner { max-width: 640px; margin: 0 auto; }
-          .why-cta-eyebrow {
-            font-size: 11px;
-            letter-spacing: 4px;
-            color: #8888aa;
-            font-weight: bold;
-            margin-bottom: 12px;
-          }
           .why-cta h2 {
             font-size: 30px;
             font-weight: 800;
@@ -317,7 +248,7 @@ export default function WhyDialerSeatView() {
           .why-cta p {
             font-size: 15px;
             line-height: 1.7;
-            color: ${T.muted};
+            color: ${SITE.muted};
             margin: 0 auto 28px;
             max-width: 540px;
           }
@@ -326,7 +257,7 @@ export default function WhyDialerSeatView() {
           }
           .why-btn-primary {
             padding: 14px 28px;
-            background: linear-gradient(135deg, ${T.blue}, #2a6eff);
+            background: linear-gradient(135deg, ${SITE.blue}, #2a6eff);
             color: white;
             font-size: 12px;
             letter-spacing: 2.5px;
@@ -345,17 +276,10 @@ export default function WhyDialerSeatView() {
             font-weight: bold;
             border-radius: 8px;
             text-decoration: none;
-          }
-
-          @media (max-width: 768px) {
+          }@media (max-width: 768px) {
             .why-hero { padding: 64px 20px 56px; }
             .why-hero h1 { font-size: 36px; }
             .why-lead { font-size: 15px; }
-            .why-section, .why-section.alt > .inner {
-              padding-left: 20px; padding-right: 20px;
-            }
-            .why-section { padding-top: 52px; padding-bottom: 52px; }
-            .why-section h2 { font-size: 26px; }
             .why-cards { grid-template-columns: 1fr; }
             .why-comp-takedown { grid-template-columns: 1fr; }
             .why-comp-links-grid { grid-template-columns: 1fr; }
@@ -365,13 +289,13 @@ export default function WhyDialerSeatView() {
           }
         `}</style>
 
-        <div className="why-root">
+        <div className="faq-root">
 
           {/* HERO */}
           <section className="why-hero">
             <div className="why-hero-inner">
               <Link href="/faq" className="why-breadcrumb">← BACK TO FAQ</Link>
-              <div className="why-eyebrow">WHY DIALERSEAT?</div>
+              <div className="faq-eyebrow">WHY DIALERSEAT?</div>
         <span style={{ fontSize: 11, color: '#8888aa', letterSpacing: '2px', display: 'block', marginBottom: 16 }}>LAST UPDATED 07/28/2026</span>
               <h1>We built the dialer we wished existed.</h1>
               <p className="why-lead">
@@ -385,8 +309,8 @@ export default function WhyDialerSeatView() {
           </section>
 
           {/* THESIS */}
-          <section className="why-section">
-            <div className="why-section-label">▸ WHY WE EXIST</div>
+          <section className="faq-section">
+            <div className="faq-section-label">▸ WHY WE EXIST</div>
             <h2>The dialer market needed someone to actually care.</h2>
             <p>
               The outbound dialer space is full of products that were built
@@ -412,9 +336,9 @@ export default function WhyDialerSeatView() {
           </section>
 
           {/* WHO BUILDS IT */}
-          <section className="why-section alt">
+          <section className="faq-section alt">
             <div className="inner">
-              <div className="why-section-label">▸ WHO BUILDS IT</div>
+              <div className="faq-section-label">▸ WHO BUILDS IT</div>
               <h2>Seasoned developers, working alongside people who&apos;ve actually dialed.</h2>
               <p>
                 Every feature shipped on DialerSeat goes through the hands
@@ -468,8 +392,8 @@ export default function WhyDialerSeatView() {
           </section>
 
           {/* HOW WE WORK */}
-          <section className="why-section">
-            <div className="why-section-label">▸ HOW WE WORK</div>
+          <section className="faq-section">
+            <div className="faq-section-label">▸ HOW WE WORK</div>
             <h2>Feedback isn&apos;t a roadmap item. It&apos;s the roadmap.</h2>
             <p>
               We&apos;ve shipped feature requests in the same week they
@@ -497,9 +421,9 @@ export default function WhyDialerSeatView() {
           </section>
 
           {/* SETTING THE RECORD STRAIGHT */}
-          <section className="why-section alt">
+          <section className="faq-section alt">
             <div className="inner">
-              <div className="why-section-label">▸ SETTING THE RECORD STRAIGHT</div>
+              <div className="faq-section-label">▸ SETTING THE RECORD STRAIGHT</div>
               <h2>&quot;But what about [other dialer]?&quot;</h2>
               <p>
                 We don&apos;t really see the other dialers as competition.
@@ -581,8 +505,8 @@ export default function WhyDialerSeatView() {
           </section>
 
           {/* OUR PROMISE */}
-          <section className="why-section">
-            <div className="why-section-label">▸ OUR PROMISE</div>
+          <section className="faq-section">
+            <div className="faq-section-label">▸ OUR PROMISE</div>
             <h2>What you&apos;re actually signing up for.</h2>
             <p>
               A lot of dialer companies bury the real terms in a 12-page
@@ -628,9 +552,9 @@ export default function WhyDialerSeatView() {
           </section>
 
           {/* WHERE WE'RE GOING */}
-          <section className="why-section alt">
+          <section className="faq-section alt">
             <div className="inner">
-              <div className="why-section-label">▸ WHERE WE&apos;RE GOING</div>
+              <div className="faq-section-label">▸ WHERE WE&apos;RE GOING</div>
               <h2>Grateful for the present. Excited about the next year.</h2>
               <p>
                 We&apos;re deeply grateful to the operators who took a chance
@@ -660,7 +584,7 @@ export default function WhyDialerSeatView() {
           {/* CTA */}
           <section className="why-cta">
             <div className="why-cta-inner">
-              <div className="why-cta-eyebrow">
+              <div className="faq-cta-eyebrow">
                 {showSignedIn ? '▸ READY TO DIAL' : '▸ ONE WEEK. $35. THAT&apos;S IT.'}
               </div>
               {showSignedIn ? (

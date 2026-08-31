@@ -3,22 +3,9 @@ import Link from 'next/link'
 import { useUser } from '@clerk/nextjs'
 import SiteHeader from '@/components/site-header'
 import SiteFooter from '@/components/site-footer'
+import FaqTheme from '@/components/faq-theme'
+import { SITE } from '@/lib/siteTheme'
 
-const T = {
-  bg: '#0a0a14',
-  surface: '#1a1a2e',
-  surface2: '#2a2a4a',
-  border: '#2a2a4a',
-  dark: '#1a1a2e',
-  darker: '#0a0a14',
-  text: '#ffffff',
-  muted: '#8888aa',
-  accent: '#4a9eff',
-  blue: '#4a9eff',
-  green: '#4ade80',
-  red: '#f87171',
-  amber: '#fbbf24',
-}
 
 export default function BillingFaqView() {
   const { isSignedIn } = useUser()
@@ -29,149 +16,39 @@ export default function BillingFaqView() {
       <div
         style={{
           flex: 1,
-          background: T.bg,
+          background: SITE.bg,
           minHeight: 'calc(100vh - 64px)',
           fontFamily: 'Futura PT, Futura, sans-serif',
-          color: T.text,
+          color: SITE.text,
         }}
       >
+        <FaqTheme />
         <style>{`
-          .bil-root { max-width: 820px; margin: 0 auto; padding: 80px 32px 120px; }
-          .bil-eyebrow {
-            font-size: 11px; letter-spacing: 4px; color: ${T.muted};
-            font-weight: bold; margin-bottom: 18px;
-          }
-          .bil-h1 {
-            font-size: 42px; line-height: 1.15; letter-spacing: -0.5px;
-            font-weight: 700; margin: 0 0 24px 0;
-          }
-          .bil-h1 em { font-style: normal; color: ${T.green}; }
-          .bil-deck {
-            font-size: 19px; line-height: 1.6; color: ${T.muted};
-            margin-bottom: 40px; max-width: 680px;
-          }
-          .bil-badge-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 56px; }
-          .bil-badge {
-            padding: 8px 16px; border-radius: 20px; font-size: 12px;
-            font-weight: bold; letter-spacing: 1px; border: 1px solid ${T.border};
-            background: ${T.surface}; color: ${T.text};
-          }
-          .bil-badge.hi { background: ${T.dark}; color: ${T.green}; border-color: ${T.dark}; }
-
-          .bil-section { margin: 56px 0; }
-          .bil-section h2 {
-            font-size: 13px; letter-spacing: 3px; font-weight: bold;
-            color: ${T.accent}; margin: 0 0 18px 0;
-            padding-bottom: 10px; border-bottom: 1px solid ${T.border};
-          }
-          .bil-section h3 {
-            font-size: 22px; line-height: 1.3; font-weight: 700;
-            margin: 28px 0 14px 0; letter-spacing: -0.2px;
-          }
-          .bil-section p {
-            font-size: 16px; line-height: 1.75; margin: 0 0 18px 0;
-            color: ${T.text};
-          }
-          .bil-section p.muted { color: ${T.muted}; font-size: 15px; }
-          .bil-section strong { color: ${T.text}; font-weight: 700; }
-          .bil-section em { font-style: italic; color: ${T.accent}; }
-          .bil-section ul { margin: 14px 0 24px 0; padding-left: 22px; }
-          .bil-section li { font-size: 16px; line-height: 1.75; margin-bottom: 8px; }
-
-          /* SCENARIO CARDS */
+/* SCENARIO CARDS */
           .bil-scenario {
-            margin: 20px 0; padding: 24px 26px; background: ${T.surface};
-            border: 1px solid ${T.border}; border-radius: 8px;
+            margin: 20px 0; padding: 24px 26px; background: ${SITE.surface};
+            border: 1px solid ${SITE.border}; border-radius: 8px;
           }
           .bil-scenario-eyebrow {
             font-size: 10px; letter-spacing: 3px; font-weight: bold;
-            color: ${T.accent}; margin-bottom: 10px;
+            color: ${SITE.deep}; margin-bottom: 10px;
           }
           .bil-scenario h4 { font-size: 18px; margin: 0 0 12px 0; font-weight: 700; }
-          .bil-scenario p { font-size: 15px; line-height: 1.7; margin: 0 0 10px 0; color: ${T.text}; }
-          .bil-scenario p:last-child { margin-bottom: 0; }
-
-          /* TIMELINE */
-          .bil-flow { display: flex; flex-direction: column; gap: 0; margin: 24px 0 8px; }
-          .bil-flow-step {
-            display: flex; gap: 16px; padding: 14px 0; align-items: flex-start;
-            border-left: 2px solid ${T.border}; padding-left: 22px; margin-left: 15px;
-            position: relative;
-          }
-          .bil-flow-step::before {
-            content: ''; position: absolute; left: -7px; top: 18px;
-            width: 12px; height: 12px; border-radius: 50%;
-            background: ${T.green}; border: 2px solid white;
-          }
-          .bil-flow-step:last-child { border-left: 2px solid transparent; }
-          .bil-flow-body h4 { font-size: 15px; margin: 0 0 4px 0; font-weight: 700; }
-          .bil-flow-body p { font-size: 14px; line-height: 1.6; margin: 0; color: ${T.muted}; }
-
-          .bil-callout {
-            margin: 32px 0; padding: 22px 26px; background: ${T.surface};
-            border-left: 3px solid ${T.amber}; border-radius: 4px;
-          }
-          .bil-callout p { font-size: 15px; line-height: 1.7; margin: 0; color: ${T.text}; }
-          .bil-callout strong { color: ${T.accent}; }
-
-          .bil-related {
-            margin-top: 48px; padding-top: 28px; border-top: 1px solid ${T.border};
-          }
-          .bil-related-label {
-            font-size: 10px; letter-spacing: 3px; color: ${T.muted};
-            font-weight: bold; margin-bottom: 14px;
-          }
-          .bil-related-links { display: flex; gap: 24px; flex-wrap: wrap; }
-          .bil-related-links a {
-            font-size: 13px; color: ${T.accent}; text-decoration: none;
-            border-bottom: 1px solid transparent; padding-bottom: 1px;
-            transition: border-color 0.15s;
-          }
-          .bil-related-links a:hover { border-bottom-color: ${T.accent}; }
-
-          .bil-cta-box {
-            margin-top: 56px; padding: 40px 36px; background: ${T.dark};
-            border-radius: 8px; text-align: center;
-          }
-          .bil-cta-box .bil-cta-eyebrow {
-            font-size: 10px; letter-spacing: 4px; color: ${T.green};
-            font-weight: bold; margin-bottom: 14px;
-          }
-          .bil-cta-box .bil-cta-h {
-            font-size: 26px; color: white; font-weight: 700;
-            margin: 0 0 12px 0; letter-spacing: -0.2px;
-          }
-          .bil-cta-box p { font-size: 15px; color: ${T.muted}; line-height: 1.6; margin: 0 0 28px 0; }
-          .bil-cta-box .bil-cta-btn {
-            display: inline-block; padding: 16px 36px;
-            background: linear-gradient(135deg, ${T.green}, #1a8a4a);
-            border: none; border-radius: 6px; color: white;
-            font-size: 12px; font-weight: bold; letter-spacing: 3px;
-            text-decoration: none; font-family: 'Futura PT', Futura, sans-serif;
-            box-shadow: 0 0 24px rgba(47,209,106,0.25);
-          }
-
-          @media (max-width: 768px) {
-            .bil-root { padding: 48px 20px 80px; }
-            .bil-h1 { font-size: 28px; }
-            .bil-deck { font-size: 16px; }
-            .bil-section h3 { font-size: 19px; }
-            .bil-section p, .bil-section li { font-size: 15px; }
+          .bil-scenario p { font-size: 15px; line-height: 1.7; margin: 0 0 10px 0; color: ${SITE.text}; }
+          .bil-scenario p:last-child { margin-bottom: 0; }@media (max-width: 768px) {
             .bil-scenario { padding: 20px 20px; }
-            .bil-cta-box { padding: 32px 24px; }
-            .bil-cta-box .bil-cta-h { font-size: 22px; }
           }
         `}</style>
 
-        <article className="bil-root">
-          <div className="bil-eyebrow">▸ BILLING &amp; CANCELLATION</div>
+        <article className="faq-root">
+          <div className="faq-eyebrow">▸ BILLING &amp; CANCELLATION</div>
           <span style={{ fontSize: 11, color: '#8888aa', letterSpacing: '2px', display: 'block', marginBottom: 16 }}>LAST UPDATED 07/28/2026</span>
 
-          <h1 className="bil-h1">
+          <h1 className="faq-h1">
             &ldquo;Cancel anytime&rdquo; is a real button, not a phone call. <em>Here&apos;s exactly what it does.</em>
           </h1>
 
-          <p className="bil-deck">
+          <p className="faq-deck">
             Every dialer says &ldquo;no contracts.&rdquo; Fewer explain what
             actually happens the moment you click cancel, what a failed
             card does to your account, or how billing works when you add a
@@ -179,14 +56,14 @@ export default function BillingFaqView() {
             marketing line.
           </p>
 
-          <div className="bil-badge-row">
-            <span className="bil-badge hi">BILLED WEEKLY VIA STRIPE</span>
-            <span className="bil-badge">NO ANNUAL COMMITMENT</span>
-            <span className="bil-badge">CANCEL KEEPS ACCESS THROUGH THE WEEK</span>
+          <div className="faq-badge-row">
+            <span className="faq-badge hi">BILLED WEEKLY VIA STRIPE</span>
+            <span className="faq-badge">NO ANNUAL COMMITMENT</span>
+            <span className="faq-badge">CANCEL KEEPS ACCESS THROUGH THE WEEK</span>
           </div>
 
           {/* ── WHAT CANCEL ACTUALLY DOES ──────────────────────────────────── */}
-          <section className="bil-section">
+          <section className="faq-section">
             <h2>▸ WHAT HAPPENS THE MOMENT YOU CLICK CANCEL</h2>
             <p>
               Cancellation doesn&apos;t cut your access off immediately.
@@ -196,21 +73,21 @@ export default function BillingFaqView() {
               charged again after that, and nothing auto-renews.
             </p>
 
-            <div className="bil-flow">
-              <div className="bil-flow-step">
-                <div className="bil-flow-body">
+            <div className="faq-flow">
+              <div className="faq-flow-step">
+                <div className="faq-flow-body">
                   <h4>YOU CLICK CANCEL</h4>
                   <p>The subscription is marked to end at period close. No refund is issued for the current week — you already paid for it, so you keep it.</p>
                 </div>
               </div>
-              <div className="bil-flow-step">
-                <div className="bil-flow-body">
+              <div className="faq-flow-step">
+                <div className="faq-flow-body">
                   <h4>YOU KEEP DIALING</h4>
                   <p>Full access continues completely normally for the rest of the paid week — nothing is restricted or downgraded early.</p>
                 </div>
               </div>
-              <div className="bil-flow-step">
-                <div className="bil-flow-body">
+              <div className="faq-flow-step">
+                <div className="faq-flow-body">
                   <h4>THE WEEK ENDS</h4>
                   <p>Access stops. No further charge happens. There&apos;s nothing else to do — no retention call, no confirmation email you have to click through.</p>
                 </div>
@@ -225,7 +102,7 @@ export default function BillingFaqView() {
           </section>
 
           {/* ── FAILED PAYMENT ─────────────────────────────────────────────── */}
-          <section className="bil-section">
+          <section className="faq-section">
             <h2>▸ WHAT A FAILED CARD ACTUALLY DOES</h2>
             <p>
               If a weekly charge fails — expired card, insufficient funds,
@@ -256,7 +133,7 @@ export default function BillingFaqView() {
           </section>
 
           {/* ── MID-WEEK SEAT CHANGES ──────────────────────────────────────── */}
-          <section className="bil-section">
+          <section className="faq-section">
             <h2>▸ ADDING OR REMOVING A SEAT MID-WEEK</h2>
             <p>
               Each seat — Pro, Manager+, or an agent seat under a
@@ -283,7 +160,7 @@ export default function BillingFaqView() {
               a second chance on top of it, not the only thing standing between
               a buyer and a lost charge. Same policy, stated in the order that
               reflects what is actually at stake. */}
-          <section className="bil-section">
+          <section className="faq-section">
             <h2>▸ WHAT YOU CAN ACTUALLY LOSE</h2>
             <p>
               <strong>Nothing, for the first seven days.</strong> New accounts
@@ -330,7 +207,7 @@ export default function BillingFaqView() {
           </section>
 
           {/* ── HONEST NOTE ───────────────────────────────────────────────── */}
-          <div className="bil-callout">
+          <div className="faq-callout">
             <p>
               <strong>One thing worth knowing —</strong> there&apos;s no
               annual or upfront billing option today. Every plan bills
@@ -344,9 +221,9 @@ export default function BillingFaqView() {
           </div>
 
           {/* ── RELATED ────────────────────────────────────────────────────── */}
-          <div className="bil-related">
-            <div className="bil-related-label">▸ RELATED READING</div>
-            <div className="bil-related-links">
+          <div className="faq-related">
+            <div className="faq-related-label">▸ RELATED READING</div>
+            <div className="faq-related-links">
               <Link href="/faq/why-we-charge">Why we charge what we charge</Link>
               <Link href="/faq/manager-plus">What Manager+ adds over Pro</Link>
               <Link href="/faq/dialerseat-teams">DialerSeat for teams</Link>
@@ -356,14 +233,14 @@ export default function BillingFaqView() {
           </div>
 
           {/* ── CTA ──────────────────────────────────────────────────────────  */}
-          <div className="bil-cta-box">
-            <div className="bil-cta-eyebrow">▸ NO CONTRACT, NO RETENTION CALL</div>
-            <h3 className="bil-cta-h">Free for 7 days, then $35/week. Cancel with one click, any time.</h3>
+          <div className="faq-cta">
+            <div className="faq-cta-eyebrow">▸ NO CONTRACT, NO RETENTION CALL</div>
+            <h3 className="faq-cta-h">Free for 7 days, then $35/week. Cancel with one click, any time.</h3>
             <p>
               You keep access through what you already paid for — nothing
               cut off early, nothing to negotiate.
             </p>
-            <a href={isSignedIn ? '/dashboard' : '/sign-up'} className="bil-cta-btn">
+            <a href={isSignedIn ? '/dashboard' : '/sign-up'} className="faq-cta-btn">
               {isSignedIn ? 'GO TO DASHBOARD →' : 'START FREE 7 DAYS →'}
             </a>
           </div>
