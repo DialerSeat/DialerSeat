@@ -115,42 +115,85 @@ page depends on.
 
 ---
 
-## Why `/faq` is different
+## `/faq` — one visual language, kept as separate pages
 
-It is tempting to do to `/faq` what was done to `/vs`. Don't. Here is the
-measurement that settles it:
+### What was measured, and what it ruled out
+
+The first plan here was "extract the shared CSS." That was wrong, and the
+measurement says so plainly:
 
 ```
-all 14 faq/*/view.tsx have DIFFERENT css hashes
-sections per page:  3 → 10
-lines per page:     331 → 999
+14 faq views, every one with a DIFFERENT css hash
+1,272 distinct css lines across them
+        3 appear in all 14 pages
+    1,192 appear in 2 pages or fewer
+  404 distinct class names, essentially no overlap
 ```
 
-Compare that with `/vs` before migration: 15 files, 8 of them **byte-identical**
-CSS, all ~490 lines, differing only in strings. That is fifteen copies of one
-page. `/faq` is 28 genuinely different pages that happen to share a visual
-language.
+**There was no shared stylesheet to extract.** Extraction assumes commonality;
+these pages had none. Three lines out of 1,272 is not a design system.
 
-Forcing them into one component means either inventing a schema wide enough to
-express all 28 (at which point the schema is the page, with worse ergonomics),
-or deleting the sections that don't fit. Both are worse than what is there now.
+Templating them into one component was ruled out for the opposite reason:
+sections run 3 → 10 and pages run 331 → 999 lines. A schema wide enough to
+express all 28 would *be* the page, with worse ergonomics than JSX.
 
-### So what IS the win for `/faq`
+### What was done instead
 
-**Extract the design system, not the layout.** Every page redefines the same
-palette and the same base rules in its own `<style>` block. Pull those into one
-place and a redesign becomes one edit, while each page keeps the structure its
-content actually needs.
+`components/faq-theme.tsx` — a **canonical vocabulary**, not an extraction. It
+deliberately mirrors `vs-competitor-view.tsx`: same palette, same section
+rhythm, same card and table treatment, so a reader moving between
+`/vs/readymode` and `/faq/leads` sees one product.
 
-Suggested order:
+Each page keeps its own JSX and its own structure. The theme supplies the chrome
+those elements are painted with. One file to edit for a redesign; no schema to
+fight.
 
-1. Create `app/faq/faq-theme.css` (or a shared `<FaqShell>` that renders the
-   common `<style>`) holding the palette, type scale, spacing, and the shared
-   `.faq-*` classes
-2. Migrate pages onto it **one at a time**, deleting only the rules that moved
-3. Leave each page's genuinely unique CSS in the page
+### The vocabulary
 
-That gets the redesign leverage without the content loss.
+| Class | Use |
+|---|---|
+| `.faq-root` | article column (820px — narrower than `/vs`, this is prose) |
+| `.faq-eyebrow` `.faq-h1` `.faq-deck` | page header |
+| `.faq-section` `.faq-section-eyebrow` `.faq-h2` `.faq-h3` `.faq-p` | body |
+| `.faq-list` | bulleted list |
+| `.faq-card` `.faq-card-title` `.faq-grid` | cards |
+| `.faq-callout` + `.warn` `.good` `.bad` | asides; the left border carries the tone |
+| `.faq-table` | real `<table>` — identical treatment to `.feature-table` on `/vs` |
+| `.faq-fieldtable` `.faq-fieldrow` `.faq-fieldcell` + `.head` `.name` | label/value grid that stacks on mobile |
+| `.faq-flow` `.faq-flow-step` `.faq-flow-title` `.faq-flow-body` | auto-numbered steps |
+| `.faq-badge` `.faq-badge-row` + `.hi` | inline tags |
+| `.faq-cta` `.faq-cta-eyebrow` `.faq-cta-h` `.faq-cta-btn` | closing CTA |
+| `.faq-related` `.faq-related-label` `.faq-related-links` | footer links |
+
+### Migration recipe — per page, about ten minutes
+
+`app/faq/leads/view.tsx` is the **reference implementation**. It went 395 → 264
+lines. Read it before doing another.
+
+1. List the page's own classes:
+   `grep -o 'className="[^"]*"' view.tsx | sed 's/className="//;s/"//' | tr ' ' '
+' | sort -u`
+2. Map its private prefix onto the vocabulary above. `leads` used `.lead-*`;
+   others use `.mob-*`, `.wl-*` and so on. **Rename longest names first** —
+   replacing `lead-flow` before `lead-flow-step` corrupts the longer one.
+3. Delete the page's `<style>` block; render `<FaqTheme />` in its place.
+4. Import: `import FaqTheme from '@/components/faq-theme'`
+5. Anything with no home in the vocabulary is either genuinely unique — leave it
+   in the page — or a gap worth **adding to the theme**, if a second page will
+   want it. Prefer adding; that is how the vocabulary earns its keep.
+6. Check nothing is orphaned: `grep -c 'lead-' view.tsx` must be `0`.
+
+### Status: 1 of 14 migrated
+
+Done: `leads`.
+
+Remaining: `billing`, `campaigns`, `compliance-export`, `data-and-recordings`,
+`dialerseat-teams`, `manager-plus`, `managers`, `mobile`, `numbers`, `scripts`,
+`white-label`, `white-label-mobile`, `why-dialerseat`.
+
+`dialerseat-teams` (999 lines, 10 sections) is the hardest and should be done
+**last**, once the vocabulary has been stretched by the easy ones. The other 14
+`/faq` routes have no `view.tsx` at all and need nothing.
 
 ---
 
