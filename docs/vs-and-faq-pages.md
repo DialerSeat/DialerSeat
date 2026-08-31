@@ -210,35 +210,40 @@ fight.
 | `.faq-cta` `.faq-cta-eyebrow` `.faq-cta-h` `.faq-cta-btn` | closing CTA |
 | `.faq-related` `.faq-related-label` `.faq-related-links` | footer links |
 
-### Migration recipe — per page, about ten minutes
+### Status: all 14 migrated
 
-`app/faq/leads/view.tsx` is the **reference implementation**. It went 395 → 264
-lines. Read it before doing another.
+Every `/faq` page renders `<FaqTheme />` and none carries a private palette.
+The batch went **6,014 lines to 4,840**, with roughly 450 duplicated CSS rules
+removed. The other 14 `/faq` routes have no `view.tsx` and need nothing.
 
-1. List the page's own classes:
-   `grep -o 'className="[^"]*"' view.tsx | sed 's/className="//;s/"//' | tr ' ' '
-' | sort -u`
-2. Map its private prefix onto the vocabulary above. `leads` used `.lead-*`;
-   others use `.mob-*`, `.wl-*` and so on. **Rename longest names first** —
-   replacing `lead-flow` before `lead-flow-step` corrupts the longer one.
-3. Delete the page's `<style>` block; render `<FaqTheme />` in its place.
-4. Import: `import FaqTheme from '@/components/faq-theme'`
-5. Anything with no home in the vocabulary is either genuinely unique — leave it
-   in the page — or a gap worth **adding to the theme**, if a second page will
-   want it. Prefer adding; that is how the vocabulary earns its keep.
-6. Check nothing is orphaned: `grep -c 'lead-' view.tsx` must be `0`.
+### If you migrate another page later
 
-### Status: 1 of 14 migrated
+The script lives in the scratchpad and is disposable, but **the lesson it
+encodes is not**: make it *report every rule it drops*. Silent dropping is how
+this loses content, and three separate classes of breakage were caught only by
+reading those reports:
 
-Done: `leads`.
+1. **Bare elements.** These pages write `<h2>`, `<p>`, `<li>`, `<code>` directly
+   and almost never a `className` — `campaigns` has nine `<p>` and zero
+   `.faq-p`. The theme therefore styles elements *inside* `.faq-section`, not
+   just classes. If you add a page, write prose with bare tags; that is the
+   supported path.
+2. **Nested prose.** `.faq-section p.muted`, `.faq-flow-body p` and `.faq-cta p`
+   each carried real styling. Losing them does not error — the paragraphs just
+   inherit body colour and quietly lose their hierarchy.
+3. **One-page classes.** `.faq-section.alt`, `.faq-section-label`,
+   `.faq-badge.price`. Recover the original rule from git rather than guessing
+   at what it looked like.
 
-Remaining: `billing`, `campaigns`, `compliance-export`, `data-and-recordings`,
-`dialerseat-teams`, `manager-plus`, `managers`, `mobile`, `numbers`, `scripts`,
-`white-label`, `white-label-mobile`, `why-dialerseat`.
+Two known-dead things, both pre-existing: an unescaped apostrophe in
+`data-and-recordings` that lint already flagged, and `.left` / `.right` on the
+mobile carousel arrows, which never had rules in the first place.
 
-`dialerseat-teams` (999 lines, 10 sections) is the hardest and should be done
-**last**, once the vocabulary has been stretched by the easy ones. The other 14
-`/faq` routes have no `view.tsx` at all and need nothing.
+### The accent-word convention
+
+`<em>` inside an `.faq-h1` renders **deep blue, not italic**. That is how these
+pages have always marked an accent word, and it maps exactly onto the landing
+page's two-tone headline — so the signature arrives without touching markup.
 
 ---
 
